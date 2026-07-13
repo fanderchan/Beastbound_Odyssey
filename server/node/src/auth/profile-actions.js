@@ -1,5 +1,7 @@
 "use strict";
 
+const {authorityRootRecordForMutation} = require("./authority-root-clone");
+
 function createProfileActionsDomain(ctx) {
   const {
     PROFILE_ACTION_IDS,
@@ -405,7 +407,7 @@ function createProfileActionsDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -431,10 +433,9 @@ function createProfileActionsDomain(ctx) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    authorityRootRecordForMutation(data, "profileBindings")[resolved.account.accountId] = binding;
+    authorityRootRecordForMutation(data, "profiles")[binding.playerId] = {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,

@@ -57,6 +57,30 @@ function createEventHubWriter(socket, options = {}) {
       destroy(false);
       return false;
     }
+    return enqueueEntry(entry, enqueueOptions);
+  }
+
+  // Trusted zero-copy path for frames encoded by EventHub. The caller owns the
+  // immutability contract and must not mutate `frame` after handing it to any
+  // writer, because multiple sockets may hold this exact Buffer concurrently.
+  function enqueuePreencoded(event, frame, enqueueOptions = {}) {
+    if (disposed || !accepting || !socket || socket.destroyed) {
+      return false;
+    }
+    if (!Buffer.isBuffer(frame)) {
+      destroy(false);
+      return false;
+    }
+    return enqueueEntry({event, frame}, enqueueOptions);
+  }
+
+  function enqueueEntry(entry, enqueueOptions) {
+    if (canWriteDirectly()) {
+      if (!reserve(1, entry.frame.length)) {
+        return false;
+      }
+      return writeDirectly(entry);
+    }
     const coalesceKey = String(enqueueOptions.coalesceKey || "");
     if (coalesceKey) {
       const previous = presenceByAccountId.get(coalesceKey) || null;
@@ -93,14 +117,38 @@ function createEventHubWriter(socket, options = {}) {
     if (disposed || !accepting || !socket || socket.destroyed) {
       return false;
     }
-    const entry = {event: null, frame: Buffer.from(frame)};
-    if (!reserve(1, entry.frame.length)) {
+    return enqueueEntry({event: null, frame: Buffer.from(frame)}, {});
+  }
+
+  function canWriteDirectly() {
+    return !paused
+      && !blocked
+      && bootstrapQueue.length === 0
+      && outboundQueue.length === 0;
+  }
+
+  function writeDirectly(entry) {
+    let writable;
+    try {
+      writable = socket.write(entry.frame);
+    } catch {
+      destroy(false);
       return false;
     }
-    outboundQueue.push(entry);
-    queuedBytes += entry.frame.length;
-    recordPeak();
-    flush();
+    notify("onFrameSent", entry.frame.length, entry.event);
+    if (writable === false) {
+      blocked = true;
+      recordPeak();
+      if (!withinHardBudget()) {
+        disconnectSlowConsumer(hardBudgetReason());
+        return false;
+      }
+      armPressureTimer();
+    } else {
+      // Preserve socket-buffer peak accounting without the former temporary
+      // application queue push/shift and its two queue-metric transitions.
+      recordPeak();
+    }
     return !disposed;
   }
 
@@ -399,6 +447,7 @@ function createEventHubWriter(socket, options = {}) {
 
   return Object.freeze({
     enqueue,
+    enqueuePreencoded,
     enqueueRaw,
     start,
     startBootstrap,
@@ -415,6 +464,10 @@ function eventEntry(event) {
     event,
     frame: encodeFrame(0x1, Buffer.from(text, "utf8")),
   };
+}
+
+function encodeEventFrame(event) {
+  return eventEntry(event).frame;
 }
 
 function safeEventEntry(event) {
@@ -457,5 +510,6 @@ function positiveInteger(value, fallback) {
 module.exports = {
   DEFAULT_EVENT_HUB_WRITER_LIMITS,
   createEventHubWriter,
+  encodeEventFrame,
   encodeFrame,
 };

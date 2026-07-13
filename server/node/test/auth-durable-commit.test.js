@@ -15,11 +15,19 @@ const {
   battleProfile,
   fetchJson,
   eventStreamUrl,
+  eventStreamProtocols,
   webSocketOpen,
   webSocketJsonReader,
   profileItemCount,
 } = require("../test-support/auth-service-test-context");
 const {drainServerForShutdown} = require("../src/http-server");
+const {
+  RUNTIME_ROOT_FIELDS,
+  captureRuntimeRootDelta,
+  canonicalDurableMutationReceipts,
+  durableBusinessChanged,
+  mergeRuntimeObjectDelta,
+} = require("../src/auth/durable-mutation-state");
 
 function deferred() {
   let resolve;
@@ -30,6 +38,232 @@ function deferred() {
   });
   return {promise, resolve, reject};
 }
+
+function assertPostcommitPublishMetrics(metrics, {count = 1, persistent = false} = {}) {
+  assert.equal(metrics.count, count);
+  assert.equal(Number.isFinite(metrics.averageMs), true);
+  assert.equal(Number.isFinite(metrics.maxMs), true);
+  assert.ok(metrics.averageMs >= 0);
+  assert.ok(metrics.maxMs >= 0);
+  for (const phase of [
+    "authority_publish",
+    "rollback_baseline",
+    "runtime_effects",
+    "maintenance_schedule",
+    "service_event_publish",
+  ]) {
+    assert.equal(metrics.phases[phase].count, count, phase);
+    assert.equal(Number.isFinite(metrics.phases[phase].averageMs), true, phase);
+    assert.equal(Number.isFinite(metrics.phases[phase].maxMs), true, phase);
+  }
+  assert.equal(
+    Object.hasOwn(metrics.phases, "large_collection_commit"),
+    persistent,
+  );
+  if (persistent) {
+    assert.equal(metrics.phases.large_collection_commit.count, count);
+  }
+}
+
+function trackingBattleRandomAuthority() {
+  const rooms = new Set();
+  return Object.freeze({
+    openRoom(roomId) {
+      const id = String(roomId || "");
+      if (id === "" || rooms.has(id)) return false;
+      rooms.add(id);
+      return true;
+    },
+    closeRoom(roomId) {
+      return rooms.delete(String(roomId || ""));
+    },
+    hasRoom(roomId) {
+      return rooms.has(String(roomId || ""));
+    },
+    roll(roomId) {
+      assert.equal(rooms.has(String(roomId || "")), true);
+      return 0.9999;
+    },
+    index(roomId, context, size) {
+      void context;
+      const count = Math.max(1, Math.trunc(Number(size || 0)));
+      return Math.min(count - 1, Math.floor(this.roll(roomId) * count));
+    },
+  });
+}
+
+function deepFreezeTestValue(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value)) {
+    deepFreezeTestValue(child);
+  }
+  return Object.freeze(value);
+}
+
+function freezeDurableProjectionRoot(value) {
+  for (const [key, child] of Object.entries(value)) {
+    // The canonical receipt ledger is an immutable Proxy. Object.freeze()
+    // cannot be applied to it because its traps deliberately reject extension
+    // changes, so retain that production immutability contract as-is.
+    if (key !== "mutationReceipts") {
+      deepFreezeTestValue(child);
+    }
+  }
+  return Object.freeze(value);
+}
+
+test("durable comparison mutates only its shallow projection of frozen authority roots", () => {
+  const receipts = canonicalDurableMutationReceipts({});
+  const before = freezeDurableProjectionRoot({
+    profiles: {
+      player_frozen_projection: {
+        profileRevision: 1,
+        profile: {stoneCoins: 20, backpackSlots: [{itemId: "item_meat_small", count: 1}]},
+      },
+    },
+    playerPositions: {acc_frozen_projection: {mapId: "map_a", cellX: 10, cellY: 10}},
+    battleTrace: [{traceId: "trace_frozen_projection"}],
+    serviceEventSeq: 9,
+    serviceEvents: [{eventSeq: 9, type: "chat.message", message: {text: "只读事件"}}],
+    consumedEquipmentEnvelopes: {},
+    mutationReceipts: receipts,
+  });
+  const candidate = freezeDurableProjectionRoot({
+    ...before,
+    profiles: {
+      player_frozen_projection: {
+        profileRevision: 2,
+        profile: {stoneCoins: 12, backpackSlots: [{itemId: "item_meat_small", count: 2}]},
+      },
+    },
+  });
+  const beforeJson = JSON.stringify(before);
+  const candidateJson = JSON.stringify(candidate);
+  const options = {
+    persistentDataForStore(data) {
+      const projection = {...data};
+      projection.playerPositions = {};
+      projection.serviceEvents = data.serviceEvents.filter((event) => !String(event.type || "").startsWith("battle."));
+      return projection;
+    },
+    normalizeEventSeq: (value) => Math.max(0, Math.trunc(Number(value || 0))),
+    consumedEquipmentEnvelopeLedgerSignature: () => "equipment-ledger:frozen",
+  };
+
+  assert.equal(durableBusinessChanged(before, before, options), false);
+  assert.equal(durableBusinessChanged(before, candidate, options), true);
+  assert.equal(JSON.stringify(before), beforeJson);
+  assert.equal(JSON.stringify(candidate), candidateJson);
+  assert.equal(Object.isFrozen(before.battleTrace), true);
+  assert.equal(Object.isFrozen(candidate.profiles.player_frozen_projection.profile.backpackSlots[0]), true);
+});
+
+test("runtime battle replay eviction defers durable journal retention until a real durable event", () => {
+  const receipts = canonicalDurableMutationReceipts({});
+  const firstChat = deepFreezeTestValue({eventSeq: 7, type: "chat.message", message: {text: "旧消息"}});
+  const secondChat = deepFreezeTestValue({eventSeq: 8, type: "chat.message", message: {text: "保留消息"}});
+  const battleEvent = deepFreezeTestValue({eventSeq: 9, type: "battle.command_submitted", roomId: "room_runtime"});
+  const newChat = deepFreezeTestValue({eventSeq: 10, type: "chat.message", message: {text: "新消息"}});
+  const before = freezeDurableProjectionRoot({
+    profiles: {},
+    battleTrace: [],
+    serviceEventSeq: 8,
+    serviceEvents: [firstChat, secondChat],
+    consumedEquipmentEnvelopes: {},
+    mutationReceipts: receipts,
+  });
+  const runtimeEviction = freezeDurableProjectionRoot({
+    ...before,
+    serviceEventSeq: 9,
+    serviceEvents: [secondChat, battleEvent],
+  });
+  const durableAppend = freezeDurableProjectionRoot({
+    ...before,
+    serviceEventSeq: 10,
+    serviceEvents: [secondChat, battleEvent, newChat],
+  });
+  const mutatedDurableTail = freezeDurableProjectionRoot({
+    ...before,
+    serviceEvents: [{...secondChat, message: {text: "被篡改"}}, battleEvent],
+  });
+  const reorderedDurableTail = freezeDurableProjectionRoot({
+    ...before,
+    serviceEvents: [secondChat, firstChat, battleEvent],
+  });
+  const options = {
+    persistentDataForStore(data) {
+      const projection = {...data};
+      projection.serviceEvents = data.serviceEvents.filter((event) => !String(event.type || "").startsWith("battle."));
+      return projection;
+    },
+    normalizeEventSeq: (value) => Math.max(0, Math.trunc(Number(value || 0))),
+    consumedEquipmentEnvelopeLedgerSignature: () => "equipment-ledger:replay-retention",
+  };
+
+  assert.equal(durableBusinessChanged(before, runtimeEviction, options), false);
+  assert.equal(durableBusinessChanged(before, durableAppend, options), true);
+  assert.equal(durableBusinessChanged(before, mutatedDurableTail, options), true);
+  assert.equal(durableBusinessChanged(before, reorderedDurableTail, options), true);
+});
+
+test("pre-commit runtime delta preserves live changes and applies only candidate-touched keys", () => {
+  const before = {
+    playerPositions: {
+      acc_conflict: {mapId: "map_a", cellX: 1, cellY: 1},
+      acc_current_delete: {mapId: "map_a", cellX: 2, cellY: 2},
+    },
+    battleRooms: {
+      room_live: {
+        roomId: "room_live",
+        connectionState: {acc_live: {connected: true}},
+      },
+    },
+    tradeOffers: {
+      offer_candidate_delete: {tradeId: "offer_candidate_delete", amount: 1},
+      offer_current_delete: {tradeId: "offer_current_delete", amount: 2},
+    },
+  };
+  const candidate = structuredClone(before);
+  candidate.playerPositions.acc_conflict = {mapId: "map_a", cellX: 3, cellY: 1};
+  candidate.playerPositions.acc_candidate_add = {mapId: "map_b", cellX: 4, cellY: 4};
+  delete candidate.tradeOffers.offer_candidate_delete;
+
+  const delta = captureRuntimeRootDelta(before, candidate);
+  const current = structuredClone(before);
+  current.playerPositions.acc_conflict = {mapId: "map_a", cellX: 99, cellY: 99};
+  current.playerPositions.acc_current_add = {mapId: "map_c", cellX: 5, cellY: 5};
+  delete current.playerPositions.acc_current_delete;
+  current.battleRooms.room_live.connectionState.acc_live.connected = false;
+  delete current.tradeOffers.offer_current_delete;
+  current.tradeOffers.offer_current_add = {tradeId: "offer_current_add", amount: 3};
+
+  const merged = {};
+  for (const field of RUNTIME_ROOT_FIELDS) {
+    merged[field] = mergeRuntimeObjectDelta(delta[field], current[field]);
+  }
+
+  assert.deepEqual(merged.playerPositions.acc_conflict, {
+    mapId: "map_a", cellX: 3, cellY: 1,
+  });
+  assert.deepEqual(merged.playerPositions.acc_candidate_add, {
+    mapId: "map_b", cellX: 4, cellY: 4,
+  });
+  assert.deepEqual(merged.playerPositions.acc_current_add, {
+    mapId: "map_c", cellX: 5, cellY: 5,
+  });
+  assert.equal(merged.playerPositions.acc_current_delete, undefined);
+  assert.equal(merged.battleRooms.room_live.connectionState.acc_live.connected, false);
+  assert.equal(merged.tradeOffers.offer_candidate_delete, undefined);
+  assert.equal(merged.tradeOffers.offer_current_delete, undefined);
+  assert.deepEqual(merged.tradeOffers.offer_current_add, {
+    tradeId: "offer_current_add", amount: 3,
+  });
+  assert.equal(merged.battleRooms, current.battleRooms);
+  assert.notEqual(merged.playerPositions, current.playerPositions);
+  assert.notEqual(merged.tradeOffers, current.tradeOffers);
+});
 
 function seedShopAccount(base, username) {
   const seedService = createAuthService({store: base});
@@ -180,6 +414,11 @@ test("asset HTTP success and service event stay pending until the owning commit"
   assert.equal(saveCount, 1);
   assert.equal(base.load().chatMessages.length, 1);
   assert.equal(events.filter((event) => event.type === "chat.message").length, 1);
+  const publishMetrics = service.durableMutationMetrics();
+  assert.equal(publishMetrics.postcommitCount, 1);
+  assert.equal(Number.isFinite(publishMetrics.postcommitAverageMs), true);
+  assert.equal(Number.isFinite(publishMetrics.postcommitMaxMs), true);
+  assertPostcommitPublishMetrics(publishMetrics.postcommitByMethod.sendChatMessage, {persistent: true});
 });
 
 test("auth responses wait for durability without persisting raw session tokens in receipts", async (t) => {
@@ -216,6 +455,16 @@ test("runtime battle invitation does not open a durable store transaction", asyn
   assert.equal(seedService.updatePlayerPosition(opponent.session.token, {
     mapId: "firebud_village_gate", cellX: 11, cellY: 10,
   }).ok, true);
+  const fullReplayWindow = base.load();
+  fullReplayWindow.serviceEventSeq = 500;
+  fullReplayWindow.serviceEvents = Array.from({length: 500}, (_, index) => ({
+    eventId: `server_event_${index + 1}`,
+    eventSeq: index + 1,
+    type: "chat.message",
+    message: {channel: "nearby", text: `历史消息${index + 1}`},
+    schemaVersion: 1,
+  }));
+  base.save(fullReplayWindow);
   let saveCount = 0;
   const service = createAuthService({
     store: createAsyncWriteAuthStore({
@@ -251,6 +500,703 @@ test("runtime battle invitation does not open a durable store transaction", asyn
   });
   assert.equal(invited.ok, true);
   assert.equal(saveCount, 0);
+
+  const accepted = await fetchJson(`${harness.baseUrl}/battle/invites/${encodeURIComponent(invited.invite.inviteId)}/accept`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${opponent.session.token}`},
+  });
+  assert.equal(accepted.ok, true);
+  assert.equal(saveCount, 0);
+
+  const intermediate = await service.invokeDurable("submitBattleCommand", [
+    challenger.session.token,
+    accepted.room.roomId,
+    {round: 1, actionId: "defend"},
+  ], {actionId: "test_runtime_battle_command"});
+  assert.equal(intermediate.ok, true);
+  assert.equal(intermediate.turn, null);
+  assert.equal(saveCount, 0);
+
+  intermediate.room.status = "corrupted_by_caller";
+  intermediate.room.battle.actors[0].hp = 0;
+  const authoritativeRoom = service.snapshot().battleRooms[accepted.room.roomId];
+  assert.equal(authoritativeRoom.status, "ready");
+  assert.ok(authoritativeRoom.battle.actors[0].hp > 0);
+  const submitMetrics = service.durableMutationMetrics().precommitByMethod.submitBattleCommand;
+  assert.equal(submitMetrics.count, 1);
+  assert.equal(submitMetrics.phases.raw_compare.count, 1);
+  assert.equal(submitMetrics.phases.runtime_normalize.count, 1);
+  for (const phase of [
+    "runtime_service_events",
+    "runtime_service_events_scan",
+    "runtime_service_events_canonicalize",
+    "runtime_service_events_freeze",
+    "runtime_player_positions",
+    "runtime_battle_rooms",
+    "runtime_battle_recoveries",
+    "runtime_battle_trace",
+    "runtime_candidate_trust",
+  ]) {
+    assert.equal(submitMetrics.phases[phase].count, 1, phase);
+  }
+  assert.equal(Object.hasOwn(submitMetrics.phases, "normalize"), false);
+  assertPostcommitPublishMetrics(
+    service.durableMutationMetrics().postcommitByMethod.submitBattleCommand,
+  );
+
+  const durableChat = await service.invokeDurable("sendChatMessage", [
+    challenger.session.token,
+    {channel: "nearby", text: "真实持久消息"},
+  ], {actionId: "test_runtime_replay_retention_flush"});
+  assert.equal(durableChat.ok, true);
+  assert.equal(saveCount, 1);
+  const persistedEvents = base.load().serviceEvents;
+  assert.equal(persistedEvents.some((event) => String(event.type || "").startsWith("battle.")), false);
+  assert.equal(persistedEvents.some((event) => event.message && event.message.text === "真实持久消息"), true);
+  assert.equal(Number(persistedEvents[0] && persistedEvents[0].eventSeq || 0) > 1, true);
+});
+
+test("runtime fast candidate matches the full normalizer for all runtime roots and journals", async () => {
+  const nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const source = createMemoryAuthStore();
+  const seed = createAuthService({store: source, now: () => nowMs});
+  const challenger = seed.register({username: "runtimeequiva", password: "test1234", displayName: "等价甲"});
+  const opponent = seed.register({username: "runtimeequivb", password: "test1234", displayName: "等价乙"});
+  const createService = () => {
+    const base = createMemoryAuthStore(source.load());
+    let saveCount = 0;
+    const service = createAuthService({
+      now: () => nowMs,
+      randomId: () => "runtime_equivalence_fixed_id",
+      randomBytes: (size) => Buffer.alloc(size, 7),
+      store: createAsyncWriteAuthStore({
+        mode: "memory",
+        load: () => base.load(),
+        async saveAsync(nextData) {
+          saveCount += 1;
+          base.save(nextData);
+        },
+      }, {onError: () => {}}),
+    });
+    for (const [registration, cellX] of [[challenger, 10], [opponent, 11]]) {
+      assert.equal(service.updatePlayerPosition(registration.session.token, {
+        mapId: "firebud_village_gate", cellX, cellY: 10,
+      }).ok, true);
+    }
+    return {service, saveCount: () => saveCount};
+  };
+  const fast = createService();
+  const fallback = createService();
+  const fastInvite = await fast.service.invokeDurable("inviteToBattle", [
+    challenger.session.token, {username: opponent.account.username},
+  ], {actionId: "test_runtime_equivalence_invite"});
+  const fallbackInvite = await fallback.service.invokeDurable("inviteToBattle", [
+    challenger.session.token, {username: opponent.account.username},
+  ], {actionId: "test_runtime_equivalence_invite"});
+  assert.equal(fastInvite.ok, true);
+  assert.equal(fallbackInvite.ok, true);
+
+  const originalAccept = fallback.service.acceptBattleInvite;
+  const originalFilter = Array.prototype.filter;
+  let projectionFailureArmed = false;
+  let projectionFailureObserved = false;
+  fallback.service.acceptBattleInvite = (...args) => {
+    const result = originalAccept(...args);
+    projectionFailureArmed = true;
+    return result;
+  };
+  Array.prototype.filter = function patchedFilter(...args) {
+    if (projectionFailureArmed && !projectionFailureObserved) {
+      projectionFailureObserved = true;
+      throw new Error("synthetic raw durable projection failure");
+    }
+    return Reflect.apply(originalFilter, this, args);
+  };
+  let fallbackAccepted;
+  try {
+    const fastAccepted = await fast.service.invokeDurable("acceptBattleInvite", [
+      opponent.session.token, fastInvite.invite.inviteId,
+    ], {actionId: "test_runtime_equivalence_accept"});
+    fallbackAccepted = await fallback.service.invokeDurable("acceptBattleInvite", [
+      opponent.session.token, fallbackInvite.invite.inviteId,
+    ], {actionId: "test_runtime_equivalence_accept"});
+    assert.equal(fastAccepted.ok, true);
+    assert.equal(fallbackAccepted.ok, true);
+  } finally {
+    Array.prototype.filter = originalFilter;
+    fallback.service.acceptBattleInvite = originalAccept;
+  }
+  assert.equal(projectionFailureObserved, true);
+  assert.equal(fast.saveCount(), 0);
+  assert.equal(fallback.saveCount(), 0);
+  const fastSnapshot = fast.service.snapshot();
+  const fallbackSnapshot = fallback.service.snapshot();
+  for (const field of RUNTIME_ROOT_FIELDS) {
+    assert.deepEqual(fallbackSnapshot[field], fastSnapshot[field], field);
+  }
+  assert.deepEqual(
+    fallbackSnapshot.battleTrace.map(({traceId, ...entry}) => entry),
+    fastSnapshot.battleTrace.map(({traceId, ...entry}) => entry),
+  );
+  assert.equal(fallbackSnapshot.serviceEventSeq, fastSnapshot.serviceEventSeq);
+  assert.deepEqual(fallbackSnapshot.serviceEvents, fastSnapshot.serviceEvents);
+  const fastMetrics = fast.service.durableMutationMetrics().precommitByMethod.acceptBattleInvite;
+  const fallbackMetrics = fallback.service.durableMutationMetrics().precommitByMethod.acceptBattleInvite;
+  assert.equal(fastMetrics.phases.runtime_normalize.count, 1);
+  assert.equal(Object.hasOwn(fastMetrics.phases, "normalize"), false);
+  assert.equal(fallbackMetrics.phases.raw_compare.count, 1);
+  assert.equal(fallbackMetrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(fallbackMetrics.phases, "runtime_normalize"), false);
+});
+
+test("runtime replay and trace survive uncovered async mutation rollback", async () => {
+  const nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base, now: () => nowMs});
+  const challenger = seed.register({username: "rollbackjournala", password: "test1234", displayName: "回滚甲"});
+  const opponent = seed.register({username: "rollbackjournalb", password: "test1234", displayName: "回滚乙"});
+  const service = createAuthService({
+    now: () => nowMs,
+    randomId: () => "rollback_journal_fixed_id",
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
+  }).ok, true);
+  const invited = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token, {username: opponent.account.username},
+  ], {actionId: "test_rollback_journal_invite"});
+  const accepted = await service.invokeDurable("acceptBattleInvite", [
+    opponent.session.token, invited.invite.inviteId,
+  ], {actionId: "test_rollback_journal_accept"});
+  assert.equal(accepted.ok, true);
+  const before = service.snapshot();
+  assert.ok(before.battleTrace.length > 0);
+  assert.ok(before.serviceEvents.length > 0);
+  assert.throws(() => service.grantGm({
+    username: challenger.account.username,
+    commandIds: ["gm_prepare_qa_profile"],
+    policyId: "rollback_journal_test",
+    expiresAt: new Date(nowMs + 60_000).toISOString(),
+  }), (error) => error && error.code === "durable_context_required");
+  const after = service.snapshot();
+  assert.deepEqual(after.battleTrace, before.battleTrace);
+  assert.deepEqual(after.serviceEvents, before.serviceEvents);
+  assert.equal(after.serviceEventSeq, before.serviceEventSeq);
+  assert.equal(after.accounts[challenger.account.username].role, "player");
+});
+
+test("battle random secret closes only after the terminal COMMIT succeeds", async () => {
+  const nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base, now: () => nowMs});
+  const challenger = seed.register({username: "rngcommita", password: "test1234", displayName: "随机甲"});
+  const opponent = seed.register({username: "rngcommitb", password: "test1234", displayName: "随机乙"});
+  const authority = trackingBattleRandomAuthority();
+  let saveAttempts = 0;
+  let rejectNextSave = true;
+  const service = createAuthService({
+    now: () => nowMs,
+    randomId: () => "rng_commit_fixed_id",
+    battleRandomAuthority: authority,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveAttempts += 1;
+        if (rejectNextSave) {
+          rejectNextSave = false;
+          throw new Error("synthetic terminal commit failure");
+        }
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
+  }).ok, true);
+  const invited = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token, {username: opponent.account.username},
+  ], {actionId: "test_rng_commit_invite"});
+  const accepted = await service.invokeDurable("acceptBattleInvite", [
+    opponent.session.token, invited.invite.inviteId,
+  ], {actionId: "test_rng_commit_accept"});
+  const roomId = accepted.room.roomId;
+  const runtimeBeforeFailedCommit = service.snapshot();
+  assert.ok(runtimeBeforeFailedCommit.battleTrace.length > 0);
+  assert.ok(runtimeBeforeFailedCommit.serviceEvents.length > 0);
+  assert.equal(authority.hasRoom(roomId), true);
+  await assert.rejects(
+    service.invokeDurable("leaveBattleRoom", [challenger.session.token, roomId], {
+      actionId: "test_rng_commit_leave_failed",
+    }),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(saveAttempts, 1);
+  assert.equal(authority.hasRoom(roomId), true);
+  assert.equal(base.load().battleRecords.some((record) => record.roomId === roomId), false);
+  const refreshed = await service.invokeDurable("getProfile", [challenger.session.token], {
+    actionId: "test_rng_commit_reload_after_failure",
+  });
+  assert.equal(refreshed.ok, true);
+  const runtimeAfterReload = service.snapshot();
+  assert.deepEqual(runtimeAfterReload.battleTrace, runtimeBeforeFailedCommit.battleTrace);
+  assert.deepEqual(runtimeAfterReload.serviceEvents, runtimeBeforeFailedCommit.serviceEvents);
+  assert.equal(runtimeAfterReload.serviceEventSeq, runtimeBeforeFailedCommit.serviceEventSeq);
+  assert.equal(saveAttempts, 1);
+  const retried = await service.invokeDurable("leaveBattleRoom", [challenger.session.token, roomId], {
+    actionId: "test_rng_commit_leave_retry",
+  });
+  assert.equal(retried.ok, true);
+  assert.equal(saveAttempts, 2);
+  assert.equal(authority.hasRoom(roomId), false);
+  assert.equal(base.load().battleRecords.some((record) => record.roomId === roomId), true);
+});
+
+test("terminal battle command falls back from raw comparison to durable victory settlement", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const challenger = seed.register({username: "durablevictorya", password: "test1234", displayName: "终局甲"});
+  const opponent = seed.register({username: "durablevictoryb", password: "test1234", displayName: "终局乙"});
+  assert.equal(seed.saveProfile(challenger.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("终局甲", {
+      level: 5, hp: 120, maxHp: 120, attack: 999, defense: 10, quick: 999,
+    }, null),
+  }).ok, true);
+  assert.equal(seed.saveProfile(opponent.session.token, {
+    expectedRevision: 0,
+    profile: battleProfile("终局乙", {
+      level: 5, hp: 1, maxHp: 1, attack: 1, defense: 1, quick: 1,
+    }, null),
+  }).ok, true);
+
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
+  }).ok, true);
+  const invited = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token,
+    {username: opponent.account.username},
+  ], {actionId: "test_terminal_victory_invite"});
+  assert.equal(invited.ok, true);
+  const accepted = await service.invokeDurable("acceptBattleInvite", [
+    opponent.session.token,
+    invited.invite.inviteId,
+  ], {actionId: "test_terminal_victory_accept"});
+  assert.equal(accepted.ok, true);
+  assert.equal(saveCount, 0);
+  const challengerActor = accepted.room.battle.actors.find((actor) => actor.accountId === challenger.account.accountId);
+  const opponentActor = accepted.room.battle.actors.find((actor) => actor.accountId === opponent.account.accountId);
+  const first = await service.invokeDurable("submitBattleCommand", [
+    challenger.session.token,
+    accepted.room.roomId,
+    {round: 1, actorId: challengerActor.actorId, actionId: "attack", targetActorId: opponentActor.actorId},
+  ], {actionId: "test_terminal_victory_attack"});
+  assert.equal(first.ok, true);
+  assert.equal(first.turn, null);
+  assert.equal(saveCount, 0);
+  const terminal = await service.invokeDurable("submitBattleCommand", [
+    opponent.session.token,
+    accepted.room.roomId,
+    {round: 1, actorId: opponentActor.actorId, actionId: "defend"},
+  ], {actionId: "test_terminal_victory_defend"});
+  assert.equal(terminal.ok, true);
+  assert.equal(terminal.room.status, "closed");
+  assert.equal(saveCount, 1);
+  assert.equal(base.load().battleRecords.some((record) => record.roomId === accepted.room.roomId), true);
+
+  const metrics = service.durableMutationMetrics().precommitByMethod.submitBattleCommand;
+  assert.equal(metrics.count, 2);
+  assert.equal(metrics.phases.raw_compare.count, 2);
+  assert.equal(metrics.phases.runtime_normalize.count, 1);
+  assert.equal(metrics.phases.normalize.count, 1);
+});
+
+test("successful capture command durably writes the pet and consumed tool", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const player = seed.register({username: "durablecapture", password: "test1234", displayName: "持久捕捉号"});
+  const profile = battleProfile("持久捕捉号", {
+    level: 5, hp: 120, maxHp: 120, attack: 20, defense: 8, quick: 90,
+  }, null);
+  profile.backpackSlots = [{itemId: "capture_net", count: 1}];
+  profile.captureTools = {capture_net: 1};
+  assert.equal(seed.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  const encounter = await service.invokeDurable("startPartyEncounter", [player.session.token, {
+    enemyCount: 1,
+    encounterZone: {
+      id: "durable_capture_grass",
+      name: "持久捕捉草丛",
+      formationTemplate: "10v10",
+      selectedWildPet: {
+        formId: "wuli_normal_orange_fire10",
+        name: "持久捕捉乌力",
+        level: 3,
+        catchable: true,
+        captureDifficulty: 1,
+        captureChanceOverride: 1,
+        battleStats: {maxHp: 80, attack: 1, defense: 1, quick: 10},
+      },
+    },
+  }], {actionId: "test_durable_capture_encounter"});
+  assert.equal(encounter.ok, true);
+  assert.equal(saveCount, 0);
+  const playerActor = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId);
+  const enemyActor = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  const captured = await service.invokeDurable("submitBattleCommand", [
+    player.session.token,
+    encounter.room.roomId,
+    {
+      round: 1,
+      actorId: playerActor.actorId,
+      actionId: "capture",
+      targetActorId: enemyActor.actorId,
+      captureToolId: "capture_net",
+    },
+  ], {actionId: "test_durable_capture_command"});
+  assert.equal(captured.ok, true);
+  assert.equal(captured.room.status, "closed");
+  assert.equal(saveCount, 1);
+  const storedProfile = base.load().profiles[player.profileBinding.playerId].profile;
+  assert.equal(profileItemCount(storedProfile, "capture_net"), 0);
+  assert.equal(storedProfile.petInstances.some((pet) => pet.formId === "wuli_normal_orange_fire10"), true);
+  assert.equal(base.load().battleRecords.some((record) => record.roomId === encounter.room.roomId), true);
+  const encounterMetrics = service.durableMutationMetrics().precommitByMethod.startPartyEncounter;
+  assert.equal(encounterMetrics.phases.runtime_normalize.count, 1);
+  assert.equal(Object.hasOwn(encounterMetrics.phases, "normalize"), false);
+  const captureMetrics = service.durableMutationMetrics().precommitByMethod.submitBattleCommand;
+  assert.equal(captureMetrics.phases.raw_compare.count, 1);
+  assert.equal(captureMetrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(captureMetrics.phases, "runtime_normalize"), false);
+});
+
+test("battle timeout maintenance remains a durable record settlement", async () => {
+  let nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base, now: () => nowMs});
+  const challenger = seed.register({username: "durabletimeouta", password: "test1234"});
+  const opponent = seed.register({username: "durabletimeoutb", password: "test1234"});
+  let saveCount = 0;
+  const service = createAuthService({
+    now: () => nowMs,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
+  }).ok, true);
+  const invited = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token,
+    {username: opponent.account.username},
+  ], {actionId: "test_timeout_invite"});
+  const accepted = await service.invokeDurable("acceptBattleInvite", [
+    opponent.session.token,
+    invited.invite.inviteId,
+  ], {actionId: "test_timeout_accept"});
+  assert.equal(accepted.ok, true);
+  assert.equal(saveCount, 0);
+  nowMs += 100_000;
+  const maintenance = await service.invokeDurable("runBattleMaintenance", [], {
+    actionId: "test_timeout_maintenance",
+  });
+  assert.equal(maintenance.ok, true);
+  assert.equal(maintenance.events.some((event) => event.type === "battle.room_closed"), true);
+  assert.equal(saveCount, 1);
+  assert.equal(base.load().battleRecords.some((record) => record.roomId === accepted.room.roomId), true);
+  const metrics = service.durableMutationMetrics().precommitByMethod.runBattleMaintenance;
+  assert.equal(metrics.phases.raw_compare.count, 1);
+  assert.equal(metrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(metrics.phases, "runtime_normalize"), false);
+  assertPostcommitPublishMetrics(
+    service.durableMutationMetrics().postcommitByMethod.runBattleMaintenance,
+    {persistent: true},
+  );
+});
+
+test("timed encounter stone consumption cannot use the runtime-only fast path", async () => {
+  let nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({
+    store: base,
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const player = seed.register({username: "durablestone", password: "test1234", displayName: "持久遇敌石号"});
+  const profile = battleProfile("持久遇敌石号", {
+    level: 5, hp: 120, maxHp: 120, attack: 18, defense: 8, quick: 70,
+  }, null);
+  profile.backpackSlots = [{itemId: "encounter_stone_patrol", count: 1}];
+  assert.equal(seed.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+
+  let saveCount = 0;
+  const service = createAuthService({
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 17, moving: false,
+  }).ok, true);
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17], [11, 17, 11, 16], [11, 16, 11, 15],
+  ]) {
+    assert.equal(service.movePlayerStep(player.session.token, {
+      mapId: "firebud_village_gate", fromCellX, fromCellY, toCellX, toCellY, moving: false,
+    }).ok, true);
+  }
+  const started = await service.invokeDurable("startHangSession", [player.session.token, {
+    mode: "encounter_stone",
+    itemId: "encounter_stone_patrol",
+    mapId: "firebud_village_gate",
+    cellX: 11,
+    cellY: 15,
+  }], {actionId: "test_timed_stone_start"});
+  assert.equal(started.ok, true);
+  assert.equal(saveCount, 1);
+  nowMs += 2500;
+  const encounter = await service.invokeDurable("startPartyEncounter", [player.session.token, {
+    encounterIntent: {zoneId: "village_grass", encounterGroupId: "firebud_grass_01"},
+  }], {actionId: "test_timed_stone_encounter"});
+  assert.equal(encounter.ok, true);
+  assert.equal(saveCount, 2);
+  const stored = base.load().profiles[player.profileBinding.playerId].profile;
+  assert.equal(stored.hangSession.encounterConsumedSlot, 1);
+  const metrics = service.durableMutationMetrics().precommitByMethod.startPartyEncounter;
+  assert.equal(metrics.phases.raw_compare.count, 1);
+  assert.equal(metrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(metrics.phases, "runtime_normalize"), false);
+});
+
+test("healthy profile and party HTTP reads bypass the durable coordinator", async (t) => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const leader = seed.register({username: "purehttpleader", password: "test1234"});
+  const member = seed.register({username: "purehttpmember", password: "test1234"});
+  const invite = seed.inviteToParty(leader.session.token, {username: member.account.username});
+  assert.equal(seed.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  assert.equal(seed.getPartyState(leader.session.token).ok, true);
+
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.markEventConnection({
+    accountId: leader.account.accountId,
+    sessionId: leader.session.sessionId,
+  }, true).ok, true);
+  assert.equal(service.markEventConnection({
+    accountId: member.account.accountId,
+    sessionId: member.session.sessionId,
+  }, true).ok, true);
+  const durableMethods = [];
+  const invokeDurable = service.invokeDurable.bind(service);
+  service.invokeDurable = (methodName, args, operation) => {
+    durableMethods.push(methodName);
+    return invokeDurable(methodName, args, operation);
+  };
+  const beforeReads = service.snapshot();
+  const harness = await listen(service);
+  t.after(() => closeHarness(harness, service));
+
+  const [profile, party] = await Promise.all([
+    fetchJson(`${harness.baseUrl}/profiles/me`, {
+      headers: {authorization: `Bearer ${leader.session.token}`},
+    }),
+    fetchJson(`${harness.baseUrl}/party/state`, {
+      headers: {authorization: `Bearer ${leader.session.token}`},
+    }),
+  ]);
+
+  assert.equal(profile.ok, true);
+  assert.equal(profile.profileSummary.accountId, leader.account.accountId);
+  assert.equal(party.ok, true);
+  assert.equal(party.party.partyId, invite.party.partyId);
+  assert.deepEqual(durableMethods, []);
+  assert.equal(saveCount, 0);
+  assert.deepEqual(service.snapshot(), beforeReads);
+  const metrics = service.durableMutationMetrics();
+  assert.equal(metrics.pending, 0);
+  assert.equal(metrics.running, 0);
+  assert.equal(metrics.accepted, 0);
+  assert.equal(metrics.completed, 0);
+});
+
+test("profile repair HTTP read stays pending until its durable commit", async (t) => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const registered = seed.register({username: "repairhttpprofile", password: "test1234"});
+  const corrupted = base.load();
+  delete corrupted.profiles[registered.profileBinding.playerId];
+  base.save(corrupted);
+
+  const writeStarted = deferred();
+  const releaseWrite = deferred();
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        writeStarted.resolve();
+        await releaseWrite.promise;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.markEventConnection({
+    accountId: registered.account.accountId,
+    sessionId: registered.session.sessionId,
+  }, true).ok, true);
+  const durableMethods = [];
+  const invokeDurable = service.invokeDurable.bind(service);
+  service.invokeDurable = (methodName, args, operation) => {
+    durableMethods.push(methodName);
+    return invokeDurable(methodName, args, operation);
+  };
+  const harness = await listen(service);
+  t.after(() => closeHarness(harness, service));
+
+  let responseSettled = false;
+  const responsePromise = fetchJson(`${harness.baseUrl}/profiles/me`, {
+    headers: {authorization: `Bearer ${registered.session.token}`},
+  }).then((response) => {
+    responseSettled = true;
+    return response;
+  });
+
+  await writeStarted.promise;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(responseSettled, false);
+  assert.deepEqual(durableMethods, ["getProfile"]);
+  assert.equal(saveCount, 1);
+
+  releaseWrite.resolve();
+  const response = await responsePromise;
+  assert.equal(response.ok, true);
+  assert.equal(response.profileSummary.accountId, registered.account.accountId);
+  assert.ok(base.load().profiles[registered.profileBinding.playerId]);
+});
+
+test("party HTTP read with stale presence falls back to durable maintenance", async (t) => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const leader = seed.register({username: "partymainleader", password: "test1234"});
+  const member = seed.register({username: "partymainmember", password: "test1234"});
+  const invite = seed.inviteToParty(leader.session.token, {username: member.account.username});
+  assert.equal(seed.acceptPartyInvite(member.session.token, invite.invite.inviteId).ok, true);
+  assert.equal(seed.getPartyState(leader.session.token).ok, true);
+  const stale = base.load();
+  const party = stale.parties[invite.party.partyId];
+  party.memberPresence[leader.account.accountId] = {
+    accountId: leader.account.accountId,
+    online: false,
+    connectionState: "offline",
+    offlineSince: new Date().toISOString(),
+    autoKickAt: new Date(Date.now() + 60_000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    schemaVersion: 1,
+  };
+  base.save(stale);
+
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  for (const identity of [leader, member]) {
+    assert.equal(service.markEventConnection({
+      accountId: identity.account.accountId,
+      sessionId: identity.session.sessionId,
+    }, true).ok, true);
+  }
+  const durableMethods = [];
+  const invokeDurable = service.invokeDurable.bind(service);
+  service.invokeDurable = (methodName, args, operation) => {
+    durableMethods.push(methodName);
+    return invokeDurable(methodName, args, operation);
+  };
+  const harness = await listen(service);
+  t.after(() => closeHarness(harness, service));
+
+  const response = await fetchJson(`${harness.baseUrl}/party/state`, {
+    headers: {authorization: `Bearer ${leader.session.token}`},
+  });
+  assert.equal(response.ok, true);
+  assert.equal(response.party.members.find((row) => row.accountId === leader.account.accountId).online, true);
+  assert.deepEqual(durableMethods, ["getPartyState"]);
+  assert.equal(saveCount, 1);
+  const partyMetrics = service.durableMutationMetrics().precommitByMethod.getPartyState;
+  assert.equal(partyMetrics.phases.raw_compare.count, 1);
+  assert.equal(partyMetrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(partyMetrics.phases, "runtime_normalize"), false);
 });
 
 test("websocket handshake durably repairs a malformed profile before accepting the player", async (t) => {
@@ -282,7 +1228,10 @@ test("websocket handshake durably repairs a malformed profile before accepting t
     await closeHarness(harness, service);
   });
   const wsBase = harness.baseUrl.replace(/^http:/, "ws:");
-  const ws = new WebSocket(eventStreamUrl(wsBase, registered.session.token));
+  const ws = new WebSocket(
+    eventStreamUrl(wsBase, registered.session.token),
+    eventStreamProtocols(registered.session.token),
+  );
   const reader = webSocketJsonReader(ws);
 
   await webSocketOpen(ws);
@@ -292,6 +1241,62 @@ test("websocket handshake durably repairs a malformed profile before accepting t
   assert.ok(base.load().profileBindings[registered.account.accountId]);
   assert.equal(Array.isArray(base.load().profiles[registered.profileBinding.playerId].profile), false);
   ws.close();
+});
+
+test("runtime trade offer created during a blocked commit survives durable publish merge", async () => {
+  const base = createMemoryAuthStore();
+  const assetOwner = seedShopAccount(base, "committradeasset");
+  const trader = seedShopAccount(base, "committradealpha");
+  const target = seedShopAccount(base, "committradebeta");
+  const writeStarted = deferred();
+  const releaseWrite = deferred();
+  let saveCount = 0;
+  const service = createAuthService({
+    allowPositionTeleport: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        writeStarted.resolve();
+        await releaseWrite.promise;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(trader.session.token, {
+    mapId: "firebud_training_yard", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(target.session.token, {
+    mapId: "firebud_training_yard", cellX: 11, cellY: 10,
+  }).ok, true);
+
+  const commitPromise = service.invokeDurable("shopTransaction", [assetOwner.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }], {actionId: "test_trade_runtime_merge"});
+  await writeStarted.promise;
+
+  const proposed = service.proposeTrade(trader.session.token, {
+    targetUsername: target.account.username,
+    stoneCoins: 1,
+  });
+  assert.equal(proposed.ok, true);
+  assert.ok(service.snapshot().tradeOffers[proposed.trade.tradeId]);
+  assert.equal(base.load().tradeOffers[proposed.trade.tradeId], undefined);
+
+  releaseWrite.resolve();
+  const committed = await commitPromise;
+  assert.equal(committed.ok, true);
+  assert.equal(saveCount, 1);
+  assert.equal(committed.profile.stoneCoins, 12);
+  const after = service.snapshot();
+  assert.ok(after.tradeOffers[proposed.trade.tradeId]);
+  assert.equal(after.tradeOffers[proposed.trade.tradeId].fromAccountId, trader.account.accountId);
+  assert.equal(after.tradeOffers[proposed.trade.tradeId].toAccountId, target.account.accountId);
+  assert.equal(base.load().tradeOffers[proposed.trade.tradeId], undefined);
 });
 
 test("logout blocks same-account runtime movement until its durable commit publishes removal", async () => {
@@ -347,6 +1352,7 @@ test("logout blocks same-account runtime movement until its durable commit publi
   releaseWrite.resolve();
   const loggedOut = await logoutPromise;
   assert.equal(loggedOut.ok, true);
+  assert.equal(service.snapshot().playerPositions[watcher.account.accountId].cellX, 12);
   const removal = events.find((event) => (
     event.type === "online.position"
     && event.accountId === actor.account.accountId
@@ -355,6 +1361,70 @@ test("logout blocks same-account runtime movement until its durable commit publi
   assert.notEqual(removal, undefined);
   const roster = service.listOnlinePlayers(watcher.session.token, {scope: "map", mapId: "map_a"});
   assert.equal(roster.players.some((player) => player.accountId === actor.account.accountId), false);
+  assertPostcommitPublishMetrics(
+    service.durableMutationMetrics().postcommitByMethod.logout,
+    {persistent: true},
+  );
+});
+
+test("failed blocked commit drops candidate runtime changes but keeps concurrent live movement", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const actor = seed.register({username: "deltarollbacka", password: "test1234"});
+  const watcher = seed.register({username: "deltarollbackw", password: "test1234"});
+  const writeStarted = deferred();
+  const releaseWrite = deferred();
+  const service = createAuthService({
+    allowPositionTeleport: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync() {
+        writeStarted.resolve();
+        await releaseWrite.promise;
+        throw new Error("forced blocked commit failure");
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(actor.session.token, {
+    mapId: "map_a", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(watcher.session.token, {
+    mapId: "map_a", cellX: 11, cellY: 10,
+  }).ok, true);
+  const events = [];
+  service.onEvent((event) => events.push(event));
+
+  const logoutPromise = service.invokeDurable("logout", [actor.session.token], {
+    actionId: "test_runtime_delta_failed_logout",
+  });
+  await writeStarted.promise;
+  const concurrentMove = service.movePlayerStep(watcher.session.token, {
+    mapId: "map_a",
+    fromCellX: 11,
+    fromCellY: 10,
+    toCellX: 12,
+    toCellY: 10,
+    moving: true,
+  });
+  assert.equal(concurrentMove.ok, true);
+  assert.equal(service.snapshot().playerPositions[actor.account.accountId].cellX, 10);
+
+  releaseWrite.resolve();
+  await assert.rejects(
+    logoutPromise,
+    (error) => error && error.code === "storage_write_failed",
+  );
+  const after = service.snapshot();
+  assert.equal(after.playerPositions[actor.account.accountId].cellX, 10);
+  assert.equal(after.playerPositions[watcher.account.accountId].cellX, 12);
+  assert.equal(service.getSession(actor.session.token).ok, true);
+  assert.equal(events.some((event) => (
+    event.type === "online.position"
+    && event.accountId === actor.account.accountId
+    && event.position === null
+  )), false);
+  await service.waitForDurableIdle();
 });
 
 test("failed logout and replacement login preserve published runtime presence", async () => {
@@ -512,6 +1582,82 @@ test("durable receipt replays across restart and rejects key reuse with another 
   assert.equal(afterRestart.profile.stoneCoins, 12);
   assert.equal(saveCount, 1);
   assert.equal(profileItemCount(afterRestart.profile, "item_meat_small"), 1);
+});
+
+test("mutating committed results cannot alter authority or later durable receipt replays", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "resultisolationa");
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  const request = {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  };
+  const operation = {
+    operationId: "bbo_result_alias_isolation_0001",
+    requestHash: "a".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+
+  const committed = await service.invokeDurable(
+    "shopTransaction",
+    [owner.session.token, request],
+    operation,
+  );
+  assert.equal(committed.ok, true);
+  assert.equal(committed.durableCommit.replayed, false);
+  assert.equal(saveCount, 1);
+  const authoritativeProfile = service.snapshot().profiles[owner.profileBinding.playerId].profile;
+  const persistedReceipt = base.load().mutationReceipts[operation.operationId];
+  assert.equal(profileItemCount(authoritativeProfile, "item_meat_small"), 1);
+  assert.equal(profileItemCount(persistedReceipt.response.profile, "item_meat_small"), 1);
+
+  committed.profile.stoneCoins = 999999;
+  committed.profile.backpackSlots[0].itemId = "caller_corrupted_item";
+  committed.profile.backpackSlots[0].count = 999999;
+  committed.profileSummary.profileRevision = 999999;
+  committed.durableCommit.operationId = "caller_corrupted_operation";
+
+  const afterMutation = service.snapshot().profiles[owner.profileBinding.playerId].profile;
+  assert.equal(afterMutation.stoneCoins, 12);
+  assert.equal(profileItemCount(afterMutation, "item_meat_small"), 1);
+  assert.equal(profileItemCount(afterMutation, "caller_corrupted_item"), 0);
+  assert.equal(base.load().mutationReceipts[operation.operationId].response.durableCommit.operationId, operation.operationId);
+
+  const replay = await service.invokeDurable(
+    "shopTransaction",
+    [owner.session.token, request],
+    operation,
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.durableCommit.operationId, operation.operationId);
+  assert.equal(replay.profile.stoneCoins, 12);
+  assert.equal(profileItemCount(replay.profile, "item_meat_small"), 1);
+  assert.equal(saveCount, 1);
+
+  replay.profile.backpackSlots[0].count = 0;
+  replay.durableCommit.actionId = "caller_corrupted_replay";
+  const replayAgain = await service.invokeDurable(
+    "shopTransaction",
+    [owner.session.token, request],
+    operation,
+  );
+  assert.equal(replayAgain.durableCommit.replayed, true);
+  assert.equal(replayAgain.durableCommit.actionId, operation.actionId);
+  assert.equal(profileItemCount(replayAgain.profile, "item_meat_small"), 1);
+  assert.equal(saveCount, 1);
 });
 
 test("durable receipt follows its account across token rotation and rejects another account", async (t) => {
@@ -675,6 +1821,10 @@ test("failed commit publishes neither the staged tombstone nor its receipt and s
   assert.equal(events.length, 0);
   assert.equal(Object.hasOwn(before.consumedEquipmentEnvelopes, owner.envelopeId), false);
   assert.equal(Object.hasOwn(before.mutationReceipts, operation.operationId), false);
+  assert.equal(
+    Object.hasOwn(service.durableMutationMetrics().postcommitByMethod, "bankWithdraw"),
+    false,
+  );
 
   const settled = await service.invokeDurable("bankWithdraw", args, operation);
   assert.equal(settled.ok, true);
@@ -686,12 +1836,78 @@ test("failed commit publishes neither the staged tombstone nor its receipt and s
   assert.equal(after.profiles[owner.profileBinding.playerId].profileRevision, (
     before.profiles[owner.profileBinding.playerId].profileRevision + 1
   ));
+  assertPostcommitPublishMetrics(
+    service.durableMutationMetrics().postcommitByMethod.bankWithdraw,
+    {persistent: true},
+  );
 
   const replay = await service.invokeDurable("bankWithdraw", args, operation);
   assert.equal(replay.ok, true);
   assert.equal(replay.durableCommit.replayed, true);
   assert.equal(saveAttempts, 2);
   assert.deepEqual(base.load(), after);
+});
+
+test("storage failure recovery preserves published replay cursor without leaking failed events", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const challenger = seed.register({username: "cursorrecovera", password: "test1234"});
+  const opponent = seed.register({username: "cursorrecoverb", password: "test1234"});
+  let failWrites = false;
+  let saveAttempts = 0;
+  const service = createAuthService({
+    allowPositionTeleport: true,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        saveAttempts += 1;
+        if (failWrites) {
+          throw new Error("forced cursor recovery failure");
+        }
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  service.updatePlayerPosition(challenger.session.token, {mapId: "map_cursor", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(opponent.session.token, {mapId: "map_cursor", cellX: 11, cellY: 10});
+  const invite = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token,
+    {username: opponent.account.username},
+  ], {actionId: "test_cursor_invite"});
+  assert.equal(invite.ok, true);
+  assert.equal(saveAttempts, 0);
+  const before = service.listEventsForSession(challenger.session.token, {afterSeq: 0});
+  const beforeIds = before.events.map((event) => event.eventId);
+  assert.ok(before.latestEventSeq > 0);
+
+  failWrites = true;
+  await assert.rejects(
+    service.invokeDurable("sendChatMessage", [
+      challenger.session.token,
+      {channel: "nearby", text: "这条失败消息不能发布"},
+    ], {actionId: "test_cursor_failed_chat"}),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  failWrites = false;
+  assert.equal(service.latestEventSeq(), before.latestEventSeq);
+
+  const recovered = await service.invokeDurable("getProfile", [challenger.session.token], {
+    actionId: "test_cursor_refresh",
+  });
+  assert.equal(recovered.ok, true);
+  const after = service.listEventsForSession(challenger.session.token, {afterSeq: 0});
+  assert.equal(after.latestEventSeq, before.latestEventSeq);
+  assert.deepEqual(after.events.map((event) => event.eventId), beforeIds);
+  assert.equal(after.events.some((event) => event.message && event.message.text === "这条失败消息不能发布"), false);
+
+  const declined = await service.invokeDurable("declineBattleInvite", [
+    opponent.session.token,
+    invite.invite.inviteId,
+  ], {actionId: "test_cursor_decline"});
+  assert.equal(declined.ok, true);
+  assert.equal(service.latestEventSeq(), before.latestEventSeq + 1);
+  assert.equal(saveAttempts, 1);
 });
 
 test("ambiguous commit is reconciled from the durable snapshot before success", async (t) => {

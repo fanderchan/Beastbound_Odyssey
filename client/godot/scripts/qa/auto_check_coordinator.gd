@@ -19,6 +19,7 @@ const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_batt
 const ServerBattleRideReplayCheck := preload("res://scripts/battle/server_battle_ride_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
+const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -1198,8 +1199,8 @@ func _run_auto_client_version_check() -> void:
 		):
 			runtime_boundaries_ok = false
 	var idempotency_ok := pure_prepare_ok and durable_specs_ok and runtime_boundaries_ok
-	var protocol_v8_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 8
-	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v8_ok else "failed"
+	var protocol_v10_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 10
+	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v10_ok else "failed"
 	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s idempotency=%s pure_prepare=%s durable=%s runtime_boundaries=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
@@ -16886,7 +16887,7 @@ func _run_auto_auth_server_client_check() -> void:
 	)
 	var refresh_headers = host._packed_string_array(refresh_spec.get("headers", []))
 	var protocol_header_ok = (
-		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 8
+		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 10
 		and
 		register_headers.has(protocol_client_header)
 		and register_headers.has(protocol_version_header)
@@ -17212,14 +17213,17 @@ func _run_auto_auth_server_client_check() -> void:
 		"stoneCoins": 55,
 		"backpackSlots": [{"itemId": "weapon_wooden_club", "count": 1}],
 	})
+	var authoritative_shop_equip_result := PlayerProgressModel.equip_item(host.player_profile, "weapon_wooden_club")
+	var authoritative_shop_equip_profile := (
+		authoritative_shop_equip_result.get("profile", {}) as Dictionary
+		if authoritative_shop_equip_result.get("profile", {}) is Dictionary
+		else {}
+	)
+	authoritative_shop_equip_profile["schemaVersion"] = ServerPetProfileProjectionModel.CURRENT_SERVER_PROFILE_SCHEMA_VERSION
 	var parsed_shop_equip_after_buy = ServerAuthClientModel.parse_equipment_equip_response(200, JSON.stringify({
 		"ok": true,
 		"message": "装备木棒。",
-		"profile": {
-			"schemaVersion": 1,
-			"equipmentSlots": {"right_hand_weapon": "weapon_wooden_club"},
-			"backpackSlots": [],
-		},
+		"profile": authoritative_shop_equip_profile,
 		"profileSummary": {
 			"playerId": "player_test",
 			"profileRevision": 8,
@@ -17717,9 +17721,10 @@ func _run_auto_auth_server_client_check() -> void:
 		and (parsed_position_without_players.get("players", []) as Array).is_empty()
 		and not bool(parsed_movement.get("hasPlayersSnapshot", true))
 	)
-	var event_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test")
-	var event_wss_url = ServerAuthClientModel.event_stream_url("https://example.test/game/", "token test")
-	var event_replay_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", "token_test", 42)
+	var event_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/")
+	var event_wss_url = ServerAuthClientModel.event_stream_url("https://example.test/game/")
+	var event_replay_url = ServerAuthClientModel.event_stream_url("http://127.0.0.1:8787/", 42, "epoch test")
+	var event_headers = ServerAuthClientModel.event_stream_headers("token_test")
 	var event_protocol_query = ServerAuthClientModel.protocol_query()
 	var event_latest_spec = ServerAuthClientModel.event_latest_request("http://127.0.0.1:8787/", "token_test")
 	var parsed_event = ServerAuthClientModel.parse_event_stream_message(JSON.stringify({
@@ -17748,9 +17753,12 @@ func _run_auto_auth_server_client_check() -> void:
 		"latestEventSeq": 43,
 	}).to_utf8_buffer())
 	var event_contract_ok = (
-		event_url == "ws://127.0.0.1:8787/events?" + event_protocol_query + "&token=token_test"
-		and event_wss_url == "wss://example.test/game/events?" + event_protocol_query + "&token=token%20test"
-		and event_replay_url == "ws://127.0.0.1:8787/events?" + event_protocol_query + "&token=token_test&lastEventSeq=42"
+		event_url == "ws://127.0.0.1:8787/events?" + event_protocol_query
+		and event_wss_url == "wss://example.test/game/events?" + event_protocol_query
+		and event_replay_url == "ws://127.0.0.1:8787/events?" + event_protocol_query + "&lastEventSeq=42&eventStreamEpoch=epoch%20test"
+		and event_url.find("token") < 0
+		and event_headers.has("Authorization: Bearer token_test")
+		and event_headers.has("X-Beastbound-Protocol-Version: %d" % ServerAuthClientModel.CLIENT_PROTOCOL_VERSION)
 		and str(event_latest_spec.get("url", "")) == "http://127.0.0.1:8787/events/latest"
 		and int(event_latest_spec.get("method", -1)) == HTTPClient.METHOD_GET
 		and host._packed_string_array(event_latest_spec.get("headers", [])).has("Authorization: Bearer token_test")
@@ -17766,9 +17774,39 @@ func _run_auto_auth_server_client_check() -> void:
 	var presence_cache_check: Dictionary = OnlinePresenceCacheModel.new(ONLINE_POSITION_MAX_REMOTE_PLAYERS).self_check()
 	var presence_cache_ok = (
 		bool(presence_cache_check.get("ok", false))
-		and int(presence_cache_check.get("caseCount", 0)) >= 7
+		and int(presence_cache_check.get("caseCount", 0)) >= 13
 		and int(presence_cache_check.get("maxPlayers", 0)) == ONLINE_POSITION_MAX_REMOTE_PLAYERS
+		and int(presence_cache_check.get("maxBatchDeltas", 0)) == 64
 	)
+	var event_budget_check: Dictionary = host._panel_flow()._server_event_position_budget_self_check()
+	var event_budget_ok := (
+		bool(event_budget_check.get("ok", false))
+		and int(event_budget_check.get("maxPositionDeltasPerFrame", 0)) == 64
+		and int(event_budget_check.get("firstFrameUsed", 0)) == 40
+		and int(event_budget_check.get("secondFrameUsed", 0)) == 40
+		and int(event_budget_check.get("seenRecordCount", 0)) == 3
+	)
+	var reconnect_check: Dictionary = ServerEventReconnectModel.new().self_check()
+	var reconnect_model_ok = (
+		bool(reconnect_check.get("ok", false))
+		and int(reconnect_check.get("delayCount", 0)) == 7
+		and int(reconnect_check.get("cursorCaseCount", 0)) == 4
+		and is_equal_approx(float(reconnect_check.get("maxDelaySeconds", 0.0)), 30.0)
+		and is_equal_approx(float(reconnect_check.get("stableResetSeconds", 0.0)), 30.0)
+		and is_equal_approx(float(reconnect_check.get("connectDeadlineSeconds", 0.0)), 10.0)
+		and is_equal_approx(float(reconnect_check.get("readyDeadlineSeconds", 0.0)), 5.0)
+	)
+	var session_guard_ok := bool(host._panel_flow()._server_session_request_guard_self_check().get("ok", false))
+	var battle_owner_ok := bool(host._server_battle().request_owner_self_check().get("ok", false))
+	var stale_poll_guard_ok := ServerBattleRoomModel.polled_room_is_older(
+		{"roomId": "room_race", "battle": {"round": 8}},
+		{"roomId": "room_race", "battle": {"round": 7}},
+	) and not ServerBattleRoomModel.polled_room_is_older(
+		{"roomId": "room_race", "battle": {"round": 8}},
+		{"roomId": "room_other", "battle": {"round": 7}},
+	)
+	if not reconnect_model_ok or not session_guard_ok or not battle_owner_ok or not stale_poll_guard_ok:
+		print("p0 client race guards: reconnect=%s session=%s battle_owner=%s stale_poll=%s session_detail=%s" % [str(reconnect_model_ok), str(session_guard_ok), str(battle_owner_ok), str(stale_poll_guard_ok), str(host._panel_flow()._server_session_request_guard_self_check())])
 	var party_state_spec = ServerAuthClientModel.party_state_request("http://127.0.0.1:8787/", "token_test")
 	var party_invite_spec = ServerAuthClientModel.party_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var party_apply_spec = ServerAuthClientModel.party_apply_request("http://127.0.0.1:8787/", "token_test", "friend")
@@ -18505,13 +18543,13 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and player_rebirth_request_ok and player_rebirth_parse_ok else "failed"
 	status = "ok" if status == "ok" and quest_record_request_ok and quest_record_parse_ok and quest_record_dialog_close_ok and quest_claim_request_ok and quest_claim_parse_ok and server_quest_record_guard_ok else "failed"
 	status = "ok" if status == "ok" and player_search_request_ok and player_search_parse_ok and mail_send_request_ok and mail_inbox_request_ok and mail_inbox_parse_ok and mail_read_parse_ok and mail_claim_request_ok and mail_claim_parse_ok else "failed"
-	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and http_missing_players_ok and movement_request_ok and movement_parse_ok and event_contract_ok and presence_cache_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok and party_pve_run_payload_ok else "failed"
+	status = "ok" if status == "ok" and online_request_ok and online_parse_ok and position_request_ok and position_parse_ok and http_missing_players_ok and movement_request_ok and movement_parse_ok and event_contract_ok and presence_cache_ok and event_budget_ok and reconnect_model_ok and session_guard_ok and battle_owner_ok and stale_poll_guard_ok and party_request_ok and party_parse_ok and battle_request_ok and battle_parse_ok and server_battle_locked_leave_guard_ok and server_encounter_route_ok and party_pve_mapping_ok and party_pve_run_payload_ok else "failed"
 	status = "ok" if status == "ok" and chat_request_ok and chat_parse_ok else "failed"
 	status = "ok" if status == "ok" and retry_contract_ok and network_failure_parse_ok and reconnect_ui_ok and reconnect_clear_ok else "failed"
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
 	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s gm_command=%s shop=%s equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s gm_command=%s shop=%s shop_parts=%s/%s/%s shop_apply=%s/%s/%d/%d equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
@@ -18521,6 +18559,13 @@ func _run_auto_auth_server_client_check() -> void:
 		str(profile_action_request_ok and profile_action_parse_ok),
 		str(gm_command_request_ok and gm_command_parse_ok),
 		str(shop_transaction_request_ok and shop_transaction_parse_ok and shop_equip_after_buy_apply_ok),
+		str(shop_transaction_request_ok),
+		str(shop_transaction_parse_ok),
+		str(shop_equip_after_buy_apply_ok),
+		str(bool(applied_shop_equip_after_buy.get("ok", false))),
+		str(shop_equip_after_buy_profile.get("right_hand_weapon", "")),
+		int((applied_shop_equip_after_buy.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)),
+		(host._string_array_values(applied_shop_equip_after_buy.get("logLines", []))).size(),
 		str(equipment_equip_request_ok and equipment_equip_parse_ok),
 		str(equipment_unequip_request_ok and equipment_unequip_parse_ok),
 		str(equipment_enhance_request_ok and equipment_enhance_parse_ok),
@@ -18539,7 +18584,7 @@ func _run_auto_auth_server_client_check() -> void:
 		str(online_request_ok and online_parse_ok),
 		str(position_request_ok and position_parse_ok and http_missing_players_ok),
 		str(movement_request_ok and movement_parse_ok),
-		str(event_contract_ok and presence_cache_ok),
+		str(event_contract_ok and presence_cache_ok and event_budget_ok and reconnect_model_ok),
 				str(party_request_ok and party_parse_ok),
 				str(battle_request_ok and battle_parse_ok),
 				str(server_battle_locked_leave_guard_ok),
@@ -20243,19 +20288,22 @@ func _run_auto_server_event_live_check() -> void:
 
 func _run_auto_server_event_replay_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var suffix = str(Time.get_ticks_usec() % 10000000000)
 	var challenger_username = "era%s" % suffix
 	var opponent_username = "erb%s" % suffix
 	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
 	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
 	var challenger_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		challenger_username,
 		"test1234",
 		"补发甲"
 	))
 	var opponent_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		opponent_username,
 		"test1234",
 		"补发乙"
@@ -20267,7 +20315,7 @@ func _run_auto_server_event_replay_live_check() -> void:
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
 	var replay_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(4, -1)
 	var replay_challenger_position = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -20278,7 +20326,7 @@ func _run_auto_server_event_replay_live_check() -> void:
 		}
 	))
 	var replay_opponent_position = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -20291,55 +20339,117 @@ func _run_auto_server_event_replay_live_check() -> void:
 	var replay_challenger_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(replay_challenger_position.get("responseCode", 0)), replay_challenger_position.get("body", PackedByteArray()) as PackedByteArray)
 	var replay_opponent_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(replay_opponent_position.get("responseCode", 0)), replay_opponent_position.get("body", PackedByteArray()) as PackedByteArray)
 	var replay_positions_ok = bool(replay_challenger_position_parsed.get("ok", false)) and bool(replay_opponent_position_parsed.get("ok", false))
+	host._stop_server_event_stream()
 	host.current_account_session = opponent_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_battle_state.clear()
 	host.server_event_seen.clear()
 	host.server_event_last_seq = 0
+	host._start_server_event_stream_if_needed()
+	var frames = 0
+	while frames < 720 and not host._server_event_type_seen("events.ready"):
+		frames += 1
+		await host.get_tree().process_frame
+	var fresh_ready := {}
+	for value in host.server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == "events.ready":
+			fresh_ready = value as Dictionary
+	var event_epoch := str(host._panel_flow().server_event_epoch).strip_edges()
+	var baseline_seq: int = int(host.server_event_last_seq)
+	var fresh_ready_ok: bool = (
+		str(fresh_ready.get("replayMode", "")) == "fresh"
+		and event_epoch != ""
+		and baseline_seq >= int(fresh_ready.get("latestEventSeq", -1))
+	)
+	if host.server_event_socket != null:
+		host.server_event_socket.close()
+	host.server_event_socket = null
+	host.server_event_state = "closed"
+	host.server_event_reconnect_remaining = 3600.0
+	host.server_event_seen.clear()
+	host.server_battle_state.clear()
 	var invite_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		opponent_username
 	))
 	var invite_parsed = ServerAuthClientModel.parse_battle_action_response(int(invite_response.get("responseCode", 0)), invite_response.get("body", PackedByteArray()) as PackedByteArray)
 	var invite = invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
 	var invite_id = str(invite.get("inviteId", ""))
+	host.server_event_reconnect_remaining = 0.0
 	host._start_server_event_stream_if_needed()
-	var frames = 0
-	while frames < 720 and not host._battle_invite_seen(invite_id):
+	frames = 0
+	while frames < 720 and (not host._server_event_type_seen("events.ready") or not host._battle_invite_seen(invite_id)):
 		frames += 1
 		await host.get_tree().process_frame
+	var invite_replay_ready := {}
+	for value in host.server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == "events.ready":
+			invite_replay_ready = value as Dictionary
 	var invite_seq = host.server_event_last_seq
-	var invite_replayed_ok = bool(invite_parsed.get("ok", false)) and invite_id != "" and host._server_event_type_seen("battle.invite") and host._battle_invite_seen(invite_id) and invite_seq > 0
-	host._stop_server_event_stream()
+	var invite_replayed_ok = (
+		bool(invite_parsed.get("ok", false))
+		and invite_id != ""
+		and fresh_ready_ok
+		and str(invite_replay_ready.get("replayMode", "")) == "replay"
+		and str(invite_replay_ready.get("eventStreamEpoch", "")) == event_epoch
+		and not host._server_event_type_seen("events.reset")
+		and host._server_event_type_seen("battle.invite")
+		and host._battle_invite_seen(invite_id)
+		and invite_seq > baseline_seq
+	)
+	if host.server_event_socket != null:
+		host.server_event_socket.close()
+	host.server_event_socket = null
+	host.server_event_state = "closed"
+	host.server_event_reconnect_remaining = 3600.0
 	host.server_event_seen.clear()
 	host.server_battle_state.clear()
 	var accept_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		invite_id
 	))
 	var accept_parsed = ServerAuthClientModel.parse_battle_action_response(int(accept_response.get("responseCode", 0)), accept_response.get("body", PackedByteArray()) as PackedByteArray)
 	var accepted_room = accept_parsed.get("room", {}) as Dictionary if accept_parsed.get("room", {}) is Dictionary else {}
 	var room_id = str(accepted_room.get("roomId", ""))
+	host.server_event_reconnect_remaining = 0.0
 	host._start_server_event_stream_if_needed()
 	frames = 0
-	while frames < 720 and not host._battle_room_ready(room_id):
+	while frames < 720 and (not host._server_event_type_seen("events.ready") or not host._battle_room_ready(room_id)):
 		frames += 1
 		await host.get_tree().process_frame
+	var room_replay_ready := {}
+	for value in host.server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == "events.ready":
+			room_replay_ready = value as Dictionary
 	var room_seq = host.server_event_last_seq
-	var room_replayed_ok = bool(accept_parsed.get("ok", false)) and room_id != "" and host._server_event_type_seen("battle.room_ready") and host._battle_room_ready(room_id) and room_seq > invite_seq
+	var room_replayed_ok = (
+		bool(accept_parsed.get("ok", false))
+		and room_id != ""
+		and str(room_replay_ready.get("replayMode", "")) == "replay"
+		and str(room_replay_ready.get("eventStreamEpoch", "")) == event_epoch
+		and not host._server_event_type_seen("events.reset")
+		and host._server_event_type_seen("battle.room_ready")
+		and host._battle_room_ready(room_id)
+		and room_seq > invite_seq
+	)
 	var invite_not_replayed_again = not host._server_event_type_seen("battle.invite")
 	var status = "ok" if register_ok and replay_positions_ok and invite_replayed_ok and room_replayed_ok and invite_not_replayed_again else "failed"
-	print("server event replay live check ready: status=%s register=%s positions=%s invite=%s room=%s cursor=%s invite_seq=%d room_seq=%d challenger=%s opponent=%s" % [
+	print("server event replay live check ready: status=%s register=%s positions=%s fresh=%s invite=%s room=%s cursor=%s fresh_mode=%s invite_mode=%s room_mode=%s baseline_seq=%d invite_seq=%d room_seq=%d challenger=%s opponent=%s" % [
 		status,
 		str(register_ok),
 		str(replay_positions_ok),
+		str(fresh_ready_ok),
 		str(invite_replayed_ok),
 		str(room_replayed_ok),
 		str(invite_not_replayed_again),
+		str(fresh_ready.get("replayMode", "")),
+		str(invite_replay_ready.get("replayMode", "")),
+		str(room_replay_ready.get("replayMode", "")),
+		baseline_seq,
 		invite_seq,
 		room_seq,
 		challenger_username,
@@ -20465,19 +20575,22 @@ func _run_auto_battle_room_live_check() -> void:
 
 func _run_auto_server_battle_turn_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var suffix = str(Time.get_ticks_usec() % 10000000000)
 	var challenger_username = "bta%s" % suffix
 	var opponent_username = "btb%s" % suffix
 	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
 	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
 	var challenger_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		challenger_username,
 		"test1234",
 		"回合甲"
 	))
 	var opponent_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		opponent_username,
 		"test1234",
 		"回合乙"
@@ -20489,7 +20602,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
 	var battle_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(5, -1)
 	var challenger_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -20500,7 +20613,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		}
 	))
 	var opponent_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -20514,7 +20627,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var opponent_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var positions_ok = bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
 	host.current_account_session = opponent_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_battle_state.clear()
@@ -20528,7 +20641,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var stream_ready = host.server_event_state == "open" or host._server_event_type_seen("events.ready")
 	host.server_event_seen.clear()
 	var invite_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		opponent_username
 	))
@@ -20541,7 +20654,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		await host.get_tree().process_frame
 	var invite_event_ok = bool(invite_parsed.get("ok", false)) and invite_id != "" and host._server_event_type_seen("battle.invite") and host._battle_invite_seen(invite_id)
 	var accept_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		invite_id
 	))
@@ -20558,10 +20671,29 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var challenger_pet_actor_id = str(actor_ids.get("challengerPet", ""))
 	var opponent_player_actor_id = str(actor_ids.get("opponentPlayer", ""))
 	var opponent_pet_actor_id = str(actor_ids.get("opponentPet", ""))
-	var actor_ids_ok = challenger_player_actor_id != "" and challenger_pet_actor_id != "" and opponent_player_actor_id != "" and opponent_pet_actor_id != ""
+	var both_pets_present := challenger_pet_actor_id != "" and opponent_pet_actor_id != ""
+	var no_pets_present := challenger_pet_actor_id == "" and opponent_pet_actor_id == ""
+	var accepted_battle := accepted_room.get("battle", {}) as Dictionary if accepted_room.get("battle", {}) is Dictionary else {}
+	var required_actor_ids: Array = accepted_battle.get("requiredActorIds", []) if accepted_battle.get("requiredActorIds", []) is Array else []
+	var expected_actor_ids: Array = [challenger_player_actor_id, opponent_player_actor_id]
+	if both_pets_present:
+		expected_actor_ids.append(challenger_pet_actor_id)
+		expected_actor_ids.append(opponent_pet_actor_id)
+	var sorted_required_actor_ids := required_actor_ids.duplicate()
+	var sorted_expected_actor_ids := expected_actor_ids.duplicate()
+	sorted_required_actor_ids.sort()
+	sorted_expected_actor_ids.sort()
+	var required_actor_count := required_actor_ids.size()
+	var actor_ids_ok = (
+		challenger_player_actor_id != ""
+		and opponent_player_actor_id != ""
+		and (both_pets_present or no_pets_present)
+		and required_actor_count == expected_actor_ids.size()
+		and sorted_required_actor_ids == sorted_expected_actor_ids
+	)
 	host.server_event_seen.clear()
 	var challenger_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		room_id,
 		{
@@ -20576,20 +20708,40 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	while frames < 720 and not host._server_event_type_seen("battle.command_submitted"):
 		frames += 1
 		await host.get_tree().process_frame
-	var command_submitted_ok = bool(challenger_command_parsed.get("ok", false)) and challenger_command_parsed.get("turn", null) == null and host._server_event_type_seen("battle.command_submitted")
-	var challenger_pet_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
-		str(challenger_session.get("serverSessionToken", "")),
-		room_id,
-		{
-			"round": 1,
-			"actorId": challenger_pet_actor_id,
-			"actionId": "pet_attack",
-			"targetActorId": opponent_player_actor_id,
-		}
-	))
+	var compact_command_event := {}
+	for value in host.server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == "battle.command_submitted":
+			compact_command_event = value as Dictionary
+	var compact_command_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
+	var compact_command_battle := compact_command_room.get("battle", {}) as Dictionary if compact_command_room.get("battle", {}) is Dictionary else {}
+	var command_submitted_ok = (
+		bool(challenger_command_parsed.get("ok", false))
+		and challenger_command_parsed.get("turn", null) == null
+		and not compact_command_event.is_empty()
+		and not compact_command_event.has("room")
+		and str(compact_command_event.get("roomId", "")) == room_id
+		and (compact_command_event.get("submittedActorIds", []) as Array).has(challenger_player_actor_id)
+		and (compact_command_event.get("requiredActorIds", []) as Array) == required_actor_ids
+		and (compact_command_battle.get("submittedActorIds", []) as Array).has(challenger_player_actor_id)
+		and (compact_command_battle.get("requiredActorIds", []) as Array) == required_actor_ids
+	)
+	var issued_command_results: Array = [challenger_command_parsed]
+	if both_pets_present:
+		var challenger_pet_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+			base_url,
+			str(challenger_session.get("serverSessionToken", "")),
+			room_id,
+			{
+				"round": 1,
+				"actorId": challenger_pet_actor_id,
+				"actionId": "pet_attack",
+				"targetActorId": opponent_player_actor_id,
+			}
+		))
+		var challenger_pet_command_parsed = ServerAuthClientModel.parse_battle_command_response(int(challenger_pet_command_response.get("responseCode", 0)), challenger_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
+		issued_command_results.append(challenger_pet_command_parsed)
 	var opponent_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		room_id,
 		{
@@ -20598,34 +20750,60 @@ func _run_auto_server_battle_turn_live_check() -> void:
 			"actionId": "defend",
 		}
 	))
-	var opponent_pet_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
-		str(opponent_session.get("serverSessionToken", "")),
-		room_id,
-		{
-			"round": 1,
-			"actorId": opponent_pet_actor_id,
-			"actionId": "pet_defend",
-		}
-	))
-	var challenger_pet_command_parsed = ServerAuthClientModel.parse_battle_command_response(int(challenger_pet_command_response.get("responseCode", 0)), challenger_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_command_parsed = ServerAuthClientModel.parse_battle_command_response(int(opponent_command_response.get("responseCode", 0)), opponent_command_response.get("body", PackedByteArray()) as PackedByteArray)
-	var opponent_pet_command_parsed = ServerAuthClientModel.parse_battle_command_response(int(opponent_pet_command_response.get("responseCode", 0)), opponent_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
-	var turn = opponent_pet_command_parsed.get("turn", {}) as Dictionary if opponent_pet_command_parsed.get("turn", {}) is Dictionary else {}
+	issued_command_results.append(opponent_command_parsed)
+	var resolved_command_parsed: Dictionary = opponent_command_parsed
+	if both_pets_present:
+		var opponent_pet_command_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_command_submit_request(
+			base_url,
+			str(opponent_session.get("serverSessionToken", "")),
+			room_id,
+			{
+				"round": 1,
+				"actorId": opponent_pet_actor_id,
+				"actionId": "pet_defend",
+			}
+		))
+		var opponent_pet_command_parsed = ServerAuthClientModel.parse_battle_command_response(int(opponent_pet_command_response.get("responseCode", 0)), opponent_pet_command_response.get("body", PackedByteArray()) as PackedByteArray)
+		issued_command_results.append(opponent_pet_command_parsed)
+		resolved_command_parsed = opponent_pet_command_parsed
+	var all_issued_commands_ok := true
+	for value in issued_command_results:
+		if not (value is Dictionary) or not bool((value as Dictionary).get("ok", false)):
+			all_issued_commands_ok = false
+			break
+	var turn = resolved_command_parsed.get("turn", {}) as Dictionary if resolved_command_parsed.get("turn", {}) is Dictionary else {}
 	var turn_events: Array = turn.get("events", []) if turn.get("events", []) is Array else []
 	var command_turn_ok = (
-		bool(challenger_pet_command_parsed.get("ok", false))
-		and bool(opponent_command_parsed.get("ok", false))
-		and bool(opponent_pet_command_parsed.get("ok", false))
+		all_issued_commands_ok
+		and issued_command_results.size() == required_actor_count
 		and str(turn.get("kind", "")) == "battle_event_list"
 		and int(turn.get("round", 0)) == 1
-		and turn_events.size() >= 4
+		and turn_events.size() >= required_actor_count
 	)
 	frames = 0
 	while frames < 720 and not host._battle_turn_resolved(room_id, 1):
 		frames += 1
 		await host.get_tree().process_frame
-	var turn_event_ok = host._server_event_type_seen("battle.turn_resolved") and host._battle_turn_resolved(room_id, 1)
+	var compact_turn_event := {}
+	for value in host.server_event_seen:
+		if value is Dictionary and str((value as Dictionary).get("type", "")) == "battle.turn_resolved":
+			compact_turn_event = value as Dictionary
+	var compact_turn_room := compact_turn_event.get("room", {}) as Dictionary if compact_turn_event.get("room", {}) is Dictionary else {}
+	var compact_turn_battle := compact_turn_room.get("battle", {}) as Dictionary if compact_turn_room.get("battle", {}) is Dictionary else {}
+	var cached_turn_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
+	var cached_turn_battle := cached_turn_room.get("battle", {}) as Dictionary if cached_turn_room.get("battle", {}) is Dictionary else {}
+	var cached_turn_list := cached_turn_battle.get("lastEventList", {}) as Dictionary if cached_turn_battle.get("lastEventList", {}) is Dictionary else {}
+	var turn_event_ok = (
+		host._server_event_type_seen("battle.turn_resolved")
+		and host._battle_turn_resolved(room_id, 1)
+		and not compact_turn_event.is_empty()
+		and str((compact_turn_event.get("turn", {}) as Dictionary).get("kind", "")) == "battle_event_list"
+		and not compact_turn_room.is_empty()
+		and not compact_turn_battle.has("lastEventList")
+		and str(cached_turn_list.get("kind", "")) == "battle_event_list"
+		and int(cached_turn_list.get("round", 0)) == 1
+	)
 	frames = 0
 	while frames < 720 and host._server_battle_event_playback_active():
 		frames += 1
@@ -20643,7 +20821,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var battle = room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	var room_round_ok = int(battle.get("round", 0)) == 2
 	var status = "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and room_ready_ok and actor_ids_ok and command_submitted_ok and command_turn_ok and turn_event_ok and playback_ok and room_round_ok else "failed"
-	print("server battle turn live check ready: status=%s register=%s positions=%s stream=%s invite=%s room=%s actors=%s submitted=%s turn=%s turn_event=%s playback=%s round=%s room=%s challenger=%s opponent=%s events=%s" % [
+	print("server battle turn live check ready: status=%s register=%s positions=%s stream=%s invite=%s room=%s actors=%s required=%d pets=%s submitted=%s turn=%s turn_event=%s playback=%s round=%s room=%s challenger=%s opponent=%s events=%s" % [
 		status,
 		str(register_ok),
 		str(positions_ok),
@@ -20651,6 +20829,8 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		str(invite_event_ok),
 		str(room_ready_ok),
 		str(actor_ids_ok),
+		required_actor_count,
+		"both" if both_pets_present else ("none" if no_pets_present else "one-sided"),
 		str(command_submitted_ok),
 		str(command_turn_ok),
 		str(turn_event_ok),
@@ -21428,6 +21608,42 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			server_actors[3],
 		],
 	}
+	var compact_command_event := {
+		"type": "battle.command_submitted",
+		"roomId": "target_mapping_room",
+		"round": 1,
+		"submittedActorIds": ["actor_b_player"],
+		"submittedAccountIds": ["acc_b"],
+		"requiredActorIds": ["actor_a_player", "actor_a_pet", "actor_b_player", "actor_b_pet"],
+		"requiredAccountIds": ["acc_a", "acc_b"],
+	}
+	var compact_progress_room := ServerBattleRoomModel.room_with_command_progress(room, compact_command_event)
+	var compact_progress_battle := compact_progress_room.get("battle", {}) as Dictionary if compact_progress_room.get("battle", {}) is Dictionary else {}
+	var stale_command_event := compact_command_event.duplicate(true)
+	stale_command_event["round"] = 0
+	var future_command_event := compact_command_event.duplicate(true)
+	future_command_event["round"] = 2
+	var wrong_room_command_event := compact_command_event.duplicate(true)
+	wrong_room_command_event["roomId"] = "other_room"
+	var turn_transport_room := room.duplicate(true)
+	var turn_transport_battle := (turn_transport_room.get("battle", {}) as Dictionary).duplicate(true)
+	turn_transport_battle["round"] = 2
+	turn_transport_battle.erase("lastEventList")
+	turn_transport_room["battle"] = turn_transport_battle
+	var restored_turn_room := ServerBattleRoomModel.room_with_turn_event_list(turn_transport_room, event_list)
+	var restored_turn_battle := restored_turn_room.get("battle", {}) as Dictionary if restored_turn_room.get("battle", {}) is Dictionary else {}
+	var transport_helper_ok := (
+		not compact_progress_room.is_empty()
+		and (compact_progress_battle.get("submittedActorIds", []) as Array) == ["actor_b_player"]
+		and (compact_progress_battle.get("submittedAccountIds", []) as Array) == ["acc_b"]
+		and ((room.get("battle", {}) as Dictionary).get("submittedActorIds", []) as Array).is_empty()
+		and ServerBattleRoomModel.room_with_command_progress(room, stale_command_event).is_empty()
+		and ServerBattleRoomModel.room_with_command_progress(room, future_command_event).is_empty()
+		and ServerBattleRoomModel.room_with_command_progress(room, wrong_room_command_event).is_empty()
+		and not restored_turn_room.is_empty()
+		and not turn_transport_battle.has("lastEventList")
+		and (restored_turn_battle.get("lastEventList", {}) as Dictionary) == event_list
+	)
 	var local_events = ServerBattleRoomModel.battle_events_from_server_event_list(state, event_list)
 	var local_event = local_events[0] as Dictionary if not local_events.is_empty() and local_events[0] is Dictionary else {}
 	var converted_target_ok = str(local_event.get("targetId", "")) == "enemy_pet"
@@ -21518,6 +21734,11 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	}
 	host.server_battle_state.clear()
 	host.server_battle_state_poll_request_active = false
+	var restore_singleflight_open_ok: bool = bool(host._server_battle().can_request_state_restore())
+	host.server_battle_state_poll_request_active = true
+	var restore_singleflight_closed_ok: bool = not bool(host._server_battle().can_request_state_restore())
+	host.server_battle_state_poll_request_active = false
+	var restore_singleflight_guard_ok: bool = restore_singleflight_open_ok and restore_singleflight_closed_ok
 	var restore_poll_enabled_ok = host._server_battle_should_poll_room_restore()
 	host.party_current_state = {
 		"party": null,
@@ -21779,18 +22000,20 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
+	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
 		str(downed_skip_ok),
 		str(self_spirit_ok),
+		str(transport_helper_ok),
 		str(hp_target_ok),
 		str(message_target_ok),
 		str(playback_target_ok),
 		str(combo_mapping_ok),
 		str(poll_target_ok),
+		str(restore_singleflight_guard_ok),
 		str(restore_poll_enabled_ok),
 		str(explicit_restore_start_ok),
 		str(active_poll_gate_ok),

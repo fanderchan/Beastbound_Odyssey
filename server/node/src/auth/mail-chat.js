@@ -16,6 +16,7 @@ const {
 const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("./equipment-envelope-consumed-ledger");
+const {authorityRootJournalForMutation} = require("./authority-root-clone");
 
 function createMailChatDomain(ctx) {
   const {
@@ -754,9 +755,10 @@ function createMailChatDomain(ctx) {
       createdAt: isoNow(now),
       schemaVersion: 1,
     };
-    data.chatMessages.push(message);
-    while (data.chatMessages.length > MAX_CHAT_MESSAGES) {
-      data.chatMessages.shift();
+    const chatMessages = authorityRootJournalForMutation(data, "chatMessages");
+    chatMessages.push(message);
+    while (chatMessages.length > MAX_CHAT_MESSAGES) {
+      chatMessages.shift();
     }
     let profile = null;
     let persisted = null;

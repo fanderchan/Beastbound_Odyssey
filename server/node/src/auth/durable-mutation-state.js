@@ -4,8 +4,11 @@ const {isDeepStrictEqual} = require("node:util");
 
 const RUNTIME_ROOT_FIELDS = Object.freeze([
   "playerPositions",
+  "partyInvites",
   "battleInvites",
   "battleRooms",
+  "battleRoomRecoveries",
+  "battleRoomRecoveryByAccountId",
   "tradeOffers",
 ]);
 const DURABLE_RECEIPT_TTL_MS = 72 * 60 * 60 * 1000;
@@ -15,18 +18,49 @@ const DURABLE_REQUEST_HASH_PATTERN = /^[a-f0-9]{64}$/;
 const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
   "register",
   "login",
+  "_httpRegisterPasswordDigest",
+  "_httpLoginPasswordDigest",
   "refreshSession",
   "getMarketConfig",
 ]);
 const DURABLE_RECEIPT_PRUNE_BATCH = 256;
+const DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX = 2048;
+const DURABLE_RECEIPT_CHECKPOINT_DEAD_KEY_MAX = 1024;
+const DURABLE_RECEIPT_CHECKPOINT_HEAP_OVERHEAD_MAX = 2048;
 const RECEIPT_LEDGER_STATE = new WeakMap();
+const RECEIPT_RESPONSE_JSON = new WeakMap();
 let NEXT_RECEIPT_LINEAGE_ID = 1;
 
 function durableBusinessChanged(beforeValue, candidateValue, options) {
-  return !isDeepStrictEqual(
-    durableBusinessProjection(beforeValue, options),
-    durableBusinessProjection(candidateValue, options),
-  );
+  const before = durableBusinessProjection(beforeValue, options);
+  const candidate = durableBusinessProjection(candidateValue, options);
+  if (serviceEventsOnlyEvictedFromFront(before.serviceEvents, candidate.serviceEvents)) {
+    // The live replay window mixes durable chat/party events with runtime-only
+    // battle traffic. Once that bounded window is full, a battle event can
+    // evict an old durable event even though no player asset or durable event
+    // was created. Defer that retention-only DELETE until the next genuine
+    // durable mutation instead of turning ordinary battle commands into MySQL
+    // writes. A new or modified durable event still fails the suffix check and
+    // therefore remains part of the owning COMMIT.
+    candidate.serviceEvents = before.serviceEvents;
+    candidate.serviceEventSeq = before.serviceEventSeq;
+  }
+  return !isDeepStrictEqual(before, candidate);
+}
+
+function serviceEventsOnlyEvictedFromFront(beforeValue, candidateValue) {
+  const before = Array.isArray(beforeValue) ? beforeValue : [];
+  const candidate = Array.isArray(candidateValue) ? candidateValue : [];
+  if (candidate.length > before.length) {
+    return false;
+  }
+  const offset = before.length - candidate.length;
+  for (let index = 0; index < candidate.length; index += 1) {
+    if (!isDeepStrictEqual(before[offset + index], candidate[index])) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function durableBusinessProjection(data, options) {
@@ -35,9 +69,12 @@ function durableBusinessProjection(data, options) {
   // runtime churn, not player assets. They remain in memory and are folded into
   // the next real durable settlement, so ordinary turns do not pay a DB RTT.
   projection.battleTrace = [];
+  const latestPersistentEvent = projection.serviceEvents.length > 0
+    ? projection.serviceEvents[projection.serviceEvents.length - 1]
+    : null;
   projection.serviceEventSeq = Math.max(
     0,
-    ...projection.serviceEvents.map((event) => options.normalizeEventSeq(event && event.eventSeq)),
+    options.normalizeEventSeq(latestPersistentEvent && latestPersistentEvent.eventSeq),
   );
   if (typeof options.consumedEquipmentEnvelopeLedgerSignature === "function") {
     projection.consumedEquipmentEnvelopes = options.consumedEquipmentEnvelopeLedgerSignature(
@@ -77,6 +114,76 @@ function mergeRuntimeObject(beforeValue, candidateValue, currentValue) {
   return merged;
 }
 
+// Capture the request-private runtime changes before the first durable await.
+// This is the same conflict policy as mergeRuntimeObject(): a candidate change
+// wins for that key, while an untouched key is left to the latest live runtime
+// root. Keeping only the delta means the COMMIT continuation no longer needs a
+// deep baseline snapshot of every active battle room and player position.
+function captureRuntimeRootDelta(beforeValue, candidateValue) {
+  const delta = {};
+  for (const field of RUNTIME_ROOT_FIELDS) {
+    delta[field] = captureRuntimeObjectDelta(
+      beforeValue && beforeValue[field],
+      candidateValue && candidateValue[field],
+    );
+  }
+  return Object.freeze(delta);
+}
+
+function captureRuntimeObjectDelta(beforeValue, candidateValue) {
+  if (beforeValue === candidateValue) {
+    return Object.freeze([]);
+  }
+  const before = objectOrEmpty(beforeValue);
+  const candidate = objectOrEmpty(candidateValue);
+  const changes = [];
+  const keys = new Set([...Object.keys(before), ...Object.keys(candidate)]);
+  for (const key of keys) {
+    const beforeHas = Object.hasOwn(before, key);
+    const candidateHas = Object.hasOwn(candidate, key);
+    if (beforeHas === candidateHas && isDeepStrictEqual(before[key], candidate[key])) {
+      continue;
+    }
+    changes.push(Object.freeze({
+      key,
+      present: candidateHas,
+      value: candidateHas ? candidate[key] : undefined,
+    }));
+  }
+  return Object.freeze(changes);
+}
+
+function mergeRuntimeObjectDelta(deltaValue, currentValue) {
+  const current = objectOrEmpty(currentValue);
+  const changes = Array.isArray(deltaValue) ? deltaValue : [];
+  if (changes.length === 0) {
+    // cachedData is the sole owner of runtime roots. Once it is replaced after
+    // COMMIT, an untouched bucket can transfer directly to the next authority
+    // root; public responses/events never expose this internal container.
+    return current;
+  }
+  const merged = {...current};
+  for (const change of changes) {
+    if (!change || typeof change.key !== "string") {
+      continue;
+    }
+    const key = change.key;
+    if (change.present !== true) {
+      delete merged[key];
+      continue;
+    }
+    // defineProperty preserves an own "__proto__" data key without invoking
+    // Object.prototype's legacy setter on malformed legacy input.
+    Object.defineProperty(merged, key, {
+      configurable: true,
+      enumerable: true,
+      value: change.value,
+      writable: true,
+    });
+  }
+  return merged;
+}
+
 function normalizeDurableMutationReceipts(value) {
   return canonicalDurableMutationReceipts(value);
 }
@@ -101,9 +208,10 @@ function canonicalDurableMutationReceipts(value) {
   return createReceiptLedgerView(lineage, 0, new Map(), new Map());
 }
 
-function createReceiptLineage(baseline, keys = Object.keys(baseline).sort()) {
+function createReceiptLineage(baseline, keys = Object.keys(baseline).sort(), options = {}) {
   const lineage = {
     baseline,
+    checkpointCount: Math.max(0, Math.trunc(Number(options.checkpointCount || 0))),
     countByRevision: [keys.length],
     expiryHeap: keys.map((operationId) => receiptHeapNode(baseline[operationId])),
     historyEntryCount: 0,
@@ -130,6 +238,7 @@ function normalizeReceiptRecord(operationId, raw) {
   const actionId = rawActionId.trim();
   const committedAtMs = Date.parse(String(raw.committedAt || ""));
   const expiresAtMs = Date.parse(String(raw.expiresAt || ""));
+  const rawResponse = raw.response;
   if (
     raw.schemaVersion !== 1
     || operationId !== normalizedOperationId
@@ -142,13 +251,14 @@ function normalizeReceiptRecord(operationId, raw) {
     || !Number.isFinite(committedAtMs)
     || !Number.isFinite(expiresAtMs)
     || expiresAtMs <= committedAtMs
-    || !raw.response
-    || typeof raw.response !== "object"
-    || Array.isArray(raw.response)
+    || !rawResponse
+    || typeof rawResponse !== "object"
+    || Array.isArray(rawResponse)
   ) {
     throw receiptError(`持久化操作回执不完整：${operationId || "<empty>"}`);
   }
-  return deepFreeze({
+  const responseJson = canonicalReceiptResponseJson(rawResponse, normalizedOperationId);
+  const receipt = {
     schemaVersion: 1,
     operationId: normalizedOperationId,
     requestHash,
@@ -156,8 +266,68 @@ function normalizeReceiptRecord(operationId, raw) {
     accountId: String(raw.accountId || ""),
     committedAt: new Date(committedAtMs).toISOString(),
     expiresAt: new Date(expiresAtMs).toISOString(),
-    response: clone(raw.response),
+  };
+  Object.defineProperty(receipt, "response", {
+    configurable: false,
+    enumerable: true,
+    get: durableReceiptResponseGetter,
   });
+  RECEIPT_RESPONSE_JSON.set(receipt, responseJson);
+  return Object.freeze(receipt);
+}
+
+// A receipt may live for 72 hours and the ledger holds up to 20,000 entries.
+// Retaining each exact replay result as a nested JavaScript object makes a
+// bounded ledger consume progressively more heap as compact fixture entries
+// are replaced by real profile/bank responses. Keep one canonical JSON string
+// instead. The public/persistence shape remains schemaVersion 1 with an
+// enumerable `response` property, while replay or serialization materializes
+// a short-lived, deeply frozen tree on demand.
+function durableReceiptResponseGetter() {
+  const responseJson = RECEIPT_RESPONSE_JSON.get(this);
+  if (typeof responseJson !== "string") {
+    throw receiptError("持久化操作回执响应缺失。", "mutation_receipt_response_missing");
+  }
+  return deepFreeze(JSON.parse(responseJson));
+}
+
+function canonicalReceiptResponseJson(response, operationId) {
+  let responseJson;
+  let parsed;
+  try {
+    responseJson = JSON.stringify(response);
+    parsed = JSON.parse(responseJson);
+  } catch {
+    throw receiptError(`持久化操作回执响应无法序列化：${operationId || "<empty>"}`);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw receiptError(`持久化操作回执响应格式不正确：${operationId || "<empty>"}`);
+  }
+  return responseJson;
+}
+
+function receiptResponseJson(receipt) {
+  const stored = RECEIPT_RESPONSE_JSON.get(receipt);
+  if (typeof stored === "string") {
+    return stored;
+  }
+  return canonicalReceiptResponseJson(
+    receipt && receipt.response,
+    String(receipt && receipt.operationId || ""),
+  );
+}
+
+function materializeReceiptRecord(receipt) {
+  return {
+    schemaVersion: 1,
+    operationId: receipt.operationId,
+    requestHash: receipt.requestHash,
+    actionId: receipt.actionId,
+    accountId: receipt.accountId,
+    committedAt: receipt.committedAt,
+    expiresAt: receipt.expiresAt,
+    response: JSON.parse(receiptResponseJson(receipt)),
+  };
 }
 
 function isCanonicalDurableMutationReceipts(value) {
@@ -321,6 +491,7 @@ function durableMutationReceiptLedgerStats(value) {
   return Object.freeze({
     activeCount: receiptStateCount(state),
     baseRevision: state.baseRevision,
+    checkpointCount: state.lineage.checkpointCount,
     expiryHeapSize: state.lineage.expiryHeap.length,
     historicalKeyCount: state.lineage.keys.size,
     historyEntryCount: state.lineage.historyEntryCount,
@@ -328,6 +499,115 @@ function durableMutationReceiptLedgerStats(value) {
     pendingDeleteCount: state.deletes.size,
     pendingUpsertCount: state.upserts.size,
   });
+}
+
+// This intentionally scans the canonical ledger and is therefore reserved for
+// explicit capacity/retention diagnostics. The normal health and per-second
+// metric paths must continue to use durableMutationReceiptLedgerStats(), whose
+// counters are O(1). Only aggregate sizes and shapes leave this boundary; no
+// player response payload is exposed in diagnostics.
+function durableMutationReceiptPayloadStats(value) {
+  const ledger = canonicalDurableMutationReceipts(value);
+  const state = RECEIPT_LEDGER_STATE.get(ledger);
+  const responseSizes = [];
+  const responseShape = emptyJsonShape();
+  const byAction = new Map();
+  let receiptJsonBytes = 0;
+  let responseJsonBytes = 0;
+  for (const operationId of visibleReceiptOperationIds(state)) {
+    const receipt = receiptVisibleToState(state, operationId);
+    if (!receipt) {
+      continue;
+    }
+    const responseJson = receiptResponseJson(receipt);
+    const responseBytes = Buffer.byteLength(responseJson);
+    const receiptBytes = receiptJsonByteLength(receipt, responseBytes);
+    receiptJsonBytes += receiptBytes;
+    responseJsonBytes += responseBytes;
+    responseSizes.push(responseBytes);
+    addJsonShape(responseShape, JSON.parse(responseJson));
+    const actionId = String(receipt.actionId || "unknown").slice(0, 160) || "unknown";
+    const action = byAction.get(actionId) || {count: 0, responseJsonBytes: 0, responseSizes: []};
+    action.count += 1;
+    action.responseJsonBytes += responseBytes;
+    action.responseSizes.push(responseBytes);
+    byAction.set(actionId, action);
+  }
+  responseSizes.sort((left, right) => left - right);
+  const actions = Object.fromEntries(Array.from(byAction.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([actionId, action]) => {
+      action.responseSizes.sort((left, right) => left - right);
+      return [actionId, Object.freeze({
+        count: action.count,
+        responseJsonBytes: action.responseJsonBytes,
+        responseAverageBytes: action.count > 0 ? Math.round(action.responseJsonBytes / action.count) : 0,
+        responseP50Bytes: percentileSorted(action.responseSizes, 0.5),
+        responseP95Bytes: percentileSorted(action.responseSizes, 0.95),
+        responseMaxBytes: action.responseSizes.at(-1) || 0,
+      })];
+    }));
+  return Object.freeze({
+    activeCount: responseSizes.length,
+    receiptJsonBytes,
+    responseJsonBytes,
+    responseAverageBytes: responseSizes.length > 0 ? Math.round(responseJsonBytes / responseSizes.length) : 0,
+    responseP50Bytes: percentileSorted(responseSizes, 0.5),
+    responseP95Bytes: percentileSorted(responseSizes, 0.95),
+    responseP99Bytes: percentileSorted(responseSizes, 0.99),
+    responseMaxBytes: responseSizes.at(-1) || 0,
+    responseShape: Object.freeze({...responseShape}),
+    byAction: Object.freeze(actions),
+  });
+}
+
+function receiptJsonByteLength(receipt, responseBytes) {
+  const metadataJson = JSON.stringify({
+    schemaVersion: receipt.schemaVersion,
+    operationId: receipt.operationId,
+    requestHash: receipt.requestHash,
+    actionId: receipt.actionId,
+    accountId: receipt.accountId,
+    committedAt: receipt.committedAt,
+    expiresAt: receipt.expiresAt,
+  });
+  return Buffer.byteLength(metadataJson) - 1
+    + Buffer.byteLength(',"response":')
+    + responseBytes
+    + 1;
+}
+
+function emptyJsonShape() {
+  return {arrays: 0, objects: 0, primitives: 0, strings: 0, stringCodeUnits: 0};
+}
+
+function addJsonShape(shape, value) {
+  if (Array.isArray(value)) {
+    shape.arrays += 1;
+    for (const child of value) {
+      addJsonShape(shape, child);
+    }
+    return;
+  }
+  if (value && typeof value === "object") {
+    shape.objects += 1;
+    for (const child of Object.values(value)) {
+      addJsonShape(shape, child);
+    }
+    return;
+  }
+  shape.primitives += 1;
+  if (typeof value === "string") {
+    shape.strings += 1;
+    shape.stringCodeUnits += value.length;
+  }
+}
+
+function percentileSorted(values, ratio) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
+  return values[Math.max(0, Math.ceil(values.length * ratio) - 1)];
 }
 
 function activeDurableReceipt(data, operationId, nowMs) {
@@ -529,11 +809,13 @@ function commitDurableMutationReceiptDelta(value) {
 
 function checkpointReceiptLineageIfNeeded(state) {
   const lineage = state.lineage;
+  const activeCount = lineage.countByRevision[lineage.revision] || 0;
+  const deadKeyCount = Math.max(0, lineage.keys.size - activeCount);
   if (
-    lineage.historyEntryCount < DURABLE_RECEIPT_MAX_COUNT * 2
-    && lineage.keys.size <= DURABLE_RECEIPT_MAX_COUNT * 2
-    && lineage.expiryHeap.length <= DURABLE_RECEIPT_MAX_COUNT * 3
-    && lineage.oldestHeap.length <= DURABLE_RECEIPT_MAX_COUNT * 3
+    lineage.historyEntryCount < DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX
+    && deadKeyCount < DURABLE_RECEIPT_CHECKPOINT_DEAD_KEY_MAX
+    && lineage.expiryHeap.length <= activeCount + DURABLE_RECEIPT_CHECKPOINT_HEAP_OVERHEAD_MAX
+    && lineage.oldestHeap.length <= activeCount + DURABLE_RECEIPT_CHECKPOINT_HEAP_OVERHEAD_MAX
   ) {
     return;
   }
@@ -546,7 +828,9 @@ function checkpointReceiptLineageIfNeeded(state) {
   }
   const keys = Object.keys(baseline).sort();
   Object.freeze(baseline);
-  state.lineage = createReceiptLineage(baseline, keys);
+  state.lineage = createReceiptLineage(baseline, keys, {
+    checkpointCount: lineage.checkpointCount + 1,
+  });
   state.baseRevision = 0;
 }
 
@@ -570,7 +854,7 @@ function materializeDurableMutationReceipts(value) {
   const state = RECEIPT_LEDGER_STATE.get(ledger);
   const result = {};
   for (const operationId of visibleReceiptOperationIds(state)) {
-    result[operationId] = clone(receiptVisibleToState(state, operationId));
+    result[operationId] = materializeReceiptRecord(receiptVisibleToState(state, operationId));
   }
   return result;
 }
@@ -705,7 +989,7 @@ function durableCommitResult(result, metadata) {
 }
 
 function durableReceiptReplayResult(receipt) {
-  const response = clone(receipt.response);
+  const response = JSON.parse(receiptResponseJson(receipt));
   response.durableCommit = {
     ...objectOrEmpty(response.durableCommit),
     schemaVersion: 1,
@@ -773,12 +1057,15 @@ module.exports = {
   DURABLE_RECEIPT_TTL_MS,
   DURABLE_RECEIPT_MAX_COUNT,
   DURABLE_RECEIPT_PRUNE_BATCH,
+  DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX,
   DURABLE_OPERATION_ID_PATTERN,
   DURABLE_REQUEST_HASH_PATTERN,
   DURABLE_RECEIPT_EXCLUDED_METHODS,
   durableBusinessChanged,
   restorePublishedPersistentData,
   mergeRuntimeObject,
+  captureRuntimeRootDelta,
+  mergeRuntimeObjectDelta,
   normalizeDurableMutationReceipts,
   canonicalDurableMutationReceipts,
   isCanonicalDurableMutationReceipts,
@@ -791,6 +1078,7 @@ module.exports = {
   materializeDurableMutationReceipts,
   durableMutationReceiptCount,
   durableMutationReceiptLedgerStats,
+  durableMutationReceiptPayloadStats,
   durableMutationReceiptSignature,
   durableMutationReceiptDelta,
   durableMutationReceiptDeltaFrom,

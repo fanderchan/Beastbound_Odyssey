@@ -13,6 +13,10 @@ const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS := 0.62
 
 var host
+var state_request_generation: int = 0
+var state_request_serial: int = 0
+var state_request_owner: Dictionary = {}
+var state_request_rerun_queued: bool = false
 
 
 func _init(main_host = null) -> void:
@@ -21,6 +25,54 @@ func _init(main_host = null) -> void:
 
 func bind(main_host) -> void:
 	host = main_host
+
+
+func invalidate_state_requests() -> void:
+	state_request_generation += 1
+	state_request_owner.clear()
+	state_request_rerun_queued = false
+	if host != null:
+		host.server_battle_state_poll_request_active = false
+
+
+func queue_state_restore() -> void:
+	if host.server_battle_state_poll_request_active:
+		state_request_rerun_queued = true
+		return
+	host.call_deferred("_request_server_battle_state_restore")
+
+
+func _begin_state_request(token: String) -> Dictionary:
+	state_request_serial += 1
+	var owner := {"id": state_request_serial, "generation": state_request_generation, "token": token}
+	state_request_owner = owner
+	host.server_battle_state_poll_request_active = true
+	return owner
+
+
+func _finish_state_request(owner: Dictionary) -> bool:
+	if int(state_request_owner.get("id", -1)) != int(owner.get("id", -2)):
+		return false
+	state_request_owner.clear()
+	host.server_battle_state_poll_request_active = false
+	var current: bool = (
+		int(owner.get("generation", -1)) == state_request_generation
+		and str(owner.get("token", "")) == host._server_profile_token()
+		and host._is_server_account_session()
+	)
+	if state_request_rerun_queued:
+		state_request_rerun_queued = false
+		host.call_deferred("_request_server_battle_state_restore")
+	return current
+
+
+func request_owner_self_check() -> Dictionary:
+	var first := {"id": 1, "generation": 4, "token": "a"}
+	var second := {"id": 2, "generation": 5, "token": "b"}
+	return {
+		"ok": int(first.get("id")) != int(second.get("id")) and int(first.get("generation")) < int(second.get("generation")),
+		"olderOwnerCannotClear": int(first.get("id")) != int(second.get("id")),
+	}
 
 
 func handle_session_invalid_response(parsed: Dictionary) -> bool:
@@ -102,10 +154,9 @@ func request_room_restore_poll() -> void:
 	var base_url: String = host._server_profile_base_url()
 	if token == "" or base_url == "":
 		return
-	host.server_battle_state_poll_request_active = true
+	var owner := _begin_state_request(token)
 	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.battle_state_request(base_url, token))
-	host.server_battle_state_poll_request_active = false
-	if not host._is_server_account_session() or token != host._server_profile_token():
+	if not _finish_state_request(owner):
 		return
 	if host.battle_active or host.server_party_encounter_request_pending:
 		return
@@ -133,10 +184,9 @@ func request_waiting_state_poll() -> void:
 	var expected_room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
 	if token == "" or base_url == "" or expected_room_id == "":
 		return
-	host.server_battle_state_poll_request_active = true
+	var owner := _begin_state_request(token)
 	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.battle_state_request(base_url, token))
-	host.server_battle_state_poll_request_active = false
-	if not host._is_server_account_session() or token != host._server_profile_token():
+	if not _finish_state_request(owner):
 		return
 	if not host._battle_is_server_authority() or str(host.battle_state.get("serverRoomId", "")).strip_edges() != expected_room_id:
 		return
@@ -162,6 +212,9 @@ func apply_polled_room(room: Dictionary, expected_room_id: String = "", allow_es
 	if active_room_id == "":
 		active_room_id = str(host.battle_state.get("serverRoomId", "")).strip_edges()
 	if active_room_id != "" and room_id != "" and room_id != active_room_id:
+		return
+	var current_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
+	if ServerBattleRoomModel.polled_room_is_older(current_room, room):
 		return
 	clear_battle_network_reconnect()
 	host.server_battle_state["room"] = room.duplicate(true)
@@ -216,13 +269,22 @@ func _apply_polled_room_after_escape_preview(room: Dictionary, expected_room_id:
 	host._clear_battle_escape_preview()
 
 
+func can_request_state_restore() -> bool:
+	if not host._is_server_account_session() or host.server_battle_state_poll_request_active:
+		return false
+	var token: String = host._server_profile_token()
+	var base_url: String = host._server_profile_base_url()
+	return token != "" and base_url != ""
+
+
 func request_state_restore() -> void:
-	if not host._is_server_account_session():
+	if not can_request_state_restore():
 		return
 	var token: String = host._server_profile_token()
 	var base_url: String = host._server_profile_base_url()
+	var owner := _begin_state_request(token)
 	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.battle_state_request(base_url, token))
-	if not host._is_server_account_session() or token != host._server_profile_token():
+	if not _finish_state_request(owner):
 		return
 	var parsed := ServerAuthClientModel.parse_battle_state_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	if not bool(parsed.get("ok", false)):
@@ -235,7 +297,13 @@ func request_state_restore() -> void:
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
 	var room = parsed.get("room", null)
 	if room is Dictionary:
-		host._apply_server_battle_room_state(room as Dictionary, false)
+		if str((room as Dictionary).get("status", "")).strip_edges() == "closed" and not host.battle_active:
+			host.server_battle_state["room"] = null
+		else:
+			host._apply_server_battle_room_state(room as Dictionary, false)
+		var latest_invite_after_room: Dictionary = host._latest_incoming_battle_invite()
+		if not host.battle_active and not latest_invite_after_room.is_empty():
+			host._open_battle_invite_panel(latest_invite_after_room)
 	else:
 		if host._battle_is_server_authority():
 			host._clear_stale_server_battle_room(host._server_battle_stale_room_message())
@@ -250,10 +318,19 @@ func apply_battle_event(event: Dictionary) -> void:
 		host.server_battle_state["incomingInvites"] = []
 	if not host.server_battle_state.has("outgoingInvites"):
 		host.server_battle_state["outgoingInvites"] = []
+	if event_type == "battle.command_submitted" and not (event.get("room", null) is Dictionary):
+		_apply_compact_command_progress(event)
+		return
+	var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 	var room_updated := false
-	if event.has("room"):
-		host.server_battle_state["room"] = event.get("room", null)
-		room_updated = event.get("room", null) is Dictionary
+	if event.get("room", null) is Dictionary:
+		var updated_room := (event.get("room", {}) as Dictionary).duplicate(true)
+		if event_type == "battle.turn_resolved" and not turn.is_empty():
+			var room_with_turn := ServerBattleRoomModel.room_with_turn_event_list(updated_room, turn)
+			if not room_with_turn.is_empty():
+				updated_room = room_with_turn
+		host.server_battle_state["room"] = updated_room
+		room_updated = true
 	if event.has("invite"):
 		_apply_battle_invite_event(event, event_type)
 	if event_type == "battle.room_closed":
@@ -267,11 +344,41 @@ func apply_battle_event(event: Dictionary) -> void:
 		return
 	if room_updated:
 		var updated_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
-		var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
 		if event_type == "battle.room_updated" and _start_escape_preview_for_room_update(event):
 			_apply_room_update_after_escape_preview(updated_room, turn, _current_escape_preview_actor_ids())
 			return
 		_apply_room_updated_payload(updated_room, turn)
+
+
+func _apply_compact_command_progress(event: Dictionary) -> void:
+	var current_room := host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
+	var current_room_id := str(current_room.get("roomId", "")).strip_edges()
+	var event_room_id := str(event.get("roomId", "")).strip_edges()
+	if current_room_id == "" or event_room_id == "" or current_room_id != event_room_id:
+		_schedule_battle_event_state_refresh()
+		return
+	var battle := current_room.get("battle", {}) as Dictionary if current_room.get("battle", {}) is Dictionary else {}
+	var room_round := maxi(1, int(battle.get("round", 1)))
+	var event_round := int(event.get("round", 0))
+	if event_round < room_round:
+		return
+	if event_round > room_round:
+		_schedule_battle_event_state_refresh()
+		return
+	var merged_room := ServerBattleRoomModel.room_with_command_progress(current_room, event)
+	if merged_room.is_empty():
+		_schedule_battle_event_state_refresh()
+		return
+	host.server_battle_state["room"] = merged_room
+	_apply_room_updated_payload(merged_room, {})
+
+
+func _schedule_battle_event_state_refresh() -> void:
+	if host._battle_is_server_authority():
+		host.server_battle_waiting_poll_elapsed = SERVER_BATTLE_WAITING_POLL_SECONDS
+	else:
+		host.server_battle_room_restore_poll_elapsed = SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS
+	queue_state_restore()
 
 
 func _apply_room_update_after_escape_preview(updated_room: Dictionary, turn: Dictionary, escaped_actor_ids: Array[String] = []) -> void:

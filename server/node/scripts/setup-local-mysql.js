@@ -20,7 +20,7 @@ function main() {
     database: checkedIdentifier(process.env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey"),
     appUser: checkedIdentifier(process.env.BEASTBOUND_MYSQL_USER || "beastbound_app"),
     appPassword: process.env.BEASTBOUND_MYSQL_APP_PASSWORD || existingEnvPassword() || crypto.randomBytes(24).toString("base64url"),
-    authHost: process.env.BEASTBOUND_AUTH_HOST || "0.0.0.0",
+    authHost: process.env.BEASTBOUND_AUTH_HOST || "127.0.0.1",
     authPort: Number(process.env.BEASTBOUND_AUTH_PORT || 8787),
   };
   const grants = [

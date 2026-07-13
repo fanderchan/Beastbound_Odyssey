@@ -6,7 +6,7 @@ const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_p
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
 const CLIENT_VERSION := "0.1.0"
-const CLIENT_PROTOCOL_VERSION := 8
+const CLIENT_PROTOCOL_VERSION := 10
 const RETRY_POLICY_NONE := "none"
 const RETRY_POLICY_IDEMPOTENT := "idempotent"
 const IDEMPOTENCY_HEADER_NAME := "Idempotency-Key"
@@ -784,16 +784,23 @@ static func movement_step_request(base_url: String, session_token: String, step:
 	}
 
 
-static func event_stream_url(base_url: String, session_token: String, last_event_seq: int = 0) -> String:
+static func event_stream_url(base_url: String, last_event_seq: int = 0, event_stream_epoch: String = "") -> String:
 	var url := normalized_base_url(base_url)
 	if url.begins_with("https://"):
 		url = "wss://" + url.substr("https://".length())
 	elif url.begins_with("http://"):
 		url = "ws://" + url.substr("http://".length())
-	var query := "%s&token=%s" % [protocol_query(), session_token.uri_encode()]
+	var query := protocol_query()
 	if last_event_seq > 0:
 		query += "&lastEventSeq=%d" % last_event_seq
+	var epoch := event_stream_epoch.strip_edges()
+	if epoch != "":
+		query += "&eventStreamEpoch=%s" % epoch.uri_encode()
 	return "%s/events?%s" % [url, query]
+
+
+static func event_stream_headers(session_token: String) -> PackedStringArray:
+	return PackedStringArray(_auth_headers(session_token))
 
 
 static func event_latest_request(base_url: String, session_token: String) -> Dictionary:

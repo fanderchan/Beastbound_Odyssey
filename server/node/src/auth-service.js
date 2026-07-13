@@ -6,7 +6,19 @@ const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
 const {createDurableMutationCoordinator} = require("./auth/durable-mutation-coordinator");
 const {
+  authorityRootCertificationRetentionDiagnostics,
+  authorityRootJournalForMutation,
+  authorityRootCloneDiagnostics,
+  authorityRootRecordForMutation,
+  certifyOwnedAuthorityRootTransientJsonValue,
   cloneAuthorityRoot,
+  freezeAuthorityRootCowRecordValues,
+  freezeAuthorityRootJournal,
+  freezeAuthorityRootIdentityRecordValues,
+  freezeAuthorityRootPlayerPositionValue,
+  freezeAuthorityRootPlayerPositionValues,
+  freezeAuthorityRootRecordValues,
+  isCertifiedAuthorityRootJsonValue,
   isTrustedAuthorityRoot,
   markAuthorityRootTrusted,
 } = require("./auth/authority-root-clone");
@@ -21,13 +33,16 @@ const {
   DURABLE_RECEIPT_EXCLUDED_METHODS,
   durableBusinessChanged,
   restorePublishedPersistentData,
-  mergeRuntimeObject,
+  captureRuntimeRootDelta,
+  mergeRuntimeObjectDelta,
   normalizeDurableMutationReceipts,
   activeDurableReceipt,
   stageDurableMutationReceipt,
   commitDurableMutationReceiptDelta,
   durableCommitResult,
   durableReceiptReplayResult,
+  durableMutationReceiptLedgerStats,
+  durableMutationReceiptPayloadStats,
   durableMutationAccountId,
   durableMutationToken,
 } = require("./auth/durable-mutation-state");
@@ -36,6 +51,15 @@ const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
+const {battleRoomForMutation} = require("./auth/battle-room-cow");
+const {
+  battleRoomRecoveryMetrics,
+  latestBattleRoomRecoveryForAccount,
+  retireClosedBattleRooms,
+} = require("./auth/runtime-battle-recovery");
+const {
+  pendingInviteMetrics,
+} = require("./auth/runtime-invite-boundary");
 const {createEconomyDomain} = require("./auth/economy");
 const {
   BANK_PROFILE_SCHEMA_VERSION,
@@ -47,10 +71,13 @@ const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
-  buildPresenceRebase,
   createPresenceRevisionTracker,
   projectOnlinePositionDelta,
+  projectOnlinePositionRebase,
 } = require("./auth/online-presence");
+const {
+  markReusableEventProjection,
+} = require("./event-projection-cache");
 const {CURRENT_PROFILE_SCHEMA_VERSION} = require("./auth/profile-migrations");
 const {
   generatePetCultivationRollSeed,
@@ -146,6 +173,9 @@ const authoritativeBattleCombatFormula = loadBattleCombatFormula();
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
 const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_BYTES = 128;
+const DISPLAY_NAME_MAX_GRAPHEMES = 24;
+const DISPLAY_NAME_MAX_BYTES = 96;
 const PASSWORD_POLICY_VERSION = 2;
 const ROLE_PLAYER = "player";
 const ROLE_GM = "gm";
@@ -157,6 +187,7 @@ const GM_POLICY_ID_MAX_LENGTH = 80;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REPLACED_CODE = "session_replaced";
+const SESSION_HISTORY_MAX_PER_ACCOUNT = 8;
 const SESSION_REPLACED_MESSAGE = "你的账号已在其他地方登录，你已被踢出游戏。";
 const AUTH_RATE_WINDOW_MS = 60 * 1000;
 const AUTH_RATE_MAX_ATTEMPTS = 12;
@@ -164,6 +195,12 @@ const AUTH_FAILURE_WINDOW_MS = 10 * 60 * 1000;
 const AUTH_FAILURE_BACKOFF_START = 5;
 const AUTH_FAILURE_BACKOFF_BASE_MS = 30 * 1000;
 const AUTH_FAILURE_BACKOFF_MAX_MS = 5 * 60 * 1000;
+const AUTH_ATTEMPT_STATE_TTL_MS = 15 * 60 * 1000;
+const AUTH_ATTEMPT_STATE_MAX_KEYS = 50_000;
+const AUTH_ATTEMPT_PRUNE_INTERVAL_MS = 60 * 1000;
+const HTTP_DUMMY_PASSWORD_SALT = "9f4b25a70b2fd13d6d1fb42084b8465a";
+const PASSWORD_HASH_PATTERN = /^[a-f0-9]{64}$/;
+const PASSWORD_SALT_PATTERN = /^[a-f0-9]{32}$/;
 const MAX_AUDIT_ROWS = 500;
 const GM_DENIAL_AUDIT_WINDOW_MS = 60 * 1000;
 const GM_DENIAL_AUDIT_MAX_KEYS = 2048;
@@ -171,6 +208,15 @@ const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAX_SERVICE_EVENTS = 500;
 const MAX_BATTLE_RECORDS = 10000;
 const MAX_BATTLE_TRACE_ROWS = 1200;
+const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
+  "playerPositions",
+  "partyInvites",
+  "battleInvites",
+  "battleRooms",
+  "battleRoomRecoveries",
+  "battleRoomRecoveryByAccountId",
+  "tradeOffers",
+]);
 const MAIL_TITLE_MAX_LENGTH = 40;
 const MAIL_BODY_MAX_LENGTH = 500;
 const PROFILE_STONE_COIN_LIMIT = 10000000;
@@ -188,6 +234,7 @@ const CHAT_HISTORY_LIMIT = 50;
 const MAX_CHAT_MESSAGES = 500;
 const ONLINE_SESSION_IDLE_TTL_MS = 25 * 1000;
 const POSITION_MAP_ID_MAX_LENGTH = 64;
+const DISPLAY_NAME_SEGMENTER = new Intl.Segmenter("zh-CN", {granularity: "grapheme"});
 const POSITION_FACING_VALUES = new Set(["east", "southeast", "south", "southwest", "west", "northwest", "north", "northeast"]);
 const ONLINE_AOI_SCOPE = "aoi";
 const ONLINE_MAP_SCOPE = "map";
@@ -195,6 +242,7 @@ const ONLINE_NONE_SCOPE = "none";
 const ONLINE_AOI_DEFAULT_RADIUS = 18;
 const ONLINE_AOI_MAX_RADIUS = 48;
 const ONLINE_PLAYERS_RESPONSE_LIMIT = 64;
+const ONLINE_ACTIVE_ACCOUNT_CACHE_MS = 100;
 const PRESENCE_MAINTENANCE_INTERVAL_MS = 5 * 1000;
 const ACCOUNT_USERNAME_BY_ID_INDEX = new WeakMap();
 const SESSION_ID_BY_TOKEN_HASH_INDEX = new WeakMap();
@@ -290,7 +338,14 @@ const BATTLE_TURN_PLAYBACK_GRACE_MS = 30 * 1000;
 const BATTLE_PARTY_PVE_OFFLINE_ESCAPE_MS = 30 * 1000;
 const BATTLE_RECONNECT_GRACE_MS = 300 * 1000;
 const BATTLE_RECONNECT_COMMAND_GRACE_MS = 15 * 1000;
-const BATTLE_CLOSED_ROOM_REPLAY_MS = 10 * 60 * 1000;
+const BATTLE_CLOSED_ROOM_REPLAY_MS = 5 * 60 * 1000;
+const BATTLE_CLOSED_ROOM_MAX_RECOVERIES = 256;
+const BATTLE_RECOVERY_PRUNE_INTERVAL_MS = 60 * 1000;
+const NORMALIZED_BATTLE_RECORD_VALUES = new WeakSet();
+const NORMALIZED_BATTLE_RECORD_CONTAINERS = new WeakSet();
+const NORMALIZED_BATTLE_TRACE_VALUES = new WeakSet();
+const NORMALIZED_BATTLE_TRACE_CONTAINERS = new WeakSet();
+const NORMALIZED_SERVICE_EVENT_CONTAINERS = new WeakSet();
 const SHOP_TRANSACTION_BUY = "buy";
 const SHOP_TRANSACTION_SELL = "sell";
 const SHOP_CURRENCY_STONE_COINS = "stoneCoins";
@@ -599,6 +654,9 @@ function createAuthService(options = {}) {
     : battleVictoryRewardForRoom;
   const serviceEventListeners = new Set();
   const authAttemptState = new Map();
+  authAttemptState.ttlMs = positiveIntegerOption(options.authAttemptStateTtlMs, AUTH_ATTEMPT_STATE_TTL_MS);
+  authAttemptState.maxKeys = positiveIntegerOption(options.authAttemptStateMaxKeys, AUTH_ATTEMPT_STATE_MAX_KEYS);
+  authAttemptState.nextPruneAt = 0;
   const gmDenialAuditAtByKey = new Map();
   const gmDenialAuditWindowMs = positiveIntegerOption(
     options.gmDenialAuditWindowMs,
@@ -612,6 +670,7 @@ function createAuthService(options = {}) {
   const runtimePositionBarrierCounts = new Map();
   const runtimeActiveSessionIds = new Map();
   runtimeActiveSessionIds.connectedSessionIds = new Set();
+  runtimeActiveSessionIds.membershipRevision = 0;
   const presenceRevisions = createPresenceRevisionTracker();
   const serverStartedAtMs = now();
   const asyncWriteStore = Boolean(store && (store.asyncWrites === true || String(store.mode || "").startsWith("async:")));
@@ -624,32 +683,83 @@ function createAuthService(options = {}) {
   let activeDurableMutation = null;
   let battleMaintenanceTimer = null;
   let presenceMaintenanceTimer = null;
+  let activeOnlineAccountsCache = null;
+  let nextBattleRecoveryPruneAt = 0;
   let durableAdmissionsStopped = false;
   let durableDrainPromise = null;
+  let durablePrecommitCount = 0;
+  let durablePrecommitTotalMs = 0;
+  let durablePrecommitMaxMs = 0;
+  const durablePrecommitByMethod = new Map();
+  let durablePostcommitCount = 0;
+  let durablePostcommitTotalMs = 0;
+  let durablePostcommitMaxMs = 0;
+  const durablePostcommitByMethod = new Map();
+  const movementStepTiming = {
+    successfulCount: 0,
+    totalMaxMs: 0,
+    resolveGatesMaxMs: 0,
+    positionPartyFollowMaxMs: 0,
+    positionNormalizeMaxMs: 0,
+    previousPositionMaxMs: 0,
+    positionStoreMaxMs: 0,
+    positionFreezeMaxMs: 0,
+    positionContainerCowMaxMs: 0,
+    positionAssignMaxMs: 0,
+    partyFollowMaxMs: 0,
+    permitMaxMs: 0,
+    publishPositionUpdateMaxMs: 0,
+    peak: null,
+  };
+
+  function initializeCachedData(storedData) {
+    // Startup preload is an ownership hand-off, but callers must still be able
+    // to discard their reference safely. Session pruning only needs to delete
+    // keys, so isolate that map before normalizeData defensively clones and
+    // certifies the complete authority root.
+    const stagedData = storedData && typeof storedData === "object" && !Array.isArray(storedData)
+      ? {...storedData, sessions: {...objectOrEmpty(storedData.sessions)}}
+      : {};
+    pruneLoadedSessionHistory(stagedData, now);
+    cachedData = normalizeData(stagedData);
+    cachedData.playerPositions = {};
+    cachedData.partyInvites = {};
+    cachedData.battleInvites = {};
+    cachedData.battleRooms = {};
+    cachedData.battleRoomRecoveries = {};
+    cachedData.battleRoomRecoveryByAccountId = {};
+    cachedData.tradeOffers = {};
+    lastPublishedPersistentData = persistentDataForStore(cachedData);
+    return cachedData;
+  }
 
   function load() {
     if (activeDurableMutation) {
       return activeDurableMutation.data;
     }
     if (!cachedData) {
-      cachedData = normalizeData(store.load());
-      cachedData.playerPositions = {};
-      cachedData.battleInvites = {};
-      cachedData.battleRooms = {};
-      cachedData.tradeOffers = {};
-      lastPublishedPersistentData = persistentDataForStore(cachedData);
+      initializeCachedData(store.load());
     }
     return cachedData;
   }
 
+  if (Object.prototype.hasOwnProperty.call(options, "initialData")) {
+    initializeCachedData(options.initialData);
+  }
+
   function save(data) {
-    const normalized = normalizeData(data);
-    inheritAuthorityIdentityIndexes(data, normalized);
+    maintainRuntimeBattleRecoveries(data);
     if (activeDurableMutation) {
-      activeDurableMutation.data = normalized;
+      // A single domain call may save its state and then append several
+      // replayable events. They all belong to the same private transaction;
+      // normalize once after the method returns instead of cloning the whole
+      // authority root once per event.
+      activeDurableMutation.data = data;
       activeDurableMutation.saveRequested = true;
       return null;
     }
+    const normalized = normalizeData(data);
+    inheritAuthorityIdentityIndexes(data, normalized);
     if (asyncWriteStore) {
       // Production async stores may only be mutated through invokeDurable().
       // Most domains edit load()'s object in place, so rebuild the published
@@ -685,6 +795,27 @@ function createAuthService(options = {}) {
     scheduleBattleMaintenance(cachedData);
   }
 
+  function maintainRuntimeBattleRecoveries(data, options = {}) {
+    const currentMs = now();
+    const rooms = data && data.battleRooms && typeof data.battleRooms === "object"
+      ? data.battleRooms
+      : {};
+    const hasClosedRoom = Object.values(rooms).some((room) => room && room.status === BATTLE_ROOM_CLOSED);
+    if (!hasClosedRoom && options.force !== true && currentMs < nextBattleRecoveryPruneAt) {
+      return null;
+    }
+    const result = retireClosedBattleRooms(data, {
+      now: () => currentMs,
+      closedStatus: BATTLE_ROOM_CLOSED,
+      ttlMs: BATTLE_CLOSED_ROOM_REPLAY_MS,
+      maxRecoveries: BATTLE_CLOSED_ROOM_MAX_RECOVERIES,
+      accountIdsForRoom: battleRoomRecoveryAccountIds,
+      toRecovery: compactBattleRoomRecovery,
+    });
+    nextBattleRecoveryPruneAt = currentMs + BATTLE_RECOVERY_PRUNE_INTERVAL_MS;
+    return result;
+  }
+
   function emitServiceEvent(event) {
     const payload = {
       ...event,
@@ -697,9 +828,13 @@ function createAuthService(options = {}) {
       payload.eventId = `server_event_${eventSeq}`;
       payload.eventSeq = eventSeq;
       data.serviceEventSeq = eventSeq;
-      data.serviceEvents.push(clone(payload));
-      while (data.serviceEvents.length > MAX_SERVICE_EVENTS) {
-        data.serviceEvents.shift();
+      // Live listeners receive the complete payload below. The replay window
+      // stores battle events without a repeated full room snapshot; replay
+      // rehydrates at most the newest event for each room from authority.
+      const serviceEvents = authorityRootJournalForMutation(data, "serviceEvents");
+      serviceEvents.push(compactReplayServiceEvent(payload));
+      while (serviceEvents.length > MAX_SERVICE_EVENTS) {
+        serviceEvents.shift();
       }
       save(data);
     }
@@ -753,8 +888,8 @@ function createAuthService(options = {}) {
     }
     applyAfterDurableCommit(() => {
       for (const sessionId of ids) {
-        runtimeActiveSessionIds.delete(sessionId);
-        runtimeActiveSessionIds.connectedSessionIds.delete(sessionId);
+        deleteRuntimeSessionActive(runtimeActiveSessionIds, sessionId);
+        deleteRuntimeConnectedSession(runtimeActiveSessionIds, sessionId);
       }
       schedulePresenceMaintenance();
     });
@@ -787,13 +922,14 @@ function createAuthService(options = {}) {
   function projectedRuntimeActivityForSessionTransition(removedSessionIds, nextSession) {
     const projected = new Map(runtimeActiveSessionIds);
     projected.connectedSessionIds = new Set(runtimeActiveSessionIds.connectedSessionIds);
+    projected.membershipRevision = Number(runtimeActiveSessionIds.membershipRevision || 0);
     for (const sessionId of Array.isArray(removedSessionIds) ? removedSessionIds : []) {
       const normalizedSessionId = String(sessionId || "");
       if (normalizedSessionId === "") {
         continue;
       }
-      projected.delete(normalizedSessionId);
-      projected.connectedSessionIds.delete(normalizedSessionId);
+      deleteRuntimeSessionActive(projected, normalizedSessionId);
+      deleteRuntimeConnectedSession(projected, normalizedSessionId);
     }
     if (nextSession && nextSession.sessionId) {
       markRuntimeSessionActive(projected, nextSession.sessionId, now());
@@ -833,20 +969,27 @@ function createAuthService(options = {}) {
   }
 
   function register(payload = {}) {
-    const username = normalizeUsername(payload.username);
-    const password = String(payload.password || "");
-    const displayName = String(payload.displayName || "").trim() || username;
+    return registerWithCredential(payload, null);
+  }
+
+  function httpRegisterPasswordDigest(payload = {}, credential = {}) {
+    return registerWithCredential(payload, credential);
+  }
+
+  function httpValidateRegistration(payload = {}) {
+    return registrationFieldValidation(payload);
+  }
+
+  function registerWithCredential(payload, credential) {
+    const username = normalizeUsername(payload && payload.username);
     const authGate = checkAuthAttemptGate(authAttemptState, "register", username, payload, now);
     if (!authGate.ok) {
       return authGate;
     }
-    if (!isValidUsername(username)) {
+    const validation = registrationFieldValidation(payload, credential);
+    if (!validation.ok) {
       recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
-      return fail("invalid_username", "账号只能使用3-20位小写字母、数字或下划线。");
-    }
-    if (password.length < PASSWORD_MIN_LENGTH) {
-      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
-      return fail("weak_password", "密码至少需要8位。");
+      return validation;
     }
     const data = load();
     if (data.accounts[username]) {
@@ -856,29 +999,39 @@ function createAuthService(options = {}) {
       return fail("account_exists", "账号已存在，请直接登录。");
     }
     const accountId = `acc_${randomId()}`;
-    const salt = randomBytes(16).toString("hex");
+    const password = String(payload && payload.password || "");
+    const salt = credential
+      ? String(credential.salt || "").trim().toLowerCase()
+      : randomBytes(16).toString("hex");
+    const passwordHash = credential
+      ? String(credential.passwordHash || "").trim().toLowerCase()
+      : hashPassword(password, salt);
+    if (!PASSWORD_SALT_PATTERN.test(salt) || !PASSWORD_HASH_PATTERN.test(passwordHash)) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return fail("credential_digest_invalid", "认证信息不完整，请重新提交。");
+    }
     const account = {
       accountId,
       username,
-      displayName,
+      displayName: validation.displayName,
       role: ROLE_PLAYER,
       passwordSalt: salt,
-      passwordHash: hashPassword(password, salt),
+      passwordHash,
       passwordPolicyVersion: PASSWORD_POLICY_VERSION,
       passwordUpdatedAt: isoNow(now),
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
       schemaVersion: 1,
     };
-    data.accounts[username] = account;
-    data.profileBindings[accountId] = {
+    storeAuthorityRootRecord(data, "accounts", username, account);
+    storeAuthorityRootRecord(data, "profileBindings", accountId, {
       accountId,
       playerId: `player_${accountId.slice(4, 16)}`,
       profileRevision: 0,
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
       schemaVersion: 1,
-    };
+    });
     ensureProfileForAccount(data, account, now);
     recordAuthEvent(data, "register", username, true, "", now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
@@ -909,12 +1062,46 @@ function createAuthService(options = {}) {
       recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("account_missing", "账号不存在。");
     }
-    if (hashPassword(password, account.passwordSalt) !== account.passwordHash) {
+    if (
+      Buffer.byteLength(password) > PASSWORD_MAX_BYTES
+      || !passwordHashesEqual(hashPassword(password, account.passwordSalt), account.passwordHash)
+    ) {
       recordAuthEvent(data, "login_denied", username, false, "密码不正确。", now);
       save(data);
       recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
       return fail("wrong_password", "密码不正确。");
     }
+    return completeLogin(data, account, username, authGate);
+  }
+
+  function httpPasswordVerificationRecord(usernameValue) {
+    const username = normalizeUsername(usernameValue);
+    const account = load().accounts[username];
+    const salt = String(account && account.passwordSalt || "").trim().toLowerCase();
+    return Object.freeze({
+      salt: PASSWORD_SALT_PATTERN.test(salt) ? salt : HTTP_DUMMY_PASSWORD_SALT,
+    });
+  }
+
+  function httpLoginPasswordDigest(payload = {}, passwordHashValue = "") {
+    const username = normalizeUsername(payload.username);
+    const authGate = checkAuthAttemptGate(authAttemptState, "login", username, payload, now);
+    if (!authGate.ok) {
+      return authGate;
+    }
+    const data = load();
+    const account = data.accounts[username];
+    const passwordHash = String(passwordHashValue || "").trim().toLowerCase();
+    if (!account || !PASSWORD_HASH_PATTERN.test(passwordHash) || !passwordHashesEqual(passwordHash, account.passwordHash)) {
+      recordAuthEvent(data, "login_denied", username, false, "登录凭据不正确。", now);
+      save(data);
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return fail("invalid_credentials", "账号或密码不正确。");
+    }
+    return completeLogin(data, account, username, authGate);
+  }
+
+  function completeLogin(data, account, username, authGate) {
     const ensured = ensureProfileForAccount(data, account, now);
     const sessionResult = createSessionForAccount(data, account, now, randomBytes);
     const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, null);
@@ -949,6 +1136,14 @@ function createAuthService(options = {}) {
     });
   }
 
+  function authSecurityMetrics() {
+    return Object.freeze({
+      attemptKeys: authAttemptState.size,
+      attemptMaxKeys: authAttemptState.maxKeys,
+      attemptTtlMs: authAttemptState.ttlMs,
+    });
+  }
+
   function refreshSession(token) {
     const data = load();
     const resolved = resolveServiceSession(data, token, {
@@ -959,12 +1154,18 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
-    resolved.session.revokedAt = isoNow(now);
     const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, null);
-    const replacedSessionIds = [
-      resolved.session.sessionId,
-      ...replacement.revokedSessions.map((session) => session.sessionId),
-    ];
+    // Refresh keeps the direct old-token compatibility code, but the immutable
+    // replacement snapshot above must still target its already-open event
+    // socket after COMMIT.
+    const refreshedSession = {
+      ...(data.sessions[resolved.session.sessionId] || resolved.session),
+      revokedReason: "session_refreshed",
+    };
+    delete refreshedSession.revokedCode;
+    delete refreshedSession.revokedMessage;
+    storeAuthorityRootRecord(data, "sessions", resolved.session.sessionId, refreshedSession);
+    const replacedSessionIds = replacement.revokedSessions.map((session) => session.sessionId);
     removeRuntimeSessionsAfterCommit(replacedSessionIds);
     resetRuntimeMovementAuthorityAfterCommit(resolved.account.accountId, "session_refreshed");
     markRuntimeSession(sessionResult.session);
@@ -1004,7 +1205,10 @@ function createAuthService(options = {}) {
     const previousPosition = data.playerPositions[resolved.account.accountId] || null;
     const partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
     resetRuntimeAccountStateAfterCommit(resolved.account.accountId, "logout");
-    resolved.session.revokedAt = isoNow(now);
+    storeAuthorityRootRecord(data, "sessions", resolved.session.sessionId, {
+      ...resolved.session,
+      revokedAt: isoNow(now),
+    });
     recordAuthEvent(data, "logout", resolved.account.username, true, "", now);
     save(data);
     if (previousPosition) {
@@ -1095,6 +1299,51 @@ function createAuthService(options = {}) {
     });
   }
 
+  function tryGetProfileReadOnly(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now, {serverStartedAtMs});
+    if (
+      !resolved.ok
+      || !runtimeActiveSessionIds.connectedSessionIds.has(String(resolved.session.sessionId || ""))
+    ) {
+      return {handled: false};
+    }
+    const binding = data.profileBindings[resolved.account.accountId] || null;
+    const profileDoc = binding && String(binding.playerId || "") !== ""
+      ? data.profiles[binding.playerId] || null
+      : null;
+    if (
+      !binding
+      || !profileDoc
+      || !profileDoc.profile
+      || typeof profileDoc.profile !== "object"
+      || Array.isArray(profileDoc.profile)
+    ) {
+      return {handled: false};
+    }
+    return {
+      handled: true,
+      result: projectPublicServiceResult(ok({
+        account: publicAccount(resolved.account),
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+        profile: clone(profileDoc.profile),
+      })),
+    };
+  }
+
+  function tryHttpPureRead(methodName, args = []) {
+    const normalizedMethodName = String(methodName || "");
+    const values = Array.isArray(args) ? args : [];
+    if (normalizedMethodName === "getProfile") {
+      return tryGetProfileReadOnly(values[0]);
+    }
+    if (normalizedMethodName === "getPartyState" && party && typeof party.tryGetPartyStateReadOnly === "function") {
+      return party.tryGetPartyStateReadOnly(values[0]);
+    }
+    return {handled: false};
+  }
+
   function saveProfile(token, payload = {}) {
     if (!allowFullProfileSave) {
       return fail("profile_upload_denied", "角色档案由服务器专用接口写入，禁止整档上传。");
@@ -1123,7 +1372,7 @@ function createAuthService(options = {}) {
     // 整档写入只用于 QA/运维，但仍必须先在候选快照中完成全局托管归属审计。
     // 避免先改 cachedData 再发现冲突，导致失败请求污染后续权威状态。
     const candidateData = cloneAuthorityRoot(data);
-    const binding = profileBindingForAccount(candidateData, resolved.account, now);
+    let binding = profileBindingForAccount(candidateData, resolved.account, now);
     const currentProfileDoc = candidateData.profiles[binding.playerId] || null;
     if (currentProfileDoc && currentProfileDoc.profile) {
       const currentBackpackConflict = rawBackpackAssetConflict(currentProfileDoc.profile);
@@ -1157,8 +1406,11 @@ function createAuthService(options = {}) {
       });
     }
     const nextRevision = currentRevision + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = isoNow(now);
+    binding = {
+      ...binding,
+      profileRevision: nextRevision,
+      updatedAt: isoNow(now),
+    };
     candidateData.profileBindings[resolved.account.accountId] = binding;
     const storedProfile = clone(profile);
     synchronizeProfileEquipmentStats(storedProfile);
@@ -1206,7 +1458,7 @@ function createAuthService(options = {}) {
     if (!accessCheck.ok) {
       return fail(accessCheck.code, accessCheck.message, accessCheck.extra || {});
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1331,17 +1583,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     const actionLabel = mode === SHOP_TRANSACTION_SELL ? "出售" : "购买";
     const priceVerb = mode === SHOP_TRANSACTION_SELL ? "获得" : "花费";
@@ -1368,7 +1619,7 @@ function createAuthService(options = {}) {
     if (!item) {
       return fail("equipment_item_invalid", `${itemLabel} 不能装备。`);
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1405,17 +1656,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -1442,7 +1692,7 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const slotId = String(payload.slotId || payload.slot || "").trim();
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1460,17 +1710,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -1494,7 +1743,7 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const slotId = String(payload.slotId || payload.slot || "").trim();
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1531,17 +1780,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -1569,7 +1817,7 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1587,17 +1835,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -1621,7 +1868,7 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const recipeId = String(payload.recipeId || payload.id || "").trim();
-    const binding = profileBindingForAccount(data, resolved.account, now);
+    let binding = profileBindingForAccount(data, resolved.account, now);
     const profileDoc = data.profiles[binding.playerId] || null;
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "请先创建角色档案。", {
@@ -1658,17 +1905,16 @@ function createAuthService(options = {}) {
     }
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[resolved.account.accountId] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -1755,7 +2001,7 @@ function createAuthService(options = {}) {
       const previousPosition = data.playerPositions[resolved.account.accountId]
         ? publicPlayerPosition(data.playerPositions[resolved.account.accountId])
         : null;
-      data.playerPositions[resolved.account.accountId] = position;
+      storePlayerPosition(data, resolved.account.accountId, position);
       return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
         authority: "party_follow",
         movement: {
@@ -1790,7 +2036,7 @@ function createAuthService(options = {}) {
       }
     }
     position.authority = "client_snapshot";
-    data.playerPositions[resolved.account.accountId] = position;
+    storePlayerPosition(data, resolved.account.accountId, position);
     const relatedPositionUpdates = applyPartyFollowForLeaderPositionChange(
       data,
       party,
@@ -1808,6 +2054,7 @@ function createAuthService(options = {}) {
   }
 
   function movePlayerStep(token, payload = {}) {
+    const timingStartedAt = process.hrtime.bigint();
     const data = load();
     const resolved = resolveServiceSession(data, token);
     if (!resolved.ok) {
@@ -1883,6 +2130,7 @@ function createAuthService(options = {}) {
         movement: {retryable: false, requiresSync: false},
       });
     }
+    const gatesFinishedAt = process.hrtime.bigint();
     const position = normalizePlayerPositionPayload({
       mapId: currentPosition.mapId,
       cellX: step.toCellX,
@@ -1892,8 +2140,12 @@ function createAuthService(options = {}) {
     }, resolved.account, now);
     position.movementSeq = Number(currentPosition.movementSeq || 0) + 1;
     position.authority = "server_step";
+    const positionNormalizedAt = process.hrtime.bigint();
     const previousPosition = publicPlayerPosition(currentPosition);
-    data.playerPositions[resolved.account.accountId] = position;
+    const previousPositionFinishedAt = process.hrtime.bigint();
+    const positionStoreTiming = {};
+    storePlayerPosition(data, resolved.account.accountId, position, positionStoreTiming);
+    const positionStoreFinishedAt = process.hrtime.bigint();
     const relatedPositionUpdates = applyPartyFollowForLeaderPositionChange(
       data,
       party,
@@ -1903,6 +2155,7 @@ function createAuthService(options = {}) {
       now,
       {blockedAccountIds: runtimePositionBarrierCounts},
     );
+    const positionPartyFollowFinishedAt = process.hrtime.bigint();
     const permitBinding = partyEncounterPermitBinding(
       data,
       resolved.account.accountId,
@@ -1923,7 +2176,8 @@ function createAuthService(options = {}) {
     } catch {
       permitObservation = null;
     }
-    return publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
+    const permitFinishedAt = process.hrtime.bigint();
+    const response = publishPositionUpdate(data, resolved.account, position, previousPosition, payload, {
       authority: "server_step",
       encounterPermit: permitObservation && permitObservation.ok ? permitObservation.permit : null,
       movement: {
@@ -1934,6 +2188,71 @@ function createAuthService(options = {}) {
       },
       relatedPositionUpdates,
     });
+    const publishFinishedAt = process.hrtime.bigint();
+    recordSuccessfulMovementStepTiming({
+      timingStartedAt,
+      gatesFinishedAt,
+      positionNormalizedAt,
+      previousPositionFinishedAt,
+      positionStoreFinishedAt,
+      positionFreezeFinishedAt: positionStoreTiming.freezeFinishedAt,
+      positionContainerFinishedAt: positionStoreTiming.containerFinishedAt,
+      positionAssignFinishedAt: positionStoreTiming.assignFinishedAt,
+      positionPartyFollowFinishedAt,
+      permitFinishedAt,
+      publishFinishedAt,
+      relatedPositionUpdates: Array.isArray(relatedPositionUpdates) ? relatedPositionUpdates.length : 0,
+    });
+    return response;
+  }
+
+  function recordSuccessfulMovementStepTiming(checkpoints) {
+    const resolveGatesMs = Number(checkpoints.gatesFinishedAt - checkpoints.timingStartedAt) / 1_000_000;
+    const positionNormalizeMs = Number(checkpoints.positionNormalizedAt - checkpoints.gatesFinishedAt) / 1_000_000;
+    const previousPositionMs = Number(checkpoints.previousPositionFinishedAt - checkpoints.positionNormalizedAt) / 1_000_000;
+    const positionStoreMs = Number(checkpoints.positionStoreFinishedAt - checkpoints.previousPositionFinishedAt) / 1_000_000;
+    const positionFreezeMs = Number(checkpoints.positionFreezeFinishedAt - checkpoints.previousPositionFinishedAt) / 1_000_000;
+    const positionContainerCowMs = Number(checkpoints.positionContainerFinishedAt - checkpoints.positionFreezeFinishedAt) / 1_000_000;
+    const positionAssignMs = Number(checkpoints.positionAssignFinishedAt - checkpoints.positionContainerFinishedAt) / 1_000_000;
+    const partyFollowMs = Number(checkpoints.positionPartyFollowFinishedAt - checkpoints.positionStoreFinishedAt) / 1_000_000;
+    const positionPartyFollowMs = positionNormalizeMs + previousPositionMs + positionStoreMs + partyFollowMs;
+    const permitMs = Number(checkpoints.permitFinishedAt - checkpoints.positionPartyFollowFinishedAt) / 1_000_000;
+    const publishPositionUpdateMs = Number(checkpoints.publishFinishedAt - checkpoints.permitFinishedAt) / 1_000_000;
+    const totalMs = Number(checkpoints.publishFinishedAt - checkpoints.timingStartedAt) / 1_000_000;
+    movementStepTiming.successfulCount += 1;
+    movementStepTiming.resolveGatesMaxMs = Math.max(movementStepTiming.resolveGatesMaxMs, resolveGatesMs);
+    movementStepTiming.positionPartyFollowMaxMs = Math.max(movementStepTiming.positionPartyFollowMaxMs, positionPartyFollowMs);
+    movementStepTiming.positionNormalizeMaxMs = Math.max(movementStepTiming.positionNormalizeMaxMs, positionNormalizeMs);
+    movementStepTiming.previousPositionMaxMs = Math.max(movementStepTiming.previousPositionMaxMs, previousPositionMs);
+    movementStepTiming.positionStoreMaxMs = Math.max(movementStepTiming.positionStoreMaxMs, positionStoreMs);
+    movementStepTiming.positionFreezeMaxMs = Math.max(movementStepTiming.positionFreezeMaxMs, positionFreezeMs);
+    movementStepTiming.positionContainerCowMaxMs = Math.max(movementStepTiming.positionContainerCowMaxMs, positionContainerCowMs);
+    movementStepTiming.positionAssignMaxMs = Math.max(movementStepTiming.positionAssignMaxMs, positionAssignMs);
+    movementStepTiming.partyFollowMaxMs = Math.max(movementStepTiming.partyFollowMaxMs, partyFollowMs);
+    movementStepTiming.permitMaxMs = Math.max(movementStepTiming.permitMaxMs, permitMs);
+    movementStepTiming.publishPositionUpdateMaxMs = Math.max(
+      movementStepTiming.publishPositionUpdateMaxMs,
+      publishPositionUpdateMs,
+    );
+    if (totalMs >= movementStepTiming.totalMaxMs) {
+      movementStepTiming.totalMaxMs = totalMs;
+      movementStepTiming.peak = {
+        successOrdinal: movementStepTiming.successfulCount,
+        totalMs,
+        resolveGatesMs,
+        positionPartyFollowMs,
+        positionNormalizeMs,
+        previousPositionMs,
+        positionStoreMs,
+        positionFreezeMs,
+        positionContainerCowMs,
+        positionAssignMs,
+        partyFollowMs,
+        permitMs,
+        publishPositionUpdateMs,
+        relatedPositionUpdates: Math.max(0, Math.trunc(Number(checkpoints.relatedPositionUpdates || 0))),
+      };
+    }
   }
 
   function rejectMovementStep(code, message, currentPosition = null, extra = {}) {
@@ -2092,14 +2411,14 @@ function createAuthService(options = {}) {
     const memberAccountIds = party
       ? partyMemberAccountIds(party)
       : [normalizedLeaderAccountId];
-    const onlineAccountIds = new Set(
-      activeOnlinePlayers(data, now, runtimeActiveSessionIds)
-        .map((account) => String(account && account.accountId || ""))
-        .filter(Boolean),
-    );
     const battleAccountIds = (Array.isArray(participantAccountIds)
       ? participantAccountIds
-      : memberAccountIds.filter((accountId) => onlineAccountIds.has(accountId)))
+      : onlinePartyMemberAccountIds(
+        data,
+        memberAccountIds,
+        normalizedLeaderAccountId,
+        sessionId,
+      ))
       .map((accountId) => String(accountId || ""))
       .filter(Boolean);
     const partyFingerprint = crypto.createHash("sha256").update(JSON.stringify({
@@ -2129,6 +2448,63 @@ function createAuthService(options = {}) {
       partyFingerprint,
       rosterFingerprint,
     };
+  }
+
+  function onlinePartyMemberAccountIds(data, memberAccountIdsValue, leaderAccountId, sessionId) {
+    const memberAccountIds = Array.from(new Set(
+      (Array.isArray(memberAccountIdsValue) ? memberAccountIdsValue : [])
+        .map((accountId) => String(accountId || ""))
+        .filter(Boolean),
+    ));
+    if (memberAccountIds.length === 0) {
+      return [];
+    }
+    const memberAccountIdSet = new Set(memberAccountIds);
+    const onlineAccountIds = new Set();
+    const currentMs = now();
+    const addActiveSessionAccount = (session) => {
+      const accountId = String(session && session.accountId || "");
+      if (
+        accountId === ""
+        || !memberAccountIdSet.has(accountId)
+        || session.revokedAt
+        || !(Date.parse(session.expiresAt) > currentMs)
+        || !runtimeSessionIsActive(runtimeActiveSessionIds, session.sessionId, currentMs)
+        || !accountById(data, accountId)
+      ) {
+        return;
+      }
+      onlineAccountIds.add(accountId);
+    };
+
+    // The overwhelmingly common movement path is a solo player. The request's
+    // already-resolved session proves that case in O(1), instead of rebuilding
+    // and sorting the complete online roster for every accepted map step.
+    const normalizedSessionId = String(sessionId || "");
+    const requestSession = normalizedSessionId !== ""
+      ? objectOrEmpty(data.sessions)[normalizedSessionId] || null
+      : null;
+    addActiveSessionAccount(requestSession);
+    if (
+      memberAccountIds.length === 1
+      && onlineAccountIds.has(String(leaderAccountId || ""))
+    ) {
+      return memberAccountIds;
+    }
+
+    // A party has at most the bounded party roster. Scan the active-session
+    // index once and retain only its members; do not allocate/sort all online
+    // account objects merely to create a membership Set.
+    for (const session of runtimeSessionCandidates(data, runtimeActiveSessionIds)) {
+      if (session && String(session.sessionId || "") === normalizedSessionId) {
+        continue;
+      }
+      addActiveSessionAccount(session);
+      if (onlineAccountIds.size >= memberAccountIdSet.size) {
+        break;
+      }
+    }
+    return memberAccountIds.filter((accountId) => onlineAccountIds.has(accountId));
   }
 
   function authorizePartyEncounter(data, resolved, payload, participantAccountIds) {
@@ -2293,10 +2669,12 @@ function createAuthService(options = {}) {
       if (!position) {
         continue;
       }
-      position.moving = false;
-      position.authority = "server_encounter_permit";
-      position.updatedAt = isoNow(now);
-      data.playerPositions[normalizedAccountId] = position;
+      storePlayerPosition(data, normalizedAccountId, {
+        ...position,
+        moving: false,
+        authority: "server_encounter_permit",
+        updatedAt: isoNow(now),
+      });
     }
   }
 
@@ -2313,11 +2691,12 @@ function createAuthService(options = {}) {
     return eventForResolvedSession(data, resolved, event);
   }
 
-  function eventForConnection(connection = {}, event = {}) {
+  function eventForConnection(connection = {}, event = {}, projectionCache = null) {
     const data = load();
     const sessionId = String(connection.sessionId || "");
     const accountId = String(connection.accountId || "");
-    if (event && event.type === "session.replaced") {
+    const eventType = String(event && event.type || "");
+    if (eventType === "session.replaced") {
       const targetSessionIds = Array.isArray(event.targetSessionIds)
         ? event.targetSessionIds.map((value) => String(value || ""))
         : [];
@@ -2340,10 +2719,16 @@ function createAuthService(options = {}) {
     if (!account) {
       return fail("account_missing", "账号不存在。");
     }
-    markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
+    if (!runtimeActiveSessionIds.connectedSessionIds.has(sessionId)) {
+      markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
+    }
     const prepared = eventForResolvedSession(data, {session, account}, event, {
       viewerAoi: connection.aoi,
+      positionProjectionCache: projectionCache instanceof Map ? projectionCache : null,
     });
+    if (!eventType.startsWith("battle.")) {
+      return prepared;
+    }
     return {
       ...prepared,
       activeBattleRoom: Boolean(activeBattleRoomForAccount(data, accountId)),
@@ -2367,17 +2752,16 @@ function createAuthService(options = {}) {
     if (!session || String(session.accountId || "") !== accountId) {
       return fail("session_missing", "登录会话不存在。");
     }
-    const connectedSessionIds = runtimeActiveSessionIds.connectedSessionIds;
     if (connected) {
       if (session.revokedAt || Date.parse(session.expiresAt) <= now()) {
         return fail("session_revoked", "登录会话已失效。");
       }
-      connectedSessionIds.add(sessionId);
+      addRuntimeConnectedSession(runtimeActiveSessionIds, sessionId);
       markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
     } else {
-      connectedSessionIds.delete(sessionId);
+      deleteRuntimeConnectedSession(runtimeActiveSessionIds, sessionId);
       if (session.revokedAt || Date.parse(session.expiresAt) <= now()) {
-        runtimeActiveSessionIds.delete(sessionId);
+        deleteRuntimeSessionActive(runtimeActiveSessionIds, sessionId);
       } else {
         markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, now());
       }
@@ -2409,8 +2793,8 @@ function createAuthService(options = {}) {
       ) {
         continue;
       }
-      runtimeActiveSessionIds.delete(sessionId);
-      runtimeActiveSessionIds.connectedSessionIds.delete(sessionId);
+      deleteRuntimeSessionActive(runtimeActiveSessionIds, sessionId);
+      deleteRuntimeConnectedSession(runtimeActiveSessionIds, sessionId);
       expiredSessionCount += 1;
       if (session && session.accountId) {
         expiredAccountIds.add(String(session.accountId));
@@ -2441,7 +2825,7 @@ function createAuthService(options = {}) {
     }
     const afterSeq = normalizeEventSeq(payload.afterSeq ?? payload.lastEventSeq ?? 0);
     const throughSeq = normalizeEventSeq(payload.throughSeq ?? payload.maxEventSeq ?? Number.MAX_SAFE_INTEGER);
-    const events = [];
+    const retained = [];
     for (const event of data.serviceEvents) {
       const eventSeq = normalizeEventSeq(event && event.eventSeq);
       if (eventSeq <= afterSeq || eventSeq > throughSeq) {
@@ -2450,14 +2834,42 @@ function createAuthService(options = {}) {
       if (!serviceEventVisibleToAccount(event, resolved.account.accountId)) {
         continue;
       }
-      const prepared = eventForResolvedSession(data, resolved, event);
+      retained.push(event);
+    }
+    const latestBattleRoomHydrationSeqByRoom = new Map();
+    for (const event of retained) {
+      if (!String(event && event.type || "").startsWith("battle.")) {
+        continue;
+      }
+      // Command progress is intentionally delta-only. If it is the newest
+      // event, retain the preceding room_ready/turn/update as the single
+      // authoritative room hydration for a cold replay client.
+      if (String(event.type || "") === "battle.command_submitted") {
+        continue;
+      }
+      const roomId = String(event && (event.roomId || event.room && event.room.roomId) || "");
+      if (roomId !== "") {
+        latestBattleRoomHydrationSeqByRoom.set(roomId, normalizeEventSeq(event.eventSeq));
+      }
+    }
+    const events = [];
+    for (const event of retained) {
+      const roomId = String(event && (event.roomId || event.room && event.room.roomId) || "");
+      const includeBattleRoom = roomId === ""
+        || normalizeEventSeq(event.eventSeq) === latestBattleRoomHydrationSeqByRoom.get(roomId);
+      const prepared = eventForResolvedSession(data, resolved, event, {includeBattleRoom});
       if (prepared.ok && prepared.visible !== false) {
         events.push(prepared.event || event);
       }
     }
+    const latestEventSeq = normalizeEventSeq(data.serviceEventSeq);
+    const earliestEventSeq = data.serviceEvents.length > 0
+      ? normalizeEventSeq(data.serviceEvents[0] && data.serviceEvents[0].eventSeq)
+      : latestEventSeq + 1;
     return ok({
       events,
-      latestEventSeq: normalizeEventSeq(data.serviceEventSeq),
+      earliestEventSeq: earliestEventSeq > 0 ? earliestEventSeq : latestEventSeq + 1,
+      latestEventSeq,
     });
   }
 
@@ -2478,7 +2890,7 @@ function createAuthService(options = {}) {
       return onlinePositionEventForResolvedSession(data, resolved, event, options);
     }
     if (event && String(event.type || "").startsWith("battle.")) {
-      return battleEventForResolvedSession(data, resolved, event);
+      return battleEventForResolvedSession(data, resolved, event, options);
     }
     return ok({
       visible: true,
@@ -2486,19 +2898,97 @@ function createAuthService(options = {}) {
     });
   }
 
-  function battleEventForResolvedSession(data, resolved, event = {}) {
+  function battleEventForResolvedSession(data, resolved, event = {}, options = {}) {
+    if (String(event.type || "") === "battle.command_submitted") {
+      if (!Object.hasOwn(event, "room")) {
+        // Preserve source identity so EventHub can encode this viewer-neutral
+        // progress frame once and reuse the exact Buffer for every participant.
+        return ok({visible: true, event});
+      }
+      const compact = {...event};
+      delete compact.room;
+      return ok({visible: true, event: compact});
+    }
     const roomId = String(event.roomId || event.room && event.room.roomId || "");
-    const room = roomId !== "" ? data.battleRooms[roomId] || null : null;
+    const room = roomId !== "" ? (
+      data.battleRooms[roomId]
+      || data.battleRoomRecoveries[roomId]
+      || null
+    ) : null;
+    if (options.includeBattleRoom === false) {
+      const compact = {...event};
+      delete compact.room;
+      if (room && compact.turn && typeof compact.turn === "object" && !Array.isArray(compact.turn)) {
+        const actors = room.battle && Array.isArray(room.battle.actors)
+          ? room.battle.actors.map(publicBattleActor)
+          : [];
+        compact.turn = hydrateBattleReplayEventList(compact.turn, actors);
+      }
+      return ok({visible: true, event: compact});
+    }
     if (!room) {
       return ok({visible: true, event});
     }
-    return ok({
+    const isTurnResolved = String(event.type || "") === "battle.turn_resolved";
+    const projectionVariants = isTurnResolved
+      ? onlinePositionProjectionVariants(options.positionProjectionCache, event)
+      : null;
+    const projectionKey = projectionVariants
+      ? battleTurnProjectionCacheKey(room, resolved.account.accountId)
+      : "";
+    if (projectionVariants && projectionVariants.has(projectionKey)) {
+      return projectionVariants.get(projectionKey);
+    }
+    const projectedRoom = publicBattleRoom(room, resolved.account.accountId, {
+      // The top-level turn below is the replayable fact. Avoid cloning and
+      // hydrating the same large list inside the room at all.
+      includeLastEventList: !isTurnResolved,
+    });
+    const prepared = ok({
       visible: true,
       event: {
         ...event,
-        room: publicBattleRoom(room, resolved.account.accountId),
+        ...(event.turn && typeof event.turn === "object" && !Array.isArray(event.turn)
+          ? {turn: hydrateBattleReplayEventList(event.turn, projectedRoom && projectedRoom.battle && projectedRoom.battle.actors)}
+          : {}),
+        room: projectedRoom,
       },
     });
+    if (projectionVariants) {
+      projectionVariants.set(projectionKey, prepared);
+      markReusableEventProjection(options.positionProjectionCache, prepared.event);
+    }
+    return prepared;
+  }
+
+  function activeOnlineAccountsForPositionRebase(data) {
+    const currentMs = now();
+    const runtimeSize = Number(runtimeActiveSessionIds.size || 0);
+    const connectedSize = Number(runtimeActiveSessionIds.connectedSessionIds && runtimeActiveSessionIds.connectedSessionIds.size || 0);
+    const membershipRevision = Number(runtimeActiveSessionIds.membershipRevision || 0);
+    if (
+      activeOnlineAccountsCache
+      && activeOnlineAccountsCache.accounts === data.accounts
+      && activeOnlineAccountsCache.sessions === data.sessions
+      && activeOnlineAccountsCache.runtimeSize === runtimeSize
+      && activeOnlineAccountsCache.connectedSize === connectedSize
+      && activeOnlineAccountsCache.membershipRevision === membershipRevision
+      && currentMs >= activeOnlineAccountsCache.createdAtMs
+      && currentMs - activeOnlineAccountsCache.createdAtMs <= ONLINE_ACTIVE_ACCOUNT_CACHE_MS
+    ) {
+      return activeOnlineAccountsCache.value;
+    }
+    const value = activeOnlinePlayers(data, now, runtimeActiveSessionIds);
+    activeOnlineAccountsCache = {
+      accounts: data.accounts,
+      sessions: data.sessions,
+      runtimeSize,
+      connectedSize,
+      membershipRevision,
+      createdAtMs: currentMs,
+      value,
+    };
+    return value;
   }
 
   function onlinePositionEventForResolvedSession(data, resolved, event = {}, options = {}) {
@@ -2518,17 +3008,21 @@ function createAuthService(options = {}) {
         cellY: eventAoi.cellY ?? (viewerPosition && viewerPosition.cellY),
         radius: eventAoi.radius ?? aoi.radius,
       }, viewerPosition);
-      const currentPlayers = withPresenceRevisions(publicOnlinePlayersForViewer(
+      // Rank the shared online-account snapshot with raw positions first. The
+      // viewer must occupy the same capped roster slot as the old snapshot path
+      // and is excluded only after both current/previous top sets are fixed.
+      const activeAccounts = activeOnlineAccountsForPositionRebase(data);
+      const currentTopAccounts = topOnlineAccountsForViewer(
         data,
         resolved.account,
         currentAoi,
-        now,
-        runtimeActiveSessionIds,
-      ));
+        viewerPosition,
+        activeAccounts,
+      );
       const previousPosition = event.previousPosition && typeof event.previousPosition === "object"
         ? event.previousPosition
         : null;
-      let previousPlayers = [];
+      let previousTopAccounts = [];
       if (previousPosition && String(previousPosition.mapId || "") !== "") {
         const previousAoi = normalizeOnlineAoiPayload({
           scope: currentAoi.scope,
@@ -2539,27 +3033,50 @@ function createAuthService(options = {}) {
           hasCell: previousPosition.hasCell,
           precision: previousPosition.precision,
         }, previousPosition);
-        previousPlayers = withPresenceRevisions(publicOnlinePlayersForViewer(
+        previousTopAccounts = topOnlineAccountsForViewer(
           data,
           resolved.account,
           previousAoi,
-          now,
-          runtimeActiveSessionIds,
-          {viewerPosition: previousPosition},
-        ));
+          previousPosition,
+          activeAccounts,
+        );
       }
-      const projectedEvent = {
-        ...event,
-        change: "rebase",
-        presenceRebase: buildPresenceRebase(
-          currentPlayers,
-          previousPlayers,
-          resolved.account.accountId,
-        ),
+      const selfAccountId = String(resolved.account.accountId || "");
+      const currentAccountIds = new Set(currentTopAccounts.map((account) => String(account.accountId || "")));
+      const previousAccountIds = new Set(previousTopAccounts.map((account) => String(account.accountId || "")));
+      const upserts = [];
+      for (const account of currentTopAccounts) {
+        const accountId = String(account && account.accountId || "");
+        if (accountId === "" || accountId === selfAccountId || previousAccountIds.has(accountId)) {
+          continue;
+        }
+        upserts.push({
+          ...publicOnlinePlayer(account, data),
+          presenceRevision: presenceRevisions.ensure(accountId),
+        });
+      }
+      const removedAccountIds = previousTopAccounts
+        .map((account) => String(account && account.accountId || ""))
+        .filter((accountId) => (
+          accountId !== ""
+          && accountId !== selfAccountId
+          && !currentAccountIds.has(accountId)
+        ))
+        .sort((left, right) => left.localeCompare(right));
+      const projectedEvent = projectOnlinePositionRebase({
+        event,
+        presenceRebase: {upserts, removedAccountIds, schemaVersion: 1},
         aoi: publicOnlineAoi(currentAoi),
-      };
-      delete projectedEvent.players;
+      });
       return ok({visible: true, event: projectedEvent});
+    }
+    const projectionVariants = onlinePositionProjectionVariants(
+      options.positionProjectionCache,
+      event,
+    );
+    const projectionKey = projectionVariants ? onlinePositionProjectionCacheKey(aoi) : "";
+    if (projectionVariants && projectionVariants.has(projectionKey)) {
+      return projectionVariants.get(projectionKey);
     }
     const currentVisible = isSelf || onlinePositionVisibleToAoi(event.position, aoi);
     const previousVisible = onlinePositionVisibleToAoi(event.previousPosition, aoi);
@@ -2569,17 +3086,23 @@ function createAuthService(options = {}) {
       currentVisible,
       previousVisible,
     });
-    return ok({
+    const prepared = ok({
       visible: projected.visible,
-      event: projected.visible
-        ? {...projected.event, aoi: publicOnlineAoi(aoi)}
-        : projected.event,
+      event: projected.event,
     });
+    if (projectionVariants) {
+      projectionVariants.set(projectionKey, prepared);
+      if (prepared.visible) {
+        markReusableEventProjection(options.positionProjectionCache, prepared.event);
+      }
+    }
+    return prepared;
   }
 
   function expireBattleTimeoutsAndEmit(data) {
     const timeoutEvents = expireBattleTimeouts(data, now, {
       runtimeActiveSessionIds,
+      applyAfterDurableCommit,
       newPetFactory,
       petExpSettlement,
       petCaptureCandidateAuthority,
@@ -2702,8 +3225,8 @@ function createAuthService(options = {}) {
   function grantGm(payload = {}) {
     const username = normalizeUsername(payload.username);
     const data = load();
-    const account = data.accounts[username];
-    if (!account) {
+    const currentAccount = data.accounts[username];
+    if (!currentAccount) {
       return fail("account_missing", "账号不存在。");
     }
     const commandIdsResult = normalizeExplicitGmCommandIds(payload.commandIds);
@@ -2718,8 +3241,12 @@ function createAuthService(options = {}) {
     if (!expiry.ok) {
       return fail("gm_grant_expiry_invalid", "GM授权必须提供规范且尚未到期的有效时间。");
     }
-    account.role = ROLE_GM;
-    account.updatedAt = isoNow(now);
+    const account = {
+      ...currentAccount,
+      role: ROLE_GM,
+      updatedAt: isoNow(now),
+    };
+    storeAuthorityRootRecord(data, "accounts", username, account);
     const commandIds = commandIdsResult.commandIds;
     const grantedAt = isoNow(now);
     data.gmUserGrants[account.accountId] = {
@@ -2874,7 +3401,81 @@ function createAuthService(options = {}) {
   }
 
   function snapshot() {
-    return clone(materializeAuthorityRootLargeCollections(load()));
+    const value = clone(materializeAuthorityRootLargeCollections(load()));
+    // snapshot() is a diagnostic/test compatibility view, not a gameplay hot
+    // root. Keep compact closed recoveries visible to old diagnostics while
+    // the authoritative battleRooms collection remains active-only.
+    value.battleRooms = {
+      ...objectOrEmpty(value.battleRoomRecoveries),
+      ...objectOrEmpty(value.battleRooms),
+    };
+    return value;
+  }
+
+  function capacityReconciliationView(accountIds = []) {
+    return projectCapacityReconciliationView(load(), accountIds);
+  }
+
+  function runtimeCapacityMetrics() {
+    const data = load();
+    maintainRuntimeBattleRecoveries(data);
+    const battle = battleRoomRecoveryMetrics(data);
+    const partyInvite = pendingInviteMetrics(data.partyInvites);
+    const battleInvite = pendingInviteMetrics(data.battleInvites, {pendingStatus: BATTLE_INVITE_PENDING});
+    const receipts = durableMutationReceiptLedgerStats(data.mutationReceipts);
+    const battleRecords = Array.isArray(data.battleRecords) ? data.battleRecords : [];
+    const battleTrace = Array.isArray(data.battleTrace) ? data.battleTrace : [];
+    const oldestBattleRecord = battleRecords[0] || null;
+    const newestBattleRecord = battleRecords[battleRecords.length - 1] || null;
+    const oldestBattleTrace = battleTrace[0] || null;
+    const newestBattleTrace = battleTrace[battleTrace.length - 1] || null;
+    return Object.freeze({
+      activeBattleRooms: battle.activeRooms,
+      battleRoomRecoveries: battle.recoveries,
+      battleRecoveryIndexedAccounts: battle.indexedAccounts,
+      partyInvitesPending: partyInvite.pending,
+      partyInvitesTerminal: partyInvite.terminal,
+      battleInvitesPending: battleInvite.pending,
+      battleInvitesTerminal: battleInvite.terminal,
+      authAttemptKeys: authAttemptState.size,
+      authEvents: Array.isArray(data.authEvents) ? data.authEvents.length : 0,
+      battleRecords: battleRecords.length,
+      battleRecordOldestId: String(oldestBattleRecord && oldestBattleRecord.recordId || ""),
+      battleRecordNewestId: String(newestBattleRecord && newestBattleRecord.recordId || ""),
+      battleRecordNewestRoomId: String(newestBattleRecord && newestBattleRecord.roomId || ""),
+      battleTrace: battleTrace.length,
+      battleTraceOldestId: String(oldestBattleTrace && oldestBattleTrace.traceId || ""),
+      battleTraceNewestId: String(newestBattleTrace && newestBattleTrace.traceId || ""),
+      battleTraceNewestRoomId: String(newestBattleTrace && newestBattleTrace.roomId || ""),
+      battleTraceNewestType: String(newestBattleTrace && newestBattleTrace.type || ""),
+      chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages.length : 0,
+      receiptActive: receipts.activeCount,
+      receiptCheckpoints: receipts.checkpointCount,
+      receiptHistoricalKeys: receipts.historicalKeyCount,
+      receiptHistoryEntries: receipts.historyEntryCount,
+      receiptExpiryHeap: receipts.expiryHeapSize,
+      receiptOldestHeap: receipts.oldestHeapSize,
+      receiptPendingDeletes: receipts.pendingDeleteCount,
+      receiptPendingUpserts: receipts.pendingUpsertCount,
+      sessions: Object.keys(objectOrEmpty(data.sessions)).length,
+      serviceEvents: Array.isArray(data.serviceEvents) ? data.serviceEvents.length : 0,
+      movementStepTiming: Object.freeze({
+        successfulCount: movementStepTiming.successfulCount,
+        totalMaxMs: movementStepTiming.totalMaxMs,
+        resolveGatesMaxMs: movementStepTiming.resolveGatesMaxMs,
+        positionPartyFollowMaxMs: movementStepTiming.positionPartyFollowMaxMs,
+        positionNormalizeMaxMs: movementStepTiming.positionNormalizeMaxMs,
+        previousPositionMaxMs: movementStepTiming.previousPositionMaxMs,
+        positionStoreMaxMs: movementStepTiming.positionStoreMaxMs,
+        positionFreezeMaxMs: movementStepTiming.positionFreezeMaxMs,
+        positionContainerCowMaxMs: movementStepTiming.positionContainerCowMaxMs,
+        positionAssignMaxMs: movementStepTiming.positionAssignMaxMs,
+        partyFollowMaxMs: movementStepTiming.partyFollowMaxMs,
+        permitMaxMs: movementStepTiming.permitMaxMs,
+        publishPositionUpdateMaxMs: movementStepTiming.publishPositionUpdateMaxMs,
+        peak: movementStepTiming.peak ? Object.freeze({...movementStepTiming.peak}) : null,
+      }),
+    });
   }
 
   function invokeDurable(methodName, args = [], operation = {}) {
@@ -2954,15 +3555,21 @@ function createAuthService(options = {}) {
       }
       return durableReceiptReplayResult(existingReceipt);
     }
-    const before = cloneAuthorityRoot(published);
+    // Persistent mutations are serialized and comparison completes before the
+    // first await, so published is a safe read-only persistent baseline here.
+    // Delay the runtime baseline until a real store write is confirmed below:
+    // runtime-only methods remain synchronous and therefore cannot interleave
+    // with another request before their candidate is published.
+    const before = published;
+    const precommitStartedAt = process.hrtime.bigint();
 
     const transaction = {
-      before,
-      data: cloneAuthorityRoot(before),
+      data: cloneAuthorityRoot(published),
       events: [],
       runtimeEffects: [],
       saveRequested: false,
     };
+    const cloneFinishedAt = process.hrtime.bigint();
     activeDurableMutation = transaction;
     let result;
     try {
@@ -2970,18 +3577,73 @@ function createAuthService(options = {}) {
       if (result && typeof result.then === "function") {
         throw new Error("durable service methods must remain synchronous");
       }
+      // Public/domain results must never retain aliases into the candidate that
+      // will become the live authority root after COMMIT.
+      if (result && typeof result === "object") {
+        result = clone(result);
+      }
     } finally {
       activeDurableMutation = null;
     }
+    const methodFinishedAt = process.hrtime.bigint();
 
-    let candidate = normalizeData(transaction.data);
-    const beforePersistent = persistentDataForStore(before);
-    let candidatePersistent = persistentDataForStore(candidate);
-    const businessPersistentChanged = durableBusinessChanged(beforePersistent, candidatePersistent, {
-      persistentDataForStore,
+    const comparisonOptions = {
+      persistentDataForStore: persistentDataViewForStore,
       normalizeEventSeq,
       consumedEquipmentEnvelopeLedgerSignature,
-    });
+    };
+    const rawCompareStartedAt = methodFinishedAt;
+    let rawPersistentUnchanged = false;
+    if (isTrustedAuthorityRoot(before) && isTrustedAuthorityRoot(transaction.data)) {
+      try {
+        rawPersistentUnchanged = !durableBusinessChanged(before, transaction.data, comparisonOptions);
+      } catch {
+        // The fast path is an optimization only. Any malformed projection or
+        // uncertain authority identity falls back to the complete normalizer.
+        rawPersistentUnchanged = false;
+      }
+    }
+    const rawCompareFinishedAt = process.hrtime.bigint();
+    let runtimeNormalizeStartedAt = null;
+    let runtimeNormalizeFinishedAt = null;
+    let runtimeNormalizePhaseCheckpoints = [];
+    if (rawPersistentUnchanged) {
+      runtimeNormalizeStartedAt = rawCompareFinishedAt;
+      let runtimeCandidate = null;
+      try {
+        runtimeCandidate = normalizeRuntimeOnlyCandidate(before, transaction.data, {
+          checkpoint(phase, phaseStartedAt, phaseFinishedAt) {
+            runtimeNormalizePhaseCheckpoints.push([phase, phaseStartedAt, phaseFinishedAt]);
+          },
+        });
+      } catch {
+        runtimeCandidate = null;
+      }
+      runtimeNormalizeFinishedAt = process.hrtime.bigint();
+      if (runtimeCandidate) {
+        recordDurablePrecommit(methodName, precommitStartedAt, {
+          persistentSnapshotFinishedAt: runtimeNormalizeFinishedAt,
+          phaseCheckpoints: [
+            ["clone", precommitStartedAt, cloneFinishedAt],
+            ["method", cloneFinishedAt, methodFinishedAt],
+            ["raw_compare", rawCompareStartedAt, rawCompareFinishedAt],
+            ...runtimeNormalizePhaseCheckpoints,
+            ["runtime_normalize", runtimeNormalizeStartedAt, runtimeNormalizeFinishedAt],
+          ],
+        });
+        publishDurableCandidate(null, runtimeCandidate, transaction.events, transaction.runtimeEffects, {methodName});
+        return result;
+      }
+    }
+
+    // A persistent difference, untrusted root, projection uncertainty or
+    // runtime-normalization failure retains the complete existing path.
+    const normalizeStartedAt = runtimeNormalizeFinishedAt || rawCompareFinishedAt;
+    let candidate = normalizeData(transaction.data, {owned: true});
+    const normalizeFinishedAt = process.hrtime.bigint();
+    const businessPersistentChanged = durableBusinessChanged(before, candidate, comparisonOptions);
+    const compareFinishedAt = process.hrtime.bigint();
+    let candidatePersistent = null;
     let response = result;
     if (businessPersistentChanged && result && result.ok && receiptOperationId !== "") {
       const committedAt = isoNow(now);
@@ -3001,27 +3663,75 @@ function createAuthService(options = {}) {
         expiresAt: new Date(now() + DURABLE_RECEIPT_TTL_MS).toISOString(),
         response: clone(response),
       }, {nowMs: now()});
-      candidate = normalizeData(candidate);
-      candidatePersistent = persistentDataForStore(candidate);
+      candidate = normalizeData(candidate, {owned: true});
     }
+    const receiptFinishedAt = process.hrtime.bigint();
 
     if (!businessPersistentChanged) {
-      publishDurableCandidate(before, candidate, transaction.events, transaction.runtimeEffects);
+      recordDurablePrecommit(methodName, precommitStartedAt, {
+        persistentSnapshotFinishedAt: receiptFinishedAt,
+        phaseCheckpoints: [
+          ["clone", precommitStartedAt, cloneFinishedAt],
+          ["method", cloneFinishedAt, methodFinishedAt],
+          ["raw_compare", rawCompareStartedAt, rawCompareFinishedAt],
+          ...runtimeNormalizePhaseCheckpoints,
+          ...(runtimeNormalizeFinishedAt ? [["runtime_normalize", runtimeNormalizeStartedAt, runtimeNormalizeFinishedAt]] : []),
+          ["normalize", normalizeStartedAt, normalizeFinishedAt],
+          ["compare", normalizeFinishedAt, compareFinishedAt],
+          ["receipt", compareFinishedAt, receiptFinishedAt],
+        ],
+      });
+      publishDurableCandidate(null, candidate, transaction.events, transaction.runtimeEffects, {methodName});
       return response;
     }
 
+    // Capture only candidate-touched runtime keys before the first await. Live
+    // movement, connection and offer changes may continue while storage is
+    // pending; untouched keys transfer from the latest cachedData after COMMIT.
+    const runtimeDelta = captureRuntimeRootDelta(before, candidate);
+    const runtimeDeltaFinishedAt = process.hrtime.bigint();
+    candidatePersistent = persistentDataForStore(candidate);
+    const persistentSnapshotFinishedAt = process.hrtime.bigint();
+    recordDurablePrecommit(methodName, precommitStartedAt, {
+      persistentSnapshotFinishedAt,
+      phaseCheckpoints: [
+        ["clone", precommitStartedAt, cloneFinishedAt],
+        ["method", cloneFinishedAt, methodFinishedAt],
+        ["raw_compare", rawCompareStartedAt, rawCompareFinishedAt],
+        ...runtimeNormalizePhaseCheckpoints,
+        ...(runtimeNormalizeFinishedAt ? [["runtime_normalize", runtimeNormalizeStartedAt, runtimeNormalizeFinishedAt]] : []),
+        ["normalize", normalizeStartedAt, normalizeFinishedAt],
+        ["compare", normalizeFinishedAt, compareFinishedAt],
+        ["receipt", compareFinishedAt, receiptFinishedAt],
+        ["runtime_delta", receiptFinishedAt, runtimeDeltaFinishedAt],
+        ["persistent_snapshot", runtimeDeltaFinishedAt, persistentSnapshotFinishedAt],
+      ],
+    });
     try {
-      await Promise.resolve(store.save(candidatePersistent));
+      const saveResult = typeof store.saveOwned === "function"
+        ? store.saveOwned(candidatePersistent)
+        : store.save(candidatePersistent);
+      await Promise.resolve(saveResult);
     } catch (cause) {
       const error = new Error("服务器存档暂时不可用，请稍后使用同一操作重试。");
       error.code = "storage_write_failed";
       error.cause = cause;
       throw error;
     }
+    const postcommitStartedAt = process.hrtime.bigint();
     candidate = commitAuthorityRootLargeCollections(candidate);
     candidatePersistent = commitAuthorityRootLargeCollections(candidatePersistent);
-    lastPublishedPersistentData = cloneAuthorityRoot(candidatePersistent);
-    publishDurableCandidate(before, candidate, transaction.events, transaction.runtimeEffects);
+    const largeCollectionCommitFinishedAt = process.hrtime.bigint();
+    publishDurableCandidate(runtimeDelta, candidate, transaction.events, transaction.runtimeEffects, {
+      committedPersistentData: candidatePersistent,
+      methodName,
+      postcommitStartedAt,
+      phaseCheckpoints: [[
+        "large_collection_commit",
+        postcommitStartedAt,
+        largeCollectionCommitFinishedAt,
+      ]],
+    });
     return response;
   }
 
@@ -3037,8 +3747,29 @@ function createAuthService(options = {}) {
       for (const field of RUNTIME_ROOT_FIELDS) {
         reloaded[field] = clone(current[field]);
       }
+      // Runtime-only battle diagnostics and events are intentionally absent
+      // from the latest durable snapshot, while already-published chat/party
+      // events may also be newer than a failed write's baseline. Preserve the
+      // visible trace/replay window and never reuse a sequence number inside
+      // the current event-stream epoch.
+      reloaded.battleTrace = mergeRuntimeBattleTrace(
+        reloaded.battleTrace,
+        current.battleTrace,
+      );
+      reloaded.serviceEvents = mergePublishedServiceEventWindows(
+        reloaded.serviceEvents,
+        current.serviceEvents,
+      );
+      reloaded.serviceEventSeq = Math.max(
+        normalizeEventSeq(reloaded.serviceEventSeq),
+        normalizeEventSeq(current.serviceEventSeq),
+        ...reloaded.serviceEvents.map((event) => normalizeEventSeq(event && event.eventSeq)),
+      );
       cachedData = reloaded;
-      lastPublishedPersistentData = persistentDataForStore(reloaded);
+      lastPublishedPersistentData = publishedRollbackBaseline(
+        persistentDataForStore(reloaded),
+        reloaded,
+      );
       if (typeof store.clearSaveError === "function") {
         store.clearSaveError();
       }
@@ -3051,15 +3782,47 @@ function createAuthService(options = {}) {
     }
   }
 
-  function publishDurableCandidate(before, candidate, events, runtimeEffects = []) {
-    const current = cachedData ? cloneAuthorityRoot(cachedData) : cloneAuthorityRoot(before);
-    const next = normalizeData(candidate);
-    inheritAuthorityIdentityIndexes(cachedData || before, next);
-    for (const field of RUNTIME_ROOT_FIELDS) {
-      next[field] = mergeRuntimeObject(before[field], candidate[field], current[field]);
+  function publishDurableCandidate(runtimeDelta, candidate, events, runtimeEffects = [], options = {}) {
+    const postcommitStartedAt = typeof options.postcommitStartedAt === "bigint"
+      ? options.postcommitStartedAt
+      : process.hrtime.bigint();
+    const phaseCheckpoints = Array.isArray(options.phaseCheckpoints)
+      ? options.phaseCheckpoints.slice()
+      : [];
+    const authorityPublishStartedAt = process.hrtime.bigint();
+    // executeDurableMutation() hands us an already-normalized request-private
+    // candidate. Runtime requests may have advanced cachedData while storage
+    // was awaiting COMMIT. The pre-await delta overlays only candidate-touched
+    // keys; untouched live buckets transfer ownership without another deep copy.
+    const current = cachedData || candidate;
+    const next = candidate;
+    inheritAuthorityIdentityIndexes(current, next);
+    if (runtimeDelta) {
+      for (const field of RUNTIME_ROOT_FIELDS) {
+        next[field] = mergeRuntimeObjectDelta(runtimeDelta[field], current[field]);
+      }
     }
     cachedData = next;
-    lastPublishedPersistentData = persistentDataForStore(cachedData);
+    const authorityPublishFinishedAt = process.hrtime.bigint();
+    phaseCheckpoints.push([
+      "authority_publish",
+      authorityPublishStartedAt,
+      authorityPublishFinishedAt,
+    ]);
+    // Keep durable fields from the last confirmed store snapshot, while also
+    // retaining normalized replay/trace journals published by runtime-only
+    // commands. An uncovered async save can then roll assets back without
+    // erasing already-visible battle events or diagnostics.
+    const rollbackBaselineStartedAt = authorityPublishFinishedAt;
+    const durableBaseline = options.committedPersistentData || lastPublishedPersistentData;
+    lastPublishedPersistentData = publishedRollbackBaseline(durableBaseline, next);
+    const rollbackBaselineFinishedAt = process.hrtime.bigint();
+    phaseCheckpoints.push([
+      "rollback_baseline",
+      rollbackBaselineStartedAt,
+      rollbackBaselineFinishedAt,
+    ]);
+    const runtimeEffectsStartedAt = rollbackBaselineFinishedAt;
     for (const effect of Array.isArray(runtimeEffects) ? runtimeEffects : []) {
       try {
         effect();
@@ -3067,14 +3830,131 @@ function createAuthService(options = {}) {
         console.error(`Beastbound committed runtime effect failed: ${error.message}`);
       }
     }
+    const runtimeEffectsFinishedAt = process.hrtime.bigint();
+    phaseCheckpoints.push([
+      "runtime_effects",
+      runtimeEffectsStartedAt,
+      runtimeEffectsFinishedAt,
+    ]);
+    const maintenanceScheduleStartedAt = runtimeEffectsFinishedAt;
     scheduleBattleMaintenance(cachedData);
-    for (const event of events) {
-      publishServiceEvent(event);
+    const maintenanceScheduleFinishedAt = process.hrtime.bigint();
+    phaseCheckpoints.push([
+      "maintenance_schedule",
+      maintenanceScheduleStartedAt,
+      maintenanceScheduleFinishedAt,
+    ]);
+    const serviceEventPublishStartedAt = maintenanceScheduleFinishedAt;
+    try {
+      for (const event of events) {
+        publishServiceEvent(event);
+      }
+    } finally {
+      const serviceEventPublishFinishedAt = process.hrtime.bigint();
+      phaseCheckpoints.push([
+        "service_event_publish",
+        serviceEventPublishStartedAt,
+        serviceEventPublishFinishedAt,
+      ]);
+      recordDurablePostcommit(options.methodName, postcommitStartedAt, {
+        finishedAt: serviceEventPublishFinishedAt,
+        phaseCheckpoints,
+      });
     }
   }
 
   function durableMutationMetrics() {
-    return durableMutationCoordinator.metrics();
+    const coordinator = durableMutationCoordinator.metrics();
+    return Object.freeze({
+      ...coordinator,
+      precommitCount: durablePrecommitCount,
+      precommitAverageMs: durablePrecommitCount > 0 ? durablePrecommitTotalMs / durablePrecommitCount : 0,
+      precommitMaxMs: durablePrecommitMaxMs,
+      precommitByMethod: Object.fromEntries(Array.from(durablePrecommitByMethod.entries()).map(([method, metrics]) => [method, {
+        count: metrics.count,
+        averageMs: metrics.totalMs / metrics.count,
+        maxMs: metrics.maxMs,
+        phases: Object.fromEntries(Object.entries(metrics.phases || {}).map(([phase, phaseMetrics]) => [phase, {
+          count: phaseMetrics.count,
+          averageMs: phaseMetrics.totalMs / phaseMetrics.count,
+          maxMs: phaseMetrics.maxMs,
+        }])),
+      }])),
+      postcommitCount: durablePostcommitCount,
+      postcommitAverageMs: durablePostcommitCount > 0 ? durablePostcommitTotalMs / durablePostcommitCount : 0,
+      postcommitMaxMs: durablePostcommitMaxMs,
+      postcommitByMethod: Object.fromEntries(Array.from(durablePostcommitByMethod.entries()).map(([method, metrics]) => [method, {
+        count: metrics.count,
+        averageMs: metrics.totalMs / metrics.count,
+        maxMs: metrics.maxMs,
+        phases: Object.fromEntries(Object.entries(metrics.phases || {}).map(([phase, phaseMetrics]) => [phase, {
+          count: phaseMetrics.count,
+          averageMs: phaseMetrics.totalMs / phaseMetrics.count,
+          maxMs: phaseMetrics.maxMs,
+        }])),
+      }])),
+    });
+  }
+
+  function recordDurablePrecommit(methodName, startedAt, checkpoints = {}) {
+    const finishedAt = checkpoints.persistentSnapshotFinishedAt || process.hrtime.bigint();
+    const elapsedMs = Number(finishedAt - startedAt) / 1_000_000;
+    durablePrecommitCount += 1;
+    durablePrecommitTotalMs += elapsedMs;
+    durablePrecommitMaxMs = Math.max(durablePrecommitMaxMs, elapsedMs);
+    const key = String(methodName || "unknown");
+    const current = durablePrecommitByMethod.get(key) || {count: 0, totalMs: 0, maxMs: 0, phases: {}};
+    current.count += 1;
+    current.totalMs += elapsedMs;
+    current.maxMs = Math.max(current.maxMs, elapsedMs);
+    const orderedCheckpoints = Array.isArray(checkpoints.phaseCheckpoints)
+      ? checkpoints.phaseCheckpoints
+      : [
+        ["clone", startedAt, checkpoints.cloneFinishedAt],
+        ["method", checkpoints.cloneFinishedAt, checkpoints.methodFinishedAt],
+        ["normalize", checkpoints.methodFinishedAt, checkpoints.normalizeFinishedAt],
+        ["compare", checkpoints.normalizeFinishedAt, checkpoints.compareFinishedAt],
+        ["receipt", checkpoints.compareFinishedAt, checkpoints.receiptFinishedAt],
+        ["runtime_delta", checkpoints.receiptFinishedAt, checkpoints.runtimeDeltaFinishedAt],
+        ["persistent_snapshot", checkpoints.runtimeDeltaFinishedAt, checkpoints.persistentSnapshotFinishedAt],
+      ];
+    for (const [phase, phaseStartedAt, phaseFinishedAt] of orderedCheckpoints) {
+      if (typeof phaseStartedAt !== "bigint" || typeof phaseFinishedAt !== "bigint") {
+        continue;
+      }
+      const phaseMs = Number(phaseFinishedAt - phaseStartedAt) / 1_000_000;
+      const phaseMetrics = current.phases[phase] || {count: 0, totalMs: 0, maxMs: 0};
+      phaseMetrics.count += 1;
+      phaseMetrics.totalMs += phaseMs;
+      phaseMetrics.maxMs = Math.max(phaseMetrics.maxMs, phaseMs);
+      current.phases[phase] = phaseMetrics;
+    }
+    durablePrecommitByMethod.set(key, current);
+  }
+
+  function recordDurablePostcommit(methodName, startedAt, checkpoints = {}) {
+    const finishedAt = checkpoints.finishedAt || process.hrtime.bigint();
+    const elapsedMs = Number(finishedAt - startedAt) / 1_000_000;
+    durablePostcommitCount += 1;
+    durablePostcommitTotalMs += elapsedMs;
+    durablePostcommitMaxMs = Math.max(durablePostcommitMaxMs, elapsedMs);
+    const key = String(methodName || "unknown");
+    const current = durablePostcommitByMethod.get(key) || {count: 0, totalMs: 0, maxMs: 0, phases: {}};
+    current.count += 1;
+    current.totalMs += elapsedMs;
+    current.maxMs = Math.max(current.maxMs, elapsedMs);
+    for (const [phase, phaseStartedAt, phaseFinishedAt] of checkpoints.phaseCheckpoints || []) {
+      if (typeof phaseStartedAt !== "bigint" || typeof phaseFinishedAt !== "bigint") {
+        continue;
+      }
+      const phaseMs = Number(phaseFinishedAt - phaseStartedAt) / 1_000_000;
+      const phaseMetrics = current.phases[phase] || {count: 0, totalMs: 0, maxMs: 0};
+      phaseMetrics.count += 1;
+      phaseMetrics.totalMs += phaseMs;
+      phaseMetrics.maxMs = Math.max(phaseMetrics.maxMs, phaseMs);
+      current.phases[phase] = phaseMetrics;
+    }
+    durablePostcommitByMethod.set(key, current);
   }
 
   function waitForDurableIdle() {
@@ -3283,7 +4163,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
@@ -3430,7 +4310,6 @@ function createAuthService(options = {}) {
     randomId,
     recordGmCommandAudit,
     recordProfilePetCodexForm,
-    recordBattleStateTrace,
     recordBattleTrace,
     recordQuestEventByIdToProfile,
     recordQuestEventToProfile,
@@ -3439,9 +4318,10 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
+    resolveSessionReadOnly: (sessionData, token) => resolveSession(sessionData, token, now, {serverStartedAtMs}),
     requiredBattleCommandAccountIds,
     requiredBattleCommandActorIds,
     resolveBattleRoomTurn: (serviceData, roomValue, battleValue, nowFn) => resolveBattleRoomTurn(
@@ -3449,7 +4329,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -3457,6 +4337,7 @@ function createAuthService(options = {}) {
       serverStartedAtMs,
     }),
     save,
+    sessionHasConnectedEventStream: (sessionId) => runtimeActiveSessionIds.connectedSessionIds.has(String(sessionId || "")),
     nextProfilePetInstanceSerial,
     settlePartyEncounterPositions,
     setProfileCurrencyAmount,
@@ -3481,6 +4362,12 @@ function createAuthService(options = {}) {
   const serviceApi = {
     register,
     login,
+    _httpValidateRegistration: httpValidateRegistration,
+    _httpPasswordVerificationRecord: httpPasswordVerificationRecord,
+    _httpRegisterPasswordDigest: httpRegisterPasswordDigest,
+    _httpLoginPasswordDigest: httpLoginPasswordDigest,
+    authSecurityMetrics,
+    runtimeCapacityMetrics,
     refreshSession,
     logout,
     getSession,
@@ -3576,7 +4463,10 @@ function createAuthService(options = {}) {
     snapshot,
   };
   for (const [name, method] of Object.entries(serviceApi)) {
-    if (name === "snapshot" || typeof method !== "function") {
+    // The connection projector already produces public event payloads and its
+    // publish-local cache intentionally reuses the prepared wrapper. The
+    // generic projector would shallow-copy that wrapper once per recipient.
+    if (name === "snapshot" || name === "eventForConnection" || typeof method !== "function") {
       continue;
     }
     serviceApi[name] = (...args) => {
@@ -3590,10 +4480,156 @@ function createAuthService(options = {}) {
   // can run against an isolated candidate and only publish after durability.
   // Direct memory-store tests and offline tools keep the existing sync API.
   serviceApi.invokeDurable = invokeDurable;
+  serviceApi._httpTryPureRead = tryHttpPureRead;
+  // Capacity QA runs inside the server worker and needs only a narrow,
+  // request-scoped authority projection. Keep this off the public transport
+  // facade: unlike snapshot(), it must never materialize permanent ledgers or
+  // expose credentials/full profiles merely to reconcile a soak checkpoint.
+  serviceApi._capacityReconciliationView = capacityReconciliationView;
+  serviceApi._capacityCloneDiagnostics = () => authorityRootCloneDiagnostics(load());
+  serviceApi._capacityRetentionDiagnostics = () => capacityRetentionDiagnostics(
+    load(),
+    lastPublishedPersistentData,
+  );
   serviceApi.waitForDurableIdle = waitForDurableIdle;
   serviceApi.stopDurableAdmissionsAndDrain = stopDurableAdmissionsAndDrain;
   serviceApi.durableMutationMetrics = durableMutationMetrics;
   return serviceApi;
+}
+
+function capacityRetentionDiagnostics(dataValue, publishedValue) {
+  const data = dataValue && typeof dataValue === "object" && !Array.isArray(dataValue) ? dataValue : {};
+  const published = publishedValue && typeof publishedValue === "object" && !Array.isArray(publishedValue)
+    ? publishedValue
+    : {};
+  const fields = [
+    "battleRecords",
+    "battleTrace",
+    "chatMessages",
+    "serviceEvents",
+    "battleRooms",
+    "battleRoomRecoveries",
+    "playerPositions",
+    "profiles",
+  ];
+  return Object.freeze({
+    receipts: durableMutationReceiptPayloadStats(data.mutationReceipts),
+    certification: authorityRootCertificationRetentionDiagnostics(data.serviceEvents),
+    authorityFields: Object.freeze(Object.fromEntries(fields.map((field) => [field, Object.freeze({
+      sameAsPublished: data[field] === published[field],
+      ...retentionJsonStats(data[field]),
+    })]))),
+  });
+}
+
+function retentionJsonStats(value) {
+  let jsonBytes = -1;
+  try {
+    jsonBytes = Buffer.byteLength(JSON.stringify(value));
+  } catch {
+    // The diagnostic remains useful through its shape and invalid byte marker.
+  }
+  const shape = {arrays: 0, objects: 0, primitives: 0, strings: 0, stringCodeUnits: 0};
+  const visiting = new WeakSet();
+  const walk = (entry) => {
+    if (Array.isArray(entry)) {
+      if (visiting.has(entry)) {
+        return;
+      }
+      visiting.add(entry);
+      shape.arrays += 1;
+      for (const child of entry) {
+        walk(child);
+      }
+      return;
+    }
+    if (entry && typeof entry === "object") {
+      if (visiting.has(entry)) {
+        return;
+      }
+      visiting.add(entry);
+      shape.objects += 1;
+      for (const child of Object.values(entry)) {
+        walk(child);
+      }
+      return;
+    }
+    shape.primitives += 1;
+    if (typeof entry === "string") {
+      shape.strings += 1;
+      shape.stringCodeUnits += entry.length;
+    }
+  };
+  walk(value);
+  return {jsonBytes, shape: Object.freeze(shape)};
+}
+
+function projectCapacityReconciliationView(data, accountIds) {
+  const requestedAccountIds = Array.from(new Set((Array.isArray(accountIds) ? accountIds : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)));
+  const bindings = objectOrEmpty(data && data.profileBindings);
+  const profileDocuments = objectOrEmpty(data && data.profiles);
+  const profiles = Object.fromEntries(requestedAccountIds.map((accountId) => {
+    const binding = bindings[accountId] && typeof bindings[accountId] === "object"
+      ? bindings[accountId]
+      : {};
+    const playerId = String(binding.playerId || "");
+    const document = playerId !== "" && profileDocuments[playerId] && typeof profileDocuments[playerId] === "object"
+      ? profileDocuments[playerId]
+      : {};
+    const profile = document.profile && typeof document.profile === "object" && !Array.isArray(document.profile)
+      ? document.profile
+      : document;
+    return [accountId, {
+      playerId,
+      stoneCoins: capacityReconciliationNumber(profile.stoneCoins),
+      bankStoneCoins: capacityReconciliationNumber(profile.bank && profile.bank.stoneCoins),
+    }];
+  }));
+
+  const parties = Object.fromEntries(Object.values(objectOrEmpty(data && data.parties))
+    .filter((party) => party && typeof party === "object" && !Array.isArray(party) && String(party.partyId || "") !== "")
+    .map((party) => {
+      const partyId = String(party.partyId);
+      return [partyId, {
+        partyId,
+        leaderAccountId: String(party.leaderAccountId || ""),
+        memberAccountIds: (Array.isArray(party.memberAccountIds) ? party.memberAccountIds : [])
+          .map((accountId) => String(accountId || "")),
+      }];
+    }));
+
+  const battleRooms = Object.fromEntries(Object.values(objectOrEmpty(data && data.battleRooms))
+    .filter((room) => (
+      room
+      && typeof room === "object"
+      && !Array.isArray(room)
+      && String(room.roomId || "") !== ""
+      && String(room.status || "") !== BATTLE_ROOM_CLOSED
+    ))
+    .map((room) => {
+      const roomId = String(room.roomId);
+      const actors = room.battle && Array.isArray(room.battle.actors)
+        ? room.battle.actors
+        : [];
+      return [roomId, {
+        roomId,
+        status: String(room.status || ""),
+        actors: actors.map((actor) => ({
+          side: String(actor && actor.side || ""),
+          accountId: String(actor && actor.accountId || ""),
+          kind: String(actor && actor.kind || ""),
+        })),
+      }];
+    }));
+
+  return {profiles, parties, battleRooms};
+}
+
+function capacityReconciliationNumber(value) {
+  const numeric = Number(value || 0);
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function projectPublicServiceResult(value) {
@@ -3632,6 +4668,12 @@ function createMemoryAuthStore(initialData = null) {
   let data = normalizeData(initialData || {});
   return {
     mode: "memory",
+    checkHealth() {
+      return {ok: true};
+    },
+    async checkHealthAsync() {
+      return {ok: true};
+    },
     load() {
       return clone(materializeAuthorityRootLargeCollections(data));
     },
@@ -3644,6 +4686,12 @@ function createMemoryAuthStore(initialData = null) {
 function createJsonAuthStore(filePath) {
   return {
     mode: "json",
+    checkHealth() {
+      return {ok: true};
+    },
+    async checkHealthAsync() {
+      return {ok: true};
+    },
     load() {
       if (!fs.existsSync(filePath)) {
         return {};
@@ -3676,6 +4724,37 @@ function createAsyncWriteAuthStore(store, options = {}) {
   let lastSaveError = null;
   let ambiguousCommitRecoveries = 0;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
+  function enqueueSave(nextData, owned = false) {
+    // saveOwned() is an internal ownership-transfer boundary used only by the
+    // durable coordinator. It shallow-copies the root so post-COMMIT ledger
+    // replacement cannot race the queued write, while certified nested
+    // snapshots remain untouched until this exact write settles.
+    const snapshot = owned ? {...nextData} : cloneAuthorityRoot(nextData);
+    const writeJob = writeQueue.then(async () => {
+      try {
+        return await saveStoreSnapshot(store, snapshot, {owned});
+      } catch (error) {
+        if (durableStoreSnapshotMatches(store, snapshot)) {
+          ambiguousCommitRecoveries += 1;
+          return {committed: true, ambiguousCommitRecovered: true};
+        }
+        throw error;
+      }
+    });
+    // Keep the FIFO alive after failure, but return the original writeJob so
+    // the request that owns this exact write observes its own rejection.
+    writeQueue = writeJob.then(
+      (value) => {
+        lastSaveError = null;
+        return value;
+      },
+      (error) => {
+        lastSaveError = error;
+        onError(error);
+      },
+    );
+    return writeJob;
+  }
   return {
     mode: store.mode ? `async:${store.mode}` : "async",
     asyncWrites: true,
@@ -3683,37 +4762,25 @@ function createAsyncWriteAuthStore(store, options = {}) {
       if (typeof store.checkHealth === "function") {
         return store.checkHealth();
       }
-      return store.load();
+      return {ok: true, checked: false};
+    },
+    checkHealthAsync() {
+      if (typeof store.checkHealthAsync === "function") {
+        return store.checkHealthAsync();
+      }
+      if (typeof store.checkHealth === "function") {
+        return Promise.resolve().then(() => store.checkHealth());
+      }
+      return Promise.resolve({ok: true, checked: false});
     },
     load() {
       return store.load();
     },
     save(nextData) {
-      const snapshot = cloneAuthorityRoot(nextData);
-      const writeJob = writeQueue.then(async () => {
-        try {
-          return await saveStoreSnapshot(store, snapshot);
-        } catch (error) {
-          if (durableStoreSnapshotMatches(store, snapshot)) {
-            ambiguousCommitRecoveries += 1;
-            return {committed: true, ambiguousCommitRecovered: true};
-          }
-          throw error;
-        }
-      });
-      // Keep the FIFO alive after failure, but return the original writeJob so
-      // the request that owns this exact write observes its own rejection.
-      writeQueue = writeJob.then(
-        (value) => {
-          lastSaveError = null;
-          return value;
-        },
-        (error) => {
-          lastSaveError = error;
-          onError(error);
-        },
-      );
-      return writeJob;
+      return enqueueSave(nextData, false);
+    },
+    saveOwned(nextData) {
+      return enqueueSave(nextData, true);
     },
     async flush() {
       await writeQueue;
@@ -3757,7 +4824,10 @@ function durableStoreSnapshotMatches(store, snapshot) {
   }
 }
 
-function saveStoreSnapshot(store, snapshot) {
+function saveStoreSnapshot(store, snapshot, options = {}) {
+  if (options.owned === true && typeof store.saveAsyncOwned === "function") {
+    return store.saveAsyncOwned(snapshot);
+  }
   if (typeof store.saveAsync === "function") {
     return store.saveAsync(snapshot);
   }
@@ -3791,21 +4861,28 @@ function commitAuthorityRootLargeCollections(data) {
   return data;
 }
 
-function normalizeData(raw) {
+function normalizeData(raw, options = {}) {
   const trustedInput = isTrustedAuthorityRoot(raw);
-  const data = raw && typeof raw === "object" ? cloneAuthorityRoot(raw) : {};
-  const serviceEvents = normalizeServiceEvents(data.serviceEvents);
+  // Durable candidates already own a full trusted clone. Their final
+  // normalization can take ownership of that clone while untrusted/store
+  // inputs retain the defensive deep-copy path.
+  const ownedInput = options.owned === true && trustedInput;
+  const data = raw && typeof raw === "object"
+    ? (ownedInput ? raw : cloneAuthorityRoot(raw))
+    : {};
+  const serviceEvents = normalizeServiceEvents(data.serviceEvents, {owned: ownedInput});
+  const latestRetainedServiceEvent = serviceEvents.length > 0 ? serviceEvents[serviceEvents.length - 1] : null;
   const serviceEventSeq = Math.max(
     normalizeEventSeq(data.serviceEventSeq),
     0,
-    ...serviceEvents.map((event) => normalizeEventSeq(event.eventSeq))
+    normalizeEventSeq(latestRetainedServiceEvent && latestRetainedServiceEvent.eventSeq)
   );
   const normalized = {
     schemaVersion: 1,
-    accounts: objectOrEmpty(data.accounts),
-    sessions: objectOrEmpty(data.sessions),
-    profileBindings: objectOrEmpty(data.profileBindings),
-    profiles: objectOrEmpty(data.profiles),
+    accounts: freezeAuthorityRootIdentityRecordValues("accounts", objectOrEmpty(data.accounts)),
+    sessions: freezeAuthorityRootIdentityRecordValues("sessions", objectOrEmpty(data.sessions)),
+    profileBindings: freezeAuthorityRootIdentityRecordValues("profileBindings", objectOrEmpty(data.profileBindings)),
+    profiles: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.profiles)),
     mailMessages: objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
     marketListings: objectOrEmpty(data.marketListings),
@@ -3823,16 +4900,18 @@ function normalizeData(raw) {
     manors: objectOrEmpty(data.manors),
     manorWars: normalizeManorWars(data.manorWars),
     manorBattles: normalizeManorBattles(data.manorBattles),
-    chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
-    playerPositions: objectOrEmpty(data.playerPositions),
+    chatMessages: freezeAuthorityRootJournal(Array.isArray(data.chatMessages) ? data.chatMessages : []),
+    playerPositions: freezeAuthorityRootPlayerPositionValues(objectOrEmpty(data.playerPositions)),
     battleInvites: objectOrEmpty(data.battleInvites),
-    battleRooms: objectOrEmpty(data.battleRooms),
+    battleRooms: freezeAuthorityRootRecordValues(objectOrEmpty(data.battleRooms)),
+    battleRoomRecoveries: freezeAuthorityRootRecordValues(objectOrEmpty(data.battleRoomRecoveries)),
+    battleRoomRecoveryByAccountId: objectOrEmpty(data.battleRoomRecoveryByAccountId),
     battleRecords: normalizeBattleRecords(data.battleRecords),
     battleTrace: normalizeBattleTrace(data.battleTrace),
     gmUserGrants: objectOrEmpty(data.gmUserGrants),
     gmCommandGrants: objectOrEmpty(data.gmCommandGrants),
-    gmCommandAudit: Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : [],
-    authEvents: Array.isArray(data.authEvents) ? data.authEvents : [],
+    gmCommandAudit: freezeAuthorityRootJournal(Array.isArray(data.gmCommandAudit) ? data.gmCommandAudit : []),
+    authEvents: freezeAuthorityRootJournal(Array.isArray(data.authEvents) ? data.authEvents.slice(-MAX_AUDIT_ROWS) : []),
     serviceEventSeq,
     serviceEvents,
   };
@@ -3847,6 +4926,118 @@ function normalizeData(raw) {
   }
   markAuthorityRootTrusted(normalized);
   return normalized;
+}
+
+function normalizeRuntimeOnlyCandidate(before, raw, options = {}) {
+  if (!isTrustedAuthorityRoot(before) || !isTrustedAuthorityRoot(raw)) {
+    return null;
+  }
+  if (
+    RUNTIME_ROOT_FIELDS.length !== RUNTIME_ONLY_CANDIDATE_FIELDS.length
+    || RUNTIME_ROOT_FIELDS.some((field) => !RUNTIME_ONLY_CANDIDATE_FIELDS.includes(field))
+  ) {
+    // A newly classified runtime field must receive an explicit normalizer
+    // before it can participate in this fast publication path.
+    return null;
+  }
+  const checkpoint = typeof options.checkpoint === "function" ? options.checkpoint : () => {};
+  let phaseStartedAt = process.hrtime.bigint();
+  const serviceEvents = normalizeServiceEvents(raw.serviceEvents, {
+    owned: true,
+    checkpoint(phase, phaseStartedAtValue, phaseFinishedAtValue) {
+      checkpoint(`runtime_service_events_${phase}`, phaseStartedAtValue, phaseFinishedAtValue);
+    },
+  });
+  let phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_service_events", phaseStartedAt, phaseFinishedAt);
+  phaseStartedAt = phaseFinishedAt;
+  const playerPositions = freezeAuthorityRootPlayerPositionValues(objectOrEmpty(raw.playerPositions));
+  phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_player_positions", phaseStartedAt, phaseFinishedAt);
+  phaseStartedAt = phaseFinishedAt;
+  const battleRooms = freezeAuthorityRootRecordValues(objectOrEmpty(raw.battleRooms));
+  phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_battle_rooms", phaseStartedAt, phaseFinishedAt);
+  phaseStartedAt = phaseFinishedAt;
+  const battleRoomRecoveries = freezeAuthorityRootRecordValues(objectOrEmpty(raw.battleRoomRecoveries));
+  phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_battle_recoveries", phaseStartedAt, phaseFinishedAt);
+  phaseStartedAt = phaseFinishedAt;
+  const battleTrace = mergeRuntimeBattleTrace(before.battleTrace, raw.battleTrace);
+  phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_battle_trace", phaseStartedAt, phaseFinishedAt);
+  phaseStartedAt = phaseFinishedAt;
+  const latestRetainedServiceEvent = serviceEvents.length > 0 ? serviceEvents[serviceEvents.length - 1] : null;
+  const candidate = {
+    // Persistent data comes only from the already-normalized published root.
+    // Equal-but-unnormalized transaction values are deliberately discarded.
+    ...before,
+    playerPositions,
+    partyInvites: objectOrEmpty(raw.partyInvites),
+    battleInvites: objectOrEmpty(raw.battleInvites),
+    battleRooms,
+    battleRoomRecoveries,
+    battleRoomRecoveryByAccountId: objectOrEmpty(raw.battleRoomRecoveryByAccountId),
+    tradeOffers: objectOrEmpty(raw.tradeOffers),
+    // A command may only append runtime diagnostics. Preserve every already
+    // published trace row and accept normalized, de-duplicated new rows from
+    // the request-private candidate instead of trusting a replacement array.
+    battleTrace,
+    serviceEventSeq: Math.max(
+      normalizeEventSeq(before.serviceEventSeq),
+      normalizeEventSeq(raw.serviceEventSeq),
+      0,
+      normalizeEventSeq(latestRetainedServiceEvent && latestRetainedServiceEvent.eventSeq),
+    ),
+    serviceEvents,
+  };
+  const trusted = markAuthorityRootTrusted(candidate);
+  phaseFinishedAt = process.hrtime.bigint();
+  checkpoint("runtime_candidate_trust", phaseStartedAt, phaseFinishedAt);
+  return trusted ? candidate : null;
+}
+
+function mergeRuntimeBattleTrace(beforeValue, rawValue) {
+  const published = normalizeBattleTrace(beforeValue);
+  const staged = normalizeBattleTrace(rawValue);
+  if (published === staged) {
+    return published;
+  }
+  const seenTraceIds = new Set();
+  const merged = [];
+  for (const entry of [...published, ...staged]) {
+    const traceId = String(entry && entry.traceId || "");
+    if (traceId === "" || seenTraceIds.has(traceId)) {
+      continue;
+    }
+    seenTraceIds.add(traceId);
+    merged.push(entry);
+  }
+  return normalizeBattleTrace(merged.slice(-MAX_BATTLE_TRACE_ROWS));
+}
+
+function publishedRollbackBaseline(durableBaseline, candidate) {
+  const baseline = isTrustedAuthorityRoot(durableBaseline)
+    ? durableBaseline
+    : persistentDataForStore(candidate);
+  const serviceEvents = normalizeServiceEvents(candidate.serviceEvents, {owned: true});
+  const latestRetainedServiceEvent = serviceEvents.length > 0 ? serviceEvents[serviceEvents.length - 1] : null;
+  const hybrid = {
+    ...baseline,
+    battleTrace: normalizeBattleTrace(candidate.battleTrace),
+    serviceEvents,
+    serviceEventSeq: Math.max(
+      normalizeEventSeq(baseline.serviceEventSeq),
+      normalizeEventSeq(candidate.serviceEventSeq),
+      normalizeEventSeq(latestRetainedServiceEvent && latestRetainedServiceEvent.eventSeq),
+    ),
+  };
+  if (markAuthorityRootTrusted(hybrid)) {
+    return hybrid;
+  }
+  // This should be unreachable for a committed/trusted candidate. Retain the
+  // existing defensive full snapshot rather than weakening rollback safety.
+  return persistentDataForStore(candidate);
 }
 
 function normalizeFamilies(value) {
@@ -3894,20 +5085,40 @@ function normalizeManorWars(value) {
     .slice(-120);
 }
 
-function persistentDataForStore(data) {
-  // createAuthService.save() passes the already-normalized authoritative root.
-  // Cloning here keeps runtime buckets isolated without repeating the global
-  // equipment-ledger audit and sort a second time for every successful write.
-  const persistent = cloneAuthorityRoot(data);
+function persistentDataViewForStore(data) {
+  const persistent = {...data};
   persistent.playerPositions = {};
+  persistent.partyInvites = {};
   persistent.battleInvites = {};
   persistent.battleRooms = {};
+  persistent.battleRoomRecoveries = {};
+  persistent.battleRoomRecoveryByAccountId = {};
   persistent.tradeOffers = {};
   persistent.serviceEvents = persistent.serviceEvents.filter((event) => {
     const type = String(event && event.type || "");
     return !type.startsWith("battle.");
   });
   return persistent;
+}
+
+function runtimeRootSnapshot(data) {
+  const snapshot = {};
+  for (const field of RUNTIME_ROOT_FIELDS) {
+    snapshot[field] = clone(data && data[field]);
+  }
+  return snapshot;
+}
+
+function persistentDataForStore(data) {
+  // The store and rollback baseline require an isolated snapshot. Comparison
+  // callers use persistentDataViewForStore() directly so they do not clone the
+  // entire authority root merely to replace these root-level runtime buckets.
+  const persistent = persistentDataViewForStore(data);
+  // The shallow persistent view is a new root, so explicitly restore its
+  // internal trust before cloning. cloneAuthorityRoot still certifies every
+  // immutable bucket independently and deep-clones any mutable value.
+  markAuthorityRootTrusted(persistent);
+  return cloneAuthorityRoot(persistent);
 }
 
 function createSessionForAccount(data, account, now, randomBytes) {
@@ -3921,8 +5132,52 @@ function createSessionForAccount(data, account, now, randomBytes) {
     revokedAt: null,
     schemaVersion: 1,
   };
-  data.sessions[session.sessionId] = session;
+  storeAuthorityRootRecord(data, "sessions", session.sessionId, session);
   return {session, token};
+}
+
+function storeAuthorityRootRecord(data, bucket, recordId, value) {
+  const normalizedRecordId = String(recordId || "");
+  if (normalizedRecordId === "") {
+    return null;
+  }
+  authorityRootRecordForMutation(data, bucket)[normalizedRecordId] = value;
+  return value;
+}
+
+function storePlayerPosition(data, accountId, position, timing = null) {
+  const normalizedAccountId = String(accountId || "");
+  if (
+    normalizedAccountId === ""
+    || !data
+    || !data.playerPositions
+    || typeof data.playerPositions !== "object"
+    || Array.isArray(data.playerPositions)
+    || !position
+    || typeof position !== "object"
+    || Array.isArray(position)
+  ) {
+    return null;
+  }
+  // Positions are request-private canonical records. Certify/freeze the value
+  // directly instead of allocating a one-entry wrapper object on every map
+  // step; the generic helper remains the defensive fallback for unexpected
+  // internal callers.
+  const frozen = freezeAuthorityRootPlayerPositionValue(position)
+    ? position
+    : freezeAuthorityRootRecordValues({[normalizedAccountId]: position})[normalizedAccountId];
+  if (timing && typeof timing === "object") {
+    timing.freezeFinishedAt = process.hrtime.bigint();
+  }
+  const records = authorityRootRecordForMutation(data, "playerPositions");
+  if (timing && typeof timing === "object") {
+    timing.containerFinishedAt = process.hrtime.bigint();
+  }
+  records[normalizedAccountId] = frozen;
+  if (timing && typeof timing === "object") {
+    timing.assignFinishedAt = process.hrtime.bigint();
+  }
+  return frozen;
 }
 
 function markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, nowMs) {
@@ -3930,12 +5185,63 @@ function markRuntimeSessionActive(runtimeActiveSessionIds, sessionId, nowMs) {
     return;
   }
   if (typeof runtimeActiveSessionIds.set === "function") {
+    const wasActive = runtimeSessionIsActive(runtimeActiveSessionIds, sessionId, nowMs);
     runtimeActiveSessionIds.set(sessionId, nowMs);
+    if (!wasActive) {
+      bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds);
+    }
     return;
   }
   if (typeof runtimeActiveSessionIds.add === "function") {
+    const hadSession = runtimeActiveSessionIds.has(sessionId);
     runtimeActiveSessionIds.add(sessionId);
+    if (!hadSession) {
+      bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds);
+    }
   }
+}
+
+function deleteRuntimeSessionActive(runtimeActiveSessionIds, sessionId) {
+  if (!runtimeActiveSessionIds || !sessionId || typeof runtimeActiveSessionIds.delete !== "function") {
+    return false;
+  }
+  const deleted = runtimeActiveSessionIds.delete(sessionId);
+  if (deleted) {
+    bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds);
+  }
+  return deleted;
+}
+
+function addRuntimeConnectedSession(runtimeActiveSessionIds, sessionId) {
+  const connectedSessionIds = runtimeActiveSessionIds && runtimeActiveSessionIds.connectedSessionIds;
+  if (!connectedSessionIds || !sessionId || typeof connectedSessionIds.add !== "function") {
+    return false;
+  }
+  const hadSession = connectedSessionIds.has(sessionId);
+  connectedSessionIds.add(sessionId);
+  if (!hadSession) {
+    bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds);
+  }
+  return !hadSession;
+}
+
+function deleteRuntimeConnectedSession(runtimeActiveSessionIds, sessionId) {
+  const connectedSessionIds = runtimeActiveSessionIds && runtimeActiveSessionIds.connectedSessionIds;
+  if (!connectedSessionIds || !sessionId || typeof connectedSessionIds.delete !== "function") {
+    return false;
+  }
+  const deleted = connectedSessionIds.delete(sessionId);
+  if (deleted) {
+    bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds);
+  }
+  return deleted;
+}
+
+function bumpRuntimeSessionMembershipRevision(runtimeActiveSessionIds) {
+  const current = Number(runtimeActiveSessionIds && runtimeActiveSessionIds.membershipRevision || 0);
+  runtimeActiveSessionIds.membershipRevision = Number.isSafeInteger(current) && current >= 0 && current < Number.MAX_SAFE_INTEGER
+    ? current + 1
+    : 1;
 }
 
 function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds) {
@@ -3948,8 +5254,8 @@ function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds
   }
   for (const session of Object.values(data.sessions)) {
     if (session && String(session.accountId || "") === normalizedAccountId && session.sessionId) {
-      runtimeActiveSessionIds.delete(session.sessionId);
-      runtimeActiveSessionIds.connectedSessionIds?.delete(session.sessionId);
+      deleteRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId);
+      deleteRuntimeConnectedSession(runtimeActiveSessionIds, session.sessionId);
     }
   }
 }
@@ -3971,24 +5277,93 @@ function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runt
     ) {
       continue;
     }
-    session.revokedAt = timestamp;
-    session.revokedCode = SESSION_REPLACED_CODE;
-    session.revokedReason = "replaced_by_login";
-    session.revokedMessage = SESSION_REPLACED_MESSAGE;
+    const revokedSession = {
+      ...session,
+      revokedAt: timestamp,
+      revokedCode: SESSION_REPLACED_CODE,
+      revokedReason: "replaced_by_login",
+      revokedMessage: SESSION_REPLACED_MESSAGE,
+    };
+    storeAuthorityRootRecord(data, "sessions", revokedSession.sessionId, revokedSession);
     if (runtimeActiveSessionIds && typeof runtimeActiveSessionIds.delete === "function" && session.sessionId) {
-      runtimeActiveSessionIds.delete(session.sessionId);
-      runtimeActiveSessionIds.connectedSessionIds?.delete(session.sessionId);
+      deleteRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId);
+      deleteRuntimeConnectedSession(runtimeActiveSessionIds, session.sessionId);
     }
     revokedSessions.push({
-      sessionId: String(session.sessionId || ""),
+      sessionId: String(revokedSession.sessionId || ""),
       accountId: normalizedAccountId,
-      createdAt: String(session.createdAt || ""),
-      expiresAt: String(session.expiresAt || ""),
+      createdAt: String(revokedSession.createdAt || ""),
+      expiresAt: String(revokedSession.expiresAt || ""),
       revokedAt: timestamp,
       schemaVersion: 1,
     });
   }
+  pruneSessionHistoryForAccount(data, normalizedAccountId, normalizedKeepSessionId, now);
   return {revokedSessions};
+}
+
+function pruneLoadedSessionHistory(data, now) {
+  const sessions = objectOrEmpty(data && data.sessions);
+  const sessionsByAccountId = new Map();
+  for (const session of Object.values(sessions)) {
+    const accountId = String(session && session.accountId || "");
+    if (accountId === "") {
+      continue;
+    }
+    const accountSessions = sessionsByAccountId.get(accountId) || [];
+    accountSessions.push(session);
+    sessionsByAccountId.set(accountId, accountSessions);
+  }
+  let removed = 0;
+  for (const [accountId, accountSessions] of sessionsByAccountId.entries()) {
+    removed += pruneSessionHistoryForAccount(data, accountId, "", now, accountSessions);
+  }
+  return removed;
+}
+
+function pruneSessionHistoryForAccount(data, accountId, keepSessionId = "", now = Date.now, knownAccountSessions = null) {
+  const sessions = authorityRootRecordForMutation(data, "sessions");
+  const normalizedAccountId = String(accountId || "");
+  const normalizedKeepSessionId = String(keepSessionId || "");
+  const currentMs = typeof now === "function" ? Number(now()) : Number(now);
+  const accountSessions = (Array.isArray(knownAccountSessions)
+    ? knownAccountSessions.slice()
+    : Object.values(sessions).filter((session) => session && String(session.accountId || "") === normalizedAccountId))
+    .sort((left, right) => (
+      finiteTimestamp(right.createdAt) - finiteTimestamp(left.createdAt)
+    ));
+  if (accountSessions.length <= SESSION_HISTORY_MAX_PER_ACCOUNT) {
+    return 0;
+  }
+  const keepIds = new Set(accountSessions
+    .filter((session, index) => (
+      String(session.sessionId || "") === normalizedKeepSessionId
+      || index < SESSION_HISTORY_MAX_PER_ACCOUNT
+    ))
+    .map((session) => String(session.sessionId || ""))
+    .filter(Boolean));
+  let removed = 0;
+  for (const session of accountSessions) {
+    const sessionId = String(session && session.sessionId || "");
+    const refreshDeadlineMs = finiteTimestamp(session && session.expiresAt) + SESSION_REFRESH_GRACE_MS;
+    const terminal = Boolean(session && session.revokedAt)
+      || !Number.isFinite(currentMs)
+      || refreshDeadlineMs <= currentMs;
+    if (sessionId === "" || keepIds.has(sessionId) || !terminal) {
+      continue;
+    }
+    delete sessions[sessionId];
+    removed += 1;
+  }
+  if (removed > 0) {
+    SESSION_ID_BY_TOKEN_HASH_INDEX.delete(sessions);
+  }
+  return removed;
+}
+
+function finiteTimestamp(value) {
+  const timestamp = Date.parse(String(value || ""));
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function sessionReplacementEvent(account, replacementSession, revokedSessions) {
@@ -4419,7 +5794,7 @@ function publicBattleInvite(invite, data) {
   };
 }
 
-function publicBattleRoom(room, viewerAccountId = "") {
+function publicBattleRoom(room, viewerAccountId = "", options = {}) {
   if (!room) {
     return null;
   }
@@ -4434,7 +5809,7 @@ function publicBattleRoom(room, viewerAccountId = "") {
     participantAccountIds: Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [],
     entry: room.entry && typeof room.entry === "object" ? clone(room.entry) : null,
     participants: Array.isArray(room.participants) ? clone(room.participants) : [],
-    battle: publicBattleRoomBattle(room.battle || null, normalizedViewerAccountId),
+    battle: publicBattleRoomBattle(room.battle || null, normalizedViewerAccountId, options),
     closeReason: String(room.closeReason || ""),
     closedByAccountId: String(room.closedByAccountId || ""),
     closedAt: room.closedAt || "",
@@ -4444,10 +5819,11 @@ function publicBattleRoom(room, viewerAccountId = "") {
   };
 }
 
-function publicBattleRoomBattle(battle, viewerAccountId = "") {
+function publicBattleRoomBattle(battle, viewerAccountId = "", options = {}) {
   if (!battle || typeof battle !== "object" || Array.isArray(battle)) {
     return null;
   }
+  const actors = Array.isArray(battle.actors) ? battle.actors.map(publicBattleActor) : [];
   return {
     round: Number(battle.round || 1),
     phase: String(battle.phase || BATTLE_PHASE_COMMAND),
@@ -4456,8 +5832,12 @@ function publicBattleRoomBattle(battle, viewerAccountId = "") {
     submittedAccountIds: Array.isArray(battle.submittedAccountIds) ? battle.submittedAccountIds.slice() : [],
     requiredActorIds: Array.isArray(battle.requiredActorIds) ? battle.requiredActorIds.slice() : [],
     submittedActorIds: Array.isArray(battle.submittedActorIds) ? battle.submittedActorIds.slice() : [],
-    actors: Array.isArray(battle.actors) ? battle.actors.map(publicBattleActor) : [],
-    lastEventList: battle.lastEventList && typeof battle.lastEventList === "object" ? clone(battle.lastEventList) : null,
+    actors,
+    ...(options.includeLastEventList === false ? {} : {
+      lastEventList: battle.lastEventList && typeof battle.lastEventList === "object"
+        ? hydrateBattleReplayEventList(battle.lastEventList, actors)
+        : null,
+    }),
     result: battle.result && typeof battle.result === "object" ? publicBattleResult(battle.result) : null,
     profileWriteback: publicBattleProfileWriteback(battle.profileWriteback || null, viewerAccountId),
     commandDeadlineAt: battle.commandDeadlineAt || "",
@@ -5429,7 +6809,7 @@ function applyPlayerRebirthReturn(data, account, now) {
   }, account, now);
   position.authority = "player_rebirth_return";
   position.movementSeq = Number(previousPosition && previousPosition.movementSeq || 0) + 1;
-  data.playerPositions[account.accountId] = position;
+  storePlayerPosition(data, account.accountId, position);
   return {
     kind: "record_point_return",
     accountId: account.accountId,
@@ -6995,9 +8375,7 @@ function refreshPartyPresence(data, party, now, runtimeActiveSessionIds = null, 
 function expirePendingPartyInvites(data, partyId, now) {
   for (const invite of Object.values(data.partyInvites)) {
     if (invite && invite.partyId === partyId && invite.status === "pending") {
-      invite.status = "expired";
-      invite.updatedAt = isoNow(now);
-      data.partyInvites[invite.inviteId] = invite;
+      delete data.partyInvites[invite.inviteId];
     }
   }
 }
@@ -7094,7 +8472,7 @@ function applyPartyFollowForLeaderPositionChange(data, party, leaderAccountId, p
     if (!nextPosition) {
       continue;
     }
-    data.playerPositions[memberAccountId] = nextPosition;
+    storePlayerPosition(data, memberAccountId, nextPosition);
     updated.push({
       accountId: memberAccountId,
       previousPosition: previousFollowerPosition ? publicPlayerPosition(previousFollowerPosition) : null,
@@ -7203,30 +8581,78 @@ function battleRoomHasCapturedClaimForAccount(room, accountId) {
 }
 
 function latestClosedBattleRoomForAccount(data, accountId, now = Date.now) {
-  const normalizedAccountId = String(accountId || "");
-  if (normalizedAccountId === "") {
-    return null;
+  return latestBattleRoomRecoveryForAccount(data, accountId, {
+    now,
+    ttlMs: BATTLE_CLOSED_ROOM_REPLAY_MS,
+  });
+}
+
+function battleRoomRecoveryAccountIds(room) {
+  if (!battleClosedRoomHasReplayPayload(room)) {
+    return [];
   }
-  const nowMs = now();
-  return Object.values(data.battleRooms)
-    .filter((room) => {
-      if (!room || room.status !== BATTLE_ROOM_CLOSED || !Array.isArray(room.participantAccountIds)) {
-        return false;
-      }
-      if (
-        !room.participantAccountIds.includes(normalizedAccountId) &&
-        !battleRoomHasCapturedClaimForAccount(room, normalizedAccountId) &&
-        !(room.departedParticipantsByAccountId && room.departedParticipantsByAccountId[normalizedAccountId])
-      ) {
-        return false;
-      }
-      if (!battleClosedRoomHasReplayPayload(room)) {
-        return false;
-      }
-      const closedMs = Date.parse(room.closedAt || room.updatedAt || "");
-      return Number.isFinite(closedMs) && nowMs - closedMs <= BATTLE_CLOSED_ROOM_REPLAY_MS;
-    })
-    .sort((a, b) => Date.parse(b.closedAt || b.updatedAt || "") - Date.parse(a.closedAt || a.updatedAt || ""))[0] || null;
+  const accountIds = new Set((Array.isArray(room && room.participantAccountIds) ? room.participantAccountIds : [])
+    .map((value) => String(value || ""))
+    .filter(Boolean));
+  for (const accountId of Object.keys(objectOrEmpty(room && room.departedParticipantsByAccountId))) {
+    if (accountId) {
+      accountIds.add(accountId);
+    }
+  }
+  const battle = room && room.battle && typeof room.battle === "object" && !Array.isArray(room.battle)
+    ? room.battle
+    : {};
+  for (const actor of Array.isArray(battle.actors) ? battle.actors : []) {
+    const claimant = String(actor && actor.capturedByAccountId || "");
+    if (claimant) {
+      accountIds.add(claimant);
+    }
+  }
+  for (const candidate of Object.values(objectOrEmpty(battle.captureCandidatesByActorId))) {
+    const claimant = String(candidate && (
+      candidate.claimedByAccountId
+      || candidate.claimantAccountId
+      || candidate.ownerAccountId
+    ) || "");
+    if (claimant) {
+      accountIds.add(claimant);
+    }
+  }
+  return Array.from(accountIds);
+}
+
+function compactBattleRoomRecovery(room, recoveryAccountIds = []) {
+  const projected = publicBattleRoom(room, "") || {};
+  const battle = room && room.battle && typeof room.battle === "object" && !Array.isArray(room.battle)
+    ? room.battle
+    : {};
+  const writeback = battle.profileWriteback && typeof battle.profileWriteback === "object" && !Array.isArray(battle.profileWriteback)
+    ? battle.profileWriteback
+    : null;
+  if (projected.battle && writeback) {
+    projected.battle.profileWriteback = {
+      kind: String(writeback.kind || "battle_profile_writeback"),
+      roomId: String(writeback.roomId || room.roomId || ""),
+      reason: String(writeback.reason || ""),
+      updatedAt: String(writeback.updatedAt || room.updatedAt || ""),
+      profiles: (Array.isArray(writeback.profiles) ? writeback.profiles : [])
+        .filter((entry) => recoveryAccountIds.includes(String(entry && entry.accountId || "")))
+        .map(publicBattleProfileWritebackEntry),
+      skippedProfiles: (Array.isArray(writeback.skippedProfiles) ? writeback.skippedProfiles : [])
+        .filter((entry) => recoveryAccountIds.includes(String(entry && entry.accountId || "")))
+        .map((entry) => clone(entry)),
+      schemaVersion: 1,
+    };
+  }
+  if (projected.battle) {
+    projected.battle.expCredits = Array.isArray(battle.expCredits)
+      ? clone(battle.expCredits)
+      : [];
+  }
+  projected.seed = "";
+  projected.entry = null;
+  projected.participants = [];
+  return projected;
 }
 
 function battleClosedRoomHasReplayPayload(room) {
@@ -7261,7 +8687,7 @@ function battleRoomConnectionStateForMutation(room) {
 }
 
 function battleRoomAccountDisconnectedForMs(room, accountId, graceMs, now = () => Date.now()) {
-  const state = battleRoomConnectionStateForMutation(room);
+  const state = objectOrEmpty(room && room.connectionState);
   const entry = state[String(accountId || "")] || {};
   if (entry.connected || !entry.disconnectedAt) {
     return false;
@@ -7321,6 +8747,10 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
     turn: null,
   };
   if (removedSet.size <= 0) {
+    return result;
+  }
+  room = battleRoomForMutation(data, room);
+  if (!room) {
     return result;
   }
   const timestamp = isoNow(nowFn);
@@ -7423,15 +8853,16 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
 function markBattleConnectionForAccount(data, accountId, connected, now = () => Date.now()) {
   let changed = false;
   const timestamp = isoNow(now);
-  for (const room of Object.values(data.battleRooms)) {
+  for (const roomValue of Object.values(data.battleRooms)) {
     if (
-      !room ||
-      room.status === BATTLE_ROOM_CLOSED ||
-      !Array.isArray(room.participantAccountIds) ||
-      !room.participantAccountIds.includes(accountId)
+      !roomValue ||
+      roomValue.status === BATTLE_ROOM_CLOSED ||
+      !Array.isArray(roomValue.participantAccountIds) ||
+      !roomValue.participantAccountIds.includes(accountId)
     ) {
       continue;
     }
+    const room = battleRoomForMutation(data, roomValue);
     const state = battleRoomConnectionStateForMutation(room);
     const previous = state[accountId] || {};
     const next = {
@@ -7492,7 +8923,7 @@ function battleRoomReconnectExpiredAccountIds(room, now) {
   if (!room || room.status === BATTLE_ROOM_CLOSED) {
     return [];
   }
-  const state = battleRoomConnectionStateForMutation(room);
+  const state = objectOrEmpty(room.connectionState);
   const nowMs = now();
   return (Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [])
     .filter((accountId) => {
@@ -7509,7 +8940,7 @@ function battleRoomHasDisconnectedParticipant(room) {
   if (!room || room.status === BATTLE_ROOM_CLOSED) {
     return false;
   }
-  const state = battleRoomConnectionStateForMutation(room);
+  const state = objectOrEmpty(room.connectionState);
   return (Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [])
     .some((accountId) => {
       const entry = state[accountId] || {};
@@ -7536,7 +8967,7 @@ function nextBattleMaintenanceDelayMs(data, now) {
     if (!room || room.status === BATTLE_ROOM_CLOSED) {
       continue;
     }
-    const battle = battleRoomBattleStateForMutation(room, now);
+    const battle = objectOrEmpty(room.battle);
     const hasDisconnectedParticipant = battleRoomHasDisconnectedParticipant(room);
     if (!hasDisconnectedParticipant && String(battle.phase || "") === BATTLE_PHASE_COMMAND && battle.commandDeadlineAt) {
       const commandMs = Date.parse(battle.commandDeadlineAt);
@@ -7544,7 +8975,7 @@ function nextBattleMaintenanceDelayMs(data, now) {
         nextAt = Math.min(nextAt, commandMs);
       }
     }
-    const state = battleRoomConnectionStateForMutation(room);
+    const state = objectOrEmpty(room.connectionState);
     for (const accountId of Array.isArray(room.participantAccountIds) ? room.participantAccountIds : []) {
       const entry = state[accountId] || {};
       if (entry.connected || !entry.disconnectedAt) {
@@ -8775,7 +10206,6 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
   if (result) {
     eventList.result = publicBattleResult(result);
   }
-  battle.lastEventList = eventList;
   const historyEventList = battleHistoricalEventList(eventList);
   battle.eventLog = Array.isArray(battle.eventLog) ? battle.eventLog.concat([historyEventList]).slice(-20) : [historyEventList];
   battle.commands = {};
@@ -8792,6 +10222,11 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     eventList.actors = battle.actors.map(publicBattleActor);
     eventList.result = publicBattleResult(battle.result);
   }
+  // Keep the hot authority room and replay window compact. Public HTTP/WS
+  // projections hydrate these dynamic snapshots with the room's full actor
+  // documents, so the v10 player contract remains unchanged while durable
+  // normalization freezes substantially less duplicated JSON per turn.
+  battle.lastEventList = battleReplayEventList(eventList);
   recordBattleTrace(data, room, "battle_turn_resolved", {
     round,
     turnSeq: battle.turnSeq,
@@ -8823,6 +10258,114 @@ function battleHistoricalEventList(eventList) {
     resolvedAt: String(eventList && eventList.resolvedAt || ""),
     ...(eventList && eventList.result ? {result: clone(eventList.result)} : {}),
   };
+}
+
+function battleReplayEventList(eventList) {
+  if (!eventList || typeof eventList !== "object" || Array.isArray(eventList)) {
+    return {};
+  }
+  if (String(eventList.actorSnapshotMode || "") === "dynamic_v1") {
+    return eventList;
+  }
+  const actorsBefore = Array.isArray(eventList.actorsBefore) ? eventList.actorsBefore : [];
+  const actors = Array.isArray(eventList.actors) ? eventList.actors : [];
+  const actorsBeforeIds = new Set(actorsBefore
+    .map((actor) => String(actor && actor.actorId || ""))
+    .filter(Boolean));
+  return {
+    schemaVersion: Math.max(1, Math.trunc(Number(eventList.schemaVersion || 1))),
+    kind: String(eventList.kind || "battle_event_list"),
+    roomId: String(eventList.roomId || ""),
+    round: Math.max(1, Math.trunc(Number(eventList.round || 1))),
+    turnSeq: Math.max(0, Math.trunc(Number(eventList.turnSeq || 0))),
+    phase: String(eventList.phase || "resolved"),
+    events: clone(Array.isArray(eventList.events) ? eventList.events : []),
+    // Keep one complete per-turn static base. Depending only on the latest
+    // room actors loses old pets after a later switch; post-turn snapshots can
+    // still store dynamic deltas for actors whose static base is present here.
+    actorsBefore: actorsBefore.map((actor) => clone(actor)),
+    actors: actors.map((actor) => actorsBeforeIds.has(String(actor && actor.actorId || ""))
+      ? battleReplayActorSnapshot(actor)
+      : clone(actor)),
+    resolvedAt: String(eventList.resolvedAt || ""),
+    actorSnapshotMode: "dynamic_v1",
+    ...(eventList.result ? {result: clone(eventList.result)} : {}),
+  };
+}
+
+function battleReplayActorSnapshot(actorValue) {
+  const actor = actorValue && typeof actorValue === "object" && !Array.isArray(actorValue)
+    ? actorValue
+    : {};
+  return {
+    actorId: String(actor.actorId || ""),
+    accountId: String(actor.accountId || ""),
+    username: String(actor.username || ""),
+    displayName: String(actor.displayName || actor.username || ""),
+    side: String(actor.side || ""),
+    kind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
+    slotId: String(actor.slotId || ""),
+    slotNumber: Number(actor.slotNumber || 0),
+    petId: String(actor.petId || ""),
+    formId: String(actor.formId || ""),
+    petState: String(actor.petState || ""),
+    activeInBattle: Boolean(actor.activeInBattle),
+    hp: Number(actor.hp || 0),
+    maxHp: Number(actor.maxHp || BATTLE_ACTOR_MAX_HP),
+    speed: Number(actor.speed || 0),
+    attack: Number(actor.attack || 0),
+    defense: Number(actor.defense || 0),
+    guarding: Boolean(actor.guarding),
+    defeated: Boolean(actor.defeated),
+    escaped: Boolean(actor.escaped),
+    captured: Boolean(actor.captured),
+    capturedByAccountId: String(actor.capturedByAccountId || ""),
+    actionState: String(actor.actionState || (Number(actor.hp || 0) <= 0 ? "down" : "idle")),
+    launched: Boolean(actor.launched),
+    revivable: Object.hasOwn(actor, "revivable") ? Boolean(actor.revivable) : true,
+    launchHpBefore: Math.max(0, Math.trunc(Number(actor.launchHpBefore || 0))),
+    ridePetInstanceId: String(actor.ridePetInstanceId || ""),
+    ridePetName: String(actor.ridePetName || ""),
+    ridePetFormId: String(actor.ridePetFormId || ""),
+    ridePetLevel: Number(actor.ridePetLevel || 0),
+    ridePetHp: Number(actor.ridePetHp || 0),
+    ridePetMaxHp: Number(actor.ridePetMaxHp || 0),
+    ridePetBattleState: String(actor.ridePetBattleState || ""),
+    ridePetKnocked: Boolean(actor.ridePetKnocked),
+    statuses: actor.statuses && typeof actor.statuses === "object" && !Array.isArray(actor.statuses)
+      ? clone(actor.statuses)
+      : {},
+    schemaVersion: 1,
+  };
+}
+
+function hydrateBattleReplayEventList(eventListValue, currentActorsValue = []) {
+  const eventList = eventListValue && typeof eventListValue === "object" && !Array.isArray(eventListValue)
+    ? eventListValue
+    : {};
+  if (String(eventList.actorSnapshotMode || "") !== "dynamic_v1") {
+    return clone(eventList);
+  }
+  const currentActors = Array.isArray(currentActorsValue) ? currentActorsValue : [];
+  const currentByActorId = new Map(currentActors.map((actor) => [String(actor && actor.actorId || ""), actor]));
+  for (const actor of Array.isArray(eventList.actorsBefore) ? eventList.actorsBefore : []) {
+    const actorId = String(actor && actor.actorId || "");
+    if (actorId !== "") {
+      currentByActorId.set(actorId, {
+        ...(currentByActorId.get(actorId) || {}),
+        ...(actor && typeof actor === "object" && !Array.isArray(actor) ? actor : {}),
+      });
+    }
+  }
+  const hydrate = (snapshots) => (Array.isArray(snapshots) ? snapshots : []).map((snapshot) => ({
+    ...(currentByActorId.get(String(snapshot && snapshot.actorId || "")) || {}),
+    ...(snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? snapshot : {}),
+  }));
+  const hydrated = clone(eventList);
+  hydrated.actorsBefore = hydrate(eventList.actorsBefore);
+  hydrated.actors = hydrate(eventList.actors);
+  delete hydrated.actorSnapshotMode;
+  return hydrated;
 }
 
 function battleRoundEndPoisonEvents(room, battle, round, sequence, now) {
@@ -10092,7 +11635,12 @@ function participantBattleItemCount(participant, itemId) {
   if (normalizedItemId === "") {
     return 0;
   }
-  const bag = participantBattleItemBag(participant);
+  const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object" && !Array.isArray(participant.teamSnapshot)
+    ? participant.teamSnapshot
+    : {};
+  const bag = snapshot.battleItemBag && typeof snapshot.battleItemBag === "object" && !Array.isArray(snapshot.battleItemBag)
+    ? snapshot.battleItemBag
+    : {};
   return Math.max(0, Math.trunc(Number(bag[normalizedItemId] || 0)));
 }
 
@@ -10106,26 +11654,26 @@ function setParticipantBattleItemCount(participant, itemId, count) {
 }
 
 function addClaimedMailItemsToActiveBattleRoom(data, accountId, items, nowFn = Date.now) {
-  const room = activeBattleRoomForAccount(data, String(accountId || ""));
+  let room = activeBattleRoomForAccount(data, String(accountId || ""));
   if (!room || room.status === BATTLE_ROOM_CLOSED) {
     return null;
   }
+  if (!battleParticipantByAccountId(room, accountId)) {
+    return null;
+  }
+  const additions = (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      itemId: normalizeBattleItemId(item && item.itemId),
+      count: Math.max(0, Math.trunc(Number(item && item.count || 0))),
+    }))
+    .filter((item) => item.itemId !== "" && item.count > 0);
+  if (additions.length <= 0) {
+    return null;
+  }
+  room = battleRoomForMutation(data, room);
   const participant = battleParticipantByAccountId(room, accountId);
-  if (!participant) {
-    return null;
-  }
-  let changed = false;
-  for (const item of Array.isArray(items) ? items : []) {
-    const itemId = normalizeBattleItemId(item && item.itemId);
-    const count = Math.max(0, Math.trunc(Number(item && item.count || 0)));
-    if (itemId === "" || count <= 0) {
-      continue;
-    }
+  for (const {itemId, count} of additions) {
     setParticipantBattleItemCount(participant, itemId, participantBattleItemCount(participant, itemId) + count);
-    changed = true;
-  }
-  if (!changed) {
-    return null;
   }
   const timestamp = isoNow(nowFn);
   room.updatedAt = timestamp;
@@ -10160,7 +11708,12 @@ function participantCaptureToolCount(participant, toolId) {
   if (normalizedToolId === BATTLE_CAPTURE_TOOL_EMPTY_HAND || !battleCaptureToolIsConsumable(normalizedToolId)) {
     return Number.POSITIVE_INFINITY;
   }
-  const bag = participantCaptureToolBag(participant);
+  const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object" && !Array.isArray(participant.teamSnapshot)
+    ? participant.teamSnapshot
+    : {};
+  const bag = snapshot.captureToolBag && typeof snapshot.captureToolBag === "object" && !Array.isArray(snapshot.captureToolBag)
+    ? snapshot.captureToolBag
+    : {};
   return Math.max(0, Math.trunc(Number(bag[normalizedToolId] || 0)));
 }
 
@@ -10558,7 +12111,12 @@ function closeBattleRoomWithResult(data, room, result, now, options = {}) {
     battleReturnCount: battleReturns.length,
   }, now);
   if (options.battleRandomAuthority && typeof options.battleRandomAuthority.closeRoom === "function") {
-    options.battleRandomAuthority.closeRoom(room.roomId);
+    const closeRandomRoom = () => options.battleRandomAuthority.closeRoom(room.roomId);
+    if (typeof options.applyAfterDurableCommit === "function") {
+      options.applyAfterDurableCommit(closeRandomRoom);
+    } else {
+      closeRandomRoom();
+    }
   }
   return room;
 }
@@ -10567,18 +12125,16 @@ function appendBattleRecord(data, record) {
   if (!record || typeof record !== "object" || Array.isArray(record) || String(record.recordId || "").trim() === "") {
     return;
   }
-  if (!Array.isArray(data.battleRecords)) {
-    data.battleRecords = [];
-  }
+  const battleRecords = authorityRootJournalForMutation(data, "battleRecords");
   const recordId = String(record.recordId || "");
-  const existingIndex = data.battleRecords.findIndex((value) => value && String(value.recordId || "") === recordId);
+  const existingIndex = battleRecords.findIndex((value) => value && String(value.recordId || "") === recordId);
   if (existingIndex >= 0) {
-    data.battleRecords[existingIndex] = record;
+    battleRecords[existingIndex] = record;
   } else {
-    data.battleRecords.push(record);
+    battleRecords.push(record);
   }
-  while (data.battleRecords.length > MAX_BATTLE_RECORDS) {
-    data.battleRecords.shift();
+  while (battleRecords.length > MAX_BATTLE_RECORDS) {
+    battleRecords.shift();
   }
 }
 
@@ -10780,7 +12336,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
   );
   const activeParticipantAccountIds = new Set(requiredBattleCommandAccountIds(room));
   for (const accountId of battleProfileWritebackAccountIds(room, battle)) {
-    const binding = data.profileBindings[String(accountId || "")] || null;
+    let binding = data.profileBindings[String(accountId || "")] || null;
     if (!binding || !binding.playerId) {
       writeback.skippedProfiles.push({accountId, reason: "profile_binding_missing"});
       continue;
@@ -11027,10 +12583,9 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       continue;
     }
     const nextRevision = Number(binding.profileRevision || profileDoc.profileRevision || 0) + 1;
-    binding.profileRevision = nextRevision;
-    binding.updatedAt = updatedAt;
-    data.profileBindings[String(accountId || "")] = binding;
-    data.profiles[binding.playerId] = {
+    binding = {...binding, profileRevision: nextRevision, updatedAt};
+    storeAuthorityRootRecord(data, "profileBindings", accountId, binding);
+    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
       ...profileDoc,
       playerId: binding.playerId,
       accountId: String(accountId || ""),
@@ -11038,7 +12593,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     summary.profileRevision = nextRevision;
     writeback.profiles.push(summary);
   }
@@ -11605,16 +13160,16 @@ function grantQuestRewardsToProfile(profile, quest, rewardChoice = {}) {
 }
 
 function currentProfileQuestId(profile) {
+  const states = profileQuestStatesView(profile || {});
   const explicit = String(profile && profile.activeQuestId || "").trim();
   if (explicit !== "") {
     const quest = questById(explicit);
-    const states = profileQuestStates(profile || {});
     const state = normalizeQuestState(states[explicit], explicit);
     if (quest && !questIsOptional(quest) && String(state.status || "active") !== "claimed" && questProgressAvailableForProfile(profile, quest)) {
       return explicit;
     }
   }
-  return firstAvailableUnfinishedQuestIdForProfile(profile);
+  return firstAvailableUnfinishedQuestIdForProfile(profile, states);
 }
 
 function questAvailableForProfile(profile, quest, checkLevel = true) {
@@ -11649,7 +13204,7 @@ function ensureActiveQuestForProfile(profile) {
   let questId = currentProfileQuestId(profile);
   const quest = questById(questId);
   if (!quest || questIsOptional(quest) || !questProgressAvailableForProfile(profile, quest)) {
-    questId = firstAvailableUnfinishedQuestIdForProfile(profile);
+    questId = firstAvailableUnfinishedQuestIdForProfile(profile, states);
   }
   if (questId !== "") {
     states[questId] = normalizeQuestState(states[questId], questId);
@@ -11661,11 +13216,13 @@ function ensureActiveQuestForProfile(profile) {
   return questId;
 }
 
-function firstAvailableUnfinishedQuestIdForProfile(profile) {
+function firstAvailableUnfinishedQuestIdForProfile(profile, statesValue = null) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
     return "";
   }
-  const states = profileQuestStates(profile);
+  const states = statesValue && typeof statesValue === "object" && !Array.isArray(statesValue)
+    ? statesValue
+    : profileQuestStates(profile);
   for (const quest of quests()) {
     if (questIsOptional(quest)) {
       continue;
@@ -11690,20 +13247,36 @@ function firstAvailableUnfinishedQuestIdForProfile(profile) {
 }
 
 function profileQuestStates(profile) {
-  if (!profile.questStates || typeof profile.questStates !== "object" || Array.isArray(profile.questStates)) {
-    profile.questStates = {};
+  const states = profileQuestStatesView(profile);
+  if (profile.questStates !== states) {
+    profile.questStates = states;
   }
-  if (!profile.questStates[QUEST_SET_BATTLE_PET_ID]) {
-    const statusPanelState = normalizeQuestState(profile.questStates[QUEST_OPEN_STATUS_PANEL_ID], QUEST_OPEN_STATUS_PANEL_ID);
-    if (profile.questStates[QUEST_OPEN_STATUS_PANEL_ID] && String(statusPanelState.status || "") === "claimed") {
-      profile.questStates[QUEST_SET_BATTLE_PET_ID] = {
-        questId: QUEST_SET_BATTLE_PET_ID,
-        status: "claimed",
-        progress: 1,
-      };
-    }
+  return states;
+}
+
+// Quest selection is also used by read-only market and validation projections.
+// Build the legacy compatibility view without writing into a deeply frozen
+// authority profile; mutation paths call profileQuestStates() and persist the
+// same derived state on their request-private profile clone.
+function profileQuestStatesView(profile) {
+  const source = profile && profile.questStates && typeof profile.questStates === "object" && !Array.isArray(profile.questStates)
+    ? profile.questStates
+    : {};
+  if (source[QUEST_SET_BATTLE_PET_ID]) {
+    return source;
   }
-  return profile.questStates;
+  const statusPanelState = normalizeQuestState(source[QUEST_OPEN_STATUS_PANEL_ID], QUEST_OPEN_STATUS_PANEL_ID);
+  if (!source[QUEST_OPEN_STATUS_PANEL_ID] || String(statusPanelState.status || "") !== "claimed") {
+    return source;
+  }
+  return {
+    ...source,
+    [QUEST_SET_BATTLE_PET_ID]: {
+      questId: QUEST_SET_BATTLE_PET_ID,
+      status: "claimed",
+      progress: 1,
+    },
+  };
 }
 
 function questById(questId) {
@@ -12307,18 +13880,17 @@ function publicQuestClaim(claim) {
 function persistProfileForAccount(data, account, binding, profile, now) {
   const updatedAt = isoNow(now);
   const nextRevision = Number(binding.profileRevision || 0) + 1;
-  binding.profileRevision = nextRevision;
-  binding.updatedAt = updatedAt;
-  data.profileBindings[account.accountId] = binding;
-  data.profiles[binding.playerId] = {
-    playerId: binding.playerId,
+  const nextBinding = {...binding, profileRevision: nextRevision, updatedAt};
+  storeAuthorityRootRecord(data, "profileBindings", account.accountId, nextBinding);
+  storeAuthorityRootRecord(data, "profiles", nextBinding.playerId, {
+    playerId: nextBinding.playerId,
     accountId: account.accountId,
     profileRevision: nextRevision,
     profile,
     updatedAt,
     schemaVersion: 1,
-  };
-  return {binding, profileDoc: data.profiles[binding.playerId]};
+  });
+  return {binding: nextBinding, profileDoc: data.profiles[nextBinding.playerId]};
 }
 
 function battleRoomProfileExpReward(room, battle, result, profile, accountId) {
@@ -16836,7 +18408,7 @@ function applyBattleRoomResultReturns(data, room, battle, result, now) {
     position.authority = "battle_result_return";
     position.movementSeq = Number(previousPosition && previousPosition.movementSeq || 0) + 1;
     position.returnReason = String(result.reason || room.closeReason || "");
-    data.playerPositions[accountId] = position;
+    storePlayerPosition(data, accountId, position);
     entries.push({
       kind: "record_point_return",
       accountId,
@@ -16893,7 +18465,7 @@ function restoreBattleParticipantPositions(data, room, options = {}) {
     position.authority = "battle_position_restore";
     position.movementSeq = Number(previousPosition && previousPosition.movementSeq || 0) + 1;
     position.returnReason = reason;
-    data.playerPositions[accountId] = position;
+    storePlayerPosition(data, accountId, position);
     entries.push({
       kind: "battle_position_restore",
       accountId,
@@ -17264,13 +18836,16 @@ function battleInviteIsExpired(invite, now) {
 }
 
 function expireBattleInvite(data, invite, now) {
-  invite.status = BATTLE_INVITE_EXPIRED;
-  invite.updatedAt = isoNow(now);
-  data.battleInvites[invite.inviteId] = invite;
+  const expiredInvite = {
+    ...invite,
+    status: BATTLE_INVITE_EXPIRED,
+    updatedAt: isoNow(now),
+  };
+  delete data.battleInvites[invite.inviteId];
   return {
     type: "battle.invite_expired",
     targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-    invite: publicBattleInvite(invite, data),
+    invite: publicBattleInvite(expiredInvite, data),
     room: null,
   };
 }
@@ -17283,11 +18858,12 @@ function expireBattleTimeouts(data, now, options = {}) {
       events.push(expireBattleInvite(data, invite, now));
     }
   }
-  for (const room of Object.values(data.battleRooms)) {
-    if (!room || room.status === BATTLE_ROOM_CLOSED) {
+  for (const roomValue of Object.values(data.battleRooms)) {
+    if (!roomValue || roomValue.status === BATTLE_ROOM_CLOSED) {
       continue;
     }
-    const battle = battleRoomBattleStateForMutation(room, now, options);
+    let room = roomValue;
+    const battle = objectOrEmpty(room.battle);
     const partyPveOfflineAccountIds = offlinePartyPveBattleParticipantAccountIds(data, room, {now, runtimeActiveSessionIds});
     if (partyPveOfflineAccountIds.length > 0) {
       const update = removeOfflinePartyPveParticipantsFromRoom(data, room, partyPveOfflineAccountIds, {
@@ -17296,6 +18872,7 @@ function expireBattleTimeouts(data, now, options = {}) {
         runtimeActiveSessionIds,
       });
       if (update.changed) {
+        room = data.battleRooms[String(room.roomId || "")] || room;
         for (const partyEvent of update.partyEvents) {
           events.push(partyEvent);
         }
@@ -17328,6 +18905,7 @@ function expireBattleTimeouts(data, now, options = {}) {
     if (!result) {
       continue;
     }
+    room = battleRoomForMutation(data, room);
     closeBattleRoomWithResult(data, room, result, now, options);
     data.battleRooms[room.roomId] = room;
     events.push({
@@ -17424,7 +19002,7 @@ function battleActorStatuses(actor) {
     return {};
   }
   if (!actor.statuses || typeof actor.statuses !== "object" || Array.isArray(actor.statuses)) {
-    actor.statuses = {};
+    return {};
   }
   return actor.statuses;
 }
@@ -19158,15 +20736,27 @@ function runtimeSessionCandidates(data, runtimeActiveSessionIds = null) {
   return result;
 }
 
-function onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null) {
-  return activeOnlinePlayers(data, now, runtimeActiveSessionIds).filter((account) => (
-    onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)
-  ));
-}
-
 function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds = null, options = {}) {
   const viewerPosition = options.viewerPosition || (viewerAccount ? data.playerPositions[viewerAccount.accountId] || null : null);
-  const players = onlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActiveSessionIds).map((account) => publicOnlinePlayer(account, data));
+  const activeAccounts = Array.isArray(options.activeAccounts)
+    ? options.activeAccounts
+    : activeOnlinePlayers(data, now, runtimeActiveSessionIds);
+  const publicPlayersByAccountId = options.publicPlayersByAccountId instanceof Map
+    ? options.publicPlayersByAccountId
+    : null;
+  const players = activeAccounts
+    .filter((account) => onlineAccountVisibleToViewer(data, viewerAccount, account, aoi))
+    .map((account) => {
+      const accountId = String(account && account.accountId || "");
+      if (publicPlayersByAccountId && publicPlayersByAccountId.has(accountId)) {
+        return publicPlayersByAccountId.get(accountId);
+      }
+      const player = publicOnlinePlayer(account, data);
+      if (publicPlayersByAccountId) {
+        publicPlayersByAccountId.set(accountId, player);
+      }
+      return player;
+    });
   players.sort((a, b) => {
     const distanceDelta = onlinePlayerDistanceRank(a, viewerPosition) - onlinePlayerDistanceRank(b, viewerPosition);
     if (distanceDelta !== 0) {
@@ -19177,11 +20767,91 @@ function publicOnlinePlayersForViewer(data, viewerAccount, aoi, now, runtimeActi
   return players.slice(0, ONLINE_PLAYERS_RESPONSE_LIMIT);
 }
 
+function topOnlineAccountsForViewer(data, viewerAccount, aoi, viewerPosition, activeAccountsValue) {
+  const activeAccounts = Array.isArray(activeAccountsValue) ? activeAccountsValue : [];
+  const ranked = [];
+  for (const account of activeAccounts) {
+    if (!onlineAccountVisibleToViewer(data, viewerAccount, account, aoi)) {
+      continue;
+    }
+    const position = data.playerPositions[String(account && account.accountId || "")] || null;
+    ranked.push({
+      account,
+      distance: onlinePositionDistanceRank(position, viewerPosition),
+      username: String(account && account.username || ""),
+    });
+  }
+  if (ranked.length <= ONLINE_PLAYERS_RESPONSE_LIMIT) {
+    ranked.sort(compareRankedOnlineAccount);
+    return ranked.map((entry) => entry.account);
+  }
+  const best = [];
+  for (const entry of ranked) {
+    if (best.length < ONLINE_PLAYERS_RESPONSE_LIMIT) {
+      rankedOnlineMaxHeapPush(best, entry);
+      continue;
+    }
+    if (compareRankedOnlineAccount(entry, best[0]) < 0) {
+      best[0] = entry;
+      rankedOnlineMaxHeapSiftDown(best, 0);
+    }
+  }
+  best.sort(compareRankedOnlineAccount);
+  return best.map((entry) => entry.account);
+}
+
+function compareRankedOnlineAccount(left, right) {
+  const distanceDelta = Number(left && left.distance || 0) - Number(right && right.distance || 0);
+  if (distanceDelta !== 0) {
+    return distanceDelta;
+  }
+  return String(left && left.username || "").localeCompare(String(right && right.username || ""));
+}
+
+// Keep the worst retained account at index zero. A new candidate can then be
+// rejected or replace that root in O(log 64), while the final 64 entries still
+// use the exact historical distance/username ordering.
+function rankedOnlineMaxHeapPush(heap, entry) {
+  let index = heap.length;
+  heap.push(entry);
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (compareRankedOnlineAccount(heap[index], heap[parent]) <= 0) {
+      break;
+    }
+    [heap[index], heap[parent]] = [heap[parent], heap[index]];
+    index = parent;
+  }
+}
+
+function rankedOnlineMaxHeapSiftDown(heap, startIndex) {
+  let index = startIndex;
+  while (true) {
+    const left = index * 2 + 1;
+    if (left >= heap.length) {
+      return;
+    }
+    const right = left + 1;
+    const worseChild = right < heap.length
+      && compareRankedOnlineAccount(heap[right], heap[left]) > 0
+      ? right
+      : left;
+    if (compareRankedOnlineAccount(heap[worseChild], heap[index]) <= 0) {
+      return;
+    }
+    [heap[index], heap[worseChild]] = [heap[worseChild], heap[index]];
+    index = worseChild;
+  }
+}
+
 function onlinePlayerDistanceRank(player, viewerPosition) {
-  if (!viewerPosition || !player || !player.position) {
+  return onlinePositionDistanceRank(player && player.position, viewerPosition);
+}
+
+function onlinePositionDistanceRank(position, viewerPosition) {
+  if (!viewerPosition || !position) {
     return Number.MAX_SAFE_INTEGER;
   }
-  const position = player.position;
   if (String(position.mapId || "") !== String(viewerPosition.mapId || "")) {
     return Number.MAX_SAFE_INTEGER;
   }
@@ -19201,6 +20871,60 @@ function onlineAccountVisibleToViewer(data, viewerAccount, account, aoi) {
     return true;
   }
   return onlinePositionVisibleToAoi(data.playerPositions[account.accountId] || null, aoi);
+}
+
+function onlinePositionProjectionVariants(projectionCache, event) {
+  if (
+    !(projectionCache instanceof Map)
+    || !event
+    || typeof event !== "object"
+    || Array.isArray(event)
+  ) {
+    return null;
+  }
+  const existing = projectionCache.get(event);
+  if (existing instanceof Map) {
+    return existing;
+  }
+  const variants = new Map();
+  projectionCache.set(event, variants);
+  return variants;
+}
+
+function onlinePositionProjectionCacheKey(aoi) {
+  const source = aoi && typeof aoi === "object" && !Array.isArray(aoi) ? aoi : {};
+  const scope = String(source.scope || "");
+  const mapId = String(source.mapId || "");
+  // `aoi` has already passed normalizeOnlineAoiPayload(). Include every
+  // primitive field in that normalized contract so semantically different
+  // viewers can never share a projected event merely because they happen to
+  // have the same current visibility result.
+  return [
+    source.enabled === true ? "1" : "0",
+    `${scope.length}:${scope}`,
+    `${mapId.length}:${mapId}`,
+    String(Number(source.cellX || 0)),
+    String(Number(source.cellY || 0)),
+    String(Number(source.radius || 0)),
+    source.sameMapOnly === true ? "1" : "0",
+  ].join("|");
+}
+
+function battleTurnProjectionCacheKey(room, viewerAccountId) {
+  const battle = room && room.battle && typeof room.battle === "object" && !Array.isArray(room.battle)
+    ? room.battle
+    : {};
+  // publicBattleRoom currently uses viewerAccountId only to filter settlement
+  // writeback. Keep every such projection account-local, including empty
+  // writebacks, so a future recipient can never inherit another account's data.
+  const hasPrivateWriteback = Boolean(
+    battle.profileWriteback
+    && typeof battle.profileWriteback === "object"
+    && !Array.isArray(battle.profileWriteback)
+  );
+  return hasPrivateWriteback
+    ? `account:${String(viewerAccountId || "")}`
+    : "shared";
 }
 
 function normalizeOnlineAoiPayload(payload = {}, fallbackPosition = null) {
@@ -19309,24 +21033,23 @@ function publicOnlineAoi(aoi) {
 }
 
 function ensureProfileForAccount(data, account, now) {
-  const binding = profileBindingForAccount(data, account, now);
+  let binding = profileBindingForAccount(data, account, now);
   const existingDoc = data.profiles[binding.playerId] || null;
   if (existingDoc && existingDoc.profile && typeof existingDoc.profile === "object" && !Array.isArray(existingDoc.profile)) {
     return {binding, profileDoc: existingDoc, created: false};
   }
   const updatedAt = String(binding.updatedAt || isoNow(now));
   const revision = Math.max(0, Math.trunc(Number(binding.profileRevision || 0)));
-  binding.profileRevision = revision;
-  binding.updatedAt = updatedAt;
-  data.profileBindings[account.accountId] = binding;
-  data.profiles[binding.playerId] = {
+  binding = {...binding, profileRevision: revision, updatedAt};
+  storeAuthorityRootRecord(data, "profileBindings", account.accountId, binding);
+  storeAuthorityRootRecord(data, "profiles", binding.playerId, {
     playerId: binding.playerId,
     accountId: account.accountId,
     profileRevision: revision,
     profile: createDefaultServerProfile(account),
     updatedAt,
     schemaVersion: 1,
-  };
+  });
   return {binding, profileDoc: data.profiles[binding.playerId], created: true};
 }
 
@@ -19645,7 +21368,7 @@ function profileBindingForAccount(data, account, now) {
       updatedAt: isoNow(now),
       schemaVersion: 1,
     };
-    data.profileBindings[account.accountId] = binding;
+    storeAuthorityRootRecord(data, "profileBindings", account.accountId, binding);
   }
   return binding;
 }
@@ -19754,15 +21477,17 @@ function recordGmAudit(data, username, commandId, okValue, message, now, randomI
   if (details && typeof details === "object" && !Array.isArray(details) && Object.keys(details).length > 0) {
     audit.details = clone(details);
   }
-  data.gmCommandAudit.push(audit);
-  while (data.gmCommandAudit.length > MAX_AUDIT_ROWS) {
-    data.gmCommandAudit.shift();
+  const gmCommandAudit = authorityRootJournalForMutation(data, "gmCommandAudit");
+  gmCommandAudit.push(audit);
+  while (gmCommandAudit.length > MAX_AUDIT_ROWS) {
+    gmCommandAudit.shift();
   }
   return {...audit, recorded: true};
 }
 
 function recordAuthEvent(data, type, username, okValue, message, now) {
-  data.authEvents.push({
+  const authEvents = authorityRootJournalForMutation(data, "authEvents");
+  authEvents.push({
     eventId: `auth_${crypto.randomUUID()}`,
     type,
     username,
@@ -19771,18 +21496,147 @@ function recordAuthEvent(data, type, username, okValue, message, now) {
     createdAt: isoNow(now),
     schemaVersion: 1,
   });
+  while (authEvents.length > MAX_AUDIT_ROWS) {
+    authEvents.shift();
+  }
 }
 
-function normalizeServiceEvents(value) {
+function normalizeServiceEvents(value, options = {}) {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
+  if (NORMALIZED_SERVICE_EVENT_CONTAINERS.has(value)) {
+    return value;
+  }
+  if (options.owned === true) {
+    const checkpoint = typeof options.checkpoint === "function" ? options.checkpoint : () => {};
+    let phaseStartedAt = process.hrtime.bigint();
+    const events = value.length > MAX_SERVICE_EVENTS ? value.slice(-MAX_SERVICE_EVENTS) : value;
+    let previousSeq = 0;
+    for (const event of events) {
+      if (!event || typeof event !== "object" || Array.isArray(event)) {
+        return normalizeServiceEvents(value);
+      }
+      const eventSeq = normalizeEventSeq(event.eventSeq);
+      if (eventSeq <= previousSeq || String(event.type || "").trim() === "") {
+        return normalizeServiceEvents(value);
+      }
+      previousSeq = eventSeq;
+    }
+    let phaseFinishedAt = process.hrtime.bigint();
+    checkpoint("scan", phaseStartedAt, phaseFinishedAt);
+    phaseStartedAt = phaseFinishedAt;
+    for (let index = 0; index < events.length; index += 1) {
+      const event = events[index];
+      const compact = compactReplayServiceEvent(event);
+      if (isCertifiedAuthorityRootJsonValue(compact)) {
+        events[index] = compact;
+        continue;
+      }
+      // Runtime event builders may include optional `undefined` fields. A
+      // shallow/deep freeze alone would leave that entry outside the certified
+      // JSON set, forcing every later authority clone to copy the entire replay
+      // window until the bad entry ages out. Canonicalize each newly appended
+      // event once; older certified entries continue to share by identity.
+      let canonical = compact;
+      if (!certifyOwnedAuthorityRootTransientJsonValue(canonical)) {
+        canonical = clone(canonical);
+        if (!certifyOwnedAuthorityRootTransientJsonValue(canonical)) {
+          return normalizeServiceEvents(value);
+        }
+      }
+      events[index] = canonical;
+    }
+    phaseFinishedAt = process.hrtime.bigint();
+    checkpoint("canonicalize", phaseStartedAt, phaseFinishedAt);
+    phaseStartedAt = phaseFinishedAt;
+    const normalized = freezeAuthorityRootJournal(events);
+    if (certifiedServiceEventWindow(normalized)) {
+      NORMALIZED_SERVICE_EVENT_CONTAINERS.add(normalized);
+    }
+    phaseFinishedAt = process.hrtime.bigint();
+    checkpoint("freeze", phaseStartedAt, phaseFinishedAt);
+    return NORMALIZED_SERVICE_EVENT_CONTAINERS.has(normalized)
+      ? normalized
+      : normalizeServiceEvents(normalized);
+  }
+  const sorted = value
     .filter((event) => event && typeof event === "object" && !Array.isArray(event))
     .map((event) => clone(event))
+    .map((event) => compactReplayServiceEvent(event))
     .filter((event) => normalizeEventSeq(event.eventSeq) > 0 && String(event.type || "").trim() !== "")
-    .sort((a, b) => normalizeEventSeq(a.eventSeq) - normalizeEventSeq(b.eventSeq))
-    .slice(-MAX_SERVICE_EVENTS);
+    .sort((a, b) => normalizeEventSeq(a.eventSeq) - normalizeEventSeq(b.eventSeq));
+  const bySeq = new Map();
+  for (const event of sorted) {
+    bySeq.set(normalizeEventSeq(event.eventSeq), event);
+  }
+  const events = Array.from(bySeq.values()).slice(-MAX_SERVICE_EVENTS);
+  const normalized = freezeAuthorityRootJournal(events);
+  if (certifiedServiceEventWindow(normalized)) {
+    NORMALIZED_SERVICE_EVENT_CONTAINERS.add(normalized);
+  }
+  return normalized;
+}
+
+function certifiedServiceEventWindow(events) {
+  let previousSeq = 0;
+  for (const event of Array.isArray(events) ? events : []) {
+    const eventSeq = normalizeEventSeq(event && event.eventSeq);
+    if (
+      !event
+      || typeof event !== "object"
+      || Array.isArray(event)
+      || !isCertifiedAuthorityRootJsonValue(event)
+      || eventSeq <= previousSeq
+      || String(event.type || "").trim() === ""
+    ) {
+      return false;
+    }
+    previousSeq = eventSeq;
+  }
+  return true;
+}
+
+function compactReplayServiceEvent(event) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    return event;
+  }
+  if (!String(event.type || "").startsWith("battle.")) {
+    return event;
+  }
+  const hasRoom = Object.hasOwn(event, "room");
+  const turn = event.turn && typeof event.turn === "object" && !Array.isArray(event.turn)
+    ? event.turn
+    : null;
+  const compactTurn = turn ? battleReplayEventList(turn) : null;
+  if (!hasRoom && compactTurn === turn) {
+    return event;
+  }
+  const compact = {...event};
+  if (compactTurn) {
+    compact.turn = compactTurn;
+  }
+  const roomId = String(event.roomId || event.room && event.room.roomId || "");
+  if (roomId !== "") {
+    compact.roomId = roomId;
+  }
+  if (hasRoom) {
+    delete compact.room;
+  }
+  return compact;
+}
+
+function mergePublishedServiceEventWindows(...windows) {
+  const bySeq = new Map();
+  for (const window of windows) {
+    for (const event of Array.isArray(window) ? window : []) {
+      const eventSeq = normalizeEventSeq(event && event.eventSeq);
+      if (eventSeq > 0) {
+        bySeq.set(eventSeq, event);
+      }
+    }
+  }
+  return normalizeServiceEvents(Array.from(bySeq.values()));
 }
 
 
@@ -19790,9 +21644,18 @@ function normalizeBattleRecords(value) {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
+  if (NORMALIZED_BATTLE_RECORD_CONTAINERS.has(value)) {
+    return value;
+  }
+  const records = value
     .filter((record) => record && typeof record === "object" && !Array.isArray(record))
     .map((record) => {
+      if (
+        NORMALIZED_BATTLE_RECORD_VALUES.has(record)
+        && isCertifiedAuthorityRootJsonValue(record)
+      ) {
+        return record;
+      }
       const participantAccountIds = Array.isArray(record.participantAccountIds)
         ? record.participantAccountIds.map((entry) => String(entry || "")).filter(Boolean)
         : [];
@@ -19843,55 +21706,70 @@ function normalizeBattleRecords(value) {
         (record.mode !== BATTLE_MODE_PARTY_PVE && record.participantAccountIds.length >= 2)
       )
     ))
-    .sort((a, b) => String(a.endedAt || "").localeCompare(String(b.endedAt || "")))
+    // battleRecords is an append journal. MySQL restores it in durable
+    // history_seq order; timestamps are payload facts and may be equal or
+    // backdated, so sorting by endedAt here could evict the newest commit.
     .slice(-MAX_BATTLE_RECORDS);
+  freezeAuthorityRootJournal(records);
+  for (const record of records) {
+    if (isCertifiedAuthorityRootJsonValue(record)) {
+      NORMALIZED_BATTLE_RECORD_VALUES.add(record);
+    }
+  }
+  NORMALIZED_BATTLE_RECORD_CONTAINERS.add(records);
+  return records;
 }
 
 function normalizeBattleTrace(value) {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
+  if (NORMALIZED_BATTLE_TRACE_CONTAINERS.has(value)) {
+    return value;
+  }
+  const trace = value
     .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
-    .map((entry) => ({
-      traceId: String(entry.traceId || `battle_trace_${crypto.randomUUID()}`),
-      createdAt: String(entry.createdAt || ""),
-      type: String(entry.type || ""),
-      roomId: String(entry.roomId || ""),
-      mode: String(entry.mode || ""),
-      status: String(entry.status || ""),
-      phase: String(entry.phase || ""),
-      round: Math.max(0, Math.trunc(Number(entry.round || 0))),
-      turnSeq: Math.max(0, Math.trunc(Number(entry.turnSeq || 0))),
-      participantAccountIds: Array.isArray(entry.participantAccountIds)
-        ? entry.participantAccountIds.map((accountId) => String(accountId || "")).filter(Boolean)
-        : [],
-      details: entry.details && typeof entry.details === "object" && !Array.isArray(entry.details) ? clone(entry.details) : {},
-      schemaVersion: 1,
-    }))
+    .map((entry) => {
+      if (
+        NORMALIZED_BATTLE_TRACE_VALUES.has(entry)
+        && isCertifiedAuthorityRootJsonValue(entry)
+      ) {
+        return entry;
+      }
+      return {
+        traceId: String(entry.traceId || `battle_trace_${crypto.randomUUID()}`),
+        createdAt: String(entry.createdAt || ""),
+        type: String(entry.type || ""),
+        roomId: String(entry.roomId || ""),
+        mode: String(entry.mode || ""),
+        status: String(entry.status || ""),
+        phase: String(entry.phase || ""),
+        round: Math.max(0, Math.trunc(Number(entry.round || 0))),
+        turnSeq: Math.max(0, Math.trunc(Number(entry.turnSeq || 0))),
+        participantAccountIds: Array.isArray(entry.participantAccountIds)
+          ? entry.participantAccountIds.map((accountId) => String(accountId || "")).filter(Boolean)
+          : [],
+        details: entry.details && typeof entry.details === "object" && !Array.isArray(entry.details) ? clone(entry.details) : {},
+        schemaVersion: 1,
+      };
+    })
     .filter((entry) => entry.type !== "")
     .slice(-MAX_BATTLE_TRACE_ROWS);
-}
-
-function recordBattleStateTrace(data, accountId, payload, now) {
-  const room = payload && payload.room && typeof payload.room === "object" && !Array.isArray(payload.room)
-    ? payload.room
-    : null;
-  recordBattleTrace(data, room, "battle_state_query", {
-    accountId: String(accountId || ""),
-    returnedRoomId: room ? String(room.roomId || "") : "",
-    returnedStatus: room ? String(room.status || "") : "",
-    returnedClosedRoom: room ? String(room.status || "") === BATTLE_ROOM_CLOSED : false,
-  }, now);
+  freezeAuthorityRootJournal(trace);
+  for (const entry of trace) {
+    if (isCertifiedAuthorityRootJsonValue(entry)) {
+      NORMALIZED_BATTLE_TRACE_VALUES.add(entry);
+    }
+  }
+  NORMALIZED_BATTLE_TRACE_CONTAINERS.add(trace);
+  return trace;
 }
 
 function recordBattleTrace(data, room, type, details = {}, now = Date.now) {
   if (!data || typeof data !== "object") {
     return null;
   }
-  if (!Array.isArray(data.battleTrace)) {
-    data.battleTrace = [];
-  }
+  const battleTrace = authorityRootJournalForMutation(data, "battleTrace");
   const battle = room && room.battle && typeof room.battle === "object" && !Array.isArray(room.battle) ? room.battle : {};
   const result = battle.result && typeof battle.result === "object" && !Array.isArray(battle.result) ? battle.result : {};
   const lastEventList = battle.lastEventList && typeof battle.lastEventList === "object" && !Array.isArray(battle.lastEventList)
@@ -19927,9 +21805,9 @@ function recordBattleTrace(data, room, type, details = {}, now = Date.now) {
   if (trace.type === "") {
     return null;
   }
-  data.battleTrace.push(trace);
-  while (data.battleTrace.length > MAX_BATTLE_TRACE_ROWS) {
-    data.battleTrace.shift();
+  battleTrace.push(trace);
+  while (battleTrace.length > MAX_BATTLE_TRACE_ROWS) {
+    battleTrace.shift();
   }
   if (process.env.BEASTBOUND_BATTLE_TRACE_STDOUT === "1") {
     console.log(`[battle-trace] ${trace.type} room=${trace.roomId} status=${trace.status} round=${trace.round} turn=${trace.turnSeq} details=${JSON.stringify(trace.details)}`);
@@ -20197,9 +22075,63 @@ function isValidUsername(username) {
   );
 }
 
+function registrationFieldValidation(payload = {}, credential = null) {
+  const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  const username = normalizeUsername(source.username);
+  if (!isValidUsername(username)) {
+    return fail("invalid_username", "账号只能使用3-20位小写字母、数字或下划线。");
+  }
+  const passwordBytes = credential
+    ? Math.max(0, Math.trunc(Number(credential.passwordByteLength || 0)))
+    : Buffer.byteLength(String(source.password || ""));
+  if (passwordBytes < PASSWORD_MIN_LENGTH) {
+    return fail("weak_password", "密码至少需要8位。");
+  }
+  if (passwordBytes > PASSWORD_MAX_BYTES) {
+    return fail("password_too_long", "密码最多允许128字节。");
+  }
+  const displayName = String(source.displayName || "").trim() || username;
+  if (!isValidDisplayName(displayName)) {
+    return fail("invalid_display_name", "角色名最多24个字符，且不能包含控制字符。");
+  }
+  return ok({username, displayName, passwordBytes});
+}
+
+function isValidDisplayName(value) {
+  const text = String(value || "");
+  if (text === "" || Buffer.byteLength(text) > DISPLAY_NAME_MAX_BYTES || /[\u0000-\u001f\u007f]/.test(text)) {
+    return false;
+  }
+  let graphemes = 0;
+  for (const _entry of DISPLAY_NAME_SEGMENTER.segment(text)) {
+    graphemes += 1;
+    if (graphemes > DISPLAY_NAME_MAX_GRAPHEMES) {
+      return false;
+    }
+  }
+  return graphemes > 0;
+}
+
+function passwordHashesEqual(leftValue, rightValue) {
+  const left = String(leftValue || "").trim().toLowerCase();
+  const right = String(rightValue || "").trim().toLowerCase();
+  if (!PASSWORD_HASH_PATTERN.test(left) || !PASSWORD_HASH_PATTERN.test(right)) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
+}
+
 function checkAuthAttemptGate(state, action, username, payload, now) {
   const nowMs = now();
   const key = authAttemptKey(action, username, payload);
+  pruneAuthAttemptState(state, nowMs, {force: false});
+  if (!state.has(key) && state.size >= positiveIntegerOption(state.maxKeys, AUTH_ATTEMPT_STATE_MAX_KEYS)) {
+    return fail(
+      "auth_rate_limited",
+      "认证请求较多，请稍后再试。",
+      {"retryAfterMs": AUTH_ATTEMPT_PRUNE_INTERVAL_MS}
+    );
+  }
   const entry = normalizeAuthAttemptEntry(state.get(key), nowMs);
   if (entry.backoffUntil > nowMs) {
     state.set(key, entry);
@@ -20221,6 +22153,7 @@ function checkAuthAttemptGate(state, action, username, payload, now) {
     );
   }
   entry.attempts.push(nowMs);
+  entry.lastSeenAt = nowMs;
   state.set(key, entry);
   return ok({"authAttemptKey": key});
 }
@@ -20231,6 +22164,7 @@ function recordAuthAttemptResult(state, key, success, now) {
   }
   const nowMs = now();
   const entry = normalizeAuthAttemptEntry(state.get(key), nowMs);
+  entry.lastSeenAt = nowMs;
   if (success) {
     entry.failures = [];
     entry.backoffUntil = 0;
@@ -20252,7 +22186,27 @@ function normalizeAuthAttemptEntry(value, nowMs) {
     attempts: authAttemptTimes(entry.attempts, nowMs, AUTH_RATE_WINDOW_MS),
     failures: authAttemptTimes(entry.failures, nowMs, AUTH_FAILURE_WINDOW_MS),
     backoffUntil: Math.max(0, Number(entry.backoffUntil || 0)),
+    lastSeenAt: Math.max(0, Number(entry.lastSeenAt || nowMs)),
   };
+}
+
+function pruneAuthAttemptState(state, nowMs, options = {}) {
+  const nextPruneAt = Math.max(0, Number(state.nextPruneAt || 0));
+  if (!options.force && nowMs < nextPruneAt) {
+    return 0;
+  }
+  const ttlMs = positiveIntegerOption(state.ttlMs, AUTH_ATTEMPT_STATE_TTL_MS);
+  let removed = 0;
+  for (const [key, rawEntry] of state) {
+    const lastSeenAt = Math.max(0, Number(rawEntry && rawEntry.lastSeenAt || 0));
+    if (lastSeenAt > 0 && nowMs - lastSeenAt < ttlMs) {
+      continue;
+    }
+    state.delete(key);
+    removed += 1;
+  }
+  state.nextPruneAt = nowMs + Math.min(AUTH_ATTEMPT_PRUNE_INTERVAL_MS, ttlMs);
+  return removed;
 }
 
 function authAttemptTimes(values, nowMs, windowMs) {
@@ -20275,7 +22229,7 @@ function normalizeAuthClientIp(value) {
   if (ip.startsWith("::ffff:")) {
     ip = ip.slice("::ffff:".length);
   }
-  return ip || "local";
+  return (ip || "local").slice(0, 64);
 }
 
 function passwordUpgradePolicyForAccount(account) {
@@ -20328,6 +22282,11 @@ function clone(value) {
 module.exports = {
   ROLE_PLAYER,
   ROLE_GM,
+  __authorityJournalNormalizersForTest: Object.freeze({
+    normalizeBattleRecords,
+    normalizeBattleTrace,
+    normalizeServiceEvents,
+  }),
   createAuthService,
   createMemoryAuthStore,
   createJsonAuthStore,

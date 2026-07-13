@@ -63,6 +63,9 @@ function createDurableMutationCoordinator(options = {}) {
     options.responseTimeoutMs ?? DEFAULT_RESPONSE_TIMEOUT_MS,
     "responseTimeoutMs",
   );
+  const yieldTurn = typeof options.yieldTurn === "function"
+    ? options.yieldTurn
+    : () => new Promise((resolve) => setImmediate(resolve));
 
   let tail = Promise.resolve();
   let pending = 0;
@@ -133,6 +136,16 @@ function createDurableMutationCoordinator(options = {}) {
     accepted += 1;
 
     const operation = tail.then(async () => {
+      // Promise continuations otherwise run the whole queued burst in one
+      // microtask checkpoint. Ten battle commands can each be safely bounded
+      // yet still starve HTTP/WS timers when chained without returning to the
+      // event loop. The first admitted operation starts immediately; every
+      // later serialized operation yields only after its predecessor has fully
+      // settled and published, so ordering and COMMIT-before-success remain
+      // unchanged.
+      if (completed > 0) {
+        await yieldTurn();
+      }
       running += 1;
       try {
         return await operationFn();

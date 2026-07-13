@@ -176,6 +176,8 @@ async function printStatus(env) {
   const pid = readPid();
   const health = await requestHealth(env).catch((error) => ({"ok": false, "error": error.message}));
   const counts = mysqlCounts(env);
+  const bindHost = env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
+  const wildcardBind = bindHost === "0.0.0.0" || bindHost === "::";
   console.log(JSON.stringify({
     ok: Boolean(health.ok),
     pid: pid || null,
@@ -183,6 +185,13 @@ async function printStatus(env) {
     url: publicUrl(env),
     localUrl: `http://127.0.0.1:${env.BEASTBOUND_AUTH_PORT || "8787"}`,
     lanIps: lanIps(),
+    exposure: {
+      bindHost,
+      mode: wildcardBind ? "lan_or_edge" : "local_or_private",
+      warning: wildcardBind
+        ? "服务正在监听所有网卡；公网部署必须置于TLS反向代理和显式可信代理配置之后。"
+        : "",
+    },
     health,
     mysql: {
       database: env.BEASTBOUND_MYSQL_DATABASE,
@@ -376,7 +385,7 @@ function loadRuntimeEnv() {
   return {
     ...env,
     BEASTBOUND_AUTH_STORE: env.BEASTBOUND_AUTH_STORE || "mysql",
-    BEASTBOUND_AUTH_HOST: env.BEASTBOUND_AUTH_HOST || "0.0.0.0",
+    BEASTBOUND_AUTH_HOST: env.BEASTBOUND_AUTH_HOST || "127.0.0.1",
     BEASTBOUND_AUTH_PORT: env.BEASTBOUND_AUTH_PORT || "8787",
   };
 }

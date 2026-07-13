@@ -196,6 +196,8 @@ test("expired sessions can refresh within grace window", () => {
     "now": () => currentMs,
     "randomBytes": (size) => Buffer.alloc(size, randomByteValue++),
   });
+  const events = [];
+  service.onEvent((event) => events.push(event));
   const registered = service.register({"username": "refreshuser", "password": "test1234"});
   assert.equal(registered.ok, true);
   const oldToken = registered.session.token;
@@ -211,6 +213,9 @@ test("expired sessions can refresh within grace window", () => {
   assert.equal(Boolean(refreshed.session.token), true);
   assert.equal(service.getSession(refreshed.session.token).ok, true);
   assert.equal(service.getSession(oldToken).code, "session_revoked");
+  const replacementEvent = events.find((event) => event.type === "session.replaced");
+  assert.ok(replacementEvent);
+  assert.deepEqual(replacementEvent.targetSessionIds, [registered.session.sessionId]);
 });
 
 test("new login replaces older sessions for the same account", () => {
@@ -515,6 +520,74 @@ test("server restart recovers sessions without stale online positions", () => {
   assert.equal(bothOnline.players.length, 2);
   assert.equal(bothOnline.players.find((player) => player.accountId === scout.account.accountId).position, null);
   assert.equal(bothOnline.players.find((player) => player.accountId === ranger.account.accountId).position, null);
+});
+
+test("server startup bounds legacy terminal session history before any account login", () => {
+  const nowMs = Date.parse("2026-07-13T00:00:00.000Z");
+  const seedService = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => nowMs,
+  });
+  const registered = seedService.register({
+    username: "legacyhistory",
+    password: "test1234",
+    displayName: "历史会话玩家",
+  });
+  assert.equal(registered.ok, true);
+
+  const legacyData = seedService.snapshot();
+  const accountId = registered.account.accountId;
+  for (let index = 0; index < 100; index += 1) {
+    const sessionId = `legacy_revoked_${String(index).padStart(3, "0")}`;
+    legacyData.sessions[sessionId] = {
+      sessionId,
+      accountId,
+      tokenHash: `legacy_hash_${index}`,
+      createdAt: new Date(Date.parse("2025-01-01T00:00:00.000Z") - index * 1000).toISOString(),
+      expiresAt: "2025-01-08T00:00:00.000Z",
+      revokedAt: "2025-01-02T00:00:00.000Z",
+      schemaVersion: 1,
+    };
+  }
+  legacyData.sessions.legacy_expired_unrevoked = {
+    sessionId: "legacy_expired_unrevoked",
+    accountId,
+    tokenHash: "legacy_expired_hash",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    expiresAt: "2024-01-08T00:00:00.000Z",
+    revokedAt: null,
+    schemaVersion: 1,
+  };
+  legacyData.sessions.legacy_refreshable_unrevoked = {
+    sessionId: "legacy_refreshable_unrevoked",
+    accountId,
+    tokenHash: "legacy_refreshable_hash",
+    createdAt: "2024-01-02T00:00:00.000Z",
+    expiresAt: "2026-07-12T00:00:00.000Z",
+    revokedAt: null,
+    schemaVersion: 1,
+  };
+
+  const legacyStore = createMemoryAuthStore(legacyData);
+  const restarted = createAuthService({
+    store: legacyStore,
+    now: () => nowMs,
+  });
+  const restartedSessions = restarted.snapshot().sessions;
+  assert.equal(Object.keys(restartedSessions).length, 9);
+  assert.equal(Boolean(restartedSessions[registered.session.sessionId]), true);
+  assert.equal(Boolean(restartedSessions.legacy_expired_unrevoked), false);
+  assert.equal(Boolean(restartedSessions.legacy_refreshable_unrevoked), true);
+  assert.equal(restarted.getSession(registered.session.token).ok, true);
+
+  const unrelatedWrite = restarted.register({
+    username: "historywriter",
+    password: "test1234",
+    displayName: "无关写入玩家",
+  });
+  assert.equal(unrelatedWrite.ok, true);
+  assert.equal(Object.keys(legacyStore.load().sessions).length, 10);
+  assert.equal(Boolean(legacyStore.load().sessions.legacy_expired_unrevoked), false);
 });
 
 test("duel battle close writes back active hang session", () => {

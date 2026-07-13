@@ -36,6 +36,10 @@ const {createPetEncounterAuthority, loadPetEncounterCatalog} = require("../src/a
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 const {scaledForRecipientLevel} = require("../src/auth/battle-exp-catalog");
 const {createBattleRandomAuthority} = require("../src/auth/battle-random-authority");
+const {
+  createEventProjectionCache,
+  isReusableEventProjection,
+} = require("../src/event-projection-cache");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
@@ -237,7 +241,15 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   assert.equal(firstCommand.ok, true);
   assert.equal(firstCommand.turn, null);
   assert.equal(firstCommand.room.battle.submittedAccountIds.includes(challenger.account.accountId), true);
-  assert.equal(events.some((event) => event.type === "battle.command_submitted" && event.roomId === accept.room.roomId), true);
+  const firstCommandEvent = events.find((event) => (
+    event.type === "battle.command_submitted"
+    && event.roomId === accept.room.roomId
+    && event.submittedActorId === firstCommand.command.actorId
+  ));
+  assert.ok(firstCommandEvent);
+  assert.equal(Object.hasOwn(firstCommandEvent, "room"), false);
+  assert.deepEqual(firstCommandEvent.submittedActorIds, firstCommand.room.battle.submittedActorIds);
+  assert.deepEqual(firstCommandEvent.requiredActorIds, firstCommand.room.battle.requiredActorIds);
 
   const duplicate = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
@@ -260,7 +272,38 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   assert.equal(secondCommand.room.battle.round, 2);
   assert.equal(secondCommand.room.battle.submittedAccountIds.length, 0);
   assert.equal(secondCommand.room.battle.lastEventList.round, 1);
-  assert.equal(events.some((event) => event.type === "battle.turn_resolved" && event.turn.kind === "battle_event_list"), true);
+  const resolvedEvent = events.find((event) => event.type === "battle.turn_resolved" && event.turn.kind === "battle_event_list");
+  assert.ok(resolvedEvent);
+  assert.equal(Object.hasOwn(resolvedEvent, "room"), false);
+  const challengerConnection = {
+    accountId: challenger.account.accountId,
+    sessionId: challenger.session.sessionId,
+  };
+  const opponentConnection = {
+    accountId: opponent.account.accountId,
+    sessionId: opponent.session.sessionId,
+  };
+  const sharedProjectionCache = createEventProjectionCache();
+  const challengerTurnProjection = service.eventForConnection(
+    challengerConnection,
+    resolvedEvent,
+    sharedProjectionCache,
+  );
+  const opponentTurnProjection = service.eventForConnection(
+    opponentConnection,
+    resolvedEvent,
+    sharedProjectionCache,
+  );
+  assert.equal(challengerTurnProjection.ok, true);
+  assert.equal(opponentTurnProjection.ok, true);
+  assert.strictEqual(
+    challengerTurnProjection.event,
+    opponentTurnProjection.event,
+    "an ordinary turn has one publish-local public projection",
+  );
+  assert.equal(isReusableEventProjection(sharedProjectionCache, challengerTurnProjection.event), true);
+  assert.equal(Object.hasOwn(challengerTurnProjection.event.room.battle, "lastEventList"), false);
+  assert.deepEqual(challengerTurnProjection.event.turn, secondCommand.turn);
 
   const staleRound = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
@@ -269,6 +312,56 @@ test("duel battle rooms resolve turn commands into event lists", () => {
   });
   assert.equal(staleRound.ok, false);
   assert.equal(staleRound.code, "battle_command_round_mismatch");
+});
+
+test("final command event keeps the resolving round required actor snapshot", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const events = [];
+  service.onEvent((event) => events.push(event));
+  const attacker = service.register({"username": "reqsnapa", "password": "test1234", "displayName": "快照攻击"});
+  const target = service.register({"username": "reqsnapb", "password": "test1234", "displayName": "快照目标"});
+  assert.equal(attacker.ok, true);
+  assert.equal(target.ok, true);
+  assert.equal(service.saveProfile(attacker.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("快照攻击", {"level": 20, "hp": 200, "maxHp": 200, "attack": 999, "defense": 1, "quick": 99}, null),
+  }).ok, true);
+  assert.equal(service.saveProfile(target.session.token, {
+    "expectedRevision": 0,
+    "profile": battleProfile("快照目标", {"level": 1, "hp": 1, "maxHp": 1, "attack": 1, "defense": 1, "quick": 1}, null),
+  }).ok, true);
+  service.updatePlayerPosition(attacker.session.token, {"mapId": "firebud_training_yard", "cellX": 10, "cellY": 10, "facing": "east", "moving": false});
+  service.updatePlayerPosition(target.session.token, {"mapId": "firebud_training_yard", "cellX": 11, "cellY": 10, "facing": "west", "moving": false});
+  const invite = service.inviteToBattle(attacker.session.token, {"username": target.account.username});
+  const accepted = service.acceptBattleInvite(target.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+  const attackerActor = accepted.room.battle.actors.find((actor) => actor.accountId === attacker.account.accountId && actor.kind === "player");
+  const targetActor = accepted.room.battle.actors.find((actor) => actor.accountId === target.account.accountId && actor.kind === "player");
+  assert.ok(attackerActor);
+  assert.ok(targetActor);
+  assert.equal(service.submitBattleCommand(target.session.token, accepted.room.roomId, {
+    round: 1,
+    actorId: targetActor.actorId,
+    actionId: "defend",
+  }).turn, null);
+  const resolved = service.submitBattleCommand(attacker.session.token, accepted.room.roomId, {
+    round: 1,
+    actorId: attackerActor.actorId,
+    actionId: "attack",
+    targetActorId: targetActor.actorId,
+  });
+  assert.equal(resolved.ok, true);
+  assert.ok(resolved.turn);
+  assert.equal(resolved.turn.result.reason, "defeat");
+  const finalCommandEvent = events.findLast((event) => (
+    event.type === "battle.command_submitted"
+    && event.submittedActorId === attackerActor.actorId
+  ));
+  assert.ok(finalCommandEvent);
+  assert.equal(Object.hasOwn(finalCommandEvent, "room"), false);
+  assert.deepEqual(finalCommandEvent.requiredActorIds.slice().sort(), [attackerActor.actorId, targetActor.actorId].sort());
+  assert.deepEqual(finalCommandEvent.submittedActorIds.slice().sort(), [attackerActor.actorId, targetActor.actorId].sort());
+  assert.equal(resolved.room.battle.requiredActorIds.includes(targetActor.actorId), false);
 });
 
 test("resolved battle rounds reserve playback grace before next command timeout", () => {
@@ -3027,6 +3120,8 @@ test("party pve capture rejects legacy full pet capacity before rolling or consu
 
 test("party pve capture writeback is private to the capturing account across state and events", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
+  const publishedEvents = [];
+  service.onEvent((event) => publishedEvents.push(event));
   const leader = service.register({"username": "captureprivlead", "password": "test1234", "displayName": "私密捕捉甲"});
   const member = service.register({"username": "captureprivmem", "password": "test1234", "displayName": "私密捕捉乙"});
   const leaderProfile = battleProfile("私密捕捉甲", {
@@ -3091,6 +3186,51 @@ test("party pve capture writeback is private to the capturing account across sta
   assert.equal(memberState.room.battle.profileWriteback.profiles.every((entry) => entry.accountId === member.account.accountId), true);
   assert.equal(memberState.room.battle.profileWriteback.profiles.some((entry) => entry.accountId === leader.account.accountId), false);
 
+  const finalTurnEvent = publishedEvents.find((event) => (
+    event.type === "battle.turn_resolved"
+    && event.roomId === encounter.room.roomId
+  ));
+  assert.ok(finalTurnEvent);
+  assert.equal(Object.hasOwn(finalTurnEvent, "room"), false);
+  const publishProjectionCache = createEventProjectionCache();
+  const leaderConnection = {
+    accountId: leader.account.accountId,
+    sessionId: leader.session.sessionId,
+  };
+  const memberConnection = {
+    accountId: member.account.accountId,
+    sessionId: member.session.sessionId,
+  };
+  const leaderProjection = service.eventForConnection(
+    leaderConnection,
+    finalTurnEvent,
+    publishProjectionCache,
+  );
+  const leaderProjectionAgain = service.eventForConnection(
+    leaderConnection,
+    finalTurnEvent,
+    publishProjectionCache,
+  );
+  const memberProjection = service.eventForConnection(
+    memberConnection,
+    finalTurnEvent,
+    publishProjectionCache,
+  );
+  assert.equal(leaderProjection.ok, true);
+  assert.equal(memberProjection.ok, true);
+  assert.strictEqual(leaderProjection.event, leaderProjectionAgain.event);
+  assert.notStrictEqual(leaderProjection.event, memberProjection.event);
+  assert.equal(isReusableEventProjection(publishProjectionCache, leaderProjection.event), true);
+  assert.equal(isReusableEventProjection(publishProjectionCache, memberProjection.event), true);
+  const leaderProjectedProfiles = leaderProjection.event.room.battle.profileWriteback.profiles;
+  const memberProjectedProfiles = memberProjection.event.room.battle.profileWriteback.profiles;
+  assert.equal(leaderProjectedProfiles.some((entry) => entry.accountId === leader.account.accountId), true);
+  assert.equal(memberProjectedProfiles.some((entry) => entry.accountId === member.account.accountId), true);
+  assert.equal(leaderProjectedProfiles.some((entry) => entry.accountId === member.account.accountId), false);
+  assert.equal(memberProjectedProfiles.some((entry) => entry.accountId === leader.account.accountId), false);
+  assert.equal(Object.hasOwn(leaderProjection.event.room.battle, "lastEventList"), false);
+  assert.equal(Object.hasOwn(memberProjection.event.room.battle, "lastEventList"), false);
+
   for (const [token, expectedAccountId] of [
     [leader.session.token, leader.account.accountId],
     [member.session.token, member.account.accountId],
@@ -3106,6 +3246,12 @@ test("party pve capture writeback is private to the capturing account across sta
         : [];
       assert.equal(profiles.every((entry) => entry.accountId === expectedAccountId), true);
     }
+    const closedEvent = battleEvents.find((event) => event.type === "battle.room_closed");
+    const closedProfiles = closedEvent && closedEvent.room && closedEvent.room.battle
+      && closedEvent.room.battle.profileWriteback
+      ? closedEvent.room.battle.profileWriteback.profiles
+      : [];
+    assert.equal(closedProfiles.some((entry) => entry.accountId === expectedAccountId), true);
   }
   const storedSharedEvents = service.snapshot().serviceEvents.filter((event) => event && String(event.type || "").startsWith("battle."));
   for (const event of storedSharedEvents) {
@@ -4247,6 +4393,13 @@ test("party pve collapses adjacent same-target attacks into combo events and sha
   assert.equal(comboEvent.dodged, false);
   assert.equal(comboEvent.critical, false);
   assert.equal(comboEvent.counterTriggered, false);
+  assert.deepEqual(
+    comboEvent.participantDamageFacts.map((entry) => entry.actorId),
+    [leaderPlayer.actorId, leaderPet.actorId],
+  );
+  assert.equal(comboEvent.participantDamageFacts.every((entry) => (
+    entry.damage >= 1 && entry.schemaVersion === 1 && String(entry.combatFormulaId || "") !== ""
+  )), true);
   assert.equal(comboEvent.defeated, true);
   assert.equal(comboEvent.expCredits.length, 1);
   const recipients = comboEvent.expCredits[0].recipients || [];
@@ -4486,7 +4639,13 @@ test("party pve victory applies StoneAge-style high level exp decay floor", () =
   assert.equal(trace.ok, true);
   assert.equal(trace.traces.some((entry) => entry.type === "battle_room_closed" && entry.details.profileWritebackCount >= 1), true);
   assert.equal(trace.traces.some((entry) => entry.type === "battle_turn_resolved" && entry.details.expCreditCount === 2), true);
-  assert.equal(trace.traces.some((entry) => entry.type === "battle_state_query" && entry.details.returnedClosedRoom === true), true);
+  assert.equal(trace.traces.some((entry) => entry.type === "battle_state_query"), false);
+  const repeatedState = service.getBattleState(leader.session.token);
+  assert.equal(repeatedState.ok, true);
+  assert.deepEqual(
+    service.getBattleTrace(leader.session.token, {"roomId": encounter.room.roomId, "limit": 20}).traces,
+    trace.traces,
+  );
 });
 
 test("duel battle rooms close when a player is defeated even if their pet survives", () => {
@@ -4602,8 +4761,22 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(challengerPet.statusResist.confusion, 0.1);
   assert.deepEqual(challengerPet.statusImmune, {});
 
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    round: 1, actorId: challengerPlayer.actorId, actionId: "defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+    round: 1, actorId: challengerPet.actorId, actionId: "pet_defend",
+  }).turn, null);
+  assert.equal(service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    round: 1, actorId: opponentPlayer.actorId, actionId: "defend",
+  }).turn, null);
+  const firstRound = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
+    round: 1, actorId: opponentPet.actorId, actionId: "pet_defend",
+  });
+  assert.ok(firstRound.turn);
+
   const switchCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
-    "round": 1,
+    "round": 2,
     "actorId": challengerPlayer.actorId,
     "actionId": "switch_pet",
     "petId": "pet_a_standby",
@@ -4612,7 +4785,7 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(switchCommand.command.actionKind, "switch_pet");
   assert.equal(switchCommand.room.battle.requiredActorIds.includes(challengerPet.actorId), false);
   const attackCommand = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
-    "round": 1,
+    "round": 2,
     "actorId": opponentPlayer.actorId,
     "actionId": "attack",
     "targetActorId": challengerPet.actorId,
@@ -4620,7 +4793,7 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(attackCommand.ok, true);
   assert.equal(attackCommand.turn, null);
   const resolveCommand = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
-    "round": 1,
+    "round": 2,
     "actorId": opponentPet.actorId,
     "actionId": "pet_defend",
   });
@@ -4641,6 +4814,13 @@ test("duel battle rooms snapshot pet teams and resolve switch-pet commands", () 
   assert.equal(switchedPet.statusImmune.stone, true);
   assert.equal(resolveCommand.room.battle.requiredActorIds.includes(switchedPet.actorId), true);
   assert.equal(resolveCommand.room.battle.requiredActorIds.includes(challengerPet.actorId), false);
+  const replay = service.listEventsForSession(challenger.session.token, {afterSeq: 0});
+  const replayedTurns = replay.events.filter((event) => (
+    event.type === "battle.turn_resolved" && event.roomId === accept.room.roomId
+  ));
+  assert.equal(replayedTurns.length, 2);
+  assert.deepEqual(replayedTurns[0].turn, firstRound.turn, "older replay remains complete after a later pet switch");
+  assert.deepEqual(replayedTurns[1].turn, resolveCommand.turn, "switch-pet replay preserves the complete pre/post actor snapshots");
 
   const leave = service.leaveBattleRoom(opponent.session.token, accept.room.roomId);
   assert.equal(leave.ok, true);

@@ -718,6 +718,32 @@ test("market listings sell through with default tax", () => {
   assert.equal(claimed.mail, null);
 });
 
+test("market reads keep a frozen legacy profile without quest state read-only", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const player = seedService.register({
+    username: "marketreadlegacy",
+    password: "test1234",
+    displayName: "旧档只读号",
+  });
+  assert.equal(player.ok, true);
+  const seed = seedService.snapshot();
+  const sourceDocument = snapshotProfileDocument(seed, player.account.accountId);
+  sourceDocument.profile.activeQuestId = "";
+  delete sourceDocument.profile.questStates;
+  const expectedDocument = structuredClone(sourceDocument);
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+
+  const result = service.marketListings(player.session.token, {limit: 20});
+
+  assert.equal(result.ok, true);
+  assert.ok(Array.isArray(result.market.listings));
+  assert.deepEqual(
+    snapshotProfileDocument(service.snapshot(), player.account.accountId),
+    expectedDocument,
+    "a read projection must not backfill quest fields into the authority profile",
+  );
+});
+
 test("market sale mail id exhaustion cancels normal and tutorial settlement without changing any asset", () => {
   function collisionMail(mailId, recipient) {
     return {

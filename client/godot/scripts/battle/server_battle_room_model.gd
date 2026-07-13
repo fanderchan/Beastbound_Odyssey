@@ -24,6 +24,16 @@ static func battle_id_for_room(room: Dictionary) -> String:
 	return "server_battle_%s" % room_id if room_id != "" else "server_battle_room"
 
 
+static func polled_room_is_older(current_room: Dictionary, polled_room: Dictionary) -> bool:
+	var current_room_id := str(current_room.get("roomId", "")).strip_edges()
+	var polled_room_id := str(polled_room.get("roomId", "")).strip_edges()
+	if current_room_id == "" or current_room_id != polled_room_id:
+		return false
+	var current_battle := current_room.get("battle", {}) as Dictionary if current_room.get("battle", {}) is Dictionary else {}
+	var polled_battle := polled_room.get("battle", {}) as Dictionary if polled_room.get("battle", {}) is Dictionary else {}
+	return int(current_battle.get("round", 0)) > int(polled_battle.get("round", 0))
+
+
 static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dictionary:
 	if not is_restorable_room(room):
 		return {}
@@ -95,6 +105,48 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 	if last_event_list is Dictionary:
 		state["lastServerEventList"] = (last_event_list as Dictionary).duplicate(true)
 	return state
+
+
+static func room_with_command_progress(room: Dictionary, event: Dictionary) -> Dictionary:
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	var event_room_id := str(event.get("roomId", "")).strip_edges()
+	if room_id == "" or event_room_id != room_id:
+		return {}
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	if battle.is_empty():
+		return {}
+	var room_round := maxi(1, int(battle.get("round", 1)))
+	var event_round := int(event.get("round", 0))
+	if event_round != room_round:
+		return {}
+	for key in ["submittedActorIds", "submittedAccountIds", "requiredActorIds", "requiredAccountIds"]:
+		if not (event.get(key, null) is Array):
+			return {}
+	var next_room := room.duplicate(true)
+	var next_battle := (next_room.get("battle", {}) as Dictionary).duplicate(true)
+	for key in ["submittedActorIds", "submittedAccountIds", "requiredActorIds", "requiredAccountIds"]:
+		next_battle[key] = (event.get(key, []) as Array).duplicate(true)
+	next_room["battle"] = next_battle
+	return next_room
+
+
+static func room_with_turn_event_list(room: Dictionary, turn: Dictionary) -> Dictionary:
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	var turn_room_id := str(turn.get("roomId", "")).strip_edges()
+	if (
+		room_id == ""
+		or turn_room_id != room_id
+		or str(turn.get("kind", "")).strip_edges() != "battle_event_list"
+	):
+		return {}
+	var battle := room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
+	if battle.is_empty():
+		return {}
+	var next_room := room.duplicate(true)
+	var next_battle := (next_room.get("battle", {}) as Dictionary).duplicate(true)
+	next_battle["lastEventList"] = turn.duplicate(true)
+	next_room["battle"] = next_battle
+	return next_room
 
 
 static func battle_events_from_server_event_list(state: Dictionary, event_list: Dictionary) -> Array[Dictionary]:

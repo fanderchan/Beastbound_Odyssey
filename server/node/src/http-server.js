@@ -20,6 +20,26 @@ const {
   protocolCompatibility,
   protocolMismatchResult,
 } = require("./protocol");
+const {
+  HttpBoundaryError,
+  applyHttpServerLimits,
+  createRequestId,
+  jsonBodyLimitForPath,
+  parseOriginFormTarget,
+  readBoundedBody,
+  readBoundedJson,
+  secureJsonHeaders,
+  validateDeclaredBodyLimit,
+} = require("./http-security-boundary");
+const {
+  NetworkAdmissionError,
+  createNetworkAdmission,
+} = require("./network-admission");
+const {
+  AuthWorkQueueError,
+  createHttpAuthBoundary,
+} = require("./http-auth-boundary");
+const {createHealthMonitor} = require("./health-monitor");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -36,6 +56,8 @@ const DEFAULT_COMMAND_CATALOG = [
 const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "register",
   "login",
+  "_httpRegisterPasswordDigest",
+  "_httpLoginPasswordDigest",
   "refreshSession",
   "logout",
   "getSession",
@@ -99,42 +121,148 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "declinePartyInvite",
   "leaveParty",
 ]);
+const PURE_HTTP_READ_SERVICE_METHODS = new Set([
+  "getProfile",
+  "getPartyState",
+]);
 
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
   const requestContexts = new AsyncLocalStorage();
   const service = createDurableHttpServiceProxy(baseService, requestContexts);
   const commandCatalog = options.commandCatalog || DEFAULT_COMMAND_CATALOG;
-  const eventHub = options.eventHub || createEventHub(baseService);
   const store = options.store || null;
   const logger = createStructuredLogger(options.logger);
+  const networkAdmission = options.networkAdmission || createNetworkAdmission({
+    ...(options.networkAdmissionOptions || {}),
+    trustedProxies: options.trustedProxies === undefined
+      ? configuredTrustedProxies(process.env.BEASTBOUND_TRUSTED_PROXIES)
+      : options.trustedProxies,
+  });
+  const eventHubOptions = {...(options.eventHubOptions || {})};
+  if (!Object.hasOwn(eventHubOptions, "allowedOrigins")) {
+    eventHubOptions.allowedOrigins = configuredList(process.env.BEASTBOUND_WS_ALLOWED_ORIGINS);
+  }
+  const eventHub = options.eventHub || createEventHub(baseService, {
+    ...eventHubOptions,
+    networkIdentity: (req) => networkAdmission.networkIdentity(req),
+  });
+  const httpAuth = hasHttpCredentialBoundary(baseService)
+    ? createHttpAuthBoundary(baseService, service, options.httpAuthOptions || {})
+    : createLegacyHttpAuthBoundary(service);
+  const healthMonitor = options.healthMonitor || createHealthMonitor(store, {
+    ...(options.healthMonitorOptions || {}),
+    onProbeError(error) {
+      logStructured(logger, {
+        type: "health.probe_failed",
+        errorCode: String(error && error.code || "health_probe_failed"),
+      });
+    },
+  });
   const qaAdvanceClock = typeof options.qaAdvanceClock === "function" ? options.qaAdvanceClock : null;
   const unsubscribeServiceLogger = installServiceEventLogger(baseService, logger);
+  healthMonitor.start();
 
-  const server = http.createServer((req, res) => requestContexts.run({req}, () => handleRequest(req, res)));
+  const server = applyHttpServerLimits(http.createServer(dispatchRequest), options.httpServerLimits || {});
+  server.on("checkContinue", (req, res) => {
+    res.beastboundNetworkAdmission = networkAdmission;
+    let preAdmission = null;
+    try {
+      preAdmission = networkAdmission.beginHttp(req);
+      req.beastboundPreAdmissionContext = preAdmission;
+      const url = parseOriginFormTarget(req, options.httpRequestTarget || {});
+      validateDeclaredBodyLimit(req, jsonBodyLimitForPath(url.pathname, options.httpBodyLimits || {}));
+      res.writeContinue();
+      dispatchRequest(req, res);
+    } catch (error) {
+      if (preAdmission) {
+        let released = false;
+        const release = () => {
+          if (!released) {
+            released = true;
+            preAdmission.release();
+          }
+        };
+        res.once("finish", release);
+        res.once("close", release);
+      }
+      const requestId = createRequestId();
+      res.beastboundLogger = logger;
+      res.beastboundRequestContext = {method: String(req.method || ""), path: "", requestId};
+      sendServiceError(res, error);
+    }
+  });
+
+  function dispatchRequest(req, res) {
+    res.beastboundNetworkAdmission = networkAdmission;
+    requestContexts.run({req, res}, () => {
+      Promise.resolve(handleRequest(req, res)).catch((error) => {
+        if (!res.headersSent && !res.writableEnded) {
+          sendServiceError(res, error);
+        } else if (!res.destroyed) {
+          res.destroy();
+        }
+      });
+    });
+  }
 
   async function handleRequest(req, res) {
     const startedAt = process.hrtime.bigint();
-    const url = new URL(req.url || "/", "http://127.0.0.1");
+    const requestId = createRequestId();
+    let networkContext = null;
+    let requestPath = "";
+    let logged = false;
     res.beastboundLogger = logger;
     res.beastboundRequestContext = {
       method: String(req.method || ""),
-      path: url.pathname,
+      path: "",
+      requestId,
       startedAt,
     };
-    res.on("finish", () => {
+    const finishRequest = (aborted = false) => {
+      if (logged) {
+        return;
+      }
+      logged = true;
+      if (networkContext) {
+        networkContext.release();
+      }
       logStructured(logger, {
         type: "http.request",
+        requestId,
         method: String(req.method || ""),
-        path: url.pathname,
+        path: requestPath,
         statusCode: res.statusCode,
-        ok: res.statusCode < 400,
+        ok: !aborted && res.statusCode < 400,
+        aborted,
+        clientIpHash: String(networkContext && networkContext.clientIpHash || ""),
+        requestBytes: safeContentLength(req),
+        responseBytes: Math.max(0, Number(res.beastboundResponseBytes || 0)),
         durationMs: durationMsSince(startedAt),
       });
-    });
+    };
+    res.once("finish", () => finishRequest(false));
+    res.once("close", () => finishRequest(!res.writableFinished));
     try {
-      if (req.method === "GET" && url.pathname === "/health") {
-        const health = healthPayload(store, eventHub, baseService);
+      networkContext = req.beastboundPreAdmissionContext || networkAdmission.beginHttp(req);
+      delete req.beastboundPreAdmissionContext;
+      req.beastboundNetworkContext = networkContext;
+      const url = parseOriginFormTarget(req, options.httpRequestTarget || {});
+      requestPath = url.pathname;
+      req.beastboundPath = requestPath;
+      res.beastboundRequestContext.path = requestPath;
+      req.beastboundBodyLimit = jsonBodyLimitForPath(requestPath, options.httpBodyLimits || {});
+      validateDeclaredBodyLimit(req, req.beastboundBodyLimit);
+      // Every route, including health and nominally bodyless GET/POST routes,
+      // owns admission until the bounded request body has fully arrived.
+      // JSON routes parse the cached bytes later through readBoundedJson().
+      await readBoundedBody(req, {maxBytes: req.beastboundBodyLimit});
+      res.beastboundRequestContext.bodyReadyAt = process.hrtime.bigint();
+      if (req.method === "GET" && url.pathname === "/health/live") {
+        return sendJson(res, 200, healthMonitor.liveSnapshot());
+      }
+      if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/health/ready")) {
+        const health = healthPayload(healthMonitor, eventHub, baseService, networkAdmission, httpAuth);
         return sendJson(res, health.ok ? 200 : 503, health);
       }
       if (req.method === "POST" && url.pathname === "/__qa/clock/advance" && qaAdvanceClock) {
@@ -144,15 +272,24 @@ function createHttpServer(options = {}) {
       if (!protocol.ok) {
         return sendJson(res, 426, protocolMismatchResult(protocol));
       }
+      const requestToken = bearerToken(req);
+      if (requestToken !== "") {
+        networkAdmission.admitAuthenticated(networkContext, requestToken);
+      }
       if (req.method === "POST" && url.pathname === "/auth/register") {
-        return sendResult(res, service.register(authPayload(req, await readJson(req))));
+        networkAdmission.admitAuthIp(networkContext, "register");
+        const payload = await readJson(req);
+        networkAdmission.admitAuthAccount(networkContext, "register", payload.username);
+        return sendResult(res, httpAuth.register(payload, networkContext.clientIp));
       }
       if (req.method === "POST" && url.pathname === "/auth/login") {
-        return sendResult(res, service.login(authPayload(req, await readJson(req))));
+        networkAdmission.admitAuthIp(networkContext, "login");
+        const payload = await readJson(req);
+        networkAdmission.admitAuthAccount(networkContext, "login", payload.username);
+        return sendResult(res, httpAuth.login(payload, networkContext.clientIp));
       }
       if (req.method === "POST" && url.pathname === "/auth/refresh") {
-        const payload = await readJson(req);
-        return sendResult(res, service.refreshSession(bearerToken(req) || String(payload.token || "")));
+        return sendResult(res, service.refreshSession(requestToken));
       }
       if (req.method === "POST" && url.pathname === "/auth/logout") {
         return sendResult(res, service.logout(bearerToken(req)));
@@ -446,8 +583,12 @@ function createHttpServer(options = {}) {
       return sendServiceError(res, error);
     }
   }
-  server.on("close", unsubscribeServiceLogger);
+  server.on("close", () => {
+    unsubscribeServiceLogger();
+    healthMonitor.close();
+  });
   server.on("upgrade", (req, socket, head) => {
+    socket.setTimeout?.(0);
     Promise.resolve(eventHub.handleUpgrade(req, socket, head)).then((handled) => {
       if (!handled && !socket.destroyed) {
         socket.destroy();
@@ -462,6 +603,8 @@ function createHttpServer(options = {}) {
   });
   server.eventHub = eventHub;
   server.authService = baseService;
+  server.networkAdmission = networkAdmission;
+  server.healthMonitor = healthMonitor;
   if (options.store) {
     server.authStore = options.store;
   }
@@ -472,18 +615,30 @@ function createDurableHttpServiceProxy(service, requestContexts) {
   return new Proxy(service, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver);
-      if (
-        typeof value !== "function"
-        || !DURABLE_HTTP_SERVICE_METHODS.has(String(property))
-        || typeof target.invokeDurable !== "function"
-      ) {
-        return typeof value === "function" ? value.bind(target) : value;
+      if (typeof value !== "function") {
+        return value;
       }
-      return (...args) => {
+      if (!DURABLE_HTTP_SERVICE_METHODS.has(String(property)) || typeof target.invokeDurable !== "function") {
+        return (...args) => observeHttpServiceSync(requestContexts, property, () => Reflect.apply(value, target, args));
+      }
+      return (...args) => observeHttpServiceSync(requestContexts, property, () => {
+        if (
+          PURE_HTTP_READ_SERVICE_METHODS.has(String(property))
+          && typeof target._httpTryPureRead === "function"
+        ) {
+          try {
+            const read = target._httpTryPureRead(String(property), args);
+            if (read && typeof read.then !== "function" && read.handled === true) {
+              return read.result;
+            }
+          } catch {
+            // Any uncertain read classification stays behind the durable gate.
+          }
+        }
         const context = requestContexts.getStore() || {};
         const req = context.req || null;
         const method = String(req && req.method || "").toUpperCase();
-        const pathName = String(req && new URL(req.url || "/", "http://127.0.0.1").pathname || "");
+        const pathName = String(req && req.beastboundPath || "");
         const actionId = `${method || "INTERNAL"} ${pathName || String(property)}`;
         const operationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
         const authToken = req ? bearerToken(req) : "";
@@ -492,9 +647,27 @@ function createDurableHttpServiceProxy(service, requestContexts) {
           actionId,
           requestHash: durableRequestHash(method, pathName, property, args, authToken),
         });
-      };
+      });
     },
   });
+}
+
+function observeHttpServiceSync(requestContexts, property, invoke) {
+  const context = requestContexts.getStore() || {};
+  const observer = context.res && context.res.beastboundNetworkAdmission;
+  if (!observer || typeof observer.observeHttpServiceCall !== "function") {
+    return invoke();
+  }
+  const startedAt = process.hrtime.bigint();
+  try {
+    return invoke();
+  } finally {
+    observer.observeHttpServiceCall({
+      serviceMethod: String(property),
+      route: diagnosticHttpRoute(context.req && context.req.beastboundPath, 200),
+      durationMs: durationMsBetween(startedAt, process.hrtime.bigint()),
+    });
+  }
 }
 
 function durableRequestHash(method, pathName, serviceMethod, args, authToken = "") {
@@ -546,6 +719,9 @@ async function sendResult(res, resultValue) {
   } catch (error) {
     return sendServiceError(res, error);
   }
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return sendServiceError(res, new Error("service returned an invalid result"));
+  }
   let status = 200;
   if (result.ok) {
     logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
@@ -562,11 +738,31 @@ async function sendResult(res, resultValue) {
     status = 426;
   }
   logProfileWriteback(res.beastboundLogger, res.beastboundRequestContext, result, status);
-  return sendJson(res, status, result);
+  return sendJson(res, status, result, {
+    retryAfterSeconds: status === 429 ? Math.max(0, Number(result.retryAfterMs || 0)) / 1000 : 0,
+  });
 }
 
 function sendServiceError(res, error) {
   const code = String(error && error.code || "");
+  if (
+    error instanceof HttpBoundaryError
+    || error instanceof NetworkAdmissionError
+    || error instanceof AuthWorkQueueError
+    || (Number.isInteger(error && error.statusCode) && error.statusCode >= 400 && error.statusCode <= 599)
+  ) {
+    const statusCode = Math.max(400, Math.min(599, Number(error.statusCode || 500)));
+    const retryAfterMs = Math.max(0, Number(error.retryAfterMs || 0));
+    return sendJson(res, statusCode, {
+      ok: false,
+      code: code || "request_rejected",
+      message: String(error.publicMessage || "请求未被接受，请稍后重试。"),
+      ...(retryAfterMs > 0 ? {retryAfterMs} : {}),
+    }, {
+      closeConnection: Boolean(error.closeConnection),
+      retryAfterSeconds: retryAfterMs / 1000,
+    });
+  }
   if ([
     "storage_write_failed",
     "storage_commit_timeout",
@@ -579,35 +775,87 @@ function sendServiceError(res, error) {
     const fallback = code === "storage_commit_timeout"
       ? "服务器正在确认存档，请使用同一操作重试。"
       : "服务器存档暂时不可用，请稍后使用同一操作重试。";
-    return sendJson(res, 503, {ok: false, code: publicCode, message: String(error && error.message || fallback)});
+    return sendJson(res, 503, {ok: false, code: publicCode, message: fallback});
   }
+  logStructured(res && res.beastboundLogger, {
+    type: "http.internal_error",
+    requestId: String(res && res.beastboundRequestContext && res.beastboundRequestContext.requestId || ""),
+    errorCode: code || "server_error",
+    errorName: String(error && error.name || "Error"),
+  });
   return sendJson(res, 500, {ok: false, code: "server_error", message: "服务器暂时异常，请稍后重试。"});
 }
 
-function sendJson(res, status, body) {
-  const text = JSON.stringify(attachProtocolMetadata(body));
-  res.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "content-length": Buffer.byteLength(text),
-  });
+function sendJson(res, status, body, options = {}) {
+  if (!res || res.headersSent || res.writableEnded || res.destroyed) {
+    return;
+  }
+  const sendStartedAt = process.hrtime.bigint();
+  const responseBody = attachProtocolMetadata(body);
+  const metadataReadyAt = process.hrtime.bigint();
+  const text = JSON.stringify(responseBody);
+  const serializedAt = process.hrtime.bigint();
+  const bytes = Buffer.byteLength(text);
+  const bytesReadyAt = process.hrtime.bigint();
+  res.beastboundResponseBytes = bytes;
+  res.writeHead(status, secureJsonHeaders(
+    res.beastboundRequestContext && res.beastboundRequestContext.requestId,
+    bytes,
+    options,
+  ));
+  const headersWrittenAt = process.hrtime.bigint();
   res.end(text);
+  const endedAt = process.hrtime.bigint();
+  const observer = res.beastboundNetworkAdmission;
+  if (observer && typeof observer.observeHttpResponse === "function") {
+    const context = res.beastboundRequestContext || {};
+    observer.observeHttpResponse({
+      method: context.method,
+      route: diagnosticHttpRoute(context.path, status),
+      statusCode: status,
+      responseBytes: bytes,
+      preSendMs: durationMsBetween(context.bodyReadyAt || context.startedAt, sendStartedAt),
+      metadataMs: durationMsBetween(sendStartedAt, metadataReadyAt),
+      serializeMs: durationMsBetween(metadataReadyAt, serializedAt),
+      byteLengthMs: durationMsBetween(serializedAt, bytesReadyAt),
+      writeHeadMs: durationMsBetween(bytesReadyAt, headersWrittenAt),
+      endMs: durationMsBetween(headersWrittenAt, endedAt),
+      sendTotalMs: durationMsBetween(sendStartedAt, endedAt),
+    });
+  }
+}
+
+function diagnosticHttpRoute(pathValue, statusCode) {
+  const path = String(pathValue || "");
+  if (Number(statusCode) === 404 || path === "") {
+    return "/:unmatched";
+  }
+  for (const [pattern, replacement] of [
+    [/^\/gm\/commands\/[^/]+$/, "/gm/commands/:command"],
+    [/^\/mail\/[^/]+\/(read|claim)$/, "/mail/:id/$1"],
+    [/^\/battle\/invites\/[^/]+\/(accept|decline|cancel)$/, "/battle/invites/:id/$1"],
+    [/^\/battle\/rooms\/[^/]+\/(commands|leave)$/, "/battle/rooms/:id/$1"],
+  ]) {
+    if (pattern.test(path)) {
+      return path.replace(pattern, replacement);
+    }
+  }
+  if (path.length > 128 || !/^\/[A-Za-z0-9_./-]+$/.test(path)) {
+    return "/:redacted";
+  }
+  return path;
+}
+
+function durationMsBetween(startedAt, endedAt) {
+  if (typeof startedAt !== "bigint" || typeof endedAt !== "bigint" || endedAt < startedAt) {
+    return 0;
+  }
+  return Number(endedAt - startedAt) / 1e6;
 }
 
 function readJson(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on("data", (chunk) => chunks.push(chunk));
-    req.on("end", () => {
-      if (chunks.length === 0) {
-        return resolve({});
-      }
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-      } catch (error) {
-        reject(new Error("请求JSON格式不正确。"));
-      }
-    });
-    req.on("error", reject);
+  return readBoundedJson(req, {
+    maxBytes: Number(req && req.beastboundBodyLimit || jsonBodyLimitForPath(req && req.beastboundPath)),
   });
 }
 
@@ -616,7 +864,8 @@ function bearerToken(req) {
   if (!header.toLowerCase().startsWith("bearer ")) {
     return "";
   }
-  return header.slice("bearer ".length).trim();
+  const token = header.slice("bearer ".length).trim();
+  return /^[A-Za-z0-9_-]{43}$/.test(token) ? token : "";
 }
 
 function requiredIdempotencyKeyFailure(req) {
@@ -628,29 +877,16 @@ function requiredIdempotencyKeyFailure(req) {
   } : null;
 }
 
-function authPayload(req, payload) {
-  const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
-  return {
-    ...source,
-    clientIp: requestClientIp(req),
-  };
-}
-
-function requestClientIp(req) {
-  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  if (forwarded !== "") {
-    return forwarded;
-  }
-  return String(req.socket && req.socket.remoteAddress || "");
-}
-
-function healthPayload(store, eventHub, service = null) {
-  const storage = storageHealth(store);
+function healthPayload(healthMonitor, eventHub, service = null, networkAdmission = null, httpAuth = null) {
+  const storage = healthMonitor.snapshot();
   const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
     ? eventHub.metrics()
     : {};
   return {
-    ok: storage.ok !== false,
+    // A configured store is not ready until its first background probe has
+    // positively completed. Store-less isolated servers report ok=true from
+    // the monitor even though no probe is required.
+    ok: storage.ok === true,
     service: "beastbound-auth",
     storage,
     eventStream: {
@@ -660,49 +896,58 @@ function healthPayload(store, eventHub, service = null) {
     durableMutations: service && typeof service.durableMutationMetrics === "function"
       ? service.durableMutationMetrics()
       : {checked: false},
+    transport: networkAdmission && typeof networkAdmission.metrics === "function"
+      ? networkAdmission.metrics()
+      : {checked: false},
+    authWork: httpAuth && typeof httpAuth.metrics === "function"
+      ? httpAuth.metrics()
+      : {checked: false},
+    authSecurity: service && typeof service.authSecurityMetrics === "function"
+      ? service.authSecurityMetrics()
+      : {checked: false},
+    healthProbe: healthMonitor.metrics(),
   };
 }
 
-function storageHealth(store) {
-  const mode = storeMode(store);
-  const check = store && typeof store.checkHealth === "function"
-    ? () => store.checkHealth()
-    : store && typeof store.load === "function"
-      ? () => store.load()
-      : null;
-  if (check === null) {
-    return {
-      ok: null,
-      checked: false,
-      mode,
-      message: "未提供存储实例，跳过存储连通性检查。",
-    };
-  }
-  const startedAt = process.hrtime.bigint();
-  try {
-    check();
-    return {
-      ok: true,
-      checked: true,
-      mode,
-      latencyMs: durationMsSince(startedAt),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      checked: true,
-      mode,
-      latencyMs: durationMsSince(startedAt),
-      message: error.message,
-    };
-  }
+function configuredTrustedProxies(value) {
+  return configuredList(value);
 }
 
-function storeMode(store) {
-  if (!store) {
-    return "unknown";
+function configuredList(value) {
+  return String(value || "").split(",").map((entry) => entry.trim()).filter(Boolean);
+}
+
+function hasHttpCredentialBoundary(service) {
+  return Boolean(
+    service
+    && typeof service._httpValidateRegistration === "function"
+    && typeof service._httpPasswordVerificationRecord === "function"
+    && typeof service._httpRegisterPasswordDigest === "function"
+    && typeof service._httpLoginPasswordDigest === "function"
+  );
+}
+
+function createLegacyHttpAuthBoundary(service) {
+  return {
+    register(payload, clientIp) {
+      return service.register({...payload, clientIp});
+    },
+    login(payload, clientIp) {
+      return service.login({...payload, clientIp});
+    },
+    metrics() {
+      return {checked: false};
+    },
+  };
+}
+
+function safeContentLength(req) {
+  const observed = Number(req && req.beastboundBodyBytes);
+  if (Number.isSafeInteger(observed) && observed >= 0) {
+    return observed;
   }
-  return String(store.mode || store.kind || store.storeMode || "custom");
+  const value = Number(req && req.headers && req.headers["content-length"] || 0);
+  return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
 function createStructuredLogger(logger) {
@@ -792,13 +1037,23 @@ if (require.main === module) {
   const port = Number(process.env.BEASTBOUND_AUTH_PORT || 8787);
   const host = process.env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
   const store = createDefaultStore();
-  store.load();
-  const service = createAuthService({store});
+  const service = createPreloadedAuthService(store);
   const server = createHttpServer({service, store});
   server.listen(port, host, () => {
     console.log(`Beastbound auth server listening on http://${host}:${port}`);
   });
   installShutdownFlush(server, store);
+}
+
+function createPreloadedAuthService(store, options = {}) {
+  if (!store || typeof store.load !== "function") {
+    throw new Error("认证服务启动需要可预加载的持久化存储。");
+  }
+  // Load synchronously before opening the listener so storage/schema errors
+  // fail the process closed. createAuthService consumes this exact document
+  // immediately and never performs a discarded second startup read.
+  const initialData = store.load();
+  return createAuthService({...options, store, initialData});
 }
 
 function createDefaultStore() {
@@ -895,6 +1150,7 @@ function shutdownStep(run) {
 
 module.exports = {
   createHttpServer,
+  createPreloadedAuthService,
   DEFAULT_COMMAND_CATALOG,
   createDefaultStore,
   drainServerForShutdown,

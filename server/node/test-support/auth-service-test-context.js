@@ -55,10 +55,11 @@ function createAuthService(options = {}) {
   return createAuthServiceStrict(serviceOptions);
 }
 const {
-  createHttpServer,
+  createHttpServer: createHttpServerStrict,
   createDefaultStore,
   DEFAULT_COMMAND_CATALOG,
 } = require("../src/http-server");
+const {TEST_AUTH_SUBPROTOCOL} = require("../src/event-hub");
 const {
   CLIENT_PROTOCOL_HEADER,
   CLIENT_VERSION_HEADER,
@@ -69,6 +70,19 @@ const {
   createMysqlAuthStore,
 } = require("../src/mysql-store");
 const {isValidPetPrivateSeed} = require("../src/auth/pet-private-seed");
+
+const TEST_EVENT_STREAM_EPOCH = Buffer.alloc(16, 0x47).toString("base64url");
+
+function createHttpServer(options = {}) {
+  return createHttpServerStrict({
+    ...options,
+    eventHubOptions: {
+      allowTestSubprotocolAuth: true,
+      eventStreamEpoch: TEST_EVENT_STREAM_EPOCH,
+      ...(options.eventHubOptions || {}),
+    },
+  });
+}
 
 function createFixturePetEncounterAuthority() {
   return Object.freeze({
@@ -386,15 +400,20 @@ async function fetchJson(url, options = {}) {
 }
 
 function eventStreamUrl(base, token, lastEventSeq = 0) {
+  void token;
   const query = new URLSearchParams({
     clientVersion: SERVER_VERSION,
     clientProtocolVersion: String(PROTOCOL_VERSION),
-    token,
   });
   if (lastEventSeq > 0) {
     query.set("lastEventSeq", String(lastEventSeq));
+    query.set("eventStreamEpoch", TEST_EVENT_STREAM_EPOCH);
   }
   return `${base}/events?${query.toString()}`;
+}
+
+function eventStreamProtocols(token) {
+  return [TEST_AUTH_SUBPROTOCOL, String(token || "")];
 }
 
 function webSocketOpen(ws) {
@@ -425,18 +444,26 @@ function webSocketJsonReader(ws) {
   const queue = [];
   const waiters = [];
   ws.addEventListener("message", async (event) => {
-    const data = await webSocketDataText(event.data);
-    queue.push(JSON.parse(data));
-    flush();
+    try {
+      const data = await webSocketDataText(event.data);
+      queue.push(...expandWebSocketJsonEvent(JSON.parse(data)));
+      flush();
+    } catch (error) {
+      rejectWaiters(error);
+    }
   });
   ws.addEventListener("error", (event) => {
     const error = new Error(`websocket error ${event.message || ""}`);
+    rejectWaiters(error);
+  });
+  function rejectWaiters(errorValue) {
+    const error = errorValue instanceof Error ? errorValue : new Error(String(errorValue || "bad websocket event"));
     while (waiters.length > 0) {
       const waiter = waiters.shift();
       clearTimeout(waiter.timer);
       waiter.reject(error);
     }
-  });
+  }
   function next(type) {
     const existingIndex = queue.findIndex((message) => !type || message.type === type);
     if (existingIndex >= 0) {
@@ -477,6 +504,36 @@ function webSocketJsonReader(ws) {
   return {next};
 }
 
+function expandWebSocketJsonEvent(event) {
+  if (!event || event.type !== "online.position_batch") {
+    return [event];
+  }
+  if (
+    Math.max(0, Math.trunc(Number(event.eventSeq || 0))) > 0
+    || Object.hasOwn(event, "targetSessionIds")
+    || Object.hasOwn(event, "targetAccountIds")
+    || !Array.isArray(event.deltas)
+    || event.deltas.length <= 0
+    || event.deltas.length > 64
+  ) {
+    throw new Error("invalid online.position_batch envelope");
+  }
+  return event.deltas.map((delta) => {
+    if (
+      !delta
+      || typeof delta !== "object"
+      || Array.isArray(delta)
+      || delta.type !== "online.position"
+      || Math.max(0, Math.trunc(Number(delta.eventSeq || 0))) > 0
+      || Object.hasOwn(delta, "targetSessionIds")
+      || Object.hasOwn(delta, "targetAccountIds")
+    ) {
+      throw new Error("invalid online.position_batch delta");
+    }
+    return delta;
+  });
+}
+
 module.exports = {
   assert,
   crypto,
@@ -508,6 +565,8 @@ module.exports = {
   battleProfileWithPets,
   fetchJson,
   eventStreamUrl,
+  eventStreamProtocols,
+  expandWebSocketJsonEvent,
   webSocketOpen,
   webSocketJsonReader,
 };

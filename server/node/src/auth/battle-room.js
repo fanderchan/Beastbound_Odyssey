@@ -1,5 +1,14 @@
 "use strict";
 
+const {
+  pendingInviteAdmission,
+  terminalInvite,
+} = require("./runtime-invite-boundary");
+const {battleRoomForMutation} = require("./battle-room-cow");
+
+const BATTLE_INVITE_MAX_PENDING = 1024;
+const BATTLE_INVITE_MAX_PER_ACCOUNT = 16;
+
 function createBattleRoomDomain(ctx) {
   const {
     BATTLE_INVITE_ACCEPTED,
@@ -55,7 +64,6 @@ function createBattleRoomDomain(ctx) {
     publicParty,
     randomBytes,
     randomId,
-    recordBattleStateTrace,
     recordBattleTrace,
     removeAccountFromParty,
     removeOfflinePartyPveParticipantsFromRoom,
@@ -92,9 +100,7 @@ function createBattleRoomDomain(ctx) {
       }
       data = load();
     }
-    const payload = battleStatePayload(data, resolved.account.accountId, now);
-    recordBattleStateTrace(data, resolved.account.accountId, payload, now);
-    return ok(payload);
+    return ok(battleStatePayload(data, resolved.account.accountId, now));
   }
 
   function pruneOfflinePartyPveParticipants(data, viewerAccountId) {
@@ -124,7 +130,8 @@ function createBattleRoomDomain(ctx) {
       if (offlineAccountIds.length <= 0) {
         continue;
       }
-      const update = removeOfflinePartyPveParticipantsFromRoom(data, room, offlineAccountIds);
+      const mutableRoom = battleRoomForMutation(data, room);
+      const update = removeOfflinePartyPveParticipantsFromRoom(data, mutableRoom, offlineAccountIds);
       if (!update.changed) {
         continue;
       }
@@ -135,12 +142,12 @@ function createBattleRoomDomain(ctx) {
       result.events.push({
         type: "battle.room_updated",
         targetAccountIds: update.targetAccountIds,
-        roomId: room.roomId,
+        roomId: mutableRoom.roomId,
         reason: "party_member_offline",
         removedAccountIds: update.removedAccountIds,
         escapedActorIds: update.escapedActorIds,
         turn: update.turn,
-        room: publicBattleRoom(room),
+        room: publicBattleRoom(mutableRoom),
       });
     }
     return result;
@@ -219,6 +226,17 @@ function createBattleRoomDomain(ctx) {
         message: "切磋邀请已发送。",
       });
     }
+    const admission = pendingInviteAdmission(data.battleInvites, {
+      fromAccountId: resolved.account.accountId,
+      toAccountId: target.accountId,
+    }, {
+      pendingStatus: BATTLE_INVITE_PENDING,
+      maxPending: BATTLE_INVITE_MAX_PENDING,
+      maxPerAccount: BATTLE_INVITE_MAX_PER_ACCOUNT,
+    });
+    if (!admission.ok) {
+      return fail("battle_invite_capacity_full", "待处理的切磋邀请较多，请稍后再试。");
+    }
     const invite = {
       inviteId: `battle_invite_${randomId()}`,
       mode: BATTLE_MODE_DUEL,
@@ -272,9 +290,7 @@ function createBattleRoomDomain(ctx) {
     if (!entryCheck.ok) {
       return entryCheck;
     }
-    invite.status = BATTLE_INVITE_ACCEPTED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
+    const completedInvite = terminalInvite(data.battleInvites, invite.inviteId, BATTLE_INVITE_ACCEPTED, {now});
     const room = {
       roomId: `battle_room_${randomId()}`,
       mode: BATTLE_MODE_DUEL,
@@ -303,11 +319,11 @@ function createBattleRoomDomain(ctx) {
     emitServiceEvent({
       type: "battle.room_ready",
       targetAccountIds: room.participantAccountIds.slice(),
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: publicBattleRoom(room),
     });
     return ok({
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: publicBattleRoom(room, resolved.account.accountId),
       message: "切磋房间已就绪。",
     });
@@ -493,18 +509,16 @@ function createBattleRoomDomain(ctx) {
     if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.toAccountId !== resolved.account.accountId) {
       return fail("battle_invite_missing", "切磋邀请不存在。");
     }
-    invite.status = BATTLE_INVITE_DECLINED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
+    const completedInvite = terminalInvite(data.battleInvites, invite.inviteId, BATTLE_INVITE_DECLINED, {now});
     save(data);
     emitServiceEvent({
       type: "battle.invite_declined",
       targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: null,
     });
     return ok({
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: null,
       message: "已拒绝切磋邀请。",
     });
@@ -520,18 +534,16 @@ function createBattleRoomDomain(ctx) {
     if (!invite || invite.status !== BATTLE_INVITE_PENDING || invite.fromAccountId !== resolved.account.accountId) {
       return fail("battle_invite_missing", "切磋邀请不存在。");
     }
-    invite.status = BATTLE_INVITE_CANCELLED;
-    invite.updatedAt = isoNow(now);
-    data.battleInvites[invite.inviteId] = invite;
+    const completedInvite = terminalInvite(data.battleInvites, invite.inviteId, BATTLE_INVITE_CANCELLED, {now});
     save(data);
     emitServiceEvent({
       type: "battle.invite_cancelled",
       targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: null,
     });
     return ok({
-      invite: publicBattleInvite(invite, data),
+      invite: publicBattleInvite(completedInvite, data),
       room: null,
       message: "切磋邀请已取消。",
     });
@@ -545,7 +557,7 @@ function createBattleRoomDomain(ctx) {
     }
     expireBattleTimeoutsAndEmit(data);
     const normalizedRoomId = String(roomId || "").trim();
-    const room = normalizedRoomId !== "" ? data.battleRooms[normalizedRoomId] || null : activeBattleRoomForAccount(data, resolved.account.accountId);
+    let room = normalizedRoomId !== "" ? data.battleRooms[normalizedRoomId] || null : activeBattleRoomForAccount(data, resolved.account.accountId);
     if (!room || room.status === BATTLE_ROOM_CLOSED) {
       return fail("battle_room_missing", "战斗房间不存在。");
     }
@@ -561,6 +573,7 @@ function createBattleRoomDomain(ctx) {
         partyRemoval = removeAccountFromParty(data, resolved.account.accountId, now);
       }
     }
+    room = battleRoomForMutation(data, room);
     const result = battleRoomResultForLeave(room, resolved.account.accountId, now);
     closeBattleRoomWithResult(data, room, result, now);
     data.battleRooms[room.roomId] = room;
@@ -597,7 +610,7 @@ function createBattleRoomDomain(ctx) {
     }
     expireBattleTimeoutsAndEmit(data);
     const normalizedRoomId = String(roomId || payload.roomId || "").trim();
-    const room = data.battleRooms[normalizedRoomId] || null;
+    let room = data.battleRooms[normalizedRoomId] || null;
     if (!room || room.status === "closed") {
       return fail("battle_room_missing", "切磋房间不存在。");
     }
@@ -608,8 +621,10 @@ function createBattleRoomDomain(ctx) {
     if (!backpackEntry.ok) {
       return backpackEntry;
     }
-    const battle = battleRoomBattleStateForMutation(room, now);
-    if (String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
+    let battle = room.battle && typeof room.battle === "object" && !Array.isArray(room.battle)
+      ? room.battle
+      : null;
+    if (!battle || String(battle.phase || "") !== BATTLE_PHASE_COMMAND) {
       return fail("battle_command_phase_invalid", "当前不能提交回合命令。", {
         room: publicBattleRoom(room, resolved.account.accountId),
       });
@@ -634,6 +649,8 @@ function createBattleRoomDomain(ctx) {
         room: publicBattleRoom(room, resolved.account.accountId),
       });
     }
+    room = battleRoomForMutation(data, room);
+    battle = battleRoomBattleStateForMutation(room, now);
     battle.commands[commandResult.command.actorId] = commandResult.command;
     battle.requiredActorIds = requiredBattleCommandActorIds(battle);
     battle.submittedActorIds = submittedBattleCommandActorIds(battle);
@@ -642,7 +659,12 @@ function createBattleRoomDomain(ctx) {
     room.updatedAt = battle.updatedAt;
     const commandSubmittedActorIds = battle.submittedActorIds.slice();
     const commandSubmittedAccountIds = battle.submittedAccountIds.slice();
-    const commandSubmittedRoom = publicBattleRoom(room);
+    // These progress lists describe the command round that is about to resolve.
+    // Capture them before resolveBattleRoomTurn() clears commands and derives
+    // the next round, otherwise the last submission can accidentally announce
+    // next-round required actors.
+    const commandRequiredActorIds = battle.requiredActorIds.slice();
+    const commandRequiredAccountIds = requiredBattleCommandAccountIds(room);
     let turn = null;
     const readyToResolve = battle.requiredActorIds.every((actorId) => battle.commands[actorId]);
     recordBattleTrace(data, room, "battle_command_submitted", {
@@ -651,7 +673,7 @@ function createBattleRoomDomain(ctx) {
       actionId: commandResult.command.actionId,
       round: expectedRound,
       submittedActorCount: commandSubmittedActorIds.length,
-      requiredActorCount: requiredBattleCommandActorIds(battle).length,
+      requiredActorCount: commandRequiredActorIds.length,
       readyToResolve,
     }, now);
     if (readyToResolve) {
@@ -670,9 +692,8 @@ function createBattleRoomDomain(ctx) {
       submittedActorKind: commandResult.command.actorKind,
       submittedActorIds: commandSubmittedActorIds,
       submittedAccountIds: commandSubmittedAccountIds,
-      requiredAccountIds: requiredBattleCommandAccountIds(room),
-      requiredActorIds: requiredBattleCommandActorIds(battle),
-      room: commandSubmittedRoom,
+      requiredAccountIds: commandRequiredAccountIds,
+      requiredActorIds: commandRequiredActorIds,
     });
     if (turn) {
       emitServiceEvent({
@@ -680,8 +701,12 @@ function createBattleRoomDomain(ctx) {
         targetAccountIds: room.participantAccountIds.slice(),
         roomId: room.roomId,
         round: turn.round,
-        turn,
-        room: publicBattleRoom(room),
+        // The service event uses the compact replay view already attached to
+        // the room. Per-viewer projection hydrates its static actor fields;
+        // the direct HTTP response below still returns the complete turn.
+        turn: room.battle && room.battle.lastEventList
+          ? room.battle.lastEventList
+          : turn,
       });
       if (room.status === BATTLE_ROOM_CLOSED && room.battle && room.battle.result) {
         emitServiceEvent({

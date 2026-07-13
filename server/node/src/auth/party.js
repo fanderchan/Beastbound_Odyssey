@@ -1,9 +1,20 @@
 "use strict";
 
+const {
+  expirePendingInvites,
+  pendingInviteAdmission,
+  terminalInvite,
+} = require("./runtime-invite-boundary");
+
+const PARTY_INVITE_TTL_MS = 2 * 60 * 1000;
+const PARTY_INVITE_MAX_PENDING = 1024;
+const PARTY_INVITE_MAX_PER_ACCOUNT = 16;
+
 function createPartyDomain(ctx) {
   const {
     PARTY_MAX_MEMBERS,
     accountById,
+    clone,
     createPartyForLeader,
     emitServiceEvent,
     fail,
@@ -21,9 +32,46 @@ function createPartyDomain(ctx) {
     randomId,
     removeAccountFromParty,
     refreshPartyPresence,
+    resolveSessionReadOnly,
     resolveSession,
     save,
+    sessionHasConnectedEventStream,
   } = ctx;
+
+  function tryGetPartyStateReadOnly(token) {
+    const data = load();
+    if (
+      typeof resolveSessionReadOnly !== "function"
+      || typeof sessionHasConnectedEventStream !== "function"
+    ) {
+      return {handled: false};
+    }
+    const resolved = resolveSessionReadOnly(data, token);
+    if (!resolved.ok || !sessionHasConnectedEventStream(resolved.session.sessionId)) {
+      return {handled: false};
+    }
+    const nowMs = Number(now());
+    if (Object.values(data.partyInvites).some((invite) => partyInviteExpiryDue(invite, nowMs))) {
+      return {handled: false};
+    }
+    const party = partyForAccount(data, resolved.account.accountId);
+    if (party && typeof refreshPartyPresence === "function") {
+      const partyId = String(party.partyId || "");
+      const previewParty = clone(party);
+      const previewData = {
+        ...data,
+        parties: {...data.parties, [partyId]: previewParty},
+        partyInvites: clone(data.partyInvites),
+      };
+      if (refreshPartyPresence(previewData, previewParty).changed) {
+        return {handled: false};
+      }
+    }
+    return {
+      handled: true,
+      result: ok(partyStatePayload(data, resolved.account.accountId)),
+    };
+  }
 
   function getPartyState(token) {
     const data = load();
@@ -31,6 +79,7 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expirePartyInvites(data);
     const party = partyForAccount(data, resolved.account.accountId);
     if (party && typeof refreshPartyPresence === "function") {
       const refreshed = refreshPartyPresence(data, party);
@@ -54,6 +103,7 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expirePartyInvites(data);
     const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
     const target = data.accounts[targetUsername];
     if (!target) {
@@ -90,6 +140,16 @@ function createPartyDomain(ctx) {
         message: "邀请已发送。",
       });
     }
+    const admission = pendingInviteAdmission(data.partyInvites, {
+      fromAccountId: resolved.account.accountId,
+      toAccountId: target.accountId,
+    }, {
+      maxPending: PARTY_INVITE_MAX_PENDING,
+      maxPerAccount: PARTY_INVITE_MAX_PER_ACCOUNT,
+    });
+    if (!admission.ok) {
+      return fail("party_invite_capacity_full", "待处理的组队邀请较多，请稍后再试。");
+    }
     const invite = {
       inviteId: `invite_${randomId()}`,
       partyId: party.partyId,
@@ -124,6 +184,7 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expirePartyInvites(data);
     const targetUsername = normalizeUsername(payload.username || payload.targetUsername || payload.recipientUsername || "");
     const target = data.accounts[targetUsername];
     if (!target) {
@@ -161,6 +222,16 @@ function createPartyDomain(ctx) {
         message: "入队申请已发送。",
       });
     }
+    const admission = pendingInviteAdmission(data.partyInvites, {
+      fromAccountId: resolved.account.accountId,
+      toAccountId: leader.accountId,
+    }, {
+      maxPending: PARTY_INVITE_MAX_PENDING,
+      maxPerAccount: PARTY_INVITE_MAX_PER_ACCOUNT,
+    });
+    if (!admission.ok) {
+      return fail("party_invite_capacity_full", "待处理的组队邀请较多，请稍后再试。");
+    }
     const invite = {
       inviteId: `invite_${randomId()}`,
       partyId: party.partyId,
@@ -195,15 +266,14 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expirePartyInvites(data);
     const invite = data.partyInvites[String(inviteId || "").trim()];
     if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
       return fail("party_invite_missing", "邀请不存在。");
     }
     const party = data.parties[invite.partyId];
     if (!party) {
-      invite.status = "expired";
-      invite.updatedAt = isoNow(now);
-      data.partyInvites[invite.inviteId] = invite;
+      terminalInvite(data.partyInvites, invite.inviteId, "expired", {now});
       save(data);
       return fail("party_missing", "队伍已经解散。");
     }
@@ -220,20 +290,18 @@ function createPartyDomain(ctx) {
     }
     party.memberAccountIds.push(joiningAccountId);
     party.updatedAt = isoNow(now);
-    invite.status = "accepted";
-    invite.updatedAt = isoNow(now);
+    const completedInvite = terminalInvite(data.partyInvites, invite.inviteId, "accepted", {now});
     data.parties[party.partyId] = party;
-    data.partyInvites[invite.inviteId] = invite;
     save(data);
     emitServiceEvent({
       type: "party.update",
       targetAccountIds: Array.from(new Set(party.memberAccountIds.concat([invite.fromAccountId, invite.toAccountId]))),
       party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
+      invite: publicPartyInvite(completedInvite, data),
     });
     return ok({
       party: publicParty(party, data),
-      invite: publicPartyInvite(invite, data),
+      invite: publicPartyInvite(completedInvite, data),
       message: inviteKind === "application" ? "已同意入队申请。" : "已加入队伍。",
     });
   }
@@ -244,22 +312,21 @@ function createPartyDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    expirePartyInvites(data);
     const invite = data.partyInvites[String(inviteId || "").trim()];
     if (!invite || invite.status !== "pending" || invite.toAccountId !== resolved.account.accountId) {
       return fail("party_invite_missing", "邀请不存在。");
     }
-    invite.status = "declined";
-    invite.updatedAt = isoNow(now);
-    data.partyInvites[invite.inviteId] = invite;
+    const completedInvite = terminalInvite(data.partyInvites, invite.inviteId, "declined", {now});
     save(data);
     emitServiceEvent({
       type: "party.invite_declined",
       targetAccountIds: [invite.fromAccountId, invite.toAccountId],
-      invite: publicPartyInvite(invite, data),
+      invite: publicPartyInvite(completedInvite, data),
       party: publicPartyForAccount(data, resolved.account.accountId),
     });
     return ok({
-      invite: publicPartyInvite(invite, data),
+      invite: publicPartyInvite(completedInvite, data),
       party: publicPartyForAccount(data, resolved.account.accountId),
       message: String(invite.kind || "invite") === "application" ? "已拒绝入队申请。" : "已拒绝邀请。",
     });
@@ -290,7 +357,15 @@ function createPartyDomain(ctx) {
     });
   }
 
+  function expirePartyInvites(data) {
+    return expirePendingInvites(data.partyInvites, {
+      now,
+      ttlMs: PARTY_INVITE_TTL_MS,
+    });
+  }
+
   return {
+    tryGetPartyStateReadOnly,
     getPartyState,
     inviteToParty,
     applyToParty,
@@ -298,6 +373,18 @@ function createPartyDomain(ctx) {
     declinePartyInvite,
     leaveParty,
   };
+}
+
+function partyInviteExpiryDue(invite, nowMs) {
+  if (!invite || String(invite.status || "") !== "pending") {
+    return false;
+  }
+  const explicitExpiresAt = Date.parse(String(invite.expiresAt || ""));
+  const createdAt = Date.parse(String(invite.createdAt || ""));
+  const expiresAt = Number.isFinite(explicitExpiresAt)
+    ? explicitExpiresAt
+    : (Number.isFinite(createdAt) ? createdAt + PARTY_INVITE_TTL_MS : nowMs);
+  return !Number.isFinite(expiresAt) || expiresAt <= nowMs;
 }
 
 module.exports = {createPartyDomain};

@@ -244,7 +244,7 @@ test("new account and password rotation keep the random password out of reports 
     nowMs: NOW_MS,
     password: generatedPassword,
     randomId: sequence(["account", "audit"]),
-    randomBytes: () => Buffer.alloc(32, 6),
+    randomBytes: (size) => Buffer.alloc(size, 6),
   });
   assert.equal(created.report.accountCreated, true);
   assert.equal(created.report.passwordChanged, true);

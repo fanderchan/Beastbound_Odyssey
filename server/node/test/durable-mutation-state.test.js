@@ -5,12 +5,15 @@ const test = require("node:test");
 
 const {
   DURABLE_RECEIPT_MAX_COUNT,
+  DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX,
   activeDurableReceipt,
   canonicalDurableMutationReceipts,
   commitDurableMutationReceiptDelta,
   durableMutationReceiptCount,
   durableMutationReceiptDeltaFrom,
   durableMutationReceiptLedgerStats,
+  durableMutationReceiptPayloadStats,
+  durableReceiptReplayResult,
   materializeDurableMutationReceipts,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
@@ -31,6 +34,37 @@ function receipt(operationId, options = {}) {
     response: options.response || {ok: true, marker: operationId},
   };
 }
+
+test("final-only receipt payload diagnostics aggregate bytes and shapes without exposing payloads", () => {
+  const firstResponse = {ok: true, profile: {name: "容量玩家", slots: [{itemId: "herb", count: 2}]}};
+  const secondResponse = {ok: true, bank: {stoneCoins: 120}, message: "完成"};
+  const first = receipt("operation_payload_stats_0001", {
+    actionId: "POST /bank/deposit",
+    response: firstResponse,
+  });
+  const second = receipt("operation_payload_stats_0002", {
+    actionId: "POST /bank/withdraw",
+    response: secondResponse,
+  });
+  const ledger = canonicalDurableMutationReceipts({
+    [first.operationId]: first,
+    [second.operationId]: second,
+  });
+  const stats = durableMutationReceiptPayloadStats(ledger);
+
+  assert.equal(stats.activeCount, 2);
+  assert.equal(stats.responseJsonBytes, Buffer.byteLength(JSON.stringify(firstResponse)) + Buffer.byteLength(JSON.stringify(secondResponse)));
+  assert.ok(stats.receiptJsonBytes > stats.responseJsonBytes);
+  assert.equal(stats.responseMaxBytes, Math.max(
+    Buffer.byteLength(JSON.stringify(firstResponse)),
+    Buffer.byteLength(JSON.stringify(secondResponse)),
+  ));
+  assert.equal(stats.byAction["POST /bank/deposit"].count, 1);
+  assert.equal(stats.byAction["POST /bank/withdraw"].count, 1);
+  assert.ok(stats.responseShape.objects >= 5);
+  assert.ok(stats.responseShape.arrays >= 1);
+  assert.equal(Object.hasOwn(stats, "responses"), false);
+});
 
 test("20k receipt lookup, append and capacity eviction touch only indexed rows", () => {
   const raw = {};
@@ -89,7 +123,8 @@ test("receipt MVCC checkpoints bound long-running history while old views remain
   }
   const baseline = canonicalDurableMutationReceipts(raw);
   let current = baseline;
-  for (let index = 0; index <= DURABLE_RECEIPT_MAX_COUNT; index += 1) {
+  const churnCount = Math.floor(DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX / 2) + 1;
+  for (let index = 0; index < churnCount; index += 1) {
     const operationId = `operation_churn_next_${String(index).padStart(8, "0")}`;
     current = stageDurableMutationReceipt(current, receipt(operationId, {
       committedAtMs: NOW_MS + index,
@@ -100,6 +135,7 @@ test("receipt MVCC checkpoints bound long-running history while old views remain
   }
   const stats = durableMutationReceiptLedgerStats(current);
   assert.equal(stats.activeCount, DURABLE_RECEIPT_MAX_COUNT);
+  assert.equal(stats.checkpointCount, 1);
   assert.ok(stats.historicalKeyCount <= DURABLE_RECEIPT_MAX_COUNT + 1);
   assert.ok(stats.historyEntryCount <= 2);
   assert.ok(stats.expiryHeapSize <= DURABLE_RECEIPT_MAX_COUNT);
@@ -120,8 +156,27 @@ test("expired operation IDs reuse DELETE then INSERT while active receipts stay 
     }),
   });
   sourceResponse.nested.value = 999;
+  const firstRead = baseline[operationId].response;
+  const secondRead = baseline[operationId].response;
+  assert.equal(firstRead.nested.value, 1);
+  assert.equal(Object.isFrozen(firstRead.nested), true);
+  assert.notEqual(firstRead, secondRead);
+  assert.equal(Object.keys(baseline[operationId]).includes("response"), true);
+  const responseDescriptor = Object.getOwnPropertyDescriptor(baseline[operationId], "response");
+  assert.equal(responseDescriptor.enumerable, true);
+  assert.equal(responseDescriptor.set, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(baseline[operationId])).response, {
+    ok: true,
+    nested: {value: 1},
+  });
+  assert.deepEqual(structuredClone(baseline[operationId]).response, {
+    ok: true,
+    nested: {value: 1},
+  });
+  const materializedBaseline = materializeDurableMutationReceipts(baseline);
+  materializedBaseline[operationId].response.nested.value = 7;
   assert.equal(baseline[operationId].response.nested.value, 1);
-  assert.equal(Object.isFrozen(baseline[operationId].response.nested), true);
+  assert.equal(durableReceiptReplayResult(baseline[operationId]).nested.value, 1);
 
   const replacement = stageDurableMutationReceipt(
     baseline,

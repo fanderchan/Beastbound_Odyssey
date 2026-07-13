@@ -2,9 +2,9 @@
 
 const {version: SERVER_VERSION} = require("../package.json");
 
-const PROTOCOL_VERSION = 8;
-const MIN_CLIENT_PROTOCOL_VERSION = 8;
-const MAX_CLIENT_PROTOCOL_VERSION = 8;
+const PROTOCOL_VERSION = 10;
+const MIN_CLIENT_PROTOCOL_VERSION = 10;
+const MAX_CLIENT_PROTOCOL_VERSION = 10;
 const CLIENT_VERSION_HEADER = "x-beastbound-client-version";
 const CLIENT_PROTOCOL_HEADER = "x-beastbound-protocol-version";
 

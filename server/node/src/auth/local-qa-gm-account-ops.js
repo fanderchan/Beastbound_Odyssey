@@ -127,11 +127,14 @@ function buildLocalQaGmAccountChange(sourceValue, options = {}) {
     }
     const randomBytes = typeof options.randomBytes === "function" ? options.randomBytes : crypto.randomBytes;
     const salt = randomBytes(16).toString("hex");
-    account.passwordSalt = salt;
-    account.passwordHash = crypto.scryptSync(password, salt, 32).toString("hex");
-    account.passwordPolicyVersion = Math.max(2, Math.trunc(Number(account.passwordPolicyVersion || 2)));
-    account.passwordUpdatedAt = nowIso;
-    account.updatedAt = nowIso;
+    account = {
+      ...account,
+      passwordSalt: salt,
+      passwordHash: crypto.scryptSync(password, salt, 32).toString("hex"),
+      passwordPolicyVersion: Math.max(2, Math.trunc(Number(account.passwordPolicyVersion || 2))),
+      passwordUpdatedAt: nowIso,
+      updatedAt: nowIso,
+    };
     data.accounts[username] = account;
     passwordChanged = true;
   }

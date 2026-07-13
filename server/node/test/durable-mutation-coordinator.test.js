@@ -113,6 +113,42 @@ test("durable coordinator recovers its serial tail after sync and async failures
   assert.equal(coordinator.metrics().succeeded, 1);
 });
 
+test("queued durable operations yield one event-loop turn after each predecessor settles", async () => {
+  const turnResolvers = [];
+  const executionOrder = [];
+  const coordinator = createDurableMutationCoordinator({
+    responseTimeoutMs: 1000,
+    yieldTurn: () => new Promise((resolve) => turnResolvers.push(resolve)),
+  });
+
+  const first = coordinator.run(() => {
+    executionOrder.push("first");
+    return "first-ok";
+  });
+  const second = coordinator.run(() => {
+    executionOrder.push("second");
+    return "second-ok";
+  });
+  const third = coordinator.run(() => {
+    executionOrder.push("third");
+    return "third-ok";
+  });
+
+  assert.equal(await first, "first-ok");
+  await Promise.resolve();
+  assert.deepEqual(executionOrder, ["first"]);
+  assert.equal(turnResolvers.length, 1);
+  turnResolvers.shift()();
+  assert.equal(await second, "second-ok");
+  await Promise.resolve();
+  assert.deepEqual(executionOrder, ["first", "second"]);
+  assert.equal(turnResolvers.length, 1);
+  turnResolvers.shift()();
+  assert.equal(await third, "third-ok");
+  await coordinator.waitForIdle();
+  assert.deepEqual(executionOrder, ["first", "second", "third"]);
+});
+
 test("response timeout does not cancel settlement or release the serial queue", async () => {
   const coordinator = createDurableMutationCoordinator({responseTimeoutMs: 15});
   const firstCommit = deferred();

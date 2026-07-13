@@ -101,10 +101,11 @@ function createEventSubscriptionIndex(options = {}) {
     if (!subscription || subscription.scope === "all") {
       return true;
     }
-    const positions = [event && event.previousPosition, event && event.position]
-      .map(normalizePosition)
-      .filter(Boolean);
-    return positions.some((position) => positionVisibleToSubscription(position, subscription));
+    // This is the per-recipient hot path. Candidate construction already owns
+    // its normalized temporary positions; visibility only needs two scalar
+    // checks and must not allocate another array/object pair for every viewer.
+    return rawPositionVisibleToSubscription(event && event.previousPosition, subscription)
+      || rawPositionVisibleToSubscription(event && event.position, subscription);
   }
 
   function removeSubscription(client) {
@@ -172,19 +173,23 @@ function normalizePosition(value) {
   };
 }
 
-function positionVisibleToSubscription(position, subscription) {
-  if (!position || position.mapId !== subscription.mapId) {
+function rawPositionVisibleToSubscription(position, subscription) {
+  if (!position || typeof position !== "object" || Array.isArray(position)) {
+    return false;
+  }
+  const mapId = String(position.mapId || "").trim();
+  if (!mapId || mapId !== subscription.mapId) {
     return false;
   }
   if (subscription.scope === "map") {
     return true;
   }
-  if (!position.hasCell) {
+  if (!hasCell(position)) {
     return false;
   }
   return (
-    Math.abs(position.cellX - subscription.cellX) <= subscription.radius
-    && Math.abs(position.cellY - subscription.cellY) <= subscription.radius
+    Math.abs(integer(position.cellX) - subscription.cellX) <= subscription.radius
+    && Math.abs(integer(position.cellY) - subscription.cellY) <= subscription.radius
   );
 }
 

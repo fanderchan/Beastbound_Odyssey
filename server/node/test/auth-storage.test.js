@@ -32,11 +32,355 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
-const {mysqlAuthStoreRootContract} = require("../src/mysql-store");
+const {
+  DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
+  __buildSaveStatementsFromPersistentDataForTest,
+  __entityChangedForTest,
+  mysqlAuthStoreRootContract,
+} = require("../src/mysql-store");
+const {createPreloadedAuthService} = require("../src/http-server");
 const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
+
+function mysqlLoadTemporaryDirectoryNames() {
+  try {
+    return fs.readdirSync(os.tmpdir())
+      .filter((name) => name.startsWith("beastbound-mysql-load-"))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+test("MySQL CLI loader default is one shared bounded full-history ceiling", () => {
+  assert.equal(DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES, 192 * 1024 * 1024);
+  assert.ok(DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES > 105_876_464);
+});
+
+test("MySQL CLI startup streams private UTF-8 output across file chunks and cleans it", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-stream-load-test-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const stdoutModePath = path.join(tempDir, "stdout-mode.txt");
+  const previousModePath = process.env.FAKE_MYSQL_STDOUT_MODE_PATH;
+  const beforeTemporaryDirectories = mysqlLoadTemporaryDirectoryNames();
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("FROM information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  if (!stdin.includes("SELECT 'server_state'")) {
+    return;
+  }
+  fs.writeFileSync(process.env.FAKE_MYSQL_STDOUT_MODE_PATH, String(fs.fstatSync(1).mode & 0o777));
+  const stateRow = ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})].join("\\t") + "\\n";
+  const accountPrefix = "accounts\\tacc_stream_utf8\\t" +
+    "{\\\"accountId\\\":\\\"acc_stream_utf8\\\",\\\"username\\\":\\\"stream_utf8\\\",\\\"displayName\\\":\\\"";
+  const outputPrefix = stateRow + accountPrefix;
+  const fillerLength = 65535 - Buffer.byteLength(outputPrefix);
+  const accountSuffix = "石器\\\",\\\"role\\\":\\\"player\\\",\\\"createdAt\\\":\\\"2026-07-13T00:00:00.000Z\\\",\\\"updatedAt\\\":\\\"2026-07-13T00:00:00.000Z\\\",\\\"schemaVersion\\\":1}\\n";
+  process.stdout.write(outputPrefix + "a".repeat(fillerLength) + accountSuffix);
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_STDOUT_MODE_PATH = stdoutModePath;
+    const loaded = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      database: "beastbound_stream_test",
+      readOnly: true,
+      ensureSchema: false,
+      strictRowIdentity: true,
+      outputMaxBufferBytes: 128 * 1024,
+    }).load();
+    assert.equal(loaded.accounts.stream_utf8.accountId, "acc_stream_utf8");
+    assert.equal(loaded.accounts.stream_utf8.displayName.endsWith("石器"), true);
+    assert.equal(Buffer.byteLength(loaded.accounts.stream_utf8.displayName, "utf8") > 63 * 1024, true);
+    assert.equal(Number(fs.readFileSync(stdoutModePath, "utf8")), 0o600);
+    assert.deepEqual(mysqlLoadTemporaryDirectoryNames(), beforeTemporaryDirectories);
+  } finally {
+    if (previousModePath === undefined) {
+      delete process.env.FAKE_MYSQL_STDOUT_MODE_PATH;
+    } else {
+      process.env.FAKE_MYSQL_STDOUT_MODE_PATH = previousModePath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("MySQL CLI startup rejects oversized file output without leaking or retaining it", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-stream-limit-test-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const beforeTemporaryDirectories = mysqlLoadTemporaryDirectoryNames();
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("FROM information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write("never-expose-this-row:" + "x".repeat(2048));
+  }
+});
+`, {mode: 0o755});
+  try {
+    assert.throws(
+      () => createMysqlAuthStore({
+        mysqlPath: fakeMysqlPath,
+        database: "beastbound_stream_limit_test",
+        readOnly: true,
+        ensureSchema: false,
+        outputMaxBufferBytes: 512,
+      }).load(),
+      (error) => {
+        assert.equal(error.code, "mysql_output_limit_exceeded");
+        assert.equal(error.message, "MySQL 持久化数据输出超过安全上限。");
+        assert.doesNotMatch(error.message, /never-expose|beastbound_stream_limit_test|fake-mysql/);
+        return true;
+      },
+    );
+    assert.deepEqual(mysqlLoadTemporaryDirectoryNames(), beforeTemporaryDirectories);
+  } finally {
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("server startup preloads and consumes one isolated store document exactly once", () => {
+  let loadCalls = 0;
+  const initialData = {
+    schemaVersion: 1,
+    accounts: {
+      preloaduser: {
+        accountId: "acc_preloaduser",
+        username: "preloaduser",
+        displayName: "启动预载",
+        role: "player",
+        createdAt: "2026-07-13T00:00:00.000Z",
+        updatedAt: "2026-07-13T00:00:00.000Z",
+      },
+    },
+    sessions: {},
+  };
+  const store = {
+    mode: "preload-observer",
+    load() {
+      loadCalls += 1;
+      if (loadCalls > 1) {
+        throw new Error("startup must not issue a discarded second load");
+      }
+      return initialData;
+    },
+    save() {},
+  };
+
+  const service = createPreloadedAuthService(store);
+  assert.equal(loadCalls, 1);
+  initialData.accounts.preloaduser.displayName = "调用方随后篡改";
+  assert.equal(service.snapshot().accounts.preloaduser.displayName, "启动预载");
+  assert.equal(loadCalls, 1);
+  assert.throws(
+    () => createPreloadedAuthService({load() { throw new Error("injected preload failure"); }}),
+    /injected preload failure/,
+  );
+});
+
+test("writable MySQL startup installs and validates durable battle history order idempotently", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-history-sequence-schema-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const statePath = path.join(tempDir, "schema-state.json");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousStatePath = process.env.FAKE_MYSQL_SCHEMA_STATE;
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(statePath, JSON.stringify({tables: {}}));
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  const state = JSON.parse(fs.readFileSync(process.env.FAKE_MYSQL_SCHEMA_STATE, "utf8"));
+  if (stdin.includes("FROM information_schema.columns AS history_column")) {
+    const match = stdin.match(/history_column\\.table_name = '([^']+)'/);
+    const value = state.tables[match && match[1]];
+    if (value === "invalid") {
+      process.stdout.write("1\\tbigint\\tYES\\t\\t0\\n");
+    } else if (value === true) {
+      process.stdout.write("1\\tbigint unsigned\\tNO\\tauto_increment\\t1\\n");
+    } else {
+      process.stdout.write("0\\t\\t\\t\\t0\\n");
+    }
+    return;
+  }
+  const alter = stdin.match(/ALTER TABLE (battle_records|battle_trace)/);
+  if (alter) {
+    state.tables[alter[1]] = true;
+    fs.writeFileSync(process.env.FAKE_MYSQL_SCHEMA_STATE, JSON.stringify(state));
+    return;
+  }
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write(["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})].join("\\t") + "\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_SCHEMA_STATE = statePath;
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const options = {
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+    };
+    assert.equal(createMysqlAuthStore(options).load().schemaVersion, 1);
+    assert.equal(createMysqlAuthStore(options).load().schemaVersion, 1);
+
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const ddl = calls.filter((call) => call.stdin.includes("CREATE TABLE IF NOT EXISTS battle_records"));
+    const contracts = calls.filter((call) => call.stdin.includes("FROM information_schema.columns AS history_column"));
+    const alters = calls.filter((call) => /ALTER TABLE (battle_records|battle_trace)/.test(call.stdin));
+    assert.equal(ddl.length, 2);
+    assert.equal(contracts.length, 4);
+    assert.equal(alters.length, 2, "only the first startup migrates each table");
+    assert.match(ddl[0].stdin, /history_seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT/);
+    assert.match(ddl[0].stdin, /UNIQUE KEY uq_battle_records_history_seq \(history_seq\)/);
+    assert.match(ddl[0].stdin, /UNIQUE KEY uq_battle_trace_history_seq \(history_seq\)/);
+    assert.ok(alters.every((call) => /ALGORITHM=INPLACE[\s\S]*LOCK=SHARED/.test(call.stdin)));
+
+    fs.writeFileSync(statePath, JSON.stringify({tables: {battle_records: "invalid", battle_trace: true}}));
+    assert.throws(
+      () => createMysqlAuthStore(options).load(),
+      (error) => error.code === "mysql_history_sequence_contract_invalid",
+    );
+  } finally {
+    if (previousStatePath === undefined) {
+      delete process.env.FAKE_MYSQL_SCHEMA_STATE;
+    } else {
+      process.env.FAKE_MYSQL_SCHEMA_STATE = previousStatePath;
+    }
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("MySQL diff skips serialization only for an identical committed entity", () => {
+  const identical = {
+    accountId: "acc_identity_skip",
+    nested: {value: 1},
+    toJSON() {
+      throw new Error("identical entity must not be serialized");
+    },
+  };
+  assert.equal(__entityChangedForTest(identical, identical), false);
+  assert.equal(
+    __entityChangedForTest(
+      {accountId: "acc_identity_fallback", nested: {value: 1}},
+      {accountId: "acc_identity_fallback", nested: {value: 1}},
+    ),
+    false,
+  );
+  assert.equal(
+    __entityChangedForTest(
+      {accountId: "acc_identity_changed", nested: {value: 1}},
+      {accountId: "acc_identity_changed", nested: {value: 2}},
+    ),
+    true,
+  );
+});
+
+test("MySQL unrelated saves do not scan shared immutable history arrays", () => {
+  const untouchedHistoryEntry = new Proxy({}, {
+    get() {
+      throw new Error("shared history entry must not be inspected");
+    },
+    ownKeys() {
+      throw new Error("shared history entry must not be serialized");
+    },
+  });
+  const battleRecords = Object.freeze([untouchedHistoryEntry]);
+  const battleTrace = Object.freeze([untouchedHistoryEntry]);
+  const serviceEvents = Object.freeze([untouchedHistoryEntry]);
+  const previous = {
+    schemaVersion: 1,
+    accounts: {},
+    battleRecords,
+    battleTrace,
+    serviceEvents,
+    serviceEventSeq: 1,
+  };
+  const next = {
+    ...previous,
+    accounts: {
+      identity_skip_user: {
+        accountId: "acc_identity_skip_user",
+        username: "identity_skip_user",
+        displayName: "共享历史短路测试",
+        role: "player",
+        createdAt: "2026-07-13T00:00:00.000Z",
+        updatedAt: "2026-07-13T00:00:00.000Z",
+      },
+    },
+  };
+
+  const statements = __buildSaveStatementsFromPersistentDataForTest(next, previous);
+  assert.equal(statements.some((statement) => statement.includes("INSERT INTO accounts")), true);
+  assert.equal(statements.some((statement) => /\b(battle_records|battle_trace|service_events)\b/.test(statement)), false);
+});
+
+test("MySQL battle history is append-only across normalization and hot-window eviction", () => {
+  const previous = {
+    schemaVersion: 1,
+    battleRecords: [
+      {recordId: "battle_record_evicted", futureServerField: {mustSurvive: true}},
+      {recordId: "battle_record_existing", roomId: "room_existing", futureServerField: {mustSurvive: true}},
+    ],
+    battleTrace: [
+      {traceId: "battle_trace_evicted", futureServerField: {mustSurvive: true}},
+      {traceId: "battle_trace_existing", roomId: "room_existing", futureServerField: {mustSurvive: true}},
+    ],
+    serviceEventSeq: 0,
+    serviceEvents: [],
+  };
+  const next = {
+    ...previous,
+    // The evicted rows are no longer resident, while normalization has rebuilt
+    // the existing rows without fields unknown to this server build.
+    battleRecords: [
+      {recordId: "battle_record_existing", roomId: "room_existing", schemaVersion: 1},
+      {recordId: "battle_record_new", roomId: "room_new", endedAt: "2026-07-13T08:00:00.000Z"},
+    ],
+    battleTrace: [
+      {traceId: "battle_trace_existing", roomId: "room_existing", schemaVersion: 1},
+      {traceId: "battle_trace_new", roomId: "room_new", type: "battle_room_closed", createdAt: "2026-07-13T08:00:00.000Z"},
+    ],
+  };
+
+  const statements = __buildSaveStatementsFromPersistentDataForTest(next, previous);
+  const historyStatements = statements.filter((statement) => /\b(battle_records|battle_trace)\b/.test(statement));
+  assert.equal(historyStatements.length, 2);
+  assert.match(historyStatements[0], /^INSERT INTO battle_records /);
+  assert.match(historyStatements[0], /'battle_record_new'/);
+  assert.match(historyStatements[1], /^INSERT INTO battle_trace /);
+  assert.match(historyStatements[1], /'battle_trace_new'/);
+  assert.equal(historyStatements.some((statement) => /\bDELETE\b|ON DUPLICATE KEY UPDATE/.test(statement)), false);
+  assert.equal(historyStatements.some((statement) => /battle_(record|trace)_(?:existing|evicted)/.test(statement)), false);
+  assert.equal(historyStatements.some((statement) => statement.includes("futureServerField")), false);
+});
 
 test("mysql auth store root contract classifies every snapshot field exactly once", () => {
   const contract = mysqlAuthStoreRootContract();
@@ -60,7 +404,6 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
     "mutationReceipts",
     "offlineHangConfig",
     "parties",
-    "partyInvites",
     "profileBindings",
     "profiles",
     "schemaVersion",
@@ -71,6 +414,9 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   const expectedRuntimeOnlyFields = [
     "battleInvites",
     "battleRooms",
+    "battleRoomRecoveries",
+    "battleRoomRecoveryByAccountId",
+    "partyInvites",
     "playerPositions",
     "tradeOffers",
   ];
@@ -78,7 +424,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   assert.deepEqual(contract.persistentFields, expectedPersistentFields);
   assert.deepEqual(contract.runtimeOnlyFields, expectedRuntimeOnlyFields);
   assert.deepEqual(contract.snapshotFields, [...expectedPersistentFields, ...expectedRuntimeOnlyFields].sort());
-  assert.equal(contract.persistentFields.length, 26);
+  assert.equal(contract.persistentFields.length, 25);
   assert.equal(new Set([...contract.persistentFields, ...contract.runtimeOnlyFields]).size, contract.snapshotFields.length);
   assert.deepEqual(contract.profileDocumentFields, [
     "playerId",
@@ -336,6 +682,7 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mutation_receipts/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS party_invites/.test(call.stdin)));
     assert.ok(calls.some((call) => /operation_id VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => /VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
@@ -354,6 +701,69 @@ process.stdin.on("end", () => {
       process.env.FAKE_MYSQL_LOG = previousLogPath;
     }
     fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("writable mysql startup purges legacy party invites once without loading them", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-party-invite-cleanup-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (!stdin.includes("SELECT 'server_state'")) {
+    return;
+  }
+  const rows = [
+    ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+  ];
+  if (stdin.includes("FROM party_invites")) {
+    rows.push(["party_invites", "legacy_party_invite", {
+      inviteId: "legacy_party_invite",
+      partyId: "legacy_party",
+      fromAccountId: "acc_legacy_a",
+      toAccountId: "acc_legacy_b",
+      status: "accepted",
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-01T00:00:01.000Z",
+      schemaVersion: 1,
+    }]);
+  }
+  process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+    });
+
+    assert.deepEqual(store.load().partyInvites, {});
+    assert.deepEqual(store.load().partyInvites, {});
+
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    assert.equal(calls.filter((call) => /^DELETE FROM party_invites\s*;?\s*$/i.test(call.stdin)).length, 1);
+    assert.equal(calls.some((call) => /SELECT 'party_invites'/.test(call.stdin)), false);
+    assert.equal(calls.some((call) => /INSERT INTO party_invites/.test(call.stdin)), false);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
 
@@ -394,7 +804,8 @@ process.stdin.on("end", () => {
     assert.match(calls[2].stdin, /SELECT 'server_state'/);
     assert.doesNotMatch(calls[2].stdin, /consumed_equipment_envelopes/);
     assert.doesNotMatch(calls[2].stdin, /mutation_receipts/);
-    assert.equal(calls.some((call) => /CREATE TABLE|CREATE DATABASE|START TRANSACTION/.test(call.stdin)), false);
+    assert.doesNotMatch(calls[2].stdin, /SELECT 'party_invites'/);
+    assert.equal(calls.some((call) => /CREATE TABLE|CREATE DATABASE|START TRANSACTION|DELETE FROM party_invites/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -553,6 +964,338 @@ process.stdin.on("end", () => {
     assert.equal(loaded.accounts.biguser.note.length, 2 * 1024 * 1024);
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql loader reads only the newest bounded battle history windows", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-battle-history-window-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  if (!stdin.includes("SELECT 'server_state'")) {
+    return;
+  }
+  const rows = [["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}]];
+  for (let index = 0; index < 10005; index += 1) {
+    const suffix = String(index).padStart(5, "0");
+    rows.push(["battle_records", "battle_record_" + suffix, {
+      recordId: "battle_record_" + suffix,
+      endedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
+      futureServerField: {index},
+    }]);
+  }
+  for (let index = 0; index < 1205; index += 1) {
+    const suffix = String(index).padStart(5, "0");
+    rows.push(["battle_trace", "battle_trace_" + suffix, {
+      traceId: "battle_trace_" + suffix,
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
+      futureServerField: {index},
+    }]);
+  }
+  process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "reader",
+      password: "secret",
+      database: "beastbound_test",
+      readOnly: true,
+    });
+    const loaded = store.load();
+    assert.equal(loaded.battleRecords.length, 10000);
+    assert.equal(loaded.battleRecords[0].recordId, "battle_record_00005");
+    assert.equal(loaded.battleRecords.at(-1).recordId, "battle_record_10004");
+    assert.equal(loaded.battleTrace.length, 1200);
+    assert.equal(loaded.battleTrace[0].traceId, "battle_trace_00005");
+    assert.equal(loaded.battleTrace.at(-1).traceId, "battle_trace_01204");
+
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const loadSql = calls.find((call) => call.stdin.includes("SELECT 'server_state'")).stdin;
+    assert.match(loadSql, /FROM \(SELECT history_seq, record_id, document_json FROM battle_records ORDER BY history_seq DESC LIMIT 10000\) AS recent_battle_records ORDER BY history_seq/);
+    assert.match(loadSql, /FROM \(SELECT history_seq, trace_id, document_json FROM battle_trace ORDER BY history_seq DESC LIMIT 1200\) AS recent_battle_trace ORDER BY history_seq/);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("full battle history windows preserve durable append order across equal and backdated timestamps", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-battle-history-sequence-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const statePath = path.join(tempDir, "history-state.json");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousStatePath = process.env.FAKE_MYSQL_HISTORY_STATE;
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  const sameTimestamp = "2026-07-13T09:00:00.000Z";
+  const state = {
+    nextRecordSeq: 10001,
+    nextTraceSeq: 1201,
+    records: Array.from({length: 10000}, (_, index) => ({
+      seq: index + 1,
+      document: {
+        recordId: `battle_record_sequence_${String(index).padStart(5, "0")}`,
+        roomId: `room_sequence_${String(index).padStart(5, "0")}`,
+        mode: "duel",
+        reason: "fixture",
+        participantAccountIds: ["acc_sequence_a", "acc_sequence_b"],
+        loserAccountIds: ["acc_sequence_b"],
+        endedAt: sameTimestamp,
+        futureServerField: {mustSurviveColdStorage: index === 0},
+        schemaVersion: 1,
+      },
+    })),
+    trace: Array.from({length: 1200}, (_, index) => ({
+      seq: index + 1,
+      document: {
+        traceId: `battle_trace_sequence_${String(index).padStart(5, "0")}`,
+        roomId: `room_sequence_${String(index).padStart(5, "0")}`,
+        type: "fixture_trace",
+        createdAt: sameTimestamp,
+        schemaVersion: 1,
+      },
+    })),
+  };
+  fs.writeFileSync(statePath, JSON.stringify(state));
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  const state = JSON.parse(fs.readFileSync(process.env.FAKE_MYSQL_HISTORY_STATE, "utf8"));
+  if (stdin.includes("SELECT 'server_state'")) {
+    const rows = [["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}]];
+    for (const entry of state.records.slice().sort((left, right) => left.seq - right.seq).slice(-10000)) {
+      rows.push(["battle_records", entry.document.recordId, entry.document]);
+    }
+    for (const entry of state.trace.slice().sort((left, right) => left.seq - right.seq).slice(-1200)) {
+      rows.push(["battle_trace", entry.document.traceId, entry.document]);
+    }
+    process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+    return;
+  }
+  if (stdin.includes("START TRANSACTION")) {
+    if (stdin.includes("'battle_record_sequence_backdated_new'")) {
+      state.records.push({
+        seq: state.nextRecordSeq++,
+        document: {
+          recordId: "battle_record_sequence_backdated_new",
+          roomId: "room_sequence_backdated_new",
+          mode: "duel",
+          reason: "backdated_fixture",
+          participantAccountIds: ["acc_sequence_a", "acc_sequence_b"],
+          loserAccountIds: ["acc_sequence_b"],
+          endedAt: "2020-01-01T00:00:00.000Z",
+          schemaVersion: 1,
+        },
+      });
+    }
+    if (stdin.includes("'battle_trace_sequence_backdated_new'")) {
+      state.trace.push({
+        seq: state.nextTraceSeq++,
+        document: {
+          traceId: "battle_trace_sequence_backdated_new",
+          roomId: "room_sequence_backdated_new",
+          type: "backdated_fixture_trace",
+          createdAt: "2020-01-01T00:00:00.000Z",
+          schemaVersion: 1,
+        },
+      });
+    }
+    fs.writeFileSync(process.env.FAKE_MYSQL_HISTORY_STATE, JSON.stringify(state));
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_HISTORY_STATE = statePath;
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const options = {
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+    };
+    const store = createMysqlAuthStore(options);
+    const loaded = store.load();
+    assert.equal(loaded.battleRecords.length, 10000);
+    assert.equal(loaded.battleTrace.length, 1200);
+    assert.equal(loaded.battleRecords[0].recordId, "battle_record_sequence_00000");
+    assert.equal(loaded.battleRecords.at(-1).recordId, "battle_record_sequence_09999");
+
+    store.save({
+      ...loaded,
+      battleRecords: [
+        ...loaded.battleRecords.slice(1),
+        {
+          recordId: "battle_record_sequence_backdated_new",
+          roomId: "room_sequence_backdated_new",
+          mode: "duel",
+          reason: "backdated_fixture",
+          participantAccountIds: ["acc_sequence_a", "acc_sequence_b"],
+          loserAccountIds: ["acc_sequence_b"],
+          endedAt: "2020-01-01T00:00:00.000Z",
+          schemaVersion: 1,
+        },
+      ],
+      battleTrace: [
+        ...loaded.battleTrace.slice(1),
+        {
+          traceId: "battle_trace_sequence_backdated_new",
+          roomId: "room_sequence_backdated_new",
+          type: "backdated_fixture_trace",
+          createdAt: "2020-01-01T00:00:00.000Z",
+          schemaVersion: 1,
+        },
+      ],
+    });
+
+    const restartedStore = createMysqlAuthStore(options);
+    const restartedData = restartedStore.load();
+    assert.equal(restartedData.battleRecords.length, 10000);
+    assert.equal(restartedData.battleTrace.length, 1200);
+    assert.equal(restartedData.battleRecords[0].recordId, "battle_record_sequence_00001");
+    assert.equal(restartedData.battleRecords.at(-1).recordId, "battle_record_sequence_backdated_new");
+    assert.equal(restartedData.battleTrace[0].traceId, "battle_trace_sequence_00001");
+    assert.equal(restartedData.battleTrace.at(-1).traceId, "battle_trace_sequence_backdated_new");
+
+    const restartedService = createAuthService({store: restartedStore, initialData: restartedData});
+    const normalized = restartedService.snapshot();
+    assert.equal(normalized.battleRecords.at(-1).recordId, "battle_record_sequence_backdated_new");
+    assert.equal(normalized.battleRecords.at(-1).endedAt, "2020-01-01T00:00:00.000Z");
+    assert.equal(normalized.battleTrace.at(-1).traceId, "battle_trace_sequence_backdated_new");
+
+    const persisted = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    assert.equal(persisted.records.length, 10001, "eviction from the hot window never deletes cold history");
+    assert.equal(persisted.trace.length, 1201);
+    assert.equal(persisted.records[0].document.futureServerField.mustSurviveColdStorage, true);
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const saveSql = calls.find((call) => call.stdin.includes("START TRANSACTION")).stdin;
+    assert.match(saveSql, /INSERT INTO battle_records/);
+    assert.match(saveSql, /INSERT INTO battle_trace/);
+    assert.doesNotMatch(saveSql, /DELETE FROM (?:battle_records|battle_trace)/);
+    assert.doesNotMatch(saveSql, /ON DUPLICATE KEY UPDATE[^;]*(?:battle_record|battle_trace)_sequence_backdated_new/);
+  } finally {
+    if (previousStatePath === undefined) {
+      delete process.env.FAKE_MYSQL_HISTORY_STATE;
+    } else {
+      process.env.FAKE_MYSQL_HISTORY_STATE = previousStatePath;
+    }
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql normalization and an unrelated request never rewrite loaded battle history", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-battle-history-normalize-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+    return;
+  }
+  if (!stdin.includes("SELECT 'server_state'")) {
+    return;
+  }
+  const rows = [
+    ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables"}],
+    ["battle_records", "battle_record_legacy_future", {
+      recordId: "battle_record_legacy_future",
+      roomId: "room_legacy_future",
+      mode: "duel",
+      participantAccountIds: ["acc_legacy_a", "acc_legacy_b"],
+      endedAt: "2026-07-12T00:00:00.000Z",
+      futureServerField: {mustSurvive: "record_sentinel"},
+    }],
+    ["battle_trace", "battle_trace_legacy_future", {
+      traceId: "battle_trace_legacy_future",
+      roomId: "room_legacy_future",
+      type: "battle_room_closed",
+      createdAt: "2026-07-12T00:00:01.000Z",
+      futureServerField: {mustSurvive: "trace_sentinel"},
+    }],
+  ];
+  process.stdout.write(rows.map((row) => [row[0], row[1], JSON.stringify(row[2])].join("\\t")).join("\\n") + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+    });
+    const service = createAuthService({store});
+    const normalized = service.snapshot();
+    assert.equal(normalized.battleRecords[0].futureServerField, undefined);
+    assert.equal(normalized.battleTrace[0].futureServerField, undefined);
+
+    const registration = service.register({
+      username: "coldhistoryuser",
+      password: "test1234",
+      displayName: "冷历史用户",
+    });
+    assert.equal(registration.ok, true);
+
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const saveSql = calls.filter((call) => call.stdin.includes("START TRANSACTION"));
+    assert.equal(saveSql.length, 1);
+    assert.match(saveSql[0].stdin, /INSERT INTO accounts/);
+    assert.doesNotMatch(saveSql[0].stdin, /(?:DELETE FROM|INSERT INTO) battle_records/);
+    assert.doesNotMatch(saveSql[0].stdin, /(?:DELETE FROM|INSERT INTO) battle_trace/);
+    assert.doesNotMatch(saveSql[0].stdin, /record_sentinel|trace_sentinel|futureServerField/);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
 
@@ -991,6 +1734,10 @@ process.stdin.on("end", () => {
     runtimeOnlyChange.battleInvites = {
       invite_noop: {inviteId: "invite_noop", status: "pending"},
     };
+    runtimeOnlyChange.tradeOffers = Object.fromEntries(Array.from({length: 1000}, (_, index) => [
+      `trade_noop_${index}`,
+      {offerId: `trade_noop_${index}`, status: "pending"},
+    ]));
     for (let index = 0; index < 1000; index += 1) {
       await store.saveAsync(runtimeOnlyChange);
     }
@@ -1222,6 +1969,209 @@ process.stdin.on("end", () => {
     assert.ok(queriedStatements.some((statement) => statement.includes("INSERT INTO accounts")));
     assert.equal(queriedStatements.some((statement) => statement === "START TRANSACTION"), false);
     assert.equal(queriedStatements.some((statement) => statement === "COMMIT"), false);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql cold-history ID conflicts roll back instead of overwriting an unseen row", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-cold-history-conflict-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  if (stdin.includes("SELECT 'server_state'")) {
+    process.stdout.write(["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})].join("\\t") + "\\n");
+  } else if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+  }
+});
+`, {mode: 0o755});
+  const events = [];
+  const queriedStatements = [];
+  const duplicate = new Error("Duplicate entry 'battle_record_cold_conflict' for key 'PRIMARY'");
+  duplicate.code = "ER_DUP_ENTRY";
+  const connection = {
+    async beginTransaction() {
+      events.push("begin");
+    },
+    async query(statement) {
+      queriedStatements.push(statement);
+      if (/^INSERT INTO battle_records /.test(statement)) {
+        assert.doesNotMatch(statement, /ON DUPLICATE KEY UPDATE/);
+        throw duplicate;
+      }
+    },
+    async commit() {
+      events.push("commit");
+    },
+    async rollback() {
+      events.push("rollback");
+    },
+    release() {
+      events.push("release");
+    },
+  };
+  const pool = {
+    async getConnection() {
+      return connection;
+    },
+    async end() {},
+  };
+  try {
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+      usePool: true,
+      poolFactory: () => pool,
+    });
+    store.load();
+    await assert.rejects(
+      store.saveAsync({
+        schemaVersion: 1,
+        battleRecords: [{
+          recordId: "battle_record_cold_conflict",
+          roomId: "room_cold_conflict",
+          endedAt: "2026-07-13T08:00:00.000Z",
+        }],
+        battleTrace: [],
+        serviceEventSeq: 0,
+        serviceEvents: [],
+      }),
+      (error) => error.message === "MySQL 异步存档失败。" && error.cause === duplicate,
+    );
+    assert.equal(queriedStatements.length, 2);
+    assert.match(queriedStatements[0], /^INSERT INTO server_state /);
+    assert.match(queriedStatements[1], /^INSERT INTO battle_records /);
+    assert.deepEqual(events, ["begin", "rollback", "release"]);
+    await store.close();
+  } finally {
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+});
+
+test("mysql saveAsync snapshots caller data before yielding and commits that owned baseline", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-save-owned-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const cliLogPath = path.join(tempDir, "cli-calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (stdin.includes("information_schema.tables")) {
+    process.stdout.write("0\\n");
+  }
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = cliLogPath;
+    let releaseFirstAcquire = null;
+    const firstAcquireGate = new Promise((resolve) => {
+      releaseFirstAcquire = resolve;
+    });
+    let acquireCount = 0;
+    const queriedStatements = [];
+    const connection = {
+      async beginTransaction() {},
+      async query(statement) {
+        queriedStatements.push(statement);
+      },
+      async commit() {},
+      async rollback() {},
+      release() {},
+    };
+    const pool = {
+      async getConnection() {
+        acquireCount += 1;
+        if (acquireCount === 1) {
+          await firstAcquireGate;
+        }
+        return connection;
+      },
+      async end() {},
+    };
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "tester",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      ensureSchema: false,
+      usePool: true,
+      poolFactory: () => pool,
+    });
+    store.load();
+    fs.writeFileSync(cliLogPath, "");
+    const state = (displayName) => ({
+      schemaVersion: 1,
+      accounts: {
+        save_owned_user: {
+          accountId: "acc_save_owned_user",
+          username: "save_owned_user",
+          displayName,
+          role: "player",
+          createdAt: "2026-07-13T00:00:00.000Z",
+          updatedAt: "2026-07-13T00:00:00.000Z",
+        },
+      },
+      mutationReceipts: {},
+      serviceEventSeq: 0,
+      serviceEvents: [],
+    });
+
+    const callerState = state("提交前名称");
+    const firstSave = store.saveAsync(callerState);
+    callerState.accounts.save_owned_user.displayName = "调用后篡改";
+    callerState.accounts.injected_after_call = {
+      accountId: "acc_injected_after_call",
+      username: "injected_after_call",
+      displayName: "不应写入",
+      role: "player",
+      createdAt: "2026-07-13T00:00:00.000Z",
+      updatedAt: "2026-07-13T00:00:00.000Z",
+    };
+    releaseFirstAcquire();
+    await firstSave;
+
+    const firstSql = queriedStatements.join("\n");
+    assert.match(firstSql, /提交前名称/);
+    assert.doesNotMatch(firstSql, /调用后篡改|injected_after_call|不应写入/);
+    const firstQueryCount = queriedStatements.length;
+    assert.equal(acquireCount, 1);
+
+    // Saving the original value again must be a true no-op. This proves the
+    // committed diff baseline also owns the pre-yield snapshot instead of the
+    // caller object that was mutated while COMMIT was pending.
+    await store.saveAsync(state("提交前名称"));
+    assert.equal(acquireCount, 1);
+    assert.equal(queriedStatements.length, firstQueryCount);
+
+    await store.saveAsync(state("第二次真实变化"));
+    assert.equal(acquireCount, 2);
+    assert.match(queriedStatements.slice(firstQueryCount).join("\n"), /第二次真实变化/);
+    await store.saveAsyncOwned(state("受托权威快照"));
+    assert.equal(acquireCount, 3);
+    assert.match(queriedStatements.join("\n"), /受托权威快照/);
+    await store.close();
   } finally {
     if (previousLogPath === undefined) {
       delete process.env.FAKE_MYSQL_LOG;
@@ -1580,6 +2530,33 @@ test("JSON auth store refuses to load corrupted files instead of silently resett
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }
+});
+
+test("async store keeps defensive saves isolated and routes durable ownership transfers without deep cloning", async () => {
+  const calls = [];
+  const underlying = {
+    mode: "owned-routing-test",
+    load: () => ({}),
+    async saveAsync(value) {
+      calls.push({kind: "defensive", value});
+    },
+    async saveAsyncOwned(value) {
+      calls.push({kind: "owned", value});
+    },
+  };
+  const store = createAsyncWriteAuthStore(underlying, {onError() {}});
+  const ownedProfiles = {player_owned: {profile: {stoneCoins: 10}}};
+  const ownedRoot = {schemaVersion: 1, profiles: ownedProfiles};
+  await store.saveOwned(ownedRoot);
+  assert.equal(calls[0].kind, "owned");
+  assert.notStrictEqual(calls[0].value, ownedRoot);
+  assert.strictEqual(calls[0].value.profiles, ownedProfiles);
+
+  const defensiveRoot = {schemaVersion: 1, profiles: {player_safe: {profile: {stoneCoins: 20}}}};
+  await store.save(defensiveRoot);
+  assert.equal(calls[1].kind, "defensive");
+  assert.notStrictEqual(calls[1].value, defensiveRoot);
+  assert.notStrictEqual(calls[1].value.profiles, defensiveRoot.profiles);
 });
 
 test("async store rejects the owning durable request, rolls back cache, and self-heals", async () => {

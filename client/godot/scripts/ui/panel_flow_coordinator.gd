@@ -16,6 +16,7 @@ const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coo
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
+const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -156,11 +157,22 @@ const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
 const PARTY_STATE_POLL_SECONDS := 10.0
 const SERVER_STEP_MOVE_MAX_SYNC_RETRIES := 2
-const SERVER_EVENT_RECONNECT_SECONDS := 3.0
 const SERVER_EVENT_MAX_PACKETS_PER_FRAME := 8
+const SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME := 64
 const SERVER_EVENT_SEEN_MAX := 40
 
 var online_presence_cache_model = OnlinePresenceCacheModel.new(ONLINE_POSITION_MAX_REMOTE_PLAYERS)
+var server_event_reconnect_model = ServerEventReconnectModel.new()
+var server_event_epoch: String = ""
+var server_event_reset_count: int = 0
+var server_event_pending_events: Array[Dictionary] = []
+var server_session_generation: int = 0
+var server_session_request_serial: int = 0
+var server_session_token: String = ""
+var server_session_request_tickets: Dictionary = {}
+var server_session_request_callbacks: Dictionary = {}
+var server_event_reset_generation: int = 0
+var server_event_reset_pending_domains: Dictionary = {}
 const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
@@ -6986,7 +6998,6 @@ func _build_hud() -> void:
 	chat_input_row.add_child(chat_send_button)
 	chat_http_request = HTTPRequest.new()
 	chat_http_request.timeout = 8.0
-	chat_http_request.request_completed.connect(_on_chat_http_request_completed)
 	chat_panel.add_child(chat_http_request)
 	hud_root.add_child(chat_panel)
 
@@ -7174,7 +7185,6 @@ func _build_hud() -> void:
 
 	party_http_request = HTTPRequest.new()
 	party_http_request.timeout = 8.0
-	party_http_request.request_completed.connect(_on_party_http_request_completed)
 	party_panel.add_child(party_http_request)
 	hud_root.add_child(party_panel)
 
@@ -7586,7 +7596,6 @@ func _build_hud() -> void:
 	mailbox_column.add_child(mailbox_status_label)
 	mailbox_http_request = HTTPRequest.new()
 	mailbox_http_request.timeout = 8.0
-	mailbox_http_request.request_completed.connect(_on_mailbox_http_request_completed)
 	mailbox_panel.add_child(mailbox_http_request)
 	hud_root.add_child(mailbox_panel)
 
@@ -8955,6 +8964,133 @@ func _server_profile_base_url() -> String:
 func _server_profile_token() -> String:
 	return str(current_account_session.get("serverSessionToken", "")).strip_edges()
 
+func _rotate_server_session_requests(next_token: String) -> void:
+	var normalized_token := next_token.strip_edges()
+	if normalized_token == server_session_token:
+		return
+	server_session_generation += 1
+	server_session_token = normalized_token
+	server_event_reset_pending_domains.clear()
+	for domain in ["chat", "party", "mail"]:
+		_cancel_server_session_request(domain)
+	if party_invite_http_request != null:
+		party_invite_http_request.cancel_request()
+	party_invite_request_pending = false
+	party_invite_pending_kind = ""
+	chat_messages.clear()
+	mailbox_server_messages.clear()
+	if mailbox_selected_source == "server":
+		mailbox_selected_mail_id = ""
+		mailbox_selected_source = "server"
+	party_current_state.clear()
+	party_online_players.clear()
+	party_invite_deferred_ids.clear()
+	if host != null and host.has_method("_server_battle"):
+		host._server_battle().invalidate_state_requests()
+
+func _begin_server_session_request(domain: String) -> Dictionary:
+	server_session_request_serial += 1
+	var ticket := {
+		"id": server_session_request_serial,
+		"generation": server_session_generation,
+		"token": _server_profile_token(),
+	}
+	server_session_request_tickets[domain] = ticket
+	return ticket
+
+func _server_session_request_is_current(domain: String, ticket: Dictionary) -> bool:
+	var owner = server_session_request_tickets.get(domain, {})
+	return (
+		owner is Dictionary
+		and int((owner as Dictionary).get("id", -1)) == int(ticket.get("id", -2))
+		and int(ticket.get("generation", -1)) == server_session_generation
+		and str(ticket.get("token", "")) == server_session_token
+		and server_session_token == _server_profile_token()
+	)
+
+func _request_node_for_session_domain(domain: String):
+	match domain:
+		"chat":
+			return chat_http_request
+		"party":
+			return party_http_request
+		"mail":
+			return mailbox_http_request
+	return null
+
+func _cancel_server_session_request(domain: String) -> void:
+	var request_node = _request_node_for_session_domain(domain)
+	var callback = server_session_request_callbacks.get(domain, Callable())
+	if request_node != null and callback is Callable and (callback as Callable).is_valid() and request_node.request_completed.is_connected(callback):
+		request_node.request_completed.disconnect(callback)
+	if request_node != null:
+		request_node.cancel_request()
+	server_session_request_callbacks.erase(domain)
+	server_session_request_tickets.erase(domain)
+	match domain:
+		"chat":
+			chat_request_pending = false
+			chat_pending_kind = ""
+		"party":
+			party_request_pending = false
+			party_pending_kind = ""
+		"mail":
+			mailbox_request_pending = false
+			mailbox_pending_kind = ""
+
+func _finish_server_session_request(domain: String, ticket: Dictionary) -> bool:
+	if not _server_session_request_is_current(domain, ticket):
+		return false
+	server_session_request_callbacks.erase(domain)
+	server_session_request_tickets.erase(domain)
+	return true
+
+func _queue_event_reset_domain(domain: String) -> void:
+	server_event_reset_pending_domains[domain] = server_event_reset_generation
+	var active := false
+	match domain:
+		"chat": active = chat_request_pending
+		"party": active = party_request_pending
+		"mail": active = mailbox_request_pending
+	if not active:
+		_run_queued_event_reset_domain(domain)
+
+func _run_queued_event_reset_domain(domain: String) -> void:
+	if not server_event_reset_pending_domains.has(domain) or not _is_server_account_session():
+		return
+	server_event_reset_pending_domains.erase(domain)
+	match domain:
+		"chat":
+			_request_chat_messages_for_channel(chat_active_channel if chat_active_channel != CHAT_CHANNEL_SYSTEM else CHAT_CHANNEL_NEARBY)
+		"party":
+			_request_party_state()
+		"mail":
+			_request_server_mailbox_inbox()
+
+func _continue_event_reset_domain(domain: String) -> void:
+	if server_event_reset_pending_domains.has(domain):
+		call_deferred("_run_queued_event_reset_domain", domain)
+
+func _server_session_request_guard_self_check() -> Dictionary:
+	var saved_generation := server_session_generation
+	var saved_token := server_session_token
+	var saved_serial := server_session_request_serial
+	var saved_tickets := server_session_request_tickets.duplicate(true)
+	server_session_generation = 7
+	server_session_token = "token_a"
+	server_session_request_serial = 40
+	var ticket_a := {"id": 41, "generation": 7, "token": "token_a"}
+	server_session_generation = 8
+	server_session_token = "token_b"
+	var ticket_b := {"id": 42, "generation": 8, "token": "token_b"}
+	var stale_rejected := int(ticket_a.get("generation", -1)) != server_session_generation or str(ticket_a.get("token", "")) != server_session_token
+	var current_accepted := int(ticket_b.get("id", 0)) == 42 and int(ticket_b.get("generation", -1)) == server_session_generation and str(ticket_b.get("token", "")) == server_session_token
+	server_session_generation = saved_generation
+	server_session_token = saved_token
+	server_session_request_serial = saved_serial
+	server_session_request_tickets = saved_tickets
+	return {"ok": stale_rejected and current_accepted, "staleRejected": stale_rejected, "currentAccepted": current_accepted}
+
 func _server_battle_should_poll_waiting_state() -> bool:
 	return host._server_battle().should_poll_waiting_state()
 
@@ -8990,14 +9126,20 @@ func _start_server_event_stream_if_needed() -> void:
 	if server_event_reconnect_remaining > 0.0 and (server_event_state == "closed" or server_event_state == "error"):
 		return
 	server_event_socket = WebSocketPeer.new()
-	var err = server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(_server_profile_base_url(), _server_profile_token(), server_event_last_seq))
+	server_event_socket.handshake_headers = ServerAuthClientModel.event_stream_headers(_server_profile_token())
+	server_event_reconnect_model.note_connecting()
+	var err = server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(
+		_server_profile_base_url(),
+		server_event_last_seq,
+		server_event_epoch,
+	))
 	if err == OK:
 		server_event_state = "connecting"
 		server_event_reconnect_remaining = 0.0
 	else:
 		server_event_socket = null
 		server_event_state = "error"
-		server_event_reconnect_remaining = SERVER_EVENT_RECONNECT_SECONDS
+		server_event_reconnect_remaining = server_event_reconnect_model.next_delay()
 
 func _stop_server_event_stream() -> void:
 	if server_event_socket != null:
@@ -9005,13 +9147,25 @@ func _stop_server_event_stream() -> void:
 	server_event_socket = null
 	server_event_state = "off"
 	server_event_reconnect_remaining = 0.0
+	server_event_epoch = ""
+	server_event_reconnect_model.reset()
 	server_event_seen.clear()
+	server_event_pending_events.clear()
 
 func _poll_server_event_stream(delta: float) -> void:
 	if not _is_server_account_session():
 		if server_event_state != "off":
 			_stop_server_event_stream()
 		return
+	var remaining_position_delta_budget := SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME
+	while not server_event_pending_events.is_empty():
+		var pending_event: Dictionary = server_event_pending_events[0]
+		var pending_cost := _server_event_logical_position_delta_count(pending_event)
+		if pending_cost > remaining_position_delta_budget:
+			return
+		server_event_pending_events.pop_front()
+		_handle_server_event(pending_event)
+		remaining_position_delta_budget -= pending_cost
 	if server_event_socket == null:
 		server_event_reconnect_remaining = maxf(0.0, server_event_reconnect_remaining - maxf(0.0, delta))
 		if server_event_reconnect_remaining <= 0.0:
@@ -9019,18 +9173,36 @@ func _poll_server_event_stream(delta: float) -> void:
 		return
 	server_event_socket.poll()
 	var state = server_event_socket.get_ready_state()
-	if state == WebSocketPeer.STATE_OPEN:
+	if state == WebSocketPeer.STATE_CONNECTING:
+		server_event_state = "connecting"
+		if server_event_reconnect_model.note_connecting_elapsed(delta):
+			_fail_server_event_stream_attempt()
+	elif state == WebSocketPeer.STATE_OPEN:
 		server_event_state = "open"
+		server_event_reconnect_model.note_open(delta)
 		var packet_count = 0
 		while server_event_socket.get_available_packet_count() > 0 and packet_count < SERVER_EVENT_MAX_PACKETS_PER_FRAME:
 			packet_count += 1
 			var parsed = ServerAuthClientModel.parse_event_stream_message(server_event_socket.get_packet())
 			if bool(parsed.get("ok", false)):
-				_handle_server_event(parsed.get("event", {}) as Dictionary if parsed.get("event", {}) is Dictionary else {})
+				var event := parsed.get("event", {}) as Dictionary if parsed.get("event", {}) is Dictionary else {}
+				var position_delta_cost := _server_event_logical_position_delta_count(event)
+				if position_delta_cost > remaining_position_delta_budget:
+					server_event_pending_events.append(event.duplicate(true))
+					break
+				_handle_server_event(event)
+				remaining_position_delta_budget -= position_delta_cost
+		if server_event_reconnect_model.ready_timed_out():
+			_fail_server_event_stream_attempt()
 	elif state == WebSocketPeer.STATE_CLOSED:
-		server_event_socket = null
-		server_event_state = "closed"
-		server_event_reconnect_remaining = SERVER_EVENT_RECONNECT_SECONDS
+		_fail_server_event_stream_attempt()
+
+func _fail_server_event_stream_attempt() -> void:
+	if server_event_socket != null:
+		server_event_socket.close()
+	server_event_socket = null
+	server_event_state = "closed"
+	server_event_reconnect_remaining = server_event_reconnect_model.next_delay()
 
 func _handle_server_event(event: Dictionary) -> void:
 	var event_type = str(event.get("type", "")).strip_edges()
@@ -9045,6 +9217,13 @@ func _handle_server_event(event: Dictionary) -> void:
 	match event_type:
 		"events.ready":
 			server_event_state = "open"
+			server_event_reconnect_model.note_ready()
+			server_event_last_seq = ServerEventReconnectModel.cursor_after_ready(server_event_last_seq, event)
+			var ready_epoch := str(event.get("eventStreamEpoch", event.get("epoch", ""))).strip_edges()
+			if ready_epoch != "":
+				server_event_epoch = ready_epoch
+		"events.reset":
+			_apply_server_event_reset(event)
 		"session.replaced":
 			var message := str(event.get("message", "你的账号已在其他地方登录，你已被踢出游戏。")).strip_edges()
 			_handle_server_session_expired(message)
@@ -9052,6 +9231,8 @@ func _handle_server_event(event: Dictionary) -> void:
 			_apply_online_position_players(event.get("players", []))
 		"online.position":
 			_apply_online_position_event(event)
+		"online.position_batch":
+			_apply_online_position_batch(event)
 		"chat.message":
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
@@ -9059,10 +9240,122 @@ func _handle_server_event(event: Dictionary) -> void:
 		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.invite_cancelled", "battle.invite_expired", "battle.command_submitted", "battle.turn_resolved", "battle.room_updated", "battle.room_closed":
 			_apply_battle_event(event)
 
+
+func _apply_server_event_reset(event: Dictionary) -> void:
+	server_event_reset_count += 1
+	server_event_reset_generation += 1
+	server_event_last_seq = maxi(0, int(event.get("latestEventSeq", event.get("latestSeq", 0))))
+	var reset_epoch := str(event.get("eventStreamEpoch", event.get("epoch", ""))).strip_edges()
+	if reset_epoch != "":
+		server_event_epoch = reset_epoch
+	online_presence_cache_model.clear()
+	_sync_online_presence_cache_players()
+	_queue_server_profile_pull()
+	_queue_event_reset_domain("party")
+	host._server_battle().queue_state_restore()
+	_queue_event_reset_domain("chat")
+	_queue_event_reset_domain("mail")
+	_request_online_position_snapshot()
+
 func _record_server_event_seen(event: Dictionary) -> void:
-	server_event_seen.append(event.duplicate(true))
-	while server_event_seen.size() > SERVER_EVENT_SEEN_MAX:
-		server_event_seen.pop_front()
+	if not auto_server_event_live_check and not auto_server_event_replay_live_check:
+		return
+	for record in _server_event_seen_records(event):
+		server_event_seen.append(record)
+		while server_event_seen.size() > SERVER_EVENT_SEEN_MAX:
+			server_event_seen.pop_front()
+
+
+func _server_event_seen_records(event: Dictionary) -> Array[Dictionary]:
+	var records: Array[Dictionary] = [event.duplicate(true)]
+	if str(event.get("type", "")).strip_edges() != "online.position_batch":
+		return records
+	if online_presence_cache_model.position_batch_delta_count(event) < 1:
+		return records
+	for value in event.get("deltas") as Array:
+		var logical_event := (value as Dictionary).duplicate(true)
+		logical_event["type"] = "online.position"
+		records.append(logical_event)
+	return records
+
+
+func _server_event_logical_position_delta_count(event: Dictionary) -> int:
+	var event_type := str(event.get("type", "")).strip_edges()
+	if event_type == "online.position":
+		return 1
+	if event_type == "online.position_batch":
+		return maxi(0, online_presence_cache_model.position_batch_delta_count(event))
+	return 0
+
+
+func _server_event_position_budget_partition(events: Array, budget: int = SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME) -> Dictionary:
+	var accepted: Array[Dictionary] = []
+	var deferred: Array[Dictionary] = []
+	var used := 0
+	for index in range(events.size()):
+		if not (events[index] is Dictionary):
+			continue
+		var event := events[index] as Dictionary
+		var cost := _server_event_logical_position_delta_count(event)
+		if cost > maxi(0, budget - used):
+			for deferred_index in range(index, events.size()):
+				if events[deferred_index] is Dictionary:
+					deferred.append((events[deferred_index] as Dictionary).duplicate(true))
+			break
+		accepted.append(event.duplicate(true))
+		used += cost
+	return {
+		"accepted": accepted,
+		"deferred": deferred,
+		"usedPositionDeltas": used,
+	}
+
+
+func _server_event_position_budget_self_check() -> Dictionary:
+	var errors: Array[String] = []
+	var first_batch_deltas: Array[Dictionary] = []
+	var second_batch_deltas: Array[Dictionary] = []
+	for index in range(40):
+		first_batch_deltas.append({"change": "remove", "accountId": "first_%02d" % index, "presenceRevision": 1})
+		second_batch_deltas.append({"change": "remove", "accountId": "second_%02d" % index, "presenceRevision": 1})
+	var first_batch := {"type": "online.position_batch", "deltas": first_batch_deltas}
+	var chat_event := {"type": "chat.message", "message": {"messageId": "budget_chat"}}
+	var second_batch := {"type": "online.position_batch", "deltas": second_batch_deltas}
+	var first_frame := _server_event_position_budget_partition([first_batch, chat_event, second_batch])
+	var first_accepted := first_frame.get("accepted", []) as Array
+	var first_deferred := first_frame.get("deferred", []) as Array
+	if int(first_frame.get("usedPositionDeltas", -1)) != 40 or first_accepted.size() != 2 or first_deferred.size() != 1:
+		errors.append("首帧没有在64条逻辑位置预算内保留完整批包")
+	elif str((first_accepted[0] as Dictionary).get("type", "")) != "online.position_batch" or str((first_accepted[1] as Dictionary).get("type", "")) != "chat.message":
+		errors.append("首帧事件顺序改变")
+	var second_frame := _server_event_position_budget_partition(first_deferred)
+	if int(second_frame.get("usedPositionDeltas", -1)) != 40 or not (second_frame.get("deferred", []) as Array).is_empty():
+		errors.append("延后批包没有在下一帧完整消费")
+	var full_batch_deltas: Array[Dictionary] = []
+	for index in range(SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME):
+		full_batch_deltas.append({"change": "remove", "accountId": "full_%02d" % index, "presenceRevision": 1})
+	var full_batch := {"type": "online.position_batch", "deltas": full_batch_deltas}
+	var after_full := {"type": "online.position", "change": "remove", "accountId": "after_full", "presenceRevision": 1}
+	var full_frame := _server_event_position_budget_partition([full_batch, after_full])
+	if int(full_frame.get("usedPositionDeltas", -1)) != SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME or (full_frame.get("deferred", []) as Array).size() != 1:
+		errors.append("单帧允许超过64条逻辑位置更新")
+	var seen_records := _server_event_seen_records({
+		"type": "online.position_batch",
+		"deltas": [
+			{"change": "remove", "accountId": "seen_a", "presenceRevision": 1},
+			{"change": "remove", "accountId": "seen_b", "presenceRevision": 1},
+		],
+	})
+	if seen_records.size() != 3 or str(seen_records[1].get("type", "")) != "online.position" or str(seen_records[1].get("accountId", "")) != "seen_a" or str(seen_records[2].get("accountId", "")) != "seen_b":
+		errors.append("batch live QA 逻辑事件没有按顺序展开")
+	return {
+		"ok": errors.is_empty(),
+		"errors": errors,
+		"maxPositionDeltasPerFrame": SERVER_EVENT_MAX_POSITION_DELTAS_PER_FRAME,
+		"firstFrameUsed": int(first_frame.get("usedPositionDeltas", -1)),
+		"secondFrameUsed": int(second_frame.get("usedPositionDeltas", -1)),
+		"seenRecordCount": seen_records.size(),
+	}
 
 func _server_event_type_seen(event_type: String) -> bool:
 	for value in server_event_seen:
@@ -10083,11 +10376,13 @@ func _current_online_map_payload() -> Dictionary:
 func _on_online_position_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	online_position_request_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
+		_continue_queued_online_position_snapshot()
 		return
 	var parsed = ServerAuthClientModel.parse_player_position_update_response(response_code, body)
 	if not bool(parsed.get("ok", false)):
 		_apply_server_position_correction_from_response(parsed)
 		_handle_session_invalid_response(parsed)
+		_continue_queued_online_position_snapshot()
 		return
 	var own_position = parsed.get("position", {}) as Dictionary if parsed.get("position", {}) is Dictionary else {}
 	if _should_apply_online_self_position(own_position):
@@ -10098,10 +10393,14 @@ func _on_online_position_http_request_completed(result: int, response_code: int,
 		_apply_server_party_snapshot(parsed.get("party", null))
 	if bool(parsed.get("hasPlayersSnapshot", false)):
 		_apply_online_position_players(parsed.get("players", []))
-	if not online_position_queued_payload.is_empty():
-		var queued_payload: Dictionary = online_position_queued_payload.duplicate(true)
-		online_position_queued_payload.clear()
-		call_deferred("_request_online_position_snapshot", queued_payload)
+	_continue_queued_online_position_snapshot()
+
+func _continue_queued_online_position_snapshot() -> void:
+	if online_position_queued_payload.is_empty() or not _is_server_account_session():
+		return
+	var queued_payload: Dictionary = online_position_queued_payload.duplicate(true)
+	online_position_queued_payload.clear()
+	call_deferred("_request_online_position_snapshot", queued_payload)
 
 func _apply_online_position_players(players) -> void:
 	var current_username := str(current_account_session.get("username", "")).strip_edges()
@@ -10123,6 +10422,17 @@ func _apply_online_position_players(players) -> void:
 
 func _apply_online_position_event(event: Dictionary) -> void:
 	var result: Dictionary = online_presence_cache_model.apply_position_event(
+		event,
+		str(current_account_session.get("accountId", "")).strip_edges(),
+		str(current_account_session.get("username", "")).strip_edges(),
+	)
+	if not bool(result.get("ok", false)) or not bool(result.get("changed", false)):
+		return
+	_sync_online_presence_cache_players()
+
+
+func _apply_online_position_batch(event: Dictionary) -> void:
+	var result: Dictionary = online_presence_cache_model.apply_position_batch(
 		event,
 		str(current_account_session.get("accountId", "")).strip_edges(),
 		str(current_account_session.get("username", "")).strip_edges(),
@@ -10227,6 +10537,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 	var previous_server_token = _server_profile_token()
 	var next_server_token = str(session.get("serverSessionToken", "")).strip_edges()
 	if previous_server_token != next_server_token:
+		_rotate_server_session_requests(next_server_token)
 		host._server_sync().clear_gm_tool_access()
 		server_event_last_seq = 0
 		server_event_seen.clear()
@@ -10490,6 +10801,7 @@ func _switch_account_to_login(save_before_logout: bool = true) -> void:
 		if save_before_logout:
 			host._flush_profile_save_now()
 			host._save_player_profile_now()
+	_rotate_server_session_requests("")
 	account_authenticated = false
 	host._server_sync().clear_gm_tool_access()
 	current_account_session = {}
@@ -16940,13 +17252,21 @@ func _request_chat_messages() -> void:
 			chat_status_label.text = "需要服务器账号登录。"
 		_refresh_chat_panel()
 		return
-	_start_chat_request("messages", ServerAuthClientModel.chat_messages_request(_server_profile_base_url(), _server_profile_token(), chat_active_channel, CHAT_MAX_MESSAGES))
+	_request_chat_messages_for_channel(chat_active_channel)
+
+func _request_chat_messages_for_channel(channel: String) -> void:
+	var normalized_channel := channel if _chat_channel_is_valid(channel) and channel != CHAT_CHANNEL_SYSTEM else CHAT_CHANNEL_NEARBY
+	_start_chat_request("messages", ServerAuthClientModel.chat_messages_request(_server_profile_base_url(), _server_profile_token(), normalized_channel, CHAT_MAX_MESSAGES))
 
 func _start_chat_request(kind: String, spec: Dictionary) -> void:
 	if chat_http_request == null or chat_request_pending:
 		return
 	chat_pending_kind = kind
 	chat_request_pending = true
+	var ticket := _begin_server_session_request("chat")
+	var callback := _on_chat_http_request_completed.bind(ticket)
+	server_session_request_callbacks["chat"] = callback
+	chat_http_request.request_completed.connect(callback, CONNECT_ONE_SHOT)
 	if chat_status_label != null:
 		chat_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
 	_refresh_chat_panel()
@@ -16957,13 +17277,21 @@ func _start_chat_request(kind: String, spec: Dictionary) -> void:
 		str(spec.get("body", ""))
 	)
 	if err != OK:
+		if chat_http_request.request_completed.is_connected(callback):
+			chat_http_request.request_completed.disconnect(callback)
+		server_session_request_callbacks.erase("chat")
+		server_session_request_tickets.erase("chat")
 		chat_request_pending = false
 		chat_pending_kind = ""
 		if chat_status_label != null:
 			chat_status_label.text = "无法发起聊天请求。"
 		_refresh_chat_panel()
 
-func _on_chat_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_chat_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, ticket: Dictionary = {}) -> void:
+	if ticket.is_empty() and server_session_request_tickets.get("chat", null) is Dictionary:
+		ticket = (server_session_request_tickets.get("chat") as Dictionary).duplicate(true)
+	if not _finish_server_session_request("chat", ticket):
+		return
 	var kind = chat_pending_kind
 	chat_pending_kind = ""
 	chat_request_pending = false
@@ -16971,6 +17299,7 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 		if chat_status_label != null:
 			chat_status_label.text = "聊天服务器连接失败。"
 		_refresh_chat_panel()
+		_continue_event_reset_domain("chat")
 		return
 	if kind == "messages":
 		var parsed_messages = ServerAuthClientModel.parse_chat_messages_response(response_code, body)
@@ -17001,6 +17330,7 @@ func _on_chat_http_request_completed(result: int, response_code: int, _headers: 
 		elif chat_status_label != null:
 			chat_status_label.text = _server_player_message(parsed_send, "消息发送失败。")
 	_refresh_chat_panel()
+	_continue_event_reset_domain("chat")
 
 func _replace_chat_channel_messages(channel: String, server_messages) -> void:
 	var normalized_channel = channel if _chat_channel_is_valid(channel) else CHAT_CHANNEL_NEARBY
@@ -18405,6 +18735,10 @@ func _start_party_request(kind: String, spec: Dictionary) -> void:
 		return
 	party_pending_kind = kind
 	party_request_pending = true
+	var ticket := _begin_server_session_request("party")
+	var callback := _on_party_http_request_completed.bind(ticket)
+	server_session_request_callbacks["party"] = callback
+	party_http_request.request_completed.connect(callback, CONNECT_ONE_SHOT)
 	_refresh_party_request_controls()
 	if party_status_label != null:
 		match kind:
@@ -18427,13 +18761,21 @@ func _start_party_request(kind: String, spec: Dictionary) -> void:
 		str(spec.get("body", ""))
 	)
 	if err != OK:
+		if party_http_request.request_completed.is_connected(callback):
+			party_http_request.request_completed.disconnect(callback)
+		server_session_request_callbacks.erase("party")
+		server_session_request_tickets.erase("party")
 		party_request_pending = false
 		party_pending_kind = ""
 		if party_status_label != null:
 			party_status_label.text = "无法发起队伍请求。"
 		_refresh_party_request_controls()
 
-func _on_party_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_party_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, ticket: Dictionary = {}) -> void:
+	if ticket.is_empty() and server_session_request_tickets.get("party", null) is Dictionary:
+		ticket = (server_session_request_tickets.get("party") as Dictionary).duplicate(true)
+	if not _finish_server_session_request("party", ticket):
+		return
 	var kind = party_pending_kind
 	party_pending_kind = ""
 	party_request_pending = false
@@ -18441,6 +18783,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 		if party_status_label != null:
 			party_status_label.text = "队伍服务器连接失败。"
 		_refresh_party_request_controls()
+		_continue_event_reset_domain("party")
 		return
 	if kind == "state" or kind == "state_poll":
 		var parsed_state = ServerAuthClientModel.parse_party_state_response(response_code, body)
@@ -18499,6 +18842,7 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 	_refresh_party_roster_hud(false)
 	_refresh_party_request_controls()
 	host._layout_hud()
+	_continue_event_reset_domain("party")
 
 func _open_player_action_panel(target: Dictionary) -> void:
 	if battle_active or target.is_empty():
@@ -19775,6 +20119,10 @@ func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
 		return
 	mailbox_pending_kind = kind
 	mailbox_request_pending = true
+	var ticket := _begin_server_session_request("mail")
+	var callback := _on_mailbox_http_request_completed.bind(ticket)
+	server_session_request_callbacks["mail"] = callback
+	mailbox_http_request.request_completed.connect(callback, CONNECT_ONE_SHOT)
 	_refresh_mailbox_request_controls()
 	if mailbox_status_label != null:
 		mailbox_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
@@ -19785,13 +20133,21 @@ func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
 		str(spec.get("body", ""))
 	)
 	if err != OK:
+		if mailbox_http_request.request_completed.is_connected(callback):
+			mailbox_http_request.request_completed.disconnect(callback)
+		server_session_request_callbacks.erase("mail")
+		server_session_request_tickets.erase("mail")
 		mailbox_request_pending = false
 		mailbox_pending_kind = ""
 		if mailbox_status_label != null:
 			mailbox_status_label.text = "无法发起邮箱请求。"
 		_refresh_mailbox_request_controls()
 
-func _on_mailbox_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_mailbox_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, ticket: Dictionary = {}) -> void:
+	if ticket.is_empty() and server_session_request_tickets.get("mail", null) is Dictionary:
+		ticket = (server_session_request_tickets.get("mail") as Dictionary).duplicate(true)
+	if not _finish_server_session_request("mail", ticket):
+		return
 	var kind = mailbox_pending_kind
 	mailbox_pending_kind = ""
 	mailbox_request_pending = false
@@ -19799,6 +20155,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		if mailbox_status_label != null:
 			mailbox_status_label.text = "邮箱服务器连接失败。"
 		_refresh_mailbox_request_controls()
+		_continue_event_reset_domain("mail")
 		return
 	if kind == "inbox":
 		var parsed_inbox = ServerAuthClientModel.parse_mail_inbox_response(response_code, body)
@@ -19882,6 +20239,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_request_controls()
+	_continue_event_reset_domain("mail")
 
 func _open_bank_panel() -> void:
 	if not battle_active:

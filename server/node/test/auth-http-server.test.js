@@ -28,6 +28,8 @@ const {
   battleProfileWithPets,
   fetchJson,
   eventStreamUrl,
+  eventStreamProtocols,
+  expandWebSocketJsonEvent,
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
@@ -35,6 +37,23 @@ const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority")
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
+
+test("websocket test reader expands strict protocol v10 position batches", () => {
+  const deltas = [1, 2].map((revision) => ({
+    type: "online.position",
+    accountId: `acc_${revision}`,
+    presenceRevision: revision,
+  }));
+  assert.deepEqual(expandWebSocketJsonEvent({type: "online.position_batch", deltas}), deltas);
+  for (const invalid of [
+    {type: "online.position_batch", deltas: []},
+    {type: "online.position_batch", targetAccountIds: ["acc"], deltas},
+    {type: "online.position_batch", deltas: [{...deltas[0], eventSeq: 1}]},
+    {type: "online.position_batch", deltas: [{type: "chat.message"}]},
+  ]) {
+    assert.throws(() => expandWebSocketJsonEvent(invalid), /invalid online\.position_batch/);
+  }
+});
 
 test("health uses the non-mutating storage probe when the store provides one", async (t) => {
   const serviceStore = createMemoryAuthStore();
@@ -112,7 +131,7 @@ test("HTTP server exposes auth and session endpoints", async (t) => {
       "body": JSON.stringify({"username": "httpbackoff", "password": "wrong123"}),
     });
     assert.equal(failed.ok, false);
-    assert.equal(failed.code, "wrong_password");
+    assert.equal(failed.code, "invalid_credentials");
   }
   const backoffResponse = await fetch(`${base}/auth/login`, {
     "method": "POST",
@@ -1602,7 +1621,7 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
     }),
   });
 
-  const ws = new WebSocket(eventStreamUrl(wsBase, opponent.session.token));
+  const ws = new WebSocket(eventStreamUrl(wsBase, opponent.session.token), eventStreamProtocols(opponent.session.token));
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");
@@ -1651,6 +1670,9 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   const commandEvent = await reader.next("battle.command_submitted");
   assert.equal(commandEvent.roomId, accept.room.roomId);
   assert.equal(commandEvent.submittedUsername, "httpbata");
+  assert.equal(Object.hasOwn(commandEvent, "room"), false);
+  assert.equal(commandEvent.submittedActorIds.includes(challengerCommand.command.actorId), true);
+  assert.equal(commandEvent.requiredActorIds.length, 2);
 
   const opponentCommand = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/commands`, {
     "method": "POST",
@@ -1668,6 +1690,8 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   assert.equal(turnEvent.turn.kind, "battle_event_list");
   assert.equal(turnEvent.turn.round, 1);
   assert.equal(turnEvent.room.battle.round, 2);
+  assert.equal(Object.hasOwn(turnEvent.room.battle, "lastEventList"), false);
+  assert.equal(opponentCommand.room.battle.lastEventList.round, 1, "HTTP command response remains a complete room snapshot");
   const leave = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/leave`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${opponent.session.token}`},
@@ -1708,7 +1732,7 @@ test("HTTP login replaces same-account websocket session", async (t) => {
     "body": JSON.stringify({"username": "httpreplace", "password": "test1234", "displayName": "顶号玩家"}),
   });
   assert.equal(first.ok, true);
-  const ws = new WebSocket(eventStreamUrl(wsBase, first.session.token));
+  const ws = new WebSocket(eventStreamUrl(wsBase, first.session.token), eventStreamProtocols(first.session.token));
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");
@@ -1740,6 +1764,59 @@ test("HTTP login replaces same-account websocket session", async (t) => {
   assert.equal(newSession.session.username, "httpreplace");
   ws.close();
 });
+
+test("HTTP refresh targets and closes the websocket authenticated by the old session", async (t) => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const server = createHttpServer({service});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const {port} = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const wsBase = `ws://127.0.0.1:${port}`;
+  const registered = await fetchJson(`${base}/auth/register`, {
+    "method": "POST",
+    "body": JSON.stringify({"username": "httprefreshws", "password": "test1234"}),
+  });
+  assert.equal(registered.ok, true);
+  const ws = new WebSocket(
+    eventStreamUrl(wsBase, registered.session.token),
+    eventStreamProtocols(registered.session.token),
+  );
+  const reader = webSocketJsonReader(ws);
+  await webSocketOpen(ws);
+  await reader.next("events.ready");
+
+  const closePromise = new Promise((resolve) => ws.addEventListener("close", resolve, {once: true}));
+  const refreshed = await fetchJson(`${base}/auth/refresh`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${registered.session.token}`},
+  });
+  assert.equal(refreshed.ok, true);
+  const replaced = await reader.next("session.replaced");
+  assert.deepEqual(replaced.targetSessionIds, [registered.session.sessionId]);
+  await Promise.race([
+    closePromise,
+    new Promise((_resolve, reject) => setTimeout(() => reject(new Error("old refresh websocket did not close")), 500)),
+  ]);
+  await waitForCondition(() => server.eventHub.clientCount() === 0, 500);
+  assert.equal(server.eventHub.clientCount(), 0);
+  assert.equal(service.getSession(refreshed.session.token).ok, true);
+});
+
+async function waitForCondition(predicate, timeoutMs) {
+  const deadline = Date.now() + Math.max(1, Number(timeoutMs || 1));
+  while (Date.now() <= deadline) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.fail(`condition not met within ${timeoutMs}ms`);
+}
 
 test("HTTP server replays websocket battle events after cursor", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
@@ -1787,16 +1864,17 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
     }),
   });
 
+  const firstWs = new WebSocket(eventStreamUrl(wsBase, opponent.session.token), eventStreamProtocols(opponent.session.token));
+  const firstReader = webSocketJsonReader(firstWs);
+  await webSocketOpen(firstWs);
+  await firstReader.next("events.ready");
+
   const invite = await fetchJson(`${base}/battle/invite`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${challenger.session.token}`},
     "body": JSON.stringify({"username": "replayb"}),
   });
   assert.equal(invite.ok, true);
-  const firstWs = new WebSocket(eventStreamUrl(wsBase, opponent.session.token));
-  const firstReader = webSocketJsonReader(firstWs);
-  await webSocketOpen(firstWs);
-  await firstReader.next("events.ready");
   const inviteEvent = await firstReader.next("battle.invite");
   assert.equal(inviteEvent.invite.inviteId, invite.invite.inviteId);
   assert.equal(Number.isInteger(inviteEvent.eventSeq), true);
@@ -1808,7 +1886,10 @@ test("HTTP server replays websocket battle events after cursor", async (t) => {
     "headers": {"authorization": `Bearer ${opponent.session.token}`},
   });
   assert.equal(accept.ok, true);
-  const secondWs = new WebSocket(eventStreamUrl(wsBase, opponent.session.token, inviteEvent.eventSeq));
+  const secondWs = new WebSocket(
+    eventStreamUrl(wsBase, opponent.session.token, inviteEvent.eventSeq),
+    eventStreamProtocols(opponent.session.token),
+  );
   const secondReader = webSocketJsonReader(secondWs);
   await webSocketOpen(secondWs);
   await secondReader.next("events.ready");
@@ -1892,7 +1973,10 @@ test("HTTP server exposes websocket event stream", async (t) => {
   assert.equal(latest.ok, true);
   assert.equal(Number.isInteger(latest.latestEventSeq), true);
 
-  const ws = new WebSocket(eventStreamUrl(wsBase, watcher.session.token, latest.latestEventSeq));
+  const ws = new WebSocket(
+    eventStreamUrl(wsBase, watcher.session.token, latest.latestEventSeq),
+    eventStreamProtocols(watcher.session.token),
+  );
   const reader = webSocketJsonReader(ws);
   await webSocketOpen(ws);
   const ready = await reader.next("events.ready");
@@ -1917,7 +2001,7 @@ test("HTTP server exposes websocket event stream", async (t) => {
   });
   assert.equal(position.ok, true);
   const positionEvent = await reader.next("online.position");
-  assert.equal(positionEvent.username, "httpwsb");
+  assert.equal(Object.hasOwn(positionEvent, "username"), false);
   assert.equal(positionEvent.change, "upsert");
   assert.equal(positionEvent.player.username, "httpwsb");
   assert.equal(positionEvent.player.position.cellX, 18);
@@ -1961,7 +2045,7 @@ test("HTTP server exposes websocket event stream", async (t) => {
     distantCellX -= 1;
   }
   const movedNearEvent = await reader.next("online.position");
-  assert.equal(movedNearEvent.username, "httpwsc");
+  assert.equal(Object.hasOwn(movedNearEvent, "username"), false);
   assert.equal(movedNearEvent.change, "upsert");
   assert.equal(movedNearEvent.player.username, "httpwsc");
   assert.equal(Object.hasOwn(movedNearEvent, "players"), false);

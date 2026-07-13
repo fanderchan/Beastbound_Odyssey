@@ -54,27 +54,114 @@ function projectOnlinePositionDelta({
   if (!visibleNow && !visibleBefore) {
     return {visible: false, event: source};
   }
-  const projected = {
-    ...source,
+  const projected = presenceEventCommonFields(source, {
     change: visibleNow ? PRESENCE_CHANGE_UPSERT : PRESENCE_CHANGE_REMOVE,
     accountId,
     presenceRevision: normalizePresenceRevision(source.presenceRevision),
-  };
-  delete projected.players;
-  // Old/new coordinates are needed only for the server's candidate lookup.
-  // A viewer receives the current visible row on upsert, or only a tombstone
-  // on remove; otherwise entering/leaving AOI would reveal the actor's exact
-  // position outside that viewer's visibility boundary.
-  delete projected.position;
-  delete projected.previousPosition;
+  });
   if (visibleNow) {
-    projected.player = source.player && typeof source.player === "object" && !Array.isArray(source.player)
-      ? source.player
-      : null;
-  } else {
-    delete projected.player;
+    projected.player = projectPresenceWirePlayer(source.player);
   }
   return {visible: true, event: projected};
+}
+
+function projectOnlinePositionRebase({event, aoi, presenceRebase}) {
+  const source = objectOrEmpty(event);
+  const rebase = objectOrEmpty(presenceRebase);
+  return presenceEventCommonFields(source, {
+    change: "rebase",
+    accountId: String(source.accountId || ""),
+    presenceRevision: normalizePresenceRevision(source.presenceRevision),
+    aoi: projectPresenceWireAoi(aoi),
+    presenceRebase: {
+      upserts: projectPresenceWirePlayers(rebase.upserts, {includeRevision: true}),
+      removedAccountIds: uniqueAccountIds(rebase.removedAccountIds),
+    },
+  });
+}
+
+function projectPresenceWirePlayers(value, options = {}) {
+  return (Array.isArray(value) ? value : []).map((player) => (
+    projectPresenceWirePlayer(player, options)
+  ));
+}
+
+function projectPresenceWirePlayer(value, options = {}) {
+  const source = objectOrEmpty(value);
+  const player = {
+    accountId: String(source.accountId || ""),
+    username: String(source.username || ""),
+    displayName: String(source.displayName || source.username || ""),
+    partyId: String(source.partyId || ""),
+    partyRole: normalizePartyRole(source.partyRole),
+    position: projectPresenceWirePosition(source.position),
+  };
+  if (options.includeRevision === true) {
+    player.presenceRevision = normalizePresenceRevision(source.presenceRevision);
+  }
+  return player;
+}
+
+function projectPresenceWirePosition(value) {
+  const source = objectOrEmpty(value);
+  return {
+    mapId: String(source.mapId || ""),
+    cellX: finiteInteger(source.cellX),
+    cellY: finiteInteger(source.cellY),
+    facing: String(source.facing || "south"),
+    moving: Boolean(source.moving),
+    hasCell: source.hasCell !== false && String(source.precision || "") !== "map",
+  };
+}
+
+function projectPresenceWireAoi(value) {
+  const source = objectOrEmpty(value);
+  return {
+    scope: String(source.scope || "all"),
+    mapId: String(source.mapId || ""),
+    cellX: finiteInteger(source.cellX),
+    cellY: finiteInteger(source.cellY),
+    radius: Math.max(0, finiteInteger(source.radius)),
+    schemaVersion: 1,
+  };
+}
+
+function presenceEventCommonFields(sourceValue, fields) {
+  const source = objectOrEmpty(sourceValue);
+  return {
+    type: "online.position",
+    ...fields,
+    schemaVersion: Math.max(1, finiteInteger(source.schemaVersion) || 1),
+    createdAt: String(source.createdAt || ""),
+  };
+}
+
+function uniqueAccountIds(value) {
+  const result = [];
+  const seen = new Set();
+  for (const item of Array.isArray(value) ? value : []) {
+    const accountId = String(item || "");
+    if (accountId === "" || seen.has(accountId)) {
+      continue;
+    }
+    seen.add(accountId);
+    result.push(accountId);
+  }
+  return result;
+}
+
+function normalizePartyRole(value) {
+  const role = String(value || "");
+  return role === "leader" || role === "member" ? role : "";
+}
+
+function finiteInteger(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.trunc(number) : 0;
+}
+
+function objectOrEmpty(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 function buildPresenceRebase(currentPlayersValue, previousPlayersValue, selfAccountIdValue = "") {
@@ -134,4 +221,7 @@ module.exports = {
   createPresenceRevisionTracker,
   normalizePresenceRevision,
   projectOnlinePositionDelta,
+  projectOnlinePositionRebase,
+  projectPresenceWirePlayer,
+  projectPresenceWirePlayers,
 };

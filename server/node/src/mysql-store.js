@@ -1,6 +1,9 @@
 "use strict";
 
 const {execFileSync, spawn} = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
   commitConsumedEquipmentEnvelopeLedger,
@@ -18,7 +21,19 @@ const {
 } = require("./auth/durable-mutation-state");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
-const DEFAULT_OUTPUT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+// The normal CLI loader and the isolated capacity fixture must share one
+// bounded ceiling. 192MiB leaves deliberate headroom above the current exact
+// full-history fixture (105,876,464 bytes) without allowing unbounded child
+// process output.
+const DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES = 192 * 1024 * 1024;
+const MYSQL_LOAD_OUTPUT_CHUNK_BYTES = 64 * 1024;
+const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
+const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
+const MYSQL_BATTLE_TRACE_WINDOW_MAX = 1200;
+const MYSQL_HISTORY_SEQUENCE_CONTRACTS = Object.freeze([
+  Object.freeze({tableName: "battle_records", indexName: "uq_battle_records_history_seq"}),
+  Object.freeze({tableName: "battle_trace", indexName: "uq_battle_trace_history_seq"}),
+]);
 
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
@@ -50,6 +65,7 @@ function createMysqlAuthStore(options = {}) {
       return;
     }
     if (!ensureSchemaEnabled) {
+      clearLegacyRuntimeRows();
       schemaReady = true;
       return;
     }
@@ -243,6 +259,7 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_battle_rooms_status (status)
       );
       CREATE TABLE IF NOT EXISTS battle_records (
+        history_seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         record_id VARCHAR(96) PRIMARY KEY,
         room_id VARCHAR(96) NOT NULL,
         mode VARCHAR(24) NOT NULL,
@@ -253,16 +270,19 @@ function createMysqlAuthStore(options = {}) {
         participant_account_ids JSON NOT NULL,
         loser_account_ids JSON NOT NULL,
         document_json JSON NOT NULL,
+        UNIQUE KEY uq_battle_records_history_seq (history_seq),
         INDEX idx_battle_records_room (room_id),
         INDEX idx_battle_records_winner_ended (winner_account_id, ended_at),
         INDEX idx_battle_records_reason_ended (reason, ended_at)
       );
       CREATE TABLE IF NOT EXISTS battle_trace (
+        history_seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         trace_id VARCHAR(96) PRIMARY KEY,
         room_id VARCHAR(96) NOT NULL DEFAULT '',
         trace_type VARCHAR(64) NOT NULL,
         created_at VARCHAR(40) NOT NULL,
         document_json JSON NOT NULL,
+        UNIQUE KEY uq_battle_trace_history_seq (history_seq),
         INDEX idx_battle_trace_room_created (room_id, created_at),
         INDEX idx_battle_trace_type_created (trace_type, created_at)
       );
@@ -310,7 +330,19 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_service_events_type_seq (event_type, event_seq)
       );
     `);
+    ensureAppendOnlyHistorySequenceSchema(config, config.database);
+    clearLegacyRuntimeRows();
     schemaReady = true;
+  }
+
+  function clearLegacyRuntimeRows() {
+    if (readOnly) {
+      return;
+    }
+    // Party invitations became runtime-only in Phase255. The table stays in
+    // the schema for rolling compatibility, but no stale invitation may be
+    // restored or retained across a writable server restart.
+    runMysql(config, config.database, "DELETE FROM party_invites;");
   }
 
   return {
@@ -321,6 +353,17 @@ function createMysqlAuthStore(options = {}) {
       }
       ensureSchema();
       runMysql(config, config.database, "SELECT 1");
+      return {ok: true};
+    },
+    async checkHealthAsync() {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (config.usePool) {
+        await persistentWritePool().query({sql: "SELECT 1", timeout: config.healthProbeTimeoutMs});
+      } else {
+        await runMysqlAsync(config, config.database, "SELECT 1", {timeoutMs: config.healthProbeTimeoutMs});
+      }
       return {ok: true};
     },
     load() {
@@ -349,11 +392,11 @@ function createMysqlAuthStore(options = {}) {
           strictRowIdentity,
         })));
       }
-      const statements = buildSaveStatements(data, lastPersistentData);
+      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
       if (statements.length > 0) {
         runMysqlSaveStatements(config, config.database, statements);
       }
-      lastPersistentData = committedMysqlPersistentData(data);
+      lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
     async saveAsync(nextData) {
       if (closed) {
@@ -371,7 +414,7 @@ function createMysqlAuthStore(options = {}) {
           strictRowIdentity,
         })));
       }
-      const statements = buildSaveStatements(data, lastPersistentData);
+      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
       if (statements.length > 0) {
         if (config.usePool) {
           await runMysqlPoolSaveStatements(persistentWritePool(), statements);
@@ -379,7 +422,36 @@ function createMysqlAuthStore(options = {}) {
           await runMysqlSaveStatementsAsync(config, config.database, statements);
         }
       }
-      lastPersistentData = committedMysqlPersistentData(data);
+      lastPersistentData = committedMysqlPersistentData(data, {owned: true});
+    },
+    async saveAsyncOwned(nextData) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (readOnly) {
+        throw new Error("Read-only MySQL auth store cannot save.");
+      }
+      // The durable coordinator transfers this isolated snapshot and does not
+      // mutate nested values until settlement. Keep a separate root so its
+      // post-COMMIT ledger replacement cannot alter this write.
+      const data = mysqlPersistentData(nextData, {ownedRoot: true});
+      if (lastPersistentData === null) {
+        ensureSchema();
+        lastPersistentData = mysqlPersistentData(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
+          includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
+          includeMutationReceipts: ensureSchemaEnabled,
+          strictRowIdentity,
+        })));
+      }
+      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
+      if (statements.length > 0) {
+        if (config.usePool) {
+          await runMysqlPoolSaveStatements(persistentWritePool(), statements);
+        } else {
+          await runMysqlSaveStatementsAsync(config, config.database, statements);
+        }
+      }
+      lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
     async close() {
       if (closePromise !== null) {
@@ -398,9 +470,15 @@ function createMysqlAuthStore(options = {}) {
 function buildSaveStatements(nextData, previousData = null) {
   const data = mysqlPersistentData(nextData);
   const previous = previousData ? mysqlPersistentData(previousData) : emptyPersistentData();
+  return buildSaveStatementsFromPersistentData(data, previous);
+}
+
+function buildSaveStatementsFromPersistentData(data, previous) {
   const statements = [];
-  if (entityChanged(stateMetadata(previous), stateMetadata(data))) {
-    statements.push(upsertStateStatement(data));
+  const previousState = stateMetadataFromPersistentData(previous);
+  const nextState = stateMetadataFromPersistentData(data);
+  if (entityChanged(previousState, nextState)) {
+    statements.push(upsertStateStatement(nextState));
   }
   appendObjectEntityDiff(statements, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
   appendObjectEntityDiff(statements, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
@@ -415,14 +493,13 @@ function buildSaveStatements(nextData, previousData = null) {
     data.consumedEquipmentEnvelopes,
   );
   appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
-  appendObjectEntityDiff(statements, "party_invites", "invite_id", previous.partyInvites, data.partyInvites, partyInviteEntityKey, insertPartyInviteStatement);
   appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
   appendObjectEntityDiff(statements, "manors", "manor_id", previous.manors, data.manors, manorEntityKey, insertManorStatement);
   appendArrayEntityDiff(statements, "manor_battles", "battle_id", previous.manorBattles, data.manorBattles, manorBattleEntityKey, insertManorBattleStatement);
   appendArrayEntityDiff(statements, "manor_wars", "war_id", previous.manorWars, data.manorWars, manorWarEntityKey, insertManorWarStatement);
   appendArrayEntityDiff(statements, "chat_messages", "message_id", previous.chatMessages, data.chatMessages, chatMessageEntityKey, insertChatMessageStatement);
-  appendArrayEntityDiff(statements, "battle_records", "record_id", previous.battleRecords, data.battleRecords, battleRecordEntityKey, insertBattleRecordStatement);
-  appendArrayEntityDiff(statements, "battle_trace", "trace_id", previous.battleTrace, data.battleTrace, battleTraceEntityKey, insertBattleTraceStatement);
+  appendImmutableHistoryInserts(statements, previous.battleRecords, data.battleRecords, battleRecordEntityKey, insertBattleRecordStatement);
+  appendImmutableHistoryInserts(statements, previous.battleTrace, data.battleTrace, battleTraceEntityKey, insertBattleTraceStatement);
   appendObjectEntityDiff(statements, "gm_user_grants", "account_id", previous.gmUserGrants, data.gmUserGrants, gmUserGrantEntityKey, insertGmUserGrantStatement);
   appendGmCommandGrantDiff(statements, previous.gmCommandGrants, data.gmCommandGrants);
   appendArrayEntityDiff(statements, "gm_command_audit", "audit_id", previous.gmCommandAudit, data.gmCommandAudit, gmCommandAuditEntityKey, insertGmCommandAuditStatement);
@@ -439,12 +516,46 @@ function loadPersistentData(config, database, options = {}) {
     || mysqlTableExists(config, database, "consumed_equipment_envelopes");
   const includeMutationReceipts = options.includeMutationReceipts === true
     || mysqlTableExists(config, database, "mutation_receipts");
-  const output = runMysql(
-    config,
-    database,
-    loadPersistentDataSql({includeConsumedEquipmentEnvelopes, includeMutationReceipts}),
-  );
-  return parsePersistentDataRows(output, options);
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), MYSQL_LOAD_TEMP_PREFIX));
+  const outputPath = path.join(temporaryDirectory, "persistent-data.tsv");
+  let outputFd = null;
+  try {
+    outputFd = fs.openSync(outputPath, "wx", 0o600);
+    fs.fchmodSync(outputFd, 0o600);
+    runMysql(
+      config,
+      database,
+      loadPersistentDataSql({includeConsumedEquipmentEnvelopes, includeMutationReceipts}),
+      {stdoutFd: outputFd},
+    );
+    fs.closeSync(outputFd);
+    outputFd = null;
+    const outputSize = fs.statSync(outputPath).size;
+    if (!Number.isSafeInteger(outputSize) || outputSize > config.outputMaxBufferBytes) {
+      const error = new Error("MySQL 持久化数据输出超过安全上限。");
+      error.code = "mysql_output_limit_exceeded";
+      throw error;
+    }
+    return parsePersistentDataLines(
+      persistentDataFileLines(outputPath, config.outputMaxBufferBytes),
+      options,
+    );
+  } finally {
+    if (outputFd !== null) {
+      try {
+        fs.closeSync(outputFd);
+      } catch {
+        // The enclosing operation already failed; cleanup below remains safe.
+      }
+    }
+    try {
+      fs.rmSync(temporaryDirectory, {recursive: true, force: true});
+    } catch {
+      const error = new Error("MySQL 持久化临时数据清理失败。");
+      error.code = "mysql_output_cleanup_failed";
+      throw error;
+    }
+  }
 }
 
 function mysqlTableExists(config, database, tableName) {
@@ -461,6 +572,78 @@ function mysqlTableExists(config, database, tableName) {
   return Number(String(output || "").trim()) === 1;
 }
 
+function ensureAppendOnlyHistorySequenceSchema(config, database) {
+  for (const contract of MYSQL_HISTORY_SEQUENCE_CONTRACTS) {
+    const current = mysqlHistorySequenceContract(config, database, contract.tableName);
+    if (current.exists) {
+      if (!current.valid) {
+        const error = new Error(
+          `MySQL历史顺序列契约不兼容：${contract.tableName}.history_seq必须是BIGINT UNSIGNED NOT NULL AUTO_INCREMENT且具有唯一索引。`,
+        );
+        error.code = "mysql_history_sequence_contract_invalid";
+        throw error;
+      }
+      continue;
+    }
+    // Single-node startup is the migration owner. MySQL atomic DDL either
+    // installs the auto-increment column and unique index together or fails;
+    // LOCK=SHARED keeps reads available during an existing-table rebuild.
+    // Unsupported engines/versions fail here before the HTTP listener opens.
+    runMysql(config, database, `
+      ALTER TABLE ${contract.tableName}
+        ADD COLUMN history_seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ADD UNIQUE KEY ${contract.indexName} (history_seq),
+        ALGORITHM=INPLACE,
+        LOCK=SHARED;
+    `);
+  }
+}
+
+function mysqlHistorySequenceContract(config, database, tableName) {
+  const schema = String(database || "").trim();
+  const table = String(tableName || "").trim();
+  const output = runMysql(config, "", `
+    SELECT
+      COUNT(*),
+      COALESCE(MAX(LOWER(column_type)), ''),
+      COALESCE(MAX(UPPER(is_nullable)), ''),
+      COALESCE(MAX(LOWER(extra)), ''),
+      (SELECT COUNT(*)
+         FROM (
+           SELECT history_index.index_name
+             FROM information_schema.statistics AS history_index
+            WHERE history_index.table_schema = ${sqlString(schema)}
+              AND history_index.table_name = ${sqlString(table)}
+              AND history_index.non_unique = 0
+            GROUP BY history_index.index_name
+           HAVING COUNT(*) = 1
+              AND MAX(history_index.column_name) = 'history_seq'
+         ) AS single_column_history_indexes)
+    FROM information_schema.columns AS history_column
+    WHERE history_column.table_schema = ${sqlString(schema)}
+      AND history_column.table_name = ${sqlString(table)}
+      AND history_column.column_name = 'history_seq';
+  `);
+  const columns = String(output || "").trim().split("\t");
+  const count = Number(columns[0] || 0);
+  if (!Number.isFinite(count) || count < 1) {
+    return {exists: false, valid: false};
+  }
+  const columnType = String(columns[1] || "").trim().toLowerCase();
+  const isNullable = String(columns[2] || "").trim().toUpperCase();
+  const extra = String(columns[3] || "").trim().toLowerCase();
+  const uniqueIndexes = Number(columns[4] || 0);
+  return {
+    exists: true,
+    valid: count === 1
+      && columnType === "bigint unsigned"
+      && isNullable === "NO"
+      && extra.split(/\s+/).includes("auto_increment")
+      && Number.isFinite(uniqueIndexes)
+      && uniqueIndexes >= 1,
+  };
+}
+
 function loadPersistentDataSql(options = {}) {
   const statements = [
     "SELECT 'server_state', state_key, CAST(document_json AS CHAR) FROM server_state WHERE state_key = 'auth'",
@@ -471,14 +654,13 @@ function loadPersistentDataSql(options = {}) {
     "SELECT 'mail_messages', mail_id, CAST(document_json AS CHAR) FROM mail_messages ORDER BY mail_id",
     "SELECT 'market_listings', listing_id, CAST(document_json AS CHAR) FROM market_listings ORDER BY listing_id",
     "SELECT 'parties', party_id, CAST(document_json AS CHAR) FROM parties ORDER BY party_id",
-    "SELECT 'party_invites', invite_id, CAST(document_json AS CHAR) FROM party_invites ORDER BY invite_id",
     "SELECT 'families', family_id, CAST(document_json AS CHAR) FROM families ORDER BY family_id",
     "SELECT 'manors', manor_id, CAST(document_json AS CHAR) FROM manors ORDER BY manor_id",
     "SELECT 'manor_battles', battle_id, CAST(document_json AS CHAR) FROM manor_battles ORDER BY battle_id",
     "SELECT 'manor_wars', war_id, CAST(document_json AS CHAR) FROM manor_wars ORDER BY war_id",
     "SELECT 'chat_messages', message_id, CAST(document_json AS CHAR) FROM chat_messages ORDER BY message_id",
-    "SELECT 'battle_records', record_id, CAST(document_json AS CHAR) FROM battle_records ORDER BY record_id",
-    "SELECT 'battle_trace', trace_id, CAST(document_json AS CHAR) FROM battle_trace ORDER BY created_at, trace_id",
+    `SELECT 'battle_records', record_id, CAST(document_json AS CHAR) FROM (SELECT history_seq, record_id, document_json FROM battle_records ORDER BY history_seq DESC LIMIT ${MYSQL_BATTLE_RECORD_WINDOW_MAX}) AS recent_battle_records ORDER BY history_seq`,
+    `SELECT 'battle_trace', trace_id, CAST(document_json AS CHAR) FROM (SELECT history_seq, trace_id, document_json FROM battle_trace ORDER BY history_seq DESC LIMIT ${MYSQL_BATTLE_TRACE_WINDOW_MAX}) AS recent_battle_trace ORDER BY history_seq`,
     "SELECT 'gm_user_grants', account_id, CAST(document_json AS CHAR) FROM gm_user_grants ORDER BY account_id",
     "SELECT 'gm_command_grants', CONCAT(account_id, '/', command_id), CAST(document_json AS CHAR) FROM gm_command_grants ORDER BY account_id, command_id",
     "SELECT 'gm_command_audit', audit_id, CAST(document_json AS CHAR) FROM gm_command_audit ORDER BY audit_id",
@@ -499,17 +681,23 @@ function loadPersistentDataSql(options = {}) {
 }
 
 function parsePersistentDataRows(output, options = {}) {
+  return parsePersistentDataLines(persistentDataOutputLines(output), options);
+}
+
+function parsePersistentDataLines(lines, options = {}) {
   const data = emptyPersistentData();
   let legacyDocument = null;
   let stateDocument = null;
   let entityRows = 0;
-  const lines = String(output || "").split(/\r?\n/).filter((line) => line.trim() !== "");
   for (const line of lines) {
     const columns = line.split("\t");
     if (columns.length < 3) {
       continue;
     }
     const bucket = columns[0];
+    if (bucket === "party_invites") {
+      continue;
+    }
     const rowKey = columns[1];
     const document = parsePersistentRowJson(bucket, rowKey, columns.slice(2).join("\t"));
     if (bucket === "server_state") {
@@ -537,6 +725,93 @@ function parsePersistentDataRows(output, options = {}) {
     return data;
   }
   return legacyDocument || {};
+}
+
+function* persistentDataFileLines(filePath, maxBytes) {
+  const chunk = Buffer.allocUnsafe(MYSQL_LOAD_OUTPUT_CHUNK_BYTES);
+  const lineParts = [];
+  let lineBytes = 0;
+  let totalBytes = 0;
+  let fd = null;
+  try {
+    fd = fs.openSync(filePath, "r");
+    while (true) {
+      const bytesRead = fs.readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead <= 0) {
+        break;
+      }
+      totalBytes += bytesRead;
+      if (totalBytes > maxBytes) {
+        const error = new Error("MySQL 持久化数据输出超过安全上限。");
+        error.code = "mysql_output_limit_exceeded";
+        throw error;
+      }
+      let start = 0;
+      while (start < bytesRead) {
+        const newlineAt = chunk.indexOf(0x0a, start);
+        if (newlineAt < 0 || newlineAt >= bytesRead) {
+          const remainder = Buffer.from(chunk.subarray(start, bytesRead));
+          lineParts.push(remainder);
+          lineBytes += remainder.length;
+          break;
+        }
+        const tail = chunk.subarray(start, newlineAt);
+        const lineBuffer = lineParts.length > 0
+          ? Buffer.concat([...lineParts, tail], lineBytes + tail.length)
+          : tail;
+        lineParts.length = 0;
+        lineBytes = 0;
+        const end = lineBuffer.length > 0 && lineBuffer[lineBuffer.length - 1] === 0x0d
+          ? lineBuffer.length - 1
+          : lineBuffer.length;
+        if (end > 0) {
+          const line = lineBuffer.toString("utf8", 0, end);
+          if (line.trim() !== "") {
+            yield line;
+          }
+        }
+        start = newlineAt + 1;
+      }
+    }
+    if (lineParts.length > 0) {
+      const lineBuffer = Buffer.concat(lineParts, lineBytes);
+      const end = lineBuffer.length > 0 && lineBuffer[lineBuffer.length - 1] === 0x0d
+        ? lineBuffer.length - 1
+        : lineBuffer.length;
+      if (end > 0) {
+        const line = lineBuffer.toString("utf8", 0, end);
+        if (line.trim() !== "") {
+          yield line;
+        }
+      }
+    }
+  } finally {
+    if (fd !== null) {
+      fs.closeSync(fd);
+    }
+  }
+}
+
+function* persistentDataOutputLines(output) {
+  if (!Buffer.isBuffer(output)) {
+    yield* String(output || "").split(/\r?\n/).filter((line) => line.trim() !== "");
+    return;
+  }
+  let start = 0;
+  while (start < output.length) {
+    const newlineAt = output.indexOf(0x0a, start);
+    let end = newlineAt >= 0 ? newlineAt : output.length;
+    if (end > start && output[end - 1] === 0x0d) {
+      end -= 1;
+    }
+    if (end > start) {
+      yield output.toString("utf8", start, end);
+    }
+    if (newlineAt < 0) {
+      break;
+    }
+    start = newlineAt + 1;
+  }
 }
 
 function parsePersistentRowJson(bucket, rowKey, jsonText) {
@@ -595,9 +870,6 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
     case "parties":
       data.parties[String(document.partyId || rowKey || "")] = document;
       break;
-    case "party_invites":
-      data.partyInvites[String(document.inviteId || rowKey || "")] = document;
-      break;
     case "families":
       data.families[String(document.familyId || rowKey || "")] = document;
       break;
@@ -614,10 +886,10 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
       data.chatMessages.push(document);
       break;
     case "battle_records":
-      data.battleRecords.push(document);
+      appendLoadedHistoryWindow(data.battleRecords, document, MYSQL_BATTLE_RECORD_WINDOW_MAX);
       break;
     case "battle_trace":
-      data.battleTrace.push(document);
+      appendLoadedHistoryWindow(data.battleTrace, document, MYSQL_BATTLE_TRACE_WINDOW_MAX);
       break;
     case "gm_user_grants":
       data.gmUserGrants[String(document.accountId || rowKey || "")] = document;
@@ -657,7 +929,6 @@ function persistentDocumentIdentity(bucket, document) {
     market_listings: "listingId",
     consumed_equipment_envelopes: "envelopeId",
     parties: "partyId",
-    party_invites: "inviteId",
     families: "familyId",
     manors: "manorId",
     manor_battles: "battleId",
@@ -685,11 +956,15 @@ function assertPersistentRowIdentity(bucket, rowKey, documentIdentity) {
   }
 }
 
-function mysqlPersistentData(nextData) {
-  const data = cloneAuthorityRoot(nextData || {});
+function mysqlPersistentData(nextData, options = {}) {
+  const data = options.ownedRoot === true ? {...(nextData || {})} : cloneAuthorityRoot(nextData || {});
   data.playerPositions = {};
+  data.partyInvites = {};
   data.battleInvites = {};
   data.battleRooms = {};
+  data.battleRoomRecoveries = {};
+  data.battleRoomRecoveryByAccountId = {};
+  data.tradeOffers = {};
   if (Array.isArray(data.serviceEvents)) {
     data.serviceEvents = data.serviceEvents.filter((event) => {
       const type = String(event && event.type || "");
@@ -699,8 +974,11 @@ function mysqlPersistentData(nextData) {
   return data;
 }
 
-function committedMysqlPersistentData(nextData) {
-  const data = mysqlPersistentData(nextData);
+function committedMysqlPersistentData(nextData, options = {}) {
+  // save()/saveAsync() own their mysqlPersistentData clone, so after COMMIT it
+  // can become the next diff baseline in place. External callers retain the
+  // defensive clone behavior.
+  const data = options.owned === true ? nextData : mysqlPersistentData(nextData);
   data.mutationReceipts = commitDurableMutationReceiptDelta(
     canonicalDurableMutationReceipts(data.mutationReceipts),
   );
@@ -773,6 +1051,9 @@ function mysqlAuthStoreRootContract() {
   const runtimeOnlyFields = Object.freeze([
     "battleInvites",
     "battleRooms",
+    "battleRoomRecoveries",
+    "battleRoomRecoveryByAccountId",
+    "partyInvites",
     "playerPositions",
     "tradeOffers",
   ]);
@@ -810,6 +1091,12 @@ function appendObjectEntityDiff(statements, tableName, primaryColumn, previousOb
 }
 
 function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArray, nextArray, keyFn, insertFn) {
+  // Owned committed snapshots retain certified immutable journal identity.
+  // When an unrelated mutation carries that exact journal forward, there is
+  // no row delta to discover and walking every retained entry is pure cost.
+  if (previousArray === nextArray) {
+    return;
+  }
   appendEntityDiff(
     statements,
     tableName,
@@ -818,6 +1105,43 @@ function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArr
     entityMapFromArray(nextArray, keyFn),
     insertFn
   );
+}
+
+function appendImmutableHistoryInserts(statements, previousArray, nextArray, keyFn, insertFn) {
+  // The in-memory battle journals are bounded hot windows, while MySQL is the
+  // append-only cold history. Missing entries therefore mean "not resident",
+  // never "delete this database row". Existing IDs are immutable as well: a
+  // loader normalization may intentionally drop fields unknown to this build,
+  // and must not overwrite the original JSON document on an unrelated save.
+  if (previousArray === nextArray) {
+    return;
+  }
+  const previousIds = new Set();
+  for (const entity of Array.isArray(previousArray) ? previousArray : []) {
+    const key = entityKey(keyFn, entity);
+    if (key !== "") {
+      previousIds.add(key);
+    }
+  }
+  const insertedIds = new Set();
+  for (const entity of Array.isArray(nextArray) ? nextArray : []) {
+    const key = entityKey(keyFn, entity);
+    if (key === "" || previousIds.has(key) || insertedIds.has(key)) {
+      continue;
+    }
+    // Deliberately omit ON DUPLICATE KEY UPDATE. If an ID belongs to an older
+    // row outside the loaded window, the database conflict rolls back instead
+    // of rewriting cold history.
+    statements.push(insertFn(entity));
+    insertedIds.add(key);
+  }
+}
+
+function appendLoadedHistoryWindow(target, document, maxRows) {
+  target.push(document);
+  if (target.length > maxRows) {
+    target.splice(0, target.length - maxRows);
+  }
 }
 
 function appendMutationReceiptDiff(statements, previousValue, nextValue) {
@@ -1016,6 +1340,14 @@ function entityKey(keyFn, entity) {
 }
 
 function entityChanged(previousEntity, nextEntity) {
+  // Trusted authority roots preserve object identity only for values that
+  // already passed the immutable/COW certification boundary.  The MySQL
+  // baseline owns its snapshot after COMMIT, so an identical reference means
+  // this row cannot have changed and does not need another full JSON walk.
+  // Untrusted or mutable rows still take the exact serialized comparison.
+  if (previousEntity === nextEntity) {
+    return false;
+  }
   return JSON.stringify(previousEntity || {}) !== JSON.stringify(nextEntity || {});
 }
 
@@ -1048,8 +1380,6 @@ function upsertColumnsForTable(tableName) {
       return ["seller_account_id", "item_id", "currency", "unit_price", "item_count", "created_at", "document_json"];
     case "parties":
       return ["leader_account_id", "member_count", "created_at", "updated_at", "document_json"];
-    case "party_invites":
-      return ["party_id", "from_account_id", "to_account_id", "status", "created_at", "updated_at", "document_json"];
     case "families":
       return ["family_name", "leader_account_id", "member_count", "fame", "created_at", "updated_at", "document_json"];
     case "manors":
@@ -1107,10 +1437,6 @@ function partyEntityKey(party) {
   return party.partyId;
 }
 
-function partyInviteEntityKey(invite) {
-  return invite.inviteId;
-}
-
 function familyEntityKey(family) {
   return family.familyId;
 }
@@ -1166,7 +1492,12 @@ function mysqlConfig(options) {
     password: options.password || process.env.BEASTBOUND_MYSQL_PASSWORD || "",
     database: options.database || process.env.BEASTBOUND_MYSQL_DATABASE || DEFAULT_DATABASE,
     createDatabase: boolConfig(options.createDatabase, process.env.BEASTBOUND_MYSQL_CREATE_DATABASE),
-    outputMaxBufferBytes: Number(options.outputMaxBufferBytes || process.env.BEASTBOUND_MYSQL_OUTPUT_MAX_BUFFER_BYTES || DEFAULT_OUTPUT_MAX_BUFFER_BYTES),
+    outputMaxBufferBytes: positiveIntegerConfig(
+      options.outputMaxBufferBytes,
+      process.env.BEASTBOUND_MYSQL_OUTPUT_MAX_BUFFER_BYTES,
+      DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
+    ),
+    healthProbeTimeoutMs: positiveIntegerConfig(options.healthProbeTimeoutMs, undefined, 2000),
     usePool: mysqlPoolEnabled(options, mysqlPathExplicit),
     poolFactory: typeof options.poolFactory === "function" ? options.poolFactory : defaultMysqlPoolFactory,
     poolConnectionLimit: positiveIntegerConfig(
@@ -1216,10 +1547,10 @@ function defaultMysqlPoolFactory(options) {
 function runMysql(config, database, sql, options = {}) {
   try {
     return execFileSync(config.mysqlPath, mysqlArgs(config, database), {
-      "encoding": "utf8",
+      "encoding": options.binaryOutput === true ? null : "utf8",
       "input": sql,
       "maxBuffer": config.outputMaxBufferBytes,
-      "stdio": ["pipe", "pipe", "pipe"],
+      "stdio": ["pipe", Number.isInteger(options.stdoutFd) ? options.stdoutFd : "pipe", "pipe"],
     });
   } catch (error) {
     if (options.silent) {
@@ -1239,10 +1570,36 @@ function runMysqlAsync(config, database, sql, options = {}) {
     const stderr = [];
     let stdoutBytes = 0;
     let settled = false;
+    let forceKillTimer = null;
+    const timeoutMs = Math.max(0, Math.trunc(Number(options.timeoutMs || 0)));
+    const timeoutTimer = timeoutMs > 0 ? setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      const error = new Error("MySQL 命令执行超时。");
+      error.code = "mysql_command_timeout";
+      child.kill("SIGTERM");
+      forceKillTimer = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill("SIGKILL");
+        }
+      }, 250);
+      forceKillTimer.unref?.();
+      reject(error);
+    }, timeoutMs) : null;
+    timeoutTimer?.unref?.();
+
+    function clearTimers() {
+      clearTimeout(timeoutTimer);
+      clearTimeout(forceKillTimer);
+    }
+
     child.stdout.on("data", (chunk) => {
       stdoutBytes += chunk.length;
       if (stdoutBytes > config.outputMaxBufferBytes) {
         settled = true;
+        clearTimers();
         child.kill("SIGTERM");
         reject(new Error("MySQL 输出超过缓冲上限。"));
         return;
@@ -1255,10 +1612,12 @@ function runMysqlAsync(config, database, sql, options = {}) {
     child.on("error", (error) => {
       if (!settled) {
         settled = true;
+        clearTimers();
         reject(error);
       }
     });
     child.on("close", (code) => {
+      clearTimers();
       if (settled) {
         return;
       }
@@ -1389,12 +1748,11 @@ function summarizeStatement(statement) {
   return text.slice(0, 48);
 }
 
-function upsertStateStatement(data) {
-  return `INSERT INTO server_state (state_key, document_json) VALUES ('auth', ${sqlJson(stateMetadata(data))}) ON DUPLICATE KEY UPDATE document_json = VALUES(document_json)`;
+function upsertStateStatement(state) {
+  return `INSERT INTO server_state (state_key, document_json) VALUES ('auth', ${sqlJson(state)}) ON DUPLICATE KEY UPDATE document_json = VALUES(document_json)`;
 }
 
-function stateMetadata(data) {
-  const persistent = mysqlPersistentData(data);
+function stateMetadataFromPersistentData(persistent) {
   return {
     schemaVersion: 2,
     storage: "mysql_entity_tables",
@@ -1472,10 +1830,6 @@ function insertConsumedEquipmentEnvelopeStatement(envelopeId) {
 function insertPartyStatement(party) {
   const memberCount = Array.isArray(party.memberAccountIds) ? party.memberAccountIds.length : 0;
   return `INSERT INTO parties (party_id, leader_account_id, member_count, created_at, updated_at, document_json) VALUES (${sqlString(party.partyId)}, ${sqlString(party.leaderAccountId)}, ${Number(memberCount)}, ${sqlString(party.createdAt)}, ${sqlString(party.updatedAt)}, ${sqlJson(party)})`;
-}
-
-function insertPartyInviteStatement(invite) {
-  return `INSERT INTO party_invites (invite_id, party_id, from_account_id, to_account_id, status, created_at, updated_at, document_json) VALUES (${sqlString(invite.inviteId)}, ${sqlString(invite.partyId)}, ${sqlString(invite.fromAccountId)}, ${sqlString(invite.toAccountId)}, ${sqlString(invite.status)}, ${sqlString(invite.createdAt)}, ${sqlString(invite.updatedAt)}, ${sqlJson(invite)})`;
 }
 
 function insertFamilyStatement(family) {
@@ -1576,6 +1930,9 @@ function positiveIntegerConfig(optionValue, envValue, fallback) {
 }
 
 module.exports = {
+  DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
+  __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
+  __entityChangedForTest: entityChanged,
   createMysqlAuthStore,
   mysqlAuthStoreRootContract,
 };
