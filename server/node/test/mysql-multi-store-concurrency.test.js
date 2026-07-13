@@ -164,12 +164,26 @@ function createSharedRevisionPool(shared, writerId, statePath) {
           transactionStarted = true;
           shared.events.push(`${writerId}:begin`);
         },
-        async query(statement) {
+        async query(statement, params = []) {
           const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
-          shared.queries.push({writerId, sql});
+          shared.queries.push({writerId, sql, params: Array.isArray(params) ? params.slice() : params});
           if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+UPDATE/i.test(sql)) {
             shared.events.push(`${writerId}:lock:${shared.storeRevision}`);
             return [[{storeRevision: shared.storeRevision}], []];
+          }
+          if (/SELECT[\s\S]+FROM\s+profile_bindings[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+            return [[{
+              account_id: "acc_multi_store",
+              player_id: "player_multi_store",
+              profile_revision: shared.storeRevision + 1,
+            }], []];
+          }
+          if (/SELECT[\s\S]+FROM\s+profiles[\s\S]+FOR\s+UPDATE/i.test(sql)) {
+            return [[{
+              player_id: "player_multi_store",
+              account_id: "acc_multi_store",
+              profile_revision: shared.storeRevision + 1,
+            }], []];
           }
           if (/UPDATE\s+auth_store_revisions[\s\S]+revision/i.test(sql)) {
             pendingRevision = shared.storeRevision + 1;
@@ -323,10 +337,14 @@ process.stdin.on("end", () => {
     const retrySql = shared.queries
       .filter((entry) => entry.writerId === "node_b")
       .slice(1)
-      .map((entry) => entry.sql)
+      .map((entry) => `${entry.sql}\n${JSON.stringify(entry.params || [])}`)
       .join("\n");
     assert.match(retrySql, /节点B基于新根/);
-    assert.match(retrySql, /"stoneCoins":90/);
+    const retryProfileWrite = shared.queries.find((entry) => (
+      entry.writerId === "node_b"
+      && /^UPDATE\s+profiles\b/i.test(entry.sql.trim())
+    ));
+    assert.equal(JSON.parse(retryProfileWrite.params[3]).stoneCoins, 90);
 
     assert.throws(
       () => storeA.save(authorityState("同步写应拒绝", 90, 3)),
@@ -485,28 +503,32 @@ test("writable schema setup creates and seeds the global auth store revision", (
   }
 });
 
-test("the async store does not treat a deterministic revision conflict as an ambiguous commit", async () => {
-  let reloadCalls = 0;
-  const conflict = new Error("stale writer");
-  conflict.code = "mysql_store_revision_conflict";
-  const store = createAsyncWriteAuthStore({
-    mode: "mysql-conflict-fixture",
-    load() {
-      reloadCalls += 1;
-      throw new Error("deterministic conflict must not trigger ambiguous reload");
-    },
-    async saveAsync() {
-      throw conflict;
-    },
-  }, {onError() {}});
+test("the async store does not treat deterministic store or resource conflicts as ambiguous commits", async (t) => {
+  for (const code of ["mysql_store_revision_conflict", "mysql_resource_revision_conflict"]) {
+    await t.test(code, async () => {
+      let reloadCalls = 0;
+      const conflict = new Error("stale writer");
+      conflict.code = code;
+      const store = createAsyncWriteAuthStore({
+        mode: "mysql-conflict-fixture",
+        load() {
+          reloadCalls += 1;
+          throw new Error("deterministic conflict must not trigger ambiguous reload");
+        },
+        async saveAsync() {
+          throw conflict;
+        },
+      }, {onError() {}});
 
-  await assert.rejects(
-    store.save({schemaVersion: 1, profiles: {}}),
-    (error) => error === conflict,
-  );
-  assert.equal(reloadCalls, 0);
-  assert.equal(store.metrics().revisionConflicts, 1);
-  assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+      await assert.rejects(
+        store.save({schemaVersion: 1, profiles: {}}),
+        (error) => error === conflict,
+      );
+      assert.equal(reloadCalls, 0);
+      assert.equal(store.metrics().revisionConflicts, 1);
+      assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+    });
+  }
 });
 
 test("a writable pooled store with schema setup disabled still fails closed when revision metadata is absent", () => {

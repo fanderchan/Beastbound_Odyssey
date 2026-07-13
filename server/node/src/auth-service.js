@@ -4819,7 +4819,8 @@ function createAsyncWriteAuthStore(store, options = {}) {
 function isMysqlStoreRevisionConflict(error) {
   let current = error;
   for (let depth = 0; current && depth < 4; depth += 1) {
-    if (current.code === "mysql_store_revision_conflict") {
+    if (current.code === "mysql_store_revision_conflict"
+      || current.code === "mysql_resource_revision_conflict") {
       return true;
     }
     current = current.cause;

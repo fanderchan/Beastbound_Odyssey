@@ -1736,8 +1736,7 @@ process.stdin.on("end", () => {
     const secondSave = saveCalls[1].stdin;
     assert.match(firstSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_first_0001'\)/);
     assert.match(firstSave, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
-    assert.ok(secondSave.includes("INSERT INTO server_state"));
-    assert.ok(secondSave.includes("mysql_entity_tables"));
+    assert.equal(secondSave.includes("INSERT INTO server_state"), false);
     assert.ok(secondSave.includes("INSERT INTO accounts"));
     assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
     assert.ok(secondSave.includes("DELETE FROM mail_messages WHERE mail_id = 'mail_incremental'"));
@@ -2143,10 +2142,9 @@ process.stdin.on("end", () => {
       }),
       (error) => error.message === "MySQL 异步存档失败。" && error.cause === duplicate,
     );
-    assert.equal(queriedStatements.length, 3);
+    assert.equal(queriedStatements.length, 2);
     assert.match(queriedStatements[0], /auth_store_revisions[\s\S]+FOR UPDATE/);
-    assert.match(queriedStatements[1], /^INSERT INTO server_state /);
-    assert.match(queriedStatements[2], /^INSERT INTO battle_records /);
+    assert.match(queriedStatements[1], /^INSERT INTO battle_records /);
     assert.equal(casFixture.state.revision, 0);
     assert.equal(casFixture.state.transactions[0].begun, true);
     assert.equal(casFixture.state.transactions[0].rolledBack, true);

@@ -73,7 +73,7 @@ pending receipt journal 只表达：
 - 同一 operation ID 若旧回执已过期，pending 必须同时记录 delete 和 insert，MySQL 在同一事务内先 DELETE 后 INSERT；
 - cap/TTL 清理复杂度只与本次实际删除数 `D` 成正比，不与未触碰历史数 `N` 成正比；单次成功资产事务最多清理 256 条常规过期/容量记录，同 key 过期复用允许额外记录该 key 的删除。大量历史过期会在后续成功事务中有界渐进清理，避免把 10,000 条 DELETE 延迟压到一个玩家请求。
 
-活动回执计数、replay、过期判断与 `server_state` metadata 都必须读取 effective view；物理上尚待本事务删除的过期行不得被当作活动回执。
+活动回执计数、replay 与过期判断都必须读取 effective view；物理上尚待本事务删除的过期行不得被当作活动回执。Phase257 起诊断计数不再写入共享 `server_state`，以免每笔回执制造全局热点。
 
 ### 4. 小签名替代大型桶 deep-equal
 
@@ -163,7 +163,7 @@ recording fake pool 只证明真实 `createMysqlAuthStore().saveAsync()` planner
 | MySQL | exact touched statements；receipt delete-before-insert；墓碑 append-only；非法改写事务前拒绝；rollback baseline 不推进；commit 后 baseline 推进；health 不破坏 warm identity |
 | 模糊提交 | COMMIT 后抛错可 reload + receipt 恢复；未 COMMIT 不误判；reload 重建索引后 replay 与 count 一致 |
 | store/export | memory/JSON save、snapshot、备份、迁移、MySQL load/save round-trip 都完整 materialize；重启不丢 committed overlay，也不泄露未提交 pending |
-| metadata | `server_state` 中 receipt/墓碑 count 与 effective view 一致；delete+insert 同 key 不产生负数、重复或漂移 |
+| metadata | receipt/墓碑 count 从 effective view 或实体表按需诊断；`server_state` 不再承载这些共享计数；delete+insert 同 key 不产生负数、重复或漂移 |
 | 容量工具 | 200 档案、0/中/大三档独立 worker；原始样本、p95、heap/RSS、SQL cardinality、revision、save 次数和 HEAD 可审计 |
 | 既有回归 | Phase247 durable commit/timeout/replay；Phase252 canonical ledger/health；storage、migration、equipment quarantine、economy/mail/GM 聚焦测试 |
 
@@ -176,7 +176,7 @@ recording fake pool 只证明真实 `createMysqlAuthStore().saveAsync()` planner
 - 墓碑使用不可变 MVCC Proxy view：启动完整审计并冻结 baseline；`ensure` 只复制本请求 touched IDs，COMMIT 后才推进 candidate revision。不同 lineage、旧 revision、丢失 pending 或直接换字段均不能复用 trusted root。
 - receipt 启动时完整校验、深冻 response，并建立 O(1) lookup、count、expiry/oldest heap；在线 stage 只复制至多 256 条 delete 与一条 insert 的小 Map。活动同 key 继续 replay/conflict，过期同 key 明确形成同事务 `DELETE → INSERT`。
 - receipt 的 `histories/keys/heaps/countByRevision` 达到有界阈值后 checkpoint 为新的 2 万活动 baseline；旧 MVCC view 仍保留原 revision 直到自然释放，在线 published view 不再随服务器生命周期总 operation ID 无界增长。
-- `durableBusinessChanged()` 用 lineage/revision/pending 小签名替换两个大型桶；MySQL 同 lineage warm planner 只消费 exact delta，`server_state` count 读取索引。raw、迁移、不同 lineage 或坏数据继续完整 diff 并在事务前失败关闭。
+- `durableBusinessChanged()` 用 lineage/revision/pending 小签名替换两个大型桶；MySQL 同 lineage warm planner 只消费 exact delta，运行时 count 读取索引。Phase257 起 `server_state` 不再持久化诊断 count；raw、迁移、不同 lineage 或坏数据继续完整 diff 并在事务前失败关闭。
 - MySQL COMMIT 成功后才 finalize 两个 view；明确失败不发布资产、revision、事件、墓碑或 receipt，同 key 可安全重试一次。模糊 COMMIT 仍走完整 reload/materialize 核对。
 - `snapshot()`、memory/JSON store、批量 MySQL profile 迁移和备份统一经过 `authority-root-materialization.js`；输出为完整普通对象，可 `structuredClone`，不会把 Proxy/journal 元数据写入文件。
 

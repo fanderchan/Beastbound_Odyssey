@@ -7,17 +7,14 @@ const path = require("node:path");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
   commitConsumedEquipmentEnvelopeLedger,
-  consumedEquipmentEnvelopeLedgerCount,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
-  isCanonicalConsumedEquipmentEnvelopeLedger,
   readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("./auth/equipment-envelope-consumed-ledger");
 const {
   canonicalDurableMutationReceipts,
   commitDurableMutationReceiptDelta,
-  durableMutationReceiptCount,
+  durableMutationReceiptDelta,
   durableMutationReceiptDeltaFrom,
-  isCanonicalDurableMutationReceipts,
 } = require("./auth/durable-mutation-state");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
@@ -33,6 +30,8 @@ const MYSQL_BATTLE_TRACE_WINDOW_MAX = 1200;
 const MYSQL_STORE_REVISION_SCOPE = "auth";
 const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
 const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
+const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
+const MYSQL_ENTITY_STATE_PRESENT = Symbol("beastbound.mysqlEntityStatePresent");
 const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
 const MYSQL_STORE_REVISION_PRESENT = Symbol("beastbound.mysqlStoreRevisionPresent");
 const MYSQL_HISTORY_SEQUENCE_CONTRACTS = Object.freeze([
@@ -49,6 +48,9 @@ function createMysqlAuthStore(options = {}) {
   let lastPersistentData = null;
   let lastPersistentRevision = null;
   let revisionCasEnabled = false;
+  // The marker distinguishes entity-table state from a legacy full-root row.
+  // It is written once through the normal revision-fenced transaction.
+  let serverStateReady = false;
   let writePool = null;
   let closePromise = null;
   let closed = false;
@@ -374,6 +376,7 @@ function createMysqlAuthStore(options = {}) {
     }
     lastPersistentRevision = mysqlStoreRevision(loaded);
     revisionCasEnabled = !readOnly && revisionPresent;
+    serverStateReady = mysqlEntityStatePresent(loaded);
     lastPersistentData = mysqlPersistentData(loaded);
     return loaded;
   }
@@ -413,7 +416,9 @@ function createMysqlAuthStore(options = {}) {
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
-      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
+      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData, {
+        forceServerState: !serverStateReady,
+      });
       if (statements.length > 0) {
         if (!config.singleWriterMaintenance) {
           const error = new Error("同步 MySQL 写入只允许显式停服维护模式。");
@@ -428,6 +433,7 @@ function createMysqlAuthStore(options = {}) {
         const writeStatements = singleWriterMaintenanceStatements(statements);
         runMysqlSaveStatements(config, config.database, writeStatements);
         lastPersistentRevision += 1;
+        serverStateReady = true;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -442,8 +448,10 @@ function createMysqlAuthStore(options = {}) {
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
-      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
-      if (statements.length > 0) {
+      const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
+        forceServerState: !serverStateReady,
+      });
+      if (plan.kind !== "noop") {
         if (!config.usePool) {
           const error = new Error("在线异步 MySQL 写入必须使用带全局版本锁的连接池。");
           error.code = "mysql_async_revision_cas_required";
@@ -454,11 +462,12 @@ function createMysqlAuthStore(options = {}) {
           error.code = MYSQL_STORE_REVISION_MISSING;
           throw error;
         }
-        const committed = await runMysqlPoolSaveStatements(persistentWritePool(), statements, {
+        const committed = await runMysqlPoolSavePlan(persistentWritePool(), plan, {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
         });
         lastPersistentRevision = committed.revision;
+        serverStateReady = true;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -476,8 +485,10 @@ function createMysqlAuthStore(options = {}) {
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
-      const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData);
-      if (statements.length > 0) {
+      const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
+        forceServerState: !serverStateReady,
+      });
+      if (plan.kind !== "noop") {
         if (!config.usePool) {
           const error = new Error("在线异步 MySQL 写入必须使用带全局版本锁的连接池。");
           error.code = "mysql_async_revision_cas_required";
@@ -488,11 +499,12 @@ function createMysqlAuthStore(options = {}) {
           error.code = MYSQL_STORE_REVISION_MISSING;
           throw error;
         }
-        const committed = await runMysqlPoolSaveStatements(persistentWritePool(), statements, {
+        const committed = await runMysqlPoolSavePlan(persistentWritePool(), plan, {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
         });
         lastPersistentRevision = committed.revision;
+        serverStateReady = true;
       }
       lastPersistentData = committedMysqlPersistentData(data, {owned: true});
     },
@@ -516,42 +528,306 @@ function buildSaveStatements(nextData, previousData = null) {
   return buildSaveStatementsFromPersistentData(data, previous);
 }
 
-function buildSaveStatementsFromPersistentData(data, previous) {
-  const statements = [];
-  const previousState = stateMetadataFromPersistentData(previous);
-  const nextState = stateMetadataFromPersistentData(data);
-  if (entityChanged(previousState, nextState)) {
-    statements.push(upsertStateStatement(nextState));
-  }
-  appendObjectEntityDiff(statements, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
-  appendObjectEntityDiff(statements, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
-  appendObjectEntityDiff(statements, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
-  appendObjectEntityDiff(statements, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
-  appendMutationReceiptDeltaOrDiff(statements, previous.mutationReceipts, data.mutationReceipts);
-  appendObjectEntityDiff(statements, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
-  appendObjectEntityDiff(statements, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
-  appendConsumedEquipmentEnvelopeDeltaOrDiff(
-    statements,
-    previous.consumedEquipmentEnvelopes,
-    data.consumedEquipmentEnvelopes,
-  );
-  appendObjectEntityDiff(statements, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
-  appendObjectEntityDiff(statements, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
-  appendObjectEntityDiff(statements, "manors", "manor_id", previous.manors, data.manors, manorEntityKey, insertManorStatement);
-  appendArrayEntityDiff(statements, "manor_battles", "battle_id", previous.manorBattles, data.manorBattles, manorBattleEntityKey, insertManorBattleStatement);
-  appendArrayEntityDiff(statements, "manor_wars", "war_id", previous.manorWars, data.manorWars, manorWarEntityKey, insertManorWarStatement);
-  appendArrayEntityDiff(statements, "chat_messages", "message_id", previous.chatMessages, data.chatMessages, chatMessageEntityKey, insertChatMessageStatement);
-  appendImmutableHistoryInserts(statements, previous.battleRecords, data.battleRecords, battleRecordEntityKey, insertBattleRecordStatement);
-  appendImmutableHistoryInserts(statements, previous.battleTrace, data.battleTrace, battleTraceEntityKey, insertBattleTraceStatement);
-  appendObjectEntityDiff(statements, "gm_user_grants", "account_id", previous.gmUserGrants, data.gmUserGrants, gmUserGrantEntityKey, insertGmUserGrantStatement);
-  appendGmCommandGrantDiff(statements, previous.gmCommandGrants, data.gmCommandGrants);
-  appendArrayEntityDiff(statements, "gm_command_audit", "audit_id", previous.gmCommandAudit, data.gmCommandAudit, gmCommandAuditEntityKey, insertGmCommandAuditStatement);
-  appendArrayEntityDiff(statements, "auth_events", "event_id", previous.authEvents, data.authEvents, authEventEntityKey, insertAuthEventStatement);
-  appendArrayEntityDiff(statements, "service_events", "event_seq", previous.serviceEvents, data.serviceEvents, serviceEventEntityKey, insertServiceEventStatement);
+function buildSaveStatementsFromPersistentData(data, previous, options = {}) {
+  const groups = buildSaveStatementGroupsFromPersistentData(data, previous, options);
+  const statements = mysqlSaveStatementsFromGroups(groups);
   if (statements.length === 0) {
     return [];
   }
   return ["START TRANSACTION", ...statements, "COMMIT"];
+}
+
+function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}) {
+  const groups = {
+    serverState: [],
+    accounts: [],
+    sessions: [],
+    profileBindings: [],
+    profiles: [],
+    mutationReceipts: [],
+    mailMessages: [],
+    marketListings: [],
+    consumedEquipmentEnvelopes: [],
+    parties: [],
+    families: [],
+    manors: [],
+    manorBattles: [],
+    manorWars: [],
+    chatMessages: [],
+    battleRecords: [],
+    battleTrace: [],
+    gmUserGrants: [],
+    gmCommandGrants: [],
+    gmCommandAudit: [],
+    authEvents: [],
+    serviceEvents: [],
+  };
+  const previousState = persistentServerStateDocument(previous);
+  const nextState = persistentServerStateDocument(data);
+  if (options.forceServerState === true || entityChanged(previousState, nextState)) {
+    groups.serverState.push(upsertStateStatement(nextState));
+  }
+  appendObjectEntityDiff(groups.accounts, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
+  appendObjectEntityDiff(groups.sessions, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
+  appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
+  appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
+  appendMutationReceiptDeltaOrDiff(groups.mutationReceipts, previous.mutationReceipts, data.mutationReceipts);
+  appendObjectEntityDiff(groups.mailMessages, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
+  appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
+  appendConsumedEquipmentEnvelopeDeltaOrDiff(
+    groups.consumedEquipmentEnvelopes,
+    previous.consumedEquipmentEnvelopes,
+    data.consumedEquipmentEnvelopes,
+  );
+  appendObjectEntityDiff(groups.parties, "parties", "party_id", previous.parties, data.parties, partyEntityKey, insertPartyStatement);
+  appendObjectEntityDiff(groups.families, "families", "family_id", previous.families, data.families, familyEntityKey, insertFamilyStatement);
+  appendObjectEntityDiff(groups.manors, "manors", "manor_id", previous.manors, data.manors, manorEntityKey, insertManorStatement);
+  appendArrayEntityDiff(groups.manorBattles, "manor_battles", "battle_id", previous.manorBattles, data.manorBattles, manorBattleEntityKey, insertManorBattleStatement);
+  appendArrayEntityDiff(groups.manorWars, "manor_wars", "war_id", previous.manorWars, data.manorWars, manorWarEntityKey, insertManorWarStatement);
+  appendArrayEntityDiff(groups.chatMessages, "chat_messages", "message_id", previous.chatMessages, data.chatMessages, chatMessageEntityKey, insertChatMessageStatement);
+  appendImmutableHistoryInserts(groups.battleRecords, previous.battleRecords, data.battleRecords, battleRecordEntityKey, insertBattleRecordStatement);
+  appendImmutableHistoryInserts(groups.battleTrace, previous.battleTrace, data.battleTrace, battleTraceEntityKey, insertBattleTraceStatement);
+  appendObjectEntityDiff(groups.gmUserGrants, "gm_user_grants", "account_id", previous.gmUserGrants, data.gmUserGrants, gmUserGrantEntityKey, insertGmUserGrantStatement);
+  appendGmCommandGrantDiff(groups.gmCommandGrants, previous.gmCommandGrants, data.gmCommandGrants);
+  appendArrayEntityDiff(groups.gmCommandAudit, "gm_command_audit", "audit_id", previous.gmCommandAudit, data.gmCommandAudit, gmCommandAuditEntityKey, insertGmCommandAuditStatement);
+  appendArrayEntityDiff(groups.authEvents, "auth_events", "event_id", previous.authEvents, data.authEvents, authEventEntityKey, insertAuthEventStatement);
+  appendArrayEntityDiff(groups.serviceEvents, "service_events", "event_seq", previous.serviceEvents, data.serviceEvents, serviceEventEntityKey, insertServiceEventStatement);
+  return groups;
+}
+
+function mysqlSaveStatementsFromGroups(groups) {
+  return [
+    groups.serverState,
+    groups.accounts,
+    groups.sessions,
+    groups.profileBindings,
+    groups.profiles,
+    groups.mutationReceipts,
+    groups.mailMessages,
+    groups.marketListings,
+    groups.consumedEquipmentEnvelopes,
+    groups.parties,
+    groups.families,
+    groups.manors,
+    groups.manorBattles,
+    groups.manorWars,
+    groups.chatMessages,
+    groups.battleRecords,
+    groups.battleTrace,
+    groups.gmUserGrants,
+    groups.gmCommandGrants,
+    groups.gmCommandAudit,
+    groups.authEvents,
+    groups.serviceEvents,
+  ].flat();
+}
+
+function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
+  const groups = buildSaveStatementGroupsFromPersistentData(data, previous, options);
+  const statements = mysqlSaveStatementsFromGroups(groups);
+  if (statements.length === 0) {
+    return {kind: "noop"};
+  }
+  const conditionalProfilePlan = buildConditionalProfileSavePlan(data, previous, groups);
+  if (conditionalProfilePlan !== null) {
+    return conditionalProfilePlan;
+  }
+  return {
+    kind: "legacy_global_cas",
+    globalRevisionFence: true,
+    statements: ["START TRANSACTION", ...statements, "COMMIT"],
+  };
+}
+
+function buildConditionalProfileSavePlan(data, previous, groups) {
+  if (Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set(["profileBindings", "profiles", "mutationReceipts"]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (groups.profileBindings.length !== 1 || groups.profiles.length !== 1) {
+    return null;
+  }
+
+  const bindingChange = singleExistingObjectEntityChange(
+    previous.profileBindings,
+    data.profileBindings,
+    profileBindingEntityKey,
+  );
+  const profileChange = singleExistingObjectEntityChange(
+    previous.profiles,
+    data.profiles,
+    profileEntityKey,
+  );
+  if (bindingChange === null || profileChange === null) {
+    return null;
+  }
+
+  const beforeBinding = bindingChange.previous;
+  const nextBinding = bindingChange.next;
+  const beforeProfile = profileChange.previous;
+  const nextProfile = profileChange.next;
+  const accountId = bindingChange.key;
+  const playerId = profileChange.key;
+  const expectedRevision = Number(beforeBinding.profileRevision);
+  const beforeProfileRevision = Number(beforeProfile.profileRevision);
+  const nextBindingRevision = Number(nextBinding.profileRevision);
+  const nextProfileRevision = Number(nextProfile.profileRevision);
+  const updatedAt = String(nextBinding.updatedAt || "");
+  if (
+    accountId === ""
+    || playerId === ""
+    || String(beforeBinding.accountId || "") !== accountId
+    || String(nextBinding.accountId || "") !== accountId
+    || String(beforeBinding.playerId || "") !== playerId
+    || String(nextBinding.playerId || "") !== playerId
+    || String(beforeProfile.playerId || "") !== playerId
+    || String(nextProfile.playerId || "") !== playerId
+    || String(beforeProfile.accountId || "") !== accountId
+    || String(nextProfile.accountId || "") !== accountId
+    || String(beforeBinding.createdAt || "") !== String(nextBinding.createdAt || "")
+    || String(beforeProfile.createdAt || "") !== String(nextProfile.createdAt || "")
+    || !Number.isSafeInteger(expectedRevision)
+    || expectedRevision < 0
+    || beforeProfileRevision !== expectedRevision
+    || nextBindingRevision !== expectedRevision + 1
+    || nextProfileRevision !== expectedRevision + 1
+    || updatedAt === ""
+    || String(nextProfile.updatedAt || "") !== updatedAt
+  ) {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length > 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (receipt !== null && String(receipt.accountId || "") !== accountId) {
+    return null;
+  }
+
+  const locks = [
+    {
+      kind: "lock",
+      resource: "profile_binding",
+      key: accountId,
+      sql: "SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? FOR UPDATE",
+      params: [accountId],
+      expectedRow: {
+        account_id: accountId,
+        player_id: playerId,
+        profile_revision: expectedRevision,
+      },
+    },
+    {
+      kind: "lock",
+      resource: "profile",
+      key: playerId,
+      sql: "SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? FOR UPDATE",
+      params: [playerId],
+      expectedRow: {
+        player_id: playerId,
+        account_id: accountId,
+        profile_revision: expectedRevision,
+      },
+    },
+  ];
+  const writes = [
+    conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+    conditionalProfileUpdate(nextProfile, expectedRevision),
+  ];
+  if (receipt !== null) {
+    writes.push(conditionalMutationReceiptInsert(receipt));
+  }
+  return {
+    kind: "profile_conditional_v1",
+    globalRevisionFence: true,
+    accountId,
+    playerId,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    locks,
+    writes,
+  };
+}
+
+function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
+  const previous = canonicalObjectEntityMap(previousValue, keyFn);
+  const next = canonicalObjectEntityMap(nextValue, keyFn);
+  if (previous === null || next === null || previous.size !== next.size) {
+    return null;
+  }
+  let change = null;
+  for (const [key, previousEntity] of previous.entries()) {
+    if (!next.has(key)) {
+      return null;
+    }
+    const nextEntity = next.get(key);
+    if (!entityChanged(previousEntity, nextEntity)) {
+      continue;
+    }
+    if (change !== null) {
+      return null;
+    }
+    change = {key, previous: previousEntity, next: nextEntity};
+  }
+  return change;
+}
+
+function canonicalObjectEntityMap(value, keyFn) {
+  if (value === undefined) {
+    return new Map();
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const result = new Map();
+  for (const objectKey of Object.keys(value).sort()) {
+    const entity = value[objectKey];
+    const key = entityKey(keyFn, entity);
+    if (key === "" || key !== objectKey || result.has(key)) {
+      return null;
+    }
+    result.set(key, entity);
+  }
+  return result;
+}
+
+function conditionalProfileReceiptDelta(previousValue, nextValue, receiptStatements) {
+  const delta = durableMutationReceiptDeltaFrom(previousValue, nextValue);
+  if (delta.ok) {
+    if (delta.deletes.length + delta.upserts.length !== receiptStatements.length) {
+      return {ok: false, deletes: [], upserts: []};
+    }
+    return delta;
+  }
+  const previousEmpty = previousValue && typeof previousValue === "object"
+    && !Array.isArray(previousValue)
+    && Object.keys(previousValue).length === 0;
+  const nextEmpty = nextValue && typeof nextValue === "object"
+    && !Array.isArray(nextValue)
+    && Object.keys(nextValue).length === 0;
+  if (previousEmpty) {
+    const stagedFromEmpty = durableMutationReceiptDelta(nextValue);
+    if (stagedFromEmpty.ok
+      && stagedFromEmpty.deletes.length === 0
+      && stagedFromEmpty.upserts.length === receiptStatements.length) {
+      return stagedFromEmpty;
+    }
+  }
+  if (previousEmpty && nextEmpty && receiptStatements.length === 0) {
+    return {ok: true, deletes: [], upserts: []};
+  }
+  return {ok: false, deletes: [], upserts: []};
 }
 
 function loadPersistentData(config, database, options = {}) {
@@ -795,14 +1071,20 @@ function parsePersistentDataLines(lines, options = {}) {
       Number(data.serviceEventSeq || 0),
       ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
     );
-    return attachMysqlStoreRevision(data, storeRevision, storeRevisionPresent);
+    return attachMysqlStoreRevision(data, storeRevision, storeRevisionPresent, entityTableState);
   }
-  return attachMysqlStoreRevision(legacyDocument || {}, storeRevision, storeRevisionPresent);
+  return attachMysqlStoreRevision(legacyDocument || {}, storeRevision, storeRevisionPresent, false);
 }
 
-function attachMysqlStoreRevision(data, revision, present) {
+function attachMysqlStoreRevision(data, revision, present, entityStatePresent) {
   const target = data && typeof data === "object" && !Array.isArray(data) ? data : {};
   Object.defineProperties(target, {
+    [MYSQL_ENTITY_STATE_PRESENT]: {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: entityStatePresent === true,
+    },
     [MYSQL_STORE_REVISION]: {
       configurable: false,
       enumerable: false,
@@ -817,6 +1099,10 @@ function attachMysqlStoreRevision(data, revision, present) {
     },
   });
   return target;
+}
+
+function mysqlEntityStatePresent(data) {
+  return Boolean(data && data[MYSQL_ENTITY_STATE_PRESENT] === true);
 }
 
 function mysqlStoreRevision(data) {
@@ -1789,10 +2075,54 @@ function singleWriterMaintenanceStatements(statements) {
   ];
 }
 
+async function runMysqlPoolSavePlan(pool, plan, options = {}) {
+  if (!plan || plan.kind === "noop") {
+    return {revision: null};
+  }
+  if (plan.kind === "legacy_global_cas") {
+    return runMysqlPoolSaveStatements(pool, plan.statements, options);
+  }
+  if (plan.kind !== "profile_conditional_v1" || plan.globalRevisionFence !== true) {
+    throw new Error("未知或未受全局围栏保护的 MySQL 存档计划。");
+  }
+  return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
+    for (const lock of plan.locks) {
+      const result = await connection.query(lock.sql, lock.params);
+      assertMysqlResourceLockRow(result, lock);
+    }
+    for (const write of plan.writes) {
+      let result;
+      try {
+        result = await connection.query(write.sql, write.params);
+      } catch (error) {
+        if (write.resource === "mutation_receipt" && error && error.code === "ER_DUP_ENTRY") {
+          throw mysqlResourceRevisionConflict(write.resource, write.key);
+        }
+        throw error;
+      }
+      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
+        throw mysqlResourceRevisionConflict(write.resource, write.key);
+      }
+    }
+  });
+}
+
 async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   if (!Array.isArray(statements) || statements.length === 0) {
     return {revision: null};
   }
+  const transactionStatements = statements[0] === "START TRANSACTION"
+    && statements[statements.length - 1] === "COMMIT"
+    ? statements.slice(1, -1)
+    : statements.slice();
+  return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
+    for (const statement of transactionStatements) {
+      await connection.query(statement);
+    }
+  });
+}
+
+async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites) {
   const revisionCasEnabled = options.revisionCasEnabled === true;
   const expectedRevision = Number(options.expectedRevision);
   if (revisionCasEnabled && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) {
@@ -1800,10 +2130,6 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     error.code = MYSQL_STORE_REVISION_MISSING;
     throw error;
   }
-  const transactionStatements = statements[0] === "START TRANSACTION"
-    && statements[statements.length - 1] === "COMMIT"
-    ? statements.slice(1, -1)
-    : statements.slice();
   let connection = null;
   let transactionStarted = false;
   try {
@@ -1824,9 +2150,7 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
         throw mysqlStoreRevisionConflict(expectedRevision, actualRevision);
       }
     }
-    for (const statement of transactionStatements) {
-      await connection.query(statement);
-    }
+    await executeBusinessWrites(connection);
     if (revisionCasEnabled) {
       const updateResult = await connection.query(
         `UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth' AND revision = ${expectedRevision}`,
@@ -1846,11 +2170,11 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
         rollbackError = caughtRollbackError;
       }
     }
-    const saveError = new Error(
-      error && error.code === MYSQL_STORE_REVISION_CONFLICT
-        ? "MySQL存档版本已变化，旧快照未写入。"
-        : "MySQL 异步存档失败。",
-    );
+    const saveError = new Error(error && error.code === MYSQL_STORE_REVISION_CONFLICT
+      ? "MySQL存档版本已变化，旧快照未写入。"
+      : error && error.code === MYSQL_RESOURCE_REVISION_CONFLICT
+        ? "MySQL资源版本已变化，条件存档未写入。"
+        : "MySQL 异步存档失败。");
     if (error && typeof error.code === "string" && error.code !== "") {
       saveError.code = error.code;
     }
@@ -1860,6 +2184,12 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     if (error && Number.isSafeInteger(error.actualRevision)) {
       saveError.actualRevision = error.actualRevision;
     }
+    if (error && typeof error.resource === "string" && error.resource !== "") {
+      saveError.resource = error.resource;
+    }
+    if (error && typeof error.resourceKey === "string" && error.resourceKey !== "") {
+      saveError.resourceKey = error.resourceKey;
+    }
     saveError.cause = error;
     if (rollbackError !== null) {
       saveError.rollbackCause = rollbackError;
@@ -1868,6 +2198,23 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   } finally {
     if (connection !== null && typeof connection.release === "function") {
       connection.release();
+    }
+  }
+}
+
+function assertMysqlResourceLockRow(result, lock) {
+  const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+  if (!Array.isArray(rows) || rows.length !== 1) {
+    throw mysqlResourceRevisionConflict(lock.resource, lock.key);
+  }
+  const row = rows[0] || {};
+  for (const [field, expectedValue] of Object.entries(lock.expectedRow || {})) {
+    const actualValue = row[field];
+    const matches = typeof expectedValue === "number"
+      ? Number(actualValue) === expectedValue
+      : String(actualValue ?? "") === String(expectedValue);
+    if (!matches) {
+      throw mysqlResourceRevisionConflict(lock.resource, lock.key);
     }
   }
 }
@@ -1898,6 +2245,14 @@ function mysqlStoreRevisionConflict(expectedRevision, actualRevision) {
   return error;
 }
 
+function mysqlResourceRevisionConflict(resource, key) {
+  const error = new Error("MySQL资源条件不匹配，拒绝覆盖已变化的行。");
+  error.code = MYSQL_RESOURCE_REVISION_CONFLICT;
+  error.resource = String(resource || "");
+  error.resourceKey = String(key || "");
+  return error;
+}
+
 function diagnoseMysqlSaveFailure(config, database, statements) {
   for (let index = 0; index < statements.length - 1; index += 1) {
     try {
@@ -1922,47 +2277,17 @@ function upsertStateStatement(state) {
   return `INSERT INTO server_state (state_key, document_json) VALUES ('auth', ${sqlJson(state)}) ON DUPLICATE KEY UPDATE document_json = VALUES(document_json)`;
 }
 
-function stateMetadataFromPersistentData(persistent) {
+function persistentServerStateDocument(persistent) {
+  // Entity counts are diagnostics, not authority. Persisting them made every
+  // otherwise independent receipt/entity write contend on server_state/auth.
+  // Ops reads exact table counts directly; keep only the operational document.
   return {
     schemaVersion: 2,
     storage: "mysql_entity_tables",
-    counts: {
-      accounts: Object.keys(objectOrEmpty(persistent.accounts)).length,
-      sessions: Object.keys(objectOrEmpty(persistent.sessions)).length,
-      profileBindings: Object.keys(objectOrEmpty(persistent.profileBindings)).length,
-      profiles: Object.keys(objectOrEmpty(persistent.profiles)).length,
-      mutationReceipts: isCanonicalDurableMutationReceipts(persistent.mutationReceipts)
-        ? durableMutationReceiptCount(persistent.mutationReceipts)
-        : Object.keys(objectOrEmpty(persistent.mutationReceipts)).length,
-      mailMessages: Object.keys(objectOrEmpty(persistent.mailMessages)).length,
-      marketListings: Object.keys(objectOrEmpty(persistent.marketListings)).length,
-      consumedEquipmentEnvelopes: consumedEquipmentEnvelopeCount(persistent.consumedEquipmentEnvelopes),
-      parties: Object.keys(objectOrEmpty(persistent.parties)).length,
-      partyInvites: Object.keys(objectOrEmpty(persistent.partyInvites)).length,
-      families: Object.keys(objectOrEmpty(persistent.families)).length,
-      manors: Object.keys(objectOrEmpty(persistent.manors)).length,
-      manorBattles: Array.isArray(persistent.manorBattles) ? persistent.manorBattles.length : 0,
-      manorWars: Array.isArray(persistent.manorWars) ? persistent.manorWars.length : 0,
-      chatMessages: Array.isArray(persistent.chatMessages) ? persistent.chatMessages.length : 0,
-      battleRecords: Array.isArray(persistent.battleRecords) ? persistent.battleRecords.length : 0,
-      battleTrace: Array.isArray(persistent.battleTrace) ? persistent.battleTrace.length : 0,
-      gmUserGrants: Object.keys(objectOrEmpty(persistent.gmUserGrants)).length,
-      gmCommandGrantAccounts: Object.keys(objectOrEmpty(persistent.gmCommandGrants)).length,
-      gmCommandAudit: Array.isArray(persistent.gmCommandAudit) ? persistent.gmCommandAudit.length : 0,
-      authEvents: Array.isArray(persistent.authEvents) ? persistent.authEvents.length : 0,
-      serviceEvents: Array.isArray(persistent.serviceEvents) ? persistent.serviceEvents.length : 0,
-    },
     serviceEventSeq: Number(persistent.serviceEventSeq || 0),
     marketConfig: objectOrEmpty(persistent.marketConfig),
     offlineHangConfig: objectOrEmpty(persistent.offlineHangConfig),
   };
-}
-
-function consumedEquipmentEnvelopeCount(value) {
-  if (isCanonicalConsumedEquipmentEnvelopeLedger(value)) {
-    return consumedEquipmentEnvelopeLedgerCount(value);
-  }
-  return Object.keys(objectOrEmpty(value)).length;
 }
 
 function insertAccountStatement(account) {
@@ -1979,6 +2304,69 @@ function insertProfileBindingStatement(binding) {
 
 function insertProfileStatement(profile) {
   return `INSERT INTO profiles (player_id, account_id, profile_revision, updated_at, profile_json) VALUES (${sqlString(profile.playerId)}, ${sqlString(profile.accountId)}, ${Number(profile.profileRevision || 0)}, ${sqlString(profile.updatedAt)}, ${sqlJson(profile.profile || {})})`;
+}
+
+function conditionalProfileBindingUpdate(binding, expectedRevision) {
+  return {
+    kind: "write",
+    resource: "profile_binding",
+    key: String(binding.accountId || ""),
+    sql: `UPDATE profile_bindings
+      SET player_id = ?, profile_revision = ?, updated_at = ?, document_json = CAST(? AS JSON)
+      WHERE account_id = ? AND player_id = ? AND profile_revision = ?`,
+    params: [
+      String(binding.playerId || ""),
+      Number(binding.profileRevision),
+      String(binding.updatedAt || ""),
+      JSON.stringify(binding),
+      String(binding.accountId || ""),
+      String(binding.playerId || ""),
+      Number(expectedRevision),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalProfileUpdate(profile, expectedRevision) {
+  return {
+    kind: "write",
+    resource: "profile",
+    key: String(profile.playerId || ""),
+    sql: `UPDATE profiles
+      SET account_id = ?, profile_revision = ?, updated_at = ?, profile_json = CAST(? AS JSON)
+      WHERE player_id = ? AND account_id = ? AND profile_revision = ?`,
+    params: [
+      String(profile.accountId || ""),
+      Number(profile.profileRevision),
+      String(profile.updatedAt || ""),
+      JSON.stringify(profile.profile || {}),
+      String(profile.playerId || ""),
+      String(profile.accountId || ""),
+      Number(expectedRevision),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalMutationReceiptInsert(receipt) {
+  return {
+    kind: "insert",
+    resource: "mutation_receipt",
+    key: String(receipt.operationId || ""),
+    sql: `INSERT INTO mutation_receipts
+      (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+      VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+    params: [
+      String(receipt.operationId || ""),
+      String(receipt.requestHash || ""),
+      String(receipt.actionId || ""),
+      String(receipt.accountId || "") || null,
+      String(receipt.committedAt || ""),
+      String(receipt.expiresAt || ""),
+      JSON.stringify(receipt),
+    ],
+    expectedAffectedRows: 1,
+  };
 }
 
 function insertMutationReceiptStatement(receipt) {
@@ -2101,6 +2489,7 @@ function positiveIntegerConfig(optionValue, envValue, fallback) {
 
 module.exports = {
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
+  __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
   createMysqlAuthStore,
