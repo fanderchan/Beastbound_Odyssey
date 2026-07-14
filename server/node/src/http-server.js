@@ -125,6 +125,10 @@ const PURE_HTTP_READ_SERVICE_METHODS = new Set([
   "getProfile",
   "getPartyState",
 ]);
+const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
+  "marketListings",
+  "listInbox",
+]);
 
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
@@ -618,6 +622,16 @@ function createDurableHttpServiceProxy(service, requestContexts) {
       if (typeof value !== "function") {
         return value;
       }
+      if (
+        SHARED_ASSET_HTTP_READ_SERVICE_METHODS.has(String(property))
+        && typeof target._httpInvokeSharedAssetRead === "function"
+      ) {
+        return (...args) => observeHttpServiceSync(
+          requestContexts,
+          property,
+          () => target._httpInvokeSharedAssetRead(String(property), args),
+        );
+      }
       if (!DURABLE_HTTP_SERVICE_METHODS.has(String(property)) || typeof target.invokeDurable !== "function") {
         return (...args) => observeHttpServiceSync(requestContexts, property, () => Reflect.apply(value, target, args));
       }
@@ -769,6 +783,7 @@ function sendServiceError(res, error) {
     "storage_queue_full",
     "storage_outcome_unknown",
     "storage_shutting_down",
+    "storage_read_failed",
     "durable_context_required",
   ].includes(code)) {
     const publicCode = code === "durable_context_required" ? "storage_write_failed" : code;

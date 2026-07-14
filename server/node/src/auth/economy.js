@@ -34,6 +34,7 @@ const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("./equipment-envelope-consumed-ledger");
 const {
+  MARKET_MAX_LISTINGS,
   auditMarketListingBook,
   buildEquipmentMarketListing,
   publicMarketListingFacts,
@@ -45,7 +46,6 @@ const TRADE_MAX_ITEM_LINES = 8;
 const TRADE_MAX_ACTIVE_OFFERS = 256;
 const TRADE_MAX_SENT_OFFERS_PER_ACCOUNT = 8;
 const TRADE_MAX_RECEIVED_OFFERS_PER_ACCOUNT = 16;
-const MARKET_MAX_LISTINGS = 120;
 const MARKET_MAX_LISTING_COUNT = 999;
 const MARKET_MAX_UNIT_PRICE = 999999999;
 const MARKET_DEFAULT_TAX_BPS = 100;

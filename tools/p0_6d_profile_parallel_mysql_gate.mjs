@@ -357,11 +357,22 @@ function storeOptions(runtime, database, gate = null) {
 
 function seededAuthority(empty) {
   const data = cloneAuthorityRoot(empty);
+  data.accounts = {};
   data.profileBindings = {};
   data.profiles = {};
   data.mutationReceipts = data.mutationReceipts || {};
   data.marketConfig = {taxRate: 0.05};
   for (const [key, actor] of Object.entries(ACTORS)) {
+    const username = `real_mysql_${key}`;
+    data.accounts[username] = {
+      accountId: actor.accountId,
+      username,
+      displayName: `真实引擎猎人${key.toUpperCase()}`,
+      role: "player",
+      createdAt: BASE_TIME,
+      updatedAt: BASE_TIME,
+      schemaVersion: 1,
+    };
     data.profileBindings[actor.accountId] = {
       accountId: actor.accountId,
       playerId: actor.playerId,
@@ -714,6 +725,23 @@ function nextMarketAuthority(before, taxRate) {
   return after;
 }
 
+function nextAuthEventAuthority(before) {
+  const after = cloneAuthorityRoot(before);
+  after.authEvents = [
+    ...(Array.isArray(before.authEvents) ? before.authEvents : []),
+    {
+      eventId: "auth_shared_read_server_state_recovery",
+      type: "shared_read_server_state_recovery",
+      username: "system_gate",
+      ok: true,
+      message: "scoped read must preserve pending server-state initialization",
+      createdAt: "2026-07-14T04:13:00.000Z",
+      schemaVersion: 1,
+    },
+  ];
+  return after;
+}
+
 async function waitUntil(predicate, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
@@ -788,6 +816,16 @@ async function globalRevision(admin) {
     "MySQL global revision query",
   );
   return Number(rows[0] && rows[0].revision);
+}
+
+async function serverStateRowCount(admin) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS state_count FROM server_state WHERE state_key = 'auth'",
+    [],
+    "MySQL server-state row count query",
+  );
+  return Number(rows[0] && rows[0].state_count || 0);
 }
 
 async function profileRow(admin, actorKey) {
@@ -1493,6 +1531,88 @@ async function runRealMysqlGate(runtime) {
     assert.equal(await globalRevision(admin), 3);
     await closeStores(stores);
 
+    const sharedReadStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(sharedReadStore);
+    sharedReadStore.load();
+    const marketReadView = await settleWithin(sharedReadStore.readSharedAssetView({
+      schemaVersion: 1,
+      scope: "market_read",
+      accountId: ACTORS.a.accountId,
+    }), WAIT_TIMEOUT_MS, "真实 MySQL 市场 RR 读穿");
+    assert.equal(
+      Object.hasOwn(marketReadView.marketListings, MARKET_LISTING_IDS.rollback),
+      true,
+    );
+    assert.equal(marketReadView.accounts.values[ACTORS.m.accountId].username, "real_mysql_m");
+
+    const mailReadView = await settleWithin(sharedReadStore.readSharedAssetView({
+      schemaVersion: 1,
+      scope: "mail_mutation",
+      accountId: ACTORS.b.accountId,
+      mailId: MAIL_CLAIM_IDS.duplicateEnvelope,
+    }, {adopt: true}), WAIT_TIMEOUT_MS, "真实 MySQL 邮箱 RR 读穿与墓碑采纳");
+    assert.equal(
+      Object.hasOwn(
+        mailReadView.mailPartitions[0].messages,
+        MAIL_CLAIM_IDS.duplicateEnvelope,
+      ),
+      true,
+    );
+    assert.deepEqual(mailReadView.consumedEquipmentEnvelopeIds, [DUPLICATE_ENVELOPE_ID]);
+
+    await adminQuery(
+      admin,
+      "UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth'",
+      [],
+      "MySQL shared read revision drift seed",
+    );
+    await assert.rejects(
+      settleWithin(sharedReadStore.readSharedAssetView({
+        schemaVersion: 1,
+        scope: "market_read",
+        accountId: ACTORS.a.accountId,
+      }), WAIT_TIMEOUT_MS, "旧 Node revision 越界拒绝"),
+      (error) => error
+        && error.code === "mysql_shared_asset_full_reload_required"
+        && error.expectedRevision === 3
+        && error.actualRevision === 4,
+    );
+    sharedReadStore.load();
+    const refreshedMarketRead = await settleWithin(sharedReadStore.readSharedAssetView({
+      schemaVersion: 1,
+      scope: "market_read",
+      accountId: ACTORS.a.accountId,
+    }), WAIT_TIMEOUT_MS, "完整 reload 后市场读穿重试");
+    assert.equal(
+      Object.hasOwn(refreshedMarketRead.marketListings, MARKET_LISTING_IDS.rollback),
+      true,
+    );
+    assert.equal(await globalRevision(admin), 4);
+    await closeStores(stores);
+
+    await adminQuery(
+      admin,
+      "DELETE FROM server_state WHERE state_key = 'auth'",
+      [],
+      "MySQL missing server-state recovery seed",
+    );
+    assert.equal(await serverStateRowCount(admin), 0);
+    const missingStateStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(missingStateStore);
+    const missingStateBefore = missingStateStore.load();
+    await settleWithin(missingStateStore.readSharedAssetView({
+      schemaVersion: 1,
+      scope: "mail_read",
+      accountId: ACTORS.a.accountId,
+    }, {adopt: true}), WAIT_TIMEOUT_MS, "缺失 server-state 后的邮箱读穿采纳");
+    const recoveredStateWrite = trackWrite(missingStateStore.saveAsync(
+      nextAuthEventAuthority(missingStateBefore),
+    ));
+    await settleWithin(recoveredStateWrite, WAIT_TIMEOUT_MS, "读穿后的 server-state 初始化提交");
+    assert.equal(await serverStateRowCount(admin), 1);
+    assert.equal(await globalRevision(admin), 5);
+    await closeStores(stores);
+
     await waitUntil(async () => await activeTransactionCount(admin) === 0, WAIT_TIMEOUT_MS, "InnoDB 事务清理");
     const deadlocksAfter = await deadlockCount(admin);
     assert.equal(deadlocksAfter, deadlocksBefore);
@@ -1542,6 +1662,11 @@ async function runRealMysqlGate(runtime) {
       mailPartialUpdateVerified: true,
       mailFullDeleteVerified: true,
       mailDuplicateEnvelopeRolledBack: true,
+      sharedMarketReadThroughVerified: true,
+      sharedMailReadThroughVerified: true,
+      sharedTombstoneDeltaVerified: true,
+      scopedReadRevisionReloadVerified: true,
+      scopedReadPreservesServerStateInitialization: true,
       globalRevision: await globalRevision(admin),
       receiptCount: receiptIds.length,
       receiptIds,

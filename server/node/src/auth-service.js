@@ -53,6 +53,10 @@ const {
   buildRowLocalMailClaimConsistencyScope,
   rowLocalMailClaimRecoveryMatches,
 } = require("./auth/mail-claim-consistency");
+const {
+  applySharedAssetReadView,
+  assertSharedAssetReadViewMatchesRequest,
+} = require("./auth/shared-asset-read-model");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
@@ -683,6 +687,7 @@ function createAuthService(options = {}) {
     responseTimeoutMs: options.durableCommitTimeoutMs,
   });
   let cachedData = null;
+  let activeSharedAssetReadData = null;
   let lastPublishedPersistentData = null;
   let activeDurableMutation = null;
   let battleMaintenanceTimer = null;
@@ -740,6 +745,9 @@ function createAuthService(options = {}) {
   function load() {
     if (activeDurableMutation) {
       return activeDurableMutation.data;
+    }
+    if (activeSharedAssetReadData) {
+      return activeSharedAssetReadData;
     }
     if (!cachedData) {
       initializeCachedData(store.load());
@@ -3491,6 +3499,36 @@ function createAuthService(options = {}) {
     );
   }
 
+  function invokeSharedAssetRead(methodName, args = {}) {
+    const normalizedMethodName = String(methodName || "");
+    const normalizedArgs = Array.isArray(args) ? args : [];
+    return durableMutationCoordinator.run(
+      () => executeSharedAssetRead(normalizedMethodName, normalizedArgs),
+    );
+  }
+
+  async function executeSharedAssetRead(methodName, args) {
+    const method = serviceApi && serviceApi[methodName];
+    if (typeof method !== "function" || methodName === "invokeSharedAssetRead") {
+      return fail("shared_asset_read_invalid", "共享资产读取入口不存在。");
+    }
+    if (store.sharedAssetReads !== true) {
+      return method(...args);
+    }
+    const read = await loadSharedAssetView(methodName, args, {adopt: false});
+    if (read.view === null) {
+      return method(...args);
+    }
+    const overlay = normalizeData(applySharedAssetReadView(read.current, read.view), {owned: true});
+    inheritAuthorityIdentityIndexes(read.current, overlay);
+    activeSharedAssetReadData = overlay;
+    try {
+      return method(...args);
+    } finally {
+      activeSharedAssetReadData = null;
+    }
+  }
+
   async function executeDurableMutationWithRuntimeBarrier(methodName, args, operation) {
     const accountId = durableRuntimeBarrierAccountId(methodName, args);
     if (accountId !== "") {
@@ -3729,6 +3767,98 @@ function createAuthService(options = {}) {
       || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt);
   }
 
+  function sharedAssetReadRequest(methodName, args, dataValue) {
+    if (store.sharedAssetReads !== true) {
+      return null;
+    }
+    const method = String(methodName || "");
+    const data = dataValue && typeof dataValue === "object" ? dataValue : {};
+    const session = sessionByToken(data, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    if (accountId === "") {
+      return null;
+    }
+    if (method === "marketListings") {
+      return {schemaVersion: 1, scope: "market_read", accountId};
+    }
+    if (method === "listInbox") {
+      return {schemaVersion: 1, scope: "mail_read", accountId};
+    }
+    if (["buyMarketListing", "cancelMarketListing"].includes(method)) {
+      const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+      const listingId = String(payload.listingId || "").trim();
+      return listingId === "" ? null : {
+        schemaVersion: 1,
+        scope: "market_mutation",
+        accountId,
+        listingId,
+      };
+    }
+    if (["claimMailAttachments", "markMailRead"].includes(method)) {
+      const mailId = String(Array.isArray(args) ? args[1] : "").trim();
+      return mailId === "" ? null : {
+        schemaVersion: 1,
+        scope: "mail_mutation",
+        accountId,
+        mailId,
+      };
+    }
+    return null;
+  }
+
+  async function refreshSharedAssetsBeforeMutation(methodName, args) {
+    const read = await loadSharedAssetView(methodName, args, {adopt: true});
+    if (read.view === null) {
+      return;
+    }
+    const refreshed = normalizeData(applySharedAssetReadView(read.current, read.view), {owned: true});
+    inheritAuthorityIdentityIndexes(read.current, refreshed);
+    cachedData = commitAuthorityRootLargeCollections(refreshed);
+    lastPublishedPersistentData = persistentDataForStore(cachedData);
+  }
+
+  async function loadSharedAssetView(methodName, args, readOptions) {
+    let current = cachedData || load();
+    let request = sharedAssetReadRequest(methodName, args, current);
+    if (request === null) {
+      return {current, view: null};
+    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const view = await store.readSharedAssetView(request, readOptions);
+        assertSharedAssetReadViewMatchesRequest(view, request);
+        return {current, view};
+      } catch (cause) {
+        if (
+          attempt === 0
+          && cause
+          && cause.code === "mysql_shared_asset_full_reload_required"
+        ) {
+          try {
+            reloadPublishedDataFromStore();
+          } catch (reloadCause) {
+            throw sharedAssetReadFailure(reloadCause);
+          }
+          current = cachedData || load();
+          request = sharedAssetReadRequest(methodName, args, current);
+          if (request === null) {
+            return {current, view: null};
+          }
+          continue;
+        }
+        throw sharedAssetReadFailure(cause);
+      }
+    }
+    throw sharedAssetReadFailure(new Error("shared asset read retry exhausted"));
+  }
+
+  function sharedAssetReadFailure(cause) {
+    const error = new Error("服务器正在同步交易与邮箱数据，请稍后重试。");
+    error.code = "storage_read_failed";
+    error.cause = cause;
+    return error;
+  }
+
   async function executeDurableMutation(methodName, args, operation) {
     const method = serviceApi && serviceApi[methodName];
     if (typeof method !== "function" || methodName === "invokeDurable") {
@@ -3745,6 +3875,7 @@ function createAuthService(options = {}) {
     }
 
     refreshPublishedDataAfterStorageFailure();
+    await refreshSharedAssetsBeforeMutation(methodName, args);
 
     const receiptOperationId = DURABLE_RECEIPT_EXCLUDED_METHODS.has(methodName) ? "" : operationId;
     const published = load();
@@ -3991,45 +4122,48 @@ function createAuthService(options = {}) {
       return;
     }
     try {
-      const current = cachedData ? cloneAuthorityRoot(cachedData) : normalizeData({});
-      const reloaded = normalizeData(store.load());
-      inheritAuthorityIdentityIndexes(cachedData, reloaded);
-      for (const field of RUNTIME_ROOT_FIELDS) {
-        reloaded[field] = clone(current[field]);
-      }
-      // Runtime-only battle diagnostics and events are intentionally absent
-      // from the latest durable snapshot, while already-published chat/party
-      // events may also be newer than a failed write's baseline. Preserve the
-      // visible trace/replay window and never reuse a sequence number inside
-      // the current event-stream epoch.
-      reloaded.battleTrace = mergeRuntimeBattleTrace(
-        reloaded.battleTrace,
-        current.battleTrace,
-      );
-      reloaded.serviceEvents = mergePublishedServiceEventWindows(
-        reloaded.serviceEvents,
-        current.serviceEvents,
-      );
-      reloaded.serviceEventSeq = Math.max(
-        normalizeEventSeq(reloaded.serviceEventSeq),
-        normalizeEventSeq(current.serviceEventSeq),
-        ...reloaded.serviceEvents.map((event) => normalizeEventSeq(event && event.eventSeq)),
-      );
-      cachedData = reloaded;
-      lastPublishedPersistentData = publishedRollbackBaseline(
-        persistentDataForStore(reloaded),
-        reloaded,
-      );
+      reloadPublishedDataFromStore();
       if (typeof store.clearSaveError === "function") {
         store.clearSaveError();
       }
-      scheduleBattleMaintenance(cachedData);
     } catch (cause) {
       const error = new Error("上一次操作结果仍在确认中，请使用原操作标识稍后重试。");
       error.code = "storage_outcome_unknown";
       error.cause = cause;
       throw error;
     }
+  }
+
+  function reloadPublishedDataFromStore() {
+    const current = cachedData ? cloneAuthorityRoot(cachedData) : normalizeData({});
+    const reloaded = normalizeData(store.load());
+    inheritAuthorityIdentityIndexes(cachedData, reloaded);
+    for (const field of RUNTIME_ROOT_FIELDS) {
+      reloaded[field] = clone(current[field]);
+    }
+    // Runtime-only battle diagnostics and events are intentionally absent
+    // from the latest durable snapshot. Preserve the visible replay window
+    // while replacing every persistent field with the newly loaded authority.
+    reloaded.battleTrace = mergeRuntimeBattleTrace(
+      reloaded.battleTrace,
+      current.battleTrace,
+    );
+    reloaded.serviceEvents = mergePublishedServiceEventWindows(
+      reloaded.serviceEvents,
+      current.serviceEvents,
+    );
+    reloaded.serviceEventSeq = Math.max(
+      normalizeEventSeq(reloaded.serviceEventSeq),
+      normalizeEventSeq(current.serviceEventSeq),
+      ...reloaded.serviceEvents.map((event) => normalizeEventSeq(event && event.eventSeq)),
+    );
+    cachedData = reloaded;
+    lastPublishedPersistentData = publishedRollbackBaseline(
+      persistentDataForStore(reloaded),
+      reloaded,
+    );
+    scheduleBattleMaintenance(cachedData);
+    return reloaded;
   }
 
   function publishDurableCandidate(runtimeDelta, candidate, events, runtimeEffects = [], options = {}) {
@@ -4731,6 +4865,9 @@ function createAuthService(options = {}) {
   // Direct memory-store tests and offline tools keep the existing sync API.
   serviceApi.invokeDurable = invokeDurable;
   serviceApi._httpTryPureRead = tryHttpPureRead;
+  if (store.sharedAssetReads === true) {
+    serviceApi._httpInvokeSharedAssetRead = invokeSharedAssetRead;
+  }
   // Capacity QA runs inside the server worker and needs only a narrow,
   // request-scoped authority projection. Keep this off the public transport
   // facade: unlike snapshot(), it must never materialize permanent ledgers or
@@ -5018,9 +5155,25 @@ function createAsyncWriteAuthStore(store, options = {}) {
     );
     return writeJob;
   }
+  function enqueueSharedAssetRead(request, readOptions = {}) {
+    if (!store || typeof store.readSharedAssetView !== "function") {
+      const error = new Error("当前存储不支持共享资产读穿。");
+      error.code = "shared_asset_read_unsupported";
+      return Promise.reject(error);
+    }
+    const requestSnapshot = clone(request && typeof request === "object" ? request : {});
+    const optionSnapshot = clone(readOptions && typeof readOptions === "object" ? readOptions : {});
+    const readJob = writeQueue.then(() => store.readSharedAssetView(requestSnapshot, optionSnapshot));
+    // Reads share the same per-Node storage tail so a fresh projection cannot
+    // overtake an earlier local COMMIT. A read failure heals the tail but does
+    // not masquerade as an uncertain write outcome.
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
   return {
     mode: store.mode ? `async:${store.mode}` : "async",
     asyncWrites: true,
+    sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
         return store.checkHealth();
@@ -5038,6 +5191,9 @@ function createAsyncWriteAuthStore(store, options = {}) {
     },
     load() {
       return store.load();
+    },
+    readSharedAssetView(request, readOptions = {}) {
+      return enqueueSharedAssetRead(request, readOptions);
     },
     save(nextData, saveOptions = {}) {
       return enqueueSave(nextData, false, saveOptions);

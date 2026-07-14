@@ -85,6 +85,77 @@ test("health uses the non-mutating storage probe when the store provides one", a
   assert.equal(fullLoads, 0);
 });
 
+test("HTTP market and inbox reads await authoritative shared projections and surface failures as 503", async (t) => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const registered = seed.register({
+    username: "httpsharedread",
+    password: "test1234",
+    displayName: "跨节点读取",
+  });
+  assert.equal(registered.ok, true);
+  const snapshot = seed.snapshot();
+  const accountId = registered.account.accountId;
+  const account = Object.values(snapshot.accounts).find((entry) => entry.accountId === accountId);
+  const binding = snapshot.profileBindings[accountId];
+  const profile = snapshot.profiles[binding.playerId];
+  const scopes = [];
+  let failReads = false;
+  const underlying = {
+    mode: "http-shared-read-test",
+    checkHealth: () => ({ok: true}),
+    load: () => structuredClone(snapshot),
+    async readSharedAssetView(request) {
+      scopes.push(request.scope);
+      if (failReads) {
+        throw new Error("shared read unavailable");
+      }
+      const marketScope = request.scope.startsWith("market_");
+      return {
+        schemaVersion: 1,
+        scope: request.scope,
+        accountId,
+        accounts: {keys: [accountId], values: {[accountId]: account}},
+        profileBindings: {keys: [accountId], values: {[accountId]: binding}},
+        profiles: {keys: [binding.playerId], values: {[binding.playerId]: profile}},
+        marketListings: marketScope ? {} : null,
+        marketConfig: marketScope ? snapshot.marketConfig : null,
+        mailPartitions: marketScope ? [] : [{recipientAccountId: accountId, messages: {}}],
+        consumedEquipmentEnvelopeIds: [],
+      };
+    },
+    async saveAsyncOwned() {
+      assert.fail("HTTP shared reads must not write");
+    },
+  };
+  const store = createAsyncWriteAuthStore(underlying, {onError: () => {}});
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = {authorization: `Bearer ${registered.session.token}`};
+
+  const market = await fetchJson(`${base}/market/listings`, {headers});
+  const inbox = await fetchJson(`${base}/mail/inbox`, {headers});
+  assert.equal(market.ok, true, JSON.stringify(market));
+  assert.equal(inbox.ok, true, JSON.stringify(inbox));
+  assert.deepEqual(scopes, ["market_read", "mail_read"]);
+
+  failReads = true;
+  const failedResponse = await fetch(`${base}/market/listings`, {
+    headers: {
+      ...headers,
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+    },
+  });
+  const failed = await failedResponse.json();
+  assert.equal(failedResponse.status, 503);
+  assert.equal(failed.ok, false);
+  assert.equal(failed.code, "storage_read_failed");
+});
+
 test("HTTP server exposes auth and session endpoints", async (t) => {
   const store = createMemoryAuthStore();
   const service = createAuthService({store});

@@ -7,6 +7,11 @@ const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
+  applySharedAssetReadView,
+  compareCanonicalIds,
+  sharedAssetReadReferencedEnvelopeIds,
+} = require("./auth/shared-asset-read-model");
+const {
   canonicalMailClaimEnvelopeIds,
   mailEquipmentEnvelopeMap,
   removedMailEquipmentEnvelopeIds,
@@ -22,6 +27,7 @@ const {
   durableMutationReceiptDelta,
   durableMutationReceiptDeltaFrom,
 } = require("./auth/durable-mutation-state");
+const {MARKET_MAX_LISTINGS} = require("./auth/market-listing-state");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -37,6 +43,7 @@ const MYSQL_STORE_REVISION_SCOPE = "auth";
 const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
 const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
 const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
+const MYSQL_SHARED_ASSET_FULL_RELOAD_REQUIRED = "mysql_shared_asset_full_reload_required";
 const MYSQL_ENTITY_STATE_PRESENT = Symbol("beastbound.mysqlEntityStatePresent");
 const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
 const MYSQL_STORE_REVISION_PRESENT = Symbol("beastbound.mysqlStoreRevisionPresent");
@@ -411,6 +418,33 @@ function createMysqlAuthStore(options = {}) {
     load() {
       return loadAuthoritySnapshot();
     },
+    async readSharedAssetView(request, readOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("共享资产读穿必须使用 MySQL 连接池。");
+        error.code = "mysql_shared_asset_pool_required";
+        throw error;
+      }
+      if (lastPersistentData === null) {
+        loadAuthoritySnapshot();
+      }
+      const result = await runMysqlSharedAssetRead(
+        persistentWritePool(),
+        request,
+        lastPersistentData,
+      );
+      assertMysqlSharedAssetRevision(lastPersistentRevision, result.storeRevision);
+      if (readOptions.adopt === true) {
+        const adopted = committedMysqlPersistentData(
+          applySharedAssetReadView(lastPersistentData, result.view),
+          {owned: true},
+        );
+        lastPersistentData = adopted;
+      }
+      return result.view;
+    },
     save(nextData) {
       if (closed) {
         throw new Error("MySQL 持久连接池已关闭。");
@@ -534,6 +568,436 @@ function createMysqlAuthStore(options = {}) {
       return closePromise;
     },
   };
+}
+
+function assertMysqlSharedAssetRevision(expectedValue, actualValue) {
+  const expectedRevision = Number(expectedValue);
+  const actualRevision = Number(actualValue);
+  if (
+    !Number.isSafeInteger(expectedRevision)
+    || expectedRevision < 0
+    || !Number.isSafeInteger(actualRevision)
+    || actualRevision < 0
+    || actualRevision !== expectedRevision
+  ) {
+    const error = new Error("MySQL 全局存档版本已变化，范围读穿前必须刷新完整权威根。");
+    error.code = MYSQL_SHARED_ASSET_FULL_RELOAD_REQUIRED;
+    error.expectedRevision = Number.isSafeInteger(expectedRevision) ? expectedRevision : null;
+    error.actualRevision = Number.isSafeInteger(actualRevision) ? actualRevision : null;
+    throw error;
+  }
+}
+
+async function runMysqlSharedAssetRead(pool, requestValue, baselineValue) {
+  const request = normalizeMysqlSharedAssetReadRequest(requestValue);
+  const baseline = mysqlPersistentData(baselineValue);
+  let connection = null;
+  let transactionStarted = false;
+  try {
+    connection = await pool.getConnection();
+    await connection.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    await connection.beginTransaction();
+    transactionStarted = true;
+
+    const revisionRows = mysqlQueryRows(await connection.query(
+      "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth'",
+    ));
+    const storeRevision = mysqlStoreRevisionFromQueryResult(revisionRows);
+    if (storeRevision === null) {
+      const error = new Error("MySQL 全局存档版本行缺失，拒绝共享资产读穿。");
+      error.code = MYSQL_STORE_REVISION_MISSING;
+      throw error;
+    }
+
+    const marketListings = request.scope.startsWith("market_")
+      ? await readMysqlSharedMarketListings(connection)
+      : null;
+    const mailPartitions = request.scope.startsWith("mail_")
+      ? [await readMysqlSharedMailPartition(connection, request.accountId)]
+      : [];
+
+    const accountIds = new Set([request.accountId]);
+    if (marketListings !== null) {
+      for (const listing of Object.values(marketListings)) {
+        accountIds.add(String(listing.sellerAccountId || ""));
+      }
+    }
+    const accounts = await readMysqlSharedAccounts(connection, Array.from(accountIds));
+    if (!Object.hasOwn(accounts, request.accountId)) {
+      throw mysqlSharedAssetIntegrityError("actor_account_missing", request.accountId);
+    }
+    if (marketListings !== null) {
+      for (const listing of Object.values(marketListings)) {
+        if (!Object.hasOwn(accounts, String(listing.sellerAccountId || ""))) {
+          throw mysqlSharedAssetIntegrityError("listing_seller_missing", listing.listingId);
+        }
+      }
+    }
+
+    const profileAccountIds = new Set([request.accountId]);
+    if (request.scope === "market_mutation" && request.listingId !== "") {
+      const listing = marketListings && marketListings[request.listingId];
+      if (listing) {
+        profileAccountIds.add(String(listing.sellerAccountId || ""));
+      }
+    }
+    const profileBindings = await readMysqlSharedProfileBindings(
+      connection,
+      Array.from(profileAccountIds),
+    );
+    for (const profileAccountId of profileAccountIds) {
+      if (!Object.hasOwn(profileBindings, profileAccountId)) {
+        throw mysqlSharedAssetIntegrityError("profile_binding_missing", profileAccountId);
+      }
+    }
+    const playerIds = Object.values(profileBindings)
+      .map((binding) => String(binding.playerId || ""))
+      .filter(Boolean);
+    const profiles = await readMysqlSharedProfiles(connection, playerIds);
+    for (const [bindingAccountId, binding] of Object.entries(profileBindings)) {
+      const playerId = String(binding.playerId || "");
+      const profile = profiles[playerId];
+      if (!profile || String(profile.accountId || "") !== bindingAccountId) {
+        throw mysqlSharedAssetIntegrityError("binding_profile_mismatch", playerId);
+      }
+      if (Number(profile.profileRevision) !== Number(binding.profileRevision)) {
+        throw mysqlSharedAssetIntegrityError("binding_profile_revision_mismatch", playerId);
+      }
+    }
+
+    const marketConfig = marketListings === null
+      ? null
+      : await readMysqlSharedMarketConfig(connection);
+    let envelopeIds;
+    try {
+      envelopeIds = sharedAssetReadReferencedEnvelopeIds({
+        marketListings,
+        mailPartitions,
+        profiles,
+      });
+    } catch {
+      throw mysqlSharedAssetIntegrityError("equipment_envelope_reference_invalid", request.accountId);
+    }
+    const consumedRows = await readMysqlSharedConsumedEnvelopes(connection, envelopeIds);
+
+    const view = {
+      schemaVersion: 1,
+      scope: request.scope,
+      accountId: request.accountId,
+      accounts: entityReplacement(accountIds, accounts),
+      profileBindings: entityReplacement(profileAccountIds, profileBindings),
+      profiles: entityReplacement(playerIds, profiles),
+      marketListings,
+      marketConfig,
+      mailPartitions,
+      consumedEquipmentEnvelopeIds: Object.keys(consumedRows).sort(compareCanonicalIds),
+    };
+    // Reuse the same certifier that applies the view. This rejects malformed
+    // or non-canonical database projections before either service/store cache
+    // can adopt them.
+    applySharedAssetReadView(baseline, view);
+    await connection.commit();
+    return {storeRevision, view};
+  } catch (error) {
+    if (connection !== null && transactionStarted) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        error.rollbackCause = rollbackError;
+      }
+    }
+    throw error;
+  } finally {
+    if (connection !== null && typeof connection.release === "function") {
+      connection.release();
+    }
+  }
+}
+
+function normalizeMysqlSharedAssetReadRequest(value) {
+  const request = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const scope = String(request.scope || "");
+  const accountId = String(request.accountId || "");
+  const listingId = String(request.listingId || "");
+  const mailId = String(request.mailId || "");
+  if (
+    !["market_read", "market_mutation", "mail_read", "mail_mutation"].includes(scope)
+    || !mysqlSharedAssetIdentity(accountId, 80)
+    || (listingId !== "" && !mysqlSharedAssetIdentity(listingId, 96))
+    || (mailId !== "" && !mysqlSharedAssetIdentity(mailId, 96))
+    || (scope === "market_mutation" && listingId === "")
+    || (scope === "mail_mutation" && mailId === "")
+  ) {
+    const error = new Error("共享资产读穿请求不完整。");
+    error.code = "mysql_shared_asset_read_request_invalid";
+    throw error;
+  }
+  return {scope, accountId, listingId, mailId};
+}
+
+async function readMysqlSharedMarketListings(connection) {
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
+      item_count, created_at, document_json
+      FROM market_listings ORDER BY listing_id LIMIT ${MARKET_MAX_LISTINGS + 1}`,
+  ));
+  if (rows.length > MARKET_MAX_LISTINGS) {
+    throw mysqlSharedAssetIntegrityError("market_listing_limit", String(rows.length));
+  }
+  const listings = {};
+  for (const row of rows) {
+    const listing = mysqlSharedJsonDocument(row && row.document_json, "market_listing_json");
+    const listingId = String(row && row.listing_id || "");
+    if (
+      !mysqlSharedAssetIdentity(listingId, 96)
+      || Object.hasOwn(listings, listingId)
+      || String(listing.listingId || "") !== listingId
+      || String(listing.sellerAccountId || "") !== String(row.seller_account_id || "")
+      || String(listing.itemId || "") !== String(row.item_id || "")
+      || String(listing.currency || "") !== String(row.currency || "")
+      || Number(listing.unitPrice) !== Number(row.unit_price)
+      || Number(listing.count) !== Number(row.item_count)
+      || String(listing.createdAt || "") !== String(row.created_at || "")
+    ) {
+      throw mysqlSharedAssetIntegrityError("market_listing_row_drift", listingId);
+    }
+    listings[listingId] = listing;
+  }
+  return canonicalEntityMap(listings);
+}
+
+async function readMysqlSharedMailPartition(connection, recipientAccountId) {
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT mail_id, sender_account_id, recipient_account_id, title,
+      created_at, read_at, document_json
+      FROM mail_messages WHERE recipient_account_id = ? ORDER BY mail_id`,
+    [recipientAccountId],
+  ));
+  const messages = {};
+  for (const row of rows) {
+    const mail = mysqlSharedJsonDocument(row && row.document_json, "mail_message_json");
+    const mailId = String(row && row.mail_id || "");
+    const rowReadAt = row && row.read_at === null ? null : String(row && row.read_at || "");
+    const documentReadAt = mail.readAt === null || mail.readAt === undefined
+      ? null
+      : String(mail.readAt || "");
+    if (
+      !mysqlSharedAssetIdentity(mailId, 96)
+      || Object.hasOwn(messages, mailId)
+      || String(mail.mailId || "") !== mailId
+      || String(mail.senderAccountId || "") !== String(row.sender_account_id || "")
+      || String(mail.recipientAccountId || "") !== recipientAccountId
+      || String(row.recipient_account_id || "") !== recipientAccountId
+      || String(mail.title || "") !== String(row.title || "")
+      || String(mail.createdAt || "") !== String(row.created_at || "")
+      || documentReadAt !== rowReadAt
+    ) {
+      throw mysqlSharedAssetIntegrityError("mail_message_row_drift", mailId);
+    }
+    messages[mailId] = mail;
+  }
+  return {recipientAccountId, messages: canonicalEntityMap(messages)};
+}
+
+async function readMysqlSharedAccounts(connection, accountIdsValue) {
+  const accountIds = canonicalIdentities(accountIdsValue, 80);
+  if (accountIds.length === 0) {
+    return {};
+  }
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT account_id, username, display_name, role, created_at, updated_at, document_json
+      FROM accounts WHERE account_id IN (${mysqlPlaceholders(accountIds.length)}) ORDER BY account_id`,
+    accountIds,
+  ));
+  const accounts = {};
+  for (const row of rows) {
+    const account = mysqlSharedJsonDocument(row && row.document_json, "account_json");
+    const accountId = String(row && row.account_id || "");
+    if (
+      !accountIds.includes(accountId)
+      || Object.hasOwn(accounts, accountId)
+      || String(account.accountId || "") !== accountId
+      || String(account.username || "") !== String(row.username || "")
+      || String(account.displayName || "") !== String(row.display_name || "")
+      || String(account.role || "") !== String(row.role || "")
+      || String(account.createdAt || "") !== String(row.created_at || "")
+      || String(account.updatedAt || "") !== String(row.updated_at || "")
+    ) {
+      throw mysqlSharedAssetIntegrityError("account_row_drift", accountId);
+    }
+    accounts[accountId] = account;
+  }
+  return canonicalEntityMap(accounts);
+}
+
+async function readMysqlSharedProfileBindings(connection, accountIdsValue) {
+  const accountIds = canonicalIdentities(accountIdsValue, 80);
+  if (accountIds.length === 0) {
+    return {};
+  }
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT account_id, player_id, profile_revision, updated_at, document_json
+      FROM profile_bindings WHERE account_id IN (${mysqlPlaceholders(accountIds.length)}) ORDER BY account_id`,
+    accountIds,
+  ));
+  const bindings = {};
+  for (const row of rows) {
+    const binding = mysqlSharedJsonDocument(row && row.document_json, "profile_binding_json");
+    const accountId = String(row && row.account_id || "");
+    const rowRevision = Number(row && row.profile_revision);
+    const documentRevision = Number(binding.profileRevision);
+    if (
+      !accountIds.includes(accountId)
+      || Object.hasOwn(bindings, accountId)
+      || String(binding.accountId || "") !== accountId
+      || String(binding.playerId || "") !== String(row.player_id || "")
+      || String(binding.updatedAt || "") !== String(row.updated_at || "")
+    ) {
+      throw mysqlSharedAssetIntegrityError("profile_binding_row_drift", accountId);
+    }
+    if (
+      !Number.isSafeInteger(rowRevision)
+      || rowRevision < 0
+      || !Number.isSafeInteger(documentRevision)
+      || documentRevision < 0
+      || documentRevision !== rowRevision
+    ) {
+      throw mysqlSharedAssetIntegrityError("profile_revision_invalid", accountId);
+    }
+    bindings[accountId] = binding;
+  }
+  return canonicalEntityMap(bindings);
+}
+
+async function readMysqlSharedProfiles(connection, playerIdsValue) {
+  const playerIds = canonicalIdentities(playerIdsValue, 80);
+  if (playerIds.length === 0) {
+    return {};
+  }
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT player_id, account_id, profile_revision, updated_at, profile_json
+      FROM profiles WHERE player_id IN (${mysqlPlaceholders(playerIds.length)}) ORDER BY player_id`,
+    playerIds,
+  ));
+  const profiles = {};
+  for (const row of rows) {
+    const playerId = String(row && row.player_id || "");
+    const profile = mysqlSharedJsonDocument(row && row.profile_json, "profile_json");
+    const profileRevision = Number(row && row.profile_revision);
+    if (!playerIds.includes(playerId) || Object.hasOwn(profiles, playerId)) {
+      throw mysqlSharedAssetIntegrityError("profile_row_drift", playerId);
+    }
+    if (!Number.isSafeInteger(profileRevision) || profileRevision < 0) {
+      throw mysqlSharedAssetIntegrityError("profile_revision_invalid", playerId);
+    }
+    profiles[playerId] = {
+      playerId,
+      accountId: String(row.account_id || ""),
+      profileRevision,
+      updatedAt: String(row.updated_at || ""),
+      profile,
+    };
+  }
+  return canonicalEntityMap(profiles);
+}
+
+async function readMysqlSharedMarketConfig(connection) {
+  const rows = mysqlQueryRows(await connection.query(
+    "SELECT document_json FROM server_state WHERE state_key = 'auth'",
+  ));
+  if (rows.length !== 1) {
+    throw mysqlSharedAssetIntegrityError("server_state_missing", "auth");
+  }
+  const state = mysqlSharedJsonDocument(rows[0].document_json, "server_state_json");
+  const marketConfig = state.marketConfig;
+  if (!marketConfig || typeof marketConfig !== "object" || Array.isArray(marketConfig)) {
+    throw mysqlSharedAssetIntegrityError("market_config_missing", "auth");
+  }
+  return marketConfig;
+}
+
+async function readMysqlSharedConsumedEnvelopes(connection, envelopeIdsValue) {
+  const envelopeIds = canonicalIdentities(envelopeIdsValue, 160);
+  if (envelopeIds.length === 0) {
+    return {};
+  }
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT envelope_id FROM consumed_equipment_envelopes
+      WHERE envelope_id IN (${mysqlPlaceholders(envelopeIds.length)}) ORDER BY envelope_id`,
+    envelopeIds,
+  ));
+  const consumed = {};
+  for (const row of rows) {
+    const envelopeId = String(row && row.envelope_id || "");
+    if (!envelopeIds.includes(envelopeId) || Object.hasOwn(consumed, envelopeId)) {
+      throw mysqlSharedAssetIntegrityError("consumed_envelope_row_drift", envelopeId);
+    }
+    consumed[envelopeId] = {schemaVersion: 1, envelopeId};
+  }
+  return canonicalEntityMap(consumed);
+}
+
+function entityReplacement(keysValue, values) {
+  const keys = Array.from(new Set(Array.from(keysValue || []).map(String)))
+    .filter(Boolean)
+    .sort(compareCanonicalIds);
+  return {keys, values: canonicalEntityMap(values)};
+}
+
+function canonicalEntityMap(value) {
+  return Object.fromEntries(
+    Object.entries(value || {}).sort(([left], [right]) => compareCanonicalIds(left, right)),
+  );
+}
+
+function canonicalIdentities(values, maxLength) {
+  const result = Array.from(new Set((Array.isArray(values) ? values : []).map((value) => String(value || ""))))
+    .filter((value) => mysqlSharedAssetIdentity(value, maxLength))
+    .sort(compareCanonicalIds);
+  return result;
+}
+
+function mysqlSharedAssetIdentity(value, maxLength) {
+  return typeof value === "string"
+    && value !== ""
+    && value === value.trim()
+    && value.length <= maxLength
+    && !/[\u0000-\u001f\u007f]/.test(value);
+}
+
+function mysqlPlaceholders(count) {
+  return Array.from({length: count}, () => "?").join(", ");
+}
+
+function mysqlQueryRows(result) {
+  const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+  if (!Array.isArray(rows)) {
+    throw mysqlSharedAssetIntegrityError("query_result_invalid", "");
+  }
+  return rows;
+}
+
+function mysqlSharedJsonDocument(value, reason) {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      throw mysqlSharedAssetIntegrityError(reason, "json_parse");
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw mysqlSharedAssetIntegrityError(reason, "not_object");
+  }
+  return structuredClone(parsed);
+}
+
+function mysqlSharedAssetIntegrityError(reason, key) {
+  const error = new Error("MySQL 共享资产读穿发现行身份或文档不一致。");
+  error.code = "mysql_shared_asset_integrity_invalid";
+  error.reason = String(reason || "invalid");
+  error.resourceKey = String(key || "");
+  return error;
 }
 
 function buildSaveStatements(nextData, previousData = null) {
@@ -1011,11 +1475,11 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
   const bindingLocks = [
     {binding: beforeBinding, shared: false},
     {binding: sellerBinding, shared: true},
-  ].sort((left, right) => String(left.binding.accountId).localeCompare(String(right.binding.accountId)));
+  ].sort((left, right) => compareCanonicalIds(left.binding.accountId, right.binding.accountId));
   const profileLocks = [
     {profile: beforeProfile, shared: false},
     {profile: sellerProfile, shared: true},
-  ].sort((left, right) => String(left.profile.playerId).localeCompare(String(right.profile.playerId)));
+  ].sort((left, right) => compareCanonicalIds(left.profile.playerId, right.profile.playerId));
   const writes = [
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
@@ -1380,9 +1844,9 @@ function buildLegacyProfileResourceLocks(previous) {
   }
   // A legacy mutation has no certified read-set yet. Once it owns the global
   // exclusive compatibility barrier, validate the complete profile snapshot
-  // in two canonical locking reads. This catches a profile-v2 commit that did
-  // not advance the global revision even when the legacy write-set does not
-  // contain the profile it previously read.
+  // in two canonical locking reads. This catches every current row-local
+  // profile-revision commit that does not advance the global revision, even
+  // when the legacy write-set omits the profile it previously read.
   return [
     {
       kind: "snapshot_lock",
@@ -4015,10 +4479,12 @@ function positiveIntegerConfig(optionValue, envValue, fallback) {
 }
 
 module.exports = {
+  __assertMysqlSharedAssetRevisionForTest: assertMysqlSharedAssetRevision,
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
+  __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,
   createMysqlAuthStore,
   mysqlAuthStoreRootContract,
 };
