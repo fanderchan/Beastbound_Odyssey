@@ -254,7 +254,13 @@ function sqlSeed(options = {}) {
     server_state: {
       auth: {
         scope_key: "auth",
-        document_json: {schemaVersion: 2, storage: "mysql_entity_tables", marketConfig: authority.marketConfig},
+        document_json: {
+          schemaVersion: 2,
+          storage: "mysql_entity_tables",
+          serviceEventSeq: Number(authority.serviceEventSeq || 0),
+          marketConfig: authority.marketConfig,
+          offlineHangConfig: authority.offlineHangConfig || {},
+        },
       },
     },
     profile_bindings: profileBindings,
@@ -310,6 +316,10 @@ function createProductionSqlHandler(queryLog) {
     if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.selectForUpdate("auth_store_revisions", "auth");
+    }
+    if (/^SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE$/i.test(normalized)) {
+      requiredParams(params, 0, sql);
+      return operation.selectForUpdate("server_state", "auth");
     }
 
     const revisionUpdate = normalized.match(
@@ -415,7 +425,13 @@ function createProductionSqlHandler(queryLog) {
       requiredParams(params, 0, sql);
       return operation.update("server_state", "auth", {
         where: {scope_key: "auth"},
-        set: {document_json: {schemaVersion: 2, storage: "mysql_entity_tables", marketConfig: {taxRate: 0.07}}},
+        set: {document_json: {
+          schemaVersion: 2,
+          storage: "mysql_entity_tables",
+          serviceEventSeq: 0,
+          marketConfig: {taxRate: 0.07},
+          offlineHangConfig: {},
+        }},
       });
     }
 

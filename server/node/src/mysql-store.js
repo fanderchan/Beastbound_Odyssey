@@ -655,10 +655,24 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (conditionalMarketCancelPlan !== null) {
     return conditionalMarketCancelPlan;
   }
+  const conditionalMarketBuyPlan = buildConditionalMarketBuySavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
+  if (conditionalMarketBuyPlan !== null) {
+    return conditionalMarketBuyPlan;
+  }
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
-    resourceLocks: buildLegacyProfileResourceLocks(previous),
+    resourceLocks: [
+      ...(groups.serverState.length > 0 && options.forceServerState !== true
+        ? [serverStateResourceLock(persistentServerStateDocument(previous))]
+        : []),
+      ...buildLegacyProfileResourceLocks(previous),
+    ],
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
 }
@@ -850,6 +864,178 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
   };
 }
 
+function buildConditionalMarketBuySavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = rowLocalMarketBuyConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set([
+    "serverState",
+    "profileBindings",
+    "profiles",
+    "mutationReceipts",
+    "mailMessages",
+    "marketListings",
+  ]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (
+    groups.profileBindings.length !== 1
+    || groups.profiles.length !== 1
+    || groups.mailMessages.length !== 1
+    || groups.marketListings.length !== 1
+  ) {
+    return null;
+  }
+
+  const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
+  const listingDelete = singleExistingObjectEntityDeletion(
+    previous.marketListings,
+    data.marketListings,
+    marketListingEntityKey,
+  );
+  const mailInsert = singleNewObjectEntityAddition(
+    previous.mailMessages,
+    data.mailMessages,
+    mailEntityKey,
+  );
+  if (profileRevisionChange === null || listingDelete === null || mailInsert === null) {
+    return null;
+  }
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileRevisionChange;
+  const listing = listingDelete.previous;
+  const listingId = listingDelete.key;
+  const saleMail = mailInsert.next;
+  const saleMailId = mailInsert.key;
+  const sellerAccountId = String(listing.sellerAccountId || "");
+  const sellerBinding = previous.profileBindings && previous.profileBindings[sellerAccountId];
+  const sellerPlayerId = String(sellerBinding && sellerBinding.playerId || "");
+  const sellerProfile = previous.profiles && previous.profiles[sellerPlayerId];
+  const ordinaryListingFields = new Set([
+    "listingId",
+    "sellerAccountId",
+    "itemId",
+    "count",
+    "unitPrice",
+    "currency",
+    "createdAt",
+    "schemaVersion",
+  ]);
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || consistencyScope.sellerAccountId !== sellerAccountId
+    || consistencyScope.sellerPlayerId !== sellerPlayerId
+    || consistencyScope.listingId !== listingId
+    || consistencyScope.saleMailId !== saleMailId
+    || sellerAccountId === ""
+    || sellerAccountId === accountId
+    || !sellerBinding
+    || !sellerProfile
+    || String(sellerBinding.accountId || "") !== sellerAccountId
+    || String(sellerBinding.playerId || "") !== sellerPlayerId
+    || String(sellerProfile.accountId || "") !== sellerAccountId
+    || String(sellerProfile.playerId || "") !== sellerPlayerId
+    || !isDeepStrictEqual(data.profileBindings && data.profileBindings[sellerAccountId], sellerBinding)
+    || !isDeepStrictEqual(data.profiles && data.profiles[sellerPlayerId], sellerProfile)
+    || String(listing.listingId || "") !== listingId
+    || Number(listing.schemaVersion) !== 1
+    || Object.hasOwn(listing, "equipmentEnvelope")
+    || Object.keys(listing).length !== ordinaryListingFields.size
+    || Object.keys(listing).some((field) => !ordinaryListingFields.has(field))
+  ) {
+    return null;
+  }
+
+  const taxChange = certifiedOrdinaryMarketBuyTaxChange(
+    previous.marketConfig,
+    data.marketConfig,
+    listing,
+  );
+  if (
+    taxChange === null
+    || consistencyScope.currency !== taxChange.currency
+    || consistencyScope.taxAmount !== taxChange.taxAmount
+    || groups.serverState.length !== (taxChange.taxAmount > 0 ? 1 : 0)
+    || !marketBuyServerStateChangesOnlyTax(previous, data, taxChange)
+    || !certifiedOrdinaryMarketSaleMail(saleMail, listing, taxChange.taxAmount, sellerAccountId)
+  ) {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+  ) {
+    return null;
+  }
+
+  const bindingLocks = [
+    {binding: beforeBinding, shared: false},
+    {binding: sellerBinding, shared: true},
+  ].sort((left, right) => String(left.binding.accountId).localeCompare(String(right.binding.accountId)));
+  const profileLocks = [
+    {profile: beforeProfile, shared: false},
+    {profile: sellerProfile, shared: true},
+  ].sort((left, right) => String(left.profile.playerId).localeCompare(String(right.profile.playerId)));
+  const writes = [
+    conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+    conditionalProfileUpdate(nextProfile, expectedRevision),
+    conditionalMarketListingDelete(listing),
+    conditionalMailMessageInsert(saleMail),
+  ];
+  if (taxChange.taxAmount > 0) {
+    writes.push(conditionalMarketTaxIncrement(taxChange.currency, taxChange.taxAmount));
+  }
+  writes.push(conditionalMutationReceiptInsert(receipt));
+  return {
+    kind: "market_buy_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId,
+    playerId,
+    sellerAccountId,
+    sellerPlayerId,
+    listingId,
+    saleMailId,
+    operationId: consistencyScope.operationId,
+    currency: taxChange.currency,
+    taxAmount: taxChange.taxAmount,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    locks: [
+      ...bindingLocks.map(({binding, shared}) => profileBindingResourceLock(binding, {shared})),
+      ...profileLocks.map(({profile, shared}) => profileResourceLock(profile, {shared})),
+      marketListingResourceLock(listing),
+    ],
+    writes,
+  };
+}
+
 function rowLocalProfileConsistencyScope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -896,6 +1082,55 @@ function rowLocalMarketCancelConsistencyScope(value) {
     return null;
   }
   return {kind, accountId, playerId, listingId, operationId, requestHash, actionId};
+}
+
+function rowLocalMarketBuyConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const kind = String(value.kind || "");
+  const accountId = String(value.accountId || "");
+  const playerId = String(value.playerId || "");
+  const sellerAccountId = String(value.sellerAccountId || "");
+  const sellerPlayerId = String(value.sellerPlayerId || "");
+  const listingId = String(value.listingId || "");
+  const saleMailId = String(value.saleMailId || "");
+  const currency = String(value.currency || "");
+  const taxAmount = Number(value.taxAmount);
+  const operationId = String(value.operationId || "");
+  const requestHash = String(value.requestHash || "");
+  const actionId = String(value.actionId || "");
+  if (
+    kind !== "row_local_market_buy_v1"
+    || accountId === ""
+    || playerId === ""
+    || sellerAccountId === ""
+    || sellerPlayerId === ""
+    || listingId === ""
+    || saleMailId === ""
+    || !["stoneCoins", "diamonds"].includes(currency)
+    || !Number.isSafeInteger(taxAmount)
+    || taxAmount < 0
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return null;
+  }
+  return {
+    kind,
+    accountId,
+    playerId,
+    sellerAccountId,
+    sellerPlayerId,
+    listingId,
+    saleMailId,
+    currency,
+    taxAmount,
+    operationId,
+    requestHash,
+    actionId,
+  };
 }
 
 function certifiedSingleProfileRevisionChange(previous, data) {
@@ -957,6 +1192,19 @@ function certifiedSingleProfileRevisionChange(previous, data) {
   };
 }
 
+function serverStateResourceLock(stateDocument) {
+  return {
+    kind: "lock",
+    resource: "server_state",
+    key: "auth",
+    sql: "SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE",
+    params: [],
+    expectedRow: {
+      document_json: stateDocument,
+    },
+  };
+}
+
 function buildLegacyProfileResourceLocks(previous) {
   const bindings = canonicalObjectEntityMap(previous.profileBindings, profileBindingEntityKey);
   const profiles = canonicalObjectEntityMap(previous.profiles, profileEntityKey);
@@ -1000,7 +1248,7 @@ function buildLegacyProfileResourceLocks(previous) {
   ];
 }
 
-function profileBindingResourceLock(binding) {
+function profileBindingResourceLock(binding, options = {}) {
   const accountId = String(binding && binding.accountId || "");
   const playerId = String(binding && binding.playerId || "");
   const revision = Number(binding && binding.profileRevision);
@@ -1013,7 +1261,7 @@ function profileBindingResourceLock(binding) {
     kind: "lock",
     resource: "profile_binding",
     key: accountId,
-    sql: "SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? FOR UPDATE",
+    sql: `SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? ${options.shared === true ? "FOR SHARE" : "FOR UPDATE"}`,
     params: [accountId],
     expectedRow: {
       account_id: accountId,
@@ -1023,7 +1271,7 @@ function profileBindingResourceLock(binding) {
   };
 }
 
-function profileResourceLock(profile) {
+function profileResourceLock(profile, options = {}) {
   const playerId = String(profile && profile.playerId || "");
   const accountId = String(profile && profile.accountId || "");
   const revision = Number(profile && profile.profileRevision);
@@ -1036,7 +1284,7 @@ function profileResourceLock(profile) {
     kind: "lock",
     resource: "profile",
     key: playerId,
-    sql: "SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? FOR UPDATE",
+    sql: `SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? ${options.shared === true ? "FOR SHARE" : "FOR UPDATE"}`,
     params: [playerId],
     expectedRow: {
       player_id: playerId,
@@ -1133,6 +1381,188 @@ function singleExistingObjectEntityDeletion(previousValue, nextValue, keyFn) {
     }
   }
   return deletion;
+}
+
+function singleNewObjectEntityAddition(previousValue, nextValue, keyFn) {
+  const previous = canonicalObjectEntityMap(previousValue, keyFn);
+  const next = canonicalObjectEntityMap(nextValue, keyFn);
+  if (previous === null || next === null || next.size !== previous.size + 1) {
+    return null;
+  }
+  let addition = null;
+  for (const [key, nextEntity] of next.entries()) {
+    if (!previous.has(key)) {
+      if (addition !== null) {
+        return null;
+      }
+      addition = {key, next: nextEntity};
+      continue;
+    }
+    if (entityChanged(previous.get(key), nextEntity)) {
+      return null;
+    }
+  }
+  return addition;
+}
+
+function certifiedOrdinaryMarketBuyTaxChange(previousValue, nextValue, listing) {
+  const previous = canonicalOrdinaryMarketConfig(previousValue);
+  const next = canonicalOrdinaryMarketConfig(nextValue);
+  if (previous === null || next === null) {
+    return null;
+  }
+  const currency = String(listing && listing.currency || "");
+  const itemId = String(listing && listing.itemId || "");
+  const count = Number(listing && listing.count);
+  const unitPrice = Number(listing && listing.unitPrice);
+  if (
+    !["stoneCoins", "diamonds"].includes(currency)
+    || itemId === ""
+    || !Number.isSafeInteger(count)
+    || count <= 0
+    || !Number.isSafeInteger(unitPrice)
+    || unitPrice <= 0
+    || previous.defaultTaxBps !== next.defaultTaxBps
+    || !isDeepStrictEqual(previous.itemTaxBps, next.itemTaxBps)
+  ) {
+    return null;
+  }
+  const otherCurrency = currency === "stoneCoins" ? "diamonds" : "stoneCoins";
+  if (previous.taxCollected[otherCurrency] !== next.taxCollected[otherCurrency]) {
+    return null;
+  }
+  const totalPriceBigInt = BigInt(count) * BigInt(unitPrice);
+  if (totalPriceBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return null;
+  }
+  const taxBps = Object.hasOwn(previous.itemTaxBps, itemId)
+    ? previous.itemTaxBps[itemId]
+    : previous.defaultTaxBps;
+  const taxAmountBigInt = taxBps <= 0
+    ? 0n
+    : (totalPriceBigInt * BigInt(taxBps) + 9999n) / 10000n;
+  const cappedTaxBigInt = taxAmountBigInt > totalPriceBigInt ? totalPriceBigInt : taxAmountBigInt;
+  const taxAmount = Number(cappedTaxBigInt);
+  const previousTotal = previous.taxCollected[currency];
+  if (
+    !Number.isSafeInteger(taxAmount)
+    || !Number.isSafeInteger(previousTotal + taxAmount)
+    || next.taxCollected[currency] !== previousTotal + taxAmount
+  ) {
+    return null;
+  }
+  return {currency, taxAmount};
+}
+
+function marketBuyServerStateChangesOnlyTax(previous, data, taxChange) {
+  const previousState = persistentServerStateDocument(previous);
+  const nextState = persistentServerStateDocument(data);
+  const normalizedNextState = cloneJson(nextState);
+  if (
+    !normalizedNextState.marketConfig
+    || !normalizedNextState.marketConfig.taxCollected
+    || !previousState.marketConfig
+    || !previousState.marketConfig.taxCollected
+  ) {
+    return false;
+  }
+  normalizedNextState.marketConfig.taxCollected[taxChange.currency]
+    = previousState.marketConfig.taxCollected[taxChange.currency];
+  return isDeepStrictEqual(previousState, normalizedNextState);
+}
+
+function canonicalOrdinaryMarketConfig(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const fields = ["defaultTaxBps", "itemTaxBps", "schemaVersion", "taxCollected"].sort();
+  if (!isDeepStrictEqual(Object.keys(value).sort(), fields) || value.schemaVersion !== 1) {
+    return null;
+  }
+  const defaultTaxBps = value.defaultTaxBps;
+  const itemTaxBps = value.itemTaxBps;
+  const taxCollected = value.taxCollected;
+  if (
+    !Number.isSafeInteger(defaultTaxBps)
+    || defaultTaxBps < 0
+    || defaultTaxBps > 10000
+    || !itemTaxBps
+    || typeof itemTaxBps !== "object"
+    || Array.isArray(itemTaxBps)
+    || !taxCollected
+    || typeof taxCollected !== "object"
+    || Array.isArray(taxCollected)
+    || !isDeepStrictEqual(Object.keys(taxCollected).sort(), ["diamonds", "stoneCoins"])
+  ) {
+    return null;
+  }
+  for (const [itemId, taxBps] of Object.entries(itemTaxBps)) {
+    if (
+      String(itemId || "").trim() === ""
+      || !Number.isSafeInteger(taxBps)
+      || taxBps < 0
+      || taxBps > 10000
+    ) {
+      return null;
+    }
+  }
+  for (const currency of ["stoneCoins", "diamonds"]) {
+    if (!Number.isSafeInteger(taxCollected[currency]) || taxCollected[currency] < 0) {
+      return null;
+    }
+  }
+  return {
+    defaultTaxBps,
+    itemTaxBps,
+    taxCollected,
+  };
+}
+
+function certifiedOrdinaryMarketSaleMail(mail, listing, taxAmount, sellerAccountId) {
+  if (!mail || typeof mail !== "object" || Array.isArray(mail)) {
+    return false;
+  }
+  const fields = [
+    "mailId",
+    "senderAccountId",
+    "senderUsername",
+    "senderDisplayName",
+    "recipientAccountId",
+    "recipientUsername",
+    "recipientDisplayName",
+    "title",
+    "body",
+    "currency",
+    "items",
+    "createdAt",
+    "readAt",
+    "schemaVersion",
+  ].sort();
+  const count = Number(listing && listing.count);
+  const unitPrice = Number(listing && listing.unitPrice);
+  const totalPrice = count * unitPrice;
+  const sellerReceives = totalPrice - taxAmount;
+  const currency = String(listing && listing.currency || "");
+  const expectedCurrency = sellerReceives > 0 ? {[currency]: sellerReceives} : {};
+  return isDeepStrictEqual(Object.keys(mail).sort(), fields)
+    && String(mail.mailId || "") !== ""
+    && String(mail.senderAccountId || "") === "system_market"
+    && String(mail.senderUsername || "") === "auction_house"
+    && String(mail.senderDisplayName || "") === "拍卖行"
+    && String(mail.recipientAccountId || "") === sellerAccountId
+    && String(mail.recipientUsername || "") !== ""
+    && String(mail.recipientDisplayName || "") !== ""
+    && String(mail.title || "") === "拍卖行成交通知"
+    && String(mail.body || "") !== ""
+    && String(mail.createdAt || "") !== ""
+    && mail.readAt === null
+    && mail.schemaVersion === 1
+    && Array.isArray(mail.items)
+    && mail.items.length === 0
+    && Number.isSafeInteger(totalPrice)
+    && Number.isSafeInteger(sellerReceives)
+    && sellerReceives >= 0
+    && isDeepStrictEqual(mail.currency, expectedCurrency);
 }
 
 function canonicalObjectEntityMap(value, keyFn) {
@@ -1734,7 +2164,11 @@ function committedMysqlPersistentData(nextData, options = {}) {
 }
 
 function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
-  if (!plan || !["profile_conditional_v2", "market_cancel_conditional_v1"].includes(plan.kind)) {
+  if (!plan || ![
+    "profile_conditional_v2",
+    "market_cancel_conditional_v1",
+    "market_buy_conditional_v1",
+  ].includes(plan.kind)) {
     return committed;
   }
   const accountId = String(plan.accountId || "");
@@ -1780,9 +2214,45 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   }
   const marketListings = {...(previous.marketListings || {})};
   delete marketListings[listingId];
-  return {
+  const marketMerged = {
     ...merged,
     marketListings,
+  };
+  if (plan.kind === "market_cancel_conditional_v1") {
+    return marketMerged;
+  }
+
+  const saleMailId = String(plan.saleMailId || "");
+  const saleMail = committed.mailMessages && committed.mailMessages[saleMailId];
+  const currency = String(plan.currency || "");
+  const taxAmount = Number(plan.taxAmount);
+  const previousMarketConfig = canonicalOrdinaryMarketConfig(previous.marketConfig);
+  if (
+    saleMailId === ""
+    || !saleMail
+    || !["stoneCoins", "diamonds"].includes(currency)
+    || !Number.isSafeInteger(taxAmount)
+    || taxAmount < 0
+    || previousMarketConfig === null
+    || !Number.isSafeInteger(previousMarketConfig.taxCollected[currency] + taxAmount)
+  ) {
+    const error = new Error("MySQL market buy 条件提交缺少已证明的成交资源结果。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    ...marketMerged,
+    mailMessages: {
+      ...(previous.mailMessages || {}),
+      [saleMailId]: saleMail,
+    },
+    marketConfig: {
+      ...previous.marketConfig,
+      taxCollected: {
+        ...previousMarketConfig.taxCollected,
+        [currency]: previousMarketConfig.taxCollected[currency] + taxAmount,
+      },
+    },
   };
 }
 
@@ -2491,7 +2961,11 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     });
   }
   if (
-    !["profile_conditional_v2", "market_cancel_conditional_v1"].includes(plan.kind)
+    ![
+      "profile_conditional_v2",
+      "market_cancel_conditional_v1",
+      "market_buy_conditional_v1",
+    ].includes(plan.kind)
     || plan.globalRevisionFence !== false
     || plan.globalCompatibilityBarrier !== "shared"
   ) {
@@ -2508,7 +2982,8 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       try {
         result = await connection.query(write.sql, write.params);
       } catch (error) {
-        if (write.resource === "mutation_receipt" && error && error.code === "ER_DUP_ENTRY") {
+        if (["mail_message", "mutation_receipt"].includes(write.resource)
+          && error && error.code === "ER_DUP_ENTRY") {
           throw mysqlResourceRevisionConflict(write.resource, write.key);
         }
         throw error;
@@ -2841,6 +3316,60 @@ function conditionalMarketListingDelete(listing) {
       Number(listing.count),
       String(listing.createdAt || ""),
     ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalMailMessageInsert(mail) {
+  return {
+    kind: "insert",
+    resource: "mail_message",
+    key: String(mail.mailId || ""),
+    sql: `INSERT INTO mail_messages
+      (mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json)
+      VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+    params: [
+      String(mail.mailId || ""),
+      String(mail.senderAccountId || ""),
+      String(mail.recipientAccountId || ""),
+      String(mail.title || ""),
+      String(mail.createdAt || ""),
+      mail.readAt === null ? null : String(mail.readAt || ""),
+      JSON.stringify(mail),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalMarketTaxIncrement(currency, taxAmount) {
+  const jsonPathByCurrency = {
+    stoneCoins: "$.marketConfig.taxCollected.stoneCoins",
+    diamonds: "$.marketConfig.taxCollected.diamonds",
+  };
+  const jsonPath = jsonPathByCurrency[currency];
+  if (
+    !jsonPath
+    || !Number.isSafeInteger(taxAmount)
+    || taxAmount <= 0
+  ) {
+    const error = new Error("MySQL market tax 条件增量缺少规范币种或金额。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    kind: "update",
+    resource: "market_tax",
+    key: currency,
+    sql: `UPDATE server_state
+      SET document_json = JSON_SET(
+        document_json,
+        '${jsonPath}',
+        CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '${jsonPath}')) AS UNSIGNED) + ?
+      )
+      WHERE state_key = 'auth'
+        AND JSON_TYPE(JSON_EXTRACT(document_json, '${jsonPath}')) IN ('INTEGER', 'UNSIGNED INTEGER')
+        AND CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '${jsonPath}')) AS UNSIGNED) <= ?`,
+    params: [taxAmount, Number.MAX_SAFE_INTEGER - taxAmount],
     expectedAffectedRows: 1,
   };
 }

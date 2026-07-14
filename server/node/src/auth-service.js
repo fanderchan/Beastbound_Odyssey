@@ -3612,9 +3612,99 @@ function createAuthService(options = {}) {
     };
   }
 
+  function durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt) {
+    if (methodName !== "buyMarketListing" || !receipt || typeof receipt !== "object") {
+      return null;
+    }
+    const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+    const listingId = String(payload.listingId || payload.id || "").trim();
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const beforeBinding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    const playerId = String(beforeBinding.playerId || "");
+    const beforeProfile = objectOrEmpty(before && before.profiles && before.profiles[playerId]);
+    const nextBinding = objectOrEmpty(candidate && candidate.profileBindings && candidate.profileBindings[accountId]);
+    const nextProfile = objectOrEmpty(candidate && candidate.profiles && candidate.profiles[playerId]);
+    const listing = objectOrEmpty(before && before.marketListings && before.marketListings[listingId]);
+    const sellerAccountId = String(listing.sellerAccountId || "");
+    const sellerBinding = objectOrEmpty(
+      before && before.profileBindings && before.profileBindings[sellerAccountId],
+    );
+    const sellerPlayerId = String(sellerBinding.playerId || "");
+    const sellerProfile = objectOrEmpty(before && before.profiles && before.profiles[sellerPlayerId]);
+    const response = objectOrEmpty(receipt.response);
+    const saleMailResponse = objectOrEmpty(response.saleMail);
+    const saleReceipt = objectOrEmpty(response.receipt);
+    const saleMailId = String(saleMailResponse.mailId || "");
+    const saleMail = objectOrEmpty(candidate && candidate.mailMessages && candidate.mailMessages[saleMailId]);
+    const ordinaryListingFields = [
+      "listingId",
+      "sellerAccountId",
+      "itemId",
+      "count",
+      "unitPrice",
+      "currency",
+      "createdAt",
+      "schemaVersion",
+    ].sort();
+    const taxAmount = Number(saleReceipt.tax);
+    const currency = String(listing.currency || "");
+    if (
+      accountId === ""
+      || playerId === ""
+      || listingId === ""
+      || sellerAccountId === ""
+      || sellerAccountId === accountId
+      || sellerPlayerId === ""
+      || saleMailId === ""
+      || !Number.isSafeInteger(taxAmount)
+      || taxAmount < 0
+      || !["stoneCoins", "diamonds"].includes(currency)
+      || String(beforeBinding.accountId || "") !== accountId
+      || String(beforeProfile.accountId || "") !== accountId
+      || String(beforeProfile.playerId || "") !== playerId
+      || String(nextBinding.accountId || "") !== accountId
+      || String(nextBinding.playerId || "") !== playerId
+      || String(nextProfile.accountId || "") !== accountId
+      || String(nextProfile.playerId || "") !== playerId
+      || String(sellerBinding.accountId || "") !== sellerAccountId
+      || String(sellerBinding.playerId || "") !== sellerPlayerId
+      || String(sellerProfile.accountId || "") !== sellerAccountId
+      || String(sellerProfile.playerId || "") !== sellerPlayerId
+      || String(listing.listingId || "") !== listingId
+      || Number(listing.schemaVersion) !== 1
+      || catalogHasEquipmentItemId(battleEquipmentCatalog, String(listing.itemId || ""))
+      || !isDeepStrictEqual(Object.keys(listing).sort(), ordinaryListingFields)
+      || Boolean(candidate && candidate.marketListings
+        && Object.hasOwn(candidate.marketListings, listingId))
+      || Boolean(before && before.mailMessages && Object.hasOwn(before.mailMessages, saleMailId))
+      || String(saleMail.mailId || "") !== saleMailId
+      || String(saleMail.recipientAccountId || "") !== sellerAccountId
+      || String(saleReceipt.listingId || "") !== listingId
+      || String(saleReceipt.currency || "") !== currency
+    ) {
+      return null;
+    }
+    return {
+      kind: "row_local_market_buy_v1",
+      accountId,
+      playerId,
+      sellerAccountId,
+      sellerPlayerId,
+      listingId,
+      saleMailId,
+      currency,
+      taxAmount,
+      operationId: String(receipt.operationId || ""),
+      requestHash: String(receipt.requestHash || ""),
+      actionId: String(receipt.actionId || ""),
+    };
+  }
+
   function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
     return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
-      || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt);
+      || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt);
   }
 
   async function executeDurableMutation(methodName, args, operation) {
@@ -4995,6 +5085,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
     if (
       !rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketCancelRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMarketBuyRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
     ) {
       return {matched: false, scoped: false, reloadedPersistentData: null};
     }
@@ -5089,6 +5180,65 @@ function rowLocalMarketCancelRecoveryMatches(reloaded, expected, scope) {
   }
   return isDeepStrictEqual(reloadedBinding, expectedBinding)
     && isDeepStrictEqual(reloadedProfile, expectedProfile)
+    && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
+}
+
+function rowLocalMarketBuyRecoveryMatches(reloaded, expected, scope) {
+  if (!scope || String(scope.kind || "") !== "row_local_market_buy_v1") {
+    return false;
+  }
+  const accountId = String(scope.accountId || "");
+  const playerId = String(scope.playerId || "");
+  const sellerAccountId = String(scope.sellerAccountId || "");
+  const sellerPlayerId = String(scope.sellerPlayerId || "");
+  const listingId = String(scope.listingId || "");
+  const saleMailId = String(scope.saleMailId || "");
+  const operationId = String(scope.operationId || "");
+  const requestHash = String(scope.requestHash || "");
+  const actionId = String(scope.actionId || "");
+  if (
+    accountId === ""
+    || playerId === ""
+    || sellerAccountId === ""
+    || sellerPlayerId === ""
+    || listingId === ""
+    || saleMailId === ""
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return false;
+  }
+  const reloadedBinding = reloaded.profileBindings && reloaded.profileBindings[accountId];
+  const expectedBinding = expected.profileBindings && expected.profileBindings[accountId];
+  const reloadedProfile = reloaded.profiles && reloaded.profiles[playerId];
+  const expectedProfile = expected.profiles && expected.profiles[playerId];
+  const reloadedReceipt = reloaded.mutationReceipts && reloaded.mutationReceipts[operationId];
+  const expectedReceipt = expected.mutationReceipts && expected.mutationReceipts[operationId];
+  const reloadedSaleMail = reloaded.mailMessages && reloaded.mailMessages[saleMailId];
+  const expectedSaleMail = expected.mailMessages && expected.mailMessages[saleMailId];
+  if (
+    !reloadedBinding
+    || !expectedBinding
+    || !reloadedProfile
+    || !expectedProfile
+    || !reloadedReceipt
+    || !expectedReceipt
+    || !reloadedSaleMail
+    || !expectedSaleMail
+    || Boolean(reloaded.marketListings && Object.hasOwn(reloaded.marketListings, listingId))
+    || Boolean(expected.marketListings && Object.hasOwn(expected.marketListings, listingId))
+    || String(reloadedSaleMail.recipientAccountId || "") !== sellerAccountId
+    || String(reloadedReceipt.operationId || "") !== operationId
+    || String(reloadedReceipt.requestHash || "") !== requestHash
+    || String(reloadedReceipt.actionId || "") !== actionId
+    || String(reloadedReceipt.accountId || "") !== accountId
+  ) {
+    return false;
+  }
+  return isDeepStrictEqual(reloadedBinding, expectedBinding)
+    && isDeepStrictEqual(reloadedProfile, expectedProfile)
+    && isDeepStrictEqual(reloadedSaleMail, expectedSaleMail)
     && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
 }
 

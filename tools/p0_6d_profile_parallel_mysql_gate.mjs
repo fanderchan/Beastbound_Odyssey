@@ -26,6 +26,10 @@ const BASE_TIME = "2026-07-14T04:00:00.000Z";
 const MARKET_LISTING_IDS = Object.freeze({
   success: "listing_real_market_cancel_success",
   rollback: "listing_real_market_cancel_rollback",
+  buyParallelA: "listing_real_market_buy_parallel_a",
+  buyParallelB: "listing_real_market_buy_parallel_b",
+  buyRace: "listing_real_market_buy_race",
+  buyRollback: "listing_real_market_buy_rollback",
 });
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
@@ -371,6 +375,10 @@ function seededAuthority(empty) {
   data.marketListings = {
     [MARKET_LISTING_IDS.success]: realMarketListing(MARKET_LISTING_IDS.success, 1),
     [MARKET_LISTING_IDS.rollback]: realMarketListing(MARKET_LISTING_IDS.rollback, 2),
+    [MARKET_LISTING_IDS.buyParallelA]: realMarketListing(MARKET_LISTING_IDS.buyParallelA, 1),
+    [MARKET_LISTING_IDS.buyParallelB]: realMarketListing(MARKET_LISTING_IDS.buyParallelB, 2),
+    [MARKET_LISTING_IDS.buyRace]: realMarketListing(MARKET_LISTING_IDS.buyRace, 1),
+    [MARKET_LISTING_IDS.buyRollback]: realMarketListing(MARKET_LISTING_IDS.buyRollback, 1),
   };
   return data;
 }
@@ -481,6 +489,111 @@ function saveMarketCancel(store, before, listingId, options) {
         actionId: "POST /market/cancel",
       },
     }),
+  };
+}
+
+function saveMarketBuy(store, before, buyerKey, listingId, options) {
+  const buyer = ACTORS[buyerKey];
+  const listing = before.marketListings[listingId];
+  const seller = ACTORS.m;
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[buyer.accountId].profileRevision) + 1;
+  const totalPrice = Number(listing.count) * Number(listing.unitPrice);
+  const taxBps = Number(before.marketConfig.itemTaxBps[listing.itemId]
+    ?? before.marketConfig.defaultTaxBps);
+  const taxAmount = Math.min(totalPrice, Math.ceil(totalPrice * taxBps / 10000));
+  const sellerReceives = totalPrice - taxAmount;
+  after.profileBindings[buyer.accountId] = {
+    ...before.profileBindings[buyer.accountId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+  };
+  const beforeBuyerProfile = before.profiles[buyer.playerId].profile;
+  after.profiles[buyer.playerId] = {
+    ...before.profiles[buyer.playerId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+    profile: {
+      ...beforeBuyerProfile,
+      stoneCoins: Number(beforeBuyerProfile.stoneCoins) - totalPrice,
+      backpackSlots: [
+        ...(Array.isArray(beforeBuyerProfile.backpackSlots) ? beforeBuyerProfile.backpackSlots : []),
+        {itemId: listing.itemId, count: listing.count},
+      ],
+    },
+  };
+  delete after.marketListings[listingId];
+  after.mailMessages[options.saleMailId] = {
+    mailId: options.saleMailId,
+    senderAccountId: "system_market",
+    senderUsername: "auction_house",
+    senderDisplayName: "拍卖行",
+    recipientAccountId: seller.accountId,
+    recipientUsername: "real_market_seller",
+    recipientDisplayName: "真实市场卖家",
+    title: "拍卖行成交通知",
+    body: "真实引擎市场成交测试",
+    currency: {[listing.currency]: sellerReceives},
+    items: [],
+    createdAt: options.updatedAt,
+    readAt: null,
+    schemaVersion: 1,
+  };
+  after.marketConfig = {
+    ...before.marketConfig,
+    taxCollected: {
+      ...before.marketConfig.taxCollected,
+      [listing.currency]: Number(before.marketConfig.taxCollected[listing.currency]) + taxAmount,
+    },
+  };
+  const receiptResponse = {
+    ok: true,
+    saleMail: after.mailMessages[options.saleMailId],
+    receipt: {
+      listingId,
+      currency: listing.currency,
+      tax: taxAmount,
+      sellerReceives,
+    },
+    operationId: options.operationId,
+  };
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId: options.operationId,
+    requestHash: options.requestHash,
+    actionId: "POST /market/buy",
+    accountId: buyer.accountId,
+    committedAt: options.updatedAt,
+    expiresAt: "2026-07-17T05:00:00.000Z",
+    response: receiptResponse,
+  }, {nowMs: Date.parse(options.updatedAt)});
+  return {
+    after,
+    promise: store.saveAsync(after, {
+      consistencyScope: {
+        kind: "row_local_market_buy_v1",
+        accountId: buyer.accountId,
+        playerId: buyer.playerId,
+        sellerAccountId: seller.accountId,
+        sellerPlayerId: seller.playerId,
+        listingId,
+        saleMailId: options.saleMailId,
+        currency: listing.currency,
+        taxAmount,
+        operationId: options.operationId,
+        requestHash: options.requestHash,
+        actionId: "POST /market/buy",
+      },
+    }),
+  };
+}
+
+function canonicalMarketConfig() {
+  return {
+    defaultTaxBps: 500,
+    itemTaxBps: {},
+    taxCollected: {stoneCoins: 0, diamonds: 0},
+    schemaVersion: 1,
   };
 }
 
@@ -616,6 +729,63 @@ async function marketTaxRate(admin) {
   return Number(rows[0] && rows[0].tax_rate);
 }
 
+async function marketTaxCollected(admin, currency = "stoneCoins") {
+  const pathByCurrency = {
+    stoneCoins: "$.marketConfig.taxCollected.stoneCoins",
+    diamonds: "$.marketConfig.taxCollected.diamonds",
+  };
+  const jsonPath = pathByCurrency[currency];
+  assert.ok(jsonPath);
+  const [rows] = await adminQuery(
+    admin,
+    `SELECT JSON_UNQUOTE(JSON_EXTRACT(document_json, '${jsonPath}')) AS tax_collected
+      FROM server_state WHERE state_key = 'auth'`,
+    [],
+    "MySQL market tax collected query",
+  );
+  return Number(rows[0] && rows[0].tax_collected);
+}
+
+async function marketTaxJsonType(admin, currency = "stoneCoins") {
+  const pathByCurrency = {
+    stoneCoins: "$.marketConfig.taxCollected.stoneCoins",
+    diamonds: "$.marketConfig.taxCollected.diamonds",
+  };
+  const jsonPath = pathByCurrency[currency];
+  assert.ok(jsonPath);
+  const [rows] = await adminQuery(
+    admin,
+    `SELECT JSON_TYPE(JSON_EXTRACT(document_json, '${jsonPath}')) AS tax_json_type
+      FROM server_state WHERE state_key = 'auth'`,
+    [],
+    "MySQL market tax JSON type query",
+  );
+  return String(rows[0] && rows[0].tax_json_type || "");
+}
+
+async function probeMarketTaxIncrementSql(admin) {
+  const connection = await admin.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.query(
+      `UPDATE server_state
+        SET document_json = JSON_SET(
+          document_json,
+          '$.marketConfig.taxCollected.stoneCoins',
+          CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '$.marketConfig.taxCollected.stoneCoins')) AS UNSIGNED) + ?
+        )
+        WHERE state_key = 'auth'
+          AND JSON_TYPE(JSON_EXTRACT(document_json, '$.marketConfig.taxCollected.stoneCoins')) IN ('INTEGER', 'UNSIGNED INTEGER')
+          AND CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '$.marketConfig.taxCollected.stoneCoins')) AS UNSIGNED) <= ?`,
+      [1, Number.MAX_SAFE_INTEGER - 1],
+    );
+    return Number(result && result.affectedRows);
+  } finally {
+    await connection.rollback();
+    connection.release();
+  }
+}
+
 async function marketListingExists(admin, listingId) {
   const [rows] = await adminQuery(
     admin,
@@ -624,6 +794,16 @@ async function marketListingExists(admin, listingId) {
     "MySQL market listing query",
   );
   return Number(rows[0] && rows[0].listing_count || 0) === 1;
+}
+
+async function marketSaleMailExists(admin, mailId) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS mail_count FROM mail_messages WHERE mail_id = ?",
+    [mailId],
+    "MySQL market sale mail query",
+  );
+  return Number(rows[0] && rows[0].mail_count || 0) === 1;
 }
 
 function isConflict(error, code) {
@@ -893,6 +1073,196 @@ async function runRealMysqlGate(runtime) {
     );
     await closeStores(stores);
 
+    const canonicalConfigStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(canonicalConfigStore);
+    const canonicalConfigBefore = canonicalConfigStore.load();
+    const canonicalConfigAfter = cloneAuthorityRoot(canonicalConfigBefore);
+    canonicalConfigAfter.marketConfig = canonicalMarketConfig();
+    const canonicalConfigWrite = trackWrite(canonicalConfigStore.saveAsync(canonicalConfigAfter));
+    await settleWithin(canonicalConfigWrite, WAIT_TIMEOUT_MS, "市场税金配置规范化提交");
+    assert.equal(await globalRevision(admin), 3);
+    assert.equal(await marketTaxCollected(admin), 0);
+    assert.equal(await marketTaxJsonType(admin), "INTEGER");
+    assert.equal(await probeMarketTaxIncrementSql(admin), 1);
+    await closeStores(stores);
+
+    const parallelBuyGate = commitGate("different_market_buys_tax_tail");
+    gates.push(parallelBuyGate);
+    const parallelBuyA = createMysqlAuthStore(storeOptions(runtime, database, parallelBuyGate));
+    const parallelBuyB = createMysqlAuthStore(storeOptions(runtime, database));
+    const staleLegacyAfterBuy = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(parallelBuyA, parallelBuyB, staleLegacyAfterBuy);
+    const parallelBuyLoadedA = parallelBuyA.load();
+    const parallelBuyLoadedB = parallelBuyB.load();
+    const staleLegacyMarketState = staleLegacyAfterBuy.load();
+    const parallelMarketBuyA = saveMarketBuy(
+      parallelBuyA,
+      parallelBuyLoadedA,
+      "a",
+      MARKET_LISTING_IDS.buyParallelA,
+      {
+        saleMailId: "mail_real_market_buy_parallel_a",
+        operationId: "real_market_buy_parallel_a",
+        requestHash: "4".repeat(64),
+        updatedAt: "2026-07-14T04:07:00.000Z",
+      },
+    );
+    trackWrite(parallelMarketBuyA.promise);
+    await settleWithin(parallelBuyGate.entered, WAIT_TIMEOUT_MS, "并行购买 A COMMIT gate");
+    const parallelMarketBuyB = saveMarketBuy(
+      parallelBuyB,
+      parallelBuyLoadedB,
+      "b",
+      MARKET_LISTING_IDS.buyParallelB,
+      {
+        saleMailId: "mail_real_market_buy_parallel_b",
+        operationId: "real_market_buy_parallel_b",
+        requestHash: "5".repeat(64),
+        updatedAt: "2026-07-14T04:07:00.000Z",
+      },
+    );
+    trackWrite(parallelMarketBuyB.promise);
+    await waitForLockWait(admin, "不同挂单购买的税金尾部行锁等待");
+    parallelBuyGate.release();
+    const parallelBuyResults = await settleWithin(
+      Promise.allSettled([parallelMarketBuyA.promise, parallelMarketBuyB.promise]),
+      WAIT_TIMEOUT_MS,
+      "不同挂单购买提交",
+    );
+    if (parallelBuyResults[0].status === "rejected") {
+      parallelBuyResults[0].reason.message = `并行购买A失败：${parallelBuyResults[0].reason.message}`;
+      throw parallelBuyResults[0].reason;
+    }
+    if (parallelBuyResults[1].status === "rejected") {
+      parallelBuyResults[1].reason.message = `并行购买B失败：${parallelBuyResults[1].reason.message}`;
+      throw parallelBuyResults[1].reason;
+    }
+    assert.equal(parallelBuyResults[0].status, "fulfilled");
+    assert.equal(parallelBuyResults[1].status, "fulfilled");
+    assert.deepEqual(await profileRow(admin, "a"), {revision: 4, stoneCoins: 60});
+    assert.deepEqual(await profileRow(admin, "b"), {revision: 4, stoneCoins: 140});
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.buyParallelA), false);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.buyParallelB), false);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_parallel_a"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_parallel_b"), true);
+    assert.equal(await marketTaxCollected(admin), 3);
+    assert.equal(await globalRevision(admin), 3);
+    const staleLegacyAfterBuyWrite = trackWrite(
+      staleLegacyAfterBuy.saveAsync(nextMarketAuthority(staleLegacyMarketState, 0.08)),
+    );
+    await assert.rejects(
+      settleWithin(staleLegacyAfterBuyWrite, WAIT_TIMEOUT_MS, "购买后旧 legacy 全局文档覆盖防护"),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.equal(await marketTaxCollected(admin), 3);
+    assert.equal(await globalRevision(admin), 3);
+    await closeStores(stores);
+
+    const buyRaceGate = commitGate("same_market_listing_buy_winner");
+    gates.push(buyRaceGate);
+    const buyRaceA = createMysqlAuthStore(storeOptions(runtime, database, buyRaceGate));
+    const buyRaceB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(buyRaceA, buyRaceB);
+    const buyRaceLoadedA = buyRaceA.load();
+    const buyRaceLoadedB = buyRaceB.load();
+    const buyRaceWinner = saveMarketBuy(buyRaceA, buyRaceLoadedA, "a", MARKET_LISTING_IDS.buyRace, {
+      saleMailId: "mail_real_market_buy_race_winner",
+      operationId: "real_market_buy_race_winner",
+      requestHash: "6".repeat(64),
+      updatedAt: "2026-07-14T04:08:00.000Z",
+    });
+    trackWrite(buyRaceWinner.promise);
+    await settleWithin(buyRaceGate.entered, WAIT_TIMEOUT_MS, "同挂单购买赢家 COMMIT gate");
+    const buyRaceLoser = saveMarketBuy(buyRaceB, buyRaceLoadedB, "b", MARKET_LISTING_IDS.buyRace, {
+      saleMailId: "mail_real_market_buy_race_loser",
+      operationId: "real_market_buy_race_loser",
+      requestHash: "7".repeat(64),
+      updatedAt: "2026-07-14T04:08:00.000Z",
+    });
+    trackWrite(buyRaceLoser.promise);
+    await waitForLockWait(admin, "同挂单购买 listing 行锁等待");
+    buyRaceGate.release();
+    const buyRaceResults = await settleWithin(
+      Promise.allSettled([buyRaceWinner.promise, buyRaceLoser.promise]),
+      WAIT_TIMEOUT_MS,
+      "同挂单购买竞争提交",
+    );
+    if (buyRaceResults[0].status === "rejected") {
+      buyRaceResults[0].reason.message = `同挂单购买赢家失败：${buyRaceResults[0].reason.message}`;
+      throw buyRaceResults[0].reason;
+    }
+    assert.equal(buyRaceResults[0].status, "fulfilled");
+    assert.equal(buyRaceResults[1].status, "rejected");
+    assert.equal(isConflict(buyRaceResults[1].reason, "mysql_resource_revision_conflict"), true);
+    assert.deepEqual(await profileRow(admin, "a"), {revision: 5, stoneCoins: 40});
+    assert.deepEqual(await profileRow(admin, "b"), {revision: 4, stoneCoins: 140});
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.buyRace), false);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_race_winner"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_race_loser"), false);
+    assert.equal(await marketTaxCollected(admin), 4);
+    assert.equal(await globalRevision(admin), 3);
+    await closeStores(stores);
+
+    const buyRollbackStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(buyRollbackStore);
+    const buyRollbackBefore = buyRollbackStore.load();
+    const buyRollbackOperationId = "real_market_buy_duplicate";
+    const buyRollbackReceipt = {
+      schemaVersion: 1,
+      operationId: buyRollbackOperationId,
+      requestHash: "8".repeat(64),
+      actionId: "POST /market/buy",
+      accountId: ACTORS.b.accountId,
+      committedAt: "2026-07-14T04:09:00.000Z",
+      expiresAt: "2026-07-17T05:00:00.000Z",
+      response: {ok: true, operationId: buyRollbackOperationId},
+    };
+    await adminQuery(
+      admin,
+      `INSERT INTO mutation_receipts
+        (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+        VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+      [
+        buyRollbackOperationId,
+        buyRollbackReceipt.requestHash,
+        buyRollbackReceipt.actionId,
+        buyRollbackReceipt.accountId,
+        buyRollbackReceipt.committedAt,
+        buyRollbackReceipt.expiresAt,
+        JSON.stringify(buyRollbackReceipt),
+      ],
+      "MySQL duplicate market buy receipt seed",
+    );
+    const buyRollback = saveMarketBuy(
+      buyRollbackStore,
+      buyRollbackBefore,
+      "b",
+      MARKET_LISTING_IDS.buyRollback,
+      {
+        saleMailId: "mail_real_market_buy_rollback",
+        operationId: buyRollbackOperationId,
+        requestHash: "9".repeat(64),
+        updatedAt: "2026-07-14T04:09:00.000Z",
+      },
+    );
+    trackWrite(buyRollback.promise);
+    await assert.rejects(
+      settleWithin(buyRollback.promise, WAIT_TIMEOUT_MS, "普通市场购买重复回执回滚"),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.deepEqual(await profileRow(admin, "b"), {revision: 4, stoneCoins: 140});
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.buyRollback), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_rollback"), false);
+    assert.equal(await marketTaxCollected(admin), 4);
+    assert.equal(await globalRevision(admin), 3);
+    await adminQuery(
+      admin,
+      "DELETE FROM mutation_receipts WHERE operation_id = ?",
+      [buyRollbackOperationId],
+      "MySQL duplicate market buy receipt cleanup",
+    );
+    await closeStores(stores);
+
     await waitUntil(async () => await activeTransactionCount(admin) === 0, WAIT_TIMEOUT_MS, "InnoDB 事务清理");
     const deadlocksAfter = await deadlockCount(admin);
     assert.equal(deadlocksAfter, deadlocksBefore);
@@ -906,6 +1276,9 @@ async function runRealMysqlGate(runtime) {
     );
     const receiptIds = receiptRows.map((row) => String(row.operation_id));
     assert.deepEqual(receiptIds, [
+      "real_market_buy_parallel_a",
+      "real_market_buy_parallel_b",
+      "real_market_buy_race_winner",
       "real_market_cancel_001",
       "real_parallel_a_001",
       "real_parallel_b_001",
@@ -929,6 +1302,11 @@ async function runRealMysqlGate(runtime) {
       legacyFirstProfileRejected: true,
       marketCancelJsonLockAndDeleteVerified: true,
       marketCancelDuplicateReceiptRolledBack: true,
+      parallelMarketBuysTaxTailLockWaitObserved: true,
+      parallelMarketBuysTaxSumVerified: true,
+      sameListingBuyExactlyOneWinner: true,
+      staleLegacyServerStateOverwriteRejected: true,
+      marketBuyDuplicateReceiptRolledBack: true,
       globalRevision: await globalRevision(admin),
       receiptCount: receiptIds.length,
       receiptIds,
@@ -982,6 +1360,10 @@ main().catch((error) => {
     qualified: false,
     code: String(error && error.code || "p0_6d_real_mysql_gate_failed"),
     message: String(error && error.message || "隔离 MySQL 并发门槛失败。"),
+    resource: String(error && error.resource || ""),
+    resourceKey: String(error && error.resourceKey || ""),
+    causeCode: String(error && error.cause && error.cause.code || ""),
+    causeMessage: String(error && error.cause && error.cause.message || ""),
   };
   process.stderr.write(`${JSON.stringify(safe, null, 2)}\n`);
   process.exitCode = 1;

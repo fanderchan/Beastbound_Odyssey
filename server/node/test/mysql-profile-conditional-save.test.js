@@ -379,6 +379,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "market config changes",
+      writesServerState: true,
       mutate(before) {
         const after = eligibleProfileState(before);
         after.marketConfig = {listingFeeRate: 0.03};
@@ -387,6 +388,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "offline hang config changes",
+      writesServerState: true,
       mutate(before) {
         const after = eligibleProfileState(before);
         after.offlineHangConfig = {rewardRate: 0.5};
@@ -395,6 +397,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "service event sequence changes",
+      writesServerState: true,
       mutate(before) {
         const after = eligibleProfileState(before);
         after.serviceEventSeq = 2;
@@ -403,6 +406,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "service event journal changes",
+      writesServerState: true,
       mutate(before) {
         const after = eligibleProfileState(before);
         after.serviceEventSeq = 1;
@@ -468,7 +472,11 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
       assert.ok(Array.isArray(plan.statements) && plan.statements.length > 0);
       assert.deepEqual(
         planOperations(plan, "resourceLocks").map(operationResource),
-        ["profile_binding_snapshot", "profile_snapshot"],
+        [
+          ...(fixture.writesServerState ? ["server_state"] : []),
+          "profile_binding_snapshot",
+          "profile_snapshot",
+        ],
       );
     });
   }
