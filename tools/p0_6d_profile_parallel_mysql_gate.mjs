@@ -20,8 +20,13 @@ const {createMysqlAuthStore} = require(path.join(ROOT, "server/node/src/mysql-st
 const ACTORS = Object.freeze({
   a: Object.freeze({accountId: "acc_real_parallel_a", playerId: "player_real_parallel_a"}),
   b: Object.freeze({accountId: "acc_real_parallel_b", playerId: "player_real_parallel_b"}),
+  m: Object.freeze({accountId: "acc_real_market_cancel", playerId: "player_real_market_cancel"}),
 });
 const BASE_TIME = "2026-07-14T04:00:00.000Z";
+const MARKET_LISTING_IDS = Object.freeze({
+  success: "listing_real_market_cancel_success",
+  rollback: "listing_real_market_cancel_rollback",
+});
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
 
@@ -363,7 +368,24 @@ function seededAuthority(empty) {
       },
     };
   }
+  data.marketListings = {
+    [MARKET_LISTING_IDS.success]: realMarketListing(MARKET_LISTING_IDS.success, 1),
+    [MARKET_LISTING_IDS.rollback]: realMarketListing(MARKET_LISTING_IDS.rollback, 2),
+  };
   return data;
+}
+
+function realMarketListing(listingId, count) {
+  return {
+    listingId,
+    sellerAccountId: ACTORS.m.accountId,
+    itemId: "item_meat_small",
+    count,
+    unitPrice: 20,
+    currency: "stoneCoins",
+    createdAt: BASE_TIME,
+    schemaVersion: 1,
+  };
 }
 
 function nextProfileAuthority(before, actorKey, options) {
@@ -414,6 +436,52 @@ function rowLocalOptions(actorKey, options) {
 function saveProfile(store, before, actorKey, options) {
   const after = nextProfileAuthority(before, actorKey, options);
   return {after, promise: store.saveAsync(after, rowLocalOptions(actorKey, options))};
+}
+
+function saveMarketCancel(store, before, listingId, options) {
+  const actor = ACTORS.m;
+  const listing = before.marketListings[listingId];
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+    profile: {
+      ...before.profiles[actor.playerId].profile,
+      backpackSlots: [{itemId: listing.itemId, count: listing.count}],
+    },
+  };
+  delete after.marketListings[listingId];
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId: options.operationId,
+    requestHash: options.requestHash,
+    actionId: "POST /market/cancel",
+    accountId: actor.accountId,
+    committedAt: options.updatedAt,
+    expiresAt: "2026-07-17T05:00:00.000Z",
+    response: {ok: true, operationId: options.operationId},
+  }, {nowMs: Date.parse(options.updatedAt)});
+  return {
+    after,
+    promise: store.saveAsync(after, {
+      consistencyScope: {
+        kind: "row_local_market_cancel_v1",
+        accountId: actor.accountId,
+        playerId: actor.playerId,
+        listingId,
+        operationId: options.operationId,
+        requestHash: options.requestHash,
+        actionId: "POST /market/cancel",
+      },
+    }),
+  };
 }
 
 function nextMarketAuthority(before, taxRate) {
@@ -546,6 +614,16 @@ async function marketTaxRate(admin) {
     "MySQL market tax query",
   );
   return Number(rows[0] && rows[0].tax_rate);
+}
+
+async function marketListingExists(admin, listingId) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS listing_count FROM market_listings WHERE listing_id = ?",
+    [listingId],
+    "MySQL market listing query",
+  );
+  return Number(rows[0] && rows[0].listing_count || 0) === 1;
 }
 
 function isConflict(error, code) {
@@ -737,6 +815,84 @@ async function runRealMysqlGate(runtime) {
     assert.equal(await marketTaxRate(admin), 0.07);
     await closeStores(stores);
 
+    const marketStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(marketStore);
+    const loadedMarket = marketStore.load();
+    const marketSuccess = saveMarketCancel(
+      marketStore,
+      loadedMarket,
+      MARKET_LISTING_IDS.success,
+      {
+        operationId: "real_market_cancel_001",
+        requestHash: "1".repeat(64),
+        updatedAt: "2026-07-14T04:05:00.000Z",
+      },
+    );
+    trackWrite(marketSuccess.promise);
+    await settleWithin(marketSuccess.promise, WAIT_TIMEOUT_MS, "普通市场撤单真实引擎提交");
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.success), false);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.rollback), true);
+    assert.deepEqual(await profileRow(admin, "m"), {revision: 2, stoneCoins: 200});
+    assert.equal(await globalRevision(admin), 2);
+    await closeStores(stores);
+
+    const marketRollbackStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(marketRollbackStore);
+    const loadedMarketRollback = marketRollbackStore.load();
+    const rollbackOperationId = "real_market_cancel_duplicate";
+    const rollbackReceipt = {
+      schemaVersion: 1,
+      operationId: rollbackOperationId,
+      requestHash: "2".repeat(64),
+      actionId: "POST /market/cancel",
+      accountId: ACTORS.m.accountId,
+      committedAt: "2026-07-14T04:06:00.000Z",
+      expiresAt: "2026-07-17T05:00:00.000Z",
+      response: {ok: true, operationId: rollbackOperationId},
+    };
+    await adminQuery(
+      admin,
+      `INSERT INTO mutation_receipts
+        (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+        VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+      [
+        rollbackOperationId,
+        rollbackReceipt.requestHash,
+        rollbackReceipt.actionId,
+        rollbackReceipt.accountId,
+        rollbackReceipt.committedAt,
+        rollbackReceipt.expiresAt,
+        JSON.stringify(rollbackReceipt),
+      ],
+      "MySQL duplicate market receipt seed",
+    );
+    const marketRollback = saveMarketCancel(
+      marketRollbackStore,
+      loadedMarketRollback,
+      MARKET_LISTING_IDS.rollback,
+      {
+        operationId: rollbackOperationId,
+        requestHash: "3".repeat(64),
+        updatedAt: "2026-07-14T04:06:00.000Z",
+      },
+    );
+    trackWrite(marketRollback.promise);
+    await assert.rejects(
+      settleWithin(marketRollback.promise, WAIT_TIMEOUT_MS, "普通市场撤单重复回执回滚"),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.rollback), true);
+    assert.deepEqual(await profileRow(admin, "m"), {revision: 2, stoneCoins: 200});
+    assert.equal(await bindingRevision(admin, "m"), 2);
+    assert.equal(await globalRevision(admin), 2);
+    await adminQuery(
+      admin,
+      "DELETE FROM mutation_receipts WHERE operation_id = ?",
+      [rollbackOperationId],
+      "MySQL duplicate market receipt cleanup",
+    );
+    await closeStores(stores);
+
     await waitUntil(async () => await activeTransactionCount(admin) === 0, WAIT_TIMEOUT_MS, "InnoDB 事务清理");
     const deadlocksAfter = await deadlockCount(admin);
     assert.equal(deadlocksAfter, deadlocksBefore);
@@ -750,6 +906,7 @@ async function runRealMysqlGate(runtime) {
     );
     const receiptIds = receiptRows.map((row) => String(row.operation_id));
     assert.deepEqual(receiptIds, [
+      "real_market_cancel_001",
       "real_parallel_a_001",
       "real_parallel_b_001",
       "real_profile_before_legacy",
@@ -770,6 +927,8 @@ async function runRealMysqlGate(runtime) {
       sameProfileExactlyOneWinner: true,
       profileFirstLegacyRejected: true,
       legacyFirstProfileRejected: true,
+      marketCancelJsonLockAndDeleteVerified: true,
+      marketCancelDuplicateReceiptRolledBack: true,
       globalRevision: await globalRevision(admin),
       receiptCount: receiptIds.length,
       receiptIds,

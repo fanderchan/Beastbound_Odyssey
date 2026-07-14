@@ -4,6 +4,7 @@ const {execFileSync, spawn} = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const {isDeepStrictEqual} = require("node:util");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
   commitConsumedEquipmentEnvelopeLedger,
@@ -645,6 +646,15 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (conditionalProfilePlan !== null) {
     return conditionalProfilePlan;
   }
+  const conditionalMarketCancelPlan = buildConditionalMarketCancelSavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
+  if (conditionalMarketCancelPlan !== null) {
+    return conditionalMarketCancelPlan;
+  }
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
@@ -671,54 +681,19 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
     return null;
   }
 
-  const bindingChange = singleExistingObjectEntityChange(
-    previous.profileBindings,
-    data.profileBindings,
-    profileBindingEntityKey,
-  );
-  const profileChange = singleExistingObjectEntityChange(
-    previous.profiles,
-    data.profiles,
-    profileEntityKey,
-  );
-  if (bindingChange === null || profileChange === null) {
+  const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
+  if (profileRevisionChange === null) {
     return null;
   }
-
-  const beforeBinding = bindingChange.previous;
-  const nextBinding = bindingChange.next;
-  const beforeProfile = profileChange.previous;
-  const nextProfile = profileChange.next;
-  const accountId = bindingChange.key;
-  const playerId = profileChange.key;
-  const expectedRevision = Number(beforeBinding.profileRevision);
-  const beforeProfileRevision = Number(beforeProfile.profileRevision);
-  const nextBindingRevision = Number(nextBinding.profileRevision);
-  const nextProfileRevision = Number(nextProfile.profileRevision);
-  const updatedAt = String(nextBinding.updatedAt || "");
-  if (
-    accountId === ""
-    || playerId === ""
-    || String(beforeBinding.accountId || "") !== accountId
-    || String(nextBinding.accountId || "") !== accountId
-    || String(beforeBinding.playerId || "") !== playerId
-    || String(nextBinding.playerId || "") !== playerId
-    || String(beforeProfile.playerId || "") !== playerId
-    || String(nextProfile.playerId || "") !== playerId
-    || String(beforeProfile.accountId || "") !== accountId
-    || String(nextProfile.accountId || "") !== accountId
-    || String(beforeBinding.createdAt || "") !== String(nextBinding.createdAt || "")
-    || String(beforeProfile.createdAt || "") !== String(nextProfile.createdAt || "")
-    || !Number.isSafeInteger(expectedRevision)
-    || expectedRevision < 0
-    || beforeProfileRevision !== expectedRevision
-    || nextBindingRevision !== expectedRevision + 1
-    || nextProfileRevision !== expectedRevision + 1
-    || updatedAt === ""
-    || String(nextProfile.updatedAt || "") !== updatedAt
-  ) {
-    return null;
-  }
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileRevisionChange;
 
   const receiptDelta = conditionalProfileReceiptDelta(
     previous.mutationReceipts,
@@ -763,6 +738,118 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
   };
 }
 
+function buildConditionalMarketCancelSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = rowLocalMarketCancelConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set([
+    "profileBindings",
+    "profiles",
+    "mutationReceipts",
+    "marketListings",
+  ]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (
+    groups.profileBindings.length !== 1
+    || groups.profiles.length !== 1
+    || groups.marketListings.length !== 1
+  ) {
+    return null;
+  }
+
+  const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
+  const listingDelete = singleExistingObjectEntityDeletion(
+    previous.marketListings,
+    data.marketListings,
+    marketListingEntityKey,
+  );
+  if (profileRevisionChange === null || listingDelete === null) {
+    return null;
+  }
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileRevisionChange;
+  const listing = listingDelete.previous;
+  const listingId = listingDelete.key;
+  const ordinaryListingFields = new Set([
+    "listingId",
+    "sellerAccountId",
+    "itemId",
+    "count",
+    "unitPrice",
+    "currency",
+    "createdAt",
+    "schemaVersion",
+  ]);
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || consistencyScope.listingId !== listingId
+    || String(listing.listingId || "") !== listingId
+    || String(listing.sellerAccountId || "") !== accountId
+    || Number(listing.schemaVersion) !== 1
+    || Object.hasOwn(listing, "equipmentEnvelope")
+    || Object.keys(listing).length !== ordinaryListingFields.size
+    || Object.keys(listing).some((field) => !ordinaryListingFields.has(field))
+  ) {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+  ) {
+    return null;
+  }
+
+  return {
+    kind: "market_cancel_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId,
+    playerId,
+    listingId,
+    operationId: consistencyScope.operationId,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    locks: [
+      profileBindingResourceLock(beforeBinding),
+      profileResourceLock(beforeProfile),
+      marketListingResourceLock(listing),
+    ],
+    writes: [
+      conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+      conditionalProfileUpdate(nextProfile, expectedRevision),
+      conditionalMarketListingDelete(listing),
+      conditionalMutationReceiptInsert(receipt),
+    ],
+  };
+}
+
 function rowLocalProfileConsistencyScope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -784,6 +871,90 @@ function rowLocalProfileConsistencyScope(value) {
     return null;
   }
   return {kind, accountId, playerId, operationId, requestHash, actionId};
+}
+
+function rowLocalMarketCancelConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const kind = String(value.kind || "");
+  const accountId = String(value.accountId || "");
+  const playerId = String(value.playerId || "");
+  const listingId = String(value.listingId || "");
+  const operationId = String(value.operationId || "");
+  const requestHash = String(value.requestHash || "");
+  const actionId = String(value.actionId || "");
+  if (
+    kind !== "row_local_market_cancel_v1"
+    || accountId === ""
+    || playerId === ""
+    || listingId === ""
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return null;
+  }
+  return {kind, accountId, playerId, listingId, operationId, requestHash, actionId};
+}
+
+function certifiedSingleProfileRevisionChange(previous, data) {
+  const bindingChange = singleExistingObjectEntityChange(
+    previous.profileBindings,
+    data.profileBindings,
+    profileBindingEntityKey,
+  );
+  const profileChange = singleExistingObjectEntityChange(
+    previous.profiles,
+    data.profiles,
+    profileEntityKey,
+  );
+  if (bindingChange === null || profileChange === null) {
+    return null;
+  }
+  const beforeBinding = bindingChange.previous;
+  const nextBinding = bindingChange.next;
+  const beforeProfile = profileChange.previous;
+  const nextProfile = profileChange.next;
+  const accountId = bindingChange.key;
+  const playerId = profileChange.key;
+  const expectedRevision = Number(beforeBinding.profileRevision);
+  const beforeProfileRevision = Number(beforeProfile.profileRevision);
+  const nextBindingRevision = Number(nextBinding.profileRevision);
+  const nextProfileRevision = Number(nextProfile.profileRevision);
+  const updatedAt = String(nextBinding.updatedAt || "");
+  if (
+    accountId === ""
+    || playerId === ""
+    || String(beforeBinding.accountId || "") !== accountId
+    || String(nextBinding.accountId || "") !== accountId
+    || String(beforeBinding.playerId || "") !== playerId
+    || String(nextBinding.playerId || "") !== playerId
+    || String(beforeProfile.playerId || "") !== playerId
+    || String(nextProfile.playerId || "") !== playerId
+    || String(beforeProfile.accountId || "") !== accountId
+    || String(nextProfile.accountId || "") !== accountId
+    || String(beforeBinding.createdAt || "") !== String(nextBinding.createdAt || "")
+    || String(beforeProfile.createdAt || "") !== String(nextProfile.createdAt || "")
+    || !Number.isSafeInteger(expectedRevision)
+    || expectedRevision < 0
+    || beforeProfileRevision !== expectedRevision
+    || nextBindingRevision !== expectedRevision + 1
+    || nextProfileRevision !== expectedRevision + 1
+    || updatedAt === ""
+    || String(nextProfile.updatedAt || "") !== updatedAt
+  ) {
+    return null;
+  }
+  return {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  };
 }
 
 function buildLegacyProfileResourceLocks(previous) {
@@ -875,6 +1046,50 @@ function profileResourceLock(profile) {
   };
 }
 
+function marketListingResourceLock(listing) {
+  const listingId = String(listing && listing.listingId || "");
+  const sellerAccountId = String(listing && listing.sellerAccountId || "");
+  const itemId = String(listing && listing.itemId || "");
+  const currency = String(listing && listing.currency || "");
+  const unitPrice = Number(listing && listing.unitPrice);
+  const itemCount = Number(listing && listing.count);
+  const createdAt = String(listing && listing.createdAt || "");
+  if (
+    listingId === ""
+    || sellerAccountId === ""
+    || itemId === ""
+    || currency === ""
+    || !Number.isSafeInteger(unitPrice)
+    || unitPrice <= 0
+    || !Number.isSafeInteger(itemCount)
+    || itemCount <= 0
+    || createdAt === ""
+  ) {
+    const error = new Error("MySQL market listing 条件锁缺少规范资源身份。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    kind: "lock",
+    resource: "market_listing",
+    key: listingId,
+    sql: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
+      item_count, created_at, document_json
+      FROM market_listings WHERE listing_id = ? FOR UPDATE`,
+    params: [listingId],
+    expectedRow: {
+      listing_id: listingId,
+      seller_account_id: sellerAccountId,
+      item_id: itemId,
+      currency,
+      unit_price: unitPrice,
+      item_count: itemCount,
+      created_at: createdAt,
+      document_json: listing,
+    },
+  };
+}
+
 function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
   const previous = canonicalObjectEntityMap(previousValue, keyFn);
   const next = canonicalObjectEntityMap(nextValue, keyFn);
@@ -896,6 +1111,28 @@ function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
     change = {key, previous: previousEntity, next: nextEntity};
   }
   return change;
+}
+
+function singleExistingObjectEntityDeletion(previousValue, nextValue, keyFn) {
+  const previous = canonicalObjectEntityMap(previousValue, keyFn);
+  const next = canonicalObjectEntityMap(nextValue, keyFn);
+  if (previous === null || next === null || previous.size !== next.size + 1) {
+    return null;
+  }
+  let deletion = null;
+  for (const [key, previousEntity] of previous.entries()) {
+    if (!next.has(key)) {
+      if (deletion !== null) {
+        return null;
+      }
+      deletion = {key, previous: previousEntity};
+      continue;
+    }
+    if (entityChanged(previousEntity, next.get(key))) {
+      return null;
+    }
+  }
+  return deletion;
 }
 
 function canonicalObjectEntityMap(value, keyFn) {
@@ -1497,7 +1734,7 @@ function committedMysqlPersistentData(nextData, options = {}) {
 }
 
 function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
-  if (!plan || plan.kind !== "profile_conditional_v2") {
+  if (!plan || !["profile_conditional_v2", "market_cancel_conditional_v1"].includes(plan.kind)) {
     return committed;
   }
   const accountId = String(plan.accountId || "");
@@ -1505,14 +1742,14 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   const binding = committed.profileBindings && committed.profileBindings[accountId];
   const profile = committed.profiles && committed.profiles[playerId];
   if (!previous || !binding || !profile) {
-    const error = new Error("MySQL profile 条件提交缺少 Node-local 资源基线。");
+    const error = new Error("MySQL 条件提交缺少 Node-local 档案资源基线。");
     error.code = "mysql_resource_precondition_invalid";
     throw error;
   }
   // A profile-v2 COMMIT proves only its certified row-local resources. Keep
   // every unrelated resource at this writer's last known baseline instead of
   // relabelling the request candidate as a fresh database-wide snapshot.
-  return {
+  const merged = {
     ...previous,
     profileBindings: {
       ...(previous.profileBindings || {}),
@@ -1523,6 +1760,29 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
       [playerId]: profile,
     },
     mutationReceipts: committed.mutationReceipts,
+  };
+  if (plan.kind === "profile_conditional_v2") {
+    return merged;
+  }
+
+  const listingId = String(plan.listingId || "");
+  const operationId = String(plan.operationId || "");
+  const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+  if (
+    listingId === ""
+    || operationId === ""
+    || !receipt
+    || (committed.marketListings && Object.hasOwn(committed.marketListings, listingId))
+  ) {
+    const error = new Error("MySQL market cancel 条件提交缺少已证明的资源结果。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  const marketListings = {...(previous.marketListings || {})};
+  delete marketListings[listingId];
+  return {
+    ...merged,
+    marketListings,
   };
 }
 
@@ -2231,7 +2491,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     });
   }
   if (
-    plan.kind !== "profile_conditional_v2"
+    !["profile_conditional_v2", "market_cancel_conditional_v1"].includes(plan.kind)
     || plan.globalRevisionFence !== false
     || plan.globalCompatibilityBarrier !== "shared"
   ) {
@@ -2413,10 +2673,22 @@ function assertMysqlResourceLockRow(result, lock) {
   }
   const row = rows[0] || {};
   for (const [field, expectedValue] of Object.entries(lock.expectedRow || {})) {
-    const actualValue = row[field];
-    const matches = typeof expectedValue === "number"
-      ? Number(actualValue) === expectedValue
-      : String(actualValue ?? "") === String(expectedValue);
+    let actualValue = row[field];
+    let matches;
+    if (expectedValue && typeof expectedValue === "object") {
+      if (typeof actualValue === "string") {
+        try {
+          actualValue = JSON.parse(actualValue);
+        } catch {
+          throw mysqlResourceRevisionConflict(lock.resource, lock.key);
+        }
+      }
+      matches = isDeepStrictEqual(actualValue, expectedValue);
+    } else {
+      matches = typeof expectedValue === "number"
+        ? Number(actualValue) === expectedValue
+        : String(actualValue ?? "") === String(expectedValue);
+    }
     if (!matches) {
       throw mysqlResourceRevisionConflict(lock.resource, lock.key);
     }
@@ -2547,6 +2819,27 @@ function conditionalProfileUpdate(profile, expectedRevision) {
       String(profile.playerId || ""),
       String(profile.accountId || ""),
       Number(expectedRevision),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalMarketListingDelete(listing) {
+  return {
+    kind: "delete",
+    resource: "market_listing",
+    key: String(listing.listingId || ""),
+    sql: `DELETE FROM market_listings
+      WHERE listing_id = ? AND seller_account_id = ? AND item_id = ?
+        AND currency = ? AND unit_price = ? AND item_count = ? AND created_at = ?`,
+    params: [
+      String(listing.listingId || ""),
+      String(listing.sellerAccountId || ""),
+      String(listing.itemId || ""),
+      String(listing.currency || ""),
+      Number(listing.unitPrice),
+      Number(listing.count),
+      String(listing.createdAt || ""),
     ],
     expectedAffectedRows: 1,
   };

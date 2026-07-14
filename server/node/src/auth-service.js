@@ -3556,6 +3556,67 @@ function createAuthService(options = {}) {
     };
   }
 
+  function durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt) {
+    if (methodName !== "cancelMarketListing" || !receipt || typeof receipt !== "object") {
+      return null;
+    }
+    const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+    const listingId = String(payload.listingId || payload.id || "").trim();
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const beforeBinding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    const playerId = String(beforeBinding.playerId || "");
+    const beforeProfile = objectOrEmpty(before && before.profiles && before.profiles[playerId]);
+    const nextBinding = objectOrEmpty(candidate && candidate.profileBindings && candidate.profileBindings[accountId]);
+    const nextProfile = objectOrEmpty(candidate && candidate.profiles && candidate.profiles[playerId]);
+    const listing = objectOrEmpty(before && before.marketListings && before.marketListings[listingId]);
+    const ordinaryListingFields = [
+      "listingId",
+      "sellerAccountId",
+      "itemId",
+      "count",
+      "unitPrice",
+      "currency",
+      "createdAt",
+      "schemaVersion",
+    ].sort();
+    if (
+      accountId === ""
+      || playerId === ""
+      || listingId === ""
+      || String(beforeBinding.accountId || "") !== accountId
+      || String(beforeProfile.accountId || "") !== accountId
+      || String(beforeProfile.playerId || "") !== playerId
+      || String(nextBinding.accountId || "") !== accountId
+      || String(nextBinding.playerId || "") !== playerId
+      || String(nextProfile.accountId || "") !== accountId
+      || String(nextProfile.playerId || "") !== playerId
+      || String(listing.listingId || "") !== listingId
+      || String(listing.sellerAccountId || "") !== accountId
+      || Number(listing.schemaVersion) !== 1
+      || catalogHasEquipmentItemId(battleEquipmentCatalog, String(listing.itemId || ""))
+      || !isDeepStrictEqual(Object.keys(listing).sort(), ordinaryListingFields)
+      || Boolean(candidate && candidate.marketListings
+        && Object.hasOwn(candidate.marketListings, listingId))
+    ) {
+      return null;
+    }
+    return {
+      kind: "row_local_market_cancel_v1",
+      accountId,
+      playerId,
+      listingId,
+      operationId: String(receipt.operationId || ""),
+      requestHash: String(receipt.requestHash || ""),
+      actionId: String(receipt.actionId || ""),
+    };
+  }
+
+  function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
+    return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt);
+  }
+
   async function executeDurableMutation(methodName, args, operation) {
     const method = serviceApi && serviceApi[methodName];
     if (typeof method !== "function" || methodName === "invokeDurable") {
@@ -3749,7 +3810,7 @@ function createAuthService(options = {}) {
     const stagedReceipt = receiptOperationId === ""
       ? null
       : objectOrEmpty(candidate.mutationReceipts && candidate.mutationReceipts[receiptOperationId]);
-    const consistencyScope = durableRowLocalProfileConsistencyScope(
+    const consistencyScope = durableMutationConsistencyScope(
       methodName,
       args,
       before,
@@ -4931,7 +4992,10 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
     const scope = options && options.consistencyScope && typeof options.consistencyScope === "object"
       ? options.consistencyScope
       : null;
-    if (!rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)) {
+    if (
+      !rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMarketCancelRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+    ) {
       return {matched: false, scoped: false, reloadedPersistentData: null};
     }
     return {
@@ -4969,6 +5033,53 @@ function rowLocalProfileRecoveryMatches(reloaded, expected, scope) {
     || !expectedProfile
     || !reloadedReceipt
     || !expectedReceipt
+    || String(reloadedReceipt.operationId || "") !== operationId
+    || String(reloadedReceipt.requestHash || "") !== requestHash
+    || String(reloadedReceipt.actionId || "") !== actionId
+    || String(reloadedReceipt.accountId || "") !== accountId
+  ) {
+    return false;
+  }
+  return isDeepStrictEqual(reloadedBinding, expectedBinding)
+    && isDeepStrictEqual(reloadedProfile, expectedProfile)
+    && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
+}
+
+function rowLocalMarketCancelRecoveryMatches(reloaded, expected, scope) {
+  if (!scope || String(scope.kind || "") !== "row_local_market_cancel_v1") {
+    return false;
+  }
+  const accountId = String(scope.accountId || "");
+  const playerId = String(scope.playerId || "");
+  const listingId = String(scope.listingId || "");
+  const operationId = String(scope.operationId || "");
+  const requestHash = String(scope.requestHash || "");
+  const actionId = String(scope.actionId || "");
+  if (
+    accountId === ""
+    || playerId === ""
+    || listingId === ""
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return false;
+  }
+  const reloadedBinding = reloaded.profileBindings && reloaded.profileBindings[accountId];
+  const expectedBinding = expected.profileBindings && expected.profileBindings[accountId];
+  const reloadedProfile = reloaded.profiles && reloaded.profiles[playerId];
+  const expectedProfile = expected.profiles && expected.profiles[playerId];
+  const reloadedReceipt = reloaded.mutationReceipts && reloaded.mutationReceipts[operationId];
+  const expectedReceipt = expected.mutationReceipts && expected.mutationReceipts[operationId];
+  if (
+    !reloadedBinding
+    || !expectedBinding
+    || !reloadedProfile
+    || !expectedProfile
+    || !reloadedReceipt
+    || !expectedReceipt
+    || Boolean(reloaded.marketListings && Object.hasOwn(reloaded.marketListings, listingId))
+    || Boolean(expected.marketListings && Object.hasOwn(expected.marketListings, listingId))
     || String(reloadedReceipt.operationId || "") !== operationId
     || String(reloadedReceipt.requestHash || "") !== requestHash
     || String(reloadedReceipt.actionId || "") !== actionId

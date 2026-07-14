@@ -7,7 +7,11 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
-const {stageDurableMutationReceipt} = require("../src/auth/durable-mutation-state");
+const {
+  canonicalDurableMutationReceipts,
+  commitDurableMutationReceiptDelta,
+  stageDurableMutationReceipt,
+} = require("../src/auth/durable-mutation-state");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
   createSharedMysqlTransactionHarness,
@@ -21,6 +25,11 @@ const UPDATED_AT_1 = "2026-07-14T02:00:00.000Z";
 const UPDATED_AT_2 = "2026-07-14T02:01:00.000Z";
 const UPDATED_AT_3 = "2026-07-14T02:02:00.000Z";
 const UPDATED_AT_4 = "2026-07-14T02:03:00.000Z";
+const MARKET_LISTING_IDS = Object.freeze({
+  a: "listing_shared_mysql_a",
+  a2: "listing_shared_mysql_a_2",
+  b: "listing_shared_mysql_b",
+});
 
 function baselineAuthority() {
   const authority = {
@@ -117,6 +126,101 @@ function stagedProfileSave(store, before, actorKey, options) {
   return {after, promise: store.saveAsync(after, saveOptions)};
 }
 
+function ordinaryListing(actorKey, overrides = {}) {
+  const actor = ACTORS[actorKey];
+  return {
+    listingId: MARKET_LISTING_IDS[actorKey],
+    sellerAccountId: actor.accountId,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: actorKey === "a" ? 20 : 30,
+    currency: "stoneCoins",
+    createdAt: UPDATED_AT_1,
+    schemaVersion: 1,
+    ...overrides,
+  };
+}
+
+function marketAuthority() {
+  const authority = baselineAuthority();
+  authority.marketListings = {
+    [MARKET_LISTING_IDS.a]: ordinaryListing("a"),
+    [MARKET_LISTING_IDS.a2]: ordinaryListing("a", {
+      listingId: MARKET_LISTING_IDS.a2,
+      count: 2,
+      unitPrice: 25,
+    }),
+    [MARKET_LISTING_IDS.b]: ordinaryListing("b"),
+  };
+  return authority;
+}
+
+function nextMarketCancelAuthority(before, actorKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const listingId = String(options.listingId || MARKET_LISTING_IDS[actorKey]);
+  const listing = before.marketListings[listingId];
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  const updatedAt = String(options.updatedAt || UPDATED_AT_2);
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt,
+    profile: {
+      ...before.profiles[actor.playerId].profile,
+      backpackSlots: [{itemId: listing.itemId, count: listing.count}],
+    },
+  };
+  delete after.marketListings[listingId];
+  const operationId = String(options.operationId);
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      schemaVersion: 1,
+      operationId,
+      requestHash: String(options.requestHash),
+      actionId: "POST /market/cancel",
+      accountId: actor.accountId,
+      committedAt: updatedAt,
+      expiresAt: "2026-07-17T02:10:00.000Z",
+      response: {ok: true, operationId},
+    },
+    {nowMs: Date.parse(updatedAt)},
+  );
+  return after;
+}
+
+function marketCancelSaveOptions(actorKey, operationId, requestHash, listingId = MARKET_LISTING_IDS[actorKey]) {
+  const actor = ACTORS[actorKey];
+  return {
+    consistencyScope: {
+      kind: "row_local_market_cancel_v1",
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      listingId,
+      operationId,
+      requestHash,
+      actionId: "POST /market/cancel",
+    },
+  };
+}
+
+function stagedMarketCancel(store, before, actorKey, options) {
+  const after = nextMarketCancelAuthority(before, actorKey, options);
+  const saveOptions = marketCancelSaveOptions(
+    actorKey,
+    options.operationId,
+    options.requestHash,
+    options.listingId,
+  );
+  return {after, promise: store.saveAsync(after, saveOptions)};
+}
+
 function legacyMarketAuthority(before) {
   const after = cloneAuthorityRoot(before);
   after.marketConfig = {...before.marketConfig, taxRate: 0.07};
@@ -124,7 +228,7 @@ function legacyMarketAuthority(before) {
 }
 
 function sqlSeed(options = {}) {
-  const authority = baselineAuthority();
+  const authority = options.authority || baselineAuthority();
   const profileBindings = {};
   const profiles = {};
   for (const actor of Object.values(ACTORS)) {
@@ -155,6 +259,18 @@ function sqlSeed(options = {}) {
     },
     profile_bindings: profileBindings,
     profiles,
+    market_listings: Object.fromEntries(
+      Object.entries(authority.marketListings || {}).map(([listingId, listing]) => [listingId, {
+        listing_id: listingId,
+        seller_account_id: listing.sellerAccountId,
+        item_id: listing.itemId,
+        currency: listing.currency,
+        unit_price: listing.unitPrice,
+        item_count: listing.count,
+        created_at: listing.createdAt,
+        document_json: listing,
+      }]),
+    ),
     mutation_receipts: options.mutationReceipts || {},
   };
 }
@@ -224,6 +340,10 @@ function createProductionSqlHandler(queryLog) {
       const [playerId] = requiredParams(params, 1, sql);
       return operation.selectForUpdate("profiles", String(playerId));
     }
+    if (/^SELECT listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json FROM market_listings WHERE listing_id = \? FOR UPDATE$/i.test(normalized)) {
+      const [listingId] = requiredParams(params, 1, sql);
+      return operation.selectForUpdate("market_listings", String(listingId));
+    }
 
     if (/^UPDATE profile_bindings SET player_id = \?, profile_revision = \?, updated_at = \?, document_json = CAST\(\? AS JSON\) WHERE account_id = \? AND player_id = \? AND profile_revision = \?$/i.test(normalized)) {
       const [playerId, nextRevision, updatedAt, documentJson, accountId, expectedPlayerId, expectedRevision]
@@ -275,6 +395,22 @@ function createProductionSqlHandler(queryLog) {
       });
     }
 
+    if (/^DELETE FROM market_listings WHERE listing_id = \? AND seller_account_id = \? AND item_id = \? AND currency = \? AND unit_price = \? AND item_count = \? AND created_at = \?$/i.test(normalized)) {
+      const [listingId, sellerAccountId, itemId, currency, unitPrice, itemCount, createdAt]
+        = requiredParams(params, 7, sql);
+      return operation.delete("market_listings", String(listingId), {
+        where: {
+          listing_id: String(listingId),
+          seller_account_id: String(sellerAccountId),
+          item_id: String(itemId),
+          currency: String(currency),
+          unit_price: Number(unitPrice),
+          item_count: Number(itemCount),
+          created_at: String(createdAt),
+        },
+      });
+    }
+
     if (/^INSERT INTO server_state \(state_key, document_json\) VALUES \('auth', CAST\(.+ AS JSON\)\) ON DUPLICATE KEY UPDATE document_json = VALUES\(document_json\)$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.update("server_state", "auth", {
@@ -309,6 +445,9 @@ function loaderRowsFromSqlSnapshot(snapshot) {
   }
   for (const [operationId, receipt] of Object.entries(snapshot.mutation_receipts || {})) {
     rows.push(["mutation_receipts", operationId, JSON.stringify(receipt.document_json)]);
+  }
+  for (const [listingId, listing] of Object.entries(snapshot.market_listings || {})) {
+    rows.push(["market_listings", listingId, JSON.stringify(listing.document_json)]);
   }
   return rows;
 }
@@ -704,4 +843,423 @@ test("duplicate receipt rolls conditional binding and profile writes back withou
   }
 
   assert.equal(harness.assertIdle(), true);
+});
+
+test("different ordinary market cancels overlap and preserve both profile and listing settlements", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-different-"));
+  const authority = marketAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_b"));
+  const gateA = harness.blockNext({writerId: "market_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let saveA = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMarketCancel(storeA, loadedA, "a", {
+      operationId: "op_market_parallel_a_x",
+      requestHash: "8".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    saveA = first.promise;
+    await gateA.entered;
+
+    const second = stagedMarketCancel(storeB, loadedB, "b", {
+      operationId: "op_market_parallel_b_x",
+      requestHash: "9".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await harness.waitForEvent({type: "commit_completed", writerId: "market_b"});
+    await second.promise;
+
+    const whileABlocked = harness.snapshot();
+    assert.equal(Object.hasOwn(whileABlocked.market_listings, MARKET_LISTING_IDS.a), true);
+    assert.equal(Object.hasOwn(whileABlocked.market_listings, MARKET_LISTING_IDS.b), false);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "market_b"
+        && event.table === "auth_store_revisions"
+      )),
+      false,
+    );
+
+    gateA.release();
+    await saveA;
+    saveA = null;
+
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.a), false);
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.a2), true);
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.b), false);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_parallel_a_x"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_parallel_b_x"), true);
+
+    // Keep Store A on its row-local baseline: it still has the stale listing B
+    // in memory. A second cancel must remain conditional without scanning the
+    // canonical receipt ledger or resurrecting B's already committed delete.
+    const firstCommitted = cloneAuthorityRoot(first.after);
+    firstCommitted.mutationReceipts = commitDurableMutationReceiptDelta(
+      canonicalDurableMutationReceipts(firstCommitted.mutationReceipts),
+    );
+    const followUp = stagedMarketCancel(storeA, firstCommitted, "a", {
+      listingId: MARKET_LISTING_IDS.a2,
+      operationId: "op_market_parallel_a_followup",
+      requestHash: "7".repeat(64),
+      updatedAt: UPDATED_AT_3,
+    });
+    await followUp.promise;
+    const afterFollowUp = harness.snapshot();
+    assert.equal(afterFollowUp.auth_store_revisions.auth.revision, 0);
+    assert.equal(Object.hasOwn(afterFollowUp.market_listings, MARKET_LISTING_IDS.a2), false);
+    assert.equal(Object.hasOwn(afterFollowUp.market_listings, MARKET_LISTING_IDS.b), false);
+    assert.equal(afterFollowUp.profiles[ACTORS.a.playerId].profile_revision, 3);
+    assert.equal(Object.hasOwn(afterFollowUp.mutation_receipts, "op_market_parallel_a_followup"), true);
+    assert.equal(
+      queryLog.filter((entry) => entry.writerId === "market_a")
+        .filter((entry) => /auth_store_revisions.+FOR SHARE$/i.test(entry.sql)).length,
+      2,
+    );
+    assert.equal(
+      queryLog.filter((entry) => entry.writerId === "market_a")
+        .some((entry) => /auth_store_revisions.+FOR UPDATE$/i.test(entry.sql)),
+      false,
+    );
+
+    for (const writerId of ["market_a", "market_b"]) {
+      const queries = queryLog.filter((entry) => entry.writerId === writerId);
+      const bindingLock = queries.findIndex((entry) => /profile_bindings.+FOR UPDATE$/i.test(entry.sql));
+      const profileLock = queries.findIndex((entry) => /FROM profiles.+FOR UPDATE$/i.test(entry.sql));
+      const listingLock = queries.findIndex((entry) => /FROM market_listings.+FOR UPDATE$/i.test(entry.sql));
+      const firstWrite = queries.findIndex((entry) => /^UPDATE profile_bindings\b/i.test(entry.sql));
+      assert.ok(bindingLock >= 0 && bindingLock < profileLock);
+      assert.ok(profileLock < listingLock && listingLock < firstWrite);
+    }
+  } finally {
+    gateA.release();
+    if (saveA !== null) {
+      await Promise.allSettled([saveA]);
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("the same ordinary market cancel has one winner and one fully rolled back loser", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-same-"));
+  const authority = marketAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_same_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_same_b"));
+  const gateA = harness.blockNext({writerId: "market_same_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMarketCancel(storeA, loadedA, "a", {
+      operationId: "op_market_same_a_x",
+      requestHash: "a".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const second = stagedMarketCancel(storeB, loadedB, "a", {
+      operationId: "op_market_same_b_x",
+      requestHash: "b".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "market_same_b",
+      table: "profile_bindings",
+      key: ACTORS.a.accountId,
+    });
+    gateA.release();
+
+    const [winner, loser] = await settled;
+    assert.equal(winner.status, "fulfilled");
+    assert.equal(loser.status, "rejected");
+    assert.equal(isResourceConflict(loser.reason), true);
+    const committed = harness.snapshot();
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.a), false);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_same_a_x"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_same_b_x"), false);
+    assert.equal(
+      queryLog.filter((entry) => entry.writerId === "market_same_b")
+        .some((entry) => /^DELETE FROM market_listings\b/i.test(entry.sql)),
+      false,
+      "the stale loser must fail on the profile guard before deleting the listing",
+    );
+  } finally {
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("market listing JSON drift fails before writes and duplicate receipt rolls back the delete", async (t) => {
+  await t.test("listing already absent", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-absent-"));
+    const authority = marketAuthority();
+    const loaderSeed = sqlSeed({authority});
+    const databaseSeed = structuredClone(loaderSeed);
+    delete databaseSeed.market_listings[MARKET_LISTING_IDS.a];
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, loaderSeed);
+    const harness = createSharedMysqlTransactionHarness({
+      seed: databaseSeed,
+      statementHandler: createProductionSqlHandler(queryLog),
+    });
+    const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_absent"));
+    try {
+      const loaded = store.load();
+      const staged = stagedMarketCancel(store, loaded, "a", {
+        operationId: "op_market_absent_x",
+        requestHash: "4".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      });
+      await assert.rejects(staged.promise, isResourceConflict);
+      assert.deepEqual(harness.snapshot(), databaseSeed);
+      assert.equal(
+        queryLog.some((entry) => /^(?:UPDATE|DELETE|INSERT)\b/i.test(entry.sql)),
+        false,
+      );
+    } finally {
+      await store.close();
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
+
+  await t.test("locked listing document drift", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-drift-"));
+    const authority = marketAuthority();
+    const loaderSeed = sqlSeed({authority});
+    const databaseSeed = structuredClone(loaderSeed);
+    databaseSeed.market_listings[MARKET_LISTING_IDS.a].document_json = {
+      ...databaseSeed.market_listings[MARKET_LISTING_IDS.a].document_json,
+      unitPrice: 999,
+    };
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, loaderSeed);
+    const harness = createSharedMysqlTransactionHarness({
+      seed: databaseSeed,
+      statementHandler: createProductionSqlHandler(queryLog),
+    });
+    const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_drift"));
+    try {
+      const loaded = store.load();
+      const staged = stagedMarketCancel(store, loaded, "a", {
+        operationId: "op_market_drift_x",
+        requestHash: "c".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      });
+      await assert.rejects(staged.promise, isResourceConflict);
+      assert.deepEqual(harness.snapshot(), databaseSeed);
+      assert.equal(
+        queryLog.some((entry) => /^UPDATE profile_bindings\b/i.test(entry.sql)),
+        false,
+      );
+    } finally {
+      await store.close();
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
+
+  await t.test("duplicate receipt", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-duplicate-"));
+    const authority = marketAuthority();
+    const operationId = "op_market_duplicate_x";
+    const loaderSeed = sqlSeed({authority});
+    const duplicateReceipt = {
+      schemaVersion: 1,
+      operationId,
+      requestHash: "d".repeat(64),
+      actionId: "POST /market/cancel",
+      accountId: ACTORS.a.accountId,
+      committedAt: UPDATED_AT_1,
+      expiresAt: "2026-07-17T02:10:00.000Z",
+      response: {ok: true, operationId},
+    };
+    const databaseSeed = sqlSeed({
+      authority,
+      mutationReceipts: {
+        [operationId]: {
+          operation_id: operationId,
+          request_hash: duplicateReceipt.requestHash,
+          action_id: duplicateReceipt.actionId,
+          account_id: duplicateReceipt.accountId,
+          committed_at: duplicateReceipt.committedAt,
+          expires_at: duplicateReceipt.expiresAt,
+          document_json: duplicateReceipt,
+        },
+      },
+    });
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, loaderSeed);
+    const harness = createSharedMysqlTransactionHarness({
+      seed: databaseSeed,
+      statementHandler: createProductionSqlHandler(queryLog),
+    });
+    const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_duplicate"));
+    try {
+      const loaded = store.load();
+      const staged = stagedMarketCancel(store, loaded, "a", {
+        operationId,
+        requestHash: "e".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      });
+      await assert.rejects(staged.promise, isResourceConflict);
+      assert.deepEqual(harness.snapshot(), databaseSeed);
+      assert.equal(
+        harness.events().some((event) => (
+          event.type === "write_staged"
+          && event.writerId === "market_duplicate"
+          && event.table === "market_listings"
+        )),
+        true,
+      );
+    } finally {
+      await store.close();
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
+});
+
+test("ordinary market cancel and legacy global writes reject stale snapshots in both orders", async (t) => {
+  await t.test("market cancel first rejects stale legacy before business SQL", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-market-first-legacy-"));
+    const authority = marketAuthority();
+    const seed = sqlSeed({authority});
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, seed);
+    const harness = createSharedMysqlTransactionHarness({
+      seed,
+      statementHandler: createProductionSqlHandler(queryLog),
+      onCommittedSnapshot(snapshot) {
+        loader.writeSnapshot(snapshot);
+      },
+    });
+    const marketStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_first"));
+    const legacyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("legacy_after_market"));
+    try {
+      const marketLoaded = marketStore.load();
+      const staleLegacy = legacyStore.load();
+      await stagedMarketCancel(marketStore, marketLoaded, "a", {
+        operationId: "op_market_before_legacy_x",
+        requestHash: "f".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      }).promise;
+      await assert.rejects(
+        legacyStore.saveAsync(legacyMarketAuthority(staleLegacy)),
+        isResourceConflict,
+      );
+      const committed = harness.snapshot();
+      assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.a), false);
+      assert.equal(committed.server_state.auth.document_json.marketConfig.taxRate, 0.05);
+      assert.equal(
+        queryLog.filter((entry) => entry.writerId === "legacy_after_market")
+          .some((entry) => /^INSERT INTO server_state\b/i.test(entry.sql)),
+        false,
+      );
+    } finally {
+      await Promise.allSettled([marketStore.close(), legacyStore.close()]);
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
+
+  await t.test("legacy first rejects waiting market cancel at the global barrier", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-legacy-first-market-"));
+    const authority = marketAuthority();
+    const seed = sqlSeed({authority});
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, seed);
+    const harness = createSharedMysqlTransactionHarness({
+      seed,
+      statementHandler: createProductionSqlHandler(queryLog),
+      onCommittedSnapshot(snapshot) {
+        loader.writeSnapshot(snapshot);
+      },
+    });
+    const legacyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("legacy_first_market"));
+    const marketStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_after_legacy"));
+    const legacyGate = harness.blockNext({writerId: "legacy_first_market", phase: "before_commit_apply"});
+    void legacyGate.entered.catch(() => {});
+    let settled = null;
+    try {
+      const legacyLoaded = legacyStore.load();
+      const marketLoaded = marketStore.load();
+      const legacySave = legacyStore.saveAsync(legacyMarketAuthority(legacyLoaded));
+      await legacyGate.entered;
+      const marketSave = stagedMarketCancel(marketStore, marketLoaded, "a", {
+        operationId: "op_market_after_legacy_x",
+        requestHash: "0".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      }).promise;
+      settled = Promise.allSettled([legacySave, marketSave]);
+      await harness.waitForEvent({
+        type: "lock_wait",
+        writerId: "market_after_legacy",
+        table: "auth_store_revisions",
+        key: "auth",
+      });
+      legacyGate.release();
+      const [legacyResult, marketResult] = await settled;
+      assert.equal(legacyResult.status, "fulfilled");
+      assert.equal(marketResult.status, "rejected");
+      assert.equal(isGlobalConflict(marketResult.reason), true);
+      const committed = harness.snapshot();
+      assert.equal(committed.auth_store_revisions.auth.revision, 1);
+      assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.a), true);
+      assert.equal(
+        queryLog.filter((entry) => entry.writerId === "market_after_legacy").length,
+        1,
+      );
+    } finally {
+      legacyGate.release();
+      if (settled !== null) {
+        await settled;
+      }
+      await Promise.allSettled([legacyStore.close(), marketStore.close()]);
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
 });
