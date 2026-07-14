@@ -22,6 +22,9 @@ const {
 const {
   __buildMysqlSavePlanFromPersistentDataForTest,
 } = require("../src/mysql-store");
+const {
+  mysqlResourceAcquisitionTrace,
+} = require("../src/mysql-resource-acquisition-order");
 
 const ACCOUNT_ID = "acc_mail_claim_conditional";
 const PLAYER_ID = "player_mail_claim_conditional";
@@ -348,6 +351,12 @@ test("planner writes consumed equipment tombstones in canonical order with stric
     assert.doesNotMatch(write.sql, /ON DUPLICATE KEY/i);
   }
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+  assert.deepEqual(
+    mysqlResourceAcquisitionTrace(plan)
+      .filter(({resource}) => resource === "consumed_equipment_envelope")
+      .map(({key}) => key),
+    [ENVELOPE_ID_A, ENVELOPE_ID_Z],
+  );
 });
 
 test("planner certifies a partial equipment claim only for the removed envelope tombstone", () => {

@@ -28,6 +28,10 @@ const {
   durableMutationReceiptDeltaFrom,
 } = require("./auth/durable-mutation-state");
 const {MARKET_MAX_LISTINGS} = require("./auth/market-listing-state");
+const {
+  assertMysqlResourceAcquisitionOrder,
+  buildMysqlResourceAcquisitionPlan,
+} = require("./mysql-resource-acquisition-order");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -1217,7 +1221,7 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
     conditionalProfileUpdate(nextProfile, expectedRevision),
   ];
   writes.push(conditionalMutationReceiptInsert(receipt));
-  return {
+  return buildMysqlResourceAcquisitionPlan({
     kind: "profile_conditional_v2",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
@@ -1227,7 +1231,7 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
     nextProfileRevision: expectedRevision + 1,
     locks,
     writes,
-  };
+  });
 }
 
 function buildConditionalMarketCancelSavePlan(data, previous, groups, consistencyScopeValue) {
@@ -1318,7 +1322,7 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
     return null;
   }
 
-  return {
+  return buildMysqlResourceAcquisitionPlan({
     kind: "market_cancel_conditional_v1",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
@@ -1339,7 +1343,7 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
       conditionalMarketListingDelete(listing),
       conditionalMutationReceiptInsert(receipt),
     ],
-  };
+  });
 }
 
 function buildConditionalMarketBuySavePlan(data, previous, groups, consistencyScopeValue) {
@@ -1475,11 +1479,11 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
   const bindingLocks = [
     {binding: beforeBinding, shared: false},
     {binding: sellerBinding, shared: true},
-  ].sort((left, right) => compareCanonicalIds(left.binding.accountId, right.binding.accountId));
+  ];
   const profileLocks = [
     {profile: beforeProfile, shared: false},
     {profile: sellerProfile, shared: true},
-  ].sort((left, right) => compareCanonicalIds(left.profile.playerId, right.profile.playerId));
+  ];
   const writes = [
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
@@ -1490,7 +1494,7 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     writes.push(conditionalMarketTaxIncrement(taxChange.currency, taxChange.taxAmount));
   }
   writes.push(conditionalMutationReceiptInsert(receipt));
-  return {
+  return buildMysqlResourceAcquisitionPlan({
     kind: "market_buy_conditional_v1",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
@@ -1511,7 +1515,7 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
       marketListingResourceLock(listing),
     ],
     writes,
-  };
+  });
 }
 
 function buildConditionalMailClaimSavePlan(data, previous, groups, consistencyScopeValue) {
@@ -1599,7 +1603,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
   const mailWrite = mailClaim.disposition === "update"
     ? conditionalMailMessageUpdate(mailClaim.nextMail, mailClaim.beforeMail)
     : conditionalMailMessageDelete(mailClaim.beforeMail);
-  return {
+  return buildMysqlResourceAcquisitionPlan({
     kind: "mail_claim_conditional_v1",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
@@ -1623,7 +1627,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
       ...mailClaim.removedEnvelopeIds.map(conditionalConsumedEquipmentEnvelopeInsert),
       conditionalMutationReceiptInsert(receipt),
     ],
-  };
+  });
 }
 
 function rowLocalProfileConsistencyScope(value) {
@@ -1890,6 +1894,7 @@ function profileBindingResourceLock(binding, options = {}) {
     kind: "lock",
     resource: "profile_binding",
     key: accountId,
+    lockMode: options.shared === true ? "shared" : "exclusive",
     sql: `SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? ${options.shared === true ? "FOR SHARE" : "FOR UPDATE"}`,
     params: [accountId],
     expectedRow: {
@@ -1913,6 +1918,7 @@ function profileResourceLock(profile, options = {}) {
     kind: "lock",
     resource: "profile",
     key: playerId,
+    lockMode: options.shared === true ? "shared" : "exclusive",
     sql: `SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? ${options.shared === true ? "FOR SHARE" : "FOR UPDATE"}`,
     params: [playerId],
     expectedRow: {
@@ -1950,6 +1956,7 @@ function marketListingResourceLock(listing) {
     kind: "lock",
     resource: "market_listing",
     key: listingId,
+    lockMode: "exclusive",
     sql: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
       item_count, created_at, document_json
       FROM market_listings WHERE listing_id = ? FOR UPDATE`,
@@ -1989,6 +1996,7 @@ function mailMessageResourceLock(mail) {
     kind: "lock",
     resource: "mail_message",
     key: mailId,
+    lockMode: "exclusive",
     sql: `SELECT mail_id, sender_account_id, recipient_account_id, title,
       created_at, read_at, document_json
       FROM mail_messages WHERE mail_id = ? FOR UPDATE`,
@@ -3868,6 +3876,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
   ) {
     throw new Error("未知或缺少兼容屏障的 MySQL 存档计划。");
   }
+  assertMysqlResourceAcquisitionOrder(plan);
   return runMysqlPoolSaveTransaction(pool, {
     ...options,
     revisionCasEnabled: false,
@@ -4484,6 +4493,7 @@ module.exports = {
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
+  __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
   __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,
   createMysqlAuthStore,
   mysqlAuthStoreRootContract,

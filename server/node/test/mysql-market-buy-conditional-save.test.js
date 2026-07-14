@@ -17,6 +17,9 @@ const {
 const {
   __buildMysqlSavePlanFromPersistentDataForTest,
 } = require("../src/mysql-store");
+const {
+  mysqlResourceAcquisitionTrace,
+} = require("../src/mysql-resource-acquisition-order");
 
 // Deliberately make account and player ordering disagree with actor roles. This
 // catches a buyer-first lock order that would deadlock when two accounts buy
@@ -348,6 +351,19 @@ test("planner selects one cross-account conditional transaction for a certified 
   assert.equal(plan.writes[4].params.includes(1), true);
   assert.equal(plan.writes.some((write) => /^INSERT INTO server_state\b/i.test(write.sql)), false);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+  assert.deepEqual(
+    mysqlResourceAcquisitionTrace(plan).map(({resource, key}) => [resource, key]),
+    [
+      ["profile_binding", SELLER_ACCOUNT_ID],
+      ["profile_binding", BUYER_ACCOUNT_ID],
+      ["profile", BUYER_PLAYER_ID],
+      ["profile", SELLER_PLAYER_ID],
+      ["market_listing", LISTING_ID],
+      ["mail_message", SALE_MAIL_ID],
+      ["market_tax", "auth"],
+      ["mutation_receipt", OPERATION_ID],
+    ],
+  );
 });
 
 test("planner fails closed when an ordinary purchase carries a broader or uncertified write set", async (t) => {

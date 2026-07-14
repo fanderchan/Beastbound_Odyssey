@@ -25,6 +25,33 @@ const ACTORS = Object.freeze({
   b: Object.freeze({accountId: "acc_real_parallel_b", playerId: "player_real_parallel_b"}),
   m: Object.freeze({accountId: "acc_real_market_cancel", playerId: "player_real_market_cancel"}),
 });
+const CROSS_ACCOUNT_ACTORS = Object.freeze({
+  buy_first_buyer: Object.freeze({
+    accountId: "acc_real_cross_10_buy_first_buyer",
+    playerId: "player_real_cross_10_buy_first_buyer",
+  }),
+  buy_first_seller: Object.freeze({
+    accountId: "acc_real_cross_11_buy_first_seller",
+    playerId: "player_real_cross_11_buy_first_seller",
+  }),
+  cancel_first_buyer: Object.freeze({
+    accountId: "acc_real_cross_20_cancel_first_buyer",
+    playerId: "player_real_cross_20_cancel_first_buyer",
+  }),
+  cancel_first_seller: Object.freeze({
+    accountId: "acc_real_cross_21_cancel_first_seller",
+    playerId: "player_real_cross_21_cancel_first_seller",
+  }),
+  reciprocal_a: Object.freeze({
+    accountId: "acc_real_cross_30_reciprocal_a",
+    playerId: "player_real_cross_30_reciprocal_a",
+  }),
+  reciprocal_b: Object.freeze({
+    accountId: "acc_real_cross_31_reciprocal_b",
+    playerId: "player_real_cross_31_reciprocal_b",
+  }),
+});
+const ALL_ACTORS = Object.freeze({...ACTORS, ...CROSS_ACCOUNT_ACTORS});
 const BASE_TIME = "2026-07-14T04:00:00.000Z";
 const MARKET_LISTING_IDS = Object.freeze({
   success: "listing_real_market_cancel_success",
@@ -33,6 +60,10 @@ const MARKET_LISTING_IDS = Object.freeze({
   buyParallelB: "listing_real_market_buy_parallel_b",
   buyRace: "listing_real_market_buy_race",
   buyRollback: "listing_real_market_buy_rollback",
+  buyFirstCancel: "listing_real_cross_buy_first_cancel",
+  cancelFirstBuy: "listing_real_cross_cancel_first_buy",
+  reciprocalSoldByA: "listing_real_cross_reciprocal_sold_by_a",
+  reciprocalSoldByB: "listing_real_cross_reciprocal_sold_by_b",
 });
 const MAIL_CLAIM_IDS = Object.freeze({
   partial: "mail_real_claim_partial",
@@ -42,6 +73,13 @@ const MAIL_CLAIM_IDS = Object.freeze({
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
+
+function actorForKey(actorKeyValue) {
+  const actorKey = String(actorKeyValue || "");
+  const actor = ALL_ACTORS[actorKey];
+  assert.ok(actor, `未知真实 MySQL 门槛角色：${actorKey || "<empty>"}`);
+  return actor;
+}
 
 function deferred() {
   let resolve;
@@ -83,16 +121,205 @@ function commitGate(label) {
   });
 }
 
+function mysqlResourceLockObservation(queryArgs) {
+  const first = queryArgs[0];
+  const sql = String(typeof first === "string" ? first : first && first.sql || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const params = Array.isArray(queryArgs[1])
+    ? queryArgs[1]
+    : first && Array.isArray(first.values)
+      ? first.values
+      : [];
+  const mode = /\bFOR\s+UPDATE\s*$/i.test(sql)
+    ? "exclusive"
+    : /\bFOR\s+SHARE\s*$/i.test(sql)
+      ? "shared"
+      : "";
+  if (mode === "") {
+    return null;
+  }
+  const resource = /\bFROM\s+profile_bindings\s+WHERE\s+account_id\s*=\s*\?/i.test(sql)
+    ? "profile_binding"
+    : /\bFROM\s+profiles\s+WHERE\s+player_id\s*=\s*\?/i.test(sql)
+      ? "profile"
+      : /\bFROM\s+market_listings\s+WHERE\s+listing_id\s*=\s*\?/i.test(sql)
+        ? "market_listing"
+        : null;
+  if (resource === null) {
+    return null;
+  }
+  return Object.freeze({resource, key: String(params[0] || ""), mode});
+}
+
+function canonicalMarketBuyLockTrace(buyerKey, sellerKey, listingId) {
+  const buyer = actorForKey(buyerKey);
+  const seller = actorForKey(sellerKey);
+  const canonical = (entries) => entries.sort((left, right) => {
+    if (left.key === right.key) {
+      return 0;
+    }
+    return left.key < right.key ? -1 : 1;
+  });
+  return [
+    ...canonical([
+      {resource: "profile_binding", key: buyer.accountId, mode: "exclusive"},
+      {resource: "profile_binding", key: seller.accountId, mode: "shared"},
+    ]),
+    ...canonical([
+      {resource: "profile", key: buyer.playerId, mode: "exclusive"},
+      {resource: "profile", key: seller.playerId, mode: "shared"},
+    ]),
+    {resource: "market_listing", key: listingId, mode: "exclusive"},
+  ];
+}
+
+function reciprocalBuyLockInterleaveGate(options) {
+  const winnerTrace = options.winnerTrace;
+  const contenderTrace = options.contenderTrace;
+  assert.ok(Array.isArray(winnerTrace) && winnerTrace.length > 0);
+  assert.ok(Array.isArray(contenderTrace) && contenderTrace.length > 0);
+  assert.deepEqual(winnerTrace[0], {
+    resource: "profile_binding",
+    key: options.canonicalFirstAccountId,
+    mode: "exclusive",
+  });
+  assert.deepEqual(contenderTrace[0], {
+    resource: "profile_binding",
+    key: options.canonicalFirstAccountId,
+    mode: "shared",
+  });
+
+  const winnerFirstAcquired = deferred();
+  const contenderFirstAttempted = deferred();
+  const winnerRelease = deferred();
+  const failure = deferred();
+  void failure.promise.catch(() => {});
+  const observations = {
+    winner: {attempted: [], acquired: []},
+    contender: {attempted: [], acquired: []},
+  };
+  let released = false;
+  let failed = false;
+  let lockWaitObserved = false;
+  let contenderAcquiredBeforeRelease = false;
+
+  function signalFailure(error) {
+    if (!failed) {
+      failed = true;
+      failure.reject(error);
+    }
+  }
+
+  function expectedTrace(participant) {
+    return participant === "winner" ? winnerTrace : contenderTrace;
+  }
+
+  function gateFor(participant) {
+    assert.ok(Object.hasOwn(observations, participant));
+    return Object.freeze({
+      async beforeQuery(queryArgs) {
+        try {
+          const lock = mysqlResourceLockObservation(queryArgs);
+          if (lock === null) {
+            return;
+          }
+          const participantObservations = observations[participant];
+          const expected = expectedTrace(participant)[participantObservations.attempted.length];
+          assert.ok(expected, `${participant} 发出了计划外的 MySQL 资源锁。`);
+          assert.deepEqual(lock, expected, `${participant} 未按规范总序获取 MySQL 资源锁。`);
+          participantObservations.attempted.push(lock);
+          if (participant === "contender" && participantObservations.attempted.length === 1) {
+            contenderFirstAttempted.resolve();
+          }
+        } catch (error) {
+          signalFailure(error);
+          throw error;
+        }
+      },
+      async afterQuery(queryArgs) {
+        try {
+          const lock = mysqlResourceLockObservation(queryArgs);
+          if (lock === null) {
+            return;
+          }
+          const participantObservations = observations[participant];
+          participantObservations.acquired.push(lock);
+          if (participantObservations.acquired.length !== 1) {
+            return;
+          }
+          if (participant === "winner") {
+            winnerFirstAcquired.resolve();
+            await winnerRelease.promise;
+            return;
+          }
+          if (!released) {
+            contenderAcquiredBeforeRelease = true;
+            throw new Error("互买竞争方在规范首锁持有期间提前获得资源锁。");
+          }
+        } catch (error) {
+          signalFailure(error);
+          throw error;
+        }
+      },
+    });
+  }
+
+  function waitFor(eventPromise) {
+    return Promise.race([eventPromise, failure.promise]);
+  }
+
+  return Object.freeze({
+    gateFor,
+    waitForWinnerFirstAcquired() {
+      return waitFor(winnerFirstAcquired.promise);
+    },
+    waitForContenderFirstAttempted() {
+      return waitFor(contenderFirstAttempted.promise);
+    },
+    markLockWaitObserved() {
+      lockWaitObserved = true;
+    },
+    release() {
+      if (!released) {
+        released = true;
+        winnerRelease.resolve();
+      }
+    },
+    assertVerified() {
+      assert.equal(lockWaitObserved, true);
+      assert.equal(contenderAcquiredBeforeRelease, false);
+      assert.deepEqual(observations.winner.attempted, winnerTrace);
+      assert.deepEqual(observations.winner.acquired, winnerTrace);
+      assert.deepEqual(observations.contender.attempted, [contenderTrace[0]]);
+      assert.deepEqual(observations.contender.acquired, [contenderTrace[0]]);
+    },
+  });
+}
+
 function gatedPool(basePool, gate) {
   return {
     async getConnection() {
       const connection = await basePool.getConnection();
       return new Proxy(connection, {
         get(target, property) {
-          if (property === "commit" && gate) {
+          if (property === "commit" && gate && typeof gate.beforeCommit === "function") {
             return async () => {
               await gate.beforeCommit();
               return target.commit();
+            };
+          }
+          if (property === "query" && gate
+            && (typeof gate.beforeQuery === "function" || typeof gate.afterQuery === "function")) {
+            return async (...args) => {
+              if (typeof gate.beforeQuery === "function") {
+                await gate.beforeQuery(args);
+              }
+              const result = await target.query(...args);
+              if (typeof gate.afterQuery === "function") {
+                await gate.afterQuery(args, result);
+              }
+              return result;
             };
           }
           const value = Reflect.get(target, property, target);
@@ -362,7 +589,7 @@ function seededAuthority(empty) {
   data.profiles = {};
   data.mutationReceipts = data.mutationReceipts || {};
   data.marketConfig = {taxRate: 0.05};
-  for (const [key, actor] of Object.entries(ACTORS)) {
+  for (const [key, actor] of Object.entries(ALL_ACTORS)) {
     const username = `real_mysql_${key}`;
     data.accounts[username] = {
       accountId: actor.accountId,
@@ -399,6 +626,26 @@ function seededAuthority(empty) {
     [MARKET_LISTING_IDS.buyParallelB]: realMarketListing(MARKET_LISTING_IDS.buyParallelB, 2),
     [MARKET_LISTING_IDS.buyRace]: realMarketListing(MARKET_LISTING_IDS.buyRace, 1),
     [MARKET_LISTING_IDS.buyRollback]: realMarketListing(MARKET_LISTING_IDS.buyRollback, 1),
+    [MARKET_LISTING_IDS.buyFirstCancel]: realMarketListing(
+      MARKET_LISTING_IDS.buyFirstCancel,
+      1,
+      {sellerKey: "buy_first_seller"},
+    ),
+    [MARKET_LISTING_IDS.cancelFirstBuy]: realMarketListing(
+      MARKET_LISTING_IDS.cancelFirstBuy,
+      2,
+      {sellerKey: "cancel_first_seller"},
+    ),
+    [MARKET_LISTING_IDS.reciprocalSoldByA]: realMarketListing(
+      MARKET_LISTING_IDS.reciprocalSoldByA,
+      2,
+      {sellerKey: "reciprocal_a"},
+    ),
+    [MARKET_LISTING_IDS.reciprocalSoldByB]: realMarketListing(
+      MARKET_LISTING_IDS.reciprocalSoldByB,
+      1,
+      {sellerKey: "reciprocal_b"},
+    ),
   };
   data.mailMessages = {
     ...(data.mailMessages || {}),
@@ -421,7 +668,7 @@ function seededAuthority(empty) {
 }
 
 function realClaimMail(mailId, actorKey, overrides = {}) {
-  const actor = ACTORS[actorKey];
+  const actor = actorForKey(actorKey);
   return {
     mailId,
     senderAccountId: "system_mail",
@@ -441,13 +688,14 @@ function realClaimMail(mailId, actorKey, overrides = {}) {
   };
 }
 
-function realMarketListing(listingId, count) {
+function realMarketListing(listingId, count, options = {}) {
+  const seller = actorForKey(options.sellerKey || "m");
   return {
     listingId,
-    sellerAccountId: ACTORS.m.accountId,
+    sellerAccountId: seller.accountId,
     itemId: "item_meat_small",
     count,
-    unitPrice: 20,
+    unitPrice: Number(options.unitPrice || 20),
     currency: "stoneCoins",
     createdAt: BASE_TIME,
     schemaVersion: 1,
@@ -505,8 +753,11 @@ function saveProfile(store, before, actorKey, options) {
 }
 
 function saveMarketCancel(store, before, listingId, options) {
-  const actor = ACTORS.m;
+  const actorKey = String(options.actorKey || "m");
+  const actor = actorForKey(actorKey);
   const listing = before.marketListings[listingId];
+  assert.ok(listing, `撤单门槛缺少挂单：${listingId}`);
+  assert.equal(listing.sellerAccountId, actor.accountId);
   const after = cloneAuthorityRoot(before);
   const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
   after.profileBindings[actor.accountId] = {
@@ -551,9 +802,12 @@ function saveMarketCancel(store, before, listingId, options) {
 }
 
 function saveMarketBuy(store, before, buyerKey, listingId, options) {
-  const buyer = ACTORS[buyerKey];
+  const buyer = actorForKey(buyerKey);
   const listing = before.marketListings[listingId];
-  const seller = ACTORS.m;
+  const sellerKey = String(options.sellerKey || "m");
+  const seller = actorForKey(sellerKey);
+  assert.ok(listing, `购买门槛缺少挂单：${listingId}`);
+  assert.equal(listing.sellerAccountId, seller.accountId);
   const after = cloneAuthorityRoot(before);
   const nextRevision = Number(before.profileBindings[buyer.accountId].profileRevision) + 1;
   const totalPrice = Number(listing.count) * Number(listing.unitPrice);
@@ -587,8 +841,10 @@ function saveMarketBuy(store, before, buyerKey, listingId, options) {
     senderUsername: "auction_house",
     senderDisplayName: "拍卖行",
     recipientAccountId: seller.accountId,
-    recipientUsername: "real_market_seller",
-    recipientDisplayName: "真实市场卖家",
+    recipientUsername: sellerKey === "m" ? "real_market_seller" : `real_mysql_${sellerKey}`,
+    recipientDisplayName: sellerKey === "m"
+      ? "真实市场卖家"
+      : `真实引擎猎人${sellerKey.toUpperCase()}`,
     title: "拍卖行成交通知",
     body: "真实引擎市场成交测试",
     currency: {[listing.currency]: sellerReceives},
@@ -829,13 +1085,34 @@ async function serverStateRowCount(admin) {
 }
 
 async function profileRow(admin, actorKey) {
+  const actor = actorForKey(actorKey);
   const [rows] = await adminQuery(
     admin,
     "SELECT profile_revision, CAST(JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.stoneCoins')) AS SIGNED) AS stone_coins FROM profiles WHERE player_id = ?",
-    [ACTORS[actorKey].playerId],
+    [actor.playerId],
     "MySQL profile row query",
   );
   return {revision: Number(rows[0].profile_revision), stoneCoins: Number(rows[0].stone_coins)};
+}
+
+async function profileAssetRow(admin, actorKey, itemId = "item_meat_small") {
+  const actor = actorForKey(actorKey);
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT profile_revision, CAST(profile_json AS CHAR) AS profile_json FROM profiles WHERE player_id = ?",
+    [actor.playerId],
+    "MySQL profile asset row query",
+  );
+  assert.ok(rows[0], `MySQL profile asset row 缺失：${actor.playerId}`);
+  const profile = JSON.parse(String(rows[0].profile_json));
+  const itemCount = (Array.isArray(profile.backpackSlots) ? profile.backpackSlots : [])
+    .filter((slot) => slot && slot.itemId === itemId)
+    .reduce((total, slot) => total + Number(slot.count || 0), 0);
+  return {
+    revision: Number(rows[0].profile_revision),
+    stoneCoins: Number(profile.stoneCoins || 0),
+    itemCount,
+  };
 }
 
 async function deadlockCount(admin) {
@@ -859,10 +1136,11 @@ async function activeTransactionCount(admin) {
 }
 
 async function bindingRevision(admin, actorKey) {
+  const actor = actorForKey(actorKey);
   const [rows] = await adminQuery(
     admin,
     "SELECT profile_revision FROM profile_bindings WHERE account_id = ?",
-    [ACTORS[actorKey].accountId],
+    [actor.accountId],
     "MySQL profile binding query",
   );
   return Number(rows[0] && rows[0].profile_revision);
@@ -1442,6 +1720,380 @@ async function runRealMysqlGate(runtime) {
     );
     await closeStores(stores);
 
+    const crossAccountGlobalRevision = await globalRevision(admin);
+    const crossAccountTaxBaseline = await marketTaxCollected(admin);
+    assert.equal(crossAccountGlobalRevision, 3);
+    assert.equal(crossAccountTaxBaseline, 4);
+
+    const buyFirstCancelGate = commitGate("buy_before_seller_cancel");
+    gates.push(buyFirstCancelGate);
+    const buyFirstStore = createMysqlAuthStore(
+      storeOptions(runtime, database, buyFirstCancelGate),
+    );
+    const cancelAfterBuyStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(buyFirstStore, cancelAfterBuyStore);
+    const buyFirstLoaded = buyFirstStore.load();
+    const cancelAfterBuyLoaded = cancelAfterBuyStore.load();
+    const buyFirstSaleMailId = "mail_real_cross_buy_first_cancel_buy";
+    const buyFirstOperationId = "real_cross_buy_first_cancel_buy";
+    const cancelAfterBuyOperationId = "real_cross_buy_first_cancel_loser_cancel";
+    const buyFirstWrite = saveMarketBuy(
+      buyFirstStore,
+      buyFirstLoaded,
+      "buy_first_buyer",
+      MARKET_LISTING_IDS.buyFirstCancel,
+      {
+        sellerKey: "buy_first_seller",
+        saleMailId: buyFirstSaleMailId,
+        operationId: buyFirstOperationId,
+        requestHash: "d".repeat(64),
+        updatedAt: "2026-07-14T04:09:10.000Z",
+      },
+    );
+    trackWrite(buyFirstWrite.promise);
+    await settleWithin(
+      buyFirstCancelGate.entered,
+      WAIT_TIMEOUT_MS,
+      "购买先于卖家撤单的 COMMIT gate",
+    );
+    const cancelAfterBuyWrite = saveMarketCancel(
+      cancelAfterBuyStore,
+      cancelAfterBuyLoaded,
+      MARKET_LISTING_IDS.buyFirstCancel,
+      {
+        actorKey: "buy_first_seller",
+        operationId: cancelAfterBuyOperationId,
+        requestHash: "e".repeat(64),
+        updatedAt: "2026-07-14T04:09:10.000Z",
+      },
+    );
+    trackWrite(cancelAfterBuyWrite.promise);
+    await waitForLockWait(admin, "购买先于卖家撤单的 seller 行锁等待");
+    buyFirstCancelGate.release();
+    const buyFirstCancelResults = await settleWithin(
+      Promise.allSettled([buyFirstWrite.promise, cancelAfterBuyWrite.promise]),
+      WAIT_TIMEOUT_MS,
+      "购买先于卖家撤单竞争提交",
+    );
+    if (buyFirstCancelResults[0].status === "rejected") {
+      buyFirstCancelResults[0].reason.message
+        = `购买先于撤单的购买失败：${buyFirstCancelResults[0].reason.message}`;
+      throw buyFirstCancelResults[0].reason;
+    }
+    assert.equal(buyFirstCancelResults[0].status, "fulfilled");
+    assert.equal(buyFirstCancelResults[1].status, "rejected");
+    assert.equal(
+      isConflict(buyFirstCancelResults[1].reason, "mysql_resource_revision_conflict"),
+      true,
+    );
+    const buyFirstBuyerAssets = await profileAssetRow(admin, "buy_first_buyer");
+    const buyFirstSellerAssets = await profileAssetRow(admin, "buy_first_seller");
+    assert.deepEqual(buyFirstBuyerAssets, {revision: 2, stoneCoins: 180, itemCount: 1});
+    assert.deepEqual(buyFirstSellerAssets, {revision: 1, stoneCoins: 200, itemCount: 0});
+    assert.equal(await bindingRevision(admin, "buy_first_buyer"), 2);
+    assert.equal(await bindingRevision(admin, "buy_first_seller"), 1);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.buyFirstCancel), false);
+    const buyFirstSaleMail = await mailDocument(admin, buyFirstSaleMailId);
+    assert.deepEqual({
+      recipientAccountId: buyFirstSaleMail && buyFirstSaleMail.recipientAccountId,
+      title: buyFirstSaleMail && buyFirstSaleMail.title,
+      currency: buyFirstSaleMail && buyFirstSaleMail.currency,
+      items: buyFirstSaleMail && buyFirstSaleMail.items,
+    }, {
+      recipientAccountId: actorForKey("buy_first_seller").accountId,
+      title: "拍卖行成交通知",
+      currency: {stoneCoins: 19},
+      items: [],
+    });
+    const taxAfterBuyFirst = await marketTaxCollected(admin);
+    assert.equal(taxAfterBuyFirst, crossAccountTaxBaseline + 1);
+    assert.equal(
+      200 - buyFirstBuyerAssets.stoneCoins,
+      buyFirstSaleMail.currency.stoneCoins + taxAfterBuyFirst - crossAccountTaxBaseline,
+    );
+    assert.equal(await mutationReceiptExists(admin, buyFirstOperationId), true);
+    assert.equal(await mutationReceiptExists(admin, cancelAfterBuyOperationId), false);
+    assert.equal(await globalRevision(admin), crossAccountGlobalRevision);
+    await closeStores(stores);
+
+    const cancelFirstBuyGate = commitGate("seller_cancel_before_buy");
+    gates.push(cancelFirstBuyGate);
+    const cancelFirstStore = createMysqlAuthStore(
+      storeOptions(runtime, database, cancelFirstBuyGate),
+    );
+    const buyAfterCancelStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(cancelFirstStore, buyAfterCancelStore);
+    const cancelFirstLoaded = cancelFirstStore.load();
+    const buyAfterCancelLoaded = buyAfterCancelStore.load();
+    const cancelFirstOperationId = "real_cross_cancel_first_buy_cancel";
+    const buyAfterCancelOperationId = "real_cross_cancel_first_buy_loser_buy";
+    const buyAfterCancelSaleMailId = "mail_real_cross_cancel_first_buy_loser";
+    const cancelFirstWrite = saveMarketCancel(
+      cancelFirstStore,
+      cancelFirstLoaded,
+      MARKET_LISTING_IDS.cancelFirstBuy,
+      {
+        actorKey: "cancel_first_seller",
+        operationId: cancelFirstOperationId,
+        requestHash: "f".repeat(64),
+        updatedAt: "2026-07-14T04:09:20.000Z",
+      },
+    );
+    trackWrite(cancelFirstWrite.promise);
+    await settleWithin(
+      cancelFirstBuyGate.entered,
+      WAIT_TIMEOUT_MS,
+      "卖家撤单先于购买的 COMMIT gate",
+    );
+    const buyAfterCancelWrite = saveMarketBuy(
+      buyAfterCancelStore,
+      buyAfterCancelLoaded,
+      "cancel_first_buyer",
+      MARKET_LISTING_IDS.cancelFirstBuy,
+      {
+        sellerKey: "cancel_first_seller",
+        saleMailId: buyAfterCancelSaleMailId,
+        operationId: buyAfterCancelOperationId,
+        requestHash: "0".repeat(64),
+        updatedAt: "2026-07-14T04:09:20.000Z",
+      },
+    );
+    trackWrite(buyAfterCancelWrite.promise);
+    await waitForLockWait(admin, "卖家撤单先于购买的 seller 行锁等待");
+    cancelFirstBuyGate.release();
+    const cancelFirstBuyResults = await settleWithin(
+      Promise.allSettled([cancelFirstWrite.promise, buyAfterCancelWrite.promise]),
+      WAIT_TIMEOUT_MS,
+      "卖家撤单先于购买竞争提交",
+    );
+    if (cancelFirstBuyResults[0].status === "rejected") {
+      cancelFirstBuyResults[0].reason.message
+        = `撤单先于购买的撤单失败：${cancelFirstBuyResults[0].reason.message}`;
+      throw cancelFirstBuyResults[0].reason;
+    }
+    assert.equal(cancelFirstBuyResults[0].status, "fulfilled");
+    assert.equal(cancelFirstBuyResults[1].status, "rejected");
+    assert.equal(
+      isConflict(cancelFirstBuyResults[1].reason, "mysql_resource_revision_conflict"),
+      true,
+    );
+    assert.deepEqual(
+      await profileAssetRow(admin, "cancel_first_buyer"),
+      {revision: 1, stoneCoins: 200, itemCount: 0},
+    );
+    assert.deepEqual(
+      await profileAssetRow(admin, "cancel_first_seller"),
+      {revision: 2, stoneCoins: 200, itemCount: 2},
+    );
+    assert.equal(await bindingRevision(admin, "cancel_first_buyer"), 1);
+    assert.equal(await bindingRevision(admin, "cancel_first_seller"), 2);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.cancelFirstBuy), false);
+    assert.equal(await marketSaleMailExists(admin, buyAfterCancelSaleMailId), false);
+    assert.equal(await marketTaxCollected(admin), taxAfterBuyFirst);
+    assert.equal(await mutationReceiptExists(admin, cancelFirstOperationId), true);
+    assert.equal(await mutationReceiptExists(admin, buyAfterCancelOperationId), false);
+    assert.equal(await globalRevision(admin), crossAccountGlobalRevision);
+    await closeStores(stores);
+
+    const reciprocalAExpectedLocks = canonicalMarketBuyLockTrace(
+      "reciprocal_a",
+      "reciprocal_b",
+      MARKET_LISTING_IDS.reciprocalSoldByB,
+    );
+    const reciprocalBExpectedLocks = canonicalMarketBuyLockTrace(
+      "reciprocal_b",
+      "reciprocal_a",
+      MARKET_LISTING_IDS.reciprocalSoldByA,
+    );
+    const reciprocalInterleave = reciprocalBuyLockInterleaveGate({
+      canonicalFirstAccountId: actorForKey("reciprocal_a").accountId,
+      winnerTrace: reciprocalAExpectedLocks,
+      contenderTrace: reciprocalBExpectedLocks,
+    });
+    gates.push(reciprocalInterleave);
+    const reciprocalAStore = createMysqlAuthStore(storeOptions(
+      runtime,
+      database,
+      reciprocalInterleave.gateFor("winner"),
+    ));
+    const reciprocalBStaleStore = createMysqlAuthStore(storeOptions(
+      runtime,
+      database,
+      reciprocalInterleave.gateFor("contender"),
+    ));
+    stores.push(reciprocalAStore, reciprocalBStaleStore);
+    const reciprocalALoaded = reciprocalAStore.load();
+    const reciprocalBStaleLoaded = reciprocalBStaleStore.load();
+    const reciprocalAOperationId = "real_cross_reciprocal_a_buy";
+    const reciprocalBStaleOperationId = "real_cross_reciprocal_b_stale";
+    const reciprocalARemittanceMailId = "mail_real_cross_reciprocal_a_winner";
+    const reciprocalBStaleMailId = "mail_real_cross_reciprocal_b_stale";
+    const reciprocalAWrite = saveMarketBuy(
+      reciprocalAStore,
+      reciprocalALoaded,
+      "reciprocal_a",
+      MARKET_LISTING_IDS.reciprocalSoldByB,
+      {
+        sellerKey: "reciprocal_b",
+        saleMailId: reciprocalARemittanceMailId,
+        operationId: reciprocalAOperationId,
+        requestHash: "1".repeat(64),
+        updatedAt: "2026-07-14T04:09:30.000Z",
+      },
+    );
+    trackWrite(reciprocalAWrite.promise);
+    await settleWithin(
+      reciprocalInterleave.waitForWinnerFirstAcquired(),
+      WAIT_TIMEOUT_MS,
+      "双向互买 A 获得 canonical 首个账号行锁",
+    );
+    const reciprocalBStaleWrite = saveMarketBuy(
+      reciprocalBStaleStore,
+      reciprocalBStaleLoaded,
+      "reciprocal_b",
+      MARKET_LISTING_IDS.reciprocalSoldByA,
+      {
+        sellerKey: "reciprocal_a",
+        saleMailId: reciprocalBStaleMailId,
+        operationId: reciprocalBStaleOperationId,
+        requestHash: "2".repeat(64),
+        updatedAt: "2026-07-14T04:09:30.000Z",
+      },
+    );
+    trackWrite(reciprocalBStaleWrite.promise);
+    await settleWithin(
+      reciprocalInterleave.waitForContenderFirstAttempted(),
+      WAIT_TIMEOUT_MS,
+      "双向互买 B 以卖家角色请求同一 canonical 首锁",
+    );
+    await waitForLockWait(admin, "双向互买 canonical account 行锁等待");
+    reciprocalInterleave.markLockWaitObserved();
+    reciprocalInterleave.release();
+    const reciprocalInitialResults = await settleWithin(
+      Promise.allSettled([reciprocalAWrite.promise, reciprocalBStaleWrite.promise]),
+      WAIT_TIMEOUT_MS,
+      "双向互买首轮竞争提交",
+    );
+    if (reciprocalInitialResults[0].status === "rejected") {
+      reciprocalInitialResults[0].reason.message
+        = `双向互买 A 赢家失败：${reciprocalInitialResults[0].reason.message}`;
+      throw reciprocalInitialResults[0].reason;
+    }
+    assert.equal(reciprocalInitialResults[0].status, "fulfilled");
+    assert.equal(reciprocalInitialResults[1].status, "rejected");
+    assert.equal(
+      isConflict(reciprocalInitialResults[1].reason, "mysql_resource_revision_conflict"),
+      true,
+    );
+    assert.deepEqual(
+      await profileAssetRow(admin, "reciprocal_a"),
+      {revision: 2, stoneCoins: 180, itemCount: 1},
+    );
+    assert.deepEqual(
+      await profileAssetRow(admin, "reciprocal_b"),
+      {revision: 1, stoneCoins: 200, itemCount: 0},
+    );
+    assert.equal(await bindingRevision(admin, "reciprocal_a"), 2);
+    assert.equal(await bindingRevision(admin, "reciprocal_b"), 1);
+    assert.equal(
+      await marketListingExists(admin, MARKET_LISTING_IDS.reciprocalSoldByA),
+      true,
+    );
+    assert.equal(
+      await marketListingExists(admin, MARKET_LISTING_IDS.reciprocalSoldByB),
+      false,
+    );
+    const reciprocalARemittanceMail = await mailDocument(admin, reciprocalARemittanceMailId);
+    assert.deepEqual({
+      recipientAccountId: reciprocalARemittanceMail
+        && reciprocalARemittanceMail.recipientAccountId,
+      currency: reciprocalARemittanceMail && reciprocalARemittanceMail.currency,
+    }, {
+      recipientAccountId: actorForKey("reciprocal_b").accountId,
+      currency: {stoneCoins: 19},
+    });
+    assert.equal(await marketSaleMailExists(admin, reciprocalBStaleMailId), false);
+    const taxAfterReciprocalFirst = await marketTaxCollected(admin);
+    assert.equal(taxAfterReciprocalFirst, taxAfterBuyFirst + 1);
+    assert.equal(await mutationReceiptExists(admin, reciprocalAOperationId), true);
+    assert.equal(await mutationReceiptExists(admin, reciprocalBStaleOperationId), false);
+    assert.equal(await globalRevision(admin), crossAccountGlobalRevision);
+    reciprocalInterleave.assertVerified();
+    await closeStores(stores);
+
+    const reciprocalBRetryStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(reciprocalBRetryStore);
+    const reciprocalBReloaded = reciprocalBRetryStore.load();
+    const reciprocalBRetryOperationId = "real_cross_reciprocal_b_retry";
+    const reciprocalBRetryMailId = "mail_real_cross_reciprocal_b_retry";
+    const reciprocalBRetryWrite = saveMarketBuy(
+      reciprocalBRetryStore,
+      reciprocalBReloaded,
+      "reciprocal_b",
+      MARKET_LISTING_IDS.reciprocalSoldByA,
+      {
+        sellerKey: "reciprocal_a",
+        saleMailId: reciprocalBRetryMailId,
+        operationId: reciprocalBRetryOperationId,
+        requestHash: "3".repeat(64),
+        updatedAt: "2026-07-14T04:09:40.000Z",
+      },
+    );
+    trackWrite(reciprocalBRetryWrite.promise);
+    await settleWithin(
+      reciprocalBRetryWrite.promise,
+      WAIT_TIMEOUT_MS,
+      "双向互买 loser reload 后重试",
+    );
+    const reciprocalAFinalAssets = await profileAssetRow(admin, "reciprocal_a");
+    const reciprocalBFinalAssets = await profileAssetRow(admin, "reciprocal_b");
+    assert.deepEqual(
+      reciprocalAFinalAssets,
+      {revision: 2, stoneCoins: 180, itemCount: 1},
+    );
+    assert.deepEqual(
+      reciprocalBFinalAssets,
+      {revision: 2, stoneCoins: 160, itemCount: 2},
+    );
+    assert.equal(await bindingRevision(admin, "reciprocal_a"), 2);
+    assert.equal(await bindingRevision(admin, "reciprocal_b"), 2);
+    assert.equal(
+      await marketListingExists(admin, MARKET_LISTING_IDS.reciprocalSoldByA),
+      false,
+    );
+    const [reciprocalAFinalRemittanceMail, reciprocalBRetryMail] = await Promise.all([
+      mailDocument(admin, reciprocalARemittanceMailId),
+      mailDocument(admin, reciprocalBRetryMailId),
+    ]);
+    assert.deepEqual({
+      recipientAccountId: reciprocalAFinalRemittanceMail
+        && reciprocalAFinalRemittanceMail.recipientAccountId,
+      currency: reciprocalAFinalRemittanceMail && reciprocalAFinalRemittanceMail.currency,
+    }, {
+      recipientAccountId: actorForKey("reciprocal_b").accountId,
+      currency: {stoneCoins: 19},
+    });
+    assert.deepEqual({
+      recipientAccountId: reciprocalBRetryMail && reciprocalBRetryMail.recipientAccountId,
+      currency: reciprocalBRetryMail && reciprocalBRetryMail.currency,
+    }, {
+      recipientAccountId: actorForKey("reciprocal_a").accountId,
+      currency: {stoneCoins: 38},
+    });
+    const taxAfterReciprocalRetry = await marketTaxCollected(admin);
+    assert.equal(taxAfterReciprocalRetry, taxAfterReciprocalFirst + 2);
+    assert.equal(
+      (200 - reciprocalAFinalAssets.stoneCoins) + (200 - reciprocalBFinalAssets.stoneCoins),
+      reciprocalAFinalRemittanceMail.currency.stoneCoins
+        + reciprocalBRetryMail.currency.stoneCoins
+        + taxAfterReciprocalRetry - taxAfterBuyFirst,
+    );
+    assert.equal(reciprocalAFinalAssets.itemCount + reciprocalBFinalAssets.itemCount, 3);
+    assert.equal(await mutationReceiptExists(admin, reciprocalBRetryOperationId), true);
+    assert.equal(await mutationReceiptExists(admin, reciprocalBStaleOperationId), false);
+    assert.equal(await globalRevision(admin), crossAccountGlobalRevision);
+    await closeStores(stores);
+
     const partialMailStore = createMysqlAuthStore(storeOptions(runtime, database));
     stores.push(partialMailStore);
     const partialMailBefore = partialMailStore.load();
@@ -1626,6 +2278,10 @@ async function runRealMysqlGate(runtime) {
     );
     const receiptIds = receiptRows.map((row) => String(row.operation_id));
     assert.deepEqual(receiptIds, [
+      "real_cross_buy_first_cancel_buy",
+      "real_cross_cancel_first_buy_cancel",
+      "real_cross_reciprocal_a_buy",
+      "real_cross_reciprocal_b_retry",
       "real_mail_claim_full",
       "real_mail_claim_partial",
       "real_market_buy_parallel_a",
@@ -1659,6 +2315,16 @@ async function runRealMysqlGate(runtime) {
       sameListingBuyExactlyOneWinner: true,
       staleLegacyServerStateOverwriteRejected: true,
       marketBuyDuplicateReceiptRolledBack: true,
+      buyFirstBeatsSellerCancel: true,
+      cancelFirstBeatsStaleBuy: true,
+      reciprocalBuyInitialExactlyOneWinner: true,
+      reciprocalBuyCanonicalFirstLockWaitObserved: true,
+      reciprocalBuyOppositeRoleInterleaveVerified: true,
+      reciprocalBuyWinnerFullCanonicalLockOrderObserved: true,
+      reciprocalBuyContenderCanonicalFirstLockObserved: true,
+      reciprocalBuyLoserReloadSucceeded: true,
+      crossAccountAssetConservationVerified: true,
+      crossAccountAssetConservationUsesFinalMysqlMailReload: true,
       mailPartialUpdateVerified: true,
       mailFullDeleteVerified: true,
       mailDuplicateEnvelopeRolledBack: true,
