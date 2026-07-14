@@ -12,6 +12,9 @@ const {
   commitDurableMutationReceiptDelta,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
+const {
+  ensureConsumedEquipmentEnvelopeIds,
+} = require("../src/auth/equipment-envelope-consumed-ledger");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
   createSharedMysqlTransactionHarness,
@@ -30,6 +33,12 @@ const MARKET_LISTING_IDS = Object.freeze({
   a2: "listing_shared_mysql_a_2",
   b: "listing_shared_mysql_b",
 });
+const MAIL_IDS = Object.freeze({
+  a: "mail_shared_mysql_a",
+  b: "mail_shared_mysql_b",
+});
+const MAIL_CLAIM_ACTION_ID = "POST /mail/claim";
+const MAIL_ENVELOPE_ID = "eqx_shared_mail_duplicate_0001";
 
 function baselineAuthority() {
   const authority = {
@@ -227,6 +236,161 @@ function legacyMarketAuthority(before) {
   return after;
 }
 
+function mailAttachment(actorKey, overrides = {}) {
+  const actor = ACTORS[actorKey];
+  return {
+    mailId: MAIL_IDS[actorKey],
+    senderAccountId: "system_mail",
+    senderUsername: "system_mail",
+    senderDisplayName: "系统邮件",
+    recipientAccountId: actor.accountId,
+    recipientUsername: `shared_mail_${actorKey}`,
+    recipientDisplayName: actor.name,
+    title: `共享领取测试${actorKey}`,
+    body: "附件领取必须与档案变更原子提交。",
+    items: [{itemId: "item_meat_small", count: 1}],
+    currency: {},
+    createdAt: UPDATED_AT_1,
+    readAt: null,
+    schemaVersion: 1,
+    ...overrides,
+  };
+}
+
+function equipmentEnvelope(envelopeId = MAIL_ENVELOPE_ID) {
+  return {
+    schemaVersion: 1,
+    envelopeId,
+    itemId: "weapon_wooden_club",
+    instanceState: {
+      schemaVersion: 1,
+      itemId: "weapon_wooden_club",
+      durability: 20,
+      enhancement: {itemId: "weapon_wooden_club", level: 0, history: []},
+      wearCounters: {itemId: "weapon_wooden_club", attackCount: 0, hitCount: 0},
+      expPillCharge: {},
+      source: "shared_mysql_mail_claim_test",
+    },
+    stateFingerprint: "f".repeat(64),
+    provenance: {
+      sourceInstanceId: "equip_shared_mail_source",
+      sourceAccountId: "acc_shared_mail_sender",
+      exportedAt: UPDATED_AT_1,
+    },
+  };
+}
+
+function mailClaimAuthority(options = {}) {
+  const authority = baselineAuthority();
+  authority.mailMessages = {
+    [MAIL_IDS.a]: mailAttachment("a"),
+    [MAIL_IDS.b]: mailAttachment("b", {
+      items: [{itemId: "item_meat_small", count: 2}],
+    }),
+  };
+  if (options.equipmentActorKey) {
+    const actorKey = String(options.equipmentActorKey);
+    authority.mailMessages[MAIL_IDS[actorKey]] = mailAttachment(actorKey, {
+      title: `共享装备领取测试${actorKey}`,
+      items: [{itemId: "weapon_wooden_club", count: 1}],
+      equipmentEnvelopes: [equipmentEnvelope()],
+      schemaVersion: 2,
+    });
+  }
+  return authority;
+}
+
+function nextMailClaimAuthority(before, actorKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const mailId = String(options.mailId || MAIL_IDS[actorKey]);
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  const updatedAt = String(options.updatedAt || UPDATED_AT_2);
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt,
+    profile: {
+      ...before.profiles[actor.playerId].profile,
+      stoneCoins: Number(before.profiles[actor.playerId].profile.stoneCoins || 0) + 1,
+      backpackSlots: [{itemId: options.itemId || "item_meat_small", count: 1}],
+    },
+  };
+  if (Array.isArray(options.remainingItems)) {
+    after.mailMessages[mailId] = {
+      ...before.mailMessages[mailId],
+      items: options.remainingItems,
+      currency: {},
+      equipmentEnvelopes: [],
+      schemaVersion: 2,
+    };
+  } else {
+    delete after.mailMessages[mailId];
+  }
+  const claimedEnvelopeIds = [...(options.claimedEnvelopeIds || [])].sort();
+  if (claimedEnvelopeIds.length > 0) {
+    const consumed = ensureConsumedEquipmentEnvelopeIds(
+      after.consumedEquipmentEnvelopes,
+      claimedEnvelopeIds,
+    );
+    assert.equal(consumed.ok, true, JSON.stringify(consumed));
+    after.consumedEquipmentEnvelopes = consumed.ledger;
+  }
+  const operationId = String(options.operationId);
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      schemaVersion: 1,
+      operationId,
+      requestHash: String(options.requestHash),
+      actionId: MAIL_CLAIM_ACTION_ID,
+      accountId: actor.accountId,
+      committedAt: updatedAt,
+      expiresAt: "2026-07-18T02:10:00.000Z",
+      response: {
+        ok: true,
+        operationId,
+        claim: {mailId},
+      },
+    },
+    {nowMs: Date.parse(updatedAt)},
+  );
+  return after;
+}
+
+function mailClaimSaveOptions(actorKey, operationId, requestHash, options = {}) {
+  const actor = ACTORS[actorKey];
+  return {
+    consistencyScope: {
+      kind: "row_local_mail_claim_v1",
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      mailId: String(options.mailId || MAIL_IDS[actorKey]),
+      mailDisposition: Array.isArray(options.remainingItems) ? "update" : "delete",
+      claimedEnvelopeIds: [...(options.claimedEnvelopeIds || [])].sort(),
+      operationId,
+      requestHash,
+      actionId: MAIL_CLAIM_ACTION_ID,
+    },
+  };
+}
+
+function stagedMailClaim(store, before, actorKey, options) {
+  const after = nextMailClaimAuthority(before, actorKey, options);
+  const saveOptions = mailClaimSaveOptions(
+    actorKey,
+    options.operationId,
+    options.requestHash,
+    options,
+  );
+  return {after, promise: store.saveAsync(after, saveOptions)};
+}
+
 function sqlSeed(options = {}) {
   const authority = options.authority || baselineAuthority();
   const profileBindings = {};
@@ -275,6 +439,22 @@ function sqlSeed(options = {}) {
         item_count: listing.count,
         created_at: listing.createdAt,
         document_json: listing,
+      }]),
+    ),
+    mail_messages: Object.fromEntries(
+      Object.entries(authority.mailMessages || {}).map(([mailId, mail]) => [mailId, {
+        mail_id: mailId,
+        sender_account_id: mail.senderAccountId,
+        recipient_account_id: mail.recipientAccountId,
+        title: mail.title,
+        created_at: mail.createdAt,
+        read_at: mail.readAt,
+        document_json: mail,
+      }]),
+    ),
+    consumed_equipment_envelopes: Object.fromEntries(
+      Object.keys(authority.consumedEquipmentEnvelopes || {}).map((envelopeId) => [envelopeId, {
+        envelope_id: envelopeId,
       }]),
     ),
     mutation_receipts: options.mutationReceipts || {},
@@ -354,6 +534,10 @@ function createProductionSqlHandler(queryLog) {
       const [listingId] = requiredParams(params, 1, sql);
       return operation.selectForUpdate("market_listings", String(listingId));
     }
+    if (/^SELECT mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json FROM mail_messages WHERE mail_id = \? FOR UPDATE$/i.test(normalized)) {
+      const [mailId] = requiredParams(params, 1, sql);
+      return operation.selectForUpdate("mail_messages", String(mailId));
+    }
 
     if (/^UPDATE profile_bindings SET player_id = \?, profile_revision = \?, updated_at = \?, document_json = CAST\(\? AS JSON\) WHERE account_id = \? AND player_id = \? AND profile_revision = \?$/i.test(normalized)) {
       const [playerId, nextRevision, updatedAt, documentJson, accountId, expectedPlayerId, expectedRevision]
@@ -421,6 +605,63 @@ function createProductionSqlHandler(queryLog) {
       });
     }
 
+    if (/^UPDATE mail_messages SET sender_account_id = \?, recipient_account_id = \?, title = \?, created_at = \?, read_at = \?, document_json = CAST\(\? AS JSON\) WHERE mail_id = \? AND sender_account_id = \? AND recipient_account_id = \? AND title = \? AND created_at = \? AND read_at <=> \?$/i.test(normalized)) {
+      const [
+        senderAccountId,
+        recipientAccountId,
+        title,
+        createdAt,
+        readAt,
+        documentJson,
+        mailId,
+        expectedSenderAccountId,
+        expectedRecipientAccountId,
+        expectedTitle,
+        expectedCreatedAt,
+        expectedReadAt,
+      ] = requiredParams(params, 12, sql);
+      return operation.update("mail_messages", String(mailId), {
+        where: {
+          mail_id: String(mailId),
+          sender_account_id: String(expectedSenderAccountId),
+          recipient_account_id: String(expectedRecipientAccountId),
+          title: String(expectedTitle),
+          created_at: String(expectedCreatedAt),
+          read_at: expectedReadAt === null ? null : String(expectedReadAt),
+        },
+        set: {
+          sender_account_id: String(senderAccountId),
+          recipient_account_id: String(recipientAccountId),
+          title: String(title),
+          created_at: String(createdAt),
+          read_at: readAt === null ? null : String(readAt),
+          document_json: jsonParameter(documentJson, sql),
+        },
+      });
+    }
+
+    if (/^DELETE FROM mail_messages WHERE mail_id = \? AND sender_account_id = \? AND recipient_account_id = \? AND title = \? AND created_at = \? AND read_at <=> \?$/i.test(normalized)) {
+      const [mailId, senderAccountId, recipientAccountId, title, createdAt, readAt]
+        = requiredParams(params, 6, sql);
+      return operation.delete("mail_messages", String(mailId), {
+        where: {
+          mail_id: String(mailId),
+          sender_account_id: String(senderAccountId),
+          recipient_account_id: String(recipientAccountId),
+          title: String(title),
+          created_at: String(createdAt),
+          read_at: readAt === null ? null : String(readAt),
+        },
+      });
+    }
+
+    if (/^INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \(\?\)$/i.test(normalized)) {
+      const [envelopeId] = requiredParams(params, 1, sql);
+      return operation.insert("consumed_equipment_envelopes", String(envelopeId), {
+        envelope_id: String(envelopeId),
+      });
+    }
+
     if (/^INSERT INTO server_state \(state_key, document_json\) VALUES \('auth', CAST\(.+ AS JSON\)\) ON DUPLICATE KEY UPDATE document_json = VALUES\(document_json\)$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.update("server_state", "auth", {
@@ -464,6 +705,15 @@ function loaderRowsFromSqlSnapshot(snapshot) {
   }
   for (const [listingId, listing] of Object.entries(snapshot.market_listings || {})) {
     rows.push(["market_listings", listingId, JSON.stringify(listing.document_json)]);
+  }
+  for (const [mailId, mail] of Object.entries(snapshot.mail_messages || {})) {
+    rows.push(["mail_messages", mailId, JSON.stringify(mail.document_json)]);
+  }
+  for (const envelopeId of Object.keys(snapshot.consumed_equipment_envelopes || {})) {
+    rows.push(["consumed_equipment_envelopes", envelopeId, JSON.stringify({
+      schemaVersion: 1,
+      envelopeId,
+    })]);
   }
   return rows;
 }
@@ -1278,4 +1528,231 @@ test("ordinary market cancel and legacy global writes reject stale snapshots in 
     }
     assert.equal(harness.assertIdle(), true);
   });
+});
+
+test("different mail claims overlap and retain both profile and mail settlements", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-different-"));
+  const authority = mailClaimAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_b"));
+  const gateA = harness.blockNext({writerId: "mail_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let saveA = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMailClaim(storeA, loadedA, "a", {
+      operationId: "op_mail_parallel_a_0001",
+      requestHash: "1".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    saveA = first.promise;
+    await gateA.entered;
+
+    const second = stagedMailClaim(storeB, loadedB, "b", {
+      remainingItems: [{itemId: "item_meat_small", count: 1}],
+      operationId: "op_mail_parallel_b_0001",
+      requestHash: "2".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await harness.waitForEvent({type: "commit_completed", writerId: "mail_b"});
+    await second.promise;
+
+    const whileABlocked = harness.snapshot();
+    assert.equal(Object.hasOwn(whileABlocked.mail_messages, MAIL_IDS.a), true);
+    assert.deepEqual(
+      whileABlocked.mail_messages[MAIL_IDS.b].document_json.items,
+      [{itemId: "item_meat_small", count: 1}],
+    );
+    assert.equal(whileABlocked.profiles[ACTORS.a.playerId].profile_revision, 1);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "mail_b"
+      )),
+      false,
+      "different account and mail rows must not serialize behind each other",
+    );
+
+    gateA.release();
+    await saveA;
+    saveA = null;
+
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.a), false);
+    assert.deepEqual(
+      committed.mail_messages[MAIL_IDS.b].document_json.items,
+      [{itemId: "item_meat_small", count: 1}],
+    );
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_parallel_a_0001"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_parallel_b_0001"), true);
+
+    for (const writerId of ["mail_a", "mail_b"]) {
+      const queries = queryLog.filter((entry) => entry.writerId === writerId);
+      const bindingLock = queries.findIndex((entry) => /profile_bindings.+FOR UPDATE$/i.test(entry.sql));
+      const profileLock = queries.findIndex((entry) => /FROM profiles.+FOR UPDATE$/i.test(entry.sql));
+      const mailLock = queries.findIndex((entry) => /FROM mail_messages.+FOR UPDATE$/i.test(entry.sql));
+      const firstWrite = queries.findIndex((entry) => /^UPDATE profile_bindings\b/i.test(entry.sql));
+      assert.ok(bindingLock >= 0 && bindingLock < profileLock);
+      assert.ok(profileLock < mailLock && mailLock < firstWrite);
+    }
+  } finally {
+    gateA.release();
+    if (saveA !== null) {
+      await Promise.allSettled([saveA]);
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("the same mail can be claimed by exactly one conditional writer", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-same-"));
+  const authority = mailClaimAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_same_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_same_b"));
+  const gateA = harness.blockNext({writerId: "mail_same_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMailClaim(storeA, loadedA, "a", {
+      operationId: "op_mail_same_a_0001",
+      requestHash: "3".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const second = stagedMailClaim(storeB, loadedB, "a", {
+      operationId: "op_mail_same_b_0001",
+      requestHash: "4".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "mail_same_b",
+      table: "profile_bindings",
+      key: ACTORS.a.accountId,
+    });
+    gateA.release();
+
+    const [winner, loser] = await settled;
+    assert.equal(winner.status, "fulfilled");
+    assert.equal(loser.status, "rejected");
+    assert.equal(isResourceConflict(loser.reason), true);
+    const committed = harness.snapshot();
+    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.a), false);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_same_a_0001"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_same_b_0001"), false);
+    assert.equal(
+      queryLog.filter((entry) => entry.writerId === "mail_same_b")
+        .some((entry) => /^DELETE FROM mail_messages\b/i.test(entry.sql)),
+      false,
+      "the stale loser must fail before deleting or acknowledging the mail",
+    );
+  } finally {
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("a duplicate equipment tombstone rolls preceding profile and mail writes back", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-tombstone-"));
+  const authority = mailClaimAuthority({equipmentActorKey: "a"});
+  const loaderSeed = sqlSeed({authority});
+  const databaseSeed = structuredClone(loaderSeed);
+  databaseSeed.consumed_equipment_envelopes[MAIL_ENVELOPE_ID] = {
+    envelope_id: MAIL_ENVELOPE_ID,
+  };
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, loaderSeed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed: databaseSeed,
+    statementHandler: createProductionSqlHandler(queryLog),
+  });
+  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_duplicate_envelope"));
+
+  try {
+    const loaded = store.load();
+    const staged = stagedMailClaim(store, loaded, "a", {
+      itemId: "weapon_wooden_club",
+      claimedEnvelopeIds: [MAIL_ENVELOPE_ID],
+      operationId: "op_mail_duplicate_envelope_0001",
+      requestHash: "5".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await assert.rejects(staged.promise, isResourceConflict);
+    assert.deepEqual(harness.snapshot(), databaseSeed);
+
+    const stagedWrites = harness.events()
+      .filter((event) => event.type === "write_staged" && event.writerId === "mail_duplicate_envelope")
+      .map((event) => `${event.table}/${event.key}`);
+    assert.deepEqual(stagedWrites, [
+      `profile_bindings/${ACTORS.a.accountId}`,
+      `profiles/${ACTORS.a.playerId}`,
+      `mail_messages/${MAIL_IDS.a}`,
+    ]);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "rollback_applied"
+        && event.writerId === "mail_duplicate_envelope"
+      )),
+      true,
+    );
+    const tombstoneInsert = queryLog.find((entry) => (
+      entry.writerId === "mail_duplicate_envelope"
+      && /^INSERT INTO consumed_equipment_envelopes\b/i.test(entry.sql)
+    ));
+    assert.ok(tombstoneInsert);
+    assert.doesNotMatch(tombstoneInsert.sql, /ON DUPLICATE KEY/i);
+    assert.equal(
+      queryLog.some((entry) => (
+        entry.writerId === "mail_duplicate_envelope"
+        && /^INSERT INTO mutation_receipts\b/i.test(entry.sql)
+      )),
+      false,
+      "the duplicate tombstone must fail before a durable success receipt is inserted",
+    );
+  } finally {
+    await store.close();
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
 });

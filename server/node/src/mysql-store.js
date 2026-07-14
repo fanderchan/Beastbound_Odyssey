@@ -7,6 +7,11 @@ const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
 const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
 const {
+  canonicalMailClaimEnvelopeIds,
+  mailEquipmentEnvelopeMap,
+  removedMailEquipmentEnvelopeIds,
+} = require("./auth/mail-claim-consistency");
+const {
   commitConsumedEquipmentEnvelopeLedger,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
   readConsumedEquipmentEnvelopeLedgerIndex,
@@ -664,6 +669,15 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (conditionalMarketBuyPlan !== null) {
     return conditionalMarketBuyPlan;
   }
+  const conditionalMailClaimPlan = buildConditionalMailClaimSavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
+  if (conditionalMailClaimPlan !== null) {
+    return conditionalMailClaimPlan;
+  }
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
@@ -1036,6 +1050,118 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
   };
 }
 
+function buildConditionalMailClaimSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = rowLocalMailClaimConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set([
+    "profileBindings",
+    "profiles",
+    "mutationReceipts",
+    "mailMessages",
+    "consumedEquipmentEnvelopes",
+  ]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (
+    groups.profileBindings.length !== 1
+    || groups.profiles.length !== 1
+    || groups.mailMessages.length !== 1
+  ) {
+    return null;
+  }
+
+  const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
+  const mailClaim = certifiedSingleMailClaimChange(previous.mailMessages, data.mailMessages);
+  if (profileRevisionChange === null || mailClaim === null) {
+    return null;
+  }
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileRevisionChange;
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || consistencyScope.mailId !== mailClaim.mailId
+    || consistencyScope.mailDisposition !== mailClaim.disposition
+    || String(mailClaim.beforeMail.recipientAccountId || "") !== accountId
+    || !isDeepStrictEqual(consistencyScope.claimedEnvelopeIds, mailClaim.removedEnvelopeIds)
+  ) {
+    return null;
+  }
+
+  const consumedDelta = consumedEquipmentEnvelopeLedgerDeltaFrom(
+    previous.consumedEquipmentEnvelopes,
+    data.consumedEquipmentEnvelopes,
+  );
+  if (
+    !consumedDelta.ok
+    || !isDeepStrictEqual([...consumedDelta.addedIds].sort(), mailClaim.removedEnvelopeIds)
+    || groups.consumedEquipmentEnvelopes.length !== mailClaim.removedEnvelopeIds.length
+  ) {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+  ) {
+    return null;
+  }
+
+  const mailWrite = mailClaim.disposition === "update"
+    ? conditionalMailMessageUpdate(mailClaim.nextMail, mailClaim.beforeMail)
+    : conditionalMailMessageDelete(mailClaim.beforeMail);
+  return {
+    kind: "mail_claim_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId,
+    playerId,
+    mailId: mailClaim.mailId,
+    mailDisposition: mailClaim.disposition,
+    claimedEnvelopeIds: mailClaim.removedEnvelopeIds,
+    operationId: consistencyScope.operationId,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    locks: [
+      profileBindingResourceLock(beforeBinding),
+      profileResourceLock(beforeProfile),
+      mailMessageResourceLock(mailClaim.beforeMail),
+    ],
+    writes: [
+      conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+      conditionalProfileUpdate(nextProfile, expectedRevision),
+      mailWrite,
+      ...mailClaim.removedEnvelopeIds.map(conditionalConsumedEquipmentEnvelopeInsert),
+      conditionalMutationReceiptInsert(receipt),
+    ],
+  };
+}
+
 function rowLocalProfileConsistencyScope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -1127,6 +1253,45 @@ function rowLocalMarketBuyConsistencyScope(value) {
     saleMailId,
     currency,
     taxAmount,
+    operationId,
+    requestHash,
+    actionId,
+  };
+}
+
+function rowLocalMailClaimConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const kind = String(value.kind || "");
+  const accountId = String(value.accountId || "");
+  const playerId = String(value.playerId || "");
+  const mailId = String(value.mailId || "");
+  const mailDisposition = String(value.mailDisposition || "");
+  const claimedEnvelopeIds = canonicalMailClaimEnvelopeIds(value.claimedEnvelopeIds);
+  const operationId = String(value.operationId || "");
+  const requestHash = String(value.requestHash || "");
+  const actionId = String(value.actionId || "");
+  if (
+    kind !== "row_local_mail_claim_v1"
+    || accountId === ""
+    || playerId === ""
+    || mailId === ""
+    || !["update", "delete"].includes(mailDisposition)
+    || claimedEnvelopeIds === null
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return null;
+  }
+  return {
+    kind,
+    accountId,
+    playerId,
+    mailId,
+    mailDisposition,
+    claimedEnvelopeIds,
     operationId,
     requestHash,
     actionId,
@@ -1338,6 +1503,44 @@ function marketListingResourceLock(listing) {
   };
 }
 
+function mailMessageResourceLock(mail) {
+  const mailId = String(mail && mail.mailId || "");
+  const senderAccountId = String(mail && mail.senderAccountId || "");
+  const recipientAccountId = String(mail && mail.recipientAccountId || "");
+  const title = String(mail && mail.title || "");
+  const createdAt = String(mail && mail.createdAt || "");
+  const readAt = nullableMailReadAt(mail && mail.readAt);
+  if (
+    mailId === ""
+    || senderAccountId === ""
+    || recipientAccountId === ""
+    || title === ""
+    || createdAt === ""
+  ) {
+    const error = new Error("MySQL mail message 条件锁缺少规范资源身份。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return {
+    kind: "lock",
+    resource: "mail_message",
+    key: mailId,
+    sql: `SELECT mail_id, sender_account_id, recipient_account_id, title,
+      created_at, read_at, document_json
+      FROM mail_messages WHERE mail_id = ? FOR UPDATE`,
+    params: [mailId],
+    expectedRow: {
+      mail_id: mailId,
+      sender_account_id: senderAccountId,
+      recipient_account_id: recipientAccountId,
+      title,
+      created_at: createdAt,
+      read_at: readAt,
+      document_json: mail,
+    },
+  };
+}
+
 function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
   const previous = canonicalObjectEntityMap(previousValue, keyFn);
   const next = canonicalObjectEntityMap(nextValue, keyFn);
@@ -1403,6 +1606,197 @@ function singleNewObjectEntityAddition(previousValue, nextValue, keyFn) {
     }
   }
   return addition;
+}
+
+const MAIL_CLAIM_ASSET_FIELDS = new Set([
+  "items",
+  "currency",
+  "currencies",
+  "equipmentEnvelopes",
+  "schemaVersion",
+]);
+
+function certifiedSingleMailClaimChange(previousValue, nextValue) {
+  const update = singleExistingObjectEntityChange(previousValue, nextValue, mailEntityKey);
+  const deletion = singleExistingObjectEntityDeletion(previousValue, nextValue, mailEntityKey);
+  if ((update === null) === (deletion === null)) {
+    return null;
+  }
+  const mailId = update ? update.key : deletion.key;
+  const beforeMail = update ? update.previous : deletion.previous;
+  const nextMail = update ? update.next : null;
+  if (
+    mailId === ""
+    || String(beforeMail && beforeMail.mailId || "") !== mailId
+    || String(beforeMail && beforeMail.senderAccountId || "") === ""
+    || String(beforeMail && beforeMail.recipientAccountId || "") === ""
+    || String(beforeMail && beforeMail.title || "") === ""
+    || String(beforeMail && beforeMail.createdAt || "") === ""
+    || (nextMail !== null && (
+      String(nextMail.mailId || "") !== mailId
+      || String(nextMail.recipientAccountId || "") !== String(beforeMail.recipientAccountId || "")
+      || Number(nextMail.schemaVersion) !== 2
+      || !mailClaimMetadataPreserved(beforeMail, nextMail)
+    ))
+  ) {
+    return null;
+  }
+  const removedEnvelopeIds = removedMailEquipmentEnvelopeIds(beforeMail, nextMail);
+  if (removedEnvelopeIds === null) {
+    return null;
+  }
+  if (nextMail === null) {
+    if (!mailClaimHasAssets(beforeMail)) {
+      return null;
+    }
+  } else if (!mailClaimAssetsStrictlyDescend(beforeMail, nextMail)) {
+    return null;
+  }
+  return {
+    mailId,
+    disposition: nextMail === null ? "delete" : "update",
+    beforeMail,
+    nextMail,
+    removedEnvelopeIds,
+  };
+}
+
+function mailClaimMetadataPreserved(beforeMail, nextMail) {
+  const metadata = (mail) => Object.fromEntries(
+    Object.entries(mail || {}).filter(([field]) => !MAIL_CLAIM_ASSET_FIELDS.has(field)),
+  );
+  return isDeepStrictEqual(metadata(beforeMail), metadata(nextMail));
+}
+
+function mailClaimAssetsStrictlyDescend(beforeMail, nextMail) {
+  const beforeItems = canonicalMailClaimItemCounts(beforeMail);
+  const nextItems = canonicalMailClaimItemCounts(nextMail);
+  const beforeCurrency = canonicalMailClaimCurrency(beforeMail);
+  const nextCurrency = canonicalMailClaimCurrency(nextMail);
+  const beforeEnvelopes = mailEquipmentEnvelopeMap(beforeMail);
+  const nextEnvelopes = mailEquipmentEnvelopeMap(nextMail);
+  if (
+    beforeItems === null
+    || nextItems === null
+    || beforeCurrency === null
+    || nextCurrency === null
+    || beforeEnvelopes === null
+    || nextEnvelopes === null
+  ) {
+    return false;
+  }
+  let decreased = false;
+  for (const [itemId, nextCount] of nextItems.entries()) {
+    const beforeCount = beforeItems.get(itemId);
+    if (beforeCount === undefined || nextCount > beforeCount) {
+      return false;
+    }
+  }
+  for (const [itemId, beforeCount] of beforeItems.entries()) {
+    const nextCount = Number(nextItems.get(itemId) || 0);
+    if (nextCount < beforeCount) {
+      decreased = true;
+    }
+  }
+  for (const currency of ["stoneCoins", "diamonds"]) {
+    const beforeAmount = Number(beforeCurrency[currency] || 0);
+    const nextAmount = Number(nextCurrency[currency] || 0);
+    if (nextAmount > beforeAmount) {
+      return false;
+    }
+    if (nextAmount < beforeAmount) {
+      decreased = true;
+    }
+  }
+  for (const [envelopeId, envelope] of nextEnvelopes.entries()) {
+    if (!beforeEnvelopes.has(envelopeId)
+      || !isDeepStrictEqual(beforeEnvelopes.get(envelopeId), envelope)) {
+      return false;
+    }
+  }
+  if (nextEnvelopes.size < beforeEnvelopes.size) {
+    decreased = true;
+  }
+  return decreased;
+}
+
+function mailClaimHasAssets(mail) {
+  const items = canonicalMailClaimItemCounts(mail);
+  const currency = canonicalMailClaimCurrency(mail);
+  const envelopes = mailEquipmentEnvelopeMap(mail);
+  return items !== null
+    && currency !== null
+    && envelopes !== null
+    && (items.size > 0
+      || envelopes.size > 0
+      || Number(currency.stoneCoins || 0) > 0
+      || Number(currency.diamonds || 0) > 0);
+}
+
+function canonicalMailClaimItemCounts(mail) {
+  const rawItems = mail && Object.hasOwn(mail, "items") ? mail.items : [];
+  if (!Array.isArray(rawItems)) {
+    return null;
+  }
+  const counts = new Map();
+  for (const item of rawItems) {
+    const itemId = String(item && item.itemId || "");
+    const count = Number(item && item.count);
+    const prior = Number(counts.get(itemId) || 0);
+    if (
+      !item
+      || typeof item !== "object"
+      || Array.isArray(item)
+      || itemId === ""
+      || itemId !== itemId.trim()
+      || !Number.isSafeInteger(count)
+      || count <= 0
+      || !Number.isSafeInteger(prior + count)
+    ) {
+      return null;
+    }
+    counts.set(itemId, prior + count);
+  }
+  return counts;
+}
+
+function canonicalMailClaimCurrency(mail) {
+  const representations = [];
+  for (const field of ["currency", "currencies"]) {
+    if (!mail || !Object.hasOwn(mail, field)) {
+      continue;
+    }
+    const value = mail[field];
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    if (Object.keys(value).some((key) => !["stoneCoins", "coins", "diamonds", "diamond"].includes(key))) {
+      return null;
+    }
+    const normalized = {};
+    for (const [canonicalId, aliases] of [
+      ["stoneCoins", ["stoneCoins", "coins"]],
+      ["diamonds", ["diamonds", "diamond"]],
+    ]) {
+      const present = aliases.filter((alias) => Object.hasOwn(value, alias));
+      if (present.length > 1 && present.some((alias) => Number(value[alias]) !== Number(value[present[0]]))) {
+        return null;
+      }
+      const amount = present.length > 0 ? Number(value[present[0]]) : 0;
+      if (!Number.isSafeInteger(amount) || amount < 0) {
+        return null;
+      }
+      if (amount > 0) {
+        normalized[canonicalId] = amount;
+      }
+    }
+    representations.push(normalized);
+  }
+  if (representations.length > 1
+    && representations.some((value) => !isDeepStrictEqual(value, representations[0]))) {
+    return null;
+  }
+  return representations[0] || {};
 }
 
 function certifiedOrdinaryMarketBuyTaxChange(previousValue, nextValue, listing) {
@@ -2168,6 +2562,7 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     "profile_conditional_v2",
     "market_cancel_conditional_v1",
     "market_buy_conditional_v1",
+    "mail_claim_conditional_v1",
   ].includes(plan.kind)) {
     return committed;
   }
@@ -2197,6 +2592,43 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   };
   if (plan.kind === "profile_conditional_v2") {
     return merged;
+  }
+
+  if (plan.kind === "mail_claim_conditional_v1") {
+    const mailId = String(plan.mailId || "");
+    const operationId = String(plan.operationId || "");
+    const mailDisposition = String(plan.mailDisposition || "");
+    const claimedEnvelopeIds = canonicalMailClaimEnvelopeIds(plan.claimedEnvelopeIds);
+    const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+    const committedMail = committed.mailMessages && committed.mailMessages[mailId];
+    const committedLedger = committed.consumedEquipmentEnvelopes;
+    if (
+      mailId === ""
+      || operationId === ""
+      || !["update", "delete"].includes(mailDisposition)
+      || claimedEnvelopeIds === null
+      || !receipt
+      || (mailDisposition === "update" && !committedMail)
+      || (mailDisposition === "delete" && committedMail)
+      || claimedEnvelopeIds.some((envelopeId) => !(
+        committedLedger && committedLedger[envelopeId]
+      ))
+    ) {
+      const error = new Error("MySQL mail claim 条件提交缺少已证明的资源结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    const mailMessages = {...(previous.mailMessages || {})};
+    if (mailDisposition === "update") {
+      mailMessages[mailId] = committedMail;
+    } else {
+      delete mailMessages[mailId];
+    }
+    return {
+      ...merged,
+      mailMessages,
+      consumedEquipmentEnvelopes: committedLedger,
+    };
   }
 
   const listingId = String(plan.listingId || "");
@@ -2965,6 +3397,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       "profile_conditional_v2",
       "market_cancel_conditional_v1",
       "market_buy_conditional_v1",
+      "mail_claim_conditional_v1",
     ].includes(plan.kind)
     || plan.globalRevisionFence !== false
     || plan.globalCompatibilityBarrier !== "shared"
@@ -2982,7 +3415,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       try {
         result = await connection.query(write.sql, write.params);
       } catch (error) {
-        if (["mail_message", "mutation_receipt"].includes(write.resource)
+        if (["mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
           && error && error.code === "ER_DUP_ENTRY") {
           throw mysqlResourceRevisionConflict(write.resource, write.key);
         }
@@ -3150,7 +3583,9 @@ function assertMysqlResourceLockRow(result, lock) {
   for (const [field, expectedValue] of Object.entries(lock.expectedRow || {})) {
     let actualValue = row[field];
     let matches;
-    if (expectedValue && typeof expectedValue === "object") {
+    if (expectedValue === null) {
+      matches = actualValue === null;
+    } else if (expectedValue && typeof expectedValue === "object") {
       if (typeof actualValue === "string") {
         try {
           actualValue = JSON.parse(actualValue);
@@ -3339,6 +3774,72 @@ function conditionalMailMessageInsert(mail) {
     ],
     expectedAffectedRows: 1,
   };
+}
+
+function conditionalMailMessageUpdate(mail, previousMail) {
+  return {
+    kind: "update",
+    resource: "mail_message",
+    key: String(mail.mailId || ""),
+    sql: `UPDATE mail_messages
+      SET sender_account_id = ?, recipient_account_id = ?, title = ?, created_at = ?,
+        read_at = ?, document_json = CAST(? AS JSON)
+      WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
+        AND title = ? AND created_at = ? AND read_at <=> ?`,
+    params: [
+      String(mail.senderAccountId || ""),
+      String(mail.recipientAccountId || ""),
+      String(mail.title || ""),
+      String(mail.createdAt || ""),
+      nullableMailReadAt(mail.readAt),
+      JSON.stringify(mail),
+      String(previousMail.mailId || ""),
+      String(previousMail.senderAccountId || ""),
+      String(previousMail.recipientAccountId || ""),
+      String(previousMail.title || ""),
+      String(previousMail.createdAt || ""),
+      nullableMailReadAt(previousMail.readAt),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalMailMessageDelete(mail) {
+  return {
+    kind: "delete",
+    resource: "mail_message",
+    key: String(mail.mailId || ""),
+    sql: `DELETE FROM mail_messages
+      WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
+        AND title = ? AND created_at = ? AND read_at <=> ?`,
+    params: [
+      String(mail.mailId || ""),
+      String(mail.senderAccountId || ""),
+      String(mail.recipientAccountId || ""),
+      String(mail.title || ""),
+      String(mail.createdAt || ""),
+      nullableMailReadAt(mail.readAt),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function conditionalConsumedEquipmentEnvelopeInsert(envelopeId) {
+  return {
+    kind: "insert",
+    resource: "consumed_equipment_envelope",
+    key: String(envelopeId || ""),
+    sql: "INSERT INTO consumed_equipment_envelopes (envelope_id) VALUES (?)",
+    params: [String(envelopeId || "")],
+    expectedAffectedRows: 1,
+  };
+}
+
+function nullableMailReadAt(value) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+  return String(value);
 }
 
 function conditionalMarketTaxIncrement(currency, taxAmount) {

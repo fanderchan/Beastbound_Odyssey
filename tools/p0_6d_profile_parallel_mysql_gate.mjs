@@ -15,6 +15,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mysql = require(path.join(ROOT, "server/node/node_modules/mysql2/promise"));
 const {cloneAuthorityRoot} = require(path.join(ROOT, "server/node/src/auth/authority-root-clone"));
 const {stageDurableMutationReceipt} = require(path.join(ROOT, "server/node/src/auth/durable-mutation-state"));
+const {ensureConsumedEquipmentEnvelopeIds} = require(
+  path.join(ROOT, "server/node/src/auth/equipment-envelope-consumed-ledger"),
+);
 const {createMysqlAuthStore} = require(path.join(ROOT, "server/node/src/mysql-store"));
 
 const ACTORS = Object.freeze({
@@ -31,6 +34,12 @@ const MARKET_LISTING_IDS = Object.freeze({
   buyRace: "listing_real_market_buy_race",
   buyRollback: "listing_real_market_buy_rollback",
 });
+const MAIL_CLAIM_IDS = Object.freeze({
+  partial: "mail_real_claim_partial",
+  full: "mail_real_claim_full",
+  duplicateEnvelope: "mail_real_claim_duplicate_envelope",
+});
+const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
 
@@ -380,7 +389,45 @@ function seededAuthority(empty) {
     [MARKET_LISTING_IDS.buyRace]: realMarketListing(MARKET_LISTING_IDS.buyRace, 1),
     [MARKET_LISTING_IDS.buyRollback]: realMarketListing(MARKET_LISTING_IDS.buyRollback, 1),
   };
+  data.mailMessages = {
+    ...(data.mailMessages || {}),
+    [MAIL_CLAIM_IDS.partial]: realClaimMail(MAIL_CLAIM_IDS.partial, "m", {
+      items: [{itemId: "item_meat_small", count: 2}],
+    }),
+    [MAIL_CLAIM_IDS.full]: realClaimMail(MAIL_CLAIM_IDS.full, "a", {
+      currency: {stoneCoins: 7},
+    }),
+    [MAIL_CLAIM_IDS.duplicateEnvelope]: realClaimMail(MAIL_CLAIM_IDS.duplicateEnvelope, "b", {
+      items: [{itemId: "weapon_wooden_club", count: 1}],
+      equipmentEnvelopes: [{
+        envelopeId: DUPLICATE_ENVELOPE_ID,
+        itemId: "weapon_wooden_club",
+        schemaVersion: 1,
+      }],
+    }),
+  };
   return data;
+}
+
+function realClaimMail(mailId, actorKey, overrides = {}) {
+  const actor = ACTORS[actorKey];
+  return {
+    mailId,
+    senderAccountId: "system_mail",
+    senderUsername: "system_mail",
+    senderDisplayName: "系统邮件",
+    recipientAccountId: actor.accountId,
+    recipientUsername: `real_mail_${actorKey}`,
+    recipientDisplayName: `真实邮件猎人${actorKey.toUpperCase()}`,
+    title: "真实引擎邮件领取测试",
+    body: "验证邮件与档案必须同事务结算。",
+    items: overrides.items || [],
+    equipmentEnvelopes: overrides.equipmentEnvelopes || [],
+    currency: overrides.currency || {},
+    createdAt: BASE_TIME,
+    readAt: null,
+    schemaVersion: 2,
+  };
 }
 
 function realMarketListing(listingId, count) {
@@ -583,6 +630,70 @@ function saveMarketBuy(store, before, buyerKey, listingId, options) {
         operationId: options.operationId,
         requestHash: options.requestHash,
         actionId: "POST /market/buy",
+      },
+    }),
+  };
+}
+
+function saveMailClaim(store, before, actorKey, mailId, options) {
+  const actor = ACTORS[actorKey];
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+  };
+  const beforeProfile = before.profiles[actor.playerId].profile;
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+    profile: {
+      ...beforeProfile,
+      stoneCoins: Number(beforeProfile.stoneCoins || 0) + Number(options.stoneCoinsAdded || 0),
+      mailClaimCount: Number(beforeProfile.mailClaimCount || 0) + 1,
+    },
+  };
+  if (options.remainingMail) {
+    after.mailMessages[mailId] = options.remainingMail;
+  } else {
+    delete after.mailMessages[mailId];
+  }
+  const claimedEnvelopeIds = [...(options.claimedEnvelopeIds || [])].sort();
+  const consumed = ensureConsumedEquipmentEnvelopeIds(
+    after.consumedEquipmentEnvelopes,
+    claimedEnvelopeIds,
+  );
+  assert.equal(consumed.ok, true, JSON.stringify(consumed));
+  after.consumedEquipmentEnvelopes = consumed.ledger;
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId: options.operationId,
+    requestHash: options.requestHash,
+    actionId: "POST /mail/claim",
+    accountId: actor.accountId,
+    committedAt: options.updatedAt,
+    expiresAt: "2026-07-17T05:00:00.000Z",
+    response: {
+      ok: true,
+      claim: {mailId},
+      operationId: options.operationId,
+    },
+  }, {nowMs: Date.parse(options.updatedAt)});
+  return {
+    after,
+    promise: store.saveAsync(after, {
+      consistencyScope: {
+        kind: "row_local_mail_claim_v1",
+        accountId: actor.accountId,
+        playerId: actor.playerId,
+        mailId,
+        mailDisposition: options.remainingMail ? "update" : "delete",
+        claimedEnvelopeIds,
+        operationId: options.operationId,
+        requestHash: options.requestHash,
+        actionId: "POST /mail/claim",
       },
     }),
   };
@@ -804,6 +915,36 @@ async function marketSaleMailExists(admin, mailId) {
     "MySQL market sale mail query",
   );
   return Number(rows[0] && rows[0].mail_count || 0) === 1;
+}
+
+async function mailDocument(admin, mailId) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT CAST(document_json AS CHAR) AS document_json FROM mail_messages WHERE mail_id = ?",
+    [mailId],
+    "MySQL mail document query",
+  );
+  return rows[0] ? JSON.parse(String(rows[0].document_json)) : null;
+}
+
+async function consumedEnvelopeExists(admin, envelopeId) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS envelope_count FROM consumed_equipment_envelopes WHERE envelope_id = ?",
+    [envelopeId],
+    "MySQL consumed envelope query",
+  );
+  return Number(rows[0] && rows[0].envelope_count || 0) === 1;
+}
+
+async function mutationReceiptExists(admin, operationId) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS receipt_count FROM mutation_receipts WHERE operation_id = ?",
+    [operationId],
+    "MySQL mutation receipt query",
+  );
+  return Number(rows[0] && rows[0].receipt_count || 0) === 1;
 }
 
 function isConflict(error, code) {
@@ -1263,6 +1404,95 @@ async function runRealMysqlGate(runtime) {
     );
     await closeStores(stores);
 
+    const partialMailStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(partialMailStore);
+    const partialMailBefore = partialMailStore.load();
+    const partialMail = partialMailBefore.mailMessages[MAIL_CLAIM_IDS.partial];
+    const partialClaim = saveMailClaim(
+      partialMailStore,
+      partialMailBefore,
+      "m",
+      MAIL_CLAIM_IDS.partial,
+      {
+        remainingMail: {
+          ...partialMail,
+          items: [{itemId: "item_meat_small", count: 1}],
+          equipmentEnvelopes: [],
+          currency: {},
+          schemaVersion: 2,
+        },
+        claimedEnvelopeIds: [],
+        operationId: "real_mail_claim_partial",
+        requestHash: "a".repeat(64),
+        updatedAt: "2026-07-14T04:10:00.000Z",
+      },
+    );
+    trackWrite(partialClaim.promise);
+    await settleWithin(partialClaim.promise, WAIT_TIMEOUT_MS, "邮件部分领取真实 UPDATE 提交");
+    const partialMailAfter = await mailDocument(admin, MAIL_CLAIM_IDS.partial);
+    assert.deepEqual(partialMailAfter.items, [{itemId: "item_meat_small", count: 1}]);
+    assert.deepEqual(await profileRow(admin, "m"), {revision: 3, stoneCoins: 200});
+    assert.equal(await mutationReceiptExists(admin, "real_mail_claim_partial"), true);
+    assert.equal(await globalRevision(admin), 3);
+    await closeStores(stores);
+
+    const fullMailStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(fullMailStore);
+    const fullMailBefore = fullMailStore.load();
+    const fullClaim = saveMailClaim(fullMailStore, fullMailBefore, "a", MAIL_CLAIM_IDS.full, {
+      remainingMail: null,
+      claimedEnvelopeIds: [],
+      stoneCoinsAdded: 7,
+      operationId: "real_mail_claim_full",
+      requestHash: "b".repeat(64),
+      updatedAt: "2026-07-14T04:11:00.000Z",
+    });
+    trackWrite(fullClaim.promise);
+    await settleWithin(fullClaim.promise, WAIT_TIMEOUT_MS, "邮件完整领取真实 DELETE 提交");
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.full), false);
+    assert.deepEqual(await profileRow(admin, "a"), {revision: 6, stoneCoins: 47});
+    assert.equal(await mutationReceiptExists(admin, "real_mail_claim_full"), true);
+    assert.equal(await globalRevision(admin), 3);
+    await closeStores(stores);
+
+    const duplicateEnvelopeStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(duplicateEnvelopeStore);
+    const duplicateEnvelopeBefore = duplicateEnvelopeStore.load();
+    await adminQuery(
+      admin,
+      "INSERT INTO consumed_equipment_envelopes (envelope_id) VALUES (?)",
+      [DUPLICATE_ENVELOPE_ID],
+      "MySQL duplicate consumed envelope seed",
+    );
+    const duplicateEnvelopeClaim = saveMailClaim(
+      duplicateEnvelopeStore,
+      duplicateEnvelopeBefore,
+      "b",
+      MAIL_CLAIM_IDS.duplicateEnvelope,
+      {
+        remainingMail: null,
+        claimedEnvelopeIds: [DUPLICATE_ENVELOPE_ID],
+        operationId: "real_mail_claim_duplicate_envelope",
+        requestHash: "c".repeat(64),
+        updatedAt: "2026-07-14T04:12:00.000Z",
+      },
+    );
+    trackWrite(duplicateEnvelopeClaim.promise);
+    await assert.rejects(
+      settleWithin(
+        duplicateEnvelopeClaim.promise,
+        WAIT_TIMEOUT_MS,
+        "邮件重复装备墓碑整单回滚",
+      ),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.deepEqual(await profileRow(admin, "b"), {revision: 4, stoneCoins: 140});
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.duplicateEnvelope), true);
+    assert.equal(await consumedEnvelopeExists(admin, DUPLICATE_ENVELOPE_ID), true);
+    assert.equal(await mutationReceiptExists(admin, "real_mail_claim_duplicate_envelope"), false);
+    assert.equal(await globalRevision(admin), 3);
+    await closeStores(stores);
+
     await waitUntil(async () => await activeTransactionCount(admin) === 0, WAIT_TIMEOUT_MS, "InnoDB 事务清理");
     const deadlocksAfter = await deadlockCount(admin);
     assert.equal(deadlocksAfter, deadlocksBefore);
@@ -1276,6 +1506,8 @@ async function runRealMysqlGate(runtime) {
     );
     const receiptIds = receiptRows.map((row) => String(row.operation_id));
     assert.deepEqual(receiptIds, [
+      "real_mail_claim_full",
+      "real_mail_claim_partial",
       "real_market_buy_parallel_a",
       "real_market_buy_parallel_b",
       "real_market_buy_race_winner",
@@ -1307,6 +1539,9 @@ async function runRealMysqlGate(runtime) {
       sameListingBuyExactlyOneWinner: true,
       staleLegacyServerStateOverwriteRejected: true,
       marketBuyDuplicateReceiptRolledBack: true,
+      mailPartialUpdateVerified: true,
+      mailFullDeleteVerified: true,
+      mailDuplicateEnvelopeRolledBack: true,
       globalRevision: await globalRevision(admin),
       receiptCount: receiptIds.length,
       receiptIds,

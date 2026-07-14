@@ -49,6 +49,10 @@ const {
 const {createProfileActionsDomain} = require("./auth/profile-actions");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
+const {
+  buildRowLocalMailClaimConsistencyScope,
+  rowLocalMailClaimRecoveryMatches,
+} = require("./auth/mail-claim-consistency");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
@@ -3701,10 +3705,28 @@ function createAuthService(options = {}) {
     };
   }
 
+  function durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt) {
+    const mailId = String(Array.isArray(args) ? args[1] : "").trim();
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const beforeBinding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    const playerId = String(beforeBinding.playerId || "");
+    return buildRowLocalMailClaimConsistencyScope({
+      methodName,
+      before,
+      candidate,
+      accountId,
+      playerId,
+      mailId,
+      receipt,
+    });
+  }
+
   function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
     return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
-      || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt);
+      || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt);
   }
 
   async function executeDurableMutation(methodName, args, operation) {
@@ -5086,6 +5108,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
       !rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketCancelRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketBuyRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMailClaimRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
     ) {
       return {matched: false, scoped: false, reloadedPersistentData: null};
     }
