@@ -36,8 +36,10 @@ const MARKET_LISTING_IDS = Object.freeze({
 const MAIL_IDS = Object.freeze({
   a: "mail_shared_mysql_a",
   b: "mail_shared_mysql_b",
+  sale: "mail_shared_mysql_market_sale",
 });
 const MAIL_CLAIM_ACTION_ID = "POST /mail/claim";
+const MARKET_BUY_ACTION_ID = "POST /market/buy";
 const MAIL_ENVELOPE_ID = "eqx_shared_mail_duplicate_0001";
 
 function baselineAuthority() {
@@ -162,6 +164,115 @@ function marketAuthority() {
     [MARKET_LISTING_IDS.b]: ordinaryListing("b"),
   };
   return authority;
+}
+
+function marketClaimAuthority() {
+  const authority = marketAuthority();
+  authority.marketConfig = {
+    defaultTaxBps: 0,
+    itemTaxBps: {},
+    taxCollected: {stoneCoins: 0, diamonds: 0},
+    schemaVersion: 1,
+  };
+  authority.mailMessages[MAIL_IDS.b] = mailAttachment("b");
+  return authority;
+}
+
+function marketSaleMail(listing, mailId = MAIL_IDS.sale) {
+  const seller = ACTORS.b;
+  const totalPrice = Number(listing.count) * Number(listing.unitPrice);
+  return {
+    mailId,
+    senderAccountId: "system_market",
+    senderUsername: "auction_house",
+    senderDisplayName: "拍卖行",
+    recipientAccountId: seller.accountId,
+    recipientUsername: "shared_market_seller_b",
+    recipientDisplayName: seller.name,
+    title: "拍卖行成交通知",
+    body: "共享事务卖家领取与购买交错测试。",
+    currency: {stoneCoins: totalPrice},
+    items: [],
+    createdAt: UPDATED_AT_2,
+    readAt: null,
+    schemaVersion: 1,
+  };
+}
+
+function nextMarketBuyAuthority(before, options = {}) {
+  const buyer = ACTORS.a;
+  const seller = ACTORS.b;
+  const listingId = String(options.listingId || MARKET_LISTING_IDS.b);
+  const saleMailId = String(options.saleMailId || MAIL_IDS.sale);
+  const listing = before.marketListings[listingId];
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[buyer.accountId].profileRevision) + 1;
+  const updatedAt = String(options.updatedAt || UPDATED_AT_2);
+  const totalPrice = Number(listing.count) * Number(listing.unitPrice);
+  after.profileBindings[buyer.accountId] = {
+    ...before.profileBindings[buyer.accountId],
+    profileRevision: nextRevision,
+    updatedAt,
+  };
+  after.profiles[buyer.playerId] = {
+    ...before.profiles[buyer.playerId],
+    profileRevision: nextRevision,
+    updatedAt,
+    profile: {
+      ...before.profiles[buyer.playerId].profile,
+      stoneCoins: Number(before.profiles[buyer.playerId].profile.stoneCoins) - totalPrice,
+      backpackSlots: [{itemId: listing.itemId, count: listing.count}],
+    },
+  };
+  delete after.marketListings[listingId];
+  after.mailMessages[saleMailId] = marketSaleMail(listing, saleMailId);
+  const operationId = String(options.operationId);
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      schemaVersion: 1,
+      operationId,
+      requestHash: String(options.requestHash),
+      actionId: MARKET_BUY_ACTION_ID,
+      accountId: buyer.accountId,
+      committedAt: updatedAt,
+      expiresAt: "2026-07-18T02:10:00.000Z",
+      response: {ok: true, operationId, saleMailId},
+    },
+    {nowMs: Date.parse(updatedAt)},
+  );
+  return after;
+}
+
+function marketBuySaveOptions(operationId, requestHash, options = {}) {
+  return {
+    consistencyScope: {
+      kind: "row_local_market_buy_v1",
+      accountId: ACTORS.a.accountId,
+      playerId: ACTORS.a.playerId,
+      sellerAccountId: ACTORS.b.accountId,
+      sellerPlayerId: ACTORS.b.playerId,
+      listingId: String(options.listingId || MARKET_LISTING_IDS.b),
+      saleMailId: String(options.saleMailId || MAIL_IDS.sale),
+      currency: "stoneCoins",
+      taxAmount: 0,
+      operationId,
+      requestHash,
+      actionId: MARKET_BUY_ACTION_ID,
+    },
+  };
+}
+
+function stagedMarketBuy(store, before, options) {
+  const after = nextMarketBuyAuthority(before, options);
+  return {
+    after,
+    promise: store.saveAsync(after, marketBuySaveOptions(
+      options.operationId,
+      options.requestHash,
+      options,
+    )),
+  };
 }
 
 function nextMarketCancelAuthority(before, actorKey, options = {}) {
@@ -522,13 +633,17 @@ function createProductionSqlHandler(queryLog) {
       requiredParams(params, 0, sql);
       return operation.selectAllForUpdate("profiles");
     }
-    if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = \? FOR UPDATE$/i.test(normalized)) {
+    if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = \? FOR (UPDATE|SHARE)$/i.test(normalized)) {
       const [accountId] = requiredParams(params, 1, sql);
-      return operation.selectForUpdate("profile_bindings", String(accountId));
+      return /FOR SHARE$/i.test(normalized)
+        ? operation.selectForShare("profile_bindings", String(accountId))
+        : operation.selectForUpdate("profile_bindings", String(accountId));
     }
-    if (/^SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = \? FOR UPDATE$/i.test(normalized)) {
+    if (/^SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = \? FOR (UPDATE|SHARE)$/i.test(normalized)) {
       const [playerId] = requiredParams(params, 1, sql);
-      return operation.selectForUpdate("profiles", String(playerId));
+      return /FOR SHARE$/i.test(normalized)
+        ? operation.selectForShare("profiles", String(playerId))
+        : operation.selectForUpdate("profiles", String(playerId));
     }
     if (/^SELECT listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json FROM market_listings WHERE listing_id = \? FOR UPDATE$/i.test(normalized)) {
       const [listingId] = requiredParams(params, 1, sql);
@@ -585,6 +700,20 @@ function createProductionSqlHandler(queryLog) {
         account_id: accountId === null ? null : String(accountId),
         committed_at: String(committedAt),
         expires_at: String(expiresAt),
+        document_json: jsonParameter(documentJson, sql),
+      });
+    }
+
+    if (/^INSERT INTO mail_messages \(mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json\) VALUES \(\?, \?, \?, \?, \?, \?, CAST\(\? AS JSON\)\)$/i.test(normalized)) {
+      const [mailId, senderAccountId, recipientAccountId, title, createdAt, readAt, documentJson]
+        = requiredParams(params, 7, sql);
+      return operation.insert("mail_messages", String(mailId), {
+        mail_id: String(mailId),
+        sender_account_id: String(senderAccountId),
+        recipient_account_id: String(recipientAccountId),
+        title: String(title),
+        created_at: String(createdAt),
+        read_at: readAt === null ? null : String(readAt),
         document_json: jsonParameter(documentJson, sql),
       });
     }
@@ -1528,6 +1657,206 @@ test("ordinary market cancel and legacy global writes reject stale snapshots in 
     }
     assert.equal(harness.assertIdle(), true);
   });
+});
+
+test("market buy first lets the waiting seller claim commit after the shared seller lock", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-buy-before-claim-"));
+  const authority = marketClaimAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const buyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("buy_before_claim"));
+  const claimStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("seller_claim_after_buy"));
+  const buyGate = harness.blockNext({writerId: "buy_before_claim", phase: "before_commit_apply"});
+  void buyGate.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const buyBefore = buyStore.load();
+    const claimBefore = claimStore.load();
+    const buy = stagedMarketBuy(buyStore, buyBefore, {
+      operationId: "op_buy_before_seller_claim_0001",
+      requestHash: "6".repeat(64),
+    });
+    await buyGate.entered;
+    const claim = stagedMailClaim(claimStore, claimBefore, "b", {
+      operationId: "op_seller_claim_after_buy_0001",
+      requestHash: "7".repeat(64),
+      updatedAt: UPDATED_AT_3,
+    });
+    settled = Promise.allSettled([buy.promise, claim.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "seller_claim_after_buy",
+      table: "profile_bindings",
+      key: ACTORS.b.accountId,
+    });
+    buyGate.release();
+
+    const [buyResult, claimResult] = await settled;
+    assert.equal(buyResult.status, "fulfilled");
+    assert.equal(claimResult.status, "fulfilled");
+    const committed = harness.snapshot();
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 70);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_json.stoneCoins, 201);
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.b), false);
+    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.b), false);
+    assert.deepEqual(committed.mail_messages[MAIL_IDS.sale].document_json.currency, {stoneCoins: 30});
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_buy_before_seller_claim_0001"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_seller_claim_after_buy_0001"), true);
+  } finally {
+    buyGate.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([buyStore.close(), claimStore.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("seller claim first rejects a stale buy before writes and the same operation retries after reload", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-claim-before-buy-"));
+  const authority = marketClaimAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const claimStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("claim_before_buy"));
+  const buyStore = createProductionStore(loader.fakeMysqlPath, harness.poolFor("stale_buy_after_claim"));
+  const claimGate = harness.blockNext({writerId: "claim_before_buy", phase: "before_commit_apply"});
+  void claimGate.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const claimBefore = claimStore.load();
+    const buyBefore = buyStore.load();
+    const claim = stagedMailClaim(claimStore, claimBefore, "b", {
+      operationId: "op_claim_before_market_buy_0001",
+      requestHash: "8".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await claimGate.entered;
+    const staleBuy = stagedMarketBuy(buyStore, buyBefore, {
+      operationId: "op_stale_buy_after_claim_0001",
+      requestHash: "9".repeat(64),
+      updatedAt: UPDATED_AT_3,
+    });
+    settled = Promise.allSettled([claim.promise, staleBuy.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "stale_buy_after_claim",
+      table: "profile_bindings",
+      key: ACTORS.b.accountId,
+    });
+    claimGate.release();
+
+    const [claimResult, staleBuyResult] = await settled;
+    assert.equal(claimResult.status, "fulfilled");
+    assert.equal(staleBuyResult.status, "rejected");
+    assert.equal(isResourceConflict(staleBuyResult.reason), true);
+    assert.equal(
+      queryLog.filter((entry) => entry.writerId === "stale_buy_after_claim")
+        .some((entry) => /^(UPDATE|DELETE|INSERT)\b/i.test(entry.sql)),
+      false,
+      "stale buy must fail while validating seller locks before any business write",
+    );
+    const afterClaim = harness.snapshot();
+    assert.equal(afterClaim.profiles[ACTORS.a.playerId].profile_revision, 1);
+    assert.equal(afterClaim.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 100);
+    assert.equal(afterClaim.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(afterClaim.market_listings, MARKET_LISTING_IDS.b), true);
+    assert.equal(Object.hasOwn(afterClaim.mail_messages, MAIL_IDS.sale), false);
+    assert.equal(Object.hasOwn(afterClaim.mutation_receipts, "op_stale_buy_after_claim_0001"), false);
+
+    const reloaded = buyStore.load();
+    const retry = stagedMarketBuy(buyStore, reloaded, {
+      operationId: "op_stale_buy_after_claim_0001",
+      requestHash: "9".repeat(64),
+      updatedAt: UPDATED_AT_4,
+    });
+    await retry.promise;
+    const committed = harness.snapshot();
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 70);
+    assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.b), false);
+    assert.deepEqual(committed.mail_messages[MAIL_IDS.sale].document_json.currency, {stoneCoins: 30});
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_stale_buy_after_claim_0001"), true);
+  } finally {
+    claimGate.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([claimStore.close(), buyStore.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("a DB-only sale mail id collision rolls preceding market writes back", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-sale-mail-duplicate-"));
+  const authority = marketClaimAuthority();
+  const loaderSeed = sqlSeed({authority});
+  const databaseSeed = structuredClone(loaderSeed);
+  const listing = authority.marketListings[MARKET_LISTING_IDS.b];
+  const existingMail = marketSaleMail(listing);
+  databaseSeed.mail_messages[MAIL_IDS.sale] = {
+    mail_id: MAIL_IDS.sale,
+    sender_account_id: existingMail.senderAccountId,
+    recipient_account_id: existingMail.recipientAccountId,
+    title: existingMail.title,
+    created_at: existingMail.createdAt,
+    read_at: existingMail.readAt,
+    document_json: existingMail,
+  };
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, loaderSeed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed: databaseSeed,
+    statementHandler: createProductionSqlHandler(queryLog),
+  });
+  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("sale_mail_duplicate"));
+
+  try {
+    const loaded = store.load();
+    const staged = stagedMarketBuy(store, loaded, {
+      operationId: "op_sale_mail_duplicate_0001",
+      requestHash: "a".repeat(64),
+    });
+    await assert.rejects(staged.promise, isResourceConflict);
+    assert.deepEqual(harness.snapshot(), databaseSeed);
+    const stagedWrites = harness.events()
+      .filter((event) => event.type === "write_staged" && event.writerId === "sale_mail_duplicate")
+      .map((event) => `${event.table}/${event.key}`);
+    assert.deepEqual(stagedWrites, [
+      `profile_bindings/${ACTORS.a.accountId}`,
+      `profiles/${ACTORS.a.playerId}`,
+      `market_listings/${MARKET_LISTING_IDS.b}`,
+    ]);
+    assert.equal(Object.hasOwn(harness.snapshot().mutation_receipts, "op_sale_mail_duplicate_0001"), false);
+  } finally {
+    await Promise.allSettled([store.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
 });
 
 test("different mail claims overlap and retain both profile and mail settlements", async () => {

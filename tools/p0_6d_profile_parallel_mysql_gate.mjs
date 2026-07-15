@@ -71,12 +71,24 @@ const MARKET_LISTING_IDS = Object.freeze({
   cancelFirstBuy: "listing_real_cross_cancel_first_buy",
   reciprocalSoldByA: "listing_real_cross_reciprocal_sold_by_a",
   reciprocalSoldByB: "listing_real_cross_reciprocal_sold_by_b",
+  sellerClaimBuyFirst: "listing_real_seller_claim_buy_first",
+  sellerClaimClaimFirst: "listing_real_seller_claim_claim_first",
+  saleMailCollisionA: "listing_real_sale_mail_collision_a",
+  saleMailCollisionB: "listing_real_sale_mail_collision_b",
+  saleMailTimeoutA: "listing_real_sale_mail_timeout_a",
+  saleMailTimeoutB: "listing_real_sale_mail_timeout_b",
 });
 const MAIL_CLAIM_IDS = Object.freeze({
   partial: "mail_real_claim_partial",
   full: "mail_real_claim_full",
   duplicateEnvelope: "mail_real_claim_duplicate_envelope",
+  sellerClaimBuyFirst: "mail_real_seller_claim_buy_first",
+  sellerClaimClaimFirst: "mail_real_seller_claim_claim_first",
 });
+const SALE_MAIL_COLLISION_ID = "mail_real_market_collision_shared";
+const SALE_MAIL_COLLISION_RETRY_ID = "mail_real_market_collision_retry_b";
+const SALE_MAIL_TIMEOUT_ID = "mail_real_market_timeout_shared";
+const SALE_MAIL_TIMEOUT_RETRY_ID = "mail_real_market_timeout_retry_b";
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
@@ -665,6 +677,30 @@ function seededAuthority(empty) {
       1,
       {sellerKey: "reciprocal_b"},
     ),
+    [MARKET_LISTING_IDS.sellerClaimBuyFirst]: realMarketListing(
+      MARKET_LISTING_IDS.sellerClaimBuyFirst,
+      1,
+    ),
+    [MARKET_LISTING_IDS.sellerClaimClaimFirst]: realMarketListing(
+      MARKET_LISTING_IDS.sellerClaimClaimFirst,
+      1,
+    ),
+    [MARKET_LISTING_IDS.saleMailCollisionA]: realMarketListing(
+      MARKET_LISTING_IDS.saleMailCollisionA,
+      1,
+    ),
+    [MARKET_LISTING_IDS.saleMailCollisionB]: realMarketListing(
+      MARKET_LISTING_IDS.saleMailCollisionB,
+      2,
+    ),
+    [MARKET_LISTING_IDS.saleMailTimeoutA]: realMarketListing(
+      MARKET_LISTING_IDS.saleMailTimeoutA,
+      1,
+    ),
+    [MARKET_LISTING_IDS.saleMailTimeoutB]: realMarketListing(
+      MARKET_LISTING_IDS.saleMailTimeoutB,
+      2,
+    ),
   };
   data.mailMessages = {
     ...(data.mailMessages || {}),
@@ -682,6 +718,16 @@ function seededAuthority(empty) {
         schemaVersion: 1,
       }],
     }),
+    [MAIL_CLAIM_IDS.sellerClaimBuyFirst]: realClaimMail(
+      MAIL_CLAIM_IDS.sellerClaimBuyFirst,
+      "m",
+      {currency: {stoneCoins: 5}},
+    ),
+    [MAIL_CLAIM_IDS.sellerClaimClaimFirst]: realClaimMail(
+      MAIL_CLAIM_IDS.sellerClaimClaimFirst,
+      "m",
+      {currency: {stoneCoins: 6}},
+    ),
   };
   return data;
 }
@@ -1284,6 +1330,16 @@ async function mutationReceiptExists(admin, operationId) {
 
 function isConflict(error, code) {
   return Boolean(error && error.code === code);
+}
+
+function isKnownLockWaitRollback(error) {
+  return Boolean(
+    error
+    && error.code === "mysql_transaction_rolled_back"
+    && error.mysqlCode === "ER_LOCK_WAIT_TIMEOUT"
+    && error.outcomeUnknown === false
+    && error.rollbackConfirmed === true,
+  );
 }
 
 async function closeStores(stores, options = {}) {
@@ -2292,6 +2348,379 @@ async function runRealMysqlGate(runtime) {
     assert.equal(await globalRevision(admin), 3);
     await closeStores(stores);
 
+    const buyFirstClaimGate = commitGate("seller_claim_after_market_buy");
+    gates.push(buyFirstClaimGate);
+    const sellerBuyFirstStore = createMysqlAuthStore(storeOptions(runtime, database, buyFirstClaimGate));
+    const claimAfterBuyStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(sellerBuyFirstStore, claimAfterBuyStore);
+    const buyFirstBefore = sellerBuyFirstStore.load();
+    const claimAfterBuyBefore = claimAfterBuyStore.load();
+    const buyFirstBuyerBefore = await profileAssetRow(admin, "a");
+    const buyFirstSellerBefore = await profileRow(admin, "m");
+    const buyFirstTaxBefore = await marketTaxCollected(admin);
+    const buyFirst = saveMarketBuy(
+      sellerBuyFirstStore,
+      buyFirstBefore,
+      "a",
+      MARKET_LISTING_IDS.sellerClaimBuyFirst,
+      {
+        saleMailId: "mail_real_seller_claim_buy_first_sale",
+        operationId: "real_seller_claim_buy_first_buy",
+        requestHash: "d".repeat(64),
+        updatedAt: "2026-07-14T04:14:00.000Z",
+      },
+    );
+    trackWrite(buyFirst.promise);
+    await settleWithin(buyFirstClaimGate.entered, WAIT_TIMEOUT_MS, "购买先行 COMMIT gate");
+    const claimAfterBuy = saveMailClaim(
+      claimAfterBuyStore,
+      claimAfterBuyBefore,
+      "m",
+      MAIL_CLAIM_IDS.sellerClaimBuyFirst,
+      {
+        remainingMail: null,
+        claimedEnvelopeIds: [],
+        stoneCoinsAdded: 5,
+        operationId: "real_seller_claim_buy_first_claim",
+        requestHash: "e".repeat(64),
+        updatedAt: "2026-07-14T04:15:00.000Z",
+      },
+    );
+    trackWrite(claimAfterBuy.promise);
+    await waitForLockWait(admin, "购买先行时卖家领取等待 SHARE/X 闸门");
+    buyFirstClaimGate.release();
+    const buyFirstClaimResults = await settleWithin(
+      Promise.allSettled([buyFirst.promise, claimAfterBuy.promise]),
+      WAIT_TIMEOUT_MS,
+      "购买先行与卖家领取并发结算",
+    );
+    for (const result of buyFirstClaimResults) {
+      if (result.status === "rejected") {
+        throw result.reason;
+      }
+    }
+    assert.deepEqual(await profileAssetRow(admin, "a"), {
+      revision: buyFirstBuyerBefore.revision + 1,
+      stoneCoins: buyFirstBuyerBefore.stoneCoins - 20,
+      itemCount: buyFirstBuyerBefore.itemCount + 1,
+    });
+    assert.deepEqual(await profileRow(admin, "m"), {
+      revision: buyFirstSellerBefore.revision + 1,
+      stoneCoins: buyFirstSellerBefore.stoneCoins + 5,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.sellerClaimBuyFirst), false);
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimBuyFirst), false);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_seller_claim_buy_first_sale"), true);
+    assert.deepEqual(
+      (await mailDocument(admin, "mail_real_seller_claim_buy_first_sale")).currency,
+      {stoneCoins: 19},
+    );
+    assert.equal(await marketTaxCollected(admin), buyFirstTaxBefore + 1);
+    assert.equal(await mutationReceiptExists(admin, "real_seller_claim_buy_first_buy"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_seller_claim_buy_first_claim"), true);
+    await closeStores(stores);
+
+    const claimFirstSeller = actorForKey("m");
+    const claimFirstSaleMailId = "mail_real_seller_claim_claim_first_sale";
+    const claimFirstInterleave = reciprocalBuyLockInterleaveGate({
+      canonicalFirstAccountId: claimFirstSeller.accountId,
+      winnerTrace: [
+        {resource: "profile_binding", key: claimFirstSeller.accountId, mode: "exclusive"},
+        {resource: "profile", key: claimFirstSeller.playerId, mode: "exclusive"},
+      ],
+      contenderTrace: canonicalMarketBuyLockTrace(
+        "b",
+        "m",
+        MARKET_LISTING_IDS.sellerClaimClaimFirst,
+      ),
+    });
+    gates.push(claimFirstInterleave);
+    const claimFirstStore = createMysqlAuthStore(storeOptions(
+      runtime,
+      database,
+      claimFirstInterleave.gateFor("winner"),
+    ));
+    const buyAfterClaimStore = createMysqlAuthStore(storeOptions(
+      runtime,
+      database,
+      claimFirstInterleave.gateFor("contender"),
+    ));
+    stores.push(claimFirstStore, buyAfterClaimStore);
+    const claimFirstBefore = claimFirstStore.load();
+    const buyAfterClaimBefore = buyAfterClaimStore.load();
+    const claimFirstBuyerBefore = await profileAssetRow(admin, "b");
+    const claimFirstSellerBefore = await profileRow(admin, "m");
+    const claimFirstTaxBefore = await marketTaxCollected(admin);
+    const claimFirst = saveMailClaim(
+      claimFirstStore,
+      claimFirstBefore,
+      "m",
+      MAIL_CLAIM_IDS.sellerClaimClaimFirst,
+      {
+        remainingMail: null,
+        claimedEnvelopeIds: [],
+        stoneCoinsAdded: 6,
+        operationId: "real_seller_claim_claim_first_claim",
+        requestHash: "f".repeat(64),
+        updatedAt: "2026-07-14T04:16:00.000Z",
+      },
+    );
+    trackWrite(claimFirst.promise);
+    await settleWithin(
+      claimFirstInterleave.waitForWinnerFirstAcquired(),
+      WAIT_TIMEOUT_MS,
+      "领取先行取得卖家 exclusive binding 行锁",
+    );
+    const staleBuyAfterClaim = saveMarketBuy(
+      buyAfterClaimStore,
+      buyAfterClaimBefore,
+      "b",
+      MARKET_LISTING_IDS.sellerClaimClaimFirst,
+      {
+        saleMailId: claimFirstSaleMailId,
+        operationId: "real_seller_claim_claim_first_buy",
+        requestHash: "0".repeat(64),
+        updatedAt: "2026-07-14T04:17:00.000Z",
+      },
+    );
+    trackWrite(staleBuyAfterClaim.promise);
+    await settleWithin(
+      claimFirstInterleave.waitForContenderFirstAttempted(),
+      WAIT_TIMEOUT_MS,
+      "陈旧购买以 shared 模式请求同一卖家 binding 行锁",
+    );
+    await waitForLockWait(admin, "领取先行时陈旧购买等待 SHARE/X 闸门");
+    claimFirstInterleave.markLockWaitObserved();
+    claimFirstInterleave.release();
+    await settleWithin(claimFirst.promise, WAIT_TIMEOUT_MS, "领取先行提交");
+    await assert.rejects(
+      settleWithin(staleBuyAfterClaim.promise, WAIT_TIMEOUT_MS, "领取后陈旧购买失败关闭"),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.deepEqual(await profileAssetRow(admin, "b"), claimFirstBuyerBefore);
+    assert.deepEqual(await profileRow(admin, "m"), {
+      revision: claimFirstSellerBefore.revision + 1,
+      stoneCoins: claimFirstSellerBefore.stoneCoins + 6,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.sellerClaimClaimFirst), true);
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimClaimFirst), false);
+    assert.equal(await marketSaleMailExists(admin, claimFirstSaleMailId), false);
+    assert.equal(await marketTaxCollected(admin), claimFirstTaxBefore);
+    assert.equal(await mutationReceiptExists(admin, "real_seller_claim_claim_first_claim"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_seller_claim_claim_first_buy"), false);
+    claimFirstInterleave.assertVerified();
+    await closeStores(stores);
+
+    const buyAfterClaimRetryStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(buyAfterClaimRetryStore);
+    const buyAfterClaimReloaded = buyAfterClaimRetryStore.load();
+    const buyAfterClaimRetry = saveMarketBuy(
+      buyAfterClaimRetryStore,
+      buyAfterClaimReloaded,
+      "b",
+      MARKET_LISTING_IDS.sellerClaimClaimFirst,
+      {
+        saleMailId: claimFirstSaleMailId,
+        operationId: "real_seller_claim_claim_first_buy",
+        requestHash: "0".repeat(64),
+        updatedAt: "2026-07-14T04:18:00.000Z",
+      },
+    );
+    trackWrite(buyAfterClaimRetry.promise);
+    await settleWithin(buyAfterClaimRetry.promise, WAIT_TIMEOUT_MS, "领取后同 operation 购买重试");
+    assert.deepEqual(await profileAssetRow(admin, "b"), {
+      revision: claimFirstBuyerBefore.revision + 1,
+      stoneCoins: claimFirstBuyerBefore.stoneCoins - 20,
+      itemCount: claimFirstBuyerBefore.itemCount + 1,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.sellerClaimClaimFirst), false);
+    assert.equal(await marketSaleMailExists(admin, claimFirstSaleMailId), true);
+    assert.deepEqual(
+      (await mailDocument(admin, claimFirstSaleMailId)).currency,
+      {stoneCoins: 19},
+    );
+    assert.equal(await marketTaxCollected(admin), claimFirstTaxBefore + 1);
+    assert.equal(await mutationReceiptExists(admin, "real_seller_claim_claim_first_buy"), true);
+    await closeStores(stores);
+
+    const collisionGate = commitGate("same_sale_mail_id_duplicate");
+    gates.push(collisionGate);
+    const collisionStoreA = createMysqlAuthStore(storeOptions(runtime, database, collisionGate));
+    const collisionStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(collisionStoreA, collisionStoreB);
+    const collisionBeforeA = collisionStoreA.load();
+    const collisionBeforeB = collisionStoreB.load();
+    const collisionBuyerBeforeA = await profileAssetRow(admin, "a");
+    const collisionBuyerBeforeB = await profileAssetRow(admin, "b");
+    const collisionTaxBefore = await marketTaxCollected(admin);
+    const collisionBuyA = saveMarketBuy(
+      collisionStoreA,
+      collisionBeforeA,
+      "a",
+      MARKET_LISTING_IDS.saleMailCollisionA,
+      {
+        saleMailId: SALE_MAIL_COLLISION_ID,
+        operationId: "real_sale_mail_collision_a_buy",
+        requestHash: "1".repeat(64),
+        updatedAt: "2026-07-14T04:19:00.000Z",
+      },
+    );
+    trackWrite(collisionBuyA.promise);
+    await settleWithin(collisionGate.entered, WAIT_TIMEOUT_MS, "同成交邮件 ID 赢家 COMMIT gate");
+    const collisionBuyB = saveMarketBuy(
+      collisionStoreB,
+      collisionBeforeB,
+      "b",
+      MARKET_LISTING_IDS.saleMailCollisionB,
+      {
+        saleMailId: SALE_MAIL_COLLISION_ID,
+        operationId: "real_sale_mail_collision_b_buy",
+        requestHash: "2".repeat(64),
+        updatedAt: "2026-07-14T04:19:00.000Z",
+      },
+    );
+    trackWrite(collisionBuyB.promise);
+    await waitForLockWait(admin, "同成交邮件 ID 唯一键等待");
+    collisionGate.release();
+    await settleWithin(collisionBuyA.promise, WAIT_TIMEOUT_MS, "同成交邮件 ID 赢家提交");
+    await assert.rejects(
+      settleWithin(collisionBuyB.promise, WAIT_TIMEOUT_MS, "同成交邮件 ID 输家整单回滚"),
+      (error) => isConflict(error, "mysql_resource_revision_conflict"),
+    );
+    assert.deepEqual(await profileAssetRow(admin, "a"), {
+      revision: collisionBuyerBeforeA.revision + 1,
+      stoneCoins: collisionBuyerBeforeA.stoneCoins - 20,
+      itemCount: collisionBuyerBeforeA.itemCount + 1,
+    });
+    assert.deepEqual(await profileAssetRow(admin, "b"), collisionBuyerBeforeB);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailCollisionA), false);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailCollisionB), true);
+    assert.equal(await marketSaleMailExists(admin, SALE_MAIL_COLLISION_ID), true);
+    assert.deepEqual((await mailDocument(admin, SALE_MAIL_COLLISION_ID)).currency, {stoneCoins: 19});
+    assert.equal(await marketTaxCollected(admin), collisionTaxBefore + 1);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_collision_a_buy"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_collision_b_buy"), false);
+
+    const collisionRetryBefore = collisionStoreB.load();
+    const collisionRetry = saveMarketBuy(
+      collisionStoreB,
+      collisionRetryBefore,
+      "b",
+      MARKET_LISTING_IDS.saleMailCollisionB,
+      {
+        saleMailId: SALE_MAIL_COLLISION_RETRY_ID,
+        operationId: "real_sale_mail_collision_b_buy",
+        requestHash: "2".repeat(64),
+        updatedAt: "2026-07-14T04:20:00.000Z",
+      },
+    );
+    trackWrite(collisionRetry.promise);
+    await settleWithin(collisionRetry.promise, WAIT_TIMEOUT_MS, "同 operation 新邮件 ID 重试");
+    assert.deepEqual(await profileAssetRow(admin, "b"), {
+      revision: collisionBuyerBeforeB.revision + 1,
+      stoneCoins: collisionBuyerBeforeB.stoneCoins - 40,
+      itemCount: collisionBuyerBeforeB.itemCount + 2,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailCollisionB), false);
+    assert.equal(await marketSaleMailExists(admin, SALE_MAIL_COLLISION_RETRY_ID), true);
+    assert.deepEqual(
+      (await mailDocument(admin, SALE_MAIL_COLLISION_RETRY_ID)).currency,
+      {stoneCoins: 38},
+    );
+    assert.equal(await marketTaxCollected(admin), collisionTaxBefore + 3);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_collision_b_buy"), true);
+    await closeStores(stores);
+
+    const timeoutCollisionGate = commitGate("same_sale_mail_id_timeout");
+    gates.push(timeoutCollisionGate);
+    const timeoutStoreA = createMysqlAuthStore(storeOptions(runtime, database, timeoutCollisionGate));
+    const timeoutStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(timeoutStoreA, timeoutStoreB);
+    const timeoutBeforeA = timeoutStoreA.load();
+    const timeoutBeforeB = timeoutStoreB.load();
+    const timeoutBuyerBeforeA = await profileAssetRow(admin, "a");
+    const timeoutBuyerBeforeB = await profileAssetRow(admin, "b");
+    const timeoutTaxBefore = await marketTaxCollected(admin);
+    const timeoutBuyA = saveMarketBuy(
+      timeoutStoreA,
+      timeoutBeforeA,
+      "a",
+      MARKET_LISTING_IDS.saleMailTimeoutA,
+      {
+        saleMailId: SALE_MAIL_TIMEOUT_ID,
+        operationId: "real_sale_mail_timeout_a_buy",
+        requestHash: "3".repeat(64),
+        updatedAt: "2026-07-14T04:21:00.000Z",
+      },
+    );
+    trackWrite(timeoutBuyA.promise);
+    await settleWithin(timeoutCollisionGate.entered, WAIT_TIMEOUT_MS, "成交邮件锁超时赢家 COMMIT gate");
+    const timeoutBuyB = saveMarketBuy(
+      timeoutStoreB,
+      timeoutBeforeB,
+      "b",
+      MARKET_LISTING_IDS.saleMailTimeoutB,
+      {
+        saleMailId: SALE_MAIL_TIMEOUT_ID,
+        operationId: "real_sale_mail_timeout_b_buy",
+        requestHash: "4".repeat(64),
+        updatedAt: "2026-07-14T04:21:00.000Z",
+      },
+    );
+    trackWrite(timeoutBuyB.promise);
+    await waitForLockWait(admin, "成交邮件唯一键 Session lock timeout 等待");
+    await assert.rejects(
+      settleWithin(timeoutBuyB.promise, WAIT_TIMEOUT_MS, "成交邮件唯一键 Session lock timeout"),
+      isKnownLockWaitRollback,
+    );
+    assert.deepEqual(await profileAssetRow(admin, "b"), timeoutBuyerBeforeB);
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailTimeoutB), true);
+    assert.equal(await marketSaleMailExists(admin, SALE_MAIL_TIMEOUT_ID), false);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_timeout_b_buy"), false);
+    assert.equal(await marketTaxCollected(admin), timeoutTaxBefore);
+    timeoutCollisionGate.release();
+    await settleWithin(timeoutBuyA.promise, WAIT_TIMEOUT_MS, "成交邮件锁超时赢家提交");
+    assert.deepEqual(await profileAssetRow(admin, "a"), {
+      revision: timeoutBuyerBeforeA.revision + 1,
+      stoneCoins: timeoutBuyerBeforeA.stoneCoins - 20,
+      itemCount: timeoutBuyerBeforeA.itemCount + 1,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailTimeoutA), false);
+    assert.equal(await marketSaleMailExists(admin, SALE_MAIL_TIMEOUT_ID), true);
+    assert.deepEqual((await mailDocument(admin, SALE_MAIL_TIMEOUT_ID)).currency, {stoneCoins: 19});
+    assert.equal(await marketTaxCollected(admin), timeoutTaxBefore + 1);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_timeout_a_buy"), true);
+
+    const timeoutRetryBefore = timeoutStoreB.load();
+    const timeoutRetry = saveMarketBuy(
+      timeoutStoreB,
+      timeoutRetryBefore,
+      "b",
+      MARKET_LISTING_IDS.saleMailTimeoutB,
+      {
+        saleMailId: SALE_MAIL_TIMEOUT_RETRY_ID,
+        operationId: "real_sale_mail_timeout_b_buy",
+        requestHash: "4".repeat(64),
+        updatedAt: "2026-07-14T04:22:00.000Z",
+      },
+    );
+    trackWrite(timeoutRetry.promise);
+    await settleWithin(timeoutRetry.promise, WAIT_TIMEOUT_MS, "锁超时后同 operation 重试");
+    assert.deepEqual(await profileAssetRow(admin, "b"), {
+      revision: timeoutBuyerBeforeB.revision + 1,
+      stoneCoins: timeoutBuyerBeforeB.stoneCoins - 40,
+      itemCount: timeoutBuyerBeforeB.itemCount + 2,
+    });
+    assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.saleMailTimeoutB), false);
+    assert.equal(await marketSaleMailExists(admin, SALE_MAIL_TIMEOUT_RETRY_ID), true);
+    assert.deepEqual(
+      (await mailDocument(admin, SALE_MAIL_TIMEOUT_RETRY_ID)).currency,
+      {stoneCoins: 38},
+    );
+    assert.equal(await marketTaxCollected(admin), timeoutTaxBefore + 3);
+    assert.equal(await mutationReceiptExists(admin, "real_sale_mail_timeout_b_buy"), true);
+    await closeStores(stores);
+
     const sharedReadStore = createMysqlAuthStore(storeOptions(runtime, database));
     stores.push(sharedReadStore);
     sharedReadStore.load();
@@ -2418,7 +2847,15 @@ async function runRealMysqlGate(runtime) {
       "real_parallel_a_001",
       "real_parallel_b_001",
       "real_profile_before_legacy",
+      "real_sale_mail_collision_a_buy",
+      "real_sale_mail_collision_b_buy",
+      "real_sale_mail_timeout_a_buy",
+      "real_sale_mail_timeout_b_buy",
       "real_same_profile_a_001",
+      "real_seller_claim_buy_first_buy",
+      "real_seller_claim_buy_first_claim",
+      "real_seller_claim_claim_first_buy",
+      "real_seller_claim_claim_first_claim",
     ]);
     return {
       qualified: true,
@@ -2455,6 +2892,11 @@ async function runRealMysqlGate(runtime) {
       mailPartialUpdateVerified: true,
       mailFullDeleteVerified: true,
       mailDuplicateEnvelopeRolledBack: true,
+      sellerClaimPurchaseFirstVerified: true,
+      sellerClaimClaimFirstRetryVerified: true,
+      saleMailDuplicateRollbackVerified: true,
+      saleMailLockTimeoutRollbackVerified: true,
+      saleMailCollisionSameOperationRetryVerified: true,
       sharedMarketReadThroughVerified: true,
       sharedMailReadThroughVerified: true,
       sharedTombstoneDeltaVerified: true,
