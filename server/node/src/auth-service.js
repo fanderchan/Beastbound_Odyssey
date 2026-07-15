@@ -3949,7 +3949,11 @@ function createAuthService(options = {}) {
     }
     if (["buyMarketListing", "cancelMarketListing"].includes(method)) {
       const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
-      const listingId = String(payload.listingId || "").trim();
+      // Keep the scoped read identity aligned with the domain's established
+      // compatibility contract. Otherwise an older client using `id` skips
+      // the authoritative market read and can see a permanent false-missing
+      // result after a row-local create on another Node.
+      const listingId = String(payload.listingId || payload.id || "").trim();
       const listing = objectOrEmpty(data.marketListings && data.marketListings[listingId]);
       const itemId = String(listing.itemId || "");
       return listingId === "" ? null : {
@@ -3972,6 +3976,29 @@ function createAuthService(options = {}) {
         scope: "mail_mutation",
         accountId,
         mailId,
+        includeProfileMailPartitions: true,
+      };
+    }
+    if (["bankDeposit", "bankWithdraw"].includes(method)) {
+      const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+      const rawItems = payload.items || payload.itemAmounts || [];
+      const items = Array.isArray(rawItems) ? rawItems : [];
+      if (!items.some((itemValue) => {
+        const item = objectOrEmpty(itemValue);
+        // Equipment bank intents already require the canonical itemId field.
+        // Do not turn malformed aliases into an otherwise unnecessary DB read.
+        return isEquipmentAssetItemId(String(item.itemId || "").trim());
+      })) {
+        return null;
+      }
+      return {
+        schemaVersion: 1,
+        scope: "equipment_ownership",
+        accountId,
+        // A bank transfer can immediately follow a remote mail claim,
+        // market purchase/cancel or another bank transfer. Adopt the actor's
+        // profile, mailbox, bounded market and referenced tombstones in one
+        // RR view before the conservative legacy save builds its candidate.
         includeProfileMailPartitions: true,
       };
     }

@@ -12,6 +12,7 @@ const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
   applySharedAssetReadView,
   compareCanonicalIds,
+  sharedAssetReadReferencedEnvelopeIds,
 } = require("../src/auth/shared-asset-read-model");
 const {
   createAuthService,
@@ -58,7 +59,10 @@ function sharedView(snapshot, request) {
       accountIds.add(recipientAccountId);
     }
   }
-  const marketListings = request.scope.startsWith("market_")
+  const marketListings = (
+    request.scope.startsWith("market_")
+    || request.scope === "equipment_ownership"
+  )
     ? canonicalMap(snapshot.marketListings)
     : null;
   if (marketListings) {
@@ -94,6 +98,12 @@ function sharedView(snapshot, request) {
       )),
     }))
     : [];
+  const profiles = replacement(playerIds, snapshot.profiles);
+  const referencedEnvelopeIds = sharedAssetReadReferencedEnvelopeIds({
+    marketListings,
+    mailPartitions,
+    profiles: profiles.values,
+  });
   return {
     schemaVersion: 1,
     scope: request.scope,
@@ -107,11 +117,13 @@ function sharedView(snapshot, request) {
     includeProfileMailPartitions: request.includeProfileMailPartitions === true,
     accounts: replacement(Array.from(accountIds), accountsById(snapshot.accounts)),
     profileBindings: replacement(Array.from(profileAccountIds), snapshot.profileBindings),
-    profiles: replacement(playerIds, snapshot.profiles),
+    profiles,
     marketListings,
     marketConfig: marketListings ? snapshot.marketConfig : null,
     mailPartitions,
-    consumedEquipmentEnvelopeIds: [],
+    consumedEquipmentEnvelopeIds: referencedEnvelopeIds.filter((envelopeId) => (
+      Object.hasOwn(snapshot.consumedEquipmentEnvelopes || {}, envelopeId)
+    )),
   };
 }
 
@@ -248,7 +260,9 @@ function createReadThroughNode(backing, initialSnapshot, options = {}) {
       return {
         schemaVersion: 1,
         operationId,
-        authorityCurrent: isDeepStrictEqual(nodeBaseline, backingSnapshot),
+        authorityCurrent: options.forceReceiptAuthorityCurrent === true
+          ? true
+          : isDeepStrictEqual(nodeBaseline, backingSnapshot),
         receipt: receipt === null ? null : structuredClone(receipt),
       };
     },
@@ -998,6 +1012,61 @@ test("a stale Node reads a remote listing, buys it, then the seller reads and cl
   assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
 });
 
+test("market buy id alias still reads a listing created on another Node", async () => {
+  const scenario = seedMarketScenario();
+  let observedRequest = null;
+  const buyerNode = createReadThroughNode(scenario.backing, scenario.beforeListing, {
+    // Row-local market creation does not advance the global revision. The
+    // exact receipt reader therefore cannot discover the missing listing by
+    // global-revision drift; this mutation depends on its scoped read-through.
+    forceReceiptAuthorityCurrent: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+  });
+
+  const bought = await buyerNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {id: scenario.listingId}],
+    {
+      operationId: "op_shared_read_buy_id_alias_0001",
+      requestHash: "7".repeat(64),
+      actionId: "POST /market/buy",
+    },
+  );
+
+  assert.equal(bought.ok, true, JSON.stringify(bought));
+  assert.equal(observedRequest.scope, "market_mutation");
+  assert.equal(observedRequest.listingId, scenario.listingId);
+  assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), false);
+});
+
+test("market cancel id alias still reads a listing created on another Node", async () => {
+  const scenario = seedMarketScenario();
+  let observedRequest = null;
+  const sellerNode = createReadThroughNode(scenario.backing, scenario.beforeListing, {
+    forceReceiptAuthorityCurrent: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+  });
+
+  const cancelled = await sellerNode.invokeDurable(
+    "cancelMarketListing",
+    [scenario.seller.session.token, {id: scenario.listingId}],
+    {
+      operationId: "op_shared_read_cancel_id_alias_0001",
+      requestHash: "8".repeat(64),
+      actionId: "POST /market/cancel",
+    },
+  );
+
+  assert.equal(cancelled.ok, true, JSON.stringify(cancelled));
+  assert.equal(observedRequest.scope, "market_mutation");
+  assert.equal(observedRequest.listingId, scenario.listingId);
+  assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), false);
+});
+
 test("a second live Node replays the first Node's committed market purchase by exact receipt", async () => {
   const scenario = seedMarketScenario();
   const operation = {
@@ -1482,6 +1551,178 @@ test("market mutation refreshes a claimed equipment owner's mailbox with its pro
   assert.equal(Object.hasOwn(finalSnapshot.mailMessages, sent.mail.mailId), false);
   assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
   assert.ok(finalSnapshot.marketListings[listed.listing.listingId]);
+});
+
+test("equipment bank deposit reads a remotely claimed mail owner before legacy save", async () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const sender = seed.register({
+    username: "sharedbankmailsender",
+    password: "test1234",
+    displayName: "银行读穿寄件人",
+  });
+  const recipient = seed.register({
+    username: "sharedbankmailowner",
+    password: "test1234",
+    displayName: "银行读穿收件人",
+  });
+  assert.equal(sender.ok, true);
+  assert.equal(recipient.ok, true);
+  seedBackpackEquipment(seed, sender.session.token);
+  const sent = seed.sendMail(sender.session.token, {
+    recipientUsername: recipient.account.username,
+    title: "跨节点银行装备",
+    body: "远端领取后应能直接存入银行。",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_shared_read_legacy_1",
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(sent.ok, true, JSON.stringify(sent));
+  const staleSnapshot = seed.snapshot();
+  const originEnvelopeId = staleSnapshot.mailMessages[sent.mail.mailId]
+    .equipmentEnvelopes[0].envelopeId;
+  const backing = createMemoryAuthStore(staleSnapshot);
+  const remote = createAuthService({store: backing});
+  const claimed = remote.claimMailAttachments(recipient.session.token, sent.mail.mailId);
+  assert.equal(claimed.ok, true, JSON.stringify(claimed));
+  const afterClaim = backing.load();
+  const recipientProfile = profileForAccount(afterClaim, recipient.account.accountId).profile;
+  const claimedInstance = Object.values(recipientProfile.equipmentInstances).find((instance) => (
+    instance
+    && instance.transferProvenance
+    && instance.transferProvenance.originEnvelopeId === originEnvelopeId
+  ));
+  assert.ok(claimedInstance);
+
+  let observedRequest = null;
+  let savedOptions = null;
+  const staleNode = createReadThroughNode(backing, staleSnapshot, {
+    allowLegacy: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+    onSave(options) {
+      savedOptions = options;
+    },
+  });
+  const deposited = await staleNode.invokeDurable(
+    "bankDeposit",
+    [recipient.session.token, {
+      items: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: claimedInstance.instanceId,
+        sourceSlotIndex: 0,
+        bankSlotIndex: 0,
+      }],
+    }],
+    {},
+  );
+
+  assert.equal(deposited.ok, true, JSON.stringify(deposited));
+  assert.equal(observedRequest.scope, "equipment_ownership");
+  assert.equal(observedRequest.includeProfileMailPartitions, true);
+  assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
+  const finalSnapshot = backing.load();
+  const finalProfile = profileForAccount(finalSnapshot, recipient.account.accountId).profile;
+  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, sent.mail.mailId), false);
+  assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
+  assert.equal(Object.hasOwn(finalProfile.equipmentInstances, claimedInstance.instanceId), false);
+  assert.equal(finalProfile.bank.slots[0].itemId, "weapon_wooden_club");
+  assert.equal(finalProfile.bank.slots[0].equipmentEnvelopes.length, 1);
+});
+
+test("equipment bank withdraw reads a deposit committed on another Node", async () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const owner = seed.register({
+    username: "sharedbankwithdraw",
+    password: "test1234",
+    displayName: "银行跨节点取回号",
+  });
+  assert.equal(owner.ok, true);
+  seedBackpackEquipment(seed, owner.session.token);
+  const staleSnapshot = seed.snapshot();
+  const backing = createMemoryAuthStore(staleSnapshot);
+  const remote = createAuthService({store: backing});
+  const deposited = remote.bankDeposit(owner.session.token, {
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_shared_read_legacy_1",
+      sourceSlotIndex: 0,
+      bankSlotIndex: 0,
+    }],
+  });
+  assert.equal(deposited.ok, true, JSON.stringify(deposited));
+  const envelopeId = deposited.bank.slots[0].equipmentEnvelopes[0].envelopeId;
+
+  let observedRequest = null;
+  let savedOptions = null;
+  const staleNode = createReadThroughNode(backing, staleSnapshot, {
+    allowLegacy: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+    onSave(options) {
+      savedOptions = options;
+    },
+  });
+  const withdrawn = await staleNode.invokeDurable(
+    "bankWithdraw",
+    [owner.session.token, {
+      itemAmounts: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        envelopeId,
+        bankSlotIndex: 0,
+        targetSlotIndex: 1,
+      }],
+    }],
+    {},
+  );
+
+  assert.equal(withdrawn.ok, true, JSON.stringify(withdrawn));
+  assert.equal(observedRequest.scope, "equipment_ownership");
+  assert.equal(observedRequest.includeProfileMailPartitions, true);
+  assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
+  const finalSnapshot = backing.load();
+  const finalProfile = profileForAccount(finalSnapshot, owner.account.accountId).profile;
+  assert.deepEqual(finalProfile.bank.slots[0], {});
+  assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, envelopeId), true);
+  assert.equal(finalProfile.backpackSlots[1].itemId, "weapon_wooden_club");
+  assert.equal(Object.values(finalProfile.equipmentInstances).filter((instance) => (
+    instance && instance.itemId === "weapon_wooden_club"
+  )).length, 1);
+});
+
+test("ordinary bank transfers do not pay the equipment ownership read cost", async () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const owner = seed.register({
+    username: "sharedbankordinary",
+    password: "test1234",
+    displayName: "普通银行读穿号",
+  });
+  assert.equal(owner.ok, true);
+  const snapshot = seed.snapshot();
+  const backing = createMemoryAuthStore(snapshot);
+  let sharedReadCalls = 0;
+  const node = createReadThroughNode(backing, snapshot, {
+    allowLegacy: true,
+    beforeSharedRead() {
+      sharedReadCalls += 1;
+    },
+  });
+
+  const deposited = await node.invokeDurable(
+    "bankDeposit",
+    [owner.session.token, {stoneCoins: 1}],
+    {},
+  );
+
+  assert.equal(deposited.ok, true, JSON.stringify(deposited));
+  assert.equal(sharedReadCalls, 0);
 });
 
 test("read-through keeps equipment market cancel on the legacy asset path", async () => {

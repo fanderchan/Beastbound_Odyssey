@@ -204,6 +204,91 @@ test("market mutation view is bound to the requested listing actor and seller pa
   }), true);
 });
 
+test("equipment ownership view binds one actor profile to its mail, market and tombstones", () => {
+  const source = baseline();
+  const originEnvelopeId = "eqx_bank_origin_0001";
+  const view = {
+    schemaVersion: 1,
+    scope: "equipment_ownership",
+    accountId: "acc_a",
+    includeProfileMailPartitions: true,
+    accounts: replacement(["acc_a", "acc_b"], {
+      acc_a: {accountId: "acc_a", username: "alpha"},
+      acc_b: {accountId: "acc_b", username: "beta"},
+    }),
+    profileBindings: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", playerId: "player_a", profileRevision: 2},
+    }),
+    profiles: replacement(["player_a"], {
+      player_a: {
+        playerId: "player_a",
+        accountId: "acc_a",
+        profileRevision: 2,
+        profile: {
+          equipmentInstances: {
+            equip_bank_remote: {
+              instanceId: "equip_bank_remote",
+              transferProvenance: {originEnvelopeId},
+            },
+          },
+        },
+      },
+    }),
+    marketListings: {
+      listing_remote: {
+        listingId: "listing_remote",
+        sellerAccountId: "acc_b",
+      },
+    },
+    marketConfig: {defaultTaxBps: 300},
+    mailPartitions: [{
+      recipientAccountId: "acc_a",
+      messages: {},
+    }],
+    consumedEquipmentEnvelopeIds: [originEnvelopeId],
+  };
+  const request = {
+    schemaVersion: 1,
+    scope: "equipment_ownership",
+    accountId: "acc_a",
+    includeProfileMailPartitions: true,
+  };
+
+  assert.equal(assertSharedAssetReadViewMatchesRequest(view, request), true);
+  const applied = applySharedAssetReadView(source, view);
+  assert.equal(applied.profileBindings.acc_a.profileRevision, 2);
+  assert.equal(Object.hasOwn(applied.mailMessages, "mail_a_old"), false);
+  assert.equal(Object.hasOwn(applied.mailMessages, "mail_b_keep"), true);
+  assert.deepEqual(Object.keys(applied.marketListings), ["listing_remote"]);
+  assert.equal(Object.hasOwn(applied.consumedEquipmentEnvelopes, originEnvelopeId), true);
+
+  assert.throws(() => applySharedAssetReadView(source, {
+    ...view,
+    includeProfileMailPartitions: false,
+    mailPartitions: [],
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "mail_partitions");
+  assert.throws(() => applySharedAssetReadView(source, {
+    ...view,
+    profileBindings: replacement(["acc_a", "acc_b"], {
+      ...view.profileBindings.values,
+      acc_b: {accountId: "acc_b", playerId: "player_b", profileRevision: 1},
+    }),
+    profiles: replacement(["player_a", "player_b"], {
+      ...view.profiles.values,
+      player_b: {
+        playerId: "player_b",
+        accountId: "acc_b",
+        profileRevision: 1,
+        profile: {},
+      },
+    }),
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "market_profile_bindings.keys");
+});
+
 test("trusted roots stage database-confirmed tombstones on the current lineage", () => {
   const source = baseline();
   assert.equal(markAuthorityRootTrusted(source), true);

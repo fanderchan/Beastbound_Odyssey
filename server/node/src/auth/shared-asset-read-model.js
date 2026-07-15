@@ -62,6 +62,7 @@ function certifiedSharedAssetReadView(value) {
     "mail_read",
     "mail_mutation",
     "mail_send",
+    "equipment_ownership",
   ].includes(scope) || accountId === ""
     || typeof value.includeProfileMailPartitions !== "boolean") {
     throw sharedAssetReadViewError("scope");
@@ -82,16 +83,17 @@ function certifiedSharedAssetReadView(value) {
   )) {
     throw sharedAssetReadViewError("mail_send_identity");
   }
+  const includesMarket = scope.startsWith("market_") || scope === "equipment_ownership";
   const marketListings = value.marketListings === null || value.marketListings === undefined
     ? null
     : certifiedEntityMap(value.marketListings, "listingId", "marketListings");
-  if ((scope.startsWith("market_")) !== (marketListings !== null)) {
+  if (includesMarket !== (marketListings !== null)) {
     throw sharedAssetReadViewError("market_scope");
   }
   const marketConfig = value.marketConfig === null || value.marketConfig === undefined
     ? null
     : certifiedDocument(value.marketConfig, "marketConfig");
-  if ((scope.startsWith("market_")) !== (marketConfig !== null)) {
+  if (includesMarket !== (marketConfig !== null)) {
     throw sharedAssetReadViewError("market_config_scope");
   }
 
@@ -122,7 +124,7 @@ function certifiedSharedAssetReadView(value) {
     "profileBindings",
   );
   const profiles = certifiedEntityReplacement(value.profiles, "playerId", "profiles");
-  if (scope.startsWith("market_")) {
+  if (includesMarket) {
     assertCertifiedMarketAuthority({
       scope,
       accountId,
@@ -155,8 +157,10 @@ function certifiedSharedAssetReadView(value) {
     !isDeepStrictEqual(partitionIds, expectedMailPartitionIds)
     || (["mail_read", "mail_mutation"].includes(scope)
       && !includeProfileMailPartitions)
-    || (scope === "market_read" && includeProfileMailPartitions
+    || (["market_read", "equipment_ownership"].includes(scope)
+      && includeProfileMailPartitions
       && !isDeepStrictEqual(profileBindings.keys, [accountId]))
+    || (scope === "equipment_ownership" && !includeProfileMailPartitions)
   ) {
     throw sharedAssetReadViewError("mail_partitions");
   }
@@ -240,7 +244,7 @@ function assertCertifiedMarketAuthority(value) {
   const bindingAccountIds = value.profileBindings.keys;
   if (
     !bindingAccountIds.includes(value.accountId)
-    || (value.scope === "market_read"
+    || (["market_read", "equipment_ownership"].includes(value.scope)
       && !isDeepStrictEqual(bindingAccountIds, [value.accountId]))
     || bindingAccountIds.some((accountId) => !expectedAccountIds.has(accountId))
   ) {

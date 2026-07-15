@@ -354,6 +354,49 @@ test("ordinary market mutation keeps mailbox reads off while retaining scoped pr
   assert.equal(fake.state.queries.some(({sql}) => /FROM mail_messages/i.test(sql)), false);
 });
 
+test("equipment ownership RR read pairs only the actor with mail, market and tombstones", async () => {
+  const originEnvelopeId = "eqx_bank_origin_0001";
+  const fake = fakePool({
+    profileOriginEnvelopeId: originEnvelopeId,
+    consumedEnvelopeIds: [originEnvelopeId],
+  });
+  const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
+    scope: "equipment_ownership",
+    accountId: ACCOUNT_A,
+    includeProfileMailPartitions: true,
+  }, baseline());
+
+  assert.deepEqual(Object.keys(result.view.marketListings), [LISTING_ID]);
+  assert.deepEqual(result.view.accounts.keys, [ACCOUNT_A, ACCOUNT_B]);
+  assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A]);
+  assert.deepEqual(result.view.profiles.keys, [PLAYER_A]);
+  assert.deepEqual(
+    result.view.mailPartitions.map((partition) => partition.recipientAccountId),
+    [ACCOUNT_A],
+  );
+  assert.deepEqual(result.view.consumedEquipmentEnvelopeIds, [originEnvelopeId]);
+  assert.deepEqual(
+    fake.state.queries
+      .filter(({sql}) => /FROM mail_messages/i.test(sql))
+      .map(({params}) => params),
+    [[ACCOUNT_A]],
+  );
+  assert.equal(result.view.marketConfig.defaultTaxBps, 300);
+  assert.equal(fake.state.committed, 1);
+  assert.equal(fake.state.rolledBack, 0);
+
+  const missingMailScope = fakePool();
+  await assert.rejects(
+    __runMysqlSharedAssetReadForTest(missingMailScope.pool, {
+      scope: "equipment_ownership",
+      accountId: ACCOUNT_A,
+      includeProfileMailPartitions: false,
+    }, baseline()),
+    (error) => error && error.code === "mysql_shared_asset_read_request_invalid",
+  );
+  assert.equal(missingMailScope.state.begun, 0);
+});
+
 test("a scoped projection cannot advance an older Node across a global revision", () => {
   assert.doesNotThrow(() => __assertMysqlSharedAssetRevisionForTest(7, 7));
   assert.throws(

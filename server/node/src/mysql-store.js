@@ -740,7 +740,10 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       throw error;
     }
 
-    const marketListings = request.scope.startsWith("market_")
+    const marketListings = (
+      request.scope.startsWith("market_")
+      || request.scope === "equipment_ownership"
+    )
       ? await readMysqlSharedMarketListings(connection)
       : null;
     const resolvedMailRecipient = request.scope === "mail_send"
@@ -884,7 +887,14 @@ function normalizeMysqlSharedAssetReadRequest(value) {
   const includeActorProfile = request.includeActorProfile === true;
   const includeProfileMailPartitions = request.includeProfileMailPartitions === true;
   if (
-    !["market_read", "market_mutation", "mail_read", "mail_mutation", "mail_send"].includes(scope)
+    ![
+      "market_read",
+      "market_mutation",
+      "mail_read",
+      "mail_mutation",
+      "mail_send",
+      "equipment_ownership",
+    ].includes(scope)
     || !mysqlSharedAssetIdentity(accountId, 80)
     || (listingId !== "" && !mysqlSharedAssetIdentity(listingId, 96))
     || (mailId !== "" && !mysqlSharedAssetIdentity(mailId, 96))
@@ -900,6 +910,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     || typeof request.includeProfileMailPartitions !== "boolean"
     || (["mail_read", "mail_mutation"].includes(scope)
       && !includeProfileMailPartitions)
+    || (scope === "equipment_ownership" && !includeProfileMailPartitions)
     || (scope !== "mail_send" && (
       recipientUsername !== ""
       || knownRecipientAccountId !== ""
