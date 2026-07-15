@@ -1034,7 +1034,10 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
 
   const sent = await fetchJson(`${base}/mail/send`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${sender.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${sender.session.token}`,
+      "Idempotency-Key": "operation_http_mail_send_0001",
+    },
     "body": JSON.stringify({
       "recipientUsername": "httpmailb",
       "title": "你好",
@@ -1042,6 +1045,23 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
     }),
   });
   assert.equal(sent.ok, true);
+  assert.equal(sent.durableCommit.replayed, false);
+
+  const replayedSent = await fetchJson(`${base}/mail/send`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${sender.session.token}`,
+      "Idempotency-Key": "operation_http_mail_send_0001",
+    },
+    "body": JSON.stringify({
+      "recipientUsername": "httpmailb",
+      "title": "你好",
+      "body": "这是服务器邮件。",
+    }),
+  });
+  assert.equal(replayedSent.ok, true);
+  assert.equal(replayedSent.mail.mailId, sent.mail.mailId);
+  assert.equal(replayedSent.durableCommit.replayed, true);
 
   const inbox = await fetchJson(`${base}/mail/inbox`, {
     "headers": {"authorization": `Bearer ${recipient.session.token}`},
@@ -1052,7 +1072,10 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
 
   const read = await fetchJson(`${base}/mail/${encodeURIComponent(inbox.messages[0].mailId)}/read`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${recipient.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${recipient.session.token}`,
+      "Idempotency-Key": "operation_http_mail_read_0001",
+    },
   });
   assert.equal(read.ok, true);
   assert.notEqual(read.mail.readAt, null);
@@ -1069,7 +1092,10 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
 
   const attached = await fetchJson(`${base}/mail/send`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${sender.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${sender.session.token}`,
+      "Idempotency-Key": "operation_http_mail_send_0002",
+    },
     "body": JSON.stringify({
       "recipientUsername": "httpmailb",
       "title": "补给",
@@ -1088,7 +1114,10 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
   assert.equal(attachmentMail.items[0].itemId, "item_meat_small");
   const claimed = await fetchJson(`${base}/mail/${encodeURIComponent(attachmentMail.mailId)}/claim`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${recipient.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${recipient.session.token}`,
+      "Idempotency-Key": "operation_http_mail_claim_0001",
+    },
   });
   assert.equal(claimed.ok, true);
   assert.equal(profileItemCount(claimed.profile, "item_meat_small"), 2);

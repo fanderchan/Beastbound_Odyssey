@@ -236,6 +236,16 @@ const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "claimMailAttachments",
   "markMailRead",
 ]);
+const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
+  "bankDeposit",
+  "bankWithdraw",
+  "createMarketListing",
+  "buyMarketListing",
+  "cancelMarketListing",
+  "sendMail",
+  "markMailRead",
+  "claimMailAttachments",
+]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
   "partyInvites",
@@ -4182,6 +4192,9 @@ function createAuthService(options = {}) {
     const operationId = String(operation && operation.operationId || "").trim();
     const requestHash = String(operation && operation.requestHash || "").trim().toLowerCase();
     const actionId = String(operation && operation.actionId || methodName).trim().slice(0, 160) || methodName;
+    if (operationId === "" && DURABLE_OPERATION_ID_REQUIRED_METHODS.has(methodName)) {
+      return fail("idempotency_key_required", "本操作需要有效的操作标识，请刷新后重试。");
+    }
     if (operationId !== "" && !DURABLE_OPERATION_ID_PATTERN.test(operationId)) {
       return fail("idempotency_key_invalid", "操作标识格式不正确，请重新发起操作。");
     }

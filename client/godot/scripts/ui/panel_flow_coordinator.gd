@@ -17,6 +17,7 @@ const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
+const IdempotentHttpRetryState := preload("res://scripts/net/idempotent_http_retry_state.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -277,6 +278,14 @@ const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 ]
 
 var host
+var market_http_retry_state = IdempotentHttpRetryState.new()
+var mailbox_http_retry_state = IdempotentHttpRetryState.new()
+var bank_http_retry_state = IdempotentHttpRetryState.new()
+var market_http_retry_generation: int = 0
+var mailbox_http_retry_generation: int = 0
+var bank_http_retry_generation: int = 0
+var market_http_retry_callback: Callable = Callable()
+var bank_http_retry_callback: Callable = Callable()
 
 var player:
 	get:
@@ -7747,7 +7756,6 @@ func _build_hud() -> void:
 	bank_detail_column.add_child(bank_status_label)
 	bank_http_request = HTTPRequest.new()
 	bank_http_request.timeout = 8.0
-	bank_http_request.request_completed.connect(_on_bank_http_request_completed)
 	bank_panel.add_child(bank_http_request)
 	hud_root.add_child(bank_panel)
 
@@ -8514,7 +8522,6 @@ func _build_market_panel() -> void:
 
 	market_http_request = HTTPRequest.new()
 	market_http_request.timeout = 8.0
-	market_http_request.request_completed.connect(_on_market_http_request_completed)
 	market_panel.add_child(market_http_request)
 	hud_root.add_child(market_panel)
 
@@ -8973,6 +8980,7 @@ func _rotate_server_session_requests(next_token: String) -> void:
 	server_event_reset_pending_domains.clear()
 	for domain in ["chat", "party", "mail"]:
 		_cancel_server_session_request(domain)
+	_cancel_market_and_bank_http_requests()
 	if party_invite_http_request != null:
 		party_invite_http_request.cancel_request()
 	party_invite_request_pending = false
@@ -8987,6 +8995,42 @@ func _rotate_server_session_requests(next_token: String) -> void:
 	party_invite_deferred_ids.clear()
 	if host != null and host.has_method("_server_battle"):
 		host._server_battle().invalidate_state_requests()
+
+func _cancel_market_and_bank_http_requests() -> void:
+	market_http_retry_generation += 1
+	market_http_retry_state.cancel()
+	_disconnect_market_http_retry_callback()
+	if market_http_request != null:
+		market_http_request.cancel_request()
+	market_request_pending = false
+	market_pending_kind = ""
+	bank_http_retry_generation += 1
+	bank_http_retry_state.cancel()
+	_disconnect_bank_http_retry_callback()
+	if bank_http_request != null:
+		bank_http_request.cancel_request()
+	bank_request_pending = false
+	bank_pending_kind = ""
+
+func _disconnect_market_http_retry_callback() -> void:
+	var callback := market_http_retry_callback
+	market_http_retry_callback = Callable()
+	if (
+		market_http_request != null
+		and callback.is_valid()
+		and market_http_request.request_completed.is_connected(callback)
+	):
+		market_http_request.request_completed.disconnect(callback)
+
+func _disconnect_bank_http_retry_callback() -> void:
+	var callback := bank_http_retry_callback
+	bank_http_retry_callback = Callable()
+	if (
+		bank_http_request != null
+		and callback.is_valid()
+		and bank_http_request.request_completed.is_connected(callback)
+	):
+		bank_http_request.request_completed.disconnect(callback)
 
 func _begin_server_session_request(domain: String) -> Dictionary:
 	server_session_request_serial += 1
@@ -9035,6 +9079,8 @@ func _cancel_server_session_request(domain: String) -> void:
 			party_request_pending = false
 			party_pending_kind = ""
 		"mail":
+			mailbox_http_retry_generation += 1
+			mailbox_http_retry_state.cancel()
 			mailbox_request_pending = false
 			mailbox_pending_kind = ""
 
@@ -19738,6 +19784,12 @@ func _request_market_state() -> void:
 func _start_market_request(kind: String, spec: Dictionary) -> void:
 	if market_http_request == null or market_request_pending:
 		return
+	if market_http_retry_state.prepare(spec).is_empty():
+		if market_status_label != null:
+			market_status_label.text = "交易所请求发送失败。"
+		_refresh_market_panel()
+		return
+	market_http_retry_generation += 1
 	market_pending_kind = kind
 	market_request_pending = true
 	if market_status_label != null:
@@ -19751,6 +19803,20 @@ func _start_market_request(kind: String, spec: Dictionary) -> void:
 			_:
 				market_status_label.text = "正在刷新..."
 	_refresh_market_panel()
+	_issue_market_http_attempt()
+
+func _issue_market_http_attempt() -> void:
+	var spec := market_http_retry_state.begin_attempt()
+	if spec.is_empty():
+		_finish_market_http_attempt()
+		if market_status_label != null:
+			market_status_label.text = "交易所请求发送失败。"
+		_refresh_market_panel()
+		return
+	_disconnect_market_http_retry_callback()
+	var generation := market_http_retry_generation
+	market_http_retry_callback = _on_market_http_request_completed.bind(generation)
+	market_http_request.request_completed.connect(market_http_retry_callback, CONNECT_ONE_SHOT)
 	var err = market_http_request.request(
 		str(spec.get("url", "")),
 		_packed_string_array(spec.get("headers", [])),
@@ -19758,16 +19824,44 @@ func _start_market_request(kind: String, spec: Dictionary) -> void:
 		str(spec.get("body", ""))
 	)
 	if err != OK:
-		market_request_pending = false
-		market_pending_kind = ""
+		_disconnect_market_http_retry_callback()
+		var decision := market_http_retry_state.complete_attempt(HTTPRequest.RESULT_CANT_CONNECT, 0)
+		if bool(decision.get("shouldRetry", false)):
+			_schedule_market_http_retry(float(decision.get("delaySeconds", 0.0)), market_http_retry_generation)
+			return
+		_finish_market_http_attempt()
 		if market_status_label != null:
 			market_status_label.text = "交易所请求发送失败。"
 		_refresh_market_panel()
 
-func _on_market_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	var kind = market_pending_kind
+func _schedule_market_http_retry(delay_seconds: float, generation: int) -> void:
+	if delay_seconds > 0.0:
+		await host.get_tree().create_timer(delay_seconds).timeout
+	else:
+		await host.get_tree().process_frame
+	if generation != market_http_retry_generation or not market_request_pending or not market_http_retry_state.is_active():
+		return
+	_issue_market_http_attempt()
+
+func _finish_market_http_attempt() -> void:
+	market_http_retry_generation += 1
+	market_http_retry_state.cancel()
+	_disconnect_market_http_retry_callback()
 	market_pending_kind = ""
 	market_request_pending = false
+
+func _on_market_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, generation: int = -1) -> void:
+	if generation >= 0 and generation != market_http_retry_generation:
+		return
+	market_http_retry_callback = Callable()
+	if not market_request_pending or not market_http_retry_state.is_active():
+		return
+	var kind = market_pending_kind
+	var decision := market_http_retry_state.complete_attempt(result, response_code)
+	if bool(decision.get("shouldRetry", false)):
+		_schedule_market_http_retry(float(decision.get("delaySeconds", 0.0)), market_http_retry_generation)
+		return
+	_finish_market_http_attempt()
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if market_status_label != null:
 			market_status_label.text = "交易所服务器连接失败。"
@@ -20117,15 +20211,33 @@ func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
 		return
 	if mailbox_request_pending:
 		return
+	if mailbox_http_retry_state.prepare(spec).is_empty():
+		if mailbox_status_label != null:
+			mailbox_status_label.text = "无法发起邮箱请求。"
+		_refresh_mailbox_request_controls()
+		return
+	mailbox_http_retry_generation += 1
 	mailbox_pending_kind = kind
 	mailbox_request_pending = true
 	var ticket := _begin_server_session_request("mail")
-	var callback := _on_mailbox_http_request_completed.bind(ticket)
-	server_session_request_callbacks["mail"] = callback
-	mailbox_http_request.request_completed.connect(callback, CONNECT_ONE_SHOT)
 	_refresh_mailbox_request_controls()
 	if mailbox_status_label != null:
 		mailbox_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
+	_issue_mailbox_http_attempt(ticket)
+
+func _issue_mailbox_http_attempt(ticket: Dictionary) -> void:
+	if not _server_session_request_is_current("mail", ticket):
+		return
+	var spec := mailbox_http_retry_state.begin_attempt()
+	if spec.is_empty():
+		if _finish_mailbox_http_attempt(ticket):
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "无法发起邮箱请求。"
+			_refresh_mailbox_request_controls()
+		return
+	var callback := _on_mailbox_http_request_completed.bind(ticket)
+	server_session_request_callbacks["mail"] = callback
+	mailbox_http_request.request_completed.connect(callback, CONNECT_ONE_SHOT)
 	var err = mailbox_http_request.request(
 		str(spec.get("url", "")),
 		_packed_string_array(spec.get("headers", [])),
@@ -20136,21 +20248,51 @@ func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
 		if mailbox_http_request.request_completed.is_connected(callback):
 			mailbox_http_request.request_completed.disconnect(callback)
 		server_session_request_callbacks.erase("mail")
-		server_session_request_tickets.erase("mail")
-		mailbox_request_pending = false
-		mailbox_pending_kind = ""
-		if mailbox_status_label != null:
-			mailbox_status_label.text = "无法发起邮箱请求。"
-		_refresh_mailbox_request_controls()
+		var decision := mailbox_http_retry_state.complete_attempt(HTTPRequest.RESULT_CANT_CONNECT, 0)
+		if bool(decision.get("shouldRetry", false)):
+			_schedule_mailbox_http_retry(float(decision.get("delaySeconds", 0.0)), mailbox_http_retry_generation, ticket)
+			return
+		if _finish_mailbox_http_attempt(ticket):
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "无法发起邮箱请求。"
+			_refresh_mailbox_request_controls()
+
+func _schedule_mailbox_http_retry(delay_seconds: float, generation: int, ticket: Dictionary) -> void:
+	if delay_seconds > 0.0:
+		await host.get_tree().create_timer(delay_seconds).timeout
+	else:
+		await host.get_tree().process_frame
+	if (
+		generation != mailbox_http_retry_generation
+		or not mailbox_request_pending
+		or not mailbox_http_retry_state.is_active()
+		or not _server_session_request_is_current("mail", ticket)
+	):
+		return
+	_issue_mailbox_http_attempt(ticket)
+
+func _finish_mailbox_http_attempt(ticket: Dictionary) -> bool:
+	if not _finish_server_session_request("mail", ticket):
+		return false
+	mailbox_http_retry_generation += 1
+	mailbox_http_retry_state.cancel()
+	mailbox_pending_kind = ""
+	mailbox_request_pending = false
+	return true
 
 func _on_mailbox_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, ticket: Dictionary = {}) -> void:
 	if ticket.is_empty() and server_session_request_tickets.get("mail", null) is Dictionary:
 		ticket = (server_session_request_tickets.get("mail") as Dictionary).duplicate(true)
-	if not _finish_server_session_request("mail", ticket):
+	if not _server_session_request_is_current("mail", ticket):
 		return
+	server_session_request_callbacks.erase("mail")
 	var kind = mailbox_pending_kind
-	mailbox_pending_kind = ""
-	mailbox_request_pending = false
+	var decision := mailbox_http_retry_state.complete_attempt(result, response_code)
+	if bool(decision.get("shouldRetry", false)):
+		_schedule_mailbox_http_retry(float(decision.get("delaySeconds", 0.0)), mailbox_http_retry_generation, ticket)
+		return
+	if not _finish_mailbox_http_attempt(ticket):
+		return
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if mailbox_status_label != null:
 			mailbox_status_label.text = "邮箱服务器连接失败。"
@@ -20565,11 +20707,31 @@ func _bank_request_spec(mode: String, items: Array[Dictionary], stone_coins: int
 func _start_bank_request(kind: String, spec: Dictionary) -> void:
 	if bank_http_request == null or not _is_server_account_session() or bank_request_pending:
 		return
+	if bank_http_retry_state.prepare(spec).is_empty():
+		if bank_status_label != null:
+			bank_status_label.text = "无法发起银行请求。"
+		_refresh_bank_panel()
+		return
+	bank_http_retry_generation += 1
 	bank_pending_kind = kind
 	bank_request_pending = true
 	if bank_status_label != null:
 		bank_status_label.text = "正在处理银行..."
 	_refresh_bank_panel()
+	_issue_bank_http_attempt()
+
+func _issue_bank_http_attempt() -> void:
+	var spec := bank_http_retry_state.begin_attempt()
+	if spec.is_empty():
+		_finish_bank_http_attempt()
+		if bank_status_label != null:
+			bank_status_label.text = "无法发起银行请求。"
+		_refresh_bank_panel()
+		return
+	_disconnect_bank_http_retry_callback()
+	var generation := bank_http_retry_generation
+	bank_http_retry_callback = _on_bank_http_request_completed.bind(generation)
+	bank_http_request.request_completed.connect(bank_http_retry_callback, CONNECT_ONE_SHOT)
 	var err = bank_http_request.request(
 		str(spec.get("url", "")),
 		_packed_string_array(spec.get("headers", [])),
@@ -20577,15 +20739,43 @@ func _start_bank_request(kind: String, spec: Dictionary) -> void:
 		str(spec.get("body", ""))
 	)
 	if err != OK:
-		bank_request_pending = false
-		bank_pending_kind = ""
+		_disconnect_bank_http_retry_callback()
+		var decision := bank_http_retry_state.complete_attempt(HTTPRequest.RESULT_CANT_CONNECT, 0)
+		if bool(decision.get("shouldRetry", false)):
+			_schedule_bank_http_retry(float(decision.get("delaySeconds", 0.0)), bank_http_retry_generation)
+			return
+		_finish_bank_http_attempt()
 		if bank_status_label != null:
 			bank_status_label.text = "无法发起银行请求。"
 		_refresh_bank_panel()
 
-func _on_bank_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _schedule_bank_http_retry(delay_seconds: float, generation: int) -> void:
+	if delay_seconds > 0.0:
+		await host.get_tree().create_timer(delay_seconds).timeout
+	else:
+		await host.get_tree().process_frame
+	if generation != bank_http_retry_generation or not bank_request_pending or not bank_http_retry_state.is_active():
+		return
+	_issue_bank_http_attempt()
+
+func _finish_bank_http_attempt() -> void:
+	bank_http_retry_generation += 1
+	bank_http_retry_state.cancel()
+	_disconnect_bank_http_retry_callback()
 	bank_pending_kind = ""
 	bank_request_pending = false
+
+func _on_bank_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, generation: int = -1) -> void:
+	if generation >= 0 and generation != bank_http_retry_generation:
+		return
+	bank_http_retry_callback = Callable()
+	if not bank_request_pending or not bank_http_retry_state.is_active():
+		return
+	var decision := bank_http_retry_state.complete_attempt(result, response_code)
+	if bool(decision.get("shouldRetry", false)):
+		_schedule_bank_http_retry(float(decision.get("delaySeconds", 0.0)), bank_http_retry_generation)
+		return
+	_finish_bank_http_attempt()
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if bank_status_label != null:
 			bank_status_label.text = "银行服务器连接失败。"

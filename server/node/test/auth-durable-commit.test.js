@@ -366,6 +366,109 @@ function shopRequest(baseUrl, token, operationId, amount = 1) {
   });
 }
 
+test("market, mail, and bank HTTP mutations reject missing or malformed operation IDs before service work", async (t) => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const methodCalls = [];
+  const guardedMethods = [
+    "bankDeposit",
+    "bankWithdraw",
+    "createMarketListing",
+    "buyMarketListing",
+    "cancelMarketListing",
+    "sendMail",
+    "markMailRead",
+    "claimMailAttachments",
+  ];
+  for (const methodName of guardedMethods) {
+    service[methodName] = (...args) => {
+      methodCalls.push({methodName, args});
+      return {ok: true, methodName};
+    };
+  }
+  const invokeDurable = service.invokeDurable.bind(service);
+  const durableInvokeCalls = [];
+  service.invokeDurable = (...args) => {
+    durableInvokeCalls.push(String(args[0] || ""));
+    return invokeDurable(...args);
+  };
+  const harness = await listen(service);
+  t.after(() => closeHarness(harness, service));
+  const token = "A".repeat(43);
+  const routes = [
+    ["/bank/deposit", "bankDeposit"],
+    ["/bank/withdraw", "bankWithdraw"],
+    ["/market/list", "createMarketListing"],
+    ["/market/buy", "buyMarketListing"],
+    ["/market/cancel", "cancelMarketListing"],
+    ["/mail/send", "sendMail"],
+    ["/mail/mail_boundary_0001/read", "markMailRead"],
+    ["/mail/mail_boundary_0001/claim", "claimMailAttachments"],
+  ];
+
+  for (const [pathName] of routes) {
+    const response = await fetch(harness.baseUrl + pathName, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+        [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+        authorization: "Bearer " + token,
+      },
+      body: "{}",
+    });
+    assert.equal(response.status, 400, pathName);
+    const result = await response.json();
+    assert.equal(result.ok, false, pathName);
+    assert.equal(result.code, "idempotency_key_required", pathName);
+  }
+  assert.deepEqual(methodCalls, []);
+  assert.deepEqual(durableInvokeCalls, []);
+
+  for (const methodName of guardedMethods) {
+    const result = await invokeDurable(methodName, [], {});
+    assert.equal(result.ok, false, methodName);
+    assert.equal(result.code, "idempotency_key_required", methodName);
+  }
+  assert.deepEqual(methodCalls, []);
+  assert.deepEqual(durableInvokeCalls, []);
+
+  const malformedResponse = await fetch(harness.baseUrl + "/market/list", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+      authorization: "Bearer " + token,
+      "Idempotency-Key": "short",
+    },
+    body: "{}",
+  });
+  assert.equal(malformedResponse.status, 400);
+  const malformed = await malformedResponse.json();
+  assert.equal(malformed.ok, false);
+  assert.equal(malformed.code, "idempotency_key_invalid");
+  assert.deepEqual(methodCalls, []);
+  assert.deepEqual(durableInvokeCalls, []);
+
+  for (const [pathName, methodName] of routes) {
+    const valid = await fetchJson(harness.baseUrl + pathName, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + token,
+        "Idempotency-Key": `operation_http_boundary_${methodName}_0001`,
+      },
+      body: "{}",
+    });
+    assert.equal(valid.ok, true, `${pathName}: ${JSON.stringify(valid)}`);
+    assert.equal(valid.methodName, methodName, pathName);
+  }
+  assert.deepEqual(
+    methodCalls.map((entry) => entry.methodName),
+    routes.map(([, methodName]) => methodName),
+  );
+  assert.deepEqual(durableInvokeCalls, routes.map(([, methodName]) => methodName));
+});
+
 test("asset HTTP success and service event stay pending until the owning commit", async (t) => {
   const base = createMemoryAuthStore();
   const registered = seedShopAccount(base, "durablegate");

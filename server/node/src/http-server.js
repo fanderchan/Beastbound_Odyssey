@@ -40,6 +40,9 @@ const {
   createHttpAuthBoundary,
 } = require("./http-auth-boundary");
 const {createHealthMonitor} = require("./health-monitor");
+const {
+  DURABLE_OPERATION_ID_PATTERN,
+} = require("./auth/durable-mutation-state");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -129,6 +132,15 @@ const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
   "marketListings",
   "listInbox",
 ]);
+const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
+  "/bank/deposit",
+  "/bank/withdraw",
+  "/market/list",
+  "/market/buy",
+  "/market/cancel",
+  "/mail/send",
+]);
+const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
 
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
@@ -276,6 +288,13 @@ function createHttpServer(options = {}) {
       const protocol = protocolCompatibility(req, url);
       if (!protocol.ok) {
         return sendJson(res, 426, protocolMismatchResult(protocol));
+      }
+      const assetIdempotencyFailure = requiredAssetMutationIdempotencyKeyFailure(
+        req,
+        url.pathname,
+      );
+      if (assetIdempotencyFailure) {
+        return sendResult(res, assetIdempotencyFailure);
       }
       const requestToken = bearerToken(req);
       if (requestToken !== "") {
@@ -473,11 +492,19 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/mail/send") {
         return sendResult(res, service.sendMail(bearerToken(req), await readJson(req)));
       }
-      if (req.method === "POST" && url.pathname.startsWith("/mail/") && url.pathname.endsWith("/read")) {
+      if (
+        req.method === "POST"
+        && IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(url.pathname)
+        && url.pathname.endsWith("/read")
+      ) {
         const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/read".length));
         return sendResult(res, service.markMailRead(bearerToken(req), mailId));
       }
-      if (req.method === "POST" && url.pathname.startsWith("/mail/") && url.pathname.endsWith("/claim")) {
+      if (
+        req.method === "POST"
+        && IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(url.pathname)
+        && url.pathname.endsWith("/claim")
+      ) {
         const mailId = decodeURIComponent(url.pathname.slice("/mail/".length, -"/claim".length));
         return sendResult(res, service.claimMailAttachments(bearerToken(req), mailId));
       }
@@ -918,11 +945,33 @@ function bearerToken(req) {
 
 function requiredIdempotencyKeyFailure(req) {
   const operationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
-  return operationId === "" ? {
-    ok: false,
-    code: "idempotency_key_required",
-    message: "本操作需要有效的操作标识，请刷新后重试。",
-  } : null;
+  if (operationId === "") {
+    return {
+      ok: false,
+      code: "idempotency_key_required",
+      message: "本操作需要有效的操作标识，请刷新后重试。",
+    };
+  }
+  if (!DURABLE_OPERATION_ID_PATTERN.test(operationId)) {
+    return {
+      ok: false,
+      code: "idempotency_key_invalid",
+      message: "操作标识格式不正确，请重新发起操作。",
+    };
+  }
+  return null;
+}
+
+function requiredAssetMutationIdempotencyKeyFailure(req, pathNameValue) {
+  if (String(req && req.method || "").toUpperCase() !== "POST") {
+    return null;
+  }
+  const pathName = String(pathNameValue || "");
+  const mailMutation = IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(pathName);
+  if (!IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS.has(pathName) && !mailMutation) {
+    return null;
+  }
+  return requiredIdempotencyKeyFailure(req);
 }
 
 function healthPayload(healthMonitor, eventHub, service = null, networkAdmission = null, httpAuth = null) {

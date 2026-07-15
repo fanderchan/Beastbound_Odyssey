@@ -20,6 +20,7 @@ const ServerBattleRideReplayCheck := preload("res://scripts/battle/server_battle
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
+const IdempotentHttpRetryState := preload("res://scripts/net/idempotent_http_retry_state.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -1178,6 +1179,74 @@ func _run_auto_client_version_check() -> void:
 		):
 			durable_specs_ok = false
 		durable_keys[durable_key] = true
+	var bank_request_items: Array[Dictionary] = [{"itemId": "item_meat_small", "count": 1}]
+	var asset_mutation_specs: Array[Dictionary] = [
+		ServerAuthClientModel.bank_deposit_request("http://127.0.0.1:8787", "token", bank_request_items, 0),
+		ServerAuthClientModel.bank_withdraw_request("http://127.0.0.1:8787", "token", bank_request_items, 0),
+		ServerAuthClientModel.market_create_listing_request("http://127.0.0.1:8787", "token", "item_meat_small", 1, 10, "stoneCoins"),
+		ServerAuthClientModel.market_create_equipment_listing_request("http://127.0.0.1:8787", "token", "weapon_wooden_club", "equipment_instance", 0, 30, "diamonds"),
+		ServerAuthClientModel.market_buy_listing_request("http://127.0.0.1:8787", "token", "listing"),
+		ServerAuthClientModel.market_cancel_listing_request("http://127.0.0.1:8787", "token", "listing"),
+		ServerAuthClientModel.mail_send_request("http://127.0.0.1:8787", "token", "friend", "标题", "正文"),
+		ServerAuthClientModel.mail_read_request("http://127.0.0.1:8787", "token", "mail"),
+		ServerAuthClientModel.mail_claim_request("http://127.0.0.1:8787", "token", "mail"),
+	]
+	var asset_builders_ok := asset_mutation_specs.size() == 9
+	var asset_builder_keys: Dictionary = {}
+	for asset_spec in asset_mutation_specs:
+		var asset_key := ServerAuthClientModel.request_idempotency_key(asset_spec)
+		var asset_headers: PackedStringArray = host._packed_string_array(asset_spec.get("headers", []))
+		if (
+			not bool(asset_spec.get("durableMutation", false))
+			or not ServerAuthClientModel.idempotency_key_is_valid(asset_key)
+			or asset_headers.count("%s: %s" % [ServerAuthClientModel.IDEMPOTENCY_HEADER_NAME, asset_key]) != 1
+			or ServerAuthClientModel.request_retry_policy(asset_spec) != ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
+			or asset_builder_keys.has(asset_key)
+		):
+			asset_builders_ok = false
+		asset_builder_keys[asset_key] = true
+	var retry_spec := asset_mutation_specs[3].duplicate(true)
+	retry_spec["retryAttempts"] = 5
+	retry_spec["retryBaseDelayMs"] = 0
+	retry_spec["retryMaxDelayMs"] = 0
+	var retry_state = IdempotentHttpRetryState.new()
+	var retry_prepared := retry_state.prepare(retry_spec)
+	var retry_key := ServerAuthClientModel.request_idempotency_key(retry_prepared)
+	var retry_attempt_one := retry_state.begin_attempt()
+	var retry_decision_one := retry_state.complete_attempt(HTTPRequest.RESULT_CANT_CONNECT, 0)
+	var retry_attempt_two := retry_state.begin_attempt()
+	var retry_decision_two := retry_state.complete_attempt(HTTPRequest.RESULT_SUCCESS, 503)
+	var retry_attempt_three := retry_state.begin_attempt()
+	var retry_decision_three := retry_state.complete_attempt(HTTPRequest.RESULT_SUCCESS, 503)
+	var retry_attempt_after_finish := retry_state.begin_attempt()
+	var retry_finished_ok := (
+		ServerAuthClientModel.idempotency_key_is_valid(retry_key)
+		and ServerAuthClientModel.request_idempotency_key(retry_attempt_one) == retry_key
+		and ServerAuthClientModel.request_idempotency_key(retry_attempt_two) == retry_key
+		and ServerAuthClientModel.request_idempotency_key(retry_attempt_three) == retry_key
+		and bool(retry_decision_one.get("shouldRetry", false))
+		and not bool(retry_decision_one.get("finished", true))
+		and bool(retry_decision_two.get("shouldRetry", false))
+		and not bool(retry_decision_two.get("finished", true))
+		and not bool(retry_decision_three.get("shouldRetry", true))
+		and bool(retry_decision_three.get("finished", false))
+		and int(retry_decision_three.get("attempts", 0)) == 3
+		and int(retry_decision_three.get("maxAttempts", 0)) == 3
+		and retry_state.attempt_count() == 3
+		and retry_state.is_finished()
+		and not retry_state.is_active()
+		and retry_attempt_after_finish.is_empty()
+	)
+	retry_state.cancel()
+	var retry_cleared_ok := (
+		retry_state.prepared_spec().is_empty()
+		and retry_state.idempotency_key() == ""
+		and retry_state.attempt_count() == 0
+		and retry_state.max_attempts() == 0
+		and retry_state.is_finished()
+		and not retry_state.is_active()
+	)
+	var retry_state_ok := retry_finished_ok and retry_cleared_ok
 	var runtime_specs: Array[Dictionary] = [
 		ServerAuthClientModel.player_position_update_request("http://127.0.0.1:8787", "token", {"mapId": "map"}),
 		ServerAuthClientModel.movement_step_request("http://127.0.0.1:8787", "token", {"mapId": "map"}),
@@ -1198,10 +1267,10 @@ func _run_auto_client_version_check() -> void:
 			or ServerAuthClientModel.request_retry_policy(prepared_runtime_spec) != ServerAuthClientModel.RETRY_POLICY_NONE
 		):
 			runtime_boundaries_ok = false
-	var idempotency_ok := pure_prepare_ok and durable_specs_ok and runtime_boundaries_ok
+	var idempotency_ok := pure_prepare_ok and durable_specs_ok and asset_builders_ok and retry_state_ok and runtime_boundaries_ok
 	var protocol_v10_ok := ServerAuthClientModel.CLIENT_PROTOCOL_VERSION == 10
 	var status = "ok" if hud_label_ok and auth_label_ok and headers_ok and query_ok and idempotency_ok and protocol_v10_ok else "failed"
-	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s idempotency=%s pure_prepare=%s durable=%s runtime_boundaries=%s protocol=%d" % [
+	print("client version check ready: status=%s hud_label=%s auth_label=%s text=%s headers=%s query=%s idempotency=%s pure_prepare=%s durable=%s asset_builders=%s retry_state=%s runtime_boundaries=%s protocol=%d" % [
 		status,
 		str(hud_label_ok),
 		str(auth_label_ok),
@@ -1211,6 +1280,8 @@ func _run_auto_client_version_check() -> void:
 		str(idempotency_ok),
 		str(pure_prepare_ok),
 		str(durable_specs_ok),
+		str(asset_builders_ok),
+		str(retry_state_ok),
 		str(runtime_boundaries_ok),
 		ServerAuthClientModel.CLIENT_PROTOCOL_VERSION,
 	])

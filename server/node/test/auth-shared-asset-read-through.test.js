@@ -1407,7 +1407,11 @@ test("marking mail read cannot resurrect attachments claimed on another Node", a
   const marked = await staleNode.invokeDurable(
     "markMailRead",
     [scenario.seller.session.token, saleMail.mailId],
-    {},
+    {
+      operationId: "op_shared_read_mail_mark_missing_0001",
+      requestHash: "5".repeat(64),
+      actionId: "POST /mail/:id/read",
+    },
   );
   assert.equal(marked.ok, false, JSON.stringify(marked));
   assert.equal(marked.code, "mail_missing");
@@ -1447,7 +1451,11 @@ test("marking mail read preserves the latest partially claimed attachment state"
   const marked = await staleNode.invokeDurable(
     "markMailRead",
     [scenario.seller.session.token, saleMail.mailId],
-    {},
+    {
+      operationId: "op_shared_read_mail_mark_partial_0001",
+      requestHash: "6".repeat(64),
+      actionId: "POST /mail/:id/read",
+    },
   );
   assert.equal(marked.ok, true, JSON.stringify(marked));
   const stored = backing.load().mailMessages[saleMail.mailId];
@@ -1456,14 +1464,18 @@ test("marking mail read preserves the latest partially claimed attachment state"
   assert.notEqual(stored.readAt, null);
 });
 
-test("read-through preserves no-receipt ordinary cancel on the certified legacy fallback", async () => {
+test("asset durable gate rejects a missing operation before shared read or save", async () => {
   const scenario = seedMarketScenario();
   let savedOptions = null;
+  let sharedReadCalls = 0;
   const sellerNode = createReadThroughNode(
     scenario.backing,
     scenario.beforeListing,
     {
       allowLegacy: true,
+      beforeSharedRead() {
+        sharedReadCalls += 1;
+      },
       onSave(options) {
         savedOptions = options;
       },
@@ -1475,9 +1487,11 @@ test("read-through preserves no-receipt ordinary cancel on the certified legacy 
     [scenario.seller.session.token, {listingId: scenario.listingId}],
     {},
   );
-  assert.equal(cancelled.ok, true, JSON.stringify(cancelled));
-  assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
-  assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), false);
+  assert.equal(cancelled.ok, false, JSON.stringify(cancelled));
+  assert.equal(cancelled.code, "idempotency_key_required");
+  assert.equal(sharedReadCalls, 0);
+  assert.equal(savedOptions, null);
+  assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), true);
 });
 
 test("market mutation refreshes a claimed equipment owner's mailbox with its profile", async () => {
@@ -1542,7 +1556,11 @@ test("market mutation refreshes a claimed equipment owner's mailbox with its pro
       unitPrice: 30,
       currency: "diamonds",
     }],
-    {},
+    {
+      operationId: "op_shared_read_claimed_equipment_market_0001",
+      requestHash: "7".repeat(64),
+      actionId: "POST /market/list",
+    },
   );
 
   assert.equal(listed.ok, true, JSON.stringify(listed));
@@ -1618,7 +1636,11 @@ test("equipment bank deposit reads a remotely claimed mail owner before legacy s
         bankSlotIndex: 0,
       }],
     }],
-    {},
+    {
+      operationId: "op_shared_read_equipment_bank_deposit_0001",
+      requestHash: "8".repeat(64),
+      actionId: "POST /bank/deposit",
+    },
   );
 
   assert.equal(deposited.ok, true, JSON.stringify(deposited));
@@ -1680,7 +1702,11 @@ test("equipment bank withdraw reads a deposit committed on another Node", async 
         targetSlotIndex: 1,
       }],
     }],
-    {},
+    {
+      operationId: "op_shared_read_equipment_bank_withdraw_0001",
+      requestHash: "9".repeat(64),
+      actionId: "POST /bank/withdraw",
+    },
   );
 
   assert.equal(withdrawn.ok, true, JSON.stringify(withdrawn));
@@ -1718,7 +1744,11 @@ test("ordinary bank transfers do not pay the equipment ownership read cost", asy
   const deposited = await node.invokeDurable(
     "bankDeposit",
     [owner.session.token, {stoneCoins: 1}],
-    {},
+    {
+      operationId: "op_shared_read_ordinary_bank_deposit_0001",
+      requestHash: "a".repeat(64),
+      actionId: "POST /bank/deposit",
+    },
   );
 
   assert.equal(deposited.ok, true, JSON.stringify(deposited));
