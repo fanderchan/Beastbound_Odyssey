@@ -1156,8 +1156,8 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
   appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
   appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
   appendMutationReceiptDeltaOrDiff(groups.mutationReceipts, previous.mutationReceipts, data.mutationReceipts);
-  appendObjectEntityDiff(groups.mailMessages, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement);
-  appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement);
+  appendObjectEntityDiff(groups.mailMessages, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement, {strictInsertNew: true});
+  appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement, {strictInsertNew: true});
   appendConsumedEquipmentEnvelopeDeltaOrDiff(
     groups.consumedEquipmentEnvelopes,
     previous.consumedEquipmentEnvelopes,
@@ -3347,14 +3347,15 @@ function mysqlAuthStoreRootContract() {
   });
 }
 
-function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn) {
+function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn, options = {}) {
   appendEntityDiff(
     statements,
     tableName,
     primaryColumn,
     entityMapFromObject(previousObject, keyFn),
     entityMapFromObject(nextObject, keyFn),
-    insertFn
+    insertFn,
+    options,
   );
 }
 
@@ -3533,7 +3534,7 @@ function consumedEquipmentEnvelopeMap(value) {
   return result;
 }
 
-function appendEntityDiff(statements, tableName, primaryColumn, previousMap, nextMap, insertFn) {
+function appendEntityDiff(statements, tableName, primaryColumn, previousMap, nextMap, insertFn, options = {}) {
   for (const key of Object.keys(previousMap).sort()) {
     if (!Object.prototype.hasOwnProperty.call(nextMap, key)) {
       statements.push(deleteEntityStatement(tableName, primaryColumn, key));
@@ -3541,7 +3542,11 @@ function appendEntityDiff(statements, tableName, primaryColumn, previousMap, nex
   }
   for (const key of Object.keys(nextMap).sort()) {
     const nextEntity = nextMap[key];
-    if (!Object.prototype.hasOwnProperty.call(previousMap, key) || entityChanged(previousMap[key], nextEntity)) {
+    if (!Object.prototype.hasOwnProperty.call(previousMap, key)) {
+      statements.push(options.strictInsertNew === true
+        ? insertFn(nextEntity)
+        : upsertEntityStatement(insertFn(nextEntity), upsertColumnsForTable(tableName)));
+    } else if (entityChanged(previousMap[key], nextEntity)) {
       statements.push(upsertEntityStatement(insertFn(nextEntity), upsertColumnsForTable(tableName)));
     }
   }
@@ -4679,7 +4684,7 @@ function insertMarketListingStatement(listing) {
 }
 
 function insertConsumedEquipmentEnvelopeStatement(envelopeId) {
-  return `INSERT INTO consumed_equipment_envelopes (envelope_id) VALUES (${sqlString(envelopeId)}) ON DUPLICATE KEY UPDATE envelope_id = VALUES(envelope_id)`;
+  return `INSERT INTO consumed_equipment_envelopes (envelope_id) VALUES (${sqlString(envelopeId)})`;
 }
 
 function insertPartyStatement(party) {

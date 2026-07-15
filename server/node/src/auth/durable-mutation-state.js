@@ -48,6 +48,7 @@ const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "bankDeposit",
   "bankWithdraw",
   "createMarketListing",
+  "sendMail",
   "acceptTrade",
 ]);
 const DURABLE_RECEIPT_PRUNE_BATCH = 256;

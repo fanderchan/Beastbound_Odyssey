@@ -14,6 +14,9 @@ const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mysql = require(path.join(ROOT, "server/node/node_modules/mysql2/promise"));
 const {cloneAuthorityRoot} = require(path.join(ROOT, "server/node/src/auth/authority-root-clone"));
+const {applySharedAssetReadView} = require(
+  path.join(ROOT, "server/node/src/auth/shared-asset-read-model"),
+);
 const {stageDurableMutationReceipt} = require(path.join(ROOT, "server/node/src/auth/durable-mutation-state"));
 const {ensureConsumedEquipmentEnvelopeIds} = require(
   path.join(ROOT, "server/node/src/auth/equipment-envelope-consumed-ledger"),
@@ -89,6 +92,8 @@ const SALE_MAIL_COLLISION_ID = "mail_real_market_collision_shared";
 const SALE_MAIL_COLLISION_RETRY_ID = "mail_real_market_collision_retry_b";
 const SALE_MAIL_TIMEOUT_ID = "mail_real_market_timeout_shared";
 const SALE_MAIL_TIMEOUT_RETRY_ID = "mail_real_market_timeout_retry_b";
+const LEGACY_MAIL_COLLISION_RETRY_ID = "mail_real_legacy_collision_retry";
+const LEGACY_MAIL_COLLISION_OPERATION_ID = "real_legacy_mail_collision_send";
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
@@ -1031,6 +1036,81 @@ function saveMailClaim(store, before, actorKey, mailId, options) {
   };
 }
 
+function saveLegacyAttachmentMail(store, before, actorKey, mailId, options) {
+  const actor = actorForKey(actorKey);
+  const recipient = actorForKey(String(options.recipientKey || "b"));
+  const after = cloneAuthorityRoot(before);
+  const beforeProfileDocument = before.profiles[actor.playerId];
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  const slots = structuredClone(beforeProfileDocument.profile.backpackSlots || []);
+  let consumed = false;
+  for (let index = 0; index < slots.length; index += 1) {
+    const slot = slots[index];
+    if (!consumed && slot && slot.itemId === "item_meat_small" && Number(slot.count) > 0) {
+      const nextCount = Number(slot.count) - 1;
+      slots[index] = nextCount > 0 ? {...slot, count: nextCount} : {};
+      consumed = true;
+    }
+  }
+  assert.equal(consumed, true, "legacy 附件碰撞门槛缺少可发送物品");
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...beforeProfileDocument,
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+    profile: {
+      ...beforeProfileDocument.profile,
+      backpackSlots: slots,
+    },
+  };
+  after.mailMessages[mailId] = {
+    mailId,
+    senderAccountId: actor.accountId,
+    senderUsername: `real_mysql_${actorKey}`,
+    senderDisplayName: `真实引擎猎人${String(actorKey).toUpperCase()}`,
+    recipientAccountId: recipient.accountId,
+    recipientUsername: `real_mysql_${String(options.recipientKey || "b")}`,
+    recipientDisplayName: `真实引擎猎人${String(options.recipientKey || "b").toUpperCase()}`,
+    title: "legacy 附件邮件碰撞测试",
+    body: "数据库中已存在同 ID 邮件时必须整单回滚。",
+    items: [{itemId: "item_meat_small", count: 1}],
+    ordinaryItems: [{itemId: "item_meat_small", count: 1}],
+    equipmentEnvelopes: [],
+    currency: {},
+    createdAt: options.updatedAt,
+    readAt: null,
+    schemaVersion: 2,
+  };
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId: options.operationId,
+    requestHash: options.requestHash,
+    actionId: "POST /mail/send",
+    accountId: actor.accountId,
+    committedAt: options.updatedAt,
+    expiresAt: "2026-07-17T05:00:00.000Z",
+    response: {
+      ok: true,
+      mail: after.mailMessages[mailId],
+      operationId: options.operationId,
+    },
+  }, {nowMs: Date.parse(options.updatedAt)});
+  return {
+    after,
+    promise: store.saveAsync(after, {
+      durableOperation: {
+        operationId: options.operationId,
+        requestHash: options.requestHash,
+        actionId: "POST /mail/send",
+      },
+    }),
+  };
+}
+
 function canonicalMarketConfig() {
   return {
     defaultTaxBps: 500,
@@ -1337,6 +1417,16 @@ function isKnownLockWaitRollback(error) {
     error
     && error.code === "mysql_transaction_rolled_back"
     && error.mysqlCode === "ER_LOCK_WAIT_TIMEOUT"
+    && error.outcomeUnknown === false
+    && error.rollbackConfirmed === true,
+  );
+}
+
+function isKnownDuplicateRollback(error) {
+  return Boolean(
+    error
+    && error.code === "mysql_transaction_rolled_back"
+    && error.mysqlCode === "ER_DUP_ENTRY"
     && error.outcomeUnknown === false
     && error.rollbackConfirmed === true,
   );
@@ -2547,9 +2637,11 @@ async function runRealMysqlGate(runtime) {
     gates.push(collisionGate);
     const collisionStoreA = createMysqlAuthStore(storeOptions(runtime, database, collisionGate));
     const collisionStoreB = createMysqlAuthStore(storeOptions(runtime, database));
-    stores.push(collisionStoreA, collisionStoreB);
+    const legacyMailCollisionStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(collisionStoreA, collisionStoreB, legacyMailCollisionStore);
     const collisionBeforeA = collisionStoreA.load();
     const collisionBeforeB = collisionStoreB.load();
+    const legacyMailCollisionBefore = legacyMailCollisionStore.load();
     const collisionBuyerBeforeA = await profileAssetRow(admin, "a");
     const collisionBuyerBeforeB = await profileAssetRow(admin, "b");
     const collisionTaxBefore = await marketTaxCollected(admin);
@@ -2600,6 +2692,84 @@ async function runRealMysqlGate(runtime) {
     assert.equal(await marketTaxCollected(admin), collisionTaxBefore + 1);
     assert.equal(await mutationReceiptExists(admin, "real_sale_mail_collision_a_buy"), true);
     assert.equal(await mutationReceiptExists(admin, "real_sale_mail_collision_b_buy"), false);
+
+    const legacyMarketView = await settleWithin(
+      legacyMailCollisionStore.readSharedAssetView({
+        schemaVersion: 1,
+        scope: "market_read",
+        accountId: ACTORS.a.accountId,
+      }, {adopt: true}),
+      WAIT_TIMEOUT_MS,
+      "legacy 旧 Node 只采纳市场与 profile、不采纳成交邮件",
+    );
+    assert.equal(legacyMarketView.mailPartitions.length, 0);
+    const legacyMailCollisionAdopted = applySharedAssetReadView(
+      legacyMailCollisionBefore,
+      legacyMarketView,
+    );
+    assert.equal(
+      Object.hasOwn(legacyMailCollisionAdopted.mailMessages, SALE_MAIL_COLLISION_ID),
+      false,
+    );
+    const remoteSaleMailBeforeLegacyCollision = await mailDocument(admin, SALE_MAIL_COLLISION_ID);
+    const legacyProfileBefore = await profileAssetRow(admin, "a");
+    const legacyGlobalRevisionBefore = await globalRevision(admin);
+    const legacyMailCollision = saveLegacyAttachmentMail(
+      legacyMailCollisionStore,
+      legacyMailCollisionAdopted,
+      "a",
+      SALE_MAIL_COLLISION_ID,
+      {
+        recipientKey: "b",
+        operationId: LEGACY_MAIL_COLLISION_OPERATION_ID,
+        requestHash: "5".repeat(64),
+        updatedAt: "2026-07-14T04:19:30.000Z",
+      },
+    );
+    trackWrite(legacyMailCollision.promise);
+    await assert.rejects(
+      settleWithin(
+        legacyMailCollision.promise,
+        WAIT_TIMEOUT_MS,
+        "legacy 新邮件与不可见成交邮件 ID 碰撞整单回滚",
+      ),
+      isKnownDuplicateRollback,
+    );
+    assert.deepEqual(await profileAssetRow(admin, "a"), legacyProfileBefore);
+    assert.deepEqual(await mailDocument(admin, SALE_MAIL_COLLISION_ID), remoteSaleMailBeforeLegacyCollision);
+    assert.equal(await mutationReceiptExists(admin, LEGACY_MAIL_COLLISION_OPERATION_ID), false);
+    assert.equal(await globalRevision(admin), legacyGlobalRevisionBefore);
+
+    const legacyMailRetry = saveLegacyAttachmentMail(
+      legacyMailCollisionStore,
+      legacyMailCollisionAdopted,
+      "a",
+      LEGACY_MAIL_COLLISION_RETRY_ID,
+      {
+        recipientKey: "b",
+        operationId: LEGACY_MAIL_COLLISION_OPERATION_ID,
+        requestHash: "5".repeat(64),
+        updatedAt: "2026-07-14T04:19:40.000Z",
+      },
+    );
+    trackWrite(legacyMailRetry.promise);
+    await settleWithin(
+      legacyMailRetry.promise,
+      WAIT_TIMEOUT_MS,
+      "legacy 邮件碰撞后同 operation 新内部 ID 重试",
+    );
+    assert.deepEqual(await profileAssetRow(admin, "a"), {
+      revision: legacyProfileBefore.revision + 1,
+      stoneCoins: legacyProfileBefore.stoneCoins,
+      itemCount: legacyProfileBefore.itemCount - 1,
+    });
+    assert.deepEqual(await mailDocument(admin, SALE_MAIL_COLLISION_ID), remoteSaleMailBeforeLegacyCollision);
+    assert.deepEqual(
+      (await mailDocument(admin, LEGACY_MAIL_COLLISION_RETRY_ID)).items,
+      [{itemId: "item_meat_small", count: 1}],
+    );
+    assert.equal(await mutationReceiptExists(admin, LEGACY_MAIL_COLLISION_OPERATION_ID), true);
+    assert.equal(await globalRevision(admin), legacyGlobalRevisionBefore + 1);
 
     const collisionRetryBefore = collisionStoreB.load();
     const collisionRetry = saveMarketBuy(
@@ -2782,8 +2952,8 @@ async function runRealMysqlGate(runtime) {
       }), WAIT_TIMEOUT_MS, "旧 Node revision 越界拒绝"),
       (error) => error
         && error.code === "mysql_shared_asset_full_reload_required"
-        && error.expectedRevision === 3
-        && error.actualRevision === 4,
+        && error.expectedRevision === 4
+        && error.actualRevision === 5,
     );
     sharedReadStore.load();
     const refreshedMarketRead = await settleWithin(sharedReadStore.readSharedAssetView({
@@ -2795,7 +2965,7 @@ async function runRealMysqlGate(runtime) {
       Object.hasOwn(refreshedMarketRead.marketListings, MARKET_LISTING_IDS.rollback),
       true,
     );
-    assert.equal(await globalRevision(admin), 4);
+    assert.equal(await globalRevision(admin), 5);
     await closeStores(stores);
 
     await adminQuery(
@@ -2818,7 +2988,7 @@ async function runRealMysqlGate(runtime) {
     ));
     await settleWithin(recoveredStateWrite, WAIT_TIMEOUT_MS, "读穿后的 server-state 初始化提交");
     assert.equal(await serverStateRowCount(admin), 1);
-    assert.equal(await globalRevision(admin), 5);
+    assert.equal(await globalRevision(admin), 6);
     await closeStores(stores);
 
     await waitUntil(async () => await activeTransactionCount(admin) === 0, WAIT_TIMEOUT_MS, "InnoDB 事务清理");
@@ -2838,6 +3008,7 @@ async function runRealMysqlGate(runtime) {
       "real_cross_cancel_first_buy_cancel",
       "real_cross_reciprocal_a_buy",
       "real_cross_reciprocal_b_retry",
+      "real_legacy_mail_collision_send",
       "real_mail_claim_full",
       "real_mail_claim_partial",
       "real_market_buy_parallel_a",
@@ -2897,6 +3068,8 @@ async function runRealMysqlGate(runtime) {
       saleMailDuplicateRollbackVerified: true,
       saleMailLockTimeoutRollbackVerified: true,
       saleMailCollisionSameOperationRetryVerified: true,
+      legacyPartialAdoptMailDuplicateRollbackVerified: true,
+      legacyMailCollisionSameOperationRetryVerified: true,
       sharedMarketReadThroughVerified: true,
       sharedMailReadThroughVerified: true,
       sharedTombstoneDeltaVerified: true,

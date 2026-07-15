@@ -36,6 +36,7 @@ const {
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
   __buildSaveStatementsFromPersistentDataForTest,
   __entityChangedForTest,
+  __runMysqlPoolSavePlanForTest,
   mysqlAuthStoreRootContract,
 } = require("../src/mysql-store");
 const {createPreloadedAuthService} = require("../src/http-server");
@@ -524,6 +525,74 @@ test("MySQL battle history is append-only across normalization and hot-window ev
   assert.equal(historyStatements.some((statement) => /\bDELETE\b|ON DUPLICATE KEY UPDATE/.test(statement)), false);
   assert.equal(historyStatements.some((statement) => /battle_(record|trace)_(?:existing|evicted)/.test(statement)), false);
   assert.equal(historyStatements.some((statement) => statement.includes("futureServerField")), false);
+});
+
+test("MySQL new mail, listing, and equipment tombstone IDs use strict inserts", () => {
+  const previous = {
+    schemaVersion: 1,
+    mailMessages: {
+      mail_known: {
+        mailId: "mail_known",
+        senderAccountId: "system",
+        recipientAccountId: "acc_strict_insert",
+        title: "旧邮件标题",
+        createdAt: "2026-07-15T00:00:00.000Z",
+        readAt: null,
+      },
+    },
+    marketListings: {
+      listing_known: {
+        listingId: "listing_known",
+        sellerAccountId: "acc_strict_insert",
+        itemId: "item_known",
+        currency: "stoneCoins",
+        unitPrice: 10,
+        count: 1,
+        createdAt: "2026-07-15T00:00:00.000Z",
+      },
+    },
+    consumedEquipmentEnvelopes: {},
+  };
+  const next = structuredClone(previous);
+  next.mailMessages.mail_known.title = "已知邮件更新";
+  next.mailMessages.mail_new = {
+    mailId: "mail_new",
+    senderAccountId: "system",
+    recipientAccountId: "acc_strict_insert",
+    title: "全新邮件",
+    createdAt: "2026-07-15T00:01:00.000Z",
+    readAt: null,
+  };
+  next.marketListings.listing_known.unitPrice = 11;
+  next.marketListings.listing_new = {
+    listingId: "listing_new",
+    sellerAccountId: "acc_strict_insert",
+    itemId: "item_new",
+    currency: "stoneCoins",
+    unitPrice: 20,
+    count: 1,
+    createdAt: "2026-07-15T00:01:00.000Z",
+  };
+  const envelopeId = "eqx_store_strict_insert_0001";
+  next.consumedEquipmentEnvelopes[envelopeId] = {schemaVersion: 1, envelopeId};
+
+  const statements = __buildSaveStatementsFromPersistentDataForTest(next, previous);
+  const statementFor = (id) => statements.find((statement) => statement.includes(`'${id}'`));
+  const newMail = statementFor("mail_new");
+  const knownMail = statementFor("mail_known");
+  const newListing = statementFor("listing_new");
+  const knownListing = statementFor("listing_known");
+  const newTombstone = statementFor(envelopeId);
+
+  for (const statement of [newMail, knownMail, newListing, knownListing, newTombstone]) {
+    assert.equal(typeof statement, "string");
+    assert.match(statement, /^INSERT INTO /);
+  }
+  assert.doesNotMatch(newMail, /ON DUPLICATE KEY UPDATE/);
+  assert.match(knownMail, /ON DUPLICATE KEY UPDATE/);
+  assert.doesNotMatch(newListing, /ON DUPLICATE KEY UPDATE/);
+  assert.match(knownListing, /ON DUPLICATE KEY UPDATE/);
+  assert.doesNotMatch(newTombstone, /ON DUPLICATE KEY UPDATE/);
 });
 
 test("mysql auth store root contract classifies every snapshot field exactly once", () => {
@@ -1792,7 +1861,7 @@ process.stdin.on("end", () => {
     const firstSave = saveCalls[0].stdin;
     const secondSave = saveCalls[1].stdin;
     assert.match(firstSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_first_0001'\)/);
-    assert.match(firstSave, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
+    assert.doesNotMatch(firstSave, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
     assert.equal(secondSave.includes("INSERT INTO server_state"), false);
     assert.ok(secondSave.includes("INSERT INTO accounts"));
     assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
@@ -2384,6 +2453,74 @@ process.stdin.on("end", () => {
   }
 });
 
+test("mysql strict new mail conflicts roll back the complete legacy transaction", async () => {
+  const duplicate = new Error("Duplicate entry 'mail_strict_conflict' for key 'PRIMARY'");
+  duplicate.code = "ER_DUP_ENTRY";
+  const statements = __buildSaveStatementsFromPersistentDataForTest({
+    schemaVersion: 1,
+    accounts: {
+      strictmail: {
+        accountId: "acc_strict_mail_conflict",
+        username: "strictmail",
+        displayName: "严格邮件事务测试",
+        role: "player",
+        createdAt: "2026-07-15T01:00:00.000Z",
+        updatedAt: "2026-07-15T01:00:00.000Z",
+      },
+    },
+    mailMessages: {
+      mail_strict_conflict: {
+        mailId: "mail_strict_conflict",
+        senderAccountId: "system",
+        recipientAccountId: "acc_strict_mail_conflict",
+        title: "严格插入冲突",
+        createdAt: "2026-07-15T01:00:00.000Z",
+        readAt: null,
+      },
+    },
+  }, {schemaVersion: 1});
+  const casFixture = createMysqlCasPoolFixture({
+    onQuery({sql}) {
+      if (/^INSERT INTO mail_messages /.test(sql)) {
+        assert.doesNotMatch(sql, /ON DUPLICATE KEY UPDATE/);
+        throw duplicate;
+      }
+    },
+  });
+
+  await assert.rejects(
+    __runMysqlPoolSavePlanForTest(casFixture.pool, {
+      kind: "legacy_global_cas",
+      statements,
+      resourceLocks: [],
+    }, {
+      revisionCasEnabled: true,
+      expectedRevision: 0,
+    }),
+    (error) => {
+      assert.equal(error && error.message, "MySQL 异步存档失败。");
+      assert.equal(error && error.code, "mysql_transaction_rolled_back");
+      assert.equal(error && error.mysqlCode, "ER_DUP_ENTRY");
+      assert.equal(error && error.transactionPhase, "rolled_back");
+      assert.equal(error && error.outcomeUnknown, false);
+      assert.equal(error && error.noCommitGuaranteed, true);
+      assert.equal(error && error.rollbackConfirmed, true);
+      assert.equal(error && error.cause && error.cause.cause, duplicate);
+      return true;
+    },
+  );
+
+  assert.equal(casFixture.state.queriedStatements.length, 3);
+  assert.match(casFixture.state.queriedStatements[0], /auth_store_revisions[\s\S]+FOR UPDATE/);
+  assert.match(casFixture.state.queriedStatements[1], /^INSERT INTO accounts /);
+  assert.match(casFixture.state.queriedStatements[2], /^INSERT INTO mail_messages /);
+  assert.equal(casFixture.state.revision, 0);
+  assert.equal(casFixture.state.transactions[0].begun, true);
+  assert.equal(casFixture.state.transactions[0].rolledBack, true);
+  assert.equal(casFixture.state.transactions[0].committed, false);
+  assert.equal(casFixture.state.transactions[0].released, true);
+});
+
 test("mysql saveAsync snapshots caller data before yielding and commits that owned baseline", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-save-owned-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
@@ -2611,7 +2748,7 @@ process.stdin.on("end", () => {
   }
 });
 
-test("mysql consumed equipment insert is idempotent after an ambiguous commit response", () => {
+test("mysql consumed equipment insert stays strict on an ambiguous maintenance response", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-consumed-retry-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const logPath = path.join(tempDir, "calls.jsonl");
@@ -2661,16 +2798,15 @@ process.stdin.on("end", () => {
       },
     };
     assert.throws(() => store.save(state), /ambiguous commit response/);
-    assert.doesNotThrow(() => store.save(state));
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
     const completeAttempts = calls.filter((call) => (
       call.stdin.includes("START TRANSACTION")
       && call.stdin.includes("INSERT INTO consumed_equipment_envelopes")
       && call.stdin.includes("COMMIT")
     ));
-    assert.equal(completeAttempts.length, 2);
+    assert.equal(completeAttempts.length, 1);
     for (const attempt of completeAttempts) {
-      assert.match(attempt.stdin, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
+      assert.doesNotMatch(attempt.stdin, /ON DUPLICATE KEY UPDATE envelope_id = VALUES\(envelope_id\)/);
       assert.match(attempt.stdin, /UPDATE auth_store_revisions SET revision = revision \+ 1/);
       assert.equal(/DELETE FROM consumed_equipment_envelopes/.test(attempt.stdin), false);
     }

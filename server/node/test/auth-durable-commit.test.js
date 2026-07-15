@@ -1733,6 +1733,153 @@ test("a stale domain failure reconciles the remote shop receipt before returning
   assert.equal(saveCalls, 0);
 });
 
+test("stale attachment mail failures replay the remote receipt without a second save", async () => {
+  const scenarios = [
+    {
+      suffix: "ordinary",
+      itemId: "item_meat_small",
+      configure(profile) {
+        profile.backpackSlots = [
+          {itemId: "item_meat_small", count: 4},
+          ...Array.from({length: 14}, () => ({})),
+        ];
+      },
+      attachment: {itemId: "item_meat_small", count: 4},
+    },
+    {
+      suffix: "equipment",
+      itemId: "weapon_wooden_club",
+      configure(profile) {
+        profile.backpackSlots = [
+          {itemId: "weapon_wooden_club", count: 1},
+          ...Array.from({length: 14}, () => ({})),
+        ];
+        profile.equipmentInstances = {
+          equip_mail_remote_replay_0001: {
+            schemaVersion: 1,
+            instanceId: "equip_mail_remote_replay_0001",
+            itemId: "weapon_wooden_club",
+            location: "backpack",
+            slotId: "",
+            durability: 23,
+            enhancement: {itemId: "weapon_wooden_club", level: 2, history: []},
+            wearCounters: {itemId: "weapon_wooden_club", attackCount: 3, hitCount: 0},
+            expPillCharge: {},
+            source: "mail_remote_replay_test",
+          },
+        };
+        profile.equipmentSlotInstanceIds = {};
+        profile.equipmentSlotsVersion = 5;
+        profile.nextEquipmentInstanceSerial = 2;
+      },
+      attachment: {
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: "equip_mail_remote_replay_0001",
+        sourceSlotIndex: 0,
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const base = createMemoryAuthStore();
+    const seed = createAuthService({store: base});
+    const sender = seed.register({
+      username: `mrs${scenario.suffix}`,
+      password: "test1234",
+      displayName: `寄件人${scenario.suffix}`,
+    });
+    const recipient = seed.register({
+      username: `mrr${scenario.suffix}`,
+      password: "test1234",
+      displayName: `收件人${scenario.suffix}`,
+    });
+    const current = seed.getProfile(sender.session.token);
+    const profile = current.profile;
+    scenario.configure(profile);
+    const saved = seed.saveProfile(sender.session.token, {
+      expectedRevision: current.profileSummary.profileRevision,
+      profile,
+    });
+    assert.equal(saved.ok, true, `${scenario.suffix}: ${JSON.stringify(saved)}`);
+
+    const operation = {
+      operationId: `bbo_cross_node_mail_failure_${scenario.suffix}_0001`,
+      requestHash: scenario.suffix === "ordinary" ? "1".repeat(64) : "2".repeat(64),
+      actionId: "POST /mail/send",
+    };
+    const args = [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: `跨节点附件${scenario.suffix}`,
+      body: "首次提交成功后，同一操作必须重放首次结果。",
+      items: [scenario.attachment],
+    }];
+    let writerReceiptReads = 0;
+    const writer = createAuthService({
+      store: createAsyncWriteAuthStore({
+        mode: `mail-replay-writer-${scenario.suffix}`,
+        load: () => base.load(),
+        async readDurableMutationReceipt(operationId) {
+          writerReceiptReads += 1;
+          return {
+            schemaVersion: 1,
+            operationId,
+            authorityCurrent: true,
+            receipt: null,
+          };
+        },
+        async saveAsyncOwned(nextData) {
+          base.save(nextData);
+        },
+      }, {onError() {}}),
+    });
+    const first = await writer.invokeDurable("sendMail", args, operation);
+    assert.equal(first.ok, true, `${scenario.suffix}: ${JSON.stringify(first)}`);
+    assert.equal(first.durableCommit.replayed, false);
+    assert.equal(writerReceiptReads, 0, `${scenario.suffix}: healthy send must stay on the zero-read path`);
+
+    const latestWithoutReceipt = base.load();
+    delete latestWithoutReceipt.mutationReceipts[operation.operationId];
+    let loadCalls = 0;
+    let receiptReads = 0;
+    let saveCalls = 0;
+    const staleStore = createAsyncWriteAuthStore({
+      mode: `mail-replay-stale-${scenario.suffix}`,
+      load() {
+        loadCalls += 1;
+        return loadCalls === 1 ? structuredClone(latestWithoutReceipt) : base.load();
+      },
+      async readDurableMutationReceipt(operationId) {
+        receiptReads += 1;
+        return {
+          schemaVersion: 1,
+          operationId,
+          authorityCurrent: false,
+          receipt: structuredClone(base.load().mutationReceipts[operationId]),
+        };
+      },
+      async saveAsyncOwned() {
+        saveCalls += 1;
+      },
+    }, {onError() {}});
+    const stale = createAuthService({store: staleStore});
+    const replay = await stale.invokeDurable("sendMail", args, operation);
+
+    assert.equal(replay.ok, true, `${scenario.suffix}: ${JSON.stringify(replay)}`);
+    assert.equal(replay.durableCommit.replayed, true);
+    assert.equal(replay.mail.mailId, first.mail.mailId);
+    assert.equal(loadCalls, 2);
+    assert.equal(receiptReads, 1);
+    assert.equal(staleStore.metrics().durableReceiptReadHits, 1);
+    assert.equal(saveCalls, 0);
+    assert.equal(
+      profileItemCount(base.load().profiles[sender.profileBinding.playerId].profile, scenario.itemId),
+      0,
+    );
+    assert.equal(Object.keys(base.load().mailMessages).length, 1);
+  }
+});
+
 test("a local active receipt missing from MySQL fails closed instead of re-executing", async () => {
   const base = createMemoryAuthStore();
   const registered = seedShopAccount(base, "durablemissingrow");
