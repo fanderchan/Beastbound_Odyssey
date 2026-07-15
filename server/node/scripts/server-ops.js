@@ -13,6 +13,10 @@ const envPath = path.resolve(localDir, "mysql.env");
 const pidPath = path.resolve(localDir, "server.pid");
 const logPath = path.resolve(localDir, "dev-server.log");
 const backupDir = path.resolve(localDir, "backups");
+const GRACEFUL_DRAIN_MS = 15_000;
+const FORCE_KILL_AFTER_MS = GRACEFUL_DRAIN_MS + 2_500;
+const STOP_HARD_DEADLINE_MS = 20_000;
+const STOP_POLL_MS = 200;
 
 async function main() {
   const command = String(process.argv[2] || "status").trim().toLowerCase();
@@ -20,7 +24,7 @@ async function main() {
   if (command === "start") {
     await startServer(env);
   } else if (command === "stop") {
-    stopServer();
+    await stopServer({env});
   } else if (command === "restart") {
     await restartServer(env);
   } else if (command === "backup") {
@@ -33,118 +37,130 @@ async function main() {
 }
 
 async function restartServer(env) {
-  const stopped = stopServer({"quiet": true, "killPort": true, env});
-  await waitForStopped(env, stopped.pids);
-  killPortListeners(env);
-  if (!(await waitForHealthDown(env))) {
-    throw new Error("Unable to stop the existing backend before restart.");
-  }
+  const stopped = await stopServer({"quiet": true, env});
+  await waitForPortFree(env);
   fs.rmSync(pidPath, {"force": true});
   console.log(JSON.stringify({"ok": true, "restarting": true, "stoppedPids": stopped.pids}, null, 2));
   await startServer(env);
 }
 
-async function waitForStopped(env, pids = []) {
-  const uniquePids = Array.from(new Set(pids.map((pid) => Number(pid || 0)).filter((pid) => pid > 0)));
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const alivePids = uniquePids.filter((pid) => processAlive(pid));
-    const health = await requestHealth(env).catch(() => null);
-    if (alivePids.length <= 0 && !(health && health.ok)) {
-      return true;
-    }
-    if (attempt === 10) {
-      for (const pid of alivePids) {
-        try {
-          process.kill(pid, "SIGKILL");
-        } catch (_error) {
-          // The process may have exited between the liveness check and kill.
-        }
-      }
-    }
-    await sleep(250);
-  }
-  return false;
-}
-
-async function waitForHealthDown(env) {
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const health = await requestHealth(env).catch(() => null);
-    if (!(health && health.ok)) {
-      return true;
-    }
-    await sleep(250);
-  }
-  return false;
-}
-
 async function startServer(env) {
   fs.mkdirSync(localDir, {"recursive": true});
   const existingPid = readPid();
-  if (existingPid && processAlive(existingPid)) {
-    console.log(JSON.stringify({"ok": true, "alreadyRunning": true, "pid": existingPid, "url": publicUrl(env)}, null, 2));
+  const existingProcess = trustedServerProcess(existingPid);
+  const listenerPids = portListenerPids(env);
+  const trustedListeners = listenerPids
+    .map((pid) => trustedServerProcess(pid))
+    .filter(Boolean);
+  if (listenerPids.length > 0) {
+    if (listenerPids.length !== 1 || trustedListeners.length !== 1) {
+      throw new Error(`Configured backend port is occupied by a process that is not a verified Beastbound backend (pids: ${listenerPids.join(", ")}).`);
+    }
+    const listener = trustedListeners[0];
+    if (existingProcess && existingProcess.pid !== listener.pid) {
+      throw new Error(`Pid file and configured backend port refer to different verified Beastbound processes (${existingProcess.pid} and ${listener.pid}).`);
+    }
+    writePid(listener.pid);
+    console.log(JSON.stringify({
+      "ok": true,
+      "alreadyRunning": true,
+      "recoveredPidFile": existingPid !== listener.pid,
+      "pid": listener.pid,
+      "url": publicUrl(env),
+    }, null, 2));
     return;
   }
-  const existingHealth = await requestHealth(env).catch(() => null);
-  if (existingHealth && existingHealth.ok) {
-    console.log(JSON.stringify({"ok": true, "alreadyRunning": true, "pid": null, "url": publicUrl(env), "health": existingHealth}, null, 2));
-    return;
+  if (existingProcess) {
+    throw new Error(`Verified Beastbound backend pid ${existingProcess.pid} is alive but is not listening on the configured port; refusing to overwrite its pid file.`);
   }
+  fs.rmSync(pidPath, {"force": true});
   const logFd = fs.openSync(logPath, "a");
-  const child = spawn(process.execPath, ["src/http-server.js"], {
-    cwd: serverRoot,
-    env: {...process.env, ...env},
-    detached: true,
-    stdio: ["ignore", logFd, logFd],
-  });
-  fs.writeFileSync(pidPath, `${child.pid}\n`);
-  child.unref();
-  console.log(JSON.stringify({"ok": true, "started": true, "pid": child.pid, "url": publicUrl(env), "logPath": logPath}, null, 2));
+  try {
+    const child = spawn(process.execPath, ["src/http-server.js"], {
+      cwd: serverRoot,
+      env: {...process.env, ...env},
+      detached: true,
+      stdio: ["ignore", logFd, logFd],
+    });
+    writePid(child.pid);
+    child.unref();
+    console.log(JSON.stringify({"ok": true, "started": true, "pid": child.pid, "url": publicUrl(env), "logPath": logPath}, null, 2));
+  } finally {
+    fs.closeSync(logFd);
+  }
 }
 
-function stopServer(options = {}) {
+async function stopServer(options = {}) {
+  const env = options.env || loadRuntimeEnv();
   const pid = readPid();
-  const pids = [];
-  if (pid) {
-    pids.push(pid);
-  }
-  if (options.killPort) {
-    for (const portPid of portListenerPids(options.env || loadRuntimeEnv())) {
-      if (!pids.includes(portPid)) {
-        pids.push(portPid);
-      }
-    }
-  }
-  if (pids.length <= 0) {
+  const candidatePids = Array.from(new Set([
+    pid,
+    ...portListenerPids(env),
+  ].map(Number).filter((value) => value > 1)));
+  const processes = candidatePids
+    .map((candidatePid) => trustedServerProcess(candidatePid))
+    .filter(Boolean);
+  const pids = processes.map((entry) => entry.pid);
+  if (processes.length <= 0) {
+    fs.rmSync(pidPath, {"force": true});
     if (!options.quiet) {
-      console.log(JSON.stringify({"ok": true, "stopped": false, "message": "No pid file."}, null, 2));
+      console.log(JSON.stringify({
+        "ok": true,
+        "stopped": false,
+        "message": candidatePids.length > 0
+          ? "No verified Beastbound backend process was found; unrelated processes were not signalled."
+          : "No verified Beastbound backend process was found.",
+      }, null, 2));
     }
     return {"ok": true, "stopped": false, pids};
   }
-  for (const targetPid of pids) {
-    if (processAlive(targetPid)) {
-      process.kill(targetPid, "SIGTERM");
-    }
+  const signalled = processes.filter((entry) => signalSameServerProcess(entry, "SIGTERM"));
+  if (signalled.length > 0) {
+    await waitForServerProcessesToExit(signalled);
   }
   fs.rmSync(pidPath, {"force": true});
   if (!options.quiet) {
-    console.log(JSON.stringify({"ok": true, "stopped": true, pids}, null, 2));
+    console.log(JSON.stringify({"ok": true, "stopped": signalled.length > 0, "pids": signalled.map((entry) => entry.pid)}, null, 2));
   }
-  return {"ok": true, "stopped": true, pids};
+  return {"ok": true, "stopped": signalled.length > 0, "pids": signalled.map((entry) => entry.pid)};
 }
 
-function killPortListeners(env, signal = "SIGTERM") {
-  const pids = portListenerPids(env);
-  for (const pid of pids) {
-    if (!processAlive(pid)) {
-      continue;
+async function waitForServerProcessesToExit(processes) {
+  const startedAt = Date.now();
+  let forceKillAttempted = false;
+  while (Date.now() - startedAt < STOP_HARD_DEADLINE_MS) {
+    const remaining = processes.filter((entry) => sameProcessIdentity(entry));
+    if (remaining.length <= 0) {
+      return;
     }
-    try {
-      process.kill(pid, signal);
-    } catch (_error) {
-      // The process may have exited between lsof and kill.
+    const elapsedMs = Date.now() - startedAt;
+    // The real server owns a 15s durable drain deadline. Leave an additional
+    // safety gap and only force a process whose start identity, cwd and exact
+    // command still match the snapshot captured before SIGTERM.
+    if (!forceKillAttempted && elapsedMs >= FORCE_KILL_AFTER_MS) {
+      forceKillAttempted = true;
+      for (const entry of remaining) {
+        signalSameServerProcess(entry, "SIGKILL");
+      }
     }
+    await sleep(STOP_POLL_MS);
   }
-  return pids;
+  const remainingPids = processes.filter((entry) => sameProcessIdentity(entry)).map((entry) => entry.pid);
+  if (remainingPids.length > 0) {
+    throw new Error(`Verified Beastbound backend did not exit within ${STOP_HARD_DEADLINE_MS}ms (pids: ${remainingPids.join(", ")}).`);
+  }
+}
+
+async function waitForPortFree(env) {
+  const deadline = Date.now() + 2_000;
+  let listeners = portListenerPids(env);
+  while (listeners.length > 0 && Date.now() < deadline) {
+    await sleep(100);
+    listeners = portListenerPids(env);
+  }
+  if (listeners.length > 0) {
+    throw new Error(`Configured backend port is still occupied; refusing to restart or signal unrelated listeners (pids: ${listeners.join(", ")}).`);
+  }
 }
 
 function portListenerPids(env) {
@@ -166,6 +182,114 @@ function portListenerPids(env) {
   } catch (_error) {
     return [];
   }
+}
+
+function trustedServerProcess(pid) {
+  const processInfo = inspectProcess(pid);
+  if (!processInfo || canonicalPath(processInfo.cwd) !== canonicalPath(serverRoot)) {
+    return null;
+  }
+  const commandMatch = processInfo.command.match(/^(\S+)\s+src\/http-server\.js$/);
+  if (!commandMatch || path.basename(commandMatch[1]) !== "node") {
+    return null;
+  }
+  return processInfo;
+}
+
+function inspectProcess(pid) {
+  const normalizedPid = Number(pid || 0);
+  if (!Number.isSafeInteger(normalizedPid) || normalizedPid <= 1) {
+    return null;
+  }
+  try {
+    const command = execFileSync("ps", [
+      "-ww",
+      "-p", String(normalizedPid),
+      "-o", "command=",
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "ignore"]}).trim();
+    const startedAt = processStartedAt(normalizedPid);
+    const cwd = processCwd(normalizedPid);
+    if (!command || !startedAt || !cwd) {
+      return null;
+    }
+    return {pid: normalizedPid, command, startedAt, cwd};
+  } catch (_error) {
+    return null;
+  }
+}
+
+function processStartedAt(pid) {
+  try {
+    return execFileSync("ps", [
+      "-ww",
+      "-p", String(pid),
+      "-o", "lstart=",
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "ignore"]}).trim() || "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function processCwd(pid) {
+  const procCwdPath = `/proc/${pid}/cwd`;
+  try {
+    if (fs.existsSync(procCwdPath)) {
+      return fs.readlinkSync(procCwdPath);
+    }
+  } catch (_error) {
+    // Fall through to the macOS/BSD lsof path.
+  }
+  try {
+    const output = execFileSync("lsof", [
+      "-a",
+      "-p", String(pid),
+      "-d", "cwd",
+      "-Fn",
+    ], {"encoding": "utf8", "stdio": ["ignore", "pipe", "ignore"]});
+    const cwdLine = output.split(/\r?\n/).find((line) => line.startsWith("n"));
+    return cwdLine ? cwdLine.slice(1) : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function canonicalPath(value) {
+  if (!value) {
+    return "";
+  }
+  try {
+    return fs.realpathSync.native(value);
+  } catch (_error) {
+    return path.resolve(value);
+  }
+}
+
+function sameProcessIdentity(snapshot) {
+  return Boolean(snapshot && processStartedAt(snapshot.pid) === snapshot.startedAt);
+}
+
+function signalSameServerProcess(snapshot, signal) {
+  const current = trustedServerProcess(snapshot && snapshot.pid);
+  if (!current || current.startedAt !== snapshot.startedAt) {
+    return false;
+  }
+  try {
+    process.kill(current.pid, signal);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function writePid(pid) {
+  const normalizedPid = Number(pid || 0);
+  if (!Number.isSafeInteger(normalizedPid) || normalizedPid <= 1) {
+    throw new Error("Unable to record an invalid backend pid.");
+  }
+  fs.mkdirSync(localDir, {"recursive": true});
+  const temporaryPath = `${pidPath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporaryPath, `${normalizedPid}\n`, {"encoding": "utf8", "mode": 0o600});
+  fs.renameSync(temporaryPath, pidPath);
 }
 
 function sleep(ms) {

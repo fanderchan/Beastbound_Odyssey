@@ -11,6 +11,16 @@ npm test
 
 ## Start Local Server
 
+On macOS, the recommended interactive entry is to double-click `../../start-backend.command`. It opens one owned backend console with a clear running title and live logs. Keep that window open while playing: closing it sends `SIGTERM` only to the exact backend process owned by that console, waits through the server's durable-drain window, and removes its runtime state only after the process exits. Double-clicking again is serialized: the new launcher waits for the previous console and backend to stop before starting one replacement. Closing the old Terminal tab is best-effort because macOS may require Terminal automation permission; failure to close the tab does not weaken process ownership or shutdown safety. If another tool replaces the backend process, the old console detects the identity change and refuses to kill the replacement.
+
+For a non-interactive one-shot restart that leaves the backend running after the command exits:
+
+```sh
+BEASTBOUND_NO_PAUSE=1 ../../start-backend.command
+```
+
+For a foreground development process without the launcher:
+
 ```sh
 cd server/node
 npm start
