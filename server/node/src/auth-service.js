@@ -3493,9 +3493,16 @@ function createAuthService(options = {}) {
   function invokeDurable(methodName, args = [], operation = {}) {
     const normalizedMethodName = String(methodName || "");
     const normalizedArgs = Array.isArray(args) ? args : [];
+    const runOptions = {};
+    if (operation && operation.timeoutMs !== undefined) {
+      runOptions.timeoutMs = operation.timeoutMs;
+    }
+    if (operation && operation.signal !== undefined) {
+      runOptions.signal = operation.signal;
+    }
     return durableMutationCoordinator.run(
       () => executeDurableMutationWithRuntimeBarrier(normalizedMethodName, normalizedArgs, operation),
-      operation && operation.timeoutMs !== undefined ? {timeoutMs: operation.timeoutMs} : {},
+      runOptions,
     );
   }
 
@@ -4068,8 +4075,13 @@ function createAuthService(options = {}) {
         : store.save(candidatePersistent, saveOptions);
       durableSaveResult = await Promise.resolve(saveResult);
     } catch (cause) {
-      const error = new Error("服务器存档暂时不可用，请稍后使用同一操作重试。");
-      error.code = "storage_write_failed";
+      const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
+      const error = new Error(outcomeUnknown
+        ? "服务器仍在确认本次操作，请使用原操作标识重试，勿新建重复操作。"
+        : "服务器存档暂时不可用，请稍后使用同一操作重试。");
+      error.code = outcomeUnknown ? "storage_outcome_unknown" : "storage_write_failed";
+      error.outcomeUnknown = outcomeUnknown;
+      error.retryable = true;
       error.cause = cause;
       throw error;
     }
@@ -5129,7 +5141,13 @@ function createAsyncWriteAuthStore(store, options = {}) {
           revisionConflicts += 1;
           throw error;
         }
-        const recovery = durableStoreSnapshotRecovery(store, snapshot, snapshotOptions);
+        if (isMysqlKnownNoCommitFailure(error)) {
+          throw error;
+        }
+        const recovery = durableStoreSnapshotRecovery(store, snapshot, {
+          ...snapshotOptions,
+          requireScopedReceipt: isMysqlCommitOutcomeAmbiguous(error),
+        });
         if (recovery.matched) {
           ambiguousCommitRecoveries += 1;
           return {
@@ -5242,6 +5260,33 @@ function isMysqlStoreRevisionConflict(error) {
   return false;
 }
 
+function isMysqlKnownNoCommitFailure(error) {
+  return mysqlFailureChainSome(error, (current) => current.outcomeUnknown === false
+    || [
+      "mysql_pool_acquire_failed",
+      "mysql_pool_acquire_timeout",
+      "mysql_session_policy_failed",
+      "mysql_session_policy_timeout",
+      "mysql_transaction_rolled_back",
+    ].includes(String(current.code || "")));
+}
+
+function isMysqlCommitOutcomeAmbiguous(error) {
+  return mysqlFailureChainSome(error, (current) => current.outcomeUnknown === true
+    || String(current.code || "") === "mysql_commit_outcome_ambiguous");
+}
+
+function mysqlFailureChainSome(error, predicate) {
+  let current = error;
+  for (let depth = 0; current && depth < 6; depth += 1) {
+    if (predicate(current)) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
 function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
   if (!store || typeof store.load !== "function") {
     return {matched: false, scoped: false, reloadedPersistentData: null};
@@ -5251,7 +5296,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
     const expected = normalizeData(snapshot);
     const reloadedPersistent = persistentDataForStore(reloaded);
     const expectedPersistent = persistentDataForStore(expected);
-    if (isDeepStrictEqual(
+    if (options.requireScopedReceipt !== true && isDeepStrictEqual(
       materializeAuthorityRootLargeCollections(reloadedPersistent),
       materializeAuthorityRootLargeCollections(expectedPersistent),
     )) {

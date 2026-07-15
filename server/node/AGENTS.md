@@ -42,6 +42,8 @@ These rules apply under `server/node/` together with the repository root `AGENTS
 - Preserve incremental writes and the store interface. Do not reintroduce whole-table delete/reinsert saves or store credentials in tracked files.
 - For a new persistent entity, update `normalizeData`, `persistentDataForStore`, MySQL schema creation, load reconstruction, incremental diff/save, and `test/auth-storage.test.js`.
 - A storage failure must surface as a failed request and remain retryable after recovery; never acknowledge a gameplay mutation whose durable write silently failed.
+- This service uses Node/mysql2 rather than JDBC, but the isolation boundary is the same: lock waits may be tuned only with validated `SET SESSION innodb_lock_wait_timeout = ...` and `SET SESSION lock_wait_timeout = ...` on Beastbound pool connections. Never issue `SET GLOBAL`, `SET PERSIST`, or `SET PERSIST_ONLY`, and never rely on a process-start statement to cover physical connections created later.
+- Re-establish the session policy on every pool checkout before `BEGIN`; if it cannot be applied, release or destroy that connection and fail before business SQL. Pool-acquire and transaction hard deadlines are application timers, not server-global variables. A pre-COMMIT timeout must end in a known rollback; a timeout after COMMIT dispatch is outcome-ambiguous and must use the exact durable receipt/scoped reload path rather than blind retry.
 - Use the database MCP server for live DB changes/inspection. Runtime credentials remain in ignored `.local/mysql.env`; never print them.
 
 ## Tests And Operations

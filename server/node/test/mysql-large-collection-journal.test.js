@@ -21,6 +21,32 @@ const {
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {battleProfile} = require("../test-support/auth-service-test-context");
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
+function isDefaultMysqlSessionPolicy(statement, params) {
+  const sql = typeof statement === "string"
+    ? statement.trim()
+    : String(statement && statement.sql || "").trim();
+  if (sql !== MYSQL_SESSION_POLICY_SQL) {
+    return false;
+  }
+  assert.deepEqual(params, [3, 5]);
+  return true;
+}
+
+function rejectOtherMysqlSetStatement(statement) {
+  const sql = typeof statement === "string"
+    ? statement.trim()
+    : String(statement && statement.sql || "").trim();
+  if (!/^SET\b/i.test(sql)) {
+    return;
+  }
+  const error = new Error(`journal test pool rejects non-default session SQL: ${sql}`);
+  error.code = "journal_test_pool_unsafe_session_sql";
+  throw error;
+}
+
 test("mysql journal retries rollback and orders expired same-key DELETE before INSERT", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-large-journal-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
@@ -53,6 +79,7 @@ process.stdin.on("end", () => {
 `, {mode: 0o755});
 
   const transactions = [];
+  const sessionPolicies = [];
   let activeQueries = null;
   let failNextQuery = true;
   let storeRevision = 0;
@@ -62,7 +89,12 @@ process.stdin.on("end", () => {
       activeQueries = [];
       transactions.push(activeQueries);
     },
-    async query(statement) {
+    async query(statement, params = []) {
+      if (isDefaultMysqlSessionPolicy(statement, params)) {
+        sessionPolicies.push(params.slice());
+        return [{affectedRows: 0}, []];
+      }
+      rejectOtherMysqlSetStatement(statement);
       activeQueries.push(statement);
       if (failNextQuery) {
         failNextQuery = false;
@@ -91,6 +123,7 @@ process.stdin.on("end", () => {
       pendingStoreRevision = null;
     },
     release() {},
+    destroy() {},
   };
   const pool = {
     async getConnection() {
@@ -132,6 +165,7 @@ process.stdin.on("end", () => {
     await store.saveAsync(candidate);
 
     assert.equal(transactions.length, 2);
+    assert.deepEqual(sessionPolicies, [[3, 5], [3, 5]]);
     const successful = transactions[1];
     const globalLockIndex = successful.findIndex((statement) => (
       /^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())
@@ -240,6 +274,7 @@ process.stdin.on("end", () => {
 `, {mode: 0o755});
 
   const transactions = [];
+  const sessionPolicies = [];
   let current = null;
   let storeRevision = 0;
   let pendingStoreRevision = null;
@@ -248,7 +283,12 @@ process.stdin.on("end", () => {
       current = [];
       transactions.push(current);
     },
-    async query(statement) {
+    async query(statement, params = []) {
+      if (isDefaultMysqlSessionPolicy(statement, params)) {
+        sessionPolicies.push(params.slice());
+        return [{affectedRows: 0}, []];
+      }
+      rejectOtherMysqlSetStatement(statement);
       current.push(statement);
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
@@ -281,6 +321,7 @@ process.stdin.on("end", () => {
       pendingStoreRevision = null;
     },
     release() {},
+    destroy() {},
   };
   try {
     const mysqlStore = createMysqlAuthStore({
@@ -312,6 +353,7 @@ process.stdin.on("end", () => {
     assert.equal(first.ok, true);
     assert.equal(first.durableCommit.replayed, false);
     assert.equal(transactions.length, 1);
+    assert.deepEqual(sessionPolicies, [[3, 5]]);
     const globalLock = transactions[0].findIndex((statement) => (
       /^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())
     ));

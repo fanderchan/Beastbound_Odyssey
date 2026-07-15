@@ -7,6 +7,9 @@ const {
   sharedMysqlOperation,
 } = require("../test-support/shared-mysql-transaction-harness");
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
 function profileRow(revision, owner, stoneCoins = 100) {
   return {profileRevision: revision, owner, stoneCoins};
 }
@@ -14,6 +17,43 @@ function profileRow(revision, owner, stoneCoins = 100) {
 function listingRow(status, owner) {
   return {status, owner};
 }
+
+test("session lock policy is isolated from transaction queries and unsafe scopes fail closed", async () => {
+  const harness = createSharedMysqlTransactionHarness({
+    seed: {profiles: {player_a: profileRow(1, "initial")}},
+  });
+  const pool = harness.poolFor("session_writer");
+  const connection = await pool.getConnection();
+
+  const [sessionResult] = await connection.query(MYSQL_SESSION_POLICY_SQL, [3, 5]);
+  assert.equal(sessionResult.affectedRows, 0);
+  await assert.rejects(
+    connection.query(MYSQL_SESSION_POLICY_SQL, [30, 50]),
+    (error) => error && error.code === "shared_mysql_unknown_operation",
+  );
+  await assert.rejects(
+    connection.query("SET GLOBAL innodb_lock_wait_timeout = 3"),
+    (error) => error && error.code === "shared_mysql_unknown_operation",
+  );
+  await assert.rejects(
+    connection.query("SET PERSIST lock_wait_timeout = 5"),
+    (error) => error && error.code === "shared_mysql_unknown_operation",
+  );
+
+  await connection.beginTransaction();
+  await connection.query(sharedMysqlOperation.read("profiles", "player_a"));
+  await connection.commit();
+  connection.release();
+  await pool.end();
+
+  const sessionEvents = harness.events().filter((event) => event.type === "session_configured");
+  assert.equal(sessionEvents.length, 1);
+  assert.equal(sessionEvents[0].transactionId, 0);
+  assert.equal(sessionEvents[0].rowLockWaitTimeoutSeconds, 3);
+  assert.equal(sessionEvents[0].metadataLockWaitTimeoutSeconds, 5);
+  assert.equal(harness.events().filter((event) => event.type === "query_started").length, 1);
+  assert.equal(harness.assertIdle(), true);
+});
 
 function createConditionalProfileStore(harness, writerId) {
   const pool = harness.poolFor(writerId);

@@ -32,6 +32,15 @@ const {
   assertMysqlResourceAcquisitionOrder,
   buildMysqlResourceAcquisitionPlan,
 } = require("./mysql-resource-acquisition-order");
+const {
+  MYSQL_COMMIT_OUTCOME_AMBIGUOUS,
+  MYSQL_TRANSACTION_ROLLED_BACK,
+  checkoutMysqlConnection,
+  classifyMysqlTransactionFailure,
+  createMysqlTransactionDeadlineController,
+  destroyMysqlConnection,
+  normalizeMysqlTransactionPolicy,
+} = require("./mysql-transaction-guard");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -438,6 +447,7 @@ function createMysqlAuthStore(options = {}) {
         persistentWritePool(),
         request,
         lastPersistentData,
+        {transactionPolicy: config.transactionPolicy},
       );
       assertMysqlSharedAssetRevision(lastPersistentRevision, result.storeRevision);
       if (readOptions.adopt === true) {
@@ -510,6 +520,7 @@ function createMysqlAuthStore(options = {}) {
         const committed = await runMysqlPoolSavePlan(persistentWritePool(), plan, {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
+          transactionPolicy: config.transactionPolicy,
         });
         if (committed.globalRevisionAdvanced === true) {
           lastPersistentRevision = committed.revision;
@@ -551,6 +562,7 @@ function createMysqlAuthStore(options = {}) {
         const committed = await runMysqlPoolSavePlan(persistentWritePool(), plan, {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
+          transactionPolicy: config.transactionPolicy,
         });
         if (committed.globalRevisionAdvanced === true) {
           lastPersistentRevision = committed.revision;
@@ -592,17 +604,10 @@ function assertMysqlSharedAssetRevision(expectedValue, actualValue) {
   }
 }
 
-async function runMysqlSharedAssetRead(pool, requestValue, baselineValue) {
+async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, options = {}) {
   const request = normalizeMysqlSharedAssetReadRequest(requestValue);
   const baseline = mysqlPersistentData(baselineValue);
-  let connection = null;
-  let transactionStarted = false;
-  try {
-    connection = await pool.getConnection();
-    await connection.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
-    await connection.beginTransaction();
-    transactionStarted = true;
-
+  return runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
     const revisionRows = mysqlQueryRows(await connection.query(
       "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth'",
     ));
@@ -700,22 +705,12 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue) {
     // or non-canonical database projections before either service/store cache
     // can adopt them.
     applySharedAssetReadView(baseline, view);
-    await connection.commit();
     return {storeRevision, view};
-  } catch (error) {
-    if (connection !== null && transactionStarted) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        error.rollbackCause = rollbackError;
-      }
-    }
-    throw error;
-  } finally {
-    if (connection !== null && typeof connection.release === "function") {
-      connection.release();
-    }
-  }
+  }, {
+    beforeBegin: (connection) => connection.query(
+      "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+    ),
+  });
 }
 
 function normalizeMysqlSharedAssetReadRequest(value) {
@@ -3650,6 +3645,11 @@ function serviceEventEntityKey(event) {
 function mysqlConfig(options) {
   const mysqlPathExplicit = Object.prototype.hasOwnProperty.call(options, "mysqlPath")
     || String(process.env.BEASTBOUND_MYSQL_BIN || "").trim() !== "";
+  const transactionPolicyOptions = options.transactionPolicy
+    && typeof options.transactionPolicy === "object"
+    && !Array.isArray(options.transactionPolicy)
+    ? options.transactionPolicy
+    : {};
   return {
     mysqlPath: options.mysqlPath || process.env.BEASTBOUND_MYSQL_BIN || "mysql",
     host: options.host || process.env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
@@ -3671,6 +3671,33 @@ function mysqlConfig(options) {
       process.env.BEASTBOUND_MYSQL_POOL_CONNECTION_LIMIT,
       2,
     ),
+    poolConnectTimeoutMs: Math.min(positiveIntegerConfig(
+      options.poolConnectTimeoutMs,
+      process.env.BEASTBOUND_MYSQL_CONNECT_TIMEOUT_MS,
+      2000,
+    ), 30000),
+    poolQueueLimit: Math.min(positiveIntegerConfig(
+      options.poolQueueLimit,
+      process.env.BEASTBOUND_MYSQL_POOL_QUEUE_LIMIT,
+      64,
+    ), 1024),
+    transactionPolicy: normalizeMysqlTransactionPolicy({
+      poolAcquireTimeoutMs: transactionPolicyOptions.poolAcquireTimeoutMs
+        ?? options.poolAcquireTimeoutMs
+        ?? process.env.BEASTBOUND_MYSQL_POOL_ACQUIRE_TIMEOUT_MS,
+      sessionSetupTimeoutMs: transactionPolicyOptions.sessionSetupTimeoutMs
+        ?? options.sessionSetupTimeoutMs
+        ?? process.env.BEASTBOUND_MYSQL_SESSION_SETUP_TIMEOUT_MS,
+      transactionTimeoutMs: transactionPolicyOptions.transactionTimeoutMs
+        ?? options.transactionTimeoutMs
+        ?? process.env.BEASTBOUND_MYSQL_TRANSACTION_TIMEOUT_MS,
+      rowLockWaitTimeoutSeconds: transactionPolicyOptions.rowLockWaitTimeoutSeconds
+        ?? options.rowLockWaitTimeoutSeconds
+        ?? process.env.BEASTBOUND_MYSQL_ROW_LOCK_WAIT_TIMEOUT_SECONDS,
+      metadataLockWaitTimeoutSeconds: transactionPolicyOptions.metadataLockWaitTimeoutSeconds
+        ?? options.metadataLockWaitTimeoutSeconds
+        ?? process.env.BEASTBOUND_MYSQL_METADATA_LOCK_WAIT_TIMEOUT_SECONDS,
+    }),
     singleWriterMaintenance: boolConfig(
       options.singleWriterMaintenance,
       process.env.BEASTBOUND_MYSQL_SINGLE_WRITER_MAINTENANCE,
@@ -3700,9 +3727,10 @@ function mysqlPoolOptions(config) {
     user: config.user,
     password: config.password,
     database: config.database,
+    connectTimeout: config.poolConnectTimeoutMs,
     waitForConnections: true,
     connectionLimit: config.poolConnectionLimit,
-    queueLimit: 0,
+    queueLimit: config.poolQueueLimit,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     multipleStatements: false,
@@ -3932,55 +3960,45 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
     error.code = MYSQL_STORE_REVISION_MISSING;
     throw error;
   }
-  let connection = null;
-  let transactionStarted = false;
   try {
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-    transactionStarted = true;
-    if (globalRevisionBarrier !== "none") {
-      const lockResult = await connection.query(
-        globalRevisionBarrier === "shared_expected"
-          ? "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR SHARE"
-          : "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
-      );
-      const actualRevision = mysqlStoreRevisionFromQueryResult(lockResult);
-      if (actualRevision === null) {
-        const error = new Error("MySQL全局存档版本行缺失，拒绝提交。");
-        error.code = MYSQL_STORE_REVISION_MISSING;
-        throw error;
+    return await runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
+      if (globalRevisionBarrier !== "none") {
+        const lockResult = await connection.query(
+          globalRevisionBarrier === "shared_expected"
+            ? "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR SHARE"
+            : "SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
+        );
+        const actualRevision = mysqlStoreRevisionFromQueryResult(lockResult);
+        if (actualRevision === null) {
+          const error = new Error("MySQL全局存档版本行缺失，拒绝提交。");
+          error.code = MYSQL_STORE_REVISION_MISSING;
+          throw error;
+        }
+        if (actualRevision !== expectedRevision) {
+          throw mysqlStoreRevisionConflict(expectedRevision, actualRevision);
+        }
       }
-      if (actualRevision !== expectedRevision) {
-        throw mysqlStoreRevisionConflict(expectedRevision, actualRevision);
+      await executeBusinessWrites(connection);
+      if (globalRevisionBarrier === "exclusive_cas") {
+        const updateResult = await connection.query(
+          `UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth' AND revision = ${expectedRevision}`,
+        );
+        if (mysqlAffectedRows(updateResult) !== 1) {
+          throw mysqlStoreRevisionConflict(expectedRevision, null);
+        }
       }
-    }
-    await executeBusinessWrites(connection);
-    if (globalRevisionBarrier === "exclusive_cas") {
-      const updateResult = await connection.query(
-        `UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth' AND revision = ${expectedRevision}`,
-      );
-      if (mysqlAffectedRows(updateResult) !== 1) {
-        throw mysqlStoreRevisionConflict(expectedRevision, null);
-      }
-    }
-    await connection.commit();
-    return {
-      revision: globalRevisionBarrier === "exclusive_cas" ? expectedRevision + 1 : expectedRevision,
-      globalRevisionAdvanced: globalRevisionBarrier === "exclusive_cas",
-    };
+      return {
+        revision: globalRevisionBarrier === "exclusive_cas" ? expectedRevision + 1 : expectedRevision,
+        globalRevisionAdvanced: globalRevisionBarrier === "exclusive_cas",
+      };
+    });
   } catch (error) {
-    let rollbackError = null;
-    if (connection !== null && transactionStarted) {
-      try {
-        await connection.rollback();
-      } catch (caughtRollbackError) {
-        rollbackError = caughtRollbackError;
-      }
-    }
     const saveError = new Error(error && error.code === MYSQL_STORE_REVISION_CONFLICT
       ? "MySQL存档版本已变化，旧快照未写入。"
       : error && error.code === MYSQL_RESOURCE_REVISION_CONFLICT
         ? "MySQL资源版本已变化，条件存档未写入。"
+        : error && error.code === MYSQL_COMMIT_OUTCOME_AMBIGUOUS
+          ? "MySQL COMMIT 结果暂时无法确认。"
         : "MySQL 异步存档失败。");
     if (error && typeof error.code === "string" && error.code !== "") {
       saveError.code = error.code;
@@ -3997,16 +4015,175 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
     if (error && typeof error.resourceKey === "string" && error.resourceKey !== "") {
       saveError.resourceKey = error.resourceKey;
     }
+    for (const field of [
+      "commitDispatched",
+      "mysqlCode",
+      "noCommitGuaranteed",
+      "outcomeUnknown",
+      "retryable",
+      "rollbackConfirmed",
+      "timeout",
+      "transactionPhase",
+    ]) {
+      if (error && error[field] !== undefined) {
+        saveError[field] = error[field];
+      }
+    }
     saveError.cause = error;
-    if (rollbackError !== null) {
-      saveError.rollbackCause = rollbackError;
+    if (error && error.rollbackCause) {
+      saveError.rollbackCause = error.rollbackCause;
     }
     throw saveError;
+  }
+}
+
+async function runMysqlGuardedPoolTransaction(pool, options, executeBusiness, lifecycle = {}) {
+  const policy = normalizeMysqlTransactionPolicy(options && options.transactionPolicy);
+  const guardOptions = options && options.transactionGuardOptions
+    && typeof options.transactionGuardOptions === "object"
+    ? options.transactionGuardOptions
+    : {};
+  let connection = null;
+  let deadline = null;
+  let transactionStarted = false;
+  let connectionReusable = true;
+  try {
+    connection = await checkoutMysqlConnection(pool, policy, guardOptions);
+    deadline = createMysqlTransactionDeadlineController(connection, policy, guardOptions);
+    const guardedConnection = mysqlDeadlineConnection(connection, deadline);
+    if (typeof lifecycle.beforeBegin === "function") {
+      await deadline.track(
+        mysqlCallbackOperation(() => lifecycle.beforeBegin(guardedConnection)),
+        {classifyFailure: false},
+      );
+    }
+    await deadline.track(mysqlConnectionOperation(connection, "beginTransaction"));
+    transactionStarted = true;
+    const result = await deadline.track(
+      mysqlCallbackOperation(() => executeBusiness(guardedConnection)),
+      {classifyFailure: false},
+    );
+    deadline.markCommitDispatched();
+    await deadline.track(mysqlConnectionOperation(connection, "commit"));
+    transactionStarted = false;
+    deadline.complete();
+    return result;
+  } catch (caughtError) {
+    let error = caughtError;
+    const commitDispatched = deadline !== null && deadline.isCommitDispatched();
+    const deadlineTerminated = deadline !== null && deadline.isFinished();
+    let rollbackCompleted = false;
+    let rollbackError = null;
+
+    if (connection !== null && commitDispatched) {
+      connectionReusable = false;
+      if (!deadlineTerminated) {
+        destroyMysqlConnection(connection, error);
+      }
+      error = classifyMysqlTransactionFailure(error, {commitDispatched: true});
+    } else if (connection !== null && transactionStarted) {
+      if (deadlineTerminated && error && error.timeout === true) {
+        connectionReusable = false;
+      } else {
+        try {
+          await deadline.track(mysqlConnectionOperation(connection, "rollback"));
+          rollbackCompleted = true;
+        } catch (caughtRollbackError) {
+          rollbackError = caughtRollbackError;
+          connectionReusable = false;
+          if (!deadline.isFinished()) {
+            destroyMysqlConnection(connection, caughtRollbackError);
+          }
+        }
+      }
+      error = mysqlDeterministicTransactionError(error)
+        ? decorateMysqlNoCommitError(error, rollbackCompleted)
+        : classifyMysqlTransactionFailure(error, {rollbackCompleted});
+    } else if (connection !== null && deadline !== null) {
+      if (deadlineTerminated && error && error.timeout === true) {
+        connectionReusable = false;
+      } else {
+        // Isolation/BEGIN failures have no possible COMMIT, but the driver's
+        // connection state is not safe to return to the pool.
+        connectionReusable = false;
+        destroyMysqlConnection(connection, error);
+      }
+      error = mysqlDeterministicTransactionError(error)
+        ? decorateMysqlNoCommitError(error, false)
+        : classifyMysqlTransactionFailure(error, {commitDispatched: false});
+    }
+    if (rollbackError !== null) {
+      error.rollbackCause = rollbackError;
+    }
+    throw error;
   } finally {
-    if (connection !== null && typeof connection.release === "function") {
+    if (deadline !== null) {
+      deadline.complete();
+    }
+    if (connection !== null && connectionReusable && typeof connection.release === "function") {
       connection.release();
     }
   }
+}
+
+function mysqlDeadlineConnection(connection, deadline) {
+  return Object.freeze({
+    query(...args) {
+      // Keep driver codes visible to the business executor long enough for
+      // exact duplicate-key/resource conflict mapping. The transaction
+      // boundary performs the final outcome classification after rollback.
+      return deadline.track(
+        mysqlConnectionOperation(connection, "query", args),
+        {classifyFailure: false},
+      );
+    },
+  });
+}
+
+function mysqlConnectionOperation(connection, methodName, args = []) {
+  try {
+    return connection[methodName](...args);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function mysqlCallbackOperation(callback) {
+  try {
+    return callback();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function mysqlDeterministicTransactionError(error) {
+  const code = String(error && error.code || "");
+  if ([
+    MYSQL_COMMIT_OUTCOME_AMBIGUOUS,
+    MYSQL_TRANSACTION_ROLLED_BACK,
+  ].includes(code)) {
+    return false;
+  }
+  if ([
+    MYSQL_STORE_REVISION_CONFLICT,
+    MYSQL_STORE_REVISION_MISSING,
+    MYSQL_RESOURCE_REVISION_CONFLICT,
+  ].includes(code)) {
+    return true;
+  }
+  // Service/domain validation codes are already stable public or recovery
+  // contracts. Only driver/transport failures are collapsed into the MySQL
+  // transaction outcome categories.
+  return code !== "" && !/^(?:ER_|CR_|PROTOCOL_|ECONN|EPIPE$|ETIMEDOUT$|ENET|EHOST)/.test(code);
+}
+
+function decorateMysqlNoCommitError(error, rollbackCompleted) {
+  error.transactionPhase = "rolled_back";
+  error.outcomeUnknown = false;
+  error.noCommitGuaranteed = true;
+  error.rollbackConfirmed = rollbackCompleted === true;
+  error.retryable = true;
+  return error;
 }
 
 async function assertMysqlResourceLocks(connection, locks) {
@@ -4493,6 +4670,7 @@ module.exports = {
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
+  __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
   __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
   __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,
   createMysqlAuthStore,

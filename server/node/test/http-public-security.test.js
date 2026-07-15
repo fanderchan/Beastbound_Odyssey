@@ -31,6 +31,16 @@ function protocolHeaders(extra = {}) {
   };
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return {promise, resolve, reject};
+}
+
 async function listen(server, t) {
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -320,6 +330,55 @@ test("bodyless routes retain HTTP admission until a bounded chunked body finishe
   await oversizedClose;
   assert.match(oversizedResponse, /^HTTP\/1\.1 413 /);
   assert.equal(server.networkAdmission.metrics().activeHttp, 0);
+});
+
+test("HTTP disconnect aborts the durable request signal before work starts", async (t) => {
+  const invoked = deferred();
+  const aborted = deferred();
+  let observed = null;
+  const service = {
+    profileAction() {
+      throw new Error("durable proxy must not invoke the raw method");
+    },
+    invokeDurable(methodName, args, operation) {
+      observed = {methodName, args, operation};
+      invoked.resolve();
+      return new Promise((_resolve, reject) => {
+        operation.signal.addEventListener("abort", () => {
+          aborted.resolve();
+          reject(Object.assign(new Error("request disconnected"), {
+            code: "storage_request_canceled",
+            statusCode: 499,
+            publicMessage: "连接已中断，本次操作尚未开始。",
+          }));
+        }, {once: true});
+      });
+    },
+  };
+  const server = createHttpServer({service, eventHub: eventHubStub(), logger: false});
+  await listen(server, t);
+
+  const request = http.request({
+    host: "127.0.0.1",
+    port: server.address().port,
+    path: "/profile/action",
+    method: "POST",
+    headers: protocolHeaders({
+      "authorization": "Bearer disconnected-token",
+      "content-type": "application/json",
+      "idempotency-key": "disconnect-before-start",
+    }),
+  });
+  request.on("error", () => {});
+  request.end(JSON.stringify({action: "discard_item", slot: 1}));
+
+  await invoked.promise;
+  assert.equal(observed.methodName, "profileAction");
+  assert.equal(observed.operation.signal instanceof AbortSignal, true);
+  assert.equal(observed.operation.signal.aborted, false);
+  request.destroy();
+  await aborted.promise;
+  assert.equal(observed.operation.signal.aborted, true);
 });
 
 test("Expect 100-continue rejects oversized auth bodies before granting upload", async (t) => {

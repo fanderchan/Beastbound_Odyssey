@@ -1,6 +1,8 @@
 "use strict";
 
 const OPERATION_MARKER = Symbol("beastbound.sharedMysqlHarnessOperation");
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
 
 function createSharedMysqlTransactionHarness(options = {}) {
   let committedTables = normalizeSeed(options.seed);
@@ -36,6 +38,7 @@ function createSharedMysqlTransactionHarness(options = {}) {
           connectionId: nextConnectionId++,
           writerId,
           released: false,
+          destroyed: false,
           transaction: null,
         };
         connections.add(connectionState);
@@ -81,6 +84,39 @@ function createSharedMysqlTransactionHarness(options = {}) {
 
       async query(statement, params = []) {
         assertConnectionOpen(connectionState);
+        const sql = statementSql(statement).trim();
+        if (sql === MYSQL_SESSION_POLICY_SQL) {
+          if (!Array.isArray(params)
+            || params.length !== 2
+            || params[0] !== 3
+            || params[1] !== 5) {
+            throw unknownOperationError(
+              statement,
+              "共享 MySQL harness 只接受默认 Beastbound 会话锁策略参数 [3,5]。",
+              connectionState.writerId,
+            );
+          }
+          if (connectionState.transaction !== null
+            && connectionState.transaction.state === "active") {
+            throw harnessError(
+              "shared_mysql_session_policy_after_begin",
+              "MySQL 会话锁策略必须在 BEGIN 前设置。",
+            );
+          }
+          recordEvent("session_configured", {
+            ...connectionState,
+            rowLockWaitTimeoutSeconds: params[0],
+            metadataLockWaitTimeoutSeconds: params[1],
+          });
+          return [{affectedRows: 0}, []];
+        }
+        if (/^SET\b/i.test(sql)) {
+          throw unknownOperationError(
+            statement,
+            "共享 MySQL harness 拒绝 GLOBAL/PERSIST 或其他未建模 SET。",
+            connectionState.writerId,
+          );
+        }
         const transaction = activeTransaction(connectionState);
         transaction.queryCount += 1;
         const operation = await resolveOperation(statement, params, transaction);
@@ -124,6 +160,19 @@ function createSharedMysqlTransactionHarness(options = {}) {
             : "connection_released",
           transaction || connectionState,
         );
+      },
+
+      destroy() {
+        if (connectionState.released) {
+          return;
+        }
+        const transaction = connectionState.transaction;
+        if (transaction !== null && transaction.state === "active") {
+          rollbackTransaction(transaction);
+        }
+        connectionState.destroyed = true;
+        connectionState.released = true;
+        recordEvent("connection_destroyed", transaction || connectionState);
       },
     };
   }
@@ -548,6 +597,8 @@ function createSharedMysqlTransactionHarness(options = {}) {
       operationType: String(source.operationType || ""),
       source: String(source.source || ""),
       writeCount: Number(source.writeCount || 0),
+      rowLockWaitTimeoutSeconds: Number(source.rowLockWaitTimeoutSeconds || 0),
+      metadataLockWaitTimeoutSeconds: Number(source.metadataLockWaitTimeoutSeconds || 0),
     });
     eventLog.push(event);
     for (const waiter of [...eventWaiters]) {

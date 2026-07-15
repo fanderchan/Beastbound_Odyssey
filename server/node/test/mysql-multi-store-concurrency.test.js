@@ -12,6 +12,26 @@ const {
 } = require("../src/auth-service");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
+function isDefaultMysqlSessionPolicy(sql, params) {
+  if (sql.trim() !== MYSQL_SESSION_POLICY_SQL) {
+    return false;
+  }
+  assert.deepEqual(params, [3, 5]);
+  return true;
+}
+
+function rejectOtherMysqlSetStatement(sql) {
+  if (!/^SET\b/i.test(sql.trim())) {
+    return;
+  }
+  const error = new Error(`test pool rejects non-default MySQL session SQL: ${sql.trim()}`);
+  error.code = "mysql_test_pool_unsafe_session_sql";
+  throw error;
+}
+
 function authorityState(displayName, stoneCoins, profileRevision = 2) {
   return {
     schemaVersion: 1,
@@ -79,6 +99,7 @@ function createRetryableRevisionPool(options = {}) {
     revision: 0,
     updateAttempts: 0,
     commitAttempts: 0,
+    sessionPolicies: [],
     transactions: [],
   };
   const failRevisionUpdates = Math.max(0, Number(options.failRevisionUpdates || 0));
@@ -90,6 +111,7 @@ function createRetryableRevisionPool(options = {}) {
         committed: false,
         rolledBack: false,
         released: false,
+        destroyed: false,
         queries: [],
       };
       shared.transactions.push(transaction);
@@ -98,8 +120,13 @@ function createRetryableRevisionPool(options = {}) {
         async beginTransaction() {
           transaction.begun = true;
         },
-        async query(statement) {
+        async query(statement, params = []) {
           const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
+          if (isDefaultMysqlSessionPolicy(sql, params)) {
+            shared.sessionPolicies.push(params.slice());
+            return [{affectedRows: 0}, []];
+          }
+          rejectOtherMysqlSetStatement(sql);
           transaction.queries.push(sql);
           if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
             return [[{storeRevision: shared.revision}], []];
@@ -109,6 +136,15 @@ function createRetryableRevisionPool(options = {}) {
           }
           if (/FROM\s+profiles\s+ORDER\s+BY\s+player_id\s+FOR\s+UPDATE/i.test(sql)) {
             return [[], []];
+          }
+          if (/SELECT\s+document_json\s+FROM\s+server_state\s+WHERE\s+state_key\s*=\s*'auth'\s+FOR\s+UPDATE/i.test(sql)) {
+            return [[{document_json: {
+              schemaVersion: 2,
+              storage: "mysql_entity_tables",
+              serviceEventSeq: 0,
+              marketConfig: {},
+              offlineHangConfig: {},
+            }}], []];
           }
           if (/UPDATE\s+auth_store_revisions\s+SET\s+revision\s*=\s*revision\s*\+\s*1/i.test(sql)) {
             shared.updateAttempts += 1;
@@ -136,6 +172,9 @@ function createRetryableRevisionPool(options = {}) {
         },
         release() {
           transaction.released = true;
+        },
+        destroy() {
+          transaction.destroyed = true;
         },
       };
     },
@@ -175,6 +214,11 @@ function createSharedRevisionPool(shared, writerId, statePath) {
         },
         async query(statement, params = []) {
           const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
+          if (isDefaultMysqlSessionPolicy(sql, params)) {
+            shared.sessionPolicies.push({writerId, params: params.slice()});
+            return [{affectedRows: 0}, []];
+          }
+          rejectOtherMysqlSetStatement(sql);
           shared.queries.push({writerId, sql, params: Array.isArray(params) ? params.slice() : params});
           if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
             shared.events.push(`${writerId}:lock:${shared.storeRevision}`);
@@ -195,6 +239,16 @@ function createSharedRevisionPool(shared, writerId, statePath) {
               account_id: "acc_multi_store",
               profile_revision: shared.storeRevision + 1,
             }], []];
+          }
+          if (/SELECT\s+document_json\s+FROM\s+server_state\s+WHERE\s+state_key\s*=\s*'auth'\s+FOR\s+UPDATE/i.test(sql)) {
+            assert.deepEqual(params, []);
+            return [[{document_json: {
+              schemaVersion: 2,
+              storage: "mysql_entity_tables",
+              serviceEventSeq: 0,
+              marketConfig: {},
+              offlineHangConfig: {},
+            }}], []];
           }
           if (/SELECT[\s\S]+FROM\s+profile_bindings[\s\S]+FOR\s+UPDATE/i.test(sql)) {
             assert.deepEqual(params, ["acc_multi_store"]);
@@ -236,6 +290,9 @@ function createSharedRevisionPool(shared, writerId, statePath) {
         },
         release() {
           shared.events.push(`${writerId}:release`);
+        },
+        destroy() {
+          shared.events.push(`${writerId}:destroy`);
         },
       };
     },
@@ -291,6 +348,7 @@ process.stdin.on("end", () => {
     rollbacks: [],
     events: [],
     queries: [],
+    sessionPolicies: [],
   };
   const createStore = (writerId, extraOptions = {}) => createMysqlAuthStore({
     mysqlPath: fakeMysqlPath,
@@ -440,7 +498,7 @@ test("a zero-row revision CAS rolls back without advancing the local baseline an
   }
 });
 
-test("a thrown COMMIT does not advance the local baseline or revision before a successful retry", async () => {
+test("a thrown COMMIT is ambiguous and destroys the connection without rollback or blind retry", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-commit-retry-"));
   const fixture = createRevisionLoaderFixture(tempDir);
   const {pool, shared} = createRetryableRevisionPool({failCommits: 1});
@@ -450,30 +508,32 @@ test("a thrown COMMIT does not advance the local baseline or revision before a s
     store.load();
     await assert.rejects(
       store.saveAsync(candidate),
-      (error) => error
-        && error.message === "MySQL 异步存档失败。"
-        && error.cause
-        && error.cause.message === "injected commit failure before durability",
+      (error) => {
+        assert.equal(error && error.code, "mysql_commit_outcome_ambiguous");
+        assert.equal(error && error.message, "MySQL COMMIT 结果暂时无法确认。");
+        assert.equal(error && error.commitDispatched, true);
+        assert.equal(error && error.transactionPhase, "commit_ambiguous");
+        assert.equal(error && error.outcomeUnknown, true);
+        assert.equal(error && error.noCommitGuaranteed, false);
+        assert.equal(error && error.rollbackConfirmed, false);
+        assert.equal(error && error.retryable, false);
+        assert.equal(error && error.cause && error.cause.cause && error.cause.cause.message,
+          "injected commit failure before durability");
+        return true;
+      },
     );
 
     assert.equal(shared.revision, 0);
     assert.equal(shared.transactions.length, 1);
     assert.equal(shared.transactions[0].committed, false);
-    assert.equal(shared.transactions[0].rolledBack, true);
-    assert.equal(shared.transactions[0].released, true);
+    assert.equal(shared.transactions[0].rolledBack, false);
+    assert.equal(shared.transactions[0].released, false);
+    assert.equal(shared.transactions[0].destroyed, true);
     const firstBusinessSql = transactionBusinessSql(shared.transactions[0]);
     assert.ok(firstBusinessSql.length > 0);
     assert.match(firstBusinessSql.join("\n"), /提交失败重试/);
-
-    await store.saveAsync(candidate);
-    assert.equal(shared.revision, 1);
-    assert.equal(shared.transactions.length, 2);
-    assert.equal(shared.transactions[1].committed, true);
-    assert.equal(shared.transactions[1].rolledBack, false);
-    assert.equal(shared.transactions[1].released, true);
-    assert.deepEqual(transactionBusinessSql(shared.transactions[1]), firstBusinessSql);
-    assert.equal(shared.updateAttempts, 2);
-    assert.equal(shared.commitAttempts, 2);
+    assert.equal(shared.updateAttempts, 1);
+    assert.equal(shared.commitAttempts, 1);
   } finally {
     await store.close();
     fs.rmSync(tempDir, {recursive: true, force: true});

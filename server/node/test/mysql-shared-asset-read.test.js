@@ -14,6 +14,9 @@ const {
   __runMysqlSharedAssetReadForTest,
 } = require("../src/mysql-store");
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
 const ACCOUNT_A = "acc_shared_read_a";
 const ACCOUNT_B = "acc_shared_read_b";
 const PLAYER_A = "player_shared_read_a";
@@ -173,17 +176,42 @@ function bindingRows(ids, profileRevision = 2) {
 }
 
 function fakePool(options = {}) {
-  const state = {begun: 0, committed: 0, rolledBack: 0, released: 0, queries: []};
+  const state = {
+    begun: 0,
+    committed: 0,
+    rolledBack: 0,
+    released: 0,
+    destroyed: 0,
+    events: [],
+    sessionPolicies: [],
+    queries: [],
+  };
   const connection = {
     async beginTransaction() {
       state.begun += 1;
+      state.events.push("begin");
     },
     async query(statement, params = []) {
-      const sql = String(statement && statement.sql || statement).replace(/\s+/g, " ").trim();
-      state.queries.push({sql, params: structuredClone(params)});
-      if (/^SET TRANSACTION ISOLATION LEVEL REPEATABLE READ$/i.test(sql)) {
+      const rawSql = String(statement && statement.sql || statement).trim();
+      const sql = rawSql.replace(/\s+/g, " ");
+      if (rawSql === MYSQL_SESSION_POLICY_SQL) {
+        assert.deepEqual(params, [3, 5]);
+        state.sessionPolicies.push(params.slice());
+        state.events.push("session");
         return [{affectedRows: 0}, []];
       }
+      if (/^SET\s+(?:GLOBAL|PERSIST|PERSIST_ONLY)\b/i.test(sql)
+        || /^SET\s+SESSION\b/i.test(sql)) {
+        const error = new Error(`shared read fake rejects unsafe or non-default session SQL: ${sql}`);
+        error.code = "shared_read_unsafe_session_sql";
+        throw error;
+      }
+      state.queries.push({sql, params: structuredClone(params)});
+      if (/^SET TRANSACTION ISOLATION LEVEL REPEATABLE READ$/i.test(sql)) {
+        state.events.push("isolation");
+        return [{affectedRows: 0}, []];
+      }
+      state.events.push("query");
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions/i.test(sql)) {
         return [[{storeRevision: 7}], []];
       }
@@ -252,6 +280,9 @@ function fakePool(options = {}) {
     release() {
       state.released += 1;
     },
+    destroy() {
+      state.destroyed += 1;
+    },
   };
   return {
     state,
@@ -273,6 +304,8 @@ test("market scoped RR read returns one canonical book plus actor and seller res
   assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A, ACCOUNT_B]);
   assert.deepEqual(result.view.profiles.keys, [PLAYER_A, PLAYER_B]);
   assert.equal(result.view.marketConfig.defaultTaxBps, 300);
+  assert.deepEqual(fake.state.sessionPolicies, [[3, 5]]);
+  assert.deepEqual(fake.state.events.slice(0, 4), ["session", "isolation", "begin", "query"]);
   assert.equal(fake.state.begun, 1);
   assert.equal(fake.state.committed, 1);
   assert.equal(fake.state.rolledBack, 0);

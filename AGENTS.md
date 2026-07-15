@@ -78,6 +78,8 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 - The target/default runtime store is MySQL 9.7. JSON and memory stores are for isolated tests and tooling, not the normal player server.
 - Use the configured MCP database server for database inspection or mutation. Do not edit MySQL files directly, do not hand-delete binlogs, and do not place credentials in commands, logs, tracked files, or final responses.
 - Local app credentials stay in ignored `server/node/.local/mysql.env`; local DBA credentials stay in `~/.mybugvault-db-credentials`. Read only what is needed and never print secret values.
+- The MySQL instance may be shared with other applications. Runtime code, tests, and operations must never execute `SET GLOBAL`, `SET PERSIST`, `SET PERSIST_ONLY`, edit server-wide timeout/lock configuration, or restart MySQL to tune Beastbound. Beastbound row-lock and metadata-lock limits belong only on Beastbound-owned connections through `SET SESSION`; pool-acquire and transaction deadlines belong in the Beastbound process.
+- Any MySQL session-policy change must prove with an independent connection that Beastbound sessions receive the intended values while `@@GLOBAL` values and unrelated sessions remain unchanged. A failed session initialization must fail closed instead of silently using server defaults.
 - Preserve incremental MySQL writes. A new persistent entity must update normalization, snapshot persistence, MySQL load/save/diff behavior, schema creation, and storage tests without reintroducing whole-table delete/reinsert amplification.
 
 ## Assets And External References

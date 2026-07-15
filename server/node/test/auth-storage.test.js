@@ -47,6 +47,17 @@ const {
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
+function isDefaultMysqlSessionPolicy(sql, params) {
+  if (sql.trim() !== MYSQL_SESSION_POLICY_SQL) {
+    return false;
+  }
+  assert.deepEqual(params, [3, 5]);
+  return true;
+}
+
 function mysqlLoadTemporaryDirectoryNames() {
   try {
     return fs.readdirSync(os.tmpdir())
@@ -65,6 +76,7 @@ function createMysqlCasPoolFixture(options = {}) {
     acquireCount: 0,
     endCalls: 0,
     events: [],
+    sessionPolicies: [],
     queriedStatements: [],
     transactions: [],
   };
@@ -77,6 +89,7 @@ function createMysqlCasPoolFixture(options = {}) {
         committed: false,
         rolledBack: false,
         released: false,
+        destroyed: false,
         queries: [],
       };
       state.transactions.push(transaction);
@@ -93,6 +106,19 @@ function createMysqlCasPoolFixture(options = {}) {
           const sql = typeof statement === "string"
             ? statement
             : String(statement && statement.sql || "");
+          if (isDefaultMysqlSessionPolicy(sql, params)) {
+            state.sessionPolicies.push({
+              rowLockWaitTimeoutSeconds: params[0],
+              metadataLockWaitTimeoutSeconds: params[1],
+            });
+            state.events.push("session");
+            return [{affectedRows: 0}, []];
+          }
+          if (/^SET\b/i.test(sql.trim())) {
+            const error = new Error(`createMysqlCasPoolFixture 拒绝非默认会话策略：${sql.trim()}`);
+            error.code = "mysql_cas_fixture_unsafe_session_sql";
+            throw error;
+          }
           transaction.queries.push(sql);
           state.queriedStatements.push(sql);
           state.events.push("query");
@@ -158,6 +184,10 @@ function createMysqlCasPoolFixture(options = {}) {
         release() {
           transaction.released = true;
           state.events.push("release");
+        },
+        destroy() {
+          transaction.destroyed = true;
+          state.events.push("destroy");
         },
       };
     },
@@ -2074,9 +2104,18 @@ process.stdin.on("end", () => {
     failNextQuery = true;
     await assert.rejects(
       store.saveAsync(state("事务回滚")),
-      (error) => error.message === "MySQL 异步存档失败。"
-        && error.cause
-        && error.cause.message === "injected pool query failure",
+      (error) => {
+        assert.equal(error && error.message, "MySQL 异步存档失败。");
+        assert.equal(error && error.code, "mysql_transaction_rolled_back");
+        assert.equal(error && error.transactionPhase, "rolled_back");
+        assert.equal(error && error.outcomeUnknown, false);
+        assert.equal(error && error.noCommitGuaranteed, true);
+        assert.equal(error && error.rollbackConfirmed, true);
+        assert.equal(error && error.retryable, true);
+        assert.equal(error && error.cause && error.cause.cause && error.cause.cause.message,
+          "injected pool query failure");
+        return true;
+      },
     );
     await store.saveAsync(state("事务回滚"));
     await store.close();
@@ -2090,6 +2129,11 @@ process.stdin.on("end", () => {
     assert.equal(casFixture.state.endCalls, 1);
     assert.equal(fs.readFileSync(cliLogPath, "utf8"), "");
     assert.equal(events.filter((event) => event === "acquire").length, 4);
+    assert.equal(events.filter((event) => event === "session").length, 4);
+    assert.deepEqual(casFixture.state.sessionPolicies, Array.from({length: 4}, () => ({
+      rowLockWaitTimeoutSeconds: 3,
+      metadataLockWaitTimeoutSeconds: 5,
+    })));
     assert.equal(events.filter((event) => event === "begin").length, 4);
     assert.equal(events.filter((event) => event === "commit").length, 3);
     assert.equal(events.filter((event) => event === "rollback").length, 1);
@@ -2314,7 +2358,15 @@ process.stdin.on("end", () => {
         serviceEventSeq: 0,
         serviceEvents: [],
       }),
-      (error) => error.message === "MySQL 异步存档失败。" && error.cause === duplicate,
+      (error) => {
+        assert.equal(error && error.message, "MySQL 异步存档失败。");
+        assert.equal(error && error.code, "mysql_transaction_rolled_back");
+        assert.equal(error && error.transactionPhase, "rolled_back");
+        assert.equal(error && error.noCommitGuaranteed, true);
+        assert.equal(error && error.rollbackConfirmed, true);
+        assert.equal(error && error.cause && error.cause.cause, duplicate);
+        return true;
+      },
     );
     assert.equal(queriedStatements.length, 4);
     assert.match(queriedStatements[0], /auth_store_revisions[\s\S]+FOR UPDATE/);

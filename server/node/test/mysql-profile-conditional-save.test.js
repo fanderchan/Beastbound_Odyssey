@@ -20,6 +20,17 @@ const {
   __buildMysqlSavePlanFromPersistentDataForTest,
 } = mysqlStoreModule;
 
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
+function isDefaultMysqlSessionPolicy(sql, params) {
+  if (sql.trim() !== MYSQL_SESSION_POLICY_SQL) {
+    return false;
+  }
+  assert.deepEqual(params, [3, 5]);
+  return true;
+}
+
 const ACCOUNT_ID = "acc_profile_conditional";
 const PLAYER_ID = "player_profile_conditional";
 const ACCOUNT_ID_B = "acc_profile_conditional_b";
@@ -546,6 +557,7 @@ process.stdin.on("end", () => {
 function createConditionalPool(options = {}) {
   const shared = {
     revision: Number(options.actualStoreRevision ?? 0),
+    sessionPolicies: [],
     transactions: [],
   };
   return {
@@ -557,6 +569,7 @@ function createConditionalPool(options = {}) {
           committed: false,
           rolledBack: false,
           released: false,
+          destroyed: false,
           queries: [],
         };
         shared.transactions.push(transaction);
@@ -567,6 +580,15 @@ function createConditionalPool(options = {}) {
           },
           async query(statement, params = []) {
             const sql = typeof statement === "string" ? statement : String(statement && statement.sql || "");
+            if (isDefaultMysqlSessionPolicy(sql, params)) {
+              shared.sessionPolicies.push(params.slice());
+              return [{affectedRows: 0}, []];
+            }
+            if (/^SET\b/i.test(sql.trim())) {
+              const error = new Error(`conditional pool rejects non-default session SQL: ${sql.trim()}`);
+              error.code = "conditional_pool_unsafe_session_sql";
+              throw error;
+            }
             transaction.queries.push({sql, params: Array.isArray(params) ? params.slice() : params});
             if (/SELECT\s+revision\s+AS\s+storeRevision\s+FROM\s+auth_store_revisions[\s\S]+FOR\s+(?:SHARE|UPDATE)/i.test(sql)) {
               assert.deepEqual(params, []);
@@ -671,6 +693,9 @@ function createConditionalPool(options = {}) {
           },
           release() {
             transaction.released = true;
+          },
+          destroy() {
+            transaction.destroyed = true;
           },
         };
       },

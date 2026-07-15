@@ -2123,6 +2123,103 @@ test("ambiguous commit is reconciled from the durable snapshot before success", 
   assert.equal(store.metrics().ambiguousCommitRecoveries, 1);
 });
 
+test("typed no-commit failure never probes a coincidentally matching snapshot", async () => {
+  const base = createMemoryAuthStore();
+  let recoveryLoads = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      recoveryLoads += 1;
+      return base.load();
+    },
+    async saveAsync() {
+      const error = new Error("row lock timeout was rolled back");
+      error.code = "mysql_transaction_rolled_back";
+      error.outcomeUnknown = false;
+      error.rollbackConfirmed = true;
+      throw error;
+    },
+  }, {onError: () => {}});
+
+  await assert.rejects(
+    store.save(base.load()),
+    (error) => error.code === "mysql_transaction_rolled_back"
+      && error.outcomeUnknown === false,
+  );
+  assert.equal(recoveryLoads, 0);
+  assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+});
+
+test("typed ambiguous COMMIT cannot use full-root equality without an exact scoped receipt", async () => {
+  const base = createMemoryAuthStore();
+  let recoveryLoads = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      recoveryLoads += 1;
+      return base.load();
+    },
+    async saveAsync(nextData) {
+      base.save(nextData);
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError: () => {}});
+
+  await assert.rejects(
+    store.save(base.load()),
+    (error) => error.code === "mysql_commit_outcome_ambiguous"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(recoveryLoads, 1);
+  assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+});
+
+test("unverified typed COMMIT ambiguity surfaces as storage_outcome_unknown", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const owner = seed.register({
+    username: "typedcommitunknown",
+    password: "test1234",
+    displayName: "模糊提交猎人",
+  });
+  const before = base.load();
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load: () => base.load(),
+    async saveAsync() {
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError: () => {}});
+  const service = createAuthService({store});
+
+  await assert.rejects(
+    service.invokeDurable("profileAction", [owner.session.token, {
+      action: "record_point_save",
+      payload: {
+        recordPoint: {
+          mapId: "firebud_training_yard",
+          spawnName: "typed_unknown",
+          label: "模糊提交记录点",
+        },
+      },
+    }], {
+      operationId: "bbo_typed_commit_unknown_0001",
+      requestHash: "e".repeat(64),
+      actionId: "POST /profile/action",
+    }),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.deepEqual(service.snapshot(), before);
+  assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+});
+
 test("unverifiable commit blocks re-execution until receipt reload proves the first outcome", async (t) => {
   const base = createMemoryAuthStore();
   const registered = seedShopAccount(base, "durableunknown");

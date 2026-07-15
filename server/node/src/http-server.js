@@ -213,6 +213,7 @@ function createHttpServer(options = {}) {
   async function handleRequest(req, res) {
     const startedAt = process.hrtime.bigint();
     const requestId = createRequestId();
+    req.beastboundDisconnectSignal = bindRequestDisconnectSignal(req, res);
     let networkContext = null;
     let requestPath = "";
     let logged = false;
@@ -660,10 +661,41 @@ function createDurableHttpServiceProxy(service, requestContexts) {
           operationId,
           actionId,
           requestHash: durableRequestHash(method, pathName, property, args, authToken),
+          signal: req && req.beastboundDisconnectSignal,
         });
       });
     },
   });
+}
+
+function bindRequestDisconnectSignal(req, res) {
+  const controller = new AbortController();
+  let listening = true;
+  const cleanup = () => {
+    if (!listening) {
+      return;
+    }
+    listening = false;
+    req.removeListener("aborted", abortDisconnectedRequest);
+    res.removeListener("close", abortDisconnectedRequest);
+    res.removeListener("finish", finishRequest);
+  };
+  const abortDisconnectedRequest = () => {
+    if (!res.writableFinished && !controller.signal.aborted) {
+      controller.abort();
+    }
+    cleanup();
+  };
+  const finishRequest = () => {
+    cleanup();
+  };
+  req.once("aborted", abortDisconnectedRequest);
+  res.once("close", abortDisconnectedRequest);
+  res.once("finish", finishRequest);
+  if (req.aborted || (res.destroyed && !res.writableFinished)) {
+    abortDisconnectedRequest();
+  }
+  return controller.signal;
 }
 
 function observeHttpServiceSync(requestContexts, property, invoke) {
@@ -783,6 +815,7 @@ function sendServiceError(res, error) {
     "storage_queue_full",
     "storage_outcome_unknown",
     "storage_shutting_down",
+    "storage_request_canceled",
     "storage_read_failed",
     "durable_context_required",
   ].includes(code)) {

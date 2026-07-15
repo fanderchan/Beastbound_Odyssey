@@ -3,6 +3,7 @@
 const STORAGE_QUEUE_FULL = "storage_queue_full";
 const STORAGE_COMMIT_TIMEOUT = "storage_commit_timeout";
 const STORAGE_SHUTTING_DOWN = "storage_shutting_down";
+const STORAGE_REQUEST_CANCELED = "storage_request_canceled";
 
 const DEFAULT_MAX_PENDING = 128;
 const DEFAULT_RESPONSE_TIMEOUT_MS = 10000;
@@ -54,6 +55,34 @@ function shuttingDownError() {
   );
 }
 
+function requestCanceledError() {
+  return new DurableMutationCoordinatorError(
+    STORAGE_REQUEST_CANCELED,
+    "连接已中断，本次操作尚未开始。",
+    {
+      statusCode: 499,
+      publicMessage: "连接已中断，本次操作尚未开始。",
+      retryable: true,
+      outcomeUnknown: false,
+    },
+  );
+}
+
+function abortSignal(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (
+    typeof value !== "object"
+    || typeof value.aborted !== "boolean"
+    || typeof value.addEventListener !== "function"
+    || typeof value.removeEventListener !== "function"
+  ) {
+    throw new TypeError("signal must be an AbortSignal");
+  }
+  return value;
+}
+
 function createDurableMutationCoordinator(options = {}) {
   const maxPending = positiveInteger(
     options.maxPending ?? DEFAULT_MAX_PENDING,
@@ -78,6 +107,7 @@ function createDurableMutationCoordinator(options = {}) {
   let failed = 0;
   let queueFull = 0;
   let shutdownRejected = 0;
+  let canceledBeforeStart = 0;
   let admissionOpen = true;
 
   function metrics() {
@@ -92,6 +122,7 @@ function createDurableMutationCoordinator(options = {}) {
       failed,
       queueFull,
       shutdownRejected,
+      canceledBeforeStart,
       admissionOpen,
       maxPending,
       responseTimeoutMs,
@@ -121,6 +152,7 @@ function createDurableMutationCoordinator(options = {}) {
       runOptions.timeoutMs ?? responseTimeoutMs,
       "timeoutMs",
     );
+    const signal = abortSignal(runOptions.signal);
     if (!admissionOpen) {
       shutdownRejected += 1;
       rejected += 1;
@@ -131,9 +163,39 @@ function createDurableMutationCoordinator(options = {}) {
       rejected += 1;
       return Promise.reject(queueFullError());
     }
+    if (signal && signal.aborted) {
+      canceledBeforeStart += 1;
+      rejected += 1;
+      return Promise.reject(requestCanceledError());
+    }
 
     pending += 1;
     accepted += 1;
+
+    let started = false;
+    let canceled = false;
+    let cancelError = null;
+    let responseCancel = null;
+    const removeAbortListener = () => {
+      if (signal) {
+        signal.removeEventListener("abort", handleAbort);
+      }
+    };
+    const handleAbort = () => {
+      if (started || canceled) {
+        return;
+      }
+      canceled = true;
+      cancelError = requestCanceledError();
+      canceledBeforeStart += 1;
+      removeAbortListener();
+      if (responseCancel) {
+        responseCancel(cancelError);
+      }
+    };
+    if (signal) {
+      signal.addEventListener("abort", handleAbort, {once: true});
+    }
 
     const operation = tail.then(async () => {
       // Promise continuations otherwise run the whole queued burst in one
@@ -146,6 +208,11 @@ function createDurableMutationCoordinator(options = {}) {
       if (completed > 0) {
         await yieldTurn();
       }
+      if (canceled) {
+        throw cancelError;
+      }
+      started = true;
+      removeAbortListener();
       running += 1;
       try {
         return await operationFn();
@@ -177,7 +244,26 @@ function createDurableMutationCoordinator(options = {}) {
       let responseSettled = false;
       let timer = null;
 
-      if (timeoutMs > 0) {
+      responseCancel = (error) => {
+        if (timer !== null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        if (responseSettled) {
+          return;
+        }
+        responseSettled = true;
+        rejected += 1;
+        reject(error);
+      };
+
+      // The signal can abort after listener registration but before the
+      // response promise installs its cancellation callback.
+      if (canceled) {
+        responseCancel(cancelError);
+      }
+
+      if (!responseSettled && timeoutMs > 0) {
         timer = setTimeout(() => {
           timer = null;
           if (responseSettled) {
@@ -191,6 +277,7 @@ function createDurableMutationCoordinator(options = {}) {
       }
 
       settlement.then((result) => {
+        removeAbortListener();
         if (timer !== null) {
           clearTimeout(timer);
           timer = null;
@@ -224,6 +311,7 @@ module.exports = {
   STORAGE_QUEUE_FULL,
   STORAGE_COMMIT_TIMEOUT,
   STORAGE_SHUTTING_DOWN,
+  STORAGE_REQUEST_CANCELED,
   DurableMutationCoordinatorError,
   createDurableMutationCoordinator,
 };
