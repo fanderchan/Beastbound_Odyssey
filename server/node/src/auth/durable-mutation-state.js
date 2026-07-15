@@ -228,6 +228,9 @@ function canonicalDurableMutationReceipts(value) {
   }
   const baseline = {};
   const keys = Object.keys(value).sort();
+  if (keys.length > DURABLE_RECEIPT_MAX_COUNT) {
+    throw receiptError("持久化操作回执账本超过容量上限。", "mutation_receipt_capacity_exceeded");
+  }
   for (const operationId of keys) {
     baseline[operationId] = normalizeReceiptRecord(operationId, value[operationId]);
   }
@@ -651,6 +654,9 @@ function activeDurableReceipt(data, operationId, nowMs) {
 }
 
 function stageDurableMutationReceiptPrune(value, nowMs, options = {}) {
+  if (!Number.isFinite(Number(nowMs))) {
+    throw receiptError("持久化操作回执缺少权威时间。", "mutation_receipt_time_invalid");
+  }
   const ledger = canonicalDurableMutationReceipts(value);
   const source = RECEIPT_LEDGER_STATE.get(ledger);
   if (source.baseRevision !== source.lineage.revision) {
@@ -662,44 +668,37 @@ function stageDurableMutationReceiptPrune(value, nowMs, options = {}) {
     lineage: source.lineage,
     upserts: new Map(source.upserts),
   };
-  const maxExpired = positiveInteger(options.maxExpired, DURABLE_RECEIPT_PRUNE_BATCH);
+  const maxExpired = Math.min(
+    DURABLE_RECEIPT_PRUNE_BATCH,
+    positiveInteger(options.maxExpired, DURABLE_RECEIPT_PRUNE_BATCH),
+  );
   const reserveCount = Math.max(0, Math.trunc(Number(options.reserveCount ?? 1)));
-  let deleteCount = state.deletes.size;
-  for (const receipt of heapEffectiveReceipts(
+  const requiredDeleteCount = Math.max(
+    0,
+    receiptStateCount(state) - (DURABLE_RECEIPT_MAX_COUNT - reserveCount),
+  );
+  if (requiredDeleteCount === 0) {
+    return createReceiptLedgerView(state.lineage, state.baseRevision, state.deletes, state.upserts);
+  }
+  if (requiredDeleteCount > 1) {
+    throw receiptError("持久化操作回执容量已满。", "mutation_receipt_capacity_exceeded");
+  }
+  const expiredCandidates = heapEffectiveReceipts(
     state.lineage.expiryHeap,
     state,
     compareExpiryNode,
     maxExpired,
     (entry) => entry.expiresAtMs <= nowMs,
-  )) {
-    if (!state.deletes.has(receipt.operationId)) {
-      state.deletes.set(receipt.operationId, {
-        expectedReceipt: receipt,
-        reason: "expired",
-      });
-      deleteCount += 1;
-    }
+  );
+  if (expiredCandidates.length === 0) {
+    throw receiptError("持久化操作回执容量已满。", "mutation_receipt_capacity_exceeded");
   }
-  while (receiptStateCount(state) > DURABLE_RECEIPT_MAX_COUNT - reserveCount) {
-    if (deleteCount >= maxExpired) {
-      throw receiptError("持久化操作回执待清理数量过多，请稍后重试。", "mutation_receipt_prune_limit");
-    }
-    const oldest = heapEffectiveReceipts(
-      state.lineage.oldestHeap,
-      state,
-      compareOldestNode,
-      1,
-      () => true,
-    )[0];
-    if (!oldest) {
-      throw receiptError("持久化操作回执容量索引异常。", "mutation_receipt_capacity_index_invalid");
-    }
-    state.deletes.set(oldest.operationId, {
-      expectedReceipt: oldest,
-      reason: "capacity",
-    });
-    deleteCount += 1;
-  }
+  const victimSeed = String(options.victimSeed || "durable_receipt_prune");
+  const victim = expiredCandidates[stableReceiptVictimHash(victimSeed) % expiredCandidates.length];
+  state.deletes.set(victim.operationId, {
+    expectedReceipt: victim,
+    reason: "expired",
+  });
   return createReceiptLedgerView(state.lineage, state.baseRevision, state.deletes, state.upserts);
 }
 
@@ -710,23 +709,34 @@ function stageDurableMutationReceipt(value, rawReceipt, options = {}) {
   }
   const normalizedOperationId = String(rawReceipt && rawReceipt.operationId || "").trim();
   const receipt = normalizeReceiptRecord(normalizedOperationId, rawReceipt);
-  let ledger = stageDurableMutationReceiptPrune(value, nowMs, options);
-  const source = RECEIPT_LEDGER_STATE.get(ledger);
-  const deletes = new Map(source.deletes);
-  const upserts = new Map(source.upserts);
+  let ledger = canonicalDurableMutationReceipts(value);
+  let source = RECEIPT_LEDGER_STATE.get(ledger);
+  if (source.baseRevision !== source.lineage.revision) {
+    throw receiptError("持久化操作回执基线已过期，请稍后重试。", "mutation_receipt_revision_stale");
+  }
   const existing = receiptVisibleToState(source, receipt.operationId);
   if (existing) {
     const expiresAtMs = Date.parse(existing.expiresAt);
     if (expiresAtMs > nowMs) {
       throw receiptError("持久化操作回执已经存在，不能改写既有结果。", "mutation_receipt_operation_conflict");
     }
+    const deletes = new Map(source.deletes);
     deletes.set(receipt.operationId, {
       expectedReceipt: existing,
       reason: "expired_same_operation_id",
     });
+    ledger = createReceiptLedgerView(source.lineage, source.baseRevision, deletes, source.upserts);
+  } else {
+    ledger = stageDurableMutationReceiptPrune(ledger, nowMs, {
+      ...options,
+      reserveCount: 1,
+      victimSeed: receipt.operationId,
+    });
   }
+  source = RECEIPT_LEDGER_STATE.get(ledger);
+  const upserts = new Map(source.upserts);
   upserts.set(receipt.operationId, receipt);
-  ledger = createReceiptLedgerView(source.lineage, source.baseRevision, deletes, upserts);
+  ledger = createReceiptLedgerView(source.lineage, source.baseRevision, source.deletes, upserts);
   if (durableMutationReceiptCount(ledger) > DURABLE_RECEIPT_MAX_COUNT) {
     throw receiptError("持久化操作回执容量已满。", "mutation_receipt_capacity_exceeded");
   }
@@ -910,6 +920,16 @@ function compareOldestNode(left, right) {
   return left.committedAtMs - right.committedAtMs
     || left.expiresAtMs - right.expiresAtMs
     || left.operationId.localeCompare(right.operationId);
+}
+
+function stableReceiptVictimHash(value) {
+  let hash = 0x811c9dc5;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }
 
 function heapify(heap, compare) {

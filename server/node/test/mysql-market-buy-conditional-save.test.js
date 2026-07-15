@@ -338,7 +338,15 @@ test("planner selects one cross-account conditional transaction for a certified 
 
   assert.deepEqual(
     operationResources(plan, "writes"),
-    ["profile_binding", "profile", "market_listing", "mail_message", "market_tax", "mutation_receipt"],
+    [
+      "profile_binding",
+      "profile",
+      "market_listing",
+      "mail_message",
+      "market_tax",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ],
   );
   assert.equal(plan.writes.every((write) => write.expectedAffectedRows === 1), true);
   assert.match(plan.writes[2].sql, /^DELETE FROM market_listings\b/i);
@@ -361,7 +369,34 @@ test("planner selects one cross-account conditional transaction for a certified 
       ["market_listing", LISTING_ID],
       ["mail_message", SALE_MAIL_ID],
       ["market_tax", "auth"],
+      ["mutation_receipt_capacity", "mutation_receipt_capacity"],
       ["mutation_receipt", OPERATION_ID],
+    ],
+  );
+});
+
+test("planner keeps market buy conditional when one expired same-operation receipt is replaced", () => {
+  const before = baselineAuthority();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [OPERATION_ID]: buyReceipt({
+      requestHash: "b".repeat(64),
+      committedAt: "2026-07-13T05:00:00.000Z",
+      expiresAt: "2026-07-14T05:00:00.000Z",
+      response: {ok: true, generation: "expired"},
+    }),
+  });
+  const plan = buildPlan(buyCandidate(before), before);
+
+  assert.equal(plan.kind, "market_buy_conditional_v1");
+  assert.equal(
+    plan.writes.some((write) => write.resource === "mutation_receipt_capacity"),
+    false,
+  );
+  assert.deepEqual(
+    plan.writes.slice(-2).map(({resource, kind, key}) => [resource, kind, key]),
+    [
+      ["mutation_receipt", "delete", OPERATION_ID],
+      ["mutation_receipt", "insert", OPERATION_ID],
     ],
   );
 });
@@ -530,7 +565,14 @@ test("zero-tax ordinary purchase omits the server-state write but keeps strict a
   assert.equal(plan.taxAmount, 0);
   assert.deepEqual(
     operationResources(plan, "writes"),
-    ["profile_binding", "profile", "market_listing", "mail_message", "mutation_receipt"],
+    [
+      "profile_binding",
+      "profile",
+      "market_listing",
+      "mail_message",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ],
   );
   assert.equal(plan.writes.some((write) => write.resource === "market_tax"), false);
   assert.equal(plan.writes.some((write) => /\bserver_state\b/i.test(write.sql)), false);

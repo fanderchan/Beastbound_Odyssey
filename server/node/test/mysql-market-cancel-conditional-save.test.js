@@ -183,12 +183,44 @@ test("planner selects a shared conditional transaction only for one certified or
   );
   assert.deepEqual(
     operationResources(plan, "writes"),
-    ["profile_binding", "profile", "market_listing", "mutation_receipt"],
+    [
+      "profile_binding",
+      "profile",
+      "market_listing",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ],
   );
   assert.equal(plan.writes.every((write) => write.expectedAffectedRows === 1), true);
   assert.match(plan.locks[2].sql, /FROM market_listings[\s\S]+FOR UPDATE/i);
   assert.match(plan.writes[2].sql, /^DELETE FROM market_listings\b/i);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+});
+
+test("planner keeps market cancel conditional when one expired same-operation receipt is replaced", () => {
+  const before = baselineAuthority();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [OPERATION_ID]: cancelReceipt({
+      requestHash: "b".repeat(64),
+      committedAt: "2026-07-13T03:00:00.000Z",
+      expiresAt: "2026-07-14T03:00:00.000Z",
+      response: {ok: true, generation: "expired"},
+    }),
+  });
+  const plan = buildPlan(cancelCandidate(before), before);
+
+  assert.equal(plan.kind, "market_cancel_conditional_v1");
+  assert.equal(
+    plan.writes.some((write) => write.resource === "mutation_receipt_capacity"),
+    false,
+  );
+  assert.deepEqual(
+    plan.writes.slice(-2).map(({resource, kind, key}) => [resource, kind, key]),
+    [
+      ["mutation_receipt", "delete", OPERATION_ID],
+      ["mutation_receipt", "insert", OPERATION_ID],
+    ],
+  );
 });
 
 test("planner fails closed to legacy for equipment, missing receipt, and broader market changes", async (t) => {

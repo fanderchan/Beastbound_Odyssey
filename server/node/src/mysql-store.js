@@ -32,6 +32,7 @@ const {
   readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("./auth/equipment-envelope-consumed-ledger");
 const {
+  DURABLE_RECEIPT_MAX_COUNT,
   canonicalDurableMutationReceipts,
   commitDurableMutationReceiptDelta,
   durableMutationReceiptDelta,
@@ -45,6 +46,10 @@ const {
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,
+  MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+  MUTATION_RECEIPT_DELETE_SQL,
+  assertMysqlMutationReceiptWriteContract,
   assertMysqlResourceAcquisitionOrder,
   buildMysqlResourceAcquisitionPlan,
 } = require("./mysql-resource-acquisition-order");
@@ -186,6 +191,8 @@ function createMysqlAuthStore(options = {}) {
         INDEX idx_mutation_receipts_account_expires (account_id, expires_at),
         INDEX idx_mutation_receipts_expires (expires_at)
       );
+      INSERT IGNORE INTO auth_store_revisions (scope_key, revision)
+        SELECT 'mutation_receipt_capacity', COUNT(*) FROM mutation_receipts;
       CREATE TABLE IF NOT EXISTS mail_messages (
         mail_id VARCHAR(96) PRIMARY KEY,
         sender_account_id VARCHAR(80) NOT NULL,
@@ -1272,6 +1279,12 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
     authEvents: [],
     serviceEvents: [],
   };
+  Object.defineProperty(groups, "mutationReceiptWrites", {
+    configurable: false,
+    enumerable: false,
+    value: [],
+    writable: false,
+  });
   const previousState = persistentServerStateDocument(previous);
   const nextState = persistentServerStateDocument(data);
   if (options.forceServerState === true || entityChanged(previousState, nextState)) {
@@ -1281,7 +1294,15 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
   appendObjectEntityDiff(groups.sessions, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
   appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
   appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
-  appendMutationReceiptDeltaOrDiff(groups.mutationReceipts, previous.mutationReceipts, data.mutationReceipts);
+  appendMutationReceiptDeltaOrDiff(
+    groups.mutationReceipts,
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    {
+      typedWrites: groups.mutationReceiptWrites,
+      requireCertifiedDeletes: options.requireCertifiedReceiptDeletes === true,
+    },
+  );
   appendObjectEntityDiff(groups.mailMessages, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement, {strictInsertNew: true});
   appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement, {strictInsertNew: true});
   appendConsumedEquipmentEnvelopeDeltaOrDiff(
@@ -1333,7 +1354,10 @@ function mysqlSaveStatementsFromGroups(groups) {
 }
 
 function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
-  const groups = buildSaveStatementGroupsFromPersistentData(data, previous, options);
+  const groups = buildSaveStatementGroupsFromPersistentData(data, previous, {
+    ...options,
+    requireCertifiedReceiptDeletes: true,
+  });
   const statements = mysqlSaveStatementsFromGroups(groups);
   if (statements.length === 0) {
     return {kind: "noop"};
@@ -1393,6 +1417,8 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     return conditionalMailClaimPlan;
   }
   const legacyMarketCreateCapacity = legacyMarketCreateCapacityProtection(previous, data);
+  const legacyReceiptWrites = groups.mutationReceiptWrites;
+  const legacyReceiptCapacityWrite = legacyMutationReceiptCapacityWrite(legacyReceiptWrites);
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
@@ -1409,8 +1435,38 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
         capacityCheck: legacyMarketCreateCapacity.capacityCheck,
         marketCreateCapacitySellerAccountId: legacyMarketCreateCapacity.sellerAccountId,
       }),
+    ...(legacyReceiptCapacityWrite === null
+      ? {}
+      : {receiptCapacityWrite: legacyReceiptCapacityWrite}),
+    ...(legacyReceiptWrites.length === 0
+      ? {}
+      : {receiptWrites: legacyReceiptWrites}),
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
+}
+
+function legacyMutationReceiptCapacityWrite(writes) {
+  let delta = 0;
+  for (const write of Array.isArray(writes) ? writes : []) {
+    if (write && write.resource === "mutation_receipt" && write.kind === "insert") {
+      delta += 1;
+    } else if (write && write.resource === "mutation_receipt" && write.kind === "delete") {
+      delta -= 1;
+    } else {
+      const error = new Error("MySQL legacy 回执容量变化包含未知语句。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+  }
+  if (delta === 0) {
+    return null;
+  }
+  if (!Number.isSafeInteger(delta) || Math.abs(delta) > DURABLE_RECEIPT_MAX_COUNT) {
+    const error = new Error("MySQL legacy 回执容量变化越界。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return mutationReceiptCapacityAdjustment(delta);
 }
 
 function legacyMarketCreateCapacityProtection(previous, data) {
@@ -1532,15 +1588,15 @@ function buildConditionalMarketCreateSavePlan(data, previous, groups, consistenc
     return null;
   }
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
@@ -1575,7 +1631,7 @@ function buildConditionalMarketCreateSavePlan(data, previous, groups, consistenc
       conditionalProfileBindingUpdate(nextBinding, expectedRevision),
       conditionalProfileUpdate(nextProfile, expectedRevision),
       conditionalMarketListingInsert(listing),
-      conditionalMutationReceiptInsert(receipt),
+      ...receiptWriteSet.writes,
     ],
   });
 }
@@ -1612,15 +1668,15 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
     nextProfile,
   } = profileRevisionChange;
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     consistencyScope.accountId !== accountId
     || consistencyScope.playerId !== playerId
@@ -1640,14 +1696,15 @@ function buildConditionalProfileSavePlan(data, previous, groups, consistencyScop
   const writes = [
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
+    ...receiptWriteSet.writes,
   ];
-  writes.push(conditionalMutationReceiptInsert(receipt));
   return buildMysqlResourceAcquisitionPlan({
     kind: "profile_conditional_v2",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
     accountId,
     playerId,
+    operationId: consistencyScope.operationId,
     expectedProfileRevision: expectedRevision,
     nextProfileRevision: expectedRevision + 1,
     locks,
@@ -1724,15 +1781,15 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
     return null;
   }
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
@@ -1762,7 +1819,7 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
       conditionalProfileBindingUpdate(nextBinding, expectedRevision),
       conditionalProfileUpdate(nextProfile, expectedRevision),
       conditionalMarketListingDelete(listing),
-      conditionalMutationReceiptInsert(receipt),
+      ...receiptWriteSet.writes,
     ],
   });
 }
@@ -1878,15 +1935,15 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     return null;
   }
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
@@ -1914,7 +1971,7 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
   if (taxChange.taxAmount > 0) {
     writes.push(conditionalMarketTaxIncrement(taxChange.currency, taxChange.taxAmount));
   }
-  writes.push(conditionalMutationReceiptInsert(receipt));
+  writes.push(...receiptWriteSet.writes);
   return buildMysqlResourceAcquisitionPlan({
     kind: "market_buy_conditional_v1",
     globalRevisionFence: false,
@@ -2002,15 +2059,15 @@ function buildConditionalMailSendSavePlan(data, previous, groups, consistencySco
     return null;
   }
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
@@ -2041,10 +2098,7 @@ function buildConditionalMailSendSavePlan(data, previous, groups, consistencySco
       conditionalProfileUpdate(nextProfile, expectedRevision),
     );
   }
-  writes.push(
-    conditionalMailMessageInsert(mailAddition.next),
-    conditionalMutationReceiptInsert(receipt),
-  );
+  writes.push(conditionalMailMessageInsert(mailAddition.next), ...receiptWriteSet.writes);
   return buildMysqlResourceAcquisitionPlan({
     kind: "mail_send_conditional_v1",
     globalRevisionFence: false,
@@ -2201,15 +2255,15 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
     return null;
   }
 
-  const receiptDelta = conditionalProfileReceiptDelta(
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
     previous.mutationReceipts,
     data.mutationReceipts,
     groups.mutationReceipts,
   );
-  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+  if (receiptWriteSet === null) {
     return null;
   }
-  const receipt = receiptDelta.upserts[0] || null;
+  const receipt = receiptWriteSet.receipt;
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
@@ -2245,7 +2299,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
       conditionalProfileUpdate(nextProfile, expectedRevision),
       mailWrite,
       ...mailClaim.removedEnvelopeIds.map(conditionalConsumedEquipmentEnvelopeInsert),
-      conditionalMutationReceiptInsert(receipt),
+      ...receiptWriteSet.writes,
     ],
   });
 }
@@ -3200,6 +3254,66 @@ function conditionalProfileReceiptDelta(previousValue, nextValue, receiptStateme
   return {ok: false, deletes: [], upserts: []};
 }
 
+function conditionalMutationReceiptWriteSet(previousValue, nextValue, receiptStatements) {
+  const delta = conditionalProfileReceiptDelta(previousValue, nextValue, receiptStatements);
+  if (
+    !delta.ok
+    || delta.upserts.length !== 1
+    || !certifiedMutationReceiptDeletes(delta)
+  ) {
+    return null;
+  }
+  const receipt = delta.upserts[0] || null;
+  const receiptWrites = [
+    ...delta.deletes.map(conditionalMutationReceiptDelete),
+    conditionalMutationReceiptInsert(receipt),
+  ].sort((left, right) => {
+    const keyOrder = compareCanonicalIds(left.key, right.key);
+    if (keyOrder !== 0) {
+      return keyOrder;
+    }
+    return left.kind === right.kind ? 0 : left.kind === "delete" ? -1 : 1;
+  });
+  return {
+    receipt,
+    writes: [
+      ...(delta.deletes.length === 0 ? [mutationReceiptCapacityAdjustment(1)] : []),
+      ...receiptWrites,
+    ],
+  };
+}
+
+function certifiedMutationReceiptDeletes(delta) {
+  if (!delta || !Array.isArray(delta.deletes) || !Array.isArray(delta.upserts)) {
+    return false;
+  }
+  if (delta.deletes.length === 0) {
+    return true;
+  }
+  if (delta.deletes.length > 1 || delta.upserts.length !== 1) {
+    return false;
+  }
+  const receipt = delta.upserts[0] || null;
+  const cutoffMs = Date.parse(String(receipt && receipt.committedAt || ""));
+  if (receipt === null || !Number.isFinite(cutoffMs)) {
+    return false;
+  }
+  return delta.deletes.every((deletion) => {
+    const expectedReceipt = deletion && deletion.expectedReceipt;
+    const operationId = String(deletion && deletion.operationId || "");
+    const expiresAtMs = Date.parse(String(expectedReceipt && expectedReceipt.expiresAt || ""));
+    const sameOperationId = operationId === String(receipt.operationId || "");
+    return Boolean(expectedReceipt)
+      && String(expectedReceipt.operationId || "") === operationId
+      && Number.isFinite(expiresAtMs)
+      && expiresAtMs <= cutoffMs
+      && (
+        (deletion.reason === "expired_same_operation_id" && sameOperationId)
+        || (deletion.reason === "expired" && !sameOperationId)
+      );
+  });
+}
+
 function loadPersistentData(config, database, options = {}) {
   const includeConsumedEquipmentEnvelopes = options.includeConsumedEquipmentEnvelopes === true
     || mysqlTableExists(config, database, "consumed_equipment_envelopes");
@@ -4124,12 +4238,22 @@ function appendLoadedHistoryWindow(target, document, maxRows) {
   }
 }
 
-function appendMutationReceiptDiff(statements, previousValue, nextValue) {
+function fallbackMutationReceiptWrites(previousValue, nextValue, options = {}) {
   const previous = mutationReceiptMap(previousValue);
   const next = mutationReceiptMap(nextValue);
+  const writes = [];
   for (const operationId of Object.keys(previous).sort()) {
     if (!Object.hasOwn(next, operationId)) {
-      statements.push(deleteEntityStatement("mutation_receipts", "operation_id", operationId));
+      if (options.requireCertifiedDeletes === true) {
+        const error = new Error("在线 MySQL 回执删除缺少规范过期凭证。");
+        error.code = "mysql_resource_precondition_invalid";
+        throw error;
+      }
+      writes.push(conditionalMutationReceiptDelete({
+        operationId,
+        expectedReceipt: previous[operationId],
+        reason: "maintenance_snapshot_diff",
+      }));
     }
   }
   for (const operationId of Object.keys(next).sort()) {
@@ -4139,29 +4263,49 @@ function appendMutationReceiptDiff(statements, previousValue, nextValue) {
       }
       continue;
     }
-    // Plain INSERT makes a database-side duplicate roll back the transaction
-    // instead of overwriting the first committed outcome.
-    statements.push(insertMutationReceiptStatement(next[operationId]));
+    writes.push(conditionalMutationReceiptInsert(next[operationId]));
   }
+  return writes;
 }
 
-function appendMutationReceiptDeltaOrDiff(statements, previousValue, nextValue) {
+function mutationReceiptWrites(previousValue, nextValue, options = {}) {
   const delta = durableMutationReceiptDeltaFrom(previousValue, nextValue);
   if (!delta.ok) {
-    appendMutationReceiptDiff(statements, previousValue, nextValue);
-    return;
+    return fallbackMutationReceiptWrites(previousValue, nextValue, options);
   }
+  if (
+    options.requireCertifiedDeletes === true
+    && !certifiedMutationReceiptDeletes(delta)
+  ) {
+    const error = new Error("在线 MySQL 回执删除缺少规范过期凭证。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  const writes = [];
   for (const deletion of delta.deletes) {
-    statements.push(deleteEntityStatement(
-      "mutation_receipts",
-      "operation_id",
-      deletion.operationId,
-    ));
+    if (
+      options.requireCertifiedDeletes === true
+      && !["expired", "expired_same_operation_id"].includes(deletion.reason)
+    ) {
+      const error = new Error("在线 MySQL 回执删除不是规范过期清理。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    writes.push(conditionalMutationReceiptDelete(deletion));
   }
   for (const receipt of delta.upserts) {
-    // Keep plain INSERT: a duplicate operation ID rolls the whole transaction
-    // back instead of overwriting the first committed outcome.
-    statements.push(insertMutationReceiptStatement(receipt));
+    writes.push(conditionalMutationReceiptInsert(receipt));
+  }
+  return writes;
+}
+
+function appendMutationReceiptDeltaOrDiff(statements, previousValue, nextValue, options = {}) {
+  const writes = mutationReceiptWrites(previousValue, nextValue, options);
+  for (const write of writes) {
+    statements.push(legacyMutationReceiptRawStatement(write));
+  }
+  if (Array.isArray(options.typedWrites)) {
+    options.typedWrites.push(...writes);
   }
 }
 
@@ -4713,6 +4857,9 @@ function singleWriterMaintenanceStatements(statements) {
   }
   return [
     ...statements.slice(0, -1),
+    `UPDATE auth_store_revisions
+      SET revision = (SELECT COUNT(*) FROM mutation_receipts)
+      WHERE scope_key = '${MUTATION_RECEIPT_CAPACITY_GUARD_KEY}'`,
     "UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth'",
     "COMMIT",
   ];
@@ -4724,10 +4871,14 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
   }
   if (plan.kind === "legacy_global_cas") {
     const capacityCheck = assertLegacyMarketCreateCapacityPlan(plan);
+    const receiptWrites = assertLegacyMutationReceiptWrites(plan);
+    const receiptCapacityWrite = assertLegacyMutationReceiptCapacityWrite(plan, receiptWrites);
     return runMysqlPoolSaveStatements(pool, plan.statements, {
       ...options,
       resourceLocks: plan.resourceLocks,
       capacityCheck,
+      receiptCapacityWrite,
+      receiptWrites,
     });
   }
   if (
@@ -4840,6 +4991,54 @@ function assertLegacyMarketCreateCapacityPlan(plan) {
   return check;
 }
 
+function isLegacyMutationReceiptRawStatement(statement) {
+  const sql = String(statement || "").trim();
+  return /^(?:INSERT INTO|DELETE FROM) mutation_receipts\b/i.test(sql);
+}
+
+function assertLegacyMutationReceiptWrites(plan) {
+  const receiptStatements = (Array.isArray(plan && plan.statements) ? plan.statements : [])
+    .filter(isLegacyMutationReceiptRawStatement);
+  const actual = plan && plan.receiptWrites;
+  if (receiptStatements.length === 0) {
+    if (actual !== undefined) {
+      const error = new Error("MySQL legacy 回执写入元数据与 SQL 不一致。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return [];
+  }
+  if (!Array.isArray(actual) || actual.length !== receiptStatements.length) {
+    const error = new Error("MySQL legacy 回执写入缺少规范参数化合同。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  for (let index = 0; index < actual.length; index += 1) {
+    const write = actual[index];
+    assertMysqlMutationReceiptWriteContract(write);
+    if (String(receiptStatements[index]).trim() !== legacyMutationReceiptRawStatement(write).trim()) {
+      const error = new Error("MySQL legacy 回执写入 SQL 与参数化合同不一致。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+  }
+  return actual;
+}
+
+function assertLegacyMutationReceiptCapacityWrite(plan, receiptWrites) {
+  const expected = legacyMutationReceiptCapacityWrite(receiptWrites);
+  const actual = plan && plan.receiptCapacityWrite;
+  if (
+    (expected === null && actual !== undefined)
+    || (expected !== null && !isDeepStrictEqual(actual, expected))
+  ) {
+    const error = new Error("MySQL legacy 回执数量变化缺少规范容量写入。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return expected;
+}
+
 function isPlainLegacyMarketListingInsertStatement(statement) {
   const sql = String(statement || "").trim();
   return /^INSERT INTO market_listings\b/i.test(sql)
@@ -4890,13 +5089,52 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     && statements[statements.length - 1] === "COMMIT"
     ? statements.slice(1, -1)
     : statements.slice();
+  const receiptWrites = Array.isArray(options.receiptWrites) ? options.receiptWrites : [];
   return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
     await assertMysqlResourceLocks(connection, options.resourceLocks);
     if (options.capacityCheck) {
       await assertMysqlMarketCreateCapacity(connection, options.capacityCheck);
     }
+    if (options.receiptCapacityWrite) {
+      const write = options.receiptCapacityWrite;
+      const result = await connection.query(write.sql, write.params);
+      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
+        throw mysqlResourceRevisionConflict(write.resource, write.key);
+      }
+    }
+    let receiptWriteIndex = 0;
     for (const statement of transactionStatements) {
-      await connection.query(statement);
+      if (!isLegacyMutationReceiptRawStatement(statement)) {
+        await connection.query(statement);
+        continue;
+      }
+      const write = receiptWrites[receiptWriteIndex];
+      if (
+        !write
+        || String(statement).trim() !== legacyMutationReceiptRawStatement(write).trim()
+      ) {
+        const error = new Error("MySQL legacy 回执执行序列与认证计划不一致。");
+        error.code = "mysql_resource_precondition_invalid";
+        throw error;
+      }
+      let result;
+      try {
+        result = await connection.query(write.sql, write.params);
+      } catch (error) {
+        if (write.kind === "insert" && error && error.code === "ER_DUP_ENTRY") {
+          throw mysqlResourceRevisionConflict(write.resource, write.key);
+        }
+        throw error;
+      }
+      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
+        throw mysqlResourceRevisionConflict(write.resource, write.key);
+      }
+      receiptWriteIndex += 1;
+    }
+    if (receiptWriteIndex !== receiptWrites.length) {
+      const error = new Error("MySQL legacy 回执执行数量与认证计划不一致。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
     }
   });
 }
@@ -5524,8 +5762,50 @@ function conditionalMutationReceiptInsert(receipt) {
   };
 }
 
-function insertMutationReceiptStatement(receipt) {
-  return `INSERT INTO mutation_receipts (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json) VALUES (${sqlString(receipt.operationId)}, ${sqlString(receipt.requestHash)}, ${sqlString(receipt.actionId)}, ${sqlNullable(receipt.accountId)}, ${sqlString(receipt.committedAt)}, ${sqlString(receipt.expiresAt)}, ${sqlJson(receipt)})`;
+function conditionalMutationReceiptDelete(deletion) {
+  const receipt = deletion && deletion.expectedReceipt || {};
+  return {
+    kind: "delete",
+    resource: "mutation_receipt",
+    key: String(deletion && deletion.operationId || ""),
+    sql: MUTATION_RECEIPT_DELETE_SQL,
+    params: [
+      String(deletion && deletion.operationId || ""),
+      String(receipt.requestHash || ""),
+      String(receipt.actionId || ""),
+      String(receipt.accountId || "") || null,
+      String(receipt.committedAt || ""),
+      String(receipt.expiresAt || ""),
+      JSON.stringify(receipt),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
+function mutationReceiptCapacityAdjustment(delta = 1) {
+  return {
+    kind: "update",
+    resource: "mutation_receipt_capacity",
+    key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    sql: MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+    params: [delta, delta],
+    expectedAffectedRows: 1,
+  };
+}
+
+function legacyMutationReceiptRawStatement(write) {
+  assertMysqlMutationReceiptWriteContract(write);
+  const [operationId, requestHash, actionId, accountId, committedAt, expiresAt, documentJson] = write.params;
+  if (write.kind === "delete") {
+    return `DELETE FROM mutation_receipts
+      WHERE operation_id = ${sqlString(operationId)} AND request_hash = ${sqlString(requestHash)}
+        AND action_id = ${sqlString(actionId)} AND account_id <=> ${sqlNullable(accountId)}
+        AND committed_at = ${sqlString(committedAt)} AND expires_at = ${sqlString(expiresAt)}
+        AND document_json = CAST(${sqlString(documentJson)} AS JSON)`;
+  }
+  return `INSERT INTO mutation_receipts
+    (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+    VALUES (${sqlString(operationId)}, ${sqlString(requestHash)}, ${sqlString(actionId)}, ${sqlNullable(accountId)}, ${sqlString(committedAt)}, ${sqlString(expiresAt)}, CAST(${sqlString(documentJson)} AS JSON))`;
 }
 
 function insertMailStatement(mail) {

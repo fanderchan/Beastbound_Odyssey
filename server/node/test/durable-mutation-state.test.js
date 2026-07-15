@@ -66,58 +66,125 @@ test("final-only receipt payload diagnostics aggregate bytes and shapes without 
   assert.equal(Object.hasOwn(stats, "responses"), false);
 });
 
-test("20k receipt lookup, append and capacity eviction touch only indexed rows", () => {
+test("canonical receipt loading fails closed above the 20,000-row contract", () => {
   const raw = {};
-  for (let index = 0; index < DURABLE_RECEIPT_MAX_COUNT; index += 1) {
+  for (let index = 0; index <= DURABLE_RECEIPT_MAX_COUNT; index += 1) {
+    const operationId = `operation_over_capacity_${String(index).padStart(8, "0")}`;
+    raw[operationId] = receipt(operationId);
+  }
+  assert.throws(
+    () => canonicalDurableMutationReceipts(raw),
+    (error) => error && error.code === "mutation_receipt_capacity_exceeded",
+  );
+});
+
+test("19,999 to 20,000 steady-state append only replaces an expired hashed victim", () => {
+  const raw = {};
+  for (let index = 0; index < DURABLE_RECEIPT_MAX_COUNT - 1; index += 1) {
     const operationId = `operation_capacity_${String(index).padStart(8, "0")}`;
     raw[operationId] = receipt(operationId, {
       committedAtMs: NOW_MS - 40_000 + index,
-      expiresAtMs: NOW_MS + 60_000 + index,
+      expiresAtMs: index < 256 ? NOW_MS + 1 : NOW_MS + 60_000 + index,
     });
   }
   const baseline = canonicalDurableMutationReceipts(raw);
-  assert.equal(durableMutationReceiptCount(baseline), DURABLE_RECEIPT_MAX_COUNT);
-  assert.equal(activeDurableReceipt({mutationReceipts: baseline}, "operation_capacity_00019999", NOW_MS).operationId, "operation_capacity_00019999");
+  assert.equal(durableMutationReceiptCount(baseline), DURABLE_RECEIPT_MAX_COUNT - 1);
+  assert.equal(activeDurableReceipt({mutationReceipts: baseline}, "operation_capacity_00019998", NOW_MS).operationId, "operation_capacity_00019998");
 
   const originalObjectKeys = Object.keys;
   let baselineScans = 0;
+  const trackedLedgers = new Set([baseline]);
   Object.keys = function countedObjectKeys(value) {
-    if (value === baseline) {
+    if (trackedLedgers.has(value)) {
       baselineScans += 1;
     }
     return originalObjectKeys(value);
   };
+  let atCapacity;
+  let appendDelta;
   let staged;
+  let repeated;
+  let alternative;
   try {
-    staged = stageDurableMutationReceipt(
+    atCapacity = stageDurableMutationReceipt(
       baseline,
-      receipt("operation_capacity_new_20000", {
+      receipt("operation_capacity_new_19999", {
         committedAtMs: NOW_MS,
         expiresAtMs: NOW_MS + 120_000,
       }),
       {nowMs: NOW_MS},
     );
+    appendDelta = durableMutationReceiptDeltaFrom(baseline, atCapacity);
+    commitDurableMutationReceiptDelta(atCapacity);
+    trackedLedgers.add(atCapacity);
+
+    assert.throws(
+      () => stageDurableMutationReceipt(
+        atCapacity,
+        receipt("operation_capacity_full_active", {
+          committedAtMs: NOW_MS,
+          expiresAtMs: NOW_MS + 120_000,
+        }),
+        {nowMs: NOW_MS},
+      ),
+      (error) => error && error.code === "mutation_receipt_capacity_exceeded",
+    );
+
+    staged = stageDurableMutationReceipt(
+      atCapacity,
+      receipt("operation_capacity_new_20001", {
+        committedAtMs: NOW_MS + 2,
+        expiresAtMs: NOW_MS + 120_002,
+      }),
+      {nowMs: NOW_MS + 2},
+    );
+    repeated = stageDurableMutationReceipt(
+      atCapacity,
+      receipt("operation_capacity_new_20001", {
+        committedAtMs: NOW_MS + 2,
+        expiresAtMs: NOW_MS + 120_002,
+      }),
+      {nowMs: NOW_MS + 2},
+    );
+    alternative = stageDurableMutationReceipt(
+      atCapacity,
+      receipt("operation_capacity_new_20002", {
+        committedAtMs: NOW_MS + 2,
+        expiresAtMs: NOW_MS + 120_002,
+      }),
+      {nowMs: NOW_MS + 2},
+    );
   } finally {
     Object.keys = originalObjectKeys;
   }
   assert.equal(baselineScans, 0);
+  assert.equal(appendDelta.ok, true);
+  assert.equal(appendDelta.deletes.length, 0);
+  assert.deepEqual(appendDelta.upserts.map((entry) => entry.operationId), ["operation_capacity_new_19999"]);
+  assert.equal(durableMutationReceiptCount(atCapacity), DURABLE_RECEIPT_MAX_COUNT);
   assert.equal(durableMutationReceiptCount(staged), DURABLE_RECEIPT_MAX_COUNT);
-  const delta = durableMutationReceiptDeltaFrom(baseline, staged);
+  const delta = durableMutationReceiptDeltaFrom(atCapacity, staged);
+  const repeatedDelta = durableMutationReceiptDeltaFrom(atCapacity, repeated);
+  const alternativeDelta = durableMutationReceiptDeltaFrom(atCapacity, alternative);
   assert.equal(delta.ok, true);
-  assert.deepEqual(delta.deletes.map((entry) => entry.operationId), ["operation_capacity_00000000"]);
-  assert.equal(delta.deletes[0].reason, "capacity");
-  assert.deepEqual(delta.upserts.map((entry) => entry.operationId), ["operation_capacity_new_20000"]);
-  assert.equal(Object.hasOwn(baseline, "operation_capacity_new_20000"), false);
-  assert.equal(Object.hasOwn(staged, "operation_capacity_new_20000"), true);
+  assert.equal(delta.deletes.length, 1);
+  assert.equal(delta.deletes[0].reason, "expired");
+  assert.ok(Number(delta.deletes[0].operationId.slice(-8)) < 256);
+  assert.equal(Date.parse(delta.deletes[0].expectedReceipt.expiresAt) <= NOW_MS + 2, true);
+  assert.deepEqual(repeatedDelta.deletes.map((entry) => entry.operationId), delta.deletes.map((entry) => entry.operationId));
+  assert.notDeepEqual(alternativeDelta.deletes.map((entry) => entry.operationId), delta.deletes.map((entry) => entry.operationId));
+  assert.deepEqual(delta.upserts.map((entry) => entry.operationId), ["operation_capacity_new_20001"]);
+  assert.equal(Object.hasOwn(atCapacity, "operation_capacity_new_20001"), false);
+  assert.equal(Object.hasOwn(staged, "operation_capacity_new_20001"), true);
 });
 
-test("receipt MVCC checkpoints bound long-running history while old views remain isolated", () => {
+test("receipt MVCC checkpoints bound expired-victim churn while old views remain isolated", () => {
   const raw = {};
   for (let index = 0; index < DURABLE_RECEIPT_MAX_COUNT; index += 1) {
     const operationId = `operation_churn_base_${String(index).padStart(8, "0")}`;
     raw[operationId] = receipt(operationId, {
-      committedAtMs: NOW_MS - DURABLE_RECEIPT_MAX_COUNT + index,
-      expiresAtMs: NOW_MS + 1_000_000 + index,
+      committedAtMs: NOW_MS - 2_000_000 + index,
+      expiresAtMs: NOW_MS - DURABLE_RECEIPT_MAX_COUNT + index,
       response: {ok: true},
     });
   }
@@ -138,8 +205,8 @@ test("receipt MVCC checkpoints bound long-running history while old views remain
   assert.equal(stats.checkpointCount, 1);
   assert.ok(stats.historicalKeyCount <= DURABLE_RECEIPT_MAX_COUNT + 1);
   assert.ok(stats.historyEntryCount <= 2);
-  assert.ok(stats.expiryHeapSize <= DURABLE_RECEIPT_MAX_COUNT);
-  assert.ok(stats.oldestHeapSize <= DURABLE_RECEIPT_MAX_COUNT);
+  assert.ok(stats.expiryHeapSize <= DURABLE_RECEIPT_MAX_COUNT + stats.historyEntryCount);
+  assert.ok(stats.oldestHeapSize <= DURABLE_RECEIPT_MAX_COUNT + stats.historyEntryCount);
   assert.equal(Object.keys(materializeDurableMutationReceipts(current)).length, DURABLE_RECEIPT_MAX_COUNT);
   assert.equal(Object.hasOwn(baseline, "operation_churn_base_00000000"), true);
   assert.equal(Object.hasOwn(baseline, "operation_churn_next_00000000"), false);

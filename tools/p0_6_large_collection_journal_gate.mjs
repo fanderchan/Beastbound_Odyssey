@@ -14,6 +14,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAMPLES = 20;
 const WARMUPS = 5;
 const RESPONSE_PAD = "x".repeat(2048);
+const AUTHORITY_CLOCK_BASE_MS = Date.parse("2040-01-01T00:00:00.000Z");
+const MYSQL_SESSION_POLICY_SQL =
+  "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
 
 const {cloneAuthorityRoot} = require("../server/node/src/auth/authority-root-clone");
 const {
@@ -26,6 +29,7 @@ const {
   readConsumedEquipmentEnvelopeLedgerIndex,
 } = require("../server/node/src/auth/equipment-envelope-consumed-ledger");
 const {
+  DURABLE_RECEIPT_TTL_MS,
   activeDurableReceipt,
   canonicalDurableMutationReceipts,
   durableMutationReceiptDelta,
@@ -264,8 +268,13 @@ async function tombstoneServiceWorker(tombstoneCount) {
 }
 
 async function serviceWorker(receiptCount) {
+  let authoritativeNowMs = AUTHORITY_CLOCK_BASE_MS;
   const seedStore = createMemoryAuthStore();
-  const seedService = createAuthService({store: seedStore, allowFullProfileSave: true});
+  const seedService = createAuthService({
+    store: seedStore,
+    allowFullProfileSave: true,
+    now: () => authoritativeNowMs,
+  });
   const registered = seedService.register({
     username: `gate${receiptCount}`,
     password: "test1234",
@@ -282,23 +291,45 @@ async function serviceWorker(receiptCount) {
       profile: {name: `容量档案${index}`, equipmentInstances: {}, backpackSlots: []},
     };
   }
-  const nowMs = Date.now();
-  raw.mutationReceipts = receiptFixture(receiptCount, nowMs, registered.account.accountId, "service");
+  raw.mutationReceipts = receiptFixture(
+    receiptCount,
+    AUTHORITY_CLOCK_BASE_MS,
+    registered.account.accountId,
+    "service",
+    {expireOnePerTick: receiptCount === 20000},
+  );
   let saves = 0;
+  let maxReceiptDeletes = 0;
+  const receiptDeleteReasons = new Set();
   const store = createAsyncWriteAuthStore({
     mode: "capacity-noop",
     load: () => raw,
-    async saveAsync() {
+    async saveAsync(nextData) {
+      const delta = durableMutationReceiptDelta(nextData.mutationReceipts);
+      assert.equal(delta.ok, true);
+      assert.equal(delta.upserts.length, 1);
+      assert.ok(delta.deletes.length <= 1);
+      if (receiptCount === 20000) {
+        assert.equal(delta.deletes.length, 1);
+        assert.equal(delta.deletes[0].reason, "expired");
+      } else {
+        assert.equal(delta.deletes.length, 0);
+      }
+      maxReceiptDeletes = Math.max(maxReceiptDeletes, delta.deletes.length);
+      for (const deletion of delta.deletes) {
+        receiptDeleteReasons.add(deletion.reason);
+      }
       saves += 1;
     },
   }, {onError: () => {}});
-  const service = createAuthService({store});
+  const service = createAuthService({store, now: () => authoritativeNowMs});
   // Startup normalization/audit is deliberately outside the online samples.
   const initial = service.getProfile(registered.session.token);
   assert.equal(initial.ok, true);
   const writeSamples = [];
   let lastOperation = null;
   async function runWrite(index, measured) {
+    authoritativeNowMs = AUTHORITY_CLOCK_BASE_MS + index;
     lastOperation = {
       operationId: `operation_gate_write_${receiptCount}_${String(index).padStart(4, "0")}`,
       requestHash: String(index + 1).padStart(64, "a").slice(-64),
@@ -360,6 +391,9 @@ async function serviceWorker(receiptCount) {
     writeP95Ms: round(p95(writeSamples)),
     replayP95Ms: round(p95(replaySamples)),
     saves,
+    authorityClockBase: new Date(AUTHORITY_CLOCK_BASE_MS).toISOString(),
+    maxReceiptDeletes,
+    receiptDeleteReasons: [...receiptDeleteReasons].sort(),
     ...resources,
     writeSamplesMs: writeSamples.map(round),
     replaySamplesMs: replaySamples.map(round),
@@ -369,7 +403,11 @@ async function serviceWorker(receiptCount) {
 async function mysqlWorker() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-p06-journal-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
-  fs.writeFileSync(fakeMysqlPath, fakeMysqlProgram(), {mode: 0o755});
+  fs.writeFileSync(
+    fakeMysqlPath,
+    fakeMysqlProgram(AUTHORITY_CLOCK_BASE_MS),
+    {mode: 0o755},
+  );
   const transactions = [];
   let activeQueries = null;
   let storeRevision = 0;
@@ -380,7 +418,15 @@ async function mysqlWorker() {
       activeQueries = [];
       transactions.push(activeQueries);
     },
-    async query(statement) {
+    async query(statement, params = []) {
+      const sql = typeof statement === "string"
+        ? statement.trim()
+        : String(statement && statement.sql || "").trim();
+      if (sql === MYSQL_SESSION_POLICY_SQL) {
+        assert.deepEqual(params, [3, 5]);
+        return [{affectedRows: 0}, []];
+      }
+      assert.ok(activeQueries, "business SQL must run inside a recording transaction");
       activeQueries.push(statement);
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
@@ -413,6 +459,7 @@ async function mysqlWorker() {
       pendingStoreRevision = null;
     },
     release() {},
+    destroy() {},
   };
   const pool = {
     async getConnection() {
@@ -438,10 +485,13 @@ async function mysqlWorker() {
     assert.equal(Object.keys(current.consumedEquipmentEnvelopes).length, 100000);
     const samples = [];
     let historicalObjectKeyScans = 0;
+    let maxReceiptDeletes = 0;
+    const receiptDeleteReasons = new Set();
     async function runSave(index, measured) {
+      const authoritativeNowMs = AUTHORITY_CLOCK_BASE_MS + index;
       const next = cloneAuthorityRoot(current);
       next.profiles.player_gate_000.profileRevision += 1;
-      next.profiles.player_gate_000.updatedAt = new Date(Date.now() + index).toISOString();
+      next.profiles.player_gate_000.updatedAt = new Date(authoritativeNowMs).toISOString();
       const appended = ensureConsumedEquipmentEnvelopeIds(
         next.consumedEquipmentEnvelopes,
         `eqx_mysql_gate_append_${String(index).padStart(8, "0")}`,
@@ -452,15 +502,22 @@ async function mysqlWorker() {
         next.mutationReceipts,
         receiptRecord(
           `operation_mysql_gate_new_${String(index).padStart(4, "0")}`,
-          Date.now() + index,
+          authoritativeNowMs,
           "acc_gate_000",
         ),
-        {nowMs: Date.now() + index},
+        {nowMs: authoritativeNowMs},
       );
       const delta = durableMutationReceiptDelta(next.mutationReceipts);
       assert.equal(delta.ok, true);
       assert.equal(delta.deletes.length, 1);
       assert.equal(delta.upserts.length, 1);
+      assert.equal(delta.deletes[0].reason, "expired");
+      assert.equal(
+        delta.deletes[0].operationId,
+        `operation_mysql_gate_${String(index).padStart(6, "0")}`,
+      );
+      maxReceiptDeletes = Math.max(maxReceiptDeletes, delta.deletes.length);
+      receiptDeleteReasons.add(delta.deletes[0].reason);
       const startedAt = performance.now();
       const guardedLedgers = new Set([
         current.mutationReceipts,
@@ -531,6 +588,9 @@ async function mysqlWorker() {
         && !statement.startsWith("SELECT player_id, account_id, profile_revision FROM profiles ORDER BY")
       )).length)),
       historicalObjectKeyScans,
+      authorityClockBase: new Date(AUTHORITY_CLOCK_BASE_MS).toISOString(),
+      maxReceiptDeletes,
+      receiptDeleteReasons: [...receiptDeleteReasons].sort(),
       ...resources,
       samplesMs: samples.map(round),
     };
@@ -539,11 +599,14 @@ async function mysqlWorker() {
   }
 }
 
-function receiptFixture(count, nowMs, accountId, prefix) {
+function receiptFixture(count, nowMs, accountId, prefix, options = {}) {
   const result = {};
   for (let index = 0; index < count; index += 1) {
     const operationId = `operation_${prefix}_${String(index).padStart(8, "0")}`;
-    result[operationId] = receiptRecord(operationId, nowMs - count + index, accountId);
+    const committedAtMs = options.expireOnePerTick === true
+      ? nowMs - DURABLE_RECEIPT_TTL_MS + index
+      : nowMs - count + index;
+    result[operationId] = receiptRecord(operationId, committedAtMs, accountId);
   }
   return result;
 }
@@ -588,12 +651,12 @@ function receiptRecord(operationId, committedAtMs, accountId) {
     actionId: "bank.deposit",
     accountId,
     committedAt: new Date(committedAtMs).toISOString(),
-    expiresAt: new Date(committedAtMs + 72 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(committedAtMs + DURABLE_RECEIPT_TTL_MS).toISOString(),
     response: {ok: true, pad: RESPONSE_PAD},
   };
 }
 
-function fakeMysqlProgram() {
+function fakeMysqlProgram(authorityClockBaseMs) {
   return `#!/usr/bin/env node
 let stdin = "";
 process.stdin.setEncoding("utf8");
@@ -615,11 +678,12 @@ process.stdin.on("end", () => {
       profile: {name: "容量档案" + suffix, equipmentInstances: {}, backpackSlots: []},
     })]);
   }
-  const nowMs = Date.parse("2026-07-12T00:00:00.000Z");
+  const nowMs = ${JSON.stringify(authorityClockBaseMs)};
+  const receiptTtlMs = ${JSON.stringify(DURABLE_RECEIPT_TTL_MS)};
   const pad = "x".repeat(2048);
   for (let index = 0; index < 20000; index += 1) {
     const operationId = "operation_mysql_gate_" + String(index).padStart(6, "0");
-    const committedAtMs = nowMs - 20000 + index;
+    const committedAtMs = nowMs - receiptTtlMs + index;
     rows.push(["mutation_receipts", operationId, JSON.stringify({
       schemaVersion: 1,
       operationId,
@@ -627,7 +691,7 @@ process.stdin.on("end", () => {
       actionId: "bank.deposit",
       accountId: "acc_gate_000",
       committedAt: new Date(committedAtMs).toISOString(),
-      expiresAt: new Date(committedAtMs + 72 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(committedAtMs + receiptTtlMs).toISOString(),
       response: {ok: true, pad},
     })]);
   }

@@ -8,6 +8,9 @@ const {
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
+  MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+  MUTATION_RECEIPT_DELETE_SQL,
   MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID,
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,
@@ -109,22 +112,59 @@ function write(resource, key, kind) {
         AND JSON_TYPE(JSON_EXTRACT(document_json, '${jsonPath}')) IN ('INTEGER', 'UNSIGNED INTEGER')
         AND CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '${jsonPath}')) AS UNSIGNED) <= ?`;
     params = [1, Number.MAX_SAFE_INTEGER - 1];
-  } else if (resource === "mutation_receipt" && kind === "insert") {
-    sql = `INSERT INTO mutation_receipts
-      (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
-      VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`;
-    params = [key, "hash", "action", "account-1", "now", "later", "{}"];
+  } else if (resource === "mutation_receipt_capacity" && kind === "update") {
+    sql = MUTATION_RECEIPT_CAPACITY_UPDATE_SQL;
+    params = [1, 1];
+  } else if (resource === "mutation_receipt" && ["delete", "insert"].includes(kind)) {
+    const receipt = {
+      schemaVersion: 1,
+      operationId: key,
+      requestHash: "a".repeat(64),
+      actionId: "profile.save",
+      accountId: "account-1",
+      committedAt: kind === "delete"
+        ? "2026-07-12T00:00:00.000Z"
+        : "2026-07-16T00:00:00.000Z",
+      expiresAt: kind === "delete"
+        ? "2026-07-15T00:00:00.000Z"
+        : "2026-07-19T00:00:00.000Z",
+      response: {ok: true},
+    };
+    sql = kind === "delete"
+      ? MUTATION_RECEIPT_DELETE_SQL
+      : `INSERT INTO mutation_receipts
+        (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+        VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`;
+    params = [
+      receipt.operationId,
+      receipt.requestHash,
+      receipt.actionId,
+      receipt.accountId,
+      receipt.committedAt,
+      receipt.expiresAt,
+      JSON.stringify(receipt),
+    ];
   }
   return {kind, resource, key, sql, params, expectedAffectedRows: 1};
 }
 
 function plan(overrides = {}) {
+  const operationId = Object.prototype.hasOwnProperty.call(overrides, "operationId")
+    ? overrides.operationId
+    : "operation-1";
+  const writes = Object.prototype.hasOwnProperty.call(overrides, "writes")
+    ? overrides.writes
+    : [
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+      write("mutation_receipt", operationId, "insert"),
+    ];
   return {
     kind: "market_buy_conditional_v1",
     globalRevisionFence: false,
     globalCompatibilityBarrier: "shared",
+    operationId,
     locks: [],
-    writes: [],
+    writes,
     ...overrides,
   };
 }
@@ -182,6 +222,7 @@ test("builder sorts only explicit locks by resource then UTF-16 key and certifie
       write("market_listing", "listing-1", "delete"),
       write("mail_message", "mail-1", "insert"),
       write("market_tax", "stoneCoins", "update"),
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
       write("mutation_receipt", "operation-1", "insert"),
     ],
   });
@@ -283,6 +324,7 @@ test("write resource and kind pairs are fail-closed", () => {
     write("market_listing", "listing-1", "write"),
     write("consumed_equipment_envelope", "envelope-1", "update"),
     write("market_tax", "stoneCoins", "insert"),
+    write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "insert"),
     write("mutation_receipt", "operation-1", "update"),
     write("unknown", "key-1", "insert"),
   ]) {
@@ -358,6 +400,218 @@ test("write metadata is bound to exact SQL, physical key params, and one affecte
   rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({writes: [zeroAffectedRows]})), "write_affected_rows_invalid");
 });
 
+test("receipt capacity update is exact, bounded, +1-only, and ranked immediately before receipts", () => {
+  assert.equal(MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "mutation_receipt_capacity");
+  assert.equal(MUTATION_RECEIPT_CAPACITY_UPDATE_SQL, `UPDATE auth_store_revisions
+  SET revision = revision + ?
+  WHERE scope_key = 'mutation_receipt_capacity'
+    AND revision + ? BETWEEN 0 AND 20000`);
+
+  const trace = mysqlResourceAcquisitionTrace(plan());
+  assert.deepEqual(trace.map(({resource, key, stage}) => [resource, key, stage]), [
+    ["mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"],
+    ["mutation_receipt", "operation-1", "insert"],
+  ]);
+
+  const wrongKey = write("mutation_receipt_capacity", "other-capacity", "update");
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [wrongKey, write("mutation_receipt", "operation-1", "insert")],
+  })), "write_key_contract_invalid");
+
+  for (const params of [[2, 2], [1, 0], [-1, -1]]) {
+    const wrongDelta = write(
+      "mutation_receipt_capacity",
+      MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+      "update",
+    );
+    wrongDelta.params = params;
+    rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+      writes: [wrongDelta, write("mutation_receipt", "operation-1", "insert")],
+    })), "write_params_invalid");
+  }
+
+  const wrongSql = write(
+    "mutation_receipt_capacity",
+    MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    "update",
+  );
+  wrongSql.sql = wrongSql.sql.replace("BETWEEN 0 AND 20000", "<= 20000");
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [wrongSql, write("mutation_receipt", "operation-1", "insert")],
+  })), "write_sql_contract_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt", "operation-1", "insert"),
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+    ],
+  })), "first_acquisition_order_invalid");
+});
+
+test("receipt insert and delete bind every indexed column to one typed JSON document", () => {
+  assert.equal(MUTATION_RECEIPT_DELETE_SQL, `DELETE FROM mutation_receipts
+  WHERE operation_id = ? AND request_hash = ? AND action_id = ?
+    AND account_id <=> ? AND committed_at = ? AND expires_at = ?
+    AND document_json = CAST(? AS JSON)`);
+
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt", "operation-1", "delete"),
+      write("mutation_receipt", "operation-1", "insert"),
+    ],
+  })), true);
+
+  const nullAccountDelete = write("mutation_receipt", "operation-1", "delete");
+  const nullAccountInsert = write("mutation_receipt", "operation-1", "insert");
+  for (const receiptWrite of [nullAccountDelete, nullAccountInsert]) {
+    receiptWrite.params[3] = null;
+    const document = JSON.parse(receiptWrite.params[6]);
+    document.accountId = "";
+    receiptWrite.params[6] = JSON.stringify(document);
+  }
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    writes: [nullAccountDelete, nullAccountInsert],
+  })), true);
+
+  for (const tamper of [
+    (value) => { value.params[1] = "b".repeat(64); },
+    (value) => { value.params[3] = 42; },
+    (value) => { value.params[4] = "not-a-date"; },
+    (value) => { value.params[6] = "{"; },
+    (value) => {
+      const document = JSON.parse(value.params[6]);
+      document.operationId = "other-operation";
+      value.params[6] = JSON.stringify(document);
+    },
+    (value) => {
+      const document = JSON.parse(value.params[6]);
+      document.response = [];
+      value.params[6] = JSON.stringify(document);
+    },
+    (value) => {
+      const document = JSON.parse(value.params[6]);
+      document.unmodeled = true;
+      value.params[6] = JSON.stringify(document);
+    },
+  ]) {
+    const tampered = write("mutation_receipt", "operation-1", "delete");
+    tamper(tampered);
+    rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+      writes: [tampered, write("mutation_receipt", "operation-1", "insert")],
+    })));
+  }
+
+  const deleteWithBroadPredicate = write("mutation_receipt", "operation-1", "delete");
+  deleteWithBroadPredicate.sql = "DELETE FROM mutation_receipts WHERE operation_id = ?";
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [deleteWithBroadPredicate, write("mutation_receipt", "operation-1", "insert")],
+  })), "write_sql_contract_invalid");
+
+  const insertWithMismatchedDocument = write("mutation_receipt", "operation-1", "insert");
+  const mismatchedDocument = JSON.parse(insertWithMismatchedDocument.params[6]);
+  mismatchedDocument.requestHash = "b".repeat(64);
+  insertWithMismatchedDocument.params[6] = JSON.stringify(mismatchedDocument);
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+      insertWithMismatchedDocument,
+    ],
+  })), "write_receipt_document_invalid");
+
+  const activeDelete = write("mutation_receipt", "operation-1", "delete");
+  activeDelete.params[5] = "2026-07-17T00:00:00.000Z";
+  const activeDeleteDocument = JSON.parse(activeDelete.params[6]);
+  activeDeleteDocument.expiresAt = activeDelete.params[5];
+  activeDelete.params[6] = JSON.stringify(activeDeleteDocument);
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [activeDelete, write("mutation_receipt", "operation-1", "insert")],
+  })), "receipt_delete_not_expired");
+});
+
+test("each conditional plan has one receipt insert and the exact net-count capacity write", () => {
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update")],
+  })), "receipt_insert_count_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+      write("mutation_receipt", "operation-a", "insert"),
+      write("mutation_receipt", "operation-b", "insert"),
+    ],
+    operationId: "operation-a",
+  })), "receipt_insert_count_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [write("mutation_receipt", "operation-1", "insert")],
+  })), "receipt_capacity_increment_required");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+      write("mutation_receipt", "operation-a", "delete"),
+      write("mutation_receipt", "operation-b", "insert"),
+    ],
+    operationId: "operation-b",
+  })), "receipt_capacity_increment_unexpected");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt", "operation-a", "delete"),
+      write("mutation_receipt", "operation-b", "delete"),
+      write("mutation_receipt", "operation-c", "insert"),
+    ],
+    operationId: "operation-c",
+  })), "receipt_delete_count_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    operationId: "operation-other",
+    writes: [
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+      write("mutation_receipt", "operation-1", "insert"),
+    ],
+  })), "receipt_operation_id_mismatch");
+});
+
+test("receipt keys are canonical while only same-key delete-to-insert reuses one acquisition", () => {
+  const insertBeforeCrossKeyDelete = plan({
+    operationId: "operation-a",
+    writes: [
+      write("mutation_receipt", "operation-a", "insert"),
+      write("mutation_receipt", "operation-z", "delete"),
+    ],
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(insertBeforeCrossKeyDelete), [
+    {resource: "mutation_receipt", key: "operation-a", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mutation_receipt", key: "operation-z", mode: "exclusive", source: "writes", stage: "delete"},
+  ]);
+
+  const sameKeyReuse = plan({
+    writes: [
+      write("mutation_receipt", "operation-1", "delete"),
+      write("mutation_receipt", "operation-1", "insert"),
+    ],
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(sameKeyReuse), [
+    {resource: "mutation_receipt", key: "operation-1", mode: "exclusive", source: "writes", stage: "delete"},
+  ]);
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    operationId: "operation-a",
+    writes: [
+      write("mutation_receipt", "operation-z", "delete"),
+      write("mutation_receipt", "operation-a", "insert"),
+    ],
+  })), "first_acquisition_order_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    writes: [
+      write("mutation_receipt", "operation-1", "insert"),
+      write("mutation_receipt", "operation-1", "delete"),
+    ],
+  })), "duplicate_first_acquisition");
+});
+
 test("mail inserts, envelope inserts, tax update and receipt insert enter the acquisition trace", () => {
   const certified = plan({
     kind: "mail_claim_conditional_v1",
@@ -372,6 +626,7 @@ test("mail inserts, envelope inserts, tax update and receipt insert enter the ac
       write("mail_message", "mail-existing", "delete"),
       write("consumed_equipment_envelope", "envelope-A", "insert"),
       write("consumed_equipment_envelope", "envelope-a", "insert"),
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
       write("mutation_receipt", "operation-1", "insert"),
     ],
   });
@@ -383,6 +638,7 @@ test("mail inserts, envelope inserts, tax update and receipt insert enter the ac
     {resource: "mail_message", key: "mail-existing", mode: "exclusive", source: "locks", stage: "lock"},
     {resource: "consumed_equipment_envelope", key: "envelope-A", mode: "exclusive", source: "writes", stage: "insert"},
     {resource: "consumed_equipment_envelope", key: "envelope-a", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mutation_receipt_capacity", key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY, mode: "exclusive", source: "writes", stage: "update"},
     {resource: "mutation_receipt", key: "operation-1", mode: "exclusive", source: "writes", stage: "insert"},
   ]);
   assert.equal(Object.isFrozen(trace), true);
@@ -425,12 +681,14 @@ test("market tax traces the real server_state/auth acquisition", () => {
     writes: [
       write("mail_message", "mail-1", "insert"),
       write("market_tax", "diamonds", "update"),
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
       write("mutation_receipt", "operation-1", "insert"),
     ],
   }));
   assert.deepEqual(trace.map(({resource, key}) => [resource, key]), [
     ["mail_message", "mail-1"],
     ["market_tax", "auth"],
+    ["mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY],
     ["mutation_receipt", "operation-1"],
   ]);
 });
@@ -446,6 +704,7 @@ test("market create capacity guard precedes a plain listing insert and durable r
       write("profile_binding", "account-1", "write"),
       write("profile", "player-1", "write"),
       write("market_listing", "listing-new", "insert"),
+      write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
       write("mutation_receipt", "operation-1", "insert"),
     ],
   });
@@ -455,6 +714,7 @@ test("market create capacity guard precedes a plain listing insert and durable r
     {resource: "profile", key: "player-1", mode: "exclusive", source: "locks", stage: "lock"},
     {resource: "market_capacity", key: MARKET_CREATE_CAPACITY_GUARD_KEY, mode: "exclusive", source: "locks", stage: "lock"},
     {resource: "market_listing", key: "listing-new", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mutation_receipt_capacity", key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY, mode: "exclusive", source: "writes", stage: "update"},
     {resource: "mutation_receipt", key: "operation-1", mode: "exclusive", source: "writes", stage: "insert"},
   ]);
 });

@@ -5,6 +5,7 @@ const test = require("node:test");
 
 const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
+  canonicalDurableMutationReceipts,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
@@ -15,6 +16,7 @@ const {
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
   mysqlResourceAcquisitionTrace,
 } = require("../src/mysql-resource-acquisition-order");
 const {
@@ -189,6 +191,7 @@ test("planner certifies one exact ordinary listing with actor profile, capacity 
     "profile_binding",
     "profile",
     "market_listing",
+    "mutation_receipt_capacity",
     "mutation_receipt",
   ]);
   assert.equal(plan.capacityCheck.sql, MARKET_CREATE_CAPACITY_CHECK_SQL);
@@ -206,7 +209,34 @@ test("planner certifies one exact ordinary listing with actor profile, capacity 
       ["profile", "lock"],
       ["market_capacity", "lock"],
       ["market_listing", "insert"],
+      ["mutation_receipt_capacity", "update"],
       ["mutation_receipt", "insert"],
+    ],
+  );
+});
+
+test("planner keeps market create conditional when one expired same-operation receipt is replaced", () => {
+  const before = baselineState();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [OPERATION_ID]: mutationReceipt({
+      requestHash: "b".repeat(64),
+      committedAt: "2026-07-14T01:00:00.000Z",
+      expiresAt: "2026-07-15T01:00:00.000Z",
+      response: {ok: true, generation: "expired"},
+    }),
+  });
+  const plan = buildPlan(candidateState(before), before);
+
+  assert.equal(plan.kind, "market_create_conditional_v1");
+  assert.equal(
+    plan.writes.some((write) => write.resource === "mutation_receipt_capacity"),
+    false,
+  );
+  assert.deepEqual(
+    plan.writes.slice(-2).map(({resource, kind, key}) => [resource, kind, key]),
+    [
+      ["mutation_receipt", "delete", OPERATION_ID],
+      ["mutation_receipt", "insert", OPERATION_ID],
     ],
   );
 });
@@ -462,6 +492,10 @@ function createConditionalPool(options = {}) {
             }
             return [{affectedRows: 1}, []];
           }
+          if (sql === MUTATION_RECEIPT_CAPACITY_UPDATE_SQL) {
+            assert.deepEqual(params, [1, 1]);
+            return [{affectedRows: 1}, []];
+          }
           if (/^INSERT\s+INTO\s+mutation_receipts\b/i.test(sql.trim())) {
             if (options.receiptDuplicate === true) {
               const error = new Error("Duplicate operation_id");
@@ -512,7 +546,7 @@ function executableLegacySingleCreatePlan() {
   return buildPlan(after, before);
 }
 
-test("executor accepts authoritative 119 total and 19 seller counts, then commits all four writes", async () => {
+test("executor accepts authoritative 119 total and 19 seller counts, then commits all five writes", async () => {
   const fixture = createConditionalPool({totalCount: 119, sellerCount: 19});
   const result = await __runMysqlPoolSavePlanForTest(fixture.pool, executablePlan(), {
     expectedRevision: 0,
@@ -527,9 +561,10 @@ test("executor accepts authoritative 119 total and 19 seller counts, then commit
     "profile_binding",
     "profile",
     "market_listing",
+    "mutation_receipt_capacity",
     "mutation_receipt",
   ]);
-  assert.equal(businessWrites(fixture.transaction).length, 4);
+  assert.equal(businessWrites(fixture.transaction).length, 5);
 });
 
 test("legacy single-add checks live capacity after global and profile locks but before any business SQL", async () => {
@@ -625,6 +660,12 @@ for (const duplicate of [
       businessWrites(fixture.transaction).some(({sql}) => /^INSERT\s+INTO\s+market_listings\b/i.test(sql.trim())),
       true,
     );
+    if (duplicate.name === "receipt") {
+      assert.equal(
+        businessWrites(fixture.transaction).some(({sql}) => /^INSERT\s+INTO\s+mutation_receipts\b/i.test(sql.trim())),
+        true,
+      );
+    }
   });
 }
 

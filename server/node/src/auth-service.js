@@ -4417,7 +4417,8 @@ function createAuthService(options = {}) {
     let candidatePersistent = null;
     let response = result;
     if (businessPersistentChanged && result && result.ok && receiptOperationId !== "") {
-      const committedAt = isoNow(now);
+      const receiptNowMs = Number(now());
+      const committedAt = new Date(receiptNowMs).toISOString();
       response = durableCommitResult(result, {
         operationId: receiptOperationId,
         actionId,
@@ -4431,9 +4432,9 @@ function createAuthService(options = {}) {
         actionId,
         accountId: durableMutationAccountId(before, args, hashToken),
         committedAt,
-        expiresAt: new Date(now() + DURABLE_RECEIPT_TTL_MS).toISOString(),
+        expiresAt: new Date(receiptNowMs + DURABLE_RECEIPT_TTL_MS).toISOString(),
         response: clone(response),
-      }, {nowMs: now()});
+      }, {nowMs: receiptNowMs});
       candidate = normalizeData(candidate, {owned: true});
     }
     const receiptFinishedAt = process.hrtime.bigint();

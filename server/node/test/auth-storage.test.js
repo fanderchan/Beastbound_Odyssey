@@ -149,6 +149,10 @@ function createMysqlCasPoolFixture(options = {}) {
               String(row.player_id || "") === String(params[0] || "")
             ))), []];
           }
+          if (/^UPDATE auth_store_revisions[\s\S]+scope_key = 'mutation_receipt_capacity'/i.test(normalizedSql)) {
+            assert.deepEqual(params, [1, 1]);
+            return [{affectedRows: 1}, []];
+          }
           const revisionUpdateMatch = normalizedSql.match(
             /^UPDATE auth_store_revisions SET revision = revision \+ 1[\s\S]+AND revision = (\d+)$/i,
           );
@@ -1866,8 +1870,8 @@ process.stdin.on("end", () => {
     assert.ok(secondSave.includes("INSERT INTO accounts"));
     assert.ok(secondSave.includes("ON DUPLICATE KEY UPDATE"));
     assert.ok(secondSave.includes("DELETE FROM mail_messages WHERE mail_id = 'mail_incremental'"));
-    assert.ok(secondSave.includes("DELETE FROM mutation_receipts WHERE operation_id = 'operation_incremental_remove_0002'"));
-    assert.match(secondSave, /INSERT INTO mutation_receipts \(operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json\) VALUES \('operation_incremental_add_0003'/);
+    assert.match(secondSave, /DELETE FROM mutation_receipts\s+WHERE operation_id = 'operation_incremental_remove_0002' AND request_hash = '[a-f0-9]{64}'\s+AND action_id = '[^']+' AND account_id <=> '[^']+'\s+AND committed_at = '[^']+' AND expires_at = '[^']+'\s+AND document_json = CAST\('[\s\S]+' AS JSON\)/);
+    assert.match(secondSave, /INSERT INTO mutation_receipts\s+\(operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json\)\s+VALUES \('operation_incremental_add_0003'/);
     assert.equal(secondSave.includes("operation_incremental_keep_0001"), false);
     assert.match(secondSave, /INSERT INTO consumed_equipment_envelopes \(envelope_id\) VALUES \('eqx_store_consumed_second_0002'\)/);
     assert.equal(secondSave.includes("eqx_store_consumed_first_0001"), false);
@@ -2361,7 +2365,10 @@ process.stdin.on("end", () => {
     assert.match(scopedQueries[1], /FROM profile_bindings WHERE account_id = \? FOR UPDATE$/);
     assert.match(scopedQueries[2], /FROM profiles WHERE player_id = \? FOR UPDATE$/);
     assert.equal(scopedQueries.some((statement) => (
-      statement.startsWith("UPDATE auth_store_revisions")
+      /^UPDATE auth_store_revisions[\s\S]+mutation_receipt_capacity/i.test(statement)
+    )), true);
+    assert.equal(scopedQueries.some((statement) => (
+      /^UPDATE auth_store_revisions[\s\S]+scope_key = 'auth'/i.test(statement)
     )), false);
     assert.equal(casFixture.state.revision, 1);
     await store.close();
@@ -2519,6 +2526,40 @@ test("mysql strict new mail conflicts roll back the complete legacy transaction"
   assert.equal(casFixture.state.transactions[0].rolledBack, true);
   assert.equal(casFixture.state.transactions[0].committed, false);
   assert.equal(casFixture.state.transactions[0].released, true);
+});
+
+test("mysql legacy JSON containing mutation_receipts is not misclassified as a receipt write", async () => {
+  const statements = __buildSaveStatementsFromPersistentDataForTest({
+    schemaVersion: 1,
+    accounts: {
+      receiptmarker: {
+        accountId: "acc_receipt_marker_text",
+        username: "receiptmarker",
+        displayName: "玩家文本 mutation_receipts 不应改变 SQL 分类",
+        role: "player",
+        createdAt: "2026-07-16T09:00:00.000Z",
+        updatedAt: "2026-07-16T09:00:00.000Z",
+      },
+    },
+  }, {schemaVersion: 1});
+  const casFixture = createMysqlCasPoolFixture();
+
+  const result = await __runMysqlPoolSavePlanForTest(casFixture.pool, {
+    kind: "legacy_global_cas",
+    statements,
+    resourceLocks: [],
+  }, {
+    revisionCasEnabled: true,
+    expectedRevision: 0,
+  });
+
+  assert.equal(result.revision, 1);
+  assert.equal(result.globalRevisionAdvanced, true);
+  assert.equal(casFixture.state.transactions[0].committed, true);
+  assert.equal(casFixture.state.transactions[0].rolledBack, false);
+  assert.equal(casFixture.state.queriedStatements.some((sql) => (
+    /^INSERT INTO accounts\b/i.test(sql) && sql.includes("mutation_receipts")
+  )), true);
 });
 
 test("mysql saveAsync snapshots caller data before yielding and commits that owned baseline", async () => {

@@ -4,6 +4,9 @@ const {
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
 } = require("./auth/market-listing-state");
+const {
+  DURABLE_RECEIPT_MAX_COUNT,
+} = require("./auth/durable-mutation-state");
 
 const MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID = "mysql_resource_acquisition_order_invalid";
 const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
@@ -12,6 +15,15 @@ const MARKET_CREATE_CAPACITY_LOCK_SQL =
 const MARKET_CREATE_CAPACITY_CHECK_SQL = `SELECT COUNT(*) AS total_count,
   COALESCE(SUM(seller_account_id = ?), 0) AS seller_count
   FROM market_listings`;
+const MUTATION_RECEIPT_CAPACITY_GUARD_KEY = "mutation_receipt_capacity";
+const MUTATION_RECEIPT_CAPACITY_UPDATE_SQL = `UPDATE auth_store_revisions
+  SET revision = revision + ?
+  WHERE scope_key = 'mutation_receipt_capacity'
+    AND revision + ? BETWEEN 0 AND ${DURABLE_RECEIPT_MAX_COUNT}`;
+const MUTATION_RECEIPT_DELETE_SQL = `DELETE FROM mutation_receipts
+  WHERE operation_id = ? AND request_hash = ? AND action_id = ?
+    AND account_id <=> ? AND committed_at = ? AND expires_at = ?
+    AND document_json = CAST(? AS JSON)`;
 
 const CONDITIONAL_PLAN_KINDS = new Set([
   "profile_conditional_v2",
@@ -30,7 +42,8 @@ const RESOURCE_RANK = new Map([
   ["mail_message", 4],
   ["consumed_equipment_envelope", 5],
   ["market_tax", 6],
-  ["mutation_receipt", 7],
+  ["mutation_receipt_capacity", 7],
+  ["mutation_receipt", 8],
 ]);
 
 const EXPLICIT_LOCK_RESOURCES = new Set([
@@ -48,7 +61,8 @@ const WRITE_KINDS_BY_RESOURCE = new Map([
   ["mail_message", new Set(["insert", "update", "delete"])],
   ["consumed_equipment_envelope", new Set(["insert"])],
   ["market_tax", new Set(["update"])],
-  ["mutation_receipt", new Set(["insert"])],
+  ["mutation_receipt_capacity", new Set(["update"])],
+  ["mutation_receipt", new Set(["delete", "insert"])],
 ]);
 
 const PRELOCKED_WRITES = new Set([
@@ -219,10 +233,30 @@ function writeContract(resource, kind, key) {
           AND CAST(JSON_UNQUOTE(JSON_EXTRACT(document_json, '${jsonPath}')) AS UNSIGNED) <= ?`,
     };
   }
+  if (resource === "mutation_receipt_capacity" && kind === "update") {
+    if (key !== MUTATION_RECEIPT_CAPACITY_GUARD_KEY) {
+      return null;
+    }
+    return {
+      keyParamIndex: null,
+      paramsLength: 2,
+      receiptCapacityParams: true,
+      sql: MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+    };
+  }
+  if (resource === "mutation_receipt" && kind === "delete") {
+    return {
+      keyParamIndex: 0,
+      paramsLength: 7,
+      receiptParams: true,
+      sql: MUTATION_RECEIPT_DELETE_SQL,
+    };
+  }
   if (resource === "mutation_receipt" && kind === "insert") {
     return {
       keyParamIndex: 0,
       paramsLength: 7,
+      receiptParams: true,
       sql: `INSERT INTO mutation_receipts
         (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
         VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
@@ -411,6 +445,15 @@ function validateWrite(write) {
       throw invalid("write_params_invalid", write.resource, key);
     }
   }
+  if (
+    contract.receiptCapacityParams
+    && (write.params[0] !== 1 || write.params[1] !== 1)
+  ) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
+  const receiptTimes = contract.receiptParams
+    ? validateMutationReceiptParams(write.params, write.resource, key)
+    : null;
   if (write.expectedAffectedRows !== 1) {
     throw invalid("write_affected_rows_invalid", write.resource, key);
   }
@@ -418,7 +461,135 @@ function validateWrite(write) {
     resource: write.resource,
     key,
     kind: write.kind,
+    ...(receiptTimes === null ? {} : receiptTimes),
   };
+}
+
+function validateMutationReceiptParams(params, resource, key) {
+  const [operationId, requestHash, actionId, accountId, committedAt, expiresAt, documentJson] = params;
+  if (
+    operationId !== key
+    || typeof requestHash !== "string"
+    || requestHash === ""
+    || requestHash.trim() !== requestHash
+    || typeof actionId !== "string"
+    || actionId === ""
+    || actionId.trim() !== actionId
+    || (accountId !== null && (
+      typeof accountId !== "string"
+      || accountId === ""
+      || accountId.trim() !== accountId
+    ))
+    || typeof committedAt !== "string"
+    || typeof expiresAt !== "string"
+    || typeof documentJson !== "string"
+  ) {
+    throw invalid("write_params_invalid", resource, key);
+  }
+  const committedAtMs = Date.parse(committedAt);
+  const expiresAtMs = Date.parse(expiresAt);
+  if (
+    !Number.isFinite(committedAtMs)
+    || !Number.isFinite(expiresAtMs)
+    || new Date(committedAtMs).toISOString() !== committedAt
+    || new Date(expiresAtMs).toISOString() !== expiresAt
+    || expiresAtMs <= committedAtMs
+  ) {
+    throw invalid("write_params_invalid", resource, key);
+  }
+  let document;
+  try {
+    document = JSON.parse(documentJson);
+  } catch {
+    throw invalid("write_receipt_document_invalid", resource, key);
+  }
+  const expectedFields = new Set([
+    "schemaVersion",
+    "operationId",
+    "requestHash",
+    "actionId",
+    "accountId",
+    "committedAt",
+    "expiresAt",
+    "response",
+  ]);
+  if (
+    !isRecord(document)
+    || Object.keys(document).length !== expectedFields.size
+    || Object.keys(document).some((field) => !expectedFields.has(field))
+    || document.schemaVersion !== 1
+    || document.operationId !== operationId
+    || document.requestHash !== requestHash
+    || document.actionId !== actionId
+    || document.accountId !== (accountId === null ? "" : accountId)
+    || document.committedAt !== committedAt
+    || document.expiresAt !== expiresAt
+    || !isRecord(document.response)
+  ) {
+    throw invalid("write_receipt_document_invalid", resource, key);
+  }
+  return {receiptCommittedAtMs: committedAtMs, receiptExpiresAtMs: expiresAtMs};
+}
+
+function assertMysqlMutationReceiptWriteContract(write) {
+  const validated = validateWrite(write);
+  if (
+    validated.resource !== "mutation_receipt"
+    || !["delete", "insert"].includes(validated.kind)
+  ) {
+    throw invalid("mutation_receipt_write_invalid", validated.resource, validated.key);
+  }
+  return true;
+}
+
+function validateMutationReceiptPlan(plan, writes) {
+  const receiptWrites = writes.filter((write) => write.resource === "mutation_receipt");
+  const receiptInserts = receiptWrites.filter((write) => write.kind === "insert");
+  const receiptDeletes = receiptWrites.filter((write) => write.kind === "delete");
+  const capacityWrites = writes.filter((write) => write.resource === "mutation_receipt_capacity");
+  if (receiptInserts.length !== 1) {
+    throw invalid("receipt_insert_count_invalid", "mutation_receipt");
+  }
+  if (receiptDeletes.length > 1) {
+    throw invalid("receipt_delete_count_invalid", "mutation_receipt");
+  }
+  const receiptInsert = receiptInserts[0];
+  if (
+    typeof plan.operationId !== "string"
+    || plan.operationId !== receiptInsert.key
+  ) {
+    throw invalid("receipt_operation_id_mismatch", "mutation_receipt", receiptInsert.key);
+  }
+  if (receiptDeletes.length === 0) {
+    if (capacityWrites.length !== 1) {
+      throw invalid(
+        "receipt_capacity_increment_required",
+        "mutation_receipt_capacity",
+        MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+      );
+    }
+    return;
+  }
+  if (capacityWrites.length !== 0) {
+    throw invalid(
+      "receipt_capacity_increment_unexpected",
+      "mutation_receipt_capacity",
+      MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    );
+  }
+  const receiptDelete = receiptDeletes[0];
+  if (receiptDelete.receiptExpiresAtMs > receiptInsert.receiptCommittedAtMs) {
+    throw invalid("receipt_delete_not_expired", "mutation_receipt", receiptDelete.key);
+  }
+  // Different keys follow the canonical key order for deadlock safety. Only a
+  // reused physical key needs the stricter DELETE -> INSERT order.
+  if (receiptDelete.key === receiptInsert.key) {
+    const deleteIndex = writes.indexOf(receiptDelete);
+    const insertIndex = writes.indexOf(receiptInsert);
+    if (insertIndex !== deleteIndex + 1) {
+      throw invalid("receipt_same_key_reuse_order_invalid", "mutation_receipt", receiptInsert.key);
+    }
+  }
 }
 
 function acquisitionForWrite(write) {
@@ -446,7 +617,9 @@ function certify(plan) {
   const trace = [];
   const acquired = new Set();
   const explicitLocks = new Map();
+  const validatedWrites = [];
   let previous = null;
+  let previousWrite = null;
 
   for (const lockValue of plan.locks) {
     const lock = validateLock(lockValue);
@@ -478,6 +651,7 @@ function certify(plan) {
 
   for (const writeValue of plan.writes) {
     const write = validateWrite(writeValue);
+    validatedWrites.push(write);
     const writeIdentity = identity(write.resource, write.key);
     const requiresPrelock = requiresExclusivePrelock(write);
     if (requiresPrelock) {
@@ -485,13 +659,24 @@ function certify(plan) {
       if (!lock || lock.mode !== "exclusive") {
         throw invalid("exclusive_prelock_required", write.resource, write.key);
       }
+      previousWrite = write;
       continue;
     }
 
     const acquisition = acquisitionForWrite(write);
     const acquisitionIdentity = identity(acquisition.resource, acquisition.key);
     if (acquired.has(acquisitionIdentity)) {
-      throw invalid("duplicate_first_acquisition", acquisition.resource, acquisition.key);
+      const sameReceiptKeyReuse = write.resource === "mutation_receipt"
+        && write.kind === "insert"
+        && previousWrite !== null
+        && previousWrite.resource === "mutation_receipt"
+        && previousWrite.kind === "delete"
+        && previousWrite.key === write.key;
+      if (!sameReceiptKeyReuse) {
+        throw invalid("duplicate_first_acquisition", acquisition.resource, acquisition.key);
+      }
+      previousWrite = write;
+      continue;
     }
     if (previous !== null && compareAcquisitions(previous, acquisition) > 0) {
       throw invalid("first_acquisition_order_invalid", acquisition.resource, acquisition.key);
@@ -499,7 +684,10 @@ function certify(plan) {
     acquired.add(acquisitionIdentity);
     trace.push(Object.freeze(acquisition));
     previous = acquisition;
+    previousWrite = write;
   }
+
+  validateMutationReceiptPlan(plan, validatedWrites);
 
   return Object.freeze(trace);
 }
@@ -533,7 +721,11 @@ module.exports = {
   MARKET_CREATE_CAPACITY_LOCK_SQL,
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
+  MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+  MUTATION_RECEIPT_DELETE_SQL,
   MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID,
+  assertMysqlMutationReceiptWriteContract,
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,
   mysqlResourceAcquisitionTrace,

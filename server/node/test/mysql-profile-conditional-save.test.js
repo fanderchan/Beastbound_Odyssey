@@ -11,6 +11,7 @@ const {createAuthService} = require("../src/auth-service");
 const {
   canonicalDurableMutationReceipts,
   commitDurableMutationReceiptDelta,
+  durableMutationReceiptCount,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const mysqlStoreModule = require("../src/mysql-store");
@@ -195,14 +196,16 @@ test("planner selects v2 only for one scoped profile r to r+1 plus its matching 
   const writes = planOperations(plan, "writes");
   assert.deepEqual(
     writes.map(operationResource),
-    ["profile_binding", "profile", "mutation_receipt"],
+    ["profile_binding", "profile", "mutation_receipt_capacity", "mutation_receipt"],
   );
   assert.equal(writes.every((operation) => operation.expectedAffectedRows === 1), true);
   assert.match(String(writes[0].sql || ""), /^UPDATE profile_bindings\b/i);
   assert.match(String(writes[0].sql || ""), /WHERE[\s\S]+account_id[\s\S]+player_id[\s\S]+profile_revision/i);
   assert.match(String(writes[1].sql || ""), /^UPDATE profiles\b/i);
   assert.match(String(writes[1].sql || ""), /WHERE[\s\S]+player_id[\s\S]+account_id[\s\S]+profile_revision/i);
-  assert.match(String(writes[2].sql || ""), /^INSERT INTO mutation_receipts\b/i);
+  assert.match(String(writes[2].sql || ""), /^UPDATE auth_store_revisions\b/i);
+  assert.deepEqual(writes[2].params, [1, 1]);
+  assert.match(String(writes[3].sql || ""), /^INSERT INTO mutation_receipts\b/i);
   assert.equal(writes.some((operation) => /ON DUPLICATE KEY/i.test(String(operation.sql || ""))), false);
   assert.equal(
     [...planOperations(plan, "locks"), ...planOperations(plan, "writes")]
@@ -319,9 +322,9 @@ test("real record_point_save produces the strict profile plus receipt conditiona
   assert.equal(latestPlan.globalCompatibilityBarrier, "shared");
   assert.deepEqual(
     latestPlan.writes.map(operationResource),
-    ["profile_binding", "profile", "mutation_receipt"],
+    ["profile_binding", "profile", "mutation_receipt_capacity", "mutation_receipt"],
   );
-  assert.equal(latestPlan.writes[2].key, operationId);
+  assert.equal(latestPlan.writes[3].key, operationId);
 });
 
 test("planner rejects unsafe or broader mutations to the legacy global-CAS path", async (t) => {
@@ -444,34 +447,6 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
         return after;
       },
     },
-    {
-      name: "expired receipt delete and same-key insert",
-      scope: rowLocalProfileScope("op_profile_conditional_expired", {
-        requestHash: "b".repeat(64),
-      }),
-      mutate(before) {
-        const operationId = "op_profile_conditional_expired";
-        before.mutationReceipts = canonicalDurableMutationReceipts({
-          [operationId]: {
-            ...mutationReceipt(operationId),
-            committedAt: "2026-07-01T00:00:00.000Z",
-            expiresAt: "2026-07-04T00:00:00.000Z",
-            response: {ok: true, generation: 1},
-          },
-        });
-        const after = nextProfileState(before);
-        after.mutationReceipts = stageDurableMutationReceipt(
-          after.mutationReceipts,
-          {
-            ...mutationReceipt(operationId),
-            requestHash: "b".repeat(64),
-            response: {ok: true, generation: 2},
-          },
-          {nowMs: Date.parse("2026-07-14T01:01:00.000Z")},
-        );
-        return after;
-      },
-    },
   ];
 
   for (const fixture of cases) {
@@ -493,6 +468,105 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
       );
     });
   }
+});
+
+test("expired same-key receipt replacement stays row-local and deletes before insert", () => {
+  const operationId = "op_profile_conditional_expired";
+  const before = profileState();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [operationId]: {
+      ...mutationReceipt(operationId),
+      committedAt: "2026-07-01T00:00:00.000Z",
+      expiresAt: "2026-07-04T00:00:00.000Z",
+      response: {ok: true, generation: 1},
+    },
+  });
+  const after = nextProfileState(before);
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      ...mutationReceipt(operationId),
+      requestHash: "b".repeat(64),
+      response: {ok: true, generation: 2},
+    },
+    {nowMs: Date.parse("2026-07-14T01:01:00.000Z")},
+  );
+  const plan = buildPlan(after, before, rowLocalProfileScope(operationId, {
+    requestHash: "b".repeat(64),
+  }));
+
+  assert.equal(plan.kind, "profile_conditional_v2");
+  assert.equal(plan.globalRevisionFence, false);
+  assert.deepEqual(plan.writes.map(operationResource), [
+    "profile_binding",
+    "profile",
+    "mutation_receipt",
+    "mutation_receipt",
+  ]);
+  assert.equal(plan.writes[2].kind, "delete");
+  assert.equal(plan.writes[3].kind, "insert");
+  assert.equal(plan.writes[2].key, operationId);
+  assert.equal(plan.writes[3].key, operationId);
+  assert.match(plan.writes[2].sql, /request_hash[\s\S]+action_id[\s\S]+account_id[\s\S]+committed_at[\s\S]+expires_at[\s\S]+document_json/i);
+});
+
+test("19999 to 20000 to 20000 keeps expired receipt turnover row-local", () => {
+  const firstNowMs = Date.parse("2040-01-01T00:00:00.000Z");
+  const expiredOperationId = "operation_profile_steady_expired_00000000";
+  const rawReceipts = {};
+  for (let index = 0; index < 19999; index += 1) {
+    const operationId = index === 0
+      ? expiredOperationId
+      : `operation_profile_steady_seed_${String(index).padStart(8, "0")}`;
+    rawReceipts[operationId] = mutationReceipt(operationId, {
+      committedAt: new Date(firstNowMs - 1000 + index).toISOString(),
+      expiresAt: new Date(index === 0 ? firstNowMs + 1 : firstNowMs + 60_000 + index).toISOString(),
+    });
+  }
+  const beforeFirst = profileState();
+  beforeFirst.mutationReceipts = canonicalDurableMutationReceipts(rawReceipts);
+  const firstOperationId = "operation_profile_steady_next_a";
+  const afterFirst = nextProfileState(beforeFirst, {stoneCoins: 99});
+  afterFirst.mutationReceipts = stageDurableMutationReceipt(
+    afterFirst.mutationReceipts,
+    mutationReceipt(firstOperationId, {
+      committedAt: new Date(firstNowMs).toISOString(),
+      expiresAt: new Date(firstNowMs + 120_000).toISOString(),
+    }),
+    {nowMs: firstNowMs},
+  );
+  const firstPlan = buildPlan(afterFirst, beforeFirst, rowLocalProfileScope(firstOperationId));
+  assert.equal(firstPlan.kind, "profile_conditional_v2");
+  assert.equal(durableMutationReceiptCount(afterFirst.mutationReceipts), 20000);
+  assert.equal(firstPlan.writes.some((write) => write.resource === "mutation_receipt_capacity"), true);
+
+  commitDurableMutationReceiptDelta(afterFirst.mutationReceipts);
+  const secondNowMs = firstNowMs + 2;
+  const secondOperationId = "operation_profile_steady_next_b";
+  const afterSecond = nextProfileState(afterFirst, {
+    revision: 3,
+    stoneCoins: 98,
+    updatedAt: new Date(secondNowMs).toISOString(),
+  });
+  afterSecond.mutationReceipts = stageDurableMutationReceipt(
+    afterSecond.mutationReceipts,
+    mutationReceipt(secondOperationId, {
+      committedAt: new Date(secondNowMs).toISOString(),
+      expiresAt: new Date(secondNowMs + 120_000).toISOString(),
+    }),
+    {nowMs: secondNowMs},
+  );
+  const secondPlan = buildPlan(afterSecond, afterFirst, rowLocalProfileScope(secondOperationId));
+  assert.equal(secondPlan.kind, "profile_conditional_v2");
+  assert.equal(secondPlan.globalRevisionFence, false);
+  assert.equal(secondPlan.globalCompatibilityBarrier, "shared");
+  assert.equal(durableMutationReceiptCount(afterSecond.mutationReceipts), 20000);
+  assert.equal(secondPlan.writes.some((write) => write.resource === "mutation_receipt_capacity"), false);
+  assert.deepEqual(
+    secondPlan.writes.filter((write) => write.resource === "mutation_receipt")
+      .map((write) => [write.kind, write.key]),
+    [["delete", expiredOperationId], ["insert", secondOperationId]],
+  );
 });
 
 test("legacy planner guards the complete profile snapshot even when only profile A is written", () => {
@@ -541,6 +615,9 @@ function createLoaderFixture(tempDir, options = {}) {
       ["profile_bindings", ACCOUNT_ID_B, JSON.stringify(before.profileBindings[ACCOUNT_ID_B])],
       ["profiles", PLAYER_ID_B, JSON.stringify(before.profiles[PLAYER_ID_B])],
     );
+  }
+  for (const receipt of Object.values(options.mutationReceipts || {})) {
+    rows.push(["mutation_receipts", receipt.operationId, JSON.stringify(receipt)]);
   }
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
 let stdin = "";
@@ -674,6 +751,16 @@ function createConditionalPool(options = {}) {
               }
               return [{affectedRows: Number(options.receiptAffectedRows ?? 1)}, []];
             }
+            if (/^DELETE\s+FROM\s+mutation_receipts\b/i.test(sql.trim())) {
+              assert.equal(params.length, 7);
+              assert.equal(params[0], JSON.parse(params[6]).operationId);
+              return [{affectedRows: Number(options.receiptDeleteAffectedRows ?? 1)}, []];
+            }
+            if (/^UPDATE\s+auth_store_revisions\b/i.test(sql.trim())
+              && /scope_key\s*=\s*'mutation_receipt_capacity'/i.test(sql)) {
+              assert.deepEqual(params, [1, 1]);
+              return [{affectedRows: Number(options.receiptCapacityAffectedRows ?? 1)}, []];
+            }
             if (/^UPDATE\s+auth_store_revisions\b/i.test(sql.trim())) {
               assert.deepEqual(params, []);
               const expected = Number((sql.match(/AND\s+revision\s*=\s*(\d+)/i) || [])[1] ?? params[0]);
@@ -727,9 +814,18 @@ test("conditional executor pool fails closed on unmodeled SQL", async () => {
 
 async function openConditionalStore(options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-profile-conditional-"));
+  const operationId = String(options.operationId || DEFAULT_OPERATION_ID);
+  const expiredReceipt = options.expiredReceipt === true
+    ? mutationReceipt(operationId, {
+      committedAt: "2026-07-10T01:00:00.000Z",
+      expiresAt: "2026-07-14T01:00:59.999Z",
+      response: {ok: true, generation: 1},
+    })
+    : null;
   const loader = createLoaderFixture(tempDir, {
     revision: options.loadedStoreRevision ?? 0,
     includeSecondProfile: options.includeSecondProfile === true,
+    mutationReceipts: expiredReceipt === null ? {} : {[operationId]: expiredReceipt},
   });
   const harness = createConditionalPool(options);
   const store = createMysqlAuthStore({
@@ -745,7 +841,6 @@ async function openConditionalStore(options = {}) {
     poolFactory: () => harness.pool,
   });
   const loaded = store.load();
-  const operationId = String(options.operationId || DEFAULT_OPERATION_ID);
   const candidate = eligibleProfileState(loaded, {operationId});
   const saveOptions = {
     consistencyScope: rowLocalProfileScope(operationId, options.scopeOverrides || {}),
@@ -753,6 +848,7 @@ async function openConditionalStore(options = {}) {
   return {
     candidate,
     harness,
+    loaded,
     saveOptions,
     store,
     async close() {
@@ -780,14 +876,22 @@ test("pool executor takes a shared compatibility barrier and never advances the 
     const profileLock = sqlIndex(transaction, /SELECT[\s\S]+FROM\s+profiles[\s\S]+FOR\s+UPDATE/i);
     const bindingUpdate = sqlIndex(transaction, /^UPDATE\s+profile_bindings\b/i);
     const profileUpdate = sqlIndex(transaction, /^UPDATE\s+profiles\b/i);
+    const receiptCapacityUpdate = sqlIndex(
+      transaction,
+      /^UPDATE\s+auth_store_revisions[\s\S]+mutation_receipt_capacity/i,
+    );
     const receiptInsert = sqlIndex(transaction, /^INSERT\s+INTO\s+mutation_receipts\b/i);
-    const globalUpdate = sqlIndex(transaction, /^UPDATE\s+auth_store_revisions\b/i);
+    const globalUpdate = sqlIndex(
+      transaction,
+      /^UPDATE\s+auth_store_revisions[\s\S]+scope_key\s*=\s*'auth'/i,
+    );
 
     assert.ok(globalLock >= 0 && globalLock < bindingLock);
     assert.ok(bindingLock >= 0 && bindingLock < profileLock);
     assert.ok(profileLock >= 0 && profileLock < bindingUpdate);
     assert.ok(bindingUpdate >= 0 && bindingUpdate < profileUpdate);
-    assert.ok(profileUpdate >= 0 && profileUpdate < receiptInsert);
+    assert.ok(profileUpdate >= 0 && profileUpdate < receiptCapacityUpdate);
+    assert.ok(receiptCapacityUpdate >= 0 && receiptCapacityUpdate < receiptInsert);
     assert.equal(globalUpdate, -1);
     assert.equal(transaction.queries.some((entry) => /ON DUPLICATE KEY UPDATE/i.test(entry.sql) && /\bprofiles?\b/i.test(entry.sql)), false);
     assert.equal(transaction.committed, true);
@@ -864,6 +968,58 @@ for (const failure of [
     }
   });
 }
+
+test("receipt capacity crossing conflict rolls back profile writes before receipt insert", async () => {
+  const fixture = await openConditionalStore({receiptCapacityAffectedRows: 0});
+  try {
+    await assert.rejects(
+      fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+      isResourceRevisionConflict,
+    );
+    const transaction = fixture.harness.shared.transactions[0];
+    assert.ok(sqlIndex(transaction, /^UPDATE\s+profile_bindings\b/i) >= 0);
+    assert.ok(sqlIndex(transaction, /^UPDATE\s+profiles\b/i) >= 0);
+    assert.ok(sqlIndex(
+      transaction,
+      /^UPDATE\s+auth_store_revisions[\s\S]+mutation_receipt_capacity/i,
+    ) >= 0);
+    assert.equal(sqlIndex(transaction, /^INSERT\s+INTO\s+mutation_receipts\b/i), -1);
+    assert.equal(transaction.committed, false);
+    assert.equal(transaction.rolledBack, true);
+    assert.equal(fixture.harness.shared.revision, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("stale expired receipt delete rolls back profile writes and replacement insert", async () => {
+  const fixture = await openConditionalStore({
+    expiredReceipt: true,
+    receiptDeleteAffectedRows: 0,
+  });
+  try {
+    const plan = buildPlan(fixture.candidate, fixture.loaded, fixture.saveOptions.consistencyScope);
+    assert.equal(plan.kind, "profile_conditional_v2");
+    assert.equal(
+      plan.writes.filter((write) => write.resource === "mutation_receipt" && write.kind === "delete").length,
+      1,
+    );
+    await assert.rejects(
+      fixture.store.saveAsync(fixture.candidate, fixture.saveOptions),
+      isResourceRevisionConflict,
+    );
+    const transaction = fixture.harness.shared.transactions[0];
+    const deleteIndex = sqlIndex(transaction, /^DELETE\s+FROM\s+mutation_receipts\b/i);
+    const insertIndex = sqlIndex(transaction, /^INSERT\s+INTO\s+mutation_receipts\b/i);
+    assert.ok(deleteIndex >= 0);
+    assert.equal(insertIndex, -1);
+    assert.equal(transaction.committed, false);
+    assert.equal(transaction.rolledBack, true);
+    assert.equal(fixture.harness.shared.revision, 0);
+  } finally {
+    await fixture.close();
+  }
+});
 
 test("legacy execution rejects a stale untouched profile B before writing profile A", async () => {
   const fixture = await openConditionalStore({

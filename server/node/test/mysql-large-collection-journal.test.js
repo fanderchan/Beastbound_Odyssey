@@ -16,9 +16,14 @@ const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
 const {
+  canonicalDurableMutationReceipts,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
-const {createMysqlAuthStore} = require("../src/mysql-store");
+const {
+  __buildMysqlSavePlanFromPersistentDataForTest,
+  __runMysqlPoolSavePlanForTest,
+  createMysqlAuthStore,
+} = require("../src/mysql-store");
 const {battleProfile} = require("../test-support/auth-service-test-context");
 
 const MYSQL_SESSION_POLICY_SQL =
@@ -79,15 +84,19 @@ process.stdin.on("end", () => {
 `, {mode: 0o755});
 
   const transactions = [];
+  const transactionQueries = [];
   const sessionPolicies = [];
   let activeQueries = null;
+  let activeTransactionQueries = null;
   let failNextQuery = true;
   let storeRevision = 0;
   let pendingStoreRevision = null;
   const connection = {
     async beginTransaction() {
       activeQueries = [];
+      activeTransactionQueries = [];
       transactions.push(activeQueries);
+      transactionQueries.push(activeTransactionQueries);
     },
     async query(statement, params = []) {
       if (isDefaultMysqlSessionPolicy(statement, params)) {
@@ -96,12 +105,30 @@ process.stdin.on("end", () => {
       }
       rejectOtherMysqlSetStatement(statement);
       activeQueries.push(statement);
+      activeTransactionQueries.push({
+        sql: String(statement && statement.sql || statement).trim(),
+        params: structuredClone(params),
+      });
       if (failNextQuery) {
         failNextQuery = false;
         throw new Error("injected journal rollback");
       }
-      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR (?:UPDATE|SHARE)$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
+      }
+      if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = \? FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{
+          account_id: accountId,
+          player_id: playerId,
+          profile_revision: binding.profileRevision,
+        }], []];
+      }
+      if (/^SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = \? FOR UPDATE$/i.test(String(statement).trim())) {
+        return [[{
+          player_id: playerId,
+          account_id: accountId,
+          profile_revision: profileDocument.profileRevision,
+        }], []];
       }
       if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(String(statement).trim())) {
         return [[], []];
@@ -167,6 +194,7 @@ process.stdin.on("end", () => {
     assert.equal(transactions.length, 2);
     assert.deepEqual(sessionPolicies, [[3, 5], [3, 5]]);
     const successful = transactions[1];
+    const successfulQueries = transactionQueries[1];
     const globalLockIndex = successful.findIndex((statement) => (
       /^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())
     ));
@@ -176,18 +204,27 @@ process.stdin.on("end", () => {
     const profileSnapshotIndex = successful.findIndex((statement) => (
       /^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(String(statement).trim())
     ));
-    const receiptDeleteIndex = successful.findIndex((statement) => (
-      statement.includes(`DELETE FROM mutation_receipts WHERE operation_id = '${oldOperationId}'`)
+    const receiptDeleteIndex = successfulQueries.findIndex(({sql, params}) => (
+      /^DELETE FROM mutation_receipts\b/i.test(sql) && params[0] === oldOperationId
     ));
-    const receiptInsertIndex = successful.findIndex((statement) => (
-      statement.includes("INSERT INTO mutation_receipts") && statement.includes(oldOperationId)
+    const receiptInsertIndex = successfulQueries.findIndex(({sql, params}) => (
+      /^INSERT INTO mutation_receipts\b/i.test(sql) && params[0] === oldOperationId
     ));
     assert.ok(globalLockIndex >= 0);
     assert.ok(bindingSnapshotIndex > globalLockIndex);
     assert.ok(profileSnapshotIndex > bindingSnapshotIndex);
     assert.ok(receiptDeleteIndex > profileSnapshotIndex);
     assert.ok(receiptInsertIndex > receiptDeleteIndex);
-    assert.equal(successful.filter((statement) => statement.includes(oldOperationId)).length, 2);
+    assert.deepEqual(successfulQueries[receiptDeleteIndex].params, [
+      oldOperationId,
+      oldReceipt.requestHash,
+      oldReceipt.actionId,
+      oldReceipt.accountId,
+      oldReceipt.committedAt,
+      oldReceipt.expiresAt,
+      JSON.stringify(oldReceipt),
+    ]);
+    assert.equal(successfulQueries.filter(({params}) => params[0] === oldOperationId).length, 2);
     assert.equal(successful.some((statement) => statement.includes("eqx_mysql_journal_append_0002")), true);
     assert.equal(successful.some((statement) => statement.includes("eqx_mysql_journal_baseline_0001")), false);
     assert.equal(successful.some((statement) => (
@@ -198,11 +235,11 @@ process.stdin.on("end", () => {
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
-test("service replaces an expired receipt through the real mysql planner and then replays without SQL", async () => {
+test("service replaces an expired receipt through the real mysql planner and replays from the exact committed row", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-service-mysql-journal-"));
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const operationId = "operation_service_mysql_expired_0001";
-  const token = "service_mysql_journal_token";
+  const token = "s".repeat(43);
   const accountId = "acc_service_mysql_journal";
   const playerId = "player_service_mysql_journal";
   const nowIso = "2026-07-12T00:00:00.000Z";
@@ -278,6 +315,7 @@ process.stdin.on("end", () => {
   let current = null;
   let storeRevision = 0;
   let pendingStoreRevision = null;
+  let committedReceipt = oldReceipt;
   const connection = {
     async beginTransaction() {
       current = [];
@@ -290,6 +328,19 @@ process.stdin.on("end", () => {
       }
       rejectOtherMysqlSetStatement(statement);
       current.push(statement);
+      if (/FROM auth_store_revisions AS revision_row\s+LEFT JOIN mutation_receipts AS receipt/i.test(String(statement))) {
+        assert.deepEqual(params, [operationId, "auth"]);
+        return [[{
+          store_revision: storeRevision,
+          operation_id: committedReceipt.operationId,
+          request_hash: committedReceipt.requestHash,
+          action_id: committedReceipt.actionId,
+          account_id: committedReceipt.accountId,
+          committed_at: committedReceipt.committedAt,
+          expires_at: committedReceipt.expiresAt,
+          document_json: structuredClone(committedReceipt),
+        }], []];
+      }
       if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(String(statement).trim())) {
         return [[{storeRevision}], []];
       }
@@ -374,13 +425,152 @@ process.stdin.on("end", () => {
       /^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(String(statement).trim())
     )), true);
 
+    committedReceipt = {
+      schemaVersion: 1,
+      operationId,
+      requestHash: operation.requestHash,
+      actionId: operation.actionId,
+      accountId,
+      committedAt: first.durableCommit.committedAt,
+      expiresAt: "2026-07-15T00:00:00.000Z",
+      response: structuredClone(first),
+    };
+    const currentSession = service.getSession(token);
+    assert.equal(currentSession.ok, true, JSON.stringify(currentSession));
+    const publishedReceipt = service.snapshot().mutationReceipts[operationId];
+    assert.equal(publishedReceipt.requestHash, operation.requestHash);
+    assert.equal(publishedReceipt.actionId, operation.actionId);
+    assert.equal(publishedReceipt.expiresAt, "2026-07-15T00:00:00.000Z");
+    assert.equal(publishedReceipt.response.ok, true);
+
     const replay = await service.invokeDurable("bankDeposit", [token, {stoneCoins: 1}], operation);
-    assert.equal(replay.ok, true);
+    assert.equal(replay.ok, true, JSON.stringify(replay));
     assert.equal(replay.durableCommit.replayed, true);
-    assert.equal(transactions.length, 1);
+    assert.equal(transactions.length, 2);
+    assert.deepEqual(sessionPolicies, [[3, 5], [3, 5]]);
+    assert.equal(transactions[1].length, 1);
+    assert.match(String(transactions[1][0]), /LEFT JOIN mutation_receipts AS receipt/i);
+    assert.equal(transactions[1].some((statement) => (
+      /^(?:INSERT|UPDATE|DELETE)\b/i.test(String(statement).trim())
+    )), false);
     await service.stopDurableAdmissionsAndDrain();
     await mysqlStore.close();
   } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
+});
+
+test("stale legacy expired-receipt deletion rolls back before replacement or auth revision", async () => {
+  const operationId = "operation_legacy_stale_delete_0001";
+  const previousReceipt = {
+    schemaVersion: 1,
+    operationId,
+    requestHash: "7".repeat(64),
+    actionId: "bank.deposit",
+    accountId: "acc_legacy_stale_receipt",
+    committedAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: "2026-07-04T00:00:00.000Z",
+    response: {ok: true, generation: 1},
+  };
+  const previous = {
+    schemaVersion: 1,
+    mutationReceipts: canonicalDurableMutationReceipts({
+      [previousReceipt.operationId]: previousReceipt,
+    }),
+  };
+  const next = {...previous};
+  next.mutationReceipts = stageDurableMutationReceipt(previous.mutationReceipts, {
+    schemaVersion: 1,
+    operationId,
+    requestHash: "8".repeat(64),
+    actionId: "bank.deposit",
+    accountId: "acc_legacy_stale_receipt",
+    committedAt: "2026-07-12T00:00:00.000Z",
+    expiresAt: "2026-07-15T00:00:00.000Z",
+    response: {ok: true, generation: 2},
+  }, {
+    nowMs: Date.parse("2026-07-12T00:00:00.000Z"),
+    reserveCount: 1,
+  });
+  const plan = __buildMysqlSavePlanFromPersistentDataForTest(next, previous);
+  assert.equal(plan.kind, "legacy_global_cas");
+
+  const state = {queries: [], committed: false, rolledBack: false};
+  const connection = {
+    async beginTransaction() {},
+    async query(statement, params = []) {
+      const sql = String(statement && statement.sql || statement).trim();
+      if (isDefaultMysqlSessionPolicy(statement, params)) {
+        return [{affectedRows: 0}, []];
+      }
+      rejectOtherMysqlSetStatement(statement);
+      state.queries.push({sql, params: structuredClone(params)});
+      if (/^SELECT revision AS storeRevision FROM auth_store_revisions[\s\S]+FOR UPDATE$/i.test(sql)) {
+        return [[{storeRevision: 0}], []];
+      }
+      if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(sql)) {
+        return [[], []];
+      }
+      if (/^SELECT player_id, account_id, profile_revision FROM profiles ORDER BY player_id FOR UPDATE$/i.test(sql)) {
+        return [[], []];
+      }
+      if (/^DELETE FROM mutation_receipts\b/i.test(sql)) {
+        return [{affectedRows: 0}, []];
+      }
+      if (/^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(sql)) {
+        return [{affectedRows: 1}, []];
+      }
+      return [{affectedRows: 1}, []];
+    },
+    async commit() { state.committed = true; },
+    async rollback() { state.rolledBack = true; },
+    release() {},
+    destroy() {},
+  };
+  const pool = {
+    async getConnection() { return connection; },
+    async end() {},
+  };
+
+  await assert.rejects(
+    __runMysqlPoolSavePlanForTest(pool, plan, {
+      expectedRevision: 0,
+      revisionCasEnabled: true,
+    }),
+    (error) => error && error.code === "mysql_resource_revision_conflict",
+  );
+  const deleteQuery = state.queries.find(({sql}) => /^DELETE FROM mutation_receipts\b/i.test(sql));
+  assert.ok(deleteQuery);
+  assert.equal(deleteQuery.params.length, 7);
+  assert.equal(
+    state.queries.some(({sql}) => /^INSERT INTO mutation_receipts\b/i.test(sql)),
+    false,
+  );
+  assert.equal(
+    state.queries.some(({sql}) => /^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(sql)),
+    false,
+  );
+  assert.equal(state.rolledBack, true);
+  assert.equal(state.committed, false);
+});
+
+test("online mysql planner rejects an uncertified generic receipt snapshot deletion", () => {
+  const receipt = {
+    schemaVersion: 1,
+    operationId: "operation_generic_receipt_delete_0001",
+    requestHash: "9".repeat(64),
+    actionId: "bank.withdraw",
+    accountId: "acc_generic_receipt_delete",
+    committedAt: "2026-07-16T01:00:00.000Z",
+    expiresAt: "2026-07-19T01:00:00.000Z",
+    response: {ok: true},
+  };
+
+  assert.throws(
+    () => __buildMysqlSavePlanFromPersistentDataForTest(
+      {schemaVersion: 1, mutationReceipts: {}},
+      {schemaVersion: 1, mutationReceipts: {[receipt.operationId]: receipt}},
+    ),
+    (error) => error && error.code === "mysql_resource_precondition_invalid",
+  );
 });

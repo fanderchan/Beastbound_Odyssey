@@ -8,8 +8,10 @@ const test = require("node:test");
 
 const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
+  DURABLE_RECEIPT_MAX_COUNT,
   canonicalDurableMutationReceipts,
   commitDurableMutationReceiptDelta,
+  durableMutationReceiptDeltaFrom,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
@@ -21,7 +23,8 @@ const {
 } = require("../src/auth/market-listing-state");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
-  createSharedMysqlTransactionHarness,
+  createSharedMysqlTransactionHarness: createBaseSharedMysqlTransactionHarness,
+  sharedMysqlOperation,
 } = require("../test-support/shared-mysql-transaction-harness");
 
 const ACTORS = Object.freeze({
@@ -47,7 +50,47 @@ const MAIL_SEND_ACTION_ID = "POST /mail/send";
 const MARKET_BUY_ACTION_ID = "POST /market/buy";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
 const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
+const MUTATION_RECEIPT_CAPACITY_GUARD_KEY = "mutation_receipt_capacity";
 const MAIL_ENVELOPE_ID = "eqx_shared_mail_duplicate_0001";
+
+function createSharedMysqlTransactionHarness(options = {}) {
+  const harness = createBaseSharedMysqlTransactionHarness(options);
+  const statementHandler = options && options.statementHandler;
+  if (statementHandler && typeof statementHandler.attachSnapshotProvider === "function") {
+    statementHandler.attachSnapshotProvider(() => harness.snapshot());
+  }
+  if (!statementHandler
+    || typeof statementHandler.isMutationReceiptCapacityUpdate !== "function"
+    || typeof statementHandler.executeMutationReceiptCapacityUpdate !== "function") {
+    return harness;
+  }
+  return Object.freeze({
+    ...harness,
+    poolFor(writerId) {
+      const pool = harness.poolFor(writerId);
+      return {
+        ...pool,
+        async getConnection() {
+          const connection = await pool.getConnection();
+          return {
+            ...connection,
+            async query(statement, params = []) {
+              if (statementHandler.isMutationReceiptCapacityUpdate(statement)) {
+                return statementHandler.executeMutationReceiptCapacityUpdate(
+                  connection,
+                  statement,
+                  params,
+                  String(writerId),
+                );
+              }
+              return connection.query(statement, params);
+            },
+          };
+        },
+      };
+    },
+  });
+}
 
 function baselineAuthority() {
   const authority = {
@@ -812,6 +855,9 @@ function marketCapacityCountRows(entries = []) {
 
 function sqlSeed(options = {}) {
   const authority = options.authority || baselineAuthority();
+  const mutationReceipts = options.mutationReceipts || {};
+  const mutationReceiptCount = Object.keys(mutationReceipts).length;
+  assert.ok(mutationReceiptCount <= DURABLE_RECEIPT_MAX_COUNT);
   const profileBindings = {};
   const profiles = {};
   for (const actor of Object.values(ACTORS)) {
@@ -836,6 +882,10 @@ function sqlSeed(options = {}) {
       [MARKET_CREATE_CAPACITY_GUARD_KEY]: {
         scope_key: MARKET_CREATE_CAPACITY_GUARD_KEY,
         revision: 0,
+      },
+      [MUTATION_RECEIPT_CAPACITY_GUARD_KEY]: {
+        scope_key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+        revision: mutationReceiptCount,
       },
     },
     server_state: {
@@ -891,13 +941,52 @@ function sqlSeed(options = {}) {
         envelope_id: envelopeId,
       }]),
     ),
-    mutation_receipts: options.mutationReceipts || {},
+    mutation_receipts: mutationReceipts,
     market_capacity_counts: marketCapacityCountRows(options.marketCapacityCounts),
   };
 }
 
+function mutationReceiptCapacityFixture(count, options = {}) {
+  assert.ok(Number.isSafeInteger(count) && count >= 0 && count <= DURABLE_RECEIPT_MAX_COUNT);
+  const expiredCount = Math.max(0, Math.min(count, Number(options.expiredCount || 0)));
+  const authority = baselineAuthority();
+  const receipts = {};
+  const rows = {};
+  for (let index = 0; index < count; index += 1) {
+    const operationId = `op_capacity_fixture_${String(index).padStart(8, "0")}`;
+    const receipt = {
+      schemaVersion: 1,
+      operationId,
+      requestHash: (index % 2 === 0 ? "a" : "b").repeat(64),
+      actionId: "record_point_save",
+      accountId: index % 2 === 0 ? ACTORS.a.accountId : ACTORS.b.accountId,
+      committedAt: UPDATED_AT_1,
+      expiresAt: index < expiredCount ? "2026-07-14T02:00:30.000Z" : "2026-07-17T02:10:00.000Z",
+      response: {ok: true, operationId},
+    };
+    receipts[operationId] = receipt;
+    rows[operationId] = {
+      operation_id: operationId,
+      request_hash: receipt.requestHash,
+      action_id: receipt.actionId,
+      account_id: receipt.accountId,
+      committed_at: receipt.committedAt,
+      expires_at: receipt.expiresAt,
+      document_json: receipt,
+    };
+  }
+  authority.mutationReceipts = receipts;
+  return {authority, rows};
+}
+
 function normalizeSql(sql) {
   return String(sql || "").trim().replace(/\s+/g, " ");
+}
+
+function mutationReceiptCapacityUpdateMatch(sql) {
+  return normalizeSql(sql).match(
+    /^UPDATE auth_store_revisions SET revision = revision \+ \? WHERE scope_key = 'mutation_receipt_capacity' AND revision \+ \? BETWEEN 0 AND (\d+)$/i,
+  );
 }
 
 function requiredParams(params, count, sql) {
@@ -920,7 +1009,10 @@ function jsonParameter(value, sql) {
 }
 
 function createProductionSqlHandler(queryLog, options = {}) {
-  return ({sql, params, writerId, operation}) => {
+  let snapshotProvider = typeof options.snapshotProvider === "function"
+    ? options.snapshotProvider
+    : null;
+  const handler = ({sql, params, writerId, operation}) => {
     const normalized = normalizeSql(sql);
     queryLog.push({writerId, sql: normalized, params: Array.isArray(params) ? params.slice() : params});
 
@@ -983,9 +1075,9 @@ function createProductionSqlHandler(queryLog, options = {}) {
     }
     if (/^SELECT COUNT\(\*\) AS total_count, COALESCE\(SUM\(seller_account_id = \?\), 0\) AS seller_count FROM market_listings$/i.test(normalized)) {
       const [accountIdValue] = requiredParams(params, 1, sql);
-      assert.equal(typeof options.snapshotProvider, "function");
+      assert.equal(typeof snapshotProvider, "function");
       const accountId = String(accountIdValue);
-      const snapshot = options.snapshotProvider();
+      const snapshot = snapshotProvider();
       const listings = Object.values(snapshot.market_listings || {});
       const totalCount = listings.length;
       const sellerCount = listings.filter((listing) => (
@@ -1044,6 +1136,22 @@ function createProductionSqlHandler(queryLog, options = {}) {
         committed_at: String(committedAt),
         expires_at: String(expiresAt),
         document_json: jsonParameter(documentJson, sql),
+      });
+    }
+
+    if (/^DELETE FROM mutation_receipts WHERE operation_id = \? AND request_hash = \? AND action_id = \? AND account_id <=> \? AND committed_at = \? AND expires_at = \? AND document_json = CAST\(\? AS JSON\)$/i.test(normalized)) {
+      const [operationId, requestHash, actionId, accountId, committedAt, expiresAt, documentJson]
+        = requiredParams(params, 7, sql);
+      return operation.delete("mutation_receipts", String(operationId), {
+        where: {
+          operation_id: String(operationId),
+          request_hash: String(requestHash),
+          action_id: String(actionId),
+          account_id: accountId === null ? null : String(accountId),
+          committed_at: String(committedAt),
+          expires_at: String(expiresAt),
+          document_json: jsonParameter(documentJson, sql),
+        },
       });
     }
 
@@ -1165,6 +1273,77 @@ function createProductionSqlHandler(queryLog, options = {}) {
 
     return null;
   };
+  Object.defineProperties(handler, {
+    attachSnapshotProvider: {
+      configurable: false,
+      enumerable: false,
+      value(provider) {
+        assert.equal(typeof provider, "function");
+        snapshotProvider = provider;
+      },
+      writable: false,
+    },
+    isMutationReceiptCapacityUpdate: {
+      configurable: false,
+      enumerable: false,
+      value(statement) {
+        return mutationReceiptCapacityUpdateMatch(statement) !== null;
+      },
+      writable: false,
+    },
+    executeMutationReceiptCapacityUpdate: {
+      configurable: false,
+      enumerable: false,
+      async value(connection, statement, params, writerId) {
+        const normalized = normalizeSql(statement);
+        const match = mutationReceiptCapacityUpdateMatch(normalized);
+        assert.ok(match);
+        queryLog.push({
+          writerId,
+          sql: normalized,
+          params: Array.isArray(params) ? params.slice() : params,
+        });
+        const [delta, repeatedDelta] = requiredParams(params, 2, statement).map(Number);
+        assert.equal(Number(match[1]), DURABLE_RECEIPT_MAX_COUNT);
+        assert.equal(Number.isSafeInteger(delta), true);
+        assert.equal(repeatedDelta, delta);
+        const lockResult = await connection.query(sharedMysqlOperation.selectForUpdate(
+          "auth_store_revisions",
+          MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+        ));
+        const rows = Array.isArray(lockResult) && Array.isArray(lockResult[0]) ? lockResult[0] : [];
+        const row = rows.length === 1 ? rows[0] : null;
+        const currentRevision = Number(row && row.revision);
+        if (!Number.isSafeInteger(currentRevision)) {
+          return [{affectedRows: 0}, []];
+        }
+        assert.equal(typeof snapshotProvider, "function");
+        const snapshot = snapshotProvider();
+        assert.equal(
+          currentRevision,
+          Object.keys(snapshot.mutation_receipts || {}).length,
+          "fake capacity revision must equal committed mutation receipt rows",
+        );
+        const nextRevision = currentRevision + delta;
+        if (nextRevision < 0 || nextRevision > DURABLE_RECEIPT_MAX_COUNT) {
+          return [{affectedRows: 0}, []];
+        }
+        return connection.query(sharedMysqlOperation.update(
+          "auth_store_revisions",
+          MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+          {
+            where: {
+              scope_key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+              revision: currentRevision,
+            },
+            set: {revision: nextRevision},
+          },
+        ));
+      },
+      writable: false,
+    },
+  });
+  return handler;
 }
 
 function loaderRowsFromSqlSnapshot(snapshot) {
@@ -1259,7 +1438,7 @@ function isGlobalConflict(error) {
   return Boolean(error && error.code === "mysql_store_revision_conflict");
 }
 
-test("different profiles truly overlap, retain both winners, and keep Node-local baselines row-local", async () => {
+test("different profiles share the auth barrier, retain both winners, and keep Node-local baselines row-local", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-different-"));
   const queryLog = [];
   const loader = createSharedLoader(tempDir);
@@ -1294,24 +1473,29 @@ test("different profiles truly overlap, retain both winners, and keep Node-local
       requestHash: "b".repeat(64),
       updatedAt: UPDATED_AT_2,
     });
-    await harness.waitForEvent({type: "commit_completed", writerId: "node_b"});
-    await stagedB.promise;
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "node_b",
+      table: "auth_store_revisions",
+      key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    });
 
     const whileABlocked = harness.snapshot();
     assert.equal(whileABlocked.profiles[ACTORS.a.playerId].profile_revision, 1);
-    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 1);
     assert.equal(
       harness.events().some((event) => (
         event.type === "lock_wait"
         && event.writerId === "node_b"
         && event.table === "auth_store_revisions"
+        && event.key === "auth"
       )),
       false,
       "different profile writers must share the compatibility barrier",
     );
 
     gateA.release();
-    await saveA;
+    await Promise.all([saveA, stagedB.promise]);
     saveA = null;
 
     const committed = harness.snapshot();
@@ -1359,6 +1543,400 @@ test("different profiles truly overlap, retain both winners, and keep Node-local
       await Promise.allSettled([saveA]);
     }
     await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("receipt capacity admits one 19,999 contender while full expired replacements stay row-local", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-receipt-capacity-"));
+  const fixture = mutationReceiptCapacityFixture(DURABLE_RECEIPT_MAX_COUNT - 1, {expiredCount: 256});
+  const seed = sqlSeed({authority: fixture.authority, mutationReceipts: fixture.rows});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("receipt_capacity_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("receipt_capacity_b"));
+  let steadyStoreA = null;
+  let steadyStoreB = null;
+  let growthGate = null;
+  let steadyGate = null;
+  let pending = [];
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const growthA = nextProfileAuthority(loadedA, "a", {
+      stoneCoins: 90,
+      operationId: "op_capacity_cross_a_0001",
+      requestHash: "c".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    const growthB = nextProfileAuthority(loadedB, "b", {
+      stoneCoins: 190,
+      operationId: "op_capacity_cross_b_0001",
+      requestHash: "d".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    assert.equal(durableMutationReceiptDeltaFrom(loadedA.mutationReceipts, growthA.mutationReceipts).deletes.length, 0);
+    assert.equal(durableMutationReceiptDeltaFrom(loadedB.mutationReceipts, growthB.mutationReceipts).deletes.length, 0);
+
+    growthGate = harness.blockNext({
+      writerId: "receipt_capacity_a",
+      phase: "before_commit_apply",
+      timeoutMs: 30_000,
+    });
+    const growthPromiseA = storeA.saveAsync(
+      growthA,
+      profileSaveOptions("a", "op_capacity_cross_a_0001", "c".repeat(64)),
+    );
+    pending = [growthPromiseA];
+    await growthGate.entered;
+    const growthPromiseB = storeB.saveAsync(
+      growthB,
+      profileSaveOptions("b", "op_capacity_cross_b_0001", "d".repeat(64)),
+    );
+    pending.push(growthPromiseB);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "receipt_capacity_b",
+      table: "auth_store_revisions",
+      key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    }, 30_000);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "receipt_capacity_b"
+        && event.table === "auth_store_revisions"
+        && event.key === "auth"
+      )),
+      false,
+    );
+    growthGate.release();
+    const growthResults = await Promise.allSettled(pending);
+    pending = [];
+    assert.equal(growthResults[0].status, "fulfilled");
+    assert.equal(growthResults[1].status, "rejected");
+    assert.equal(isResourceConflict(growthResults[1].reason), true);
+
+    const atCapacity = harness.snapshot();
+    assert.equal(atCapacity.auth_store_revisions.auth.revision, 0);
+    assert.equal(
+      atCapacity.auth_store_revisions[MUTATION_RECEIPT_CAPACITY_GUARD_KEY].revision,
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(Object.keys(atCapacity.mutation_receipts).length, DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(atCapacity.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(atCapacity.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 90);
+    assert.equal(atCapacity.profiles[ACTORS.b.playerId].profile_revision, 1);
+    assert.equal(atCapacity.profiles[ACTORS.b.playerId].profile_json.stoneCoins, 200);
+    assert.equal(Object.hasOwn(atCapacity.mutation_receipts, "op_capacity_cross_a_0001"), true);
+    assert.equal(Object.hasOwn(atCapacity.mutation_receipts, "op_capacity_cross_b_0001"), false);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "rollback_applied" && event.writerId === "receipt_capacity_b"
+      )),
+      true,
+    );
+
+    steadyStoreA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("receipt_steady_a"));
+    steadyStoreB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("receipt_steady_b"));
+    const fullA = steadyStoreA.load();
+    const fullB = steadyStoreB.load();
+    const steadyA = nextProfileAuthority(fullA, "a", {
+      stoneCoins: 80,
+      operationId: "op_capacity_steady_a_0001",
+      requestHash: "e".repeat(64),
+      updatedAt: UPDATED_AT_3,
+    });
+    const steadyB = nextProfileAuthority(fullB, "b", {
+      stoneCoins: 190,
+      operationId: "op_capacity_steady_b_0001",
+      requestHash: "f".repeat(64),
+      updatedAt: UPDATED_AT_3,
+    });
+    const steadyDeltaA = durableMutationReceiptDeltaFrom(fullA.mutationReceipts, steadyA.mutationReceipts);
+    const steadyDeltaB = durableMutationReceiptDeltaFrom(fullB.mutationReceipts, steadyB.mutationReceipts);
+    assert.equal(steadyDeltaA.ok, true);
+    assert.equal(steadyDeltaB.ok, true);
+    assert.equal(steadyDeltaA.deletes.length, 1);
+    assert.equal(steadyDeltaB.deletes.length, 1);
+    assert.equal(steadyDeltaA.deletes[0].reason, "expired");
+    assert.equal(steadyDeltaB.deletes[0].reason, "expired");
+    assert.notEqual(steadyDeltaA.deletes[0].operationId, steadyDeltaB.deletes[0].operationId);
+
+    steadyGate = harness.blockNext({
+      writerId: "receipt_steady_a",
+      phase: "before_commit_apply",
+      timeoutMs: 60_000,
+    });
+    const steadyPromiseA = steadyStoreA.saveAsync(
+      steadyA,
+      profileSaveOptions("a", "op_capacity_steady_a_0001", "e".repeat(64)),
+    );
+    pending = [steadyPromiseA];
+    await Promise.race([
+      steadyGate.entered,
+      steadyPromiseA.then(
+        () => Promise.reject(new Error("steady writer committed before entering the commit gate")),
+        (error) => Promise.reject(error),
+      ),
+    ]);
+    const steadyPromiseB = steadyStoreB.saveAsync(
+      steadyB,
+      profileSaveOptions("b", "op_capacity_steady_b_0001", "f".repeat(64)),
+    );
+    pending.push(steadyPromiseB);
+    await harness.waitForEvent({type: "commit_completed", writerId: "receipt_steady_b"}, 30_000);
+    await steadyPromiseB;
+
+    const steadyQueries = queryLog.filter((entry) => (
+      entry.writerId === "receipt_steady_a" || entry.writerId === "receipt_steady_b"
+    ));
+    assert.equal(
+      steadyQueries.some((entry) => mutationReceiptCapacityUpdateMatch(entry.sql) !== null),
+      false,
+    );
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "receipt_steady_b"
+        && event.table === "auth_store_revisions"
+      )),
+      false,
+    );
+
+    steadyGate.release();
+    const steadyResults = await Promise.allSettled(pending);
+    pending = [];
+    assert.equal(steadyResults[0].status, "fulfilled");
+    assert.equal(steadyResults[1].status, "fulfilled");
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(
+      committed.auth_store_revisions[MUTATION_RECEIPT_CAPACITY_GUARD_KEY].revision,
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(Object.keys(committed.mutation_receipts).length, DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, steadyDeltaA.deletes[0].operationId), false);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, steadyDeltaB.deletes[0].operationId), false);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_capacity_steady_a_0001"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_capacity_steady_b_0001"), true);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 3);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+  } finally {
+    if (growthGate !== null) {
+      growthGate.release();
+    }
+    if (steadyGate !== null) {
+      steadyGate.release();
+    }
+    if (pending.length > 0) {
+      await Promise.allSettled(pending);
+    }
+    await Promise.allSettled([
+      storeA.close(),
+      storeB.close(),
+      ...(steadyStoreA === null ? [] : [steadyStoreA.close()]),
+      ...(steadyStoreB === null ? [] : [steadyStoreB.close()]),
+    ]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("stale legacy receipt replacement rolls back after a conditional writer deletes the same expired victim", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-receipt-stale-legacy-"));
+  const fixture = mutationReceiptCapacityFixture(DURABLE_RECEIPT_MAX_COUNT, {expiredCount: 256});
+  const seed = sqlSeed({authority: fixture.authority, mutationReceipts: fixture.rows});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const conditionalWriterId = "receipt_stale_conditional";
+  const legacyWriterId = "receipt_stale_legacy";
+  const conditionalStore = createProductionStore(
+    loader.fakeMysqlPath,
+    harness.poolFor(conditionalWriterId),
+  );
+  const legacyStore = createProductionStore(
+    loader.fakeMysqlPath,
+    harness.poolFor(legacyWriterId),
+  );
+  const conditionalGate = harness.blockNext({
+    writerId: conditionalWriterId,
+    phase: "before_commit_apply",
+    timeoutMs: 60_000,
+  });
+  void conditionalGate.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const conditionalLoaded = conditionalStore.load();
+    const legacyLoaded = legacyStore.load();
+    const conditionalOptions = {
+      mailId: "mail_receipt_stale_conditional",
+      operationId: "op_receipt_stale_conditional_0001",
+      requestHash: "7".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    };
+    const conditionalAfter = nextMailSendAuthority(
+      conditionalLoaded,
+      "a",
+      "b",
+      conditionalOptions,
+    );
+    const conditionalDelta = durableMutationReceiptDeltaFrom(
+      conditionalLoaded.mutationReceipts,
+      conditionalAfter.mutationReceipts,
+    );
+    assert.equal(conditionalDelta.ok, true);
+    assert.equal(conditionalDelta.deletes.length, 1);
+    assert.equal(conditionalDelta.deletes[0].reason, "expired");
+    const sharedVictimOperationId = conditionalDelta.deletes[0].operationId;
+
+    let legacyOperationId = "";
+    for (let index = 0; index < 4096 && legacyOperationId === ""; index += 1) {
+      const candidateOperationId = `op_receipt_stale_legacy_${String(index).padStart(4, "0")}`;
+      const candidateLedger = stageDurableMutationReceipt(
+        legacyLoaded.mutationReceipts,
+        {
+          schemaVersion: 1,
+          operationId: candidateOperationId,
+          requestHash: "8".repeat(64),
+          actionId: MAIL_SEND_ACTION_ID,
+          accountId: ACTORS.a.accountId,
+          committedAt: UPDATED_AT_2,
+          expiresAt: "2026-07-18T02:10:00.000Z",
+          response: {ok: true, operationId: candidateOperationId},
+        },
+        {nowMs: Date.parse(UPDATED_AT_2)},
+      );
+      const candidateDelta = durableMutationReceiptDeltaFrom(
+        legacyLoaded.mutationReceipts,
+        candidateLedger,
+      );
+      if (
+        candidateDelta.ok === true
+        && candidateDelta.deletes.length === 1
+        && candidateDelta.deletes[0].operationId === sharedVictimOperationId
+      ) {
+        legacyOperationId = candidateOperationId;
+      }
+    }
+    assert.notEqual(legacyOperationId, "", "must find a distinct operation id with the same bounded victim");
+    assert.notEqual(legacyOperationId, conditionalOptions.operationId);
+
+    const legacyOptions = {
+      mailId: "mail_receipt_stale_legacy",
+      operationId: legacyOperationId,
+      requestHash: "8".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    };
+    const legacyAfter = nextMailSendAuthority(legacyLoaded, "a", "b", legacyOptions);
+    const legacyDelta = durableMutationReceiptDeltaFrom(
+      legacyLoaded.mutationReceipts,
+      legacyAfter.mutationReceipts,
+    );
+    assert.equal(legacyDelta.ok, true);
+    assert.equal(legacyDelta.deletes.length, 1);
+    assert.equal(legacyDelta.deletes[0].reason, "expired");
+    assert.equal(legacyDelta.deletes[0].operationId, sharedVictimOperationId);
+    assert.deepEqual(legacyDelta.deletes[0].expectedReceipt, conditionalDelta.deletes[0].expectedReceipt);
+
+    const conditional = stagedMailSend(
+      conditionalStore,
+      conditionalLoaded,
+      "a",
+      "b",
+      conditionalOptions,
+    );
+    await conditionalGate.entered;
+    const legacyPromise = legacyStore.saveAsync(legacyAfter);
+    settled = Promise.allSettled([conditional.promise, legacyPromise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: legacyWriterId,
+      table: "auth_store_revisions",
+      key: "auth",
+    }, 30_000);
+    conditionalGate.release();
+
+    const [conditionalResult, legacyResult] = await settled;
+    assert.equal(conditionalResult.status, "fulfilled");
+    assert.equal(legacyResult.status, "rejected");
+    assert.equal(isResourceConflict(legacyResult.reason), true);
+    assert.equal(legacyResult.reason.outcomeUnknown, false);
+    assert.equal(legacyResult.reason.rollbackConfirmed, true);
+
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(
+      committed.auth_store_revisions[MUTATION_RECEIPT_CAPACITY_GUARD_KEY].revision,
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(Object.keys(committed.mutation_receipts).length, DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, sharedVictimOperationId), false);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, conditionalOptions.operationId), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, legacyOperationId), false);
+    assert.equal(Object.hasOwn(committed.mail_messages, conditionalOptions.mailId), true);
+    assert.equal(Object.hasOwn(committed.mail_messages, legacyOptions.mailId), false);
+
+    const legacyReceiptDeletes = queryLog.filter((entry) => (
+      entry.writerId === legacyWriterId
+      && /^DELETE FROM mutation_receipts\b/i.test(entry.sql)
+      && entry.params[0] === sharedVictimOperationId
+    ));
+    assert.equal(legacyReceiptDeletes.length, 1);
+    assert.deepEqual(legacyReceiptDeletes[0].params, [
+      sharedVictimOperationId,
+      conditionalDelta.deletes[0].expectedReceipt.requestHash,
+      conditionalDelta.deletes[0].expectedReceipt.actionId,
+      conditionalDelta.deletes[0].expectedReceipt.accountId || null,
+      conditionalDelta.deletes[0].expectedReceipt.committedAt,
+      conditionalDelta.deletes[0].expectedReceipt.expiresAt,
+      JSON.stringify(conditionalDelta.deletes[0].expectedReceipt),
+    ]);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "write_condition_missed"
+        && event.writerId === legacyWriterId
+        && event.table === "mutation_receipts"
+        && event.key === sharedVictimOperationId
+      )),
+      true,
+    );
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "rollback_applied" && event.writerId === legacyWriterId
+      )),
+      true,
+    );
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "commit_applied" && event.writerId === legacyWriterId
+      )),
+      false,
+    );
+  } finally {
+    conditionalGate.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([conditionalStore.close(), legacyStore.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
 
@@ -1587,7 +2165,7 @@ test("duplicate receipt rolls conditional binding and profile writes back withou
     assert.deepEqual(harness.snapshot(), seed);
     assert.equal(
       harness.events().filter((event) => event.type === "write_staged" && event.writerId === "duplicate_node").length,
-      2,
+      3,
     );
     assert.equal(
       harness.events().some((event) => event.type === "rollback_applied" && event.writerId === "duplicate_node"),
@@ -1601,7 +2179,7 @@ test("duplicate receipt rolls conditional binding and profile writes back withou
   assert.equal(harness.assertIdle(), true);
 });
 
-test("two text mails from the same sender overlap and both commit without profile locks", async () => {
+test("two text mails from the same sender share receipt capacity and both commit without profile locks", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-send-text-"));
   const authority = mailSendAuthority();
   const seed = sqlSeed({authority});
@@ -1619,6 +2197,7 @@ test("two text mails from the same sender overlap and both commit without profil
   const gateA = harness.blockNext({writerId: "mail_text_a", phase: "before_commit_apply"});
   void gateA.entered.catch(() => {});
   let firstPromise = null;
+  let secondPromise = null;
 
   try {
     const loadedA = storeA.load();
@@ -1640,12 +2219,17 @@ test("two text mails from the same sender overlap and both commit without profil
       requestHash: "b".repeat(64),
       updatedAt: UPDATED_AT_2,
     });
-    await harness.waitForEvent({type: "commit_completed", writerId: "mail_text_b"});
-    await second.promise;
+    secondPromise = second.promise;
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "mail_text_b",
+      table: "auth_store_revisions",
+      key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    });
 
     const whileBlocked = harness.snapshot();
     assert.equal(Object.hasOwn(whileBlocked.mail_messages, "mail_shared_send_text_a"), false);
-    assert.equal(Object.hasOwn(whileBlocked.mail_messages, "mail_shared_send_text_b"), true);
+    assert.equal(Object.hasOwn(whileBlocked.mail_messages, "mail_shared_send_text_b"), false);
     assert.equal(
       harness.events().some((event) => (
         event.type === "lock_wait"
@@ -1656,8 +2240,9 @@ test("two text mails from the same sender overlap and both commit without profil
     );
 
     gateA.release();
-    await firstPromise;
+    await Promise.all([firstPromise, secondPromise]);
     firstPromise = null;
+    secondPromise = null;
     const committed = harness.snapshot();
     assert.equal(committed.auth_store_revisions.auth.revision, 0);
     assert.equal(Object.hasOwn(committed.mail_messages, "mail_shared_send_text_a"), true);
@@ -1668,8 +2253,8 @@ test("two text mails from the same sender overlap and both commit without profil
     assert.equal(mailQueries.some((entry) => /FROM (?:profile_bindings|profiles)\b/i.test(entry.sql)), false);
   } finally {
     gateA.release();
-    if (firstPromise !== null) {
-      await Promise.allSettled([firstPromise]);
+    if (firstPromise !== null || secondPromise !== null) {
+      await Promise.allSettled([firstPromise, secondPromise].filter(Boolean));
     }
     await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
@@ -2229,7 +2814,7 @@ test("market create DB-only listing and receipt collisions roll all earlier asse
         harness.events()
           .filter((event) => event.type === "write_staged" && event.writerId === "market_create_receipt_duplicate")
           .map((event) => event.table),
-        ["profile_bindings", "profiles", "market_listings"],
+        ["profile_bindings", "profiles", "market_listings", "auth_store_revisions"],
       );
     } finally {
       await store.close();
@@ -2239,7 +2824,7 @@ test("market create DB-only listing and receipt collisions roll all earlier asse
   });
 });
 
-test("different ordinary market cancels overlap and preserve both profile and listing settlements", async () => {
+test("different ordinary market cancels share receipt capacity and preserve both settlements", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-different-"));
   const authority = marketAuthority();
   const seed = sqlSeed({authority});
@@ -2257,6 +2842,7 @@ test("different ordinary market cancels overlap and preserve both profile and li
   const gateA = harness.blockNext({writerId: "market_a", phase: "before_commit_apply"});
   void gateA.entered.catch(() => {});
   let saveA = null;
+  let saveB = null;
 
   try {
     const loadedA = storeA.load();
@@ -2274,25 +2860,32 @@ test("different ordinary market cancels overlap and preserve both profile and li
       requestHash: "9".repeat(64),
       updatedAt: UPDATED_AT_2,
     });
-    await harness.waitForEvent({type: "commit_completed", writerId: "market_b"});
-    await second.promise;
+    saveB = second.promise;
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "market_b",
+      table: "auth_store_revisions",
+      key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    });
 
     const whileABlocked = harness.snapshot();
     assert.equal(Object.hasOwn(whileABlocked.market_listings, MARKET_LISTING_IDS.a), true);
-    assert.equal(Object.hasOwn(whileABlocked.market_listings, MARKET_LISTING_IDS.b), false);
-    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(Object.hasOwn(whileABlocked.market_listings, MARKET_LISTING_IDS.b), true);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 1);
     assert.equal(
       harness.events().some((event) => (
         event.type === "lock_wait"
         && event.writerId === "market_b"
         && event.table === "auth_store_revisions"
+        && event.key === "auth"
       )),
       false,
     );
 
     gateA.release();
-    await saveA;
+    await Promise.all([saveA, saveB]);
     saveA = null;
+    saveB = null;
 
     const committed = harness.snapshot();
     assert.equal(committed.auth_store_revisions.auth.revision, 0);
@@ -2346,8 +2939,8 @@ test("different ordinary market cancels overlap and preserve both profile and li
     }
   } finally {
     gateA.release();
-    if (saveA !== null) {
-      await Promise.allSettled([saveA]);
+    if (saveA !== null || saveB !== null) {
+      await Promise.allSettled([saveA, saveB].filter(Boolean));
     }
     await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
@@ -2858,7 +3451,7 @@ test("a DB-only sale mail id collision rolls preceding market writes back", asyn
   assert.equal(harness.assertIdle(), true);
 });
 
-test("different mail claims overlap and retain both profile and mail settlements", async () => {
+test("different mail claims share receipt capacity and retain both profile and mail settlements", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-different-"));
   const authority = mailClaimAuthority();
   const seed = sqlSeed({authority});
@@ -2876,6 +3469,7 @@ test("different mail claims overlap and retain both profile and mail settlements
   const gateA = harness.blockNext({writerId: "mail_a", phase: "before_commit_apply"});
   void gateA.entered.catch(() => {});
   let saveA = null;
+  let saveB = null;
 
   try {
     const loadedA = storeA.load();
@@ -2894,29 +3488,37 @@ test("different mail claims overlap and retain both profile and mail settlements
       requestHash: "2".repeat(64),
       updatedAt: UPDATED_AT_2,
     });
-    await harness.waitForEvent({type: "commit_completed", writerId: "mail_b"});
-    await second.promise;
+    saveB = second.promise;
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "mail_b",
+      table: "auth_store_revisions",
+      key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    });
 
     const whileABlocked = harness.snapshot();
     assert.equal(Object.hasOwn(whileABlocked.mail_messages, MAIL_IDS.a), true);
     assert.deepEqual(
       whileABlocked.mail_messages[MAIL_IDS.b].document_json.items,
-      [{itemId: "item_meat_small", count: 1}],
+      [{itemId: "item_meat_small", count: 2}],
     );
     assert.equal(whileABlocked.profiles[ACTORS.a.playerId].profile_revision, 1);
-    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.equal(whileABlocked.profiles[ACTORS.b.playerId].profile_revision, 1);
     assert.equal(
       harness.events().some((event) => (
         event.type === "lock_wait"
         && event.writerId === "mail_b"
+        && event.table === "auth_store_revisions"
+        && event.key === "auth"
       )),
       false,
       "different account and mail rows must not serialize behind each other",
     );
 
     gateA.release();
-    await saveA;
+    await Promise.all([saveA, saveB]);
     saveA = null;
+    saveB = null;
 
     const committed = harness.snapshot();
     assert.equal(committed.auth_store_revisions.auth.revision, 0);
@@ -2941,8 +3543,8 @@ test("different mail claims overlap and retain both profile and mail settlements
     }
   } finally {
     gateA.release();
-    if (saveA !== null) {
-      await Promise.allSettled([saveA]);
+    if (saveA !== null || saveB !== null) {
+      await Promise.allSettled([saveA, saveB].filter(Boolean));
     }
     await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});

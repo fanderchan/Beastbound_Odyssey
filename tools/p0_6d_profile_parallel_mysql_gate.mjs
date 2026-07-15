@@ -17,7 +17,11 @@ const {cloneAuthorityRoot} = require(path.join(ROOT, "server/node/src/auth/autho
 const {applySharedAssetReadView} = require(
   path.join(ROOT, "server/node/src/auth/shared-asset-read-model"),
 );
-const {stageDurableMutationReceipt} = require(path.join(ROOT, "server/node/src/auth/durable-mutation-state"));
+const {
+  DURABLE_RECEIPT_MAX_COUNT,
+  durableMutationReceiptDeltaFrom,
+  stageDurableMutationReceipt,
+} = require(path.join(ROOT, "server/node/src/auth/durable-mutation-state"));
 const {ensureConsumedEquipmentEnvelopeIds} = require(
   path.join(ROOT, "server/node/src/auth/equipment-envelope-consumed-ledger"),
 );
@@ -25,7 +29,15 @@ const {
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
 } = require(path.join(ROOT, "server/node/src/auth/market-listing-state"));
-const {createMysqlAuthStore} = require(path.join(ROOT, "server/node/src/mysql-store"));
+const {
+  __runMysqlPoolSavePlanForTest,
+  createMysqlAuthStore,
+} = require(path.join(ROOT, "server/node/src/mysql-store"));
+const {
+  MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+  MUTATION_RECEIPT_DELETE_SQL,
+} = require(path.join(ROOT, "server/node/src/mysql-resource-acquisition-order"));
 const {
   createAsyncWriteAuthStore,
   createAuthService,
@@ -102,7 +114,11 @@ const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
 const MAIL_SEND_ACTION_ID = "POST /mail/send";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
+const RECEIPT_SEED_BATCH_SIZE = 500;
 const WAIT_TIMEOUT_MS = 10000;
+const MUTATION_RECEIPT_INSERT_SQL = `INSERT INTO mutation_receipts
+  (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+  VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON))`;
 
 function actorForKey(actorKeyValue) {
   const actorKey = String(actorKeyValue || "");
@@ -1720,6 +1736,135 @@ async function mutationReceiptExists(admin, operationId) {
   return Number(rows[0] && rows[0].receipt_count || 0) === 1;
 }
 
+async function mutationReceiptCount(admin) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS receipt_count FROM mutation_receipts",
+    [],
+    "MySQL mutation receipt count query",
+  );
+  return Number(rows[0] && rows[0].receipt_count || 0);
+}
+
+async function mutationReceiptCapacityRevision(admin) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT revision FROM auth_store_revisions WHERE scope_key = ?",
+    [MUTATION_RECEIPT_CAPACITY_GUARD_KEY],
+    "MySQL mutation receipt capacity query",
+  );
+  assert.ok(rows[0], "MySQL mutation receipt capacity row 缺失。");
+  return Number(rows[0].revision);
+}
+
+function retentionReceipt(operationId, options = {}) {
+  const committedAt = String(options.committedAt || "2026-06-01T00:00:00.000Z");
+  const expiresAt = String(options.expiresAt || "2026-06-04T00:00:00.000Z");
+  return {
+    schemaVersion: 1,
+    operationId: String(operationId),
+    requestHash: crypto.createHash("sha256").update(String(operationId)).digest("hex"),
+    actionId: "receipt.retention.gate",
+    accountId: "",
+    committedAt,
+    expiresAt,
+    response: {ok: true, fixture: "receipt_retention_gate"},
+  };
+}
+
+function mutationReceiptWriteParams(receipt) {
+  return [
+    receipt.operationId,
+    receipt.requestHash,
+    receipt.actionId,
+    receipt.accountId || null,
+    receipt.committedAt,
+    receipt.expiresAt,
+    JSON.stringify(receipt),
+  ];
+}
+
+function mutationReceiptInsertWrite(receipt) {
+  return {
+    kind: "insert",
+    resource: "mutation_receipt",
+    key: receipt.operationId,
+    sql: MUTATION_RECEIPT_INSERT_SQL,
+    params: mutationReceiptWriteParams(receipt),
+    expectedAffectedRows: 1,
+  };
+}
+
+function mutationReceiptDeleteWrite(receipt) {
+  return {
+    kind: "delete",
+    resource: "mutation_receipt",
+    key: receipt.operationId,
+    sql: MUTATION_RECEIPT_DELETE_SQL,
+    params: mutationReceiptWriteParams(receipt),
+    expectedAffectedRows: 1,
+  };
+}
+
+function mutationReceiptCapacityIncrementWrite() {
+  return {
+    kind: "update",
+    resource: "mutation_receipt_capacity",
+    key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    sql: MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
+    params: [1, 1],
+    expectedAffectedRows: 1,
+  };
+}
+
+function receiptRetentionPlan(receipt, expiredVictim = null) {
+  const receiptWrites = [
+    ...(expiredVictim === null ? [] : [mutationReceiptDeleteWrite(expiredVictim)]),
+    mutationReceiptInsertWrite(receipt),
+  ].sort((left, right) => {
+    if (left.key !== right.key) {
+      return left.key < right.key ? -1 : 1;
+    }
+    return left.kind === right.kind ? 0 : left.kind === "delete" ? -1 : 1;
+  });
+  return {
+    kind: "profile_conditional_v2",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    operationId: receipt.operationId,
+    locks: [],
+    writes: [
+      ...(expiredVictim === null ? [mutationReceiptCapacityIncrementWrite()] : []),
+      ...receiptWrites,
+    ],
+  };
+}
+
+async function seedExpiredMutationReceipts(admin, count) {
+  assert.ok(Number.isSafeInteger(count) && count >= 0 && count <= DURABLE_RECEIPT_MAX_COUNT);
+  for (let offset = 0; offset < count; offset += RECEIPT_SEED_BATCH_SIZE) {
+    const batchCount = Math.min(RECEIPT_SEED_BATCH_SIZE, count - offset);
+    const values = [];
+    const params = [];
+    for (let index = 0; index < batchCount; index += 1) {
+      const receipt = retentionReceipt(
+        `receipt_retention_seed_${String(offset + index).padStart(5, "0")}`,
+      );
+      values.push("(?, ?, ?, ?, ?, ?, CAST(? AS JSON))");
+      params.push(...mutationReceiptWriteParams(receipt));
+    }
+    const [result] = await adminQuery(
+      admin,
+      `INSERT INTO mutation_receipts
+        (operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json)
+        VALUES ${values.join(", ")}`,
+      params,
+      `MySQL expired receipt seed ${offset}-${offset + batchCount - 1}`,
+    );
+    assert.equal(Number(result.affectedRows), batchCount);
+  }
+}
+
 function isConflict(error, code) {
   return Boolean(error && error.code === code);
 }
@@ -1815,12 +1960,14 @@ async function runRealMysqlGate(runtime) {
       updatedAt: "2026-07-14T04:01:00.000Z",
     });
     trackWrite(differentWriteB.promise);
-    try {
-      await settleWithin(differentWriteB.promise, WAIT_TIMEOUT_MS, "不同 profile 的 B 提交");
-    } finally {
-      differentGate.release();
-    }
-    await settleWithin(differentWriteA.promise, WAIT_TIMEOUT_MS, "不同 profile 的 A 提交");
+    await waitForLockWait(admin, "不同 profile 净增长回执容量尾部等待");
+    differentGate.release();
+    const differentResults = await settleWithin(
+      Promise.allSettled([differentWriteA.promise, differentWriteB.promise]),
+      WAIT_TIMEOUT_MS,
+      "不同 profile 净增长回执容量尾部提交",
+    );
+    assert.deepEqual(differentResults.map((result) => result.status), ["fulfilled", "fulfilled"]);
     assert.deepEqual(await profileRow(admin, "a"), {revision: 2, stoneCoins: 90});
     assert.deepEqual(await profileRow(admin, "b"), {revision: 2, stoneCoins: 190});
     assert.equal(await bindingRevision(admin, "a"), 2);
@@ -3356,7 +3503,8 @@ async function runRealMysqlGate(runtime) {
       portIsNot3306: runtime.port !== 3306,
       externalMysqlCredentialsIgnored: true,
       bufferPoolMiB: MYSQL_MEMORY_BYTES / 1024 / 1024,
-      differentProfilesCommittedBeforeARelease: true,
+      differentProfilesCapacityTailWaitObserved: true,
+      differentProfilesBothCommittedAfterCapacityTailRelease: true,
       sameProfileLockWaitObserved: true,
       sameProfileExactlyOneWinner: true,
       profileFirstLegacyRejected: true,
@@ -3775,12 +3923,18 @@ async function runMailSendMysqlGate(runtime) {
       updatedAt: "2026-07-14T04:40:00.000Z",
     });
     trackWrite(textB.promise);
-    await settleWithin(textB.promise, WAIT_TIMEOUT_MS, "parallel text mail B commits before A release");
+    await waitForLockWait(admin, "parallel text mail receipt capacity tail wait");
     assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_a"), false);
-    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_b"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_b"), false);
     textGate.release();
-    await settleWithin(textA.promise, WAIT_TIMEOUT_MS, "parallel text mail A commit");
+    const textResults = await settleWithin(
+      Promise.allSettled([textA.promise, textB.promise]),
+      WAIT_TIMEOUT_MS,
+      "parallel text mail receipt capacity tail commits",
+    );
+    assert.deepEqual(textResults.map((result) => result.status), ["fulfilled", "fulfilled"]);
     assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_a"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_b"), true);
     assert.equal(await mutationReceiptExists(admin, "real_mail_send_text_a"), true);
     assert.equal(await mutationReceiptExists(admin, "real_mail_send_text_b"), true);
     assert.equal(await globalRevision(admin), 1);
@@ -3810,13 +3964,14 @@ async function runMailSendMysqlGate(runtime) {
       updatedAt: "2026-07-14T04:41:00.000Z",
     });
     trackWrite(ordinaryB.promise);
-    await settleWithin(
-      ordinaryB.promise,
-      WAIT_TIMEOUT_MS,
-      "different-profile ordinary mail B commits before A release",
-    );
+    await waitForLockWait(admin, "different-profile ordinary mail receipt capacity tail wait");
     differentGate.release();
-    await settleWithin(ordinaryA.promise, WAIT_TIMEOUT_MS, "different-profile ordinary mail A commit");
+    const ordinaryResults = await settleWithin(
+      Promise.allSettled([ordinaryA.promise, ordinaryB.promise]),
+      WAIT_TIMEOUT_MS,
+      "different-profile ordinary mail receipt capacity tail commits",
+    );
+    assert.deepEqual(ordinaryResults.map((result) => result.status), ["fulfilled", "fulfilled"]);
     assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 2, stoneCoins: 100, itemCount: 3});
     assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 2, stoneCoins: 200, itemCount: 3});
     assert.equal(await marketSaleMailExists(admin, "mail_real_send_items_a"), true);
@@ -3973,8 +4128,8 @@ async function runMailSendMysqlGate(runtime) {
     return {
       mailSendSeparateDatabase: database,
       mailSendAuthorityReadVerified: true,
-      mailSendTextOverlapVerified: true,
-      mailSendDifferentProfilesOverlapVerified: true,
+      mailSendTextCapacityTailWaitObserved: true,
+      mailSendDifferentProfilesCapacityTailWaitObserved: true,
       mailSendSameSenderLockWaitObserved: true,
       mailSendSameSenderExactlyOneInitialWinner: true,
       mailSendSameOperationRetryVerified: true,
@@ -4005,6 +4160,444 @@ async function runMailSendMysqlGate(runtime) {
   }
 }
 
+async function runReceiptRetentionMysqlGate(runtime) {
+  const database = `beastbound_p0_6d2c10_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const pools = [];
+  const stores = [];
+  const pendingWrites = [];
+  const capacityRaceGate = commitGate("mutation_receipt_capacity_19999");
+  const steadyStateGate = commitGate("mutation_receipt_steady_state_parallel_a");
+  let admin = null;
+  let bootstrap = null;
+  function trackWrite(promise) {
+    pendingWrites.push(promise);
+    void promise.catch(() => {});
+    return promise;
+  }
+  async function closePools() {
+    const results = await settleWithin(
+      Promise.allSettled(pools.splice(0).map((pool) => pool.end())),
+      WAIT_TIMEOUT_MS,
+      "receipt retention pool close",
+    );
+    const rejected = results.find((result) => result.status === "rejected");
+    if (rejected) {
+      throw rejected.reason;
+    }
+  }
+  try {
+    bootstrap = createMysqlAuthStore(storeOptions(runtime, database));
+    const empty = bootstrap.load();
+    await settleWithin(
+      trackWrite(bootstrap.saveAsync(mailSendSeededAuthority(empty))),
+      WAIT_TIMEOUT_MS,
+      "receipt retention authority bootstrap save",
+    );
+    await settleWithin(bootstrap.close(), WAIT_TIMEOUT_MS, "receipt retention schema bootstrap close");
+    bootstrap = null;
+
+    admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 4});
+    const deadlocksBefore = await deadlockCount(admin);
+    assert.equal(await globalRevision(admin), 1);
+    const [revisionReset] = await adminQuery(
+      admin,
+      "UPDATE auth_store_revisions SET revision = 0 WHERE scope_key = 'auth' AND revision = 1",
+      [],
+      "MySQL receipt retention isolated auth revision reset",
+    );
+    assert.equal(Number(revisionReset.affectedRows), 1);
+    assert.equal(await globalRevision(admin), 0);
+    assert.equal(await mutationReceiptCapacityRevision(admin), 0);
+    assert.equal(await mutationReceiptCount(admin), 0);
+
+    await seedExpiredMutationReceipts(admin, DURABLE_RECEIPT_MAX_COUNT - 1);
+    const [capacitySeed] = await adminQuery(
+      admin,
+      `UPDATE auth_store_revisions
+        SET revision = ?
+        WHERE scope_key = ? AND revision = 0`,
+      [DURABLE_RECEIPT_MAX_COUNT - 1, MUTATION_RECEIPT_CAPACITY_GUARD_KEY],
+      "MySQL mutation receipt capacity 19999 seed",
+    );
+    assert.equal(Number(capacitySeed.affectedRows), 1);
+    assert.equal(await mutationReceiptCount(admin), DURABLE_RECEIPT_MAX_COUNT - 1);
+    assert.equal(
+      await mutationReceiptCapacityRevision(admin),
+      DURABLE_RECEIPT_MAX_COUNT - 1,
+    );
+
+    const capacityReceiptA = retentionReceipt("receipt_retention_capacity_a", {
+      committedAt: "2026-07-16T01:00:00.000Z",
+      expiresAt: "2026-07-19T01:00:00.000Z",
+    });
+    const capacityReceiptB = retentionReceipt("receipt_retention_capacity_b", {
+      committedAt: "2026-07-16T01:00:00.000Z",
+      expiresAt: "2026-07-19T01:00:00.000Z",
+    });
+    const capacityPoolA = gatedPool(
+      mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 1}),
+      capacityRaceGate,
+    );
+    const capacityPoolB = mysql.createPool({
+      ...runtime.connectionOptions,
+      database,
+      connectionLimit: 1,
+    });
+    pools.push(capacityPoolA, capacityPoolB);
+    const capacityWriteA = trackWrite(__runMysqlPoolSavePlanForTest(
+      capacityPoolA,
+      receiptRetentionPlan(capacityReceiptA),
+      {expectedRevision: 0},
+    ));
+    await settleWithin(
+      capacityRaceGate.entered,
+      WAIT_TIMEOUT_MS,
+      "mutation receipt capacity A COMMIT gate",
+    );
+    const capacityWriteB = trackWrite(__runMysqlPoolSavePlanForTest(
+      capacityPoolB,
+      receiptRetentionPlan(capacityReceiptB),
+      {expectedRevision: 0},
+    ));
+    await waitForLockWait(admin, "mutation receipt capacity 19999 lock wait");
+    capacityRaceGate.release();
+    const capacityResults = await settleWithin(
+      Promise.allSettled([capacityWriteA, capacityWriteB]),
+      WAIT_TIMEOUT_MS,
+      "mutation receipt capacity 19999 competing commits",
+    );
+    assert.equal(capacityResults[0].status, "fulfilled");
+    assert.equal(capacityResults[1].status, "rejected");
+    assert.equal(capacityResults[1].reason.code, "mysql_resource_revision_conflict");
+    assert.equal(capacityResults[1].reason.resource, "mutation_receipt_capacity");
+    assert.equal(
+      capacityResults[1].reason.resourceKey,
+      MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
+    );
+    assert.equal(await mutationReceiptCount(admin), DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(
+      await mutationReceiptCapacityRevision(admin),
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(await mutationReceiptExists(admin, capacityReceiptA.operationId), true);
+    assert.equal(await mutationReceiptExists(admin, capacityReceiptB.operationId), false);
+    assert.equal(await globalRevision(admin), 0);
+    await closePools();
+
+    const conditionalReceiptStore = createMysqlAuthStore(storeOptions(runtime, database));
+    const staleLegacyReceiptStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(conditionalReceiptStore, staleLegacyReceiptStore);
+    const conditionalReceiptBefore = conditionalReceiptStore.load();
+    const staleLegacyReceiptBefore = staleLegacyReceiptStore.load();
+    const conditionalReceiptOptions = {
+      mode: "text",
+      mailId: "mail_receipt_retention_conditional_first",
+      operationId: "receipt_retention_conditional_first",
+      requestHash: crypto.createHash("sha256")
+        .update("receipt-retention-conditional-first")
+        .digest("hex"),
+      updatedAt: "2026-07-16T01:00:30.000Z",
+    };
+    const conditionalReceiptMutation = mailSendMutation(
+      conditionalReceiptBefore,
+      "b",
+      "a",
+      conditionalReceiptOptions,
+    );
+    const conditionalReceiptDelta = durableMutationReceiptDeltaFrom(
+      conditionalReceiptBefore.mutationReceipts,
+      conditionalReceiptMutation.after.mutationReceipts,
+    );
+    assert.equal(conditionalReceiptDelta.ok, true);
+    assert.equal(conditionalReceiptDelta.deletes.length, 1);
+    assert.equal(conditionalReceiptDelta.upserts.length, 1);
+    const staleLegacyVictim = conditionalReceiptDelta.deletes[0].expectedReceipt;
+
+    let staleLegacyOptions = null;
+    for (let attempt = 0; attempt < 4096; attempt += 1) {
+      const operationId = `receipt_retention_stale_legacy_${String(attempt).padStart(4, "0")}`;
+      const requestHash = crypto.createHash("sha256")
+        .update(`receipt-retention-stale-legacy-${attempt}`)
+        .digest("hex");
+      const candidateReceipts = stageDurableMutationReceipt(
+        staleLegacyReceiptBefore.mutationReceipts,
+        {
+          schemaVersion: 1,
+          operationId,
+          requestHash,
+          actionId: MAIL_SEND_ACTION_ID,
+          accountId: ACTORS.a.accountId,
+          committedAt: conditionalReceiptOptions.updatedAt,
+          expiresAt: "2026-07-18T05:00:00.000Z",
+          response: {ok: true, fixture: "stale_legacy_receipt_victim_selection"},
+        },
+        {nowMs: Date.parse(conditionalReceiptOptions.updatedAt)},
+      );
+      const candidateDelta = durableMutationReceiptDeltaFrom(
+        staleLegacyReceiptBefore.mutationReceipts,
+        candidateReceipts,
+      );
+      assert.equal(candidateDelta.ok, true);
+      assert.equal(candidateDelta.deletes.length, 1);
+      assert.equal(candidateDelta.upserts.length, 1);
+      if (candidateDelta.deletes[0].operationId === staleLegacyVictim.operationId) {
+        staleLegacyOptions = {
+          mode: "ordinary_items",
+          mailId: "mail_receipt_retention_stale_legacy",
+          operationId,
+          requestHash,
+          updatedAt: conditionalReceiptOptions.updatedAt,
+        };
+        break;
+      }
+    }
+    assert.ok(staleLegacyOptions, "无法选择与条件事务相同的陈旧 legacy 回执 victim。");
+    const staleLegacyMutation = mailSendMutation(
+      staleLegacyReceiptBefore,
+      "a",
+      "b",
+      staleLegacyOptions,
+    );
+    const staleLegacyDelta = durableMutationReceiptDeltaFrom(
+      staleLegacyReceiptBefore.mutationReceipts,
+      staleLegacyMutation.after.mutationReceipts,
+    );
+    assert.equal(staleLegacyDelta.ok, true);
+    assert.equal(staleLegacyDelta.deletes.length, 1);
+    assert.equal(staleLegacyDelta.deletes[0].operationId, staleLegacyVictim.operationId);
+    assert.deepEqual(staleLegacyDelta.deletes[0].expectedReceipt, staleLegacyVictim);
+    assert.equal(staleLegacyDelta.upserts.length, 1);
+    const staleLegacyAssetBefore = await profileAssetRow(admin, "a");
+    const staleLegacyBindingRevisionBefore = await bindingRevision(admin, "a");
+
+    await settleWithin(
+      trackWrite(conditionalReceiptStore.saveAsync(
+        conditionalReceiptMutation.after,
+        {consistencyScope: conditionalReceiptMutation.consistencyScope},
+      )),
+      WAIT_TIMEOUT_MS,
+      "20k conditional receipt replacement commits before stale legacy",
+    );
+    assert.equal(await mutationReceiptExists(admin, staleLegacyVictim.operationId), false);
+    assert.equal(
+      await mutationReceiptExists(admin, conditionalReceiptOptions.operationId),
+      true,
+    );
+    assert.equal(
+      await marketSaleMailExists(admin, conditionalReceiptOptions.mailId),
+      true,
+    );
+    assert.equal(await mutationReceiptCount(admin), DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(
+      await mutationReceiptCapacityRevision(admin),
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(await globalRevision(admin), 0);
+
+    const staleLegacyWrite = trackWrite(staleLegacyReceiptStore.saveAsync(
+      staleLegacyMutation.after,
+      {
+        durableOperation: {
+          operationId: staleLegacyOptions.operationId,
+          requestHash: staleLegacyOptions.requestHash,
+          actionId: MAIL_SEND_ACTION_ID,
+        },
+      },
+    ));
+    const [staleLegacyResult] = await settleWithin(
+      Promise.allSettled([staleLegacyWrite]),
+      WAIT_TIMEOUT_MS,
+      "stale legacy exact receipt delete affectedRows=0 rollback",
+    );
+    assert.equal(staleLegacyResult.status, "rejected");
+    assert.equal(staleLegacyResult.reason.code, "mysql_resource_revision_conflict");
+    assert.equal(staleLegacyResult.reason.resource, "mutation_receipt");
+    assert.equal(staleLegacyResult.reason.resourceKey, staleLegacyVictim.operationId);
+    assert.deepEqual(await profileAssetRow(admin, "a"), staleLegacyAssetBefore);
+    assert.equal(await bindingRevision(admin, "a"), staleLegacyBindingRevisionBefore);
+    assert.equal(await marketSaleMailExists(admin, staleLegacyOptions.mailId), false);
+    assert.equal(await mutationReceiptExists(admin, staleLegacyOptions.operationId), false);
+    assert.equal(await mutationReceiptCount(admin), DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(
+      await mutationReceiptCapacityRevision(admin),
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(await globalRevision(admin), 0);
+
+    let observedCapacityWrites = 0;
+    async function observeCapacityWrite(queryArgs) {
+      const first = queryArgs[0];
+      const sql = String(typeof first === "string" ? first : first && first.sql || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (
+        /^UPDATE auth_store_revisions\b/i.test(sql)
+        && sql.includes("scope_key = 'mutation_receipt_capacity'")
+      ) {
+        observedCapacityWrites += 1;
+      }
+    }
+    const steadyStoreA = createMysqlAuthStore(storeOptions(runtime, database, {
+      beforeCommit: () => steadyStateGate.beforeCommit(),
+      beforeQuery: observeCapacityWrite,
+    }));
+    const steadyStoreB = createMysqlAuthStore(storeOptions(runtime, database, {
+      beforeQuery: observeCapacityWrite,
+    }));
+    stores.push(steadyStoreA, steadyStoreB);
+    const steadyLoadedA = steadyStoreA.load();
+    const steadyLoadedB = steadyStoreB.load();
+    const steadyOptionsA = {
+      stoneCoins: 91,
+      operationId: "receipt_retention_parallel_a",
+      requestHash: "c".repeat(64),
+      updatedAt: "2026-07-16T01:01:00.000Z",
+    };
+    const steadyAfterA = nextProfileAuthority(steadyLoadedA, "a", steadyOptionsA);
+    const steadyDeltaA = durableMutationReceiptDeltaFrom(
+      steadyLoadedA.mutationReceipts,
+      steadyAfterA.mutationReceipts,
+    );
+    assert.equal(steadyDeltaA.ok, true);
+    assert.equal(steadyDeltaA.deletes.length, 1);
+    assert.equal(steadyDeltaA.upserts.length, 1);
+    const victimA = steadyDeltaA.deletes[0].expectedReceipt;
+
+    let steadyOptionsB = null;
+    let steadyAfterB = null;
+    let steadyDeltaB = null;
+    for (let attempt = 0; attempt < 32; attempt += 1) {
+      const candidateOptions = {
+        stoneCoins: 191,
+        operationId: `receipt_retention_parallel_b_${String(attempt).padStart(2, "0")}`,
+        requestHash: crypto.createHash("sha256").update(`steady-b-${attempt}`).digest("hex"),
+        updatedAt: "2026-07-16T01:01:00.000Z",
+      };
+      const candidateAfter = nextProfileAuthority(steadyLoadedB, "b", candidateOptions);
+      const candidateDelta = durableMutationReceiptDeltaFrom(
+        steadyLoadedB.mutationReceipts,
+        candidateAfter.mutationReceipts,
+      );
+      assert.equal(candidateDelta.ok, true);
+      assert.equal(candidateDelta.deletes.length, 1);
+      assert.equal(candidateDelta.upserts.length, 1);
+      if (candidateDelta.deletes[0].operationId !== victimA.operationId) {
+        steadyOptionsB = candidateOptions;
+        steadyAfterB = candidateAfter;
+        steadyDeltaB = candidateDelta;
+        break;
+      }
+    }
+    assert.ok(steadyOptionsB && steadyAfterB && steadyDeltaB, "无法选择不同的过期回执 victim。");
+    const victimB = steadyDeltaB.deletes[0].expectedReceipt;
+    assert.notEqual(victimA.operationId, steadyOptionsA.operationId);
+    assert.notEqual(victimB.operationId, steadyOptionsB.operationId);
+    assert.notEqual(victimA.operationId, victimB.operationId);
+    assert.ok(Date.parse(victimA.expiresAt) <= Date.parse(steadyOptionsA.updatedAt));
+    assert.ok(Date.parse(victimB.expiresAt) <= Date.parse(steadyOptionsB.updatedAt));
+
+    const steadyWriteA = trackWrite(steadyStoreA.saveAsync(
+      steadyAfterA,
+      rowLocalOptions("a", steadyOptionsA),
+    ));
+    await settleWithin(
+      steadyStateGate.entered,
+      WAIT_TIMEOUT_MS,
+      "20k steady-state different-account A COMMIT gate",
+    );
+    const steadyWriteB = trackWrite(steadyStoreB.saveAsync(
+      steadyAfterB,
+      rowLocalOptions("b", steadyOptionsB),
+    ));
+    await settleWithin(
+      steadyWriteB,
+      WAIT_TIMEOUT_MS,
+      "20k steady-state different-account B commits before A release",
+    );
+    assert.deepEqual(await profileRow(admin, "a"), {revision: 1, stoneCoins: 100});
+    assert.deepEqual(await profileRow(admin, "b"), {revision: 2, stoneCoins: 191});
+    assert.equal(await mutationReceiptExists(admin, steadyOptionsA.operationId), false);
+    assert.equal(await mutationReceiptExists(admin, steadyOptionsB.operationId), true);
+    steadyStateGate.release();
+    await settleWithin(
+      steadyWriteA,
+      WAIT_TIMEOUT_MS,
+      "20k steady-state different-account A commit",
+    );
+    assert.deepEqual(await profileRow(admin, "a"), {revision: 2, stoneCoins: 91});
+    assert.equal(await mutationReceiptExists(admin, victimA.operationId), false);
+    assert.equal(await mutationReceiptExists(admin, victimB.operationId), false);
+    assert.equal(await mutationReceiptExists(admin, steadyOptionsA.operationId), true);
+    assert.equal(await mutationReceiptExists(admin, steadyOptionsB.operationId), true);
+    assert.equal(observedCapacityWrites, 0);
+    assert.equal(await mutationReceiptCount(admin), DURABLE_RECEIPT_MAX_COUNT);
+    assert.equal(
+      await mutationReceiptCapacityRevision(admin),
+      DURABLE_RECEIPT_MAX_COUNT,
+    );
+    assert.equal(await globalRevision(admin), 0);
+    await closeStores(stores);
+
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, "receipt retention transaction cleanup");
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    return {
+      qualified: true,
+      receiptRetentionSeparateDatabase: database,
+      receiptRetentionSeedCount: DURABLE_RECEIPT_MAX_COUNT - 1,
+      receiptCapacity19999ExactlyOneWinner: true,
+      receiptCapacityFinalCount: await mutationReceiptCount(admin),
+      receiptCapacityFinalRevision: await mutationReceiptCapacityRevision(admin),
+      receiptCapacityLockWaitObserved: true,
+      receiptCapacityLoserRolledBack: true,
+      receiptStaleLegacyExactDeleteConflictVerified: true,
+      receiptStaleLegacyMailAssetReceiptRevisionRolledBack: true,
+      receiptDifferentExpiredVictimNetZeroVerified: true,
+      receiptSteadyStateDifferentAccountsCommittedBeforeARelease: true,
+      receiptSteadyStateVictimsWereDifferent: true,
+      receiptNetZeroCapacityWritesObserved: observedCapacityWrites,
+      receiptRetentionGlobalRevision: await globalRevision(admin),
+      receiptRetentionDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      receiptRetentionActiveTransactions: await activeTransactionCount(admin),
+      receiptRetentionActiveLockWaits: await lockWaitCount(admin),
+    };
+  } finally {
+    capacityRaceGate.release();
+    steadyStateGate.release();
+    try {
+      await settleWithin(
+        Promise.allSettled(pendingWrites),
+        WAIT_TIMEOUT_MS,
+        "receipt retention pending writes cleanup",
+      );
+    } catch {
+      // The isolated mysqld teardown remains the final bounded cleanup guard.
+    }
+    try {
+      await closePools();
+    } catch {
+      // The isolated mysqld teardown remains the final bounded cleanup guard.
+    }
+    await closeStores(stores, {bestEffort: true});
+    if (bootstrap) {
+      try {
+        await settleWithin(bootstrap.close(), WAIT_TIMEOUT_MS, "receipt retention bootstrap close");
+      } catch {
+        // The isolated mysqld teardown remains the final bounded cleanup guard.
+      }
+    }
+    if (admin) {
+      try {
+        await settleWithin(admin.end(), WAIT_TIMEOUT_MS, "receipt retention admin pool close");
+      } catch {
+        // The isolated mysqld teardown remains the final bounded cleanup guard.
+      }
+    }
+  }
+}
+
 async function main() {
   // Explicit empty credentials must not fall through mysql-store's runtime
   // environment defaults. This process-local scrub never reads their values
@@ -4015,10 +4608,21 @@ async function main() {
   let report = null;
   try {
     runtime = await startIsolatedMysql();
-    const baseReport = await runRealMysqlGate(runtime);
-    const marketCreateReport = await runMarketCreateMysqlGate(runtime);
-    const mailSendReport = await runMailSendMysqlGate(runtime);
-    report = {...baseReport, ...marketCreateReport, ...mailSendReport};
+    const receiptRetentionOnly = process.argv.slice(2).includes("--receipt-retention-only");
+    if (receiptRetentionOnly) {
+      report = await runReceiptRetentionMysqlGate(runtime);
+    } else {
+      const baseReport = await runRealMysqlGate(runtime);
+      const marketCreateReport = await runMarketCreateMysqlGate(runtime);
+      const mailSendReport = await runMailSendMysqlGate(runtime);
+      const receiptRetentionReport = await runReceiptRetentionMysqlGate(runtime);
+      report = {
+        ...baseReport,
+        ...marketCreateReport,
+        ...mailSendReport,
+        ...receiptRetentionReport,
+      };
+    }
   } finally {
     await stopIsolatedMysql(runtime);
   }

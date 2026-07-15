@@ -290,12 +290,44 @@ test("planner certifies an ordinary partial mail claim as one exact row-local up
   );
   assert.deepEqual(
     operationResources(plan, "writes"),
-    ["profile_binding", "profile", "mail_message", "mutation_receipt"],
+    [
+      "profile_binding",
+      "profile",
+      "mail_message",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ],
   );
   assert.match(plan.locks[2].sql, /FROM mail_messages[\s\S]+FOR UPDATE\b/i);
   assert.match(plan.writes[2].sql, /^UPDATE mail_messages\b/i);
   assert.equal(plan.writes.every((write) => write.expectedAffectedRows === 1), true);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+});
+
+test("planner keeps mail claim conditional when one expired same-operation receipt is replaced", () => {
+  const before = baselineAuthority();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [OPERATION_ID]: claimReceipt({
+      requestHash: "b".repeat(64),
+      committedAt: "2026-07-14T01:00:00.000Z",
+      expiresAt: "2026-07-15T01:00:00.000Z",
+      response: {ok: true, generation: "expired"},
+    }),
+  });
+  const plan = buildPlan(ordinaryPartialCandidate(before), before);
+
+  assert.equal(plan.kind, "mail_claim_conditional_v1");
+  assert.equal(
+    plan.writes.some((write) => write.resource === "mutation_receipt_capacity"),
+    false,
+  );
+  assert.deepEqual(
+    plan.writes.slice(-2).map(({resource, kind, key}) => [resource, kind, key]),
+    [
+      ["mutation_receipt", "delete", OPERATION_ID],
+      ["mutation_receipt", "insert", OPERATION_ID],
+    ],
+  );
 });
 
 test("planner certifies an ordinary full mail claim as one exact delete", () => {
@@ -311,7 +343,13 @@ test("planner certifies an ordinary full mail claim as one exact delete", () => 
   assert.deepEqual(operationResources(plan, "locks"), ["profile_binding", "profile", "mail_message"]);
   assert.deepEqual(
     operationResources(plan, "writes"),
-    ["profile_binding", "profile", "mail_message", "mutation_receipt"],
+    [
+      "profile_binding",
+      "profile",
+      "mail_message",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ],
   );
   assert.match(plan.writes[2].sql, /^DELETE FROM mail_messages\b/i);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
@@ -338,6 +376,7 @@ test("planner writes consumed equipment tombstones in canonical order with stric
       "mail_message",
       "consumed_equipment_envelope",
       "consumed_equipment_envelope",
+      "mutation_receipt_capacity",
       "mutation_receipt",
     ],
   );

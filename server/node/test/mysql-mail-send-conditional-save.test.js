@@ -5,6 +5,7 @@ const test = require("node:test");
 
 const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
 const {
+  canonicalDurableMutationReceipts,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
@@ -13,6 +14,7 @@ const {
   MAIL_SEND_MODE_TEXT,
 } = require("../src/auth/mail-send-consistency");
 const {
+  MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
   mysqlResourceAcquisitionTrace,
 } = require("../src/mysql-resource-acquisition-order");
 const {
@@ -256,12 +258,19 @@ test("text mail plan writes only the strict mail and receipt behind a shared glo
   assert.equal(built.globalCompatibilityBarrier, "shared");
   assert.equal(built.playerId, "");
   assert.deepEqual(resources(built.locks), []);
-  assert.deepEqual(resources(built.writes), ["mail_message", "mutation_receipt"]);
+  assert.deepEqual(
+    resources(built.writes),
+    ["mail_message", "mutation_receipt_capacity", "mutation_receipt"],
+  );
   assert.match(built.writes[0].sql, /^INSERT INTO mail_messages\b/i);
   assert.doesNotMatch(built.writes[0].sql, /ON DUPLICATE KEY/i);
   assert.deepEqual(
     mysqlResourceAcquisitionTrace(built).map(({resource, stage}) => [resource, stage]),
-    [["mail_message", "insert"], ["mutation_receipt", "insert"]],
+    [
+      ["mail_message", "insert"],
+      ["mutation_receipt_capacity", "update"],
+      ["mutation_receipt", "insert"],
+    ],
   );
 });
 
@@ -281,6 +290,7 @@ test("ordinary attachment mail locks and updates only the sender profile before 
     "profile_binding",
     "profile",
     "mail_message",
+    "mutation_receipt_capacity",
     "mutation_receipt",
   ]);
   assert.deepEqual(
@@ -289,7 +299,34 @@ test("ordinary attachment mail locks and updates only the sender profile before 
       ["profile_binding", "lock"],
       ["profile", "lock"],
       ["mail_message", "insert"],
+      ["mutation_receipt_capacity", "update"],
       ["mutation_receipt", "insert"],
+    ],
+  );
+});
+
+test("planner keeps text mail conditional when one expired same-operation receipt is replaced", () => {
+  const before = baselineState();
+  before.mutationReceipts = canonicalDurableMutationReceipts({
+    [OPERATION_ID]: receipt({
+      requestHash: "8".repeat(64),
+      committedAt: "2026-07-14T08:00:00.000Z",
+      expiresAt: "2026-07-15T08:00:00.000Z",
+      response: {ok: true, generation: "expired"},
+    }),
+  });
+  const built = plan(candidateState(before), before);
+
+  assert.equal(built.kind, "mail_send_conditional_v1");
+  assert.equal(
+    built.writes.some((write) => write.resource === "mutation_receipt_capacity"),
+    false,
+  );
+  assert.deepEqual(
+    built.writes.slice(-2).map(({resource, kind, key}) => [resource, kind, key]),
+    [
+      ["mutation_receipt", "delete", OPERATION_ID],
+      ["mutation_receipt", "insert", OPERATION_ID],
     ],
   );
 });
@@ -600,6 +637,10 @@ function conditionalPool(options = {}) {
               }
               return [{affectedRows: 1}, []];
             }
+            if (sql === MUTATION_RECEIPT_CAPACITY_UPDATE_SQL) {
+              assert.deepEqual(params, [1, 1]);
+              return [{affectedRows: 1}, []];
+            }
             if (/^INSERT INTO mutation_receipts\b/i.test(sql.trim())) {
               if (options.duplicateReceipt) {
                 const error = new Error("duplicate receipt");
@@ -655,6 +696,12 @@ for (const duplicate of ["duplicateMail", "duplicateReceipt"]) {
     assert.equal(fixture.transaction.committed, false);
     assert.equal(fixture.transaction.rolledBack, true);
     assert.equal(fixture.transaction.released, true);
+    if (duplicate === "duplicateReceipt") {
+      assert.equal(
+        fixture.transaction.queries.some(({sql}) => /^INSERT INTO mutation_receipts\b/i.test(sql.trim())),
+        true,
+      );
+    }
   });
 }
 
