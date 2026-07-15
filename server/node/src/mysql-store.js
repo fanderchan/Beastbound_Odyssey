@@ -743,10 +743,6 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
     const marketListings = request.scope.startsWith("market_")
       ? await readMysqlSharedMarketListings(connection)
       : null;
-    const mailPartitions = ["mail_read", "mail_mutation"].includes(request.scope)
-      ? [await readMysqlSharedMailPartition(connection, request.accountId)]
-      : [];
-
     const resolvedMailRecipient = request.scope === "mail_send"
       ? await readMysqlSharedAccountByUsername(connection, request.recipientUsername)
       : null;
@@ -819,6 +815,18 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       }
     }
 
+    const includeProfileMailPartitions = request.includeProfileMailPartitions;
+    const mailPartitionAccountIds = includeProfileMailPartitions
+      ? Array.from(profileAccountIds).sort(compareCanonicalIds)
+      : [];
+    const mailPartitions = [];
+    for (const profileAccountId of mailPartitionAccountIds) {
+      // Equipment ownership spans profile/bank, mailbox and market containers.
+      // Keep every replaced profile paired with its authoritative mailbox in
+      // the same RR view so another Node's claim cannot create a mixed root.
+      mailPartitions.push(await readMysqlSharedMailPartition(connection, profileAccountId));
+    }
+
     const marketConfig = marketListings === null
       ? null
       : await readMysqlSharedMarketConfig(connection);
@@ -844,6 +852,7 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
         : "",
       recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
       includeActorProfile: request.scope === "mail_send" && request.includeActorProfile,
+      includeProfileMailPartitions,
       accounts: entityReplacement(accountIds, accounts),
       profileBindings: entityReplacement(profileAccountIds, profileBindings),
       profiles: entityReplacement(playerIds, profiles),
@@ -873,6 +882,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
   const recipientUsername = String(request.recipientUsername || "");
   const knownRecipientAccountId = String(request.knownRecipientAccountId || "");
   const includeActorProfile = request.includeActorProfile === true;
+  const includeProfileMailPartitions = request.includeProfileMailPartitions === true;
   if (
     !["market_read", "market_mutation", "mail_read", "mail_mutation", "mail_send"].includes(scope)
     || !mysqlSharedAssetIdentity(accountId, 80)
@@ -885,7 +895,11 @@ function normalizeMysqlSharedAssetReadRequest(value) {
       || (knownRecipientAccountId !== ""
         && !mysqlSharedAssetIdentity(knownRecipientAccountId, 80))
       || typeof request.includeActorProfile !== "boolean"
+      || (includeProfileMailPartitions && !includeActorProfile)
     ))
+    || typeof request.includeProfileMailPartitions !== "boolean"
+    || (["mail_read", "mail_mutation"].includes(scope)
+      && !includeProfileMailPartitions)
     || (scope !== "mail_send" && (
       recipientUsername !== ""
       || knownRecipientAccountId !== ""
@@ -904,6 +918,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     recipientUsername,
     knownRecipientAccountId,
     includeActorProfile,
+    includeProfileMailPartitions,
   };
 }
 

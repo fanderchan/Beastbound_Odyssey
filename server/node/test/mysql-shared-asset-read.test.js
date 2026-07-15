@@ -219,6 +219,10 @@ function fakePool(options = {}) {
         return [marketRows(), []];
       }
       if (/FROM mail_messages WHERE recipient_account_id = \?/i.test(sql)) {
+        const recipientAccountId = String(params[0] || "");
+        if (recipientAccountId !== ACCOUNT_A) {
+          return [[], []];
+        }
         const mail = ordinaryMail(options.mailOverrides || {});
         return [[{
           mail_id: mail.mailId,
@@ -309,6 +313,7 @@ test("market scoped RR read returns one canonical book plus actor and seller res
     scope: "market_mutation",
     accountId: ACCOUNT_A,
     listingId: LISTING_ID,
+    includeProfileMailPartitions: true,
   }, baseline());
 
   assert.equal(result.storeRevision, 7);
@@ -316,6 +321,16 @@ test("market scoped RR read returns one canonical book plus actor and seller res
   assert.deepEqual(result.view.accounts.keys, [ACCOUNT_A, ACCOUNT_B]);
   assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A, ACCOUNT_B]);
   assert.deepEqual(result.view.profiles.keys, [PLAYER_A, PLAYER_B]);
+  assert.deepEqual(
+    result.view.mailPartitions.map((partition) => partition.recipientAccountId),
+    [ACCOUNT_A, ACCOUNT_B],
+  );
+  assert.deepEqual(
+    fake.state.queries
+      .filter(({sql}) => /FROM mail_messages/i.test(sql))
+      .map(({params}) => params),
+    [[ACCOUNT_A], [ACCOUNT_B]],
+  );
   assert.equal(result.view.marketConfig.defaultTaxBps, 300);
   assert.deepEqual(fake.state.sessionPolicies, [[3, 5]]);
   assert.deepEqual(fake.state.events.slice(0, 4), ["session", "isolation", "begin", "query"]);
@@ -323,6 +338,20 @@ test("market scoped RR read returns one canonical book plus actor and seller res
   assert.equal(fake.state.committed, 1);
   assert.equal(fake.state.rolledBack, 0);
   assert.equal(fake.state.released, 1);
+});
+
+test("ordinary market mutation keeps mailbox reads off while retaining scoped profiles", async () => {
+  const fake = fakePool();
+  const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
+    scope: "market_mutation",
+    accountId: ACCOUNT_A,
+    listingId: LISTING_ID,
+    includeProfileMailPartitions: false,
+  }, baseline());
+
+  assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A, ACCOUNT_B]);
+  assert.deepEqual(result.view.mailPartitions, []);
+  assert.equal(fake.state.queries.some(({sql}) => /FROM mail_messages/i.test(sql)), false);
 });
 
 test("a scoped projection cannot advance an older Node across a global revision", () => {
@@ -342,6 +371,7 @@ test("mail scoped RR read is recipient-bound and rejects SQL/document mirror dri
     scope: "mail_mutation",
     accountId: ACCOUNT_A,
     mailId: MAIL_ID,
+    includeProfileMailPartitions: true,
   }, baseline());
   assert.deepEqual(
     Object.keys(result.view.mailPartitions[0].messages),
@@ -356,6 +386,7 @@ test("mail scoped RR read is recipient-bound and rejects SQL/document mirror dri
       scope: "mail_mutation",
       accountId: ACCOUNT_A,
       mailId: MAIL_ID,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error && error.code === "mysql_shared_asset_integrity_invalid",
   );
@@ -369,6 +400,7 @@ test("mail scoped RR read is recipient-bound and rejects SQL/document mirror dri
       scope: "mail_mutation",
       accountId: ACCOUNT_A,
       mailId: MAIL_ID,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"
@@ -386,6 +418,7 @@ test("mail send resolves the recipient by username without reading a mailbox", a
       recipientUsername: "beta",
       knownRecipientAccountId: ACCOUNT_B,
       includeActorProfile,
+      includeProfileMailPartitions: false,
     }, baseline());
 
     assert.equal(result.view.recipientUsername, "beta");
@@ -415,6 +448,7 @@ test("mail send resolves the recipient by username without reading a mailbox", a
       recipientUsername: "beta",
       knownRecipientAccountId: "",
       includeActorProfile: false,
+      includeProfileMailPartitions: false,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"
@@ -423,12 +457,45 @@ test("mail send resolves the recipient by username without reading a mailbox", a
   assert.equal(drift.state.rolledBack, 1);
 });
 
+test("equipment mail authority pairs the sender profile with its mailbox partition", async () => {
+  const fake = fakePool();
+  const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
+    scope: "mail_send",
+    accountId: ACCOUNT_A,
+    recipientUsername: "beta",
+    knownRecipientAccountId: ACCOUNT_B,
+    includeActorProfile: true,
+    includeProfileMailPartitions: true,
+  }, baseline());
+
+  assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A]);
+  assert.deepEqual(
+    result.view.mailPartitions.map((partition) => partition.recipientAccountId),
+    [ACCOUNT_A],
+  );
+  assert.equal(fake.state.queries.some(({sql}) => /FROM mail_messages/i.test(sql)), true);
+
+  const missingProfile = fakePool();
+  await assert.rejects(
+    __runMysqlSharedAssetReadForTest(missingProfile.pool, {
+      scope: "mail_send",
+      accountId: ACCOUNT_A,
+      recipientUsername: "beta",
+      knownRecipientAccountId: ACCOUNT_B,
+      includeActorProfile: false,
+      includeProfileMailPartitions: true,
+    }, baseline()),
+    (error) => error && error.code === "mysql_shared_asset_read_request_invalid",
+  );
+});
+
 test("scoped profiles require matching non-negative safe-integer revisions", async () => {
   const mismatch = fakePool({bindingRevision: 3, profileRevision: 2});
   await assert.rejects(
     __runMysqlSharedAssetReadForTest(mismatch.pool, {
       scope: "mail_read",
       accountId: ACCOUNT_A,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"
@@ -442,6 +509,7 @@ test("scoped profiles require matching non-negative safe-integer revisions", asy
     __runMysqlSharedAssetReadForTest(fractional.pool, {
       scope: "mail_read",
       accountId: ACCOUNT_A,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"
@@ -459,6 +527,7 @@ test("scoped reads fail closed when any required binding or profile is missing",
         scope: "market_mutation",
         accountId: ACCOUNT_A,
         listingId: LISTING_ID,
+        includeProfileMailPartitions: true,
       }, baseline()),
       (error) => error
         && error.code === "mysql_shared_asset_integrity_invalid"
@@ -479,6 +548,7 @@ test("scoped reads fail closed when any required binding or profile is missing",
       scope: "market_mutation",
       accountId: ACCOUNT_A,
       listingId: LISTING_ID,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"
@@ -503,6 +573,7 @@ test("profile transfer provenance reads only its confirmed tombstone delta", asy
   const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
     scope: "mail_read",
     accountId: ACCOUNT_A,
+    includeProfileMailPartitions: true,
   }, root);
   const consumedQuery = fake.state.queries.find((entry) => (
     /FROM consumed_equipment_envelopes/i.test(entry.sql)
@@ -523,6 +594,7 @@ test("profile transfer provenance reads only its confirmed tombstone delta", asy
     __runMysqlSharedAssetReadForTest(malformed.pool, {
       scope: "mail_read",
       accountId: ACCOUNT_A,
+      includeProfileMailPartitions: true,
     }, baseline()),
     (error) => error
       && error.code === "mysql_shared_asset_integrity_invalid"

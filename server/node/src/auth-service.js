@@ -3921,20 +3921,48 @@ function createAuthService(options = {}) {
         isEquipmentItemId: isEquipmentAssetItemId,
       });
     }
-    if (["marketListings", "createMarketListing"].includes(method)) {
-      return {schemaVersion: 1, scope: "market_read", accountId};
+    if (method === "marketListings") {
+      return {
+        schemaVersion: 1,
+        scope: "market_read",
+        accountId,
+        includeProfileMailPartitions: false,
+      };
+    }
+    if (method === "createMarketListing") {
+      const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+      const itemId = String(payload.itemId || payload.item || "").trim();
+      return {
+        schemaVersion: 1,
+        scope: "market_read",
+        accountId,
+        includeProfileMailPartitions: isEquipmentAssetItemId(itemId),
+      };
     }
     if (method === "listInbox") {
-      return {schemaVersion: 1, scope: "mail_read", accountId};
+      return {
+        schemaVersion: 1,
+        scope: "mail_read",
+        accountId,
+        includeProfileMailPartitions: true,
+      };
     }
     if (["buyMarketListing", "cancelMarketListing"].includes(method)) {
       const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
       const listingId = String(payload.listingId || "").trim();
+      const listing = objectOrEmpty(data.marketListings && data.marketListings[listingId]);
+      const itemId = String(listing.itemId || "");
       return listingId === "" ? null : {
         schemaVersion: 1,
         scope: "market_mutation",
         accountId,
         listingId,
+        // A missing local listing may have been created on another Node. Read
+        // the paired mail partitions until the RR market view proves whether
+        // it is ordinary or carries an equipment escrow.
+        includeProfileMailPartitions: Object.keys(listing).length === 0
+          || Object.hasOwn(listing, "equipmentEnvelope")
+          || isEquipmentAssetItemId(itemId),
       };
     }
     if (["claimMailAttachments", "markMailRead"].includes(method)) {
@@ -3944,6 +3972,7 @@ function createAuthService(options = {}) {
         scope: "mail_mutation",
         accountId,
         mailId,
+        includeProfileMailPartitions: true,
       };
     }
     return null;

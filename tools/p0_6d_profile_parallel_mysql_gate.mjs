@@ -3010,6 +3010,7 @@ async function runRealMysqlGate(runtime) {
         schemaVersion: 1,
         scope: "market_read",
         accountId: ACTORS.a.accountId,
+        includeProfileMailPartitions: false,
       }, {adopt: true}),
       WAIT_TIMEOUT_MS,
       "legacy 旧 Node 只采纳市场与 profile、不采纳成交邮件",
@@ -3210,6 +3211,7 @@ async function runRealMysqlGate(runtime) {
       schemaVersion: 1,
       scope: "market_read",
       accountId: ACTORS.a.accountId,
+      includeProfileMailPartitions: false,
     }), WAIT_TIMEOUT_MS, "真实 MySQL 市场 RR 读穿");
     assert.equal(
       Object.hasOwn(marketReadView.marketListings, MARKET_LISTING_IDS.rollback),
@@ -3222,6 +3224,7 @@ async function runRealMysqlGate(runtime) {
       scope: "mail_mutation",
       accountId: ACTORS.b.accountId,
       mailId: MAIL_CLAIM_IDS.duplicateEnvelope,
+      includeProfileMailPartitions: true,
     }, {adopt: true}), WAIT_TIMEOUT_MS, "真实 MySQL 邮箱 RR 读穿与墓碑采纳");
     assert.equal(
       Object.hasOwn(
@@ -3261,6 +3264,7 @@ async function runRealMysqlGate(runtime) {
         schemaVersion: 1,
         scope: "market_read",
         accountId: ACTORS.a.accountId,
+        includeProfileMailPartitions: false,
       }), WAIT_TIMEOUT_MS, "旧 Node revision 越界拒绝"),
       (error) => error
         && error.code === "mysql_shared_asset_full_reload_required"
@@ -3272,6 +3276,7 @@ async function runRealMysqlGate(runtime) {
       schemaVersion: 1,
       scope: "market_read",
       accountId: ACTORS.a.accountId,
+      includeProfileMailPartitions: false,
     }), WAIT_TIMEOUT_MS, "完整 reload 后市场读穿重试");
     assert.equal(
       Object.hasOwn(refreshedMarketRead.marketListings, MARKET_LISTING_IDS.rollback),
@@ -3294,6 +3299,7 @@ async function runRealMysqlGate(runtime) {
       schemaVersion: 1,
       scope: "mail_read",
       accountId: ACTORS.a.accountId,
+      includeProfileMailPartitions: true,
     }, {adopt: true}), WAIT_TIMEOUT_MS, "缺失 server-state 后的邮箱读穿采纳");
     const recoveredStateWrite = trackWrite(missingStateStore.saveAsync(
       nextAuthEventAuthority(missingStateBefore),
@@ -3736,6 +3742,7 @@ async function runMailSendMysqlGate(runtime) {
         recipientUsername: "real_mysql_b",
         knownRecipientAccountId: ACTORS.b.accountId,
         includeActorProfile,
+        includeProfileMailPartitions: false,
       }), WAIT_TIMEOUT_MS, "mail send authority read");
       assert.equal(view.recipientAccountId, ACTORS.b.accountId);
       assert.deepEqual(view.mailPartitions, []);

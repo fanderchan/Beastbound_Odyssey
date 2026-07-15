@@ -386,8 +386,8 @@ test("ordinary scope independently rejects a best-effort deduction from insuffic
   assert.equal(certifyFixtureOrdinaryProfileChange(shortBefore, shortAfter), null);
 });
 
-test("real durable text and ordinary sends sign row-local scopes while equipment stays legacy", async () => {
-  for (const mode of [MAIL_SEND_MODE_TEXT, MAIL_SEND_MODE_ORDINARY_ITEMS, "equipment"]) {
+test("real durable text and ordinary sends sign row-local scopes while equipment and mixed stay legacy", async () => {
+  for (const mode of [MAIL_SEND_MODE_TEXT, MAIL_SEND_MODE_ORDINARY_ITEMS, "equipment", "mixed"]) {
     const base = createMemoryAuthStore();
     const seed = createAuthService({store: base});
     const sender = seed.register({username: `mss_${mode}`.slice(0, 20), password: "test1234", displayName: "寄件"});
@@ -398,6 +398,9 @@ test("real durable text and ordinary sends sign row-local scopes while equipment
         current.profile.backpackSlots[0] = {itemId: "item_meat_small", count: 2};
       } else {
         current.profile.backpackSlots[0] = {itemId: "weapon_wooden_club", count: 1};
+        if (mode === "mixed") {
+          current.profile.backpackSlots[1] = {itemId: "item_meat_small", count: 2};
+        }
         current.profile.equipmentInstances = {
           equip_mail_send_scope_0001: {
             schemaVersion: 1,
@@ -439,22 +442,31 @@ test("real durable text and ordinary sends sign row-local scopes while equipment
     };
     if (mode === MAIL_SEND_MODE_ORDINARY_ITEMS) {
       payload.items = [{itemId: "item_meat_small", count: 1}];
-    } else if (mode === "equipment") {
+    } else if (["equipment", "mixed"].includes(mode)) {
       payload.items = [{
         itemId: "weapon_wooden_club",
         count: 1,
         instanceId: "equip_mail_send_scope_0001",
         sourceSlotIndex: 0,
       }];
+      if (mode === "mixed") {
+        payload.items.push({itemId: "item_meat_small", count: 1});
+      }
     }
     const operation = {
       operationId: `op_real_mail_send_${mode}_0001`,
-      requestHash: (mode === MAIL_SEND_MODE_TEXT ? "a" : mode === MAIL_SEND_MODE_ORDINARY_ITEMS ? "b" : "c").repeat(64),
+      requestHash: (
+        mode === MAIL_SEND_MODE_TEXT
+          ? "a"
+          : mode === MAIL_SEND_MODE_ORDINARY_ITEMS
+            ? "b"
+            : mode === "equipment" ? "c" : "d"
+      ).repeat(64),
       actionId: ACTION_ID,
     };
     const result = await service.invokeDurable("sendMail", [sender.session.token, payload], operation);
     assert.equal(result.ok, true, `${mode}: ${JSON.stringify(result)}`);
-    if (mode === "equipment") {
+    if (["equipment", "mixed"].includes(mode)) {
       assert.equal(saveOptions.consistencyScope, undefined);
       assert.equal(savedPlan.kind, "legacy_global_cas");
     } else {

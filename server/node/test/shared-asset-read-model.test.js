@@ -68,6 +68,7 @@ test("market view atomically replaces the complete market book and exact actor r
     schemaVersion: 1,
     scope: "market_mutation",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a", "acc_b"], {
       acc_a: {accountId: "acc_a", username: "alpha_new"},
       acc_b: {accountId: "acc_b", username: "beta"},
@@ -93,7 +94,20 @@ test("market view atomically replaces the complete market book and exact actor r
       },
     },
     marketConfig: {defaultTaxBps: 300},
-    mailPartitions: [],
+    mailPartitions: [
+      {
+        recipientAccountId: "acc_a",
+        messages: {
+          mail_a_old: {mailId: "mail_a_old", recipientAccountId: "acc_a"},
+        },
+      },
+      {
+        recipientAccountId: "acc_b",
+        messages: {
+          mail_b_keep: {mailId: "mail_b_keep", recipientAccountId: "acc_b"},
+        },
+      },
+    ],
     consumedEquipmentEnvelopeIds: ["eqx_prior_remote_0001", "eqx_remote_0002"],
   });
 
@@ -111,6 +125,85 @@ test("market view atomically replaces the complete market book and exact actor r
   });
 });
 
+test("market mutation view is bound to the requested listing actor and seller partitions", () => {
+  const actorOnly = {
+    schemaVersion: 1,
+    scope: "market_mutation",
+    accountId: "acc_a",
+    includeProfileMailPartitions: true,
+    accounts: replacement(["acc_a", "acc_b"], {
+      acc_a: {accountId: "acc_a", username: "alpha"},
+      acc_b: {accountId: "acc_b", username: "beta"},
+    }),
+    profileBindings: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", playerId: "player_a", profileRevision: 1},
+    }),
+    profiles: replacement(["player_a"], {
+      player_a: {
+        playerId: "player_a",
+        accountId: "acc_a",
+        profileRevision: 1,
+        profile: {},
+      },
+    }),
+    marketListings: {
+      listing_target: {listingId: "listing_target", sellerAccountId: "acc_b"},
+    },
+    marketConfig: {defaultTaxBps: 500},
+    mailPartitions: [{recipientAccountId: "acc_a", messages: {}}],
+    consumedEquipmentEnvelopeIds: [],
+  };
+
+  assert.throws(() => assertSharedAssetReadViewMatchesRequest(actorOnly, {
+    scope: "market_mutation",
+    accountId: "acc_a",
+    listingId: "listing_target",
+    includeProfileMailPartitions: true,
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "request_identity");
+  assert.throws(() => applySharedAssetReadView(baseline(), {
+    ...actorOnly,
+    profileBindings: replacement([], {}),
+    profiles: replacement([], {}),
+    mailPartitions: [],
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "market_profile_bindings.keys");
+
+  const complete = {
+    ...actorOnly,
+    profileBindings: replacement(["acc_a", "acc_b"], {
+      acc_a: {accountId: "acc_a", playerId: "player_a", profileRevision: 1},
+      acc_b: {accountId: "acc_b", playerId: "player_b", profileRevision: 1},
+    }),
+    profiles: replacement(["player_a", "player_b"], {
+      player_a: {
+        playerId: "player_a",
+        accountId: "acc_a",
+        profileRevision: 1,
+        profile: {},
+      },
+      player_b: {
+        playerId: "player_b",
+        accountId: "acc_b",
+        profileRevision: 1,
+        profile: {},
+      },
+    }),
+    mailPartitions: [
+      {recipientAccountId: "acc_a", messages: {}},
+      {recipientAccountId: "acc_b", messages: {}},
+    ],
+  };
+  assert.equal(assertSharedAssetReadViewMatchesRequest(complete, {
+    scope: "market_mutation",
+    accountId: "acc_a",
+    listingId: "listing_target",
+    includeProfileMailPartitions: true,
+  }), true);
+});
+
 test("trusted roots stage database-confirmed tombstones on the current lineage", () => {
   const source = baseline();
   assert.equal(markAuthorityRootTrusted(source), true);
@@ -118,6 +211,7 @@ test("trusted roots stage database-confirmed tombstones on the current lineage",
     schemaVersion: 1,
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a"], {
       acc_a: {accountId: "acc_a", username: "alpha"},
     }),
@@ -158,6 +252,7 @@ test("mail view replaces only the certified recipient partition", () => {
     schemaVersion: 1,
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a"], {
       acc_a: {accountId: "acc_a", username: "alpha"},
     }),
@@ -188,6 +283,7 @@ test("separate applications own every mutable mail and market document", () => {
     schemaVersion: 1,
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a"], {
       acc_a: {accountId: "acc_a", username: "alpha"},
     }),
@@ -221,6 +317,18 @@ test("separate applications own every mutable mail and market document", () => {
   const marketView = {
     ...mailView,
     scope: "market_read",
+    includeProfileMailPartitions: false,
+    profileBindings: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", playerId: "player_a", profileRevision: 1},
+    }),
+    profiles: replacement(["player_a"], {
+      player_a: {
+        playerId: "player_a",
+        accountId: "acc_a",
+        profileRevision: 1,
+        profile: {},
+      },
+    }),
     marketListings: {
       listing_alias: {
         listingId: "listing_alias",
@@ -252,6 +360,7 @@ test("view certifier rejects unordered keys, wrong recipient partitions, and ext
     schemaVersion: 1,
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a"], {acc_a: {accountId: "acc_a", username: "alpha"}}),
     profileBindings: replacement([], {}),
     profiles: replacement([], {}),
@@ -311,6 +420,7 @@ test("a certified view must match the exact requested scope and account", () => 
     schemaVersion: 1,
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
     accounts: replacement(["acc_a"], {
       acc_a: {accountId: "acc_a", username: "alpha"},
     }),
@@ -324,10 +434,12 @@ test("a certified view must match the exact requested scope and account", () => 
   assert.equal(assertSharedAssetReadViewMatchesRequest(view, {
     scope: "mail_read",
     accountId: "acc_a",
+    includeProfileMailPartitions: true,
   }), true);
   assert.throws(() => assertSharedAssetReadViewMatchesRequest(view, {
     scope: "mail_read",
     accountId: "acc_b",
+    includeProfileMailPartitions: true,
   }), (error) => error
     && error.code === "shared_asset_read_view_invalid"
     && error.reason === "request_identity");

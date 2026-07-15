@@ -114,6 +114,7 @@ test("HTTP market and inbox reads await authoritative shared projections and sur
         schemaVersion: 1,
         scope: request.scope,
         accountId,
+        includeProfileMailPartitions: request.includeProfileMailPartitions,
         accounts: {keys: [accountId], values: {[accountId]: account}},
         profileBindings: {keys: [accountId], values: {[accountId]: binding}},
         profiles: {keys: [binding.playerId], values: {[binding.playerId]: profile}},

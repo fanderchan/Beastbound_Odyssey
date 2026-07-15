@@ -68,13 +68,20 @@ function buildMailSendSharedAssetReadRequest(options = {}) {
   const isEquipmentItemId = typeof options.isEquipmentItemId === "function"
     ? options.isEquipmentItemId
     : () => false;
+  const selectedEquipmentInstanceIds = new Set();
+  let hasEquipmentAttachment = false;
   if (rawItems.some((entry) => {
     if (!isRecord(entry)) {
       return true;
     }
     const itemId = typeof entry.itemId === "string" ? entry.itemId.trim() : "";
     const count = Number(entry.count);
-    return Object.keys(entry).length !== 2
+    const equipment = isEquipmentItemId(itemId);
+    const allowedFields = equipment
+      ? new Set(["itemId", "count", "instanceId", "sourceSlotIndex"])
+      : new Set(["itemId", "count"]);
+    if (
+      Object.keys(entry).some((field) => !allowedFields.has(field))
       || !Object.hasOwn(entry, "itemId")
       || !Object.hasOwn(entry, "count")
       || itemId === ""
@@ -82,7 +89,27 @@ function buildMailSendSharedAssetReadRequest(options = {}) {
       || !itemById(itemId)
       || !Number.isSafeInteger(count)
       || count < 1
-      || isEquipmentItemId(itemId);
+    ) {
+      return true;
+    }
+    if (!equipment) {
+      return false;
+    }
+    const instanceId = typeof entry.instanceId === "string" ? entry.instanceId.trim() : "";
+    const sourceSlotIndex = Number(entry.sourceSlotIndex);
+    if (
+      count !== 1
+      || instanceId === ""
+      || entry.instanceId !== instanceId
+      || !Number.isSafeInteger(sourceSlotIndex)
+      || sourceSlotIndex < 0
+      || selectedEquipmentInstanceIds.has(instanceId)
+    ) {
+      return true;
+    }
+    selectedEquipmentInstanceIds.add(instanceId);
+    hasEquipmentAttachment = true;
+    return false;
   })) {
     return null;
   }
@@ -99,6 +126,7 @@ function buildMailSendSharedAssetReadRequest(options = {}) {
     recipientUsername,
     knownRecipientAccountId,
     includeActorProfile: rawItems.length > 0,
+    includeProfileMailPartitions: hasEquipmentAttachment,
   };
 }
 

@@ -84,14 +84,16 @@ function sharedView(snapshot, request) {
       playerIds.push(binding.playerId);
     }
   }
-  const mailPartitions = ["mail_read", "mail_mutation"].includes(request.scope) ? [{
-    recipientAccountId: request.accountId,
-    messages: canonicalMap(Object.fromEntries(
-      Object.entries(snapshot.mailMessages).filter(([, mail]) => (
-        mail.recipientAccountId === request.accountId
+  const mailPartitions = request.includeProfileMailPartitions === true
+    ? Array.from(profileAccountIds).sort(compareCanonicalIds).map((recipientAccountId) => ({
+      recipientAccountId,
+      messages: canonicalMap(Object.fromEntries(
+        Object.entries(snapshot.mailMessages).filter(([, mail]) => (
+          mail.recipientAccountId === recipientAccountId
+        )),
       )),
-    )),
-  }] : [];
+    }))
+    : [];
   return {
     schemaVersion: 1,
     scope: request.scope,
@@ -102,6 +104,7 @@ function sharedView(snapshot, request) {
       : "",
     recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
     includeActorProfile: request.scope === "mail_send" && request.includeActorProfile === true,
+    includeProfileMailPartitions: request.includeProfileMailPartitions === true,
     accounts: replacement(Array.from(accountIds), accountsById(snapshot.accounts)),
     profileBindings: replacement(Array.from(profileAccountIds), snapshot.profileBindings),
     profiles: replacement(playerIds, snapshot.profiles),
@@ -415,6 +418,7 @@ test("text mail resolves a recipient created on another Node without scanning a 
     recipientUsername: recipient.account.username,
     knownRecipientAccountId: "",
     includeActorProfile: false,
+    includeProfileMailPartitions: false,
   });
   assert.equal(savedScope.kind, "row_local_mail_send_v1");
   assert.equal(savedScope.mode, "text");
@@ -479,6 +483,7 @@ test("ordinary mail adopts the sender profile changed on another Node before ded
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(observedRequest.scope, "mail_send");
   assert.equal(observedRequest.includeActorProfile, true);
+  assert.equal(observedRequest.includeProfileMailPartitions, false);
   assert.equal(observedRequest.knownRecipientAccountId, recipient.account.accountId);
   assert.equal(savedScope.kind, "row_local_mail_send_v1");
   assert.equal(savedScope.mode, "ordinary_items");
@@ -486,6 +491,99 @@ test("ordinary mail adopts the sender profile changed on another Node before ded
     backpackItemCount(profileForAccount(backing.load(), sender.account.accountId), "item_meat_small"),
     1,
   );
+});
+
+test("equipment mail refreshes the claimed owner's profile and mailbox before forwarding", async () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const originalSender = seed.register({
+    username: "eqforwardsender",
+    password: "test1234",
+    displayName: "装备原寄件人",
+  });
+  const forwarder = seed.register({
+    username: "eqforwardowner",
+    password: "test1234",
+    displayName: "装备转寄人",
+  });
+  const recipient = seed.register({
+    username: "eqforwardrecv",
+    password: "test1234",
+    displayName: "装备最终收件人",
+  });
+  assert.equal(originalSender.ok, true);
+  assert.equal(forwarder.ok, true);
+  assert.equal(recipient.ok, true);
+  seedBackpackEquipment(seed, originalSender.session.token);
+  const firstSend = seed.sendMail(originalSender.session.token, {
+    recipientUsername: forwarder.account.username,
+    title: "待转寄装备",
+    body: "另一 Node 领取后，本 Node 必须先刷新完整装备归属。",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_shared_read_legacy_1",
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(firstSend.ok, true, JSON.stringify(firstSend));
+  const staleSnapshot = seed.snapshot();
+  const firstMail = staleSnapshot.mailMessages[firstSend.mail.mailId];
+  const originEnvelopeId = firstMail.equipmentEnvelopes[0].envelopeId;
+  const backing = createMemoryAuthStore(staleSnapshot);
+  const remote = createAuthService({store: backing});
+  const claimed = remote.claimMailAttachments(forwarder.session.token, firstSend.mail.mailId);
+  assert.equal(claimed.ok, true, JSON.stringify(claimed));
+  const afterClaim = backing.load();
+  const forwarderProfile = profileForAccount(afterClaim, forwarder.account.accountId).profile;
+  const claimedInstance = Object.values(forwarderProfile.equipmentInstances).find((instance) => (
+    instance
+    && instance.transferProvenance
+    && instance.transferProvenance.originEnvelopeId === originEnvelopeId
+  ));
+  assert.ok(claimedInstance);
+
+  let observedRequest = null;
+  let savedOptions = null;
+  const staleNode = createReadThroughNode(backing, staleSnapshot, {
+    allowLegacy: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+    onSave(options) {
+      savedOptions = options;
+    },
+  });
+  const forwarded = await staleNode.invokeDurable(
+    "sendMail",
+    [forwarder.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "已转寄装备",
+      body: "新邮件必须只托管一次装备。",
+      items: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: claimedInstance.instanceId,
+        sourceSlotIndex: 0,
+      }],
+    }],
+    {
+      operationId: "op_shared_read_equipment_forward_0001",
+      requestHash: "8".repeat(64),
+      actionId: "POST /mail/send",
+    },
+  );
+
+  assert.equal(forwarded.ok, true, JSON.stringify(forwarded));
+  assert.equal(observedRequest.scope, "mail_send");
+  assert.equal(observedRequest.includeActorProfile, true);
+  assert.equal(observedRequest.includeProfileMailPartitions, true);
+  assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
+  const finalSnapshot = backing.load();
+  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, firstSend.mail.mailId), false);
+  assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
+  assert.ok(finalSnapshot.mailMessages[forwarded.mail.mailId]);
+  const finalForwarder = profileForAccount(finalSnapshot, forwarder.account.accountId).profile;
+  assert.equal(Object.hasOwn(finalForwarder.equipmentInstances, claimedInstance.instanceId), false);
 });
 
 test("ordinary mail refuses a stale attachment already consumed on another Node", async () => {
@@ -584,6 +682,7 @@ test("ordinary market create refreshes a stale global-cap snapshot before valida
   const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
     beforeSharedRead(request) {
       assert.equal(request.scope, "market_read");
+      assert.equal(request.includeProfileMailPartitions, false);
     },
     onReceiptRead() {
       receiptReads += 1;
@@ -1312,6 +1411,79 @@ test("read-through preserves no-receipt ordinary cancel on the certified legacy 
   assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), false);
 });
 
+test("market mutation refreshes a claimed equipment owner's mailbox with its profile", async () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const sender = seed.register({
+    username: "sharedmailowner",
+    password: "test1234",
+    displayName: "装备邮件寄件人",
+  });
+  const recipient = seed.register({
+    username: "sharedmarketowner",
+    password: "test1234",
+    displayName: "装备邮件收件人",
+  });
+  assert.equal(sender.ok, true);
+  assert.equal(recipient.ok, true);
+  seedBackpackEquipment(seed, sender.session.token);
+  const sent = seed.sendMail(sender.session.token, {
+    recipientUsername: recipient.account.username,
+    title: "跨节点装备邮件",
+    body: "领取后应能直接上架，旧 Node 不得保留已删除的邮件 owner。",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: "equip_shared_read_legacy_1",
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(sent.ok, true, JSON.stringify(sent));
+  const staleSnapshot = seed.snapshot();
+  const staleMail = staleSnapshot.mailMessages[sent.mail.mailId];
+  const originEnvelopeId = staleMail.equipmentEnvelopes[0].envelopeId;
+  const backing = createMemoryAuthStore(staleSnapshot);
+  const remote = createAuthService({store: backing});
+  const claimed = remote.claimMailAttachments(recipient.session.token, sent.mail.mailId);
+  assert.equal(claimed.ok, true, JSON.stringify(claimed));
+  const afterClaim = backing.load();
+  const recipientProfile = profileForAccount(afterClaim, recipient.account.accountId).profile;
+  const claimedInstance = Object.values(recipientProfile.equipmentInstances).find((instance) => (
+    instance
+    && instance.transferProvenance
+    && instance.transferProvenance.originEnvelopeId === originEnvelopeId
+  ));
+  assert.ok(claimedInstance);
+  assert.equal(Object.hasOwn(afterClaim.mailMessages, sent.mail.mailId), false);
+  assert.equal(Object.hasOwn(afterClaim.consumedEquipmentEnvelopes, originEnvelopeId), true);
+
+  let savedOptions = null;
+  const staleNode = createReadThroughNode(backing, staleSnapshot, {
+    allowLegacy: true,
+    onSave(options) {
+      savedOptions = options;
+    },
+  });
+  const listed = await staleNode.invokeDurable(
+    "createMarketListing",
+    [recipient.session.token, {
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: claimedInstance.instanceId,
+      sourceSlotIndex: 0,
+      unitPrice: 30,
+      currency: "diamonds",
+    }],
+    {},
+  );
+
+  assert.equal(listed.ok, true, JSON.stringify(listed));
+  assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
+  const finalSnapshot = backing.load();
+  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, sent.mail.mailId), false);
+  assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
+  assert.ok(finalSnapshot.marketListings[listed.listing.listingId]);
+});
+
 test("read-through keeps equipment market cancel on the legacy asset path", async () => {
   const seed = createAuthService({store: createMemoryAuthStore()});
   const seller = seed.register({
@@ -1334,8 +1506,12 @@ test("read-through keeps equipment market cancel on the legacy asset path", asyn
   const envelopeId = created.listing.equipmentEnvelope.envelopeId;
   const backing = createMemoryAuthStore(seed.snapshot());
   let savedOptions = null;
+  let observedRequest = null;
   const sellerNode = createReadThroughNode(backing, beforeListing, {
     allowLegacy: true,
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
     onSave(options) {
       savedOptions = options;
     },
@@ -1351,6 +1527,8 @@ test("read-through keeps equipment market cancel on the legacy asset path", asyn
     },
   );
   assert.equal(cancelled.ok, true, JSON.stringify(cancelled));
+  assert.equal(observedRequest.scope, "market_mutation");
+  assert.equal(observedRequest.includeProfileMailPartitions, true);
   assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
   const finalSnapshot = backing.load();
   assert.equal(Object.hasOwn(finalSnapshot.marketListings, created.listing.listingId), false);

@@ -55,13 +55,15 @@ function certifiedSharedAssetReadView(value) {
   }
   const scope = String(value.scope || "");
   const accountId = String(value.accountId || "");
+  const includeProfileMailPartitions = value.includeProfileMailPartitions === true;
   if (![
     "market_read",
     "market_mutation",
     "mail_read",
     "mail_mutation",
     "mail_send",
-  ].includes(scope) || accountId === "") {
+  ].includes(scope) || accountId === ""
+    || typeof value.includeProfileMailPartitions !== "boolean") {
     throw sharedAssetReadViewError("scope");
   }
   const mailSend = scope === "mail_send";
@@ -76,6 +78,7 @@ function certifiedSharedAssetReadView(value) {
     || !canonicalOptionalIdentity(knownRecipientAccountId, true)
     || !canonicalOptionalIdentity(recipientAccountId, true)
     || typeof value.includeActorProfile !== "boolean"
+    || (includeProfileMailPartitions && !includeActorProfile)
   )) {
     throw sharedAssetReadViewError("mail_send_identity");
   }
@@ -96,14 +99,7 @@ function certifiedSharedAssetReadView(value) {
     ? value.mailPartitions.map(certifiedMailPartition)
     : [];
   const partitionIds = mailPartitions.map((partition) => partition.recipientAccountId);
-  if (
-    !canonicalUniqueStrings(partitionIds)
-    || (["mail_read", "mail_mutation"].includes(scope) && (
-      partitionIds.length !== 1
-      || partitionIds[0] !== accountId
-    ))
-    || ((scope.startsWith("market_") || mailSend) && partitionIds.length !== 0)
-  ) {
+  if (!canonicalUniqueStrings(partitionIds)) {
     throw sharedAssetReadViewError("mail_partitions");
   }
 
@@ -126,6 +122,16 @@ function certifiedSharedAssetReadView(value) {
     "profileBindings",
   );
   const profiles = certifiedEntityReplacement(value.profiles, "playerId", "profiles");
+  if (scope.startsWith("market_")) {
+    assertCertifiedMarketAuthority({
+      scope,
+      accountId,
+      accounts,
+      profileBindings,
+      profiles,
+      marketListings,
+    });
+  }
   if (mailSend) {
     assertCertifiedMailSendAuthority({
       accountId,
@@ -137,6 +143,22 @@ function certifiedSharedAssetReadView(value) {
       profileBindings,
       profiles,
     });
+  }
+  const expectedMailPartitionIds = !includeProfileMailPartitions
+    ? []
+    : ["mail_read", "mail_mutation"].includes(scope)
+      ? [accountId]
+      : scope === "market_mutation"
+        ? profileBindings.keys
+        : [accountId];
+  if (
+    !isDeepStrictEqual(partitionIds, expectedMailPartitionIds)
+    || (["mail_read", "mail_mutation"].includes(scope)
+      && !includeProfileMailPartitions)
+    || (scope === "market_read" && includeProfileMailPartitions
+      && !isDeepStrictEqual(profileBindings.keys, [accountId]))
+  ) {
+    throw sharedAssetReadViewError("mail_partitions");
   }
   const referencedEnvelopeIds = new Set(sharedAssetReadReferencedEnvelopeIds({
     marketListings,
@@ -155,6 +177,7 @@ function certifiedSharedAssetReadView(value) {
     knownRecipientAccountId,
     recipientAccountId,
     includeActorProfile,
+    includeProfileMailPartitions,
     accounts,
     profileBindings,
     profiles,
@@ -168,18 +191,80 @@ function certifiedSharedAssetReadView(value) {
 function assertSharedAssetReadViewMatchesRequest(viewValue, requestValue) {
   const view = certifiedSharedAssetReadView(viewValue);
   const request = objectOrEmpty(requestValue);
+  let marketMutationIdentityMismatch = false;
+  if (view.scope === "market_mutation") {
+    const listingId = typeof request.listingId === "string" ? request.listingId : "";
+    const listing = objectOrEmpty(view.marketListings[listingId]);
+    const sellerAccountId = String(listing.sellerAccountId || "");
+    const expectedProfileAccountIds = Array.from(new Set([
+      view.accountId,
+      sellerAccountId,
+    ].filter(Boolean))).sort(compareCanonicalIds);
+    marketMutationIdentityMismatch = !canonicalOptionalIdentity(listingId, false)
+      || !isDeepStrictEqual(view.profileBindings.keys, expectedProfileAccountIds);
+  }
   if (
     String(request.scope || "") !== view.scope
     || String(request.accountId || "") !== view.accountId
+    || marketMutationIdentityMismatch
     || (view.scope === "mail_send" && (
       String(request.recipientUsername || "") !== view.recipientUsername
       || String(request.knownRecipientAccountId || "") !== view.knownRecipientAccountId
       || Boolean(request.includeActorProfile) !== view.includeActorProfile
     ))
+    || typeof request.includeProfileMailPartitions !== "boolean"
+    || request.includeProfileMailPartitions !== view.includeProfileMailPartitions
   ) {
     throw sharedAssetReadViewError("request_identity");
   }
   return true;
+}
+
+function assertCertifiedMarketAuthority(value) {
+  const expectedAccountIds = new Set([value.accountId]);
+  for (const listing of Object.values(value.marketListings)) {
+    const sellerAccountId = String(listing && listing.sellerAccountId || "");
+    if (!canonicalOptionalIdentity(sellerAccountId, false)) {
+      throw sharedAssetReadViewError("market_listing_seller");
+    }
+    expectedAccountIds.add(sellerAccountId);
+  }
+  const expectedAccountKeys = Array.from(expectedAccountIds).sort(compareCanonicalIds);
+  if (
+    !isDeepStrictEqual(value.accounts.keys, expectedAccountKeys)
+    || expectedAccountKeys.some((accountId) => !value.accounts.values[accountId])
+  ) {
+    throw sharedAssetReadViewError("market_accounts");
+  }
+
+  const bindingAccountIds = value.profileBindings.keys;
+  if (
+    !bindingAccountIds.includes(value.accountId)
+    || (value.scope === "market_read"
+      && !isDeepStrictEqual(bindingAccountIds, [value.accountId]))
+    || bindingAccountIds.some((accountId) => !expectedAccountIds.has(accountId))
+  ) {
+    throw sharedAssetReadViewError("market_profile_bindings.keys");
+  }
+  const expectedPlayerIds = [];
+  for (const bindingAccountId of bindingAccountIds) {
+    const binding = value.profileBindings.values[bindingAccountId];
+    const playerId = String(binding && binding.playerId || "");
+    const profile = value.profiles.values[playerId];
+    if (
+      !binding
+      || playerId === ""
+      || !profile
+      || String(profile.accountId || "") !== bindingAccountId
+    ) {
+      throw sharedAssetReadViewError("market_profiles");
+    }
+    expectedPlayerIds.push(playerId);
+  }
+  expectedPlayerIds.sort(compareCanonicalIds);
+  if (!isDeepStrictEqual(value.profiles.keys, expectedPlayerIds)) {
+    throw sharedAssetReadViewError("market_profiles.keys");
+  }
 }
 
 function assertCertifiedMailSendAuthority(value) {
