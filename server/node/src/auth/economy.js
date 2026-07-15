@@ -35,6 +35,7 @@ const {
 } = require("./equipment-envelope-consumed-ledger");
 const {
   MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
   auditMarketListingBook,
   buildEquipmentMarketListing,
   publicMarketListingFacts,
@@ -447,7 +448,11 @@ function createEconomyDomain(ctx) {
       return fail("market_price_invalid", "单价需要大于0。", profilePayload(prepared, prepared.profile));
     }
     const activeListings = marketBook.listings;
-    if (activeListings.filter((listing) => listing.sellerAccountId === prepared.account.accountId).length >= 20) {
+    if (
+      activeListings.filter((listing) => (
+        listing.sellerAccountId === prepared.account.accountId
+      )).length >= MARKET_MAX_LISTINGS_PER_SELLER
+    ) {
       return fail("market_listing_limit", "你的挂单太多，请先卖出或取消一些。", profilePayload(prepared, prepared.profile));
     }
     if (activeListings.length >= MARKET_MAX_LISTINGS) {

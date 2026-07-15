@@ -21,6 +21,10 @@ const {stageDurableMutationReceipt} = require(path.join(ROOT, "server/node/src/a
 const {ensureConsumedEquipmentEnvelopeIds} = require(
   path.join(ROOT, "server/node/src/auth/equipment-envelope-consumed-ledger"),
 );
+const {
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
+} = require(path.join(ROOT, "server/node/src/auth/market-listing-state"));
 const {createMysqlAuthStore} = require(path.join(ROOT, "server/node/src/mysql-store"));
 const {
   createAsyncWriteAuthStore,
@@ -95,6 +99,7 @@ const SALE_MAIL_TIMEOUT_RETRY_ID = "mail_real_market_timeout_retry_b";
 const LEGACY_MAIL_COLLISION_RETRY_ID = "mail_real_legacy_collision_retry";
 const LEGACY_MAIL_COLLISION_OPERATION_ID = "real_legacy_mail_collision_send";
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
+const MARKET_CREATE_ACTION_ID = "POST /market/list";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
 
@@ -606,6 +611,16 @@ function storeOptions(runtime, database, gate = null) {
   };
 }
 
+function crossDatabaseStoreOptions(runtime, loaderDatabase, targetDatabase) {
+  const options = storeOptions(runtime, loaderDatabase);
+  return {
+    ...options,
+    poolFactory(poolOptions) {
+      return mysql.createPool({...poolOptions, database: targetDatabase});
+    },
+  };
+}
+
 function seededAuthority(empty) {
   const data = cloneAuthorityRoot(empty);
   data.accounts = {};
@@ -769,6 +784,118 @@ function realMarketListing(listingId, count, options = {}) {
     currency: "stoneCoins",
     createdAt: BASE_TIME,
     schemaVersion: 1,
+  };
+}
+
+function realMarketCreateFillerListing(index) {
+  const normalizedIndex = Number(index);
+  return {
+    listingId: `listing_real_market_create_capacity_${String(normalizedIndex).padStart(3, "0")}`,
+    sellerAccountId: `acc_real_market_create_filler_${Math.floor(normalizedIndex / MARKET_MAX_LISTINGS_PER_SELLER)}`,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: 10 + normalizedIndex,
+    currency: "stoneCoins",
+    createdAt: BASE_TIME,
+    schemaVersion: 1,
+  };
+}
+
+function marketCreateSeededAuthority(empty, totalListingCount) {
+  assert.ok(Number.isSafeInteger(totalListingCount));
+  assert.ok(totalListingCount >= 0 && totalListingCount <= MARKET_MAX_LISTINGS);
+  const data = seededAuthority(empty);
+  data.marketListings = {};
+  for (let index = 0; index < totalListingCount; index += 1) {
+    const listing = realMarketCreateFillerListing(index);
+    data.marketListings[listing.listingId] = listing;
+  }
+  for (const actorKey of ["a", "b"]) {
+    const actor = actorForKey(actorKey);
+    data.profiles[actor.playerId].profile.backpackSlots = [{
+      itemId: "item_meat_small",
+      count: 2,
+    }];
+  }
+  return data;
+}
+
+function marketCreateMutation(before, actorKey, options) {
+  const actor = actorForKey(actorKey);
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  const beforeProfile = before.profiles[actor.playerId].profile;
+  const beforeSlots = Array.isArray(beforeProfile.backpackSlots) ? beforeProfile.backpackSlots : [];
+  const beforeItemCount = beforeSlots
+    .filter((slot) => slot && slot.itemId === "item_meat_small")
+    .reduce((total, slot) => total + Number(slot.count || 0), 0);
+  assert.ok(beforeItemCount >= 1, `${actorKey} 缺少真实市场挂单测试道具。`);
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt: options.updatedAt,
+    profile: {
+      ...beforeProfile,
+      backpackSlots: beforeItemCount > 1
+        ? [{itemId: "item_meat_small", count: beforeItemCount - 1}]
+        : [],
+    },
+  };
+  const listing = {
+    listingId: options.listingId,
+    sellerAccountId: actor.accountId,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: Number(options.unitPrice),
+    currency: "stoneCoins",
+    createdAt: options.updatedAt,
+    schemaVersion: 1,
+  };
+  assert.equal(Object.hasOwn(before.marketListings, listing.listingId), false);
+  after.marketListings[listing.listingId] = listing;
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId: options.operationId,
+    requestHash: options.requestHash,
+    actionId: MARKET_CREATE_ACTION_ID,
+    accountId: actor.accountId,
+    committedAt: options.updatedAt,
+    expiresAt: "2026-07-18T05:00:00.000Z",
+    response: {ok: true, listing, saleMail: null, operationId: options.operationId},
+  }, {nowMs: Date.parse(options.updatedAt)});
+  const beforeListings = Object.values(before.marketListings || {});
+  return {
+    after,
+    consistencyScope: {
+      kind: "row_local_market_create_v1",
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      listingId: listing.listingId,
+      observedTotalListingCount: beforeListings.length,
+      observedSellerListingCount: beforeListings.filter((entry) => (
+        entry.sellerAccountId === actor.accountId
+      )).length,
+      maxTotalListings: MARKET_MAX_LISTINGS,
+      maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+      operationId: options.operationId,
+      requestHash: options.requestHash,
+      actionId: MARKET_CREATE_ACTION_ID,
+    },
+  };
+}
+
+function saveMarketCreate(store, before, actorKey, options) {
+  const mutation = marketCreateMutation(before, actorKey, options);
+  return {
+    after: mutation.after,
+    promise: options.legacy === true
+      ? store.saveAsync(mutation.after)
+      : store.saveAsync(mutation.after, {consistencyScope: mutation.consistencyScope}),
   };
 }
 
@@ -1366,6 +1493,38 @@ async function marketListingExists(admin, listingId) {
     "MySQL market listing query",
   );
   return Number(rows[0] && rows[0].listing_count || 0) === 1;
+}
+
+async function marketListingCount(admin) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS listing_count FROM market_listings",
+    [],
+    "MySQL market listing count query",
+  );
+  return Number(rows[0] && rows[0].listing_count || 0);
+}
+
+async function marketSellerListingCount(admin, actorKey) {
+  const actor = actorForKey(actorKey);
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT COUNT(*) AS listing_count FROM market_listings WHERE seller_account_id = ?",
+    [actor.accountId],
+    "MySQL market seller listing count query",
+  );
+  return Number(rows[0] && rows[0].listing_count || 0);
+}
+
+async function marketCreateCapacityGuardRevision(admin) {
+  const [rows] = await adminQuery(
+    admin,
+    "SELECT revision FROM auth_store_revisions WHERE scope_key = 'market_create_capacity'",
+    [],
+    "MySQL market create capacity guard revision query",
+  );
+  assert.ok(rows[0], "MySQL market create capacity guard row 缺失。");
+  return Number(rows[0].revision);
 }
 
 async function marketSaleMailExists(admin, mailId) {
@@ -3106,6 +3265,285 @@ async function runRealMysqlGate(runtime) {
   }
 }
 
+async function runMarketCreateMysqlGate(runtime) {
+  const database = `beastbound_p0_6d2c6_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const stores = [];
+  const gates = [];
+  const pendingWrites = [];
+  let admin = null;
+  function trackWrite(promise) {
+    pendingWrites.push(promise);
+    void promise.catch(() => {});
+    return promise;
+  }
+  try {
+    const bootstrap = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(bootstrap);
+    const empty = bootstrap.load();
+    await settleWithin(
+      trackWrite(bootstrap.saveAsync(marketCreateSeededAuthority(empty, 118))),
+      WAIT_TIMEOUT_MS,
+      "market create bootstrap seed save",
+    );
+    await closeStores(stores);
+
+    admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 2});
+    const deadlocksBefore = await deadlockCount(admin);
+    assert.equal(await globalRevision(admin), 1);
+    assert.equal(await marketCreateCapacityGuardRevision(admin), 0);
+    assert.equal(await marketListingCount(admin), 118);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 1, stoneCoins: 100, itemCount: 2});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 1, stoneCoins: 200, itemCount: 2});
+
+    const capacity118Gate = commitGate("market_create_capacity_118_a");
+    gates.push(capacity118Gate);
+    const capacity118A = createMysqlAuthStore(storeOptions(runtime, database, capacity118Gate));
+    const capacity118B = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(capacity118A, capacity118B);
+    const loaded118A = capacity118A.load();
+    const loaded118B = capacity118B.load();
+    const create118A = saveMarketCreate(capacity118A, loaded118A, "a", {
+      listingId: "listing_real_market_create_118_a",
+      operationId: "real_market_create_118_a",
+      requestHash: "8".repeat(64),
+      unitPrice: 41,
+      updatedAt: "2026-07-14T04:30:00.000Z",
+    });
+    trackWrite(create118A.promise);
+    await settleWithin(capacity118Gate.entered, WAIT_TIMEOUT_MS, "118 market create A COMMIT gate");
+    const create118B = saveMarketCreate(capacity118B, loaded118B, "b", {
+      listingId: "listing_real_market_create_118_b",
+      operationId: "real_market_create_118_b",
+      requestHash: "9".repeat(64),
+      unitPrice: 42,
+      updatedAt: "2026-07-14T04:30:00.000Z",
+    });
+    trackWrite(create118B.promise);
+    await waitForLockWait(admin, "118 market create capacity guard wait");
+    capacity118Gate.release();
+    const results118 = await settleWithin(
+      Promise.allSettled([create118A.promise, create118B.promise]),
+      WAIT_TIMEOUT_MS,
+      "118 market create competing commits",
+    );
+    assert.deepEqual(results118.map((result) => result.status), ["fulfilled", "fulfilled"]);
+    assert.equal(await marketListingCount(admin), MARKET_MAX_LISTINGS);
+    assert.equal(await marketSellerListingCount(admin, "a"), 1);
+    assert.equal(await marketSellerListingCount(admin, "b"), 1);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 2, stoneCoins: 100, itemCount: 1});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 2, stoneCoins: 200, itemCount: 1});
+    assert.equal(await mutationReceiptExists(admin, "real_market_create_118_a"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_market_create_118_b"), true);
+    assert.equal(await globalRevision(admin), 1);
+    assert.equal(await marketCreateCapacityGuardRevision(admin), 0);
+    await closeStores(stores);
+
+    const removedFillerId = realMarketCreateFillerListing(0).listingId;
+    const [removedFiller] = await adminQuery(
+      admin,
+      "DELETE FROM market_listings WHERE listing_id = ?",
+      [removedFillerId],
+      "prepare 119 market create boundary",
+    );
+    assert.equal(Number(removedFiller.affectedRows), 1);
+    assert.equal(await marketListingCount(admin), 119);
+
+    const capacity119Gate = commitGate("market_create_capacity_119_a");
+    gates.push(capacity119Gate);
+    const capacity119A = createMysqlAuthStore(storeOptions(runtime, database, capacity119Gate));
+    const capacity119B = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(capacity119A, capacity119B);
+    const loaded119A = capacity119A.load();
+    const loaded119B = capacity119B.load();
+    const create119A = saveMarketCreate(capacity119A, loaded119A, "a", {
+      listingId: "listing_real_market_create_119_a",
+      operationId: "real_market_create_119_a",
+      requestHash: "a".repeat(64),
+      unitPrice: 43,
+      updatedAt: "2026-07-14T04:31:00.000Z",
+    });
+    trackWrite(create119A.promise);
+    await settleWithin(capacity119Gate.entered, WAIT_TIMEOUT_MS, "119 market create A COMMIT gate");
+    const create119B = saveMarketCreate(capacity119B, loaded119B, "b", {
+      listingId: "listing_real_market_create_119_b",
+      operationId: "real_market_create_119_b",
+      requestHash: "b".repeat(64),
+      unitPrice: 44,
+      updatedAt: "2026-07-14T04:31:00.000Z",
+    });
+    trackWrite(create119B.promise);
+    await waitForLockWait(admin, "119 market create capacity guard wait");
+    capacity119Gate.release();
+    const results119 = await settleWithin(
+      Promise.allSettled([create119A.promise, create119B.promise]),
+      WAIT_TIMEOUT_MS,
+      "119 market create competing commits",
+    );
+    assert.equal(results119[0].status, "fulfilled");
+    assert.equal(results119[1].status, "rejected");
+    assert.equal(results119[1].reason.code, "market_full");
+    assert.equal(results119[1].reason.outcomeUnknown, false);
+    assert.equal(results119[1].reason.rollbackConfirmed, true);
+    assert.equal(await marketListingCount(admin), MARKET_MAX_LISTINGS);
+    assert.equal(await marketSellerListingCount(admin, "a"), 2);
+    assert.equal(await marketSellerListingCount(admin, "b"), 1);
+    assert.equal(await marketListingExists(admin, "listing_real_market_create_119_a"), true);
+    assert.equal(await marketListingExists(admin, "listing_real_market_create_119_b"), false);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 3, stoneCoins: 100, itemCount: 0});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 2, stoneCoins: 200, itemCount: 1});
+    assert.equal(await mutationReceiptExists(admin, "real_market_create_119_a"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_market_create_119_b"), false);
+    assert.equal(await globalRevision(admin), 1);
+    assert.equal(await marketCreateCapacityGuardRevision(admin), 0);
+    await closeStores(stores);
+
+    const mixedRemovedFillerId = realMarketCreateFillerListing(1).listingId;
+    const [mixedRemovedFiller] = await adminQuery(
+      admin,
+      "DELETE FROM market_listings WHERE listing_id = ?",
+      [mixedRemovedFillerId],
+      "prepare mixed conditional legacy 119 boundary",
+    );
+    assert.equal(Number(mixedRemovedFiller.affectedRows), 1);
+    for (const actorKey of ["a", "b"]) {
+      const actor = actorForKey(actorKey);
+      const [assetReset] = await adminQuery(
+        admin,
+        "UPDATE profiles SET profile_json = JSON_SET(profile_json, '$.backpackSlots', CAST(? AS JSON)) WHERE player_id = ?",
+        [JSON.stringify([{itemId: "item_meat_small", count: 2}]), actor.playerId],
+        `prepare mixed ${actorKey} market asset`,
+      );
+      assert.equal(Number(assetReset.affectedRows), 1);
+    }
+    assert.equal(await marketListingCount(admin), 119);
+
+    const mixedGate = commitGate("market_create_mixed_conditional_b");
+    gates.push(mixedGate);
+    const mixedConditionalStore = createMysqlAuthStore(storeOptions(runtime, database, mixedGate));
+    stores.push(mixedConditionalStore);
+    const mixedConditionalLoaded = mixedConditionalStore.load();
+    const mixedConditionalOptions = {
+      listingId: "listing_real_market_create_mixed_conditional_b",
+      operationId: "real_market_create_mixed_conditional_b",
+      requestHash: "c".repeat(64),
+      unitPrice: 45,
+      updatedAt: "2026-07-14T04:32:00.000Z",
+    };
+    const mixedConditionalMutation = marketCreateMutation(
+      mixedConditionalLoaded,
+      "b",
+      mixedConditionalOptions,
+    );
+
+    const loaderDatabase = `beastbound_p0_6d2c6_loader_${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+    const loaderBootstrap = createMysqlAuthStore(storeOptions(runtime, loaderDatabase));
+    stores.push(loaderBootstrap);
+    loaderBootstrap.load();
+    const loaderAuthority = cloneAuthorityRoot(mixedConditionalLoaded);
+    const conditionalActor = actorForKey("b");
+    loaderAuthority.profileBindings[conditionalActor.accountId] =
+      mixedConditionalMutation.after.profileBindings[conditionalActor.accountId];
+    loaderAuthority.profiles[conditionalActor.playerId] =
+      mixedConditionalMutation.after.profiles[conditionalActor.playerId];
+    await settleWithin(
+      trackWrite(loaderBootstrap.saveAsync(loaderAuthority)),
+      WAIT_TIMEOUT_MS,
+      "mixed legacy future-profile loader seed",
+    );
+    await closeStores(stores);
+
+    const mixedConditionalStore2 = createMysqlAuthStore(storeOptions(runtime, database, mixedGate));
+    const mixedLegacyStore = createMysqlAuthStore(
+      crossDatabaseStoreOptions(runtime, loaderDatabase, database),
+    );
+    stores.push(mixedConditionalStore2, mixedLegacyStore);
+    const mixedConditionalLoaded2 = mixedConditionalStore2.load();
+    const mixedLegacyLoaded = mixedLegacyStore.load();
+    const mixedConditional = saveMarketCreate(
+      mixedConditionalStore2,
+      mixedConditionalLoaded2,
+      "b",
+      mixedConditionalOptions,
+    );
+    trackWrite(mixedConditional.promise);
+    await settleWithin(mixedGate.entered, WAIT_TIMEOUT_MS, "mixed conditional COMMIT gate");
+    const mixedLegacyOptions = {
+      legacy: true,
+      listingId: "listing_real_market_create_mixed_legacy_a",
+      operationId: "real_market_create_mixed_legacy_a",
+      requestHash: "d".repeat(64),
+      unitPrice: 46,
+      updatedAt: "2026-07-14T04:33:00.000Z",
+    };
+    const mixedLegacy = saveMarketCreate(
+      mixedLegacyStore,
+      mixedLegacyLoaded,
+      "a",
+      mixedLegacyOptions,
+    );
+    trackWrite(mixedLegacy.promise);
+    await waitForLockWait(admin, "mixed legacy waits on auth EXCLUSIVE");
+    mixedGate.release();
+    const mixedResults = await settleWithin(
+      Promise.allSettled([mixedConditional.promise, mixedLegacy.promise]),
+      WAIT_TIMEOUT_MS,
+      "mixed conditional first legacy capacity result",
+    );
+    assert.equal(mixedResults[0].status, "fulfilled");
+    assert.equal(mixedResults[1].status, "rejected");
+    assert.equal(mixedResults[1].reason.code, "market_full");
+    assert.equal(mixedResults[1].reason.outcomeUnknown, false);
+    assert.equal(mixedResults[1].reason.rollbackConfirmed, true);
+    assert.equal(await marketListingCount(admin), MARKET_MAX_LISTINGS);
+    assert.equal(await marketListingExists(admin, mixedConditionalOptions.listingId), true);
+    assert.equal(await marketListingExists(admin, mixedLegacyOptions.listingId), false);
+    assert.equal(await mutationReceiptExists(admin, mixedConditionalOptions.operationId), true);
+    assert.equal(await mutationReceiptExists(admin, mixedLegacyOptions.operationId), false);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 3, stoneCoins: 100, itemCount: 2});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 3, stoneCoins: 200, itemCount: 1});
+    assert.equal(await globalRevision(admin), 1);
+    assert.equal(await marketCreateCapacityGuardRevision(admin), 0);
+    await closeStores(stores);
+
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, "market create transaction cleanup");
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    return {
+      marketCreateSeparateDatabase: database,
+      marketCreate118BothCommitted: true,
+      marketCreate119ExactlyOneWinner: true,
+      marketCreateMixedLegacyKnownFullRollbackVerified: true,
+      marketCreateMixedLegacyAuthWaitObserved: true,
+      marketCreateCapacityGuardWaitObserved: true,
+      marketCreateKnownFullRollbackVerified: true,
+      marketCreateGlobalRevisionStable: true,
+      marketCreateGuardRevisionStable: true,
+      marketCreateDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      marketCreateActiveTransactions: await activeTransactionCount(admin),
+      marketCreateActiveLockWaits: await lockWaitCount(admin),
+    };
+  } finally {
+    for (const gate of gates) {
+      gate.release();
+    }
+    try {
+      await settleWithin(Promise.allSettled(pendingWrites), WAIT_TIMEOUT_MS, "market create pending writes cleanup");
+    } catch {
+      // The isolated mysqld teardown remains the final bounded cleanup guard.
+    }
+    await closeStores(stores, {bestEffort: true});
+    if (admin) {
+      try {
+        await settleWithin(admin.end(), WAIT_TIMEOUT_MS, "market create admin pool close");
+      } catch {
+        // The isolated mysqld teardown remains the final bounded cleanup guard.
+      }
+    }
+  }
+}
+
 async function main() {
   // Explicit empty credentials must not fall through mysql-store's runtime
   // environment defaults. This process-local scrub never reads their values
@@ -3116,7 +3554,9 @@ async function main() {
   let report = null;
   try {
     runtime = await startIsolatedMysql();
-    report = await runRealMysqlGate(runtime);
+    const baseReport = await runRealMysqlGate(runtime);
+    const marketCreateReport = await runMarketCreateMysqlGate(runtime);
+    report = {...baseReport, ...marketCreateReport};
   } finally {
     await stopIsolatedMysql(runtime);
   }

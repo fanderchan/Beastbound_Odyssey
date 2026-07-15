@@ -366,6 +366,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
     },
     {
       name: "another persistent resource changes",
+      guardsMarketCapacity: true,
       mutate(before) {
         const after = eligibleProfileState(before);
         after.marketListings.listing_extra = {
@@ -487,6 +488,7 @@ test("planner rejects unsafe or broader mutations to the legacy global-CAS path"
           ...(fixture.writesServerState ? ["server_state"] : []),
           "profile_binding_snapshot",
           "profile_snapshot",
+          ...(fixture.guardsMarketCapacity ? ["market_capacity"] : []),
         ],
       );
     });
@@ -509,7 +511,11 @@ test("legacy planner guards the complete profile snapshot even when only profile
   const plan = buildPlan(after, before, rowLocalProfileScope());
   assert.equal(plan.kind, "legacy_global_cas");
   const locks = planOperations(plan, "resourceLocks");
-  assert.deepEqual(locks.map(operationResource), ["profile_binding_snapshot", "profile_snapshot"]);
+  assert.deepEqual(locks.map(operationResource), [
+    "profile_binding_snapshot",
+    "profile_snapshot",
+    "market_capacity",
+  ]);
   assert.deepEqual(locks[0].expectedRows, [
     {account_id: ACCOUNT_ID, player_id: PLAYER_ID, profile_revision: 1},
     {account_id: ACCOUNT_ID_B, player_id: PLAYER_ID_B, profile_revision: 1},

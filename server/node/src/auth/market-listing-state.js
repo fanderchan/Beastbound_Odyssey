@@ -8,6 +8,7 @@ const {
 const MARKET_LISTING_SCHEMA_VERSION = 2;
 const MARKET_LISTING_LEGACY_SCHEMA_VERSION = 1;
 const MARKET_MAX_LISTINGS = 120;
+const MARKET_MAX_LISTINGS_PER_SELLER = 20;
 const MARKET_DEFAULT_MAX_COUNT = 999;
 const MARKET_DEFAULT_MAX_UNIT_PRICE = 999999999;
 const MARKET_DEFAULT_CURRENCIES = Object.freeze(["stoneCoins", "diamonds"]);
@@ -380,6 +381,7 @@ function publicMarketListingFacts(value, equipmentCatalog, options = {}) {
 module.exports = {
   MARKET_LISTING_SCHEMA_VERSION,
   MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
   auditMarketListingBook,
   buildEquipmentMarketListing,
   publicMarketListingFacts,

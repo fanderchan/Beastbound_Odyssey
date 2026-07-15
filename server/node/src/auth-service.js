@@ -74,6 +74,10 @@ const {
 } = require("./auth/runtime-invite-boundary");
 const {createEconomyDomain} = require("./auth/economy");
 const {
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
+} = require("./auth/market-listing-state");
+const {
   BANK_PROFILE_SCHEMA_VERSION,
   readBankProfileState,
 } = require("./auth/bank-profile-state");
@@ -3616,6 +3620,84 @@ function createAuthService(options = {}) {
     };
   }
 
+  function durableRowLocalMarketCreateConsistencyScope(methodName, args, before, candidate, receipt) {
+    if (methodName !== "createMarketListing" || !receipt || typeof receipt !== "object") {
+      return null;
+    }
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const beforeBinding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    const playerId = String(beforeBinding.playerId || "");
+    const beforeProfile = objectOrEmpty(before && before.profiles && before.profiles[playerId]);
+    const nextBinding = objectOrEmpty(candidate && candidate.profileBindings && candidate.profileBindings[accountId]);
+    const nextProfile = objectOrEmpty(candidate && candidate.profiles && candidate.profiles[playerId]);
+    const beforeListings = objectOrEmpty(before && before.marketListings);
+    const nextListings = objectOrEmpty(candidate && candidate.marketListings);
+    const beforeListingIds = Object.keys(beforeListings);
+    const nextListingIds = Object.keys(nextListings);
+    const addedListingIds = nextListingIds.filter((listingId) => !Object.hasOwn(beforeListings, listingId));
+    const listingId = addedListingIds.length === 1 ? addedListingIds[0] : "";
+    const listing = objectOrEmpty(nextListings[listingId]);
+    const response = objectOrEmpty(receipt.response);
+    const responseListing = objectOrEmpty(response.listing);
+    const observedTotalListingCount = beforeListingIds.length;
+    const observedSellerListingCount = Object.values(beforeListings).filter((entry) => (
+      String(entry && entry.sellerAccountId || "") === accountId
+    )).length;
+    const ordinaryListingFields = [
+      "listingId",
+      "sellerAccountId",
+      "itemId",
+      "count",
+      "unitPrice",
+      "currency",
+      "createdAt",
+      "schemaVersion",
+    ].sort();
+    if (
+      accountId === ""
+      || playerId === ""
+      || listingId === ""
+      || observedTotalListingCount >= MARKET_MAX_LISTINGS
+      || observedSellerListingCount >= MARKET_MAX_LISTINGS_PER_SELLER
+      || String(beforeBinding.accountId || "") !== accountId
+      || String(beforeProfile.accountId || "") !== accountId
+      || String(beforeProfile.playerId || "") !== playerId
+      || String(nextBinding.accountId || "") !== accountId
+      || String(nextBinding.playerId || "") !== playerId
+      || String(nextProfile.accountId || "") !== accountId
+      || String(nextProfile.playerId || "") !== playerId
+      || nextListingIds.length !== observedTotalListingCount + 1
+      || beforeListingIds.some((existingListingId) => (
+        !Object.hasOwn(nextListings, existingListingId)
+        || !isDeepStrictEqual(nextListings[existingListingId], beforeListings[existingListingId])
+      ))
+      || String(listing.listingId || "") !== listingId
+      || String(listing.sellerAccountId || "") !== accountId
+      || Number(listing.schemaVersion) !== 1
+      || catalogHasEquipmentItemId(battleEquipmentCatalog, String(listing.itemId || ""))
+      || !isDeepStrictEqual(Object.keys(listing).sort(), ordinaryListingFields)
+      || String(responseListing.listingId || "") !== listingId
+      || response.saleMail !== null
+      || String(receipt.accountId || "") !== accountId
+    ) {
+      return null;
+    }
+    return {
+      kind: "row_local_market_create_v1",
+      accountId,
+      playerId,
+      listingId,
+      observedTotalListingCount,
+      observedSellerListingCount,
+      maxTotalListings: MARKET_MAX_LISTINGS,
+      maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+      operationId: String(receipt.operationId || ""),
+      requestHash: String(receipt.requestHash || ""),
+      actionId: String(receipt.actionId || ""),
+    };
+  }
+
   function durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt) {
     if (methodName !== "cancelMarketListing" || !receipt || typeof receipt !== "object") {
       return null;
@@ -3780,6 +3862,7 @@ function createAuthService(options = {}) {
 
   function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
     return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMarketCreateConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt);
@@ -3796,7 +3879,7 @@ function createAuthService(options = {}) {
     if (accountId === "") {
       return null;
     }
-    if (method === "marketListings") {
+    if (["marketListings", "createMarketListing"].includes(method)) {
       return {schemaVersion: 1, scope: "market_read", accountId};
     }
     if (method === "listInbox") {
@@ -4082,6 +4165,12 @@ function createAuthService(options = {}) {
     // receipt miss but before this Node observes the consumed listing/mail.
     await refreshSharedAssetsBeforeMutation(methodName, args);
     published = load();
+    existingReceipt = receiptOperationId === ""
+      ? null
+      : activeDurableReceipt(published, receiptOperationId, now());
+    if (existingReceipt) {
+      return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
+    }
     let receiptCheckedAfterSharedRefresh = false;
     if (
       receiptOperationId !== ""
@@ -4304,10 +4393,17 @@ function createAuthService(options = {}) {
         : store.save(candidatePersistent, saveOptions);
       durableSaveResult = await Promise.resolve(saveResult);
     } catch (cause) {
+      const marketCreateCapacityFailureCode = methodName === "createMarketListing"
+        ? mysqlKnownMarketCreateCapacityFailureCode(cause)
+        : "";
       if (
         receiptOperationId !== ""
         && store.durableReceiptReads === true
-        && (isMysqlStoreRevisionConflict(cause) || isMysqlCommitOutcomeAmbiguous(cause))
+        && (
+          isMysqlStoreRevisionConflict(cause)
+          || isMysqlCommitOutcomeAmbiguous(cause)
+          || marketCreateCapacityFailureCode !== ""
+        )
       ) {
         const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
         let decision;
@@ -4338,6 +4434,17 @@ function createAuthService(options = {}) {
         ) {
           store.clearSaveError();
         }
+      }
+      if (marketCreateCapacityFailureCode !== "") {
+        if (typeof store.clearSaveError === "function") {
+          store.clearSaveError();
+        }
+        return fail(
+          marketCreateCapacityFailureCode,
+          marketCreateCapacityFailureCode === "market_listing_limit"
+            ? "你的挂单太多，请先卖出或取消一些。"
+            : "交易所挂单已满，请稍后再试。",
+        );
       }
       const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
       const error = new Error(outcomeUnknown
@@ -5611,6 +5718,22 @@ function isMysqlKnownNoCommitFailure(error) {
     ].includes(String(current.code || "")));
 }
 
+function mysqlKnownMarketCreateCapacityFailureCode(error) {
+  if (!isMysqlKnownNoCommitFailure(error)) {
+    return "";
+  }
+  let failureCode = "";
+  mysqlFailureChainSome(error, (current) => {
+    const code = String(current && current.code || "");
+    if (["market_listing_limit", "market_full"].includes(code)) {
+      failureCode = code;
+      return true;
+    }
+    return false;
+  });
+  return failureCode;
+}
+
 function isMysqlCommitOutcomeAmbiguous(error) {
   return mysqlFailureChainSome(error, (current) => current.outcomeUnknown === true
     || String(current.code || "") === "mysql_commit_outcome_ambiguous");
@@ -5647,6 +5770,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
       : null;
     if (
       !rowLocalProfileRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMarketCreateRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketCancelRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketBuyRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMailClaimRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
@@ -5661,6 +5785,59 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
   } catch {
     return {matched: false, scoped: false, reloadedPersistentData: null};
   }
+}
+
+function rowLocalMarketCreateRecoveryMatches(reloaded, expected, scope) {
+  if (!scope || String(scope.kind || "") !== "row_local_market_create_v1") {
+    return false;
+  }
+  const accountId = String(scope.accountId || "");
+  const playerId = String(scope.playerId || "");
+  const listingId = String(scope.listingId || "");
+  const operationId = String(scope.operationId || "");
+  const requestHash = String(scope.requestHash || "");
+  const actionId = String(scope.actionId || "");
+  if (
+    accountId === ""
+    || playerId === ""
+    || listingId === ""
+    || operationId === ""
+    || requestHash === ""
+    || actionId === ""
+  ) {
+    return false;
+  }
+  const reloadedBinding = reloaded.profileBindings && reloaded.profileBindings[accountId];
+  const expectedBinding = expected.profileBindings && expected.profileBindings[accountId];
+  const reloadedProfile = reloaded.profiles && reloaded.profiles[playerId];
+  const expectedProfile = expected.profiles && expected.profiles[playerId];
+  const reloadedListing = reloaded.marketListings && reloaded.marketListings[listingId];
+  const expectedListing = expected.marketListings && expected.marketListings[listingId];
+  const reloadedReceipt = reloaded.mutationReceipts && reloaded.mutationReceipts[operationId];
+  const expectedReceipt = expected.mutationReceipts && expected.mutationReceipts[operationId];
+  if (
+    !reloadedBinding
+    || !expectedBinding
+    || !reloadedProfile
+    || !expectedProfile
+    || !reloadedListing
+    || !expectedListing
+    || !reloadedReceipt
+    || !expectedReceipt
+    || String(reloadedListing.listingId || "") !== listingId
+    || String(reloadedListing.sellerAccountId || "") !== accountId
+    || Number(reloadedListing.schemaVersion) !== 1
+    || String(reloadedReceipt.operationId || "") !== operationId
+    || String(reloadedReceipt.requestHash || "") !== requestHash
+    || String(reloadedReceipt.actionId || "") !== actionId
+    || String(reloadedReceipt.accountId || "") !== accountId
+  ) {
+    return false;
+  }
+  return isDeepStrictEqual(reloadedBinding, expectedBinding)
+    && isDeepStrictEqual(reloadedProfile, expectedProfile)
+    && isDeepStrictEqual(reloadedListing, expectedListing)
+    && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
 }
 
 function rowLocalProfileRecoveryMatches(reloaded, expected, scope) {

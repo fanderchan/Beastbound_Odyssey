@@ -1,9 +1,21 @@
 "use strict";
 
+const {
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
+} = require("./auth/market-listing-state");
+
 const MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID = "mysql_resource_acquisition_order_invalid";
+const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
+const MARKET_CREATE_CAPACITY_LOCK_SQL =
+  "SELECT scope_key, revision FROM auth_store_revisions WHERE scope_key = ? FOR UPDATE";
+const MARKET_CREATE_CAPACITY_CHECK_SQL = `SELECT COUNT(*) AS total_count,
+  COALESCE(SUM(seller_account_id = ?), 0) AS seller_count
+  FROM market_listings`;
 
 const CONDITIONAL_PLAN_KINDS = new Set([
   "profile_conditional_v2",
+  "market_create_conditional_v1",
   "market_cancel_conditional_v1",
   "market_buy_conditional_v1",
   "mail_claim_conditional_v1",
@@ -12,16 +24,18 @@ const CONDITIONAL_PLAN_KINDS = new Set([
 const RESOURCE_RANK = new Map([
   ["profile_binding", 0],
   ["profile", 1],
-  ["market_listing", 2],
-  ["mail_message", 3],
-  ["consumed_equipment_envelope", 4],
-  ["market_tax", 5],
-  ["mutation_receipt", 6],
+  ["market_capacity", 2],
+  ["market_listing", 3],
+  ["mail_message", 4],
+  ["consumed_equipment_envelope", 5],
+  ["market_tax", 6],
+  ["mutation_receipt", 7],
 ]);
 
 const EXPLICIT_LOCK_RESOURCES = new Set([
   "profile_binding",
   "profile",
+  "market_capacity",
   "market_listing",
   "mail_message",
 ]);
@@ -29,7 +43,7 @@ const EXPLICIT_LOCK_RESOURCES = new Set([
 const WRITE_KINDS_BY_RESOURCE = new Map([
   ["profile_binding", new Set(["write"])],
   ["profile", new Set(["write"])],
-  ["market_listing", new Set(["delete"])],
+  ["market_listing", new Set(["insert", "delete"])],
   ["mail_message", new Set(["insert", "update", "delete"])],
   ["consumed_equipment_envelope", new Set(["insert"])],
   ["market_tax", new Set(["update"])],
@@ -39,7 +53,6 @@ const WRITE_KINDS_BY_RESOURCE = new Map([
 const PRELOCKED_WRITES = new Set([
   "profile_binding",
   "profile",
-  "market_listing",
 ]);
 
 function invalid(reason, resource = "", key = "") {
@@ -78,6 +91,12 @@ function lockContract(resource, lockMode) {
     return {
       identityField: "player_id",
       sql: `SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? ${suffix}`,
+    };
+  }
+  if (resource === "market_capacity") {
+    return {
+      identityField: "scope_key",
+      sql: MARKET_CREATE_CAPACITY_LOCK_SQL,
     };
   }
   if (resource === "market_listing") {
@@ -127,6 +146,15 @@ function writeContract(resource, kind, key) {
       sql: `DELETE FROM market_listings
         WHERE listing_id = ? AND seller_account_id = ? AND item_id = ?
           AND currency = ? AND unit_price = ? AND item_count = ? AND created_at = ?`,
+    };
+  }
+  if (resource === "market_listing" && kind === "insert") {
+    return {
+      keyParamIndex: 0,
+      paramsLength: 8,
+      sql: `INSERT INTO market_listings
+        (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
     };
   }
   if (resource === "mail_message" && kind === "insert") {
@@ -238,6 +266,52 @@ function validateEnvelope(plan) {
   }
 }
 
+function validateCapacityCheck(plan) {
+  const check = plan.capacityCheck;
+  if (plan.kind !== "market_create_conditional_v1") {
+    if (check !== undefined) {
+      throw invalid("capacity_check_unexpected");
+    }
+    return null;
+  }
+  const checkFields = new Set([
+    "kind",
+    "resource",
+    "key",
+    "sql",
+    "params",
+    "maxTotalListings",
+    "maxSellerListings",
+  ]);
+  if (
+    !isRecord(check)
+    || Object.keys(check).length !== checkFields.size
+    || Object.keys(check).some((field) => !checkFields.has(field))
+    || check.kind !== "check"
+    || check.resource !== "market_capacity"
+    || check.key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+    || normalizeSql(check.sql) !== normalizeSql(MARKET_CREATE_CAPACITY_CHECK_SQL)
+    || !Array.isArray(check.params)
+    || check.params.length !== 1
+    || typeof plan.accountId !== "string"
+    || plan.accountId === ""
+    || plan.accountId.trim() !== plan.accountId
+    || check.params[0] !== plan.accountId
+    || !Number.isSafeInteger(plan.observedTotalListingCount)
+    || plan.observedTotalListingCount < 0
+    || !Number.isSafeInteger(plan.observedSellerListingCount)
+    || plan.observedSellerListingCount < 0
+    || plan.observedSellerListingCount > plan.observedTotalListingCount
+    || plan.maxTotalListings !== MARKET_MAX_LISTINGS
+    || plan.maxSellerListings !== MARKET_MAX_LISTINGS_PER_SELLER
+    || check.maxTotalListings !== MARKET_MAX_LISTINGS
+    || check.maxSellerListings !== MARKET_MAX_LISTINGS_PER_SELLER
+  ) {
+    throw invalid("capacity_check_invalid", "market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY);
+  }
+  return check;
+}
+
 function validateLock(lock) {
   if (!isRecord(lock) || lock.kind !== "lock" || !EXPLICIT_LOCK_RESOURCES.has(lock.resource)) {
     throw invalid("explicit_lock_invalid");
@@ -247,7 +321,7 @@ function validateLock(lock) {
   if (lock.lockMode !== "shared" && lock.lockMode !== "exclusive") {
     throw invalid("lock_mode_invalid", resource, key);
   }
-  if (["market_listing", "mail_message"].includes(resource) && lock.lockMode !== "exclusive") {
+  if (["market_capacity", "market_listing", "mail_message"].includes(resource) && lock.lockMode !== "exclusive") {
     throw invalid("lock_mode_invalid", resource, key);
   }
   if (typeof lock.sql !== "string" || lock.sql.trim() === "") {
@@ -280,6 +354,18 @@ function validateLock(lock) {
     || lock.expectedRow[contract.identityField] !== key
   ) {
     throw invalid("lock_expected_row_key_mismatch", resource, key);
+  }
+  if (
+    resource === "market_capacity"
+    && (
+      key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+      || !isRecord(lock.expectedRow)
+      || Object.keys(lock.expectedRow).length !== 2
+      || lock.expectedRow.scope_key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+      || lock.expectedRow.revision !== 0
+    )
+  ) {
+    throw invalid("market_capacity_guard_invalid", resource, key);
   }
   return {resource, key, mode: lock.lockMode, source: "locks", stage: "lock"};
 }
@@ -335,10 +421,7 @@ function validateWrite(write) {
 }
 
 function acquisitionForWrite(write) {
-  if (PRELOCKED_WRITES.has(write.resource)) {
-    return null;
-  }
-  if (write.resource === "mail_message" && write.kind !== "insert") {
+  if (requiresExclusivePrelock(write)) {
     return null;
   }
   return {
@@ -350,8 +433,15 @@ function acquisitionForWrite(write) {
   };
 }
 
+function requiresExclusivePrelock(write) {
+  return PRELOCKED_WRITES.has(write.resource)
+    || (write.resource === "market_listing" && write.kind === "delete")
+    || (write.resource === "mail_message" && write.kind !== "insert");
+}
+
 function certify(plan) {
   validateEnvelope(plan);
+  const capacityCheck = validateCapacityCheck(plan);
   const trace = [];
   const acquired = new Set();
   const explicitLocks = new Map();
@@ -372,11 +462,23 @@ function certify(plan) {
     previous = lock;
   }
 
+  if (capacityCheck !== null) {
+    const guard = explicitLocks.get(identity("market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY));
+    if (!guard || guard.mode !== "exclusive") {
+      throw invalid(
+        "market_capacity_guard_required",
+        "market_capacity",
+        MARKET_CREATE_CAPACITY_GUARD_KEY,
+      );
+    }
+  } else if ([...explicitLocks.values()].some((lock) => lock.resource === "market_capacity")) {
+    throw invalid("market_capacity_guard_unexpected", "market_capacity");
+  }
+
   for (const writeValue of plan.writes) {
     const write = validateWrite(writeValue);
     const writeIdentity = identity(write.resource, write.key);
-    const requiresPrelock = PRELOCKED_WRITES.has(write.resource)
-      || (write.resource === "mail_message" && write.kind !== "insert");
+    const requiresPrelock = requiresExclusivePrelock(write);
     if (requiresPrelock) {
       const lock = explicitLocks.get(writeIdentity);
       if (!lock || lock.mode !== "exclusive") {
@@ -425,6 +527,11 @@ function mysqlResourceAcquisitionTrace(plan) {
 }
 
 module.exports = {
+  MARKET_CREATE_CAPACITY_CHECK_SQL,
+  MARKET_CREATE_CAPACITY_GUARD_KEY,
+  MARKET_CREATE_CAPACITY_LOCK_SQL,
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
   MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID,
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,

@@ -31,8 +31,14 @@ const {
   durableMutationReceiptDelta,
   durableMutationReceiptDeltaFrom,
 } = require("./auth/durable-mutation-state");
-const {MARKET_MAX_LISTINGS} = require("./auth/market-listing-state");
 const {
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
+} = require("./auth/market-listing-state");
+const {
+  MARKET_CREATE_CAPACITY_CHECK_SQL,
+  MARKET_CREATE_CAPACITY_GUARD_KEY,
+  MARKET_CREATE_CAPACITY_LOCK_SQL,
   assertMysqlResourceAcquisitionOrder,
   buildMysqlResourceAcquisitionPlan,
 } = require("./mysql-resource-acquisition-order");
@@ -59,6 +65,8 @@ const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
 const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
 const MYSQL_BATTLE_TRACE_WINDOW_MAX = 1200;
 const MYSQL_STORE_REVISION_SCOPE = "auth";
+const MYSQL_MARKET_LISTING_LIMIT = "market_listing_limit";
+const MYSQL_MARKET_FULL = "market_full";
 const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
 const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
 const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
@@ -125,6 +133,7 @@ function createMysqlAuthStore(options = {}) {
         revision BIGINT UNSIGNED NOT NULL
       );
       INSERT IGNORE INTO auth_store_revisions (scope_key, revision) VALUES ('auth', 0);
+      INSERT IGNORE INTO auth_store_revisions (scope_key, revision) VALUES ('market_create_capacity', 0);
       CREATE TABLE IF NOT EXISTS accounts (
         account_id VARCHAR(80) PRIMARY KEY,
         username VARCHAR(32) NOT NULL UNIQUE,
@@ -1221,6 +1230,15 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (conditionalProfilePlan !== null) {
     return conditionalProfilePlan;
   }
+  const conditionalMarketCreatePlan = buildConditionalMarketCreateSavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
+  if (conditionalMarketCreatePlan !== null) {
+    return conditionalMarketCreatePlan;
+  }
   const conditionalMarketCancelPlan = buildConditionalMarketCancelSavePlan(
     data,
     previous,
@@ -1248,6 +1266,7 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (conditionalMailClaimPlan !== null) {
     return conditionalMailClaimPlan;
   }
+  const legacyMarketCreateCapacity = legacyMarketCreateCapacityProtection(previous, data);
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
@@ -1256,9 +1275,183 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
         ? [serverStateResourceLock(persistentServerStateDocument(previous))]
         : []),
       ...buildLegacyProfileResourceLocks(previous),
+      ...(legacyMarketCreateCapacity === null ? [] : [legacyMarketCreateCapacity.lock]),
     ],
+    ...(legacyMarketCreateCapacity === null
+      ? {}
+      : {
+        capacityCheck: legacyMarketCreateCapacity.capacityCheck,
+        marketCreateCapacitySellerAccountId: legacyMarketCreateCapacity.sellerAccountId,
+      }),
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
+}
+
+function legacyMarketCreateCapacityProtection(previous, data) {
+  const listingAddition = singleNewObjectEntityAddition(
+    previous.marketListings,
+    data.marketListings,
+    marketListingEntityKey,
+  );
+  if (listingAddition === null) {
+    return null;
+  }
+  const sellerAccountId = listingAddition.next && listingAddition.next.sellerAccountId;
+  if (
+    typeof sellerAccountId !== "string"
+    || sellerAccountId === ""
+    || sellerAccountId.trim() !== sellerAccountId
+  ) {
+    throw mysqlLegacyMarketCreateCapacityPlanInvalid();
+  }
+  return {
+    sellerAccountId,
+    lock: marketCreateCapacityResourceLock(),
+    capacityCheck: marketCreateCapacityCheck(sellerAccountId),
+  };
+}
+
+function buildConditionalMarketCreateSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = rowLocalMarketCreateConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set([
+    "profileBindings",
+    "profiles",
+    "mutationReceipts",
+    "marketListings",
+  ]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (
+    groups.profileBindings.length !== 1
+    || groups.profiles.length !== 1
+    || groups.marketListings.length !== 1
+  ) {
+    return null;
+  }
+
+  const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
+  const listingAddition = singleNewObjectEntityAddition(
+    previous.marketListings,
+    data.marketListings,
+    marketListingEntityKey,
+  );
+  const previousListings = canonicalObjectEntityMap(previous.marketListings, marketListingEntityKey);
+  if (profileRevisionChange === null || listingAddition === null || previousListings === null) {
+    return null;
+  }
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileRevisionChange;
+  const listing = listingAddition.next;
+  const listingId = listingAddition.key;
+  const ordinaryListingFields = new Set([
+    "listingId",
+    "sellerAccountId",
+    "itemId",
+    "count",
+    "unitPrice",
+    "currency",
+    "createdAt",
+    "schemaVersion",
+  ]);
+  const observedTotalListingCount = previousListings.size;
+  let observedSellerListingCount = 0;
+  for (const previousListing of previousListings.values()) {
+    if (String(previousListing && previousListing.sellerAccountId || "") === accountId) {
+      observedSellerListingCount += 1;
+    }
+  }
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || consistencyScope.listingId !== listingId
+    || consistencyScope.observedTotalListingCount !== observedTotalListingCount
+    || consistencyScope.observedSellerListingCount !== observedSellerListingCount
+    || consistencyScope.maxTotalListings !== MARKET_MAX_LISTINGS
+    || consistencyScope.maxSellerListings !== MARKET_MAX_LISTINGS_PER_SELLER
+    || observedTotalListingCount >= MARKET_MAX_LISTINGS
+    || observedSellerListingCount >= MARKET_MAX_LISTINGS_PER_SELLER
+    || typeof listing.listingId !== "string"
+    || listing.listingId !== listingId
+    || typeof listing.sellerAccountId !== "string"
+    || listing.sellerAccountId !== accountId
+    || typeof listing.itemId !== "string"
+    || listing.itemId === ""
+    || listing.itemId.trim() !== listing.itemId
+    || !["stoneCoins", "diamonds"].includes(listing.currency)
+    || !Number.isSafeInteger(listing.count)
+    || listing.count <= 0
+    || !Number.isSafeInteger(listing.unitPrice)
+    || listing.unitPrice <= 0
+    || typeof listing.createdAt !== "string"
+    || listing.createdAt === ""
+    || listing.createdAt.trim() !== listing.createdAt
+    || listing.schemaVersion !== 1
+    || Object.keys(listing).length !== ordinaryListingFields.size
+    || Object.keys(listing).some((field) => !ordinaryListingFields.has(field))
+  ) {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+  ) {
+    return null;
+  }
+
+  return buildMysqlResourceAcquisitionPlan({
+    kind: "market_create_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId,
+    playerId,
+    listingId,
+    operationId: consistencyScope.operationId,
+    observedTotalListingCount,
+    observedSellerListingCount,
+    maxTotalListings: MARKET_MAX_LISTINGS,
+    maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    capacityCheck: marketCreateCapacityCheck(accountId),
+    locks: [
+      profileBindingResourceLock(beforeBinding),
+      profileResourceLock(beforeProfile),
+      marketCreateCapacityResourceLock(),
+    ],
+    writes: [
+      conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+      conditionalProfileUpdate(nextProfile, expectedRevision),
+      conditionalMarketListingInsert(listing),
+      conditionalMutationReceiptInsert(receipt),
+    ],
+  });
 }
 
 function buildConditionalProfileSavePlan(data, previous, groups, consistencyScopeValue) {
@@ -1755,6 +1948,81 @@ function rowLocalProfileConsistencyScope(value) {
   return {kind, accountId, playerId, operationId, requestHash, actionId};
 }
 
+function rowLocalMarketCreateConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const fields = new Set([
+    "kind",
+    "accountId",
+    "playerId",
+    "listingId",
+    "operationId",
+    "requestHash",
+    "actionId",
+    "observedTotalListingCount",
+    "observedSellerListingCount",
+    "maxTotalListings",
+    "maxSellerListings",
+  ]);
+  const kind = value.kind;
+  const accountId = value.accountId;
+  const playerId = value.playerId;
+  const listingId = value.listingId;
+  const observedTotalListingCount = value.observedTotalListingCount;
+  const observedSellerListingCount = value.observedSellerListingCount;
+  const maxTotalListings = value.maxTotalListings;
+  const maxSellerListings = value.maxSellerListings;
+  const operationId = value.operationId;
+  const requestHash = value.requestHash;
+  const actionId = value.actionId;
+  if (
+    kind !== "row_local_market_create_v1"
+    || Object.keys(value).length !== fields.size
+    || Object.keys(value).some((field) => !fields.has(field))
+    || typeof accountId !== "string"
+    || accountId === ""
+    || accountId.trim() !== accountId
+    || typeof playerId !== "string"
+    || playerId === ""
+    || playerId.trim() !== playerId
+    || typeof listingId !== "string"
+    || listingId === ""
+    || listingId.trim() !== listingId
+    || !Number.isSafeInteger(observedTotalListingCount)
+    || observedTotalListingCount < 0
+    || !Number.isSafeInteger(observedSellerListingCount)
+    || observedSellerListingCount < 0
+    || observedSellerListingCount > observedTotalListingCount
+    || maxTotalListings !== MARKET_MAX_LISTINGS
+    || maxSellerListings !== MARKET_MAX_LISTINGS_PER_SELLER
+    || typeof operationId !== "string"
+    || operationId === ""
+    || operationId.trim() !== operationId
+    || typeof requestHash !== "string"
+    || requestHash === ""
+    || requestHash.trim() !== requestHash
+    || typeof actionId !== "string"
+    || actionId === ""
+    || actionId.trim() !== actionId
+  ) {
+    return null;
+  }
+  return {
+    kind,
+    accountId,
+    playerId,
+    listingId,
+    observedTotalListingCount,
+    observedSellerListingCount,
+    maxTotalListings,
+    maxSellerListings,
+    operationId,
+    requestHash,
+    actionId,
+  };
+}
+
 function rowLocalMarketCancelConsistencyScope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -2028,6 +2296,33 @@ function profileResourceLock(profile, options = {}) {
       account_id: accountId,
       profile_revision: revision,
     },
+  };
+}
+
+function marketCreateCapacityResourceLock() {
+  return {
+    kind: "lock",
+    resource: "market_capacity",
+    key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+    lockMode: "exclusive",
+    sql: MARKET_CREATE_CAPACITY_LOCK_SQL,
+    params: [MARKET_CREATE_CAPACITY_GUARD_KEY],
+    expectedRow: {
+      scope_key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+      revision: 0,
+    },
+  };
+}
+
+function marketCreateCapacityCheck(accountId) {
+  return {
+    kind: "check",
+    resource: "market_capacity",
+    key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+    sql: MARKET_CREATE_CAPACITY_CHECK_SQL,
+    params: [String(accountId || "")],
+    maxTotalListings: MARKET_MAX_LISTINGS,
+    maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
   };
 }
 
@@ -3134,6 +3429,7 @@ function committedMysqlPersistentData(nextData, options = {}) {
 function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   if (!plan || ![
     "profile_conditional_v2",
+    "market_create_conditional_v1",
     "market_cancel_conditional_v1",
     "market_buy_conditional_v1",
     "mail_claim_conditional_v1",
@@ -3166,6 +3462,32 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   };
   if (plan.kind === "profile_conditional_v2") {
     return merged;
+  }
+
+  if (plan.kind === "market_create_conditional_v1") {
+    const listingId = String(plan.listingId || "");
+    const operationId = String(plan.operationId || "");
+    const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+    const listing = committed.marketListings && committed.marketListings[listingId];
+    if (
+      listingId === ""
+      || operationId === ""
+      || !receipt
+      || !listing
+      || String(listing.listingId || "") !== listingId
+      || (previous.marketListings && Object.hasOwn(previous.marketListings, listingId))
+    ) {
+      const error = new Error("MySQL market create 条件提交缺少已证明的新增资源结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return {
+      ...merged,
+      marketListings: {
+        ...(previous.marketListings || {}),
+        [listingId]: listing,
+      },
+    };
   }
 
   if (plan.kind === "mail_claim_conditional_v1") {
@@ -4012,14 +4334,17 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     return {revision: null, globalRevisionAdvanced: false};
   }
   if (plan.kind === "legacy_global_cas") {
+    const capacityCheck = assertLegacyMarketCreateCapacityPlan(plan);
     return runMysqlPoolSaveStatements(pool, plan.statements, {
       ...options,
       resourceLocks: plan.resourceLocks,
+      capacityCheck,
     });
   }
   if (
     ![
       "profile_conditional_v2",
+      "market_create_conditional_v1",
       "market_cancel_conditional_v1",
       "market_buy_conditional_v1",
       "mail_claim_conditional_v1",
@@ -4036,12 +4361,15 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     globalRevisionBarrier: "shared_expected",
   }, async (connection) => {
     await assertMysqlResourceLocks(connection, plan.locks);
+    if (plan.kind === "market_create_conditional_v1") {
+      await assertMysqlMarketCreateCapacity(connection, plan.capacityCheck);
+    }
     for (const write of plan.writes) {
       let result;
       try {
         result = await connection.query(write.sql, write.params);
       } catch (error) {
-        if (["mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
+        if (["market_listing", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
           && error && error.code === "ER_DUP_ENTRY") {
           throw mysqlResourceRevisionConflict(write.resource, write.key);
         }
@@ -4054,6 +4382,116 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
   });
 }
 
+function assertLegacyMarketCreateCapacityPlan(plan) {
+  const statements = Array.isArray(plan && plan.statements) ? plan.statements : [];
+  const marketInserts = statements.filter(isPlainLegacyMarketListingInsertStatement);
+  const marketDeletes = statements.filter((statement) => (
+    /^DELETE FROM market_listings\b/i.test(String(statement || "").trim())
+  ));
+  const required = marketInserts.length === 1 && marketDeletes.length === 0;
+  const locks = Array.isArray(plan && plan.resourceLocks) ? plan.resourceLocks : [];
+  const capacityLocks = locks.filter((lock) => lock && lock.resource === "market_capacity");
+  if (!required) {
+    if (
+      plan.capacityCheck !== undefined
+      || plan.marketCreateCapacitySellerAccountId !== undefined
+      || capacityLocks.length !== 0
+    ) {
+      throw mysqlLegacyMarketCreateCapacityPlanInvalid();
+    }
+    return null;
+  }
+  const check = plan.capacityCheck;
+  const sellerAccountId = plan.marketCreateCapacitySellerAccountId;
+  const checkFields = new Set([
+    "kind",
+    "resource",
+    "key",
+    "sql",
+    "params",
+    "maxTotalListings",
+    "maxSellerListings",
+  ]);
+  const lock = capacityLocks.length === 1 ? capacityLocks[0] : null;
+  if (
+    !check
+    || typeof check !== "object"
+    || Array.isArray(check)
+    || Object.keys(check).length !== checkFields.size
+    || Object.keys(check).some((field) => !checkFields.has(field))
+    || check.kind !== "check"
+    || check.resource !== "market_capacity"
+    || check.key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+    || check.sql !== MARKET_CREATE_CAPACITY_CHECK_SQL
+    || !Array.isArray(check.params)
+    || check.params.length !== 1
+    || typeof sellerAccountId !== "string"
+    || sellerAccountId === ""
+    || sellerAccountId.trim() !== sellerAccountId
+    || check.params[0] !== sellerAccountId
+    || check.maxTotalListings !== MARKET_MAX_LISTINGS
+    || check.maxSellerListings !== MARKET_MAX_LISTINGS_PER_SELLER
+    || lock === null
+    || locks[locks.length - 1] !== lock
+    || lock.kind !== "lock"
+    || lock.key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+    || lock.lockMode !== "exclusive"
+    || lock.sql !== MARKET_CREATE_CAPACITY_LOCK_SQL
+    || !Array.isArray(lock.params)
+    || lock.params.length !== 1
+    || lock.params[0] !== MARKET_CREATE_CAPACITY_GUARD_KEY
+    || !lock.expectedRow
+    || Object.keys(lock.expectedRow).length !== 2
+    || lock.expectedRow.scope_key !== MARKET_CREATE_CAPACITY_GUARD_KEY
+    || lock.expectedRow.revision !== 0
+  ) {
+    throw mysqlLegacyMarketCreateCapacityPlanInvalid();
+  }
+  return check;
+}
+
+function isPlainLegacyMarketListingInsertStatement(statement) {
+  const sql = String(statement || "").trim();
+  return /^INSERT INTO market_listings\b/i.test(sql)
+    && !/\bON DUPLICATE KEY UPDATE\b/i.test(sql);
+}
+
+function mysqlLegacyMarketCreateCapacityPlanInvalid() {
+  const error = new Error("MySQL legacy 单挂单新增缺少规范容量保护。");
+  error.code = "mysql_resource_precondition_invalid";
+  return error;
+}
+
+async function assertMysqlMarketCreateCapacity(connection, check) {
+  const result = await connection.query(check.sql, check.params);
+  const rows = mysqlQueryRows(result);
+  const row = rows.length === 1 ? rows[0] || {} : null;
+  const totalCount = Number(row && row.total_count);
+  const sellerCount = Number(row && row.seller_count);
+  if (
+    row === null
+    || !Number.isSafeInteger(totalCount)
+    || totalCount < 0
+    || !Number.isSafeInteger(sellerCount)
+    || sellerCount < 0
+    || sellerCount > totalCount
+  ) {
+    throw mysqlResourceRevisionConflict("market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY);
+  }
+  // Keep the player-facing precedence established by createMarketListing():
+  // the seller-specific limit wins when both boundaries are already full.
+  if (sellerCount >= check.maxSellerListings) {
+    const error = new Error("你的挂单太多，请先卖出或取消一些。");
+    error.code = MYSQL_MARKET_LISTING_LIMIT;
+    throw error;
+  }
+  if (totalCount >= check.maxTotalListings) {
+    const error = new Error("交易所挂单已满，请稍后再试。");
+    error.code = MYSQL_MARKET_FULL;
+    throw error;
+  }
+}
+
 async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   if (!Array.isArray(statements) || statements.length === 0) {
     return {revision: null, globalRevisionAdvanced: false};
@@ -4064,6 +4502,9 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     : statements.slice();
   return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
     await assertMysqlResourceLocks(connection, options.resourceLocks);
+    if (options.capacityCheck) {
+      await assertMysqlMarketCreateCapacity(connection, options.capacityCheck);
+    }
     for (const statement of transactionStatements) {
       await connection.query(statement);
     }
@@ -4509,6 +4950,28 @@ function conditionalProfileUpdate(profile, expectedRevision) {
   };
 }
 
+function conditionalMarketListingInsert(listing) {
+  return {
+    kind: "insert",
+    resource: "market_listing",
+    key: String(listing.listingId || ""),
+    sql: `INSERT INTO market_listings
+      (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+    params: [
+      String(listing.listingId || ""),
+      String(listing.sellerAccountId || ""),
+      String(listing.itemId || ""),
+      String(listing.currency || ""),
+      Number(listing.unitPrice),
+      Number(listing.count),
+      String(listing.createdAt || ""),
+      JSON.stringify(listing),
+    ],
+    expectedAffectedRows: 1,
+  };
+}
+
 function conditionalMarketListingDelete(listing) {
   return {
     kind: "delete",
@@ -4791,10 +5254,12 @@ function positiveIntegerConfig(optionValue, envValue, fallback) {
 
 module.exports = {
   __assertMysqlSharedAssetRevisionForTest: assertMysqlSharedAssetRevision,
+  __assertLegacyMarketCreateCapacityPlanForTest: assertLegacyMarketCreateCapacityPlan,
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
+  __mergeMysqlSaveBaselineAfterCommitForTest: mergeMysqlSaveBaselineAfterCommit,
   __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,
   __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
   __runMysqlForTest: runMysql,

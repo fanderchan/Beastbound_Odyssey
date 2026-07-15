@@ -15,6 +15,10 @@ const {
 const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("../src/auth/equipment-envelope-consumed-ledger");
+const {
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
+} = require("../src/auth/market-listing-state");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
   createSharedMysqlTransactionHarness,
@@ -40,6 +44,8 @@ const MAIL_IDS = Object.freeze({
 });
 const MAIL_CLAIM_ACTION_ID = "POST /mail/claim";
 const MARKET_BUY_ACTION_ID = "POST /market/buy";
+const MARKET_CREATE_ACTION_ID = "POST /market/list";
+const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
 const MAIL_ENVELOPE_ID = "eqx_shared_mail_duplicate_0001";
 
 function baselineAuthority() {
@@ -149,6 +155,131 @@ function ordinaryListing(actorKey, overrides = {}) {
     createdAt: UPDATED_AT_1,
     schemaVersion: 1,
     ...overrides,
+  };
+}
+
+function marketCreateFillerListing(index) {
+  const normalizedIndex = Number(index);
+  return {
+    listingId: `listing_shared_market_capacity_${String(normalizedIndex).padStart(3, "0")}`,
+    sellerAccountId: `acc_shared_market_filler_${Math.floor(normalizedIndex / MARKET_MAX_LISTINGS_PER_SELLER)}`,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: 10 + normalizedIndex,
+    currency: "stoneCoins",
+    createdAt: UPDATED_AT_1,
+    schemaVersion: 1,
+  };
+}
+
+function marketCreateAuthority(totalListingCount) {
+  assert.ok(Number.isSafeInteger(totalListingCount));
+  assert.ok(totalListingCount >= 0 && totalListingCount <= MARKET_MAX_LISTINGS);
+  const authority = baselineAuthority();
+  for (const actor of Object.values(ACTORS)) {
+    authority.profiles[actor.playerId].profile.backpackSlots = [{
+      itemId: "item_meat_small",
+      count: 2,
+    }];
+  }
+  authority.marketListings = {};
+  for (let index = 0; index < totalListingCount; index += 1) {
+    const listing = marketCreateFillerListing(index);
+    authority.marketListings[listing.listingId] = listing;
+  }
+  return authority;
+}
+
+function nextMarketCreateAuthority(before, actorKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const listingId = String(options.listingId || `listing_shared_market_create_${actorKey}`);
+  const after = cloneAuthorityRoot(before);
+  const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+  const updatedAt = String(options.updatedAt || UPDATED_AT_2);
+  const beforeSlots = before.profiles[actor.playerId].profile.backpackSlots || [];
+  const beforeSlot = beforeSlots.find((slot) => slot.itemId === "item_meat_small");
+  assert.ok(beforeSlot && Number(beforeSlot.count) >= 1);
+  const remainingCount = Number(beforeSlot.count) - 1;
+  after.profileBindings[actor.accountId] = {
+    ...before.profileBindings[actor.accountId],
+    profileRevision: nextRevision,
+    updatedAt,
+  };
+  after.profiles[actor.playerId] = {
+    ...before.profiles[actor.playerId],
+    profileRevision: nextRevision,
+    updatedAt,
+    profile: {
+      ...before.profiles[actor.playerId].profile,
+      backpackSlots: remainingCount > 0
+        ? [{itemId: "item_meat_small", count: remainingCount}]
+        : [],
+    },
+  };
+  const listing = {
+    listingId,
+    sellerAccountId: actor.accountId,
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: actorKey === "a" ? 41 : 42,
+    currency: "stoneCoins",
+    createdAt: updatedAt,
+    schemaVersion: 1,
+  };
+  after.marketListings[listingId] = listing;
+  const operationId = String(options.operationId);
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      schemaVersion: 1,
+      operationId,
+      requestHash: String(options.requestHash),
+      actionId: MARKET_CREATE_ACTION_ID,
+      accountId: actor.accountId,
+      committedAt: updatedAt,
+      expiresAt: "2026-07-18T02:10:00.000Z",
+      response: {ok: true, listing, saleMail: null, operationId},
+    },
+    {nowMs: Date.parse(updatedAt)},
+  );
+  return after;
+}
+
+function marketCreateSaveOptions(before, actorKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const listings = Object.values(before.marketListings || {});
+  return {
+    consistencyScope: {
+      kind: "row_local_market_create_v1",
+      accountId: actor.accountId,
+      playerId: actor.playerId,
+      listingId: String(options.listingId || `listing_shared_market_create_${actorKey}`),
+      observedTotalListingCount: listings.length,
+      observedSellerListingCount: listings.filter((listing) => (
+        listing.sellerAccountId === actor.accountId
+      )).length,
+      maxTotalListings: MARKET_MAX_LISTINGS,
+      maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+      operationId: String(options.operationId),
+      requestHash: String(options.requestHash),
+      actionId: MARKET_CREATE_ACTION_ID,
+    },
+  };
+}
+
+function stagedMarketCreate(store, before, actorKey, options) {
+  const after = nextMarketCreateAuthority(before, actorKey, options);
+  return {
+    after,
+    promise: store.saveAsync(after, marketCreateSaveOptions(before, actorKey, options)),
+  };
+}
+
+function stagedLegacyMarketCreate(store, before, actorKey, options) {
+  const after = nextMarketCreateAuthority(before, actorKey, options);
+  return {
+    after,
+    promise: store.saveAsync(after),
   };
 }
 
@@ -502,6 +633,21 @@ function stagedMailClaim(store, before, actorKey, options) {
   return {after, promise: store.saveAsync(after, saveOptions)};
 }
 
+function marketCapacityCountKey(accountId, totalCount, sellerCount) {
+  return `${accountId}:${Number(totalCount)}:${Number(sellerCount)}`;
+}
+
+function marketCapacityCountRows(entries = []) {
+  return Object.fromEntries(entries.map((entry) => {
+    const actor = ACTORS[String(entry.actorKey || "")];
+    assert.ok(actor, `unknown market capacity actor: ${String(entry.actorKey || "")}`);
+    const totalCount = Number(entry.totalCount);
+    const sellerCount = Number(entry.sellerCount);
+    const key = marketCapacityCountKey(actor.accountId, totalCount, sellerCount);
+    return [key, {total_count: totalCount, seller_count: sellerCount}];
+  }));
+}
+
 function sqlSeed(options = {}) {
   const authority = options.authority || baselineAuthority();
   const profileBindings = {};
@@ -525,6 +671,10 @@ function sqlSeed(options = {}) {
   return {
     auth_store_revisions: {
       auth: {scope_key: "auth", revision: 0},
+      [MARKET_CREATE_CAPACITY_GUARD_KEY]: {
+        scope_key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+        revision: 0,
+      },
     },
     server_state: {
       auth: {
@@ -569,6 +719,7 @@ function sqlSeed(options = {}) {
       }]),
     ),
     mutation_receipts: options.mutationReceipts || {},
+    market_capacity_counts: marketCapacityCountRows(options.marketCapacityCounts),
   };
 }
 
@@ -595,7 +746,7 @@ function jsonParameter(value, sql) {
   }
 }
 
-function createProductionSqlHandler(queryLog) {
+function createProductionSqlHandler(queryLog, options = {}) {
   return ({sql, params, writerId, operation}) => {
     const normalized = normalizeSql(sql);
     queryLog.push({writerId, sql: normalized, params: Array.isArray(params) ? params.slice() : params});
@@ -607,6 +758,10 @@ function createProductionSqlHandler(queryLog) {
     if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.selectForUpdate("auth_store_revisions", "auth");
+    }
+    if (/^SELECT scope_key, revision FROM auth_store_revisions WHERE scope_key = \? FOR UPDATE$/i.test(normalized)) {
+      const [scopeKey] = requiredParams(params, 1, sql);
+      return operation.selectForUpdate("auth_store_revisions", String(scopeKey));
     }
     if (/^SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE$/i.test(normalized)) {
       requiredParams(params, 0, sql);
@@ -652,6 +807,21 @@ function createProductionSqlHandler(queryLog) {
     if (/^SELECT mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json FROM mail_messages WHERE mail_id = \? FOR UPDATE$/i.test(normalized)) {
       const [mailId] = requiredParams(params, 1, sql);
       return operation.selectForUpdate("mail_messages", String(mailId));
+    }
+    if (/^SELECT COUNT\(\*\) AS total_count, COALESCE\(SUM\(seller_account_id = \?\), 0\) AS seller_count FROM market_listings$/i.test(normalized)) {
+      const [accountIdValue] = requiredParams(params, 1, sql);
+      assert.equal(typeof options.snapshotProvider, "function");
+      const accountId = String(accountIdValue);
+      const snapshot = options.snapshotProvider();
+      const listings = Object.values(snapshot.market_listings || {});
+      const totalCount = listings.length;
+      const sellerCount = listings.filter((listing) => (
+        String(listing.seller_account_id || "") === accountId
+      )).length;
+      return operation.read(
+        "market_capacity_counts",
+        marketCapacityCountKey(accountId, totalCount, sellerCount),
+      );
     }
 
     if (/^UPDATE profile_bindings SET player_id = \?, profile_revision = \?, updated_at = \?, document_json = CAST\(\? AS JSON\) WHERE account_id = \? AND player_id = \? AND profile_revision = \?$/i.test(normalized)) {
@@ -700,6 +870,21 @@ function createProductionSqlHandler(queryLog) {
         account_id: accountId === null ? null : String(accountId),
         committed_at: String(committedAt),
         expires_at: String(expiresAt),
+        document_json: jsonParameter(documentJson, sql),
+      });
+    }
+
+    if (/^INSERT INTO market_listings \(listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json\) VALUES \(\?, \?, \?, \?, \?, \?, \?, CAST\(\? AS JSON\)\)$/i.test(normalized)) {
+      const [listingId, sellerAccountId, itemId, currency, unitPrice, itemCount, createdAt, documentJson]
+        = requiredParams(params, 8, sql);
+      return operation.insert("market_listings", String(listingId), {
+        listing_id: String(listingId),
+        seller_account_id: String(sellerAccountId),
+        item_id: String(itemId),
+        currency: String(currency),
+        unit_price: Number(unitPrice),
+        item_count: Number(itemCount),
+        created_at: String(createdAt),
         document_json: jsonParameter(documentJson, sql),
       });
     }
@@ -1238,6 +1423,481 @@ test("duplicate receipt rolls conditional binding and profile writes back withou
   }
 
   assert.equal(harness.assertIdle(), true);
+});
+
+test("market create capacity guard serializes different sellers at 118 and commits both up to 120", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-create-118-"));
+  const authority = marketCreateAuthority(118);
+  const seed = sqlSeed({
+    authority,
+    marketCapacityCounts: [
+      {actorKey: "a", totalCount: 118, sellerCount: 0},
+      {actorKey: "b", totalCount: 119, sellerCount: 0},
+    ],
+  });
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  let harness = null;
+  harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog, {
+      snapshotProvider: () => harness.snapshot(),
+    }),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_118_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_118_b"));
+  const gateA = harness.blockNext({writerId: "market_create_118_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMarketCreate(storeA, loadedA, "a", {
+      operationId: "op_market_create_118_a",
+      requestHash: "1".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const second = stagedMarketCreate(storeB, loadedB, "b", {
+      operationId: "op_market_create_118_b",
+      requestHash: "2".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "market_create_118_b",
+      table: "auth_store_revisions",
+      key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+    });
+    gateA.release();
+
+    const results = await settled;
+    assert.deepEqual(results.map((result) => result.status), ["fulfilled", "fulfilled"]);
+    const committed = harness.snapshot();
+    assert.equal(Object.keys(committed.market_listings).length, MARKET_MAX_LISTINGS);
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(committed.auth_store_revisions[MARKET_CREATE_CAPACITY_GUARD_KEY].revision, 0);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assert.deepEqual(committed.profiles[ACTORS.a.playerId].profile_json.backpackSlots, [
+      {itemId: "item_meat_small", count: 1},
+    ]);
+    assert.deepEqual(committed.profiles[ACTORS.b.playerId].profile_json.backpackSlots, [
+      {itemId: "item_meat_small", count: 1},
+    ]);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_create_118_a"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_create_118_b"), true);
+  } finally {
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("market create capacity guard lets exactly one 119 contender win and rolls the full loser back", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-create-119-"));
+  const authority = marketCreateAuthority(119);
+  const seed = sqlSeed({
+    authority,
+    marketCapacityCounts: [
+      {actorKey: "a", totalCount: 119, sellerCount: 0},
+      {actorKey: "b", totalCount: 120, sellerCount: 0},
+    ],
+  });
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  let harness = null;
+  harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog, {
+      snapshotProvider: () => harness.snapshot(),
+    }),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_119_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_119_b"));
+  const gateA = harness.blockNext({writerId: "market_create_119_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMarketCreate(storeA, loadedA, "a", {
+      operationId: "op_market_create_119_a",
+      requestHash: "3".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const second = stagedMarketCreate(storeB, loadedB, "b", {
+      operationId: "op_market_create_119_b",
+      requestHash: "4".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "market_create_119_b",
+      table: "auth_store_revisions",
+      key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+    });
+    gateA.release();
+
+    const [firstResult, secondResult] = await settled;
+    assert.equal(firstResult.status, "fulfilled");
+    assert.equal(secondResult.status, "rejected");
+    assert.equal(secondResult.reason.code, "market_full");
+    const committed = harness.snapshot();
+    assert.equal(Object.keys(committed.market_listings).length, MARKET_MAX_LISTINGS);
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 1);
+    assert.deepEqual(committed.profiles[ACTORS.b.playerId].profile_json.backpackSlots, [
+      {itemId: "item_meat_small", count: 2},
+    ]);
+    assert.equal(Object.hasOwn(committed.market_listings, "listing_shared_market_create_a"), true);
+    assert.equal(Object.hasOwn(committed.market_listings, "listing_shared_market_create_b"), false);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_create_119_a"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_market_create_119_b"), false);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "write_staged" && event.writerId === "market_create_119_b"
+      )),
+      false,
+    );
+  } finally {
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("conditional create first makes a waiting legacy single-add fail live capacity before business SQL", async (t) => {
+  const cases = [
+    {
+      name: "global 119 to 120 rejects the legacy addition as market_full",
+      conditionalActorKey: "a",
+      legacyActorKey: "b",
+      expectedCode: "market_full",
+      initialSellerCount: 0,
+    },
+    {
+      name: "same seller 19 to 20 rejects the legacy addition as market_listing_limit",
+      conditionalActorKey: "b",
+      legacyActorKey: "b",
+      expectedCode: "market_listing_limit",
+      initialSellerCount: 19,
+    },
+  ];
+
+  for (const fixture of cases) {
+    await t.test(fixture.name, async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-create-mixed-"));
+      const conditionalDir = path.join(tempDir, "conditional");
+      const legacyDir = path.join(tempDir, "legacy");
+      fs.mkdirSync(conditionalDir);
+      fs.mkdirSync(legacyDir);
+      const authority = marketCreateAuthority(119);
+      if (fixture.initialSellerCount > 0) {
+        const sellerAccountId = ACTORS[fixture.legacyActorKey].accountId;
+        for (const listing of Object.values(authority.marketListings).slice(0, fixture.initialSellerCount)) {
+          listing.sellerAccountId = sellerAccountId;
+        }
+      }
+      const conditionalOptions = {
+        operationId: `op_market_create_mixed_conditional_${fixture.expectedCode}`,
+        requestHash: fixture.expectedCode === "market_full" ? "a".repeat(64) : "b".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      };
+      const legacyOptions = {
+        listingId: `listing_shared_market_create_legacy_${fixture.expectedCode}`,
+        operationId: `op_market_create_mixed_legacy_${fixture.expectedCode}`,
+        requestHash: fixture.expectedCode === "market_full" ? "c".repeat(64) : "d".repeat(64),
+        updatedAt: UPDATED_AT_3,
+      };
+      const conditionalAfter = nextMarketCreateAuthority(
+        authority,
+        fixture.conditionalActorKey,
+        conditionalOptions,
+      );
+      // The legacy writer intentionally has the winning profile revision but
+      // a stale 119-listing book. This isolates the compatibility dimension:
+      // profile snapshot validation can pass, so only the shared capacity
+      // guard plus the post-wait aggregate may prevent the 121st listing.
+      const legacyView = cloneAuthorityRoot(authority);
+      const conditionalActor = ACTORS[fixture.conditionalActorKey];
+      legacyView.profileBindings[conditionalActor.accountId] =
+        conditionalAfter.profileBindings[conditionalActor.accountId];
+      legacyView.profiles[conditionalActor.playerId] =
+        conditionalAfter.profiles[conditionalActor.playerId];
+
+      const capacityRows = [
+        {
+          actorKey: fixture.conditionalActorKey,
+          totalCount: 119,
+          sellerCount: fixture.initialSellerCount,
+        },
+        {
+          actorKey: fixture.legacyActorKey,
+          totalCount: 120,
+          sellerCount: fixture.initialSellerCount
+            + (fixture.conditionalActorKey === fixture.legacyActorKey ? 1 : 0),
+        },
+      ];
+      const seed = sqlSeed({authority, marketCapacityCounts: capacityRows});
+      const conditionalLoader = createSharedLoader(conditionalDir, seed);
+      const legacyLoaderSeed = sqlSeed({authority: legacyView});
+      const legacyProfile = legacyView.profiles[conditionalActor.playerId];
+      legacyLoaderSeed.profiles[conditionalActor.playerId] = {
+        ...legacyLoaderSeed.profiles[conditionalActor.playerId],
+        profile_revision: legacyProfile.profileRevision,
+        updated_at: legacyProfile.updatedAt,
+        profile_json: legacyProfile.profile,
+      };
+      const legacyLoader = createSharedLoader(legacyDir, legacyLoaderSeed);
+      const queryLog = [];
+      let harness = null;
+      harness = createSharedMysqlTransactionHarness({
+        seed,
+        statementHandler: createProductionSqlHandler(queryLog, {
+          snapshotProvider: () => harness.snapshot(),
+        }),
+        onCommittedSnapshot(snapshot) {
+          conditionalLoader.writeSnapshot(snapshot);
+        },
+      });
+      const conditionalWriterId = `market_create_mixed_conditional_${fixture.expectedCode}`;
+      const legacyWriterId = `market_create_mixed_legacy_${fixture.expectedCode}`;
+      const conditionalStore = createProductionStore(
+        conditionalLoader.fakeMysqlPath,
+        harness.poolFor(conditionalWriterId),
+      );
+      const legacyStore = createProductionStore(
+        legacyLoader.fakeMysqlPath,
+        harness.poolFor(legacyWriterId),
+      );
+      const conditionalGate = harness.blockNext({
+        writerId: conditionalWriterId,
+        phase: "before_commit_apply",
+      });
+      void conditionalGate.entered.catch(() => {});
+      let settled = null;
+
+      try {
+        const conditionalLoaded = conditionalStore.load();
+        const legacyLoaded = legacyStore.load();
+        const conditional = stagedMarketCreate(
+          conditionalStore,
+          conditionalLoaded,
+          fixture.conditionalActorKey,
+          conditionalOptions,
+        );
+        await conditionalGate.entered;
+        const legacy = stagedLegacyMarketCreate(
+          legacyStore,
+          legacyLoaded,
+          fixture.legacyActorKey,
+          legacyOptions,
+        );
+        settled = Promise.allSettled([conditional.promise, legacy.promise]);
+        await harness.waitForEvent({
+          type: "lock_wait",
+          writerId: legacyWriterId,
+          table: "auth_store_revisions",
+          key: "auth",
+        });
+        conditionalGate.release();
+
+        const [conditionalResult, legacyResult] = await settled;
+        assert.equal(conditionalResult.status, "fulfilled");
+        assert.equal(legacyResult.status, "rejected");
+        assert.equal(legacyResult.reason.code, fixture.expectedCode);
+        assert.equal(legacyResult.reason.outcomeUnknown, false);
+        assert.equal(legacyResult.reason.rollbackConfirmed, true);
+        const committed = harness.snapshot();
+        assert.equal(Object.keys(committed.market_listings).length, MARKET_MAX_LISTINGS);
+        assert.equal(committed.auth_store_revisions.auth.revision, 0);
+        assert.equal(committed.auth_store_revisions[MARKET_CREATE_CAPACITY_GUARD_KEY].revision, 0);
+        assert.equal(
+          Object.hasOwn(committed.market_listings, legacyOptions.listingId),
+          false,
+        );
+        assert.equal(
+          Object.hasOwn(committed.mutation_receipts, legacyOptions.operationId),
+          false,
+        );
+        assert.deepEqual(
+          committed.profiles[ACTORS[fixture.legacyActorKey].playerId].profile_json.backpackSlots,
+          fixture.conditionalActorKey === fixture.legacyActorKey
+            ? [{itemId: "item_meat_small", count: 1}]
+            : [{itemId: "item_meat_small", count: 2}],
+        );
+        assert.equal(
+          harness.events().some((event) => (
+            event.type === "write_staged" && event.writerId === legacyWriterId
+          )),
+          false,
+        );
+        const legacyQueries = queryLog.filter((entry) => entry.writerId === legacyWriterId);
+        assert.equal(
+          legacyQueries.some((entry) => /^(?:INSERT|UPDATE|DELETE)\b/i.test(entry.sql)),
+          false,
+        );
+        const legacyGuardIndex = legacyQueries.findIndex((entry) => (
+          /scope_key = \? FOR UPDATE$/i.test(entry.sql)
+        ));
+        const legacyCapacityIndex = legacyQueries.findIndex((entry) => (
+          /^SELECT COUNT\(\*\) AS total_count/i.test(entry.sql)
+        ));
+        assert.ok(legacyGuardIndex >= 0 && legacyGuardIndex < legacyCapacityIndex);
+      } finally {
+        conditionalGate.release();
+        if (settled !== null) {
+          await settled;
+        }
+        await Promise.allSettled([conditionalStore.close(), legacyStore.close()]);
+        fs.rmSync(tempDir, {recursive: true, force: true});
+      }
+
+      assert.equal(harness.assertIdle(), true);
+    });
+  }
+});
+
+test("market create DB-only listing and receipt collisions roll all earlier asset writes back", async (t) => {
+  await t.test("listing id collision", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-create-listing-duplicate-"));
+    const authority = marketCreateAuthority(10);
+    const loaderSeed = sqlSeed({authority});
+    const databaseSeed = sqlSeed({
+      authority,
+      marketCapacityCounts: [{actorKey: "a", totalCount: 11, sellerCount: 1}],
+    });
+    const duplicate = nextMarketCreateAuthority(authority, "a", {
+      operationId: "op_market_create_listing_duplicate_seed",
+      requestHash: "5".repeat(64),
+      updatedAt: UPDATED_AT_1,
+    }).marketListings.listing_shared_market_create_a;
+    databaseSeed.market_listings[duplicate.listingId] = {
+      listing_id: duplicate.listingId,
+      seller_account_id: duplicate.sellerAccountId,
+      item_id: duplicate.itemId,
+      currency: duplicate.currency,
+      unit_price: duplicate.unitPrice,
+      item_count: duplicate.count,
+      created_at: duplicate.createdAt,
+      document_json: duplicate,
+    };
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, loaderSeed);
+    let harness = null;
+    harness = createSharedMysqlTransactionHarness({
+      seed: databaseSeed,
+      statementHandler: createProductionSqlHandler(queryLog, {
+        snapshotProvider: () => harness.snapshot(),
+      }),
+    });
+    const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_listing_duplicate"));
+    try {
+      const loaded = store.load();
+      const staged = stagedMarketCreate(store, loaded, "a", {
+        operationId: "op_market_create_listing_duplicate",
+        requestHash: "6".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      });
+      await assert.rejects(staged.promise, isResourceConflict);
+      assert.deepEqual(harness.snapshot(), databaseSeed);
+      assert.deepEqual(
+        harness.events()
+          .filter((event) => event.type === "write_staged" && event.writerId === "market_create_listing_duplicate")
+          .map((event) => event.table),
+        ["profile_bindings", "profiles"],
+      );
+    } finally {
+      await store.close();
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
+
+  await t.test("receipt collision after listing insert", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-market-create-receipt-duplicate-"));
+    const authority = marketCreateAuthority(10);
+    const operationId = "op_market_create_receipt_duplicate";
+    const loaderSeed = sqlSeed({authority});
+    const duplicateReceipt = {
+      schemaVersion: 1,
+      operationId,
+      requestHash: "7".repeat(64),
+      actionId: MARKET_CREATE_ACTION_ID,
+      accountId: ACTORS.a.accountId,
+      committedAt: UPDATED_AT_1,
+      expiresAt: "2026-07-18T02:10:00.000Z",
+      response: {ok: true, operationId},
+    };
+    const databaseSeed = sqlSeed({
+      authority,
+      marketCapacityCounts: [{actorKey: "a", totalCount: 10, sellerCount: 0}],
+      mutationReceipts: {
+        [operationId]: {
+          operation_id: operationId,
+          request_hash: duplicateReceipt.requestHash,
+          action_id: duplicateReceipt.actionId,
+          account_id: duplicateReceipt.accountId,
+          committed_at: duplicateReceipt.committedAt,
+          expires_at: duplicateReceipt.expiresAt,
+          document_json: duplicateReceipt,
+        },
+      },
+    });
+    const queryLog = [];
+    const loader = createSharedLoader(tempDir, loaderSeed);
+    let harness = null;
+    harness = createSharedMysqlTransactionHarness({
+      seed: databaseSeed,
+      statementHandler: createProductionSqlHandler(queryLog, {
+        snapshotProvider: () => harness.snapshot(),
+      }),
+    });
+    const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor("market_create_receipt_duplicate"));
+    try {
+      const loaded = store.load();
+      const staged = stagedMarketCreate(store, loaded, "a", {
+        operationId,
+        requestHash: "8".repeat(64),
+        updatedAt: UPDATED_AT_2,
+      });
+      await assert.rejects(staged.promise, isResourceConflict);
+      assert.deepEqual(harness.snapshot(), databaseSeed);
+      assert.deepEqual(
+        harness.events()
+          .filter((event) => event.type === "write_staged" && event.writerId === "market_create_receipt_duplicate")
+          .map((event) => event.table),
+        ["profile_bindings", "profiles", "market_listings"],
+      );
+    } finally {
+      await store.close();
+      fs.rmSync(tempDir, {recursive: true, force: true});
+    }
+    assert.equal(harness.assertIdle(), true);
+  });
 });
 
 test("different ordinary market cancels overlap and preserve both profile and listing settlements", async () => {

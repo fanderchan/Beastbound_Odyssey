@@ -99,7 +99,10 @@ function mergeScopedCommit(backing, nextData, saveOptions) {
     current.profileBindings[scope.accountId] = nextData.profileBindings[scope.accountId];
     current.profiles[scope.playerId] = nextData.profiles[scope.playerId];
   };
-  if (scope.kind === "row_local_market_buy_v1") {
+  if (scope.kind === "row_local_market_create_v1") {
+    mergeActorProfile();
+    current.marketListings[scope.listingId] = nextData.marketListings[scope.listingId];
+  } else if (scope.kind === "row_local_market_buy_v1") {
     mergeActorProfile();
     delete current.marketListings[scope.listingId];
     current.mailMessages[scope.saleMailId] = nextData.mailMessages[scope.saleMailId];
@@ -176,6 +179,7 @@ function seedBackpackEquipment(service, token) {
 function createReadThroughNode(backing, initialSnapshot, options = {}) {
   let nodeBaseline = cloneAuthorityRoot(initialSnapshot);
   let loadCalls = 0;
+  let sharedReadCalls = 0;
   const underlying = {
     mode: "shared-read-test",
     load() {
@@ -186,6 +190,12 @@ function createReadThroughNode(backing, initialSnapshot, options = {}) {
       return cloneAuthorityRoot(nodeBaseline);
     },
     async readSharedAssetView(request, readOptions = {}) {
+      sharedReadCalls += 1;
+      if (options.fullReloadBeforeFirstSharedRead === true && sharedReadCalls === 1) {
+        const error = new Error("global revision changed");
+        error.code = "mysql_shared_asset_full_reload_required";
+        throw error;
+      }
       if (typeof options.beforeSharedRead === "function") {
         await options.beforeSharedRead(request);
       }
@@ -215,10 +225,19 @@ function createReadThroughNode(backing, initialSnapshot, options = {}) {
       if (typeof options.onSave === "function") {
         options.onSave(saveOptions);
       }
+      if (options.saveError) {
+        throw options.saveError;
+      }
       if (!saveOptions.consistencyScope && options.allowLegacy === true) {
         backing.save(nextData);
       } else {
         mergeScopedCommit(backing, nextData, saveOptions);
+      }
+      if (typeof options.afterCommit === "function") {
+        options.afterCommit(backing, nextData, saveOptions);
+      }
+      if (options.saveErrorAfterCommit) {
+        throw options.saveErrorAfterCommit;
       }
       nodeBaseline = cloneAuthorityRoot(nextData);
     },
@@ -267,6 +286,310 @@ function seedMarketScenario() {
     listingId: listing.listing.listingId,
   };
 }
+
+function seedMarketCreateCapacityScenario({totalCount, sellerCount}) {
+  assert.ok(Number.isSafeInteger(totalCount) && totalCount >= 0 && totalCount <= 120);
+  assert.ok(Number.isSafeInteger(sellerCount) && sellerCount >= 0 && sellerCount <= totalCount);
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const seller = service.register({
+    username: `mcs${totalCount}_${sellerCount}`,
+    password: "test1234",
+    displayName: "挂单读穿卖家",
+  });
+  const other = service.register({
+    username: `mco${totalCount}_${sellerCount}`,
+    password: "test1234",
+    displayName: "挂单读穿他人",
+  });
+  assert.equal(seller.ok, true, JSON.stringify(seller));
+  assert.equal(other.ok, true, JSON.stringify(other));
+  const current = service.getProfile(seller.session.token);
+  current.profile.backpackSlots[0] = {itemId: "item_meat_small", count: 3};
+  const saved = service.saveProfile(seller.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  });
+  assert.equal(saved.ok, true, JSON.stringify(saved));
+  const staleSnapshot = service.snapshot();
+  for (let index = 0; index < totalCount; index += 1) {
+    const listingId = `market_capacity_${String(index).padStart(3, "0")}`;
+    staleSnapshot.marketListings[listingId] = {
+      listingId,
+      sellerAccountId: index < sellerCount
+        ? seller.account.accountId
+        : other.account.accountId,
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 10 + index,
+      currency: "stoneCoins",
+      createdAt: "2026-07-15T00:00:00.000Z",
+      schemaVersion: 1,
+    };
+  }
+  return {
+    backing: createMemoryAuthStore(staleSnapshot),
+    other,
+    seller,
+    staleSnapshot,
+  };
+}
+
+test("ordinary market create refreshes a stale global-cap snapshot before validating", async () => {
+  const scenario = seedMarketCreateCapacityScenario({totalCount: 120, sellerCount: 5});
+  const fresh = scenario.backing.load();
+  delete fresh.marketListings.market_capacity_119;
+  scenario.backing.save(fresh);
+  let receiptReads = 0;
+  let savedScope = null;
+  const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+    beforeSharedRead(request) {
+      assert.equal(request.scope, "market_read");
+    },
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave(options) {
+      savedScope = options.consistencyScope;
+    },
+  });
+
+  const created = await node.invokeDurable(
+    "createMarketListing",
+    [scenario.seller.session.token, {
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 77,
+      currency: "stoneCoins",
+    }],
+    {
+      operationId: "op_market_create_global_cap_0001",
+      requestHash: "c".repeat(64),
+      actionId: "POST /market/list",
+    },
+  );
+  assert.equal(created.ok, true, JSON.stringify(created));
+  assert.equal(receiptReads, 0);
+  assert.equal(savedScope.kind, "row_local_market_create_v1");
+  assert.equal(savedScope.observedTotalListingCount, 119);
+  assert.equal(savedScope.observedSellerListingCount, 5);
+  assert.equal(savedScope.maxTotalListings, 120);
+  assert.equal(savedScope.maxSellerListings, 20);
+  const finalSnapshot = scenario.backing.load();
+  assert.equal(Object.keys(finalSnapshot.marketListings).length, 120);
+  assert.equal(
+    Object.values(finalSnapshot.marketListings).filter((listing) => (
+      listing.sellerAccountId === scenario.seller.account.accountId
+    )).length,
+    6,
+  );
+  assert.equal(
+    backpackItemCount(profileForAccount(finalSnapshot, scenario.seller.account.accountId), "item_meat_small"),
+    2,
+  );
+});
+
+test("ordinary market create refreshes a stale seller-cap snapshot before validating", async () => {
+  const scenario = seedMarketCreateCapacityScenario({totalCount: 20, sellerCount: 20});
+  const fresh = scenario.backing.load();
+  delete fresh.marketListings.market_capacity_000;
+  scenario.backing.save(fresh);
+  let receiptReads = 0;
+  let savedScope = null;
+  const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave(options) {
+      savedScope = options.consistencyScope;
+    },
+  });
+
+  const created = await node.invokeDurable(
+    "createMarketListing",
+    [scenario.seller.session.token, {
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 88,
+      currency: "stoneCoins",
+    }],
+    {
+      operationId: "op_market_create_seller_cap_0001",
+      requestHash: "d".repeat(64),
+      actionId: "POST /market/list",
+    },
+  );
+  assert.equal(created.ok, true, JSON.stringify(created));
+  assert.equal(receiptReads, 0);
+  assert.equal(savedScope.kind, "row_local_market_create_v1");
+  assert.equal(savedScope.observedTotalListingCount, 19);
+  assert.equal(savedScope.observedSellerListingCount, 19);
+  const finalSnapshot = scenario.backing.load();
+  assert.equal(Object.keys(finalSnapshot.marketListings).length, 20);
+  assert.equal(
+    Object.values(finalSnapshot.marketListings).filter((listing) => (
+      listing.sellerAccountId === scenario.seller.account.accountId
+    )).length,
+    20,
+  );
+});
+
+test("healthy ordinary market create performs no exact durable-receipt read", async () => {
+  const scenario = seedMarketCreateCapacityScenario({totalCount: 0, sellerCount: 0});
+  let receiptReads = 0;
+  let saveCalls = 0;
+  const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave(options) {
+      saveCalls += 1;
+      assert.equal(options.consistencyScope.kind, "row_local_market_create_v1");
+    },
+  });
+  const created = await node.invokeDurable(
+    "createMarketListing",
+    [scenario.seller.session.token, {
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 99,
+      currency: "stoneCoins",
+    }],
+    {
+      operationId: "op_market_create_zero_exact_read_0001",
+      requestHash: "e".repeat(64),
+      actionId: "POST /market/list",
+    },
+  );
+  assert.equal(created.ok, true, JSON.stringify(created));
+  assert.equal(receiptReads, 0);
+  assert.equal(saveCalls, 1);
+});
+
+test("scoped market-create recovery preserves an unrelated commit after an ambiguous save", async () => {
+  const scenario = seedMarketCreateCapacityScenario({totalCount: 0, sellerCount: 0});
+  const unrelatedPlayerId = scenario.staleSnapshot.profileBindings[scenario.other.account.accountId].playerId;
+  const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+    afterCommit(backing) {
+      const concurrent = backing.load();
+      concurrent.profiles[unrelatedPlayerId].profile.stoneCoins += 1;
+      backing.save(concurrent);
+    },
+    saveErrorAfterCommit: new Error("connection ended after commit"),
+  });
+  const created = await node.invokeDurable(
+    "createMarketListing",
+    [scenario.seller.session.token, {
+      itemId: "item_meat_small",
+      count: 1,
+      unitPrice: 105,
+      currency: "stoneCoins",
+    }],
+    {
+      operationId: "op_market_create_scoped_recovery_0001",
+      requestHash: "0".repeat(64),
+      actionId: "POST /market/list",
+    },
+  );
+  assert.equal(created.ok, true, JSON.stringify(created));
+  const finalSnapshot = scenario.backing.load();
+  assert.equal(Object.hasOwn(finalSnapshot.marketListings, created.listing.listingId), true);
+  assert.equal(
+    finalSnapshot.profiles[unrelatedPlayerId].profile.stoneCoins,
+    scenario.staleSnapshot.profiles[unrelatedPlayerId].profile.stoneCoins + 1,
+  );
+  assert.equal(
+    backpackItemCount(profileForAccount(finalSnapshot, scenario.seller.account.accountId), "item_meat_small"),
+    2,
+  );
+});
+
+test("market create full reload replays a newly imported local receipt without an exact read", async () => {
+  const scenario = seedMarketCreateCapacityScenario({totalCount: 0, sellerCount: 0});
+  const operation = {
+    operationId: "op_market_create_reload_replay_0001",
+    requestHash: "f".repeat(64),
+    actionId: "POST /market/list",
+  };
+  const args = [scenario.seller.session.token, {
+    itemId: "item_meat_small",
+    count: 1,
+    unitPrice: 111,
+    currency: "stoneCoins",
+  }];
+  const firstNode = createReadThroughNode(scenario.backing, scenario.staleSnapshot);
+  const first = await firstNode.invokeDurable("createMarketListing", args, operation);
+  assert.equal(first.ok, true, JSON.stringify(first));
+  let receiptReads = 0;
+  let saveCalls = 0;
+  const retryNode = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+    fullReloadBeforeFirstSharedRead: true,
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave() {
+      saveCalls += 1;
+    },
+  });
+
+  const replay = await retryNode.invokeDurable("createMarketListing", args, operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.listing.listingId, first.listing.listingId);
+  assert.equal(receiptReads, 0);
+  assert.equal(saveCalls, 0);
+  const finalSnapshot = scenario.backing.load();
+  assert.equal(Object.keys(finalSnapshot.marketListings).length, 1);
+  assert.equal(
+    backpackItemCount(profileForAccount(finalSnapshot, scenario.seller.account.accountId), "item_meat_small"),
+    2,
+  );
+});
+
+test("known MySQL market-create capacity rollbacks return product failures without publishing", async (t) => {
+  for (const [code, message] of [
+    ["market_listing_limit", "你的挂单太多，请先卖出或取消一些。"],
+    ["market_full", "交易所挂单已满，请稍后再试。"],
+  ]) {
+    await t.test(code, async () => {
+      const scenario = seedMarketCreateCapacityScenario({totalCount: 0, sellerCount: 0});
+      const saveError = new Error(code);
+      saveError.code = code;
+      saveError.outcomeUnknown = false;
+      let receiptReads = 0;
+      const node = createReadThroughNode(scenario.backing, scenario.staleSnapshot, {
+        saveError,
+        onReceiptRead() {
+          receiptReads += 1;
+        },
+      });
+      const result = await node.invokeDurable(
+        "createMarketListing",
+        [scenario.seller.session.token, {
+          itemId: "item_meat_small",
+          count: 1,
+          unitPrice: 122,
+          currency: "stoneCoins",
+        }],
+        {
+          operationId: `op_market_create_${code}_0001`,
+          requestHash: code === "market_full" ? "1".repeat(64) : "2".repeat(64),
+          actionId: "POST /market/list",
+        },
+      );
+      assert.equal(result.ok, false, JSON.stringify(result));
+      assert.equal(result.code, code);
+      assert.equal(result.message, message);
+      assert.equal(receiptReads, 1);
+      const finalSnapshot = scenario.backing.load();
+      assert.equal(Object.keys(finalSnapshot.marketListings).length, 0);
+      assert.equal(Object.keys(finalSnapshot.mutationReceipts).length, 0);
+      assert.equal(
+        backpackItemCount(profileForAccount(finalSnapshot, scenario.seller.account.accountId), "item_meat_small"),
+        3,
+      );
+    });
+  }
+});
 
 test("a stale Node reads a remote listing, buys it, then the seller reads and claims the remote sale mail", async () => {
   const scenario = seedMarketScenario();

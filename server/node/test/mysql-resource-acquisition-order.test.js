@@ -4,6 +4,10 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MARKET_CREATE_CAPACITY_CHECK_SQL,
+  MARKET_CREATE_CAPACITY_GUARD_KEY,
+  MARKET_MAX_LISTINGS,
+  MARKET_MAX_LISTINGS_PER_SELLER,
   MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID,
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,
@@ -17,6 +21,7 @@ function lock(resource, key, lockMode = "exclusive") {
   const identityFieldByResource = {
     profile_binding: "account_id",
     profile: "player_id",
+    market_capacity: "scope_key",
     market_listing: "listing_id",
     mail_message: "mail_id",
   };
@@ -24,6 +29,7 @@ function lock(resource, key, lockMode = "exclusive") {
   const sqlByResource = {
     profile_binding: `SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? ${suffix}`,
     profile: `SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? ${suffix}`,
+    market_capacity: "SELECT scope_key, revision FROM auth_store_revisions WHERE scope_key = ? FOR UPDATE",
     market_listing: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
       item_count, created_at, document_json
       FROM market_listings WHERE listing_id = ? ${suffix}`,
@@ -32,6 +38,10 @@ function lock(resource, key, lockMode = "exclusive") {
       FROM mail_messages WHERE mail_id = ? ${suffix}`,
   };
   const identityField = identityFieldByResource[resource];
+  const expectedRow = {[identityField]: key};
+  if (resource === "market_capacity") {
+    expectedRow.revision = 0;
+  }
   return {
     kind: "lock",
     resource,
@@ -39,7 +49,7 @@ function lock(resource, key, lockMode = "exclusive") {
     lockMode,
     sql: sqlByResource[resource],
     params: [key],
-    expectedRow: {[identityField]: key},
+    expectedRow,
   };
 }
 
@@ -61,6 +71,11 @@ function write(resource, key, kind) {
       WHERE listing_id = ? AND seller_account_id = ? AND item_id = ?
         AND currency = ? AND unit_price = ? AND item_count = ? AND created_at = ?`;
     params = [key, "seller-1", "item-1", "stoneCoins", 1, 1, "now"];
+  } else if (resource === "market_listing" && kind === "insert") {
+    sql = `INSERT INTO market_listings
+      (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON))`;
+    params = [key, "seller-1", "item-1", "stoneCoins", 1, 1, "now", "{}"];
   } else if (resource === "mail_message" && kind === "insert") {
     sql = `INSERT INTO mail_messages
       (mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json)
@@ -112,6 +127,34 @@ function plan(overrides = {}) {
     writes: [],
     ...overrides,
   };
+}
+
+function capacityCheck(accountId = "account-1", overrides = {}) {
+  return {
+    kind: "check",
+    resource: "market_capacity",
+    key: MARKET_CREATE_CAPACITY_GUARD_KEY,
+    sql: MARKET_CREATE_CAPACITY_CHECK_SQL,
+    params: [accountId],
+    maxTotalListings: MARKET_MAX_LISTINGS,
+    maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+    ...overrides,
+  };
+}
+
+function marketCreatePlan(overrides = {}) {
+  const accountId = String(overrides.accountId || "account-1");
+  return plan({
+    kind: "market_create_conditional_v1",
+    accountId,
+    observedTotalListingCount: 0,
+    observedSellerListingCount: 0,
+    maxTotalListings: MARKET_MAX_LISTINGS,
+    maxSellerListings: MARKET_MAX_LISTINGS_PER_SELLER,
+    capacityCheck: capacityCheck(accountId),
+    locks: [lock("market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY)],
+    ...overrides,
+  });
 }
 
 function rejectsInvalid(action, reason) {
@@ -285,6 +328,7 @@ test("write metadata is bound to exact SQL, physical key params, and one affecte
   })), "write_sql_contract_invalid");
 
   for (const [resource, kind, key, keyParamIndex] of [
+    ["market_listing", "insert", "listing-new", 0],
     ["market_listing", "delete", "listing-1", 0],
     ["mail_message", "update", "mail-1", 6],
     ["consumed_equipment_envelope", "insert", "envelope-1", 0],
@@ -391,7 +435,66 @@ test("market tax traces the real server_state/auth acquisition", () => {
   ]);
 });
 
-test("only the four conditional plans behind the shared barrier are accepted", () => {
+test("market create capacity guard precedes a plain listing insert and durable receipt", () => {
+  const certified = marketCreatePlan({
+    locks: [
+      lock("profile_binding", "account-1"),
+      lock("profile", "player-1"),
+      lock("market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY),
+    ],
+    writes: [
+      write("profile_binding", "account-1", "write"),
+      write("profile", "player-1", "write"),
+      write("market_listing", "listing-new", "insert"),
+      write("mutation_receipt", "operation-1", "insert"),
+    ],
+  });
+
+  assert.deepEqual(mysqlResourceAcquisitionTrace(certified), [
+    {resource: "profile_binding", key: "account-1", mode: "exclusive", source: "locks", stage: "lock"},
+    {resource: "profile", key: "player-1", mode: "exclusive", source: "locks", stage: "lock"},
+    {resource: "market_capacity", key: MARKET_CREATE_CAPACITY_GUARD_KEY, mode: "exclusive", source: "locks", stage: "lock"},
+    {resource: "market_listing", key: "listing-new", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mutation_receipt", key: "operation-1", mode: "exclusive", source: "writes", stage: "insert"},
+  ]);
+});
+
+test("market create capacity SQL, params, constants, counts, and guard metadata are fail-closed", () => {
+  for (const tamper of [
+    (value) => { delete value.capacityCheck; },
+    (value) => { value.capacityCheck.extra = true; },
+    (value) => { value.capacityCheck.sql += " FOR UPDATE"; },
+    (value) => { value.capacityCheck.params[0] = "account-other"; },
+    (value) => { value.capacityCheck.maxTotalListings -= 1; },
+    (value) => { value.capacityCheck.maxSellerListings -= 1; },
+    (value) => { value.maxTotalListings -= 1; },
+    (value) => { value.maxSellerListings -= 1; },
+    (value) => { value.observedTotalListingCount = -1; },
+    (value) => { value.observedSellerListingCount = 1; },
+  ]) {
+    const tampered = marketCreatePlan();
+    tamper(tampered);
+    rejectsInvalid(
+      () => assertMysqlResourceAcquisitionOrder(tampered),
+      "capacity_check_invalid",
+    );
+  }
+
+  const missingGuard = marketCreatePlan({locks: []});
+  rejectsInvalid(
+    () => assertMysqlResourceAcquisitionOrder(missingGuard),
+    "market_capacity_guard_required",
+  );
+
+  const badGuard = lock("market_capacity", MARKET_CREATE_CAPACITY_GUARD_KEY);
+  badGuard.expectedRow.revision = 1;
+  rejectsInvalid(
+    () => assertMysqlResourceAcquisitionOrder(marketCreatePlan({locks: [badGuard]})),
+    "market_capacity_guard_invalid",
+  );
+});
+
+test("only the five conditional plans behind the shared barrier are accepted", () => {
   for (const kind of [
     "profile_conditional_v2",
     "market_cancel_conditional_v1",
@@ -400,6 +503,7 @@ test("only the four conditional plans behind the shared barrier are accepted", (
   ]) {
     assert.equal(assertMysqlResourceAcquisitionOrder(plan({kind})), true);
   }
+  assert.equal(assertMysqlResourceAcquisitionOrder(marketCreatePlan()), true);
   rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({kind: "snapshot_v1"})), "conditional_plan_kind_invalid");
   rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({globalCompatibilityBarrier: "exclusive"})), "global_shared_barrier_invalid");
   rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({globalRevisionFence: true})), "global_shared_barrier_invalid");
