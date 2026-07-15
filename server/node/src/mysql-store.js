@@ -12,6 +12,10 @@ const {
   sharedAssetReadReferencedEnvelopeIds,
 } = require("./auth/shared-asset-read-model");
 const {
+  canonicalDurableReceiptReadView,
+  durableReceiptReadOperationId,
+} = require("./auth/durable-receipt-read-model");
+const {
   canonicalMailClaimEnvelopeIds,
   mailEquipmentEnvelopeMap,
   removedMailEquipmentEnvelopeIds,
@@ -48,6 +52,8 @@ const DEFAULT_DATABASE = "beastbound_odyssey";
 // full-history fixture (105,876,464 bytes) without allowing unbounded child
 // process output.
 const DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES = 192 * 1024 * 1024;
+const DEFAULT_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 3000;
+const MAX_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 4000;
 const MYSQL_LOAD_OUTPUT_CHUNK_BYTES = 64 * 1024;
 const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
 const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
@@ -431,6 +437,32 @@ function createMysqlAuthStore(options = {}) {
     load() {
       return loadAuthoritySnapshot();
     },
+    async readDurableMutationReceipt(operationIdValue) {
+      const operationId = durableReceiptReadOperationId(operationIdValue);
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("持久化操作回执读穿必须使用 MySQL 连接池。");
+        error.code = "mysql_durable_receipt_pool_required";
+        throw error;
+      }
+      const view = await runMysqlDurableReceiptRead(
+        persistentWritePool(),
+        operationId,
+        {transactionPolicy: config.transactionPolicy},
+      );
+      const baselineReceipt = lastPersistentData
+        && lastPersistentData.mutationReceipts
+        ? lastPersistentData.mutationReceipts[operationId] || null
+        : null;
+      return canonicalDurableReceiptReadView({
+        ...view,
+        authorityCurrent: lastPersistentRevision !== null
+          && view.storeRevision === lastPersistentRevision
+          && isDeepStrictEqual(baselineReceipt, view.receipt),
+      }, operationId);
+    },
     async readSharedAssetView(request, readOptions = {}) {
       if (closed) {
         throw new Error("MySQL 持久连接池已关闭。");
@@ -584,6 +616,81 @@ function createMysqlAuthStore(options = {}) {
       return closePromise;
     },
   };
+}
+
+async function runMysqlDurableReceiptRead(pool, operationIdValue, options = {}) {
+  const operationId = durableReceiptReadOperationId(operationIdValue);
+  return runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
+    const rows = mysqlQueryRows(await connection.query(
+      `SELECT revision_row.revision AS store_revision,
+        receipt.operation_id, receipt.request_hash, receipt.action_id,
+        receipt.account_id, receipt.committed_at, receipt.expires_at,
+        receipt.document_json
+        FROM auth_store_revisions AS revision_row
+        LEFT JOIN mutation_receipts AS receipt ON receipt.operation_id = ?
+        WHERE revision_row.scope_key = ?`,
+      [operationId, MYSQL_STORE_REVISION_SCOPE],
+    ));
+    if (rows.length !== 1) {
+      throw mysqlDurableReceiptIntegrityError("revision_row_count", operationId);
+    }
+    const row = rows[0] || {};
+    const storeRevision = Number(row.store_revision);
+    if (!Number.isSafeInteger(storeRevision) || storeRevision < 0) {
+      throw mysqlDurableReceiptIntegrityError("store_revision", operationId);
+    }
+    if (row.operation_id === null || row.operation_id === undefined) {
+      if ([
+        row.request_hash,
+        row.action_id,
+        row.account_id,
+        row.committed_at,
+        row.expires_at,
+        row.document_json,
+      ].some((value) => value !== null && value !== undefined)) {
+        throw mysqlDurableReceiptIntegrityError("missing_row_partial", operationId);
+      }
+      return canonicalDurableReceiptReadView({
+        schemaVersion: 1,
+        operationId,
+        storeRevision,
+        receipt: null,
+      }, operationId);
+    }
+    let view;
+    try {
+      view = canonicalDurableReceiptReadView({
+        schemaVersion: 1,
+        operationId,
+        storeRevision,
+        receipt: mysqlSharedJsonDocument(row.document_json, "mutation_receipt_json"),
+      }, operationId);
+    } catch (cause) {
+      const error = mysqlDurableReceiptIntegrityError("document_invalid", operationId);
+      error.cause = cause;
+      throw error;
+    }
+    const receipt = view.receipt;
+    if (
+      String(row.operation_id || "") !== operationId
+      || String(row.request_hash || "") !== receipt.requestHash
+      || String(row.action_id || "") !== receipt.actionId
+      || String(row.account_id || "") !== receipt.accountId
+      || String(row.committed_at || "") !== receipt.committedAt
+      || String(row.expires_at || "") !== receipt.expiresAt
+    ) {
+      throw mysqlDurableReceiptIntegrityError("row_document_drift", operationId);
+    }
+    return view;
+  });
+}
+
+function mysqlDurableReceiptIntegrityError(reason, operationId) {
+  const error = new Error("MySQL 持久化操作回执行与文档不一致。");
+  error.code = "mysql_durable_receipt_integrity_invalid";
+  error.reason = String(reason || "unknown");
+  error.resourceKey = String(operationId || "");
+  return error;
 }
 
 function assertMysqlSharedAssetRevision(expectedValue, actualValue) {
@@ -2495,7 +2602,7 @@ function loadPersistentData(config, database, options = {}) {
         includeMutationReceipts,
         includeStoreRevision,
       }),
-      {stdoutFd: outputFd},
+      {stdoutFd: outputFd, timeoutMs: config.authorityLoadTimeoutMs},
     );
     fs.closeSync(outputFd);
     outputFd = null;
@@ -3663,6 +3770,11 @@ function mysqlConfig(options) {
       process.env.BEASTBOUND_MYSQL_OUTPUT_MAX_BUFFER_BYTES,
       DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
     ),
+    authorityLoadTimeoutMs: Math.min(positiveIntegerConfig(
+      options.authorityLoadTimeoutMs,
+      process.env.BEASTBOUND_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS,
+      DEFAULT_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS,
+    ), MAX_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS),
     healthProbeTimeoutMs: positiveIntegerConfig(options.healthProbeTimeoutMs, undefined, 2000),
     usePool: mysqlPoolEnabled(options, mysqlPathExplicit),
     poolFactory: typeof options.poolFactory === "function" ? options.poolFactory : defaultMysqlPoolFactory,
@@ -3744,15 +3856,23 @@ function defaultMysqlPoolFactory(options) {
 
 function runMysql(config, database, sql, options = {}) {
   try {
+    const timeoutMs = Math.max(0, Math.trunc(Number(options.timeoutMs || 0)));
     return execFileSync(config.mysqlPath, mysqlArgs(config, database), {
       "encoding": options.binaryOutput === true ? null : "utf8",
       "input": sql,
       "maxBuffer": config.outputMaxBufferBytes,
       "stdio": ["pipe", Number.isInteger(options.stdoutFd) ? options.stdoutFd : "pipe", "pipe"],
+      ...(timeoutMs > 0 ? {timeout: timeoutMs, killSignal: "SIGKILL"} : {}),
     });
   } catch (error) {
     if (options.silent) {
       return "";
+    }
+    if (error && (error.code === "ETIMEDOUT" || error.signal === "SIGKILL")) {
+      const timeoutError = new Error("MySQL 权威存档读取超过 Beastbound 进程期限。");
+      timeoutError.code = "mysql_command_timeout";
+      timeoutError.cause = error;
+      throw timeoutError;
     }
     const stderr = error && error.stderr ? String(error.stderr).trim() : "";
     throw new Error(stderr || "MySQL 命令执行失败。");
@@ -4670,7 +4790,9 @@ module.exports = {
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
   __entityChangedForTest: entityChanged,
+  __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,
   __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
+  __runMysqlForTest: runMysql,
   __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
   __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,
   createMysqlAuthStore,

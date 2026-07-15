@@ -2,6 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const {isDeepStrictEqual} = require("node:util");
 
 const {
   createAsyncWriteAuthStore,
@@ -174,17 +175,41 @@ function seedBackpackEquipment(service, token) {
 
 function createReadThroughNode(backing, initialSnapshot, options = {}) {
   let nodeBaseline = cloneAuthorityRoot(initialSnapshot);
+  let loadCalls = 0;
   const underlying = {
     mode: "shared-read-test",
     load() {
+      loadCalls += 1;
+      if (loadCalls > 1) {
+        nodeBaseline = cloneAuthorityRoot(backing.load());
+      }
       return cloneAuthorityRoot(nodeBaseline);
     },
-    async readSharedAssetView(request, options = {}) {
+    async readSharedAssetView(request, readOptions = {}) {
+      if (typeof options.beforeSharedRead === "function") {
+        await options.beforeSharedRead(request);
+      }
       const view = sharedView(backing.load(), request);
-      if (options.adopt === true) {
+      if (readOptions.adopt === true) {
         nodeBaseline = applySharedAssetReadView(nodeBaseline, view);
       }
       return view;
+    },
+    async readDurableMutationReceipt(operationId) {
+      if (typeof options.onReceiptRead === "function") {
+        options.onReceiptRead(operationId);
+      }
+      if (options.receiptReadError) {
+        throw options.receiptReadError;
+      }
+      const backingSnapshot = backing.load();
+      const receipt = backingSnapshot.mutationReceipts[operationId] || null;
+      return {
+        schemaVersion: 1,
+        operationId,
+        authorityCurrent: isDeepStrictEqual(nodeBaseline, backingSnapshot),
+        receipt: receipt === null ? null : structuredClone(receipt),
+      };
     },
     async saveAsyncOwned(nextData, saveOptions = {}) {
       if (typeof options.onSave === "function") {
@@ -309,6 +334,309 @@ test("a stale Node reads a remote listing, buys it, then the seller reads and cl
   assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, "op_shared_read_claim_0001"), true);
   assert.equal(Object.hasOwn(finalSnapshot.marketListings, scenario.listingId), false);
   assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
+});
+
+test("a second live Node replays the first Node's committed market purchase by exact receipt", async () => {
+  const scenario = seedMarketScenario();
+  const operation = {
+    operationId: "op_cross_node_market_replay_0001",
+    requestHash: "1".repeat(64),
+    actionId: "POST /market/buy",
+  };
+  let retryReceiptReads = 0;
+  let retrySaves = 0;
+  const firstNode = createReadThroughNode(scenario.backing, scenario.afterListing);
+  const retryNode = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    onReceiptRead() {
+      retryReceiptReads += 1;
+    },
+    onSave() {
+      retrySaves += 1;
+    },
+  });
+
+  const first = await firstNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(first.ok, true, JSON.stringify(first));
+  assert.equal(first.durableCommit.replayed, false);
+
+  const replay = await retryNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.deepEqual(replay.receipt, first.receipt);
+  assert.equal(retryReceiptReads, 1);
+  assert.equal(retrySaves, 0);
+  const cachedAfterReplay = retryNode.getProfile(scenario.buyer.session.token);
+  assert.equal(cachedAfterReplay.ok, true, JSON.stringify(cachedAfterReplay));
+  assert.equal(cachedAfterReplay.profile.stoneCoins, replay.profile.stoneCoins);
+  assert.equal(
+    backpackItemCount(cachedAfterReplay, "item_meat_small"),
+    backpackItemCount(replay, "item_meat_small"),
+  );
+
+  const requestConflict = await retryNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    {...operation, requestHash: "2".repeat(64)},
+  );
+  assert.equal(requestConflict.ok, false);
+  assert.equal(requestConflict.code, "idempotency_key_conflict");
+  const accountConflict = await retryNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.seller.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(accountConflict.ok, false);
+  assert.equal(accountConflict.code, "idempotency_key_conflict");
+  assert.equal(retrySaves, 0);
+
+  const finalSnapshot = scenario.backing.load();
+  const initialBuyer = profileForAccount(scenario.afterListing, scenario.buyer.account.accountId);
+  const finalBuyer = profileForAccount(finalSnapshot, scenario.buyer.account.accountId);
+  assert.equal(finalBuyer.profile.stoneCoins, initialBuyer.profile.stoneCoins - 20);
+  assert.equal(
+    backpackItemCount(finalBuyer, "item_meat_small"),
+    backpackItemCount(initialBuyer, "item_meat_small") + 1,
+  );
+  assert.equal(
+    Object.values(finalSnapshot.mailMessages).filter((mail) => mail.title === "拍卖行成交通知").length,
+    1,
+  );
+  assert.equal(Object.keys(finalSnapshot.mutationReceipts).filter((id) => id === operation.operationId).length, 1);
+});
+
+test("shared assets refresh before exact precheck closes the remote-commit timing window", async () => {
+  const scenario = seedMarketScenario();
+  const operation = {
+    operationId: "op_cross_node_market_timing_0001",
+    requestHash: "7".repeat(64),
+    actionId: "POST /market/buy",
+  };
+  const args = [scenario.buyer.session.token, {listingId: scenario.listingId}];
+  const winner = createReadThroughNode(scenario.backing, scenario.afterListing);
+  let winnerCommitted = false;
+  let receiptReads = 0;
+  let retrySaves = 0;
+  const retry = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    async beforeSharedRead() {
+      if (winnerCommitted) {
+        return;
+      }
+      const first = await winner.invokeDurable("buyMarketListing", args, operation);
+      assert.equal(first.ok, true, JSON.stringify(first));
+      winnerCommitted = true;
+    },
+    onReceiptRead() {
+      assert.equal(winnerCommitted, true);
+      receiptReads += 1;
+    },
+    onSave() {
+      retrySaves += 1;
+    },
+  });
+
+  const replay = await retry.invokeDurable("buyMarketListing", args, operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(receiptReads, 1);
+  assert.equal(retrySaves, 0);
+});
+
+test("malformed sessions are rejected before exact receipt pool work", async () => {
+  const scenario = seedMarketScenario();
+  let receiptReads = 0;
+  const node = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+  });
+  const result = await node.invokeDurable(
+    "buyMarketListing",
+    ["invalid-token", {listingId: scenario.listingId}],
+    {
+      operationId: "op_invalid_session_receipt_0001",
+      requestHash: "8".repeat(64),
+      actionId: "POST /market/buy",
+    },
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "session_missing");
+  assert.equal(receiptReads, 0);
+});
+
+test("a missing market resource performs only one exact precheck on its failure path", async () => {
+  const scenario = seedMarketScenario();
+  const withoutListing = scenario.backing.load();
+  delete withoutListing.marketListings[scenario.listingId];
+  scenario.backing.save(withoutListing);
+  let receiptReads = 0;
+  let saveCalls = 0;
+  const node = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave() {
+      saveCalls += 1;
+    },
+  });
+  const result = await node.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    {
+      operationId: "op_market_missing_single_read_0001",
+      requestHash: "b".repeat(64),
+      actionId: "POST /market/buy",
+    },
+  );
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.equal(result.code, "market_listing_missing");
+  assert.equal(receiptReads, 1);
+  assert.equal(saveCalls, 0);
+});
+
+test("exact replay reload rejects a session revoked on another Node", async () => {
+  const scenario = seedMarketScenario();
+  const operation = {
+    operationId: "op_revoked_session_receipt_0001",
+    requestHash: "9".repeat(64),
+    actionId: "POST /market/buy",
+  };
+  const firstNode = createReadThroughNode(scenario.backing, scenario.afterListing);
+  const first = await firstNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(first.ok, true, JSON.stringify(first));
+
+  const revoked = scenario.backing.load();
+  delete revoked.sessions[scenario.buyer.session.sessionId];
+  scenario.backing.save(revoked);
+  let retrySaves = 0;
+  const retryNode = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    onSave() {
+      retrySaves += 1;
+    },
+  });
+  const replay = await retryNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(replay.ok, false, JSON.stringify(replay));
+  assert.equal(replay.code, "session_missing");
+  assert.equal(retrySaves, 0);
+});
+
+test("a canonical token issued on another Node can recover its account receipt", async () => {
+  const scenario = seedMarketScenario();
+  const operation = {
+    operationId: "op_rotated_session_receipt_0001",
+    requestHash: "a".repeat(64),
+    actionId: "POST /market/buy",
+  };
+  const firstNode = createReadThroughNode(scenario.backing, scenario.afterListing);
+  const first = await firstNode.invokeDurable(
+    "buyMarketListing",
+    [scenario.buyer.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(first.ok, true, JSON.stringify(first));
+  const authority = createAuthService({store: scenario.backing});
+  const rotated = authority.login({username: "sharedreadbuyer", password: "test1234"});
+  assert.equal(rotated.ok, true, JSON.stringify(rotated));
+
+  const retryNode = createReadThroughNode(scenario.backing, scenario.afterListing);
+  const replay = await retryNode.invokeDurable(
+    "buyMarketListing",
+    [rotated.session.token, {listingId: scenario.listingId}],
+    operation,
+  );
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.deepEqual(replay.receipt, first.receipt);
+});
+
+test("a second live Node replays a remote mail claim without awarding attachments twice", async () => {
+  const scenario = seedMarketScenario();
+  const seed = createAuthService({store: createMemoryAuthStore(scenario.afterListing)});
+  const bought = seed.buyMarketListing(scenario.buyer.session.token, {
+    listingId: scenario.listingId,
+  });
+  assert.equal(bought.ok, true, JSON.stringify(bought));
+  const ready = seed.snapshot();
+  const saleMail = Object.values(ready.mailMessages).find((mail) => (
+    mail.recipientAccountId === scenario.seller.account.accountId
+    && mail.title === "拍卖行成交通知"
+  ));
+  assert.ok(saleMail);
+  const backing = createMemoryAuthStore(ready);
+  const firstNode = createReadThroughNode(backing, ready);
+  let retrySaves = 0;
+  const retryNode = createReadThroughNode(backing, ready, {
+    onSave() {
+      retrySaves += 1;
+    },
+  });
+  const operation = {
+    operationId: "op_cross_node_mail_replay_0001",
+    requestHash: "3".repeat(64),
+    actionId: "POST /mail/claim",
+  };
+
+  const first = await firstNode.invokeDurable(
+    "claimMailAttachments",
+    [scenario.seller.session.token, saleMail.mailId],
+    operation,
+  );
+  assert.equal(first.ok, true, JSON.stringify(first));
+  const replay = await retryNode.invokeDurable(
+    "claimMailAttachments",
+    [scenario.seller.session.token, saleMail.mailId],
+    operation,
+  );
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(retrySaves, 0);
+
+  const finalSnapshot = backing.load();
+  const initialSeller = profileForAccount(ready, scenario.seller.account.accountId);
+  const finalSeller = profileForAccount(finalSnapshot, scenario.seller.account.accountId);
+  assert.equal(finalSeller.profile.stoneCoins, initialSeller.profile.stoneCoins + 19);
+  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
+  assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, operation.operationId), true);
+});
+
+test("an exact receipt read failure stops market mutation before stale validation or save", async () => {
+  const scenario = seedMarketScenario();
+  let saveCalls = 0;
+  const node = createReadThroughNode(scenario.backing, scenario.afterListing, {
+    receiptReadError: new Error("receipt database unavailable"),
+    onSave() {
+      saveCalls += 1;
+    },
+  });
+  await assert.rejects(
+    node.invokeDurable(
+      "buyMarketListing",
+      [scenario.buyer.session.token, {listingId: scenario.listingId}],
+      {
+        operationId: "op_cross_node_receipt_failure_0001",
+        requestHash: "4".repeat(64),
+        actionId: "POST /market/buy",
+      },
+    ),
+    (error) => error && error.code === "storage_read_failed",
+  );
+  assert.equal(saveCalls, 0);
+  assert.equal(Object.hasOwn(scenario.backing.load().marketListings, scenario.listingId), true);
 });
 
 test("marking mail read cannot resurrect attachments claimed on another Node", async () => {

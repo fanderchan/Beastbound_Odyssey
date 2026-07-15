@@ -19,6 +19,10 @@ const {ensureConsumedEquipmentEnvelopeIds} = require(
   path.join(ROOT, "server/node/src/auth/equipment-envelope-consumed-ledger"),
 );
 const {createMysqlAuthStore} = require(path.join(ROOT, "server/node/src/mysql-store"));
+const {
+  createAsyncWriteAuthStore,
+  createAuthService,
+} = require(path.join(ROOT, "server/node/src/auth-service"));
 
 const ACTORS = Object.freeze({
   a: Object.freeze({accountId: "acc_real_parallel_a", playerId: "player_real_parallel_a"}),
@@ -53,6 +57,9 @@ const CROSS_ACCOUNT_ACTORS = Object.freeze({
 });
 const ALL_ACTORS = Object.freeze({...ACTORS, ...CROSS_ACCOUNT_ACTORS});
 const BASE_TIME = "2026-07-14T04:00:00.000Z";
+const CROSS_NODE_REPLAY_TOKEN = Buffer.alloc(32, 0x52).toString("base64url");
+const CROSS_NODE_REPLAY_SESSION_ID = "sess_real_cross_node_replay_a";
+const CROSS_NODE_REPLAY_NOW_MS = Date.parse("2026-07-15T00:00:00.000Z");
 const MARKET_LISTING_IDS = Object.freeze({
   success: "listing_real_market_cancel_success",
   rollback: "listing_real_market_cancel_rollback",
@@ -588,6 +595,18 @@ function seededAuthority(empty) {
   data.profileBindings = {};
   data.profiles = {};
   data.mutationReceipts = data.mutationReceipts || {};
+  data.sessions = {
+    ...(data.sessions || {}),
+    [CROSS_NODE_REPLAY_SESSION_ID]: {
+      sessionId: CROSS_NODE_REPLAY_SESSION_ID,
+      accountId: ACTORS.a.accountId,
+      tokenHash: crypto.createHash("sha256").update(CROSS_NODE_REPLAY_TOKEN).digest("hex"),
+      createdAt: BASE_TIME,
+      expiresAt: "2026-07-22T00:00:00.000Z",
+      revokedAt: null,
+      schemaVersion: 1,
+    },
+  };
   data.marketConfig = {taxRate: 0.05};
   for (const [key, actor] of Object.entries(ALL_ACTORS)) {
     const username = `real_mysql_${key}`;
@@ -1548,10 +1567,29 @@ async function runRealMysqlGate(runtime) {
     const parallelBuyA = createMysqlAuthStore(storeOptions(runtime, database, parallelBuyGate));
     const parallelBuyB = createMysqlAuthStore(storeOptions(runtime, database));
     const staleLegacyAfterBuy = createMysqlAuthStore(storeOptions(runtime, database));
-    stores.push(parallelBuyA, parallelBuyB, staleLegacyAfterBuy);
+    const replayMysqlStore = createMysqlAuthStore(storeOptions(runtime, database));
+    let replayLoadCalls = 0;
+    const replayStore = createAsyncWriteAuthStore({
+      ...replayMysqlStore,
+      load() {
+        replayLoadCalls += 1;
+        return replayMysqlStore.load();
+      },
+    }, {onError() {}});
+    stores.push(parallelBuyA, parallelBuyB, staleLegacyAfterBuy, replayStore);
     const parallelBuyLoadedA = parallelBuyA.load();
     const parallelBuyLoadedB = parallelBuyB.load();
     const staleLegacyMarketState = staleLegacyAfterBuy.load();
+    const replayInitialData = replayStore.load();
+    const replayService = createAuthService({
+      store: replayStore,
+      initialData: replayInitialData,
+      now: () => CROSS_NODE_REPLAY_NOW_MS,
+    });
+    const staleReplayProfile = replayService.getProfile(CROSS_NODE_REPLAY_TOKEN);
+    assert.equal(staleReplayProfile.ok, true, JSON.stringify(staleReplayProfile));
+    assert.equal(replayLoadCalls, 1);
+    const replayGlobalRevision = await globalRevision(admin);
     const parallelMarketBuyA = saveMarketBuy(
       parallelBuyA,
       parallelBuyLoadedA,
@@ -1604,6 +1642,77 @@ async function runRealMysqlGate(runtime) {
     assert.equal(await marketSaleMailExists(admin, "mail_real_market_buy_parallel_b"), true);
     assert.equal(await marketTaxCollected(admin), 3);
     assert.equal(await globalRevision(admin), 3);
+
+    assert.equal(await globalRevision(admin), replayGlobalRevision);
+    const staleExactReceiptView = await settleWithin(
+      replayStore.readDurableMutationReceipt("real_market_buy_parallel_a"),
+      WAIT_TIMEOUT_MS,
+      "真实 MySQL 陈旧 Node 精确回执",
+    );
+    assert.equal(staleExactReceiptView.storeRevision, replayGlobalRevision);
+    assert.equal(staleExactReceiptView.receipt.requestHash, "4".repeat(64));
+    assert.equal(staleExactReceiptView.receipt.actionId, "POST /market/buy");
+    assert.equal(staleExactReceiptView.receipt.accountId, ACTORS.a.accountId);
+    assert.equal(staleExactReceiptView.authorityCurrent, false);
+    assert.equal(replayLoadCalls, 1, "exact read 本身不能偷偷 full reload");
+
+    const assetsBeforeReplay = await profileAssetRow(admin, "a");
+    const taxBeforeReplay = await marketTaxCollected(admin);
+    const crossNodeReplay = await settleWithin(
+      replayService.invokeDurable(
+        "buyMarketListing",
+        [CROSS_NODE_REPLAY_TOKEN, {listingId: MARKET_LISTING_IDS.buyParallelA}],
+        {
+          operationId: "real_market_buy_parallel_a",
+          requestHash: "4".repeat(64),
+          actionId: "POST /market/buy",
+        },
+      ),
+      WAIT_TIMEOUT_MS,
+      "真实 MySQL 跨 Node service replay",
+    );
+    assert.equal(crossNodeReplay.ok, true, JSON.stringify(crossNodeReplay));
+    assert.equal(crossNodeReplay.durableCommit.replayed, true);
+    assert.equal(crossNodeReplay.durableCommit.operationId, "real_market_buy_parallel_a");
+    assert.equal(crossNodeReplay.receipt.listingId, MARKET_LISTING_IDS.buyParallelA);
+    assert.equal(replayLoadCalls, 2, "authorityCurrent=false 必须触发一次 full reload");
+
+    const cachedReplayProfile = replayService.getProfile(CROSS_NODE_REPLAY_TOKEN);
+    const cachedReplayItemCount = (cachedReplayProfile.profile.backpackSlots || [])
+      .reduce((total, slot) => total + (
+        slot && slot.itemId === "item_meat_small" ? Number(slot.count || 0) : 0
+      ), 0);
+    assert.deepEqual({
+      revision: cachedReplayProfile.profileSummary.profileRevision,
+      stoneCoins: cachedReplayProfile.profile.stoneCoins,
+      itemCount: cachedReplayItemCount,
+    }, assetsBeforeReplay);
+    const replayRoot = replayService.snapshot();
+    assert.equal(
+      replayRoot.mutationReceipts.real_market_buy_parallel_a.requestHash,
+      "4".repeat(64),
+    );
+    assert.equal(
+      Object.hasOwn(replayRoot.marketListings, MARKET_LISTING_IDS.buyParallelA),
+      false,
+    );
+    assert.deepEqual(await profileAssetRow(admin, "a"), assetsBeforeReplay);
+    assert.equal(await marketTaxCollected(admin), taxBeforeReplay);
+    assert.equal(await globalRevision(admin), replayGlobalRevision);
+    assert.equal(await mutationReceiptExists(admin, "real_market_buy_parallel_a"), true);
+
+    const currentExactReceiptView = await settleWithin(
+      replayStore.readDurableMutationReceipt("real_market_buy_parallel_a"),
+      WAIT_TIMEOUT_MS,
+      "真实 MySQL reload 后精确回执基线",
+    );
+    assert.equal(currentExactReceiptView.authorityCurrent, true);
+    assert.deepEqual({
+      reads: replayStore.metrics().durableReceiptReads,
+      hits: replayStore.metrics().durableReceiptReadHits,
+    }, {reads: 3, hits: 3});
+    await replayService.stopDurableAdmissionsAndDrain();
+
     const staleLegacyAfterBuyWrite = trackWrite(
       staleLegacyAfterBuy.saveAsync(nextMarketAuthority(staleLegacyMarketState, 0.08)),
     );
@@ -2212,6 +2321,24 @@ async function runRealMysqlGate(runtime) {
     );
     assert.deepEqual(mailReadView.consumedEquipmentEnvelopeIds, [DUPLICATE_ENVELOPE_ID]);
 
+    const exactReceiptView = await settleWithin(
+      sharedReadStore.readDurableMutationReceipt("real_market_buy_parallel_a"),
+      WAIT_TIMEOUT_MS,
+      "真实 MySQL 同基线精确回执读取",
+    );
+    assert.equal(exactReceiptView.operationId, "real_market_buy_parallel_a");
+    assert.equal(exactReceiptView.receipt.requestHash, "4".repeat(64));
+    assert.equal(exactReceiptView.receipt.actionId, "POST /market/buy");
+    assert.equal(exactReceiptView.receipt.accountId, ACTORS.a.accountId);
+    assert.equal(exactReceiptView.authorityCurrent, true);
+    const missingReceiptView = await settleWithin(
+      sharedReadStore.readDurableMutationReceipt("real_receipt_missing_probe_0001"),
+      WAIT_TIMEOUT_MS,
+      "真实 MySQL 缺失回执读取",
+    );
+    assert.equal(missingReceiptView.receipt, null);
+    assert.equal(missingReceiptView.authorityCurrent, true);
+
     await adminQuery(
       admin,
       "UPDATE auth_store_revisions SET revision = revision + 1 WHERE scope_key = 'auth'",
@@ -2331,6 +2458,10 @@ async function runRealMysqlGate(runtime) {
       sharedMarketReadThroughVerified: true,
       sharedMailReadThroughVerified: true,
       sharedTombstoneDeltaVerified: true,
+      exactDurableReceiptReadVerified: true,
+      missingDurableReceiptReadVerified: true,
+      crossNodeStaleReceiptBaselineVerified: true,
+      crossNodeReceiptReplayCacheVerified: true,
       scopedReadRevisionReloadVerified: true,
       scopedReadPreservesServerStateInitialization: true,
       globalRevision: await globalRevision(admin),

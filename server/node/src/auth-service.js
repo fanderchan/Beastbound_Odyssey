@@ -31,6 +31,7 @@ const {
   DURABLE_OPERATION_ID_PATTERN,
   DURABLE_REQUEST_HASH_PATTERN,
   DURABLE_RECEIPT_EXCLUDED_METHODS,
+  DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS,
   durableBusinessChanged,
   restorePublishedPersistentData,
   captureRuntimeRootDelta,
@@ -57,6 +58,9 @@ const {
   applySharedAssetReadView,
   assertSharedAssetReadViewMatchesRequest,
 } = require("./auth/shared-asset-read-model");
+const {
+  canonicalDurableReceiptReadView,
+} = require("./auth/durable-receipt-read-model");
 const {createPartyDomain} = require("./auth/party");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
@@ -194,6 +198,7 @@ const GM_COMMAND_ID_MAX_LENGTH = 80;
 const GM_POLICY_ID_MAX_LENGTH = 80;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const SESSION_REPLACED_CODE = "session_replaced";
 const SESSION_HISTORY_MAX_PER_ACCOUNT = 8;
 const SESSION_REPLACED_MESSAGE = "你的账号已在其他地方登录，你已被踢出游戏。";
@@ -216,6 +221,12 @@ const MAX_PLAYER_SEARCH_RESULTS = 12;
 const MAX_SERVICE_EVENTS = 500;
 const MAX_BATTLE_RECORDS = 10000;
 const MAX_BATTLE_TRACE_ROWS = 1200;
+const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
+  "buyMarketListing",
+  "cancelMarketListing",
+  "claimMailAttachments",
+  "markMailRead",
+]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
   "partyInvites",
@@ -3866,6 +3877,122 @@ function createAuthService(options = {}) {
     return error;
   }
 
+  function durableReceiptReplayDecision(published, args, receipt, requestHash, actionId) {
+    const currentSession = resolveServiceSession(published, durableMutationToken(args));
+    if (!currentSession.ok) {
+      return fail(currentSession.code, currentSession.message);
+    }
+    if (
+      String(receipt && receipt.accountId || "") === ""
+      || String(receipt.accountId) !== String(currentSession.account.accountId || "")
+      || String(receipt.requestHash || "") !== requestHash
+      || String(receipt.actionId || "") !== actionId
+    ) {
+      return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
+    }
+    return durableReceiptReplayResult(receipt);
+  }
+
+  async function exactDurableReceiptDecision(
+    published,
+    args,
+    operationId,
+    requestHash,
+    actionId,
+    options = {},
+  ) {
+    if (operationId === "" || store.durableReceiptReads !== true) {
+      return {handled: false};
+    }
+    // HTTP already reduces malformed Bearer values to an empty token. Preserve
+    // that zero-DB rejection for direct/internal callers too, while allowing a
+    // canonical token newly issued by another Node to reach the exact proof and
+    // authoritative reload path.
+    const token = durableMutationToken(args);
+    if (!SESSION_TOKEN_PATTERN.test(token)) {
+      const localSession = resolveServiceSession(published, token);
+      return {
+        handled: true,
+        result: fail(localSession.code, localSession.message),
+      };
+    }
+    const initialLocalActiveReceipt = activeDurableReceipt(published, operationId, now());
+    let view;
+    try {
+      view = canonicalDurableReceiptReadView(
+        await store.readDurableMutationReceipt(operationId),
+        operationId,
+      );
+    } catch (cause) {
+      throw durableReceiptReadFailure(cause);
+    }
+    // A receipt this Node already published cannot legitimately disappear or
+    // change in MySQL. Check before any reload so a corrupt/missing DB row can
+    // never erase the local proof and permit the operation to execute twice.
+    if (
+      initialLocalActiveReceipt
+      && (!view.receipt || !isDeepStrictEqual(initialLocalActiveReceipt, view.receipt))
+    ) {
+      throw durableReceiptReadFailure(new Error("本地活动回执与 MySQL 精确行不一致。"));
+    }
+    let authority = published;
+    let authorityRefreshed = false;
+    if (!view.authorityCurrent) {
+      try {
+        reloadPublishedDataFromStore();
+        authority = load();
+        authorityRefreshed = true;
+      } catch (cause) {
+        throw durableReceiptReadFailure(cause);
+      }
+    }
+    const localReceipt = authority && authority.mutationReceipts
+      ? authority.mutationReceipts[operationId] || null
+      : null;
+    const localActiveReceipt = activeDurableReceipt(authority, operationId, now());
+    const receipt = view.receipt;
+    if (
+      (localReceipt || receipt)
+      && (!localReceipt || !receipt || !isDeepStrictEqual(localReceipt, receipt))
+    ) {
+      throw durableReceiptReadFailure(new Error("权威根与 MySQL 精确回执不一致。"));
+    }
+    if (!receipt) {
+      if (authorityRefreshed && options.abortIfAuthorityRefreshed === true) {
+        throw durableReceiptReadFailure(
+          new Error("候选执行期间权威根已刷新，必须基于新根重试。"),
+        );
+      }
+      return {handled: false, authorityRefreshed};
+    }
+    const expiresAtMs = Date.parse(String(receipt.expiresAt || ""));
+    if (expiresAtMs <= now()) {
+      if (localActiveReceipt) {
+        throw durableReceiptReadFailure(new Error("过期回执被错误识别为活动回执。"));
+      }
+      if (authorityRefreshed && options.abortIfAuthorityRefreshed === true) {
+        throw durableReceiptReadFailure(
+          new Error("候选执行期间刷新出过期回执，必须基于新根重试。"),
+        );
+      }
+      return {handled: false, expired: true, authorityRefreshed};
+    }
+    return {
+      handled: true,
+      receipt,
+      authorityRefreshed,
+      result: durableReceiptReplayDecision(authority, args, receipt, requestHash, actionId),
+    };
+  }
+
+  function durableReceiptReadFailure(cause) {
+    const error = new Error("服务器正在核对本次操作结果，请稍后使用原操作标识重试。");
+    error.code = "storage_read_failed";
+    error.retryable = true;
+    error.cause = cause;
+    return error;
+  }
+
   async function executeDurableMutation(methodName, args, operation) {
     const method = serviceApi && serviceApi[methodName];
     if (typeof method !== "function" || methodName === "invokeDurable") {
@@ -3881,29 +4008,102 @@ function createAuthService(options = {}) {
       return fail("idempotency_request_invalid", "操作校验信息不完整，请重新发起操作。");
     }
 
-    refreshPublishedDataAfterStorageFailure();
-    await refreshSharedAssetsBeforeMutation(methodName, args);
-
     const receiptOperationId = DURABLE_RECEIPT_EXCLUDED_METHODS.has(methodName) ? "" : operationId;
-    const published = load();
-    const existingReceipt = receiptOperationId === ""
+    const pendingSaveError = typeof store.lastSaveError === "function" ? store.lastSaveError() : null;
+    const pendingOperation = typeof store.lastSaveOperation === "function"
+      ? store.lastSaveOperation()
+      : null;
+    if (pendingSaveError && isMysqlCommitOutcomeAmbiguous(pendingSaveError)) {
+      const matchesPendingOperation = pendingOperation
+        && pendingOperation.operationId === receiptOperationId
+        && pendingOperation.requestHash === requestHash
+        && pendingOperation.actionId === actionId;
+      if (
+        !matchesPendingOperation
+        || receiptOperationId === ""
+        || store.durableReceiptReads !== true
+      ) {
+        throw durableReceiptOutcomeUnknownFailure(pendingSaveError);
+      }
+      let pendingDecision;
+      try {
+        pendingDecision = await exactDurableReceiptDecision(
+          load(),
+          args,
+          receiptOperationId,
+          requestHash,
+          actionId,
+        );
+      } catch (cause) {
+        throw durableReceiptOutcomeUnknownFailure(cause);
+      }
+      // A normal full snapshot cannot prove that an ambiguous COMMIT did not
+      // happen. Keep the write gate closed until this exact operation has an
+      // active durable receipt; missing/expired rows remain outcome-unknown.
+      if (!pendingDecision.handled || !pendingDecision.receipt) {
+        throw durableReceiptOutcomeUnknownFailure(pendingSaveError);
+      }
+      if (typeof store.clearSaveError === "function") {
+        store.clearSaveError();
+      }
+      return pendingDecision.result;
+    }
+    refreshPublishedDataAfterStorageFailure();
+    let published = load();
+    let existingReceipt = receiptOperationId === ""
       ? null
       : activeDurableReceipt(published, receiptOperationId, now());
+    // A local active receipt is checked before any broader shared-asset read.
+    // A current same-Node baseline replays directly; only baseline/revision
+    // drift requires the exact reader to reload the full authority root.
+    if (
+      receiptOperationId !== ""
+      && store.durableReceiptReads === true
+      && existingReceipt
+    ) {
+      const decision = await exactDurableReceiptDecision(
+        published,
+        args,
+        receiptOperationId,
+        requestHash,
+        actionId,
+      );
+      if (decision.handled) {
+        return decision.result;
+      }
+      published = load();
+      existingReceipt = activeDurableReceipt(published, receiptOperationId, now());
+    }
     if (existingReceipt) {
-      const currentSession = resolveServiceSession(published, durableMutationToken(args));
-      if (!currentSession.ok) {
-        return fail(currentSession.code, currentSession.message);
+      return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
+    }
+    // Shared market/mail state must be refreshed before the remote receipt
+    // precheck. This closes the window where another Node commits after a
+    // receipt miss but before this Node observes the consumed listing/mail.
+    await refreshSharedAssetsBeforeMutation(methodName, args);
+    published = load();
+    let receiptCheckedAfterSharedRefresh = false;
+    if (
+      receiptOperationId !== ""
+      && store.durableReceiptReads === true
+      && DURABLE_RECEIPT_PRECHECK_METHODS.has(methodName)
+    ) {
+      receiptCheckedAfterSharedRefresh = true;
+      const decision = await exactDurableReceiptDecision(
+        published,
+        args,
+        receiptOperationId,
+        requestHash,
+        actionId,
+      );
+      if (decision.handled) {
+        return decision.result;
       }
-      if (
-        String(existingReceipt.accountId || "") === ""
-        || String(existingReceipt.accountId) !== String(currentSession.account.accountId || "")
-      ) {
-        return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
+      published = load();
+      existingReceipt = activeDurableReceipt(published, receiptOperationId, now());
+      if (existingReceipt) {
+        return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
       }
-      if (existingReceipt.requestHash !== requestHash || existingReceipt.actionId !== actionId) {
-        return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
-      }
-      return durableReceiptReplayResult(existingReceipt);
     }
     // Persistent mutations are serialized and comparison completes before the
     // first await, so published is a safe read-only persistent baseline here.
@@ -3936,6 +4136,27 @@ function createAuthService(options = {}) {
       activeDurableMutation = null;
     }
     const methodFinishedAt = process.hrtime.bigint();
+
+    if (
+      receiptOperationId !== ""
+      && store.durableReceiptReads === true
+      && DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS.has(methodName)
+      && !receiptCheckedAfterSharedRefresh
+      && result
+      && result.ok === false
+    ) {
+      const decision = await exactDurableReceiptDecision(
+        load(),
+        args,
+        receiptOperationId,
+        requestHash,
+        actionId,
+        {abortIfAuthorityRefreshed: true},
+      );
+      if (decision.handled) {
+        return decision.result;
+      }
+    }
 
     const comparisonOptions = {
       persistentDataForStore: persistentDataViewForStore,
@@ -4067,7 +4288,15 @@ function createAuthService(options = {}) {
       candidatePersistent,
       stagedReceipt,
     );
-    const saveOptions = consistencyScope === null ? {} : {consistencyScope};
+    const durableOperation = receiptOperationId === "" ? null : {
+      operationId: receiptOperationId,
+      requestHash,
+      actionId,
+    };
+    const saveOptions = {
+      ...(consistencyScope === null ? {} : {consistencyScope}),
+      ...(durableOperation === null ? {} : {durableOperation}),
+    };
     let durableSaveResult = null;
     try {
       const saveResult = typeof store.saveOwned === "function"
@@ -4075,6 +4304,41 @@ function createAuthService(options = {}) {
         : store.save(candidatePersistent, saveOptions);
       durableSaveResult = await Promise.resolve(saveResult);
     } catch (cause) {
+      if (
+        receiptOperationId !== ""
+        && store.durableReceiptReads === true
+        && (isMysqlStoreRevisionConflict(cause) || isMysqlCommitOutcomeAmbiguous(cause))
+      ) {
+        const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
+        let decision;
+        try {
+          decision = await exactDurableReceiptDecision(
+            load(),
+            args,
+            receiptOperationId,
+            requestHash,
+            actionId,
+          );
+        } catch (recoveryCause) {
+          if (outcomeUnknown) {
+            throw durableReceiptOutcomeUnknownFailure(recoveryCause);
+          }
+          throw recoveryCause;
+        }
+        if (decision.handled) {
+          if (typeof store.clearSaveError === "function") {
+            store.clearSaveError();
+          }
+          return decision.result;
+        }
+        if (
+          !outcomeUnknown
+          && decision.authorityRefreshed
+          && typeof store.clearSaveError === "function"
+        ) {
+          store.clearSaveError();
+        }
+      }
       const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
       const error = new Error(outcomeUnknown
         ? "服务器仍在确认本次操作，请使用原操作标识重试，勿新建重复操作。"
@@ -4126,6 +4390,17 @@ function createAuthService(options = {}) {
       ]],
     });
     return response;
+  }
+
+  function durableReceiptOutcomeUnknownFailure(cause) {
+    const error = new Error(
+      "服务器仍在确认本次操作，请使用原操作标识重试，勿新建重复操作。",
+    );
+    error.code = "storage_outcome_unknown";
+    error.outcomeUnknown = true;
+    error.retryable = true;
+    error.cause = cause;
+    return error;
   }
 
   function refreshPublishedDataAfterStorageFailure() {
@@ -5121,7 +5396,10 @@ function createJsonAuthStore(filePath) {
 function createAsyncWriteAuthStore(store, options = {}) {
   let writeQueue = Promise.resolve();
   let lastSaveError = null;
+  let lastSaveOperation = null;
   let ambiguousCommitRecoveries = 0;
+  let durableReceiptReadHits = 0;
+  let durableReceiptReadCount = 0;
   let revisionConflicts = 0;
   const onError = typeof options.onError === "function" ? options.onError : defaultAsyncStoreErrorHandler;
   function enqueueSave(nextData, owned = false, saveOptions = {}) {
@@ -5133,6 +5411,7 @@ function createAsyncWriteAuthStore(store, options = {}) {
     const snapshotOptions = saveOptions && typeof saveOptions === "object"
       ? clone(saveOptions)
       : {};
+    const durableOperation = normalizePendingDurableOperation(snapshotOptions.durableOperation);
     const writeJob = writeQueue.then(async () => {
       try {
         return await saveStoreSnapshot(store, snapshot, {owned, ...snapshotOptions});
@@ -5142,6 +5421,16 @@ function createAsyncWriteAuthStore(store, options = {}) {
           throw error;
         }
         if (isMysqlKnownNoCommitFailure(error)) {
+          throw error;
+        }
+        // Production MySQL can prove a typed ambiguous COMMIT with the exact
+        // receipt reader. Propagate first so the service reaches that bounded
+        // PK transaction instead of blocking on a synchronous full snapshot.
+        if (
+          isMysqlCommitOutcomeAmbiguous(error)
+          && store
+          && typeof store.readDurableMutationReceipt === "function"
+        ) {
           throw error;
         }
         const recovery = durableStoreSnapshotRecovery(store, snapshot, {
@@ -5164,10 +5453,12 @@ function createAsyncWriteAuthStore(store, options = {}) {
     writeQueue = writeJob.then(
       (value) => {
         lastSaveError = null;
+        lastSaveOperation = null;
         return value;
       },
       (error) => {
         lastSaveError = error;
+        lastSaveOperation = durableOperation;
         onError(error);
       },
     );
@@ -5188,9 +5479,31 @@ function createAsyncWriteAuthStore(store, options = {}) {
     writeQueue = readJob.then(() => undefined, () => undefined);
     return readJob;
   }
+  function enqueueDurableReceiptRead(operationId) {
+    if (!store || typeof store.readDurableMutationReceipt !== "function") {
+      const error = new Error("当前存储不支持持久化操作回执读穿。");
+      error.code = "durable_receipt_read_unsupported";
+      return Promise.reject(error);
+    }
+    const normalizedOperationId = String(operationId || "").trim();
+    const readJob = writeQueue.then(async () => {
+      durableReceiptReadCount += 1;
+      const view = await store.readDurableMutationReceipt(normalizedOperationId);
+      if (view && view.receipt) {
+        durableReceiptReadHits += 1;
+      }
+      return view;
+    });
+    // Exact reads share the Node-local storage tail: a retry routed back to
+    // this Node must never overtake its own earlier COMMIT. Read failures heal
+    // the FIFO and remain read errors; they do not mutate lastSaveError.
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
   return {
     mode: store.mode ? `async:${store.mode}` : "async",
     asyncWrites: true,
+    durableReceiptReads: Boolean(store && typeof store.readDurableMutationReceipt === "function"),
     sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
@@ -5213,6 +5526,9 @@ function createAsyncWriteAuthStore(store, options = {}) {
     readSharedAssetView(request, readOptions = {}) {
       return enqueueSharedAssetRead(request, readOptions);
     },
+    readDurableMutationReceipt(operationId) {
+      return enqueueDurableReceiptRead(operationId);
+    },
     save(nextData, saveOptions = {}) {
       return enqueueSave(nextData, false, saveOptions);
     },
@@ -5228,12 +5544,18 @@ function createAsyncWriteAuthStore(store, options = {}) {
     lastSaveError() {
       return lastSaveError;
     },
+    lastSaveOperation() {
+      return lastSaveOperation === null ? null : {...lastSaveOperation};
+    },
     clearSaveError() {
       lastSaveError = null;
+      lastSaveOperation = null;
     },
     metrics() {
       return {
         ambiguousCommitRecoveries,
+        durableReceiptReadHits,
+        durableReceiptReads: durableReceiptReadCount,
         revisionConflicts,
         failed: lastSaveError !== null,
         underlying: typeof store.metrics === "function" ? store.metrics() : null,
@@ -5258,6 +5580,24 @@ function isMysqlStoreRevisionConflict(error) {
     current = current.cause;
   }
   return false;
+}
+
+function normalizePendingDurableOperation(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const operationId = String(value.operationId || "").trim();
+  const requestHash = String(value.requestHash || "").trim().toLowerCase();
+  const actionId = String(value.actionId || "").trim();
+  if (
+    !DURABLE_OPERATION_ID_PATTERN.test(operationId)
+    || !DURABLE_REQUEST_HASH_PATTERN.test(requestHash)
+    || actionId === ""
+    || actionId.length > 160
+  ) {
+    return null;
+  }
+  return Object.freeze({operationId, requestHash, actionId});
 }
 
 function isMysqlKnownNoCommitFailure(error) {

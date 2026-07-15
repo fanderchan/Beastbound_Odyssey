@@ -23,6 +23,33 @@ const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
   "refreshSession",
   "getMarketConfig",
 ]);
+// These player-asset domains can turn a successful remote mutation into a
+// local domain failure before this Node reaches MySQL (for example, a shop
+// retry after the remote purchase already consumed the balance). Reconcile
+// only failed results: healthy battle/runtime success stays on the zero-read
+// path, while high-value stale failures get one exact receipt proof.
+const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
+  "saveProfile",
+  "profileAction",
+  "startHangSession",
+  "stopHangSession",
+  "startOfflineHang",
+  "claimOfflineHang",
+  "cancelOfflineHang",
+  "playerRebirth",
+  "questRecord",
+  "questClaim",
+  "shopTransaction",
+  "equipmentEquip",
+  "equipmentUnequip",
+  "equipmentEnhance",
+  "equipmentRepairAll",
+  "equipmentSynthesize",
+  "bankDeposit",
+  "bankWithdraw",
+  "createMarketListing",
+  "acceptTrade",
+]);
 const DURABLE_RECEIPT_PRUNE_BATCH = 256;
 const DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX = 2048;
 const DURABLE_RECEIPT_CHECKPOINT_DEAD_KEY_MAX = 1024;
@@ -1061,6 +1088,7 @@ module.exports = {
   DURABLE_OPERATION_ID_PATTERN,
   DURABLE_REQUEST_HASH_PATTERN,
   DURABLE_RECEIPT_EXCLUDED_METHODS,
+  DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS,
   durableBusinessChanged,
   restorePublishedPersistentData,
   mergeRuntimeObject,

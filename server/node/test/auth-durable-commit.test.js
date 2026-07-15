@@ -465,11 +465,16 @@ test("runtime battle invitation does not open a durable store transaction", asyn
     schemaVersion: 1,
   }));
   base.save(fullReplayWindow);
+  let receiptReadCount = 0;
   let saveCount = 0;
   const service = createAuthService({
     store: createAsyncWriteAuthStore({
       mode: "memory",
       load: () => base.load(),
+      async readDurableMutationReceipt(operationId) {
+        receiptReadCount += 1;
+        return {schemaVersion: 1, operationId, authorityCurrent: true, receipt: null};
+      },
       async saveAsync(nextData) {
         saveCount += 1;
         base.save(nextData);
@@ -512,10 +517,15 @@ test("runtime battle invitation does not open a durable store transaction", asyn
     challenger.session.token,
     accepted.room.roomId,
     {round: 1, actionId: "defend"},
-  ], {actionId: "test_runtime_battle_command"});
+  ], {
+    operationId: "bbo_runtime_battle_no_receipt_read_0001",
+    requestHash: "9".repeat(64),
+    actionId: "test_runtime_battle_command",
+  });
   assert.equal(intermediate.ok, true);
   assert.equal(intermediate.turn, null);
   assert.equal(saveCount, 0);
+  assert.equal(receiptReadCount, 0);
 
   intermediate.room.status = "corrupted_by_caller";
   intermediate.room.battle.actors[0].hp = 0;
@@ -1584,6 +1594,362 @@ test("durable receipt replays across restart and rejects key reuse with another 
   assert.equal(profileItemCount(afterRestart.profile, "item_meat_small"), 1);
 });
 
+test("a stale live Node turns a resource conflict into the first Node's exact receipt replay", async () => {
+  const base = createMemoryAuthStore();
+  const registered = seedShopAccount(base, "durablecrossnode");
+  const staleSnapshot = base.load();
+  const receiptView = (operationId, authorityCurrent = true) => {
+    const receipt = base.load().mutationReceipts[operationId] || null;
+    return {
+      schemaVersion: 1,
+      operationId,
+      authorityCurrent,
+      receipt: receipt === null ? null : JSON.parse(JSON.stringify(receipt)),
+    };
+  };
+  const firstStore = createAsyncWriteAuthStore({
+    mode: "cross-node-winner-test",
+    load: () => base.load(),
+    readDurableMutationReceipt: async (operationId) => receiptView(operationId),
+    async saveAsyncOwned(nextData) {
+      base.save(nextData);
+    },
+  }, {onError() {}});
+  let staleLoadCalls = 0;
+  let staleSaveAttempts = 0;
+  const staleStore = createAsyncWriteAuthStore({
+    mode: "cross-node-stale-test",
+    load() {
+      staleLoadCalls += 1;
+      return staleLoadCalls === 1
+        ? JSON.parse(JSON.stringify(staleSnapshot))
+        : base.load();
+    },
+    readDurableMutationReceipt: async (operationId) => receiptView(
+      operationId,
+      staleLoadCalls > 1,
+    ),
+    async saveAsyncOwned() {
+      staleSaveAttempts += 1;
+      const error = new Error("remote Node already advanced this profile");
+      error.code = "mysql_resource_revision_conflict";
+      error.resource = "profile";
+      error.outcomeUnknown = false;
+      throw error;
+    },
+  }, {onError() {}});
+  const firstNode = createAuthService({store: firstStore});
+  const staleNode = createAuthService({store: staleStore});
+  const operation = {
+    operationId: "bbo_cross_node_conflict_replay_0001",
+    requestHash: "5".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const args = [registered.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }];
+
+  const first = await firstNode.invokeDurable("shopTransaction", args, operation);
+  assert.equal(first.ok, true, JSON.stringify(first));
+  assert.equal(first.durableCommit.replayed, false);
+  const replay = await staleNode.invokeDurable("shopTransaction", args, operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.profile.stoneCoins, 12);
+  assert.equal(profileItemCount(replay.profile, "item_meat_small"), 1);
+  assert.equal(staleSaveAttempts, 1);
+  assert.equal(staleLoadCalls, 2);
+  assert.equal(staleStore.metrics().durableReceiptReads, 1);
+  assert.equal(staleStore.metrics().durableReceiptReadHits, 1);
+  assert.equal(staleStore.lastSaveError(), null);
+  assert.equal(base.load().profiles[registered.profileBinding.playerId].profile.stoneCoins, 12);
+  assert.equal(profileItemCount(base.load().profiles[registered.profileBinding.playerId].profile, "item_meat_small"), 1);
+});
+
+test("a stale domain failure reconciles the remote shop receipt before returning a false failure", async () => {
+  const base = createMemoryAuthStore();
+  const registered = seedShopAccount(base, "durabledomainreplay");
+  const operation = {
+    operationId: "bbo_cross_node_domain_failure_0001",
+    requestHash: "d".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const args = [registered.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 2,
+  }];
+  const writer = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "domain-replay-writer",
+      load: () => base.load(),
+      async saveAsyncOwned(nextData) {
+        base.save(nextData);
+      },
+    }, {onError() {}}),
+  });
+  const first = await writer.invokeDurable("shopTransaction", args, operation);
+  assert.equal(first.ok, true, JSON.stringify(first));
+  assert.equal(first.profile.stoneCoins, 4);
+
+  const latestWithoutReceipt = base.load();
+  delete latestWithoutReceipt.mutationReceipts[operation.operationId];
+  let loadCalls = 0;
+  let receiptReads = 0;
+  let saveCalls = 0;
+  const stale = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "domain-replay-stale",
+      load() {
+        loadCalls += 1;
+        return loadCalls === 1 ? structuredClone(latestWithoutReceipt) : base.load();
+      },
+      async readDurableMutationReceipt(operationId) {
+        receiptReads += 1;
+        return {
+          schemaVersion: 1,
+          operationId,
+          authorityCurrent: false,
+          receipt: structuredClone(base.load().mutationReceipts[operationId]),
+        };
+      },
+      async saveAsyncOwned() {
+        saveCalls += 1;
+      },
+    }, {onError() {}}),
+  });
+
+  const replay = await stale.invokeDurable("shopTransaction", args, operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.profile.stoneCoins, 4);
+  assert.equal(profileItemCount(replay.profile, "item_meat_small"), 2);
+  assert.equal(loadCalls, 2);
+  assert.equal(receiptReads, 1);
+  assert.equal(saveCalls, 0);
+});
+
+test("a local active receipt missing from MySQL fails closed instead of re-executing", async () => {
+  const base = createMemoryAuthStore();
+  const registered = seedShopAccount(base, "durablemissingrow");
+  const operation = {
+    operationId: "bbo_local_receipt_missing_mysql_0001",
+    requestHash: "6".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const args = [registered.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }];
+  const writer = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "receipt-missing-writer",
+      load: () => base.load(),
+      async saveAsyncOwned(nextData) {
+        base.save(nextData);
+      },
+    }, {onError() {}}),
+  });
+  assert.equal((await writer.invokeDurable("shopTransaction", args, operation)).ok, true);
+  let exactLoads = 0;
+  let exactSaves = 0;
+  const exactReader = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "receipt-exact-reader",
+      load() {
+        exactLoads += 1;
+        return base.load();
+      },
+      async readDurableMutationReceipt(operationId) {
+        const stored = base.load().mutationReceipts[operationId];
+        return {
+          schemaVersion: 1,
+          operationId,
+          authorityCurrent: true,
+          receipt: JSON.parse(JSON.stringify(stored)),
+        };
+      },
+      async saveAsyncOwned() {
+        exactSaves += 1;
+      },
+    }, {onError() {}}),
+  });
+  const exactReplay = await exactReader.invokeDurable("shopTransaction", args, operation);
+  assert.equal(exactReplay.ok, true);
+  assert.equal(exactReplay.durableCommit.replayed, true);
+  assert.equal(exactSaves, 0);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const repeated = await exactReader.invokeDurable("shopTransaction", args, operation);
+    assert.equal(repeated.ok, true);
+    assert.equal(repeated.durableCommit.replayed, true);
+  }
+  assert.equal(exactLoads, 1, "same-Node exact replay must not full-reload the authority root");
+  let unexpectedSaves = 0;
+  const reader = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "receipt-missing-reader",
+      load: () => base.load(),
+      async readDurableMutationReceipt(operationId) {
+        return {schemaVersion: 1, operationId, authorityCurrent: false, receipt: null};
+      },
+      async saveAsyncOwned() {
+        unexpectedSaves += 1;
+      },
+    }, {onError() {}}),
+  });
+
+  await assert.rejects(
+    reader.invokeDurable("shopTransaction", args, operation),
+    (error) => error && error.code === "storage_read_failed",
+  );
+  assert.equal(unexpectedSaves, 0);
+  assert.equal(base.load().profiles[registered.profileBinding.playerId].profile.stoneCoins, 12);
+  assert.equal(profileItemCount(base.load().profiles[registered.profileBinding.playerId].profile, "item_meat_small"), 1);
+});
+
+test("a stale Node reloads an expired exact receipt before safely reusing its operation ID", async () => {
+  const base = createMemoryAuthStore();
+  const registered = seedShopAccount(base, "durableexpiredremote");
+  const operation = {
+    operationId: "bbo_cross_node_expired_reuse_0001",
+    requestHash: "7".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const staleSnapshot = base.load();
+  const withExpired = base.load();
+  withExpired.mutationReceipts[operation.operationId] = {
+    schemaVersion: 1,
+    operationId: operation.operationId,
+    requestHash: "8".repeat(64),
+    actionId: "POST /bank/deposit",
+    accountId: registered.account.accountId,
+    committedAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: "2026-07-02T00:00:00.000Z",
+    response: {ok: true, generation: "expired"},
+  };
+  base.save(withExpired);
+  let loadCalls = 0;
+  let saveAttempts = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "cross-node-expired-receipt-test",
+    load() {
+      loadCalls += 1;
+      return loadCalls === 1
+        ? JSON.parse(JSON.stringify(staleSnapshot))
+        : base.load();
+    },
+    async readDurableMutationReceipt(operationId) {
+      const stored = base.load().mutationReceipts[operationId] || null;
+      return {
+        schemaVersion: 1,
+        operationId,
+        authorityCurrent: loadCalls > 1,
+        receipt: stored === null ? null : JSON.parse(JSON.stringify(stored)),
+      };
+    },
+    async saveAsyncOwned(nextData) {
+      saveAttempts += 1;
+      if (saveAttempts === 1) {
+        const error = new Error("expired receipt primary key still exists remotely");
+        error.code = "mysql_resource_revision_conflict";
+        error.resource = "mutation_receipt";
+        error.outcomeUnknown = false;
+        throw error;
+      }
+      base.save(nextData);
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+  const args = [registered.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }];
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", args, operation),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(store.lastSaveError(), null);
+  const settled = await service.invokeDurable("shopTransaction", args, operation);
+  assert.equal(settled.ok, true, JSON.stringify(settled));
+  assert.equal(settled.durableCommit.replayed, false);
+  assert.equal(saveAttempts, 2);
+  assert.equal(base.load().mutationReceipts[operation.operationId].requestHash, operation.requestHash);
+  assert.equal(base.load().profiles[registered.profileBinding.playerId].profile.stoneCoins, 12);
+  assert.equal(profileItemCount(base.load().profiles[registered.profileBinding.playerId].profile, "item_meat_small"), 1);
+});
+
+test("an expired remote receipt refresh cannot publish the stale failure candidate over authority", async () => {
+  const base = createMemoryAuthStore();
+  const registered = seedShopAccount(base, "expiredcandguard");
+  const operation = {
+    operationId: "bbo_expired_candidate_guard_0001",
+    requestHash: "e".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const stale = base.load();
+  stale.profiles[registered.profileBinding.playerId].profile.stoneCoins = 0;
+  const authoritative = base.load();
+  authoritative.profiles[registered.profileBinding.playerId].profile.stoneCoins = 777;
+  authoritative.mutationReceipts[operation.operationId] = {
+    schemaVersion: 1,
+    operationId: operation.operationId,
+    requestHash: "f".repeat(64),
+    actionId: "POST /bank/deposit",
+    accountId: registered.account.accountId,
+    committedAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: "2026-07-02T00:00:00.000Z",
+    response: {ok: true, generation: "expired"},
+  };
+  base.save(authoritative);
+  let loadCalls = 0;
+  let saveCalls = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "expired-candidate-guard",
+      load() {
+        loadCalls += 1;
+        return loadCalls === 1 ? structuredClone(stale) : base.load();
+      },
+      async readDurableMutationReceipt(operationId) {
+        return {
+          schemaVersion: 1,
+          operationId,
+          authorityCurrent: false,
+          receipt: structuredClone(base.load().mutationReceipts[operationId]),
+        };
+      },
+      async saveAsyncOwned() {
+        saveCalls += 1;
+      },
+    }, {onError() {}}),
+  });
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", [registered.session.token, {
+      mode: "buy",
+      shopId: "firebud_item_shop",
+      itemId: "item_meat_small",
+      amount: 1,
+    }], operation),
+    (error) => error && error.code === "storage_read_failed",
+  );
+  assert.equal(loadCalls, 2);
+  assert.equal(saveCalls, 0);
+  assert.equal(
+    service.snapshot().profiles[registered.profileBinding.playerId].profile.stoneCoins,
+    777,
+  );
+});
+
 test("mutating committed results cannot alter authority or later durable receipt replays", async () => {
   const base = createMemoryAuthStore();
   const owner = seedShopAccount(base, "resultisolationa");
@@ -2218,6 +2584,251 @@ test("unverified typed COMMIT ambiguity surfaces as storage_outcome_unknown", as
   );
   assert.deepEqual(service.snapshot(), before);
   assert.equal(store.metrics().ambiguousCommitRecoveries, 0);
+});
+
+test("typed COMMIT ambiguity stays outcome-unknown when exact receipt reading fails", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "ambiguousexactread");
+  let loadCalls = 0;
+  let receiptReads = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      loadCalls += 1;
+      return base.load();
+    },
+    async readDurableMutationReceipt() {
+      receiptReads += 1;
+      throw new Error("exact receipt database unavailable");
+    },
+    async saveAsyncOwned() {
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", [owner.session.token, {
+      mode: "buy",
+      shopId: "firebud_item_shop",
+      itemId: "item_meat_small",
+      amount: 1,
+    }], {
+      operationId: "bbo_ambiguous_exact_read_fail_0001",
+      requestHash: "1".repeat(64),
+      actionId: "POST /shops/transaction",
+    }),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(loadCalls, 1, "typed ambiguity must reach exact read before any full reload");
+  assert.equal(receiptReads, 1);
+});
+
+test("typed COMMIT ambiguity blocks re-execution until the same exact receipt becomes visible", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "ambigexactmissing");
+  const args = [owner.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }];
+  const operation = {
+    operationId: "bbo_ambiguous_exact_missing_0001",
+    requestHash: "2".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  let loadedReceipt = null;
+  let pendingCommit = null;
+  let receiptReads = 0;
+  let saveAttempts = 0;
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      const snapshot = base.load();
+      loadedReceipt = structuredClone(
+        snapshot.mutationReceipts[operation.operationId] || null,
+      );
+      return snapshot;
+    },
+    async readDurableMutationReceipt(operationId) {
+      receiptReads += 1;
+      const receipt = structuredClone(base.load().mutationReceipts[operationId] || null);
+      return {
+        schemaVersion: 1,
+        operationId,
+        authorityCurrent: JSON.stringify(receipt) === JSON.stringify(loadedReceipt),
+        receipt,
+      };
+    },
+    async saveAsyncOwned(nextData) {
+      saveAttempts += 1;
+      pendingCommit = nextData;
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", args, operation),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(receiptReads, 1);
+  assert.equal(saveAttempts, 1);
+  assert.deepEqual(store.lastSaveOperation(), operation);
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", ["bad", args[1]], operation),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(receiptReads, 1, "a malformed session must not reach MySQL or clear the write gate");
+  assert.equal(saveAttempts, 1);
+  assert.notEqual(store.lastSaveError(), null);
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", ["", args[1]], operation),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(receiptReads, 1, "an empty session must not reach MySQL or clear the write gate");
+  assert.equal(saveAttempts, 1);
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", args, {
+      ...operation,
+      operationId: "bbo_ambiguous_other_operation_0001",
+    }),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(receiptReads, 1, "a different operation must not probe or clear the prior ambiguity");
+  assert.equal(saveAttempts, 1);
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", args, operation),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(receiptReads, 2);
+  assert.equal(saveAttempts, 1, "an exact miss must not execute the mutation again");
+
+  base.save(pendingCommit);
+  const replay = await service.invokeDurable("shopTransaction", args, operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.profile.stoneCoins, 12);
+  assert.equal(receiptReads, 3);
+  assert.equal(saveAttempts, 1);
+  assert.equal(store.lastSaveError(), null);
+  assert.equal(store.lastSaveOperation(), null);
+});
+
+test("typed COMMIT ambiguity stays outcome-unknown when receipt recovery cannot reload authority", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "ambiguousexactreload");
+  let loadCalls = 0;
+  const operation = {
+    operationId: "bbo_ambiguous_exact_reload_0001",
+    requestHash: "3".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      loadCalls += 1;
+      if (loadCalls > 1) {
+        throw new Error("full authority reload unavailable");
+      }
+      return base.load();
+    },
+    async readDurableMutationReceipt(operationId) {
+      return {
+        schemaVersion: 1,
+        operationId,
+        authorityCurrent: false,
+        receipt: structuredClone(base.load().mutationReceipts[operationId]),
+      };
+    },
+    async saveAsyncOwned(nextData) {
+      base.save(nextData);
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+
+  await assert.rejects(
+    service.invokeDurable("shopTransaction", [owner.session.token, {
+      mode: "buy",
+      shopId: "firebud_item_shop",
+      itemId: "item_meat_small",
+      amount: 1,
+    }], operation),
+    (error) => error.code === "storage_outcome_unknown"
+      && error.outcomeUnknown === true,
+  );
+  assert.equal(loadCalls, 2);
+  assert.equal(base.load().profiles[owner.profileBinding.playerId].profile.stoneCoins, 12);
+});
+
+test("typed COMMIT ambiguity replays only after exact hit and bounded authority reload succeed", async () => {
+  const base = createMemoryAuthStore();
+  const owner = seedShopAccount(base, "ambigexactsuccess");
+  let loadCalls = 0;
+  let receiptReads = 0;
+  const operation = {
+    operationId: "bbo_ambiguous_exact_success_0001",
+    requestHash: "4".repeat(64),
+    actionId: "POST /shops/transaction",
+  };
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load() {
+      loadCalls += 1;
+      return base.load();
+    },
+    async readDurableMutationReceipt(operationId) {
+      receiptReads += 1;
+      return {
+        schemaVersion: 1,
+        operationId,
+        authorityCurrent: false,
+        receipt: structuredClone(base.load().mutationReceipts[operationId]),
+      };
+    },
+    async saveAsyncOwned(nextData) {
+      base.save(nextData);
+      const error = new Error("commit acknowledgement lost");
+      error.code = "mysql_commit_outcome_ambiguous";
+      error.outcomeUnknown = true;
+      throw error;
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+
+  const replay = await service.invokeDurable("shopTransaction", [owner.session.token, {
+    mode: "buy",
+    shopId: "firebud_item_shop",
+    itemId: "item_meat_small",
+    amount: 1,
+  }], operation);
+  assert.equal(replay.ok, true, JSON.stringify(replay));
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.profile.stoneCoins, 12);
+  assert.equal(loadCalls, 2);
+  assert.equal(receiptReads, 1);
+  assert.equal(store.lastSaveError(), null);
 });
 
 test("unverifiable commit blocks re-execution until receipt reload proves the first outcome", async (t) => {
