@@ -55,6 +55,11 @@ const {
   rowLocalMailClaimRecoveryMatches,
 } = require("./auth/mail-claim-consistency");
 const {
+  buildMailSendSharedAssetReadRequest,
+  buildRowLocalMailSendConsistencyScope,
+  rowLocalMailSendRecoveryMatches,
+} = require("./auth/mail-send-consistency");
+const {
   applySharedAssetReadView,
   assertSharedAssetReadViewMatchesRequest,
 } = require("./auth/shared-asset-read-model");
@@ -3860,11 +3865,34 @@ function createAuthService(options = {}) {
     });
   }
 
+  function durableRowLocalMailSendConsistencyScope(methodName, args, before, candidate, receipt) {
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    return buildRowLocalMailSendConsistencyScope({
+      methodName,
+      before,
+      candidate,
+      receipt,
+      accountId,
+      battleEquipmentCatalog,
+      mailAttachmentStateOptions: {
+        itemById: bagItemById,
+        isEquipmentItemId: isEquipmentAssetItemId,
+      },
+      normalizeBackpackSlots,
+      profileBackpackSlots,
+      backpackItemCount,
+      consumeBackpackItem,
+      captureToolBagFromProfile,
+    });
+  }
+
   function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
     return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCreateConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMailSendConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt);
   }
 
@@ -3878,6 +3906,20 @@ function createAuthService(options = {}) {
     const accountId = String(session && session.accountId || "");
     if (accountId === "") {
       return null;
+    }
+    if (method === "sendMail") {
+      return buildMailSendSharedAssetReadRequest({
+        methodName: method,
+        payload: objectOrEmpty(Array.isArray(args) ? args[1] : null),
+        data,
+        accountId,
+        normalizeUsername,
+        normalizeMailText,
+        mailTitleMaxLength: MAIL_TITLE_MAX_LENGTH,
+        mailBodyMaxLength: MAIL_BODY_MAX_LENGTH,
+        itemById: bagItemById,
+        isEquipmentItemId: isEquipmentAssetItemId,
+      });
     }
     if (["marketListings", "createMarketListing"].includes(method)) {
       return {schemaVersion: 1, scope: "market_read", accountId};
@@ -5773,6 +5815,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
       && !rowLocalMarketCreateRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketCancelRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMarketBuyRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMailSendRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMailClaimRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
     ) {
       return {matched: false, scoped: false, reloadedPersistentData: null};

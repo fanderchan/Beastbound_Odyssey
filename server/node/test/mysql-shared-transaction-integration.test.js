@@ -43,6 +43,7 @@ const MAIL_IDS = Object.freeze({
   sale: "mail_shared_mysql_market_sale",
 });
 const MAIL_CLAIM_ACTION_ID = "POST /mail/claim";
+const MAIL_SEND_ACTION_ID = "POST /mail/send";
 const MARKET_BUY_ACTION_ID = "POST /market/buy";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
 const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
@@ -63,7 +64,15 @@ function baselineAuthority() {
     serviceEventSeq: 0,
     serviceEvents: [],
   };
-  for (const actor of Object.values(ACTORS)) {
+  for (const [actorKey, actor] of Object.entries(ACTORS)) {
+    authority.accounts[`shared_mail_${actorKey}`] = {
+      accountId: actor.accountId,
+      username: `shared_mail_${actorKey}`,
+      displayName: actor.name,
+      role: "player",
+      createdAt: UPDATED_AT_1,
+      updatedAt: UPDATED_AT_1,
+    };
     authority.profileBindings[actor.accountId] = {
       accountId: actor.accountId,
       playerId: actor.playerId,
@@ -478,6 +487,159 @@ function legacyMarketAuthority(before) {
   return after;
 }
 
+function mailSendAuthority() {
+  const authority = baselineAuthority();
+  for (const actor of Object.values(ACTORS)) {
+    authority.profiles[actor.playerId].profile.backpackSlots = [{
+      itemId: "item_meat_small",
+      count: 2,
+    }];
+    authority.profiles[actor.playerId].profile.captureTools = {};
+  }
+  return authority;
+}
+
+function playerSendMail(actorKey, recipientKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const recipient = ACTORS[recipientKey];
+  const items = Array.isArray(options.items) ? options.items : [];
+  return {
+    mailId: String(options.mailId),
+    senderAccountId: actor.accountId,
+    senderUsername: `shared_mail_${actorKey}`,
+    senderDisplayName: actor.name,
+    recipientAccountId: recipient.accountId,
+    recipientUsername: `shared_mail_${recipientKey}`,
+    recipientDisplayName: recipient.name,
+    title: String(options.title || `共享发信测试${actorKey}`),
+    body: "普通邮件必须与附件扣除和回执原子提交。",
+    items,
+    equipmentEnvelopes: [],
+    currency: {},
+    createdAt: String(options.updatedAt || UPDATED_AT_2),
+    readAt: null,
+    schemaVersion: 2,
+  };
+}
+
+function nextMailSendAuthority(before, actorKey, recipientKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const after = cloneAuthorityRoot(before);
+  const mode = String(options.mode || "text");
+  const items = mode === "ordinary_items"
+    ? [{itemId: "item_meat_small", count: 1}]
+    : [];
+  const updatedAt = String(options.updatedAt || UPDATED_AT_2);
+  if (mode === "ordinary_items") {
+    const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+    const beforeCount = Number(before.profiles[actor.playerId].profile.backpackSlots[0].count);
+    after.profileBindings[actor.accountId] = {
+      ...before.profileBindings[actor.accountId],
+      profileRevision: nextRevision,
+      updatedAt,
+    };
+    after.profiles[actor.playerId] = {
+      ...before.profiles[actor.playerId],
+      profileRevision: nextRevision,
+      updatedAt,
+      profile: {
+        ...before.profiles[actor.playerId].profile,
+        backpackSlots: [{itemId: "item_meat_small", count: beforeCount - 1}],
+      },
+    };
+  }
+  const mail = playerSendMail(actorKey, recipientKey, {...options, items, updatedAt});
+  after.mailMessages[mail.mailId] = mail;
+  const operationId = String(options.operationId);
+  const response = {
+    ok: true,
+    mail: {
+      mailId: mail.mailId,
+      mailKind: "",
+      senderUsername: mail.senderUsername,
+      senderDisplayName: mail.senderDisplayName,
+      recipientUsername: mail.recipientUsername,
+      recipientDisplayName: mail.recipientDisplayName,
+      title: mail.title,
+      body: mail.body,
+      items: mail.items,
+      currency: {},
+      createdAt: mail.createdAt,
+      readAt: null,
+      schemaVersion: 2,
+      equipmentEnvelopes: [],
+    },
+    message: "邮件已发送。",
+    durableCommit: {
+      schemaVersion: 1,
+      operationId,
+      actionId: MAIL_SEND_ACTION_ID,
+      committedAt: updatedAt,
+      replayed: false,
+    },
+  };
+  if (mode === "ordinary_items") {
+    const binding = after.profileBindings[actor.accountId];
+    const profile = after.profiles[actor.playerId];
+    response.profileSummary = {
+      accountId: actor.accountId,
+      username: `shared_mail_${actorKey}`,
+      displayName: actor.name,
+      playerId: actor.playerId,
+      profileRevision: binding.profileRevision,
+      storageMode: "server_document",
+      serverAuthority: "profile_document",
+      hasProfile: true,
+      updatedAt: binding.updatedAt,
+      schemaVersion: 1,
+    };
+    response.profile = profile.profile;
+  }
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    {
+      schemaVersion: 1,
+      operationId,
+      requestHash: String(options.requestHash),
+      actionId: MAIL_SEND_ACTION_ID,
+      accountId: actor.accountId,
+      committedAt: updatedAt,
+      expiresAt: "2026-07-18T02:10:00.000Z",
+      response,
+    },
+    {nowMs: Date.parse(updatedAt)},
+  );
+  return after;
+}
+
+function mailSendSaveOptions(actorKey, recipientKey, options = {}) {
+  const actor = ACTORS[actorKey];
+  const recipient = ACTORS[recipientKey];
+  const mode = String(options.mode || "text");
+  return {
+    consistencyScope: {
+      kind: "row_local_mail_send_v1",
+      mode,
+      accountId: actor.accountId,
+      playerId: mode === "ordinary_items" ? actor.playerId : "",
+      recipientAccountId: recipient.accountId,
+      recipientUsername: `shared_mail_${recipientKey}`,
+      mailId: String(options.mailId),
+      operationId: String(options.operationId),
+      requestHash: String(options.requestHash),
+      actionId: MAIL_SEND_ACTION_ID,
+    },
+  };
+}
+
+function stagedMailSend(store, before, actorKey, recipientKey, options) {
+  const after = nextMailSendAuthority(before, actorKey, recipientKey, options);
+  return {
+    after,
+    promise: store.saveAsync(after, mailSendSaveOptions(actorKey, recipientKey, options)),
+  };
+}
+
 function mailAttachment(actorKey, overrides = {}) {
   const actor = ACTORS[actorKey];
   return {
@@ -688,6 +850,17 @@ function sqlSeed(options = {}) {
         },
       },
     },
+    accounts: Object.fromEntries(
+      Object.values(authority.accounts || {}).map((account) => [account.accountId, {
+        account_id: account.accountId,
+        username: account.username,
+        display_name: account.displayName,
+        role: account.role,
+        created_at: account.createdAt,
+        updated_at: account.updatedAt,
+        document_json: account,
+      }]),
+    ),
     profile_bindings: profileBindings,
     profiles,
     market_listings: Object.fromEntries(
@@ -1002,6 +1175,9 @@ function loaderRowsFromSqlSnapshot(snapshot) {
     ["server_state", "auth", JSON.stringify(serverState)],
     ["store_revision", "auth", String(snapshot.auth_store_revisions.auth.revision)],
   ];
+  for (const [accountId, account] of Object.entries(snapshot.accounts || {})) {
+    rows.push(["accounts", accountId, JSON.stringify(account.document_json)]);
+  }
   for (const [accountId, binding] of Object.entries(snapshot.profile_bindings || {})) {
     rows.push(["profile_bindings", accountId, JSON.stringify(binding.document_json)]);
   }
@@ -1419,6 +1595,169 @@ test("duplicate receipt rolls conditional binding and profile writes back withou
     );
   } finally {
     await store.close();
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("two text mails from the same sender overlap and both commit without profile locks", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-send-text-"));
+  const authority = mailSendAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_text_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_text_b"));
+  const gateA = harness.blockNext({writerId: "mail_text_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let firstPromise = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMailSend(storeA, loadedA, "a", "b", {
+      mode: "text",
+      mailId: "mail_shared_send_text_a",
+      operationId: "op_shared_send_text_a",
+      requestHash: "a".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    firstPromise = first.promise;
+    await gateA.entered;
+
+    const second = stagedMailSend(storeB, loadedB, "a", "b", {
+      mode: "text",
+      mailId: "mail_shared_send_text_b",
+      operationId: "op_shared_send_text_b",
+      requestHash: "b".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await harness.waitForEvent({type: "commit_completed", writerId: "mail_text_b"});
+    await second.promise;
+
+    const whileBlocked = harness.snapshot();
+    assert.equal(Object.hasOwn(whileBlocked.mail_messages, "mail_shared_send_text_a"), false);
+    assert.equal(Object.hasOwn(whileBlocked.mail_messages, "mail_shared_send_text_b"), true);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "lock_wait"
+        && event.writerId === "mail_text_b"
+        && ["profile_bindings", "profiles"].includes(event.table)
+      )),
+      false,
+    );
+
+    gateA.release();
+    await firstPromise;
+    firstPromise = null;
+    const committed = harness.snapshot();
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(Object.hasOwn(committed.mail_messages, "mail_shared_send_text_a"), true);
+    assert.equal(Object.hasOwn(committed.mail_messages, "mail_shared_send_text_b"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_shared_send_text_a"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_shared_send_text_b"), true);
+    const mailQueries = queryLog.filter((entry) => entry.writerId.startsWith("mail_text_"));
+    assert.equal(mailQueries.some((entry) => /FROM (?:profile_bindings|profiles)\b/i.test(entry.sql)), false);
+  } finally {
+    gateA.release();
+    if (firstPromise !== null) {
+      await Promise.allSettled([firstPromise]);
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
+
+test("same-sender ordinary attachment mails serialize on profile and a failed contender retries safely", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-mail-send-ordinary-"));
+  const authority = mailSendAuthority();
+  const seed = sqlSeed({authority});
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, seed);
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const storeA = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_items_a"));
+  const storeB = createProductionStore(loader.fakeMysqlPath, harness.poolFor("mail_items_b"));
+  const gateA = harness.blockNext({writerId: "mail_items_a", phase: "before_commit_apply"});
+  void gateA.entered.catch(() => {});
+  let settled = null;
+
+  try {
+    const loadedA = storeA.load();
+    const loadedB = storeB.load();
+    const first = stagedMailSend(storeA, loadedA, "a", "b", {
+      mode: "ordinary_items",
+      mailId: "mail_shared_send_items_a",
+      operationId: "op_shared_send_items_a",
+      requestHash: "c".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    });
+    await gateA.entered;
+    const secondOptions = {
+      mode: "ordinary_items",
+      mailId: "mail_shared_send_items_b",
+      operationId: "op_shared_send_items_b",
+      requestHash: "d".repeat(64),
+      updatedAt: UPDATED_AT_2,
+    };
+    const second = stagedMailSend(storeB, loadedB, "a", "b", secondOptions);
+    settled = Promise.allSettled([first.promise, second.promise]);
+    await harness.waitForEvent({
+      type: "lock_wait",
+      writerId: "mail_items_b",
+      table: "profile_bindings",
+      key: ACTORS.a.accountId,
+    });
+    gateA.release();
+
+    const [firstResult, secondResult] = await settled;
+    assert.equal(firstResult.status, "fulfilled");
+    assert.equal(secondResult.status, "rejected");
+    assert.equal(isResourceConflict(secondResult.reason), true);
+    const firstCommitted = harness.snapshot();
+    assert.equal(firstCommitted.auth_store_revisions.auth.revision, 0);
+    assert.equal(firstCommitted.profiles[ACTORS.a.playerId].profile_revision, 2);
+    assert.deepEqual(firstCommitted.profiles[ACTORS.a.playerId].profile_json.backpackSlots, [
+      {itemId: "item_meat_small", count: 1},
+    ]);
+    assert.equal(Object.hasOwn(firstCommitted.mail_messages, "mail_shared_send_items_a"), true);
+    assert.equal(Object.hasOwn(firstCommitted.mail_messages, "mail_shared_send_items_b"), false);
+    assert.equal(Object.hasOwn(firstCommitted.mutation_receipts, "op_shared_send_items_b"), false);
+
+    const reloadedB = storeB.load();
+    const retried = stagedMailSend(storeB, reloadedB, "a", "b", {
+      ...secondOptions,
+      updatedAt: UPDATED_AT_3,
+    });
+    await retried.promise;
+    const committed = harness.snapshot();
+    assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 3);
+    assert.deepEqual(committed.profiles[ACTORS.a.playerId].profile_json.backpackSlots, [
+      {itemId: "item_meat_small", count: 0},
+    ]);
+    assert.equal(Object.hasOwn(committed.mail_messages, "mail_shared_send_items_b"), true);
+    assert.equal(Object.hasOwn(committed.mutation_receipts, "op_shared_send_items_b"), true);
+  } finally {
+    gateA.release();
+    if (settled !== null) {
+      await settled;
+    }
+    await Promise.allSettled([storeA.close(), storeB.close()]);
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
 

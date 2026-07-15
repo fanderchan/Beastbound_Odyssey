@@ -100,6 +100,7 @@ const LEGACY_MAIL_COLLISION_RETRY_ID = "mail_real_legacy_collision_retry";
 const LEGACY_MAIL_COLLISION_OPERATION_ID = "real_legacy_mail_collision_send";
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
+const MAIL_SEND_ACTION_ID = "POST /mail/send";
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const WAIT_TIMEOUT_MS = 10000;
 
@@ -896,6 +897,158 @@ function saveMarketCreate(store, before, actorKey, options) {
     promise: options.legacy === true
       ? store.saveAsync(mutation.after)
       : store.saveAsync(mutation.after, {consistencyScope: mutation.consistencyScope}),
+  };
+}
+
+function mailSendSeededAuthority(empty) {
+  const data = seededAuthority(empty);
+  data.marketListings = {};
+  data.mailMessages = {};
+  data.consumedEquipmentEnvelopes = {};
+  for (const actorKey of ["a", "b"]) {
+    const actor = actorForKey(actorKey);
+    data.profiles[actor.playerId].profile.backpackSlots = [{
+      itemId: "item_meat_small",
+      count: 4,
+    }];
+    data.profiles[actor.playerId].profile.captureTools = {};
+  }
+  return data;
+}
+
+function mailSendMutation(before, actorKey, recipientKey, options) {
+  const actor = actorForKey(actorKey);
+  const recipient = actorForKey(recipientKey);
+  const after = cloneAuthorityRoot(before);
+  const mode = String(options.mode || "text");
+  const updatedAt = String(options.updatedAt);
+  const items = mode === "ordinary_items"
+    ? [{itemId: "item_meat_small", count: 1}]
+    : [];
+  let playerId = "";
+  if (mode === "ordinary_items") {
+    playerId = actor.playerId;
+    const nextRevision = Number(before.profileBindings[actor.accountId].profileRevision) + 1;
+    const beforeProfile = before.profiles[actor.playerId].profile;
+    const beforeCount = (Array.isArray(beforeProfile.backpackSlots)
+      ? beforeProfile.backpackSlots
+      : [])
+      .filter((slot) => slot && slot.itemId === "item_meat_small")
+      .reduce((total, slot) => total + Number(slot.count || 0), 0);
+    assert.ok(beforeCount >= 1, `${actorKey} 缺少真实邮件附件测试道具。`);
+    after.profileBindings[actor.accountId] = {
+      ...before.profileBindings[actor.accountId],
+      profileRevision: nextRevision,
+      updatedAt,
+    };
+    after.profiles[actor.playerId] = {
+      ...before.profiles[actor.playerId],
+      profileRevision: nextRevision,
+      updatedAt,
+      profile: {
+        ...beforeProfile,
+        backpackSlots: beforeCount > 1
+          ? [{itemId: "item_meat_small", count: beforeCount - 1}]
+          : [],
+      },
+    };
+  }
+  const mail = {
+    mailId: String(options.mailId),
+    senderAccountId: actor.accountId,
+    senderUsername: `real_mysql_${actorKey}`,
+    senderDisplayName: `真实引擎猎人${actorKey.toUpperCase()}`,
+    recipientAccountId: recipient.accountId,
+    recipientUsername: `real_mysql_${recipientKey}`,
+    recipientDisplayName: `真实引擎猎人${recipientKey.toUpperCase()}`,
+    title: String(options.title || "真实 MySQL 普通发信"),
+    body: "验证邮件、普通附件和 durable receipt 同事务提交。",
+    items,
+    equipmentEnvelopes: [],
+    currency: {},
+    createdAt: updatedAt,
+    readAt: null,
+    schemaVersion: 2,
+  };
+  assert.equal(Object.hasOwn(before.mailMessages, mail.mailId), false);
+  after.mailMessages[mail.mailId] = mail;
+  const operationId = String(options.operationId);
+  const response = {
+    ok: true,
+    mail: {
+      mailId: mail.mailId,
+      mailKind: "",
+      senderUsername: mail.senderUsername,
+      senderDisplayName: mail.senderDisplayName,
+      recipientUsername: mail.recipientUsername,
+      recipientDisplayName: mail.recipientDisplayName,
+      title: mail.title,
+      body: mail.body,
+      items: mail.items,
+      currency: {},
+      createdAt: mail.createdAt,
+      readAt: null,
+      schemaVersion: 2,
+      equipmentEnvelopes: [],
+    },
+    message: "邮件已发送。",
+    durableCommit: {
+      schemaVersion: 1,
+      operationId,
+      actionId: MAIL_SEND_ACTION_ID,
+      committedAt: updatedAt,
+      replayed: false,
+    },
+  };
+  if (mode === "ordinary_items") {
+    const binding = after.profileBindings[actor.accountId];
+    const profile = after.profiles[actor.playerId];
+    response.profileSummary = {
+      accountId: actor.accountId,
+      username: `real_mysql_${actorKey}`,
+      displayName: `真实引擎猎人${actorKey.toUpperCase()}`,
+      playerId: actor.playerId,
+      profileRevision: binding.profileRevision,
+      storageMode: "server_document",
+      serverAuthority: "profile_document",
+      hasProfile: true,
+      updatedAt: binding.updatedAt,
+      schemaVersion: 1,
+    };
+    response.profile = profile.profile;
+  }
+  after.mutationReceipts = stageDurableMutationReceipt(after.mutationReceipts, {
+    schemaVersion: 1,
+    operationId,
+    requestHash: String(options.requestHash),
+    actionId: MAIL_SEND_ACTION_ID,
+    accountId: actor.accountId,
+    committedAt: updatedAt,
+    expiresAt: "2026-07-18T05:00:00.000Z",
+    response,
+  }, {nowMs: Date.parse(updatedAt)});
+  return {
+    after,
+    consistencyScope: {
+      kind: "row_local_mail_send_v1",
+      mode,
+      accountId: actor.accountId,
+      playerId,
+      recipientAccountId: recipient.accountId,
+      recipientUsername: `real_mysql_${recipientKey}`,
+      mailId: mail.mailId,
+      operationId: String(options.operationId),
+      requestHash: String(options.requestHash),
+      actionId: MAIL_SEND_ACTION_ID,
+    },
+  };
+}
+
+function saveMailSend(store, before, actorKey, recipientKey, options) {
+  const mutation = mailSendMutation(before, actorKey, recipientKey, options);
+  return {
+    after: mutation.after,
+    promise: store.saveAsync(mutation.after, {consistencyScope: mutation.consistencyScope}),
   };
 }
 
@@ -3544,6 +3697,307 @@ async function runMarketCreateMysqlGate(runtime) {
   }
 }
 
+async function runMailSendMysqlGate(runtime) {
+  const database = `beastbound_p0_6d2c7_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const stores = [];
+  const gates = [];
+  const pendingWrites = [];
+  let admin = null;
+  function trackWrite(promise) {
+    pendingWrites.push(promise);
+    void promise.catch(() => {});
+    return promise;
+  }
+  try {
+    const bootstrap = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(bootstrap);
+    const empty = bootstrap.load();
+    await settleWithin(
+      trackWrite(bootstrap.saveAsync(mailSendSeededAuthority(empty))),
+      WAIT_TIMEOUT_MS,
+      "mail send bootstrap seed save",
+    );
+    await closeStores(stores);
+
+    admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 4});
+    const deadlocksBefore = await deadlockCount(admin);
+    assert.equal(await globalRevision(admin), 1);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 1, stoneCoins: 100, itemCount: 4});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 1, stoneCoins: 200, itemCount: 4});
+
+    const authorityReadStore = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(authorityReadStore);
+    authorityReadStore.load();
+    for (const includeActorProfile of [false, true]) {
+      const view = await settleWithin(authorityReadStore.readSharedAssetView({
+        schemaVersion: 1,
+        scope: "mail_send",
+        accountId: ACTORS.a.accountId,
+        recipientUsername: "real_mysql_b",
+        knownRecipientAccountId: ACTORS.b.accountId,
+        includeActorProfile,
+      }), WAIT_TIMEOUT_MS, "mail send authority read");
+      assert.equal(view.recipientAccountId, ACTORS.b.accountId);
+      assert.deepEqual(view.mailPartitions, []);
+      assert.deepEqual(view.profileBindings.keys, includeActorProfile ? [ACTORS.a.accountId] : []);
+      assert.deepEqual(view.profiles.keys, includeActorProfile ? [ACTORS.a.playerId] : []);
+    }
+    await closeStores(stores);
+
+    const textGate = commitGate("mail_send_parallel_text_a");
+    gates.push(textGate);
+    const textStoreA = createMysqlAuthStore(storeOptions(runtime, database, textGate));
+    const textStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(textStoreA, textStoreB);
+    const textLoadedA = textStoreA.load();
+    const textLoadedB = textStoreB.load();
+    const textA = saveMailSend(textStoreA, textLoadedA, "a", "b", {
+      mode: "text",
+      mailId: "mail_real_send_text_a",
+      operationId: "real_mail_send_text_a",
+      requestHash: "1".repeat(64),
+      updatedAt: "2026-07-14T04:40:00.000Z",
+    });
+    trackWrite(textA.promise);
+    await settleWithin(textGate.entered, WAIT_TIMEOUT_MS, "text mail A COMMIT gate");
+    const textB = saveMailSend(textStoreB, textLoadedB, "a", "b", {
+      mode: "text",
+      mailId: "mail_real_send_text_b",
+      operationId: "real_mail_send_text_b",
+      requestHash: "2".repeat(64),
+      updatedAt: "2026-07-14T04:40:00.000Z",
+    });
+    trackWrite(textB.promise);
+    await settleWithin(textB.promise, WAIT_TIMEOUT_MS, "parallel text mail B commits before A release");
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_a"), false);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_b"), true);
+    textGate.release();
+    await settleWithin(textA.promise, WAIT_TIMEOUT_MS, "parallel text mail A commit");
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_text_a"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_mail_send_text_a"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_mail_send_text_b"), true);
+    assert.equal(await globalRevision(admin), 1);
+    await closeStores(stores);
+
+    const differentGate = commitGate("mail_send_different_profiles_a");
+    gates.push(differentGate);
+    const differentStoreA = createMysqlAuthStore(storeOptions(runtime, database, differentGate));
+    const differentStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(differentStoreA, differentStoreB);
+    const differentLoadedA = differentStoreA.load();
+    const differentLoadedB = differentStoreB.load();
+    const ordinaryA = saveMailSend(differentStoreA, differentLoadedA, "a", "b", {
+      mode: "ordinary_items",
+      mailId: "mail_real_send_items_a",
+      operationId: "real_mail_send_items_a",
+      requestHash: "3".repeat(64),
+      updatedAt: "2026-07-14T04:41:00.000Z",
+    });
+    trackWrite(ordinaryA.promise);
+    await settleWithin(differentGate.entered, WAIT_TIMEOUT_MS, "ordinary mail A COMMIT gate");
+    const ordinaryB = saveMailSend(differentStoreB, differentLoadedB, "b", "a", {
+      mode: "ordinary_items",
+      mailId: "mail_real_send_items_b",
+      operationId: "real_mail_send_items_b",
+      requestHash: "4".repeat(64),
+      updatedAt: "2026-07-14T04:41:00.000Z",
+    });
+    trackWrite(ordinaryB.promise);
+    await settleWithin(
+      ordinaryB.promise,
+      WAIT_TIMEOUT_MS,
+      "different-profile ordinary mail B commits before A release",
+    );
+    differentGate.release();
+    await settleWithin(ordinaryA.promise, WAIT_TIMEOUT_MS, "different-profile ordinary mail A commit");
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 2, stoneCoins: 100, itemCount: 3});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 2, stoneCoins: 200, itemCount: 3});
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_items_a"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_items_b"), true);
+    assert.equal(await globalRevision(admin), 1);
+    await closeStores(stores);
+
+    const sameSenderGate = commitGate("mail_send_same_sender_winner");
+    gates.push(sameSenderGate);
+    const sameSenderStoreA = createMysqlAuthStore(storeOptions(runtime, database, sameSenderGate));
+    const sameSenderStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(sameSenderStoreA, sameSenderStoreB);
+    const sameSenderLoadedA = sameSenderStoreA.load();
+    const sameSenderLoadedB = sameSenderStoreB.load();
+    const sameSenderA = saveMailSend(sameSenderStoreA, sameSenderLoadedA, "a", "b", {
+      mode: "ordinary_items",
+      mailId: "mail_real_send_same_a",
+      operationId: "real_mail_send_same_a",
+      requestHash: "5".repeat(64),
+      updatedAt: "2026-07-14T04:42:00.000Z",
+    });
+    trackWrite(sameSenderA.promise);
+    await settleWithin(sameSenderGate.entered, WAIT_TIMEOUT_MS, "same sender A COMMIT gate");
+    const sameSenderOptionsB = {
+      mode: "ordinary_items",
+      mailId: "mail_real_send_same_b",
+      operationId: "real_mail_send_same_b",
+      requestHash: "6".repeat(64),
+      updatedAt: "2026-07-14T04:42:00.000Z",
+    };
+    const sameSenderB = saveMailSend(
+      sameSenderStoreB,
+      sameSenderLoadedB,
+      "a",
+      "b",
+      sameSenderOptionsB,
+    );
+    trackWrite(sameSenderB.promise);
+    await waitForLockWait(admin, "same sender ordinary mail profile wait");
+    sameSenderGate.release();
+    const sameResults = await settleWithin(
+      Promise.allSettled([sameSenderA.promise, sameSenderB.promise]),
+      WAIT_TIMEOUT_MS,
+      "same sender ordinary mail race",
+    );
+    assert.equal(sameResults[0].status, "fulfilled");
+    assert.equal(sameResults[1].status, "rejected");
+    assert.equal(sameResults[1].reason.code, "mysql_resource_revision_conflict");
+    assert.equal(sameResults[1].reason.outcomeUnknown, false);
+    assert.equal(sameResults[1].reason.rollbackConfirmed, true);
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 3, stoneCoins: 100, itemCount: 2});
+    assert.equal(await marketSaleMailExists(admin, sameSenderOptionsB.mailId), false);
+    assert.equal(await mutationReceiptExists(admin, sameSenderOptionsB.operationId), false);
+    const sameSenderReloaded = sameSenderStoreB.load();
+    const sameSenderRetry = saveMailSend(sameSenderStoreB, sameSenderReloaded, "a", "b", {
+      ...sameSenderOptionsB,
+      updatedAt: "2026-07-14T04:43:00.000Z",
+    });
+    trackWrite(sameSenderRetry.promise);
+    await settleWithin(sameSenderRetry.promise, WAIT_TIMEOUT_MS, "same sender original operation retry");
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 4, stoneCoins: 100, itemCount: 1});
+    assert.equal(await marketSaleMailExists(admin, sameSenderOptionsB.mailId), true);
+    assert.equal(await mutationReceiptExists(admin, sameSenderOptionsB.operationId), true);
+    await closeStores(stores);
+
+    const mailCollisionGate = commitGate("mail_send_duplicate_mail_id_a");
+    gates.push(mailCollisionGate);
+    const collisionStoreA = createMysqlAuthStore(storeOptions(runtime, database, mailCollisionGate));
+    const collisionStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(collisionStoreA, collisionStoreB);
+    const collisionLoadedA = collisionStoreA.load();
+    const collisionLoadedB = collisionStoreB.load();
+    const collisionMailId = "mail_real_send_collision_shared";
+    const collisionA = saveMailSend(collisionStoreA, collisionLoadedA, "a", "b", {
+      mode: "ordinary_items",
+      mailId: collisionMailId,
+      operationId: "real_mail_send_collision_a",
+      requestHash: "7".repeat(64),
+      updatedAt: "2026-07-14T04:44:00.000Z",
+    });
+    trackWrite(collisionA.promise);
+    await settleWithin(mailCollisionGate.entered, WAIT_TIMEOUT_MS, "mail collision A COMMIT gate");
+    const collisionB = saveMailSend(collisionStoreB, collisionLoadedB, "b", "a", {
+      mode: "ordinary_items",
+      mailId: collisionMailId,
+      operationId: "real_mail_send_collision_b",
+      requestHash: "8".repeat(64),
+      updatedAt: "2026-07-14T04:44:00.000Z",
+    });
+    trackWrite(collisionB.promise);
+    await waitForLockWait(admin, "ordinary mail duplicate ID wait");
+    mailCollisionGate.release();
+    const collisionResults = await settleWithin(
+      Promise.allSettled([collisionA.promise, collisionB.promise]),
+      WAIT_TIMEOUT_MS,
+      "ordinary mail duplicate ID result",
+    );
+    assert.equal(collisionResults[0].status, "fulfilled");
+    assert.equal(collisionResults[1].status, "rejected");
+    assert.equal(collisionResults[1].reason.code, "mysql_resource_revision_conflict");
+    assert.deepEqual(await profileAssetRow(admin, "a"), {revision: 5, stoneCoins: 100, itemCount: 0});
+    assert.deepEqual(await profileAssetRow(admin, "b"), {revision: 2, stoneCoins: 200, itemCount: 3});
+    assert.equal((await mailDocument(admin, collisionMailId)).senderAccountId, ACTORS.a.accountId);
+    assert.equal(await mutationReceiptExists(admin, "real_mail_send_collision_a"), true);
+    assert.equal(await mutationReceiptExists(admin, "real_mail_send_collision_b"), false);
+    await closeStores(stores);
+
+    const receiptCollisionGate = commitGate("mail_send_duplicate_receipt_a");
+    gates.push(receiptCollisionGate);
+    const receiptStoreA = createMysqlAuthStore(storeOptions(runtime, database, receiptCollisionGate));
+    const receiptStoreB = createMysqlAuthStore(storeOptions(runtime, database));
+    stores.push(receiptStoreA, receiptStoreB);
+    const receiptLoadedA = receiptStoreA.load();
+    const receiptLoadedB = receiptStoreB.load();
+    const sharedOperationId = "real_mail_send_receipt_shared";
+    const receiptA = saveMailSend(receiptStoreA, receiptLoadedA, "b", "a", {
+      mode: "text",
+      mailId: "mail_real_send_receipt_a",
+      operationId: sharedOperationId,
+      requestHash: "9".repeat(64),
+      updatedAt: "2026-07-14T04:45:00.000Z",
+    });
+    trackWrite(receiptA.promise);
+    await settleWithin(receiptCollisionGate.entered, WAIT_TIMEOUT_MS, "receipt collision A COMMIT gate");
+    const receiptB = saveMailSend(receiptStoreB, receiptLoadedB, "b", "a", {
+      mode: "text",
+      mailId: "mail_real_send_receipt_b",
+      operationId: sharedOperationId,
+      requestHash: "9".repeat(64),
+      updatedAt: "2026-07-14T04:45:00.000Z",
+    });
+    trackWrite(receiptB.promise);
+    await waitForLockWait(admin, "text mail duplicate receipt wait");
+    receiptCollisionGate.release();
+    const receiptResults = await settleWithin(
+      Promise.allSettled([receiptA.promise, receiptB.promise]),
+      WAIT_TIMEOUT_MS,
+      "text mail duplicate receipt result",
+    );
+    assert.equal(receiptResults[0].status, "fulfilled");
+    assert.equal(receiptResults[1].status, "rejected");
+    assert.equal(receiptResults[1].reason.code, "mysql_resource_revision_conflict");
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_receipt_a"), true);
+    assert.equal(await marketSaleMailExists(admin, "mail_real_send_receipt_b"), false);
+    assert.equal(await mutationReceiptExists(admin, sharedOperationId), true);
+    assert.equal(await globalRevision(admin), 1);
+    await closeStores(stores);
+
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, "mail send transaction cleanup");
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    return {
+      mailSendSeparateDatabase: database,
+      mailSendAuthorityReadVerified: true,
+      mailSendTextOverlapVerified: true,
+      mailSendDifferentProfilesOverlapVerified: true,
+      mailSendSameSenderLockWaitObserved: true,
+      mailSendSameSenderExactlyOneInitialWinner: true,
+      mailSendSameOperationRetryVerified: true,
+      mailSendDuplicateMailRollbackVerified: true,
+      mailSendDuplicateReceiptRollbackVerified: true,
+      mailSendGlobalRevisionStable: true,
+      mailSendDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      mailSendActiveTransactions: await activeTransactionCount(admin),
+      mailSendActiveLockWaits: await lockWaitCount(admin),
+    };
+  } finally {
+    for (const gate of gates) {
+      gate.release();
+    }
+    try {
+      await settleWithin(Promise.allSettled(pendingWrites), WAIT_TIMEOUT_MS, "mail send pending writes cleanup");
+    } catch {
+      // The isolated mysqld teardown remains the final bounded cleanup guard.
+    }
+    await closeStores(stores, {bestEffort: true});
+    if (admin) {
+      try {
+        await settleWithin(admin.end(), WAIT_TIMEOUT_MS, "mail send admin pool close");
+      } catch {
+        // The isolated mysqld teardown remains the final bounded cleanup guard.
+      }
+    }
+  }
+}
+
 async function main() {
   // Explicit empty credentials must not fall through mysql-store's runtime
   // environment defaults. This process-local scrub never reads their values
@@ -3556,7 +4010,8 @@ async function main() {
     runtime = await startIsolatedMysql();
     const baseReport = await runRealMysqlGate(runtime);
     const marketCreateReport = await runMarketCreateMysqlGate(runtime);
-    report = {...baseReport, ...marketCreateReport};
+    const mailSendReport = await runMailSendMysqlGate(runtime);
+    report = {...baseReport, ...marketCreateReport, ...mailSendReport};
   } finally {
     await stopIsolatedMysql(runtime);
   }

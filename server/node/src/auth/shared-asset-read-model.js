@@ -60,8 +60,24 @@ function certifiedSharedAssetReadView(value) {
     "market_mutation",
     "mail_read",
     "mail_mutation",
+    "mail_send",
   ].includes(scope) || accountId === "") {
     throw sharedAssetReadViewError("scope");
+  }
+  const mailSend = scope === "mail_send";
+  const recipientUsername = mailSend ? String(value.recipientUsername || "") : "";
+  const knownRecipientAccountId = mailSend
+    ? String(value.knownRecipientAccountId || "")
+    : "";
+  const recipientAccountId = mailSend ? String(value.recipientAccountId || "") : "";
+  const includeActorProfile = mailSend && value.includeActorProfile === true;
+  if (mailSend && (
+    !canonicalOptionalIdentity(recipientUsername, false)
+    || !canonicalOptionalIdentity(knownRecipientAccountId, true)
+    || !canonicalOptionalIdentity(recipientAccountId, true)
+    || typeof value.includeActorProfile !== "boolean"
+  )) {
+    throw sharedAssetReadViewError("mail_send_identity");
   }
   const marketListings = value.marketListings === null || value.marketListings === undefined
     ? null
@@ -82,11 +98,11 @@ function certifiedSharedAssetReadView(value) {
   const partitionIds = mailPartitions.map((partition) => partition.recipientAccountId);
   if (
     !canonicalUniqueStrings(partitionIds)
-    || (scope.startsWith("mail_") && (
+    || (["mail_read", "mail_mutation"].includes(scope) && (
       partitionIds.length !== 1
       || partitionIds[0] !== accountId
     ))
-    || (scope.startsWith("market_") && partitionIds.length !== 0)
+    || ((scope.startsWith("market_") || mailSend) && partitionIds.length !== 0)
   ) {
     throw sharedAssetReadViewError("mail_partitions");
   }
@@ -110,6 +126,18 @@ function certifiedSharedAssetReadView(value) {
     "profileBindings",
   );
   const profiles = certifiedEntityReplacement(value.profiles, "playerId", "profiles");
+  if (mailSend) {
+    assertCertifiedMailSendAuthority({
+      accountId,
+      recipientUsername,
+      knownRecipientAccountId,
+      recipientAccountId,
+      includeActorProfile,
+      accounts,
+      profileBindings,
+      profiles,
+    });
+  }
   const referencedEnvelopeIds = new Set(sharedAssetReadReferencedEnvelopeIds({
     marketListings,
     mailPartitions,
@@ -123,6 +151,10 @@ function certifiedSharedAssetReadView(value) {
     schemaVersion: SHARED_ASSET_READ_VIEW_SCHEMA_VERSION,
     scope,
     accountId,
+    recipientUsername,
+    knownRecipientAccountId,
+    recipientAccountId,
+    includeActorProfile,
     accounts,
     profileBindings,
     profiles,
@@ -139,10 +171,75 @@ function assertSharedAssetReadViewMatchesRequest(viewValue, requestValue) {
   if (
     String(request.scope || "") !== view.scope
     || String(request.accountId || "") !== view.accountId
+    || (view.scope === "mail_send" && (
+      String(request.recipientUsername || "") !== view.recipientUsername
+      || String(request.knownRecipientAccountId || "") !== view.knownRecipientAccountId
+      || Boolean(request.includeActorProfile) !== view.includeActorProfile
+    ))
   ) {
     throw sharedAssetReadViewError("request_identity");
   }
   return true;
+}
+
+function assertCertifiedMailSendAuthority(value) {
+  const expectedAccountKeys = Array.from(new Set([
+    value.accountId,
+    value.knownRecipientAccountId,
+    value.recipientAccountId,
+  ].filter(Boolean))).sort(compareCanonicalIds);
+  if (!isDeepStrictEqual(value.accounts.keys, expectedAccountKeys)) {
+    throw sharedAssetReadViewError("mail_send_accounts.keys");
+  }
+  const actor = value.accounts.values[value.accountId];
+  const recipient = value.recipientAccountId === ""
+    ? null
+    : value.accounts.values[value.recipientAccountId];
+  if (
+    !actor
+    || String(actor.accountId || "") !== value.accountId
+    || (value.recipientAccountId !== "" && (
+      !recipient
+      || String(recipient.accountId || "") !== value.recipientAccountId
+      || String(recipient.username || "") !== value.recipientUsername
+    ))
+    || Object.values(value.accounts.values).some((account) => (
+      String(account && account.username || "") === value.recipientUsername
+      && String(account && account.accountId || "") !== value.recipientAccountId
+    ))
+  ) {
+    throw sharedAssetReadViewError("mail_send_accounts.values");
+  }
+  if (!value.includeActorProfile) {
+    if (
+      value.profileBindings.keys.length !== 0
+      || Object.keys(value.profileBindings.values).length !== 0
+      || value.profiles.keys.length !== 0
+      || Object.keys(value.profiles.values).length !== 0
+    ) {
+      throw sharedAssetReadViewError("mail_send_profile_unexpected");
+    }
+    return;
+  }
+  const binding = value.profileBindings.values[value.accountId];
+  const playerId = String(binding && binding.playerId || "");
+  const profile = value.profiles.values[playerId];
+  if (
+    !isDeepStrictEqual(value.profileBindings.keys, [value.accountId])
+    || !binding
+    || playerId === ""
+    || !isDeepStrictEqual(value.profiles.keys, [playerId])
+    || !profile
+    || String(profile.accountId || "") !== value.accountId
+  ) {
+    throw sharedAssetReadViewError("mail_send_profile_missing");
+  }
+}
+
+function canonicalOptionalIdentity(value, allowEmpty) {
+  return typeof value === "string"
+    && (allowEmpty || value !== "")
+    && value === value.trim();
 }
 
 function certifiedEntityReplacement(value, identityField, fieldName) {

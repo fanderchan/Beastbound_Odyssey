@@ -47,6 +47,17 @@ function accountsById(accountsValue) {
 
 function sharedView(snapshot, request) {
   const accountIds = new Set([request.accountId]);
+  let recipientAccountId = "";
+  if (request.scope === "mail_send") {
+    const recipient = snapshot.accounts[request.recipientUsername] || null;
+    recipientAccountId = String(recipient && recipient.accountId || "");
+    if (request.knownRecipientAccountId) {
+      accountIds.add(request.knownRecipientAccountId);
+    }
+    if (recipientAccountId) {
+      accountIds.add(recipientAccountId);
+    }
+  }
   const marketListings = request.scope.startsWith("market_")
     ? canonicalMap(snapshot.marketListings)
     : null;
@@ -55,7 +66,11 @@ function sharedView(snapshot, request) {
       accountIds.add(listing.sellerAccountId);
     }
   }
-  const profileAccountIds = new Set([request.accountId]);
+  const profileAccountIds = new Set(
+    request.scope === "mail_send" && request.includeActorProfile !== true
+      ? []
+      : [request.accountId],
+  );
   if (request.scope === "market_mutation") {
     const listing = marketListings[request.listingId];
     if (listing) {
@@ -69,7 +84,7 @@ function sharedView(snapshot, request) {
       playerIds.push(binding.playerId);
     }
   }
-  const mailPartitions = request.scope.startsWith("mail_") ? [{
+  const mailPartitions = ["mail_read", "mail_mutation"].includes(request.scope) ? [{
     recipientAccountId: request.accountId,
     messages: canonicalMap(Object.fromEntries(
       Object.entries(snapshot.mailMessages).filter(([, mail]) => (
@@ -81,6 +96,12 @@ function sharedView(snapshot, request) {
     schemaVersion: 1,
     scope: request.scope,
     accountId: request.accountId,
+    recipientUsername: request.scope === "mail_send" ? request.recipientUsername : "",
+    knownRecipientAccountId: request.scope === "mail_send"
+      ? String(request.knownRecipientAccountId || "")
+      : "",
+    recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
+    includeActorProfile: request.scope === "mail_send" && request.includeActorProfile === true,
     accounts: replacement(Array.from(accountIds), accountsById(snapshot.accounts)),
     profileBindings: replacement(Array.from(profileAccountIds), snapshot.profileBindings),
     profiles: replacement(playerIds, snapshot.profiles),
@@ -123,6 +144,13 @@ function mergeScopedCommit(backing, nextData, saveOptions) {
         envelopeId,
       };
     }
+  } else if (scope.kind === "row_local_mail_send_v1") {
+    if (scope.mode === "ordinary_items") {
+      mergeActorProfile();
+    } else {
+      assert.equal(scope.mode, "text");
+    }
+    current.mailMessages[scope.mailId] = nextData.mailMessages[scope.mailId];
   } else {
     assert.fail(`unsupported cross-node fixture scope: ${String(scope.kind || "")}`);
   }
@@ -333,6 +361,218 @@ function seedMarketCreateCapacityScenario({totalCount, sellerCount}) {
     staleSnapshot,
   };
 }
+
+test("text mail resolves a recipient created on another Node without scanning a mailbox", async () => {
+  const backing = createMemoryAuthStore();
+  const seed = createAuthService({store: backing});
+  const sender = seed.register({
+    username: "mailreadsender",
+    password: "test1234",
+    displayName: "邮件寄件人",
+  });
+  assert.equal(sender.ok, true);
+  const staleSnapshot = backing.load();
+  const remote = createAuthService({store: backing});
+  const recipient = remote.register({
+    username: "mailreadrecipient",
+    password: "test1234",
+    displayName: "远端收件人",
+  });
+  assert.equal(recipient.ok, true);
+  let observedRequest = null;
+  let receiptReads = 0;
+  let savedScope = null;
+  const node = createReadThroughNode(backing, staleSnapshot, {
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+    onReceiptRead() {
+      receiptReads += 1;
+    },
+    onSave(options) {
+      savedScope = structuredClone(options.consistencyScope);
+    },
+  });
+  const result = await node.invokeDurable(
+    "sendMail",
+    [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "跨节点新收件人",
+      body: "首个请求就应找到刚注册的账号。",
+    }],
+    {
+      operationId: "op_mail_send_remote_recipient_0001",
+      requestHash: "1".repeat(64),
+      actionId: "POST /mail/send",
+    },
+  );
+
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.deepEqual(observedRequest, {
+    schemaVersion: 1,
+    scope: "mail_send",
+    accountId: sender.account.accountId,
+    recipientUsername: recipient.account.username,
+    knownRecipientAccountId: "",
+    includeActorProfile: false,
+  });
+  assert.equal(savedScope.kind, "row_local_mail_send_v1");
+  assert.equal(savedScope.mode, "text");
+  assert.equal(savedScope.recipientAccountId, recipient.account.accountId);
+  assert.equal(receiptReads, 0);
+  assert.equal(
+    Object.values(backing.load().mailMessages).filter((mail) => (
+      mail.recipientAccountId === recipient.account.accountId
+    )).length,
+    1,
+  );
+});
+
+test("ordinary mail adopts the sender profile changed on another Node before deducting attachments", async () => {
+  const backing = createMemoryAuthStore();
+  const seed = createAuthService({store: backing});
+  const sender = seed.register({
+    username: "mailassetreadsend",
+    password: "test1234",
+    displayName: "附件寄件人",
+  });
+  const recipient = seed.register({
+    username: "mailassetreadrecv",
+    password: "test1234",
+    displayName: "附件收件人",
+  });
+  assert.equal(sender.ok, true);
+  assert.equal(recipient.ok, true);
+  const staleSnapshot = backing.load();
+  const remote = createAuthService({store: backing});
+  const current = remote.getProfile(sender.session.token);
+  current.profile.backpackSlots[0] = {itemId: "item_meat_small", count: 2};
+  assert.equal(remote.saveProfile(sender.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  }).ok, true);
+  let observedRequest = null;
+  let savedScope = null;
+  const node = createReadThroughNode(backing, staleSnapshot, {
+    beforeSharedRead(request) {
+      observedRequest = structuredClone(request);
+    },
+    onSave(options) {
+      savedScope = structuredClone(options.consistencyScope);
+    },
+  });
+  const result = await node.invokeDurable(
+    "sendMail",
+    [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "远端补给",
+      body: "必须基于刚更新的背包扣除。",
+      items: [{itemId: "item_meat_small", count: 1}],
+    }],
+    {
+      operationId: "op_mail_send_remote_asset_0001",
+      requestHash: "2".repeat(64),
+      actionId: "POST /mail/send",
+    },
+  );
+
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(observedRequest.scope, "mail_send");
+  assert.equal(observedRequest.includeActorProfile, true);
+  assert.equal(observedRequest.knownRecipientAccountId, recipient.account.accountId);
+  assert.equal(savedScope.kind, "row_local_mail_send_v1");
+  assert.equal(savedScope.mode, "ordinary_items");
+  assert.equal(
+    backpackItemCount(profileForAccount(backing.load(), sender.account.accountId), "item_meat_small"),
+    1,
+  );
+});
+
+test("ordinary mail refuses a stale attachment already consumed on another Node", async () => {
+  const backing = createMemoryAuthStore();
+  const seed = createAuthService({store: backing});
+  const sender = seed.register({username: "mailstalesend", password: "test1234", displayName: "陈旧寄件人"});
+  const recipient = seed.register({username: "mailstalerecv", password: "test1234", displayName: "陈旧收件人"});
+  const withItem = seed.getProfile(sender.session.token);
+  withItem.profile.backpackSlots[0] = {itemId: "item_meat_small", count: 1};
+  assert.equal(seed.saveProfile(sender.session.token, {
+    expectedRevision: withItem.profileSummary.profileRevision,
+    profile: withItem.profile,
+  }).ok, true);
+  const staleSnapshot = backing.load();
+  const remote = createAuthService({store: backing});
+  const consumed = remote.getProfile(sender.session.token);
+  consumed.profile.backpackSlots[0] = {};
+  assert.equal(remote.saveProfile(sender.session.token, {
+    expectedRevision: consumed.profileSummary.profileRevision,
+    profile: consumed.profile,
+  }).ok, true);
+  let saveCalls = 0;
+  const node = createReadThroughNode(backing, staleSnapshot, {
+    onSave() {
+      saveCalls += 1;
+    },
+  });
+  const result = await node.invokeDurable(
+    "sendMail",
+    [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "已消耗附件",
+      body: "不能使用旧节点中的物品。",
+      items: [{itemId: "item_meat_small", count: 1}],
+    }],
+    {
+      operationId: "op_mail_send_stale_asset_0001",
+      requestHash: "3".repeat(64),
+      actionId: "POST /mail/send",
+    },
+  );
+
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.equal(result.code, "mail_attachment_not_enough");
+  assert.equal(saveCalls, 0);
+  assert.equal(Object.keys(backing.load().mailMessages).length, 0);
+});
+
+test("malformed mail attachments keep the domain error without pre-reading a profile", async () => {
+  const initial = createMemoryAuthStore();
+  const seed = createAuthService({store: initial});
+  const sender = seed.register({username: "mailbadreadsend", password: "test1234", displayName: "畸形寄件人"});
+  const recipient = seed.register({username: "mailbadreadrecv", password: "test1234", displayName: "畸形收件人"});
+  assert.equal(sender.ok, true);
+  assert.equal(recipient.ok, true);
+  const remoteSnapshot = initial.load();
+  const playerId = remoteSnapshot.profileBindings[sender.account.accountId].playerId;
+  delete remoteSnapshot.profileBindings[sender.account.accountId];
+  delete remoteSnapshot.profiles[playerId];
+  const staleSnapshot = cloneAuthorityRoot(remoteSnapshot);
+  const backing = createMemoryAuthStore(remoteSnapshot);
+  let sharedReadCalled = false;
+  const node = createReadThroughNode(backing, staleSnapshot, {
+    beforeSharedRead() {
+      sharedReadCalled = true;
+    },
+  });
+
+  const result = await node.invokeDurable(
+    "sendMail",
+    [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "畸形附件",
+      body: "应先按原邮件规则拒绝。",
+      items: [{itemId: "item_meat_small", count: 1, unexpected: true}],
+    }],
+    {
+      operationId: "op_mail_send_malformed_attachment_0001",
+      requestHash: "4".repeat(64),
+      actionId: "POST /mail/send",
+    },
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "mail_item_invalid");
+  assert.equal(sharedReadCalled, false);
+});
 
 test("ordinary market create refreshes a stale global-cap snapshot before validating", async () => {
   const scenario = seedMarketCreateCapacityScenario({totalCount: 120, sellerCount: 5});

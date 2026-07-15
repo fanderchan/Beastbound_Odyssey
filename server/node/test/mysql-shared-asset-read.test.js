@@ -230,6 +230,19 @@ function fakePool(options = {}) {
           document_json: mail,
         }], []];
       }
+      if (/FROM accounts WHERE username = \?/i.test(sql)) {
+        if (options.missingRecipient === true) {
+          return [[], []];
+        }
+        const recipientRows = accountRows([ACCOUNT_B]);
+        if (options.recipientUsernameDrift === true) {
+          recipientRows[0].document_json = {
+            ...recipientRows[0].document_json,
+            username: "drifted",
+          };
+        }
+        return [recipientRows, []];
+      }
       if (/FROM accounts WHERE account_id IN/i.test(sql)) {
         return [accountRows(params), []];
       }
@@ -362,6 +375,52 @@ test("mail scoped RR read is recipient-bound and rejects SQL/document mirror dri
       && error.reason === "binding_profile_mismatch",
   );
   assert.equal(profileMismatch.state.rolledBack, 1);
+});
+
+test("mail send resolves the recipient by username without reading a mailbox", async () => {
+  for (const includeActorProfile of [false, true]) {
+    const fake = fakePool();
+    const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
+      scope: "mail_send",
+      accountId: ACCOUNT_A,
+      recipientUsername: "beta",
+      knownRecipientAccountId: ACCOUNT_B,
+      includeActorProfile,
+    }, baseline());
+
+    assert.equal(result.view.recipientUsername, "beta");
+    assert.equal(result.view.knownRecipientAccountId, ACCOUNT_B);
+    assert.equal(result.view.recipientAccountId, ACCOUNT_B);
+    assert.equal(result.view.includeActorProfile, includeActorProfile);
+    assert.deepEqual(result.view.accounts.keys, [ACCOUNT_A, ACCOUNT_B]);
+    assert.deepEqual(result.view.mailPartitions, []);
+    assert.deepEqual(
+      result.view.profileBindings.keys,
+      includeActorProfile ? [ACCOUNT_A] : [],
+    );
+    assert.deepEqual(
+      result.view.profiles.keys,
+      includeActorProfile ? [PLAYER_A] : [],
+    );
+    assert.equal(fake.state.queries.some(({sql}) => (
+      /FROM mail_messages/i.test(sql)
+    )), false);
+  }
+
+  const drift = fakePool({recipientUsernameDrift: true});
+  await assert.rejects(
+    __runMysqlSharedAssetReadForTest(drift.pool, {
+      scope: "mail_send",
+      accountId: ACCOUNT_A,
+      recipientUsername: "beta",
+      knownRecipientAccountId: "",
+      includeActorProfile: false,
+    }, baseline()),
+    (error) => error
+      && error.code === "mysql_shared_asset_integrity_invalid"
+      && error.reason === "mail_recipient_account_row_drift",
+  );
+  assert.equal(drift.state.rolledBack, 1);
 });
 
 test("scoped profiles require matching non-negative safe-integer revisions", async () => {

@@ -21,6 +21,12 @@ const {
   removedMailEquipmentEnvelopeIds,
 } = require("./auth/mail-claim-consistency");
 const {
+  MAIL_SEND_MODE_ORDINARY_ITEMS,
+  MAIL_SEND_MODE_TEXT,
+  canonicalMailSendConsistencyScope,
+  mailSendReceiptResponseMatches,
+} = require("./auth/mail-send-consistency");
+const {
   commitConsumedEquipmentEnvelopeLedger,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
   readConsumedEquipmentEnvelopeLedgerIndex,
@@ -737,11 +743,24 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
     const marketListings = request.scope.startsWith("market_")
       ? await readMysqlSharedMarketListings(connection)
       : null;
-    const mailPartitions = request.scope.startsWith("mail_")
+    const mailPartitions = ["mail_read", "mail_mutation"].includes(request.scope)
       ? [await readMysqlSharedMailPartition(connection, request.accountId)]
       : [];
 
+    const resolvedMailRecipient = request.scope === "mail_send"
+      ? await readMysqlSharedAccountByUsername(connection, request.recipientUsername)
+      : null;
+    const recipientAccountId = String(resolvedMailRecipient && resolvedMailRecipient.accountId || "");
+
     const accountIds = new Set([request.accountId]);
+    if (request.scope === "mail_send") {
+      if (request.knownRecipientAccountId !== "") {
+        accountIds.add(request.knownRecipientAccountId);
+      }
+      if (recipientAccountId !== "") {
+        accountIds.add(recipientAccountId);
+      }
+    }
     if (marketListings !== null) {
       for (const listing of Object.values(marketListings)) {
         accountIds.add(String(listing.sellerAccountId || ""));
@@ -751,6 +770,12 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
     if (!Object.hasOwn(accounts, request.accountId)) {
       throw mysqlSharedAssetIntegrityError("actor_account_missing", request.accountId);
     }
+    if (request.scope === "mail_send" && recipientAccountId !== "") {
+      const recipient = accounts[recipientAccountId];
+      if (!recipient || String(recipient.username || "") !== request.recipientUsername) {
+        throw mysqlSharedAssetIntegrityError("mail_recipient_mismatch", request.recipientUsername);
+      }
+    }
     if (marketListings !== null) {
       for (const listing of Object.values(marketListings)) {
         if (!Object.hasOwn(accounts, String(listing.sellerAccountId || ""))) {
@@ -759,7 +784,11 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       }
     }
 
-    const profileAccountIds = new Set([request.accountId]);
+    const profileAccountIds = new Set(
+      request.scope === "mail_send" && request.includeActorProfile !== true
+        ? []
+        : [request.accountId],
+    );
     if (request.scope === "market_mutation" && request.listingId !== "") {
       const listing = marketListings && marketListings[request.listingId];
       if (listing) {
@@ -809,6 +838,12 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       schemaVersion: 1,
       scope: request.scope,
       accountId: request.accountId,
+      recipientUsername: request.scope === "mail_send" ? request.recipientUsername : "",
+      knownRecipientAccountId: request.scope === "mail_send"
+        ? request.knownRecipientAccountId
+        : "",
+      recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
+      includeActorProfile: request.scope === "mail_send" && request.includeActorProfile,
       accounts: entityReplacement(accountIds, accounts),
       profileBindings: entityReplacement(profileAccountIds, profileBindings),
       profiles: entityReplacement(playerIds, profiles),
@@ -835,19 +870,41 @@ function normalizeMysqlSharedAssetReadRequest(value) {
   const accountId = String(request.accountId || "");
   const listingId = String(request.listingId || "");
   const mailId = String(request.mailId || "");
+  const recipientUsername = String(request.recipientUsername || "");
+  const knownRecipientAccountId = String(request.knownRecipientAccountId || "");
+  const includeActorProfile = request.includeActorProfile === true;
   if (
-    !["market_read", "market_mutation", "mail_read", "mail_mutation"].includes(scope)
+    !["market_read", "market_mutation", "mail_read", "mail_mutation", "mail_send"].includes(scope)
     || !mysqlSharedAssetIdentity(accountId, 80)
     || (listingId !== "" && !mysqlSharedAssetIdentity(listingId, 96))
     || (mailId !== "" && !mysqlSharedAssetIdentity(mailId, 96))
     || (scope === "market_mutation" && listingId === "")
     || (scope === "mail_mutation" && mailId === "")
+    || (scope === "mail_send" && (
+      !mysqlSharedAssetIdentity(recipientUsername, 20)
+      || (knownRecipientAccountId !== ""
+        && !mysqlSharedAssetIdentity(knownRecipientAccountId, 80))
+      || typeof request.includeActorProfile !== "boolean"
+    ))
+    || (scope !== "mail_send" && (
+      recipientUsername !== ""
+      || knownRecipientAccountId !== ""
+      || request.includeActorProfile !== undefined
+    ))
   ) {
     const error = new Error("共享资产读穿请求不完整。");
     error.code = "mysql_shared_asset_read_request_invalid";
     throw error;
   }
-  return {scope, accountId, listingId, mailId};
+  return {
+    scope,
+    accountId,
+    listingId,
+    mailId,
+    recipientUsername,
+    knownRecipientAccountId,
+    includeActorProfile,
+  };
 }
 
 async function readMysqlSharedMarketListings(connection) {
@@ -912,6 +969,40 @@ async function readMysqlSharedMailPartition(connection, recipientAccountId) {
     messages[mailId] = mail;
   }
   return {recipientAccountId, messages: canonicalEntityMap(messages)};
+}
+
+async function readMysqlSharedAccountByUsername(connection, usernameValue) {
+  const username = String(usernameValue || "");
+  if (!mysqlSharedAssetIdentity(username, 20)) {
+    throw mysqlSharedAssetIntegrityError("mail_recipient_username_invalid", username);
+  }
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT account_id, username, display_name, role, created_at, updated_at, document_json
+      FROM accounts WHERE username = ?`,
+    [username],
+  ));
+  if (rows.length === 0) {
+    return null;
+  }
+  if (rows.length !== 1) {
+    throw mysqlSharedAssetIntegrityError("mail_recipient_username_duplicate", username);
+  }
+  const row = rows[0] || {};
+  const account = mysqlSharedJsonDocument(row.document_json, "account_json");
+  const accountId = String(row.account_id || "");
+  if (
+    !mysqlSharedAssetIdentity(accountId, 80)
+    || String(row.username || "") !== username
+    || String(account.accountId || "") !== accountId
+    || String(account.username || "") !== username
+    || String(account.displayName || "") !== String(row.display_name || "")
+    || String(account.role || "") !== String(row.role || "")
+    || String(account.createdAt || "") !== String(row.created_at || "")
+    || String(account.updatedAt || "") !== String(row.updated_at || "")
+  ) {
+    throw mysqlSharedAssetIntegrityError("mail_recipient_account_row_drift", username);
+  }
+  return account;
 }
 
 async function readMysqlSharedAccounts(connection, accountIdsValue) {
@@ -1256,6 +1347,15 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   );
   if (conditionalMarketBuyPlan !== null) {
     return conditionalMarketBuyPlan;
+  }
+  const conditionalMailSendPlan = buildConditionalMailSendSavePlan(
+    data,
+    previous,
+    groups,
+    options.consistencyScope,
+  );
+  if (conditionalMailSendPlan !== null) {
+    return conditionalMailSendPlan;
   }
   const conditionalMailClaimPlan = buildConditionalMailClaimSavePlan(
     data,
@@ -1811,6 +1911,205 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     ],
     writes,
   });
+}
+
+function buildConditionalMailSendSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = canonicalMailSendConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const profileExpected = consistencyScope.mode === MAIL_SEND_MODE_ORDINARY_ITEMS;
+  const allowedGroups = new Set([
+    "profileBindings",
+    "profiles",
+    "mutationReceipts",
+    "mailMessages",
+  ]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (
+    groups.mailMessages.length !== 1
+    || groups.profileBindings.length !== (profileExpected ? 1 : 0)
+    || groups.profiles.length !== (profileExpected ? 1 : 0)
+  ) {
+    return null;
+  }
+
+  const mailAddition = singleNewObjectEntityAddition(
+    previous.mailMessages,
+    data.mailMessages,
+    mailEntityKey,
+  );
+  if (
+    mailAddition === null
+    || !certifiedOrdinaryPlayerMailSend(mailAddition.next, previous, consistencyScope)
+  ) {
+    return null;
+  }
+
+  let expectedRevision = null;
+  let beforeBinding = null;
+  let nextBinding = null;
+  let beforeProfile = null;
+  let nextProfile = null;
+  if (profileExpected) {
+    const change = certifiedSingleProfileRevisionChange(previous, data);
+    if (
+      change === null
+      || change.accountId !== consistencyScope.accountId
+      || change.playerId !== consistencyScope.playerId
+    ) {
+      return null;
+    }
+    ({
+      expectedRevision,
+      beforeBinding,
+      nextBinding,
+      beforeProfile,
+      nextProfile,
+    } = change);
+  } else if (consistencyScope.playerId !== "") {
+    return null;
+  }
+
+  const receiptDelta = conditionalProfileReceiptDelta(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (!receiptDelta.ok || receiptDelta.deletes.length !== 0 || receiptDelta.upserts.length !== 1) {
+    return null;
+  }
+  const receipt = receiptDelta.upserts[0] || null;
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== consistencyScope.accountId
+    || !mailSendReceiptResponseMatches({
+      receipt,
+      mail: mailAddition.next,
+      sender: previous.accounts && previous.accounts[mailAddition.next.senderUsername],
+      mode: consistencyScope.mode,
+      nextBinding,
+      nextProfile,
+    })
+  ) {
+    return null;
+  }
+
+  const locks = [];
+  const writes = [];
+  if (profileExpected) {
+    locks.push(
+      profileBindingResourceLock(beforeBinding),
+      profileResourceLock(beforeProfile),
+    );
+    writes.push(
+      conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+      conditionalProfileUpdate(nextProfile, expectedRevision),
+    );
+  }
+  writes.push(
+    conditionalMailMessageInsert(mailAddition.next),
+    conditionalMutationReceiptInsert(receipt),
+  );
+  return buildMysqlResourceAcquisitionPlan({
+    kind: "mail_send_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    mode: consistencyScope.mode,
+    accountId: consistencyScope.accountId,
+    playerId: consistencyScope.playerId,
+    recipientAccountId: consistencyScope.recipientAccountId,
+    recipientUsername: consistencyScope.recipientUsername,
+    mailId: consistencyScope.mailId,
+    operationId: consistencyScope.operationId,
+    ...(profileExpected ? {
+      expectedProfileRevision: expectedRevision,
+      nextProfileRevision: expectedRevision + 1,
+    } : {}),
+    locks,
+    writes,
+  });
+}
+
+function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
+  const mail = objectOrEmpty(mailValue);
+  const fields = new Set([
+    "mailId",
+    "senderAccountId",
+    "senderUsername",
+    "senderDisplayName",
+    "recipientAccountId",
+    "recipientUsername",
+    "recipientDisplayName",
+    "title",
+    "body",
+    "items",
+    "equipmentEnvelopes",
+    "currency",
+    "createdAt",
+    "readAt",
+    "schemaVersion",
+  ]);
+  const sender = objectOrEmpty(previous.accounts && previous.accounts[mail.senderUsername]);
+  const recipient = objectOrEmpty(previous.accounts && previous.accounts[mail.recipientUsername]);
+  const items = Array.isArray(mail.items) ? mail.items : null;
+  const itemIds = items === null ? [] : items.map((item) => String(item && item.itemId || ""));
+  if (
+    Object.keys(mail).length !== fields.size
+    || Object.keys(mail).some((field) => !fields.has(field))
+    || mail.mailId !== scope.mailId
+    || mail.senderAccountId !== scope.accountId
+    || mail.recipientAccountId !== scope.recipientAccountId
+    || mail.recipientUsername !== scope.recipientUsername
+    || mail.senderAccountId === mail.recipientAccountId
+    || sender.accountId !== mail.senderAccountId
+    || sender.username !== mail.senderUsername
+    || sender.displayName !== mail.senderDisplayName
+    || recipient.accountId !== mail.recipientAccountId
+    || recipient.username !== mail.recipientUsername
+    || recipient.displayName !== mail.recipientDisplayName
+    || typeof mail.title !== "string"
+    || mail.title === ""
+    || mail.title !== mail.title.trim()
+    || typeof mail.body !== "string"
+    || mail.body === ""
+    || mail.body !== mail.body.trim()
+    || typeof mail.createdAt !== "string"
+    || mail.createdAt === ""
+    || mail.createdAt !== mail.createdAt.trim()
+    || mail.readAt !== null
+    || mail.schemaVersion !== 2
+    || !Array.isArray(mail.equipmentEnvelopes)
+    || mail.equipmentEnvelopes.length !== 0
+    || !isRecord(mail.currency)
+    || Object.keys(mail.currency).length !== 0
+    || items === null
+    || items.some((item) => (
+      !isRecord(item)
+      || Object.keys(item).length !== 2
+      || !Object.hasOwn(item, "itemId")
+      || !Object.hasOwn(item, "count")
+      || typeof item.itemId !== "string"
+      || item.itemId === ""
+      || item.itemId !== item.itemId.trim()
+      || !Number.isSafeInteger(item.count)
+      || item.count <= 0
+    ))
+    || new Set(itemIds).size !== itemIds.length
+    || (scope.mode === MAIL_SEND_MODE_TEXT && items.length !== 0)
+    || (scope.mode === MAIL_SEND_MODE_ORDINARY_ITEMS && items.length === 0)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function buildConditionalMailClaimSavePlan(data, previous, groups, consistencyScopeValue) {
@@ -3432,9 +3731,73 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     "market_create_conditional_v1",
     "market_cancel_conditional_v1",
     "market_buy_conditional_v1",
+    "mail_send_conditional_v1",
     "mail_claim_conditional_v1",
   ].includes(plan.kind)) {
     return committed;
+  }
+  if (plan.kind === "mail_send_conditional_v1") {
+    const mode = String(plan.mode || "");
+    const accountId = String(plan.accountId || "");
+    const playerId = String(plan.playerId || "");
+    const recipientAccountId = String(plan.recipientAccountId || "");
+    const mailId = String(plan.mailId || "");
+    const operationId = String(plan.operationId || "");
+    const mail = committed.mailMessages && committed.mailMessages[mailId];
+    const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+    if (
+      !previous
+      || ![MAIL_SEND_MODE_TEXT, MAIL_SEND_MODE_ORDINARY_ITEMS].includes(mode)
+      || accountId === ""
+      || recipientAccountId === ""
+      || recipientAccountId === accountId
+      || mailId === ""
+      || operationId === ""
+      || !mail
+      || !receipt
+      || String(mail.mailId || "") !== mailId
+      || String(mail.senderAccountId || "") !== accountId
+      || String(mail.recipientAccountId || "") !== recipientAccountId
+      || (previous.mailMessages && Object.hasOwn(previous.mailMessages, mailId))
+    ) {
+      const error = new Error("MySQL mail send 条件提交缺少已证明的新增资源结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    const merged = {
+      ...previous,
+      mutationReceipts: committed.mutationReceipts,
+      mailMessages: {
+        ...(previous.mailMessages || {}),
+        [mailId]: mail,
+      },
+    };
+    if (mode === MAIL_SEND_MODE_TEXT) {
+      if (playerId !== "") {
+        const error = new Error("MySQL text mail send 不应提交档案资源。");
+        error.code = "mysql_resource_precondition_invalid";
+        throw error;
+      }
+      return merged;
+    }
+    const binding = committed.profileBindings && committed.profileBindings[accountId];
+    const profile = committed.profiles && committed.profiles[playerId];
+    if (playerId === "" || !binding || !profile) {
+      const error = new Error("MySQL ordinary mail send 条件提交缺少发件人档案结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return {
+      ...merged,
+      profileBindings: {
+        ...(previous.profileBindings || {}),
+        [accountId]: binding,
+      },
+      profiles: {
+        ...(previous.profiles || {}),
+        [playerId]: profile,
+      },
+    };
   }
   const accountId = String(plan.accountId || "");
   const playerId = String(plan.playerId || "");
@@ -4347,6 +4710,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       "market_create_conditional_v1",
       "market_cancel_conditional_v1",
       "market_buy_conditional_v1",
+      "mail_send_conditional_v1",
       "mail_claim_conditional_v1",
     ].includes(plan.kind)
     || plan.globalRevisionFence !== false
@@ -5229,6 +5593,10 @@ function checkedIdentifier(value) {
 
 function objectOrEmpty(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function cloneJson(value) {
