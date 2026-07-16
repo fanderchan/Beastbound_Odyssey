@@ -26,6 +26,14 @@ const {
   materializeAuthorityRootLargeCollections,
 } = require("./auth/authority-root-materialization");
 const {
+  commitMailAuthorityDelta,
+  isCanonicalMailAuthorityState,
+  mailAuthorityDeltaFrom,
+  mailAuthoritySignature,
+  readMailAuthorityState,
+  stageMailAuthorityUpsert,
+} = require("./auth/mail-authority-state");
+const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
   DURABLE_OPERATION_ID_PATTERN,
@@ -3794,6 +3802,13 @@ function createAuthService(options = {}) {
     const saleReceipt = objectOrEmpty(response.receipt);
     const saleMailId = String(saleMailResponse.mailId || "");
     const saleMail = objectOrEmpty(candidate && candidate.mailMessages && candidate.mailMessages[saleMailId]);
+    const mailDelta = mailAuthorityDeltaFrom(
+      before && before.mailMessages,
+      candidate && candidate.mailMessages,
+    );
+    const exactSaleMailChange = mailDelta.ok && mailDelta.changes.length === 1
+      ? mailDelta.changes[0]
+      : null;
     const ordinaryListingFields = [
       "listingId",
       "sellerAccountId",
@@ -3835,6 +3850,11 @@ function createAuthService(options = {}) {
       || Boolean(candidate && candidate.marketListings
         && Object.hasOwn(candidate.marketListings, listingId))
       || Boolean(before && before.mailMessages && Object.hasOwn(before.mailMessages, saleMailId))
+      || exactSaleMailChange === null
+      || exactSaleMailChange.mailId !== saleMailId
+      || exactSaleMailChange.disposition !== "insert"
+      || exactSaleMailChange.before !== null
+      || exactSaleMailChange.after !== saleMail
       || String(saleMail.mailId || "") !== saleMailId
       || String(saleMail.recipientAccountId || "") !== sellerAccountId
       || String(saleReceipt.listingId || "") !== listingId
@@ -4362,6 +4382,7 @@ function createAuthService(options = {}) {
       persistentDataForStore: persistentDataViewForStore,
       normalizeEventSeq,
       consumedEquipmentEnvelopeLedgerSignature,
+      mailAuthoritySignature,
     };
     const rawCompareStartedAt = methodFinishedAt;
     let rawPersistentUnchanged = false;
@@ -6129,6 +6150,9 @@ function commitAuthorityRootLargeCollections(data) {
   }
   data.mutationReceipts = committedReceipts;
   data.consumedEquipmentEnvelopes = committedLedger.ledger;
+  if (isCanonicalMailAuthorityState(data.mailMessages)) {
+    data.mailMessages = commitMailAuthorityDelta(data.mailMessages);
+  }
   markAuthorityRootTrusted(data);
   return data;
 }
@@ -6149,13 +6173,19 @@ function normalizeData(raw, options = {}) {
     0,
     normalizeEventSeq(latestRetainedServiceEvent && latestRetainedServiceEvent.eventSeq)
   );
+  const normalizedMailMessages = readMailAuthorityState(objectOrEmpty(data.mailMessages));
   const normalized = {
     schemaVersion: 1,
     accounts: freezeAuthorityRootIdentityRecordValues("accounts", objectOrEmpty(data.accounts)),
     sessions: freezeAuthorityRootIdentityRecordValues("sessions", objectOrEmpty(data.sessions)),
     profileBindings: freezeAuthorityRootIdentityRecordValues("profileBindings", objectOrEmpty(data.profileBindings)),
     profiles: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.profiles)),
-    mailMessages: objectOrEmpty(data.mailMessages),
+    // Healthy mail roots become immutable touched-row views. Malformed legacy
+    // rows remain inspectable so existing quarantine paths can fail the owning
+    // operation closed without silently dropping player attachments.
+    mailMessages: normalizedMailMessages.ok
+      ? normalizedMailMessages.messages
+      : objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
     marketListings: objectOrEmpty(data.marketListings),
     mutationReceipts: normalizeDurableMutationReceipts(data.mutationReceipts),
@@ -15324,7 +15354,13 @@ function createQualificationRewardMail(options, reward, items) {
     readAt: null,
     schemaVersion: 1,
   };
-  data.mailMessages[mail.mailId] = mail;
+  const stagedMail = stageMailAuthorityUpsert(data.mailMessages, mail);
+  if (!stagedMail.ok) {
+    const error = new Error(stagedMail.message || "qualification reward mail unavailable");
+    error.code = stagedMail.code || "mail_authority_stage_failed";
+    throw error;
+  }
+  data.mailMessages = stagedMail.messages;
   return {items: attachments, mail};
 }
 

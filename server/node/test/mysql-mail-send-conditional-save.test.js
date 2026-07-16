@@ -9,7 +9,13 @@ const {
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
+  mailAuthorityDiagnostics,
+  readMailAuthorityState,
+  stageMailAuthorityUpsert,
+} = require("../src/auth/mail-authority-state");
+const {
   __certifiedOrdinaryAttachmentProfileChangeForTest: certifiedOrdinaryAttachmentProfileChange,
+  __singleNewMailAdditionForTest: singleNewMailAddition,
   MAIL_SEND_MODE_ORDINARY_ITEMS,
   MAIL_SEND_MODE_TEXT,
 } = require("../src/auth/mail-send-consistency");
@@ -19,6 +25,7 @@ const {
 } = require("../src/mysql-resource-acquisition-order");
 const {
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlan,
+  __canonicalizeMysqlMailAuthorityBaselineForTest: canonicalizeMysqlMailAuthorityBaseline,
   __mergeMysqlSaveBaselineAfterCommitForTest: mergeMysqlSaveBaselineAfterCommit,
   __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
 } = require("../src/mysql-store");
@@ -272,6 +279,116 @@ test("text mail plan writes only the strict mail and receipt behind a shared glo
       ["mutation_receipt", "insert"],
     ],
   );
+});
+
+test("text mail planner consumes one certified mail delta without enumerating mailbox history", () => {
+  const before = baselineState();
+  const mailbox = {};
+  for (let index = 0; index < 2000; index += 1) {
+    const mailId = `mail_send_history_${String(index).padStart(5, "0")}`;
+    mailbox[mailId] = playerMail({
+      mailId,
+      senderAccountId: RECIPIENT_ACCOUNT_ID,
+      senderUsername: "mail_send_recipient",
+      senderDisplayName: "收件人",
+      recipientAccountId: SENDER_ACCOUNT_ID,
+      recipientUsername: "mail_send_sender",
+      recipientDisplayName: "寄件人",
+      title: "历史邮件",
+    });
+  }
+  const canonical = readMailAuthorityState(mailbox);
+  assert.equal(canonical.ok, true);
+  before.mailMessages = canonical.messages;
+  const after = cloneAuthorityRoot(before);
+  const sentMail = playerMail();
+  const staged = stageMailAuthorityUpsert(after.mailMessages, sentMail);
+  assert.equal(staged.ok, true);
+  after.mailMessages = staged.messages;
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    receipt({response: mailSendReceiptResponse(after, MAIL_SEND_MODE_TEXT, sentMail)}),
+    {nowMs: Date.parse(UPDATED_AT)},
+  );
+  const beforeEnumerations = mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations;
+
+  const built = plan(after, before);
+
+  assert.equal(built.kind, "mail_send_conditional_v1");
+  assert.equal(
+    mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations,
+    beforeEnumerations,
+  );
+});
+
+test("production-style separate mail lineages still plan and merge one touched row", () => {
+  const storeBefore = canonicalizeMysqlMailAuthorityBaseline(baselineState());
+  const candidate = baselineState();
+  candidate.mailMessages = readMailAuthorityState(candidate.mailMessages).messages;
+  const sentMail = playerMail();
+  candidate.mailMessages = stageMailAuthorityUpsert(candidate.mailMessages, sentMail).messages;
+  candidate.mutationReceipts = stageDurableMutationReceipt(
+    candidate.mutationReceipts,
+    receipt({response: mailSendReceiptResponse(candidate, MAIL_SEND_MODE_TEXT, sentMail)}),
+    {nowMs: Date.parse(UPDATED_AT)},
+  );
+  const storeEnumerations = mailAuthorityDiagnostics(storeBefore.mailMessages).ownKeyEnumerations;
+  const candidateEnumerations = mailAuthorityDiagnostics(candidate.mailMessages).ownKeyEnumerations;
+
+  const built = plan(candidate, storeBefore);
+  const merged = mergeMysqlSaveBaselineAfterCommit(storeBefore, candidate, built);
+
+  assert.equal(built.kind, "mail_send_conditional_v1");
+  assert.deepEqual(merged.mailMessages[MAIL_ID], sentMail);
+  assert.deepEqual(merged.mailMessages.mail_unrelated, storeBefore.mailMessages.mail_unrelated);
+  assert.equal(
+    mailAuthorityDiagnostics(storeBefore.mailMessages).ownKeyEnumerations,
+    storeEnumerations,
+  );
+  assert.equal(
+    mailAuthorityDiagnostics(candidate.mailMessages).ownKeyEnumerations,
+    candidateEnumerations,
+  );
+});
+
+test("mail-send scope certification rejects hidden changes from another mail lineage", () => {
+  const before = readMailAuthorityState(baselineState().mailMessages).messages;
+  const hiddenBaseline = baselineState().mailMessages;
+  hiddenBaseline.mail_unrelated = {
+    ...hiddenBaseline.mail_unrelated,
+    body: "不允许藏在另一个 lineage 里",
+  };
+  let candidate = readMailAuthorityState(hiddenBaseline).messages;
+  candidate = stageMailAuthorityUpsert(candidate, playerMail()).messages;
+
+  assert.equal(singleNewMailAddition(before, candidate), null);
+});
+
+test("rejected row-local scope rebuilds a complete legacy mail diff", () => {
+  const before = baselineState();
+  before.mailMessages = readMailAuthorityState(before.mailMessages).messages;
+  const after = cloneAuthorityRoot(before);
+  after.mailMessages = stageMailAuthorityUpsert(after.mailMessages, {
+    ...after.mailMessages.mail_unrelated,
+    body: "这项额外更新必须进入 legacy SQL",
+  }).messages;
+  const sentMail = playerMail();
+  after.mailMessages = stageMailAuthorityUpsert(after.mailMessages, sentMail).messages;
+  after.mutationReceipts = stageDurableMutationReceipt(
+    after.mutationReceipts,
+    receipt({response: mailSendReceiptResponse(after, MAIL_SEND_MODE_TEXT, sentMail)}),
+    {nowMs: Date.parse(UPDATED_AT)},
+  );
+
+  const built = plan(after, before);
+  const mailStatements = built.statements.filter((statement) => (
+    /\bmail_messages\b/i.test(statement)
+  ));
+
+  assert.equal(built.kind, "legacy_global_cas");
+  assert.equal(mailStatements.length, 2);
+  assert.equal(mailStatements.some((statement) => statement.includes(MAIL_ID)), true);
+  assert.equal(mailStatements.some((statement) => statement.includes("mail_unrelated")), true);
 });
 
 test("ordinary attachment mail locks and updates only the sender profile before mail and receipt", () => {

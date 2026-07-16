@@ -40,6 +40,11 @@ const {
   commitDurableMutationReceiptDelta,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
+const {
+  commitMailAuthorityDelta,
+  readMailAuthorityState,
+  stageMailAuthorityUpsert,
+} = require("../src/auth/mail-authority-state");
 
 test("authority root clones share only a validated immutable consumed ledger", () => {
   const canonical = readConsumedEquipmentEnvelopeLedger({
@@ -1205,6 +1210,52 @@ test("trusted roots accept same-lineage staged views but reject canonical field 
   );
 });
 
+test("trusted roots share only same-lineage immutable mail views", () => {
+  const mail = {
+    mailId: "mail_trusted_0001",
+    senderAccountId: "system_test",
+    recipientAccountId: "acc_trusted_mail",
+    title: "可信邮件",
+    body: "只允许通过 touched-row 视图修改。",
+    items: [],
+    createdAt: "2026-07-16T00:00:00.000Z",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const baseline = readMailAuthorityState({[mail.mailId]: mail}).messages;
+  const root = {
+    profiles: {},
+    consumedEquipmentEnvelopes: readConsumedEquipmentEnvelopeLedger({}).ledger,
+    mutationReceipts: canonicalDurableMutationReceipts({}),
+    mailMessages: baseline,
+  };
+  assert.equal(markAuthorityRootTrusted(root), true);
+
+  const cloned = cloneAuthorityRoot(root);
+  assert.equal(cloned.mailMessages, baseline);
+  assert.throws(() => {
+    cloned.mailMessages[mail.mailId] = {...mail, title: "直接篡改"};
+  }, TypeError);
+
+  const staged = stageMailAuthorityUpsert(cloned.mailMessages, {
+    ...mail,
+    readAt: "2026-07-16T00:01:00.000Z",
+  });
+  assert.equal(staged.ok, true);
+  cloned.mailMessages = staged.messages;
+  assert.equal(isTrustedAuthorityRoot(cloned), true);
+  assert.equal(root.mailMessages[mail.mailId].readAt, null);
+  commitMailAuthorityDelta(cloned.mailMessages);
+  assert.equal(cloned.mailMessages[mail.mailId].readAt, "2026-07-16T00:01:00.000Z");
+
+  cloned.mailMessages = readMailAuthorityState({[mail.mailId]: mail}).messages;
+  assert.equal(authorityRootTrustCompromised(cloned), true);
+  assert.throws(
+    () => cloneAuthorityRoot(cloned),
+    (error) => error && error.code === "authority_root_large_collection_identity_replaced",
+  );
+});
+
 test("backup and migration materialization produces complete structured-cloneable buckets", () => {
   const baseline = readConsumedEquipmentEnvelopeLedger({
     eqx_materialize_ledger_0001: {schemaVersion: 1, envelopeId: "eqx_materialize_ledger_0001"},
@@ -1214,6 +1265,20 @@ test("backup and migration materialization produces complete structured-cloneabl
     profiles: {player_a: {profile: {name: "物化档案"}}},
     consumedEquipmentEnvelopes: staged.ledger,
     mutationReceipts: canonicalDurableMutationReceipts({}),
+    mailMessages: stageMailAuthorityUpsert(
+      readMailAuthorityState({}).messages,
+      {
+        mailId: "mail_materialize_0001",
+        senderAccountId: "system_test",
+        recipientAccountId: "acc_materialize",
+        title: "物化邮件",
+        body: "必须导出为普通对象。",
+        items: [],
+        createdAt: "2026-07-16T00:00:00.000Z",
+        readAt: null,
+        schemaVersion: 1,
+      },
+    ).messages,
   };
   markAuthorityRootTrusted(root);
   const materialized = materializeAuthorityRootLargeCollections(root);
@@ -1223,6 +1288,7 @@ test("backup and migration materialization produces complete structured-cloneabl
     "eqx_materialize_ledger_0002",
   ]);
   assert.deepEqual(materialized.mutationReceipts, {});
+  assert.deepEqual(Object.keys(materialized.mailMessages), ["mail_materialize_0001"]);
   assert.equal(isTrustedAuthorityRoot(materialized), false);
 });
 

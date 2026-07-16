@@ -43,6 +43,15 @@ const {
   MARKET_MAX_LISTINGS_PER_SELLER,
 } = require("./auth/market-listing-state");
 const {
+  commitMailAuthorityDelta,
+  isCanonicalMailAuthorityState,
+  mailAuthorityDelta,
+  mailAuthorityDeltaFrom,
+  readMailAuthorityState,
+  stageMailAuthorityDelete,
+  stageMailAuthorityUpsert,
+} = require("./auth/mail-authority-state");
+const {
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,
@@ -431,7 +440,13 @@ function createMysqlAuthStore(options = {}) {
     lastPersistentRevision = mysqlStoreRevision(loaded);
     revisionCasEnabled = !readOnly && revisionPresent;
     serverStateReady = mysqlEntityStatePresent(loaded);
-    lastPersistentData = mysqlPersistentData(loaded);
+    // Keep the store-owned baseline on its own immutable mail lineage. The
+    // loaded object returned to the service is normalized separately, so a
+    // request COMMIT cannot advance the store baseline before the exact
+    // post-COMMIT merge runs.
+    lastPersistentData = canonicalizeMysqlMailAuthorityBaseline(
+      mysqlPersistentData(loaded),
+    );
     return loaded;
   }
 
@@ -1285,6 +1300,12 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
     value: [],
     writable: false,
   });
+  Object.defineProperty(groups, "mailAuthorityChanges", {
+    configurable: false,
+    enumerable: false,
+    value: [],
+    writable: false,
+  });
   const previousState = persistentServerStateDocument(previous);
   const nextState = persistentServerStateDocument(data);
   if (options.forceServerState === true || entityChanged(previousState, nextState)) {
@@ -1303,7 +1324,15 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
       requireCertifiedDeletes: options.requireCertifiedReceiptDeletes === true,
     },
   );
-  appendObjectEntityDiff(groups.mailMessages, "mail_messages", "mail_id", previous.mailMessages, data.mailMessages, mailEntityKey, insertMailStatement, {strictInsertNew: true});
+  appendMailAuthorityDeltaOrDiff(
+    groups.mailMessages,
+    previous.mailMessages,
+    data.mailMessages,
+    {
+      allowCertifiedDelta: options.allowCertifiedMailDelta === true,
+      typedChanges: groups.mailAuthorityChanges,
+    },
+  );
   appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement, {strictInsertNew: true});
   appendConsumedEquipmentEnvelopeDeltaOrDiff(
     groups.consumedEquipmentEnvelopes,
@@ -1354,67 +1383,42 @@ function mysqlSaveStatementsFromGroups(groups) {
 }
 
 function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
-  const groups = buildSaveStatementGroupsFromPersistentData(data, previous, {
+  const allowCertifiedMailDelta = Boolean(
+    options.consistencyScope
+    && typeof options.consistencyScope === "object"
+    && !Array.isArray(options.consistencyScope),
+  );
+  let groups = buildSaveStatementGroupsFromPersistentData(data, previous, {
     ...options,
+    allowCertifiedMailDelta,
     requireCertifiedReceiptDeletes: true,
   });
-  const statements = mysqlSaveStatementsFromGroups(groups);
+  let statements = mysqlSaveStatementsFromGroups(groups);
   if (statements.length === 0) {
     return {kind: "noop"};
   }
-  const conditionalProfilePlan = buildConditionalProfileSavePlan(
+  const conditionalPlan = buildConditionalMysqlSavePlan(
     data,
     previous,
     groups,
     options.consistencyScope,
   );
-  if (conditionalProfilePlan !== null) {
-    return conditionalProfilePlan;
+  if (conditionalPlan !== null) {
+    return conditionalPlan;
   }
-  const conditionalMarketCreatePlan = buildConditionalMarketCreateSavePlan(
-    data,
-    previous,
-    groups,
-    options.consistencyScope,
-  );
-  if (conditionalMarketCreatePlan !== null) {
-    return conditionalMarketCreatePlan;
-  }
-  const conditionalMarketCancelPlan = buildConditionalMarketCancelSavePlan(
-    data,
-    previous,
-    groups,
-    options.consistencyScope,
-  );
-  if (conditionalMarketCancelPlan !== null) {
-    return conditionalMarketCancelPlan;
-  }
-  const conditionalMarketBuyPlan = buildConditionalMarketBuySavePlan(
-    data,
-    previous,
-    groups,
-    options.consistencyScope,
-  );
-  if (conditionalMarketBuyPlan !== null) {
-    return conditionalMarketBuyPlan;
-  }
-  const conditionalMailSendPlan = buildConditionalMailSendSavePlan(
-    data,
-    previous,
-    groups,
-    options.consistencyScope,
-  );
-  if (conditionalMailSendPlan !== null) {
-    return conditionalMailSendPlan;
-  }
-  const conditionalMailClaimPlan = buildConditionalMailClaimSavePlan(
-    data,
-    previous,
-    groups,
-    options.consistencyScope,
-  );
-  if (conditionalMailClaimPlan !== null) {
-    return conditionalMailClaimPlan;
+  if (allowCertifiedMailDelta) {
+    // A certified touched-mail delta is safe only after a row-local planner
+    // accepts the complete write set. Legacy global CAS must rediscover the
+    // full diff so an unsupported caller cannot hide unrelated changes.
+    groups = buildSaveStatementGroupsFromPersistentData(data, previous, {
+      ...options,
+      allowCertifiedMailDelta: false,
+      requireCertifiedReceiptDeletes: true,
+    });
+    statements = mysqlSaveStatementsFromGroups(groups);
+    if (statements.length === 0) {
+      return {kind: "noop"};
+    }
   }
   const legacyMarketCreateCapacity = legacyMarketCreateCapacityProtection(previous, data);
   const legacyReceiptWrites = groups.mutationReceiptWrites;
@@ -1443,6 +1447,23 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
       : {receiptWrites: legacyReceiptWrites}),
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
+}
+
+function buildConditionalMysqlSavePlan(data, previous, groups, consistencyScope) {
+  for (const build of [
+    buildConditionalProfileSavePlan,
+    buildConditionalMarketCreateSavePlan,
+    buildConditionalMarketCancelSavePlan,
+    buildConditionalMarketBuySavePlan,
+    buildConditionalMailSendSavePlan,
+    buildConditionalMailClaimSavePlan,
+  ]) {
+    const plan = build(data, previous, groups, consistencyScope);
+    if (plan !== null) {
+      return plan;
+    }
+  }
+  return null;
 }
 
 function legacyMutationReceiptCapacityWrite(writes) {
@@ -1858,10 +1879,11 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     data.marketListings,
     marketListingEntityKey,
   );
-  const mailInsert = singleNewObjectEntityAddition(
+  const mailInsert = singleMailAuthorityEntityChange(
     previous.mailMessages,
     data.mailMessages,
-    mailEntityKey,
+    groups.mailAuthorityChanges,
+    "insert",
   );
   if (profileRevisionChange === null || listingDelete === null || mailInsert === null) {
     return null;
@@ -2022,10 +2044,11 @@ function buildConditionalMailSendSavePlan(data, previous, groups, consistencySco
     return null;
   }
 
-  const mailAddition = singleNewObjectEntityAddition(
+  const mailAddition = singleMailAuthorityEntityChange(
     previous.mailMessages,
     data.mailMessages,
-    mailEntityKey,
+    groups.mailAuthorityChanges,
+    "insert",
   );
   if (
     mailAddition === null
@@ -2219,7 +2242,11 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
   }
 
   const profileRevisionChange = certifiedSingleProfileRevisionChange(previous, data);
-  const mailClaim = certifiedSingleMailClaimChange(previous.mailMessages, data.mailMessages);
+  const mailClaim = certifiedSingleMailClaimChange(
+    previous.mailMessages,
+    data.mailMessages,
+    groups.mailAuthorityChanges,
+  );
   if (profileRevisionChange === null || mailClaim === null) {
     return null;
   }
@@ -2856,6 +2883,27 @@ function singleNewObjectEntityAddition(previousValue, nextValue, keyFn) {
   return addition;
 }
 
+function singleMailAuthorityEntityChange(previousValue, nextValue, typedChanges, disposition) {
+  if (Array.isArray(typedChanges) && typedChanges.length > 0) {
+    if (typedChanges.length !== 1 || typedChanges[0].disposition !== disposition) {
+      return null;
+    }
+    const change = typedChanges[0];
+    return disposition === "insert"
+      ? {key: change.mailId, next: change.after}
+      : disposition === "delete"
+        ? {key: change.mailId, previous: change.before}
+        : {key: change.mailId, previous: change.before, next: change.after};
+  }
+  if (disposition === "insert") {
+    return singleNewObjectEntityAddition(previousValue, nextValue, mailEntityKey);
+  }
+  if (disposition === "delete") {
+    return singleExistingObjectEntityDeletion(previousValue, nextValue, mailEntityKey);
+  }
+  return singleExistingObjectEntityChange(previousValue, nextValue, mailEntityKey);
+}
+
 const MAIL_CLAIM_ASSET_FIELDS = new Set([
   "items",
   "currency",
@@ -2864,9 +2912,19 @@ const MAIL_CLAIM_ASSET_FIELDS = new Set([
   "schemaVersion",
 ]);
 
-function certifiedSingleMailClaimChange(previousValue, nextValue) {
-  const update = singleExistingObjectEntityChange(previousValue, nextValue, mailEntityKey);
-  const deletion = singleExistingObjectEntityDeletion(previousValue, nextValue, mailEntityKey);
+function certifiedSingleMailClaimChange(previousValue, nextValue, typedChanges = []) {
+  const update = singleMailAuthorityEntityChange(
+    previousValue,
+    nextValue,
+    typedChanges,
+    "update",
+  );
+  const deletion = singleMailAuthorityEntityChange(
+    previousValue,
+    nextValue,
+    typedChanges,
+    "delete",
+  );
   if ((update === null) === (deletion === null)) {
     return null;
   }
@@ -3726,7 +3784,14 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
       // Keep the SQL primary key authoritative. A mismatched document identity
       // must survive loading so domain audits can fail closed instead of
       // deleting the wrong row and allowing its assets to reappear on restart.
-      data.mailMessages[String(rowKey || "")] = document;
+      // defineProperty also keeps a malformed "__proto__" primary key as an
+      // inspectable own row instead of invoking Object.prototype's setter.
+      Object.defineProperty(data.mailMessages, String(rowKey || ""), {
+        configurable: true,
+        enumerable: true,
+        value: document,
+        writable: true,
+      });
       break;
     case "market_listings":
       data.marketListings[String(rowKey || "")] = document;
@@ -3862,6 +3927,9 @@ function committedMysqlPersistentData(nextData, options = {}) {
     throw error;
   }
   data.consumedEquipmentEnvelopes = committedLedger.ledger;
+  if (isCanonicalMailAuthorityState(data.mailMessages)) {
+    data.mailMessages = commitMailAuthorityDelta(data.mailMessages);
+  }
   return data;
 }
 
@@ -3907,10 +3975,10 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     const merged = {
       ...previous,
       mutationReceipts: committed.mutationReceipts,
-      mailMessages: {
-        ...(previous.mailMessages || {}),
-        [mailId]: mail,
-      },
+      mailMessages: mergeCommittedMailAuthorityChange(
+        previous.mailMessages,
+        {mailId, disposition: "insert", mail},
+      ),
     };
     if (mode === MAIL_SEND_MODE_TEXT) {
       if (playerId !== "") {
@@ -4017,12 +4085,10 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
       error.code = "mysql_resource_precondition_invalid";
       throw error;
     }
-    const mailMessages = {...(previous.mailMessages || {})};
-    if (mailDisposition === "update") {
-      mailMessages[mailId] = committedMail;
-    } else {
-      delete mailMessages[mailId];
-    }
+    const mailMessages = mergeCommittedMailAuthorityChange(
+      previous.mailMessages,
+      {mailId, disposition: mailDisposition, mail: committedMail || null},
+    );
     return {
       ...merged,
       mailMessages,
@@ -4073,10 +4139,10 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   }
   return {
     ...marketMerged,
-    mailMessages: {
-      ...(previous.mailMessages || {}),
-      [saleMailId]: saleMail,
-    },
+    mailMessages: mergeCommittedMailAuthorityChange(
+      previous.mailMessages,
+      {mailId: saleMailId, disposition: "insert", mail: saleMail},
+    ),
     marketConfig: {
       ...previous.marketConfig,
       taxCollected: {
@@ -4085,6 +4151,32 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
       },
     },
   };
+}
+
+function mergeCommittedMailAuthorityChange(previousValue, change) {
+  const staged = change.disposition === "delete"
+    ? stageMailAuthorityDelete(previousValue, change.mailId)
+    : stageMailAuthorityUpsert(previousValue, change.mail);
+  if (!staged.ok || !isCanonicalMailAuthorityState(staged.messages)) {
+    const error = new Error("MySQL 条件提交无法合并邮件权威基线。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return commitMailAuthorityDelta(staged.messages);
+}
+
+function canonicalizeMysqlMailAuthorityBaseline(data) {
+  if (!data || isCanonicalMailAuthorityState(data.mailMessages)) {
+    return data;
+  }
+  const read = readMailAuthorityState(data.mailMessages);
+  if (read.ok) {
+    data.mailMessages = read.messages;
+  }
+  // Malformed legacy rows stay intact. The existing domain quarantine then
+  // fails only the owning mail operation closed instead of dropping assets at
+  // startup or silently adopting a partial baseline.
+  return data;
 }
 
 function canonicalizeLoadedAuthorityCollections(data) {
@@ -4182,6 +4274,66 @@ function appendObjectEntityDiff(statements, tableName, primaryColumn, previousOb
     insertFn,
     options,
   );
+}
+
+function appendMailAuthorityDeltaOrDiff(statements, previousValue, nextValue, options = {}) {
+  const delta = options.allowCertifiedDelta === true
+    ? certifiedMailDeltaAgainstBaseline(previousValue, nextValue)
+    : null;
+  if (delta !== null) {
+    for (const change of delta.changes) {
+      if (Array.isArray(options.typedChanges)) {
+        options.typedChanges.push(change);
+      }
+      if (change.disposition === "delete") {
+        statements.push(deleteEntityStatement("mail_messages", "mail_id", change.mailId));
+      } else if (change.disposition === "insert") {
+        statements.push(insertMailStatement(change.after));
+      } else {
+        statements.push(upsertEntityStatement(
+          insertMailStatement(change.after),
+          upsertColumnsForTable("mail_messages"),
+        ));
+      }
+    }
+    return;
+  }
+  appendObjectEntityDiff(
+    statements,
+    "mail_messages",
+    "mail_id",
+    previousValue,
+    nextValue,
+    mailEntityKey,
+    insertMailStatement,
+    {strictInsertNew: true},
+  );
+}
+
+function certifiedMailDeltaAgainstBaseline(previousValue, nextValue) {
+  let delta = mailAuthorityDeltaFrom(previousValue, nextValue);
+  if (!delta.ok) {
+    delta = mailAuthorityDelta(nextValue);
+  }
+  if (!delta.ok) {
+    return null;
+  }
+  for (const change of delta.changes) {
+    const mailId = String(change && change.mailId || "");
+    const previousMail = previousValue && previousValue[mailId];
+    const expectedBefore = change.before || null;
+    if (
+      mailId === ""
+      || (change.after !== null && mailEntityKey(change.after) !== mailId)
+      || (expectedBefore !== null && mailEntityKey(expectedBefore) !== mailId)
+      || (expectedBefore === null
+        ? Boolean(previousMail)
+        : !isDeepStrictEqual(previousMail, expectedBefore))
+    ) {
+      return null;
+    }
+  }
+  return delta;
 }
 
 function appendArrayEntityDiff(statements, tableName, primaryColumn, previousArray, nextArray, keyFn, insertFn) {
@@ -5932,6 +6084,7 @@ module.exports = {
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
   __buildMysqlSavePlanFromPersistentDataForTest: buildMysqlSavePlanFromPersistentData,
   __buildSaveStatementsFromPersistentDataForTest: buildSaveStatementsFromPersistentData,
+  __canonicalizeMysqlMailAuthorityBaselineForTest: canonicalizeMysqlMailAuthorityBaseline,
   __entityChangedForTest: entityChanged,
   __mergeMysqlSaveBaselineAfterCommitForTest: mergeMysqlSaveBaselineAfterCommit,
   __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,

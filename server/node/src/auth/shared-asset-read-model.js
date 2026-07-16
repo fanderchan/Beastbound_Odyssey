@@ -8,6 +8,9 @@ const {
   validEnvelopeId,
 } = require("./equipment-envelope-consumed-ledger");
 const {mailEquipmentEnvelopeMap} = require("./mail-claim-consistency");
+const {
+  stageMailAuthorityChanges,
+} = require("./mail-authority-state");
 
 const SHARED_ASSET_READ_VIEW_SCHEMA_VERSION = 1;
 
@@ -27,14 +30,21 @@ function applySharedAssetReadView(rootValue, viewValue) {
     next.marketConfig = structuredClone(view.marketConfig);
   }
   for (const partition of view.mailPartitions) {
-    const messages = objectOrEmpty(next.mailMessages);
-    const retained = {};
+    const messages = next.mailMessages;
+    const changes = [];
     for (const [mailId, mail] of Object.entries(messages)) {
-      if (String(mail && mail.recipientAccountId || "") !== partition.recipientAccountId) {
-        retained[mailId] = mail;
+      if (String(mail && mail.recipientAccountId || "") === partition.recipientAccountId) {
+        changes.push({mailId, after: null});
       }
     }
-    next.mailMessages = {...retained, ...partition.messages};
+    for (const [mailId, mail] of Object.entries(partition.messages)) {
+      changes.push({mailId, after: mail});
+    }
+    const staged = stageMailAuthorityChanges(messages, changes);
+    if (!staged.ok) {
+      throw sharedAssetReadViewError(`mailPartitions.${partition.recipientAccountId}`);
+    }
+    next.mailMessages = staged.messages;
   }
   if (view.consumedEquipmentEnvelopeIds.length > 0) {
     const ensured = ensureConsumedEquipmentEnvelopeIds(

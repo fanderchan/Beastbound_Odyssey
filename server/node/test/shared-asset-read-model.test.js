@@ -363,7 +363,7 @@ test("mail view replaces only the certified recipient partition", () => {
   assert.equal(Object.hasOwn(result.mailMessages, "mail_b_keep"), true);
 });
 
-test("separate applications own every mutable mail and market document", () => {
+test("separate applications isolate immutable mail and mutable market documents", () => {
   const mailView = {
     schemaVersion: 1,
     scope: "mail_read",
@@ -393,8 +393,12 @@ test("separate applications own every mutable mail and market document", () => {
   const mailB = applySharedAssetReadView(baseline(), mailView);
   assert.notEqual(mailA.mailMessages.mail_alias, mailB.mailMessages.mail_alias);
   assert.notEqual(mailA.mailMessages.mail_alias, mailView.mailPartitions[0].messages.mail_alias);
-  mailB.mailMessages.mail_alias.readAt = "2026-07-14T10:00:00.000Z";
-  mailB.mailMessages.mail_alias.items[0].count = 1;
+  assert.throws(() => {
+    mailB.mailMessages.mail_alias.readAt = "2026-07-14T10:00:00.000Z";
+  }, TypeError);
+  assert.throws(() => {
+    mailB.mailMessages.mail_alias.items[0].count = 1;
+  }, TypeError);
   assert.equal(mailA.mailMessages.mail_alias.readAt, null);
   assert.equal(mailA.mailMessages.mail_alias.items[0].count, 2);
   assert.equal(mailView.mailPartitions[0].messages.mail_alias.items[0].count, 2);

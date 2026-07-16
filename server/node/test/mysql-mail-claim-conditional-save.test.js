@@ -15,6 +15,13 @@ const {
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
+  mailAuthorityDeltaFrom,
+  mailAuthorityDiagnostics,
+  readMailAuthorityState,
+  stageMailAuthorityDelete,
+  stageMailAuthorityUpsert,
+} = require("../src/auth/mail-authority-state");
+const {
   createAsyncWriteAuthStore,
   createAuthService,
   createMemoryAuthStore,
@@ -192,12 +199,14 @@ function stageReceipt(after, overrides = {}) {
 function ordinaryPartialCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before);
-  after.mailMessages[MAIL_ID] = ordinaryMail({
+  const staged = stageMailAuthorityUpsert(after.mailMessages, ordinaryMail({
     items: [{itemId: "item_meat_small", count: 1}],
     currency: {},
     equipmentEnvelopes: [],
     schemaVersion: 2,
-  });
+  }));
+  assert.equal(staged.ok, true, staged.message || "mail update stage failed");
+  after.mailMessages = staged.messages;
   stageReceipt(after);
   return after;
 }
@@ -205,7 +214,9 @@ function ordinaryPartialCandidate(before) {
 function ordinaryFullCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before, [{itemId: "item_meat_small", count: 2}]);
-  delete after.mailMessages[MAIL_ID];
+  const staged = stageMailAuthorityDelete(after.mailMessages, MAIL_ID);
+  assert.equal(staged.ok, true, staged.message || "mail delete stage failed");
+  after.mailMessages = staged.messages;
   stageReceipt(after);
   return after;
 }
@@ -213,10 +224,12 @@ function ordinaryFullCandidate(before) {
 function equipmentPartialCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before, [{itemId: "weapon_wooden_club", count: 1}]);
-  after.mailMessages[MAIL_ID] = equipmentMail({
+  const stagedMail = stageMailAuthorityUpsert(after.mailMessages, equipmentMail({
     items: [{itemId: "weapon_wooden_club", count: 1}],
     equipmentEnvelopes: [equipmentEnvelope(ENVELOPE_ID_Z, "equip_source_z")],
-  });
+  }));
+  assert.equal(stagedMail.ok, true, stagedMail.message || "equipment mail update stage failed");
+  after.mailMessages = stagedMail.messages;
   const consumed = ensureConsumedEquipmentEnvelopeIds(
     after.consumedEquipmentEnvelopes,
     [ENVELOPE_ID_A],
@@ -230,7 +243,9 @@ function equipmentPartialCandidate(before) {
 function equipmentFullCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before, [{itemId: "weapon_wooden_club", count: 2}]);
-  delete after.mailMessages[MAIL_ID];
+  const stagedMail = stageMailAuthorityDelete(after.mailMessages, MAIL_ID);
+  assert.equal(stagedMail.ok, true, stagedMail.message || "equipment mail delete stage failed");
+  after.mailMessages = stagedMail.messages;
   const consumed = ensureConsumedEquipmentEnvelopeIds(
     after.consumedEquipmentEnvelopes,
     [ENVELOPE_ID_Z, ENVELOPE_ID_A],
@@ -355,6 +370,41 @@ test("planner certifies an ordinary full mail claim as one exact delete", () => 
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
 });
 
+test("mail claim update and delete plans do not enumerate a large untouched mailbox", () => {
+  const before = baselineAuthority();
+  for (let index = 0; index < 2000; index += 1) {
+    const mailId = `mail_claim_history_${String(index).padStart(5, "0")}`;
+    before.mailMessages[mailId] = ordinaryMail({
+      mailId,
+      title: "历史邮件",
+      items: [],
+      currency: {},
+    });
+  }
+  before.mailMessages = readMailAuthorityState(before.mailMessages).messages;
+  const beforeEnumerations = mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations;
+
+  const updateCandidate = ordinaryPartialCandidate(before);
+  const deleteCandidate = ordinaryFullCandidate(before);
+  assert.equal(mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations, beforeEnumerations);
+  assert.equal(mailAuthorityDeltaFrom(before.mailMessages, updateCandidate.mailMessages).ok, true);
+  assert.equal(mailAuthorityDeltaFrom(before.mailMessages, deleteCandidate.mailMessages).ok, true);
+  const updatePlan = buildPlan(updateCandidate, before);
+  assert.equal(mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations, beforeEnumerations);
+  const deletePlan = buildPlan(
+    deleteCandidate,
+    before,
+    claimScope({mailDisposition: "delete"}),
+  );
+
+  assert.equal(updatePlan.kind, "mail_claim_conditional_v1");
+  assert.equal(deletePlan.kind, "mail_claim_conditional_v1");
+  assert.equal(
+    mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations,
+    beforeEnumerations,
+  );
+});
+
 test("planner writes consumed equipment tombstones in canonical order with strict inserts", () => {
   const before = baselineAuthority(equipmentMail());
   const plan = buildPlan(
@@ -429,7 +479,10 @@ test("planner fails closed for broader writes, wrong scope, mail drift, or ledge
       setup() {
         const before = baselineAuthority();
         const after = ordinaryPartialCandidate(before);
-        after.mailMessages.mail_unrelated = ordinaryMail({mailId: "mail_unrelated"});
+        after.mailMessages = stageMailAuthorityUpsert(
+          after.mailMessages,
+          ordinaryMail({mailId: "mail_unrelated"}),
+        ).messages;
         return {before, after, scope: claimScope()};
       },
     },
@@ -482,7 +535,10 @@ test("planner fails closed for broader writes, wrong scope, mail drift, or ledge
       setup() {
         const before = baselineAuthority();
         const after = ordinaryPartialCandidate(before);
-        after.mailMessages[MAIL_ID].recipientAccountId = "acc_other_recipient";
+        after.mailMessages = stageMailAuthorityUpsert(after.mailMessages, {
+          ...after.mailMessages[MAIL_ID],
+          recipientAccountId: "acc_other_recipient",
+        }).messages;
         return {before, after, scope: claimScope()};
       },
     },

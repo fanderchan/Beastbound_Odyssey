@@ -4,6 +4,7 @@ const {isDeepStrictEqual} = require("node:util");
 const {
   consumedEquipmentEnvelopeLedgerDeltaFrom,
 } = require("./equipment-envelope-consumed-ledger");
+const {mailAuthorityDeltaFrom} = require("./mail-authority-state");
 
 function buildRowLocalMailClaimConsistencyScope(options = {}) {
   if (options.methodName !== "claimMailAttachments"
@@ -25,6 +26,10 @@ function buildRowLocalMailClaimConsistencyScope(options = {}) {
     && Object.hasOwn(candidate.mailMessages, mailId));
   const nextMail = hasNextMail ? objectOrEmpty(candidate.mailMessages[mailId]) : null;
   const mailDisposition = hasNextMail ? "update" : "delete";
+  const mailDelta = mailAuthorityDeltaFrom(before.mailMessages, candidate.mailMessages);
+  const exactMailChange = mailDelta.ok && mailDelta.changes.length === 1
+    ? mailDelta.changes[0]
+    : null;
   const claimedEnvelopeIds = removedMailEquipmentEnvelopeIds(beforeMail, nextMail);
   const consumedDelta = consumedEquipmentEnvelopeLedgerDeltaFrom(
     before.consumedEquipmentEnvelopes,
@@ -44,6 +49,11 @@ function buildRowLocalMailClaimConsistencyScope(options = {}) {
     || String(nextProfile.playerId || "") !== playerId
     || String(beforeMail.mailId || "") !== mailId
     || String(beforeMail.recipientAccountId || "") !== accountId
+    || exactMailChange === null
+    || exactMailChange.mailId !== mailId
+    || exactMailChange.disposition !== mailDisposition
+    || exactMailChange.before !== beforeMail
+    || exactMailChange.after !== nextMail
     || (nextMail !== null && (
       String(nextMail.mailId || "") !== mailId
       || String(nextMail.recipientAccountId || "") !== accountId

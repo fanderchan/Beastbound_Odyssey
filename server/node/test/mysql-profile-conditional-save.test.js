@@ -14,6 +14,10 @@ const {
   durableMutationReceiptCount,
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
+const {
+  mailAuthorityDiagnostics,
+  readMailAuthorityState,
+} = require("../src/auth/mail-authority-state");
 const mysqlStoreModule = require("../src/mysql-store");
 
 const {
@@ -214,6 +218,39 @@ test("planner selects v2 only for one scoped profile r to r+1 plus its matching 
     "receipt count metadata must not put a full server_state document on the conditional fast path",
   );
   assert.equal(Array.isArray(plan.statements), false);
+});
+
+test("profile planner does not enumerate an untouched canonical mailbox", () => {
+  const before = profileState();
+  const mailbox = {};
+  for (let index = 0; index < 2000; index += 1) {
+    const mailId = `mail_planner_untouched_${String(index).padStart(5, "0")}`;
+    mailbox[mailId] = {
+      mailId,
+      senderAccountId: "system_capacity",
+      recipientAccountId: `acc_mailbox_${index % 10}`,
+      title: "容量邮件",
+      body: "未触碰邮件不得进入 profile planner diff。",
+      items: [],
+      createdAt: UPDATED_AT_1,
+      readAt: null,
+      schemaVersion: 1,
+    };
+  }
+  const canonical = readMailAuthorityState(mailbox);
+  assert.equal(canonical.ok, true);
+  before.mailMessages = canonical.messages;
+  const beforeEnumerations = mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations;
+
+  const after = eligibleProfileState(before);
+  const plan = buildPlan(after, before, rowLocalProfileScope());
+
+  assert.equal(plan.kind, "profile_conditional_v2");
+  assert.equal(after.mailMessages, before.mailMessages);
+  assert.equal(
+    mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations,
+    beforeEnumerations,
+  );
 });
 
 test("planner falls back when row-local scope is missing or does not match the receipt", async (t) => {

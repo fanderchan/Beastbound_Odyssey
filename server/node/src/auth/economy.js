@@ -40,6 +40,7 @@ const {
   buildEquipmentMarketListing,
   publicMarketListingFacts,
 } = require("./market-listing-state");
+const {stageMailAuthorityUpsert} = require("./mail-authority-state");
 
 const TRADE_OFFER_TTL_MS = 2 * 60 * 1000;
 const TRADE_MAX_DISTANCE_CELLS = 2;
@@ -570,12 +571,20 @@ function createEconomyDomain(ctx) {
     });
     let saleMail = null;
     if (tutorialSale && questMessages.length > 0) {
-      saleMail = createTutorialMarketSaleMail(
+      const saleMailResult = createTutorialMarketSaleMail(
         prepared.data,
         prepared.account,
         listing,
         tutorialSaleMailIdentity.mailId,
       );
+      if (!saleMailResult.ok) {
+        return fail(
+          saleMailResult.code,
+          saleMailResult.message,
+          profilePayload(prepared, prepared.profile),
+        );
+      }
+      saleMail = saleMailResult.mail;
       delete prepared.data.marketListings[listingId];
     }
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
@@ -730,7 +739,7 @@ function createEconomyDomain(ctx) {
     data.consumedEquipmentEnvelopes = nextConsumedLedger;
     data.marketConfig = config;
     const buyerPersisted = persistProfileForAccount(data, resolved.account, buyerPrepared.binding, buyerProfile, now);
-    const saleMail = createMarketSaleMail(
+    const saleMailResult = createMarketSaleMail(
       data,
       seller,
       listing,
@@ -738,6 +747,13 @@ function createEconomyDomain(ctx) {
       sellerReceives,
       saleMailIdentity.mailId,
     );
+    if (!saleMailResult.ok) {
+      return fail(saleMailResult.code, saleMailResult.message, {
+        listing: publicMarketListing(listing, data),
+        ...marketStatePayload(data, resolved.account),
+      });
+    }
+    const saleMail = saleMailResult.mail;
     delete data.marketListings[listingId];
     save(data);
     return ok({
@@ -3009,7 +3025,6 @@ function createEconomyDomain(ctx) {
   }
 
   function createMarketSaleMail(data, seller, listing, tax, sellerReceives, mailId) {
-    data.mailMessages = objectMap(data.mailMessages);
     const currencyLabel = shopCurrencyLabel(listing.currency);
     const itemText = itemAmountText([{itemId: listing.itemId, count: listing.count}]);
     const totalPrice = marketListingTotalPrice(listing);
@@ -3036,12 +3051,15 @@ function createEconomyDomain(ctx) {
       readAt: null,
       schemaVersion: 1,
     };
-    data.mailMessages[mail.mailId] = mail;
-    return mail;
+    const staged = stageMailAuthorityUpsert(data.mailMessages, mail);
+    if (!staged.ok) {
+      return staged;
+    }
+    data.mailMessages = staged.messages;
+    return {ok: true, mail: staged.mail};
   }
 
   function createTutorialMarketSaleMail(data, seller, listing, mailId) {
-    data.mailMessages = objectMap(data.mailMessages);
     const sellerReceives = marketListingTotalPrice(listing);
     const mail = {
       mailId,
@@ -3064,8 +3082,12 @@ function createEconomyDomain(ctx) {
       readAt: null,
       schemaVersion: 1,
     };
-    data.mailMessages[mail.mailId] = mail;
-    return mail;
+    const staged = stageMailAuthorityUpsert(data.mailMessages, mail);
+    if (!staged.ok) {
+      return staged;
+    }
+    data.mailMessages = staged.messages;
+    return {ok: true, mail: staged.mail};
   }
 
   function marketCurrencyAttachment(currency, amount) {

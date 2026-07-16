@@ -109,6 +109,9 @@ function durableBusinessProjection(data, options) {
       projection.consumedEquipmentEnvelopes,
     );
   }
+  if (typeof options.mailAuthoritySignature === "function") {
+    projection.mailMessages = options.mailAuthoritySignature(projection.mailMessages);
+  }
   projection.mutationReceipts = durableMutationReceiptSignature(projection.mutationReceipts);
   return projection;
 }

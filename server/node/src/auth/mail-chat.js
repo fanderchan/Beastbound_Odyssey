@@ -17,6 +17,10 @@ const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("./equipment-envelope-consumed-ledger");
 const {authorityRootJournalForMutation} = require("./authority-root-clone");
+const {
+  stageMailAuthorityDelete,
+  stageMailAuthorityUpsert,
+} = require("./mail-authority-state");
 
 function createMailChatDomain(ctx) {
   const {
@@ -234,7 +238,11 @@ function createMailChatDomain(ctx) {
     if (senderProfile && senderBinding) {
       persistProfileForAccount(data, resolved.account, senderBinding, senderProfile, now);
     }
-    data.mailMessages[mail.mailId] = mail;
+    const stagedMail = stageMailAuthorityUpsert(data.mailMessages, mail);
+    if (!stagedMail.ok) {
+      return fail(stagedMail.code, stagedMail.message);
+    }
+    data.mailMessages = stagedMail.messages;
     save(data);
     return ok({
       mail: publicMail(mail),
@@ -282,7 +290,7 @@ function createMailChatDomain(ctx) {
       return fail(resolved.code, resolved.message);
     }
     const normalizedMailId = String(mailId || "").trim();
-    const mail = data.mailMessages[normalizedMailId];
+    let mail = data.mailMessages[normalizedMailId];
     if (!mail) {
       return fail("mail_missing", "邮件不存在。");
     }
@@ -294,8 +302,15 @@ function createMailChatDomain(ctx) {
       return fail("mail_missing", "邮件不存在。");
     }
     if (!mail.readAt) {
-      mail.readAt = isoNow(now);
-      data.mailMessages[normalizedMailId] = mail;
+      const stagedMail = stageMailAuthorityUpsert(data.mailMessages, {
+        ...mail,
+        readAt: isoNow(now),
+      });
+      if (!stagedMail.ok) {
+        return fail(stagedMail.code, stagedMail.message);
+      }
+      data.mailMessages = stagedMail.messages;
+      mail = stagedMail.mail;
       save(data);
     }
     return ok({
@@ -448,9 +463,23 @@ function createMailChatDomain(ctx) {
     }
     data.consumedEquipmentEnvelopes = consumed.ledger;
     if (!updatedMail.empty) {
-      data.mailMessages[normalizedMailId] = updatedMail.mail;
+      const stagedMail = stageMailAuthorityUpsert(data.mailMessages, updatedMail.mail);
+      if (!stagedMail.ok) {
+        return fail(stagedMail.code, stagedMail.message, {
+          mail: publicMail(mail),
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      data.mailMessages = stagedMail.messages;
     } else {
-      delete data.mailMessages[normalizedMailId];
+      const stagedMail = stageMailAuthorityDelete(data.mailMessages, normalizedMailId);
+      if (!stagedMail.ok) {
+        return fail(stagedMail.code, stagedMail.message, {
+          mail: publicMail(mail),
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        });
+      }
+      data.mailMessages = stagedMail.messages;
     }
     const questMessages = recordAndClaimQuest(profile, {
       type: "claim_mail",

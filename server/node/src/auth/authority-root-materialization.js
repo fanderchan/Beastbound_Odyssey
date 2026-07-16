@@ -7,6 +7,9 @@ const {
 const {
   materializeDurableMutationReceipts,
 } = require("./durable-mutation-state");
+const {
+  materializeMailAuthorityState,
+} = require("./mail-authority-state");
 
 // Online authority roots may contain immutable Proxy-backed MVCC views. Every
 // serialization, backup and migration boundary must turn those views back into
@@ -22,6 +25,10 @@ function materializeAuthorityRootLargeCollections(data) {
     ? cloneJson(ledger.ledger)
     : cloneJson(root.consumedEquipmentEnvelopes);
   root.mutationReceipts = materializeDurableMutationReceipts(root.mutationReceipts);
+  const mailMessages = materializeMailAuthorityState(root.mailMessages);
+  root.mailMessages = mailMessages.ok
+    ? mailMessages.messages
+    : cloneJson(root.mailMessages);
   return root;
 }
 

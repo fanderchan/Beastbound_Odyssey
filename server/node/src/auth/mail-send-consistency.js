@@ -5,6 +5,9 @@ const {
   consumedEquipmentEnvelopeLedgerDeltaFrom,
 } = require("./equipment-envelope-consumed-ledger");
 const {readMailAttachmentState} = require("./mail-attachment-state");
+const {
+  mailAuthorityDeltaFrom,
+} = require("./mail-authority-state");
 
 const MAIL_SEND_SCOPE_KIND = "row_local_mail_send_v1";
 const MAIL_SEND_MODE_TEXT = "text";
@@ -483,6 +486,24 @@ function senderProfileUnchanged(before, candidate, accountId) {
 }
 
 function singleNewMailAddition(beforeValue, candidateValue) {
+  const authorityDelta = mailAuthorityDeltaFrom(beforeValue, candidateValue);
+  if (authorityDelta.ok) {
+    if (authorityDelta.changes.length !== 1) {
+      return null;
+    }
+    const change = authorityDelta.changes[0];
+    const beforeMail = beforeValue && beforeValue[change.mailId];
+    if (
+      change.disposition !== "insert"
+      || change.before !== null
+      || !change.after
+      || canonicalIdentity(change.after.mailId) !== change.mailId
+      || (beforeMail && !isDeepStrictEqual(beforeMail, change.before))
+    ) {
+      return null;
+    }
+    return {mailId: change.mailId, mail: change.after};
+  }
   const before = objectOrEmpty(beforeValue);
   const candidate = objectOrEmpty(candidateValue);
   const beforeIds = Object.keys(before);
@@ -534,6 +555,7 @@ function objectOrEmpty(value) {
 
 module.exports = {
   __certifiedOrdinaryAttachmentProfileChangeForTest: certifiedOrdinaryAttachmentProfileChange,
+  __singleNewMailAdditionForTest: singleNewMailAddition,
   MAIL_SEND_MODE_ORDINARY_ITEMS,
   MAIL_SEND_MODE_TEXT,
   MAIL_SEND_SCOPE_KIND,

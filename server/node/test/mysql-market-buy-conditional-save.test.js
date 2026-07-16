@@ -10,6 +10,11 @@ const {
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
 const {
+  mailAuthorityDiagnostics,
+  readMailAuthorityState,
+  stageMailAuthorityUpsert,
+} = require("../src/auth/mail-authority-state");
+const {
   createAsyncWriteAuthStore,
   createAuthService,
   createMemoryAuthStore,
@@ -209,7 +214,12 @@ function buyCandidate(before, options = {}) {
     },
   };
   delete after.marketListings[LISTING_ID];
-  after.mailMessages[mailId] = saleMail({mailId, taxAmount, currency});
+  const stagedMail = stageMailAuthorityUpsert(
+    after.mailMessages,
+    saleMail({mailId, taxAmount, currency}),
+  );
+  assert.equal(stagedMail.ok, true, stagedMail.message || "market sale mail stage failed");
+  after.mailMessages = stagedMail.messages;
   if (taxAmount > 0) {
     after.marketConfig = {
       ...before.marketConfig,
@@ -375,6 +385,24 @@ test("planner selects one cross-account conditional transaction for a certified 
   );
 });
 
+test("market buy sale-mail planning does not enumerate a large untouched mailbox", () => {
+  const before = baselineAuthority();
+  for (let index = 0; index < 2000; index += 1) {
+    const mailId = `mail_market_history_${String(index).padStart(5, "0")}`;
+    before.mailMessages[mailId] = saleMail({mailId});
+  }
+  before.mailMessages = readMailAuthorityState(before.mailMessages).messages;
+  const beforeEnumerations = mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations;
+
+  const plan = buildPlan(buyCandidate(before), before);
+
+  assert.equal(plan.kind, "market_buy_conditional_v1");
+  assert.equal(
+    mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations,
+    beforeEnumerations,
+  );
+});
+
 test("planner keeps market buy conditional when one expired same-operation receipt is replaced", () => {
   const before = baselineAuthority();
   before.mutationReceipts = canonicalDurableMutationReceipts({
@@ -430,10 +458,10 @@ test("planner fails closed when an ordinary purchase carries a broader or uncert
     {
       name: "another mail is inserted",
       mutate(_before, after) {
-        after.mailMessages.mail_unrelated = {
-          ...saleMail({mailId: "mail_unrelated"}),
-          mailId: "mail_unrelated",
-        };
+        after.mailMessages = stageMailAuthorityUpsert(
+          after.mailMessages,
+          saleMail({mailId: "mail_unrelated"}),
+        ).messages;
       },
     },
     {
@@ -482,16 +510,19 @@ test("planner fails closed when an ordinary purchase carries a broader or uncert
     {
       name: "sale mail recipient differs",
       mutate(_before, after) {
-        after.mailMessages[SALE_MAIL_ID] = saleMail({recipientAccountId: BUYER_ACCOUNT_ID});
+        after.mailMessages = stageMailAuthorityUpsert(
+          after.mailMessages,
+          saleMail({recipientAccountId: BUYER_ACCOUNT_ID}),
+        ).messages;
       },
     },
     {
       name: "sale mail proceeds differ",
       mutate(_before, after) {
-        after.mailMessages[SALE_MAIL_ID] = {
+        after.mailMessages = stageMailAuthorityUpsert(after.mailMessages, {
           ...after.mailMessages[SALE_MAIL_ID],
           currency: {stoneCoins: 40},
-        };
+        }).messages;
       },
     },
     {

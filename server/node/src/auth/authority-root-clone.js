@@ -8,9 +8,14 @@ const {
   durableMutationReceiptLedgerCanDescendFrom,
   isCanonicalDurableMutationReceipts,
 } = require("./durable-mutation-state");
+const {
+  isCanonicalMailAuthorityState,
+  mailAuthorityStateCanDescendFrom,
+} = require("./mail-authority-state");
 
 const CONSUMED_EQUIPMENT_ENVELOPES_KEY = "consumedEquipmentEnvelopes";
 const MUTATION_RECEIPTS_KEY = "mutationReceipts";
+const MAIL_MESSAGES_KEY = "mailMessages";
 const IMMUTABLE_JOURNAL_ARRAY_KEYS = Object.freeze([
   "battleRecords",
   "battleTrace",
@@ -66,7 +71,7 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-// The two large authority ledgers expose immutable MVCC views. Normalized
+// The large authority ledgers and mailbox expose immutable MVCC views. Normalized
 // bounded journals freeze both entries and containers; writers obtain a
 // request-private container through authorityRootJournalForMutation(). Sharing
 // those immutable containers between request-private candidates avoids copying
@@ -83,8 +88,10 @@ function cloneAuthorityRoot(value) {
   }
   const ledger = value[CONSUMED_EQUIPMENT_ENVELOPES_KEY];
   const receipts = value[MUTATION_RECEIPTS_KEY];
+  const mailMessages = value[MAIL_MESSAGES_KEY];
   const shareLedger = isCanonicalConsumedEquipmentEnvelopeLedger(ledger);
   const shareReceipts = isCanonicalDurableMutationReceipts(receipts);
+  const shareMailMessages = isCanonicalMailAuthorityState(mailMessages);
   const trustedRoot = isTrustedAuthorityRoot(value);
   const sharedJournalArrays = trustedRoot
     ? IMMUTABLE_JOURNAL_ARRAY_KEYS.filter((key) => immutableJournalCanShare(key, value[key], value))
@@ -101,6 +108,7 @@ function cloneAuthorityRoot(value) {
   if (
     !shareLedger
     && !shareReceipts
+    && !shareMailMessages
     && sharedJournalArrays.length === 0
     && sharedRecordMaps.length === 0
     && sharedIdentityRecordMaps.length === 0
@@ -114,6 +122,9 @@ function cloneAuthorityRoot(value) {
   }
   if (shareReceipts) {
     delete withoutSharedLedgers[MUTATION_RECEIPTS_KEY];
+  }
+  if (shareMailMessages) {
+    delete withoutSharedLedgers[MAIL_MESSAGES_KEY];
   }
   for (const key of [
     ...sharedJournalArrays,
@@ -129,6 +140,9 @@ function cloneAuthorityRoot(value) {
   }
   if (shareReceipts) {
     cloned[MUTATION_RECEIPTS_KEY] = receipts;
+  }
+  if (shareMailMessages) {
+    cloned[MAIL_MESSAGES_KEY] = mailMessages;
   }
   for (const key of sharedJournalArrays) {
     cloned[key] = value[key];
@@ -698,6 +712,9 @@ function markAuthorityRootTrusted(value) {
     TRUSTED_AUTHORITY_ROOTS.set(value, {
       consumedEquipmentEnvelopes: value[CONSUMED_EQUIPMENT_ENVELOPES_KEY],
       mutationReceipts: value[MUTATION_RECEIPTS_KEY],
+      mailMessages: isCanonicalMailAuthorityState(value[MAIL_MESSAGES_KEY])
+        ? value[MAIL_MESSAGES_KEY]
+        : null,
       playerPositions: playerPositionsCertified ? playerPositions : null,
       serviceEvents: authorityRootServiceEventWindowCanShare(serviceEvents) ? serviceEvents : null,
     });
@@ -717,6 +734,7 @@ function isTrustedAuthorityRoot(value) {
   }
   const ledger = value[CONSUMED_EQUIPMENT_ENVELOPES_KEY];
   const receipts = value[MUTATION_RECEIPTS_KEY];
+  const mailMessages = value[MAIL_MESSAGES_KEY];
   return (
     isCanonicalConsumedEquipmentEnvelopeLedger(ledger)
     && isCanonicalDurableMutationReceipts(receipts)
@@ -728,6 +746,10 @@ function isTrustedAuthorityRoot(value) {
       trusted.mutationReceipts,
       receipts,
     )
+    && (trusted.mailMessages === null || (
+      isCanonicalMailAuthorityState(mailMessages)
+      && mailAuthorityStateCanDescendFrom(trusted.mailMessages, mailMessages)
+    ))
   );
 }
 
@@ -745,6 +767,9 @@ function authorityRootCloneDiagnostics(value) {
   }
   if (isCanonicalDurableMutationReceipts(value[MUTATION_RECEIPTS_KEY])) {
     shared.add(MUTATION_RECEIPTS_KEY);
+  }
+  if (isCanonicalMailAuthorityState(value[MAIL_MESSAGES_KEY])) {
+    shared.add(MAIL_MESSAGES_KEY);
   }
   if (isTrustedAuthorityRoot(value)) {
     for (const key of IMMUTABLE_JOURNAL_ARRAY_KEYS) {
