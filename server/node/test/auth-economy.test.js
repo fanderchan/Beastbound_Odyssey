@@ -715,7 +715,13 @@ test("market listings sell through with default tax", () => {
   assert.equal(claimed.ok, true);
   assert.equal(claimed.claim.currency.stoneCoins, 39);
   assert.equal(claimed.profile.stoneCoins, 159);
-  assert.equal(claimed.mail, null);
+  assert.equal(claimed.mail.mailId, saleMail.mailId);
+  assert.deepEqual(claimed.mail.items, []);
+  assert.deepEqual(claimed.mail.equipmentEnvelopes, []);
+  assert.deepEqual(claimed.mail.currency, {});
+  assert.equal(Number.isFinite(Date.parse(claimed.mail.settledAt)), true);
+  assert.equal(Date.parse(claimed.mail.settledAt) >= Date.parse(claimed.mail.createdAt), true);
+  assert.equal(service.snapshot().mailMessages[saleMail.mailId].settledAt, claimed.mail.settledAt);
 });
 
 test("market reads keep a frozen legacy profile without quest state read-only", () => {

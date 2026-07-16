@@ -158,11 +158,8 @@ function mergeScopedCommit(backing, nextData, saveOptions) {
     delete current.marketListings[scope.listingId];
   } else if (scope.kind === "row_local_mail_claim_v1") {
     mergeActorProfile();
-    if (scope.mailDisposition === "delete") {
-      delete current.mailMessages[scope.mailId];
-    } else {
-      current.mailMessages[scope.mailId] = nextData.mailMessages[scope.mailId];
-    }
+    assert.equal(scope.mailDisposition, "update");
+    current.mailMessages[scope.mailId] = nextData.mailMessages[scope.mailId];
     for (const envelopeId of scope.claimedEnvelopeIds || []) {
       current.consumedEquipmentEnvelopes[envelopeId] = {
         schemaVersion: 1,
@@ -197,6 +194,20 @@ function backpackItemCount(profileDocument, itemId) {
     (total, slot) => total + (slot && slot.itemId === itemId ? Number(slot.count || 0) : 0),
     0,
   );
+}
+
+function assertSettledReceiptMail(mail, expectedMailId) {
+  assert.ok(mail);
+  assert.equal(mail.mailId, expectedMailId);
+  assert.deepEqual(mail.items, []);
+  assert.deepEqual(mail.equipmentEnvelopes || [], []);
+  assert.deepEqual(mail.currency, {});
+  const createdAtMs = Date.parse(String(mail.createdAt || ""));
+  const settledAtMs = Date.parse(String(mail.settledAt || ""));
+  assert.equal(Number.isFinite(createdAtMs), true);
+  assert.equal(Number.isFinite(settledAtMs), true);
+  assert.equal(settledAtMs >= createdAtMs, true);
+  return mail;
 }
 
 function seedBackpackEquipment(service, token) {
@@ -605,7 +616,7 @@ test("equipment mail refreshes the claimed owner's profile and mailbox before fo
   assert.equal(observedRequest.includeProfileMailPartitions, true);
   assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
   const finalSnapshot = backing.load();
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, firstSend.mail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[firstSend.mail.mailId], firstSend.mail.mailId);
   assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
   assert.ok(finalSnapshot.mailMessages[forwarded.mail.mailId]);
   const finalForwarder = profileForAccount(finalSnapshot, forwarder.account.accountId).profile;
@@ -1005,7 +1016,10 @@ test("a stale Node reads a remote listing, buys it, then the seller reads and cl
   );
   assert.equal(claimed.ok, true, JSON.stringify(claimed));
   assert.equal(claimed.claim.currency.stoneCoins, 19);
-  assert.equal(Object.hasOwn(scenario.backing.load().mailMessages, saleMail.mailId), false);
+  assertSettledReceiptMail(
+    scenario.backing.load().mailMessages[saleMail.mailId],
+    saleMail.mailId,
+  );
 
   const finalSnapshot = scenario.backing.load();
   const initialBuyer = profileForAccount(scenario.afterListing, scenario.buyer.account.accountId);
@@ -1021,7 +1035,7 @@ test("a stale Node reads a remote listing, buys it, then the seller reads and cl
   assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, "op_shared_read_buy_0001"), true);
   assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, "op_shared_read_claim_0001"), true);
   assert.equal(Object.hasOwn(finalSnapshot.marketListings, scenario.listingId), false);
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[saleMail.mailId], saleMail.mailId);
 });
 
 test("market buy id alias still reads a listing created on another Node", async () => {
@@ -1353,7 +1367,8 @@ test("a second live Node replays a remote mail claim without awarding attachment
   const initialSeller = profileForAccount(ready, scenario.seller.account.accountId);
   const finalSeller = profileForAccount(finalSnapshot, scenario.seller.account.accountId);
   assert.equal(finalSeller.profile.stoneCoins, initialSeller.profile.stoneCoins + 19);
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[saleMail.mailId], saleMail.mailId);
+  assert.deepEqual(replay.mail, first.mail);
   assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, operation.operationId), true);
 });
 
@@ -1424,13 +1439,13 @@ test("marking mail read cannot resurrect attachments claimed on another Node", a
     "markMailRead",
     [scenario.seller.session.token, saleMail.mailId],
     {
-      operationId: "op_shared_read_mail_mark_missing_0001",
+      operationId: "op_shared_read_mail_mark_settled_0001",
       requestHash: "5".repeat(64),
       actionId: "POST /mail/:id/read",
     },
   );
-  assert.equal(marked.ok, false, JSON.stringify(marked));
-  assert.equal(marked.code, "mail_missing");
+  assert.equal(marked.ok, true, JSON.stringify(marked));
+  assertSettledReceiptMail(marked.mail, saleMail.mailId);
   assert.equal(saveCalls, 0);
   assert.deepEqual(observedReadRequest, {
     schemaVersion: 1,
@@ -1440,7 +1455,7 @@ test("marking mail read cannot resurrect attachments claimed on another Node", a
     includeProfileMailPartitions: false,
   });
   const finalSnapshot = backing.load();
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[saleMail.mailId], saleMail.mailId);
   assert.equal(
     profileForAccount(finalSnapshot, scenario.seller.account.accountId).profile.stoneCoins,
     sellerCoinsAfterClaim,
@@ -1568,7 +1583,7 @@ test("market mutation refreshes a claimed equipment owner's mailbox with its pro
     && instance.transferProvenance.originEnvelopeId === originEnvelopeId
   ));
   assert.ok(claimedInstance);
-  assert.equal(Object.hasOwn(afterClaim.mailMessages, sent.mail.mailId), false);
+  assertSettledReceiptMail(afterClaim.mailMessages[sent.mail.mailId], sent.mail.mailId);
   assert.equal(Object.hasOwn(afterClaim.consumedEquipmentEnvelopes, originEnvelopeId), true);
 
   let savedOptions = null;
@@ -1598,7 +1613,7 @@ test("market mutation refreshes a claimed equipment owner's mailbox with its pro
   assert.equal(listed.ok, true, JSON.stringify(listed));
   assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
   const finalSnapshot = backing.load();
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, sent.mail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[sent.mail.mailId], sent.mail.mailId);
   assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
   assert.ok(finalSnapshot.marketListings[listed.listing.listingId]);
 });
@@ -1681,7 +1696,7 @@ test("equipment bank deposit reads a remotely claimed mail owner before legacy s
   assert.equal(savedOptions && savedOptions.consistencyScope, undefined);
   const finalSnapshot = backing.load();
   const finalProfile = profileForAccount(finalSnapshot, recipient.account.accountId).profile;
-  assert.equal(Object.hasOwn(finalSnapshot.mailMessages, sent.mail.mailId), false);
+  assertSettledReceiptMail(finalSnapshot.mailMessages[sent.mail.mailId], sent.mail.mailId);
   assert.equal(Object.hasOwn(finalSnapshot.consumedEquipmentEnvelopes, originEnvelopeId), true);
   assert.equal(Object.hasOwn(finalProfile.equipmentInstances, claimedInstance.instanceId), false);
   assert.equal(finalProfile.bank.slots[0].itemId, "weapon_wooden_club");

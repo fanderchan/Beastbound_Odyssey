@@ -33,6 +33,11 @@ static func is_unread(message: Dictionary) -> bool:
 	return not _is_read(message)
 
 
+static func is_settled(message: Dictionary) -> bool:
+	var settled_at = message.get("settledAt", null)
+	return settled_at is String and (settled_at as String).strip_edges() != ""
+
+
 static func replace_page(_state: Dictionary, page: Dictionary) -> Dictionary:
 	var page_messages := _normalized_messages(page.get("messages", []))
 	return _state_from_page(page_messages, page, _count_unread(page_messages))
@@ -167,6 +172,17 @@ static func self_check() -> Dictionary:
 	_expect(unread_count(read_twice) == 2, "重复已读错误扣减总未读数", errors)
 	var claimed := apply_claim_mail(read_twice, null, "mail_page_c")
 	_expect(messages(claimed).size() == 2 and unread_count(claimed) == 1, "删除未读邮件没有同步总未读数", errors)
+	var settled := apply_claim_mail(claimed, {
+		"mailId": "mail_page_a",
+		"title": "甲",
+		"items": [],
+		"currency": {},
+		"readAt": "2099-01-01T00:00:03.000Z",
+		"settledAt": "2099-01-01T00:00:03.000Z",
+	}, "mail_page_a")
+	_expect(messages(settled).size() == 2, "结算回执被错误删除", errors)
+	_expect(is_settled(messages(settled)[0]), "结算回执没有原位保留", errors)
+	_expect(unread_count(settled) == 1, "结算回执重复扣减未读数", errors)
 	var reset := reset_for_account()
 	_expect(messages(reset).is_empty() and not has_more(reset) and unread_count(reset) == 0, "账号重置没有清空分页状态", errors)
 	return {"ok": errors.is_empty(), "errors": errors}

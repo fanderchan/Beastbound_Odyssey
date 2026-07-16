@@ -18,7 +18,6 @@ const {
   mailAuthorityDeltaFrom,
   mailAuthorityDiagnostics,
   readMailAuthorityState,
-  stageMailAuthorityDelete,
   stageMailAuthorityUpsert,
 } = require("../src/auth/mail-authority-state");
 const {
@@ -134,6 +133,57 @@ function equipmentMail(overrides = {}) {
   });
 }
 
+function publicEquipmentEnvelope(envelope) {
+  const instanceState = structuredClone(envelope.instanceState || {});
+  delete instanceState.source;
+  delete instanceState.transferProvenance;
+  delete instanceState.qaAssetSample;
+  return {
+    schemaVersion: envelope.schemaVersion,
+    envelopeId: envelope.envelopeId,
+    itemId: envelope.itemId,
+    instanceState,
+    stateFingerprint: envelope.stateFingerprint,
+  };
+}
+
+function publicMailDocument(mail) {
+  const result = {
+    mailId: mail.mailId,
+    mailKind: String(mail.mailKind || ""),
+    senderUsername: mail.senderUsername,
+    senderDisplayName: mail.senderDisplayName,
+    recipientUsername: mail.recipientUsername,
+    recipientDisplayName: mail.recipientDisplayName,
+    title: mail.title,
+    body: mail.body,
+    items: structuredClone(mail.items || []),
+    currency: structuredClone(mail.currency || {}),
+    createdAt: mail.createdAt,
+    readAt: typeof mail.readAt === "string" && mail.readAt !== "" ? mail.readAt : null,
+    settledAt: typeof mail.settledAt === "string" && mail.settledAt !== ""
+      ? mail.settledAt
+      : null,
+    schemaVersion: Number(mail.schemaVersion) === 2 ? 2 : 1,
+  };
+  if (result.schemaVersion === 2 || Object.hasOwn(mail, "equipmentEnvelopes")) {
+    result.equipmentEnvelopes = (mail.equipmentEnvelopes || []).map(publicEquipmentEnvelope);
+  }
+  return result;
+}
+
+function settledReceiptMail(mail, settledAt = UPDATED_AT_2) {
+  return {
+    ...structuredClone(mail),
+    items: [],
+    currency: {},
+    equipmentEnvelopes: [],
+    readAt: typeof mail.readAt === "string" && mail.readAt !== "" ? mail.readAt : settledAt,
+    settledAt,
+    schemaVersion: 2,
+  };
+}
+
 function baselineAuthority(mail = ordinaryMail()) {
   return {
     schemaVersion: 1,
@@ -189,9 +239,15 @@ function applyProfileClaim(after, before, addedItems = [{itemId: "item_meat_smal
 }
 
 function stageReceipt(after, overrides = {}) {
+  const response = overrides.response || {
+    ok: true,
+    operationId: OPERATION_ID,
+    claim: {mailId: MAIL_ID},
+    mail: publicMailDocument(after.mailMessages[MAIL_ID]),
+  };
   after.mutationReceipts = stageDurableMutationReceipt(
     after.mutationReceipts,
-    claimReceipt(overrides),
+    claimReceipt({...overrides, response}),
     {nowMs: Date.parse(UPDATED_AT_2)},
   );
 }
@@ -214,8 +270,11 @@ function ordinaryPartialCandidate(before) {
 function ordinaryFullCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before, [{itemId: "item_meat_small", count: 2}]);
-  const staged = stageMailAuthorityDelete(after.mailMessages, MAIL_ID);
-  assert.equal(staged.ok, true, staged.message || "mail delete stage failed");
+  const staged = stageMailAuthorityUpsert(
+    after.mailMessages,
+    settledReceiptMail(before.mailMessages[MAIL_ID]),
+  );
+  assert.equal(staged.ok, true, staged.message || "mail settlement update stage failed");
   after.mailMessages = staged.messages;
   stageReceipt(after);
   return after;
@@ -243,8 +302,11 @@ function equipmentPartialCandidate(before) {
 function equipmentFullCandidate(before) {
   const after = cloneAuthorityRoot(before);
   applyProfileClaim(after, before, [{itemId: "weapon_wooden_club", count: 2}]);
-  const stagedMail = stageMailAuthorityDelete(after.mailMessages, MAIL_ID);
-  assert.equal(stagedMail.ok, true, stagedMail.message || "equipment mail delete stage failed");
+  const stagedMail = stageMailAuthorityUpsert(
+    after.mailMessages,
+    settledReceiptMail(before.mailMessages[MAIL_ID]),
+  );
+  assert.equal(stagedMail.ok, true, stagedMail.message || "equipment mail settlement update stage failed");
   after.mailMessages = stagedMail.messages;
   const consumed = ensureConsumedEquipmentEnvelopeIds(
     after.consumedEquipmentEnvelopes,
@@ -289,7 +351,8 @@ function operationKeys(plan, field) {
 
 test("planner certifies an ordinary partial mail claim as one exact row-local update", () => {
   const before = baselineAuthority();
-  const plan = buildPlan(ordinaryPartialCandidate(before), before);
+  const candidate = ordinaryPartialCandidate(before);
+  const plan = buildPlan(candidate, before);
 
   assert.equal(plan.kind, "mail_claim_conditional_v1");
   assert.equal(plan.globalRevisionFence, false);
@@ -317,6 +380,11 @@ test("planner certifies an ordinary partial mail claim as one exact row-local up
   assert.match(plan.writes[2].sql, /^UPDATE mail_messages\b/i);
   assert.equal(plan.writes.every((write) => write.expectedAffectedRows === 1), true);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+  assert.equal(Object.hasOwn(candidate.mailMessages[MAIL_ID], "settledAt"), false);
+  assert.deepEqual(
+    candidate.mutationReceipts[OPERATION_ID].response.mail,
+    publicMailDocument(candidate.mailMessages[MAIL_ID]),
+  );
 });
 
 test("planner keeps mail claim conditional when one expired same-operation receipt is replaced", () => {
@@ -345,16 +413,14 @@ test("planner keeps mail claim conditional when one expired same-operation recei
   );
 });
 
-test("planner certifies an ordinary full mail claim as one exact delete", () => {
+test("planner certifies an ordinary full mail claim as one exact settled receipt update", () => {
   const before = baselineAuthority();
-  const plan = buildPlan(
-    ordinaryFullCandidate(before),
-    before,
-    claimScope({mailDisposition: "delete"}),
-  );
+  const candidate = ordinaryFullCandidate(before);
+  const plan = buildPlan(candidate, before);
+  const settledMail = candidate.mailMessages[MAIL_ID];
 
   assert.equal(plan.kind, "mail_claim_conditional_v1");
-  assert.equal(plan.mailDisposition, "delete");
+  assert.equal(plan.mailDisposition, "update");
   assert.deepEqual(operationResources(plan, "locks"), ["profile_binding", "profile", "mail_message"]);
   assert.deepEqual(
     operationResources(plan, "writes"),
@@ -366,11 +432,21 @@ test("planner certifies an ordinary full mail claim as one exact delete", () => 
       "mutation_receipt",
     ],
   );
-  assert.match(plan.writes[2].sql, /^DELETE FROM mail_messages\b/i);
+  assert.match(plan.writes[2].sql, /^UPDATE mail_messages\b/i);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+  assert.equal(settledMail.schemaVersion, 2);
+  assert.deepEqual(settledMail.items, []);
+  assert.deepEqual(settledMail.equipmentEnvelopes, []);
+  assert.deepEqual(settledMail.currency, {});
+  assert.equal(settledMail.settledAt, UPDATED_AT_2);
+  assert.equal(settledMail.readAt, UPDATED_AT_2);
+  assert.deepEqual(
+    candidate.mutationReceipts[OPERATION_ID].response.mail,
+    publicMailDocument(settledMail),
+  );
 });
 
-test("mail claim update and delete plans do not enumerate a large untouched mailbox", () => {
+test("partial and settled mail claim updates do not enumerate a large untouched mailbox", () => {
   const before = baselineAuthority();
   for (let index = 0; index < 2000; index += 1) {
     const mailId = `mail_claim_history_${String(index).padStart(5, "0")}`;
@@ -385,20 +461,17 @@ test("mail claim update and delete plans do not enumerate a large untouched mail
   const beforeEnumerations = mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations;
 
   const updateCandidate = ordinaryPartialCandidate(before);
-  const deleteCandidate = ordinaryFullCandidate(before);
+  const settledCandidate = ordinaryFullCandidate(before);
   assert.equal(mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations, beforeEnumerations);
   assert.equal(mailAuthorityDeltaFrom(before.mailMessages, updateCandidate.mailMessages).ok, true);
-  assert.equal(mailAuthorityDeltaFrom(before.mailMessages, deleteCandidate.mailMessages).ok, true);
+  assert.equal(mailAuthorityDeltaFrom(before.mailMessages, settledCandidate.mailMessages).ok, true);
   const updatePlan = buildPlan(updateCandidate, before);
   assert.equal(mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations, beforeEnumerations);
-  const deletePlan = buildPlan(
-    deleteCandidate,
-    before,
-    claimScope({mailDisposition: "delete"}),
-  );
+  const settledPlan = buildPlan(settledCandidate, before);
 
   assert.equal(updatePlan.kind, "mail_claim_conditional_v1");
-  assert.equal(deletePlan.kind, "mail_claim_conditional_v1");
+  assert.equal(settledPlan.kind, "mail_claim_conditional_v1");
+  assert.equal(settledPlan.mailDisposition, "update");
   assert.equal(
     mailAuthorityDiagnostics(before.mailMessages).ownKeyEnumerations,
     beforeEnumerations,
@@ -407,16 +480,18 @@ test("mail claim update and delete plans do not enumerate a large untouched mail
 
 test("planner writes consumed equipment tombstones in canonical order with strict inserts", () => {
   const before = baselineAuthority(equipmentMail());
+  const candidate = equipmentFullCandidate(before);
   const plan = buildPlan(
-    equipmentFullCandidate(before),
+    candidate,
     before,
     claimScope({
-      mailDisposition: "delete",
       claimedEnvelopeIds: [ENVELOPE_ID_A, ENVELOPE_ID_Z],
     }),
   );
 
   assert.equal(plan.kind, "mail_claim_conditional_v1");
+  assert.equal(plan.mailDisposition, "update");
+  assert.match(plan.writes[2].sql, /^UPDATE mail_messages\b/i);
   assert.deepEqual(plan.claimedEnvelopeIds, [ENVELOPE_ID_A, ENVELOPE_ID_Z]);
   assert.deepEqual(
     operationResources(plan, "writes"),
@@ -445,6 +520,10 @@ test("planner writes consumed equipment tombstones in canonical order with stric
       .filter(({resource}) => resource === "consumed_equipment_envelope")
       .map(({key}) => key),
     [ENVELOPE_ID_A, ENVELOPE_ID_Z],
+  );
+  assert.deepEqual(
+    candidate.mutationReceipts[OPERATION_ID].response.mail,
+    publicMailDocument(candidate.mailMessages[MAIL_ID]),
   );
 });
 
@@ -510,10 +589,10 @@ test("planner fails closed for broader writes, wrong scope, mail drift, or ledge
       },
     },
     {
-      name: "scope disposition differs",
+      name: "forged delete disposition cannot certify a settled receipt update",
       setup() {
         const before = baselineAuthority();
-        return {before, after: ordinaryPartialCandidate(before), scope: claimScope({mailDisposition: "delete"})};
+        return {before, after: ordinaryFullCandidate(before), scope: claimScope({mailDisposition: "delete"})};
       },
     },
     {
@@ -524,10 +603,43 @@ test("planner fails closed for broader writes, wrong scope, mail drift, or ledge
           before,
           after: equipmentFullCandidate(before),
           scope: claimScope({
-            mailDisposition: "delete",
             claimedEnvelopeIds: [ENVELOPE_ID_Z, ENVELOPE_ID_A],
           }),
         };
+      },
+    },
+    {
+      name: "receipt response mail differs from the public next mail",
+      setup() {
+        const before = baselineAuthority();
+        const after = ordinaryFullCandidate(before);
+        const changedReceipt = structuredClone(after.mutationReceipts[OPERATION_ID]);
+        changedReceipt.response.mail.title = "伪造领取回执";
+        after.mutationReceipts = stageDurableMutationReceipt(
+          before.mutationReceipts,
+          changedReceipt,
+          {nowMs: Date.parse(UPDATED_AT_2)},
+        );
+        return {before, after, scope: claimScope()};
+      },
+    },
+    {
+      name: "asset mail already marked settled cannot certify a partial claim",
+      setup() {
+        const before = baselineAuthority(ordinaryMail({settledAt: UPDATED_AT_1}));
+        const after = cloneAuthorityRoot(before);
+        applyProfileClaim(after, before);
+        const staged = stageMailAuthorityUpsert(after.mailMessages, {
+          ...before.mailMessages[MAIL_ID],
+          items: [{itemId: "item_meat_small", count: 1}],
+          currency: {},
+          equipmentEnvelopes: [],
+          schemaVersion: 2,
+        });
+        assert.equal(staged.ok, true, staged.message || "conflicting lifecycle update stage failed");
+        after.mailMessages = staged.messages;
+        stageReceipt(after);
+        return {before, after, scope: claimScope()};
       },
     },
     {
@@ -712,13 +824,27 @@ test("real durable mail claim signs its exact profile, mail disposition, and tom
     accountId: recipient.account.accountId,
     playerId: recipient.profileBinding.playerId,
     mailId,
-    mailDisposition: "delete",
+    mailDisposition: "update",
     claimedEnvelopeIds: [],
     operationId: operation.operationId,
     requestHash: operation.requestHash,
     actionId: operation.actionId,
   });
   assert.equal(savedPlan.kind, "mail_claim_conditional_v1");
+  assert.match(savedPlan.writes[2].sql, /^UPDATE mail_messages\b/i);
+  const settledMail = committed.mailMessages[mailId];
+  assert.ok(settledMail);
+  assert.equal(settledMail.schemaVersion, 2);
+  assert.deepEqual(settledMail.items, []);
+  assert.deepEqual(settledMail.equipmentEnvelopes, []);
+  assert.deepEqual(settledMail.currency, {});
+  assert.equal(typeof settledMail.settledAt, "string");
+  assert.equal(settledMail.readAt, settledMail.settledAt);
+  assert.deepEqual(result.mail, publicMailDocument(settledMail));
+  assert.deepEqual(
+    committed.mutationReceipts[operation.operationId].response.mail,
+    publicMailDocument(settledMail),
+  );
 });
 
 test("real durable equipment mail claim signs and strictly inserts its exact envelope tombstone", async () => {
@@ -765,13 +891,14 @@ test("real durable equipment mail claim signs and strictly inserts its exact env
     accountId: recipient.account.accountId,
     playerId: recipient.profileBinding.playerId,
     mailId,
-    mailDisposition: "delete",
+    mailDisposition: "update",
     claimedEnvelopeIds: [envelopeId],
     operationId: operation.operationId,
     requestHash: operation.requestHash,
     actionId: operation.actionId,
   });
   assert.equal(savedPlan.kind, "mail_claim_conditional_v1");
+  assert.match(savedPlan.writes[2].sql, /^UPDATE mail_messages\b/i);
   assert.deepEqual(savedPlan.claimedEnvelopeIds, [envelopeId]);
   const tombstoneWrites = savedPlan.writes.filter((write) => (
     write.resource === "consumed_equipment_envelope"
@@ -781,6 +908,18 @@ test("real durable equipment mail claim signs and strictly inserts its exact env
   assert.equal(tombstoneWrites[0].expectedAffectedRows, 1);
   assert.match(tombstoneWrites[0].sql, /^INSERT INTO consumed_equipment_envelopes\b/i);
   assert.doesNotMatch(tombstoneWrites[0].sql, /ON DUPLICATE KEY/i);
+  const settledMail = committed.mailMessages[mailId];
+  assert.ok(settledMail);
+  assert.deepEqual(settledMail.items, []);
+  assert.deepEqual(settledMail.equipmentEnvelopes, []);
+  assert.deepEqual(settledMail.currency, {});
+  assert.equal(typeof settledMail.settledAt, "string");
+  assert.equal(settledMail.readAt, settledMail.settledAt);
+  assert.deepEqual(result.mail, publicMailDocument(settledMail));
+  assert.deepEqual(
+    committed.mutationReceipts[operation.operationId].response.mail,
+    publicMailDocument(settledMail),
+  );
 });
 
 test("ambiguous ordinary mail claim recovers only after exact claim resources committed", async () => {
@@ -820,7 +959,19 @@ test("ambiguous ordinary mail claim recovers only after exact claim resources co
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(store.metrics().ambiguousCommitRecoveries, 1);
   const snapshot = service.snapshot();
-  assert.equal(Object.hasOwn(snapshot.mailMessages, mailId), false);
+  const settledMail = snapshot.mailMessages[mailId];
+  assert.ok(settledMail);
+  assert.equal(settledMail.schemaVersion, 2);
+  assert.deepEqual(settledMail.items, []);
+  assert.deepEqual(settledMail.equipmentEnvelopes, []);
+  assert.deepEqual(settledMail.currency, {});
+  assert.equal(typeof settledMail.settledAt, "string");
+  assert.equal(settledMail.readAt, settledMail.settledAt);
+  assert.deepEqual(result.mail, publicMailDocument(settledMail));
+  assert.deepEqual(
+    snapshot.mutationReceipts[operation.operationId].response.mail,
+    publicMailDocument(settledMail),
+  );
   assert.equal(
     snapshot.profiles[unrelated.profileBinding.playerId].profile.recordPoint.label,
     unrelatedRecordPoint.label,
@@ -828,7 +979,7 @@ test("ambiguous ordinary mail claim recovers only after exact claim resources co
   assert.deepEqual(snapshot, base.load());
 });
 
-test("ambiguous ordinary mail claim rejects a mismatched mail disposition proof", async () => {
+test("ambiguous ordinary mail claim rejects a mismatched settled receipt proof", async () => {
   const {base, recipient, mailId} = seedOrdinaryMailClaimScenario("mismatch");
   const beforePublished = base.load();
   const mailBefore = structuredClone(beforePublished.mailMessages[mailId]);

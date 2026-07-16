@@ -17,6 +17,7 @@ const {
 } = require("./auth/durable-receipt-read-model");
 const {
   canonicalMailClaimEnvelopeIds,
+  mailClaimReceiptResponseMatches,
   mailEquipmentEnvelopeMap,
   removedMailEquipmentEnvelopeIds,
 } = require("./auth/mail-claim-consistency");
@@ -2341,6 +2342,9 @@ function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
     "readAt",
     "schemaVersion",
   ]);
+  if (scope.mode === MAIL_SEND_MODE_TEXT) {
+    fields.add("settledAt");
+  }
   const sender = objectOrEmpty(previous.accounts && previous.accounts[mail.senderUsername]);
   const recipient = objectOrEmpty(previous.accounts && previous.accounts[mail.recipientUsername]);
   const items = Array.isArray(mail.items) ? mail.items : null;
@@ -2368,6 +2372,7 @@ function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
     || typeof mail.createdAt !== "string"
     || mail.createdAt === ""
     || mail.createdAt !== mail.createdAt.trim()
+    || !canonicalMysqlIsoTimestamp(mail.createdAt)
     || mail.readAt !== null
     || mail.schemaVersion !== 2
     || !Array.isArray(mail.equipmentEnvelopes)
@@ -2389,6 +2394,8 @@ function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
     || new Set(itemIds).size !== itemIds.length
     || (scope.mode === MAIL_SEND_MODE_TEXT && items.length !== 0)
     || (scope.mode === MAIL_SEND_MODE_ORDINARY_ITEMS && items.length === 0)
+    || (scope.mode === MAIL_SEND_MODE_TEXT && mail.settledAt !== mail.createdAt)
+    || (scope.mode === MAIL_SEND_MODE_ORDINARY_ITEMS && Object.hasOwn(mail, "settledAt"))
   ) {
     return false;
   }
@@ -2568,19 +2575,18 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
     return null;
   }
   const receipt = receiptWriteSet.receipt;
+  const receiptMail = objectOrEmpty(objectOrEmpty(receipt && receipt.response).mail);
   if (
     receipt === null
     || String(receipt.operationId || "") !== consistencyScope.operationId
     || String(receipt.requestHash || "") !== consistencyScope.requestHash
     || String(receipt.actionId || "") !== consistencyScope.actionId
     || String(receipt.accountId || "") !== accountId
+    || !mailClaimReceiptResponseMatches(mailClaim.nextMail, receiptMail)
   ) {
     return null;
   }
 
-  const mailWrite = mailClaim.disposition === "update"
-    ? conditionalMailMessageUpdate(mailClaim.nextMail, mailClaim.beforeMail)
-    : conditionalMailMessageDelete(mailClaim.beforeMail);
   return buildMysqlResourceAcquisitionPlan({
     kind: "mail_claim_conditional_v1",
     globalRevisionFence: false,
@@ -2601,7 +2607,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
     writes: [
       conditionalProfileBindingUpdate(nextBinding, expectedRevision),
       conditionalProfileUpdate(nextProfile, expectedRevision),
-      mailWrite,
+      conditionalMailMessageUpdate(mailClaim.nextMail, mailClaim.beforeMail),
       ...mailClaim.removedEnvelopeIds.map(conditionalConsumedEquipmentEnvelopeInsert),
       ...receiptWriteSet.writes,
     ],
@@ -2798,7 +2804,7 @@ function rowLocalMailClaimConsistencyScope(value) {
     || accountId === ""
     || playerId === ""
     || mailId === ""
-    || !["update", "delete"].includes(mailDisposition)
+    || mailDisposition !== "update"
     || claimedEnvelopeIds === null
     || operationId === ""
     || requestHash === ""
@@ -3248,7 +3254,51 @@ function mailClaimMetadataPreserved(beforeMail, nextMail) {
   const metadata = (mail) => Object.fromEntries(
     Object.entries(mail || {}).filter(([field]) => !MAIL_CLAIM_ASSET_FIELDS.has(field)),
   );
-  return isDeepStrictEqual(metadata(beforeMail), metadata(nextMail));
+  const beforeMetadata = metadata(beforeMail);
+  const nextMetadata = metadata(nextMail);
+  const beforeHasAssets = mailClaimHasAssets(beforeMail);
+  const nextHasAssets = mailClaimHasAssets(nextMail);
+  if (
+    beforeHasAssets !== true
+    || nextHasAssets === null
+    || Object.hasOwn(beforeMetadata, "settledAt")
+  ) {
+    return false;
+  }
+  if (nextHasAssets) {
+    return isDeepStrictEqual(beforeMetadata, nextMetadata);
+  }
+  if (
+    !Object.hasOwn(nextMetadata, "settledAt")
+  ) {
+    return false;
+  }
+  const settledAt = canonicalMysqlIsoTimestamp(nextMetadata.settledAt)
+    ? nextMetadata.settledAt
+    : "";
+  const createdAt = canonicalMysqlIsoTimestamp(beforeMetadata.createdAt)
+    ? beforeMetadata.createdAt
+    : "";
+  if (
+    settledAt === ""
+    || (createdAt !== "" && Date.parse(settledAt) < Date.parse(createdAt))
+  ) {
+    return false;
+  }
+  const expectedMetadata = {
+    ...beforeMetadata,
+    settledAt,
+  };
+  if (
+    beforeMetadata.readAt === null
+    || beforeMetadata.readAt === undefined
+    || String(beforeMetadata.readAt).trim() === ""
+  ) {
+    expectedMetadata.readAt = settledAt;
+  } else if (!canonicalMysqlIsoTimestamp(beforeMetadata.readAt)) {
+    return false;
+  }
+  return isDeepStrictEqual(nextMetadata, expectedMetadata);
 }
 
 function mailClaimAssetsStrictlyDescend(beforeMail, nextMail) {
@@ -4483,11 +4533,10 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     if (
       mailId === ""
       || operationId === ""
-      || !["update", "delete"].includes(mailDisposition)
+      || mailDisposition !== "update"
       || claimedEnvelopeIds === null
       || !receipt
-      || (mailDisposition === "update" && !committedMail)
-      || (mailDisposition === "delete" && committedMail)
+      || !committedMail
       || claimedEnvelopeIds.some((envelopeId) => !(
         committedLedger && committedLedger[envelopeId]
       ))
@@ -4498,7 +4547,7 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     }
     const mailMessages = mergeCommittedMailAuthorityChange(
       previous.mailMessages,
-      {mailId, disposition: mailDisposition, mail: committedMail || null},
+      {mailId, disposition: "update", mail: committedMail},
     );
     return {
       ...merged,

@@ -546,7 +546,7 @@ function playerSendMail(actorKey, recipientKey, options = {}) {
   const actor = ACTORS[actorKey];
   const recipient = ACTORS[recipientKey];
   const items = Array.isArray(options.items) ? options.items : [];
-  return {
+  const mail = {
     mailId: String(options.mailId),
     senderAccountId: actor.accountId,
     senderUsername: `shared_mail_${actorKey}`,
@@ -563,6 +563,10 @@ function playerSendMail(actorKey, recipientKey, options = {}) {
     readAt: null,
     schemaVersion: 2,
   };
+  if (items.length === 0) {
+    mail.settledAt = mail.createdAt;
+  }
+  return mail;
 }
 
 function nextMailSendAuthority(before, actorKey, recipientKey, options = {}) {
@@ -609,6 +613,7 @@ function nextMailSendAuthority(before, actorKey, recipientKey, options = {}) {
       currency: {},
       createdAt: mail.createdAt,
       readAt: null,
+      settledAt: mode === "text" ? mail.createdAt : null,
       schemaVersion: 2,
       equipmentEnvelopes: [],
     },
@@ -727,6 +732,28 @@ function equipmentEnvelope(envelopeId = MAIL_ENVELOPE_ID) {
   };
 }
 
+function publicClaimMail(mail) {
+  return {
+    mailId: mail.mailId,
+    mailKind: String(mail.mailKind || ""),
+    senderUsername: mail.senderUsername,
+    senderDisplayName: mail.senderDisplayName,
+    recipientUsername: mail.recipientUsername,
+    recipientDisplayName: mail.recipientDisplayName,
+    title: mail.title,
+    body: mail.body,
+    items: structuredClone(mail.items || []),
+    currency: structuredClone(mail.currency || {}),
+    createdAt: mail.createdAt,
+    readAt: mail.readAt || null,
+    settledAt: typeof mail.settledAt === "string" && mail.settledAt !== ""
+      ? mail.settledAt
+      : null,
+    schemaVersion: 2,
+    equipmentEnvelopes: structuredClone(mail.equipmentEnvelopes || []),
+  };
+}
+
 function mailClaimAuthority(options = {}) {
   const authority = baselineAuthority();
   authority.mailMessages = {
@@ -768,17 +795,24 @@ function nextMailClaimAuthority(before, actorKey, options = {}) {
       backpackSlots: [{itemId: options.itemId || "item_meat_small", count: 1}],
     },
   };
-  if (Array.isArray(options.remainingItems)) {
-    after.mailMessages[mailId] = {
-      ...before.mailMessages[mailId],
-      items: options.remainingItems,
-      currency: {},
-      equipmentEnvelopes: [],
-      schemaVersion: 2,
-    };
+  const beforeMail = before.mailMessages[mailId];
+  const finalClaim = !Array.isArray(options.remainingItems);
+  const nextMail = {
+    ...beforeMail,
+    items: finalClaim ? [] : options.remainingItems,
+    currency: {},
+    equipmentEnvelopes: [],
+    schemaVersion: 2,
+  };
+  if (finalClaim) {
+    nextMail.settledAt = updatedAt;
+    nextMail.readAt = typeof beforeMail.readAt === "string" && beforeMail.readAt.trim() !== ""
+      ? beforeMail.readAt
+      : updatedAt;
   } else {
-    delete after.mailMessages[mailId];
+    delete nextMail.settledAt;
   }
+  after.mailMessages[mailId] = nextMail;
   const claimedEnvelopeIds = [...(options.claimedEnvelopeIds || [])].sort();
   if (claimedEnvelopeIds.length > 0) {
     const consumed = ensureConsumedEquipmentEnvelopeIds(
@@ -802,6 +836,7 @@ function nextMailClaimAuthority(before, actorKey, options = {}) {
       response: {
         ok: true,
         operationId,
+        mail: publicClaimMail(nextMail),
         claim: {mailId},
       },
     },
@@ -818,13 +853,24 @@ function mailClaimSaveOptions(actorKey, operationId, requestHash, options = {}) 
       accountId: actor.accountId,
       playerId: actor.playerId,
       mailId: String(options.mailId || MAIL_IDS[actorKey]),
-      mailDisposition: Array.isArray(options.remainingItems) ? "update" : "delete",
+      mailDisposition: "update",
       claimedEnvelopeIds: [...(options.claimedEnvelopeIds || [])].sort(),
       operationId,
       requestHash,
       actionId: MAIL_CLAIM_ACTION_ID,
     },
   };
+}
+
+function assertSettledMailRow(row, settledAt) {
+  assert.ok(row);
+  assert.equal(row.read_at, settledAt);
+  assert.equal(row.document_json.readAt, settledAt);
+  assert.equal(row.document_json.settledAt, settledAt);
+  assert.deepEqual(row.document_json.items, []);
+  assert.deepEqual(row.document_json.equipmentEnvelopes, []);
+  assert.deepEqual(row.document_json.currency, {});
+  assert.equal(row.document_json.schemaVersion, 2);
 }
 
 function stagedMailClaim(store, before, actorKey, options) {
@@ -3301,7 +3347,7 @@ test("market buy first lets the waiting seller claim commit after the shared sel
     assert.equal(committed.profiles[ACTORS.b.playerId].profile_revision, 2);
     assert.equal(committed.profiles[ACTORS.b.playerId].profile_json.stoneCoins, 201);
     assert.equal(Object.hasOwn(committed.market_listings, MARKET_LISTING_IDS.b), false);
-    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.b), false);
+    assertSettledMailRow(committed.mail_messages[MAIL_IDS.b], UPDATED_AT_3);
     assert.deepEqual(committed.mail_messages[MAIL_IDS.sale].document_json.currency, {stoneCoins: 30});
     assert.equal(Object.hasOwn(committed.mutation_receipts, "op_buy_before_seller_claim_0001"), true);
     assert.equal(Object.hasOwn(committed.mutation_receipts, "op_seller_claim_after_buy_0001"), true);
@@ -3373,6 +3419,7 @@ test("seller claim first rejects a stale buy before writes and the same operatio
     assert.equal(afterClaim.profiles[ACTORS.a.playerId].profile_revision, 1);
     assert.equal(afterClaim.profiles[ACTORS.a.playerId].profile_json.stoneCoins, 100);
     assert.equal(afterClaim.profiles[ACTORS.b.playerId].profile_revision, 2);
+    assertSettledMailRow(afterClaim.mail_messages[MAIL_IDS.b], UPDATED_AT_2);
     assert.equal(Object.hasOwn(afterClaim.market_listings, MARKET_LISTING_IDS.b), true);
     assert.equal(Object.hasOwn(afterClaim.mail_messages, MAIL_IDS.sale), false);
     assert.equal(Object.hasOwn(afterClaim.mutation_receipts, "op_stale_buy_after_claim_0001"), false);
@@ -3522,7 +3569,7 @@ test("different mail claims share receipt capacity and retain both profile and m
 
     const committed = harness.snapshot();
     assert.equal(committed.auth_store_revisions.auth.revision, 0);
-    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.a), false);
+    assertSettledMailRow(committed.mail_messages[MAIL_IDS.a], UPDATED_AT_2);
     assert.deepEqual(
       committed.mail_messages[MAIL_IDS.b].document_json.items,
       [{itemId: "item_meat_small", count: 1}],
@@ -3600,15 +3647,15 @@ test("the same mail can be claimed by exactly one conditional writer", async () 
     assert.equal(loser.status, "rejected");
     assert.equal(isResourceConflict(loser.reason), true);
     const committed = harness.snapshot();
-    assert.equal(Object.hasOwn(committed.mail_messages, MAIL_IDS.a), false);
+    assertSettledMailRow(committed.mail_messages[MAIL_IDS.a], UPDATED_AT_2);
     assert.equal(committed.profiles[ACTORS.a.playerId].profile_revision, 2);
     assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_same_a_0001"), true);
     assert.equal(Object.hasOwn(committed.mutation_receipts, "op_mail_same_b_0001"), false);
     assert.equal(
       queryLog.filter((entry) => entry.writerId === "mail_same_b")
-        .some((entry) => /^DELETE FROM mail_messages\b/i.test(entry.sql)),
+        .some((entry) => /^UPDATE mail_messages\b/i.test(entry.sql)),
       false,
-      "the stale loser must fail before deleting or acknowledging the mail",
+      "the stale loser must fail before updating or acknowledging the settled mail receipt",
     );
   } finally {
     gateA.release();

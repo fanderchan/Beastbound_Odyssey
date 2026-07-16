@@ -8817,6 +8817,30 @@ func _run_auto_mailbox_check() -> void:
 		host.mailbox_claim_button.disabled
 		and host.mailbox_detail_label.text.find("数量不一致") >= 0
 	)
+	var settled_mail := server_messages[0].duplicate(true)
+	settled_mail["items"] = []
+	settled_mail["equipmentEnvelopes"] = []
+	settled_mail["currency"] = {}
+	settled_mail["readAt"] = "2099-01-01T00:00:01.000Z"
+	settled_mail["settledAt"] = "2099-01-01T00:00:01.000Z"
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {"messages": [settled_mail]})
+	host._refresh_mailbox_panel()
+	var settled_receipt_ui_ok: bool = (
+		host.mailbox_claim_button.disabled
+		and host.mailbox_claim_button.text == "已结算"
+		and host.mailbox_claim_button.tooltip_text.find("没有待领取附件") >= 0
+		and host.mailbox_detail_label.text.find("附件状态：已结算") >= 0
+		and host.mailbox_detail_label.text.find("无（已结算）") >= 0
+	)
+	var settled_screenshot_ok := true
+	var settled_screenshot_path := OS.get_environment("BEASTBOUND_SETTLED_MAIL_SCREENSHOT_PATH").strip_edges()
+	if settled_screenshot_path != "":
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		var settled_screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var settled_screenshot_error: int = settled_screenshot_image.save_png(settled_screenshot_path) if settled_screenshot_image != null else ERR_UNAVAILABLE
+		settled_screenshot_ok = settled_screenshot_image != null and settled_screenshot_error == OK
+		print("mailbox settled receipt screenshot: status=%s path=%s" % ["ok" if settled_screenshot_ok else "failed", settled_screenshot_path])
 	host._panel_flow()._rotate_server_session_requests("mailbox-account-reset-check")
 	var account_reset_ok := (
 		MailboxPageModel.messages(host.mailbox_page_state).is_empty()
@@ -8824,8 +8848,8 @@ func _run_auto_mailbox_check() -> void:
 		and MailboxPageModel.unread_count(host.mailbox_page_state) == 0
 	)
 	host._close_mailbox_panel()
-	var status = "ok" if pagination_model_ok and mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok and account_reset_ok else "failed"
-	print("mailbox check ready: status=%s page_model=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s account_reset=%s messages=%d errors=%s" % [
+	var status = "ok" if pagination_model_ok and mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok and settled_receipt_ui_ok and settled_screenshot_ok and account_reset_ok else "failed"
+	print("mailbox check ready: status=%s page_model=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s settled_receipt=%s settled_screenshot=%s account_reset=%s messages=%d errors=%s" % [
 		status,
 		str(pagination_model_ok),
 		str(mailbox_ok),
@@ -8840,6 +8864,8 @@ func _run_auto_mailbox_check() -> void:
 		str(malformed_mail_guard_ok),
 		str(legacy_equipment_mail_guard_ok),
 		str(drifted_equipment_mail_guard_ok),
+		str(settled_receipt_ui_ok),
+		str(settled_screenshot_ok),
 		str(account_reset_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
 		str(pagination_model_check.get("errors", [])),
@@ -17639,7 +17665,14 @@ func _run_auto_auth_server_client_check() -> void:
 			"playerId": "player_test",
 			"profileRevision": 9,
 		},
-		"mail": null,
+		"mail": {
+			"mailId": "mail_test",
+			"items": [],
+			"equipmentEnvelopes": [],
+			"currency": {},
+			"readAt": "2099-01-01T00:00:01.000Z",
+			"settledAt": "2099-01-01T00:00:01.000Z",
+		},
 		"claim": {
 			"mailId": "mail_test",
 			"addedItems": [{"itemId": "item_meat_small", "count": 1}],
@@ -17651,6 +17684,8 @@ func _run_auto_auth_server_client_check() -> void:
 		and int((parsed_mail_claim.get("profileSummary", {}) as Dictionary).get("profileRevision", -1)) == 9
 		and (parsed_mail_claim.get("profile", {}) as Dictionary).has("backpackSlots")
 		and str((parsed_mail_claim.get("claim", {}) as Dictionary).get("mailId", "")) == "mail_test"
+		and str((parsed_mail_claim.get("mail", {}) as Dictionary).get("settledAt", "")) == "2099-01-01T00:00:01.000Z"
+		and ((parsed_mail_claim.get("mail", {}) as Dictionary).get("items", []) as Array).is_empty()
 	)
 	var online_spec = ServerAuthClientModel.online_players_request("http://127.0.0.1:8787/", "token_test")
 	var online_request_ok = (

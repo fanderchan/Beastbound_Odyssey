@@ -6,6 +6,9 @@ const {
 } = require("./equipment-envelope-consumed-ledger");
 const {readMailAttachmentState} = require("./mail-attachment-state");
 const {
+  canonicalMailLifecycleIsoTimestamp,
+} = require("./mail-lifecycle-state");
+const {
   mailAuthorityDeltaFrom,
 } = require("./mail-authority-state");
 
@@ -29,6 +32,7 @@ const PLAYER_MAIL_FIELDS = new Set([
   "readAt",
   "schemaVersion",
 ]);
+const PLAYER_TEXT_MAIL_FIELDS = new Set([...PLAYER_MAIL_FIELDS, "settledAt"]);
 
 function buildMailSendSharedAssetReadRequest(options = {}) {
   if (options.methodName !== "sendMail") {
@@ -155,6 +159,12 @@ function buildRowLocalMailSendConsistencyScope(options = {}) {
     options.battleEquipmentCatalog,
     objectOrEmpty(options.mailAttachmentStateOptions),
   );
+  const mode = Array.isArray(mail.items) && mail.items.length === 0
+    ? MAIL_SEND_MODE_TEXT
+    : MAIL_SEND_MODE_ORDINARY_ITEMS;
+  const expectedMailFields = mode === MAIL_SEND_MODE_TEXT
+    ? PLAYER_TEXT_MAIL_FIELDS
+    : PLAYER_MAIL_FIELDS;
   const consumedDelta = consumedEquipmentEnvelopeLedgerDeltaFrom(
     before.consumedEquipmentEnvelopes,
     candidate.consumedEquipmentEnvelopes,
@@ -164,7 +174,7 @@ function buildRowLocalMailSendConsistencyScope(options = {}) {
     || recipient === null
     || recipientAccountId === ""
     || recipientAccountId === accountId
-    || !exactFields(mail, PLAYER_MAIL_FIELDS)
+    || !exactFields(mail, expectedMailFields)
     || Number(mail.schemaVersion) !== 2
     || mail.readAt !== null
     || !isRecord(mail.currency)
@@ -191,6 +201,10 @@ function buildRowLocalMailSendConsistencyScope(options = {}) {
     || typeof mail.createdAt !== "string"
     || mail.createdAt === ""
     || mail.createdAt !== mail.createdAt.trim()
+    || canonicalMailLifecycleIsoTimestamp(mail.createdAt) !== mail.createdAt
+    || (mode === MAIL_SEND_MODE_TEXT
+      ? mail.settledAt !== mail.createdAt
+      : Object.hasOwn(mail, "settledAt"))
     || !consumedDelta.ok
     || consumedDelta.addedIds.length !== 0
     || canonicalIdentity(options.receipt.accountId) !== accountId
@@ -198,9 +212,6 @@ function buildRowLocalMailSendConsistencyScope(options = {}) {
     return null;
   }
 
-  const mode = mailState.ordinaryItems.length === 0
-    ? MAIL_SEND_MODE_TEXT
-    : MAIL_SEND_MODE_ORDINARY_ITEMS;
   let playerId = "";
   let nextBinding = null;
   let nextProfile = null;
@@ -368,6 +379,7 @@ function mailSendReceiptResponseMatches(options = {}) {
     currency: {},
     createdAt: mail.createdAt,
     readAt: null,
+    settledAt: mode === MAIL_SEND_MODE_TEXT ? mail.createdAt : null,
     schemaVersion: 2,
     equipmentEnvelopes: [],
   };

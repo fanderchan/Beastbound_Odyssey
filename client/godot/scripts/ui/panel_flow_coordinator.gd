@@ -20023,6 +20023,7 @@ func _refresh_mailbox_panel() -> void:
 	if selected.is_empty():
 		mailbox_detail_label.text = "没有邮件。"
 		mailbox_claim_button.disabled = true
+		mailbox_claim_button.text = "领取附件"
 		mailbox_claim_button.visible = true
 		mailbox_claim_button.tooltip_text = ""
 		_refresh_mailbox_request_controls()
@@ -20032,10 +20033,12 @@ func _refresh_mailbox_panel() -> void:
 	if selected_source == "server":
 		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
 		var server_has_attachments := _mailbox_has_attachments(selected_message)
+		var server_settled := MailboxPageModel.is_settled(selected_message)
 		var equipment_attachments_safe := _mailbox_equipment_attachments_safe(selected_message)
 		mailbox_claim_button.disabled = mailbox_request_pending or not server_has_attachments or not equipment_attachments_safe
+		mailbox_claim_button.text = "已结算" if server_settled else "领取附件"
 		mailbox_claim_button.visible = true
-		mailbox_claim_button.tooltip_text = _mailbox_claim_tooltip(selected_message) if server_has_attachments or not equipment_attachments_safe else ""
+		mailbox_claim_button.tooltip_text = "这封邮件已经没有待领取附件。" if server_settled else (_mailbox_claim_tooltip(selected_message) if server_has_attachments or not equipment_attachments_safe else "")
 		_refresh_mailbox_request_controls()
 		return
 	var items = _mailbox_item_entries(selected_message)
@@ -20051,6 +20054,7 @@ func _refresh_mailbox_panel() -> void:
 	lines.append("附件：%s" % _mailbox_attachment_text(selected_message))
 	mailbox_detail_label.text = "\n".join(lines)
 	mailbox_claim_button.disabled = mailbox_request_pending or items.is_empty()
+	mailbox_claim_button.text = "领取附件"
 	mailbox_claim_button.tooltip_text = "附件会放入背包。背包空间不足时，剩余附件会保留在邮箱。"
 	_refresh_mailbox_request_controls()
 
@@ -20122,9 +20126,10 @@ func _mailbox_entry_button_text(entry: Dictionary) -> String:
 	var message = entry.get("message", {}) as Dictionary if entry.get("message", {}) is Dictionary else {}
 	if source == "server":
 		var status = "未读" if MailboxPageModel.is_unread(message) else "已读"
+		var settlement = "  无待领附件" if MailboxPageModel.is_settled(message) else ""
 		var title = str(message.get("title", "玩家邮件"))
 		var sender = str(message.get("senderDisplayName", message.get("senderUsername", "玩家")))
-		return "%s\n%s  %s" % [title, sender, status]
+		return "%s\n%s  %s%s" % [title, sender, status, settlement]
 	return PlayerProgressModel.mailbox_message_button_text(message)
 
 func _server_mailbox_detail_text(message: Dictionary) -> String:
@@ -20137,13 +20142,17 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 	var created_at = str(message.get("createdAt", "")).strip_edges()
 	if created_at != "":
 		lines.append("时间：%s" % created_at)
+	var settled := MailboxPageModel.is_settled(message)
 	lines.append("状态：%s" % ("未读" if MailboxPageModel.is_unread(message) else "已读"))
+	if settled:
+		lines.append("附件状态：已结算（无待领取附件）")
+		lines.append("结算：%s" % str(message.get("settledAt", "")))
 	var body = str(message.get("body", "")).strip_edges()
 	if body != "":
 		lines.append("")
 		lines.append(body)
 	lines.append("")
-	lines.append("附件：%s" % _mailbox_attachment_text(message))
+	lines.append("附件：%s" % ("无（已结算）" if settled else _mailbox_attachment_text(message)))
 	var equipment_rows := EquipmentEscrowClientModel.mail_equipment_rows(message)
 	if not equipment_rows.is_empty():
 		lines.append("")

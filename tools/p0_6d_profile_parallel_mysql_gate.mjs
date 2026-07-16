@@ -986,6 +986,9 @@ function mailSendMutation(before, actorKey, recipientKey, options) {
     readAt: null,
     schemaVersion: 2,
   };
+  if (mode === "text") {
+    mail.settledAt = updatedAt;
+  }
   assert.equal(Object.hasOwn(before.mailMessages, mail.mailId), false);
   after.mailMessages[mail.mailId] = mail;
   const operationId = String(options.operationId);
@@ -1004,6 +1007,7 @@ function mailSendMutation(before, actorKey, recipientKey, options) {
       currency: {},
       createdAt: mail.createdAt,
       readAt: null,
+      settledAt: mode === "text" ? mail.createdAt : null,
       schemaVersion: 2,
       equipmentEnvelopes: [],
     },
@@ -1288,11 +1292,25 @@ function saveMailClaim(store, before, actorKey, mailId, options) {
       mailClaimCount: Number(beforeProfile.mailClaimCount || 0) + 1,
     },
   };
-  if (options.remainingMail) {
-    after.mailMessages[mailId] = options.remainingMail;
-  } else {
-    delete after.mailMessages[mailId];
+  const beforeMail = before.mailMessages[mailId];
+  const finalClaim = !options.remainingMail;
+  const nextMail = finalClaim
+    ? {
+      ...beforeMail,
+      items: [],
+      equipmentEnvelopes: [],
+      currency: {},
+      readAt: typeof beforeMail.readAt === "string" && beforeMail.readAt.trim() !== ""
+        ? beforeMail.readAt
+        : options.updatedAt,
+      settledAt: options.updatedAt,
+      schemaVersion: 2,
+    }
+    : structuredClone(options.remainingMail);
+  if (!finalClaim) {
+    delete nextMail.settledAt;
   }
+  after.mailMessages[mailId] = nextMail;
   const claimedEnvelopeIds = [...(options.claimedEnvelopeIds || [])].sort();
   const consumed = ensureConsumedEquipmentEnvelopeIds(
     after.consumedEquipmentEnvelopes,
@@ -1311,6 +1329,25 @@ function saveMailClaim(store, before, actorKey, mailId, options) {
     response: {
       ok: true,
       claim: {mailId},
+      mail: {
+        mailId: nextMail.mailId,
+        mailKind: String(nextMail.mailKind || ""),
+        senderUsername: nextMail.senderUsername,
+        senderDisplayName: nextMail.senderDisplayName,
+        recipientUsername: nextMail.recipientUsername,
+        recipientDisplayName: nextMail.recipientDisplayName,
+        title: nextMail.title,
+        body: nextMail.body,
+        items: structuredClone(nextMail.items || []),
+        currency: structuredClone(nextMail.currency || {}),
+        createdAt: nextMail.createdAt,
+        readAt: nextMail.readAt || null,
+        settledAt: typeof nextMail.settledAt === "string" && nextMail.settledAt !== ""
+          ? nextMail.settledAt
+          : null,
+        schemaVersion: 2,
+        equipmentEnvelopes: structuredClone(nextMail.equipmentEnvelopes || []),
+      },
       operationId: options.operationId,
     },
   }, {nowMs: Date.parse(options.updatedAt)});
@@ -1322,7 +1359,7 @@ function saveMailClaim(store, before, actorKey, mailId, options) {
         accountId: actor.accountId,
         playerId: actor.playerId,
         mailId,
-        mailDisposition: options.remainingMail ? "update" : "delete",
+        mailDisposition: "update",
         claimedEnvelopeIds,
         operationId: options.operationId,
         requestHash: options.requestHash,
@@ -2852,8 +2889,17 @@ async function runRealMysqlGate(runtime) {
       updatedAt: "2026-07-14T04:11:00.000Z",
     });
     trackWrite(fullClaim.promise);
-    await settleWithin(fullClaim.promise, WAIT_TIMEOUT_MS, "邮件完整领取真实 DELETE 提交");
-    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.full), false);
+    await settleWithin(fullClaim.promise, WAIT_TIMEOUT_MS, "邮件完整领取真实结算 UPDATE 提交");
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.full), true);
+    assert.deepEqual(await mailDocument(admin, MAIL_CLAIM_IDS.full), {
+      ...fullMailBefore.mailMessages[MAIL_CLAIM_IDS.full],
+      items: [],
+      equipmentEnvelopes: [],
+      currency: {},
+      readAt: "2026-07-14T04:11:00.000Z",
+      settledAt: "2026-07-14T04:11:00.000Z",
+      schemaVersion: 2,
+    });
     assert.deepEqual(await profileRow(admin, "a"), {revision: 6, stoneCoins: 47});
     assert.equal(await mutationReceiptExists(admin, "real_mail_claim_full"), true);
     assert.equal(await globalRevision(admin), 3);
@@ -2958,7 +3004,11 @@ async function runRealMysqlGate(runtime) {
       stoneCoins: buyFirstSellerBefore.stoneCoins + 5,
     });
     assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.sellerClaimBuyFirst), false);
-    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimBuyFirst), false);
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimBuyFirst), true);
+    assert.equal(
+      (await mailDocument(admin, MAIL_CLAIM_IDS.sellerClaimBuyFirst)).settledAt,
+      "2026-07-14T04:15:00.000Z",
+    );
     assert.equal(await marketSaleMailExists(admin, "mail_real_seller_claim_buy_first_sale"), true);
     assert.deepEqual(
       (await mailDocument(admin, "mail_real_seller_claim_buy_first_sale")).currency,
@@ -3052,7 +3102,11 @@ async function runRealMysqlGate(runtime) {
       stoneCoins: claimFirstSellerBefore.stoneCoins + 6,
     });
     assert.equal(await marketListingExists(admin, MARKET_LISTING_IDS.sellerClaimClaimFirst), true);
-    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimClaimFirst), false);
+    assert.equal(await marketSaleMailExists(admin, MAIL_CLAIM_IDS.sellerClaimClaimFirst), true);
+    assert.equal(
+      (await mailDocument(admin, MAIL_CLAIM_IDS.sellerClaimClaimFirst)).settledAt,
+      "2026-07-14T04:16:00.000Z",
+    );
     assert.equal(await marketSaleMailExists(admin, claimFirstSaleMailId), false);
     assert.equal(await marketTaxCollected(admin), claimFirstTaxBefore);
     assert.equal(await mutationReceiptExists(admin, "real_seller_claim_claim_first_claim"), true);
@@ -3527,7 +3581,7 @@ async function runRealMysqlGate(runtime) {
       crossAccountAssetConservationVerified: true,
       crossAccountAssetConservationUsesFinalMysqlMailReload: true,
       mailPartialUpdateVerified: true,
-      mailFullDeleteVerified: true,
+      mailFullSettledUpdateVerified: true,
       mailDuplicateEnvelopeRolledBack: true,
       sellerClaimPurchaseFirstVerified: true,
       sellerClaimClaimFirstRetryVerified: true,

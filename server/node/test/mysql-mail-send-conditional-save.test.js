@@ -111,7 +111,7 @@ function baselineState() {
 }
 
 function playerMail(overrides = {}) {
-  return {
+  const mail = {
     mailId: MAIL_ID,
     senderAccountId: SENDER_ACCOUNT_ID,
     senderUsername: "mail_send_sender",
@@ -129,6 +129,12 @@ function playerMail(overrides = {}) {
     schemaVersion: 2,
     ...overrides,
   };
+  if (Array.isArray(mail.items) && mail.items.length === 0) {
+    mail.settledAt = mail.createdAt;
+  } else {
+    delete mail.settledAt;
+  }
+  return mail;
 }
 
 function receipt(overrides = {}) {
@@ -158,6 +164,7 @@ function publicPlayerMail(mail) {
     currency: {},
     createdAt: mail.createdAt,
     readAt: null,
+    settledAt: mail.settledAt || null,
     schemaVersion: 2,
     equipmentEnvelopes: [],
   };

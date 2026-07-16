@@ -18,9 +18,13 @@ const {
 } = require("./equipment-envelope-consumed-ledger");
 const {authorityRootJournalForMutation} = require("./authority-root-clone");
 const {
-  stageMailAuthorityDelete,
   stageMailAuthorityUpsert,
 } = require("./mail-authority-state");
+const {
+  initializeMailLifecycle,
+  readMailLifecycleState,
+  settleMailLifecycle,
+} = require("./mail-lifecycle-state");
 const {
   buildCanonicalMailInboxPage,
   normalizeMailInboxPageOptions,
@@ -237,7 +241,11 @@ function createMailChatDomain(ctx) {
     if (!builtMail.ok) {
       return fail(builtMail.code, builtMail.message);
     }
-    const mail = builtMail.mail;
+    const initializedLifecycle = initializeMailLifecycle(builtMail.mail, builtMail);
+    if (!initializedLifecycle.ok) {
+      return fail(initializedLifecycle.code, initializedLifecycle.message);
+    }
+    const mail = initializedLifecycle.mail;
     data.consumedEquipmentEnvelopes = nextConsumedLedger;
     if (senderProfile && senderBinding) {
       persistProfileForAccount(data, resolved.account, senderBinding, senderProfile, now);
@@ -383,6 +391,12 @@ function createMailChatDomain(ctx) {
         mail: publicMail(mail),
       });
     }
+    const lifecycleState = readMailLifecycleState(attachmentState.mail, attachmentState);
+    if (!lifecycleState.ok) {
+      return fail(lifecycleState.code, lifecycleState.message, {
+        mail: publicMail(mail),
+      });
+    }
     const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(data);
     for (const envelope of attachmentState.equipmentEnvelopes) {
       const ownership = envelopeRegistry.requireUnique(envelope.envelopeId, {
@@ -498,25 +512,30 @@ function createMailChatDomain(ctx) {
       });
     }
     data.consumedEquipmentEnvelopes = consumed.ledger;
-    if (!updatedMail.empty) {
-      const stagedMail = stageMailAuthorityUpsert(data.mailMessages, updatedMail.mail);
-      if (!stagedMail.ok) {
-        return fail(stagedMail.code, stagedMail.message, {
+    let nextMail = updatedMail.mail;
+    if (updatedMail.empty) {
+      const settled = settleMailLifecycle(updatedMail.mail, {
+        ok: true,
+        items: updatedMail.remaining.items,
+        equipmentEnvelopes: updatedMail.remaining.equipmentEnvelopes,
+        currency: updatedMail.remaining.currency,
+      }, isoNow(now));
+      if (!settled.ok) {
+        return fail(settled.code, settled.message, {
           mail: publicMail(mail),
           profileSummary: profileSummaryForAccount(resolved.account, data),
         });
       }
-      data.mailMessages = stagedMail.messages;
-    } else {
-      const stagedMail = stageMailAuthorityDelete(data.mailMessages, normalizedMailId);
-      if (!stagedMail.ok) {
-        return fail(stagedMail.code, stagedMail.message, {
-          mail: publicMail(mail),
-          profileSummary: profileSummaryForAccount(resolved.account, data),
-        });
-      }
-      data.mailMessages = stagedMail.messages;
+      nextMail = settled.mail;
     }
+    const stagedMail = stageMailAuthorityUpsert(data.mailMessages, nextMail);
+    if (!stagedMail.ok) {
+      return fail(stagedMail.code, stagedMail.message, {
+        mail: publicMail(mail),
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    data.mailMessages = stagedMail.messages;
     const questMessages = recordAndClaimQuest(profile, {
       type: "claim_mail",
       mailKind: String(mail.mailKind || ""),
@@ -534,7 +553,7 @@ function createMailChatDomain(ctx) {
       profileBinding: persisted.binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
       profile: clone(profile),
-      mail: updatedMail.empty ? null : publicMail(updatedMail.mail),
+      mail: publicMail(nextMail),
       battleRoom: battleRoom && publicBattleRoom
         ? publicBattleRoom(battleRoom, resolved.account.accountId)
         : null,

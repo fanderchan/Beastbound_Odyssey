@@ -66,6 +66,8 @@ const {
   buildRowLocalMailClaimConsistencyScope,
   rowLocalMailClaimRecoveryMatches,
 } = require("./auth/mail-claim-consistency");
+const {readMailAttachmentState} = require("./auth/mail-attachment-state");
+const {readMailLifecycleState} = require("./auth/mail-lifecycle-state");
 const {
   buildRowLocalMailReadConsistencyScope,
   rowLocalMailReadRecoveryMatches,
@@ -3961,6 +3963,7 @@ function createAuthService(options = {}) {
       playerId,
       mailId,
       receipt,
+      publicMail,
     });
   }
 
@@ -7020,6 +7023,15 @@ function playerPositionPublicPrecision(position) {
 }
 
 function publicMail(mail) {
+  const needsEquipmentOptions = Number(mail.schemaVersion) === 2
+    || Object.hasOwn(mail, "equipmentEnvelopes")
+    || (typeof mail.settledAt === "string" && mail.settledAt !== "");
+  const equipmentOptions = needsEquipmentOptions ? {
+    ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+    expToNextLevel: battleExpToNextLevel,
+    maxPlayerLevel: MAX_PLAYER_LEVEL,
+  } : {};
+  const publicSettledAt = publicMailSettledAt(mail, equipmentOptions);
   const result = {
     mailId: mail.mailId,
     mailKind: String(mail.mailKind || ""),
@@ -7033,19 +7045,31 @@ function publicMail(mail) {
     currency: normalizeMailCurrency(mail.currency || mail.currencies || {}),
     createdAt: mail.createdAt,
     readAt: mail.readAt || null,
+    settledAt: publicSettledAt,
     schemaVersion: Number(mail.schemaVersion) === 2 ? 2 : 1,
   };
   if (result.schemaVersion === 2 || Object.hasOwn(mail, "equipmentEnvelopes")) {
-    const equipmentOptions = {
-      ...equipmentWearRulesFromDocument(playerGrowthDocument()),
-      expToNextLevel: battleExpToNextLevel,
-      maxPlayerLevel: MAX_PLAYER_LEVEL,
-    };
     result.equipmentEnvelopes = (Array.isArray(mail.equipmentEnvelopes) ? mail.equipmentEnvelopes : []).map((envelope) => (
       publicEquipmentTransferSummary(envelope, battleEquipmentCatalog, equipmentOptions)
     ));
   }
   return result;
+}
+
+function publicMailSettledAt(mail, equipmentOptions) {
+  if (typeof mail.settledAt !== "string" || mail.settledAt === "") {
+    return null;
+  }
+  const attachmentState = readMailAttachmentState(mail, battleEquipmentCatalog, {
+    itemById: bagItemById,
+    isEquipmentItemId: isEquipmentAssetItemId,
+    equipmentTransferOptions: equipmentOptions,
+  });
+  if (!attachmentState.ok) {
+    return null;
+  }
+  const lifecycleState = readMailLifecycleState(attachmentState.mail, attachmentState);
+  return lifecycleState.ok && lifecycleState.settled ? lifecycleState.settledAt : null;
 }
 
 function normalizeMailItems(value) {

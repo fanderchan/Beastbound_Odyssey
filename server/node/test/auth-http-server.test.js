@@ -1262,7 +1262,13 @@ test("HTTP server exposes player search and mail endpoints", async (t) => {
   });
   assert.equal(claimed.ok, true);
   assert.equal(profileItemCount(claimed.profile, "item_meat_small"), 2);
-  assert.equal(claimed.mail, null);
+  assert.equal(claimed.mail.mailId, attachmentMail.mailId);
+  assert.deepEqual(claimed.mail.items, []);
+  assert.deepEqual(claimed.mail.equipmentEnvelopes, []);
+  assert.deepEqual(claimed.mail.currency, {});
+  assert.equal(Number.isFinite(Date.parse(claimed.mail.settledAt)), true);
+  assert.equal(Date.parse(claimed.mail.settledAt) >= Date.parse(claimed.mail.createdAt), true);
+  assert.equal(service.snapshot().mailMessages[attachmentMail.mailId].settledAt, claimed.mail.settledAt);
 });
 
 test("HTTP server exposes online roster and party endpoints", async (t) => {

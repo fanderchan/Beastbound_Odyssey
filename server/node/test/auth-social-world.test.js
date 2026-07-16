@@ -85,6 +85,7 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(sent.mail.senderUsername, "maila");
   assert.equal(sent.mail.recipientUsername, "mailb");
   assert.equal(sent.mail.readAt, null);
+  assert.equal(sent.mail.settledAt, sent.mail.createdAt);
 
   const senderInbox = service.listInbox(sender.session.token);
   assert.equal(senderInbox.ok, true);
@@ -144,9 +145,76 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(claimed.ok, true);
   assert.equal(claimed.claim.addedItems[0].count, 2);
   assert.equal(profileItemCount(claimed.profile, "item_meat_small"), 2);
-  assert.equal(claimed.mail, null);
+  assert.equal(claimed.mail.mailId, attachmentInbox.messages[0].mailId);
+  assert.deepEqual(claimed.mail.items, []);
+  assert.deepEqual(claimed.mail.currency, {});
+  assert.equal(typeof claimed.mail.settledAt, "string");
+  assert.equal(claimed.mail.readAt, claimed.mail.settledAt);
   const afterClaimInbox = service.listInbox(recipient.session.token);
-  assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
+  assert.equal(afterClaimInbox.messages.some((mail) => (
+    mail.mailId === attachmentInbox.messages[0].mailId
+    && mail.settledAt === claimed.mail.settledAt
+  )), true);
+  const replayedClaim = service.claimMailAttachments(recipient.session.token, attachmentInbox.messages[0].mailId);
+  assert.equal(replayedClaim.ok, false);
+  assert.equal(replayedClaim.code, "mail_no_attachments");
+});
+
+test("mail public projection exposes settlement only for a strictly verified empty receipt", () => {
+  const seedService = createAuthService({store: createMemoryAuthStore()});
+  const sender = seedService.register({username: "mail_life_send", password: "test1234", displayName: "生命周期寄件人"});
+  const recipient = seedService.register({username: "mail_life_owner", password: "test1234", displayName: "生命周期收件人"});
+  const seed = seedService.snapshot();
+  const createdAt = "2026-07-16T08:00:00.000Z";
+  const settledAt = "2026-07-16T09:00:00.000Z";
+  const baseMail = {
+    senderAccountId: sender.account.accountId,
+    senderUsername: sender.account.username,
+    senderDisplayName: sender.account.displayName,
+    recipientAccountId: recipient.account.accountId,
+    recipientUsername: recipient.account.username,
+    recipientDisplayName: recipient.account.displayName,
+    title: "生命周期投影",
+    body: "损坏字段不能伪装成已结算回执。",
+    items: [],
+    equipmentEnvelopes: [],
+    currency: {},
+    createdAt,
+    readAt: settledAt,
+    schemaVersion: 2,
+  };
+  seed.mailMessages.mail_lifecycle_valid = {
+    ...baseMail,
+    mailId: "mail_lifecycle_valid",
+    settledAt,
+  };
+  seed.mailMessages.mail_lifecycle_invalid_time = {
+    ...baseMail,
+    mailId: "mail_lifecycle_invalid_time",
+    settledAt: "not-a-time",
+  };
+  seed.mailMessages.mail_lifecycle_asset_conflict = {
+    ...baseMail,
+    mailId: "mail_lifecycle_asset_conflict",
+    items: [{itemId: "item_meat_small", count: 1}],
+    settledAt,
+  };
+  seed.mailMessages.mail_lifecycle_future_schema = {
+    ...baseMail,
+    mailId: "mail_lifecycle_future_schema",
+    settledAt,
+    schemaVersion: 3,
+  };
+
+  const service = createAuthService({store: createMemoryAuthStore(seed)});
+  const inbox = service.listInbox(recipient.session.token);
+  assert.equal(inbox.ok, true, JSON.stringify(inbox));
+  const byId = Object.fromEntries(inbox.messages.map((mail) => [mail.mailId, mail]));
+  assert.equal(byId.mail_lifecycle_valid.settledAt, settledAt);
+  assert.equal(byId.mail_lifecycle_invalid_time.settledAt, null);
+  assert.equal(byId.mail_lifecycle_asset_conflict.settledAt, null);
+  assert.deepEqual(byId.mail_lifecycle_asset_conflict.items, [{itemId: "item_meat_small", count: 1}]);
+  assert.equal(byId.mail_lifecycle_future_schema.settledAt, null);
 });
 
 test("memory inbox pagination keeps legacy full reads and keyset pages isolated by account", () => {
@@ -330,7 +398,10 @@ test("equipment mail selects one instance, preserves its state, and keeps histor
   assert.equal(inboxBeforeClaim.messages[0].equipmentEnvelopes[0].instanceState.enhancement.level, 2);
   const claimedModern = seedService.claimMailAttachments(recipient.session.token, sent.mail.mailId);
   assert.equal(claimedModern.ok, true, JSON.stringify(claimedModern));
-  assert.equal(claimedModern.mail, null);
+  assert.equal(claimedModern.mail.mailId, sent.mail.mailId);
+  assert.deepEqual(claimedModern.mail.items, []);
+  assert.deepEqual(claimedModern.mail.equipmentEnvelopes, []);
+  assert.equal(typeof claimedModern.mail.settledAt, "string");
   assert.equal(profileItemCount(claimedModern.profile, "weapon_wooden_club"), 1);
   assert.equal(claimedModern.claim.importedEquipmentInstanceIds.length, 1);
   const importedId = claimedModern.claim.importedEquipmentInstanceIds[0];
@@ -348,7 +419,14 @@ test("equipment mail selects one instance, preserves its state, and keeps histor
     schemaVersion: 1,
     envelopeId: internalEnvelope.envelopeId,
   });
-  assert.equal(afterModernClaim.mailMessages[sent.mail.mailId], undefined);
+  assert.deepEqual(afterModernClaim.mailMessages[sent.mail.mailId], {
+    ...internalMail,
+    items: [],
+    equipmentEnvelopes: [],
+    currency: {},
+    readAt: claimedModern.mail.readAt,
+    settledAt: claimedModern.mail.settledAt,
+  });
 
   const seed = seedService.snapshot();
   seed.mailMessages.legacy_equipment_mail = {

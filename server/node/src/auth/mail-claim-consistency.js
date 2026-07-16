@@ -35,11 +35,17 @@ function buildRowLocalMailClaimConsistencyScope(options = {}) {
     before.consumedEquipmentEnvelopes,
     candidate.consumedEquipmentEnvelopes,
   );
-  const responseClaim = objectOrEmpty(objectOrEmpty(options.receipt.response).claim);
+  const receiptResponse = objectOrEmpty(options.receipt.response);
+  const responseClaim = objectOrEmpty(receiptResponse.claim);
+  const responseMail = objectOrEmpty(receiptResponse.mail);
+  const expectedResponseMail = typeof options.publicMail === "function" && nextMail !== null
+    ? options.publicMail(nextMail)
+    : null;
   if (
     accountId === ""
     || playerId === ""
     || mailId === ""
+    || mailDisposition !== "update"
     || String(beforeBinding.accountId || "") !== accountId
     || String(beforeProfile.accountId || "") !== accountId
     || String(beforeProfile.playerId || "") !== playerId
@@ -62,6 +68,8 @@ function buildRowLocalMailClaimConsistencyScope(options = {}) {
     || !consumedDelta.ok
     || !isDeepStrictEqual([...consumedDelta.addedIds].sort(), claimedEnvelopeIds)
     || String(responseClaim.mailId || "") !== mailId
+    || !expectedResponseMail
+    || !isDeepStrictEqual(responseMail, expectedResponseMail)
   ) {
     return null;
   }
@@ -94,7 +102,7 @@ function rowLocalMailClaimRecoveryMatches(reloaded, expected, scope) {
     accountId === ""
     || playerId === ""
     || mailId === ""
-    || !["update", "delete"].includes(mailDisposition)
+    || mailDisposition !== "update"
     || operationId === ""
     || requestHash === ""
     || actionId === ""
@@ -121,12 +129,9 @@ function rowLocalMailClaimRecoveryMatches(reloaded, expected, scope) {
     || String(reloadedReceipt.requestHash || "") !== requestHash
     || String(reloadedReceipt.actionId || "") !== actionId
     || String(reloadedReceipt.accountId || "") !== accountId
-    || (mailDisposition === "update" && (
-      !reloadedMail
-      || !expectedMail
-      || !isDeepStrictEqual(reloadedMail, expectedMail)
-    ))
-    || (mailDisposition === "delete" && (reloadedMail || expectedMail))
+    || !reloadedMail
+    || !expectedMail
+    || !isDeepStrictEqual(reloadedMail, expectedMail)
   ) {
     return false;
   }
@@ -217,9 +222,88 @@ function objectOrEmpty(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function nullableTimestamp(value) {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+function mailClaimReceiptResponseMatches(mailValue, responseValue) {
+  const mail = objectOrEmpty(mailValue);
+  const response = objectOrEmpty(responseValue);
+  const schemaVersion = Number(mail.schemaVersion) === 2 ? 2 : 1;
+  const expected = {
+    mailId: mail.mailId,
+    mailKind: String(mail.mailKind || ""),
+    senderUsername: mail.senderUsername,
+    senderDisplayName: mail.senderDisplayName,
+    recipientUsername: mail.recipientUsername,
+    recipientDisplayName: mail.recipientDisplayName,
+    title: mail.title,
+    body: mail.body,
+    items: publicMailClaimItems(mail.items),
+    currency: publicMailClaimCurrency(mail.currency || mail.currencies || {}),
+    createdAt: mail.createdAt,
+    readAt: nullableTimestamp(mail.readAt),
+    settledAt: nullableTimestamp(mail.settledAt),
+    schemaVersion,
+  };
+  if (schemaVersion === 2 || Object.hasOwn(mail, "equipmentEnvelopes")) {
+    expected.equipmentEnvelopes = (Array.isArray(mail.equipmentEnvelopes)
+      ? mail.equipmentEnvelopes
+      : []).map(publicMailClaimEquipmentEnvelope);
+  }
+  return isDeepStrictEqual(response, expected);
+}
+
+function publicMailClaimItems(value) {
+  const counts = new Map();
+  for (const entry of Array.isArray(value) ? value : []) {
+    const itemId = String(entry && entry.itemId || "").trim();
+    const count = Math.max(0, Math.trunc(Number(entry && entry.count || 0)));
+    if (itemId === "" || count <= 0) {
+      continue;
+    }
+    counts.set(itemId, Number(counts.get(itemId) || 0) + count);
+  }
+  return Array.from(counts.entries()).map(([itemId, count]) => ({itemId, count}));
+}
+
+function publicMailClaimCurrency(value) {
+  const raw = objectOrEmpty(value);
+  const result = {};
+  const stoneCoins = Math.max(0, Math.trunc(Number(raw.stoneCoins || raw.coins || 0)));
+  const diamonds = Math.max(0, Math.trunc(Number(raw.diamonds || raw.diamond || 0)));
+  if (stoneCoins > 0) {
+    result.stoneCoins = stoneCoins;
+  }
+  if (diamonds > 0) {
+    result.diamonds = diamonds;
+  }
+  return result;
+}
+
+function publicMailClaimEquipmentEnvelope(value) {
+  const envelope = objectOrEmpty(value);
+  const state = objectOrEmpty(envelope.instanceState);
+  const publicState = {};
+  for (const [field, fieldValue] of Object.entries(state)) {
+    if (["source", "transferProvenance", "qaAssetSample", "__proto__", "prototype", "constructor"].includes(field)) {
+      continue;
+    }
+    publicState[field] = structuredClone(fieldValue);
+  }
+  return {
+    schemaVersion: envelope.schemaVersion,
+    envelopeId: envelope.envelopeId,
+    itemId: envelope.itemId,
+    instanceState: publicState,
+    stateFingerprint: envelope.stateFingerprint,
+  };
+}
+
 module.exports = {
   buildRowLocalMailClaimConsistencyScope,
   canonicalMailClaimEnvelopeIds,
+  mailClaimReceiptResponseMatches,
   mailEquipmentEnvelopeMap,
   removedMailEquipmentEnvelopeIds,
   rowLocalMailClaimRecoveryMatches,

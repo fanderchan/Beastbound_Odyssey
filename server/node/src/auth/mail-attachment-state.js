@@ -23,6 +23,7 @@ const MAIL_V1_FIELDS = new Set([
   "currencies",
   "createdAt",
   "readAt",
+  "settledAt",
   "schemaVersion",
 ]);
 const MAIL_V2_FIELDS = new Set([
