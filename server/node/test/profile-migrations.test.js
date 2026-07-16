@@ -253,6 +253,59 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
   assert.equal(summary.digest, profileAssetSummary(structuredClone(profile)).digest);
 });
 
+test("migration asset audits include exact private pets waiting in the recovery shelter", () => {
+  const pendingPet = {
+    instanceId: "pet_shelter_001",
+    petId: "pet_shelter_001",
+    formId: "blue_man_dragon_water10",
+    templateId: "blue_man_dragon_water10",
+    state: "storage",
+    level: 1,
+    attack: 14,
+    petGrowth: {
+      schemaVersion: 1,
+      private: {privateSeed: `bps1_${"B".repeat(43)}`},
+    },
+  };
+  const source = legacyProfile(1);
+  source.petRecoveryShelter = {
+    schemaVersion: 1,
+    pending: {
+      pet_capture_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: {
+        schemaVersion: 1,
+        recoveryId: "pet_capture_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        roomId: "battle_room_migration_shelter",
+        actorId: "wild_migration_shelter",
+        petInstanceId: pendingPet.instanceId,
+        formId: pendingPet.formId,
+        status: "pending",
+        pet: pendingPet,
+        createdAt: "2026-07-17T00:00:00.000Z",
+      },
+    },
+    completed: {},
+    recentCompletedIds: [],
+  };
+
+  const summary = profileAssetSummary(source);
+  assert.equal(summary.pets.referenceCount, 4);
+  assert.equal(summary.pets.uniqueIdentityCount, 4);
+  assert.equal(summary.pets.formCounts.blue_man_dragon_water10, 2);
+  const changedPet = structuredClone(source);
+  changedPet.petRecoveryShelter.pending.pet_capture_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.pet.attack = 999;
+  assert.notEqual(profileAssetSummary(changedPet).digest, summary.digest);
+
+  const migrated = migrateProfile(source);
+  assert.equal(migrated.ok, true);
+  assert.equal(migrated.assetsUnchanged, true);
+  assert.equal(migrated.contentUnchanged, true);
+  assert.deepEqual(migrated.profile.petRecoveryShelter, source.petRecoveryShelter);
+  assert.equal(
+    migrated.profile.petRecoveryShelter.pending.pet_capture_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.pet.petGrowth.private.privateSeed,
+    `bps1_${"B".repeat(43)}`,
+  );
+});
+
 test("batch migration preserves every existing and unknown bucket plus profile document metadata", () => {
   const currentProfile = migrateProfile(legacyProfile(2)).profile;
   const snapshot = {

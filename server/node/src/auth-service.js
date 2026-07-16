@@ -69,6 +69,14 @@ const {
   REASON_CODES: PET_PROTECTION_REASON_CODES,
   evaluateProfilePetAutomaticProcessing,
 } = require("./auth/pet-protection-policy");
+const {
+  PROFILE_KEY: PET_RECOVERY_SHELTER_PROFILE_KEY,
+  captureRecoveryId,
+  pendingPetCaptures,
+  readShelter: readPetRecoveryShelter,
+  recoverPetCapture,
+  stagePetCapture,
+} = require("./auth/pet-capture-shelter");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {
@@ -260,6 +268,7 @@ const MAX_BATTLE_TRACE_ROWS = 1200;
 const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "buyMarketListing",
   "cancelMarketListing",
+  "claimPetRecovery",
   "claimMailAttachments",
   "markMailRead",
 ]);
@@ -269,6 +278,8 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "createMarketListing",
   "buyMarketListing",
   "cancelMarketListing",
+  "claimPetRecovery",
+  "submitBattleCommand",
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
@@ -560,6 +571,7 @@ const PROFILE_ACTION_IDS = new Set([
 const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "saveProfile",
   "profileAction",
+  "claimPetRecovery",
   "startHangSession",
   "startOfflineHang",
   "playerRebirth",
@@ -1374,6 +1386,160 @@ function createAuthService(options = {}) {
     });
   }
 
+  function claimPetRecovery(token, payload = {}) {
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    if (
+      !payload
+      || typeof payload !== "object"
+      || Array.isArray(payload)
+      || Object.keys(payload).length !== 1
+      || !Object.prototype.hasOwnProperty.call(payload, "recoveryId")
+    ) {
+      return fail("pet_recovery_payload_invalid", "宠物收容取回请求不正确。");
+    }
+    const recoveryId = String(payload.recoveryId || "").trim();
+    if (!/^pet_capture_[a-f0-9]{32}$/.test(recoveryId)) {
+      return fail("pet_recovery_id_invalid", "宠物收容编号不正确。");
+    }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const binding = ensured.binding;
+    const profileDoc = ensured.profileDoc;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? clone(profileDoc.profile)
+      : null;
+    if (!profile) {
+      return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const recovered = recoverPetCapture(profile, {
+      recoveryId,
+      completedAt: isoNow(now),
+    });
+    if (!recovered.ok) {
+      const messages = {
+        pet_capture_shelter_capacity_full: "宠物栏和兽栏仍然已满，请腾出一个位置后再取回。",
+        pet_capture_shelter_pending_missing: "没有找到这条待取回宠物记录。",
+        pet_capture_shelter_identity_conflict: "宠物身份发生冲突，已停止取回，请联系GM处理。",
+        pet_capture_shelter_invalid: "宠物安全收容资料异常，已停止取回，请联系GM处理。",
+      };
+      return fail(
+        String(recovered.code || "pet_recovery_failed"),
+        messages[recovered.code] || "宠物暂时无法安全取回，请联系GM处理。",
+        {
+          profileBinding: binding,
+          profileSummary: profileSummaryForAccount(resolved.account, data),
+        },
+      );
+    }
+    const pet = recovered.pet || (Array.isArray(profile.petInstances) ? profile.petInstances : [])
+      .find((entry) => String(entry && (entry.instanceId || entry.petId) || "") === String(recovered.petInstanceId || ""))
+      || null;
+    if (pet) {
+      recordProfilePetCodexForm(profile, String(pet.formId || pet.templateId || ""), true);
+    }
+    let persisted = {binding, profileDoc};
+    if (recovered.changed) {
+      persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
+      save(data);
+    } else if (ensured.created) {
+      save(data);
+    }
+    return ok({
+      account: publicAccount(resolved.account),
+      profileBinding: persisted.binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      profile: clone(profile),
+      recovery: {
+        recoveryId,
+        instanceId: String(recovered.petInstanceId || pet && (pet.instanceId || pet.petId) || ""),
+        formId: String(pet && (pet.formId || pet.templateId) || ""),
+        state: String(pet && pet.state || ""),
+        disposition: String(recovered.disposition || ""),
+        replayed: Boolean(recovered.replayed),
+        pet: pet ? publicPet(pet) : null,
+        schemaVersion: 1,
+      },
+      message: recovered.replayed ? "这只宠物已经安全取回。" : "宠物已安全取回。",
+    });
+  }
+
+  function listPetRecoveries(token) {
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    if (ensured.created) {
+      save(data);
+    }
+    return petRecoveryListResult(data, resolved.account, ensured.binding, ensured.profileDoc && ensured.profileDoc.profile);
+  }
+
+  function petRecoveryListResult(data, account, binding, profile) {
+    const pending = pendingPetCaptures(profile);
+    if (!pending.ok) {
+      return fail("pet_capture_shelter_invalid", "宠物安全收容资料异常，请联系GM处理。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(account, data),
+      });
+    }
+    const recoveries = pending.records
+      .sort((left, right) => (
+        String(left.createdAt || "").localeCompare(String(right.createdAt || ""))
+        || String(left.recoveryId || "").localeCompare(String(right.recoveryId || ""))
+      ))
+      .map((record) => ({
+        recoveryId: String(record.recoveryId || ""),
+        petInstanceId: String(record.petInstanceId || ""),
+        formId: String(record.formId || ""),
+        createdAt: String(record.createdAt || ""),
+        pet: publicPet(record.pet),
+        schemaVersion: 1,
+      }));
+    return ok({
+      account: publicAccount(account),
+      profileBinding: binding,
+      profileSummary: profileSummaryForAccount(account, data),
+      recoveries,
+      count: recoveries.length,
+      schemaVersion: 1,
+    });
+  }
+
+  function tryListPetRecoveriesReadOnly(token) {
+    const data = load();
+    const resolved = resolveServiceSession(data, token);
+    if (!resolved.ok) {
+      return {handled: true, result: fail(resolved.code, resolved.message)};
+    }
+    const binding = data.profileBindings[resolved.account.accountId] || null;
+    const profileDoc = binding && String(binding.playerId || "") !== ""
+      ? data.profiles[binding.playerId] || null
+      : null;
+    if (
+      !binding
+      || !profileDoc
+      || !profileDoc.profile
+      || typeof profileDoc.profile !== "object"
+      || Array.isArray(profileDoc.profile)
+    ) {
+      return {handled: false};
+    }
+    return {
+      handled: true,
+      result: projectPublicServiceResult(
+        petRecoveryListResult(data, resolved.account, binding, profileDoc.profile),
+      ),
+    };
+  }
+
   function tryGetProfileReadOnly(token) {
     const data = load();
     const resolved = resolveSession(data, token, now, {serverStartedAtMs});
@@ -1413,6 +1579,9 @@ function createAuthService(options = {}) {
     if (normalizedMethodName === "getProfile") {
       return tryGetProfileReadOnly(values[0]);
     }
+    if (normalizedMethodName === "listPetRecoveries") {
+      return tryListPetRecoveriesReadOnly(values[0]);
+    }
     if (normalizedMethodName === "getPartyState" && party && typeof party.tryGetPartyStateReadOnly === "function") {
       return party.tryGetPartyStateReadOnly(values[0]);
     }
@@ -1431,6 +1600,9 @@ function createAuthService(options = {}) {
     const profile = payload.profile;
     if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
       return fail("invalid_profile", "角色档案必须是对象。");
+    }
+    if (Object.prototype.hasOwnProperty.call(profile, PET_RECOVERY_SHELTER_PROFILE_KEY)) {
+      return fail("profile_private_field_denied", "玩家档案不能上传宠物安全收容资料。");
     }
     const backpackConflict = rawBackpackAssetConflict(profile);
     if (backpackConflict) {
@@ -1488,6 +1660,15 @@ function createAuthService(options = {}) {
     };
     candidateData.profileBindings[resolved.account.accountId] = binding;
     const storedProfile = clone(profile);
+    if (
+      currentProfileDoc
+      && currentProfileDoc.profile
+      && Object.prototype.hasOwnProperty.call(currentProfileDoc.profile, PET_RECOVERY_SHELTER_PROFILE_KEY)
+    ) {
+      storedProfile[PET_RECOVERY_SHELTER_PROFILE_KEY] = clone(
+        currentProfileDoc.profile[PET_RECOVERY_SHELTER_PROFILE_KEY],
+      );
+    }
     synchronizeProfileEquipmentStats(storedProfile);
     candidateData.profiles[binding.playerId] = {
       playerId: binding.playerId,
@@ -3692,12 +3873,15 @@ function createAuthService(options = {}) {
   }
 
   function durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt) {
-    if (methodName !== "profileAction" || !receipt || typeof receipt !== "object") {
+    if (!receipt || typeof receipt !== "object") {
       return null;
     }
+    const rowLocalProfileMethod = methodName === "claimPetRecovery";
     const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
-    const action = normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command);
-    if (action !== "record_point_save") {
+    const action = methodName === "profileAction"
+      ? normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command)
+      : "";
+    if (!rowLocalProfileMethod && action !== "record_point_save") {
       return null;
     }
     const session = sessionByToken(before, durableMutationToken(args));
@@ -5402,6 +5586,8 @@ function createAuthService(options = {}) {
     getSession,
     getEventSession,
     getProfile,
+    listPetRecoveries,
+    claimPetRecovery,
     saveProfile,
     profileAction: profileActions.profileAction,
     startHangSession: profileActions.startHangSession,
@@ -11218,6 +11404,7 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
     if (captureSource === BATTLE_CAPTURE_SOURCE_AUTO) {
       const filterResult = battleAutoCapturePreEvaluation(
         data,
+        room,
         battle,
         account.accountId,
         targetActor,
@@ -11510,12 +11697,18 @@ function battleCaptureCapacityCheck(data, room, battle, accountId) {
   if (!profile) {
     return fail("battle_capture_candidate_invalid", "角色宠物资料暂时不可用，请重新登录后再试。");
   }
-  const claimedInRoom = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((entry) => (
-    entry &&
-    Boolean(entry.captured) &&
-    String(entry.capturedByAccountId || "") === normalizedAccountId
+  const shelter = pendingPetCaptures(profile);
+  if (!shelter.ok) {
+    return fail("battle_capture_shelter_invalid", "宠物安全收容资料异常，本次捕捉已取消，请联系GM处理。");
+  }
+  const claimedRecoveryIds = battleClaimedCaptureRecoveryIds(room, battle, normalizedAccountId);
+  const shelteredOutsideCurrentClaims = shelter.records.filter((record) => (
+    !claimedRecoveryIds.has(String(record && record.recoveryId || ""))
   )).length;
-  const used = profilePartyVisiblePetCount(profile) + profileStoragePetCount(profile) + claimedInRoom;
+  const used = profilePartyVisiblePetCount(profile)
+    + profileStoragePetCount(profile)
+    + claimedRecoveryIds.size
+    + shelteredOutsideCurrentClaims;
   if (used >= BATTLE_PET_MAX_PER_PARTICIPANT + BATTLE_PET_STORAGE_LIMIT) {
     return fail("battle_capture_capacity_full", "宠物栏和兽栏都满了，请先清理位置再捕捉。");
   }
@@ -11523,6 +11716,37 @@ function battleCaptureCapacityCheck(data, room, battle, accountId) {
     used,
     available: BATTLE_PET_MAX_PER_PARTICIPANT + BATTLE_PET_STORAGE_LIMIT - used,
   });
+}
+
+function battleClaimedCaptureRecoveryIds(room, battle, accountId) {
+  const normalizedAccountId = String(accountId || "");
+  const roomId = String(room && room.roomId || "");
+  const recoveryIds = new Set();
+  for (const actor of Array.isArray(battle && battle.actors) ? battle.actors : []) {
+    if (
+      actor
+      && Boolean(actor.captured)
+      && String(actor.capturedByAccountId || "") === normalizedAccountId
+    ) {
+      const recoveryId = captureRecoveryId(roomId, String(actor.actorId || ""));
+      if (recoveryId !== "") {
+        recoveryIds.add(recoveryId);
+      }
+    }
+  }
+  for (const [actorId, candidate] of Object.entries(objectOrEmpty(battle && battle.captureCandidatesByActorId))) {
+    if (
+      candidate
+      && String(candidate.status || "") === "claimed"
+      && String(candidate.claimedByAccountId || "") === normalizedAccountId
+    ) {
+      const recoveryId = captureRecoveryId(roomId, String(actorId || candidate.actorId || ""));
+      if (recoveryId !== "") {
+        recoveryIds.add(recoveryId);
+      }
+    }
+  }
+  return recoveryIds;
 }
 
 function battleCaptureProfileForAccount(data, accountId) {
@@ -11536,7 +11760,7 @@ function battleCaptureProfileForAccount(data, accountId) {
     : null;
 }
 
-function battleAutoCapturePreEvaluation(data, battle, accountId, targetActor, petAutoCaptureFilter) {
+function battleAutoCapturePreEvaluation(data, room, battle, accountId, targetActor, petAutoCaptureFilter) {
   const profile = battleCaptureProfileForAccount(data, accountId);
   if (!profile || !petAutoCaptureFilter || typeof petAutoCaptureFilter.evaluatePreCapture !== "function") {
     return {
@@ -11552,12 +11776,26 @@ function battleAutoCapturePreEvaluation(data, battle, accountId, targetActor, pe
   const ownedSameFormCount = petInstances.filter((pet) => (
     pet && String(pet.formId || pet.templateId || pet.speciesId || "") === formId
   )).length;
-  const pendingSameFormCount = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((entry) => (
+  const shelter = pendingPetCaptures(profile);
+  if (!shelter.ok) {
+    return {
+      ok: false,
+      code: "battle_auto_capture_filter_unavailable",
+      message: "宠物安全收容资料异常，本次自动捕捉已取消，请联系GM处理。",
+    };
+  }
+  const shelteredRecoveryIds = new Set(shelter.records.map((record) => String(record.recoveryId || "")));
+  const shelteredSameFormCount = shelter.records.filter((record) => (
+    String(record && record.formId || "") === formId
+  )).length;
+  const unshelteredClaimedSameFormCount = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((entry) => (
     entry
     && Boolean(entry.captured)
     && String(entry.capturedByAccountId || "") === String(accountId || "")
     && String(entry.formId || entry.speciesId || "") === formId
+    && !shelteredRecoveryIds.has(captureRecoveryId(String(room && room.roomId || ""), String(entry.actorId || "")))
   )).length;
+  const pendingSameFormCount = shelteredSameFormCount + unshelteredClaimedSameFormCount;
   const settings = serverAutoCaptureSettingsRules().normalizeSettings(profile.autoCaptureSettings);
   let evaluation = null;
   try {
@@ -11727,7 +11965,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
       continue;
     }
     if (String(command.actionKind || command.actionId || "") === BATTLE_ACTION_CAPTURE) {
-      events.push(battleCaptureEvent(data, room, battle, command, actor, round, sequence, options));
+      events.push(battleCaptureEvent(data, room, battle, command, actor, round, sequence, now, options));
       sequence += 1;
       commandIndex += 1;
       if (battleResultForResolvedActors(room, battle, now)) {
@@ -13631,6 +13869,13 @@ function battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now)
 
 function closeBattleRoomWithResult(data, room, result, now, options = {}) {
   const battle = battleRoomBattleStateForMutation(room, now, options);
+  const captureSettlementPreflight = preflightBattleCaptureShelterSettlement(data, room, battle);
+  if (!captureSettlementPreflight.ok) {
+    const error = new Error("已认领宠物缺少完整私有收容快照，战斗结算已安全中止。");
+    error.code = String(captureSettlementPreflight.code || "battle_capture_settlement_blocked");
+    error.details = captureSettlementPreflight.details;
+    throw error;
+  }
   const recordId = `battle_record_${String(room.roomId || "").replace(/^battle_room_/, "")}`;
   room.status = BATTLE_ROOM_CLOSED;
   room.closeReason = String(result.reason || "closed");
@@ -13689,6 +13934,74 @@ function closeBattleRoomWithResult(data, room, result, now, options = {}) {
     }
   }
   return room;
+}
+
+function preflightBattleCaptureShelterSettlement(data, room, battle) {
+  const roomId = String(room && room.roomId || "");
+  const claims = new Map();
+  for (const [actorId, candidate] of Object.entries(objectOrEmpty(battle && battle.captureCandidatesByActorId))) {
+    if (!candidate || String(candidate.status || "") !== "claimed") {
+      continue;
+    }
+    const accountId = String(candidate.claimedByAccountId || "");
+    const recoveryId = captureRecoveryId(roomId, String(actorId || candidate.actorId || ""));
+    if (accountId !== "" && recoveryId !== "") {
+      claims.set(recoveryId, {
+        recoveryId,
+        actorId: String(actorId || candidate.actorId || ""),
+        accountId,
+        petInstanceId: String(candidate.pet && (candidate.pet.instanceId || candidate.pet.petId) || ""),
+      });
+    }
+  }
+  for (const actor of Array.isArray(battle && battle.actors) ? battle.actors : []) {
+    if (!actor || !Boolean(actor.captured)) {
+      continue;
+    }
+    const actorId = String(actor.actorId || "");
+    const accountId = String(actor.capturedByAccountId || "");
+    const recoveryId = captureRecoveryId(roomId, actorId);
+    if (accountId !== "" && recoveryId !== "" && !claims.has(recoveryId)) {
+      claims.set(recoveryId, {recoveryId, actorId, accountId, petInstanceId: ""});
+    }
+  }
+  for (const claim of claims.values()) {
+    const binding = data && data.profileBindings ? data.profileBindings[claim.accountId] || null : null;
+    const profileDoc = binding && binding.playerId && data && data.profiles
+      ? data.profiles[binding.playerId] || null
+      : null;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? profileDoc.profile
+      : null;
+    if (!profile) {
+      return {ok: false, code: "battle_capture_settlement_profile_missing", details: claim};
+    }
+    const read = readPetRecoveryShelter(profile);
+    if (!read.ok) {
+      return {ok: false, code: String(read.code || "battle_capture_shelter_invalid"), details: claim};
+    }
+    const pending = read.shelter.pending[claim.recoveryId] || null;
+    const completed = read.shelter.completed[claim.recoveryId] || null;
+    const live = (Array.isArray(profile.petInstances) ? profile.petInstances : (Array.isArray(profile.pets) ? profile.pets : []))
+      .find((pet) => (
+        pet
+        && String(pet.capturedBattleRoomId || "") === roomId
+        && String(pet.capturedBattleActorId || "") === claim.actorId
+      )) || null;
+    const resolvedPetInstanceId = String(
+      pending && pending.petInstanceId
+      || completed && completed.petInstanceId
+      || live && (live.instanceId || live.petId)
+      || "",
+    );
+    if (
+      (!pending && !completed && !live)
+      || (claim.petInstanceId !== "" && resolvedPetInstanceId !== claim.petInstanceId)
+    ) {
+      return {ok: false, code: "battle_capture_settlement_snapshot_missing", details: claim};
+    }
+  }
+  return {ok: true};
 }
 
 function appendBattleRecord(data, record) {
@@ -14069,6 +14382,13 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     changed = changed || captureToolWriteback.changed;
     summary.captureToolBag = captureToolWriteback.publicCaptureToolBag;
     const captureWriteback = applyBattleCapturedPetsToProfile(profile, battle, accountId, room, options);
+    if (captureWriteback.skippedReason) {
+      writeback.skippedProfiles.push({
+        accountId: String(accountId || ""),
+        playerId: String(binding.playerId || ""),
+        reason: String(captureWriteback.skippedReason),
+      });
+    }
     changed = changed || captureWriteback.changed;
     summary.capturedPets = captureWriteback.capturedPets;
     summary.lostCapturedPets = captureWriteback.lostCapturedPets;
@@ -17510,15 +17830,8 @@ function profilePetIdentityValues(pet) {
 }
 
 function applyBattleCapturedPetsToProfile(profile, battle, accountId, room, options = {}) {
-  const capturedActors = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((actor) => (
-    actor &&
-    Boolean(actor.captured) &&
-    String(actor.capturedByAccountId || "") === String(accountId || "") &&
-    String(actor.formId || actor.speciesId || "").trim() !== ""
-  ));
-  if (capturedActors.length <= 0) {
-    return {changed: false, capturedPets: [], lostCapturedPets: []};
-  }
+  const roomId = String(room && room.roomId || "");
+  const normalizedAccountId = String(accountId || "");
   if (!Array.isArray(profile.petInstances)) {
     profile.petInstances = Array.isArray(profile.pets) ? clone(profile.pets) : [];
   }
@@ -17526,63 +17839,62 @@ function applyBattleCapturedPetsToProfile(profile, battle, accountId, room, opti
   const capturedPets = [];
   const lostCapturedPets = [];
   let changed = false;
-  let serial = nextProfilePetInstanceSerial(profile, instances);
-  let partyCount = profilePartyVisiblePetCount(profile);
-  let storageCount = profileStoragePetCount(profile);
-  for (const actor of capturedActors) {
-    const existing = instances.find((pet) => (
-      pet &&
-      String(pet.capturedBattleRoomId || "") === String(room && room.roomId || "") &&
-      String(pet.capturedBattleActorId || "") === String(actor.actorId || "")
-    ));
+  const existingByActorId = new Map(instances
+    .filter((pet) => pet && String(pet.capturedBattleRoomId || "") === roomId)
+    .map((pet) => [String(pet.capturedBattleActorId || ""), pet]));
+  const shelter = pendingPetCaptures(profile);
+  if (!shelter.ok) {
+    return {
+      changed: false,
+      capturedPets: [],
+      lostCapturedPets: [],
+      skippedReason: String(shelter.code || "pet_capture_shelter_invalid"),
+    };
+  }
+  const pendingForRoom = shelter.records.filter((record) => (
+    String(record && record.roomId || "") === roomId
+    && String(record && record.pet && record.pet.capturedByAccountId || "") === normalizedAccountId
+  ));
+  const actorIds = new Set([
+    ...pendingForRoom.map((record) => String(record.actorId || "")),
+    ...(Array.isArray(battle && battle.actors) ? battle.actors : [])
+      .filter((actor) => (
+        actor
+        && Boolean(actor.captured)
+        && String(actor.capturedByAccountId || "") === normalizedAccountId
+      ))
+      .map((actor) => String(actor.actorId || "")),
+  ].filter(Boolean));
+  for (const actorId of actorIds) {
+    const existing = existingByActorId.get(actorId) || null;
     if (existing) {
       capturedPets.push(publicCapturedPetSummary(existing));
       continue;
     }
-    const formId = String(actor.formId || actor.speciesId || "").trim();
-    const canJoinParty = partyCount < BATTLE_PET_MAX_PER_PARTICIPANT;
-    const canEnterStorage = storageCount < BATTLE_PET_STORAGE_LIMIT;
-    const state = canJoinParty ? BATTLE_PET_STATE_STANDBY : BATTLE_PET_STATE_STORAGE;
-    const materialized = options.petCaptureCandidateAuthority && typeof options.petCaptureCandidateAuthority.materialize === "function"
-      ? options.petCaptureCandidateAuthority.materialize(room, {
-        actorId: String(actor.actorId || ""),
-        accountId: String(accountId || ""),
-        state,
-        capturedSerial: serial,
-        captureStatusIds: uniqueStringArray(actor.captureStatusIds || battleActorActiveStatusIds(actor)),
-      })
-      : null;
-    if (!materialized || materialized.ok !== true || !materialized.pet) {
+    const record = pendingForRoom.find((entry) => String(entry.actorId || "") === actorId) || null;
+    if (!record) {
       continue;
     }
-    const captured = clone(materialized.pet);
-    serial += 1;
-    if (String(actor.captureSource || "") === BATTLE_CAPTURE_SOURCE_AUTO) {
-      captured.captureFilterEvaluation = battleAutoCapturePostEvaluation(
-        options.petAutoCaptureFilter,
-        actor.captureFilterSettings,
-        actor.captureFilterPreEvaluation,
-        captured,
-      );
+    const recovered = recoverPetCapture(profile, {
+      recoveryId: record.recoveryId,
+      completedAt: String(room && (room.closedAt || room.updatedAt) || new Date().toISOString()),
+    });
+    if (!recovered.ok) {
+      const pendingPet = clone(record.pet);
+      pendingPet.captureRecoveryPending = true;
+      pendingPet.captureRecoveryId = record.recoveryId;
+      capturedPets.push(publicCapturedPetSummary(pendingPet));
+      continue;
     }
-    if (!canJoinParty && !canEnterStorage) {
-      // 正常路径会在投掷捕捉随机数前拒绝满容量；若内部运维在战斗中改档，宁可临时超额收容也绝不吞掉已认领宠物。
-      captured.state = BATTLE_PET_STATE_STORAGE;
-      captured.captureOverflowPending = true;
+    const captured = recovered.pet || instances.find((pet) => (
+      pet && String(pet.instanceId || pet.petId || "") === String(recovered.petInstanceId || "")
+    ));
+    if (!captured) {
+      continue;
     }
-    instances.push(captured);
-    if (String(captured.state || state) === BATTLE_PET_STATE_STORAGE) {
-      storageCount += 1;
-    } else {
-      partyCount += 1;
-    }
-    profile.nextPetInstanceSerial = serial;
-    recordProfilePetCodexForm(profile, formId, true);
+    recordProfilePetCodexForm(profile, String(captured.formId || captured.templateId || ""), true);
     capturedPets.push(publicCapturedPetSummary(captured));
-    changed = true;
-  }
-  if (serial > nextProfilePetInstanceSerial(profile, instances)) {
-    profile.nextPetInstanceSerial = serial;
+    changed = changed || recovered.changed;
   }
   return {
     changed,
@@ -20052,6 +20364,8 @@ function publicCapturedPetSummary(pet) {
     captureFilterEvaluation: pet.captureFilterEvaluation && typeof pet.captureFilterEvaluation === "object" && !Array.isArray(pet.captureFilterEvaluation)
       ? clone(pet.captureFilterEvaluation)
       : null,
+    recoveryPending: Boolean(pet.captureRecoveryPending),
+    recoveryId: String(pet.captureRecoveryId || ""),
     schemaVersion: 1,
   };
 }
@@ -21678,7 +21992,90 @@ function battleSpiritPoisonEvent(room, battle, command, actor, spiritId, round, 
   return event;
 }
 
-function battleCaptureEvent(data, room, battle, command, actor, round, sequence, options = {}) {
+function stageClaimedBattleCapture(data, room, battle, target, accountId, claimedRoom, participant, toolId, autoFilterResult, now, options = {}) {
+  const normalizedAccountId = String(accountId || "");
+  const account = accountById(data, normalizedAccountId);
+  const binding = data && data.profileBindings ? data.profileBindings[normalizedAccountId] || null : null;
+  const profileDoc = binding && binding.playerId && data && data.profiles
+    ? data.profiles[binding.playerId] || null
+    : null;
+  const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+    ? clone(profileDoc.profile)
+    : null;
+  if (!account || !binding || !profileDoc || !profile) {
+    return fail("battle_capture_shelter_profile_missing", "角色宠物资料暂时不可用，本次捕捉没有生效。");
+  }
+  if (!Array.isArray(profile.petInstances)) {
+    profile.petInstances = Array.isArray(profile.pets) ? clone(profile.pets) : [];
+  }
+  const pending = pendingPetCaptures(profile);
+  if (!pending.ok) {
+    return fail("battle_capture_shelter_invalid", "宠物安全收容资料异常，本次捕捉没有生效，请联系GM处理。");
+  }
+  const pendingPartyCount = pending.records.filter((record) => (
+    String(record && record.pet && record.pet.state || BATTLE_PET_STATE_STANDBY) !== BATTLE_PET_STATE_STORAGE
+  )).length;
+  const pendingStorageCount = pending.records.length - pendingPartyCount;
+  const virtualPartyCount = profilePartyVisiblePetCount(profile) + pendingPartyCount;
+  const virtualStorageCount = profileStoragePetCount(profile) + pendingStorageCount;
+  let state = "";
+  if (virtualPartyCount < BATTLE_PET_MAX_PER_PARTICIPANT) {
+    state = BATTLE_PET_STATE_STANDBY;
+  } else if (virtualStorageCount < BATTLE_PET_STORAGE_LIMIT) {
+    state = BATTLE_PET_STATE_STORAGE;
+  } else {
+    return fail("battle_capture_capacity_full", "宠物栏和兽栏都满了，本次捕捉没有生效。");
+  }
+  const serial = nextProfilePetInstanceSerial(profile, profile.petInstances);
+  const materialized = options.petCaptureCandidateAuthority && typeof options.petCaptureCandidateAuthority.materialize === "function"
+    ? options.petCaptureCandidateAuthority.materialize(claimedRoom, {
+      actorId: String(target && target.actorId || ""),
+      accountId: normalizedAccountId,
+      state,
+      capturedSerial: serial,
+      captureStatusIds: uniqueStringArray(target && (target.captureStatusIds || battleActorActiveStatusIds(target))),
+    })
+    : null;
+  if (!materialized || materialized.ok !== true || !materialized.pet) {
+    return fail("battle_capture_materialize_failed", "宠物个体暂时无法安全落档，本次捕捉没有生效，请重新遇敌。");
+  }
+  const captured = clone(materialized.pet);
+  if (autoFilterResult && autoFilterResult.ok) {
+    captured.captureFilterEvaluation = battleAutoCapturePostEvaluation(
+      options.petAutoCaptureFilter,
+      autoFilterResult.settings,
+      autoFilterResult.evaluation,
+      captured,
+    );
+  }
+  const staged = stagePetCapture(profile, {
+    roomId: String(room && room.roomId || ""),
+    actorId: String(target && target.actorId || ""),
+    pet: captured,
+    createdAt: isoNow(now),
+  });
+  if (!staged.ok) {
+    return fail(String(staged.code || "battle_capture_shelter_failed"), "宠物安全收容失败，本次捕捉没有生效，请联系GM处理。");
+  }
+  const captureToolBag = clone(participantCaptureToolBag(participant));
+  if (battleCaptureToolIsConsumable(toolId)) {
+    captureToolBag[toolId] = Math.max(0, Math.trunc(Number(captureToolBag[toolId] || 0)) - 1);
+  }
+  const toolWriteback = applyCaptureToolBagToProfile(profile, captureToolBag);
+  if (toolWriteback.skippedReason) {
+    return fail(String(toolWriteback.skippedReason), "捕捉网结算暂时不可用，本次捕捉没有生效。");
+  }
+  recordProfilePetCodexForm(profile, String(captured.formId || captured.templateId || ""), true);
+  const persisted = persistProfileForAccount(data, account, binding, profile, now);
+  return ok({
+    recoveryId: staged.recoveryId,
+    pet: captured,
+    captureToolBag: toolWriteback.publicCaptureToolBag,
+    profileRevision: persisted.binding.profileRevision,
+  });
+}
+
+function battleCaptureEvent(data, room, battle, command, actor, round, sequence, now, options = {}) {
   const toolId = normalizeBattleCaptureToolId(command.captureToolId || command.itemId || command.actionId);
   const participant = battleParticipantByAccountId(room, actor.accountId);
   const target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
@@ -21691,7 +22088,7 @@ function battleCaptureEvent(data, room, battle, command, actor, round, sequence,
     return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
   }
   const autoFilterResult = String(command.captureSource || "") === BATTLE_CAPTURE_SOURCE_AUTO
-    ? battleAutoCapturePreEvaluation(data, battle, actor.accountId, target, options.petAutoCaptureFilter)
+    ? battleAutoCapturePreEvaluation(data, room, battle, actor.accountId, target, options.petAutoCaptureFilter)
     : null;
   if (autoFilterResult && !autoFilterResult.ok) {
     return battleCaptureUnavailableEvent(
@@ -21732,6 +22129,7 @@ function battleCaptureEvent(data, room, battle, command, actor, round, sequence,
   applyBattleCaptureCandidateRoomState(room, battle, rollResult.room);
   const roll = Number(rollResult.roll);
   const success = chance > 0 && roll < chance;
+  let stagedCapture = null;
   if (success) {
     const claimResult = options.petCaptureCandidateAuthority.claim(room, {
       actorId: String(target.actorId || ""),
@@ -21740,10 +22138,42 @@ function battleCaptureEvent(data, room, battle, command, actor, round, sequence,
     if (!claimResult || claimResult.ok !== true) {
       return battleCaptureUnavailableEvent(room, command, actor, target, round, sequence, "这只野生宠物已经被其他队员捕获。");
     }
+    stagedCapture = stageClaimedBattleCapture(
+      data,
+      room,
+      battle,
+      target,
+      actor.accountId,
+      claimResult.room,
+      participant,
+      toolId,
+      autoFilterResult,
+      now,
+      options,
+    );
+    if (!stagedCapture || stagedCapture.ok !== true) {
+      return battleCaptureUnavailableEvent(
+        room,
+        command,
+        actor,
+        target,
+        round,
+        sequence,
+        String(stagedCapture && stagedCapture.message || "宠物个体暂时无法安全落档，本次捕捉没有生效。"),
+      );
+    }
     applyBattleCaptureCandidateRoomState(room, battle, claimResult.room);
   }
   if (battleCaptureToolIsConsumable(toolId)) {
-    setParticipantCaptureToolCount(participant, toolId, participantCaptureToolCount(participant, toolId) - 1);
+    if (success && stagedCapture) {
+      setParticipantCaptureToolCount(
+        participant,
+        toolId,
+        Number(stagedCapture.captureToolBag && stagedCapture.captureToolBag[toolId] || 0),
+      );
+    } else {
+      setParticipantCaptureToolCount(participant, toolId, participantCaptureToolCount(participant, toolId) - 1);
+    }
   }
   if (success) {
     target.hp = 0;

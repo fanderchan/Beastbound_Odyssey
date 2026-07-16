@@ -930,7 +930,11 @@ test("terminal battle command falls back from raw comparison to durable victory 
     challenger.session.token,
     accepted.room.roomId,
     {round: 1, actorId: challengerActor.actorId, actionId: "attack", targetActorId: opponentActor.actorId},
-  ], {actionId: "test_terminal_victory_attack"});
+  ], {
+    operationId: "bbo_terminal_victory_attack_0001",
+    requestHash: "a".repeat(64),
+    actionId: "test_terminal_victory_attack",
+  });
   assert.equal(first.ok, true);
   assert.equal(first.turn, null);
   assert.equal(saveCount, 0);
@@ -938,7 +942,11 @@ test("terminal battle command falls back from raw comparison to durable victory 
     opponent.session.token,
     accepted.room.roomId,
     {round: 1, actorId: opponentActor.actorId, actionId: "defend"},
-  ], {actionId: "test_terminal_victory_defend"});
+  ], {
+    operationId: "bbo_terminal_victory_defend_0001",
+    requestHash: "b".repeat(64),
+    actionId: "test_terminal_victory_defend",
+  });
   assert.equal(terminal.ok, true);
   assert.equal(terminal.room.status, "closed");
   assert.equal(saveCount, 1);
@@ -1004,7 +1012,11 @@ test("successful capture command durably writes the pet and consumed tool", asyn
       targetActorId: enemyActor.actorId,
       captureToolId: "capture_net",
     },
-  ], {actionId: "test_durable_capture_command"});
+  ], {
+    operationId: "bbo_durable_capture_command_0001",
+    requestHash: "c".repeat(64),
+    actionId: "test_durable_capture_command",
+  });
   assert.equal(captured.ok, true);
   assert.equal(captured.room.status, "closed");
   assert.equal(saveCount, 1);

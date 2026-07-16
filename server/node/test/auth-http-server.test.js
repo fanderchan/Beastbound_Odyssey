@@ -1906,7 +1906,10 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
 
   const challengerCommand = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/commands`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${challenger.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${challenger.session.token}`,
+      "Idempotency-Key": "operation_http_battle_command_0001",
+    },
     "body": JSON.stringify({
       "round": 1,
       "actionId": "attack",
@@ -1924,7 +1927,10 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
 
   const opponentCommand = await fetchJson(`${base}/battle/rooms/${encodeURIComponent(accept.room.roomId)}/commands`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${opponent.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${opponent.session.token}`,
+      "Idempotency-Key": "operation_http_battle_command_0002",
+    },
     "body": JSON.stringify({
       "round": 1,
       "actionId": "defend",

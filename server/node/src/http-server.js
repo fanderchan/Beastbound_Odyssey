@@ -68,6 +68,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "logout",
   "getSession",
   "getProfile",
+  "listPetRecoveries",
   "grantGmPet",
   "levelUpGmPet",
   "prepareGmQaProfile",
@@ -82,6 +83,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "startOfflineHang",
   "claimOfflineHang",
   "cancelOfflineHang",
+  "claimPetRecovery",
   "profileAction",
   "shopTransaction",
   "bankDeposit",
@@ -129,6 +131,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
 ]);
 const PURE_HTTP_READ_SERVICE_METHODS = new Set([
   "getProfile",
+  "listPetRecoveries",
   "getPartyState",
 ]);
 const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
@@ -144,6 +147,8 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/mail/send",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
+const IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN = /^\/pets\/recovery\/[^/]+\/claim$/;
+const IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN = /^\/battle\/rooms\/[^/]+\/commands$/;
 
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
@@ -414,6 +419,18 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "GET" && url.pathname === "/profiles/me") {
         return sendResult(res, service.getProfile(bearerToken(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/pets/recovery") {
+        return sendResult(res, service.listPetRecoveries(bearerToken(req)));
+      }
+      if (
+        req.method === "POST"
+        && IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN.test(url.pathname)
+      ) {
+        // Recovery ids are server-issued ASCII identifiers. Keeping the raw
+        // path segment avoids turning malformed percent escapes into a 500.
+        const recoveryId = url.pathname.slice("/pets/recovery/".length, -"/claim".length);
+        return sendResult(res, service.claimPetRecovery(bearerToken(req), {recoveryId}));
       }
       if (req.method === "PUT" && url.pathname === "/profiles/me") {
         await readJson(req);
@@ -915,6 +932,7 @@ function diagnosticHttpRoute(pathValue, statusCode) {
   for (const [pattern, replacement] of [
     [/^\/gm\/commands\/[^/]+$/, "/gm/commands/:command"],
     [/^\/mail\/[^/]+\/(read|claim)$/, "/mail/:id/$1"],
+    [/^\/pets\/recovery\/[^/]+\/claim$/, "/pets/recovery/:id/claim"],
     [/^\/battle\/invites\/[^/]+\/(accept|decline|cancel)$/, "/battle/invites/:id/$1"],
     [/^\/battle\/rooms\/[^/]+\/(commands|leave)$/, "/battle/rooms/:id/$1"],
   ]) {
@@ -975,7 +993,14 @@ function requiredAssetMutationIdempotencyKeyFailure(req, pathNameValue) {
   }
   const pathName = String(pathNameValue || "");
   const mailMutation = IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(pathName);
-  if (!IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS.has(pathName) && !mailMutation) {
+  const petRecoveryMutation = IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN.test(pathName);
+  const battleCommandMutation = IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN.test(pathName);
+  if (
+    !IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS.has(pathName)
+    && !mailMutation
+    && !petRecoveryMutation
+    && !battleCommandMutation
+  ) {
     return null;
   }
   return requiredIdempotencyKeyFailure(req);

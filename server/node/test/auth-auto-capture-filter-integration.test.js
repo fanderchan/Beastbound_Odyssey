@@ -250,6 +250,9 @@ test("only-new filter treats a same-form pet already captured in the current bat
     level: 1,
   }, 2);
   assert.equal(enemies.length, 2);
+  const firstCandidateBefore = service.snapshot().battleRooms[encounter.room.roomId]
+    .battle.captureCandidatesByActorId[enemies[0].actorId];
+  const firstPrivateSeed = firstCandidateBefore.pet.petGrowth.private.privateSeed;
   const first = service.submitBattleCommand(account.session.token, encounter.room.roomId, {
     round: 1,
     actorId: player.actorId,
@@ -282,8 +285,19 @@ test("only-new filter treats a same-form pet already captured in the current bat
   const afterReject = service.snapshot().battleRooms[encounter.room.roomId]
     .battle.captureCandidatesByActorId[remaining.actorId];
   assert.equal(afterReject.attemptCount, 0);
-  // Profile writeback is intentionally deferred until the multi-enemy battle
-  // closes; the first event proves one net remains and the rejected command
-  // cannot consume it or increment the second candidate's attempt counter.
-  assert.equal(profileItemCount(service.getProfile(account.session.token).profile, "capture_net"), 2);
+  // A success event is now durable immediately even while the room remains
+  // open: the exact private pet lives in the profile-private shelter and its
+  // consumed net is committed in the same revision. Normal profile output
+  // exposes neither the shelter wrapper nor hidden growth.
+  const internal = internalProfileForAccount(service, account.account.accountId);
+  const pending = Object.values(internal.petRecoveryShelter.pending);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].actorId, enemies[0].actorId);
+  assert.deepEqual(pending[0].pet.initialStats, firstCandidateBefore.pet.initialStats);
+  assert.equal(pending[0].pet.petGrowth.private.privateSeed, firstPrivateSeed);
+  assert.equal(internal.petInstances.some((pet) => pet.capturedBattleActorId === enemies[0].actorId), false);
+  const publicProfile = service.getProfile(account.session.token).profile;
+  assert.equal(Object.hasOwn(publicProfile, "petRecoveryShelter"), false);
+  assert.equal(JSON.stringify(publicProfile).includes(firstPrivateSeed), false);
+  assert.equal(profileItemCount(publicProfile, "capture_net"), 1);
 });

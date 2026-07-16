@@ -7,7 +7,11 @@ const {publicEquipmentTransferSummary} = require("./equipment-transfer-envelope"
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
 const UNSAFE_OBJECT_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const PRIVATE_PROFILE_FIELD_KEYS = new Set(["gmQaPetSampleManifests", "gmQaAssetManifests"]);
+const PRIVATE_PROFILE_FIELD_KEYS = new Set([
+  "gmQaPetSampleManifests",
+  "gmQaAssetManifests",
+  "petRecoveryShelter",
+]);
 const PET_ARRAY_CONTAINER_KEYS = new Set(["petInstances", "pets"]);
 const QA_ASSET_PRIVATE_SOURCE = "gm_qa_asset_manifest";
 const GROWTH_AUTHORITY_SCHEMA_VERSION = 1;

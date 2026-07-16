@@ -186,6 +186,14 @@ function petReferences(profile) {
       result.push({path: `trainingPartners[${index}].pet`, pet: partner.pet});
     }
   }
+  const shelter = isRecord(profile.petRecoveryShelter) ? profile.petRecoveryShelter : {};
+  const pending = isRecord(shelter.pending) ? shelter.pending : {};
+  for (const recoveryId of Object.keys(pending).sort()) {
+    const record = pending[recoveryId];
+    if (isRecord(record) && isRecord(record.pet)) {
+      result.push({path: `petRecoveryShelter.pending[${recoveryId}].pet`, pet: record.pet});
+    }
+  }
   return result;
 }
 

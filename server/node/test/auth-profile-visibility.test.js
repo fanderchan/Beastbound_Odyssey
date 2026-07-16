@@ -565,6 +565,15 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
       expiresAtSec: 999999,
       pet: petFixture("pet_drop"),
     }],
+    petRecoveryShelter: {
+      schemaVersion: 1,
+      pending: {
+        pet_capture_private: {
+          pet: petFixture("pet_shelter_private"),
+          privateSeed: "DO_NOT_EXPOSE_SHELTER_SEED",
+        },
+      },
+    },
     futureFeature: {
       roster: {
         reserve: petFixture("pet_future"),
@@ -609,6 +618,8 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
   assert.equal(actual.pets[0].instanceId, "pet_legacy");
   assert.equal(actual.trainingPartners[0].pet.instanceId, "pet_partner_snapshot");
   assert.equal(actual.groundPetDrops[0].pet.instanceId, "pet_drop");
+  assert.equal(Object.hasOwn(actual, "petRecoveryShelter"), false);
+  assert.equal(JSON.stringify(actual).includes("DO_NOT_EXPOSE_SHELTER_SEED"), false);
   assert.equal(actual.futureFeature.roster.reserve.instanceId, "pet_future");
   assert.deepEqual(actual.futureFeature.roster.partialReserve, {
     instanceId: "pet_future_partial",

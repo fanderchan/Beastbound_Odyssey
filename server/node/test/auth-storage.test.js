@@ -1647,6 +1647,20 @@ process.stdin.on("end", () => {
           initialStats: {maxHp: 81, attack: 29, defense: 24, quick: 36},
           growthSpeciesLevel1Stats: {maxHp: 81, attack: 29, defense: 24, quick: 36},
         }],
+        petRecoveryShelter: {
+          schemaVersion: 1,
+          pending: {
+            pet_capture_entity_pending: {
+              recoveryId: "pet_capture_entity_pending",
+              pet: {
+                instanceId: "pet_private_entity_pending",
+                petGrowth: {private: {privateSeed: "entity-shelter-private-seed"}},
+              },
+            },
+          },
+          completed: {},
+          recentCompletedIds: [],
+        },
       },
     }],
     ["mutation_receipts", "operation_entity_0001", {
@@ -1771,6 +1785,11 @@ process.stdin.on("end", () => {
       defense: 24,
       quick: 36,
     });
+    assert.equal(
+      loaded.profiles.player_entity.profile.petRecoveryShelter.pending
+        .pet_capture_entity_pending.pet.petGrowth.private.privateSeed,
+      "entity-shelter-private-seed",
+    );
     assert.deepEqual(loaded.mutationReceipts.operation_entity_0001.response, {
       ok: true,
       listingId: "market_entity",
@@ -3094,6 +3113,20 @@ test("JSON auth store is available only when explicitly selected", async () => {
                 "initialStats": {"maxHp": 72, "attack": 26, "defense": 22, "quick": 34},
                 "growthSpeciesLevel1Stats": {"maxHp": 72, "attack": 26, "defense": 22, "quick": 34},
               }],
+              "petRecoveryShelter": {
+                "schemaVersion": 1,
+                "pending": {
+                  "pet_capture_json_pending": {
+                    "recoveryId": "pet_capture_json_pending",
+                    "pet": {
+                      "instanceId": "pet_private_json_pending",
+                      "petGrowth": {"private": {"privateSeed": "json-shelter-private-seed"}},
+                    },
+                  },
+                },
+                "completed": {},
+                "recentCompletedIds": [],
+              },
             },
           },
         },
@@ -3101,10 +3134,19 @@ test("JSON auth store is available only when explicitly selected", async () => {
     });
     const saved = JSON.parse(fs.readFileSync(storePath, "utf8"));
     assert.equal(saved.accounts.jsonuser.username, "jsonuser");
+    assert.equal(
+      saved.profiles.player_jsonuser.profile.petRecoveryShelter.pending
+        .pet_capture_json_pending.pet.petGrowth.private.privateSeed,
+      "json-shelter-private-seed",
+    );
     const reloaded = createJsonAuthStore(storePath).load();
     const privatePet = reloaded.profiles.player_jsonuser.profile.petInstances[0];
     assert.equal(privatePet.individualSeed, `bps1_${"B".repeat(43)}`);
     assert.deepEqual(privatePet.initialStats, {maxHp: 72, attack: 26, defense: 22, quick: 34});
+    assert.deepEqual(
+      reloaded.profiles.player_jsonuser.profile.petRecoveryShelter,
+      saved.profiles.player_jsonuser.profile.petRecoveryShelter,
+    );
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

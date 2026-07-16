@@ -40,6 +40,7 @@ const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "questRecord",
   "questClaim",
   "shopTransaction",
+  "submitBattleCommand",
   "equipmentEquip",
   "equipmentUnequip",
   "equipmentEnhance",
