@@ -324,6 +324,8 @@ test("publicGrowthObservation keeps only player evidence fields and four stat ax
 
 test("publicPet deep-clones visible pet facts and removes private growth state at every depth", () => {
   const source = canonicalPetFixture("pet_primary");
+  source.source = "wild_capture";
+  source.captureOverflowPending = true;
   const before = structuredClone(source);
 
   const actual = publicPet(source);
@@ -337,6 +339,8 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   assert.deepEqual(actual.forgottenSkillIds, source.forgottenSkillIds);
   assert.equal(actual.binding, "bound");
   assert.equal(actual.capturedSerial, 17);
+  assert.equal(actual.source, undefined);
+  assert.equal(actual.captureOverflowPending, undefined);
   assert.deepEqual(actual.growthAuthority, {
     schemaVersion: 1,
     source: "server",

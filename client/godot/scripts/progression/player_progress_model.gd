@@ -5514,8 +5514,12 @@ static func can_clear_storage_pet(profile: Dictionary, instance_id: String) -> D
 		return {"ok": false, "message": "只有兽栏里的宠物可以清理。"}
 	if bool(instance.get("locked", false)):
 		return {"ok": false, "message": "%s 已锁定，不能清理。" % str(instance.get("name", "宠物"))}
+	if str(instance.get("binding", BackpackModel.BINDING_UNBOUND)) == BackpackModel.BINDING_BOUND or bool(instance.get("bound", false)) or bool(instance.get("bindingLocked", false)):
+		return {"ok": false, "message": "%s 已绑定，不能清理。" % str(instance.get("name", "宠物"))}
 	if _pet_required_by_active_quest(normalized, instance):
 		return {"ok": false, "message": "%s 是当前任务需要的宠物，不能清理。" % str(instance.get("name", "宠物"))}
+	if bool(instance.get("captureOverflowPending", false)):
+		return {"ok": false, "message": "%s 正在等待安全收容，不能清理。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 可以清理。" % str(instance.get("name", "宠物"))}
 
 
@@ -7465,7 +7469,11 @@ static func _captured_pet_log_part(captured: Dictionary) -> String:
 	var pet_name := str(captured.get("name", "宠物"))
 	var level := maxi(1, int(captured.get("level", 1)))
 	var power := _captured_pet_power(captured)
-	var destination := "队伍已满，已送入兽栏" if str(captured.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE else "已加入队伍"
+	var destination := "已加入队伍"
+	if bool(captured.get("captureOverflowPending", false)):
+		destination = "栏位已满，完整保留为待整理宠物"
+	elif str(captured.get("state", PET_STATE_STANDBY)) == PET_STATE_STORAGE:
+		destination = "队伍已满，已送入兽栏"
 	return "捕获%s Lv%d，战力%d，%s" % [pet_name, level, power, destination]
 
 
@@ -7940,12 +7948,6 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 	var serial := maxi(int(profile.get("nextPetInstanceSerial", 1)), _next_serial_from_instances(_pet_instances(profile)))
 	var occupied_party_count := _party_visible_instance_count(profile)
 	var occupied_storage_count := _storage_instance_count(profile)
-	var capture_settings := auto_capture_settings(profile)
-	var auto_discard_enabled := (
-		bool(capture_settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
-		and bool(capture_settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, false))
-	)
-	var auto_discard_threshold := maxi(0, int(capture_settings.get(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY, AutoCaptureSettingsModel.DEFAULT_LOW_POWER_THRESHOLD)))
 	for actor in _actors(state):
 		if not bool(actor.get("captured", false)):
 			continue
@@ -7955,13 +7957,17 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 		var instance_id := "pet_captured_%d" % serial
 		serial += 1
 		var state_name := PET_STATE_STANDBY
-		var can_keep := true
+		var overflow_pending := false
 		if occupied_party_count < PARTY_LIMIT:
 			state_name = PET_STATE_STANDBY
 		elif occupied_storage_count < STORAGE_LIMIT:
 			state_name = PET_STATE_STORAGE
 		else:
-			can_keep = false
+			# Local/offline compatibility must never destroy a frozen capture.
+			# Keep it as an over-cap storage pet until the focused recovery
+			# shelter can adopt the same contract as the online server.
+			state_name = PET_STATE_STORAGE
+			overflow_pending = true
 		var capture_serial := serial - 1
 		var captured := _pet_instance_from_form(instance_id, str(actor.get("name", actor.get("formName", "宠物"))), form_id, state_name, maxi(1, int(actor.get("level", 1))), {
 			"hp": maxi(1, int(actor.get("maxHp", actor.get("hp", 1)))),
@@ -7979,13 +7985,9 @@ static func _captured_pet_result_from_state(profile: Dictionary, state: Dictiona
 		captured["captureToolId"] = str(actor.get("captureToolId", ""))
 		captured["captureStatusIds"] = _string_array(actor.get("captureStatusIds", BattleStatusModel.active_status_ids(actor)))
 		captured["isNew"] = true
-		if auto_discard_enabled and combat_power < auto_discard_threshold:
-			captured["discardThreshold"] = auto_discard_threshold
-			auto_discarded_instances.append(captured)
-			continue
-		if not can_keep:
-			lost_captured_instances.append(captured)
-			continue
+		captured["source"] = "local_capture"
+		if overflow_pending:
+			captured["captureOverflowPending"] = true
 		captured_instances.append(captured)
 		if state_name == PET_STATE_STORAGE:
 			occupied_storage_count += 1
@@ -8135,6 +8137,8 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["isNew"] = bool(instance.get("isNew", false))
 	instance["locked"] = bool(instance.get("locked", false))
 	instance["binding"] = BackpackModel.BINDING_BOUND if str(instance.get("binding", BackpackModel.BINDING_UNBOUND)) == BackpackModel.BINDING_BOUND else BackpackModel.BINDING_UNBOUND
+	instance["source"] = str(instance.get("source", ""))
+	instance["captureOverflowPending"] = bool(instance.get("captureOverflowPending", false))
 	instance["tameEligible"] = bool(instance.get("tameEligible", false))
 	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
 		if template.has(key):

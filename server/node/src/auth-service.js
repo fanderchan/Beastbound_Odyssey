@@ -65,6 +65,10 @@ const {
   createAutoCaptureSettingsRules,
 } = require("./auth/auto-capture-settings");
 const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
+const {
+  REASON_CODES: PET_PROTECTION_REASON_CODES,
+  evaluateProfilePetAutomaticProcessing,
+} = require("./auth/pet-protection-policy");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {
@@ -18014,7 +18018,23 @@ function profilePetBinding(pet) {
 }
 
 function profilePetIsBound(pet) {
-  return profilePetBinding(pet) === ITEM_BINDING_BOUND;
+  return profilePetBinding(pet) === ITEM_BINDING_BOUND
+    || Boolean(pet && pet.bound)
+    || Boolean(pet && pet.bindingLocked);
+}
+
+function profilePetAutomaticProtection(profile, pet) {
+  return evaluateProfilePetAutomaticProcessing({
+    pet,
+    profile,
+    template: petTemplateForFormId(profilePetFormId(pet)),
+    requiredByActiveQuest: petRequiredByActiveQuest(profile, pet),
+  });
+}
+
+function petAutomaticProtectionHasReason(evaluation, reasonCode) {
+  return Array.isArray(evaluation && evaluation.reasons)
+    && evaluation.reasons.some((entry) => String(entry && entry.code || "") === String(reasonCode || ""));
 }
 
 function stateLabel(state) {
@@ -19165,17 +19185,24 @@ function applyPetDropAction(profile, params, now) {
   if (!pet) {
     return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
   }
-  if (String(profile.ridePetInstanceId || "") === petId) {
+  const automaticProtection = profilePetAutomaticProtection(profile, pet);
+  if (
+    String(profile.ridePetInstanceId || "") === petId
+    || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.RIDING)
+  ) {
     return {ok: false, code: "pet_riding", message: `${profilePetName(pet)} 正在骑乘中，不能丢弃。`};
   }
   if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE) {
     return {ok: false, code: "pet_in_storage", message: "兽栏里的宠物不能直接丢弃。"};
   }
-  if (Boolean(pet.locked)) {
+  if (Boolean(pet.locked) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.LOCKED)) {
     return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能丢弃。`};
   }
-  if (profilePetIsBound(pet)) {
+  if (profilePetIsBound(pet) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.BOUND)) {
     return {ok: false, code: "pet_bound", message: `${profilePetName(pet)} 已绑定，不能丢到公共区域。`};
+  }
+  if (petRequiredByActiveQuest(profile, pet) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.REQUIRED_BY_QUEST)) {
+    return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能丢弃。`};
   }
   const mapId = String(params.mapId || "").trim();
   const cell = Array.isArray(params.cell) ? params.cell : [params.cellX, params.cellY];
@@ -19228,11 +19255,31 @@ function applyPetClearStorageAction(profile, params) {
   if (!pet) {
     return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
   }
+  const automaticProtection = profilePetAutomaticProtection(profile, pet);
+  if (
+    String(profile.ridePetInstanceId || "") === petId
+    || profilePetState(pet) === BATTLE_PET_STATE_RIDING
+    || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.RIDING)
+  ) {
+    return {ok: false, code: "pet_riding", message: `${profilePetName(pet)} 正在骑乘中，不能清理。`};
+  }
   if (profilePetState(pet) !== BATTLE_PET_STATE_STORAGE) {
     return {ok: false, code: "pet_not_storage", message: "只有兽栏里的宠物可以清理。"};
   }
-  if (Boolean(pet.locked)) {
+  if (Boolean(pet.locked) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.LOCKED)) {
     return {ok: false, code: "pet_locked", message: `${profilePetName(pet)} 已锁定，不能清理。`};
+  }
+  if (profilePetIsBound(pet) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.BOUND)) {
+    return {ok: false, code: "pet_bound", message: `${profilePetName(pet)} 已绑定，不能清理。`};
+  }
+  if (petRequiredByActiveQuest(profile, pet) || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.REQUIRED_BY_QUEST)) {
+    return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能清理。`};
+  }
+  if (
+    Boolean(pet.captureOverflowPending)
+    || petAutomaticProtectionHasReason(automaticProtection, PET_PROTECTION_REASON_CODES.CAPTURE_OVERFLOW_PENDING)
+  ) {
+    return {ok: false, code: "pet_recovery_pending", message: `${profilePetName(pet)} 正在等待安全收容，不能清理。`};
   }
   instances.splice(index, 1);
   ensureActivePetAfterInstanceRemoval(profile);

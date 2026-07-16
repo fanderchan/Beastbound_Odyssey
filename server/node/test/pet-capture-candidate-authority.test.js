@@ -329,6 +329,7 @@ test("claim assigns one owner and materialize transfers the exact frozen pet wit
   expected.captureToolId = "capture_rope_basic";
   expected.captureStatusIds = ["poison"];
   expected.captureAttemptNumber = 1;
+  expected.source = "wild_capture";
   expected.isNew = true;
   assert.deepEqual(materialized.pet, expected);
   assert.equal(Object.hasOwn(materialized.pet, "candidateId"), false);

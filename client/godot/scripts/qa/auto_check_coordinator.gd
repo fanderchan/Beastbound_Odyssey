@@ -3064,11 +3064,21 @@ func _run_auto_capture_settings_check() -> void:
 		})
 	var full_result = PlayerProgressModel.apply_battle_result(full_profile, full_state, "victory")
 	var full_log_text = "\n".join(full_result.get("logLines", []))
+	var full_captured: Array = full_result.get("capturedPets", [])
+	var full_profile_after: Dictionary = full_result.get("profile", {})
+	var full_persisted_capture := PlayerProgressModel.pet_instance_by_id(
+		full_profile_after,
+		str((full_captured[0] as Dictionary).get("instanceId", "")) if not full_captured.is_empty() else ""
+	)
 	var full_message_ok = (
-		(full_result.get("lostCapturedPets", []) as Array).size() == 1
+		(full_result.get("lostCapturedPets", []) as Array).is_empty()
+		and full_captured.size() == 1
+		and bool((full_captured[0] as Dictionary).get("captureOverflowPending", false))
+		and bool(full_persisted_capture.get("captureOverflowPending", false))
+		and (full_profile_after.get("petInstances", []) as Array).size() == 26
 		and full_log_text.find("捕获") >= 0
 		and full_log_text.find("战力") >= 0
-		and full_log_text.find("兽栏和宠物栏满，请清理") >= 0
+		and full_log_text.find("完整保留为待整理宠物") >= 0
 	)
 
 	var discard_profile = PlayerProgressModel.with_auto_capture_settings(PlayerProgressModel.default_profile(), {
@@ -3092,11 +3102,11 @@ func _run_auto_capture_settings_check() -> void:
 	var discard_result = PlayerProgressModel.apply_battle_result(discard_profile, discard_state, "victory")
 	var discard_log_text = "\n".join(discard_result.get("logLines", []))
 	var discard_ok = (
-		(discard_result.get("autoDiscardedPets", []) as Array).size() == 1
-		and (discard_result.get("capturedPets", []) as Array).is_empty()
+		(discard_result.get("autoDiscardedPets", []) as Array).is_empty()
+		and (discard_result.get("capturedPets", []) as Array).size() == 1
 		and discard_log_text.find("捕获") >= 0
 		and discard_log_text.find("战力") >= 0
-		and discard_log_text.find("已自动丢弃") >= 0
+		and discard_log_text.find("已自动丢弃") < 0
 	)
 
 	var loaded_gm = host._load_map(GM_10V10_MAP_ID)
@@ -13535,10 +13545,15 @@ func _run_auto_pet_management_safety_check() -> void:
 	var task_pet = PlayerProgressModel.create_pet_instance_from_form("pet_task_guard", "任务乌力", "wuli_normal_orange_fire10", PlayerProgressModel.PET_STATE_STORAGE, 50)
 	var batch_pet = PlayerProgressModel.create_pet_instance_from_form("pet_batch_store", "批存布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 2)
 	var locked_pet = PlayerProgressModel.create_pet_instance_from_form("pet_locked_guard", "锁定布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STANDBY, 3)
+	var bound_pet = PlayerProgressModel.create_pet_instance_from_form("pet_bound_guard", "绑定布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STORAGE, 1, {"binding": BackpackModel.BINDING_BOUND})
+	var overflow_pet = PlayerProgressModel.create_pet_instance_from_form("pet_overflow_guard", "待整理布伊", "bui_normal_red_fire10", PlayerProgressModel.PET_STATE_STORAGE, 1)
 	locked_pet["locked"] = true
+	overflow_pet["captureOverflowPending"] = true
 	instances.append(task_pet)
 	instances.append(batch_pet)
 	instances.append(locked_pet)
+	instances.append(bound_pet)
+	instances.append(overflow_pet)
 	profile["petInstances"] = instances
 	profile["activeQuestId"] = "quest_capture_wuli"
 	profile["questStates"] = {
@@ -13548,6 +13563,8 @@ func _run_auto_pet_management_safety_check() -> void:
 	var locked_drop = PlayerProgressModel.can_drop_pet(host.player_profile, "pet_locked_guard")
 	var locked_deliver = PlayerProgressModel.deliver_pet_for_quest(host.player_profile, "quest_capture_wuli", "pet_locked_guard")
 	var task_clear = PlayerProgressModel.can_clear_storage_pet(host.player_profile, "pet_task_guard")
+	var bound_clear = PlayerProgressModel.can_clear_storage_pet(host.player_profile, "pet_bound_guard")
+	var overflow_clear = PlayerProgressModel.can_clear_storage_pet(host.player_profile, "pet_overflow_guard")
 	var lock_result = PlayerProgressModel.toggle_pet_locked(host.player_profile, "pet_batch_store")
 	host.player_profile = lock_result.get("profile", host.player_profile)
 	var unlock_result = PlayerProgressModel.toggle_pet_locked(host.player_profile, "pet_batch_store")
@@ -13667,6 +13684,10 @@ func _run_auto_pet_management_safety_check() -> void:
 		and str(locked_drop.get("message", "")).find("锁定") >= 0
 		and not bool(locked_deliver.get("ok", false))
 		and bool(task_clear.get("ok", false))
+		and not bool(bound_clear.get("ok", false))
+		and str(bound_clear.get("message", "")).find("绑定") >= 0
+		and not bool(overflow_clear.get("ok", false))
+		and str(overflow_clear.get("message", "")).find("安全收容") >= 0
 		and bool(lock_result.get("locked", false))
 		and not bool(unlock_result.get("locked", true))
 		and batch_pet_state == PlayerProgressModel.PET_STATE_STORAGE

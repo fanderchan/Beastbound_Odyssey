@@ -1170,6 +1170,10 @@ function createPetCaptureCandidateAuthority(options = {}) {
     pet.captureToolId = candidate.lastAttempt.captureToolId;
     pet.captureStatusIds = materializeInput.captureStatusIds;
     pet.captureAttemptNumber = candidate.lastAttempt.attemptNumber;
+    // Only the server-side frozen candidate authority may stamp this source.
+    // Old pets intentionally remain source-unknown and therefore fail closed
+    // for any future automatic processing policy.
+    pet.source = "wild_capture";
     pet.isNew = true;
     if (hasOwn(pet, "captureSecret") || hasOwn(pet, "integrityTag")) {
       return fail("pet_capture_candidate_materialize_invalid", ["private candidate authority state cannot transfer to a pet"]);

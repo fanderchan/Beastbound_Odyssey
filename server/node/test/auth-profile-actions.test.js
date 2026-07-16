@@ -1420,6 +1420,13 @@ test("battle pet tutorial egg can be discarded, reclaimed, and hatches a bound p
   });
   assert.equal(storedBoundPet.ok, true);
   assert.equal(storedBoundPet.profile.petInstances.find((pet) => pet.instanceId === boundPet.instanceId).state, "storage");
+  const clearBoundPet = service.profileAction(token, {
+    "action": "pet_clear_storage",
+    "payload": {"instanceId": boundPet.instanceId},
+  });
+  assert.equal(clearBoundPet.ok, false);
+  assert.equal(clearBoundPet.code, "pet_bound");
+  assert.ok(service.getProfile(token).profile.petInstances.some((pet) => pet.instanceId === boundPet.instanceId));
   const withdrewBoundPet = service.profileAction(token, {
     "action": "pet_stable_toggle",
     "payload": {"instanceId": boundPet.instanceId},
@@ -1435,6 +1442,42 @@ test("battle pet tutorial egg can be discarded, reclaimed, and hatches a bound p
   assert.equal(battleWithoutCurrentMount.result.state, "battle");
   assert.equal(battleWithoutCurrentMount.profile.questStates.quest_set_battle_pet.status, "claimed");
   assert.equal(battleWithoutCurrentMount.profile.activeQuestId, "quest_open_status_panel");
+});
+
+test("recovery-pending overflow pet cannot be cleared from storage", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "petoverflowguard", password: "test1234", displayName: "收容保护号"});
+  const token = registered.session.token;
+  const profile = battleProfile("收容保护号", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.petInstances = [{
+    instanceId: "pet_overflow_pending",
+    petId: "pet_overflow_pending",
+    formId: "wuli_normal_orange_fire10",
+    templateId: "wuli_normal_orange_fire10",
+    name: "待整理乌力",
+    state: "storage",
+    level: 1,
+    exp: 0,
+    nextExp: 100,
+    hp: 40,
+    maxHp: 40,
+    attack: 9,
+    defense: 7,
+    quick: 5,
+    source: "wild_capture",
+    captureOverflowPending: true,
+    schemaVersion: 1,
+  }];
+  assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+
+  const cleared = service.profileAction(token, {
+    action: "pet_clear_storage",
+    payload: {instanceId: "pet_overflow_pending"},
+  });
+  assert.equal(cleared.ok, false);
+  assert.equal(cleared.code, "pet_recovery_pending");
+  const loaded = service.getProfile(token);
+  assert.ok(loaded.profile.petInstances.some((pet) => pet.instanceId === "pet_overflow_pending"));
 });
 
 test("server shop equipment purchase can be equipped immediately", () => {
