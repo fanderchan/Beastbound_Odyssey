@@ -1,6 +1,7 @@
 "use strict";
 
 const {authorityRootRecordForMutation} = require("./authority-root-clone");
+const {AUTO_CAPTURE_SETTINGS_ACTION_ID} = require("./auto-capture-settings");
 
 function createProfileActionsDomain(ctx) {
   const {
@@ -292,7 +293,9 @@ function createProfileActionsDomain(ctx) {
       });
     }
     const profile = clone(profileDoc.profile);
-    const params = objectOrEmpty(payload.payload || payload.params || payload);
+    const params = action === AUTO_CAPTURE_SETTINGS_ACTION_ID
+      ? (Object.hasOwn(payload, "payload") ? payload.payload : null)
+      : objectOrEmpty(payload.payload || payload.params || payload);
     const ridePetInstanceIdBefore = String(profile.ridePetInstanceId || "").trim();
     const actionResult = applyProfileActionToProfile(profile, action, params, now);
     if (!actionResult.ok) {

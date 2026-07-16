@@ -60,6 +60,10 @@ const {
   durableMutationToken,
 } = require("./auth/durable-mutation-state");
 const {createProfileActionsDomain} = require("./auth/profile-actions");
+const {
+  AUTO_CAPTURE_SETTINGS_ACTION_ID,
+  createAutoCaptureSettingsRules,
+} = require("./auth/auto-capture-settings");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {
@@ -516,6 +520,7 @@ const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
   },
 };
 const PROFILE_ACTION_IDS = new Set([
+  AUTO_CAPTURE_SETTINGS_ACTION_ID,
   "player_stat_allocate",
   "backpack_unlock_slot",
   "bank_unlock_tab",
@@ -5138,7 +5143,12 @@ function createAuthService(options = {}) {
       action,
       params,
       nowFn,
-      {newPetFactory, petExpSettlement, petRebirthGrowthCycle},
+      {
+        autoCaptureSettingsRules: serverAutoCaptureSettingsRules(),
+        newPetFactory,
+        petExpSettlement,
+        petRebirthGrowthCycle,
+      },
     ),
     bagItemById,
     bagItemIsBound,
@@ -17684,6 +17694,11 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
     return backpackConflict;
   }
   switch (action) {
+    case AUTO_CAPTURE_SETTINGS_ACTION_ID:
+      if (!options.autoCaptureSettingsRules || typeof options.autoCaptureSettingsRules.applyPlayerUpdate !== "function") {
+        return {ok: false, code: "auto_capture_settings_unavailable", message: "自动捕捉设置暂不可用。"};
+      }
+      return options.autoCaptureSettingsRules.applyPlayerUpdate(profile, params);
     case "player_stat_allocate":
       return applyPlayerStatAllocateAction(profile, params);
     case "backpack_unlock_slot":
@@ -22713,20 +22728,20 @@ function defaultAutoBattleSettings() {
 }
 
 function defaultAutoCaptureSettings() {
-  return {
-    enabled: false,
-    targetMode: "all",
-    targetFormId: "",
-    targetManualText: "",
-    hpPercent: 100,
-    levelComparator: "=",
-    levelValue: 1,
-    preferredToolId: BATTLE_CAPTURE_TOOL_EMPTY_HAND,
-    noTargetAction: "escape",
-    capturePetSkillSlot: 2,
-    autoDiscardLowPower: false,
-    lowPowerThreshold: 31,
-  };
+  return serverAutoCaptureSettingsRules().defaultSettings();
+}
+
+let serverAutoCaptureSettingsRulesCache = null;
+
+function serverAutoCaptureSettingsRules() {
+  if (!serverAutoCaptureSettingsRulesCache) {
+    serverAutoCaptureSettingsRulesCache = createAutoCaptureSettingsRules({
+      emptyHandToolId: BATTLE_CAPTURE_TOOL_EMPTY_HAND,
+      resolveForm: petTemplateForFormId,
+      normalizeCaptureToolId: normalizeBattleCaptureToolId,
+    });
+  }
+  return serverAutoCaptureSettingsRulesCache;
 }
 
 function defaultHangSettings() {

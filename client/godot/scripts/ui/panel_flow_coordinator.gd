@@ -24,6 +24,7 @@ const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_ca
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
+const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -22379,6 +22380,7 @@ func _offline_hang_gm_spinbox(label_text: String, value: float, minimum: float, 
 
 func _refresh_auto_capture_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
+	var online_safe_mode: bool = _is_server_account_session() and not auth_auto_bypass
 	_add_auto_settings_section("自动捉宠")
 	_add_auto_settings_checkbox(
 		"自动捉宠",
@@ -22465,7 +22467,7 @@ func _refresh_auto_capture_settings_tab() -> void:
 		int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT))
 	)
 	# 联网自动丢弃尚未具备服务端保护、收容与审计，不能显示一个实际不会安全执行的开关。
-	if not (_is_server_account_session() and not auth_auto_bypass):
+	if not online_safe_mode:
 		_add_auto_settings_checkbox(
 			"低战力丢弃",
 			AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
@@ -22479,6 +22481,110 @@ func _refresh_auto_capture_settings_tab() -> void:
 			AutoCaptureSettingsModel.MAX_POWER,
 			"战力"
 		)
+	var capacity := AutoCaptureSettingsPresenter.capacity_state(
+		PlayerProgressModel.party_pet_instances(player_profile).size(),
+		PlayerProgressModel.storage_pet_instances(player_profile).size(),
+		PlayerProgressModel.PARTY_LIMIT,
+		PlayerProgressModel.STORAGE_LIMIT
+	)
+	_add_auto_capture_settings_note(
+		"autoCaptureCapacityLabel",
+		str(capacity.get("text", "")),
+		Color(0.95, 0.82, 0.42, 1.0) if bool(capacity.get("warning", false)) else Color(0.78, 0.84, 0.82, 1.0)
+	)
+	_add_auto_capture_settings_note(
+		"autoCaptureGrowthGuidanceLabel",
+		AutoCaptureSettingsPresenter.growth_guidance_text(online_safe_mode),
+		Color(0.72, 0.88, 0.78, 1.0) if online_safe_mode else Color(0.95, 0.82, 0.42, 1.0)
+	)
+	var save_button := Button.new()
+	save_button.text = "保存捕捉设置"
+	save_button.custom_minimum_size = Vector2(0, 44)
+	save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_button.disabled = profile_action_request_pending
+	save_button.pressed.connect(_on_auto_capture_settings_save_pressed)
+	auto_settings_content.add_child(save_button)
+	auto_settings_controls["autoCaptureSaveButton"] = save_button
+	_add_auto_capture_settings_note(
+		"autoCaptureSaveStatusLabel",
+		"修改后请保存到服务器。" if online_safe_mode else "修改后请保存到本机。",
+		Color(0.72, 0.76, 0.74, 1.0)
+	)
+	_set_auto_capture_settings_controls_enabled(not profile_action_request_pending)
+
+
+func _add_auto_capture_settings_note(key: String, text: String, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.custom_minimum_size = Vector2(0, 40)
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", color)
+	auto_settings_content.add_child(label)
+	auto_settings_controls[key] = label
+	return label
+
+
+func _set_auto_capture_save_status(message: String, success: bool = false) -> void:
+	var label := auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
+	if label == null:
+		return
+	label.text = message
+	label.add_theme_color_override(
+		"font_color",
+		Color(0.55, 0.95, 0.66, 1.0) if success else Color(0.95, 0.82, 0.42, 1.0)
+	)
+
+
+func _set_auto_capture_settings_controls_enabled(enabled: bool) -> void:
+	for key in _auto_capture_settings_keys():
+		var control = auto_settings_controls.get(key, null)
+		if control is BaseButton:
+			(control as BaseButton).disabled = not enabled
+		elif control is SpinBox:
+			(control as SpinBox).editable = enabled
+		elif control is LineEdit:
+			(control as LineEdit).editable = enabled
+
+
+func _on_auto_capture_settings_save_pressed() -> void:
+	if profile_action_request_pending:
+		_set_auto_capture_save_status("捕捉设置正在保存，请稍候。")
+		return
+	var save_button := auto_settings_controls.get("autoCaptureSaveButton", null) as Button
+	if save_button != null:
+		save_button.disabled = true
+	_set_auto_capture_save_status("正在保存捕捉设置……")
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	var online_safe_mode: bool = _is_server_account_session() and not auth_auto_bypass
+	if online_safe_mode:
+		_set_auto_capture_settings_controls_enabled(false)
+		settings = AutoCaptureSettingsModel.online_safe_settings(settings)
+		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+		var parsed := await _submit_server_profile_action(
+			"auto_capture_settings_update",
+			{"settings": settings},
+			"捕捉设置保存失败。"
+		)
+		_refresh_auto_settings_panel()
+		if bool(parsed.get("ok", false)):
+			_set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
+			_set_world_log_message("捕捉设置已保存。")
+		else:
+			var message := _server_player_message(parsed, "捕捉设置保存失败，请稍后重试。").strip_edges()
+			_set_auto_capture_save_status(message)
+			_set_world_log_message(message)
+		return
+	var saved: bool = profile_save_enabled and host._save_player_profile_now()
+	if save_button != null:
+		save_button.disabled = false
+	if saved:
+		_set_auto_capture_save_status("捕捉设置已保存到本机。", true)
+		_set_world_log_message("捕捉设置已保存。")
+	else:
+		_set_auto_capture_save_status("捕捉设置未能保存，请稍后重试。")
+		_set_world_log_message("捕捉设置未能保存，请稍后重试。")
 
 func _set_auto_settings_tab(tab: String) -> void:
 	auto_settings_active_tab = tab if ["battle", "hang", "capture"].has(tab) else "battle"
@@ -22721,6 +22827,10 @@ func _hang_settings_keys() -> Array[String]:
 	]
 
 func _set_auto_capture_settings_value(key: String, value) -> void:
+	if _is_server_account_session() and not auth_auto_bypass and profile_action_request_pending:
+		_refresh_auto_settings_panel()
+		_set_auto_capture_save_status("捕捉设置正在保存，请完成后再修改。")
+		return
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
 	match key:
 		AutoCaptureSettingsModel.ENABLED_KEY, AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY:
@@ -22730,8 +22840,17 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		_:
 			settings[key] = str(value)
 	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+	if _is_server_account_session() and not auth_auto_bypass:
+		_set_auto_capture_save_status("修改后请保存到服务器。")
+		return
 	if profile_save_enabled:
-		host._save_player_profile_now()
+		var saved: bool = host._save_player_profile_now()
+		_set_auto_capture_save_status(
+			"捕捉设置已自动保存到本机。" if saved else "捕捉设置未能保存，请稍后重试。",
+			saved
+		)
+	else:
+		_set_auto_capture_save_status("修改后请保存到本机。")
 
 func _set_hang_settings_value(key: String, value) -> void:
 	var settings = PlayerProgressModel.hang_settings(player_profile)

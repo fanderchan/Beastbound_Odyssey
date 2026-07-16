@@ -75,6 +75,12 @@ static func normalize_settings(value) -> Dictionary:
 	return normalized
 
 
+static func online_safe_settings(value) -> Dictionary:
+	var normalized := normalize_settings(value)
+	normalized[AUTO_DISCARD_LOW_POWER_KEY] = false
+	return normalized
+
+
 static func normalized_target_mode(mode_id: String) -> String:
 	var normalized_id := mode_id.strip_edges()
 	for option in target_mode_options():

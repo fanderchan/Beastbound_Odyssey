@@ -27,6 +27,7 @@ const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_ca
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
+const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -2623,6 +2624,88 @@ func _run_auto_capture_settings_check() -> void:
 		and str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, "")) == AutoCaptureSettingsModel.NO_TARGET_ESCAPE
 		and int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, 0)) == AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
 	)
+	var presenter_check := AutoCaptureSettingsPresenter.contract_check()
+	var online_safe_settings := AutoCaptureSettingsModel.online_safe_settings(settings)
+	var online_safe_projection_ok := (
+		bool(settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, false))
+		and not bool(online_safe_settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, true))
+	)
+	var saved_account_session: Dictionary = host.current_account_session.duplicate(true)
+	var saved_auth_auto_bypass: bool = host.auth_auto_bypass
+	var saved_profile_action_pending: bool = host.profile_action_request_pending
+	var saved_auto_settings_tab: String = host.auto_settings_active_tab
+	host.auto_settings_active_tab = "capture"
+	host.current_account_session = {}
+	host.auth_auto_bypass = true
+	host.profile_action_request_pending = false
+	host._refresh_auto_settings_panel()
+	var local_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
+	var local_capacity_label := host.auto_settings_controls.get("autoCaptureCapacityLabel", null) as Label
+	var local_guidance_label := host.auto_settings_controls.get("autoCaptureGrowthGuidanceLabel", null) as Label
+	var local_ui_ok: bool = (
+		local_save_button != null
+		and local_save_button.text == "保存捕捉设置"
+		and not local_save_button.disabled
+		and local_capacity_label != null
+		and local_capacity_label.text.find("已用 1/25") >= 0
+		and local_capacity_label.text.find("剩余 24 格") >= 0
+		and local_guidance_label != null
+		and local_guidance_label.text.find("约 Lv20") >= 0
+		and local_guidance_label.text.find("不会识别隐藏成长") >= 0
+		and host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
+	)
+	host.current_account_session = {
+		"accountId": "auto_capture_settings_account",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "auto_capture_settings_token",
+	}
+	host.auth_auto_bypass = false
+	host._refresh_auto_settings_panel()
+	var online_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
+	var online_capacity_label := host.auto_settings_controls.get("autoCaptureCapacityLabel", null) as Label
+	var online_guidance_label := host.auto_settings_controls.get("autoCaptureGrowthGuidanceLabel", null) as Label
+	var online_status_label := host.auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
+	var online_ui_ok: bool = (
+		online_save_button != null
+		and not online_save_button.disabled
+		and online_capacity_label != null
+		and online_capacity_label.text.find("已用 1/25") >= 0
+		and online_guidance_label != null
+		and online_guidance_label.text.find("联网不会自动丢弃宠物") >= 0
+		and online_guidance_label.text.find("约 Lv20") >= 0
+		and online_status_label != null
+		and online_status_label.text == "修改后请保存到服务器。"
+		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
+		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY)
+	)
+	host._set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
+	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, false)
+	var dirty_status_label := host.auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
+	var dirty_status_ok: bool = dirty_status_label != null and dirty_status_label.text == "修改后请保存到服务器。"
+	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, true)
+	host.profile_action_request_pending = true
+	host._refresh_auto_settings_panel()
+	var pending_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
+	var pending_enabled_control := host.auto_settings_controls.get(AutoCaptureSettingsModel.ENABLED_KEY, null) as CheckBox
+	var pending_guard_ok := (
+		pending_save_button != null
+		and pending_save_button.disabled
+		and pending_enabled_control != null
+		and pending_enabled_control.disabled
+	)
+	var enabled_before_pending_edit := bool(PlayerProgressModel.auto_capture_settings(host.player_profile).get(AutoCaptureSettingsModel.ENABLED_KEY, false))
+	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, not enabled_before_pending_edit)
+	var pending_edit_status := host.auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
+	var pending_edit_guard_ok := (
+		bool(PlayerProgressModel.auto_capture_settings(host.player_profile).get(AutoCaptureSettingsModel.ENABLED_KEY, false)) == enabled_before_pending_edit
+		and pending_edit_status != null
+		and pending_edit_status.text == "捕捉设置正在保存，请完成后再修改。"
+	)
+	host.current_account_session = saved_account_session
+	host.auth_auto_bypass = saved_auth_auto_bypass
+	host.profile_action_request_pending = saved_profile_action_pending
+	host.auto_settings_active_tab = saved_auto_settings_tab
+	host._close_auto_settings_panel()
 	var power_ok = (
 		CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_EMPTY_HAND) == 1
 		and CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 3
@@ -3022,10 +3105,17 @@ func _run_auto_capture_settings_check() -> void:
 		and not host.hang_mode_active
 		and str(host.battle_state.get("message", "")).find("自动挂机已停止") >= 0
 	)
-	var status = "ok" if normalized_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok and pending_claim_capacity_ok and capacity_error_stop_ok and terminal_error_stop_ok else "failed"
-	print("auto capture settings check ready: status=%s normalized=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s partner_defends=%d heal_hold=%s heal_target=%s heal_pet=%s heal_submit=%s heal_marked=%s heal_pet_submit=%s heal_pet_defend=%s heal_partner_defends=%d no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s full_lost=%d full_log=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s pending_claim_capacity=%s capacity_error_stop=%s terminal_error_stop=%s" % [
+	var status = "ok" if normalized_ok and bool(presenter_check.get("ok", false)) and online_safe_projection_ok and local_ui_ok and online_ui_ok and dirty_status_ok and pending_guard_ok and pending_edit_guard_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok and pending_claim_capacity_ok and capacity_error_stop_ok and terminal_error_stop_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s presenter=%s local_ui=%s online_ui=%s dirty_status=%s pending_guard=%s pending_edit_guard=%s online_safe=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s partner_defends=%d heal_hold=%s heal_target=%s heal_pet=%s heal_submit=%s heal_marked=%s heal_pet_submit=%s heal_pet_defend=%s heal_partner_defends=%d no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s full_lost=%d full_log=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s pending_claim_capacity=%s capacity_error_stop=%s terminal_error_stop=%s" % [
 		status,
 		str(normalized_ok),
+		str(presenter_check.get("ok", false)),
+		str(local_ui_ok),
+		str(online_ui_ok),
+		str(dirty_status_ok),
+		str(pending_guard_ok),
+		str(pending_edit_guard_ok),
+		str(online_safe_projection_ok),
 		str(power_ok),
 		str(fallback_ok),
 		str(power_formula_ok),
