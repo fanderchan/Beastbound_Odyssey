@@ -6,6 +6,9 @@ const {canonicalMailDocument} = require("./auth/mail-authority-state");
 const {readMailLifecycleState} = require("./auth/mail-lifecycle-state");
 const {stableDigest} = require("./auth/profile-migrations");
 const {
+  projectActiveMailIdentityRow,
+} = require("./mysql-mail-storage-forward-maintenance");
+const {
   redactMailStorageBootstrapFact,
 } = require("./mysql-mail-storage-bootstrap-public-report");
 
@@ -102,10 +105,12 @@ function buildMailStorageBootstrapPlan(options = {}) {
   const sourceDigest = digestSourceRows(sourceRows);
   const identityRows = sourceRows.map((row) => {
     const lifecycle = lifecycleByMailId.get(row.mailId);
-    return projectIdentityRow(
-      row,
-      lifecycle && lifecycle.settled === true ? lifecycle.settledAt : null,
-    );
+    return projectActiveMailIdentityRow({
+      mail: row.document,
+      settledAt: lifecycle && lifecycle.settled === true ? lifecycle.settledAt : null,
+      dataGeneration: MAIL_STORAGE_BOOTSTRAP_TARGET_DATA_GENERATION,
+      revision: 0,
+    });
   });
   const counterRows = projectCounterRows(sourceRows);
   const counts = {
@@ -311,12 +316,14 @@ function verifyMailStorageBootstrapPlan(plan, options = {}) {
       certification.code,
     );
   }
-  const expectedIdentityRows = plan.sourceRows.map((row) => projectIdentityRow(
-    row,
-    certification.lifecycleByMailId.get(row.mailId).settled === true
+  const expectedIdentityRows = plan.sourceRows.map((row) => projectActiveMailIdentityRow({
+    mail: row.document,
+    settledAt: certification.lifecycleByMailId.get(row.mailId).settled === true
       ? certification.lifecycleByMailId.get(row.mailId).settledAt
       : null,
-  ));
+    dataGeneration: MAIL_STORAGE_BOOTSTRAP_TARGET_DATA_GENERATION,
+    revision: 0,
+  }));
   const expectedCounterRows = projectCounterRows(plan.sourceRows);
   const expectedCounts = {
     source: plan.sourceRows.length,
@@ -542,35 +549,6 @@ function digestSourceRows(rows) {
     physicalFields: [...PHYSICAL_ROW_FIELDS],
     rows,
   });
-}
-
-function projectIdentityRow(row, settledAt) {
-  return {
-    mailId: row.mailId,
-    senderAccountId: row.senderAccountId,
-    recipientAccountId: row.recipientAccountId,
-    location: "active",
-    createdAt: row.createdAt,
-    settledAt,
-    archivedAt: null,
-    identityDigest: stableDigest({
-      kind: "beastbound_mail_identity",
-      schemaVersion: 1,
-      mailId: row.mailId,
-      senderAccountId: row.senderAccountId,
-      recipientAccountId: row.recipientAccountId,
-      createdAt: row.createdAt,
-    }),
-    documentDigest: stableDigest({
-      kind: "beastbound_mail_document",
-      schemaVersion: 1,
-      mailId: row.mailId,
-      document: row.document,
-    }),
-    rewardId: null,
-    dataGeneration: MAIL_STORAGE_BOOTSTRAP_TARGET_DATA_GENERATION,
-    revision: 0,
-  };
 }
 
 function projectCounterRows(sourceRows) {

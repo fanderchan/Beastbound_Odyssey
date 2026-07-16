@@ -26,7 +26,7 @@ process.stdin.on("end", () => {
     process.stdout.write(${JSON.stringify(buildMailStorageCanonicalContractOutputForTest())});
     return;
   }
-  if (stdin.includes("FROM mail_storage_control")) {
+  if (stdin.includes("FROM mail_storage_control") && !stdin.includes("START TRANSACTION")) {
     process.stdout.write(${JSON.stringify(MAIL_STORAGE_CONTROL_GENERATION_ZERO_OUTPUT)});
     return;
   }

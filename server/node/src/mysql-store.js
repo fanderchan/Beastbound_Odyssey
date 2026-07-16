@@ -70,6 +70,7 @@ const {
   assertMysqlMutationReceiptWriteContract,
   assertMysqlResourceAcquisitionOrder,
   buildMysqlResourceAcquisitionPlan,
+  mysqlResourceWriteAffectedRowsAccepted,
 } = require("./mysql-resource-acquisition-order");
 const {
   MYSQL_COMMIT_OUTCOME_AMBIGUOUS,
@@ -91,6 +92,15 @@ const {
 const {
   readMysqlMailStorageBootstrapSnapshot,
 } = require("./mysql-mail-storage-bootstrap-read");
+const {
+  createMailStorageBootstrapAttachmentCertifier,
+} = require("./mysql-mail-storage-bootstrap-catalog");
+const {
+  buildMailStorageForwardMaintenancePlan,
+} = require("./mysql-mail-storage-forward-maintenance");
+const {
+  buildMailStorageForwardWriteSet,
+} = require("./mysql-mail-storage-forward-writes");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -114,6 +124,7 @@ const MYSQL_MARKET_FULL = "market_full";
 const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
 const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
 const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
+const MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED = "mysql_mail_storage_runtime_state_changed";
 const MYSQL_SHARED_ASSET_FULL_RELOAD_REQUIRED = "mysql_shared_asset_full_reload_required";
 const MYSQL_ENTITY_STATE_PRESENT = Symbol("beastbound.mysqlEntityStatePresent");
 const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
@@ -134,6 +145,11 @@ function createMysqlAuthStore(options = {}) {
   const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
+  // Store-private lifecycle capability captured by the startup fence. Mail
+  // write plans must never infer generation support from an in-memory
+  // authority document or silently switch modes while this store is alive.
+  let mailStorageStartupState = null;
+  let mailStorageAttachmentCertifier = null;
   let lastPersistentData = null;
   let lastPersistentRevision = null;
   let revisionCasEnabled = false;
@@ -143,6 +159,20 @@ function createMysqlAuthStore(options = {}) {
   let writePool = null;
   let closePromise = null;
   let closed = false;
+
+  function mailStoragePlanningOptions() {
+    return {
+      mailStorageState: mailStorageStartupState === null
+        ? null
+        : {...mailStorageStartupState, controlFence: true},
+      mailStorageCertifierFactory() {
+        if (mailStorageAttachmentCertifier === null) {
+          mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+        }
+        return mailStorageAttachmentCertifier;
+      },
+    };
+  }
 
   function persistentWritePool() {
     if (closed) {
@@ -168,7 +198,11 @@ function createMysqlAuthStore(options = {}) {
       // physical contract and generation before their first authority load.
       // An explicitly auditing read-only bootstrap/dry-run may do the same.
       if (!readOnly || config.requireMailStorageSchemaAudit) {
-        ensureMailStorageFoundationSchema(config, config.database, {install: false});
+        mailStorageStartupState = ensureMailStorageFoundationSchema(
+          config,
+          config.database,
+          {install: false},
+        );
       }
       clearLegacyRuntimeRows();
       schemaReady = true;
@@ -445,7 +479,7 @@ function createMysqlAuthStore(options = {}) {
     `);
     ensureAppendOnlyHistorySequenceSchema(config, config.database);
     ensureMailInboxPageIndexSchema(config, config.database);
-    ensureMailStorageFoundationSchema(config, config.database);
+    mailStorageStartupState = ensureMailStorageFoundationSchema(config, config.database);
     clearLegacyRuntimeRows();
     schemaReady = true;
   }
@@ -619,6 +653,7 @@ function createMysqlAuthStore(options = {}) {
       }
       const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
+        ...mailStoragePlanningOptions(),
       });
       if (statements.length > 0) {
         if (!config.singleWriterMaintenance) {
@@ -652,6 +687,7 @@ function createMysqlAuthStore(options = {}) {
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
+        ...mailStoragePlanningOptions(),
       });
       if (plan.kind !== "noop") {
         if (!config.usePool) {
@@ -694,6 +730,7 @@ function createMysqlAuthStore(options = {}) {
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
+        ...mailStoragePlanningOptions(),
       });
       if (plan.kind !== "noop") {
         if (!config.usePool) {
@@ -1483,7 +1520,11 @@ function buildSaveStatements(nextData, previousData = null) {
 
 function buildSaveStatementsFromPersistentData(data, previous, options = {}) {
   const groups = buildSaveStatementGroupsFromPersistentData(data, previous, options);
-  const statements = mysqlSaveStatementsFromGroups(groups);
+  const mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
+  const statements = mysqlSaveStatementsFromGroups(groups, {
+    mailForwardWriteSet,
+    mailMode: "cli",
+  });
   if (statements.length === 0) {
     return [];
   }
@@ -1576,7 +1617,52 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
   return groups;
 }
 
-function mysqlSaveStatementsFromGroups(groups) {
+function mysqlSaveStatementsFromGroups(groups, options = {}) {
+  const mailForwardWriteSet = options.mailForwardWriteSet || null;
+  if (mailForwardWriteSet !== null && options.mailMode === "cli") {
+    const controlStatements = mailForwardWriteSet.legacyStatements.slice(0, 2);
+    const generationOne = mailForwardWriteSet.sidecarWrites.length > 0
+      || mailForwardWriteSet.mailWrites.length > 0;
+    const forwardMailStatements = generationOne
+      ? mailForwardWriteSet.legacyStatements.slice(2)
+      : groups.mailMessages;
+    // The stopped writer has no mysql2 affectedRows, so its exact control and
+    // ROW_COUNT guards are raw SQL. Fence the generation immediately after
+    // BEGIN, keep market/profile work before mailbox sidecars, and leave the
+    // durable receipt last as the recovery witness for the atomic mutation.
+    return [
+      controlStatements,
+      groups.serverState,
+      groups.accounts,
+      groups.sessions,
+      groups.profileBindings,
+      groups.profiles,
+      groups.marketListings,
+      forwardMailStatements,
+      groups.consumedEquipmentEnvelopes,
+      groups.parties,
+      groups.families,
+      groups.manors,
+      groups.manorBattles,
+      groups.manorWars,
+      groups.chatMessages,
+      groups.battleRecords,
+      groups.battleTrace,
+      groups.gmUserGrants,
+      groups.gmCommandGrants,
+      groups.gmCommandAudit,
+      groups.authEvents,
+      groups.serviceEvents,
+      groups.mutationReceipts,
+    ].flat();
+  }
+  let mailStatements = groups.mailMessages;
+  if (mailForwardWriteSet !== null && options.mailMode === "pool") {
+    mailStatements = mailForwardWriteSet.sidecarWrites.length > 0
+      || mailForwardWriteSet.mailWrites.length > 0
+      ? mailForwardWriteSet.legacyWriteStatements.map(({statement}) => statement)
+      : groups.mailMessages;
+  }
   return [
     groups.serverState,
     groups.accounts,
@@ -1584,7 +1670,7 @@ function mysqlSaveStatementsFromGroups(groups) {
     groups.profileBindings,
     groups.profiles,
     groups.mutationReceipts,
-    groups.mailMessages,
+    mailStatements,
     groups.marketListings,
     groups.consumedEquipmentEnvelopes,
     groups.parties,
@@ -1603,6 +1689,64 @@ function mysqlSaveStatementsFromGroups(groups) {
   ].flat();
 }
 
+function buildMailStorageForwardWriteSetFromGroups(groups, options = {}) {
+  if (!groups || !Array.isArray(groups.mailMessages) || groups.mailMessages.length === 0) {
+    return null;
+  }
+  // Test-only pure planner callers from phases predating the lifecycle
+  // foundation may omit the physical store capability. Every real writable
+  // store passes its startup-audited state through createMysqlAuthStore().
+  if (!options.mailStorageState) {
+    return null;
+  }
+  if (
+    Number(options.mailStorageState.dataGeneration) === 1
+    && (
+      !Array.isArray(groups.mailAuthorityChanges)
+      || groups.mailAuthorityChanges.length !== groups.mailMessages.length
+    )
+  ) {
+    // Malformed legacy collections may still be preserved in memory so the
+    // owning operation can quarantine them instead of dropping assets. Their
+    // generic SQL fallback has no trustworthy before/after identity facts,
+    // therefore generation one must reject it rather than write a physical
+    // mail row without the counter/identity sidecars.
+    const error = new Error("MySQL 邮箱 generation forward 缺少完整 typed change 覆盖。");
+    error.code = "mysql_mail_storage_forward_typed_coverage_invalid";
+    throw error;
+  }
+  let certifyAttachment;
+  if (Number(options.mailStorageState.dataGeneration) === 1) {
+    certifyAttachment = typeof options.mailStorageCertifyAttachment === "function"
+      ? options.mailStorageCertifyAttachment
+      : (typeof options.mailStorageCertifierFactory === "function"
+        ? options.mailStorageCertifierFactory()
+        : undefined);
+  }
+  const forwardPlan = buildMailStorageForwardMaintenancePlan({
+    storageState: options.mailStorageState,
+    changes: groups.mailAuthorityChanges,
+    certifyAttachment,
+  });
+  if (!forwardPlan.ok) {
+    const cause = forwardPlan.errors[0] || {};
+    const error = new Error("MySQL 邮箱 generation forward 维护计划认证失败。");
+    error.code = String(cause.code || "mysql_mail_storage_forward_maintenance_invalid");
+    if (typeof cause.path === "string" && cause.path !== "") {
+      error.path = cause.path;
+    }
+    if (typeof cause.key === "string" && cause.key !== "") {
+      error.resourceKey = cause.key;
+    }
+    throw error;
+  }
+  return buildMailStorageForwardWriteSet({
+    storageState: options.mailStorageState,
+    forwardPlan,
+    changes: groups.mailAuthorityChanges,
+  });
+}
+
 function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   const allowCertifiedMailDelta = Boolean(
     options.consistencyScope
@@ -1618,11 +1762,17 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   if (statements.length === 0) {
     return {kind: "noop"};
   }
+  let mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
+  statements = mysqlSaveStatementsFromGroups(groups, {
+    mailForwardWriteSet,
+    mailMode: "pool",
+  });
   const conditionalPlan = buildConditionalMysqlSavePlan(
     data,
     previous,
     groups,
     options.consistencyScope,
+    mailForwardWriteSet,
   );
   if (conditionalPlan !== null) {
     return conditionalPlan;
@@ -1640,6 +1790,11 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     if (statements.length === 0) {
       return {kind: "noop"};
     }
+    mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
+    statements = mysqlSaveStatementsFromGroups(groups, {
+      mailForwardWriteSet,
+      mailMode: "pool",
+    });
   }
   const legacyMarketCreateCapacity = legacyMarketCreateCapacityProtection(previous, data);
   const legacyReceiptWrites = groups.mutationReceiptWrites;
@@ -1648,6 +1803,7 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
     resourceLocks: [
+      ...(mailForwardWriteSet === null ? [] : mailForwardWriteSet.controlLocks),
       ...(groups.serverState.length > 0 && options.forceServerState !== true
         ? [serverStateResourceLock(persistentServerStateDocument(previous))]
         : []),
@@ -1666,11 +1822,18 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     ...(legacyReceiptWrites.length === 0
       ? {}
       : {receiptWrites: legacyReceiptWrites}),
+    ...(mailForwardWriteSet === null ? {} : {mailForwardWriteSet}),
     statements: ["START TRANSACTION", ...statements, "COMMIT"],
   };
 }
 
-function buildConditionalMysqlSavePlan(data, previous, groups, consistencyScope) {
+function buildConditionalMysqlSavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScope,
+  mailForwardWriteSet = null,
+) {
   for (const build of [
     buildConditionalProfileSavePlan,
     buildConditionalMarketCreateSavePlan,
@@ -1680,12 +1843,23 @@ function buildConditionalMysqlSavePlan(data, previous, groups, consistencyScope)
     buildConditionalMailReadSavePlan,
     buildConditionalMailClaimSavePlan,
   ]) {
-    const plan = build(data, previous, groups, consistencyScope);
+    const plan = build(data, previous, groups, consistencyScope, mailForwardWriteSet);
     if (plan !== null) {
       return plan;
     }
   }
   return null;
+}
+
+function conditionalMailForwardLocks(writeSet) {
+  if (writeSet === null) {
+    return [];
+  }
+  return [...writeSet.controlLocks, ...writeSet.identityLocks];
+}
+
+function conditionalMailForwardWrites(writeSet) {
+  return writeSet === null ? [] : [...writeSet.sidecarWrites];
 }
 
 function legacyMutationReceiptCapacityWrite(writes) {
@@ -2067,7 +2241,13 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
   });
 }
 
-function buildConditionalMarketBuySavePlan(data, previous, groups, consistencyScopeValue) {
+function buildConditionalMarketBuySavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScopeValue,
+  mailForwardWriteSet = null,
+) {
   const consistencyScope = rowLocalMarketBuyConsistencyScope(consistencyScopeValue);
   if (consistencyScope === null
     || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
@@ -2210,6 +2390,7 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
     conditionalMarketListingDelete(listing),
+    ...conditionalMailForwardWrites(mailForwardWriteSet),
     conditionalMailMessageInsert(saleMail),
   ];
   if (taxChange.taxAmount > 0) {
@@ -2232,6 +2413,7 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
     expectedProfileRevision: expectedRevision,
     nextProfileRevision: expectedRevision + 1,
     locks: [
+      ...conditionalMailForwardLocks(mailForwardWriteSet),
       ...bindingLocks.map(({binding, shared}) => profileBindingResourceLock(binding, {shared})),
       ...profileLocks.map(({profile, shared}) => profileResourceLock(profile, {shared})),
       marketListingResourceLock(listing),
@@ -2240,7 +2422,13 @@ function buildConditionalMarketBuySavePlan(data, previous, groups, consistencySc
   });
 }
 
-function buildConditionalMailSendSavePlan(data, previous, groups, consistencyScopeValue) {
+function buildConditionalMailSendSavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScopeValue,
+  mailForwardWriteSet = null,
+) {
   const consistencyScope = canonicalMailSendConsistencyScope(consistencyScopeValue);
   if (consistencyScope === null
     || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
@@ -2331,7 +2519,7 @@ function buildConditionalMailSendSavePlan(data, previous, groups, consistencySco
     return null;
   }
 
-  const locks = [];
+  const locks = conditionalMailForwardLocks(mailForwardWriteSet);
   const writes = [];
   if (profileExpected) {
     locks.push(
@@ -2343,7 +2531,11 @@ function buildConditionalMailSendSavePlan(data, previous, groups, consistencySco
       conditionalProfileUpdate(nextProfile, expectedRevision),
     );
   }
-  writes.push(conditionalMailMessageInsert(mailAddition.next), ...receiptWriteSet.writes);
+  writes.push(
+    ...conditionalMailForwardWrites(mailForwardWriteSet),
+    conditionalMailMessageInsert(mailAddition.next),
+    ...receiptWriteSet.writes,
+  );
   return buildMysqlResourceAcquisitionPlan({
     kind: "mail_send_conditional_v1",
     globalRevisionFence: false,
@@ -2443,7 +2635,13 @@ function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
   return true;
 }
 
-function buildConditionalMailReadSavePlan(data, previous, groups, consistencyScopeValue) {
+function buildConditionalMailReadSavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScopeValue,
+  mailForwardWriteSet = null,
+) {
   const consistencyScope = canonicalMailReadConsistencyScope(consistencyScopeValue);
   if (consistencyScope === null
     || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
@@ -2517,8 +2715,12 @@ function buildConditionalMailReadSavePlan(data, previous, groups, consistencySco
     mailId: consistencyScope.mailId,
     mailDisposition: consistencyScope.mailDisposition,
     operationId: consistencyScope.operationId,
-    locks: [mailMessageResourceLock(beforeMail)],
+    locks: [
+      ...conditionalMailForwardLocks(mailForwardWriteSet),
+      mailMessageResourceLock(beforeMail),
+    ],
     writes: [
+      ...conditionalMailForwardWrites(mailForwardWriteSet),
       conditionalMailMessageUpdate(nextMail, beforeMail),
       ...receiptWriteSet.writes,
     ],
@@ -2540,7 +2742,13 @@ function canonicalMysqlIsoTimestamp(value) {
   }
 }
 
-function buildConditionalMailClaimSavePlan(data, previous, groups, consistencyScopeValue) {
+function buildConditionalMailClaimSavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScopeValue,
+  mailForwardWriteSet = null,
+) {
   const consistencyScope = rowLocalMailClaimConsistencyScope(consistencyScopeValue);
   if (consistencyScope === null
     || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
@@ -2641,6 +2849,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
     expectedProfileRevision: expectedRevision,
     nextProfileRevision: expectedRevision + 1,
     locks: [
+      ...conditionalMailForwardLocks(mailForwardWriteSet),
       profileBindingResourceLock(beforeBinding),
       profileResourceLock(beforeProfile),
       mailMessageResourceLock(mailClaim.beforeMail),
@@ -2648,6 +2857,7 @@ function buildConditionalMailClaimSavePlan(data, previous, groups, consistencySc
     writes: [
       conditionalProfileBindingUpdate(nextBinding, expectedRevision),
       conditionalProfileUpdate(nextProfile, expectedRevision),
+      ...conditionalMailForwardWrites(mailForwardWriteSet),
       conditionalMailMessageUpdate(mailClaim.nextMail, mailClaim.beforeMail),
       ...mailClaim.removedEnvelopeIds.map(conditionalConsumedEquipmentEnvelopeInsert),
       ...receiptWriteSet.writes,
@@ -4886,6 +5096,25 @@ function appendMailAuthorityDeltaOrDiff(statements, previousValue, nextValue, op
     }
     return;
   }
+  const fullChanges = fullMailAuthorityChanges(previousValue, nextValue);
+  if (fullChanges !== null) {
+    for (const change of fullChanges) {
+      if (Array.isArray(options.typedChanges)) {
+        options.typedChanges.push(change);
+      }
+      if (change.disposition === "delete") {
+        statements.push(deleteEntityStatement("mail_messages", "mail_id", change.mailId));
+      } else if (change.disposition === "insert") {
+        statements.push(insertMailStatement(change.after));
+      } else {
+        statements.push(upsertEntityStatement(
+          insertMailStatement(change.after),
+          upsertColumnsForTable("mail_messages"),
+        ));
+      }
+    }
+    return;
+  }
   appendObjectEntityDiff(
     statements,
     "mail_messages",
@@ -4896,6 +5125,31 @@ function appendMailAuthorityDeltaOrDiff(statements, previousValue, nextValue, op
     insertMailStatement,
     {strictInsertNew: true},
   );
+}
+
+function fullMailAuthorityChanges(previousValue, nextValue) {
+  const previous = canonicalObjectEntityMap(previousValue, mailEntityKey);
+  const next = canonicalObjectEntityMap(nextValue, mailEntityKey);
+  if (previous === null || next === null) {
+    return null;
+  }
+  const changes = [];
+  for (const [mailId, before] of previous.entries()) {
+    if (!next.has(mailId)) {
+      changes.push({mailId, disposition: "delete", before, after: null});
+    }
+  }
+  for (const [mailId, after] of next.entries()) {
+    if (!previous.has(mailId)) {
+      changes.push({mailId, disposition: "insert", before: null, after});
+      continue;
+    }
+    const before = previous.get(mailId);
+    if (entityChanged(before, after)) {
+      changes.push({mailId, disposition: "update", before, after});
+    }
+  }
+  return changes;
 }
 
 function certifiedMailDeltaAgainstBaseline(previousValue, nextValue) {
@@ -5625,12 +5879,14 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     const capacityCheck = assertLegacyMarketCreateCapacityPlan(plan);
     const receiptWrites = assertLegacyMutationReceiptWrites(plan);
     const receiptCapacityWrite = assertLegacyMutationReceiptCapacityWrite(plan, receiptWrites);
+    const mailForwardWriteSet = assertLegacyMailForwardWriteSet(plan);
     return runMysqlPoolSaveStatements(pool, plan.statements, {
       ...options,
       resourceLocks: plan.resourceLocks,
       capacityCheck,
       receiptCapacityWrite,
       receiptWrites,
+      mailForwardWriteSet,
     });
   }
   if (
@@ -5663,13 +5919,13 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       try {
         result = await connection.query(write.sql, write.params);
       } catch (error) {
-        if (["market_listing", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
+        if (["market_listing", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
           && error && error.code === "ER_DUP_ENTRY") {
           throw mysqlResourceRevisionConflict(write.resource, write.key);
         }
         throw error;
       }
-      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
+      if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
         throw mysqlResourceRevisionConflict(write.resource, write.key);
       }
     }
@@ -5792,6 +6048,74 @@ function assertLegacyMutationReceiptCapacityWrite(plan, receiptWrites) {
   return expected;
 }
 
+function assertLegacyMailForwardWriteSet(plan) {
+  const writeSet = plan && plan.mailForwardWriteSet;
+  const statements = Array.isArray(plan && plan.statements) ? plan.statements : [];
+  const mailStorageStatements = statements.filter((statement) => (
+    /^(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:mail_active_counters|mail_identity_registry|mail_messages)\b/i
+      .test(String(statement || "").trim())
+  ));
+  if (writeSet === undefined) {
+    if (mailStorageStatements.some((statement) => (
+      /^(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:mail_active_counters|mail_identity_registry)\b/i
+        .test(String(statement || "").trim())
+    ))) {
+      throw mysqlLegacyMailForwardPlanInvalid();
+    }
+    return null;
+  }
+  if (
+    !writeSet
+    || !Array.isArray(writeSet.controlLocks)
+    || writeSet.controlLocks.length !== 1
+    || !Array.isArray(writeSet.identityLocks)
+    || !Array.isArray(writeSet.sidecarWrites)
+    || !Array.isArray(writeSet.mailWrites)
+    || !Array.isArray(writeSet.legacyWriteStatements)
+  ) {
+    throw mysqlLegacyMailForwardPlanInvalid();
+  }
+  const controlLocks = (Array.isArray(plan.resourceLocks) ? plan.resourceLocks : [])
+    .filter((lock) => lock && lock.resource === "mail_storage_control");
+  if (
+    controlLocks.length !== 1
+    || !isDeepStrictEqual(controlLocks[0], writeSet.controlLocks[0])
+  ) {
+    throw mysqlLegacyMailForwardPlanInvalid();
+  }
+  const expectedWrites = [...writeSet.sidecarWrites, ...writeSet.mailWrites];
+  if (
+    writeSet.legacyWriteStatements.length !== expectedWrites.length
+    || writeSet.legacyWriteStatements.some((entry, index) => (
+      !entry
+      || typeof entry.statement !== "string"
+      || !isDeepStrictEqual(entry.write, expectedWrites[index])
+    ))
+  ) {
+    throw mysqlLegacyMailForwardPlanInvalid();
+  }
+  if (expectedWrites.length > 0) {
+    const expectedStatements = writeSet.legacyWriteStatements.map(({statement}) => statement.trim());
+    if (!isDeepStrictEqual(
+      mailStorageStatements.map((statement) => String(statement).trim()),
+      expectedStatements,
+    )) {
+      throw mysqlLegacyMailForwardPlanInvalid();
+    }
+  } else if (mailStorageStatements.some((statement) => (
+    !/^\s*(?:INSERT INTO|UPDATE|DELETE FROM)\s+mail_messages\b/i.test(String(statement || ""))
+  ))) {
+    throw mysqlLegacyMailForwardPlanInvalid();
+  }
+  return writeSet;
+}
+
+function mysqlLegacyMailForwardPlanInvalid() {
+  const error = new Error("MySQL legacy 邮箱 forward 写入元数据与 SQL 不一致。");
+  error.code = "mysql_resource_precondition_invalid";
+  return error;
+}
+
 function isPlainLegacyMarketListingInsertStatement(statement) {
   const sql = String(statement || "").trim();
   return /^INSERT INTO market_listings\b/i.test(sql)
@@ -5843,24 +6167,55 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     ? statements.slice(1, -1)
     : statements.slice();
   const receiptWrites = Array.isArray(options.receiptWrites) ? options.receiptWrites : [];
+  const mailForwardWriteSet = options.mailForwardWriteSet || null;
   return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
     await assertMysqlResourceLocks(connection, options.resourceLocks);
     if (options.capacityCheck) {
       await assertMysqlMarketCreateCapacity(connection, options.capacityCheck);
     }
+    const mailEntries = mailForwardWriteSet === null
+      ? []
+      : mailForwardWriteSet.legacyWriteStatements;
+    let mailEntryIndex = 0;
+    const deferredReceiptStatements = [];
+    let receiptWriteIndex = 0;
+    for (const statement of transactionStatements) {
+      const nextMailEntry = mailEntries[mailEntryIndex];
+      if (
+        nextMailEntry
+        && String(statement).trim() === String(nextMailEntry.statement).trim()
+      ) {
+        mailEntryIndex += 1;
+        continue;
+      }
+      if (isLegacyMutationReceiptRawStatement(statement)) {
+        deferredReceiptStatements.push(statement);
+        continue;
+      }
+      if (
+        mailForwardWriteSet !== null
+        && mailEntries.length > 0
+        && /^(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:mail_active_counters|mail_identity_registry|mail_messages)\b/i
+          .test(String(statement || "").trim())
+      ) {
+        throw mysqlLegacyMailForwardPlanInvalid();
+      }
+      await connection.query(statement);
+    }
+    if (mailEntryIndex !== mailEntries.length) {
+      throw mysqlLegacyMailForwardPlanInvalid();
+    }
+    if (mailForwardWriteSet !== null) {
+      await executeMysqlLegacyMailForwardWrites(connection, mailForwardWriteSet);
+    }
     if (options.receiptCapacityWrite) {
       const write = options.receiptCapacityWrite;
       const result = await connection.query(write.sql, write.params);
-      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
+      if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
         throw mysqlResourceRevisionConflict(write.resource, write.key);
       }
     }
-    let receiptWriteIndex = 0;
-    for (const statement of transactionStatements) {
-      if (!isLegacyMutationReceiptRawStatement(statement)) {
-        await connection.query(statement);
-        continue;
-      }
+    for (const statement of deferredReceiptStatements) {
       const write = receiptWrites[receiptWriteIndex];
       if (
         !write
@@ -5870,18 +6225,7 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
         error.code = "mysql_resource_precondition_invalid";
         throw error;
       }
-      let result;
-      try {
-        result = await connection.query(write.sql, write.params);
-      } catch (error) {
-        if (write.kind === "insert" && error && error.code === "ER_DUP_ENTRY") {
-          throw mysqlResourceRevisionConflict(write.resource, write.key);
-        }
-        throw error;
-      }
-      if (mysqlAffectedRows(result) !== write.expectedAffectedRows) {
-        throw mysqlResourceRevisionConflict(write.resource, write.key);
-      }
+      await executeMysqlCertifiedResourceWrite(connection, write);
       receiptWriteIndex += 1;
     }
     if (receiptWriteIndex !== receiptWrites.length) {
@@ -5890,6 +6234,56 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
       throw error;
     }
   });
+}
+
+async function executeMysqlLegacyMailForwardWrites(connection, writeSet) {
+  const counterWrites = writeSet.sidecarWrites.filter((write) => (
+    write.resource === "mail_active_counter"
+  ));
+  const identityWrites = writeSet.sidecarWrites.filter((write) => (
+    write.resource === "mail_identity"
+  ));
+  if (counterWrites.length + identityWrites.length !== writeSet.sidecarWrites.length) {
+    throw mysqlLegacyMailForwardPlanInvalid();
+  }
+  for (const write of counterWrites) {
+    await executeMysqlCertifiedResourceWrite(connection, write);
+  }
+  await assertMysqlResourceLocks(connection, writeSet.identityLocks);
+  for (const write of identityWrites) {
+    await executeMysqlCertifiedResourceWrite(connection, write);
+  }
+  for (const write of writeSet.mailWrites) {
+    let result;
+    try {
+      result = await connection.query(write.sql, write.params);
+    } catch (error) {
+      if (write.kind === "insert" && error && error.code === "ER_DUP_ENTRY") {
+        throw mysqlResourceRevisionConflict(write.resource, write.key);
+      }
+      throw error;
+    }
+    if (mysqlAffectedRows(result) !== 1) {
+      throw mysqlResourceRevisionConflict(write.resource, write.key);
+    }
+  }
+}
+
+async function executeMysqlCertifiedResourceWrite(connection, write) {
+  let result;
+  try {
+    result = await connection.query(write.sql, write.params);
+  } catch (error) {
+    if (["market_listing", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
+      && write.kind === "insert"
+      && error && error.code === "ER_DUP_ENTRY") {
+      throw mysqlResourceRevisionConflict(write.resource, write.key);
+    }
+    throw error;
+  }
+  if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
+    throw mysqlResourceRevisionConflict(write.resource, write.key);
+  }
 }
 
 async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites) {
@@ -5942,6 +6336,8 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
   } catch (error) {
     const saveError = new Error(error && error.code === MYSQL_STORE_REVISION_CONFLICT
       ? "MySQL存档版本已变化，旧快照未写入。"
+      : error && error.code === MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED
+        ? "MySQL邮箱数据代次已变化，当前服务必须重启后才能继续写入。"
       : error && error.code === MYSQL_RESOURCE_REVISION_CONFLICT
         ? "MySQL资源版本已变化，条件存档未写入。"
         : error && error.code === MYSQL_COMMIT_OUTCOME_AMBIGUOUS
@@ -6115,6 +6511,7 @@ function mysqlDeterministicTransactionError(error) {
     MYSQL_STORE_REVISION_CONFLICT,
     MYSQL_STORE_REVISION_MISSING,
     MYSQL_RESOURCE_REVISION_CONFLICT,
+    MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED,
   ].includes(code)) {
     return true;
   }
@@ -6129,7 +6526,7 @@ function decorateMysqlNoCommitError(error, rollbackCompleted) {
   error.outcomeUnknown = false;
   error.noCommitGuaranteed = true;
   error.rollbackConfirmed = rollbackCompleted === true;
-  error.retryable = true;
+  error.retryable = error.code !== MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED;
   return error;
 }
 
@@ -6229,8 +6626,13 @@ function mysqlStoreRevisionConflict(expectedRevision, actualRevision) {
 }
 
 function mysqlResourceRevisionConflict(resource, key) {
-  const error = new Error("MySQL资源条件不匹配，拒绝覆盖已变化的行。");
-  error.code = MYSQL_RESOURCE_REVISION_CONFLICT;
+  const runtimeMailStorageChange = resource === "mail_storage_control";
+  const error = new Error(runtimeMailStorageChange
+    ? "MySQL邮箱数据代次与启动围栏不一致，拒绝继续写入。"
+    : "MySQL资源条件不匹配，拒绝覆盖已变化的行。");
+  error.code = runtimeMailStorageChange
+    ? MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED
+    : MYSQL_RESOURCE_REVISION_CONFLICT;
   error.resource = String(resource || "");
   error.resourceKey = String(key || "");
   return error;

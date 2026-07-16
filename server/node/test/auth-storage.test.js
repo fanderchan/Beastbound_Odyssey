@@ -94,6 +94,15 @@ function createMysqlCasPoolFixture(options = {}) {
     revision: Number.isSafeInteger(options.revision) ? options.revision : 0,
     profileBindingRows: structuredClone(options.profileBindingRows || []),
     profileRows: structuredClone(options.profileRows || []),
+    mailStorageControl: structuredClone(options.mailStorageControl || {
+      scope_key: "mail_lifecycle",
+      schema_generation: 1,
+      data_generation: 0,
+      lifecycle_state: "uninitialized",
+      archive_enabled: 0,
+      vault_claim_enabled: 0,
+      active_limit_enabled: 0,
+    }),
     acquireCount: 0,
     endCalls: 0,
     events: [],
@@ -152,6 +161,9 @@ function createMysqlCasPoolFixture(options = {}) {
           const normalizedSql = sql.trim();
           if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR (?:UPDATE|SHARE)$/i.test(normalizedSql)) {
             return [[{storeRevision: state.revision}], []];
+          }
+          if (/^SELECT scope_key, schema_generation, data_generation,[\s\S]+FROM mail_storage_control WHERE scope_key = \? FOR SHARE$/i.test(normalizedSql)) {
+            return [[structuredClone(state.mailStorageControl)], []];
           }
           if (/^SELECT account_id, player_id, profile_revision FROM profile_bindings ORDER BY account_id FOR UPDATE$/i.test(normalizedSql)) {
             return [structuredClone(state.profileBindingRows), []];

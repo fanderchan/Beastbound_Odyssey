@@ -24,6 +24,62 @@ const MUTATION_RECEIPT_DELETE_SQL = `DELETE FROM mutation_receipts
   WHERE operation_id = ? AND request_hash = ? AND action_id = ?
     AND account_id <=> ? AND committed_at = ? AND expires_at = ?
     AND document_json = CAST(? AS JSON)`;
+const MAIL_STORAGE_CONTROL_SCOPE_KEY = "mail_lifecycle";
+const MAIL_STORAGE_CONTROL_LOCK_SQL = `SELECT scope_key, schema_generation, data_generation,
+  lifecycle_state, archive_enabled, vault_claim_enabled, active_limit_enabled
+  FROM mail_storage_control WHERE scope_key = ? FOR SHARE`;
+const MAIL_ACTIVE_COUNTER_SEED_SQL = `INSERT INTO mail_active_counters
+  (recipient_account_id, active_count, data_generation, revision)
+  VALUES (?, 0, 1, 0)
+  ON DUPLICATE KEY UPDATE recipient_account_id = VALUES(recipient_account_id)`;
+const MAIL_ACTIVE_COUNTER_INCREMENT_SQL = `UPDATE mail_active_counters
+  SET active_count = active_count + ?, revision = revision + 1
+  WHERE recipient_account_id = ? AND data_generation = 1
+    AND active_count <= 4294967295 - ?
+    AND revision < 18446744073709551615`;
+const MAIL_IDENTITY_LOCK_SQL = `SELECT mail_id, sender_account_id, recipient_account_id,
+  location, created_at, settled_at, archived_at, identity_digest, document_digest,
+  reward_id, data_generation, revision
+  FROM mail_identity_registry WHERE mail_id = ? FOR UPDATE`;
+const MAIL_IDENTITY_INSERT_SQL = `INSERT INTO mail_identity_registry
+  (mail_id, sender_account_id, recipient_account_id, location, created_at,
+    settled_at, archived_at, identity_digest, document_digest, reward_id,
+    data_generation, revision)
+  VALUES (?, ?, ?, 'active', ?, ?, NULL, ?, ?, NULL, 1, 0)`;
+const MAIL_IDENTITY_UPDATE_SQL = `UPDATE mail_identity_registry
+  SET settled_at = ?, document_digest = ?, revision = revision + 1
+  WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
+    AND location = 'active' AND created_at = ? AND settled_at <=> ?
+    AND archived_at IS NULL AND identity_digest = ? AND document_digest = ?
+    AND reward_id IS NULL AND data_generation = 1
+    AND revision < 18446744073709551615`;
+
+const MAIL_STORAGE_CONTROL_EXPECTED_FIELDS = Object.freeze([
+  "scope_key",
+  "schema_generation",
+  "data_generation",
+  "lifecycle_state",
+  "archive_enabled",
+  "vault_claim_enabled",
+  "active_limit_enabled",
+]);
+const MAIL_IDENTITY_EXPECTED_FIELDS = Object.freeze([
+  "mail_id",
+  "sender_account_id",
+  "recipient_account_id",
+  "location",
+  "created_at",
+  "settled_at",
+  "archived_at",
+  "identity_digest",
+  "document_digest",
+  "reward_id",
+  "data_generation",
+]);
+const STORAGE_IDENTIFIER_PATTERN = /^[a-z0-9_:-]+$/;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const MAIL_ACTIVE_COUNT_MAX = 4294967295;
+const MAIL_COUNTER_SEED_AFFECTED_ROWS = Object.freeze([0, 1, 2]);
 
 const CONDITIONAL_PLAN_KINDS = new Set([
   "profile_conditional_v2",
@@ -36,22 +92,27 @@ const CONDITIONAL_PLAN_KINDS = new Set([
 ]);
 
 const RESOURCE_RANK = new Map([
-  ["profile_binding", 0],
-  ["profile", 1],
-  ["market_capacity", 2],
-  ["market_listing", 3],
-  ["mail_message", 4],
-  ["consumed_equipment_envelope", 5],
-  ["market_tax", 6],
-  ["mutation_receipt_capacity", 7],
-  ["mutation_receipt", 8],
+  ["mail_storage_control", 0],
+  ["profile_binding", 1],
+  ["profile", 2],
+  ["market_capacity", 3],
+  ["market_listing", 4],
+  ["mail_active_counter", 5],
+  ["mail_identity", 6],
+  ["mail_message", 7],
+  ["consumed_equipment_envelope", 8],
+  ["market_tax", 9],
+  ["mutation_receipt_capacity", 10],
+  ["mutation_receipt", 11],
 ]);
 
 const EXPLICIT_LOCK_RESOURCES = new Set([
+  "mail_storage_control",
   "profile_binding",
   "profile",
   "market_capacity",
   "market_listing",
+  "mail_identity",
   "mail_message",
 ]);
 
@@ -59,6 +120,8 @@ const WRITE_KINDS_BY_RESOURCE = new Map([
   ["profile_binding", new Set(["write"])],
   ["profile", new Set(["write"])],
   ["market_listing", new Set(["insert", "delete"])],
+  ["mail_active_counter", new Set(["seed", "increment"])],
+  ["mail_identity", new Set(["insert", "update"])],
   ["mail_message", new Set(["insert", "update", "delete"])],
   ["consumed_equipment_envelope", new Set(["insert"])],
   ["market_tax", new Set(["update"])],
@@ -97,6 +160,12 @@ function normalizeSql(value) {
 
 function lockContract(resource, lockMode) {
   const suffix = lockMode === "shared" ? "FOR SHARE" : "FOR UPDATE";
+  if (resource === "mail_storage_control") {
+    return {
+      identityField: "scope_key",
+      sql: MAIL_STORAGE_CONTROL_LOCK_SQL,
+    };
+  }
   if (resource === "profile_binding") {
     return {
       identityField: "account_id",
@@ -121,6 +190,12 @@ function lockContract(resource, lockMode) {
       sql: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
         item_count, created_at, document_json
         FROM market_listings WHERE listing_id = ? FOR UPDATE`,
+    };
+  }
+  if (resource === "mail_identity") {
+    return {
+      identityField: "mail_id",
+      sql: MAIL_IDENTITY_LOCK_SQL,
     };
   }
   if (resource === "mail_message") {
@@ -171,6 +246,39 @@ function writeContract(resource, kind, key) {
       sql: `INSERT INTO market_listings
         (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json)
         VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON))`,
+    };
+  }
+  if (resource === "mail_active_counter" && kind === "seed") {
+    return {
+      keyParamIndex: 0,
+      paramsLength: 1,
+      allowedAffectedRows: MAIL_COUNTER_SEED_AFFECTED_ROWS,
+      sql: MAIL_ACTIVE_COUNTER_SEED_SQL,
+    };
+  }
+  if (resource === "mail_active_counter" && kind === "increment") {
+    return {
+      keyParamIndex: 1,
+      paramsLength: 3,
+      stableParamPairs: [[0, 2]],
+      counterIncrementParams: true,
+      sql: MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+    };
+  }
+  if (resource === "mail_identity" && kind === "insert") {
+    return {
+      keyParamIndex: 0,
+      paramsLength: 7,
+      identityInsertParams: true,
+      sql: MAIL_IDENTITY_INSERT_SQL,
+    };
+  }
+  if (resource === "mail_identity" && kind === "update") {
+    return {
+      keyParamIndex: 2,
+      paramsLength: 9,
+      identityUpdateParams: true,
+      sql: MAIL_IDENTITY_UPDATE_SQL,
     };
   }
   if (resource === "mail_message" && kind === "insert") {
@@ -273,6 +381,121 @@ function canonicalKey(value, resource) {
   return value;
 }
 
+function hasExactFields(value, fields) {
+  return isRecord(value)
+    && Object.keys(value).length === fields.length
+    && fields.every((field) => Object.prototype.hasOwnProperty.call(value, field));
+}
+
+function canonicalStorageIdentifier(value, maximumLength) {
+  return typeof value === "string"
+    && value.length > 0
+    && value.length <= maximumLength
+    && STORAGE_IDENTIFIER_PATTERN.test(value);
+}
+
+function canonicalStoredTimestamp(value) {
+  return typeof value === "string"
+    && value.length > 0
+    && value.length <= 40;
+}
+
+function canonicalIsoTimestamp(value) {
+  if (!canonicalStoredTimestamp(value)) {
+    return false;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
+function nullableCanonicalIsoTimestamp(value) {
+  return value === null || canonicalIsoTimestamp(value);
+}
+
+function validMailStorageControlExpectedRow(value) {
+  return hasExactFields(value, MAIL_STORAGE_CONTROL_EXPECTED_FIELDS)
+    && value.scope_key === MAIL_STORAGE_CONTROL_SCOPE_KEY
+    && value.schema_generation === 1
+    && (
+      (value.data_generation === 0 && value.lifecycle_state === "uninitialized")
+      || (value.data_generation === 1 && value.lifecycle_state === "ready")
+    )
+    && value.archive_enabled === 0
+    && value.vault_claim_enabled === 0
+    && value.active_limit_enabled === 0;
+}
+
+function validMailIdentityExpectedRow(value, key) {
+  return hasExactFields(value, MAIL_IDENTITY_EXPECTED_FIELDS)
+    && value.mail_id === key
+    && canonicalStorageIdentifier(value.mail_id, 96)
+    && canonicalStorageIdentifier(value.sender_account_id, 80)
+    && canonicalStorageIdentifier(value.recipient_account_id, 80)
+    && value.location === "active"
+    && canonicalStoredTimestamp(value.created_at)
+    && nullableCanonicalIsoTimestamp(value.settled_at)
+    && value.archived_at === null
+    && SHA256_PATTERN.test(value.identity_digest)
+    && SHA256_PATTERN.test(value.document_digest)
+    && value.reward_id === null
+    && value.data_generation === 1;
+}
+
+function validMailIdentityInsertParams(params) {
+  const [
+    mailId,
+    senderAccountId,
+    recipientAccountId,
+    createdAt,
+    settledAt,
+    identityDigest,
+    documentDigest,
+  ] = params;
+  return canonicalStorageIdentifier(mailId, 96)
+    && canonicalStorageIdentifier(senderAccountId, 80)
+    && canonicalStorageIdentifier(recipientAccountId, 80)
+    && canonicalIsoTimestamp(createdAt)
+    && nullableCanonicalIsoTimestamp(settledAt)
+    && SHA256_PATTERN.test(identityDigest)
+    && SHA256_PATTERN.test(documentDigest);
+}
+
+function validMailIdentityUpdateParams(params) {
+  const [
+    nextSettledAt,
+    nextDocumentDigest,
+    mailId,
+    senderAccountId,
+    recipientAccountId,
+    createdAt,
+    previousSettledAt,
+    identityDigest,
+    previousDocumentDigest,
+  ] = params;
+  return nullableCanonicalIsoTimestamp(nextSettledAt)
+    && SHA256_PATTERN.test(nextDocumentDigest)
+    && canonicalStorageIdentifier(mailId, 96)
+    && canonicalStorageIdentifier(senderAccountId, 80)
+    && canonicalStorageIdentifier(recipientAccountId, 80)
+    && canonicalStoredTimestamp(createdAt)
+    && nullableCanonicalIsoTimestamp(previousSettledAt)
+    && (previousSettledAt === null || nextSettledAt === previousSettledAt)
+    && SHA256_PATTERN.test(identityDigest)
+    && SHA256_PATTERN.test(previousDocumentDigest)
+    && nextDocumentDigest !== previousDocumentDigest;
+}
+
+function hasExpectedAffectedRowsMetadata(write, allowedAffectedRows) {
+  if (allowedAffectedRows === MAIL_COUNTER_SEED_AFFECTED_ROWS) {
+    return Array.isArray(write.expectedAffectedRows)
+      && write.expectedAffectedRows.length === MAIL_COUNTER_SEED_AFFECTED_ROWS.length
+      && write.expectedAffectedRows.every((value, index) => (
+        value === MAIL_COUNTER_SEED_AFFECTED_ROWS[index]
+      ));
+  }
+  return write.expectedAffectedRows === 1;
+}
+
 // JavaScript relational string comparison is lexicographic by UTF-16 code units.
 function compareCanonicalKeys(left, right) {
   if (left === right) {
@@ -357,7 +580,13 @@ function validateLock(lock) {
   if (lock.lockMode !== "shared" && lock.lockMode !== "exclusive") {
     throw invalid("lock_mode_invalid", resource, key);
   }
-  if (["market_capacity", "market_listing", "mail_message"].includes(resource) && lock.lockMode !== "exclusive") {
+  if (resource === "mail_storage_control" && lock.lockMode !== "shared") {
+    throw invalid("lock_mode_invalid", resource, key);
+  }
+  if (
+    ["market_capacity", "market_listing", "mail_identity", "mail_message"].includes(resource)
+    && lock.lockMode !== "exclusive"
+  ) {
     throw invalid("lock_mode_invalid", resource, key);
   }
   if (typeof lock.sql !== "string" || lock.sql.trim() === "") {
@@ -402,6 +631,21 @@ function validateLock(lock) {
     )
   ) {
     throw invalid("market_capacity_guard_invalid", resource, key);
+  }
+  if (
+    resource === "mail_storage_control"
+    && (
+      key !== MAIL_STORAGE_CONTROL_SCOPE_KEY
+      || !validMailStorageControlExpectedRow(lock.expectedRow)
+    )
+  ) {
+    throw invalid("mail_storage_control_guard_invalid", resource, key);
+  }
+  if (
+    resource === "mail_identity"
+    && !validMailIdentityExpectedRow(lock.expectedRow, key)
+  ) {
+    throw invalid("mail_identity_expected_row_invalid", resource, key);
   }
   return {resource, key, mode: lock.lockMode, source: "locks", stage: "lock"};
 }
@@ -452,18 +696,50 @@ function validateWrite(write) {
   ) {
     throw invalid("write_params_invalid", write.resource, key);
   }
+  if (
+    write.resource === "mail_active_counter"
+    && !canonicalStorageIdentifier(key, 80)
+  ) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
+  if (contract.counterIncrementParams) {
+    const incrementBy = write.params[0];
+    if (
+      !Number.isSafeInteger(incrementBy)
+      || incrementBy <= 0
+      || incrementBy > MAIL_ACTIVE_COUNT_MAX
+      || write.params[2] !== incrementBy
+    ) {
+      throw invalid("write_params_invalid", write.resource, key);
+    }
+  }
+  if (contract.identityInsertParams && !validMailIdentityInsertParams(write.params)) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
+  if (contract.identityUpdateParams && !validMailIdentityUpdateParams(write.params)) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
   const receiptTimes = contract.receiptParams
     ? validateMutationReceiptParams(write.params, write.resource, key)
     : null;
-  if (write.expectedAffectedRows !== 1) {
+  const allowedAffectedRows = contract.allowedAffectedRows || Object.freeze([1]);
+  if (!hasExpectedAffectedRowsMetadata(write, allowedAffectedRows)) {
     throw invalid("write_affected_rows_invalid", write.resource, key);
   }
   return {
     resource: write.resource,
     key,
     kind: write.kind,
+    allowedAffectedRows,
     ...(receiptTimes === null ? {} : receiptTimes),
   };
+}
+
+function mysqlResourceWriteAffectedRowsAccepted(write, affectedRows) {
+  const validated = validateWrite(write);
+  return Number.isSafeInteger(affectedRows)
+    && affectedRows >= 0
+    && validated.allowedAffectedRows.includes(affectedRows);
 }
 
 function validateMutationReceiptParams(params, resource, key) {
@@ -609,7 +885,32 @@ function acquisitionForWrite(write) {
 function requiresExclusivePrelock(write) {
   return PRELOCKED_WRITES.has(write.resource)
     || (write.resource === "market_listing" && write.kind === "delete")
+    || (write.resource === "mail_identity" && write.kind === "update")
     || (write.resource === "mail_message" && write.kind !== "insert");
+}
+
+function allowsSameKeyWriteReuse(previousWrite, write) {
+  if (previousWrite === null || previousWrite.key !== write.key) {
+    return false;
+  }
+  return (
+    previousWrite.resource === "mutation_receipt"
+    && previousWrite.kind === "delete"
+    && write.resource === "mutation_receipt"
+    && write.kind === "insert"
+  ) || (
+    previousWrite.resource === "mail_active_counter"
+    && previousWrite.kind === "seed"
+    && write.resource === "mail_active_counter"
+    && write.kind === "increment"
+  );
+}
+
+function requiresMailStorageControlFence(writes) {
+  return writes.some((write) => (
+    write.resource === "mail_active_counter"
+    || write.resource === "mail_identity"
+  ));
 }
 
 function certify(plan) {
@@ -618,6 +919,7 @@ function certify(plan) {
   const trace = [];
   const acquired = new Set();
   const explicitLocks = new Map();
+  const seenWriteIdentities = new Set();
   const validatedWrites = [];
   let previous = null;
   let previousWrite = null;
@@ -654,6 +956,11 @@ function certify(plan) {
     const write = validateWrite(writeValue);
     validatedWrites.push(write);
     const writeIdentity = identity(write.resource, write.key);
+    const sameKeyWriteReuse = allowsSameKeyWriteReuse(previousWrite, write);
+    if (seenWriteIdentities.has(writeIdentity) && !sameKeyWriteReuse) {
+      throw invalid("duplicate_first_acquisition", write.resource, write.key);
+    }
+    seenWriteIdentities.add(writeIdentity);
     const requiresPrelock = requiresExclusivePrelock(write);
     if (requiresPrelock) {
       const lock = explicitLocks.get(writeIdentity);
@@ -667,13 +974,7 @@ function certify(plan) {
     const acquisition = acquisitionForWrite(write);
     const acquisitionIdentity = identity(acquisition.resource, acquisition.key);
     if (acquired.has(acquisitionIdentity)) {
-      const sameReceiptKeyReuse = write.resource === "mutation_receipt"
-        && write.kind === "insert"
-        && previousWrite !== null
-        && previousWrite.resource === "mutation_receipt"
-        && previousWrite.kind === "delete"
-        && previousWrite.key === write.key;
-      if (!sameReceiptKeyReuse) {
+      if (!sameKeyWriteReuse) {
         throw invalid("duplicate_first_acquisition", acquisition.resource, acquisition.key);
       }
       previousWrite = write;
@@ -686,6 +987,20 @@ function certify(plan) {
     trace.push(Object.freeze(acquisition));
     previous = acquisition;
     previousWrite = write;
+  }
+
+  if (requiresMailStorageControlFence(validatedWrites)) {
+    const controlLock = explicitLocks.get(identity(
+      "mail_storage_control",
+      MAIL_STORAGE_CONTROL_SCOPE_KEY,
+    ));
+    if (!controlLock || controlLock.mode !== "shared") {
+      throw invalid(
+        "mail_storage_control_lock_required",
+        "mail_storage_control",
+        MAIL_STORAGE_CONTROL_SCOPE_KEY,
+      );
+    }
   }
 
   validateMutationReceiptPlan(plan, validatedWrites);
@@ -717,6 +1032,12 @@ function mysqlResourceAcquisitionTrace(plan) {
 }
 
 module.exports = {
+  MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_SEED_SQL,
+  MAIL_IDENTITY_INSERT_SQL,
+  MAIL_IDENTITY_LOCK_SQL,
+  MAIL_IDENTITY_UPDATE_SQL,
+  MAIL_STORAGE_CONTROL_LOCK_SQL,
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,
@@ -730,4 +1051,5 @@ module.exports = {
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,
   mysqlResourceAcquisitionTrace,
+  mysqlResourceWriteAffectedRowsAccepted,
 };

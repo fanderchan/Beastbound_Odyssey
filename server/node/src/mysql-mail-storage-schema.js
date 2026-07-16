@@ -3,11 +3,10 @@
 const MAIL_STORAGE_SCOPE_KEY = "mail_lifecycle";
 const MAIL_STORAGE_SCHEMA_GENERATION = 1;
 const MAIL_STORAGE_INITIAL_DATA_GENERATION = 0;
-// This foundation-only binary does not maintain registry/counter rows on
-// ordinary mail writes yet. It must therefore reject a post-bootstrap store.
-// The forward-writer phase may raise this only together with every mail write
-// path that keeps the generation coherent.
-const MAIL_STORAGE_MAX_SUPPORTED_DATA_GENERATION = 0;
+// Generation one is declared supported only because every online, legacy and
+// stopped-maintenance mail writer now maintains the registry/counter sidecars
+// in the same transaction. Later feature generations remain fail-closed.
+const MAIL_STORAGE_MAX_SUPPORTED_DATA_GENERATION = 1;
 const MAIL_STORAGE_INITIAL_STATE = "uninitialized";
 const MAIL_STORAGE_STATES = Object.freeze([
   "uninitialized",

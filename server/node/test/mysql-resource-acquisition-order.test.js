@@ -4,6 +4,12 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_SEED_SQL,
+  MAIL_IDENTITY_INSERT_SQL,
+  MAIL_IDENTITY_LOCK_SQL,
+  MAIL_IDENTITY_UPDATE_SQL,
+  MAIL_STORAGE_CONTROL_LOCK_SQL,
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_MAX_LISTINGS,
@@ -15,35 +21,71 @@ const {
   buildMysqlResourceAcquisitionPlan,
   assertMysqlResourceAcquisitionOrder,
   mysqlResourceAcquisitionTrace,
+  mysqlResourceWriteAffectedRowsAccepted,
 } = require("../src/mysql-resource-acquisition-order");
 const {
   __runMysqlPoolSavePlanForTest,
 } = require("../src/mysql-store");
 
+const MAIL_STORAGE_CONTROL_KEY = "mail_lifecycle";
+const MAIL_CREATED_AT = "2026-07-16T00:00:00.000Z";
+const MAIL_SETTLED_AT = "2026-07-16T01:00:00.000Z";
+const MAIL_IDENTITY_DIGEST = "a".repeat(64);
+const MAIL_PREVIOUS_DOCUMENT_DIGEST = "b".repeat(64);
+const MAIL_NEXT_DOCUMENT_DIGEST = "c".repeat(64);
+
 function lock(resource, key, lockMode = "exclusive") {
   const identityFieldByResource = {
+    mail_storage_control: "scope_key",
     profile_binding: "account_id",
     profile: "player_id",
     market_capacity: "scope_key",
     market_listing: "listing_id",
+    mail_identity: "mail_id",
     mail_message: "mail_id",
   };
   const suffix = lockMode === "shared" ? "FOR SHARE" : "FOR UPDATE";
   const sqlByResource = {
+    mail_storage_control: MAIL_STORAGE_CONTROL_LOCK_SQL,
     profile_binding: `SELECT account_id, player_id, profile_revision FROM profile_bindings WHERE account_id = ? ${suffix}`,
     profile: `SELECT player_id, account_id, profile_revision FROM profiles WHERE player_id = ? ${suffix}`,
     market_capacity: "SELECT scope_key, revision FROM auth_store_revisions WHERE scope_key = ? FOR UPDATE",
     market_listing: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
       item_count, created_at, document_json
       FROM market_listings WHERE listing_id = ? ${suffix}`,
+    mail_identity: MAIL_IDENTITY_LOCK_SQL,
     mail_message: `SELECT mail_id, sender_account_id, recipient_account_id, title,
       created_at, read_at, document_json
       FROM mail_messages WHERE mail_id = ? ${suffix}`,
   };
   const identityField = identityFieldByResource[resource];
   const expectedRow = {[identityField]: key};
+  if (resource === "mail_storage_control") {
+    Object.assign(expectedRow, {
+      schema_generation: 1,
+      data_generation: 1,
+      lifecycle_state: "ready",
+      archive_enabled: 0,
+      vault_claim_enabled: 0,
+      active_limit_enabled: 0,
+    });
+  }
   if (resource === "market_capacity") {
     expectedRow.revision = 0;
+  }
+  if (resource === "mail_identity") {
+    Object.assign(expectedRow, {
+      sender_account_id: "system",
+      recipient_account_id: "recipient-1",
+      location: "active",
+      created_at: MAIL_CREATED_AT,
+      settled_at: null,
+      archived_at: null,
+      identity_digest: MAIL_IDENTITY_DIGEST,
+      document_digest: MAIL_PREVIOUS_DOCUMENT_DIGEST,
+      reward_id: null,
+      data_generation: 1,
+    });
   }
   return {
     kind: "lock",
@@ -79,6 +121,36 @@ function write(resource, key, kind) {
       (listing_id, seller_account_id, item_id, currency, unit_price, item_count, created_at, document_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON))`;
     params = [key, "seller-1", "item-1", "stoneCoins", 1, 1, "now", "{}"];
+  } else if (resource === "mail_active_counter" && kind === "seed") {
+    sql = MAIL_ACTIVE_COUNTER_SEED_SQL;
+    params = [key];
+  } else if (resource === "mail_active_counter" && kind === "increment") {
+    sql = MAIL_ACTIVE_COUNTER_INCREMENT_SQL;
+    params = [1, key, 1];
+  } else if (resource === "mail_identity" && kind === "insert") {
+    sql = MAIL_IDENTITY_INSERT_SQL;
+    params = [
+      key,
+      "system",
+      "recipient-1",
+      MAIL_CREATED_AT,
+      null,
+      MAIL_IDENTITY_DIGEST,
+      MAIL_PREVIOUS_DOCUMENT_DIGEST,
+    ];
+  } else if (resource === "mail_identity" && kind === "update") {
+    sql = MAIL_IDENTITY_UPDATE_SQL;
+    params = [
+      null,
+      MAIL_NEXT_DOCUMENT_DIGEST,
+      key,
+      "system",
+      "recipient-1",
+      MAIL_CREATED_AT,
+      null,
+      MAIL_IDENTITY_DIGEST,
+      MAIL_PREVIOUS_DOCUMENT_DIGEST,
+    ];
   } else if (resource === "mail_message" && kind === "insert") {
     sql = `INSERT INTO mail_messages
       (mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json)
@@ -145,7 +217,16 @@ function write(resource, key, kind) {
       JSON.stringify(receipt),
     ];
   }
-  return {kind, resource, key, sql, params, expectedAffectedRows: 1};
+  return {
+    kind,
+    resource,
+    key,
+    sql,
+    params,
+    expectedAffectedRows: resource === "mail_active_counter" && kind === "seed"
+      ? [0, 1, 2]
+      : 1,
+  };
 }
 
 function plan(overrides = {}) {
@@ -207,11 +288,21 @@ function rejectsInvalid(action, reason) {
   });
 }
 
+function withDurableReceipt(writes, operationId = "operation-1") {
+  return [
+    ...writes,
+    write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"),
+    write("mutation_receipt", operationId, "insert"),
+  ];
+}
+
 test("builder sorts only explicit locks by resource then UTF-16 key and certifies the result", () => {
   const input = plan({
     locks: [
+      lock("mail_identity", "mail-existing"),
       lock("market_listing", "listing-1"),
       lock("profile", "player-a", "shared"),
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
       lock("profile_binding", "account-a", "shared"),
       lock("profile", "player-Z"),
       lock("profile_binding", "account-Z"),
@@ -232,15 +323,162 @@ test("builder sorts only explicit locks by resource then UTF-16 key and certifie
   const built = buildMysqlResourceAcquisitionPlan(input);
 
   assert.deepEqual(built.locks.map(({resource, key}) => [resource, key]), [
+    ["mail_storage_control", MAIL_STORAGE_CONTROL_KEY],
     ["profile_binding", "account-Z"],
     ["profile_binding", "account-a"],
     ["profile", "player-Z"],
     ["profile", "player-a"],
     ["market_listing", "listing-1"],
+    ["mail_identity", "mail-existing"],
   ]);
   assert.deepEqual(input.locks, originalLocks);
   assert.equal(built.writes, originalWrites);
   assert.equal(assertMysqlResourceAcquisitionOrder(built), true);
+});
+
+test("generation-zero and generation-one mail control fences are exact and fail closed", () => {
+  const generationZero = lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared");
+  generationZero.expectedRow.data_generation = 0;
+  generationZero.expectedRow.lifecycle_state = "uninitialized";
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    locks: [generationZero],
+    writes: withDurableReceipt([write("mail_message", "mail-gen0", "insert")]),
+  })), true);
+
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+  })), true);
+
+  for (const tamper of [
+    (value) => { value.expectedRow.extra = true; },
+    (value) => { value.expectedRow.schema_generation = 2; },
+    (value) => { value.expectedRow.data_generation = 0; },
+    (value) => { value.expectedRow.lifecycle_state = "building"; },
+    (value) => { value.expectedRow.archive_enabled = 1; },
+    (value) => { value.expectedRow.vault_claim_enabled = false; },
+    (value) => { value.expectedRow.active_limit_enabled = 1; },
+    (value) => { value.params[0] = "other-scope"; },
+    (value) => { value.sql = value.sql.replace("FOR SHARE", "FOR UPDATE"); },
+  ]) {
+    const tampered = lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared");
+    tamper(tampered);
+    rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({locks: [tampered]})));
+  }
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "exclusive")],
+  })), "lock_mode_invalid");
+});
+
+test("mail identity lock returns all twelve fields but expectedRow fixes exactly eleven derivable fields", () => {
+  const certified = plan({
+    locks: [
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+      lock("mail_identity", "mail-1"),
+    ],
+  });
+  assert.equal(assertMysqlResourceAcquisitionOrder(certified), true);
+  assert.equal(MAIL_IDENTITY_LOCK_SQL, `SELECT mail_id, sender_account_id, recipient_account_id,
+  location, created_at, settled_at, archived_at, identity_digest, document_digest,
+  reward_id, data_generation, revision
+  FROM mail_identity_registry WHERE mail_id = ? FOR UPDATE`);
+
+  for (const tamper of [
+    (value) => { value.expectedRow.revision = 0; },
+    (value) => { value.expectedRow.location = "archive"; },
+    (value) => { value.expectedRow.archived_at = MAIL_SETTLED_AT; },
+    (value) => { value.expectedRow.reward_id = "reward-1"; },
+    (value) => { value.expectedRow.data_generation = 0; },
+    (value) => { value.expectedRow.identity_digest = "A".repeat(64); },
+    (value) => { value.expectedRow.document_digest = "short"; },
+    (value) => { value.expectedRow.settled_at = "not-a-date"; },
+    (value) => { value.sql = value.sql.replace("reward_id", "archived_at AS reward_id"); },
+  ]) {
+    const tampered = lock("mail_identity", "mail-1");
+    tamper(tampered);
+    rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+      locks: [
+        lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+        tampered,
+      ],
+    })));
+  }
+});
+
+test("generation-one send, read, and claim follow one certified resource order", () => {
+  const send = plan({
+    kind: "mail_send_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([
+      write("mail_active_counter", "recipient-1", "seed"),
+      (() => {
+        const increment = write("mail_active_counter", "recipient-1", "increment");
+        increment.params = [2, "recipient-1", 2];
+        return increment;
+      })(),
+      write("mail_identity", "mail-1", "insert"),
+      write("mail_message", "mail-1", "insert"),
+    ]),
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(send), [
+    {resource: "mail_storage_control", key: MAIL_STORAGE_CONTROL_KEY, mode: "shared", source: "locks", stage: "lock"},
+    {resource: "mail_active_counter", key: "recipient-1", mode: "exclusive", source: "writes", stage: "seed"},
+    {resource: "mail_identity", key: "mail-1", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mail_message", key: "mail-1", mode: "exclusive", source: "writes", stage: "insert"},
+    {resource: "mutation_receipt_capacity", key: MUTATION_RECEIPT_CAPACITY_GUARD_KEY, mode: "exclusive", source: "writes", stage: "update"},
+    {resource: "mutation_receipt", key: "operation-1", mode: "exclusive", source: "writes", stage: "insert"},
+  ]);
+
+  const read = plan({
+    kind: "mail_read_conditional_v1",
+    locks: [
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+      lock("mail_identity", "mail-1"),
+      lock("mail_message", "mail-1"),
+    ],
+    writes: withDurableReceipt([
+      write("mail_identity", "mail-1", "update"),
+      write("mail_message", "mail-1", "update"),
+    ]),
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(read).map(({resource, stage}) => [resource, stage]), [
+    ["mail_storage_control", "lock"],
+    ["mail_identity", "lock"],
+    ["mail_message", "lock"],
+    ["mutation_receipt_capacity", "update"],
+    ["mutation_receipt", "insert"],
+  ]);
+
+  const settledIdentityUpdate = write("mail_identity", "mail-1", "update");
+  settledIdentityUpdate.params[0] = MAIL_SETTLED_AT;
+  const claim = plan({
+    kind: "mail_claim_conditional_v1",
+    locks: [
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+      lock("profile_binding", "account-1"),
+      lock("profile", "player-1"),
+      lock("mail_identity", "mail-1"),
+      lock("mail_message", "mail-1"),
+    ],
+    writes: withDurableReceipt([
+      write("profile_binding", "account-1", "write"),
+      write("profile", "player-1", "write"),
+      settledIdentityUpdate,
+      write("mail_message", "mail-1", "delete"),
+      write("consumed_equipment_envelope", "envelope-1", "insert"),
+    ]),
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(claim).map(({resource, stage}) => [resource, stage]), [
+    ["mail_storage_control", "lock"],
+    ["profile_binding", "lock"],
+    ["profile", "lock"],
+    ["mail_identity", "lock"],
+    ["mail_message", "lock"],
+    ["consumed_equipment_envelope", "insert"],
+    ["mutation_receipt_capacity", "update"],
+    ["mutation_receipt", "insert"],
+  ]);
 });
 
 test("assert never repairs an unordered lock plan", () => {
@@ -295,6 +533,7 @@ test("updates and deletes require the same-key exclusive prelock", () => {
     ["profile_binding", "write"],
     ["profile", "write"],
     ["market_listing", "delete"],
+    ["mail_identity", "update"],
     ["mail_message", "update"],
   ]) {
     rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
@@ -317,11 +556,231 @@ test("updates and deletes require the same-key exclusive prelock", () => {
   }
 });
 
+test("generation-one sidecars require the exact control fence and reject reverse acquisitions", () => {
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    writes: withDurableReceipt([write("mail_message", "mail-1", "insert")]),
+  })), true);
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    writes: withDurableReceipt([write("mail_identity", "mail-1", "insert")]),
+  })), "mail_storage_control_lock_required");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    writes: withDurableReceipt([
+      write("mail_active_counter", "recipient-1", "seed"),
+      write("mail_active_counter", "recipient-1", "increment"),
+    ]),
+  })), "mail_storage_control_lock_required");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_read_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([write("mail_identity", "mail-1", "update")]),
+  })), "exclusive_prelock_required");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    locks: [
+      lock("mail_identity", "mail-1"),
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+    ],
+  })), "explicit_lock_order_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([
+      write("mail_identity", "mail-1", "insert"),
+      write("mail_active_counter", "recipient-1", "seed"),
+    ]),
+  })), "first_acquisition_order_invalid");
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_send_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([
+      write("mail_message", "mail-1", "insert"),
+      write("mail_identity", "mail-1", "insert"),
+    ]),
+  })), "first_acquisition_order_invalid");
+});
+
+test("mail sidecar SQL and parameters are fixed to generation one and bounded CAS", () => {
+  assert.equal(MAIL_STORAGE_CONTROL_LOCK_SQL, `SELECT scope_key, schema_generation, data_generation,
+  lifecycle_state, archive_enabled, vault_claim_enabled, active_limit_enabled
+  FROM mail_storage_control WHERE scope_key = ? FOR SHARE`);
+  assert.equal(MAIL_ACTIVE_COUNTER_SEED_SQL, `INSERT INTO mail_active_counters
+  (recipient_account_id, active_count, data_generation, revision)
+  VALUES (?, 0, 1, 0)
+  ON DUPLICATE KEY UPDATE recipient_account_id = VALUES(recipient_account_id)`);
+  assert.equal(MAIL_ACTIVE_COUNTER_INCREMENT_SQL, `UPDATE mail_active_counters
+  SET active_count = active_count + ?, revision = revision + 1
+  WHERE recipient_account_id = ? AND data_generation = 1
+    AND active_count <= 4294967295 - ?
+    AND revision < 18446744073709551615`);
+  assert.equal(MAIL_IDENTITY_INSERT_SQL, `INSERT INTO mail_identity_registry
+  (mail_id, sender_account_id, recipient_account_id, location, created_at,
+    settled_at, archived_at, identity_digest, document_digest, reward_id,
+    data_generation, revision)
+  VALUES (?, ?, ?, 'active', ?, ?, NULL, ?, ?, NULL, 1, 0)`);
+  assert.equal(MAIL_IDENTITY_UPDATE_SQL, `UPDATE mail_identity_registry
+  SET settled_at = ?, document_digest = ?, revision = revision + 1
+  WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
+    AND location = 'active' AND created_at = ? AND settled_at <=> ?
+    AND archived_at IS NULL AND identity_digest = ? AND document_digest = ?
+    AND reward_id IS NULL AND data_generation = 1
+    AND revision < 18446744073709551615`);
+
+  for (const tamper of [
+    (value) => { value.sql = value.sql.replace("VALUES (?, 0, 1, 0)", "VALUES (?, 1, 1, 0)"); },
+    (value) => { value.params[0] = "Recipient-1"; },
+  ]) {
+    const value = write("mail_active_counter", "recipient-1", "seed");
+    tamper(value);
+    rejectsInvalid(() => mysqlResourceWriteAffectedRowsAccepted(value, 1));
+  }
+
+  for (const tamper of [
+    (value) => { value.sql = value.sql.replace("data_generation = 1", "data_generation = 0"); },
+    (value) => { value.sql = value.sql.replace("revision < 18446744073709551615", "revision >= 0"); },
+    (value) => { value.params = [0, "recipient-1", 0]; },
+    (value) => { value.params = [2, "recipient-1", 1]; },
+    (value) => { value.params = [4294967296, "recipient-1", 4294967296]; },
+  ]) {
+    const value = write("mail_active_counter", "recipient-1", "increment");
+    tamper(value);
+    rejectsInvalid(() => mysqlResourceWriteAffectedRowsAccepted(value, 1));
+  }
+
+  for (const tamper of [
+    (value) => { value.sql = value.sql.replace("'active'", "'archive'"); },
+    (value) => { value.sql = value.sql.replace("NULL, 1, 0", "NULL, 0, 0"); },
+    (value) => { value.params[0] = "Mail-1"; },
+    (value) => { value.params[3] = "now"; },
+    (value) => { value.params[4] = "not-a-date"; },
+    (value) => { value.params[5] = "A".repeat(64); },
+  ]) {
+    const value = write("mail_identity", "mail-1", "insert");
+    tamper(value);
+    rejectsInvalid(() => mysqlResourceWriteAffectedRowsAccepted(value, 1));
+  }
+
+  for (const tamper of [
+    (value) => { value.sql = value.sql.replace("reward_id IS NULL", "reward_id IS NOT NULL"); },
+    (value) => { value.sql = value.sql.replace("data_generation = 1", "data_generation = 2"); },
+    (value) => { value.params[3] = "Other-Sender"; },
+    (value) => { value.params[0] = "not-a-date"; },
+    (value) => {
+      value.params[6] = MAIL_SETTLED_AT;
+      value.params[0] = null;
+    },
+    (value) => { value.params[1] = value.params[8]; },
+  ]) {
+    const value = write("mail_identity", "mail-1", "update");
+    tamper(value);
+    rejectsInvalid(() => mysqlResourceWriteAffectedRowsAccepted(value, 1));
+  }
+});
+
+test("counter seed-to-increment is the only additional same-key write reuse", () => {
+  const incrementByTwo = write("mail_active_counter", "recipient-1", "increment");
+  incrementByTwo.params = [2, "recipient-1", 2];
+  const certified = plan({
+    kind: "mail_send_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([
+      write("mail_active_counter", "recipient-1", "seed"),
+      incrementByTwo,
+    ]),
+  });
+  assert.deepEqual(mysqlResourceAcquisitionTrace(certified).map(({resource, key, stage}) => [resource, key, stage]), [
+    ["mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "lock"],
+    ["mail_active_counter", "recipient-1", "seed"],
+    ["mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"],
+    ["mutation_receipt", "operation-1", "insert"],
+  ]);
+
+  for (const writes of [
+    [
+      write("mail_active_counter", "recipient-1", "seed"),
+      write("mail_active_counter", "recipient-1", "seed"),
+    ],
+    [
+      write("mail_active_counter", "recipient-1", "increment"),
+      write("mail_active_counter", "recipient-1", "seed"),
+    ],
+    [
+      write("mail_active_counter", "recipient-1", "increment"),
+      write("mail_active_counter", "recipient-1", "increment"),
+    ],
+    [
+      write("mail_identity", "mail-1", "insert"),
+      write("mail_identity", "mail-1", "insert"),
+    ],
+  ]) {
+    rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+      locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+      writes: withDurableReceipt(writes),
+    })), "duplicate_first_acquisition");
+  }
+
+  rejectsInvalid(() => assertMysqlResourceAcquisitionOrder(plan({
+    kind: "mail_read_conditional_v1",
+    locks: [
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
+      lock("mail_identity", "mail-1"),
+    ],
+    writes: withDurableReceipt([
+      write("mail_identity", "mail-1", "update"),
+      write("mail_identity", "mail-1", "update"),
+    ]),
+  })), "duplicate_first_acquisition");
+});
+
+test("executor-facing affected-row helper accepts only each certified write's exact set", () => {
+  const seed = write("mail_active_counter", "recipient-1", "seed");
+  assert.deepEqual([0, 1, 2, 3].map((count) => (
+    mysqlResourceWriteAffectedRowsAccepted(seed, count)
+  )), [true, true, true, false]);
+  assert.equal(mysqlResourceWriteAffectedRowsAccepted(seed, -1), false);
+  assert.equal(mysqlResourceWriteAffectedRowsAccepted(seed, 1.5), false);
+  assert.equal(mysqlResourceWriteAffectedRowsAccepted(seed, Number.MAX_SAFE_INTEGER + 1), false);
+
+  const increment = write("mail_active_counter", "recipient-1", "increment");
+  increment.params = [2, "recipient-1", 2];
+  assert.deepEqual([0, 1, 2].map((count) => (
+    mysqlResourceWriteAffectedRowsAccepted(increment, count)
+  )), [false, true, false]);
+  assert.equal(mysqlResourceWriteAffectedRowsAccepted(
+    write("mail_identity", "mail-1", "insert"),
+    1,
+  ), true);
+
+  const badSeedMetadata = write("mail_active_counter", "recipient-1", "seed");
+  badSeedMetadata.expectedAffectedRows = [0, 1];
+  rejectsInvalid(
+    () => mysqlResourceWriteAffectedRowsAccepted(badSeedMetadata, 1),
+    "write_affected_rows_invalid",
+  );
+  const badIncrementMetadata = write("mail_active_counter", "recipient-1", "increment");
+  badIncrementMetadata.expectedAffectedRows = [1];
+  rejectsInvalid(
+    () => mysqlResourceWriteAffectedRowsAccepted(badIncrementMetadata, 1),
+    "write_affected_rows_invalid",
+  );
+});
+
 test("write resource and kind pairs are fail-closed", () => {
   for (const invalidWrite of [
     write("profile", "player-1", "insert"),
     write("profile", "player-1", "update"),
     write("market_listing", "listing-1", "write"),
+    write("mail_active_counter", "recipient-1", "insert"),
+    write("mail_active_counter", "recipient-1", "update"),
+    write("mail_identity", "mail-1", "seed"),
+    write("mail_identity", "mail-1", "delete"),
     write("consumed_equipment_envelope", "envelope-1", "update"),
     write("market_tax", "stoneCoins", "insert"),
     write("mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "insert"),
@@ -616,6 +1075,7 @@ test("mail inserts, envelope inserts, tax update and receipt insert enter the ac
   const certified = plan({
     kind: "mail_claim_conditional_v1",
     locks: [
+      lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared"),
       lock("profile_binding", "account-1"),
       lock("profile", "player-1"),
       lock("mail_message", "mail-existing"),
@@ -633,6 +1093,7 @@ test("mail inserts, envelope inserts, tax update and receipt insert enter the ac
 
   const trace = mysqlResourceAcquisitionTrace(certified);
   assert.deepEqual(trace, [
+    {resource: "mail_storage_control", key: MAIL_STORAGE_CONTROL_KEY, mode: "shared", source: "locks", stage: "lock"},
     {resource: "profile_binding", key: "account-1", mode: "exclusive", source: "locks", stage: "lock"},
     {resource: "profile", key: "player-1", mode: "exclusive", source: "locks", stage: "lock"},
     {resource: "mail_message", key: "mail-existing", mode: "exclusive", source: "locks", stage: "lock"},
@@ -678,6 +1139,7 @@ test("first-write acquisitions validate total order and physical duplicates", ()
 
 test("market tax traces the real server_state/auth acquisition", () => {
   const trace = mysqlResourceAcquisitionTrace(plan({
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
     writes: [
       write("mail_message", "mail-1", "insert"),
       write("market_tax", "diamonds", "update"),
@@ -686,6 +1148,7 @@ test("market tax traces the real server_state/auth acquisition", () => {
     ],
   }));
   assert.deepEqual(trace.map(({resource, key}) => [resource, key]), [
+    ["mail_storage_control", MAIL_STORAGE_CONTROL_KEY],
     ["mail_message", "mail-1"],
     ["market_tax", "auth"],
     ["mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY],

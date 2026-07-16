@@ -379,16 +379,9 @@ test("ready state is generation-fenced and enforces feature and reconciliation i
     sourceDigest: "b".repeat(64),
     reconciledAt: "2026-07-16T09:30:00.000Z",
   });
-  assert.equal(MAIL_STORAGE_MAX_SUPPORTED_DATA_GENERATION, 0);
-  assert.throws(
-    () => validateMailStorageStartupState(readyBase),
-    (error) => error
-      && error.code === "mysql_mail_storage_data_generation_future"
-      && error.dataGeneration === 1
-      && error.maxSupportedDataGeneration === 0,
-  );
+  assert.equal(MAIL_STORAGE_MAX_SUPPORTED_DATA_GENERATION, 1);
   const generationOneOptions = {maxSupportedDataGeneration: 1};
-  const disabled = validateMailStorageStartupState(readyBase, generationOneOptions);
+  const disabled = validateMailStorageStartupState(readyBase);
   assert.equal(disabled.ready, true);
   assert.deepEqual(disabled.flags, {archive: false, vaultClaim: false, activeLimit: false});
   assert.deepEqual(disabled.bootstrap, {
@@ -535,7 +528,7 @@ test("writable store rejects bad contracts, interrupted bootstrap, future genera
       {
         prepare() {
           process.env.FAKE_MAIL_STORAGE_CONTROL = controlOutput({
-            dataGeneration: 1,
+            dataGeneration: 2,
             lifecycleState: "ready",
             sourceDigest: "c".repeat(64),
             reconciledAt: "2026-07-16T10:30:00.000Z",

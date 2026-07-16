@@ -254,12 +254,43 @@ function scope(mode = MAIL_SEND_MODE_TEXT, overrides = {}) {
   };
 }
 
-function plan(after, before, mode = MAIL_SEND_MODE_TEXT, scopeValue = scope(mode)) {
-  return buildMysqlSavePlan(after, before, {consistencyScope: scopeValue});
+function plan(
+  after,
+  before,
+  mode = MAIL_SEND_MODE_TEXT,
+  scopeValue = scope(mode),
+  planningOverrides = {},
+) {
+  return buildMysqlSavePlan(after, before, {
+    consistencyScope: scopeValue,
+    ...planningOverrides,
+  });
 }
 
 function resources(values) {
   return values.map((value) => value.resource);
+}
+
+function generationOneMailStoragePlanningOptions() {
+  return {
+    mailStorageState: {
+      controlFence: true,
+      compatible: true,
+      ready: true,
+      schemaGeneration: 1,
+      dataGeneration: 1,
+      lifecycleState: "ready",
+      flags: {archive: false, vaultClaim: false, activeLimit: false},
+    },
+    mailStorageCertifyAttachment(mail) {
+      return {
+        ok: true,
+        items: structuredClone(mail.items || []),
+        equipmentEnvelopes: structuredClone(mail.equipmentEnvelopes || []),
+        currency: structuredClone(mail.currency || {}),
+      };
+    },
+  };
 }
 
 test("text mail plan writes only the strict mail and receipt behind a shared global barrier", () => {
@@ -281,6 +312,39 @@ test("text mail plan writes only the strict mail and receipt behind a shared glo
   assert.deepEqual(
     mysqlResourceAcquisitionTrace(built).map(({resource, stage}) => [resource, stage]),
     [
+      ["mail_message", "insert"],
+      ["mutation_receipt_capacity", "update"],
+      ["mutation_receipt", "insert"],
+    ],
+  );
+});
+
+test("generation one text mail atomically maintains counter and permanent identity before the mail row", () => {
+  const before = baselineState();
+  const built = plan(
+    candidateState(before),
+    before,
+    MAIL_SEND_MODE_TEXT,
+    scope(),
+    generationOneMailStoragePlanningOptions(),
+  );
+
+  assert.equal(built.kind, "mail_send_conditional_v1");
+  assert.deepEqual(resources(built.locks), ["mail_storage_control"]);
+  assert.deepEqual(resources(built.writes), [
+    "mail_active_counter",
+    "mail_active_counter",
+    "mail_identity",
+    "mail_message",
+    "mutation_receipt_capacity",
+    "mutation_receipt",
+  ]);
+  assert.deepEqual(
+    mysqlResourceAcquisitionTrace(built).map(({resource, stage}) => [resource, stage]),
+    [
+      ["mail_storage_control", "lock"],
+      ["mail_active_counter", "seed"],
+      ["mail_identity", "insert"],
       ["mail_message", "insert"],
       ["mutation_receipt_capacity", "update"],
       ["mutation_receipt", "insert"],
@@ -744,6 +808,17 @@ function conditionalPool(options = {}) {
             if (/auth_store_revisions[\s\S]+scope_key = 'auth'[\s\S]+FOR SHARE/i.test(sql)) {
               return [[{storeRevision: 0}], []];
             }
+            if (/FROM mail_storage_control[\s\S]+FOR SHARE/i.test(sql)) {
+              return [[{
+                scope_key: "mail_lifecycle",
+                schema_generation: 1,
+                data_generation: 1,
+                lifecycle_state: "ready",
+                archive_enabled: 0,
+                vault_claim_enabled: 0,
+                active_limit_enabled: 0,
+              }], []];
+            }
             if (/FROM profile_bindings[\s\S]+FOR UPDATE/i.test(sql)) {
               return [[{account_id: SENDER_ACCOUNT_ID, player_id: SENDER_PLAYER_ID, profile_revision: 1}], []];
             }
@@ -751,6 +826,15 @@ function conditionalPool(options = {}) {
               return [[{player_id: SENDER_PLAYER_ID, account_id: SENDER_ACCOUNT_ID, profile_revision: 1}], []];
             }
             if (/^UPDATE (?:profile_bindings|profiles)\b/i.test(sql.trim())) {
+              return [{affectedRows: 1}, []];
+            }
+            if (/^INSERT INTO mail_active_counters\b/i.test(sql.trim())) {
+              return [{affectedRows: 1}, []];
+            }
+            if (/^UPDATE mail_active_counters\b/i.test(sql.trim())) {
+              return [{affectedRows: 1}, []];
+            }
+            if (/^INSERT INTO mail_identity_registry\b/i.test(sql.trim())) {
               return [{affectedRows: 1}, []];
             }
             if (/^INSERT INTO mail_messages\b/i.test(sql.trim())) {
@@ -796,6 +880,56 @@ test("conditional executor commits without advancing the global revision", async
   assert.deepEqual(result, {revision: 0, globalRevisionAdvanced: false});
   assert.equal(fixture.transaction.committed, true);
   assert.equal(fixture.transaction.rolledBack, false);
+});
+
+test("generation one conditional executor commits sidecars, mail, and receipt in one certified order", async () => {
+  const before = baselineState();
+  const fixture = conditionalPool();
+  const result = await runMysqlPoolSavePlan(
+    fixture.pool,
+    plan(
+      candidateState(before),
+      before,
+      MAIL_SEND_MODE_TEXT,
+      scope(),
+      generationOneMailStoragePlanningOptions(),
+    ),
+    {expectedRevision: 0},
+  );
+
+  assert.deepEqual(result, {revision: 0, globalRevisionAdvanced: false});
+  assert.equal(fixture.transaction.committed, true);
+  assert.equal(fixture.transaction.rolledBack, false);
+  assert.deepEqual(
+    fixture.transaction.queries
+      .map(({sql}) => sql.trim())
+      .filter((sql) => (
+        /mail_storage_control/i.test(sql)
+        || /^(?:INSERT INTO|UPDATE) mail_active_counters\b/i.test(sql)
+        || /^INSERT INTO mail_identity_registry\b/i.test(sql)
+        || /^INSERT INTO mail_messages\b/i.test(sql)
+        || /^UPDATE auth_store_revisions[\s\S]+mutation_receipt_capacity/i.test(sql)
+        || /^INSERT INTO mutation_receipts\b/i.test(sql)
+      ))
+      .map((sql) => {
+        if (/mail_storage_control/i.test(sql)) return "control";
+        if (/^INSERT INTO mail_active_counters\b/i.test(sql)) return "counter_seed";
+        if (/^UPDATE mail_active_counters\b/i.test(sql)) return "counter_increment";
+        if (/^INSERT INTO mail_identity_registry\b/i.test(sql)) return "identity_insert";
+        if (/^INSERT INTO mail_messages\b/i.test(sql)) return "mail_insert";
+        if (/^UPDATE auth_store_revisions\b/i.test(sql)) return "receipt_capacity";
+        return "receipt_insert";
+      }),
+    [
+      "control",
+      "counter_seed",
+      "counter_increment",
+      "identity_insert",
+      "mail_insert",
+      "receipt_capacity",
+      "receipt_insert",
+    ],
+  );
 });
 
 for (const duplicate of ["duplicateMail", "duplicateReceipt"]) {
