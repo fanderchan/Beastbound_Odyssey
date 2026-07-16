@@ -5,6 +5,9 @@ const {isDeepStrictEqual} = require("node:util");
 const {canonicalMailDocument} = require("./auth/mail-authority-state");
 const {readMailLifecycleState} = require("./auth/mail-lifecycle-state");
 const {stableDigest} = require("./auth/profile-migrations");
+const {
+  redactMailStorageBootstrapFact,
+} = require("./mysql-mail-storage-bootstrap-public-report");
 
 const MAIL_STORAGE_BOOTSTRAP_PLAN_KIND = "beastbound_mail_storage_bootstrap_plan";
 const MAIL_STORAGE_BOOTSTRAP_SOURCE_KIND = "beastbound_mail_storage_bootstrap_source";
@@ -755,12 +758,8 @@ function publicMailStorageBootstrapPlanReport(planValue) {
       recipient: safeReportCount(counts.recipient),
       active: safeReportCount(counts.active),
     },
-    lastMailId: canonicalIdentity(plan.lastMailId, 96) ? plan.lastMailId : "",
     errorCount: errors.length,
-    errors: errors.map((entry) => ({
-      code: String(entry && entry.code || "mail_storage_bootstrap_invalid"),
-      path: String(entry && entry.path || ""),
-    })),
+    errors: errors.map(redactMailStorageBootstrapFact),
   });
 }
 

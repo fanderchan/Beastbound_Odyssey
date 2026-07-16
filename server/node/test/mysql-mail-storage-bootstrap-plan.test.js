@@ -326,15 +326,36 @@ test("the explicit public report never exposes mail content, accounts, or assets
   assert.equal(report.ok, true);
   assert.equal(report.applySafe, false);
   assert.deepEqual(report.counts, plan.counts);
+  assert.equal(Object.hasOwn(report, "lastMailId"), false);
   for (const secret of [
     "sensitive_mail_body",
     ordinaryItemId,
+    document.mailId,
     document.senderAccountId,
     document.recipientAccountId,
     document.title,
   ]) {
     assert.equal(serialized.includes(secret), false);
   }
+});
+
+test("the public report allowlists diagnostic codes and paths", () => {
+  const report = publicMailStorageBootstrapPlanReport({
+    ok: false,
+    errors: [
+      {code: "mail_storage_bootstrap_source_invalid", path: "sourceRows[12].document_json"},
+      {
+        code: "mail_storage_bootstrap_private_body",
+        path: "sourceRows[0].private_title",
+      },
+    ],
+  });
+
+  assert.deepEqual(report.errors, [
+    {code: "mail_storage_bootstrap_source_invalid", path: "sourceRows[12].document_json"},
+    {code: "mail_storage_bootstrap_invalid", path: ""},
+  ]);
+  assert.equal(JSON.stringify(report).includes("private_"), false);
 });
 
 test("source and plan digests ignore input and JSON key order but cover physical content", () => {

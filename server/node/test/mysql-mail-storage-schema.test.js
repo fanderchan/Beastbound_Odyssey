@@ -205,7 +205,7 @@ test("foundation SQL rejects unbounded or invalid metadata lock waits", () => {
   }
 });
 
-test("information schema query is database-scoped and includes the active mail identity reference", () => {
+test("information schema query includes the active mail source engine and seven-field contract", () => {
   const sql = buildMailStorageContractQuerySql("beastbound_test");
   assert.match(sql, /information_schema\.tables/);
   assert.match(sql, /information_schema\.columns/);
@@ -215,7 +215,17 @@ test("information schema query is database-scoped and includes the active mail i
     assert.match(sql, new RegExp(`'${tableName}'`));
   }
   assert.match(sql, /table_name = 'mail_messages'/);
-  assert.match(sql, /column_name = 'mail_id'/);
+  for (const columnName of [
+    "mail_id",
+    "sender_account_id",
+    "recipient_account_id",
+    "title",
+    "created_at",
+    "read_at",
+    "document_json",
+  ]) {
+    assert.match(sql, new RegExp(`'${columnName}'`));
+  }
   assert.throws(
     () => buildMailStorageContractQuerySql("beastbound; DROP DATABASE shared"),
     (error) => error && error.code === "mail_storage_database_invalid",
@@ -260,6 +270,22 @@ test("exact contract parser accepts the canonical fake output and rejects missin
     (error) => error
       && error.code === "mysql_mail_storage_schema_contract_invalid"
       && error.contractErrors.some((entry) => entry.includes("utf8mb4_bin")),
+  );
+
+  const referenceTableIndex = lines.findIndex((line) => (
+    line.startsWith("reference_table\tmail_messages\t\t0\t")
+  ));
+  assert.notEqual(referenceTableIndex, -1);
+  const sourceEngineDrift = [...lines];
+  sourceEngineDrift[referenceTableIndex] = sourceEngineDrift[referenceTableIndex].replace(
+    "INNODB",
+    "MYISAM",
+  );
+  assert.throws(
+    () => assertMailStorageContractOutput(`${sourceEngineDrift.join("\n")}\n`),
+    (error) => error
+      && error.code === "mysql_mail_storage_schema_contract_invalid"
+      && error.contractErrors.some((entry) => entry.includes("MYISAM")),
   );
 });
 

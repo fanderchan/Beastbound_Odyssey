@@ -44,7 +44,7 @@ reconciler 只接受已经由未来物理 adapter 投影成规范形状的 contr
 
 ## 隐私边界
 
-内部 plan 为了摘要与逻辑备份包含完整邮件正文、昵称、附件和货币，因此禁止直接输出到 stdout、日志或审计 JSON。模块提供显式 `publicMailStorageBootstrapPlanReport`，只公开计数、摘要、最后 mailId 和错误 code/path，不公开账号、正文、标题或资产。后续完整 before image 只能进入 `0600`、create-once、回读验证的逻辑备份。
+内部 plan 为了摘要与严格对账包含完整邮件正文、昵称、附件和货币，因此禁止直接输出到 stdout、日志或审计 JSON。模块提供显式 `publicMailStorageBootstrapPlanReport`，只公开计数、摘要和经过已知 code 集合与 planner path 结构双重白名单过滤的错误事实，不公开 mailId、账号、正文、标题或资产。数据库备份继续由用户现有外部运维负责；本项目 bootstrap 工具不创建、不检查、不输出或接管备份。
 
 ## 验证证据
 
@@ -58,8 +58,8 @@ reconciler 只接受已经由未来物理 adapter 投影成规范形状的 contr
 
 `3b-2` 余下工作继续拆为：
 
-1. 默认 dry-run、显式脱敏报告、`0600` 完整逻辑备份及备份后写前重读；
+1. 默认 dry-run、真实目录附件认证、两个独立只读一致性快照的漂移探针与显式脱敏报告；
 2. generation 1 的全部在线/停服 forward writers：新信同事务登记 identity/counter，已读/领取同步 document digest/settledAt，普通路径禁止裸删；
-3. 停服 apply、COMMIT 模糊后的独立重读恢复、完整对账与最后单调切换 `ready/data1`。
+3. 停服 apply：在持锁事务内重新读取、重新规划和完整对账，处理 COMMIT 模糊恢复并最后单调切换 `ready/data1`；2b 的只读双快照结果只作诊断，不能充当写授权。
 
 部署时必须先让所有旧 Node 退出，再执行停服 bootstrap，随后只启动能同时维护 gen1 的新二进制；不能把 ready 后旧新节点滚动混跑描述成安全方案。

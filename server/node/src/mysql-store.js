@@ -88,6 +88,9 @@ const {
   parseMailStorageControlOutput,
   validateMailStorageStartupState,
 } = require("./mysql-mail-storage-schema");
+const {
+  readMysqlMailStorageBootstrapSnapshot,
+} = require("./mysql-mail-storage-bootstrap-read");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -508,6 +511,26 @@ function createMysqlAuthStore(options = {}) {
     },
     load() {
       return loadAuthoritySnapshot();
+    },
+    async readMailStorageBootstrapSnapshot(readOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!readOnly) {
+        const error = new Error("邮箱 bootstrap 快照只允许只读 MySQL store。");
+        error.code = "mysql_mail_storage_bootstrap_read_only_store_required";
+        throw error;
+      }
+      if (!config.usePool) {
+        const error = new Error("邮箱 bootstrap 快照必须使用 MySQL 连接池。");
+        error.code = "mysql_mail_storage_bootstrap_pool_required";
+        throw error;
+      }
+      return readMysqlMailStorageBootstrapSnapshot(persistentWritePool(), {
+        database: config.database,
+        transactionPolicy: config.transactionPolicy,
+        transactionGuardOptions: readOptions.transactionGuardOptions,
+      });
     },
     async readDurableMutationReceipt(operationIdValue) {
       const operationId = durableReceiptReadOperationId(operationIdValue);

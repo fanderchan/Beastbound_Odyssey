@@ -22,6 +22,16 @@ const MAIL_STORAGE_TABLE_NAMES = Object.freeze([
   "mail_archive_messages",
   "reward_vault_entries",
 ]);
+const MAIL_STORAGE_SOURCE_TABLE_NAME = "mail_messages";
+const MAIL_STORAGE_SOURCE_COLUMNS = Object.freeze([
+  column("mail_id", 1, "varchar(96)", "NO", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("sender_account_id", 2, "varchar(80)", "NO", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("recipient_account_id", 3, "varchar(80)", "NO", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("title", 4, "varchar(80)", "NO", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("created_at", 5, "varchar(40)", "NO", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("read_at", 6, "varchar(40)", "YES", "<NULL>", "utf8mb4", "utf8mb4_0900_ai_ci"),
+  column("document_json", 7, "json", "NO", "<NULL>"),
+]);
 const MYSQL_IDENTIFIER_PATTERN = /^[A-Za-z0-9_]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -151,22 +161,34 @@ const EXPECTED_CONTRACT_ROWS = Object.freeze([
       "A",
     )),
   ]),
-  // mail_id already exists in the active table. The new registry, archive and
-  // vault delivery link must retain this exact comparison domain or a legacy
-  // collation drift could make one physical identity compare differently
-  // across tables.
+  // The bootstrap source participates in the same repeatable-read snapshot as
+  // the lifecycle sidecars. Certify its transactional engine and all seven
+  // physical source fields instead of assuming a historical table still uses
+  // the current InnoDB contract.
   contractRow(
-    "reference",
-    "mail_messages",
-    "mail_id",
-    1,
-    "varchar(96)",
-    "NO",
-    "<NULL>",
-    "utf8mb4",
+    "reference_table",
+    MAIL_STORAGE_SOURCE_TABLE_NAME,
+    "",
+    0,
+    "INNODB",
+    "",
+    "",
+    "",
     "utf8mb4_0900_ai_ci",
-    "0|0|0",
+    "",
   ),
+  ...MAIL_STORAGE_SOURCE_COLUMNS.map((entry) => contractRow(
+    "reference",
+    MAIL_STORAGE_SOURCE_TABLE_NAME,
+    entry.name,
+    entry.ordinal,
+    entry.columnType,
+    entry.nullable,
+    entry.defaultValue,
+    entry.characterSet,
+    entry.collation,
+    entry.extraFlags,
+  )),
 ]);
 
 function buildMailStorageFoundationSql(options = {}) {
@@ -331,8 +353,24 @@ FROM (
     )
   FROM information_schema.columns
   WHERE table_schema = ${sqlString(database)}
-    AND table_name = 'mail_messages'
-    AND column_name = 'mail_id'
+    AND table_name = '${MAIL_STORAGE_SOURCE_TABLE_NAME}'
+    AND column_name IN (${MAIL_STORAGE_SOURCE_COLUMNS.map((entry) => sqlString(entry.name)).join(", ")})
+  UNION ALL
+  SELECT
+    'reference_table',
+    table_name,
+    '',
+    0,
+    UPPER(engine),
+    '',
+    '',
+    '',
+    LOWER(table_collation),
+    ''
+  FROM information_schema.tables
+  WHERE table_schema = ${sqlString(database)}
+    AND table_name = '${MAIL_STORAGE_SOURCE_TABLE_NAME}'
+    AND table_type = 'BASE TABLE'
   UNION ALL
   SELECT
     'index',
@@ -349,7 +387,7 @@ FROM (
   WHERE table_schema = ${sqlString(database)}
     AND table_name IN (${tables})
 ) AS mail_storage_contract
-ORDER BY FIELD(contract_kind, 'table', 'column', 'reference', 'index'),
+ORDER BY FIELD(contract_kind, 'table', 'column', 'reference_table', 'reference', 'index'),
   table_name, ordinal_position, object_name;`;
 }
 
