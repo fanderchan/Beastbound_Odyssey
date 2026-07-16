@@ -23,6 +23,7 @@ const AccountAuthModel := preload("res://scripts/progression/account_auth_model.
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
+const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
@@ -22380,6 +22381,7 @@ func _offline_hang_gm_spinbox(label_text: String, value: float, minimum: float, 
 
 func _refresh_auto_capture_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
+	var filter_policy := AutoCaptureFilterModel.normalize_policy(settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}))
 	var online_safe_mode: bool = _is_server_account_session() and not auth_auto_bypass
 	_add_auto_settings_section("自动捉宠")
 	_add_auto_settings_checkbox(
@@ -22394,7 +22396,7 @@ func _refresh_auto_capture_settings_tab() -> void:
 		str(settings.get(AutoCaptureSettingsModel.TARGET_MODE_KEY, AutoCaptureSettingsModel.TARGET_ALL))
 	)
 	_add_auto_settings_option(
-		"图鉴",
+		"形态",
 		AutoCaptureSettingsModel.TARGET_FORM_ID_KEY,
 		_auto_capture_form_options(),
 		str(settings.get(AutoCaptureSettingsModel.TARGET_FORM_ID_KEY, ""))
@@ -22448,6 +22450,49 @@ func _refresh_auto_capture_settings_tab() -> void:
 	)
 	level_row.add_child(level_spinbox)
 	auto_settings_controls[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = level_spinbox
+	_add_auto_settings_section("公开筛选")
+	_add_auto_settings_option(
+		"系别",
+		AutoCaptureFilterModel.UI_LINE_ID_KEY,
+		AutoCaptureFilterModel.line_options(),
+		AutoCaptureFilterModel.selected_line_id(filter_policy)
+	)
+	_add_auto_settings_option(
+		"元素组合",
+		AutoCaptureFilterModel.UI_ELEMENT_MODE_KEY,
+		AutoCaptureFilterModel.element_mode_options(),
+		str((filter_policy.get("element", {}) as Dictionary).get("mode", AutoCaptureFilterModel.ELEMENT_MODE_ANY))
+	)
+	_add_auto_capture_filter_elements(filter_policy)
+	_add_auto_settings_int_spinbox(
+		"元素最低",
+		AutoCaptureFilterModel.UI_ELEMENT_MIN_POINTS_KEY,
+		int((filter_policy.get("element", {}) as Dictionary).get("minPoints", 1)),
+		1,
+		10,
+		"点"
+	)
+	_add_auto_settings_checkbox(
+		"仅新图鉴",
+		AutoCaptureFilterModel.UI_ONLY_NEW_CODEX_FORM_KEY,
+		bool(filter_policy.get("onlyNewCodexForm", false))
+	)
+	_add_auto_settings_int_spinbox(
+		"同形态最多",
+		AutoCaptureFilterModel.UI_MAX_OWNED_SAME_FORM_KEY,
+		int(filter_policy.get("maxOwnedSameForm", 0)),
+		0,
+		AutoCaptureFilterModel.MAX_OWNED_SAME_FORM,
+		"只"
+	)
+	_add_auto_settings_section("Lv1 四维范围（0 为不限）")
+	for stat_id in AutoCaptureFilterModel.STAT_IDS:
+		_add_auto_capture_filter_stat_range(filter_policy, stat_id)
+	_add_auto_capture_settings_note(
+		"autoCaptureFilterGuidanceLabel",
+		AutoCaptureSettingsPresenter.public_filter_guidance_text(),
+		Color(0.72, 0.88, 0.78, 1.0)
+	)
 	_add_auto_settings_section("工具与筛选")
 	_add_auto_settings_option(
 		"工具优先",
@@ -22524,6 +22569,66 @@ func _add_auto_capture_settings_note(key: String, text: String, color: Color) ->
 	auto_settings_content.add_child(label)
 	auto_settings_controls[key] = label
 	return label
+
+
+func _add_auto_capture_filter_elements(filter_policy: Dictionary) -> void:
+	var row := _auto_settings_row("元素选择")
+	var element := filter_policy.get("element", {}) as Dictionary
+	var selected_ids: Array[String] = []
+	var raw_ids = element.get("ids", [])
+	if raw_ids is Array:
+		for value in raw_ids as Array:
+			selected_ids.append(str(value))
+	for element_id in AutoCaptureFilterModel.ELEMENT_IDS:
+		var checkbox := CheckBox.new()
+		checkbox.text = AutoCaptureFilterModel.element_label(element_id)
+		checkbox.button_pressed = selected_ids.has(element_id)
+		checkbox.custom_minimum_size = Vector2(62, 40)
+		checkbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		checkbox.add_theme_font_size_override("font_size", 14)
+		checkbox.toggled.connect(func(pressed: bool) -> void:
+			_set_auto_settings_value(AutoCaptureFilterModel.ui_element_key(element_id), pressed)
+		)
+		row.add_child(checkbox)
+		auto_settings_controls[AutoCaptureFilterModel.ui_element_key(element_id)] = checkbox
+
+
+func _add_auto_capture_filter_stat_range(filter_policy: Dictionary, stat_id: String) -> void:
+	var row := _auto_settings_row("Lv1 %s" % AutoCaptureFilterModel.stat_label(stat_id))
+	var four := filter_policy.get("levelOneFourV", {}) as Dictionary
+	var bounds := four.get(stat_id, {}) as Dictionary
+	var min_key := AutoCaptureFilterModel.ui_stat_min_key(stat_id)
+	var max_key := AutoCaptureFilterModel.ui_stat_max_key(stat_id)
+	var minimum := SpinBox.new()
+	minimum.min_value = 0
+	minimum.max_value = AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT
+	minimum.step = 1
+	minimum.rounded = true
+	minimum.prefix = "最低 "
+	minimum.value = float(clampi(int(bounds.get("min", 0)), 0, AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT))
+	minimum.custom_minimum_size = Vector2(132, 40)
+	minimum.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	minimum.add_theme_font_size_override("font_size", 14)
+	minimum.value_changed.connect(func(next_value: float) -> void:
+		_set_auto_settings_value(min_key, int(next_value))
+	)
+	row.add_child(minimum)
+	auto_settings_controls[min_key] = minimum
+	var maximum := SpinBox.new()
+	maximum.min_value = 0
+	maximum.max_value = AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT
+	maximum.step = 1
+	maximum.rounded = true
+	maximum.prefix = "最高 "
+	maximum.value = float(clampi(int(bounds.get("max", 0)), 0, AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT))
+	maximum.custom_minimum_size = Vector2(132, 40)
+	maximum.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	maximum.add_theme_font_size_override("font_size", 14)
+	maximum.value_changed.connect(func(next_value: float) -> void:
+		_set_auto_settings_value(max_key, int(next_value))
+	)
+	row.add_child(maximum)
+	auto_settings_controls[max_key] = maximum
 
 
 func _set_auto_capture_save_status(message: String, success: bool = false) -> void:
@@ -22803,7 +22908,7 @@ func _set_auto_settings_value(key: String, value) -> void:
 		host._save_player_profile_now()
 
 func _auto_capture_settings_keys() -> Array[String]:
-	return [
+	var keys: Array[String] = [
 		AutoCaptureSettingsModel.ENABLED_KEY,
 		AutoCaptureSettingsModel.TARGET_MODE_KEY,
 		AutoCaptureSettingsModel.TARGET_FORM_ID_KEY,
@@ -22817,6 +22922,8 @@ func _auto_capture_settings_keys() -> Array[String]:
 		AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY,
 		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
 	]
+	keys.append_array(AutoCaptureFilterModel.ui_keys())
+	return keys
 
 func _hang_settings_keys() -> Array[String]:
 	return [
@@ -22832,6 +22939,17 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		_set_auto_capture_save_status("捕捉设置正在保存，请完成后再修改。")
 		return
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
+	if AutoCaptureFilterModel.is_ui_key(key):
+		var updated_policy := AutoCaptureFilterModel.with_ui_value(
+			settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}),
+			key,
+			value
+		)
+		settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = updated_policy
+		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+		_sync_auto_capture_filter_range_controls(updated_policy, key)
+		_auto_capture_settings_changed()
+		return
 	match key:
 		AutoCaptureSettingsModel.ENABLED_KEY, AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY:
 			settings[key] = bool(value)
@@ -22840,6 +22958,27 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		_:
 			settings[key] = str(value)
 	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+	_auto_capture_settings_changed()
+
+
+func _sync_auto_capture_filter_range_controls(filter_policy: Dictionary, changed_key: String) -> void:
+	var four := filter_policy.get("levelOneFourV", {}) as Dictionary
+	for stat_id in AutoCaptureFilterModel.STAT_IDS:
+		var min_key := AutoCaptureFilterModel.ui_stat_min_key(stat_id)
+		var max_key := AutoCaptureFilterModel.ui_stat_max_key(stat_id)
+		if changed_key != min_key and changed_key != max_key:
+			continue
+		var bounds := four.get(stat_id, {}) as Dictionary
+		var minimum := auto_settings_controls.get(min_key, null) as SpinBox
+		var maximum := auto_settings_controls.get(max_key, null) as SpinBox
+		if minimum != null:
+			minimum.set_value_no_signal(float(bounds.get("min", 0)))
+		if maximum != null:
+			maximum.set_value_no_signal(float(bounds.get("max", 0)))
+		return
+
+
+func _auto_capture_settings_changed() -> void:
 	if _is_server_account_session() and not auth_auto_bypass:
 		_set_auto_capture_save_status("修改后请保存到服务器。")
 		return

@@ -64,6 +64,7 @@ const {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   createAutoCaptureSettingsRules,
 } = require("./auth/auto-capture-settings");
+const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
 const {createQuestDomain} = require("./auth/quest");
 const {createMailChatDomain} = require("./auth/mail-chat");
 const {
@@ -346,6 +347,7 @@ const BATTLE_ACTION_SWITCH_PET = "switch_pet";
 const BATTLE_ACTION_ITEM = "item";
 const BATTLE_ACTION_SPIRIT = "spirit";
 const BATTLE_ACTION_CAPTURE = "capture";
+const BATTLE_CAPTURE_SOURCE_AUTO = "auto_capture_v1";
 const BATTLE_ACTION_RUN = "run";
 const BATTLE_ACTION_TRAINING_PARTNER_HEAL = "training_partner_heal";
 const TRAINING_PARTNER_HEAL_SPIRIT_ID = "spirit_moist_1";
@@ -674,6 +676,10 @@ function createAuthService(options = {}) {
     templateResolver: petTemplateForFormId,
     expToNextLevel: battleExpToNextLevel,
     randomBytes,
+  });
+  const petAutoCaptureFilter = options.petAutoCaptureFilter || createPetAutoCaptureFilter({
+    resolveTemplate: petTemplateForFormId,
+    resolveLine: petTemplateLineById,
   });
   const petEncounterAuthority = options.petEncounterAuthority || createPetEncounterAuthority();
   const petEncounterPermitAuthority = options.petEncounterPermitAuthority || createPetEncounterPermitAuthority({
@@ -3171,6 +3177,7 @@ function createAuthService(options = {}) {
       newPetFactory,
       petExpSettlement,
       petCaptureCandidateAuthority,
+      petAutoCaptureFilter,
       randomId,
       battleActorRules,
       battleRandomAuthority,
@@ -5181,7 +5188,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
@@ -5223,7 +5230,7 @@ function createAuthService(options = {}) {
       account,
       nowFn,
       randomIdFn,
-      {petCaptureCandidateAuthority},
+      {petCaptureCandidateAuthority, petAutoCaptureFilter},
     ),
     normalizeChatChannel,
     normalizeChatText,
@@ -5336,7 +5343,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     resolveSessionReadOnly: (sessionData, token) => resolveSession(sessionData, token, now, {serverStartedAtMs}),
@@ -5347,7 +5354,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -11141,6 +11148,7 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
   let switchPet = null;
   let itemId = "";
   let captureToolId = "";
+  let captureSource = "";
   if (action.actionKind === BATTLE_ACTION_SWITCH_PET) {
     const switchResult = battleSwitchPetForPayload(payload, room, battle, account);
     if (!switchResult.ok) {
@@ -11162,6 +11170,9 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       return captureToolResult;
     }
     captureToolId = captureToolResult.toolId;
+    if (String(payload.captureMode || "").trim().toLowerCase() === "auto") {
+      captureSource = BATTLE_CAPTURE_SOURCE_AUTO;
+    }
   }
   const targetActor = battleCommandTargetActor(payload, data, room, battle, actor, action.actionId);
   if (!targetActor) {
@@ -11200,6 +11211,18 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
     if (!captureTargetResult.ok) {
       return captureTargetResult;
     }
+    if (captureSource === BATTLE_CAPTURE_SOURCE_AUTO) {
+      const filterResult = battleAutoCapturePreEvaluation(
+        data,
+        battle,
+        account.accountId,
+        targetActor,
+        options.petAutoCaptureFilter,
+      );
+      if (!filterResult.ok) {
+        return fail(filterResult.code, filterResult.message);
+      }
+    }
     const candidateResult = validateBattleCaptureCandidateAttempt(
       options.petCaptureCandidateAuthority,
       room,
@@ -11235,6 +11258,7 @@ function normalizeBattleCommandPayload(payload, data, room, battle, account, now
       petId: switchPet ? String(switchPet.petId || "") : "",
       itemId,
       captureToolId,
+      ...(captureSource === "" ? {} : {captureSource}),
       targetActorId: targetActor.actorId,
       targetAccountId: targetActor.accountId,
       targetUsername: targetActor.username,
@@ -11495,6 +11519,98 @@ function battleCaptureCapacityCheck(data, room, battle, accountId) {
     used,
     available: BATTLE_PET_MAX_PER_PARTICIPANT + BATTLE_PET_STORAGE_LIMIT - used,
   });
+}
+
+function battleCaptureProfileForAccount(data, accountId) {
+  const normalizedAccountId = String(accountId || "");
+  const binding = data && data.profileBindings ? data.profileBindings[normalizedAccountId] || null : null;
+  const profileDoc = binding && binding.playerId && data && data.profiles
+    ? data.profiles[binding.playerId] || null
+    : null;
+  return profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+    ? profileDoc.profile
+    : null;
+}
+
+function battleAutoCapturePreEvaluation(data, battle, accountId, targetActor, petAutoCaptureFilter) {
+  const profile = battleCaptureProfileForAccount(data, accountId);
+  if (!profile || !petAutoCaptureFilter || typeof petAutoCaptureFilter.evaluatePreCapture !== "function") {
+    return {
+      ok: false,
+      code: "battle_auto_capture_filter_unavailable",
+      message: "自动捕捉筛选暂时不可用，请重新登录后再试。",
+    };
+  }
+  const formId = String(targetActor && (targetActor.formId || targetActor.speciesId) || "").trim();
+  const petInstances = Array.isArray(profile.petInstances)
+    ? profile.petInstances
+    : (Array.isArray(profile.pets) ? profile.pets : []);
+  const ownedSameFormCount = petInstances.filter((pet) => (
+    pet && String(pet.formId || pet.templateId || pet.speciesId || "") === formId
+  )).length;
+  const pendingSameFormCount = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((entry) => (
+    entry
+    && Boolean(entry.captured)
+    && String(entry.capturedByAccountId || "") === String(accountId || "")
+    && String(entry.formId || entry.speciesId || "") === formId
+  )).length;
+  const settings = serverAutoCaptureSettingsRules().normalizeSettings(profile.autoCaptureSettings);
+  let evaluation = null;
+  try {
+    evaluation = petAutoCaptureFilter.evaluatePreCapture({
+      settings,
+      actor: {
+        formId,
+        displayName: String(targetActor && targetActor.displayName || ""),
+        hp: Number(targetActor && targetActor.hp),
+        maxHp: Number(targetActor && targetActor.maxHp),
+        level: Number(targetActor && targetActor.level),
+        catchable: Boolean(targetActor && targetActor.catchable),
+      },
+      context: {
+        codexCapturedFormIds: Array.isArray(profile.petCodexCapturedFormIds)
+          ? profile.petCodexCapturedFormIds.slice()
+          : null,
+        ownedSameFormCount,
+        pendingSameFormCount,
+      },
+    });
+  } catch (_error) {
+    evaluation = null;
+  }
+  if (!evaluation || typeof evaluation !== "object" || Array.isArray(evaluation)) {
+    return {
+      ok: false,
+      code: "battle_auto_capture_filter_unavailable",
+      message: "自动捕捉筛选暂时无法判断这只宠物。",
+    };
+  }
+  const message = captureFilterEvaluationMessage(evaluation, evaluation.matched === true
+    ? "自动捕捉公开条件已通过。"
+    : "这只宠物不符合当前自动捕捉条件。");
+  if (evaluation.matched !== true) {
+    return {
+      ok: false,
+      code: String(evaluation.status || "") === "unavailable"
+        ? "battle_auto_capture_filter_unavailable"
+        : "battle_auto_capture_filter_no_match",
+      message,
+      evaluation,
+      settings,
+    };
+  }
+  return {ok: true, evaluation, settings, message};
+}
+
+function captureFilterEvaluationMessage(evaluation, fallback) {
+  const reasons = Array.isArray(evaluation && evaluation.reasons) ? evaluation.reasons : [];
+  for (const reason of reasons) {
+    const message = String(reason && reason.message || "").trim();
+    if (message !== "") {
+      return message;
+    }
+  }
+  return String(fallback || "自动捕捉筛选暂时无法判断这只宠物。");
 }
 
 function battleCommandTargetActor(payload, data, room, battle, actor, actionId) {
@@ -17437,6 +17553,14 @@ function applyBattleCapturedPetsToProfile(profile, battle, accountId, room, opti
     }
     const captured = clone(materialized.pet);
     serial += 1;
+    if (String(actor.captureSource || "") === BATTLE_CAPTURE_SOURCE_AUTO) {
+      captured.captureFilterEvaluation = battleAutoCapturePostEvaluation(
+        options.petAutoCaptureFilter,
+        actor.captureFilterSettings,
+        actor.captureFilterPreEvaluation,
+        captured,
+      );
+    }
     if (!canJoinParty && !canEnterStorage) {
       // 正常路径会在投掷捕捉随机数前拒绝满容量；若内部运维在战斗中改档，宁可临时超额收容也绝不吞掉已认领宠物。
       captured.state = BATTLE_PET_STATE_STORAGE;
@@ -17481,6 +17605,54 @@ function nextProfilePetInstanceSerial(profile, instances) {
     }
   }
   return serial;
+}
+
+function battleAutoCapturePostEvaluation(petAutoCaptureFilter, settings, preEvaluation, capturedPet) {
+  if (!petAutoCaptureFilter || typeof petAutoCaptureFilter.evaluatePostCapture !== "function") {
+    return unavailableCaptureFilterEvaluation("post_capture", "抓后筛选暂时不可用，宠物已完整保留。");
+  }
+  try {
+    const evaluation = petAutoCaptureFilter.evaluatePostCapture({
+      settings: settings && typeof settings === "object" && !Array.isArray(settings) ? clone(settings) : {},
+      pet: {
+        formId: String(capturedPet && (capturedPet.formId || capturedPet.templateId || capturedPet.speciesId) || ""),
+        initialStats: capturedPet && capturedPet.initialStats && typeof capturedPet.initialStats === "object" && !Array.isArray(capturedPet.initialStats)
+          ? clone(capturedPet.initialStats)
+          : {},
+        growthSpeciesLevel1Stats: capturedPet && capturedPet.growthSpeciesLevel1Stats && typeof capturedPet.growthSpeciesLevel1Stats === "object" && !Array.isArray(capturedPet.growthSpeciesLevel1Stats)
+          ? clone(capturedPet.growthSpeciesLevel1Stats)
+          : {},
+      },
+      preEvaluation: preEvaluation && typeof preEvaluation === "object" && !Array.isArray(preEvaluation)
+        ? clone(preEvaluation)
+        : null,
+    });
+    if (evaluation && typeof evaluation === "object" && !Array.isArray(evaluation) && evaluation.retainPet === true) {
+      return clone(evaluation);
+    }
+  } catch (_error) {
+    // Capture settlement is fail-safe: evaluation failures never drop or alter the claimed pet.
+  }
+  return unavailableCaptureFilterEvaluation("post_capture", "抓后筛选暂时无法判断，宠物已完整保留。");
+}
+
+function unavailableCaptureFilterEvaluation(stage, message) {
+  return {
+    schemaVersion: 1,
+    stage: String(stage || "post_capture"),
+    status: "unavailable",
+    matched: false,
+    retainPet: true,
+    reasons: [{
+      code: "public_facts_invalid",
+      field: "publicFacts",
+      expected: "complete",
+      actual: "unavailable",
+      message: String(message || "筛选暂时无法判断，宠物已完整保留。"),
+    }],
+    deferredChecks: [],
+    facts: {},
+  };
 }
 
 function profilePartyVisiblePetCount(profile) {
@@ -19830,6 +20002,9 @@ function publicCapturedPetSummary(pet) {
     growthSpeciesLevel1Stats: projected.growthSpeciesLevel1Stats && typeof projected.growthSpeciesLevel1Stats === "object"
       ? clone(projected.growthSpeciesLevel1Stats)
       : {},
+    captureFilterEvaluation: pet.captureFilterEvaluation && typeof pet.captureFilterEvaluation === "object" && !Array.isArray(pet.captureFilterEvaluation)
+      ? clone(pet.captureFilterEvaluation)
+      : null,
     schemaVersion: 1,
   };
 }
@@ -21468,6 +21643,20 @@ function battleCaptureEvent(data, room, battle, command, actor, round, sequence,
   ) {
     return battleTargetMissingEvent(room, battle, command, actor, round, sequence);
   }
+  const autoFilterResult = String(command.captureSource || "") === BATTLE_CAPTURE_SOURCE_AUTO
+    ? battleAutoCapturePreEvaluation(data, battle, actor.accountId, target, options.petAutoCaptureFilter)
+    : null;
+  if (autoFilterResult && !autoFilterResult.ok) {
+    return battleCaptureUnavailableEvent(
+      room,
+      command,
+      actor,
+      target,
+      round,
+      sequence,
+      autoFilterResult.message,
+    );
+  }
   const candidateResult = validateBattleCaptureCandidateAttempt(
     options.petCaptureCandidateAuthority,
     room,
@@ -21518,6 +21707,11 @@ function battleCaptureEvent(data, room, battle, command, actor, round, sequence,
     target.captureToolId = toolId;
     target.captureStatusIds = targetStatusIds;
     target.capturedAtRound = round;
+    if (autoFilterResult && autoFilterResult.ok) {
+      target.captureSource = BATTLE_CAPTURE_SOURCE_AUTO;
+      target.captureFilterPreEvaluation = clone(autoFilterResult.evaluation);
+      target.captureFilterSettings = clone(autoFilterResult.settings);
+    }
   }
   const hpAfter = Number(target.hp || 0);
   const toolName = battleCaptureToolFullName(toolId);
@@ -22738,6 +22932,7 @@ function serverAutoCaptureSettingsRules() {
     serverAutoCaptureSettingsRulesCache = createAutoCaptureSettingsRules({
       emptyHandToolId: BATTLE_CAPTURE_TOOL_EMPTY_HAND,
       resolveForm: petTemplateForFormId,
+      resolveLine: petTemplateLineById,
       normalizeCaptureToolId: normalizeBattleCaptureToolId,
     });
   }

@@ -963,6 +963,8 @@ func handle_auto_capture_terminal_response(parsed: Dictionary, command_id: Strin
 		"battle_command_capture_invalid",
 		"battle_command_capture_tool_missing",
 		"battle_capture_candidate_invalid",
+		"battle_auto_capture_filter_no_match",
+		"battle_auto_capture_filter_unavailable",
 	].has(code):
 		return false
 	var room = parsed.get("room", null)
@@ -1000,7 +1002,7 @@ func open_pet_command() -> void:
 	host._layout_hud()
 
 
-func submit_player_command(command_id: String, target_id: String = "", pet_id: String = "", item_id: String = "") -> void:
+func submit_player_command(command_id: String, target_id: String = "", pet_id: String = "", item_id: String = "", auto_capture: bool = false) -> void:
 	if not host._battle_is_server_authority():
 		return
 	if host.server_battle_command_request_active:
@@ -1011,7 +1013,7 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 		return
 	if sync_command_owner_from_room():
 		return
-	var payload := _player_command_payload(command_id, target_id, pet_id, item_id)
+	var payload := _player_command_payload(command_id, target_id, pet_id, item_id, auto_capture)
 	if payload.is_empty():
 		return
 	var room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
@@ -1055,7 +1057,7 @@ func submit_player_command(command_id: String, target_id: String = "", pet_id: S
 	host._layout_hud()
 
 
-func _player_command_payload(command_id: String, target_id: String, pet_id: String, item_id: String) -> Dictionary:
+func _player_command_payload(command_id: String, target_id: String, pet_id: String, item_id: String, auto_capture: bool = false) -> Dictionary:
 	var item_action_id := item_id.strip_edges()
 	var action_id := ""
 	var capture_tool_id := ""
@@ -1137,6 +1139,10 @@ func _player_command_payload(command_id: String, target_id: String, pet_id: Stri
 			payload["spiritId"] = action_id
 		elif command_id == "capture":
 			payload["captureToolId"] = capture_tool_id
+			if auto_capture:
+				# This marker selects the player's saved server-side automation policy.
+				# It never carries client-computed filter facts or authorizes a capture.
+				payload["captureMode"] = "auto"
 	elif action_id == "switch_pet":
 		payload["petId"] = switch_pet_id
 	return payload

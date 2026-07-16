@@ -19,6 +19,7 @@ const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_ca
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
+const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
@@ -6389,7 +6390,7 @@ func _battle_auto_try_submit_capture() -> bool:
 		str(target.get("name", "敌人")),
 		CaptureToolCatalog.chance_tier(chance),
 	])
-	_submit_player_battle_command("capture", target_id)
+	_submit_player_battle_command("capture", target_id, true)
 	if _battle_auto_capture_enabled() and battle_command_owner == "pet":
 		_battle_auto_submit_capture_pet_action(settings)
 	return true
@@ -6504,21 +6505,62 @@ func _battle_auto_capture_actor_matches(actor: Dictionary, settings: Dictionary)
 		int(settings.get(AutoCaptureSettingsModel.LEVEL_VALUE_KEY, AutoCaptureSettingsModel.MIN_LEVEL))
 	):
 		return false
-	if str(settings.get(AutoCaptureSettingsModel.TARGET_MODE_KEY, AutoCaptureSettingsModel.TARGET_ALL)) == AutoCaptureSettingsModel.TARGET_ALL:
-		return true
-	var target_form_id := str(settings.get(AutoCaptureSettingsModel.TARGET_FORM_ID_KEY, ""))
-	var manual_text := AutoCaptureSettingsModel.clean_manual_text(str(settings.get(AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY, "")))
-	if target_form_id == "" and manual_text == "":
-		return false
-	if target_form_id != "" and str(actor.get("formId", actor.get("templateId", ""))) == target_form_id:
-		return true
-	if manual_text == "":
-		return false
-	var needle := manual_text.to_lower()
-	for key in ["name", "formName", "formId", "templateId", "lineName", "subtypeName"]:
-		if str(actor.get(key, "")).to_lower().find(needle) >= 0:
-			return true
-	return false
+	if str(settings.get(AutoCaptureSettingsModel.TARGET_MODE_KEY, AutoCaptureSettingsModel.TARGET_ALL)) != AutoCaptureSettingsModel.TARGET_ALL:
+		var target_form_id := str(settings.get(AutoCaptureSettingsModel.TARGET_FORM_ID_KEY, ""))
+		var manual_text := AutoCaptureSettingsModel.clean_manual_text(str(settings.get(AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY, "")))
+		if target_form_id == "" and manual_text == "":
+			return false
+		var identity_matches := target_form_id != "" and str(actor.get("formId", actor.get("templateId", ""))) == target_form_id
+		if not identity_matches and manual_text != "":
+			var needle := manual_text.to_lower()
+			var form_id_for_identity := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+			var template := PetTemplateCatalog.runtime_template_for_form(form_id_for_identity)
+			for public_text in [
+				form_id_for_identity,
+				str(actor.get("name", "")),
+				str(template.get("formName", template.get("name", ""))),
+				str(template.get("wildName", "")),
+				str(template.get("lineId", "")),
+				str(template.get("lineName", "")),
+				str(template.get("subtypeName", "")),
+			]:
+				if str(public_text).to_lower().find(needle) >= 0:
+					identity_matches = true
+					break
+		if not identity_matches:
+			return false
+	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+	var captured_form_ids_value = player_profile.get("petCodexCapturedFormIds", [])
+	var captured_form_ids: Array = captured_form_ids_value if captured_form_ids_value is Array else []
+	var pending_same_form := 0
+	var self_account_id := str(current_account_session.get("accountId", ""))
+	var battle_actors_value = battle_state.get("actors", [])
+	if battle_actors_value is Array:
+		for candidate_value in battle_actors_value as Array:
+			if not (candidate_value is Dictionary):
+				continue
+			var candidate := candidate_value as Dictionary
+			if (
+				bool(candidate.get("captured", false))
+				and str(candidate.get("capturedByAccountId", "")) == self_account_id
+				and str(candidate.get("formId", candidate.get("templateId", ""))) == form_id
+			):
+				pending_same_form += 1
+	var owned_same_form := pending_same_form
+	var instances_value = player_profile.get("petInstances", [])
+	if instances_value is Array:
+		for instance_value in instances_value as Array:
+			if instance_value is Dictionary and str((instance_value as Dictionary).get("formId", "")) == form_id:
+				owned_same_form += 1
+	var local_filter := AutoCaptureFilterModel.local_preselection(
+		actor,
+		{
+			"isNewCodexForm": not captured_form_ids.has(form_id) and pending_same_form <= 0,
+			"ownedSameForm": owned_same_form,
+		},
+		settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}),
+	)
+	return bool(local_filter.get("eligible", true))
 
 
 func _battle_auto_has_capture_space() -> bool:
@@ -9793,7 +9835,7 @@ func _begin_player_enemy_target_selection(command_id: String) -> void:
 	queue_redraw()
 
 
-func _submit_player_battle_command(command_id: String, target_id: String = "") -> void:
+func _submit_player_battle_command(command_id: String, target_id: String = "", auto_capture: bool = false) -> void:
 	battle_target_mode = "enemy"
 	if command_id == "attack" or command_id == "capture":
 		battle_selected_target_id = target_id
@@ -9820,7 +9862,7 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 				_sync_battle_buttons()
 				return
 	if _battle_is_server_authority():
-		_submit_server_battle_player_command(command_id, battle_selected_target_id)
+		_submit_server_battle_player_command(command_id, battle_selected_target_id, "", "", auto_capture)
 		return
 	battle_pending_player_command = {
 		"command": command_id,
@@ -9832,8 +9874,8 @@ func _submit_player_battle_command(command_id: String, target_id: String = "") -
 	_open_pet_command_or_start_round()
 
 
-func _submit_server_battle_player_command(command_id: String, target_id: String = "", pet_id: String = "", item_id: String = "") -> void:
-	await _server_battle().submit_player_command(command_id, target_id, pet_id, item_id)
+func _submit_server_battle_player_command(command_id: String, target_id: String = "", pet_id: String = "", item_id: String = "", auto_capture: bool = false) -> void:
+	await _server_battle().submit_player_command(command_id, target_id, pet_id, item_id, auto_capture)
 
 
 func _server_battle_needs_self_pet_command() -> bool:

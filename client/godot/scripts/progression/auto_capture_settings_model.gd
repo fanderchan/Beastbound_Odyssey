@@ -2,6 +2,7 @@ extends RefCounted
 
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 
 const SETTINGS_KEY := "autoCaptureSettings"
 
@@ -17,6 +18,7 @@ const NO_TARGET_ACTION_KEY := "noTargetAction"
 const CAPTURE_PET_SLOT_KEY := "capturePetSkillSlot"
 const AUTO_DISCARD_LOW_POWER_KEY := "autoDiscardLowPower"
 const LOW_POWER_THRESHOLD_KEY := "lowPowerThreshold"
+const FILTER_POLICY_KEY := "filterPolicy"
 
 const TARGET_ALL := "all"
 const TARGET_CODEX := "codex"
@@ -54,6 +56,7 @@ static func default_settings() -> Dictionary:
 		CAPTURE_PET_SLOT_KEY: DEFAULT_CAPTURE_PET_SLOT,
 		AUTO_DISCARD_LOW_POWER_KEY: false,
 		LOW_POWER_THRESHOLD_KEY: DEFAULT_LOW_POWER_THRESHOLD,
+		FILTER_POLICY_KEY: AutoCaptureFilterModel.default_policy(),
 	}
 
 
@@ -72,6 +75,7 @@ static func normalize_settings(value) -> Dictionary:
 	normalized[CAPTURE_PET_SLOT_KEY] = normalized_pet_skill_slot(raw.get(CAPTURE_PET_SLOT_KEY, normalized[CAPTURE_PET_SLOT_KEY]))
 	normalized[AUTO_DISCARD_LOW_POWER_KEY] = bool(raw.get(AUTO_DISCARD_LOW_POWER_KEY, normalized[AUTO_DISCARD_LOW_POWER_KEY]))
 	normalized[LOW_POWER_THRESHOLD_KEY] = clampi(int(raw.get(LOW_POWER_THRESHOLD_KEY, normalized[LOW_POWER_THRESHOLD_KEY])), MIN_POWER, MAX_POWER)
+	normalized[FILTER_POLICY_KEY] = AutoCaptureFilterModel.normalize_policy(raw.get(FILTER_POLICY_KEY, {}))
 	return normalized
 
 

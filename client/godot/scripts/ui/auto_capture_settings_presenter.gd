@@ -27,12 +27,17 @@ static func growth_guidance_text(online_safe_mode: bool) -> String:
 	return "捕获时先看 Lv1 四维，建议训练到约 Lv20 再判断成长；低战力丢弃不会识别隐藏成长，请谨慎使用。"
 
 
+static func public_filter_guidance_text() -> String:
+	return "公开条件用于选择目标；元素不勾选、同形态最多或四维边界为 0 时不限。Lv1 四维只能抓回后评价。当前无论命中都保留，不会自动处理宠物。"
+
+
 static func contract_check() -> Dictionary:
 	var roomy := capacity_state(3, 4, 5, 20)
 	var near_full := capacity_state(5, 18, 5, 20)
 	var full := capacity_state(5, 20, 5, 20)
 	var online_text := growth_guidance_text(true)
 	var local_text := growth_guidance_text(false)
+	var filter_text := public_filter_guidance_text()
 	return {
 		"ok": (
 			int(roomy.get("used", -1)) == 7
@@ -48,10 +53,13 @@ static func contract_check() -> Dictionary:
 			and online_text.find("联网不会自动丢弃宠物") >= 0
 			and online_text.find("约 Lv20") >= 0
 			and local_text.find("不会识别隐藏成长") >= 0
+			and filter_text.find("Lv1 四维只能抓回后评价") >= 0
+			and filter_text.find("无论命中都保留") >= 0
 		),
 		"roomy": roomy,
 		"nearFull": near_full,
 		"full": full,
 		"onlineText": online_text,
 		"localText": local_text,
+		"filterText": filter_text,
 	}

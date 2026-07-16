@@ -357,6 +357,7 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"catchable": bool(server_actor.get("catchable", kind == "wild_pet")),
 		"captureDifficulty": maxi(0, int(server_actor.get("captureDifficulty", 0))),
 		"captured": bool(server_actor.get("captured", false)),
+		"capturedByAccountId": str(server_actor.get("capturedByAccountId", "")),
 		"actionState": action_state,
 		"launched": launched,
 		"revivable": bool(server_actor.get("revivable", true)) and not launched,
@@ -523,6 +524,7 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["catchable"] = bool(server_actor.get("catchable", actor.get("catchable", false)))
 		actor["captureDifficulty"] = maxi(0, int(server_actor.get("captureDifficulty", actor.get("captureDifficulty", 0))))
 		actor["captured"] = bool(server_actor.get("captured", actor.get("captured", false)))
+		actor["capturedByAccountId"] = str(server_actor.get("capturedByAccountId", actor.get("capturedByAccountId", "")))
 		actor["escaped"] = bool(server_actor.get("escaped", actor.get("escaped", false)))
 		var launched := bool(server_actor.get("launched", actor.get("launched", false))) or str(server_actor.get("actionState", "")).strip_edges() == "launched" or (server_actor.has("revivable") and not bool(server_actor.get("revivable", true)))
 		actor["launched"] = launched

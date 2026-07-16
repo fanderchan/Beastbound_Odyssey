@@ -12,14 +12,17 @@ const {
 const {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   createAutoCaptureSettingsRules,
+  defaultFilterPolicy,
 } = require("../src/auth/auto-capture-settings");
 
 function testRules() {
   const formIds = new Set(["known_form"]);
+  const lineIds = new Set(["known_line", "second_line"]);
   const toolIds = new Set(["empty_hand", "capture_net"]);
   return createAutoCaptureSettingsRules({
     emptyHandToolId: "empty_hand",
     resolveForm: (formId) => formIds.has(formId) ? {formId} : null,
+    resolveLine: (lineId) => lineIds.has(lineId) ? {lineId} : null,
     normalizeCaptureToolId: (value) => {
       const toolId = String(value || "").trim().toLowerCase();
       return toolIds.has(toolId) ? toolId : "empty_hand";
@@ -42,6 +45,7 @@ test("auto-capture settings normalize dirty legacy values through injected catal
     capturePetSkillSlot: 2,
     autoDiscardLowPower: false,
     lowPowerThreshold: 31,
+    filterPolicy: defaultFilterPolicy(),
   });
   assert.deepEqual(rules.normalizeSettings("legacy-corrupt"), rules.defaultSettings());
 
@@ -73,6 +77,7 @@ test("auto-capture settings normalize dirty legacy values through injected catal
     capturePetSkillSlot: 1,
     autoDiscardLowPower: true,
     lowPowerThreshold: 0,
+    filterPolicy: defaultFilterPolicy(),
   });
 
   assert.equal(rules.normalizeSettings({targetFormId: "future_unknown_form"}).targetFormId, "");
@@ -110,6 +115,102 @@ test("player auto-capture update accepts only a settings envelope and always dis
   assert.equal(accepted.settings.targetFormId, "known_form");
   assert.equal(accepted.settings.preferredToolId, "capture_net");
   assert.equal(Object.hasOwn(accepted.settings, "unknownFutureSetting"), false);
+});
+
+test("public capture filter policy rejects unsafe player widening and repairs legacy saves", () => {
+  const rules = testRules();
+  const validPolicy = {
+    schemaVersion: 1,
+    lineIds: [" known_line ", "known_line", "second_line"],
+    element: {mode: "all", ids: [" WATER ", "earth", "water"], minPoints: 3},
+    onlyNewCodexForm: true,
+    maxOwnedSameForm: 8,
+    levelOneFourV: {
+      maxHp: {min: 60, max: 80},
+      attack: {min: 14, max: 0},
+      defense: {min: 0, max: 10},
+      quick: {min: 6, max: 9},
+    },
+  };
+  const accepted = rules.normalizePlayerUpdate({settings: {filterPolicy: validPolicy}});
+  assert.equal(accepted.ok, true);
+  assert.deepEqual(accepted.settings.filterPolicy, {
+    ...validPolicy,
+    lineIds: ["known_line", "second_line"],
+    element: {mode: "all", ids: ["water", "earth"], minPoints: 3},
+  });
+
+  const invalidPolicies = [
+    {...validPolicy, schemaVersion: 2},
+    {...validPolicy, lineIds: ["unknown_line"]},
+    {...validPolicy, element: {...validPolicy.element, ids: ["light"]}},
+    {...validPolicy, element: {...validPolicy.element, minPoints: 0}},
+    {...validPolicy, maxOwnedSameForm: 1000},
+    {
+      ...validPolicy,
+      levelOneFourV: {...validPolicy.levelOneFourV, attack: {min: 20, max: 10}},
+    },
+  ];
+  for (const filterPolicy of invalidPolicies) {
+    const rejected = rules.normalizePlayerUpdate({settings: {filterPolicy}});
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.code, "auto_capture_filter_policy_invalid");
+  }
+
+  const repaired = rules.normalizeSettings({
+    filterPolicy: {
+      schemaVersion: 999,
+      lineIds: ["unknown", "known_line", "known_line"],
+      element: {mode: "broken", ids: ["light", "WATER", "water"], minPoints: 99},
+      onlyNewCodexForm: "yes",
+      maxOwnedSameForm: -20,
+      levelOneFourV: {
+        maxHp: {min: 80, max: 60},
+        attack: "corrupt",
+      },
+    },
+  }).filterPolicy;
+  assert.deepEqual(repaired, {
+    schemaVersion: 1,
+    lineIds: ["known_line"],
+    element: {mode: "any", ids: ["water"], minPoints: 10},
+    onlyNewCodexForm: true,
+    maxOwnedSameForm: 0,
+    levelOneFourV: {
+      maxHp: {min: 60, max: 80},
+      attack: {min: 0, max: 0},
+      defense: {min: 0, max: 0},
+      quick: {min: 0, max: 0},
+    },
+  });
+});
+
+test("legacy player update preserves the existing public filter policy", () => {
+  const rules = testRules();
+  const profile = {
+    autoCaptureSettings: {
+      enabled: true,
+      filterPolicy: {
+        schemaVersion: 1,
+        lineIds: ["known_line"],
+        element: {mode: "any", ids: ["water"], minPoints: 5},
+        onlyNewCodexForm: true,
+        maxOwnedSameForm: 3,
+        levelOneFourV: {
+          maxHp: {min: 60, max: 0},
+          attack: {min: 14, max: 0},
+          defense: {min: 0, max: 0},
+          quick: {min: 0, max: 0},
+        },
+      },
+    },
+  };
+  const beforePolicy = structuredClone(rules.normalizeSettings(profile.autoCaptureSettings).filterPolicy);
+  const result = rules.applyPlayerUpdate(profile, {settings: {enabled: false, hpPercent: 20}});
+  assert.equal(result.ok, true);
+  assert.equal(profile.autoCaptureSettings.enabled, false);
+  assert.equal(profile.autoCaptureSettings.hpPercent, 20);
+  assert.deepEqual(profile.autoCaptureSettings.filterPolicy, beforePolicy);
 });
 
 test("server-authoritative auto-capture action persists normalized settings and revision", () => {
@@ -162,6 +263,7 @@ test("server-authoritative auto-capture action persists normalized settings and 
     capturePetSkillSlot: 7,
     autoDiscardLowPower: false,
     lowPowerThreshold: 9999,
+    filterPolicy: defaultFilterPolicy(),
   });
 
   const restarted = createAuthService({store});

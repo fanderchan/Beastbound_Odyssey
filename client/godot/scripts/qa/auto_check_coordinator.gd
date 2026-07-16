@@ -26,6 +26,7 @@ const AccountAuthModel := preload("res://scripts/progression/account_auth_model.
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
+const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
@@ -2613,8 +2614,24 @@ func _run_auto_capture_settings_check() -> void:
 	settings[AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY] = AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
 	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
 	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
+	settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = {
+		"schemaVersion": 1,
+		"lineIds": ["man_dragon"],
+		"element": {"mode": "all", "ids": ["water"], "minPoints": 10},
+		"onlyNewCodexForm": true,
+		"maxOwnedSameForm": 3,
+		"levelOneFourV": {
+			"maxHp": {"min": 60, "max": 70},
+			"attack": {"min": 14, "max": 16},
+			"defense": {"min": 0, "max": 0},
+			"quick": {"min": 6, "max": 0},
+		},
+	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
+	var filter_policy := settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
+	var filter_element := filter_policy.get("element", {}) as Dictionary
+	var filter_four := filter_policy.get("levelOneFourV", {}) as Dictionary
 
 	var normalized_ok = (
 		bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
@@ -2623,8 +2640,12 @@ func _run_auto_capture_settings_check() -> void:
 		and str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 		and str(settings.get(AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY, "")) == AutoCaptureSettingsModel.NO_TARGET_ESCAPE
 		and int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, 0)) == AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
+		and (filter_policy.get("lineIds", []) as Array).has("man_dragon")
+		and (filter_element.get("ids", []) as Array).has("water")
+		and int((filter_four.get("attack", {}) as Dictionary).get("min", 0)) == 14
 	)
 	var presenter_check := AutoCaptureSettingsPresenter.contract_check()
+	var filter_check := AutoCaptureFilterModel.contract_check()
 	var online_safe_settings := AutoCaptureSettingsModel.online_safe_settings(settings)
 	var online_safe_projection_ok := (
 		bool(settings.get(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY, false))
@@ -2642,6 +2663,10 @@ func _run_auto_capture_settings_check() -> void:
 	var local_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
 	var local_capacity_label := host.auto_settings_controls.get("autoCaptureCapacityLabel", null) as Label
 	var local_guidance_label := host.auto_settings_controls.get("autoCaptureGrowthGuidanceLabel", null) as Label
+	var local_filter_guidance_label := host.auto_settings_controls.get("autoCaptureFilterGuidanceLabel", null) as Label
+	var local_filter_line := host.auto_settings_controls.get(AutoCaptureFilterModel.UI_LINE_ID_KEY, null) as OptionButton
+	var local_filter_water := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_element_key("water"), null) as CheckBox
+	var local_filter_attack_min := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_min_key("attack"), null) as SpinBox
 	var local_ui_ok: bool = (
 		local_save_button != null
 		and local_save_button.text == "保存捕捉设置"
@@ -2652,6 +2677,15 @@ func _run_auto_capture_settings_check() -> void:
 		and local_guidance_label != null
 		and local_guidance_label.text.find("约 Lv20") >= 0
 		and local_guidance_label.text.find("不会识别隐藏成长") >= 0
+		and local_filter_guidance_label != null
+		and local_filter_guidance_label.text.find("抓回后评价") >= 0
+		and local_filter_guidance_label.text.find("无论命中都保留") >= 0
+		and local_filter_line != null
+		and str(local_filter_line.get_item_metadata(local_filter_line.selected)) == "man_dragon"
+		and local_filter_water != null
+		and local_filter_water.button_pressed
+		and local_filter_attack_min != null
+		and int(local_filter_attack_min.value) == 14
 		and host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 	)
 	host.current_account_session = {
@@ -2665,6 +2699,7 @@ func _run_auto_capture_settings_check() -> void:
 	var online_capacity_label := host.auto_settings_controls.get("autoCaptureCapacityLabel", null) as Label
 	var online_guidance_label := host.auto_settings_controls.get("autoCaptureGrowthGuidanceLabel", null) as Label
 	var online_status_label := host.auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
+	var online_filter_guidance_label := host.auto_settings_controls.get("autoCaptureFilterGuidanceLabel", null) as Label
 	var online_ui_ok: bool = (
 		online_save_button != null
 		and not online_save_button.disabled
@@ -2675,23 +2710,44 @@ func _run_auto_capture_settings_check() -> void:
 		and online_guidance_label.text.find("约 Lv20") >= 0
 		and online_status_label != null
 		and online_status_label.text == "修改后请保存到服务器。"
+		and online_filter_guidance_label != null
+		and online_filter_guidance_label.text.find("当前无论命中都保留") >= 0
 		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY)
 	)
-	host._set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
+	host._panel_flow()._set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
 	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, false)
 	var dirty_status_label := host.auto_settings_controls.get("autoCaptureSaveStatusLabel", null) as Label
 	var dirty_status_ok: bool = dirty_status_label != null and dirty_status_label.text == "修改后请保存到服务器。"
 	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, true)
+	var before_nested_settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
+	host._set_auto_capture_settings_value(AutoCaptureFilterModel.ui_element_key("fire"), true)
+	var after_nested_settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
+	var after_nested_policy := after_nested_settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
+	var after_nested_element := after_nested_policy.get("element", {}) as Dictionary
+	var after_nested_four := after_nested_policy.get("levelOneFourV", {}) as Dictionary
+	var nested_edit_ok := (
+		str(after_nested_settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, "")) == str(before_nested_settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, ""))
+		and (after_nested_policy.get("lineIds", []) as Array).has("man_dragon")
+		and (after_nested_element.get("ids", []) as Array).has("water")
+		and (after_nested_element.get("ids", []) as Array).has("fire")
+		and int((after_nested_four.get("attack", {}) as Dictionary).get("max", 0)) == 16
+	)
 	host.profile_action_request_pending = true
 	host._refresh_auto_settings_panel()
 	var pending_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
 	var pending_enabled_control := host.auto_settings_controls.get(AutoCaptureSettingsModel.ENABLED_KEY, null) as CheckBox
+	var pending_element_control := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_element_key("water"), null) as CheckBox
+	var pending_stat_control := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_min_key("attack"), null) as SpinBox
 	var pending_guard_ok := (
 		pending_save_button != null
 		and pending_save_button.disabled
 		and pending_enabled_control != null
 		and pending_enabled_control.disabled
+		and pending_element_control != null
+		and pending_element_control.disabled
+		and pending_stat_control != null
+		and not pending_stat_control.editable
 	)
 	var enabled_before_pending_edit := bool(PlayerProgressModel.auto_capture_settings(host.player_profile).get(AutoCaptureSettingsModel.ENABLED_KEY, false))
 	host._set_auto_capture_settings_value(AutoCaptureSettingsModel.ENABLED_KEY, not enabled_before_pending_edit)
@@ -2701,11 +2757,21 @@ func _run_auto_capture_settings_check() -> void:
 		and pending_edit_status != null
 		and pending_edit_status.text == "捕捉设置正在保存，请完成后再修改。"
 	)
+	var filter_before_pending_edit := PlayerProgressModel.auto_capture_settings(host.player_profile).get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
+	host._set_auto_capture_settings_value(AutoCaptureFilterModel.UI_MAX_OWNED_SAME_FORM_KEY, 9)
+	var filter_after_pending_edit := PlayerProgressModel.auto_capture_settings(host.player_profile).get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
+	var pending_nested_edit_guard_ok := filter_before_pending_edit == filter_after_pending_edit
 	host.current_account_session = saved_account_session
 	host.auth_auto_bypass = saved_auth_auto_bypass
 	host.profile_action_request_pending = saved_profile_action_pending
 	host.auto_settings_active_tab = saved_auto_settings_tab
 	host._close_auto_settings_panel()
+	# Keep the existing capture-loop regression independent from the focused
+	# public-filter contract above; that loop intentionally uses an ordinary
+	# Wuli target to exercise tools, pet defend and capacity behavior.
+	settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
+	settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = AutoCaptureFilterModel.default_policy()
+	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	var power_ok = (
 		CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_EMPTY_HAND) == 1
 		and CaptureToolCatalog.capture_power_for(BattleModel.CAPTURE_TOOL_ROPE_BASIC) == 3
@@ -2750,10 +2816,34 @@ func _run_auto_capture_settings_check() -> void:
 	var target_id = BattleModel.living_enemy_id(host.battle_state)
 	var target_actor = BattleModel.actor_by_id(host.battle_state, target_id)
 	var target_match_ok = host._battle_auto_capture_actor_matches(target_actor, settings)
+	var manual_name_settings: Dictionary = settings.duplicate(true)
+	manual_name_settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_CODEX
+	manual_name_settings[AutoCaptureSettingsModel.TARGET_FORM_ID_KEY] = ""
+	manual_name_settings[AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY] = "普通乌力"
+	var manual_line_settings: Dictionary = manual_name_settings.duplicate(true)
+	manual_line_settings[AutoCaptureSettingsModel.TARGET_MANUAL_TEXT_KEY] = "乌力系"
+	var manual_identity_compat_ok: bool = (
+		host._battle_auto_capture_actor_matches(target_actor, manual_name_settings)
+		and host._battle_auto_capture_actor_matches(target_actor, manual_line_settings)
+	)
 	var space_ok = host._battle_auto_has_capture_space()
 	var chosen_tool = CaptureToolCatalog.best_available_fallback_tool(
 		str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID)),
 		BattleModel.capture_tool_inventory(host.battle_state)
+	)
+	var saved_pending_capture_tool_id: String = str(host.battle_pending_capture_tool_id)
+	host.battle_pending_capture_tool_id = chosen_tool
+	var payload_player_actor := BattleModel.actor_by_id(host.battle_state, BattleModel.PLAYER_ACTOR_ID)
+	payload_player_actor["serverActorId"] = "srv_auto_capture_player"
+	target_actor["serverActorId"] = "srv_auto_capture_target"
+	var automatic_capture_payload: Dictionary = host._server_battle()._player_command_payload("capture", target_id, "", "", true)
+	var manual_capture_payload: Dictionary = host._server_battle()._player_command_payload("capture", target_id, "", "", false)
+	host.battle_pending_capture_tool_id = saved_pending_capture_tool_id
+	var capture_mode_payload_ok: bool = (
+		str(automatic_capture_payload.get("actionId", "")) == "capture"
+		and str(automatic_capture_payload.get("captureMode", "")) == "auto"
+		and str(automatic_capture_payload.get("targetActorId", "")) == "srv_auto_capture_target"
+		and not manual_capture_payload.has("captureMode")
 	)
 	var submit_pet_actor_id = BattleModel.controlled_pet_id(host.battle_state)
 	var submit_ok = false
@@ -3105,20 +3195,25 @@ func _run_auto_capture_settings_check() -> void:
 		and not host.hang_mode_active
 		and str(host.battle_state.get("message", "")).find("自动挂机已停止") >= 0
 	)
-	var status = "ok" if normalized_ok and bool(presenter_check.get("ok", false)) and online_safe_projection_ok and local_ui_ok and online_ui_ok and dirty_status_ok and pending_guard_ok and pending_edit_guard_ok and power_ok and fallback_ok and power_formula_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok and pending_claim_capacity_ok and capacity_error_stop_ok and terminal_error_stop_ok else "failed"
-	print("auto capture settings check ready: status=%s normalized=%s presenter=%s local_ui=%s online_ui=%s dirty_status=%s pending_guard=%s pending_edit_guard=%s online_safe=%s powers=%s fallback=%s formula=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s partner_defends=%d heal_hold=%s heal_target=%s heal_pet=%s heal_submit=%s heal_marked=%s heal_pet_submit=%s heal_pet_defend=%s heal_partner_defends=%d no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s full_lost=%d full_log=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s pending_claim_capacity=%s capacity_error_stop=%s terminal_error_stop=%s" % [
+	var status = "ok" if normalized_ok and bool(presenter_check.get("ok", false)) and bool(filter_check.get("ok", false)) and online_safe_projection_ok and local_ui_ok and online_ui_ok and dirty_status_ok and nested_edit_ok and pending_guard_ok and pending_edit_guard_ok and pending_nested_edit_guard_ok and power_ok and fallback_ok and power_formula_ok and manual_identity_compat_ok and capture_mode_payload_ok and pending_capture_ok and capture_partner_hold_ok and heal_hold_no_ally_attack_ok and no_target_escape_ok and server_duel_no_auto_leave_ok and success_no_target_message_ok and full_message_ok and discard_ok and gm_random_ok and pending_claim_capacity_ok and capacity_error_stop_ok and terminal_error_stop_ok else "failed"
+	print("auto capture settings check ready: status=%s normalized=%s presenter=%s filter=%s local_ui=%s online_ui=%s dirty_status=%s nested_edit=%s pending_guard=%s pending_edit_guard=%s pending_nested_guard=%s online_safe=%s powers=%s fallback=%s formula=%s manual_identity=%s auto_payload=%s submit=%s capture_seen=%s capture_tool=%s capture_pet_defend=%s partner_hold=%s partner_defends=%d heal_hold=%s heal_target=%s heal_pet=%s heal_submit=%s heal_marked=%s heal_pet_submit=%s heal_pet_defend=%s heal_partner_defends=%d no_target_escape=%s server_duel_no_leave=%s success_no_target_msg=%s target=%s match=%s catchable=%s hp=%d/%d level=%d space=%s tool=%s full_msg=%s full_lost=%d full_log=%s discard=%s gm_random=%s pool=%d random_count=%d random_levels=%s random_battle_count=%s random_formation=%s two_slots=%s pending_claim_capacity=%s capacity_error_stop=%s terminal_error_stop=%s" % [
 		status,
 		str(normalized_ok),
 		str(presenter_check.get("ok", false)),
+		str(filter_check.get("ok", false)),
 		str(local_ui_ok),
 		str(online_ui_ok),
 		str(dirty_status_ok),
+		str(nested_edit_ok),
 		str(pending_guard_ok),
 		str(pending_edit_guard_ok),
+		str(pending_nested_edit_guard_ok),
 		str(online_safe_projection_ok),
 		str(power_ok),
 		str(fallback_ok),
 		str(power_formula_ok),
+		str(manual_identity_compat_ok),
+		str(capture_mode_payload_ok),
 		str(pending_capture_ok),
 		str(submit_capture_seen),
 		str(submit_capture_tool_ok),
@@ -14067,7 +14162,8 @@ func _run_auto_capture_settings_preview() -> void:
 	host.player_profile = PlayerProgressModel.default_profile()
 	var settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
 	settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
-	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_ALL
+	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_CODEX
+	settings[AutoCaptureSettingsModel.TARGET_FORM_ID_KEY] = "blue_man_dragon_water10"
 	settings[AutoCaptureSettingsModel.HP_PERCENT_KEY] = 100
 	settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_LT
 	settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 999
@@ -14076,6 +14172,19 @@ func _run_auto_capture_settings_preview() -> void:
 	settings[AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY] = AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
 	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
 	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
+	settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = {
+		"schemaVersion": 1,
+		"lineIds": ["man_dragon"],
+		"element": {"mode": "all", "ids": ["water"], "minPoints": 10},
+		"onlyNewCodexForm": false,
+		"maxOwnedSameForm": 10,
+		"levelOneFourV": {
+			"maxHp": {"min": 63, "max": 0},
+			"attack": {"min": 14, "max": 0},
+			"defense": {"min": 0, "max": 0},
+			"quick": {"min": 0, "max": 0},
+		},
+	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	host.auto_settings_active_tab = "capture"
 	host._open_auto_settings_panel()

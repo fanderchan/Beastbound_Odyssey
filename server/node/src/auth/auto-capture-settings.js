@@ -5,6 +5,11 @@ const AUTO_CAPTURE_SETTINGS_ACTION_ID = "auto_capture_settings_update";
 const TARGET_MODES = new Set(["all", "codex"]);
 const LEVEL_COMPARATORS = new Set(["<", "=", ">"]);
 const NO_TARGET_ACTIONS = new Set(["battle", "escape"]);
+const FILTER_POLICY_SCHEMA_VERSION = 1;
+const FILTER_ELEMENT_MODES = new Set(["any", "all"]);
+const FILTER_ELEMENT_IDS = Object.freeze(["fire", "water", "earth", "wind"]);
+const FILTER_ELEMENT_ID_SET = new Set(FILTER_ELEMENT_IDS);
+const FILTER_LEVEL_ONE_STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 
 const LIMITS = Object.freeze({
   hpPercent: Object.freeze({min: 1, max: 100, fallback: 100}),
@@ -12,6 +17,11 @@ const LIMITS = Object.freeze({
   capturePetSkillSlot: Object.freeze({min: 1, max: 7, fallback: 2}),
   lowPowerThreshold: Object.freeze({min: 0, max: 9999, fallback: 31}),
   targetManualTextLength: 24,
+  filterLineIds: Object.freeze({maxCount: 32}),
+  filterElementIds: Object.freeze({maxCount: 4}),
+  filterElementMinPoints: Object.freeze({min: 1, max: 10, fallback: 1}),
+  filterMaxOwnedSameForm: Object.freeze({min: 0, max: 999, fallback: 0}),
+  filterLevelOneStat: Object.freeze({min: 0, max: 999999, fallback: 0}),
 });
 
 function isObjectRecord(value) {
@@ -64,9 +74,32 @@ function resolvedFormExists(resolved) {
   return isObjectRecord(resolved) && Object.keys(resolved).length > 0;
 }
 
+function resolvedLineExists(resolved) {
+  return resolvedFormExists(resolved);
+}
+
+function defaultFilterPolicy() {
+  return {
+    schemaVersion: FILTER_POLICY_SCHEMA_VERSION,
+    lineIds: [],
+    element: {
+      mode: "any",
+      ids: [],
+      minPoints: 1,
+    },
+    onlyNewCodexForm: false,
+    maxOwnedSameForm: 0,
+    levelOneFourV: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [
+      key,
+      {min: 0, max: 0},
+    ])),
+  };
+}
+
 function createAutoCaptureSettingsRules(options = {}) {
   const emptyHandToolId = String(options.emptyHandToolId || "empty_hand").trim().toLowerCase() || "empty_hand";
   const resolveForm = typeof options.resolveForm === "function" ? options.resolveForm : () => null;
+  const resolveLine = typeof options.resolveLine === "function" ? options.resolveLine : () => null;
   const normalizeCaptureToolId = typeof options.normalizeCaptureToolId === "function"
     ? options.normalizeCaptureToolId
     : () => emptyHandToolId;
@@ -92,6 +125,180 @@ function createAutoCaptureSettingsRules(options = {}) {
     }
   }
 
+  function lineExists(lineId) {
+    try {
+      return resolvedLineExists(resolveLine(lineId));
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function normalizeLegacyLineIds(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const result = [];
+    for (const entry of value) {
+      const lineId = String(entry ?? "").trim();
+      if (
+        lineId === ""
+        || result.includes(lineId)
+        || !lineExists(lineId)
+        || result.length >= LIMITS.filterLineIds.maxCount
+      ) {
+        continue;
+      }
+      result.push(lineId);
+    }
+    return result;
+  }
+
+  function normalizeLegacyElementIds(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const result = [];
+    for (const entry of value) {
+      const elementId = String(entry ?? "").trim().toLowerCase();
+      if (
+        !FILTER_ELEMENT_ID_SET.has(elementId)
+        || result.includes(elementId)
+        || result.length >= LIMITS.filterElementIds.maxCount
+      ) {
+        continue;
+      }
+      result.push(elementId);
+    }
+    return result;
+  }
+
+  function normalizeLegacyStatRange(value) {
+    const source = isObjectRecord(value) ? value : {};
+    let min = normalizeInteger(source.min, LIMITS.filterLevelOneStat);
+    let max = normalizeInteger(source.max, LIMITS.filterLevelOneStat);
+    if (min > 0 && max > 0 && min > max) {
+      [min, max] = [max, min];
+    }
+    return {min, max};
+  }
+
+  function normalizeFilterPolicy(value) {
+    const source = isObjectRecord(value) ? value : {};
+    const elementSource = isObjectRecord(source.element) ? source.element : {};
+    const fourVSource = isObjectRecord(source.levelOneFourV) ? source.levelOneFourV : {};
+    return {
+      schemaVersion: FILTER_POLICY_SCHEMA_VERSION,
+      lineIds: normalizeLegacyLineIds(source.lineIds),
+      element: {
+        mode: normalizeEnum(elementSource.mode, FILTER_ELEMENT_MODES, "any"),
+        ids: normalizeLegacyElementIds(elementSource.ids),
+        minPoints: normalizeInteger(elementSource.minPoints, LIMITS.filterElementMinPoints),
+      },
+      onlyNewCodexForm: normalizeBoolean(source.onlyNewCodexForm, false),
+      maxOwnedSameForm: normalizeInteger(source.maxOwnedSameForm, LIMITS.filterMaxOwnedSameForm),
+      levelOneFourV: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [
+        key,
+        normalizeLegacyStatRange(fourVSource[key]),
+      ])),
+    };
+  }
+
+  function invalidFilterPolicy() {
+    return {
+      ok: false,
+      code: "auto_capture_filter_policy_invalid",
+      message: "捕后公开筛选条件不正确，请检查系别、属性和 Lv1 四维范围。",
+    };
+  }
+
+  function strictInteger(value, limits) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < limits.min || parsed > limits.max) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function normalizePlayerFilterPolicy(value) {
+    if (!isObjectRecord(value) || value.schemaVersion !== FILTER_POLICY_SCHEMA_VERSION) {
+      return invalidFilterPolicy();
+    }
+    if (!Array.isArray(value.lineIds) || value.lineIds.length > LIMITS.filterLineIds.maxCount) {
+      return invalidFilterPolicy();
+    }
+    const lineIds = [];
+    for (const entry of value.lineIds) {
+      if (typeof entry !== "string") {
+        return invalidFilterPolicy();
+      }
+      const lineId = entry.trim();
+      if (lineId === "" || !lineExists(lineId)) {
+        return invalidFilterPolicy();
+      }
+      if (!lineIds.includes(lineId)) {
+        lineIds.push(lineId);
+      }
+    }
+
+    if (!isObjectRecord(value.element)) {
+      return invalidFilterPolicy();
+    }
+    const elementMode = String(value.element.mode ?? "").trim().toLowerCase();
+    if (!FILTER_ELEMENT_MODES.has(elementMode)) {
+      return invalidFilterPolicy();
+    }
+    if (!Array.isArray(value.element.ids) || value.element.ids.length > LIMITS.filterElementIds.maxCount) {
+      return invalidFilterPolicy();
+    }
+    const elementIds = [];
+    for (const entry of value.element.ids) {
+      if (typeof entry !== "string") {
+        return invalidFilterPolicy();
+      }
+      const elementId = entry.trim().toLowerCase();
+      if (!FILTER_ELEMENT_ID_SET.has(elementId)) {
+        return invalidFilterPolicy();
+      }
+      if (!elementIds.includes(elementId)) {
+        elementIds.push(elementId);
+      }
+    }
+    const minPoints = strictInteger(value.element.minPoints, LIMITS.filterElementMinPoints);
+    const maxOwnedSameForm = strictInteger(value.maxOwnedSameForm, LIMITS.filterMaxOwnedSameForm);
+    if (minPoints === null || maxOwnedSameForm === null || typeof value.onlyNewCodexForm !== "boolean") {
+      return invalidFilterPolicy();
+    }
+
+    if (!isObjectRecord(value.levelOneFourV)) {
+      return invalidFilterPolicy();
+    }
+    const levelOneFourV = {};
+    for (const key of FILTER_LEVEL_ONE_STAT_KEYS) {
+      const range = value.levelOneFourV[key];
+      if (!isObjectRecord(range)) {
+        return invalidFilterPolicy();
+      }
+      const min = strictInteger(range.min, LIMITS.filterLevelOneStat);
+      const max = strictInteger(range.max, LIMITS.filterLevelOneStat);
+      if (min === null || max === null || (min > 0 && max > 0 && min > max)) {
+        return invalidFilterPolicy();
+      }
+      levelOneFourV[key] = {min, max};
+    }
+
+    return {
+      ok: true,
+      policy: {
+        schemaVersion: FILTER_POLICY_SCHEMA_VERSION,
+        lineIds,
+        element: {mode: elementMode, ids: elementIds, minPoints},
+        onlyNewCodexForm: value.onlyNewCodexForm,
+        maxOwnedSameForm,
+        levelOneFourV,
+      },
+    };
+  }
+
   function normalizeSettings(value, policy = {}) {
     const source = isObjectRecord(value) ? value : {};
     const autoDiscardLowPower = policy.forceAutoDiscardLowPowerDisabled === true
@@ -110,6 +317,7 @@ function createAutoCaptureSettingsRules(options = {}) {
       capturePetSkillSlot: normalizeInteger(source.capturePetSkillSlot, LIMITS.capturePetSkillSlot),
       autoDiscardLowPower,
       lowPowerThreshold: normalizeInteger(source.lowPowerThreshold, LIMITS.lowPowerThreshold),
+      filterPolicy: normalizeFilterPolicy(source.filterPolicy),
     };
   }
 
@@ -130,9 +338,20 @@ function createAutoCaptureSettingsRules(options = {}) {
         message: "自动捕捉设置请求不正确。",
       };
     }
+    const hasFilterPolicy = Object.hasOwn(payload.settings, "filterPolicy");
+    const normalizedFilterPolicy = hasFilterPolicy
+      ? normalizePlayerFilterPolicy(payload.settings.filterPolicy)
+      : null;
+    if (normalizedFilterPolicy && !normalizedFilterPolicy.ok) {
+      return normalizedFilterPolicy;
+    }
+    const settings = normalizeSettings(payload.settings, {forceAutoDiscardLowPowerDisabled: true});
+    if (normalizedFilterPolicy) {
+      settings.filterPolicy = normalizedFilterPolicy.policy;
+    }
     return {
       ok: true,
-      settings: normalizeSettings(payload.settings, {forceAutoDiscardLowPowerDisabled: true}),
+      settings,
     };
   }
 
@@ -144,9 +363,13 @@ function createAutoCaptureSettingsRules(options = {}) {
         message: "请先创建角色档案。",
       };
     }
+    const existingFilterPolicy = normalizeSettings(profile.autoCaptureSettings).filterPolicy;
     const normalized = normalizePlayerUpdate(payload);
     if (!normalized.ok) {
       return normalized;
+    }
+    if (!Object.hasOwn(payload.settings, "filterPolicy")) {
+      normalized.settings.filterPolicy = existingFilterPolicy;
     }
     profile.autoCaptureSettings = normalized.settings;
     return {
@@ -166,5 +389,9 @@ function createAutoCaptureSettingsRules(options = {}) {
 
 module.exports = {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
+  FILTER_ELEMENT_IDS,
+  FILTER_LEVEL_ONE_STAT_KEYS,
+  FILTER_POLICY_SCHEMA_VERSION,
   createAutoCaptureSettingsRules,
+  defaultFilterPolicy,
 };
