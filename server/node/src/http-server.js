@@ -43,6 +43,9 @@ const {createHealthMonitor} = require("./health-monitor");
 const {
   DURABLE_OPERATION_ID_PATTERN,
 } = require("./auth/durable-mutation-state");
+const {
+  normalizeMailInboxPageOptions,
+} = require("./auth/mail-inbox-pagination");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -487,7 +490,11 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.stopHangSession(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/mail/inbox") {
-        return sendResult(res, service.listInbox(bearerToken(req)));
+        const inboxOptions = mailInboxOptionsFromSearchParams(url.searchParams);
+        if (!inboxOptions.ok) {
+          return sendResult(res, inboxOptions);
+        }
+        return sendResult(res, service.listInbox(bearerToken(req), inboxOptions.options));
       }
       if (req.method === "POST" && url.pathname === "/mail/send") {
         return sendResult(res, service.sendMail(bearerToken(req), await readJson(req)));
@@ -972,6 +979,37 @@ function requiredAssetMutationIdempotencyKeyFailure(req, pathNameValue) {
     return null;
   }
   return requiredIdempotencyKeyFailure(req);
+}
+
+function mailInboxOptionsFromSearchParams(searchParams) {
+  const limitValues = searchParams.getAll("limit");
+  const cursorValues = searchParams.getAll("cursor");
+  if (limitValues.length === 0 && cursorValues.length === 0) {
+    return {ok: true, options: {}};
+  }
+  if (limitValues.length !== 1 || cursorValues.length > 1) {
+    return {
+      ok: false,
+      code: "mail_inbox_pagination_invalid",
+      message: "邮箱分页参数无效，请刷新后重试。",
+    };
+  }
+  const rawOptions = {limit: limitValues[0]};
+  if (cursorValues.length === 1) {
+    rawOptions.cursor = cursorValues[0];
+  }
+  try {
+    return {
+      ok: true,
+      options: normalizeMailInboxPageOptions(rawOptions, {requireExplicitLimit: true}),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: String(error && error.code || "mail_inbox_pagination_invalid"),
+      message: String(error && error.message || "邮箱分页参数无效，请刷新后重试。"),
+    };
+  }
 }
 
 function healthPayload(healthMonitor, eventHub, service = null, networkAdmission = null, httpAuth = null) {

@@ -156,10 +156,33 @@ function createMailLineage(baseline, options = {}) {
       0,
       Math.trunc(Number(options.ownKeyEnumerations || 0)),
     ),
+    recipientMailIds: recipientMailIdIndex(baseline),
     revision: 0,
   };
   NEXT_MAIL_LINEAGE_ID += 1;
   return lineage;
+}
+
+function recipientMailIdIndex(baseline) {
+  const index = new Map();
+  for (const [mailId, mail] of baseline.entries()) {
+    addRecipientMailId(index, mail && mail.recipientAccountId, mailId);
+  }
+  return index;
+}
+
+function addRecipientMailId(index, recipientAccountIdValue, mailIdValue) {
+  const recipientAccountId = canonicalIdentity(recipientAccountIdValue, 80);
+  const mailId = canonicalIdentity(mailIdValue);
+  if (recipientAccountId === "" || mailId === "") {
+    return;
+  }
+  let ids = index.get(recipientAccountId);
+  if (!ids) {
+    ids = new Set();
+    index.set(recipientAccountId, ids);
+  }
+  ids.add(mailId);
 }
 
 function isCanonicalMailAuthorityState(value) {
@@ -199,6 +222,38 @@ function visibleMailIds(state) {
   return Array.from(ids)
     .filter((mailId) => Boolean(visibleMail(state, mailId)))
     .sort();
+}
+
+function readMailAuthorityRecipientRows(value, recipientAccountIdValue) {
+  const read = readMailAuthorityState(value);
+  if (!read.ok || !isCanonicalMailAuthorityState(read.messages)) {
+    return read;
+  }
+  const recipientAccountId = canonicalIdentity(recipientAccountIdValue, 80);
+  if (recipientAccountId === "") {
+    return fail(
+      "mail_authority_recipient_invalid",
+      "邮箱收件身份无效，请重新登录后再试。",
+    );
+  }
+  const state = MAIL_STATE_BY_VIEW.get(read.messages);
+  const mailIds = new Set(state.lineage.recipientMailIds.get(recipientAccountId) || []);
+  for (const [mailId, change] of state.changes.entries()) {
+    if (
+      String(change.before && change.before.recipientAccountId || "") === recipientAccountId
+      || String(change.after && change.after.recipientAccountId || "") === recipientAccountId
+    ) {
+      mailIds.add(mailId);
+    }
+  }
+  const mailRows = [];
+  for (const mailId of mailIds) {
+    const mail = visibleMail(state, mailId);
+    if (mail && mail.recipientAccountId === recipientAccountId) {
+      mailRows.push(mail);
+    }
+  }
+  return {ok: true, recipientAccountId, mailRows};
 }
 
 function createMailView(lineage, baseRevision, changes) {
@@ -473,6 +528,16 @@ function commitMailAuthorityDelta(value) {
     state.lineage.histories.set(mailId, history);
     state.lineage.historyEntryCount += 1;
     state.lineage.ids.add(mailId);
+    addRecipientMailId(
+      state.lineage.recipientMailIds,
+      change.before && change.before.recipientAccountId,
+      mailId,
+    );
+    addRecipientMailId(
+      state.lineage.recipientMailIds,
+      change.after && change.after.recipientAccountId,
+      mailId,
+    );
   }
   state.lineage.countByRevision.push(count);
   state.lineage.revision = revision;
@@ -602,6 +667,9 @@ function mailAuthorityDiagnostics(value) {
     lineageId: state.lineage.lineageId,
     ownKeyEnumerations: state.lineage.ownKeyEnumerations,
     pendingChanges: state.changes.size,
+    recipientIndexAccounts: state.lineage.recipientMailIds.size,
+    recipientIndexedMailIds: Array.from(state.lineage.recipientMailIds.values())
+      .reduce((total, ids) => total + ids.size, 0),
     trackedMailIds: state.lineage.ids.size,
   };
 }
@@ -634,6 +702,7 @@ module.exports = {
   mailAuthorityStateCanDescendFrom,
   mailAuthorityStatesShareLineage,
   materializeMailAuthorityState,
+  readMailAuthorityRecipientRows,
   readMailAuthorityState,
   rebaseMailAuthorityState,
   stageMailAuthorityDelete,

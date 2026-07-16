@@ -30,6 +30,11 @@ const {
   canonicalMailReadConsistencyScope,
 } = require("./auth/mail-read-consistency");
 const {
+  canonicalMailInboxPageResult,
+  encodeMailInboxCursor,
+  normalizeMailInboxPageOptions,
+} = require("./auth/mail-inbox-pagination");
+const {
   commitConsumedEquipmentEnvelopeLedger,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
   readConsumedEquipmentEnvelopeLedgerIndex,
@@ -83,6 +88,8 @@ const DEFAULT_DATABASE = "beastbound_odyssey";
 const DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES = 192 * 1024 * 1024;
 const DEFAULT_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 3000;
 const MAX_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 4000;
+const DEFAULT_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS = 300000;
+const MAX_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS = 900000;
 const MYSQL_LOAD_OUTPUT_CHUNK_BYTES = 64 * 1024;
 const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
 const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
@@ -101,6 +108,11 @@ const MYSQL_HISTORY_SEQUENCE_CONTRACTS = Object.freeze([
   Object.freeze({tableName: "battle_records", indexName: "uq_battle_records_history_seq"}),
   Object.freeze({tableName: "battle_trace", indexName: "uq_battle_trace_history_seq"}),
 ]);
+const MYSQL_MAIL_INBOX_PAGE_INDEX = Object.freeze({
+  tableName: "mail_messages",
+  indexName: "idx_mail_recipient_created_id",
+  columns: Object.freeze(["recipient_account_id", "created_at", "mail_id"]),
+});
 
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
@@ -213,7 +225,7 @@ function createMysqlAuthStore(options = {}) {
         created_at VARCHAR(40) NOT NULL,
         read_at VARCHAR(40) NULL,
         document_json JSON NOT NULL,
-        INDEX idx_mail_recipient_created (recipient_account_id, created_at)
+        INDEX idx_mail_recipient_created_id (recipient_account_id, created_at, mail_id)
       );
       CREATE TABLE IF NOT EXISTS market_listings (
         listing_id VARCHAR(96) PRIMARY KEY,
@@ -411,6 +423,7 @@ function createMysqlAuthStore(options = {}) {
       );
     `);
     ensureAppendOnlyHistorySequenceSchema(config, config.database);
+    ensureMailInboxPageIndexSchema(config, config.database);
     clearLegacyRuntimeRows();
     schemaReady = true;
   }
@@ -502,6 +515,26 @@ function createMysqlAuthStore(options = {}) {
           && view.storeRevision === lastPersistentRevision
           && isDeepStrictEqual(baselineReceipt, view.receipt),
       }, operationId);
+    },
+    async readMailInboxPage(accountId, pageOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("邮箱分页读取必须使用 MySQL 连接池。");
+        error.code = "mysql_mail_inbox_page_pool_required";
+        throw error;
+      }
+      // Validate before touching schema or acquiring a connection. A malformed
+      // cursor must be a local fail-closed error, never a database query.
+      const request = normalizeMysqlMailInboxPageRequest(accountId, pageOptions);
+      ensureSchema();
+      return runMysqlMailInboxPageRead(
+        persistentWritePool(),
+        request.recipientAccountId,
+        {limit: request.limit, cursor: request.cursor},
+        {transactionPolicy: config.transactionPolicy},
+      );
     },
     async readSharedAssetView(request, readOptions = {}) {
       if (closed) {
@@ -749,6 +782,106 @@ function assertMysqlSharedAssetRevision(expectedValue, actualValue) {
     error.actualRevision = Number.isSafeInteger(actualRevision) ? actualRevision : null;
     throw error;
   }
+}
+
+function normalizeMysqlMailInboxPageRequest(accountIdValue, optionsValue) {
+  const recipientAccountId = typeof accountIdValue === "string" ? accountIdValue : "";
+  if (!mysqlSharedAssetIdentity(recipientAccountId, 80)) {
+    const error = new Error("MySQL邮箱分页请求缺少规范收件人身份。");
+    error.code = "mysql_mail_inbox_page_request_invalid";
+    throw error;
+  }
+  const options = normalizeMailInboxPageOptions(optionsValue, {requireExplicitLimit: true});
+  return {recipientAccountId, limit: options.limit, cursor: options.cursor};
+}
+
+async function runMysqlMailInboxPageRead(pool, accountIdValue, optionsValue, transactionOptions = {}) {
+  const request = normalizeMysqlMailInboxPageRequest(accountIdValue, optionsValue);
+  return runMysqlGuardedPoolTransaction(pool, transactionOptions, async (connection) => {
+    const cursorSql = request.cursor === null
+      ? ""
+      : " AND (created_at < ? OR (created_at = ? AND mail_id < ?))";
+    const pageParams = request.cursor === null
+      ? [request.recipientAccountId, request.limit + 1]
+      : [
+        request.recipientAccountId,
+        request.cursor.createdAt,
+        request.cursor.createdAt,
+        request.cursor.mailId,
+        request.limit + 1,
+      ];
+    const pageRows = mysqlQueryRows(await connection.query(
+      `SELECT mail_id, sender_account_id, recipient_account_id, title,
+        created_at, read_at, document_json
+        FROM mail_messages
+        WHERE recipient_account_id = ?${cursorSql}
+        ORDER BY created_at DESC, mail_id DESC
+        LIMIT ?`,
+      pageParams,
+    ));
+    if (pageRows.length > request.limit + 1) {
+      throw mysqlMailInboxPageIntegrityError("page_row_limit", request.recipientAccountId);
+    }
+
+    const unreadRows = mysqlQueryRows(await connection.query(
+      `SELECT COUNT(*) AS unread_count
+        FROM mail_messages
+        WHERE recipient_account_id = ? AND read_at IS NULL`,
+      [request.recipientAccountId],
+    ));
+    const unreadCount = unreadRows.length === 1
+      ? Number(unreadRows[0] && unreadRows[0].unread_count)
+      : Number.NaN;
+    if (!Number.isSafeInteger(unreadCount) || unreadCount < 0) {
+      throw mysqlMailInboxPageIntegrityError("unread_count", request.recipientAccountId);
+    }
+
+    const seenMailIds = new Set();
+    const certifiedRows = pageRows.map((row) => {
+      const mailId = String(row && row.mail_id || "");
+      if (seenMailIds.has(mailId)) {
+        throw mysqlMailInboxPageIntegrityError("duplicate_mail_id", mailId);
+      }
+      seenMailIds.add(mailId);
+      return mysqlSharedMailDocument(row, mailId, request.recipientAccountId);
+    });
+    const hasMore = certifiedRows.length > request.limit;
+    const mailRows = hasMore ? certifiedRows.slice(0, request.limit) : certifiedRows;
+    const lastRow = mailRows[mailRows.length - 1] || null;
+    const nextCursor = hasMore
+      ? encodeMailInboxCursor({
+        createdAt: String(lastRow && lastRow.createdAt || ""),
+        mailId: String(lastRow && lastRow.mailId || ""),
+      })
+      : null;
+    return canonicalMailInboxPageResult({
+      recipientAccountId: request.recipientAccountId,
+      mailRows,
+      unreadCount,
+      nextCursor,
+      hasMore,
+    }, request.recipientAccountId, {
+      limit: request.limit,
+      cursor: request.cursor,
+    }, {
+      // ORDER BY and the keyset WHERE predicate run under the same MySQL
+      // collation. Re-applying JavaScript text ordering here would reject a
+      // valid database page for values whose case/accent order differs.
+      trustStoreOrder: true,
+    });
+  }, {
+    beforeBegin: (connection) => connection.query(
+      "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+    ),
+  });
+}
+
+function mysqlMailInboxPageIntegrityError(reason, key) {
+  const error = new Error("MySQL邮箱分页结果不完整或身份不一致。");
+  error.code = "mysql_mail_inbox_page_integrity_invalid";
+  error.reason = String(reason || "invalid");
+  error.resourceKey = String(key || "");
+  return error;
 }
 
 async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, options = {}) {
@@ -3611,6 +3744,96 @@ function ensureAppendOnlyHistorySequenceSchema(config, database) {
   }
 }
 
+function ensureMailInboxPageIndexSchema(config, database) {
+  const contract = mysqlMailInboxPageIndexContract(config, database);
+  if (contract.exists) {
+    if (!contract.valid) {
+      const error = new Error(
+        "MySQL邮箱分页索引契约不兼容：mail_messages必须按recipient_account_id、created_at、mail_id建立完整索引。",
+      );
+      error.code = "mysql_mail_inbox_page_index_contract_invalid";
+      throw error;
+    }
+    return;
+  }
+  // This is startup-owned online DDL for an existing Beastbound table. It is
+  // deliberately local to this schema and never changes shared MySQL globals.
+  // A later startup revalidates the exact named-column contract.
+  const metadataLockWaitTimeoutSeconds = config.transactionPolicy
+    .metadataLockWaitTimeoutSeconds;
+  const commandTimeoutMs = config.mailInboxIndexMigrationTimeoutMs;
+  try {
+    runMysql(config, database, `
+      SET SESSION lock_wait_timeout = ${metadataLockWaitTimeoutSeconds};
+      ALTER TABLE ${MYSQL_MAIL_INBOX_PAGE_INDEX.tableName}
+        ADD INDEX ${MYSQL_MAIL_INBOX_PAGE_INDEX.indexName}
+          (${MYSQL_MAIL_INBOX_PAGE_INDEX.columns.join(", ")}),
+        ALGORITHM=INPLACE,
+        LOCK=NONE;
+    `, {timeoutMs: commandTimeoutMs});
+  } catch (cause) {
+    if (cause && cause.code === "mysql_command_timeout") {
+      const error = new Error("MySQL邮箱分页索引迁移超过进程期限，服务拒绝启动。");
+      error.code = "mysql_mail_inbox_page_index_migration_timeout";
+      error.timeoutMs = commandTimeoutMs;
+      error.cause = cause;
+      throw error;
+    }
+    if (/\b(?:ERROR\s+1205|Lock wait timeout exceeded|metadata lock)\b/i.test(
+      String(cause && cause.message || ""),
+    )) {
+      const error = new Error("MySQL邮箱分页索引迁移等待 metadata lock 超时，服务拒绝启动。");
+      error.code = "mysql_mail_inbox_page_index_migration_lock_timeout";
+      error.timeoutSeconds = metadataLockWaitTimeoutSeconds;
+      error.cause = cause;
+      throw error;
+    }
+    const error = new Error("MySQL邮箱分页索引迁移失败，服务拒绝启动。");
+    error.code = "mysql_mail_inbox_page_index_migration_failed";
+    error.cause = cause;
+    throw error;
+  }
+}
+
+function mysqlMailInboxPageIndexContract(config, database) {
+  const schema = String(database || "").trim();
+  const output = runMysql(config, "", `
+    SELECT
+      COUNT(*),
+      COALESCE(GROUP_CONCAT(
+        CONCAT(seq_in_index, ':', LOWER(column_name))
+        ORDER BY seq_in_index SEPARATOR ','
+      ), ''),
+      COALESCE(SUM(sub_part IS NOT NULL), 0),
+      COALESCE(SUM(UPPER(is_visible) <> 'YES'), 0),
+      COALESCE(GROUP_CONCAT(DISTINCT UPPER(index_type) ORDER BY index_type), '')
+    FROM information_schema.statistics
+    WHERE table_schema = ${sqlString(schema)}
+      AND table_name = ${sqlString(MYSQL_MAIL_INBOX_PAGE_INDEX.tableName)}
+      AND index_name = ${sqlString(MYSQL_MAIL_INBOX_PAGE_INDEX.indexName)};
+  `);
+  const columns = String(output || "").trim().split("\t");
+  const count = Number(columns[0] || 0);
+  if (!Number.isFinite(count) || count < 1) {
+    return {exists: false, valid: false};
+  }
+  const indexedColumns = String(columns[1] || "").trim().toLowerCase();
+  const prefixColumns = Number(columns[2] || 0);
+  const invisibleColumns = Number(columns[3] || 0);
+  const indexTypes = String(columns[4] || "").trim().toUpperCase();
+  const expectedColumns = MYSQL_MAIL_INBOX_PAGE_INDEX.columns
+    .map((columnName, index) => `${index + 1}:${columnName}`)
+    .join(",");
+  return {
+    exists: true,
+    valid: count === MYSQL_MAIL_INBOX_PAGE_INDEX.columns.length
+      && indexedColumns === expectedColumns
+      && prefixColumns === 0
+      && invisibleColumns === 0
+      && indexTypes === "BTREE",
+  };
+}
+
 function mysqlHistorySequenceContract(config, database, tableName) {
   const schema = String(database || "").trim();
   const table = String(tableName || "").trim();
@@ -4975,6 +5198,11 @@ function mysqlConfig(options) {
       process.env.BEASTBOUND_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS,
       DEFAULT_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS,
     ), MAX_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS),
+    mailInboxIndexMigrationTimeoutMs: Math.min(positiveIntegerConfig(
+      options.mailInboxIndexMigrationTimeoutMs,
+      process.env.BEASTBOUND_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS,
+      DEFAULT_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS,
+    ), MAX_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS),
     healthProbeTimeoutMs: positiveIntegerConfig(options.healthProbeTimeoutMs, undefined, 2000),
     usePool: mysqlPoolEnabled(options, mysqlPathExplicit),
     poolFactory: typeof options.poolFactory === "function" ? options.poolFactory : defaultMysqlPoolFactory,
@@ -6278,6 +6506,7 @@ module.exports = {
   __mergeMysqlSaveBaselineAfterCommitForTest: mergeMysqlSaveBaselineAfterCommit,
   __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,
   __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
+  __runMysqlMailInboxPageReadForTest: runMysqlMailInboxPageRead,
   __runMysqlForTest: runMysql,
   __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
   __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,

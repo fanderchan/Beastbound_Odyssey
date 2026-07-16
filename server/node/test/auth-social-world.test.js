@@ -93,6 +93,8 @@ test("players can search and send text mail across accounts", () => {
   const recipientInbox = service.listInbox(recipient.session.token);
   assert.equal(recipientInbox.ok, true);
   assert.equal(recipientInbox.unreadCount, 1);
+  assert.equal(recipientInbox.nextCursor, null);
+  assert.equal(recipientInbox.hasMore, false);
   assert.equal(recipientInbox.messages[0].title, "组队吗");
 
   const read = service.markMailRead(recipient.session.token, recipientInbox.messages[0].mailId);
@@ -145,6 +147,77 @@ test("players can search and send text mail across accounts", () => {
   assert.equal(claimed.mail, null);
   const afterClaimInbox = service.listInbox(recipient.session.token);
   assert.equal(afterClaimInbox.messages.some((mail) => mail.mailId === attachmentInbox.messages[0].mailId), false);
+});
+
+test("memory inbox pagination keeps legacy full reads and keyset pages isolated by account", () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const owner = seed.register({username: "mail_page_owner", password: "test1234", displayName: "分页收件人"});
+  const other = seed.register({username: "mail_page_other", password: "test1234", displayName: "其他收件人"});
+  assert.equal(owner.ok, true);
+  assert.equal(other.ok, true);
+  const snapshot = seed.snapshot();
+  const addMail = (mailId, recipient, createdAt) => {
+    snapshot.mailMessages[mailId] = {
+      mailId,
+      senderAccountId: "acc_mail_page_sender",
+      senderUsername: "mail_page_sender",
+      senderDisplayName: "分页寄件人",
+      recipientAccountId: recipient.account.accountId,
+      recipientUsername: recipient.account.username,
+      recipientDisplayName: recipient.account.displayName,
+      title: mailId,
+      body: "分页正文",
+      items: [],
+      currency: {},
+      createdAt,
+      readAt: null,
+      schemaVersion: 1,
+    };
+  };
+  addMail("mail_page_a", owner, "2026-07-16T12:00:00.000Z");
+  addMail("mail_page_b", owner, "2026-07-16T12:00:00.000Z");
+  addMail("mail_page_c", owner, "2026-07-16T12:00:00.000Z");
+  addMail("mail_page_d", owner, "2026-07-15T12:00:00.000Z");
+  addMail("mail_page_other", other, "2026-07-17T12:00:00.000Z");
+  const service = createAuthService({store: createMemoryAuthStore(snapshot)});
+
+  const legacy = service.listInbox(owner.session.token);
+  assert.equal(legacy.ok, true);
+  assert.deepEqual(legacy.messages.map(({mailId}) => mailId), [
+    "mail_page_a",
+    "mail_page_b",
+    "mail_page_c",
+    "mail_page_d",
+  ]);
+  assert.equal(legacy.nextCursor, null);
+  assert.equal(legacy.hasMore, false);
+
+  const first = service.listInbox(owner.session.token, {limit: 2});
+  const second = service.listInbox(owner.session.token, {limit: 2, cursor: first.nextCursor});
+  assert.deepEqual(first.messages.map(({mailId}) => mailId), ["mail_page_c", "mail_page_b"]);
+  assert.deepEqual(second.messages.map(({mailId}) => mailId), ["mail_page_a", "mail_page_d"]);
+  assert.equal(first.unreadCount, 4);
+  assert.equal(second.unreadCount, 4);
+  assert.equal(first.hasMore, true);
+  assert.equal(second.hasMore, false);
+  assert.deepEqual(
+    [...first.messages, ...second.messages].map(({mailId}) => mailId),
+    ["mail_page_c", "mail_page_b", "mail_page_a", "mail_page_d"],
+  );
+
+  const isolated = service.listInbox(other.session.token, {limit: 50});
+  assert.deepEqual(isolated.messages.map(({mailId}) => mailId), ["mail_page_other"]);
+  for (const options of [
+    {limit: 0},
+    {limit: 51},
+    {limit: "01"},
+    {cursor: first.nextCursor},
+    {limit: 2, cursor: "not-a-canonical-cursor"},
+  ]) {
+    const invalid = service.listInbox(owner.session.token, options);
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.code, "mail_inbox_pagination_invalid");
+  }
 });
 
 test("mail runtime identity rejects addressed key, inner id, and recipient drift without letting another mailbox cause a global denial", () => {

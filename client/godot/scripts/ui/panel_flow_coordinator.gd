@@ -38,6 +38,7 @@ const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
@@ -1949,6 +1950,12 @@ var mailbox_refresh_button:
 	set(value):
 		host.mailbox_refresh_button = value
 
+var mailbox_load_more_button:
+	get:
+		return host.mailbox_load_more_button
+	set(value):
+		host.mailbox_load_more_button = value
+
 var mailbox_recipient_input:
 	get:
 		return host.mailbox_recipient_input
@@ -2009,11 +2016,11 @@ var mailbox_selected_source:
 	set(value):
 		host.mailbox_selected_source = value
 
-var mailbox_server_messages:
+var mailbox_page_state:
 	get:
-		return host.mailbox_server_messages
+		return host.mailbox_page_state
 	set(value):
-		host.mailbox_server_messages = value
+		host.mailbox_page_state = value
 
 var mailbox_request_pending:
 	get:
@@ -7532,14 +7539,26 @@ func _build_hud() -> void:
 	mailbox_inbox_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mailbox_column.add_child(mailbox_inbox_container)
 
+	var mailbox_list_column = VBoxContainer.new()
+	mailbox_list_column.custom_minimum_size = Vector2(230, 0)
+	mailbox_list_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mailbox_list_column.add_theme_constant_override("separation", 7)
+	mailbox_inbox_container.add_child(mailbox_list_column)
 	var mailbox_list_scroll = ScrollContainer.new()
 	mailbox_list_scroll.custom_minimum_size = Vector2(230, 0)
 	mailbox_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mailbox_inbox_container.add_child(mailbox_list_scroll)
+	mailbox_list_column.add_child(mailbox_list_scroll)
 	mailbox_list_container = VBoxContainer.new()
 	mailbox_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_list_container.add_theme_constant_override("separation", 7)
 	mailbox_list_scroll.add_child(mailbox_list_container)
+	mailbox_load_more_button = Button.new()
+	mailbox_load_more_button.text = "加载更多邮件"
+	mailbox_load_more_button.visible = false
+	mailbox_load_more_button.custom_minimum_size = Vector2(0, 42)
+	mailbox_load_more_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mailbox_load_more_button.pressed.connect(_request_server_mailbox_more)
+	mailbox_list_column.add_child(mailbox_load_more_button)
 
 	var mailbox_detail_column = VBoxContainer.new()
 	mailbox_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -8986,7 +9005,7 @@ func _rotate_server_session_requests(next_token: String) -> void:
 	party_invite_request_pending = false
 	party_invite_pending_kind = ""
 	chat_messages.clear()
-	mailbox_server_messages.clear()
+	mailbox_page_state = MailboxPageModel.reset_for_account()
 	if mailbox_selected_source == "server":
 		mailbox_selected_mail_id = ""
 		mailbox_selected_source = "server"
@@ -20040,7 +20059,7 @@ func _select_mailbox_message(mail_id: String, source: String = "local") -> void:
 	mailbox_selected_source = source
 	if source == "server":
 		var server_mail = _server_mailbox_message_by_key(mail_id)
-		if not server_mail.is_empty() and str(server_mail.get("readAt", "")).strip_edges() == "":
+		if not server_mail.is_empty() and MailboxPageModel.is_unread(server_mail):
 			_request_server_mailbox_read(str(server_mail.get("mailId", "")))
 	_refresh_mailbox_panel()
 
@@ -20072,7 +20091,7 @@ func _refresh_mailbox_menu_button() -> void:
 
 func _mailbox_combined_entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for message in mailbox_server_messages:
+	for message in MailboxPageModel.messages(mailbox_page_state):
 		var mail_id = str(message.get("mailId", "")).strip_edges()
 		if mail_id == "":
 			continue
@@ -20102,7 +20121,7 @@ func _mailbox_entry_button_text(entry: Dictionary) -> String:
 	var source = str(entry.get("source", "server"))
 	var message = entry.get("message", {}) as Dictionary if entry.get("message", {}) is Dictionary else {}
 	if source == "server":
-		var status = "未读" if str(message.get("readAt", "")).strip_edges() == "" else "已读"
+		var status = "未读" if MailboxPageModel.is_unread(message) else "已读"
 		var title = str(message.get("title", "玩家邮件"))
 		var sender = str(message.get("senderDisplayName", message.get("senderUsername", "玩家")))
 		return "%s\n%s  %s" % [title, sender, status]
@@ -20118,7 +20137,7 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 	var created_at = str(message.get("createdAt", "")).strip_edges()
 	if created_at != "":
 		lines.append("时间：%s" % created_at)
-	lines.append("状态：%s" % ("未读" if str(message.get("readAt", "")).strip_edges() == "" else "已读"))
+	lines.append("状态：%s" % ("未读" if MailboxPageModel.is_unread(message) else "已读"))
 	var body = str(message.get("body", "")).strip_edges()
 	if body != "":
 		lines.append("")
@@ -20142,17 +20161,13 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 
 func _server_mailbox_message_by_key(key: String) -> Dictionary:
 	var mail_id = _mailbox_key_id(key, "server:")
-	for message in mailbox_server_messages:
+	for message in MailboxPageModel.messages(mailbox_page_state):
 		if str(message.get("mailId", "")) == mail_id:
 			return message
 	return {}
 
 func _server_mailbox_unread_count() -> int:
-	var count = 0
-	for message in mailbox_server_messages:
-		if str(message.get("readAt", "")).strip_edges() == "":
-			count += 1
-	return count
+	return MailboxPageModel.unread_count(mailbox_page_state)
 
 func _mailbox_key_id(key: String, prefix: String) -> String:
 	return key.substr(prefix.length()) if key.begins_with(prefix) else key
@@ -20160,6 +20175,10 @@ func _mailbox_key_id(key: String, prefix: String) -> String:
 func _refresh_mailbox_request_controls() -> void:
 	if mailbox_refresh_button != null:
 		mailbox_refresh_button.disabled = mailbox_request_pending or not _is_server_account_session()
+	if mailbox_load_more_button != null:
+		mailbox_load_more_button.visible = _is_server_account_session() and MailboxPageModel.has_more(mailbox_page_state)
+		mailbox_load_more_button.disabled = mailbox_request_pending
+		mailbox_load_more_button.text = "正在加载..." if mailbox_request_pending and mailbox_pending_kind == "inbox_more" else "加载更多邮件"
 	if mailbox_send_button != null:
 		mailbox_send_button.disabled = mailbox_request_pending or not _is_server_account_session() or mailbox_active_tab != "compose"
 	var inputs_editable: bool = not mailbox_request_pending and _is_server_account_session() and mailbox_active_tab == "compose"
@@ -20178,7 +20197,25 @@ func _request_server_mailbox_inbox() -> void:
 			mailbox_status_label.text = "需要服务器账号登录。"
 		_refresh_mailbox_request_controls()
 		return
-	_start_mailbox_request("inbox", ServerAuthClientModel.mail_inbox_request(_server_profile_base_url(), _server_profile_token()))
+	_start_mailbox_request("inbox", ServerAuthClientModel.mail_inbox_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		"",
+		MailboxPageModel.DEFAULT_PAGE_LIMIT
+	))
+
+func _request_server_mailbox_more() -> void:
+	if not _is_server_account_session() or not MailboxPageModel.has_more(mailbox_page_state):
+		return
+	var cursor := MailboxPageModel.next_cursor(mailbox_page_state)
+	if cursor == "":
+		return
+	_start_mailbox_request("inbox_more", ServerAuthClientModel.mail_inbox_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		cursor,
+		MailboxPageModel.DEFAULT_PAGE_LIMIT
+	))
 
 func _request_server_mailbox_read(mail_id: String) -> void:
 	if mail_id.strip_edges() == "" or not _is_server_account_session():
@@ -20294,26 +20331,25 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 	if not _finish_mailbox_http_attempt(ticket):
 		return
 	if result != HTTPRequest.RESULT_SUCCESS:
+		if kind == "inbox" or kind == "inbox_more":
+			mailbox_page_state = MailboxPageModel.preserve_after_failure(mailbox_page_state)
 		if mailbox_status_label != null:
 			mailbox_status_label.text = "邮箱服务器连接失败。"
 		_refresh_mailbox_request_controls()
 		_continue_event_reset_domain("mail")
 		return
-	if kind == "inbox":
+	if kind == "inbox" or kind == "inbox_more":
 		var parsed_inbox = ServerAuthClientModel.parse_mail_inbox_response(response_code, body)
 		if bool(parsed_inbox.get("ok", false)):
-			mailbox_server_messages.clear()
-			var raw_messages = parsed_inbox.get("messages", [])
-			if raw_messages is Array:
-				for value in raw_messages:
-					if value is Dictionary:
-						mailbox_server_messages.append((value as Dictionary).duplicate(true))
+			mailbox_page_state = MailboxPageModel.append_page(mailbox_page_state, parsed_inbox) if kind == "inbox_more" else MailboxPageModel.replace_page(mailbox_page_state, parsed_inbox)
 			if mailbox_status_label != null:
-				mailbox_status_label.text = "邮箱已刷新。"
+				mailbox_status_label.text = "已加载更多邮件。" if kind == "inbox_more" else "邮箱已刷新。"
 		elif _handle_session_invalid_response(parsed_inbox):
 			return
-		elif mailbox_status_label != null:
-			mailbox_status_label.text = _server_player_message(parsed_inbox, "邮箱读取失败。")
+		else:
+			mailbox_page_state = MailboxPageModel.preserve_after_failure(mailbox_page_state)
+			if mailbox_status_label != null:
+				mailbox_status_label.text = _server_player_message(parsed_inbox, "邮箱读取失败。")
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_mail_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
@@ -20335,10 +20371,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		var parsed_read = ServerAuthClientModel.parse_mail_read_response(response_code, body)
 		if bool(parsed_read.get("ok", false)):
 			var read_mail = parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
-			for index in range(mailbox_server_messages.size()):
-				if str(mailbox_server_messages[index].get("mailId", "")) == str(read_mail.get("mailId", "")):
-					mailbox_server_messages[index] = read_mail
-					break
+			mailbox_page_state = MailboxPageModel.apply_read_mail(mailbox_page_state, read_mail)
 		elif _handle_session_invalid_response(parsed_read):
 			return
 		elif mailbox_status_label != null:
@@ -20349,19 +20382,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 			_apply_server_profile_payload(parsed_claim)
 			var claim_mail_id = _mailbox_key_id(mailbox_selected_mail_id, "server:")
 			var claim_mail = parsed_claim.get("mail", null)
-			var replaced = false
-			if claim_mail is Dictionary:
-				for index in range(mailbox_server_messages.size()):
-					if str(mailbox_server_messages[index].get("mailId", "")) == str((claim_mail as Dictionary).get("mailId", "")):
-						mailbox_server_messages[index] = (claim_mail as Dictionary).duplicate(true)
-						replaced = true
-						break
-				if not replaced:
-					mailbox_server_messages.append((claim_mail as Dictionary).duplicate(true))
-			else:
-				for index in range(mailbox_server_messages.size() - 1, -1, -1):
-					if str(mailbox_server_messages[index].get("mailId", "")) == claim_mail_id:
-						mailbox_server_messages.remove_at(index)
+			mailbox_page_state = MailboxPageModel.apply_claim_mail(mailbox_page_state, claim_mail, claim_mail_id)
 			_apply_claimed_mail_items_to_battle_state(parsed_claim)
 			var room = parsed_claim.get("battleRoom", null)
 			if room is Dictionary:

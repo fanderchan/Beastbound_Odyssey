@@ -34,6 +34,10 @@ const {
   stageMailAuthorityUpsert,
 } = require("./auth/mail-authority-state");
 const {
+  canonicalMailInboxPageResult,
+  normalizeMailInboxPageOptions,
+} = require("./auth/mail-inbox-pagination");
+const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
   DURABLE_OPERATION_ID_PATTERN,
@@ -3561,6 +3565,10 @@ function createAuthService(options = {}) {
     if (typeof method !== "function" || methodName === "invokeSharedAssetRead") {
       return fail("shared_asset_read_invalid", "共享资产读取入口不存在。");
     }
+    const inboxPage = await executeSpecializedMailInboxPageRead(methodName, args);
+    if (inboxPage.handled) {
+      return inboxPage.result;
+    }
     if (store.sharedAssetReads !== true) {
       return method(...args);
     }
@@ -3576,6 +3584,63 @@ function createAuthService(options = {}) {
     } finally {
       activeSharedAssetReadData = null;
     }
+  }
+
+  async function executeSpecializedMailInboxPageRead(methodName, args) {
+    if (methodName !== "listInbox") {
+      return {handled: false};
+    }
+    const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
+    const pageRequested = Object.hasOwn(payload, "limit") || Object.hasOwn(payload, "cursor");
+    if (!pageRequested) {
+      return {handled: false};
+    }
+    const current = cachedData || load();
+    const resolved = resolveServiceSession(current, Array.isArray(args) ? args[0] : "");
+    if (!resolved.ok) {
+      return {handled: true, result: fail(resolved.code, resolved.message)};
+    }
+    let pageOptions;
+    try {
+      pageOptions = normalizeMailInboxPageOptions(payload, {requireExplicitLimit: true});
+    } catch (error) {
+      return {
+        handled: true,
+        result: fail(
+          String(error && error.code || "mail_inbox_pagination_invalid"),
+          String(error && error.message || "邮箱分页参数无效，请刷新后重试。"),
+        ),
+      };
+    }
+    if (
+      store.mailInboxPageReads !== true
+      || typeof store.readMailInboxPage !== "function"
+    ) {
+      return {handled: false};
+    }
+    let page;
+    try {
+      page = canonicalMailInboxPageResult(
+        await store.readMailInboxPage(resolved.account.accountId, pageOptions),
+        resolved.account.accountId,
+        pageOptions,
+        // The store adapter owns one database ORDER BY/WHERE collation
+        // contract. The service still re-certifies every row identity,
+        // duplicate, count and last-row cursor without guessing that collation.
+        {trustStoreOrder: true},
+      );
+    } catch (cause) {
+      throw sharedAssetReadFailure(cause);
+    }
+    return {
+      handled: true,
+      result: projectPublicServiceResult(ok({
+        messages: page.mailRows.map(publicMail),
+        unreadCount: page.unreadCount,
+        nextCursor: page.nextCursor,
+        hasMore: page.hasMore,
+      })),
+    };
   }
 
   async function executeDurableMutationWithRuntimeBarrier(methodName, args, operation) {
@@ -5421,7 +5486,7 @@ function createAuthService(options = {}) {
   // Direct memory-store tests and offline tools keep the existing sync API.
   serviceApi.invokeDurable = invokeDurable;
   serviceApi._httpTryPureRead = tryHttpPureRead;
-  if (store.sharedAssetReads === true) {
+  if (store.sharedAssetReads === true || store.mailInboxPageReads === true) {
     serviceApi._httpInvokeSharedAssetRead = invokeSharedAssetRead;
   }
   // Capacity QA runs inside the server worker and needs only a narrow,
@@ -5748,6 +5813,21 @@ function createAsyncWriteAuthStore(store, options = {}) {
     writeQueue = readJob.then(() => undefined, () => undefined);
     return readJob;
   }
+  function enqueueMailInboxPageRead(accountId, pageOptions = {}) {
+    if (!store || typeof store.readMailInboxPage !== "function") {
+      const error = new Error("当前存储不支持邮箱分页读穿。");
+      error.code = "mail_inbox_page_read_unsupported";
+      return Promise.reject(error);
+    }
+    const normalizedAccountId = String(accountId || "").trim();
+    const optionSnapshot = clone(pageOptions && typeof pageOptions === "object" ? pageOptions : {});
+    const readJob = writeQueue.then(() => store.readMailInboxPage(
+      normalizedAccountId,
+      optionSnapshot,
+    ));
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
   function enqueueDurableReceiptRead(operationId) {
     if (!store || typeof store.readDurableMutationReceipt !== "function") {
       const error = new Error("当前存储不支持持久化操作回执读穿。");
@@ -5773,6 +5853,7 @@ function createAsyncWriteAuthStore(store, options = {}) {
     mode: store.mode ? `async:${store.mode}` : "async",
     asyncWrites: true,
     durableReceiptReads: Boolean(store && typeof store.readDurableMutationReceipt === "function"),
+    mailInboxPageReads: Boolean(store && typeof store.readMailInboxPage === "function"),
     sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
@@ -5794,6 +5875,9 @@ function createAsyncWriteAuthStore(store, options = {}) {
     },
     readSharedAssetView(request, readOptions = {}) {
       return enqueueSharedAssetRead(request, readOptions);
+    },
+    readMailInboxPage(accountId, pageOptions = {}) {
+      return enqueueMailInboxPageRead(accountId, pageOptions);
     },
     readDurableMutationReceipt(operationId) {
       return enqueueDurableReceiptRead(operationId);

@@ -46,6 +46,7 @@ const HangSettingsModel := preload("res://scripts/progression/hang_settings_mode
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -8603,6 +8604,8 @@ func _run_auto_exp_pill_check() -> void:
 
 func _run_auto_mailbox_check() -> void:
 	host.profile_save_enabled = false
+	var pagination_model_check := MailboxPageModel.self_check()
+	var pagination_model_ok := bool(pagination_model_check.get("ok", false))
 	var filler_ids = [
 		"item_meat_small",
 		"item_heal_all_5",
@@ -8730,8 +8733,13 @@ func _run_auto_mailbox_check() -> void:
 			"createdAt": "2099-01-01T00:00:00.000Z",
 			"readAt": null,
 		}]
-	host.mailbox_server_messages.clear()
-	host.mailbox_server_messages.append(server_messages[0].duplicate(true))
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {
+		"messages": server_messages,
+		"nextCursor": "opaque+/=mailbox-check",
+		"hasMore": true,
+		"unreadCount": 4,
+		"unreadCountProvided": true,
+	})
 	host.current_account_session = {
 		"authSource": ServerAuthClientModel.SOURCE_SERVER,
 		"serverSessionToken": "mailbox-check-token",
@@ -8745,6 +8753,12 @@ func _run_auto_mailbox_check() -> void:
 	var server_ui_ok = (
 		host.mailbox_claim_button != null
 			and not host.mailbox_claim_button.disabled
+			and host.mailbox_load_more_button != null
+			and host.mailbox_load_more_button.visible
+			and not host.mailbox_load_more_button.disabled
+			and host.mailbox_load_more_button.text == "加载更多邮件"
+			and host.mailbox_menu_button != null
+			and host.mailbox_menu_button.text == "邮箱5"
 				and host.mailbox_detail_label != null
 				and host.mailbox_detail_label.text.find("附件") >= 0
 				and host.mailbox_detail_label.text.find("39石币") >= 0
@@ -8769,8 +8783,7 @@ func _run_auto_mailbox_check() -> void:
 	)
 	var duplicate_mail := server_messages[0].duplicate(true)
 	duplicate_mail["equipmentEnvelopes"] = [mail_equipment_envelope.duplicate(true), mail_equipment_envelope.duplicate(true)]
-	host.mailbox_server_messages.clear()
-	host.mailbox_server_messages.append(duplicate_mail)
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {"messages": [duplicate_mail]})
 	host._refresh_mailbox_panel()
 	var duplicate_mail_guard_ok: bool = (
 		host.mailbox_claim_button.disabled
@@ -8779,8 +8792,7 @@ func _run_auto_mailbox_check() -> void:
 	)
 	var malformed_mail := server_messages[0].duplicate(true)
 	malformed_mail["equipmentEnvelopes"] = [42]
-	host.mailbox_server_messages.clear()
-	host.mailbox_server_messages.append(malformed_mail)
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {"messages": [malformed_mail]})
 	host._refresh_mailbox_panel()
 	var malformed_mail_guard_ok: bool = (
 		host.mailbox_claim_button.disabled
@@ -8788,8 +8800,7 @@ func _run_auto_mailbox_check() -> void:
 	)
 	var legacy_equipment_mail := server_messages[0].duplicate(true)
 	legacy_equipment_mail.erase("equipmentEnvelopes")
-	host.mailbox_server_messages.clear()
-	host.mailbox_server_messages.append(legacy_equipment_mail)
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {"messages": [legacy_equipment_mail]})
 	host._refresh_mailbox_panel()
 	var legacy_equipment_mail_guard_ok: bool = (
 		host.mailbox_claim_button.disabled
@@ -8800,17 +8811,23 @@ func _run_auto_mailbox_check() -> void:
 		{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2},
 		{"itemId": "weapon_wooden_club", "count": 2},
 	]
-	host.mailbox_server_messages.clear()
-	host.mailbox_server_messages.append(drifted_equipment_mail)
+	host.mailbox_page_state = MailboxPageModel.replace_page(host.mailbox_page_state, {"messages": [drifted_equipment_mail]})
 	host._refresh_mailbox_panel()
 	var drifted_equipment_mail_guard_ok: bool = (
 		host.mailbox_claim_button.disabled
 		and host.mailbox_detail_label.text.find("数量不一致") >= 0
 	)
+	host._panel_flow()._rotate_server_session_requests("mailbox-account-reset-check")
+	var account_reset_ok := (
+		MailboxPageModel.messages(host.mailbox_page_state).is_empty()
+		and not MailboxPageModel.has_more(host.mailbox_page_state)
+		and MailboxPageModel.unread_count(host.mailbox_page_state) == 0
+	)
 	host._close_mailbox_panel()
-	var status = "ok" if mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok else "failed"
-	print("mailbox check ready: status=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s messages=%d" % [
+	var status = "ok" if pagination_model_ok and mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok and account_reset_ok else "failed"
+	print("mailbox check ready: status=%s page_model=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s account_reset=%s messages=%d errors=%s" % [
 		status,
+		str(pagination_model_ok),
 		str(mailbox_ok),
 		str(claim_full_ok),
 		str(claim_ok),
@@ -8823,7 +8840,9 @@ func _run_auto_mailbox_check() -> void:
 		str(malformed_mail_guard_ok),
 		str(legacy_equipment_mail_guard_ok),
 		str(drifted_equipment_mail_guard_ok),
+		str(account_reset_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
+		str(pagination_model_check.get("errors", [])),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -17549,13 +17568,18 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(mail_send_spec.get("body", "")).find("\"recipientUsername\":\"friend\"") >= 0
 	)
 	var mail_inbox_spec = ServerAuthClientModel.mail_inbox_request("http://127.0.0.1:8787/", "token_test")
+	var opaque_mail_cursor := "opaque+/=cursor"
+	var mail_inbox_cursor_spec = ServerAuthClientModel.mail_inbox_request("http://127.0.0.1:8787/", "token_test", opaque_mail_cursor)
 	var mail_inbox_request_ok = (
-		str(mail_inbox_spec.get("url", "")) == "http://127.0.0.1:8787/mail/inbox"
+		str(mail_inbox_spec.get("url", "")) == "http://127.0.0.1:8787/mail/inbox?limit=30"
 		and int(mail_inbox_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and str(mail_inbox_cursor_spec.get("url", "")) == "http://127.0.0.1:8787/mail/inbox?limit=30&cursor=%s" % opaque_mail_cursor.uri_encode()
 	)
 	var parsed_mail_inbox = ServerAuthClientModel.parse_mail_inbox_response(200, JSON.stringify({
 		"ok": true,
 		"unreadCount": 1,
+		"nextCursor": opaque_mail_cursor,
+		"hasMore": true,
 		"messages": [{
 			"mailId": "mail_test",
 			"senderUsername": "remoteuser",
@@ -17569,6 +17593,24 @@ func _run_auto_auth_server_client_check() -> void:
 		bool(parsed_mail_inbox.get("ok", false))
 		and int(parsed_mail_inbox.get("unreadCount", 0)) == 1
 		and (parsed_mail_inbox.get("messages", []) as Array).size() == 1
+		and str(parsed_mail_inbox.get("nextCursor", "")) == opaque_mail_cursor
+		and bool(parsed_mail_inbox.get("hasMore", false))
+		and bool(parsed_mail_inbox.get("unreadCountProvided", false))
+	)
+	var parsed_legacy_mail_inbox = ServerAuthClientModel.parse_mail_inbox_response(200, JSON.stringify({
+		"ok": true,
+		"messages": [{
+			"mailId": "mail_legacy_test",
+			"title": "旧服邮件",
+			"readAt": null,
+		}],
+	}).to_utf8_buffer())
+	mail_inbox_parse_ok = (
+		mail_inbox_parse_ok
+		and not bool(parsed_legacy_mail_inbox.get("hasMore", true))
+		and str(parsed_legacy_mail_inbox.get("nextCursor", "")) == ""
+		and int(parsed_legacy_mail_inbox.get("unreadCount", 0)) == 1
+		and not bool(parsed_legacy_mail_inbox.get("unreadCountProvided", true))
 	)
 	var parsed_mail_read = ServerAuthClientModel.parse_mail_read_response(200, JSON.stringify({
 		"ok": true,
@@ -19025,7 +19067,7 @@ func _run_auto_server_mail_live_check() -> void:
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_profile_sync_expected_revision = 0
-	host.mailbox_server_messages.clear()
+	host.mailbox_page_state = MailboxPageModel.reset_for_account()
 	host._open_mailbox_panel()
 	var frames = 0
 	while frames < 360 and host.mailbox_request_pending:
@@ -19033,7 +19075,7 @@ func _run_auto_server_mail_live_check() -> void:
 		await host.get_tree().process_frame
 	var inbox_ok = false
 	var ui_ok = false
-	for message in host.mailbox_server_messages:
+	for message in MailboxPageModel.messages(host.mailbox_page_state):
 		if str(message.get("senderUsername", "")) == sender_username and str(message.get("body", "")).find("火芽村") >= 0:
 			inbox_ok = true
 			break
@@ -19053,7 +19095,7 @@ func _run_auto_server_mail_live_check() -> void:
 		str(ui_ok),
 		sender_username,
 		recipient_username,
-		host.mailbox_server_messages.size(),
+		MailboxPageModel.messages(host.mailbox_page_state).size(),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

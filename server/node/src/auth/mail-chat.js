@@ -21,6 +21,10 @@ const {
   stageMailAuthorityDelete,
   stageMailAuthorityUpsert,
 } = require("./mail-authority-state");
+const {
+  buildCanonicalMailInboxPage,
+  normalizeMailInboxPageOptions,
+} = require("./mail-inbox-pagination");
 
 function createMailChatDomain(ctx) {
   const {
@@ -252,11 +256,41 @@ function createMailChatDomain(ctx) {
     });
   }
 
-  function listInbox(token) {
+  function listInbox(token, payload = {}) {
     const data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
+    }
+    const pageRequested = isRecord(payload) && Object.hasOwn(payload, "limit");
+    if (pageRequested || (isRecord(payload) && Object.hasOwn(payload, "cursor"))) {
+      if (!pageRequested) {
+        return fail("mail_inbox_pagination_invalid", "邮箱分页参数无效，请刷新后重试。");
+      }
+      let pageOptions;
+      let page;
+      try {
+        pageOptions = normalizeMailInboxPageOptions(payload, {requireExplicitLimit: true});
+        page = buildCanonicalMailInboxPage(
+          data.mailMessages,
+          resolved.account.accountId,
+          pageOptions,
+        );
+      } catch (error) {
+        if (String(error && error.code || "") === "mail_inbox_pagination_invalid") {
+          return fail(error.code, error.message);
+        }
+        return fail(
+          "mail_identity_invalid",
+          "邮箱中存在身份异常的邮件，请联系GM处理。",
+        );
+      }
+      return ok({
+        messages: page.mailRows.map(publicMail),
+        unreadCount: page.unreadCount,
+        nextCursor: page.nextCursor,
+        hasMore: page.hasMore,
+      });
     }
     for (const [mailKey, mail] of Object.entries(data.mailMessages || {})) {
       const rawRecipientAccountId = mail && typeof mail === "object" && !Array.isArray(mail)
@@ -280,6 +314,8 @@ function createMailChatDomain(ctx) {
     return ok({
       messages,
       unreadCount: messages.filter((mail) => !mail.readAt).length,
+      nextCursor: null,
+      hasMore: false,
     });
   }
 
@@ -696,6 +732,10 @@ function createMailChatDomain(ctx) {
       return {code: "mail_identity_invalid", message: "邮箱中存在身份异常的邮件，请联系GM处理。"};
     }
     return null;
+  }
+
+  function isRecord(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
   }
 
   function mailCurrencyText(currency) {

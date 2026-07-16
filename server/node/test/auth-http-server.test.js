@@ -35,6 +35,7 @@ const {
 } = require("../test-support/auth-service-test-context");
 const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
+const {encodeMailInboxCursor} = require("../src/auth/mail-inbox-pagination");
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
@@ -155,6 +156,146 @@ test("HTTP market and inbox reads await authoritative shared projections and sur
   assert.equal(failedResponse.status, 503);
   assert.equal(failed.ok, false);
   assert.equal(failed.code, "storage_read_failed");
+});
+
+test("HTTP inbox pagination uses the specialized store reader without adopting a partial page", async (t) => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const registered = seed.register({
+    username: "httpinboxpage",
+    password: "test1234",
+    displayName: "分页玩家",
+  });
+  assert.equal(registered.ok, true);
+  const snapshot = seed.snapshot();
+  const accountId = registered.account.accountId;
+  snapshot.mailMessages.mail_local_stale = {
+    mailId: "mail_local_stale",
+    senderAccountId: "acc_local_sender",
+    senderUsername: "local_sender",
+    senderDisplayName: "本地寄件人",
+    recipientAccountId: accountId,
+    recipientUsername: registered.account.username,
+    recipientDisplayName: registered.account.displayName,
+    title: "本地旧页",
+    body: "旧权威根中的邮件。",
+    items: [],
+    currency: {},
+    createdAt: "2026-07-15 10:00:00",
+    readAt: null,
+    schemaVersion: 1,
+  };
+  const remoteMail = {
+    mailId: "mail_remote_page",
+    senderAccountId: "acc_remote_sender_internal",
+    senderUsername: "remote_sender",
+    senderDisplayName: "远端寄件人",
+    recipientAccountId: accountId,
+    recipientUsername: registered.account.username,
+    recipientDisplayName: registered.account.displayName,
+    title: "远端分页",
+    body: "只用于本次分页响应。",
+    items: [],
+    currency: {},
+    createdAt: "2026-07-16 10:00:00",
+    readAt: null,
+    schemaVersion: 1,
+    internalOnly: "不得出现在玩家响应里",
+  };
+  const remoteOlderMail = {
+    ...remoteMail,
+    mailId: "mail_remote_older_page",
+    title: "远端续页",
+    createdAt: "2026-07-15 09:00:00",
+    internalOnly: "续页也不得泄漏内部字段",
+  };
+  const remoteNextCursor = encodeMailInboxCursor({
+    createdAt: remoteMail.createdAt,
+    mailId: remoteMail.mailId,
+  });
+  const pageReads = [];
+  const underlying = {
+    mode: "http-inbox-page-test",
+    checkHealth: () => ({ok: true}),
+    load: () => structuredClone(snapshot),
+    async readMailInboxPage(readAccountId, options) {
+      pageReads.push({accountId: readAccountId, options});
+      const continuation = options.cursor !== null;
+      return {
+        recipientAccountId: accountId,
+        mailRows: [continuation ? remoteOlderMail : remoteMail],
+        unreadCount: 2,
+        nextCursor: continuation ? null : remoteNextCursor,
+        hasMore: !continuation,
+      };
+    },
+    async saveAsyncOwned() {
+      assert.fail("inbox page reads must not write");
+    },
+  };
+  const store = createAsyncWriteAuthStore(underlying, {onError: () => {}});
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = {authorization: `Bearer ${registered.session.token}`};
+
+  const legacy = await fetchJson(`${base}/mail/inbox`, {headers});
+  assert.equal(legacy.ok, true, JSON.stringify(legacy));
+  assert.deepEqual(legacy.messages.map(({mailId}) => mailId), ["mail_local_stale"]);
+  assert.equal(pageReads.length, 0);
+
+  const page = await fetchJson(`${base}/mail/inbox?limit=1`, {headers});
+  assert.equal(page.ok, true, JSON.stringify(page));
+  assert.deepEqual(page.messages.map(({mailId}) => mailId), ["mail_remote_page"]);
+  assert.equal(page.messages[0].senderAccountId, undefined);
+  assert.equal(page.messages[0].recipientAccountId, undefined);
+  assert.equal(page.messages[0].internalOnly, undefined);
+  assert.equal(page.nextCursor, remoteNextCursor);
+  assert.deepEqual(pageReads, [{accountId, options: {limit: 1, cursor: null}}]);
+
+  const continuationQuery = new URLSearchParams({limit: "1", cursor: page.nextCursor});
+  const continuation = await fetchJson(`${base}/mail/inbox?${continuationQuery}`, {headers});
+  assert.equal(continuation.ok, true, JSON.stringify(continuation));
+  assert.deepEqual(continuation.messages.map(({mailId}) => mailId), ["mail_remote_older_page"]);
+  assert.equal(continuation.messages[0].internalOnly, undefined);
+  assert.equal(continuation.nextCursor, null);
+  assert.deepEqual(pageReads[1], {
+    accountId,
+    options: {
+      limit: 1,
+      cursor: {createdAt: remoteMail.createdAt, mailId: remoteMail.mailId},
+    },
+  });
+  const after = service.snapshot();
+  assert.equal(Object.hasOwn(after.mailMessages, "mail_local_stale"), true);
+  assert.equal(Object.hasOwn(after.mailMessages, "mail_remote_page"), false);
+
+  const unauthenticated = await fetchJson(`${base}/mail/inbox?limit=1`);
+  assert.equal(unauthenticated.ok, false);
+  assert.equal(pageReads.length, 2);
+  for (const query of [
+    "cursor=abc",
+    "limit=0",
+    "limit=51",
+    "limit=01",
+    "limit=1&limit=2",
+    "limit=1&cursor=",
+    "limit=1&cursor=x&cursor=y",
+  ]) {
+    const response = await fetch(`${base}/mail/inbox?${query}`, {
+      headers: {
+        ...headers,
+        [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+        [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+      },
+    });
+    const invalid = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(invalid.code, "mail_inbox_pagination_invalid");
+  }
+  assert.equal(pageReads.length, 2);
 });
 
 test("HTTP server exposes auth and session endpoints", async (t) => {

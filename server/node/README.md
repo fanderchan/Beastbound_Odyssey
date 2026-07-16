@@ -41,6 +41,8 @@ Optional environment variables:
 - `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
 - `BEASTBOUND_MYSQL_CREATE_DATABASE`: set to `1` only when the configured MySQL user is allowed to create the database. Local live-server setup creates the database once with root, then runs the app account with this set to `0`.
 - `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
+- `BEASTBOUND_MYSQL_METADATA_LOCK_WAIT_TIMEOUT_SECONDS`: Beastbound-connection/session metadata-lock wait limit, default `5`, maximum `60`; it never changes the shared MySQL global value.
+- `BEASTBOUND_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS`: hard deadline for the one-time online inbox pagination index migration, default `300000`, maximum `900000`. Increase it only when an isolated migration rehearsal proves the table needs longer; metadata-lock waiting remains independently bounded by the session setting above.
 - `BEASTBOUND_STRUCTURED_LOGS`: set to `1` to write JSON lines for HTTP request duration, profile writebacks, and battle settlements.
 - `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
 - `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
@@ -116,7 +118,8 @@ Structured logs use one JSON object per event with `schemaVersion` and `createdA
 - `POST /profile/action`
 - `POST /hang/session/start`
 - `POST /hang/session/stop`
-- `GET /mail/inbox`
+- `GET /mail/inbox` (legacy full inbox)
+- `GET /mail/inbox?limit={1..50}&cursor={opaque}` (keyset page; omit `cursor` for the first page)
 - `POST /mail/send`
 - `POST /mail/{mailId}/read`
 - `GET /party/state`
@@ -171,7 +174,8 @@ Text mail is the first player-to-player interaction slice:
 
 - `GET /players/search` requires a server session and returns public player identity fields.
 - `POST /mail/send` sends title/body text to another account.
-- `GET /mail/inbox` returns the current account's inbox.
+- `GET /mail/inbox` without query parameters retains the legacy full-inbox response for rolling compatibility.
+- `GET /mail/inbox?limit={1..50}&cursor={opaque}` returns one `(createdAt DESC, mailId DESC)` keyset page plus the full inbox unread count. Clients must treat the cursor as opaque.
 - `POST /mail/{mailId}/read` marks one inbox message as read.
 
 This stage deliberately does not support item attachments for player mail. Existing reward fallback attachments remain in the Godot profile mailbox until economy authority is moved server-side.

@@ -17,6 +17,7 @@ const IDEMPOTENCY_RANDOM_BYTES := 24
 const DEFAULT_RETRY_ATTEMPTS := 3
 const DEFAULT_RETRY_BASE_DELAY_MS := 250
 const DEFAULT_RETRY_MAX_DELAY_MS := 1000
+const MAIL_INBOX_PAGE_LIMIT := 30
 const NETWORK_FAILED_CODE := "network_failed"
 const NETWORK_RETRY_FAILED_CODE := "network_retry_failed"
 const SESSION_INVALID_CODES := [
@@ -1114,9 +1115,13 @@ static func battle_command_submit_request(base_url: String, session_token: Strin
 	})
 
 
-static func mail_inbox_request(base_url: String, session_token: String) -> Dictionary:
+static func mail_inbox_request(base_url: String, session_token: String, cursor: String = "", limit: int = MAIL_INBOX_PAGE_LIMIT) -> Dictionary:
+	var safe_limit := clampi(limit, 1, MAIL_INBOX_PAGE_LIMIT)
+	var url := "%s/mail/inbox?limit=%d" % [normalized_base_url(base_url), safe_limit]
+	if cursor != "":
+		url += "&cursor=%s" % cursor.uri_encode()
 	return {
-		"url": "%s/mail/inbox" % normalized_base_url(base_url),
+		"url": url,
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_GET,
 		"body": "",
@@ -1473,14 +1478,30 @@ static func parse_mail_inbox_response(response_code: int, body: PackedByteArray)
 	var parsed := _parse_server_json(response_code, body, "邮箱读取失败。")
 	if not bool(parsed.get("ok", false)):
 		return parsed
+	var response := parsed.get("response", {}) as Dictionary
 	var messages: Array[Dictionary] = []
-	var raw_messages = (parsed.get("response", {}) as Dictionary).get("messages", [])
+	var raw_messages = response.get("messages", [])
 	if raw_messages is Array:
 		for value in raw_messages:
 			if value is Dictionary:
 				messages.append((value as Dictionary).duplicate(true))
+	var unread_count_provided := response.has("unreadCount")
+	var unread_count := 0
+	if unread_count_provided:
+		unread_count = maxi(0, int(response.get("unreadCount", 0)))
+	else:
+		for message in messages:
+			var read_at = message.get("readAt", null)
+			if not (read_at is String) or (read_at as String).strip_edges() == "":
+				unread_count += 1
+	var raw_next_cursor = response.get("nextCursor", "")
+	var next_cursor: String = raw_next_cursor if raw_next_cursor is String else ""
+	var has_more := bool(response.get("hasMore", false)) and next_cursor != ""
 	parsed["messages"] = messages
-	parsed["unreadCount"] = int((parsed.get("response", {}) as Dictionary).get("unreadCount", 0))
+	parsed["unreadCount"] = unread_count
+	parsed["unreadCountProvided"] = unread_count_provided
+	parsed["nextCursor"] = next_cursor if has_more else ""
+	parsed["hasMore"] = has_more
 	return parsed
 
 

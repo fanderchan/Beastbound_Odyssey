@@ -31,6 +31,7 @@ const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_m
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -477,6 +478,7 @@ var mailbox_list_container: VBoxContainer
 var mailbox_detail_label: RichTextLabel
 var mailbox_claim_button: Button
 var mailbox_refresh_button: Button
+var mailbox_load_more_button: Button
 var mailbox_recipient_input: LineEdit
 var mailbox_title_input: LineEdit
 var mailbox_body_input: TextEdit
@@ -487,7 +489,7 @@ var mailbox_http_request: HTTPRequest
 var mailbox_message_buttons: Dictionary = {}
 var mailbox_selected_mail_id: String = ""
 var mailbox_selected_source: String = "server"
-var mailbox_server_messages: Array[Dictionary] = []
+var mailbox_page_state: Dictionary = MailboxPageModel.empty_state()
 var mailbox_request_pending: bool = false
 var mailbox_pending_kind: String = ""
 var mailbox_inbox_tab_button: Button
