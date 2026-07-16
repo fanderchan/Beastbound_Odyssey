@@ -29,6 +29,19 @@ function applySharedAssetReadView(rootValue, viewValue) {
   if (view.marketConfig !== null) {
     next.marketConfig = structuredClone(view.marketConfig);
   }
+  if (view.mailRows !== null) {
+    const changes = view.mailRows.keys.map((mailId) => ({
+      mailId,
+      after: Object.hasOwn(view.mailRows.values, mailId)
+        ? view.mailRows.values[mailId]
+        : null,
+    }));
+    const staged = stageMailAuthorityChanges(next.mailMessages, changes);
+    if (!staged.ok) {
+      throw sharedAssetReadViewError("mailRows");
+    }
+    next.mailMessages = staged.messages;
+  }
   for (const partition of view.mailPartitions) {
     const messages = next.mailMessages;
     const changes = [];
@@ -71,6 +84,7 @@ function certifiedSharedAssetReadView(value) {
     "market_mutation",
     "mail_read",
     "mail_mutation",
+    "mail_mark_read",
     "mail_send",
     "equipment_ownership",
   ].includes(scope) || accountId === ""
@@ -84,6 +98,8 @@ function certifiedSharedAssetReadView(value) {
     : "";
   const recipientAccountId = mailSend ? String(value.recipientAccountId || "") : "";
   const includeActorProfile = mailSend && value.includeActorProfile === true;
+  const mailMarkRead = scope === "mail_mark_read";
+  const targetMailId = mailMarkRead ? String(value.targetMailId || "") : "";
   if (mailSend && (
     !canonicalOptionalIdentity(recipientUsername, false)
     || !canonicalOptionalIdentity(knownRecipientAccountId, true)
@@ -113,6 +129,24 @@ function certifiedSharedAssetReadView(value) {
   const partitionIds = mailPartitions.map((partition) => partition.recipientAccountId);
   if (!canonicalUniqueStrings(partitionIds)) {
     throw sharedAssetReadViewError("mail_partitions");
+  }
+  const mailRows = value.mailRows === null || value.mailRows === undefined
+    ? null
+    : certifiedEntityReplacement(value.mailRows, "mailId", "mailRows");
+  if (
+    mailMarkRead
+      ? (
+        !canonicalOptionalIdentity(targetMailId, false)
+        || mailRows === null
+        || !isDeepStrictEqual(mailRows.keys, [targetMailId])
+        || Object.values(mailRows.values).some((mail) => (
+          String(mail.recipientAccountId || "") !== accountId
+          || mailEquipmentEnvelopeMap(mail) === null
+        ))
+      )
+      : (targetMailId !== "" || mailRows !== null)
+  ) {
+    throw sharedAssetReadViewError("mail_rows");
   }
 
   if (!Array.isArray(value.consumedEquipmentEnvelopeIds)) {
@@ -174,6 +208,20 @@ function certifiedSharedAssetReadView(value) {
   ) {
     throw sharedAssetReadViewError("mail_partitions");
   }
+  if (mailMarkRead && (
+    includeProfileMailPartitions
+    || accounts.keys.length !== 1
+    || accounts.keys[0] !== accountId
+    || !accounts.values[accountId]
+    || profileBindings.keys.length !== 0
+    || profiles.keys.length !== 0
+    || marketListings !== null
+    || marketConfig !== null
+    || mailPartitions.length !== 0
+    || consumedEquipmentEnvelopeIds.length !== 0
+  )) {
+    throw sharedAssetReadViewError("mail_mark_read_scope");
+  }
   const referencedEnvelopeIds = new Set(sharedAssetReadReferencedEnvelopeIds({
     marketListings,
     mailPartitions,
@@ -192,11 +240,13 @@ function certifiedSharedAssetReadView(value) {
     recipientAccountId,
     includeActorProfile,
     includeProfileMailPartitions,
+    targetMailId,
     accounts,
     profileBindings,
     profiles,
     marketListings,
     marketConfig,
+    mailRows,
     mailPartitions,
     consumedEquipmentEnvelopeIds,
   };
@@ -221,6 +271,8 @@ function assertSharedAssetReadViewMatchesRequest(viewValue, requestValue) {
     String(request.scope || "") !== view.scope
     || String(request.accountId || "") !== view.accountId
     || marketMutationIdentityMismatch
+    || (view.scope === "mail_mark_read"
+      && String(request.mailId || "") !== view.targetMailId)
     || (view.scope === "mail_send" && (
       String(request.recipientUsername || "") !== view.recipientUsername
       || String(request.knownRecipientAccountId || "") !== view.knownRecipientAccountId

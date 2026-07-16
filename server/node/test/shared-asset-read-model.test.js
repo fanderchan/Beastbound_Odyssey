@@ -125,6 +125,66 @@ test("market view atomically replaces the complete market book and exact actor r
   });
 });
 
+test("mail mark-read view replaces only its authenticated target row", () => {
+  const request = {
+    schemaVersion: 1,
+    scope: "mail_mark_read",
+    accountId: "acc_a",
+    mailId: "mail_a_old",
+    includeProfileMailPartitions: false,
+  };
+  const view = {
+    schemaVersion: 1,
+    scope: "mail_mark_read",
+    accountId: "acc_a",
+    targetMailId: "mail_a_old",
+    includeProfileMailPartitions: false,
+    accounts: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", username: "alpha"},
+    }),
+    profileBindings: replacement([], {}),
+    profiles: replacement([], {}),
+    marketListings: null,
+    marketConfig: null,
+    mailRows: replacement(["mail_a_old"], {
+      mail_a_old: {
+        mailId: "mail_a_old",
+        recipientAccountId: "acc_a",
+        readAt: "2026-07-16T08:00:00.000Z",
+      },
+    }),
+    mailPartitions: [],
+    consumedEquipmentEnvelopeIds: [],
+  };
+
+  assert.equal(assertSharedAssetReadViewMatchesRequest(view, request), true);
+  const updated = applySharedAssetReadView(baseline(), view);
+  assert.equal(updated.mailMessages.mail_a_old.readAt, "2026-07-16T08:00:00.000Z");
+  assert.equal(updated.mailMessages.mail_b_keep.recipientAccountId, "acc_b");
+
+  const missing = applySharedAssetReadView(updated, {
+    ...view,
+    mailRows: replacement(["mail_a_old"], {}),
+  });
+  assert.equal(Object.hasOwn(missing.mailMessages, "mail_a_old"), false);
+  assert.equal(Object.hasOwn(missing.mailMessages, "mail_b_keep"), true);
+
+  assert.throws(() => applySharedAssetReadView(baseline(), {
+    ...view,
+    mailRows: replacement(["mail_a_old"], {
+      mail_a_old: {mailId: "mail_a_old", recipientAccountId: "acc_b"},
+    }),
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "mail_rows");
+  assert.throws(() => assertSharedAssetReadViewMatchesRequest(view, {
+    ...request,
+    mailId: "mail_other",
+  }), (error) => error
+    && error.code === "shared_asset_read_view_invalid"
+    && error.reason === "request_identity");
+});
+
 test("market mutation view is bound to the requested listing actor and seller partitions", () => {
   const actorOnly = {
     schemaVersion: 1,

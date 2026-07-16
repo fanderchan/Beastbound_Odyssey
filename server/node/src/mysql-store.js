@@ -27,6 +27,9 @@ const {
   mailSendReceiptResponseMatches,
 } = require("./auth/mail-send-consistency");
 const {
+  canonicalMailReadConsistencyScope,
+} = require("./auth/mail-read-consistency");
+const {
   commitConsumedEquipmentEnvelopeLedger,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
   readConsumedEquipmentEnvelopeLedgerIndex,
@@ -772,6 +775,13 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       ? await readMysqlSharedAccountByUsername(connection, request.recipientUsername)
       : null;
     const recipientAccountId = String(resolvedMailRecipient && resolvedMailRecipient.accountId || "");
+    const mailRows = request.scope === "mail_mark_read"
+      ? await readMysqlSharedExactMailRow(
+        connection,
+        request.targetMailId,
+        request.accountId,
+      )
+      : null;
 
     const accountIds = new Set([request.accountId]);
     if (request.scope === "mail_send") {
@@ -806,7 +816,8 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
     }
 
     const profileAccountIds = new Set(
-      request.scope === "mail_send" && request.includeActorProfile !== true
+      request.scope === "mail_mark_read"
+        || (request.scope === "mail_send" && request.includeActorProfile !== true)
         ? []
         : [request.accountId],
     );
@@ -878,6 +889,10 @@ async function runMysqlSharedAssetRead(pool, requestValue, baselineValue, option
       recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
       includeActorProfile: request.scope === "mail_send" && request.includeActorProfile,
       includeProfileMailPartitions,
+      ...(request.scope === "mail_mark_read" ? {
+        targetMailId: request.targetMailId,
+        mailRows,
+      } : {}),
       accounts: entityReplacement(accountIds, accounts),
       profileBindings: entityReplacement(profileAccountIds, profileBindings),
       profiles: entityReplacement(playerIds, profiles),
@@ -904,6 +919,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
   const accountId = String(request.accountId || "");
   const listingId = String(request.listingId || "");
   const mailId = String(request.mailId || "");
+  const targetMailId = scope === "mail_mark_read" ? mailId : "";
   const recipientUsername = String(request.recipientUsername || "");
   const knownRecipientAccountId = String(request.knownRecipientAccountId || "");
   const includeActorProfile = request.includeActorProfile === true;
@@ -914,6 +930,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
       "market_mutation",
       "mail_read",
       "mail_mutation",
+      "mail_mark_read",
       "mail_send",
       "equipment_ownership",
     ].includes(scope)
@@ -922,6 +939,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     || (mailId !== "" && !mysqlSharedAssetIdentity(mailId, 96))
     || (scope === "market_mutation" && listingId === "")
     || (scope === "mail_mutation" && mailId === "")
+    || (scope === "mail_mark_read" && !mysqlSharedAssetIdentity(mailId, 96))
     || (scope === "mail_send" && (
       !mysqlSharedAssetIdentity(recipientUsername, 20)
       || (knownRecipientAccountId !== ""
@@ -933,6 +951,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     || (["mail_read", "mail_mutation"].includes(scope)
       && !includeProfileMailPartitions)
     || (scope === "equipment_ownership" && !includeProfileMailPartitions)
+    || (scope === "mail_mark_read" && includeProfileMailPartitions)
     || (scope !== "mail_send" && (
       recipientUsername !== ""
       || knownRecipientAccountId !== ""
@@ -948,6 +967,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     accountId,
     listingId,
     mailId,
+    targetMailId,
     recipientUsername,
     knownRecipientAccountId,
     includeActorProfile,
@@ -995,28 +1015,54 @@ async function readMysqlSharedMailPartition(connection, recipientAccountId) {
   ));
   const messages = {};
   for (const row of rows) {
-    const mail = mysqlSharedJsonDocument(row && row.document_json, "mail_message_json");
     const mailId = String(row && row.mail_id || "");
-    const rowReadAt = row && row.read_at === null ? null : String(row && row.read_at || "");
-    const documentReadAt = mail.readAt === null || mail.readAt === undefined
-      ? null
-      : String(mail.readAt || "");
-    if (
-      !mysqlSharedAssetIdentity(mailId, 96)
-      || Object.hasOwn(messages, mailId)
-      || String(mail.mailId || "") !== mailId
-      || String(mail.senderAccountId || "") !== String(row.sender_account_id || "")
-      || String(mail.recipientAccountId || "") !== recipientAccountId
-      || String(row.recipient_account_id || "") !== recipientAccountId
-      || String(mail.title || "") !== String(row.title || "")
-      || String(mail.createdAt || "") !== String(row.created_at || "")
-      || documentReadAt !== rowReadAt
-    ) {
+    if (Object.hasOwn(messages, mailId)) {
       throw mysqlSharedAssetIntegrityError("mail_message_row_drift", mailId);
     }
-    messages[mailId] = mail;
+    messages[mailId] = mysqlSharedMailDocument(row, mailId, recipientAccountId);
   }
   return {recipientAccountId, messages: canonicalEntityMap(messages)};
+}
+
+async function readMysqlSharedExactMailRow(connection, mailId, recipientAccountId) {
+  const rows = mysqlQueryRows(await connection.query(
+    `SELECT mail_id, sender_account_id, recipient_account_id, title,
+      created_at, read_at, document_json
+      FROM mail_messages WHERE mail_id = ? AND recipient_account_id = ?`,
+    [mailId, recipientAccountId],
+  ));
+  if (rows.length > 1) {
+    throw mysqlSharedAssetIntegrityError("mail_message_row_count", mailId);
+  }
+  const values = {};
+  if (rows.length === 1) {
+    values[mailId] = mysqlSharedMailDocument(rows[0], mailId, recipientAccountId);
+  }
+  return entityReplacement([mailId], values);
+}
+
+function mysqlSharedMailDocument(row, expectedMailId, expectedRecipientAccountId) {
+  const mail = mysqlSharedJsonDocument(row && row.document_json, "mail_message_json");
+  const mailId = String(row && row.mail_id || "");
+  const recipientAccountId = String(row && row.recipient_account_id || "");
+  const rowReadAt = row && row.read_at === null ? null : String(row && row.read_at || "");
+  const documentReadAt = mail.readAt === null || mail.readAt === undefined
+    ? null
+    : String(mail.readAt || "");
+  if (
+    !mysqlSharedAssetIdentity(mailId, 96)
+    || mailId !== expectedMailId
+    || String(mail.mailId || "") !== mailId
+    || String(mail.senderAccountId || "") !== String(row && row.sender_account_id || "")
+    || recipientAccountId !== expectedRecipientAccountId
+    || String(mail.recipientAccountId || "") !== recipientAccountId
+    || String(mail.title || "") !== String(row && row.title || "")
+    || String(mail.createdAt || "") !== String(row && row.created_at || "")
+    || documentReadAt !== rowReadAt
+  ) {
+    throw mysqlSharedAssetIntegrityError("mail_message_row_drift", mailId || expectedMailId);
+  }
+  return mail;
 }
 
 async function readMysqlSharedAccountByUsername(connection, usernameValue) {
@@ -1456,6 +1502,7 @@ function buildConditionalMysqlSavePlan(data, previous, groups, consistencyScope)
     buildConditionalMarketCancelSavePlan,
     buildConditionalMarketBuySavePlan,
     buildConditionalMailSendSavePlan,
+    buildConditionalMailReadSavePlan,
     buildConditionalMailClaimSavePlan,
   ]) {
     const plan = build(data, previous, groups, consistencyScope);
@@ -2213,6 +2260,103 @@ function certifiedOrdinaryPlayerMailSend(mailValue, previous, scope) {
     return false;
   }
   return true;
+}
+
+function buildConditionalMailReadSavePlan(data, previous, groups, consistencyScopeValue) {
+  const consistencyScope = canonicalMailReadConsistencyScope(consistencyScopeValue);
+  if (consistencyScope === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)) {
+    return null;
+  }
+  const allowedGroups = new Set(["mutationReceipts", "mailMessages"]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) {
+      return null;
+    }
+  }
+  if (groups.mailMessages.length !== 1) {
+    return null;
+  }
+
+  const mailUpdate = singleMailAuthorityEntityChange(
+    previous.mailMessages,
+    data.mailMessages,
+    groups.mailAuthorityChanges,
+    "update",
+  );
+  if (mailUpdate === null) {
+    return null;
+  }
+  const beforeMail = objectOrEmpty(mailUpdate.previous);
+  const nextMail = objectOrEmpty(mailUpdate.next);
+  const expectedNextMail = {...beforeMail, readAt: nextMail.readAt};
+  if (
+    consistencyScope.mailDisposition !== "update"
+    || mailUpdate.key !== consistencyScope.mailId
+    || String(beforeMail.mailId || "") !== consistencyScope.mailId
+    || String(nextMail.mailId || "") !== consistencyScope.mailId
+    || String(beforeMail.recipientAccountId || "") !== consistencyScope.accountId
+    || String(nextMail.recipientAccountId || "") !== consistencyScope.accountId
+    || beforeMail.readAt !== null
+    || !canonicalMysqlIsoTimestamp(nextMail.readAt)
+    || !isDeepStrictEqual(nextMail, expectedNextMail)
+  ) {
+    return null;
+  }
+
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (receiptWriteSet === null) {
+    return null;
+  }
+  const receipt = receiptWriteSet.receipt;
+  const receiptResponse = objectOrEmpty(receipt && receipt.response);
+  const responseMail = objectOrEmpty(receiptResponse.mail);
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== consistencyScope.accountId
+    || receiptResponse.ok !== true
+    || String(responseMail.mailId || "") !== consistencyScope.mailId
+    || String(responseMail.readAt || "") !== nextMail.readAt
+  ) {
+    return null;
+  }
+
+  return buildMysqlResourceAcquisitionPlan({
+    kind: "mail_read_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId: consistencyScope.accountId,
+    mailId: consistencyScope.mailId,
+    mailDisposition: consistencyScope.mailDisposition,
+    operationId: consistencyScope.operationId,
+    locks: [mailMessageResourceLock(beforeMail)],
+    writes: [
+      conditionalMailMessageUpdate(nextMail, beforeMail),
+      ...receiptWriteSet.writes,
+    ],
+  });
+}
+
+function canonicalMysqlIsoTimestamp(value) {
+  if (typeof value !== "string" || value === "" || value !== value.trim()) {
+    return false;
+  }
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) {
+    return false;
+  }
+  try {
+    return new Date(timestamp).toISOString() === value;
+  } catch {
+    return false;
+  }
 }
 
 function buildConditionalMailClaimSavePlan(data, previous, groups, consistencyScopeValue) {
@@ -3940,6 +4084,7 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     "market_cancel_conditional_v1",
     "market_buy_conditional_v1",
     "mail_send_conditional_v1",
+    "mail_read_conditional_v1",
     "mail_claim_conditional_v1",
   ].includes(plan.kind)) {
     return committed;
@@ -4005,6 +4150,49 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
         ...(previous.profiles || {}),
         [playerId]: profile,
       },
+    };
+  }
+  if (plan.kind === "mail_read_conditional_v1") {
+    const accountId = String(plan.accountId || "");
+    const mailId = String(plan.mailId || "");
+    const operationId = String(plan.operationId || "");
+    const mailDisposition = String(plan.mailDisposition || "");
+    const previousMail = previous && previous.mailMessages && previous.mailMessages[mailId];
+    const committedMail = committed.mailMessages && committed.mailMessages[mailId];
+    const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+    const expectedCommittedMail = previousMail && committedMail
+      ? {...previousMail, readAt: committedMail.readAt}
+      : null;
+    if (
+      !previous
+      || accountId === ""
+      || mailId === ""
+      || operationId === ""
+      || mailDisposition !== "update"
+      || !previousMail
+      || !committedMail
+      || !receipt
+      || String(previousMail.mailId || "") !== mailId
+      || String(previousMail.recipientAccountId || "") !== accountId
+      || previousMail.readAt !== null
+      || String(committedMail.mailId || "") !== mailId
+      || String(committedMail.recipientAccountId || "") !== accountId
+      || !canonicalMysqlIsoTimestamp(committedMail.readAt)
+      || !isDeepStrictEqual(committedMail, expectedCommittedMail)
+      || String(receipt.operationId || "") !== operationId
+      || String(receipt.accountId || "") !== accountId
+    ) {
+      const error = new Error("MySQL mail read 条件提交缺少已证明的已读资源结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return {
+      ...previous,
+      mutationReceipts: committed.mutationReceipts,
+      mailMessages: mergeCommittedMailAuthorityChange(
+        previous.mailMessages,
+        {mailId, disposition: "update", mail: committedMail},
+      ),
     };
   }
   const accountId = String(plan.accountId || "");
@@ -5040,6 +5228,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       "market_cancel_conditional_v1",
       "market_buy_conditional_v1",
       "mail_send_conditional_v1",
+      "mail_read_conditional_v1",
       "mail_claim_conditional_v1",
     ].includes(plan.kind)
     || plan.globalRevisionFence !== false

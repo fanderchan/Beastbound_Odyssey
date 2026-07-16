@@ -71,7 +71,8 @@ function sharedView(snapshot, request) {
     }
   }
   const profileAccountIds = new Set(
-    request.scope === "mail_send" && request.includeActorProfile !== true
+    request.scope === "mail_mark_read"
+      || (request.scope === "mail_send" && request.includeActorProfile !== true)
       ? []
       : [request.accountId],
   );
@@ -99,6 +100,13 @@ function sharedView(snapshot, request) {
     }))
     : [];
   const profiles = replacement(playerIds, snapshot.profiles);
+  const targetMailId = request.scope === "mail_mark_read" ? String(request.mailId || "") : "";
+  const targetMail = targetMailId === "" ? null : snapshot.mailMessages[targetMailId] || null;
+  const mailRows = request.scope === "mail_mark_read"
+    ? replacement([targetMailId], targetMail && targetMail.recipientAccountId === request.accountId
+      ? {[targetMailId]: targetMail}
+      : {})
+    : null;
   const referencedEnvelopeIds = sharedAssetReadReferencedEnvelopeIds({
     marketListings,
     mailPartitions,
@@ -115,11 +123,13 @@ function sharedView(snapshot, request) {
     recipientAccountId: request.scope === "mail_send" ? recipientAccountId : "",
     includeActorProfile: request.scope === "mail_send" && request.includeActorProfile === true,
     includeProfileMailPartitions: request.includeProfileMailPartitions === true,
+    targetMailId,
     accounts: replacement(Array.from(accountIds), accountsById(snapshot.accounts)),
     profileBindings: replacement(Array.from(profileAccountIds), snapshot.profileBindings),
     profiles,
     marketListings,
     marketConfig: marketListings ? snapshot.marketConfig : null,
+    mailRows,
     mailPartitions,
     consumedEquipmentEnvelopeIds: referencedEnvelopeIds.filter((envelopeId) => (
       Object.hasOwn(snapshot.consumedEquipmentEnvelopes || {}, envelopeId)
@@ -165,6 +175,8 @@ function mergeScopedCommit(backing, nextData, saveOptions) {
     } else {
       assert.equal(scope.mode, "text");
     }
+    current.mailMessages[scope.mailId] = nextData.mailMessages[scope.mailId];
+  } else if (scope.kind === "row_local_mail_read_v1") {
     current.mailMessages[scope.mailId] = nextData.mailMessages[scope.mailId];
   } else {
     assert.fail(`unsupported cross-node fixture scope: ${String(scope.kind || "")}`);
@@ -1397,8 +1409,12 @@ test("marking mail read cannot resurrect attachments claimed on another Node", a
     scenario.seller.account.accountId,
   ).profile.stoneCoins;
   let saveCalls = 0;
+  let observedReadRequest = null;
   const staleNode = createReadThroughNode(backing, staleSnapshot, {
     allowLegacy: true,
+    beforeSharedRead(request) {
+      observedReadRequest = structuredClone(request);
+    },
     onSave() {
       saveCalls += 1;
     },
@@ -1416,6 +1432,13 @@ test("marking mail read cannot resurrect attachments claimed on another Node", a
   assert.equal(marked.ok, false, JSON.stringify(marked));
   assert.equal(marked.code, "mail_missing");
   assert.equal(saveCalls, 0);
+  assert.deepEqual(observedReadRequest, {
+    schemaVersion: 1,
+    scope: "mail_mark_read",
+    accountId: scenario.seller.account.accountId,
+    mailId: saleMail.mailId,
+    includeProfileMailPartitions: false,
+  });
   const finalSnapshot = backing.load();
   assert.equal(Object.hasOwn(finalSnapshot.mailMessages, saleMail.mailId), false);
   assert.equal(
@@ -1446,7 +1469,13 @@ test("marking mail read preserves the latest partially claimed attachment state"
     {itemId: "item_meat_small", count: 1},
   ];
   const backing = createMemoryAuthStore(freshSnapshot);
-  const staleNode = createReadThroughNode(backing, staleSnapshot, {allowLegacy: true});
+  let savedScope = null;
+  const staleNode = createReadThroughNode(backing, staleSnapshot, {
+    allowLegacy: true,
+    onSave(options) {
+      savedScope = options.consistencyScope;
+    },
+  });
 
   const marked = await staleNode.invokeDurable(
     "markMailRead",
@@ -1462,6 +1491,9 @@ test("marking mail read preserves the latest partially claimed attachment state"
   assert.deepEqual(stored.currency, {});
   assert.deepEqual(stored.items, [{itemId: "item_meat_small", count: 1}]);
   assert.notEqual(stored.readAt, null);
+  assert.equal(savedScope.kind, "row_local_mail_read_v1");
+  assert.equal(savedScope.accountId, scenario.seller.account.accountId);
+  assert.equal(savedScope.mailId, saleMail.mailId);
 });
 
 test("asset durable gate rejects a missing operation before shared read or save", async () => {

@@ -63,6 +63,10 @@ const {
   rowLocalMailClaimRecoveryMatches,
 } = require("./auth/mail-claim-consistency");
 const {
+  buildRowLocalMailReadConsistencyScope,
+  rowLocalMailReadRecoveryMatches,
+} = require("./auth/mail-read-consistency");
+const {
   buildMailSendSharedAssetReadRequest,
   buildRowLocalMailSendConsistencyScope,
   rowLocalMailSendRecoveryMatches,
@@ -3895,6 +3899,20 @@ function createAuthService(options = {}) {
     });
   }
 
+  function durableRowLocalMailReadConsistencyScope(methodName, args, before, candidate, receipt) {
+    const mailId = String(Array.isArray(args) ? args[1] : "").trim();
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    return buildRowLocalMailReadConsistencyScope({
+      methodName,
+      before,
+      candidate,
+      accountId,
+      mailId,
+      receipt,
+    });
+  }
+
   function durableRowLocalMailSendConsistencyScope(methodName, args, before, candidate, receipt) {
     const session = sessionByToken(before, durableMutationToken(args));
     const accountId = String(session && session.accountId || "");
@@ -3923,7 +3941,8 @@ function createAuthService(options = {}) {
       || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMailSendConsistencyScope(methodName, args, before, candidate, receipt)
-      || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt);
+      || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMailReadConsistencyScope(methodName, args, before, candidate, receipt);
   }
 
   function sharedAssetReadRequest(methodName, args, dataValue) {
@@ -3999,7 +4018,17 @@ function createAuthService(options = {}) {
           || isEquipmentAssetItemId(itemId),
       };
     }
-    if (["claimMailAttachments", "markMailRead"].includes(method)) {
+    if (method === "markMailRead") {
+      const mailId = String(Array.isArray(args) ? args[1] : "").trim();
+      return mailId === "" ? null : {
+        schemaVersion: 1,
+        scope: "mail_mark_read",
+        accountId,
+        mailId,
+        includeProfileMailPartitions: false,
+      };
+    }
+    if (method === "claimMailAttachments") {
       const mailId = String(Array.isArray(args) ? args[1] : "").trim();
       return mailId === "" ? null : {
         schemaVersion: 1,
@@ -5908,6 +5937,7 @@ function durableStoreSnapshotRecovery(store, snapshot, options = {}) {
       && !rowLocalMarketBuyRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMailSendRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
       && !rowLocalMailClaimRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
+      && !rowLocalMailReadRecoveryMatches(reloadedPersistent, expectedPersistent, scope)
     ) {
       return {matched: false, scoped: false, reloadedPersistentData: null};
     }

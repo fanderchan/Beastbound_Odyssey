@@ -754,12 +754,13 @@ test("market create capacity SQL, params, constants, counts, and guard metadata 
   );
 });
 
-test("only the six conditional plans behind the shared barrier are accepted", () => {
+test("only the seven conditional plans behind the shared barrier are accepted", () => {
   for (const kind of [
     "profile_conditional_v2",
     "market_cancel_conditional_v1",
     "market_buy_conditional_v1",
     "mail_send_conditional_v1",
+    "mail_read_conditional_v1",
     "mail_claim_conditional_v1",
   ]) {
     assert.equal(assertMysqlResourceAcquisitionOrder(plan({kind})), true);

@@ -31,6 +31,7 @@ const CONDITIONAL_PLAN_KINDS = new Set([
   "market_cancel_conditional_v1",
   "market_buy_conditional_v1",
   "mail_send_conditional_v1",
+  "mail_read_conditional_v1",
   "mail_claim_conditional_v1",
 ]);
 

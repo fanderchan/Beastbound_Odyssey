@@ -218,6 +218,21 @@ function fakePool(options = {}) {
       if (/FROM market_listings ORDER BY listing_id LIMIT/i.test(sql)) {
         return [marketRows(), []];
       }
+      if (/FROM mail_messages WHERE mail_id = \? AND recipient_account_id = \?/i.test(sql)) {
+        if (options.missingExactMail === true || params[1] !== ACCOUNT_A) {
+          return [[], []];
+        }
+        const mail = ordinaryMail(options.mailOverrides || {});
+        return [[{
+          mail_id: mail.mailId,
+          sender_account_id: mail.senderAccountId,
+          recipient_account_id: ACCOUNT_A,
+          title: options.rowMailTitle || mail.title,
+          created_at: mail.createdAt,
+          read_at: null,
+          document_json: mail,
+        }], []];
+      }
       if (/FROM mail_messages WHERE recipient_account_id = \?/i.test(sql)) {
         const recipientAccountId = String(params[0] || "");
         if (recipientAccountId !== ACCOUNT_A) {
@@ -352,6 +367,42 @@ test("ordinary market mutation keeps mailbox reads off while retaining scoped pr
   assert.deepEqual(result.view.profileBindings.keys, [ACCOUNT_A, ACCOUNT_B]);
   assert.deepEqual(result.view.mailPartitions, []);
   assert.equal(fake.state.queries.some(({sql}) => /FROM mail_messages/i.test(sql)), false);
+});
+
+test("mail mark-read RR view reads one recipient-bound row without profiles or mailbox partitions", async () => {
+  const fake = fakePool();
+  const result = await __runMysqlSharedAssetReadForTest(fake.pool, {
+    scope: "mail_mark_read",
+    accountId: ACCOUNT_A,
+    mailId: MAIL_ID,
+    includeProfileMailPartitions: false,
+  }, baseline());
+
+  assert.equal(result.view.targetMailId, MAIL_ID);
+  assert.deepEqual(result.view.mailRows.keys, [MAIL_ID]);
+  assert.deepEqual(Object.keys(result.view.mailRows.values), [MAIL_ID]);
+  assert.deepEqual(result.view.profileBindings, {keys: [], values: {}});
+  assert.deepEqual(result.view.profiles, {keys: [], values: {}});
+  assert.deepEqual(result.view.mailPartitions, []);
+  const scopedQueries = fake.state.queries.map(({sql, params}) => ({sql, params}));
+  assert.deepEqual(
+    scopedQueries.filter(({sql}) => /FROM mail_messages/i.test(sql)).map(({params}) => params),
+    [[MAIL_ID, ACCOUNT_A]],
+  );
+  assert.equal(scopedQueries.some(({sql}) => /FROM profile_bindings|FROM profiles/i.test(sql)), false);
+  assert.equal(
+    scopedQueries.some(({sql}) => /FROM mail_messages WHERE recipient_account_id = \?/i.test(sql)),
+    false,
+  );
+
+  const missing = fakePool({missingExactMail: true});
+  const missingResult = await __runMysqlSharedAssetReadForTest(missing.pool, {
+    scope: "mail_mark_read",
+    accountId: ACCOUNT_A,
+    mailId: MAIL_ID,
+    includeProfileMailPartitions: false,
+  }, baseline());
+  assert.deepEqual(missingResult.view.mailRows, {keys: [MAIL_ID], values: {}});
 });
 
 test("equipment ownership RR read pairs only the actor with mail, market and tombstones", async () => {
