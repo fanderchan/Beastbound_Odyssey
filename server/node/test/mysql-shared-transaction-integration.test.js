@@ -23,6 +23,9 @@ const {
 } = require("../src/auth/market-listing-state");
 const {createMysqlAuthStore} = require("../src/mysql-store");
 const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../test-support/mysql-mail-storage-fixture");
+const {
   createSharedMysqlTransactionHarness: createBaseSharedMysqlTransactionHarness,
   sharedMysqlOperation,
 } = require("../test-support/shared-mysql-transaction-harness");
@@ -1463,7 +1466,7 @@ process.stdin.on("end", () => {
 
 function createProductionStore(fakeMysqlPath, pool) {
   return createMysqlAuthStore({
-    mysqlPath: fakeMysqlPath,
+    mysqlPath: wrapFakeMysqlWithMailStorageAudit(fakeMysqlPath),
     host: "127.0.0.1",
     port: 3306,
     user: "tester",

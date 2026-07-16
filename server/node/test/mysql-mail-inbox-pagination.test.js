@@ -345,7 +345,10 @@ process.stdin.on("end", () => {
     assert.match(alters[0].stdin, /SET SESSION lock_wait_timeout = 2;/);
     assert.match(alters[0].stdin, /ALGORITHM=INPLACE[\s\S]*LOCK=NONE/);
     assert.ok(calls.every(({stdin}) => !/SET\s+(?:GLOBAL|PERSIST|PERSIST_ONLY)\b/i.test(stdin)));
-    assert.ok(calls.filter(({stdin}) => !/ALTER TABLE mail_messages/.test(stdin)).every(
+    assert.ok(calls.filter(({stdin}) => (
+      !/ALTER TABLE mail_messages/.test(stdin)
+      && !/CREATE TABLE IF NOT EXISTS mail_storage_control/.test(stdin)
+    )).every(
       ({stdin}) => !/SET SESSION lock_wait_timeout/i.test(stdin),
     ));
 

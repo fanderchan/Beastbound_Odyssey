@@ -19,6 +19,9 @@ const {
   readMailAuthorityState,
 } = require("../src/auth/mail-authority-state");
 const mysqlStoreModule = require("../src/mysql-store");
+const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../test-support/mysql-mail-storage-fixture");
 
 const {
   createMysqlAuthStore,
@@ -866,7 +869,7 @@ async function openConditionalStore(options = {}) {
   });
   const harness = createConditionalPool(options);
   const store = createMysqlAuthStore({
-    mysqlPath: loader.fakeMysqlPath,
+    mysqlPath: wrapFakeMysqlWithMailStorageAudit(loader.fakeMysqlPath),
     host: "127.0.0.1",
     port: 3306,
     user: "tester",

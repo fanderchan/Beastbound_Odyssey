@@ -80,6 +80,14 @@ const {
   destroyMysqlConnection,
   normalizeMysqlTransactionPolicy,
 } = require("./mysql-transaction-guard");
+const {
+  assertMailStorageContractOutput,
+  buildMailStorageContractQuerySql,
+  buildMailStorageControlQuerySql,
+  buildMailStorageFoundationSql,
+  parseMailStorageControlOutput,
+  validateMailStorageStartupState,
+} = require("./mysql-mail-storage-schema");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -91,6 +99,8 @@ const DEFAULT_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 3000;
 const MAX_MYSQL_AUTHORITY_LOAD_TIMEOUT_MS = 4000;
 const DEFAULT_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS = 300000;
 const MAX_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS = 900000;
+const DEFAULT_MYSQL_MAIL_STORAGE_SCHEMA_TIMEOUT_MS = 30000;
+const MAX_MYSQL_MAIL_STORAGE_SCHEMA_TIMEOUT_MS = 120000;
 const MYSQL_LOAD_OUTPUT_CHUNK_BYTES = 64 * 1024;
 const MYSQL_LOAD_TEMP_PREFIX = "beastbound-mysql-load-";
 const MYSQL_BATTLE_RECORD_WINDOW_MAX = 10000;
@@ -150,6 +160,13 @@ function createMysqlAuthStore(options = {}) {
       return;
     }
     if (!ensureSchemaEnabled) {
+      // Skipping DDL is not permission for a writer to skip the lifecycle
+      // fence. Existing-schema online/maintenance writers still audit the
+      // physical contract and generation before their first authority load.
+      // An explicitly auditing read-only bootstrap/dry-run may do the same.
+      if (!readOnly || config.requireMailStorageSchemaAudit) {
+        ensureMailStorageFoundationSchema(config, config.database, {install: false});
+      }
       clearLegacyRuntimeRows();
       schemaReady = true;
       return;
@@ -425,6 +442,7 @@ function createMysqlAuthStore(options = {}) {
     `);
     ensureAppendOnlyHistorySequenceSchema(config, config.database);
     ensureMailInboxPageIndexSchema(config, config.database);
+    ensureMailStorageFoundationSchema(config, config.database);
     clearLegacyRuntimeRows();
     schemaReady = true;
   }
@@ -3845,6 +3863,93 @@ function ensureMailInboxPageIndexSchema(config, database) {
   }
 }
 
+function ensureMailStorageFoundationSchema(config, database, options = {}) {
+  const commandTimeoutMs = config.mailStorageSchemaTimeoutMs;
+  if (options.install !== false) {
+    try {
+      runMysql(
+        config,
+        database,
+        buildMailStorageFoundationSql({
+          metadataLockWaitTimeoutSeconds: config.transactionPolicy
+            .metadataLockWaitTimeoutSeconds,
+        }),
+        {timeoutMs: commandTimeoutMs},
+      );
+    } catch (cause) {
+      throw mysqlMailStorageSchemaFailure(cause, "setup", commandTimeoutMs, config);
+    }
+  }
+
+  // Every path that can write durable authority state must pass the complete
+  // fence. The normal online writer uses the pool; stopped CLI writers opt in
+  // through singleWriterMaintenance. Legacy fake/diagnostic CLI stores that
+  // cannot perform a non-noop write may skip it, while 3b-2 dry-run/bootstrap
+  // can explicitly require the audit before it gains a write capability.
+  if (
+    !config.usePool
+    && !config.singleWriterMaintenance
+    && !config.requireMailStorageSchemaAudit
+  ) {
+    return null;
+  }
+
+  try {
+    const contractOutput = runMysql(
+      config,
+      database,
+      buildMailStorageContractQuerySql(database),
+      {timeoutMs: commandTimeoutMs},
+    );
+    assertMailStorageContractOutput(contractOutput);
+    const controlOutput = runMysql(
+      config,
+      database,
+      buildMailStorageControlQuerySql(),
+      {timeoutMs: commandTimeoutMs},
+    );
+    return validateMailStorageStartupState(
+      parseMailStorageControlOutput(controlOutput),
+    );
+  } catch (cause) {
+    if (cause && /^mysql_mail_storage_/.test(String(cause.code || ""))) {
+      throw cause;
+    }
+    throw mysqlMailStorageSchemaFailure(cause, "audit", commandTimeoutMs, config);
+  }
+}
+
+function mysqlMailStorageSchemaFailure(cause, phase, commandTimeoutMs, config) {
+  if (cause && cause.code === "mysql_command_timeout") {
+    const error = new Error(phase === "setup"
+      ? "MySQL 邮箱生命周期建表超过进程期限，服务拒绝启动。"
+      : "MySQL 邮箱生命周期结构审计超过进程期限，服务拒绝启动。");
+    error.code = phase === "setup"
+      ? "mysql_mail_storage_schema_timeout"
+      : "mysql_mail_storage_schema_audit_timeout";
+    error.timeoutMs = commandTimeoutMs;
+    error.cause = cause;
+    return error;
+  }
+  if (/\b(?:ERROR\s+1205|Lock wait timeout exceeded|metadata lock)\b/i.test(
+    String(cause && cause.message || ""),
+  )) {
+    const error = new Error("MySQL 邮箱生命周期建表等待 metadata lock 超时，服务拒绝启动。");
+    error.code = "mysql_mail_storage_schema_lock_timeout";
+    error.timeoutSeconds = config.transactionPolicy.metadataLockWaitTimeoutSeconds;
+    error.cause = cause;
+    return error;
+  }
+  const error = new Error(phase === "setup"
+    ? "MySQL 邮箱生命周期建表失败，服务拒绝启动。"
+    : "MySQL 邮箱生命周期结构审计失败，服务拒绝启动。");
+  error.code = phase === "setup"
+    ? "mysql_mail_storage_schema_failed"
+    : "mysql_mail_storage_schema_audit_failed";
+  error.cause = cause;
+  return error;
+}
+
 function mysqlMailInboxPageIndexContract(config, database) {
   const schema = String(database || "").trim();
   const output = runMysql(config, "", `
@@ -5229,6 +5334,7 @@ function mysqlConfig(options) {
     && !Array.isArray(options.transactionPolicy)
     ? options.transactionPolicy
     : {};
+  const usePool = mysqlPoolEnabled(options, mysqlPathExplicit);
   return {
     mysqlPath: options.mysqlPath || process.env.BEASTBOUND_MYSQL_BIN || "mysql",
     host: options.host || process.env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
@@ -5252,8 +5358,14 @@ function mysqlConfig(options) {
       process.env.BEASTBOUND_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS,
       DEFAULT_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS,
     ), MAX_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS),
+    mailStorageSchemaTimeoutMs: Math.min(positiveIntegerConfig(
+      options.mailStorageSchemaTimeoutMs,
+      process.env.BEASTBOUND_MYSQL_MAIL_STORAGE_SCHEMA_TIMEOUT_MS,
+      DEFAULT_MYSQL_MAIL_STORAGE_SCHEMA_TIMEOUT_MS,
+    ), MAX_MYSQL_MAIL_STORAGE_SCHEMA_TIMEOUT_MS),
     healthProbeTimeoutMs: positiveIntegerConfig(options.healthProbeTimeoutMs, undefined, 2000),
-    usePool: mysqlPoolEnabled(options, mysqlPathExplicit),
+    usePool,
+    requireMailStorageSchemaAudit: options.requireMailStorageSchemaAudit === true,
     poolFactory: typeof options.poolFactory === "function" ? options.poolFactory : defaultMysqlPoolFactory,
     poolConnectionLimit: positiveIntegerConfig(
       options.poolConnectionLimit,

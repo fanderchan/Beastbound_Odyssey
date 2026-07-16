@@ -25,6 +25,9 @@ const {
   createMysqlAuthStore,
 } = require("../src/mysql-store");
 const {battleProfile} = require("../test-support/auth-service-test-context");
+const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../test-support/mysql-mail-storage-fixture");
 
 const MYSQL_SESSION_POLICY_SQL =
   "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
@@ -161,7 +164,7 @@ process.stdin.on("end", () => {
 
   try {
     const store = createMysqlAuthStore({
-      mysqlPath: fakeMysqlPath,
+      mysqlPath: wrapFakeMysqlWithMailStorageAudit(fakeMysqlPath),
       host: "127.0.0.1",
       port: 3306,
       user: "tester",
@@ -376,7 +379,7 @@ process.stdin.on("end", () => {
   };
   try {
     const mysqlStore = createMysqlAuthStore({
-      mysqlPath: fakeMysqlPath,
+      mysqlPath: wrapFakeMysqlWithMailStorageAudit(fakeMysqlPath),
       host: "127.0.0.1",
       port: 3306,
       user: "tester",

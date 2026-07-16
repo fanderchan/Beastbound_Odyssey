@@ -10,7 +10,20 @@ const {
   createAuthService,
   createMemoryAuthStore,
 } = require("../src/auth-service");
-const {createMysqlAuthStore} = require("../src/mysql-store");
+const {createMysqlAuthStore: createMysqlAuthStoreImpl} = require("../src/mysql-store");
+const {
+  buildMailStorageCanonicalContractOutputForTest,
+} = require("../src/mysql-mail-storage-schema");
+const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../test-support/mysql-mail-storage-fixture");
+
+function createMysqlAuthStore(options = {}) {
+  return createMysqlAuthStoreImpl({
+    ...options,
+    mysqlPath: wrapFakeMysqlWithMailStorageAudit(options.mysqlPath),
+  });
+}
 
 const MYSQL_SESSION_POLICY_SQL =
   "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
@@ -77,7 +90,11 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
   fs.appendFileSync(${JSON.stringify(sqlLogPath)}, stdin + "\\n-- invocation --\\n");
-  if (stdin.includes("SELECT 'server_state'")) {
+  if (stdin.includes("AS mail_storage_contract")) {
+    process.stdout.write(${JSON.stringify(buildMailStorageCanonicalContractOutputForTest())});
+  } else if (stdin.includes("FROM mail_storage_control")) {
+    process.stdout.write("mail_lifecycle\\t1\\t0\\tuninitialized\\t0\\t0\\t0\\t\\t0\\t0\\t0\\t0\\t\\t\\n");
+  } else if (stdin.includes("SELECT 'server_state'")) {
     const state = JSON.parse(fs.readFileSync(${JSON.stringify(statePath)}, "utf8"));
     const rows = [
       ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],

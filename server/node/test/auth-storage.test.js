@@ -19,7 +19,7 @@ const {
   CLIENT_VERSION_HEADER,
   PROTOCOL_VERSION,
   SERVER_VERSION,
-  createMysqlAuthStore,
+  createMysqlAuthStore: createMysqlAuthStoreImpl,
   createCountingAuthStore,
   testPasswordHash,
   withEnv,
@@ -47,9 +47,29 @@ const {
 const {
   stageDurableMutationReceipt,
 } = require("../src/auth/durable-mutation-state");
+const {
+  buildMailStorageCanonicalContractOutputForTest,
+} = require("../src/mysql-mail-storage-schema");
+const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../test-support/mysql-mail-storage-fixture");
 
 const MYSQL_SESSION_POLICY_SQL =
   "SET SESSION innodb_lock_wait_timeout = ?, SESSION lock_wait_timeout = ?";
+
+function createMysqlAuthStore(options = {}) {
+  if (
+    options.readOnly === true
+    || typeof options.mysqlPath !== "string"
+    || !path.resolve(options.mysqlPath).startsWith(`${path.resolve(os.tmpdir())}${path.sep}`)
+  ) {
+    return createMysqlAuthStoreImpl(options);
+  }
+  return createMysqlAuthStoreImpl({
+    ...options,
+    mysqlPath: wrapFakeMysqlWithMailStorageAudit(options.mysqlPath),
+  });
+}
 
 function isDefaultMysqlSessionPolicy(sql, params) {
   if (sql.trim() !== MYSQL_SESSION_POLICY_SQL) {
@@ -746,6 +766,7 @@ test("mysql store sends generated SQL through stdin", () => {
   const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
   const logPath = path.join(tempDir, "calls.jsonl");
   const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  const previousMailStorageContract = process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT;
   fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
 const fs = require("node:fs");
 let stdin = "";
@@ -767,6 +788,14 @@ process.stdin.on("end", () => {
       hasManorWars: stdin.includes("INSERT INTO manor_wars"),
       hasManorBattles: stdin.includes("INSERT INTO manor_battles"),
     }) + "\\n");
+    if (stdin.includes("AS mail_storage_contract")) {
+      process.stdout.write(process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT || "");
+      return;
+    }
+    if (stdin.includes("FROM mail_storage_control")) {
+      process.stdout.write("mail_lifecycle\\t1\\t0\\tuninitialized\\t0\\t0\\t0\\t\\t0\\t0\\t0\\t0\\t\\t\\n");
+      return;
+    }
     if (stdin.includes("SELECT 'server_state'")) {
       process.stdout.write("store_revision\\tauth\\t0\\n");
     }
@@ -774,6 +803,7 @@ process.stdin.on("end", () => {
 `, {"mode": 0o755});
   try {
     process.env.FAKE_MYSQL_LOG = logPath;
+    process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT = buildMailStorageCanonicalContractOutputForTest();
     const store = createMysqlAuthStore({
       "mysqlPath": fakeMysqlPath,
       "host": "127.0.0.1",
@@ -904,11 +934,36 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mutation_receipts/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS party_invites/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_storage_control/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_active_counters/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_identity_registry/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_archive_messages/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS reward_vault_entries/.test(call.stdin)));
+    assert.ok(calls.some((call) => /INSERT IGNORE INTO mail_storage_control[\s\S]+VALUES[\s\S]+\('mail_lifecycle', 1,[\s\S]+0, 'uninitialized'/.test(call.stdin)));
     assert.ok(calls.some((call) => /operation_id VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => /VARCHAR\(160\) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY/.test(call.stdin)));
     assert.ok(calls.some((call) => call.stdinLength > 4096));
+    const loadCall = calls.find((call) => String(call.stdin || "").includes("SELECT 'server_state'"));
     const saveCall = calls.find((call) => String(call.stdin || "").includes("START TRANSACTION"));
+    assert.ok(loadCall);
     assert.ok(saveCall);
+    for (const auxiliaryTable of [
+      "mail_active_counters",
+      "mail_identity_registry",
+      "mail_archive_messages",
+      "reward_vault_entries",
+    ]) {
+      assert.equal(
+        new RegExp(`FROM\\s+${auxiliaryTable}\\b`).test(loadCall.stdin),
+        false,
+        `${auxiliaryTable} must stay out of the full authority loader`,
+      );
+      assert.equal(
+        new RegExp(`(?:INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+${auxiliaryTable}\\b`).test(saveCall.stdin),
+        false,
+        `${auxiliaryTable} must stay out of ordinary authority saves`,
+      );
+    }
     assert.equal(/\bDELETE FROM accounts\b/.test(saveCall.stdin), false);
     assert.equal(/\bDELETE FROM sessions\b/.test(saveCall.stdin), false);
     assert.equal(saveCall.stdin.includes("INSERT INTO player_positions"), false);
@@ -921,6 +976,11 @@ process.stdin.on("end", () => {
       delete process.env.FAKE_MYSQL_LOG;
     } else {
       process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    if (previousMailStorageContract === undefined) {
+      delete process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT;
+    } else {
+      process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT = previousMailStorageContract;
     }
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }
@@ -2882,6 +2942,14 @@ process.stdin.on("end", () => {
     argv: process.argv.slice(2),
     stdin,
   }) + "\\n");
+  if (stdin.includes("AS mail_storage_contract")) {
+    process.stdout.write(process.env.FAKE_MYSQL_MAIL_STORAGE_CONTRACT || "");
+    return;
+  }
+  if (stdin.includes("FROM mail_storage_control")) {
+    process.stdout.write("mail_lifecycle\\t1\\t0\\tuninitialized\\t0\\t0\\t0\\t\\t0\\t0\\t0\\t0\\t\\t\\n");
+    return;
+  }
   if (stdin.includes("SELECT 'server_state'")) {
     process.stdout.write("store_revision\\tauth\\t0\\n");
   }
@@ -2901,6 +2969,7 @@ process.stdin.on("end", () => {
       "BEASTBOUND_MYSQL_DATABASE": "beastbound_test",
       "BEASTBOUND_MYSQL_CREATE_DATABASE": "0",
       "FAKE_MYSQL_LOG": logPath,
+      "FAKE_MYSQL_MAIL_STORAGE_CONTRACT": buildMailStorageCanonicalContractOutputForTest(),
     }, async () => {
       const store = createDefaultStore({
         mysqlStoreOptions: {
