@@ -200,7 +200,6 @@ const PET_SORT_POWER := "power"
 const PET_SORT_SPECIES := "species"
 const PET_SORT_CAPTURED := "captured"
 const PET_LOW_POWER_FILTER_THRESHOLD := 31
-const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
 const BATTLE_COMMAND_COUNTDOWN_SECONDS := 99.0
@@ -457,6 +456,12 @@ var battle_command_title_label:
 		return host.battle_command_title_label
 	set(value):
 		host.battle_command_title_label = value
+
+var battle_capture_capacity_label:
+	get:
+		return host.battle_capture_capacity_label
+	set(value):
+		host.battle_capture_capacity_label = value
 
 var battle_round_panel:
 	get:
@@ -8273,6 +8278,16 @@ func _build_hud() -> void:
 	battle_auto_button.add_theme_stylebox_override("disabled", _battle_command_button_style(Color(0.05, 0.06, 0.06, 0.30)))
 	battle_auto_button.pressed.connect(host._on_battle_auto_button_pressed)
 	battle_header.add_child(battle_auto_button)
+	battle_capture_capacity_label = Label.new()
+	battle_capture_capacity_label.name = "BattleCaptureCapacity"
+	battle_capture_capacity_label.text = "随身 0/5、兽栏 0/20"
+	battle_capture_capacity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_capture_capacity_label.add_theme_font_size_override("font_size", 14)
+	battle_capture_capacity_label.add_theme_color_override("font_color", Color("d8c78f"))
+	battle_capture_capacity_label.custom_minimum_size = Vector2(0, 20)
+	battle_capture_capacity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_capture_capacity_label.visible = false
+	battle_column.add_child(battle_capture_capacity_label)
 	battle_command_button_grid = GridContainer.new()
 	battle_command_button_grid.name = "BattleCommandButtonGrid"
 	battle_command_button_grid.columns = 4

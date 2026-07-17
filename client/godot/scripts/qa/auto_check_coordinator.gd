@@ -12,6 +12,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
@@ -3173,9 +3174,12 @@ func _run_auto_capture_settings_check() -> void:
 	}
 	host.server_battle_state.clear()
 	host.server_battle_state["room"] = pending_claim_room
+	var pending_claim_capacity: Dictionary = host._battle_capture_capacity_snapshot()
 	var pending_claim_capacity_ok: bool = (
 		ServerBattleRoomModel.captured_wild_pet_count_for_account(pending_claim_room, host.current_account_session) == 1
-		and host._battle_auto_pending_capture_count() == 1
+		and bool(pending_claim_capacity.get("known", false))
+		and int(pending_claim_capacity.get("pendingCount", 0)) == 1
+		and not bool(pending_claim_capacity.get("canCapture", true))
 		and not host._battle_auto_has_capture_space()
 	)
 	host.hang_mode_active = true
@@ -4075,6 +4079,66 @@ func _run_auto_battle_capture_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+func _capture_capacity_test_profile(party_count: int, storage_count: int) -> Dictionary:
+	var profile := PlayerProgressModel.default_profile()
+	var instances: Array[Dictionary] = []
+	for index in range(party_count):
+		instances.append({
+			"instanceId": "capture_capacity_party_%d" % index,
+			"petId": "capture_capacity_party_%d" % index,
+			"formId": "wuli_normal_orange_fire10",
+			"templateId": "wuli_normal_orange_fire10",
+			"name": "随身测试宠%d" % (index + 1),
+			"state": PlayerProgressModel.PET_STATE_STANDBY,
+			"level": 1,
+			"hp": 80,
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 5,
+			"quick": 30,
+		})
+	for index in range(storage_count):
+		instances.append({
+			"instanceId": "capture_capacity_storage_%d" % index,
+			"petId": "capture_capacity_storage_%d" % index,
+			"formId": "wuli_normal_orange_fire10",
+			"templateId": "wuli_normal_orange_fire10",
+			"name": "兽栏测试宠%d" % (index + 1),
+			"state": PlayerProgressModel.PET_STATE_STORAGE,
+			"level": 1,
+			"hp": 80,
+			"maxHp": 80,
+			"attack": 10,
+			"defense": 5,
+			"quick": 30,
+		})
+	profile["petInstances"] = instances
+	return profile
+
+
+func _capture_capacity_test_room(room_id: String, owner_account_id: String, owner_pending: int = 0, other_pending: int = 0) -> Dictionary:
+	var actors: Array[Dictionary] = []
+	for index in range(owner_pending):
+		actors.append({
+			"actorId": "capture_capacity_owner_%d" % index,
+			"kind": "wild_pet",
+			"captured": true,
+			"capturedByAccountId": owner_account_id,
+		})
+	for index in range(other_pending):
+		actors.append({
+			"actorId": "capture_capacity_other_%d" % index,
+			"kind": "wild_pet",
+			"captured": true,
+			"capturedByAccountId": "capture_capacity_other_account",
+		})
+	return {
+		"roomId": room_id,
+		"status": "ready",
+		"battle": {"actors": actors},
+	}
+
+
 func _run_auto_capture_tools_check() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
@@ -4104,13 +4168,90 @@ func _run_auto_capture_tools_check() -> void:
 	var auto_empty_hand_fallback := ""
 	var auto_matched_poison_tool := ""
 	var owned_filter_texts: Array[String] = []
+	var capacity_account_id := "capture_capacity_account"
+	var capacity_room_id := "capture_tools_server_menu_check"
+	var capacity_session := {"accountId": capacity_account_id}
+	var capacity_full := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(5, 20),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_owner_storage_full := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(5, 19),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id, 1),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_other_pending_ignored := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(5, 19),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id, 0, 1),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_owner_party_full := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(4, 20),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id, 1),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_one_slot_left := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(4, 19),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id, 1),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_missing_account := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(0, 0),
+		_capture_capacity_test_room(capacity_room_id, capacity_account_id),
+		{},
+		capacity_room_id,
+		true
+	)
+	var capacity_room_mismatch := BattleCaptureCapacityModel.snapshot(
+		_capture_capacity_test_profile(0, 0),
+		_capture_capacity_test_room("capture_capacity_other_room", capacity_account_id),
+		capacity_session,
+		capacity_room_id,
+		true
+	)
+	var capacity_model_matrix_ok := (
+		bool(capacity_full.get("known", false))
+		and not bool(capacity_full.get("canCapture", true))
+		and str(capacity_full.get("label", "")) == "随身 5/5、兽栏 20/20（已满）"
+		and not bool(capacity_owner_storage_full.get("canCapture", true))
+		and int(capacity_owner_storage_full.get("storageCount", 0)) == 20
+		and bool(capacity_other_pending_ignored.get("canCapture", false))
+		and int(capacity_other_pending_ignored.get("storageCount", 0)) == 19
+		and not bool(capacity_owner_party_full.get("canCapture", true))
+		and int(capacity_owner_party_full.get("partyCount", 0)) == 5
+		and bool(capacity_one_slot_left.get("canCapture", false))
+		and int(capacity_one_slot_left.get("totalUsed", 0)) == 24
+		and not bool(capacity_missing_account.get("known", true))
+		and not bool(capacity_room_mismatch.get("known", true))
+	)
+	var capacity_player_ui_ok := false
+	var capacity_capture_tools_disabled_ok := false
+	var capacity_item_reuse_ok := false
+	var capacity_unknown_auto_safe_ok := false
 	if target_id != "":
+		var original_profile: Dictionary = host.player_profile.duplicate(true)
+		var original_session: Dictionary = host.current_account_session.duplicate(true)
+		var original_server_battle_state: Dictionary = host.server_battle_state.duplicate(true)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_ROPE_BASIC, 5)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET, 3)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_NET_REINFORCED, 1)
 		host.battle_state = BattleModel.set_capture_tool_count(host.battle_state, BattleModel.CAPTURE_TOOL_POISON_WULI_NET, 1)
 		host.battle_state["serverAuthority"] = true
-		host.battle_state["serverRoomId"] = "capture_tools_server_menu_check"
+		host.battle_state["serverRoomId"] = capacity_room_id
+		host.battle_state["serverRoom"] = _capture_capacity_test_room(capacity_room_id, capacity_account_id)
+		host.current_account_session = capacity_session.duplicate(true)
+		host.server_battle_state["room"] = _capture_capacity_test_room(capacity_room_id, capacity_account_id)
 		host._set_battle_command_owner("player")
 		host._sync_battle_buttons()
 		var capture_entry_button = host.battle_command_buttons.get("capture") as Button
@@ -4136,8 +4277,90 @@ func _run_auto_capture_tools_check() -> void:
 			server_help_message.find("精灵") >= 0
 			and server_help_message.find("捕捉") >= 0
 		)
+		host.player_profile = _capture_capacity_test_profile(5, 20)
+		host._set_battle_command_owner("player")
+		host._sync_battle_buttons()
+		var full_capture_button = host.battle_command_buttons.get("capture") as Button
+		var full_attack_button = host.battle_command_buttons.get("attack") as Button
+		capacity_player_ui_ok = (
+			full_capture_button != null
+			and full_capture_button.disabled
+			and full_attack_button != null
+			and not full_attack_button.disabled
+			and host.battle_capture_capacity_label != null
+			and host.battle_capture_capacity_label.visible
+			and host.battle_capture_capacity_label.text == "随身 5/5、兽栏 20/20（已满）"
+		)
+		host._set_battle_command_owner("capture")
+		host._sync_battle_buttons()
+		var all_capture_tools_disabled: bool = not host.battle_capture_button_tool_ids.is_empty()
+		for command_id in host.battle_capture_button_tool_ids.keys():
+			var tool_button = host.battle_command_buttons.get(command_id) as Button
+			all_capture_tools_disabled = all_capture_tools_disabled and tool_button != null and tool_button.disabled
+		var capture_return_button = host.battle_command_buttons.get("help") as Button
+		capacity_capture_tools_disabled_ok = (
+			all_capture_tools_disabled
+			and capture_return_button != null
+			and not capture_return_button.disabled
+		)
+		host.battle_state = BattleModel.set_item_count(host.battle_state, BattleModel.ITEM_POISON_SINGLE, 1)
+		host._set_battle_command_owner("item")
+		host._sync_battle_buttons()
+		var poison_reuse_button = host.battle_command_buttons.get("capture") as Button
+		capacity_item_reuse_ok = (
+			poison_reuse_button != null
+			and poison_reuse_button.visible
+			and not poison_reuse_button.disabled
+			and host.battle_capture_capacity_label != null
+			and not host.battle_capture_capacity_label.visible
+		)
+
+		var auto_profile: Dictionary = original_profile.duplicate(true)
+		var auto_settings := PlayerProgressModel.auto_capture_settings(auto_profile)
+		auto_settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
+		auto_settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_ALL
+		auto_settings[AutoCaptureSettingsModel.HP_PERCENT_KEY] = AutoCaptureSettingsModel.MAX_HP_PERCENT
+		auto_settings[AutoCaptureSettingsModel.LEVEL_COMPARATOR_KEY] = AutoCaptureSettingsModel.COMPARATOR_EQ
+		auto_settings[AutoCaptureSettingsModel.LEVEL_VALUE_KEY] = 1
+		auto_settings[AutoCaptureSettingsModel.NO_TARGET_ACTION_KEY] = AutoCaptureSettingsModel.NO_TARGET_ESCAPE
+		host.player_profile = PlayerProgressModel.with_auto_capture_settings(auto_profile, auto_settings)
+		host.battle_state = host._set_battle_actor_fields(host.battle_state, target_id, {
+			"catchable": true,
+			"captured": false,
+			"level": 1,
+			"hp": 8,
+			"maxHp": 100,
+		})
+		host.battle_state.erase("serverRoom")
+		host.server_battle_state.erase("room")
+		host._set_battle_command_owner("player")
+		host.battle_auto_attack_enabled = true
+		host.battle_auto_attack_delay = 0.0
+		host.battle_auto_attack_player_submissions = 0
+		host.battle_pending_player_command.clear()
+		var tools_before_unknown := BattleModel.capture_tool_inventory(host.battle_state).duplicate(true)
+		var unknown_submitted: bool = bool(host._submit_battle_auto_player_action())
+		var unknown_waited_safely: bool = (
+			not unknown_submitted
+			and host.battle_auto_attack_player_submissions == 0
+			and host.battle_pending_player_command.is_empty()
+			and host.battle_auto_attack_enabled
+			and host.battle_auto_attack_delay > 0.0
+			and BattleModel.capture_tool_inventory(host.battle_state) == tools_before_unknown
+			and str(host.battle_state.get("message", "")) == BattleCaptureCapacityModel.SYNCING_TEXT
+		)
+		host.server_battle_state["room"] = _capture_capacity_test_room(capacity_room_id, capacity_account_id)
+		host.battle_state["serverRoom"] = _capture_capacity_test_room(capacity_room_id, capacity_account_id)
+		var ready_capacity_unblocked: bool = not bool(host._battle_auto_capture_capacity_blocks_cycle(auto_settings))
+		capacity_unknown_auto_safe_ok = unknown_waited_safely and ready_capacity_unblocked
+		host.battle_auto_attack_enabled = false
+		host.battle_auto_attack_delay = 0.0
+		host.player_profile = original_profile
+		host.current_account_session = original_session
+		host.server_battle_state = original_server_battle_state
 		host.battle_state.erase("serverAuthority")
 		host.battle_state.erase("serverRoomId")
+		host.battle_state.erase("serverRoom")
 		host._set_battle_command_owner("capture")
 		host._sync_battle_buttons()
 		var empty_button = host.battle_command_buttons.get("attack") as Button
@@ -4260,9 +4483,14 @@ func _run_auto_capture_tools_check() -> void:
 	var saw_capture: bool = await host._auto_wait_for_event_type("capture", 1200)
 	var ui_success_ok = saw_capture and bool(host.battle_state.get("lastCaptureSuccess", false)) and str(host.battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 	var reinforced_consumed_ok = PlayerProgressModel.capture_tool_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
-	var status = "ok" if loaded and zone_found and server_main_capture_enabled_ok and server_noncatchable_disabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and auto_target_tool_fallback_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
-	print("capture tools check ready: status=%s server_main_capture=%s noncatchable_disabled=%s server_help_capture=%s menu=%s owned_filter=%s auto_target_fallback=%s auto_regular=%s auto_empty=%s auto_poison=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
+	var status = "ok" if loaded and zone_found and capacity_model_matrix_ok and capacity_player_ui_ok and capacity_capture_tools_disabled_ok and capacity_item_reuse_ok and capacity_unknown_auto_safe_ok and server_main_capture_enabled_ok and server_noncatchable_disabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and auto_target_tool_fallback_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s capacity_model=%s capacity_player_ui=%s capacity_tools_disabled=%s capacity_item_reuse=%s capacity_unknown_auto_safe=%s server_main_capture=%s noncatchable_disabled=%s server_help_capture=%s menu=%s owned_filter=%s auto_target_fallback=%s auto_regular=%s auto_empty=%s auto_poison=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
 		status,
+		str(capacity_model_matrix_ok),
+		str(capacity_player_ui_ok),
+		str(capacity_capture_tools_disabled_ok),
+		str(capacity_item_reuse_ok),
+		str(capacity_unknown_auto_safe_ok),
 		str(server_main_capture_enabled_ok),
 		str(server_noncatchable_disabled_ok),
 		str(server_help_mentions_capture_ok),
@@ -13687,7 +13915,7 @@ func _run_auto_pet_management_safety_check() -> void:
 		and not bool(bound_clear.get("ok", false))
 		and str(bound_clear.get("message", "")).find("绑定") >= 0
 		and not bool(overflow_clear.get("ok", false))
-		and str(overflow_clear.get("message", "")).find("安全收容") >= 0
+		and str(overflow_clear.get("message", "")).find("受保护") >= 0
 		and bool(lock_result.get("locked", false))
 		and not bool(unlock_result.get("locked", true))
 		and batch_pet_state == PlayerProgressModel.PET_STATE_STORAGE

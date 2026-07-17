@@ -5,6 +5,7 @@ const {
   test,
   once,
   createAuthService,
+  createAsyncWriteAuthStore,
   createMemoryAuthStore,
   createHttpServer,
   battleProfile,
@@ -74,6 +75,14 @@ function seedRecoveryStore() {
   assert.equal(staged.ok, true);
   store.save(snapshot);
   return {store, owner, other, staged, pet, privateSeed};
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return {promise, resolve};
 }
 
 test("HTTP pet recovery is discoverable, idempotent, private, and owner-scoped", async (t) => {
@@ -158,4 +167,104 @@ test("HTTP pet recovery is discoverable, idempotent, private, and owner-scoped",
   assert.equal(Object.keys(ownerInternal.petRecoveryShelter.pending).length, 0);
   assert.equal(JSON.stringify(service.snapshot().mutationReceipts).includes(fixture.privateSeed), false);
   assert.equal(JSON.stringify(service.snapshot().mutationReceipts).includes("petRecoveryShelter"), false);
+});
+
+test("HTTP profile read waits for orphan capture recovery to commit", async (t) => {
+  const fixture = seedRecoveryStore();
+  const writeStarted = deferred();
+  const releaseWrite = deferred();
+  let saveCount = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => fixture.store.load(),
+      async saveAsync(nextData) {
+        saveCount += 1;
+        writeStarted.resolve();
+        await releaseWrite.promise;
+        fixture.store.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.markEventConnection({
+    accountId: fixture.owner.account.accountId,
+    sessionId: fixture.owner.session.sessionId,
+  }, true).ok, true);
+  const server = createHttpServer({service, store: fixture.store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    releaseWrite.resolve();
+    await service.waitForDurableIdle();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  let responseSettled = false;
+  const responsePromise = fetchJson(`${base}/profiles/me`, {
+    headers: {authorization: `Bearer ${fixture.owner.session.token}`},
+  }).then((response) => {
+    responseSettled = true;
+    return response;
+  });
+  await writeStarted.promise;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(responseSettled, false);
+  assert.equal(saveCount, 1);
+  assert.equal(
+    Object.keys(internalProfileForAccount(service, fixture.owner.account.accountId).petRecoveryShelter.pending).length,
+    1,
+  );
+
+  releaseWrite.resolve();
+  const response = await responsePromise;
+  assert.equal(response.ok, true);
+  assert.equal(response.profile.petInstances.some((pet) => pet.instanceId === fixture.pet.instanceId), true);
+  assert.equal(Object.hasOwn(response.profile, "petRecoveryShelter"), false);
+  assert.equal(JSON.stringify(response).includes(fixture.privateSeed), false);
+  const persisted = fixture.store.load();
+  const binding = persisted.profileBindings[fixture.owner.account.accountId];
+  assert.equal(Object.keys(persisted.profiles[binding.playerId].profile.petRecoveryShelter.pending).length, 0);
+});
+
+test("HTTP profile recovery returns no success and publishes no pet when storage fails", async (t) => {
+  const fixture = seedRecoveryStore();
+  let saveAttempts = 0;
+  const service = createAuthService({
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => fixture.store.load(),
+      async saveAsync() {
+        saveAttempts += 1;
+        throw new Error("injected recovery storage failure");
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.markEventConnection({
+    accountId: fixture.owner.account.accountId,
+    sessionId: fixture.owner.session.sessionId,
+  }, true).ok, true);
+  const server = createHttpServer({service, store: fixture.store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await service.waitForDurableIdle();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const response = await fetchJson(`${base}/profiles/me`, {
+    headers: {authorization: `Bearer ${fixture.owner.session.token}`},
+  });
+  assert.equal(response.ok, false);
+  assert.equal(response.code, "storage_write_failed");
+  assert.equal(saveAttempts, 1);
+  const cached = internalProfileForAccount(service, fixture.owner.account.accountId);
+  assert.equal(cached.petInstances.some((pet) => pet.instanceId === fixture.pet.instanceId), false);
+  assert.equal(Object.keys(cached.petRecoveryShelter.pending).length, 1);
+  const persisted = fixture.store.load();
+  const binding = persisted.profileBindings[fixture.owner.account.accountId];
+  const storedProfile = persisted.profiles[binding.playerId].profile;
+  assert.equal(storedProfile.petInstances.some((pet) => pet.instanceId === fixture.pet.instanceId), false);
+  assert.equal(Object.keys(storedProfile.petRecoveryShelter.pending).length, 1);
 });

@@ -11,6 +11,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
@@ -114,7 +115,7 @@ const PET_SORT_POWER := "power"
 const PET_SORT_SPECIES := "species"
 const PET_SORT_CAPTURED := "captured"
 const PET_LOW_POWER_FILTER_THRESHOLD := 31
-const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 170.0)
+const BATTLE_COMMAND_PLAYER_SIZE := Vector2(390.0, 196.0)
 const BATTLE_COMMAND_MENU_SIZE := Vector2(300.0, 440.0)
 const BATTLE_COMMAND_BUTTON_ORDER: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run", "help"]
 const BATTLE_CAPTURE_COMMAND_SLOTS: Array[String] = ["attack", "spirit", "capture", "defend", "item", "switch_pet", "run"]
@@ -227,6 +228,7 @@ var encounter_enter_button: Button
 var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
 var battle_command_title_label: Label
+var battle_capture_capacity_label: Label
 var battle_round_panel: PanelContainer
 var battle_round_label: Label
 var battle_timer_panel: PanelContainer
@@ -944,6 +946,8 @@ var pet_encounter_table_preview: bool = false
 var pet_capture_feedback_preview: bool = false
 var pet_skill_training_preview: bool = false
 var capture_tools_preview: bool = false
+var capture_capacity_preview: bool = false
+var capture_capacity_preview_screenshot_path: String = ""
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
@@ -1648,6 +1652,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_capture_feedback_preview")
 	elif pet_skill_training_preview:
 		call_deferred("_run_pet_skill_training_preview")
+	elif capture_capacity_preview:
+		call_deferred("_run_capture_capacity_preview")
 	elif capture_tools_preview:
 		call_deferred("_run_capture_tools_preview")
 	elif auto_map_transfer_check:
@@ -2395,6 +2401,11 @@ func _apply_preview_window_args() -> void:
 			pet_skill_training_preview = true
 		elif arg == "--capture-tools-preview":
 			capture_tools_preview = true
+		elif arg == "--capture-capacity-preview":
+			capture_capacity_preview = true
+		elif arg.begins_with("--capture-capacity-preview-screenshot="):
+			capture_capacity_preview = true
+			capture_capacity_preview_screenshot_path = arg.trim_prefix("--capture-capacity-preview-screenshot=").strip_edges()
 		elif arg == "--battle-preview":
 			battle_preview = true
 		elif arg == "--battle-preview-10v10":
@@ -3015,7 +3026,47 @@ func _run_capture_tools_preview() -> void:
 	var target_id := BattleModel.living_enemy_id(battle_state)
 	if target_id != "":
 		battle_state = BattleModel.set_actor_hp(battle_state, target_id, 22)
-	_open_capture_command_menu()
+		_open_capture_command_menu()
+
+
+func _run_capture_capacity_preview() -> void:
+	profile_save_enabled = false
+	player_profile = PlayerProgressModel.default_profile()
+	var instances: Array[Dictionary] = []
+	for index in range(PlayerProgressModel.PARTY_LIMIT + PlayerProgressModel.STORAGE_LIMIT):
+		var state := PlayerProgressModel.PET_STATE_STANDBY if index < PlayerProgressModel.PARTY_LIMIT else PlayerProgressModel.PET_STATE_STORAGE
+		instances.append(PlayerProgressModel.create_pet_instance_from_form(
+			"capture_capacity_preview_%d" % index,
+			"容量测试宠%d" % (index + 1),
+			"wuli_normal_orange_fire10",
+			state,
+			1
+		))
+	player_profile["petInstances"] = instances
+	var loaded := _load_map("firebud_village_gate", "from_training_yard")
+	var zones := EncounterModel.encounter_zones(map_data)
+	if not loaded or zones.is_empty():
+		return
+	_start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
+	await get_tree().process_frame
+	_set_battle_command_owner("player")
+	_sync_battle_buttons()
+	if capture_capacity_preview_screenshot_path != "":
+		if DisplayServer.get_name() == "headless":
+			print("CAPTURE_CAPACITY_PREVIEW_SCREENSHOT path=%s status=error_headless_renderer" % capture_capacity_preview_screenshot_path)
+			get_tree().quit(1)
+			return
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var directory_error := DirAccess.make_dir_recursive_absolute(capture_capacity_preview_screenshot_path.get_base_dir())
+		var save_error := directory_error
+		if save_error == OK:
+			save_error = get_viewport().get_texture().get_image().save_png(capture_capacity_preview_screenshot_path)
+		print("CAPTURE_CAPACITY_PREVIEW_SCREENSHOT path=%s status=%s" % [
+			capture_capacity_preview_screenshot_path,
+			"ok" if save_error == OK else "error_%d" % save_error,
+		])
+		get_tree().quit(0 if save_error == OK else 1)
 
 
 func _force_capture_seed_for_result(tool_id: String, expected_success: bool) -> void:
@@ -6211,6 +6262,8 @@ func _submit_battle_auto_player_action() -> bool:
 		battle_auto_attack_player_submissions += 1
 		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 		return true
+	if _battle_auto_capture_capacity_blocks_cycle(capture_settings):
+		return false
 	if _battle_auto_try_submit_capture():
 		battle_auto_attack_player_submissions += 1
 		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
@@ -6369,13 +6422,6 @@ func _battle_auto_try_submit_capture() -> bool:
 	if target_id == "":
 		return false
 	var target := BattleModel.actor_by_id(battle_state, target_id)
-	if not _battle_auto_has_capture_space():
-		var has_hang_activity := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
-		var full_message := "宠物栏和兽栏已满，自动挂机已停止，请清理位置后再继续。" if has_hang_activity else "宠物栏和兽栏已满，请先清理位置。"
-		_set_battle_message(full_message)
-		if has_hang_activity:
-			_stop_hang_activity(full_message, false)
-		return false
 	var inventory := BattleModel.capture_tool_inventory(battle_state)
 	var preferred_tool_id := str(settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, CaptureToolCatalog.EMPTY_HAND_ID))
 	var tool_id := _battle_auto_capture_tool_for_target(preferred_tool_id, inventory, target_id)
@@ -6393,6 +6439,27 @@ func _battle_auto_try_submit_capture() -> bool:
 	_submit_player_battle_command("capture", target_id, true)
 	if _battle_auto_capture_enabled() and battle_command_owner == "pet":
 		_battle_auto_submit_capture_pet_action(settings)
+	return true
+
+
+func _battle_auto_capture_capacity_blocks_cycle(settings: Dictionary) -> bool:
+	if not bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false)):
+		return false
+	if _battle_auto_capture_target_id(settings) == "":
+		return false
+	var capacity := _battle_capture_capacity_snapshot()
+	if not bool(capacity.get("known", false)):
+		_set_battle_message(BattleCaptureCapacityModel.SYNCING_TEXT)
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		return true
+	if bool(capacity.get("canCapture", false)):
+		return false
+	var has_hang_activity := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	var full_message := "宠物栏和兽栏已满，自动挂机已停止，请清理位置后再继续。" if has_hang_activity else "宠物栏和兽栏已满，请先清理位置。"
+	_set_battle_message(full_message)
+	if has_hang_activity:
+		_stop_hang_activity(full_message, false)
+	battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
 	return true
 
 
@@ -6564,24 +6631,54 @@ func _battle_auto_capture_actor_matches(actor: Dictionary, settings: Dictionary)
 
 
 func _battle_auto_has_capture_space() -> bool:
-	var profile_pet_count := (
-		PlayerProgressModel.party_pet_instances(player_profile).size()
-		+ PlayerProgressModel.storage_pet_instances(player_profile).size()
-	)
-	return (
-		profile_pet_count + _battle_auto_pending_capture_count()
-		< PlayerProgressModel.PARTY_LIMIT + PlayerProgressModel.STORAGE_LIMIT
-	)
+	return bool(_battle_capture_capacity_snapshot().get("canCapture", false))
 
 
-func _battle_auto_pending_capture_count() -> int:
-	if not _battle_is_server_authority():
-		return 0
+func _battle_capture_capacity_snapshot() -> Dictionary:
 	var room := server_battle_state.get("room", {}) as Dictionary if server_battle_state.get("room", {}) is Dictionary else {}
 	var active_room_id := str(battle_state.get("serverRoomId", "")).strip_edges()
-	if room.is_empty() or active_room_id == "" or str(room.get("roomId", "")).strip_edges() != active_room_id:
-		return 0
-	return ServerBattleRoomModel.captured_wild_pet_count_for_account(room, current_account_session)
+	var state_room := battle_state.get("serverRoom", {}) as Dictionary if battle_state.get("serverRoom", {}) is Dictionary else {}
+	if (
+		_battle_is_server_authority()
+		and not state_room.is_empty()
+		and str(state_room.get("roomId", "")).strip_edges() == active_room_id
+		and (room.is_empty() or str(room.get("roomId", "")).strip_edges() != active_room_id)
+	):
+		room = state_room
+	return BattleCaptureCapacityModel.snapshot(
+		player_profile,
+		room,
+		current_account_session,
+		active_room_id,
+		_battle_is_server_authority()
+	)
+
+
+func _battle_capture_capacity_blocks_action(show_message: bool = true) -> bool:
+	var capacity := _battle_capture_capacity_snapshot()
+	if bool(capacity.get("canCapture", false)):
+		return false
+	if show_message:
+		_set_battle_message(str(capacity.get("blockedMessage", BattleCaptureCapacityModel.SYNCING_TEXT)))
+		_sync_battle_buttons()
+	return true
+
+
+func _sync_battle_capture_capacity_label(capacity: Dictionary, has_capture_target: bool) -> void:
+	if battle_capture_capacity_label == null:
+		return
+	battle_capture_capacity_label.visible = battle_active and (
+		battle_command_owner == "capture"
+		or (battle_command_owner == "player" and has_capture_target)
+	)
+	if not battle_capture_capacity_label.visible:
+		return
+	battle_capture_capacity_label.text = str(capacity.get("label", BattleCaptureCapacityModel.SYNCING_TEXT))
+	var available := bool(capacity.get("known", false)) and bool(capacity.get("canCapture", false))
+	battle_capture_capacity_label.add_theme_color_override(
+		"font_color",
+		Color("d8c78f") if available else Color("ffb26b")
+	)
 
 
 func _battle_auto_submit_item_action(item_id: String, target_id: String = "") -> bool:
@@ -9837,6 +9934,8 @@ func _begin_player_enemy_target_selection(command_id: String) -> void:
 
 func _submit_player_battle_command(command_id: String, target_id: String = "", auto_capture: bool = false) -> void:
 	battle_target_mode = "enemy"
+	if command_id == "capture" and _battle_capture_capacity_blocks_action():
+		return
 	if command_id == "attack" or command_id == "capture":
 		battle_selected_target_id = target_id
 		if battle_selected_target_id == "":
@@ -10049,6 +10148,8 @@ func _open_item_command_menu() -> void:
 
 
 func _open_capture_command_menu() -> void:
+	if _battle_capture_capacity_blocks_action():
+		return
 	if _first_catchable_living_enemy_id() == "":
 		_set_battle_message("当前没有可捕捉的宠物。")
 		_sync_battle_buttons()
@@ -10140,6 +10241,8 @@ func _on_capture_battle_command_pressed(command_id: String) -> void:
 		_set_battle_command_owner("player")
 		_set_battle_message("重新选择人物指令。")
 		return
+	if _battle_capture_capacity_blocks_action():
+		return
 	var tool_id := _capture_tool_id_for_command(command_id)
 	if tool_id == "":
 		_set_battle_message("这个捕捉方式暂未开放。")
@@ -10152,6 +10255,8 @@ func _on_capture_battle_command_pressed(command_id: String) -> void:
 
 
 func _begin_capture_target_selection(tool_id: String) -> void:
+	if _battle_capture_capacity_blocks_action():
+		return
 	var target_id := _first_catchable_living_enemy_id()
 	if target_id == "":
 		_set_battle_message("当前没有可捕捉的宠物。")
@@ -11418,6 +11523,9 @@ func _sync_battle_buttons() -> void:
 	var has_enemy := can_command and BattleModel.living_enemy_id(battle_state) != ""
 	var has_capture_target := can_command and _first_catchable_living_enemy_id() != ""
 	var has_ally := can_command and BattleModel.living_ally_id(battle_state) != ""
+	var capture_capacity := _battle_capture_capacity_snapshot()
+	var capture_allowed := bool(capture_capacity.get("canCapture", false))
+	_sync_battle_capture_capacity_label(capture_capacity, has_capture_target)
 	if battle_command_owner == "player" and battle_command_buttons.has("run"):
 		var run_button := battle_command_buttons["run"] as Button
 		if run_button != null:
@@ -11425,6 +11533,7 @@ func _sync_battle_buttons() -> void:
 	for command_id in battle_command_buttons.keys():
 		var button := battle_command_buttons[command_id] as Button
 		if button != null:
+			button.tooltip_text = ""
 			button.disabled = not can_command
 			if battle_command_owner == "pet":
 				if str(command_id) == "help":
@@ -11464,7 +11573,9 @@ func _sync_battle_buttons() -> void:
 						button.disabled = not can_command
 					_:
 						var capture_tool_id := str(battle_capture_button_tool_ids.get(str(command_id), ""))
-						button.disabled = capture_tool_id == "" or not has_capture_target or not BattleModel.has_capture_tool(battle_state, capture_tool_id)
+						button.disabled = not capture_allowed or capture_tool_id == "" or not has_capture_target or not BattleModel.has_capture_tool(battle_state, capture_tool_id)
+						if not capture_allowed:
+							button.tooltip_text = str(capture_capacity.get("blockedMessage", BattleCaptureCapacityModel.SYNCING_TEXT))
 			elif battle_command_owner == "switch_pet":
 				if str(command_id) == "run":
 					button.disabled = not can_command
@@ -11479,7 +11590,9 @@ func _sync_battle_buttons() -> void:
 						"attack":
 							button.disabled = not has_enemy
 						"capture":
-							button.disabled = not has_capture_target
+							button.disabled = not has_capture_target or not capture_allowed
+							if not capture_allowed:
+								button.tooltip_text = str(capture_capacity.get("blockedMessage", BattleCaptureCapacityModel.SYNCING_TEXT))
 						"defend", "run", "help":
 							button.disabled = not can_command
 						"item":
@@ -11503,7 +11616,9 @@ func _sync_battle_buttons() -> void:
 						"attack":
 							button.disabled = not has_enemy
 						"capture":
-							button.disabled = not has_capture_target
+							button.disabled = not has_capture_target or not capture_allowed
+							if not capture_allowed:
+								button.tooltip_text = str(capture_capacity.get("blockedMessage", BattleCaptureCapacityModel.SYNCING_TEXT))
 						"spirit":
 							button.disabled = not has_ally
 						"switch_pet":

@@ -216,6 +216,104 @@ function pendingPetCaptures(profile) {
   };
 }
 
+function petCaptureRecoveryOpportunity(profile) {
+  const pending = pendingPetCaptures(profile);
+  if (!pending.ok) {
+    return pending;
+  }
+  const instances = Array.isArray(profile && profile.petInstances)
+    ? profile.petInstances
+    : (Array.isArray(profile && profile.pets) ? profile.pets : []);
+  const partyCount = instances.filter((pet) => pet && String(pet.state || "standby") !== "storage").length;
+  const storageCount = instances.filter((pet) => pet && String(pet.state || "standby") === "storage").length;
+  const available = Math.max(0, PARTY_LIMIT + STORAGE_LIMIT - partyCount - storageCount);
+  return {
+    ok: true,
+    eligible: pending.records.length > 0 && available > 0,
+    pendingCount: pending.records.length,
+    partyCount,
+    storageCount,
+    available,
+  };
+}
+
+function captureRecoveryOrder(record) {
+  const capturedSerial = Number(record && record.pet && record.pet.capturedSerial);
+  return Number.isSafeInteger(capturedSerial) && capturedSerial > 0
+    ? capturedSerial
+    : Number.MAX_SAFE_INTEGER;
+}
+
+function comparePendingCaptures(left, right) {
+  return captureRecoveryOrder(left) - captureRecoveryOrder(right)
+    || Date.parse(String(left && left.createdAt || "")) - Date.parse(String(right && right.createdAt || ""))
+    || String(left && left.recoveryId || "").localeCompare(String(right && right.recoveryId || ""));
+}
+
+function reconcilePendingPetCaptures(profile, input) {
+  if (
+    !isObjectRecord(profile)
+    || !isObjectRecord(input)
+    || !hasExactKeys(input, ["completedAt"])
+    || stableTimestamp(input.completedAt) === ""
+  ) {
+    return {ok: false, code: "pet_capture_shelter_reconcile_invalid"};
+  }
+  const pending = pendingPetCaptures(profile);
+  if (!pending.ok) {
+    return pending;
+  }
+  if (pending.records.length === 0) {
+    return {
+      ok: true,
+      changed: false,
+      recoveredCount: 0,
+      remainingCount: 0,
+      capacityFull: false,
+      recoveries: [],
+      profile,
+    };
+  }
+  const candidate = structuredClone(profile);
+  const recoveries = [];
+  let capacityFull = false;
+  for (const record of pending.records.sort(comparePendingCaptures)) {
+    const recovered = recoverPetCapture(candidate, {
+      recoveryId: record.recoveryId,
+      completedAt: input.completedAt,
+    });
+    if (!recovered.ok) {
+      if (recovered.code === "pet_capture_shelter_capacity_full") {
+        capacityFull = true;
+        break;
+      }
+      return {ok: false, code: recovered.code || "pet_capture_shelter_reconcile_failed"};
+    }
+    if (recovered.changed) {
+      recoveries.push({
+        recoveryId: String(recovered.recoveryId || ""),
+        petInstanceId: String(recovered.petInstanceId || ""),
+        formId: String(recovered.pet && (recovered.pet.formId || recovered.pet.templateId) || record.formId || ""),
+        disposition: String(recovered.disposition || ""),
+        replayed: Boolean(recovered.replayed),
+      });
+    }
+  }
+  const remaining = pendingPetCaptures(candidate);
+  if (!remaining.ok) {
+    return {ok: false, code: remaining.code || "pet_capture_shelter_reconcile_failed"};
+  }
+  return {
+    ok: true,
+    changed: recoveries.length > 0,
+    recoveredCount: recoveries.length,
+    remainingCount: remaining.records.length,
+    capacityFull,
+    recoveries,
+    profile: candidate,
+  };
+}
+
 function petMatchesCapture(pet, record) {
   const identity = petIdentity(pet);
   return identity.instanceId === record.petInstanceId
@@ -442,7 +540,9 @@ module.exports = Object.freeze({
   STORAGE_LIMIT,
   captureRecoveryId,
   pendingPetCaptures,
+  petCaptureRecoveryOpportunity,
   readShelter,
+  reconcilePendingPetCaptures,
   recoverPetCapture,
   stagePetCapture,
 });

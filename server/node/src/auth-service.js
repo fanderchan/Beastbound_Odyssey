@@ -73,7 +73,9 @@ const {
   PROFILE_KEY: PET_RECOVERY_SHELTER_PROFILE_KEY,
   captureRecoveryId,
   pendingPetCaptures,
+  petCaptureRecoveryOpportunity,
   readShelter: readPetRecoveryShelter,
+  reconcilePendingPetCaptures,
   recoverPetCapture,
   stagePetCapture,
 } = require("./auth/pet-capture-shelter");
@@ -1373,11 +1375,47 @@ function createAuthService(options = {}) {
       return fail(resolved.code, resolved.message);
     }
     const ensured = ensureProfileForAccount(data, resolved.account, now);
-    if (ensured.created) {
+    let binding = ensured.binding;
+    let profileDoc = ensured.profileDoc;
+    const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
+      ? profileDoc.profile
+      : null;
+    let recovered = false;
+    if (profile) {
+      const opportunity = petCaptureRecoveryOpportunity(profile);
+      if (
+        opportunity.ok
+        && opportunity.eligible
+        && !activeBattleRoomForAccount(data, resolved.account.accountId)
+      ) {
+        const reconciliation = reconcilePendingPetCaptures(profile, {completedAt: isoNow(now)});
+        if (reconciliation.ok && reconciliation.changed) {
+          for (const entry of reconciliation.recoveries) {
+            const formId = String(entry && entry.formId || "");
+            if (formId !== "") {
+              recordProfilePetCodexForm(
+                reconciliation.profile,
+                formId,
+                true,
+              );
+            }
+          }
+          const persisted = persistProfileForAccount(
+            data,
+            resolved.account,
+            binding,
+            reconciliation.profile,
+            now,
+          );
+          binding = persisted.binding;
+          profileDoc = persisted.profileDoc;
+          recovered = true;
+        }
+      }
+    }
+    if (ensured.created || recovered) {
       save(data);
     }
-    const binding = ensured.binding;
-    const profileDoc = ensured.profileDoc;
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: binding,
@@ -1559,6 +1597,14 @@ function createAuthService(options = {}) {
       || !profileDoc.profile
       || typeof profileDoc.profile !== "object"
       || Array.isArray(profileDoc.profile)
+    ) {
+      return {handled: false};
+    }
+    const opportunity = petCaptureRecoveryOpportunity(profileDoc.profile);
+    if (
+      opportunity.ok
+      && opportunity.eligible
+      && !activeBattleRoomForAccount(data, resolved.account.accountId)
     ) {
       return {handled: false};
     }

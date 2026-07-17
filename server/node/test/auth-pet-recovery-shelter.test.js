@@ -10,6 +10,7 @@ const {
   battleProfile,
   profileItemCount,
 } = require("../test-support/auth-service-test-context");
+const {stagePetCapture} = require("../src/auth/pet-capture-shelter");
 
 function captureProfile(name, netCount = 1) {
   const profile = battleProfile(name, {
@@ -43,6 +44,68 @@ function capacityPet(index) {
     defense: 5,
     quick: 30,
   };
+}
+
+function orphanCapturedPet(accountId, capturedSerial) {
+  const roomId = `battle_room_orphan_${capturedSerial}`;
+  const actorId = `wild_orphan_${capturedSerial}`;
+  const instanceId = `pet_orphan_${capturedSerial}`;
+  return {
+    roomId,
+    actorId,
+    pet: {
+      instanceId,
+      petId: instanceId,
+      formId: "blue_man_dragon_water10",
+      templateId: "blue_man_dragon_water10",
+      speciesId: "blue_man_dragon_water10",
+      name: `孤立蓝人龙${capturedSerial}`,
+      state: "standby",
+      source: "wild_capture",
+      capturedSerial,
+      capturedBattleRoomId: roomId,
+      capturedBattleActorId: actorId,
+      capturedByAccountId: accountId,
+      level: 1,
+      exp: 0,
+      hp: 65,
+      maxHp: 65,
+      attack: 14,
+      defense: 9,
+      quick: 6,
+      initialStats: {maxHp: 65, attack: 14, defense: 9, quick: 6},
+      petGrowth: {
+        schemaVersion: 1,
+        private: {
+          privateSeed: String(capturedSerial).padStart(64, "0"),
+          privateRoll: {innateGrowthBonus: {maxHp: 0, attack: 0, defense: 0, quick: 0}},
+        },
+      },
+    },
+    createdAt: new Date(Date.parse("2026-07-17T03:00:00.000Z") + capturedSerial).toISOString(),
+  };
+}
+
+function seedOrphanCaptures(store, username, capturedSerials) {
+  const seed = createAuthService({store, allowFullProfileSave: true});
+  const account = seed.register({username, password: "test1234", displayName: "孤立捕捉号"});
+  assert.equal(account.ok, true);
+  assert.equal(seed.saveProfile(account.session.token, {
+    expectedRevision: 0,
+    profile: captureProfile("孤立捕捉号"),
+  }).ok, true);
+  const data = store.load();
+  const binding = data.profileBindings[account.account.accountId];
+  const profileDoc = data.profiles[binding.playerId];
+  for (const capturedSerial of capturedSerials) {
+    const input = orphanCapturedPet(account.account.accountId, capturedSerial);
+    const staged = stagePetCapture(profileDoc.profile, input);
+    assert.equal(staged.ok, true);
+  }
+  binding.profileRevision += 1;
+  profileDoc.profileRevision = binding.profileRevision;
+  store.save(data);
+  return {account, revision: binding.profileRevision};
 }
 
 function startPendingCapture(store, username) {
@@ -118,11 +181,26 @@ test("a captured private pet survives a mid-battle restart, full capacity, and r
   const accountId = staged.account.account.accountId;
   const privateSeed = staged.pending.pet.petGrowth.private.privateSeed;
   const exactPet = structuredClone(staged.pending.pet);
+  const revisionBeforeActiveRead = staged.service.snapshot().profileBindings[accountId].profileRevision;
 
   const beforeRestartPublic = staged.service.getProfile(token);
   assert.equal(Object.hasOwn(beforeRestartPublic.profile, "petRecoveryShelter"), false);
   assert.equal(JSON.stringify(beforeRestartPublic).includes(privateSeed), false);
   assert.equal(profileItemCount(beforeRestartPublic.profile, "capture_net"), 0);
+  assert.equal(beforeRestartPublic.profileBinding.profileRevision, revisionBeforeActiveRead);
+  assert.equal(beforeRestartPublic.profile.petInstances.some((pet) => pet.instanceId === exactPet.instanceId), false);
+  assert.equal(
+    Object.keys(internalProfileForAccount(staged.service, accountId).petRecoveryShelter.pending).length,
+    1,
+  );
+
+  const fullData = store.load();
+  const fullBinding = fullData.profileBindings[accountId];
+  const fullProfileDoc = fullData.profiles[fullBinding.playerId];
+  fullProfileDoc.profile.petInstances = Array.from({length: 25}, (_value, index) => capacityPet(index));
+  fullBinding.profileRevision += 1;
+  fullProfileDoc.profileRevision = fullBinding.profileRevision;
+  store.save(fullData);
 
   const restarted = createAuthService({store, allowFullProfileSave: true});
   assert.deepEqual(restarted.snapshot().battleRooms, {});
@@ -134,21 +212,12 @@ test("a captured private pet survives a mid-battle restart, full capacity, and r
   assert.equal(JSON.stringify(listed).includes(privateSeed), false);
   assert.equal(JSON.stringify(listed).includes("privateRoll"), false);
 
-  const current = restarted.getProfile(token);
-  const fullProfile = structuredClone(current.profile);
-  fullProfile.petInstances = Array.from({length: 25}, (_value, index) => capacityPet(index));
-  delete fullProfile.pets;
-  const filled = restarted.saveProfile(token, {
-    expectedRevision: current.profileBinding.profileRevision,
-    profile: fullProfile,
-  });
-  assert.equal(filled.ok, true);
   const filledPublic = restarted.getProfile(token);
   assert.equal(filledPublic.ok, true);
   const afterFillInternal = internalProfileForAccount(restarted, accountId);
   assert.deepEqual(afterFillInternal.petRecoveryShelter.pending[staged.recoveryId].pet, exactPet);
 
-  const revisionBeforeFullClaim = filled.profileBinding.profileRevision;
+  const revisionBeforeFullClaim = filledPublic.profileBinding.profileRevision;
   const fullClaim = restarted.claimPetRecovery(token, {recoveryId: staged.recoveryId});
   assert.equal(fullClaim.ok, false);
   assert.equal(fullClaim.code, "pet_capture_shelter_capacity_full");
@@ -195,6 +264,82 @@ test("a captured private pet survives a mid-battle restart, full capacity, and r
       .filter((pet) => pet.instanceId === exactPet.instanceId).length,
     1,
   );
+});
+
+test("an orphaned capture is restored by the next safe profile read with one revision", () => {
+  const store = createMemoryAuthStore();
+  const seeded = seedOrphanCaptures(store, "recoveryautoread", [3, 1, 2]);
+  const service = createAuthService({store});
+  assert.deepEqual(service.snapshot().battleRooms, {});
+
+  const restored = service.getProfile(seeded.account.session.token);
+  assert.equal(restored.ok, true);
+  assert.equal(restored.profileBinding.profileRevision, seeded.revision + 1);
+  assert.deepEqual(
+    restored.profile.petInstances.map((pet) => pet.instanceId),
+    ["pet_orphan_1", "pet_orphan_2", "pet_orphan_3"],
+  );
+  assert.equal(Object.hasOwn(restored.profile, "petRecoveryShelter"), false);
+  assert.equal(JSON.stringify(restored).includes("privateSeed"), false);
+  const internal = internalProfileForAccount(service, seeded.account.account.accountId);
+  assert.equal(Object.keys(internal.petRecoveryShelter.pending).length, 0);
+  assert.equal(Object.keys(internal.petRecoveryShelter.completed).length, 3);
+
+  const repeated = service.getProfile(seeded.account.session.token);
+  assert.equal(repeated.profileBinding.profileRevision, restored.profileBinding.profileRevision);
+  assert.equal(repeated.profile.petInstances.length, 3);
+});
+
+test("a full profile with pending recovery stays on the connected pure-read path", () => {
+  const store = createMemoryAuthStore();
+  const seeded = seedOrphanCaptures(store, "recoveryfullread", [1]);
+  const data = store.load();
+  const binding = data.profileBindings[seeded.account.account.accountId];
+  data.profiles[binding.playerId].profile.petInstances = Array.from(
+    {length: 25},
+    (_value, index) => capacityPet(index),
+  );
+  store.save(data);
+  const service = createAuthService({store});
+  assert.equal(service.markEventConnection({
+    accountId: seeded.account.account.accountId,
+    sessionId: seeded.account.session.sessionId,
+  }, true).ok, true);
+
+  const read = service._httpTryPureRead("getProfile", [seeded.account.session.token]);
+  assert.equal(read.handled, true);
+  assert.equal(read.result.ok, true);
+  assert.equal(read.result.profileBinding.profileRevision, seeded.revision);
+  assert.equal(read.result.profile.petInstances.length, 25);
+  assert.equal(
+    Object.keys(internalProfileForAccount(service, seeded.account.account.accountId).petRecoveryShelter.pending).length,
+    1,
+  );
+});
+
+test("background recovery discards the whole candidate when a later identity conflicts", () => {
+  const store = createMemoryAuthStore();
+  const seeded = seedOrphanCaptures(store, "recoveryatomic", [1, 2]);
+  const data = store.load();
+  const binding = data.profileBindings[seeded.account.account.accountId];
+  data.profiles[binding.playerId].profile.petInstances.push({
+    instanceId: "pet_orphan_2",
+    petId: "pet_orphan_2",
+    formId: "wuli_normal_orange_fire10",
+    templateId: "wuli_normal_orange_fire10",
+    state: "standby",
+  });
+  store.save(data);
+  const service = createAuthService({store});
+  const before = structuredClone(internalProfileForAccount(service, seeded.account.account.accountId));
+
+  const result = service.getProfile(seeded.account.session.token);
+  assert.equal(result.ok, true);
+  assert.equal(result.profileBinding.profileRevision, seeded.revision);
+  const after = internalProfileForAccount(service, seeded.account.account.accountId);
+  assert.deepEqual(after, before);
+  assert.equal(after.petInstances.some((pet) => pet.instanceId === "pet_orphan_1"), false);
+  assert.equal(Object.keys(after.petRecoveryShelter.pending).length, 2);
 });
 
 function failingMaterializeAuthority() {
@@ -437,5 +582,5 @@ test("durable capture replays the committed success after the runtime battle roo
   assert.equal(staleSaveCalls, 0);
   const internal = internalProfileForAccount(restarted, account.account.accountId);
   assert.equal(Object.keys(internal.petRecoveryShelter.pending).length, 1);
-  assert.equal(profileItemCount(restarted.getProfile(account.session.token).profile, "capture_net"), 0);
+  assert.equal(profileItemCount(internal, "capture_net"), 0);
 });

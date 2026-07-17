@@ -5519,7 +5519,7 @@ static func can_clear_storage_pet(profile: Dictionary, instance_id: String) -> D
 	if _pet_required_by_active_quest(normalized, instance):
 		return {"ok": false, "message": "%s 是当前任务需要的宠物，不能清理。" % str(instance.get("name", "宠物"))}
 	if bool(instance.get("captureOverflowPending", false)):
-		return {"ok": false, "message": "%s 正在等待安全收容，不能清理。" % str(instance.get("name", "宠物"))}
+		return {"ok": false, "message": "%s 当前受保护，暂时不能清理。" % str(instance.get("name", "宠物"))}
 	return {"ok": true, "message": "%s 可以清理。" % str(instance.get("name", "宠物"))}
 
 

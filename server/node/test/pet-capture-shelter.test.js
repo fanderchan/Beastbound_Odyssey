@@ -160,6 +160,98 @@ test("recovery requires a real slot, preserves pending on full capacity, and res
   assert.equal(profile.petInstances.filter((pet) => pet.instanceId === "pet_captured_17").length, 1);
 });
 
+test("background reconciliation uses capture order, fills available slots, and leaves the source atomic", () => {
+  const profile = fullProfile();
+  profile.petInstances = profile.petInstances.slice(0, 23);
+  const staged = [30, 10, 20].map((capturedSerial) => {
+    const roomId = `battle_room_reconcile_${capturedSerial}`;
+    const actorId = `wild_reconcile_${capturedSerial}`;
+    const instanceId = `pet_reconcile_${capturedSerial}`;
+    return shelter.stagePetCapture(profile, {
+      roomId,
+      actorId,
+      pet: capturedPet({
+        instanceId,
+        petId: instanceId,
+        capturedSerial,
+        capturedBattleRoomId: roomId,
+        capturedBattleActorId: actorId,
+      }),
+      createdAt: `2026-07-17T01:02:${String(capturedSerial).padStart(2, "0")}.000Z`,
+    });
+  });
+  assert.equal(staged.every((result) => result.ok), true);
+  const before = structuredClone(profile);
+  const opportunity = shelter.petCaptureRecoveryOpportunity(profile);
+  assert.deepEqual(opportunity, {
+    ok: true,
+    eligible: true,
+    pendingCount: 3,
+    partyCount: 5,
+    storageCount: 18,
+    available: 2,
+  });
+
+  const reconciled = shelter.reconcilePendingPetCaptures(profile, {
+    completedAt: "2026-07-17T01:05:00.000Z",
+  });
+  assert.equal(reconciled.ok, true);
+  assert.equal(reconciled.changed, true);
+  assert.equal(reconciled.recoveredCount, 2);
+  assert.equal(reconciled.remainingCount, 1);
+  assert.equal(reconciled.capacityFull, true);
+  assert.deepEqual(reconciled.recoveries.map((entry) => entry.petInstanceId), [
+    "pet_reconcile_10",
+    "pet_reconcile_20",
+  ]);
+  assert.equal(reconciled.profile.petInstances.length, 25);
+  assert.equal(Object.keys(reconciled.profile.petRecoveryShelter.pending).length, 1);
+  assert.equal(
+    Object.values(reconciled.profile.petRecoveryShelter.pending)[0].petInstanceId,
+    "pet_reconcile_30",
+  );
+  assert.deepEqual(profile, before);
+});
+
+test("background reconciliation publishes nothing when a later pending identity conflicts", () => {
+  const profile = {petInstances: [], nextPetInstanceSerial: 1};
+  for (const capturedSerial of [1, 2]) {
+    const roomId = `battle_room_atomic_${capturedSerial}`;
+    const actorId = `wild_atomic_${capturedSerial}`;
+    const instanceId = `pet_atomic_${capturedSerial}`;
+    const staged = shelter.stagePetCapture(profile, {
+      roomId,
+      actorId,
+      pet: capturedPet({
+        instanceId,
+        petId: instanceId,
+        capturedSerial,
+        capturedBattleRoomId: roomId,
+        capturedBattleActorId: actorId,
+      }),
+      createdAt: `2026-07-17T01:02:0${capturedSerial}.000Z`,
+    });
+    assert.equal(staged.ok, true);
+  }
+  profile.petInstances.push({
+    instanceId: "pet_atomic_2",
+    petId: "pet_atomic_2",
+    formId: "wuli_normal_orange_fire10",
+    templateId: "wuli_normal_orange_fire10",
+    state: "standby",
+  });
+  const before = structuredClone(profile);
+
+  const reconciled = shelter.reconcilePendingPetCaptures(profile, {
+    completedAt: "2026-07-17T01:05:00.000Z",
+  });
+  assert.equal(reconciled.ok, false);
+  assert.equal(reconciled.code, "pet_capture_shelter_identity_conflict");
+  assert.deepEqual(profile, before);
+  assert.equal(profile.petInstances.some((pet) => pet.instanceId === "pet_atomic_1"), false);
+  assert.equal(Object.keys(profile.petRecoveryShelter.pending).length, 2);
+});
+
 test("malformed or future shelter state fails closed and pending records are never trimmed", () => {
   for (const value of [
     null,
