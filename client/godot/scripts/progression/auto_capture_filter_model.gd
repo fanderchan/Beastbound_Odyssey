@@ -2,10 +2,10 @@ extends RefCounted
 
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 const MAX_LINE_IDS := 32
 const MAX_OWNED_SAME_FORM := 999
-const MAX_LEVEL_ONE_STAT := 999999
+const MAX_LEVEL_ONE_PERCENTILE := 100
 
 const ELEMENT_MODE_ANY := "any"
 const ELEMENT_MODE_ALL := "all"
@@ -44,11 +44,11 @@ static func default_policy() -> Dictionary:
 		},
 		"onlyNewCodexForm": false,
 		"maxOwnedSameForm": 0,
-		"levelOneFourV": {
-			"maxHp": {"min": 0, "max": 0},
-			"attack": {"min": 0, "max": 0},
-			"defense": {"min": 0, "max": 0},
-			"quick": {"min": 0, "max": 0},
+		"levelOneMinimumPercentiles": {
+			"maxHp": 0,
+			"attack": 0,
+			"defense": 0,
+			"quick": 0,
 		},
 	}
 
@@ -66,12 +66,12 @@ static func normalize_policy(value) -> Dictionary:
 	}
 	normalized["onlyNewCodexForm"] = bool(raw.get("onlyNewCodexForm", false))
 	normalized["maxOwnedSameForm"] = clampi(int(raw.get("maxOwnedSameForm", 0)), 0, MAX_OWNED_SAME_FORM)
-	var raw_four_value = raw.get("levelOneFourV", {})
-	var raw_four := raw_four_value as Dictionary if raw_four_value is Dictionary else {}
-	var four := {}
+	var raw_percentiles_value = raw.get("levelOneMinimumPercentiles", {}) if int(raw.get("schemaVersion", 0)) == SCHEMA_VERSION else {}
+	var raw_percentiles := raw_percentiles_value as Dictionary if raw_percentiles_value is Dictionary else {}
+	var percentiles := {}
 	for stat_id in STAT_IDS:
-		four[stat_id] = _normalized_stat_range(raw_four.get(stat_id, {}))
-	normalized["levelOneFourV"] = four
+		percentiles[stat_id] = clampi(int(raw_percentiles.get(stat_id, 0)), 0, MAX_LEVEL_ONE_PERCENTILE)
+	normalized["levelOneMinimumPercentiles"] = percentiles
 	return normalized
 
 
@@ -86,8 +86,7 @@ static func ui_keys() -> Array[String]:
 	for element_id in ELEMENT_IDS:
 		keys.append(ui_element_key(element_id))
 	for stat_id in STAT_IDS:
-		keys.append(ui_stat_min_key(stat_id))
-		keys.append(ui_stat_max_key(stat_id))
+		keys.append(ui_stat_key(stat_id))
 	return keys
 
 
@@ -99,12 +98,8 @@ static func ui_element_key(element_id: String) -> String:
 	return "filterPolicy.element.%s" % element_id
 
 
-static func ui_stat_min_key(stat_id: String) -> String:
-	return "filterPolicy.levelOneFourV.%s.min" % stat_id
-
-
-static func ui_stat_max_key(stat_id: String) -> String:
-	return "filterPolicy.levelOneFourV.%s.max" % stat_id
+static func ui_stat_key(stat_id: String) -> String:
+	return "filterPolicy.levelOneMinimumPercentiles.%s" % stat_id
 
 
 static func with_ui_value(value, key: String, next_value) -> Dictionary:
@@ -133,20 +128,11 @@ static func with_ui_value(value, key: String, next_value) -> Dictionary:
 				(policy["element"] as Dictionary)["ids"] = ids
 				return normalize_policy(policy)
 			for stat_id in STAT_IDS:
-				var four := policy["levelOneFourV"] as Dictionary
-				var bounds := (four.get(stat_id, {}) as Dictionary).duplicate(true)
-				if key == ui_stat_min_key(stat_id):
-					bounds["min"] = clampi(int(next_value), 0, MAX_LEVEL_ONE_STAT)
-					if int(bounds.get("max", 0)) > 0 and int(bounds.get("min", 0)) > int(bounds.get("max", 0)):
-						bounds["max"] = bounds["min"]
-				elif key == ui_stat_max_key(stat_id):
-					bounds["max"] = clampi(int(next_value), 0, MAX_LEVEL_ONE_STAT)
-					if int(bounds.get("max", 0)) > 0 and int(bounds.get("min", 0)) > int(bounds.get("max", 0)):
-						bounds["min"] = bounds["max"]
-				else:
+				if key != ui_stat_key(stat_id):
 					continue
-				four[stat_id] = bounds
-				policy["levelOneFourV"] = four
+				var percentiles := policy["levelOneMinimumPercentiles"] as Dictionary
+				percentiles[stat_id] = clampi(int(next_value), 0, MAX_LEVEL_ONE_PERCENTILE)
+				policy["levelOneMinimumPercentiles"] = percentiles
 				return normalize_policy(policy)
 	return normalize_policy(policy)
 
@@ -182,10 +168,9 @@ static func element_label(element_id: String) -> String:
 
 
 static func has_level_one_rules(value) -> bool:
-	var four := normalize_policy(value).get("levelOneFourV", {}) as Dictionary
+	var percentiles := normalize_policy(value).get("levelOneMinimumPercentiles", {}) as Dictionary
 	for stat_id in STAT_IDS:
-		var bounds := four.get(stat_id, {}) as Dictionary
-		if int(bounds.get("min", 0)) > 0 or int(bounds.get("max", 0)) > 0:
+		if int(percentiles.get(stat_id, 0)) > 0:
 			return true
 	return false
 
@@ -201,8 +186,9 @@ static func local_preselection(actor: Dictionary, context: Dictionary, value, ta
 	var only_new := bool(policy.get("onlyNewCodexForm", false))
 	var max_owned := int(policy.get("maxOwnedSameForm", 0))
 	var deferred: Array[String] = []
-	if has_level_one_rules(policy):
-		deferred.append("level_one_four_v")
+	var actor_level := int(actor.get("level", 0))
+	if has_level_one_rules(policy) and actor_level == 1:
+		deferred.append("level_one_four_v_percentiles")
 	var has_pre_rules := normalized_target_form != "" or not line_ids.is_empty() or not element_ids.is_empty() or only_new or max_owned > 0
 	if not has_pre_rules and deferred.is_empty():
 		return _selection_result("disabled", true, true, [], deferred)
@@ -260,14 +246,16 @@ static func local_preselection(actor: Dictionary, context: Dictionary, value, ta
 
 static func contract_check() -> Dictionary:
 	var policy := normalize_policy({
+		"schemaVersion": SCHEMA_VERSION,
 		"lineIds": ["man_dragon", "man_dragon", "unknown"],
 		"element": {"mode": "all", "ids": ["water"], "minPoints": 10},
 		"onlyNewCodexForm": true,
 		"maxOwnedSameForm": 3,
-		"levelOneFourV": {"attack": {"min": 14, "max": 16}},
+		"levelOneMinimumPercentiles": {"maxHp": 90, "attack": 85, "defense": 0, "quick": 40},
 	})
 	var actor := {
 		"formId": "blue_man_dragon_water10",
+		"level": 1,
 		"_privateOpaque": "must_not_be_read",
 	}
 	var matched := local_preselection(actor, {"isNewCodexForm": true, "ownedSameForm": 2}, policy)
@@ -275,21 +263,20 @@ static func contract_check() -> Dictionary:
 	var hidden_changed := local_preselection(actor, {"isNewCodexForm": true, "ownedSameForm": 2}, policy)
 	var capped := local_preselection(actor, {"isNewCodexForm": true, "ownedSameForm": 3}, policy)
 	var unavailable := local_preselection(actor, {}, policy)
-	var edited := with_ui_value(policy, ui_stat_min_key("attack"), 20)
-	var edited_attack := (edited.get("levelOneFourV", {}) as Dictionary).get("attack", {}) as Dictionary
+	var edited := with_ui_value(policy, ui_stat_key("attack"), 92)
+	var edited_attack := int((edited.get("levelOneMinimumPercentiles", {}) as Dictionary).get("attack", 0))
 	return {
 		"ok": (
 			_string_array(policy.get("lineIds", [])).size() == 1
 			and str(matched.get("status", "")) == "matched"
 			and bool(matched.get("eligible", false))
 			and matched == hidden_changed
-			and (matched.get("deferredChecks", []) as Array).has("level_one_four_v")
+			and (matched.get("deferredChecks", []) as Array).has("level_one_four_v_percentiles")
 			and str(capped.get("status", "")) == "not_matched"
 			and not bool(capped.get("eligible", true))
 			and str(unavailable.get("status", "")) == "unavailable"
 			and bool(unavailable.get("eligible", false))
-			and int(edited_attack.get("min", 0)) == 20
-			and int(edited_attack.get("max", 0)) == 20
+			and edited_attack == 92
 		),
 		"policy": policy,
 		"matched": matched,
@@ -348,17 +335,6 @@ static func _normalized_element_ids(value) -> Array[String]:
 
 static func _normalized_element_mode(value: String) -> String:
 	return ELEMENT_MODE_ALL if value.strip_edges() == ELEMENT_MODE_ALL else ELEMENT_MODE_ANY
-
-
-static func _normalized_stat_range(value) -> Dictionary:
-	var raw := value as Dictionary if value is Dictionary else {}
-	var minimum := clampi(int(raw.get("min", 0)), 0, MAX_LEVEL_ONE_STAT)
-	var maximum := clampi(int(raw.get("max", 0)), 0, MAX_LEVEL_ONE_STAT)
-	if minimum > 0 and maximum > 0 and minimum > maximum:
-		var swap := minimum
-		minimum = maximum
-		maximum = swap
-	return {"min": minimum, "max": maximum}
 
 
 static func _string_array(value) -> Array[String]:

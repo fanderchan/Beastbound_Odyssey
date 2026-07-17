@@ -12,7 +12,8 @@ const GROWTH_RULE_POLICY_KEY = "growthRulePolicy";
 const TARGET_MODES = new Set(["all", "codex"]);
 const LEVEL_COMPARATORS = new Set(["<", "=", ">"]);
 const NO_TARGET_ACTIONS = new Set(["battle", "escape"]);
-const FILTER_POLICY_SCHEMA_VERSION = 1;
+const FILTER_POLICY_LEGACY_SCHEMA_VERSION = 1;
+const FILTER_POLICY_SCHEMA_VERSION = 2;
 const FILTER_ELEMENT_MODES = new Set(["any", "all"]);
 const FILTER_ELEMENT_IDS = Object.freeze(["fire", "water", "earth", "wind"]);
 const FILTER_ELEMENT_ID_SET = new Set(FILTER_ELEMENT_IDS);
@@ -29,6 +30,7 @@ const LIMITS = Object.freeze({
   filterElementMinPoints: Object.freeze({min: 1, max: 10, fallback: 1}),
   filterMaxOwnedSameForm: Object.freeze({min: 0, max: 999, fallback: 0}),
   filterLevelOneStat: Object.freeze({min: 0, max: 999999, fallback: 0}),
+  filterLevelOnePercentile: Object.freeze({min: 0, max: 100, fallback: 0}),
 });
 
 function isObjectRecord(value) {
@@ -96,10 +98,7 @@ function defaultFilterPolicy() {
     },
     onlyNewCodexForm: false,
     maxOwnedSameForm: 0,
-    levelOneFourV: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [
-      key,
-      {min: 0, max: 0},
-    ])),
+    levelOneMinimumPercentiles: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [key, 0])),
   };
 }
 
@@ -182,20 +181,13 @@ function createAutoCaptureSettingsRules(options = {}) {
     return result;
   }
 
-  function normalizeLegacyStatRange(value) {
-    const source = isObjectRecord(value) ? value : {};
-    let min = normalizeInteger(source.min, LIMITS.filterLevelOneStat);
-    let max = normalizeInteger(source.max, LIMITS.filterLevelOneStat);
-    if (min > 0 && max > 0 && min > max) {
-      [min, max] = [max, min];
-    }
-    return {min, max};
-  }
-
   function normalizeFilterPolicy(value) {
     const source = isObjectRecord(value) ? value : {};
     const elementSource = isObjectRecord(source.element) ? source.element : {};
-    const fourVSource = isObjectRecord(source.levelOneFourV) ? source.levelOneFourV : {};
+    const percentileSource = (
+      source.schemaVersion === FILTER_POLICY_SCHEMA_VERSION
+      && isObjectRecord(source.levelOneMinimumPercentiles)
+    ) ? source.levelOneMinimumPercentiles : {};
     return {
       schemaVersion: FILTER_POLICY_SCHEMA_VERSION,
       lineIds: normalizeLegacyLineIds(source.lineIds),
@@ -206,9 +198,9 @@ function createAutoCaptureSettingsRules(options = {}) {
       },
       onlyNewCodexForm: normalizeBoolean(source.onlyNewCodexForm, false),
       maxOwnedSameForm: normalizeInteger(source.maxOwnedSameForm, LIMITS.filterMaxOwnedSameForm),
-      levelOneFourV: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [
+      levelOneMinimumPercentiles: Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [
         key,
-        normalizeLegacyStatRange(fourVSource[key]),
+        normalizeInteger(percentileSource[key], LIMITS.filterLevelOnePercentile),
       ])),
     };
   }
@@ -217,7 +209,7 @@ function createAutoCaptureSettingsRules(options = {}) {
     return {
       ok: false,
       code: "auto_capture_filter_policy_invalid",
-      message: "捕后公开筛选条件不正确，请检查系别、属性和 Lv1 四维范围。",
+      message: "捕后公开筛选条件不正确，请检查系别、属性和 Lv1 四维分位。",
     };
   }
 
@@ -230,7 +222,10 @@ function createAutoCaptureSettingsRules(options = {}) {
   }
 
   function normalizePlayerFilterPolicy(value) {
-    if (!isObjectRecord(value) || value.schemaVersion !== FILTER_POLICY_SCHEMA_VERSION) {
+    if (
+      !isObjectRecord(value)
+      || ![FILTER_POLICY_LEGACY_SCHEMA_VERSION, FILTER_POLICY_SCHEMA_VERSION].includes(value.schemaVersion)
+    ) {
       return invalidFilterPolicy();
     }
     if (!Array.isArray(value.lineIds) || value.lineIds.length > LIMITS.filterLineIds.maxCount) {
@@ -279,21 +274,42 @@ function createAutoCaptureSettingsRules(options = {}) {
       return invalidFilterPolicy();
     }
 
-    if (!isObjectRecord(value.levelOneFourV)) {
-      return invalidFilterPolicy();
-    }
-    const levelOneFourV = {};
-    for (const key of FILTER_LEVEL_ONE_STAT_KEYS) {
-      const range = value.levelOneFourV[key];
-      if (!isObjectRecord(range)) {
+    const levelOneMinimumPercentiles = Object.fromEntries(FILTER_LEVEL_ONE_STAT_KEYS.map((key) => [key, 0]));
+    if (value.schemaVersion === FILTER_POLICY_LEGACY_SCHEMA_VERSION) {
+      if (
+        !isObjectRecord(value.levelOneFourV)
+        || Object.keys(value.levelOneFourV).length !== FILTER_LEVEL_ONE_STAT_KEYS.length
+      ) {
         return invalidFilterPolicy();
       }
-      const min = strictInteger(range.min, LIMITS.filterLevelOneStat);
-      const max = strictInteger(range.max, LIMITS.filterLevelOneStat);
-      if (min === null || max === null || (min > 0 && max > 0 && min > max)) {
+      for (const key of FILTER_LEVEL_ONE_STAT_KEYS) {
+        const range = value.levelOneFourV[key];
+        if (!isObjectRecord(range)) {
+          return invalidFilterPolicy();
+        }
+        const min = strictInteger(range.min, LIMITS.filterLevelOneStat);
+        const max = strictInteger(range.max, LIMITS.filterLevelOneStat);
+        if (min === null || max === null || (min > 0 && max > 0 && min > max)) {
+          return invalidFilterPolicy();
+        }
+      }
+    } else {
+      if (
+        !isObjectRecord(value.levelOneMinimumPercentiles)
+        || Object.keys(value.levelOneMinimumPercentiles).length !== FILTER_LEVEL_ONE_STAT_KEYS.length
+      ) {
         return invalidFilterPolicy();
       }
-      levelOneFourV[key] = {min, max};
+      for (const key of FILTER_LEVEL_ONE_STAT_KEYS) {
+        const percentile = strictInteger(
+          value.levelOneMinimumPercentiles[key],
+          LIMITS.filterLevelOnePercentile,
+        );
+        if (percentile === null) {
+          return invalidFilterPolicy();
+        }
+        levelOneMinimumPercentiles[key] = percentile;
+      }
     }
 
     return {
@@ -304,7 +320,7 @@ function createAutoCaptureSettingsRules(options = {}) {
         element: {mode: elementMode, ids: elementIds, minPoints},
         onlyNewCodexForm: value.onlyNewCodexForm,
         maxOwnedSameForm,
-        levelOneFourV,
+        levelOneMinimumPercentiles,
       },
     };
   }
@@ -428,6 +444,7 @@ module.exports = {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   FILTER_ELEMENT_IDS,
   FILTER_LEVEL_ONE_STAT_KEYS,
+  FILTER_POLICY_LEGACY_SCHEMA_VERSION,
   FILTER_POLICY_SCHEMA_VERSION,
   GROWTH_RULE_POLICY_KEY,
   createAutoCaptureSettingsRules,

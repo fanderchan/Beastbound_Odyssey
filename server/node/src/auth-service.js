@@ -704,6 +704,7 @@ function createAuthService(options = {}) {
   const petAutoCaptureFilter = options.petAutoCaptureFilter || createPetAutoCaptureFilter({
     resolveTemplate: petTemplateForFormId,
     resolveLine: petTemplateLineById,
+    resolveGrowthProfile: (formId) => petGrowthCatalog.profileForFormId(formId),
   });
   const petEncounterAuthority = options.petEncounterAuthority || createPetEncounterAuthority();
   const petEncounterPermitAuthority = options.petEncounterPermitAuthority || createPetEncounterPermitAuthority({
@@ -17986,6 +17987,13 @@ function battleAutoCapturePostEvaluation(petAutoCaptureFilter, settings, preEval
       settings: settings && typeof settings === "object" && !Array.isArray(settings) ? clone(settings) : {},
       pet: {
         formId: String(capturedPet && (capturedPet.formId || capturedPet.templateId || capturedPet.speciesId) || ""),
+        level: Number(capturedPet && capturedPet.level),
+        maxHp: Number(capturedPet && capturedPet.maxHp),
+        attack: Number(capturedPet && capturedPet.attack),
+        defense: Number(capturedPet && capturedPet.defense),
+        quick: Number(capturedPet && capturedPet.quick),
+        growthModelVersion: String(capturedPet && capturedPet.growthModelVersion || ""),
+        growthSpeciesProfileId: String(capturedPet && capturedPet.growthSpeciesProfileId || ""),
         initialStats: capturedPet && capturedPet.initialStats && typeof capturedPet.initialStats === "object" && !Array.isArray(capturedPet.initialStats)
           ? clone(capturedPet.initialStats)
           : {},

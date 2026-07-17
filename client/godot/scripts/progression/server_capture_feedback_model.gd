@@ -43,7 +43,10 @@ static func contract_check() -> Dictionary:
 				"status": "matched",
 				"matched": true,
 				"retainPet": true,
-				"reasons": [{"code": "post_capture_public_rules_matched", "message": "Lv1 四维符合设置。"}],
+				"reasons": [{"code": "post_capture_public_rules_matched", "message": "Lv1 四维分位达到设置。"}],
+				"facts": {
+					"levelOnePercentiles": {"maxHp": 95.0, "attack": 87.5, "defense": 75.0, "quick": 62.5},
+				},
 			},
 		}],
 	}
@@ -61,19 +64,28 @@ static func contract_check() -> Dictionary:
 	var nested_text := "\n".join(_capture_filter_lines({
 		"captureFilterEvaluation": {"post": {"status": "unavailable", "reasons": []}},
 	}))
+	var manual_text := "\n".join(_capture_filter_lines({
+		"captureFilterEvaluation": {
+			"status": "manual_review",
+			"reasons": [{"code": "captured_level_not_one", "message": "捕获等级为 Lv20，默认保留人工判断。"}],
+		},
+	}))
 	return {
 		"ok": (
 			text.find("捕获普通乌力 Lv1，已加入队伍。") >= 0
 			and text.find("初始四维：生命83 攻击11 防御7 敏捷49。") >= 0
 			and text.find("约 Lv20 再决定去留") >= 0
 			and text.find("公开筛选：已命中") >= 0
-			and text.find("Lv1 四维符合设置") >= 0
+			and text.find("物种内分位：生命95.0% 攻击87.5% 防御75.0% 敏捷62.5%") >= 0
+			and text.find("Lv1 四维分位达到设置") >= 0
 			and text.find("当前不会自动处理，宠物已保留") >= 0
 			and not_matched_text.find("公开筛选：未命中") >= 0
 			and not_matched_text.find("同形态持有数量已到设置上限") >= 0
 			and unknown_text.find("公开筛选：无法判断") >= 0
 			and unknown_text.find("private_seed_123") < 0
 			and nested_text.find("公开筛选：无法判断") >= 0
+			and manual_text.find("公开筛选：需人工判断") >= 0
+			and manual_text.find("Lv20") >= 0
 			and text.find("private") < 0
 			and text.find("seed") < 0
 			and text.find("预测140") < 0
@@ -82,6 +94,7 @@ static func contract_check() -> Dictionary:
 		"notMatchedText": not_matched_text,
 		"unknownText": unknown_text,
 		"nestedText": nested_text,
+		"manualText": manual_text,
 	}
 
 
@@ -104,6 +117,9 @@ static func _captured_pet_lines(pet: Dictionary) -> Array[String]:
 			int(initial.get("defense", 0)),
 			int(initial.get("quick", 0)),
 		])
+	var percentile_line := _level_one_percentile_line(pet)
+	if percentile_line != "":
+		lines.append(percentile_line)
 	lines.append_array(_capture_filter_lines(pet))
 	var authority_value = pet.get("growthAuthority", {})
 	var authority := authority_value as Dictionary if authority_value is Dictionary else {}
@@ -130,10 +146,12 @@ static func _capture_filter_lines(pet: Dictionary) -> Array[String]:
 		prefix = "公开筛选：已命中。"
 	elif status == "not_matched":
 		prefix = "公开筛选：未命中。"
+	elif status == "manual_review":
+		prefix = "公开筛选：需人工判断。"
 	elif status != "unavailable":
 		reason_text = ""
 	if reason_text == "":
-		reason_text = "公开信息不足。" if status == "unavailable" or not ["matched", "not_matched"].has(status) else ""
+		reason_text = "公开信息不足。" if status == "unavailable" or not ["matched", "not_matched", "manual_review"].has(status) else ""
 	var detail := "%s%s" % [prefix, reason_text]
 	return ["%s当前不会自动处理，宠物已保留。" % detail]
 
@@ -201,19 +219,50 @@ static func _known_reason_text(code: String) -> String:
 			return "Lv1 四维资料暂时不完整。"
 		"level_one_four_v_inconsistent":
 			return "Lv1 四维资料暂时无法确认。"
-		"level_one_maxHp_below_min", "level_one_maxHp_above_max", "level_one_max_hp_mismatch":
-			return "Lv1 生命不在设置范围。"
-		"level_one_attack_below_min", "level_one_attack_above_max", "level_one_attack_mismatch":
-			return "Lv1 攻击不在设置范围。"
-		"level_one_defense_below_min", "level_one_defense_above_max", "level_one_defense_mismatch":
-			return "Lv1 防御不在设置范围。"
-		"level_one_quick_below_min", "level_one_quick_above_max", "level_one_quick_mismatch":
-			return "Lv1 敏捷不在设置范围。"
+		"captured_pet_identity_unavailable", "captured_pet_identity_inconsistent":
+			return "捕获个体与战斗目标暂时无法核对。"
+		"captured_level_not_one":
+			return "捕获等级不是 Lv1，已保留人工判断。"
+		"level_one_percentile_profile_unavailable", "level_one_percentile_unavailable":
+			return "物种 Lv1 分位资料暂时无法确认。"
+		"level_one_maxHp_percentile_below_min":
+			return "Lv1 生命分位低于设置。"
+		"level_one_attack_percentile_below_min":
+			return "Lv1 攻击分位低于设置。"
+		"level_one_defense_percentile_below_min":
+			return "Lv1 防御分位低于设置。"
+		"level_one_quick_percentile_below_min":
+			return "Lv1 敏捷分位低于设置。"
 		"post_capture_public_rules_not_matched":
 			return "公开筛选条件未全部命中。"
 		"post_capture_public_rules_matched", "level_one_four_v_matched":
 			return "公开筛选条件全部命中。"
 	return ""
+
+
+static func _level_one_percentile_line(pet: Dictionary) -> String:
+	var raw_value = pet.get("captureFilterEvaluation", {})
+	if not (raw_value is Dictionary):
+		return ""
+	var raw := raw_value as Dictionary
+	var nested_value = raw.get("post", {})
+	var evaluation := nested_value as Dictionary if nested_value is Dictionary and not (nested_value as Dictionary).is_empty() else raw
+	var facts_value = evaluation.get("facts", {})
+	if not (facts_value is Dictionary):
+		return ""
+	var percentiles_value = (facts_value as Dictionary).get("levelOnePercentiles", {})
+	if not (percentiles_value is Dictionary):
+		return ""
+	var percentiles := percentiles_value as Dictionary
+	var values: Array[float] = []
+	for key in STAT_KEYS:
+		if not percentiles.has(key):
+			return ""
+		var amount := float(percentiles.get(key, -1.0))
+		if not is_finite(amount) or amount < 0.0 or amount > 100.0:
+			return ""
+		values.append(amount)
+	return "物种内分位：生命%.1f%% 攻击%.1f%% 防御%.1f%% 敏捷%.1f%%。" % values
 
 
 static func _clean_player_text(value: String) -> String:

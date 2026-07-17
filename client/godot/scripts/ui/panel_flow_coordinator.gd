@@ -22653,9 +22653,17 @@ func _refresh_auto_capture_settings_tab() -> void:
 		AutoCaptureFilterModel.MAX_OWNED_SAME_FORM,
 		"只"
 	)
-	_add_auto_settings_section("Lv1 四维范围（0 为不限）")
+	_add_auto_settings_section("Lv1 四维最低分位（0 为不限）")
+	var level_one_percentiles := filter_policy.get("levelOneMinimumPercentiles", {}) as Dictionary
 	for stat_id in AutoCaptureFilterModel.STAT_IDS:
-		_add_auto_capture_filter_stat_range(filter_policy, stat_id)
+		_add_auto_settings_int_spinbox(
+			"Lv1 %s" % AutoCaptureFilterModel.stat_label(stat_id),
+			AutoCaptureFilterModel.ui_stat_key(stat_id),
+			int(level_one_percentiles.get(stat_id, 0)),
+			0,
+			AutoCaptureFilterModel.MAX_LEVEL_ONE_PERCENTILE,
+			"%分位"
+		)
 	_add_auto_capture_settings_note(
 		"autoCaptureFilterGuidanceLabel",
 		AutoCaptureSettingsPresenter.public_filter_guidance_text(),
@@ -22788,44 +22796,6 @@ func _add_auto_capture_filter_elements(filter_policy: Dictionary) -> void:
 		)
 		row.add_child(checkbox)
 		auto_settings_controls[AutoCaptureFilterModel.ui_element_key(element_id)] = checkbox
-
-
-func _add_auto_capture_filter_stat_range(filter_policy: Dictionary, stat_id: String) -> void:
-	var row := _auto_settings_row("Lv1 %s" % AutoCaptureFilterModel.stat_label(stat_id))
-	var four := filter_policy.get("levelOneFourV", {}) as Dictionary
-	var bounds := four.get(stat_id, {}) as Dictionary
-	var min_key := AutoCaptureFilterModel.ui_stat_min_key(stat_id)
-	var max_key := AutoCaptureFilterModel.ui_stat_max_key(stat_id)
-	var minimum := SpinBox.new()
-	minimum.min_value = 0
-	minimum.max_value = AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT
-	minimum.step = 1
-	minimum.rounded = true
-	minimum.prefix = "最低 "
-	minimum.value = float(clampi(int(bounds.get("min", 0)), 0, AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT))
-	minimum.custom_minimum_size = Vector2(132, 40)
-	minimum.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	minimum.add_theme_font_size_override("font_size", 14)
-	minimum.value_changed.connect(func(next_value: float) -> void:
-		_set_auto_settings_value(min_key, int(next_value))
-	)
-	row.add_child(minimum)
-	auto_settings_controls[min_key] = minimum
-	var maximum := SpinBox.new()
-	maximum.min_value = 0
-	maximum.max_value = AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT
-	maximum.step = 1
-	maximum.rounded = true
-	maximum.prefix = "最高 "
-	maximum.value = float(clampi(int(bounds.get("max", 0)), 0, AutoCaptureFilterModel.MAX_LEVEL_ONE_STAT))
-	maximum.custom_minimum_size = Vector2(132, 40)
-	maximum.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	maximum.add_theme_font_size_override("font_size", 14)
-	maximum.value_changed.connect(func(next_value: float) -> void:
-		_set_auto_settings_value(max_key, int(next_value))
-	)
-	row.add_child(maximum)
-	auto_settings_controls[max_key] = maximum
 
 
 func _set_auto_capture_save_status(message: String, success: bool = false) -> void:
@@ -23150,7 +23120,6 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		)
 		settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = updated_policy
 		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
-		_sync_auto_capture_filter_range_controls(updated_policy, key)
 		_auto_capture_settings_changed()
 		return
 	if PetGrowthRulePreviewModel.is_ui_key(key):
@@ -23195,23 +23164,6 @@ func _set_auto_capture_growth_preview(preview: Dictionary, server_confirmed: boo
 		"font_color",
 		Color(0.55, 0.95, 0.66, 1.0) if server_confirmed else Color(0.86, 0.90, 0.84, 1.0)
 	)
-
-
-func _sync_auto_capture_filter_range_controls(filter_policy: Dictionary, changed_key: String) -> void:
-	var four := filter_policy.get("levelOneFourV", {}) as Dictionary
-	for stat_id in AutoCaptureFilterModel.STAT_IDS:
-		var min_key := AutoCaptureFilterModel.ui_stat_min_key(stat_id)
-		var max_key := AutoCaptureFilterModel.ui_stat_max_key(stat_id)
-		if changed_key != min_key and changed_key != max_key:
-			continue
-		var bounds := four.get(stat_id, {}) as Dictionary
-		var minimum := auto_settings_controls.get(min_key, null) as SpinBox
-		var maximum := auto_settings_controls.get(max_key, null) as SpinBox
-		if minimum != null:
-			minimum.set_value_no_signal(float(bounds.get("min", 0)))
-		if maximum != null:
-			maximum.set_value_no_signal(float(bounds.get("max", 0)))
-		return
 
 
 func _auto_capture_settings_changed() -> void:

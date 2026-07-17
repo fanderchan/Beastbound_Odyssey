@@ -148,10 +148,14 @@ Design the pet together with existing挂机 behavior:
 
 - Define whether auto-capture should target species, encounter level, element, quantity, or codex state.
 - Only a genuinely captured Lv1 wild pet may use per-stat public Lv1 4V percentiles for immediate handling. A Lv2+ capture defaults to retain/manual review.
+- Each percentile is the inclusive CDF within that pet's own species profile: `P(same-species Lv1 visible stat <= this value)`. Higher is better. Evaluate blood, attack, defense, and quick independently; a minimum of `0` disables that stat. Never compare raw Lv1 numbers across species.
+- The Lv1 percentile calculator may read only public `outputBase`, `initialOutputSpread`, `distribution`, `rareExtremeRate`, and the captured public four-stat snapshot. It must not read `growthOutputSpread`, `innateGrowthBonus`, hidden seeds/rolls, or Lv140 projections.
+- Old schema-v1 raw min/max settings are not mathematically convertible across species. Preserve the non-stat public filters but migrate all four raw bounds to disabled `0` percentiles.
 - When a capture target exists, ensure pet/party AI does not accidentally kill it.
 - Never read hidden growth, predict Lv140, or auto-train to Lv20 in the capture tab. Growth-based keep/discard remains a manual owned-pet-panel decision.
 - Never auto-discard locked, task, riding, cultivated, bound, paid, rare reward, or inheritance-relevant pets.
 - Keep a player-visible recent-action log and GM audit path before enabling high-value automatic discard.
+- Until that recoverable record exists, both matched and unmatched percentile results remain recommendations and `retainPet=true`; do not silently turn a threshold edit into destructive release.
 - Treat full party + full stable as a pre-capture block. Do not spend the capture turn or tool when the player has no capacity; technical recovery remains invisible and only reconciles exceptional already-claimed snapshots.
 
 Calculate false-discard rates from the same species simulation used for quality thresholds.
@@ -167,4 +171,5 @@ For a finalized species profile:
 - Audit old-pet migration with before/after counts, IDs, seeds, visible stats, skills, and value bands.
 - Simulate encounter time and capture attempts using actual zone and tool configuration.
 - Across every species profile, audit capture levels against the Lv1 baseline: hidden-growth mean, top-5%/top-1% tail, non-zero jackpot count, Lv1 4V drift, average attempts, and the hard attempt bound.
+- Run `node tools/pet_level_one_percentile_audit.mjs`; it compares the analytic rounded-visible Lv1 CDF against 10,000 deterministic authority rolls for every current profile.
 - Test that the battle actor and captured pet share form, level, max HP, attack, defense, quick, elements, and skills, while ordinary battle damage to current HP remains valid.

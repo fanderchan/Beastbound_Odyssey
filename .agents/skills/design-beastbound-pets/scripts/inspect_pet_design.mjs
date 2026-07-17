@@ -355,6 +355,10 @@ const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
 const serverAuthClientText = readText("client/godot/scripts/progression/server_auth_client_model.gd");
 const clientGrowthRulePreviewText = readText("client/godot/scripts/progression/pet_growth_rule_preview_model.gd");
+const autoCaptureSettingsText = readText("server/node/src/auth/auto-capture-settings.js");
+const petAutoCaptureFilterText = readText("server/node/src/auth/pet-auto-capture-filter.js");
+const petLevelOnePercentileText = readText("server/node/src/auth/pet-level-one-percentile.js");
+const clientAutoCaptureFilterText = readText("client/godot/scripts/progression/auto_capture_filter_model.gd");
 const protocolVersion = Number(protocolText.match(/const PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
 const minimumProtocolVersion = Number(protocolText.match(/const MIN_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
 const maximumProtocolVersion = Number(protocolText.match(/const MAX_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
@@ -402,6 +406,17 @@ const serverAuthority = {
     && wildCaptureGrowthSelectionText.includes("selectWildCaptureGrowthDraw")
     && wildCaptureGrowthSelectionText.includes("jackpotAcceptanceFloor")
     && petCaptureCandidateAuthorityText.includes("selectWildCaptureGrowthDraw"),
+  levelOnePercentileFilterWired: authServiceText.includes("resolveGrowthProfile")
+    && autoCaptureSettingsText.includes("FILTER_POLICY_SCHEMA_VERSION = 2")
+    && autoCaptureSettingsText.includes("levelOneMinimumPercentiles")
+    && petAutoCaptureFilterText.includes("levelOnePercentiles")
+    && petAutoCaptureFilterText.includes("captured_level_not_one")
+    && petAutoCaptureFilterText.includes("retainPet: true")
+    && petLevelOnePercentileText.includes("distributionCdf")
+    && petLevelOnePercentileText.includes("initialOutputSpread")
+    && !petLevelOnePercentileText.includes("growthOutputSpread")
+    && clientAutoCaptureFilterText.includes("const SCHEMA_VERSION := 2")
+    && clientAutoCaptureFilterText.includes("levelOneMinimumPercentiles"),
   captureActorCandidateFactsUnified: petCaptureCandidateAuthorityText.includes("synchronizeActorWithCandidate")
     && petCaptureCandidateAuthorityText.includes("battle actor intrinsic pet facts do not match its frozen capture candidate")
     && petCaptureCandidateAuthorityText.includes("actor.maxHp !== pet.maxHp")
@@ -434,6 +449,7 @@ if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1E
 if (!serverAuthority.newLevelOneFactoryWired) issues.warnings.push("Node 新 Lv1 宠物尚未统一经过严格成长 factory");
 if (!serverAuthority.petCaptureCandidatesWired) issues.warnings.push("Node 野外捕捉尚未冻结遇敌候选、使用私有随机数并原样转移");
 if (!serverAuthority.wildCaptureGrowthLevelBiasWired) issues.warnings.push("Node 尚未按捕捉等级压低隐藏成长上尾，Lv1 捕宠价值没有全宠物服务端合同");
+if (!serverAuthority.levelOnePercentileFilterWired) issues.warnings.push("Lv1 捕后筛选尚未统一为全物种公开分位，或仍可能读取隐藏成长/误筛 Lv2+");
 if (!serverAuthority.captureActorCandidateFactsUnified) issues.warnings.push("可捕捉野怪的战斗固有属性尚未与冻结宠物个体统一，捕前捕后可能不一致");
 if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node authority-v1 宠物转生尚未接入严格成长周期重启与材料预检");
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
@@ -532,7 +548,7 @@ if (requestedFormId) {
     for (const [toolId, chances] of Object.entries(detail.captureChance)) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
-    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
+    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, lv1Percentiles=${serverAuthority.levelOnePercentileFilterWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
   console.log(JSON.stringify(summary, null, 2));
@@ -540,7 +556,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
-  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/Lv1分位/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.levelOnePercentileFilterWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

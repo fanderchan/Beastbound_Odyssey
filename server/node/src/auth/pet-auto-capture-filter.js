@@ -1,5 +1,8 @@
 "use strict";
 
+const {MODEL_VERSION} = require("./pet-growth-authority");
+const {levelOnePercentiles} = require("./pet-level-one-percentile");
+
 const FILTER_SCHEMA_VERSION = 1;
 const ELEMENT_IDS = Object.freeze(["fire", "water", "earth", "wind"]);
 const LEVEL_ONE_STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
@@ -58,7 +61,7 @@ function defaultPolicy() {
     element: {mode: "any", ids: [], minPoints: 1},
     onlyNewCodexForm: false,
     maxOwnedSameForm: 0,
-    levelOneFourV: Object.fromEntries(LEVEL_ONE_STAT_KEYS.map((key) => [key, {min: 0, max: 0}])),
+    levelOneMinimumPercentiles: Object.fromEntries(LEVEL_ONE_STAT_KEYS.map((key) => [key, 0])),
   };
 }
 
@@ -68,7 +71,9 @@ function policyForEvaluation(settings) {
     : {};
   const fallback = defaultPolicy();
   const elementSource = isObjectRecord(source.element) ? source.element : {};
-  const fourVSource = isObjectRecord(source.levelOneFourV) ? source.levelOneFourV : {};
+  const percentileSource = isObjectRecord(source.levelOneMinimumPercentiles)
+    ? source.levelOneMinimumPercentiles
+    : {};
   const lineIds = Array.isArray(source.lineIds)
     ? source.lineIds.map(cleanId).filter((lineId, index, all) => lineId !== "" && all.indexOf(lineId) === index)
     : [];
@@ -88,20 +93,15 @@ function policyForEvaluation(settings) {
     },
     onlyNewCodexForm: source.onlyNewCodexForm === true,
     maxOwnedSameForm,
-    levelOneFourV: Object.fromEntries(LEVEL_ONE_STAT_KEYS.map((key) => {
-      const range = isObjectRecord(fourVSource[key]) ? fourVSource[key] : fallback.levelOneFourV[key];
-      return [key, {
-        min: finiteInteger(range.min, 0, 999999) ?? 0,
-        max: finiteInteger(range.max, 0, 999999) ?? 0,
-      }];
-    })),
+    levelOneMinimumPercentiles: Object.fromEntries(LEVEL_ONE_STAT_KEYS.map((key) => [
+      key,
+      finiteInteger(percentileSource[key], 0, 100) ?? fallback.levelOneMinimumPercentiles[key],
+    ])),
   };
 }
 
 function hasDeferredLevelOneChecks(policy) {
-  return LEVEL_ONE_STAT_KEYS.some((key) => (
-    policy.levelOneFourV[key].min > 0 || policy.levelOneFourV[key].max > 0
-  ));
+  return LEVEL_ONE_STAT_KEYS.some((key) => policy.levelOneMinimumPercentiles[key] > 0);
 }
 
 function emptyFacts() {
@@ -119,6 +119,8 @@ function emptyFacts() {
     ownedSameFormCount: null,
     pendingSameFormCount: null,
     levelOneFourV: null,
+    levelOnePercentiles: null,
+    levelOnePercentileProfileId: "",
   };
 }
 
@@ -167,12 +169,17 @@ function copyPreFacts(value) {
     ownedSameFormCount: finiteInteger(source.ownedSameFormCount, 0),
     pendingSameFormCount: finiteInteger(source.pendingSameFormCount, 0),
     levelOneFourV: null,
+    levelOnePercentiles: null,
+    levelOnePercentileProfileId: "",
   };
 }
 
 function createPetAutoCaptureFilter(options = {}) {
   const resolveTemplate = typeof options.resolveTemplate === "function" ? options.resolveTemplate : () => null;
   const resolveLine = typeof options.resolveLine === "function" ? options.resolveLine : () => null;
+  const resolveGrowthProfile = typeof options.resolveGrowthProfile === "function"
+    ? options.resolveGrowthProfile
+    : () => null;
 
   function evaluatePreCapture({settings, actor, context} = {}) {
     if (normalizedSettingsValue(settings, "enabled", false) !== true) {
@@ -231,6 +238,8 @@ function createPetAutoCaptureFilter(options = {}) {
       ownedSameFormCount,
       pendingSameFormCount,
       levelOneFourV: null,
+      levelOnePercentiles: null,
+      levelOnePercentileProfileId: "",
     };
 
     if (!catchable) {
@@ -321,13 +330,16 @@ function createPetAutoCaptureFilter(options = {}) {
       return evaluation("pre_capture", "not_matched", false, failures, [], facts);
     }
 
-    const deferredChecks = hasDeferredLevelOneChecks(policy) ? ["level_one_four_v"] : [];
+    const hasLevelOneRules = hasDeferredLevelOneChecks(policy);
+    const deferredChecks = hasLevelOneRules && level === 1 ? ["level_one_four_v_percentiles"] : [];
     return evaluation("pre_capture", "matched", true, [
       reason(
         "pre_capture_public_rules_matched",
         deferredChecks.length > 0
-          ? "投网前公开条件已命中；Lv1 四维将在抓回后复核。"
-          : "投网前公开条件已命中。"
+          ? "投网前公开条件已命中；Lv1 四维分位将在抓回后复核。"
+          : (hasLevelOneRules && level > 1
+            ? `投网前公开条件已命中；目标为 Lv${level}，捕获后默认保留人工判断。`
+            : "投网前公开条件已命中。")
       ),
     ], deferredChecks, facts);
   }
@@ -375,48 +387,101 @@ function createPetAutoCaptureFilter(options = {}) {
       return unavailablePost("level_one_four_v_unavailable", "Lv1 四维不可用；宠物已保留等待人工复核。", preFacts);
     }
 
+    let petFormId;
+    let petLevel;
+    try {
+      petFormId = cleanId(pet.formId);
+      petLevel = finiteInteger(pet.level, 1, 140);
+    } catch (_error) {
+      return unavailablePost("captured_pet_identity_unavailable", "捕获个体的形态或等级无法确认；宠物已保留等待人工复核。", preFacts);
+    }
+    if (
+      petFormId === ""
+      || petLevel === null
+      || petFormId !== preFacts.formId
+      || petLevel !== preFacts.level
+    ) {
+      return unavailablePost("captured_pet_identity_inconsistent", "战斗目标与捕获个体的形态或等级不一致；宠物已保留等待人工复核。", preFacts);
+    }
+
+    const policy = policyForEvaluation(settings);
+    if (petLevel > 1) {
+      return evaluation("post_capture", "manual_review", true, [
+        reason(
+          "captured_level_not_one",
+          `捕获等级为 Lv${petLevel}，不参与 Lv1 四维自动筛选；宠物已保留，请人工判断。`
+        ),
+      ], [], preFacts);
+    }
+
     let initialStats;
     let mirroredStats;
+    let currentStats;
+    let growthModelVersion;
+    let growthSpeciesProfileId;
     try {
       // These are the only pet properties this evaluator may read. Hidden
       // growth rolls, seeds and candidate state are intentionally unreachable.
       initialStats = readLevelOneStats(pet.initialStats);
       mirroredStats = readLevelOneStats(pet.growthSpeciesLevel1Stats);
+      currentStats = readLevelOneStats({
+        maxHp: pet.maxHp,
+        attack: pet.attack,
+        defense: pet.defense,
+        quick: pet.quick,
+      });
+      growthModelVersion = cleanId(pet.growthModelVersion);
+      growthSpeciesProfileId = cleanId(pet.growthSpeciesProfileId);
     } catch (_error) {
       return unavailablePost("level_one_four_v_unavailable", "Lv1 四维不可用；宠物已保留等待人工复核。", preFacts);
     }
-    if (!initialStats || !mirroredStats) {
+    if (!initialStats || !mirroredStats || !currentStats) {
       return unavailablePost("level_one_four_v_unavailable", "Lv1 四维不完整；宠物已保留等待人工复核。", preFacts);
     }
-    if (LEVEL_ONE_STAT_KEYS.some((key) => initialStats[key] !== mirroredStats[key])) {
-      return unavailablePost("level_one_four_v_inconsistent", "两份 Lv1 四维记录不一致；宠物已保留等待人工复核。", preFacts);
+    if (LEVEL_ONE_STAT_KEYS.some((key) => (
+      initialStats[key] !== mirroredStats[key] || initialStats[key] !== currentStats[key]
+    ))) {
+      return unavailablePost("level_one_four_v_inconsistent", "当前四维与两份 Lv1 记录不一致；宠物已保留等待人工复核。", preFacts);
     }
 
-    const facts = {...preFacts, levelOneFourV: initialStats};
-    const policy = policyForEvaluation(settings);
+    const profile = safeResolve(resolveGrowthProfile, petFormId);
+    if (
+      !profile
+      || growthModelVersion !== MODEL_VERSION
+      || growthSpeciesProfileId === ""
+      || growthSpeciesProfileId !== cleanId(profile.profileId)
+    ) {
+      return unavailablePost("level_one_percentile_profile_unavailable", "物种 Lv1 分位档案无法确认；宠物已保留等待人工复核。", preFacts);
+    }
+    let percentileFacts;
+    try {
+      percentileFacts = levelOnePercentiles(profile, initialStats);
+    } catch (_error) {
+      return unavailablePost("level_one_percentile_unavailable", "Lv1 四维分位暂时无法计算；宠物已保留等待人工复核。", preFacts);
+    }
+    const facts = {
+      ...preFacts,
+      levelOneFourV: initialStats,
+      levelOnePercentiles: {...percentileFacts.statPercentiles},
+      levelOnePercentileProfileId: percentileFacts.profileId,
+    };
     const failures = [];
     for (const key of LEVEL_ONE_STAT_KEYS) {
-      const value = initialStats[key];
-      const range = policy.levelOneFourV[key];
-      if (range.min > 0 && value < range.min) {
+      const value = percentileFacts.statPercentiles[key];
+      const minimum = policy.levelOneMinimumPercentiles[key];
+      if (minimum > 0 && value < minimum) {
         failures.push(reason(
-          `level_one_${key}_below_min`,
-          `Lv1 ${LEVEL_ONE_STAT_LABELS[key]} ${value}，低于下限 ${range.min}。`
-        ));
-      }
-      if (range.max > 0 && value > range.max) {
-        failures.push(reason(
-          `level_one_${key}_above_max`,
-          `Lv1 ${LEVEL_ONE_STAT_LABELS[key]} ${value}，高于上限 ${range.max}。`
+          `level_one_${key}_percentile_below_min`,
+          `Lv1 ${LEVEL_ONE_STAT_LABELS[key]} ${initialStats[key]} 为 ${value.toFixed(1)}% 分位，低于保留门槛 ${minimum}%。`
         ));
       }
     }
     if (failures.length > 0) {
-      failures.push(reason("post_capture_public_rules_not_matched", "公开 Lv1 四维未命中；当前不会自动处理，宠物已完整保留。"));
+      failures.push(reason("post_capture_public_rules_not_matched", "Lv1 四维分位未全部达标；当前不会自动放生，宠物已完整保留。"));
       return evaluation("post_capture", "not_matched", false, failures, [], facts);
     }
     return evaluation("post_capture", "matched", true, [
-      reason("post_capture_public_rules_matched", "公开 Lv1 四维已命中培养目标；宠物已完整保留。"),
+      reason("post_capture_public_rules_matched", "Lv1 四维分位达到设置；这不代表隐藏成长，宠物已完整保留。"),
     ], [], facts);
   }
 

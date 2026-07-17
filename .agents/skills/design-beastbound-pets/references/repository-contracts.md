@@ -14,6 +14,8 @@
 | --- | --- |
 | Taxonomy, elements, form defaults, capture difficulty | `client/godot/data/pet_templates.json` |
 | Species Lv1/growth distributions and observation thresholds | `client/godot/data/balance/pet_growth_species_profiles.json` |
+| Species-relative public Lv1 percentile calculation | `server/node/src/auth/pet-level-one-percentile.js`; offline all-profile check in `tools/pet_level_one_percentile_audit.mjs` |
+| Authoritative auto-capture public filter and schema-v2 settings | `server/node/src/auth/pet-auto-capture-filter.js`, `auto-capture-settings.js`, `client/godot/scripts/progression/auto_capture_filter_model.gd` |
 | Global capture-level hidden-growth tail policy | `client/godot/data/balance/pet_growth_species_profiles.json#wildCaptureGrowthPolicy`, `server/node/src/auth/wild-capture-growth-selection.js` |
 | Legacy broad growth profiles | `client/godot/data/balance/pet_growth_profiles.json` |
 | Active actions and effect payloads | `client/godot/data/battle_actions.json` |
@@ -119,6 +121,7 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - Historical legacy Lv2+ pets may have no persisted Lv1 4V. Preserve those existing instances and mark observation unavailable; never invent their missing history from an instance ID. New authority captures begin as real Lv1 candidates, preserve authentic Lv1 4V, then deterministically settle the same individual to the wild level before combat.
 - Local/offline legacy growth tools can still derive precise Lv140 values for QA. Server-marker pets must stay on the evidence-only observation path.
 - Lv20 retention rules have a bounded no-mutation preview, but the product decision now keeps trained-pet judgment in the owned-pet panel. This preview is not permission for capture automation to train, move, discard, or consume a pet; its legacy settings placement should be relocated rather than expanded.
+- Auto-capture filter schema v2 stores one 0..100 minimum Lv1 percentile per public stat. Only a capture confirmed as the same frozen authority-v1 Lv1 individual is evaluated; Lv2+, missing, or inconsistent facts default to retain/manual review. Schema-v1 raw stat ranges migrate disabled because they cannot be translated across species. Current results never auto-release the pet.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
 - Distinct pet actions currently require globally unique preferred slots; all seven slots are occupied, so expand the catalog/slot contract before adding new active skill IDs.
@@ -150,5 +153,7 @@ Useful existing checks include:
 - `node --test server/node/test/pet-growth-authority.test.js server/node/test/pet-growth-catalog.test.js server/node/test/pet-growth-runtime.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js server/node/test/pet-private-state.test.js`
 - `node --test server/node/test/pet-capture-candidate-authority.test.js server/node/test/auth-battle-room.test.js`
 - `node --test server/node/test/pet-observed-growth-rule-preview.test.js server/node/test/auth-auto-capture-settings.test.js`
+- `node --test server/node/test/pet-level-one-percentile.test.js server/node/test/pet-auto-capture-filter.test.js server/node/test/auth-auto-capture-filter-integration.test.js`
+- `node tools/pet_level_one_percentile_audit.mjs`
 
 Use `tools/run_godot_auto_checks.mjs --only <flags> --fail-fast` for selected client checks. Run the full local CI only for a genuine release/export gate or explicit user request.

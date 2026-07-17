@@ -124,17 +124,12 @@ test("player auto-capture update accepts only a settings envelope and always dis
 test("public capture filter policy rejects unsafe player widening and repairs legacy saves", () => {
   const rules = testRules();
   const validPolicy = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     lineIds: [" known_line ", "known_line", "second_line"],
     element: {mode: "all", ids: [" WATER ", "earth", "water"], minPoints: 3},
     onlyNewCodexForm: true,
     maxOwnedSameForm: 8,
-    levelOneFourV: {
-      maxHp: {min: 60, max: 80},
-      attack: {min: 14, max: 0},
-      defense: {min: 0, max: 10},
-      quick: {min: 6, max: 9},
-    },
+    levelOneMinimumPercentiles: {maxHp: 90, attack: 85, defense: 0, quick: 40},
   };
   const accepted = rules.normalizePlayerUpdate({settings: {filterPolicy: validPolicy}});
   assert.equal(accepted.ok, true);
@@ -145,14 +140,22 @@ test("public capture filter policy rejects unsafe player widening and repairs le
   });
 
   const invalidPolicies = [
-    {...validPolicy, schemaVersion: 2},
+    {...validPolicy, schemaVersion: 3},
     {...validPolicy, lineIds: ["unknown_line"]},
     {...validPolicy, element: {...validPolicy.element, ids: ["light"]}},
     {...validPolicy, element: {...validPolicy.element, minPoints: 0}},
     {...validPolicy, maxOwnedSameForm: 1000},
     {
       ...validPolicy,
-      levelOneFourV: {...validPolicy.levelOneFourV, attack: {min: 20, max: 10}},
+      levelOneMinimumPercentiles: {maxHp: 90, attack: 85, defense: 0},
+    },
+    {
+      ...validPolicy,
+      levelOneMinimumPercentiles: {...validPolicy.levelOneMinimumPercentiles, attack: 101},
+    },
+    {
+      ...validPolicy,
+      levelOneMinimumPercentiles: {...validPolicy.levelOneMinimumPercentiles, attack: 85.5},
     },
   ];
   for (const filterPolicy of invalidPolicies) {
@@ -175,21 +178,40 @@ test("public capture filter policy rejects unsafe player widening and repairs le
     },
   }).filterPolicy;
   assert.deepEqual(repaired, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     lineIds: ["known_line"],
     element: {mode: "any", ids: ["water"], minPoints: 10},
     onlyNewCodexForm: true,
     maxOwnedSameForm: 0,
+    levelOneMinimumPercentiles: {maxHp: 0, attack: 0, defense: 0, quick: 0},
+  });
+
+  const legacyPolicy = {
+    schemaVersion: 1,
+    lineIds: ["known_line"],
+    element: {mode: "any", ids: ["water"], minPoints: 5},
+    onlyNewCodexForm: true,
+    maxOwnedSameForm: 3,
     levelOneFourV: {
       maxHp: {min: 60, max: 80},
-      attack: {min: 0, max: 0},
-      defense: {min: 0, max: 0},
-      quick: {min: 0, max: 0},
+      attack: {min: 14, max: 0},
+      defense: {min: 0, max: 10},
+      quick: {min: 6, max: 9},
     },
+  };
+  const migrated = rules.normalizePlayerUpdate({settings: {filterPolicy: legacyPolicy}});
+  assert.equal(migrated.ok, true);
+  assert.deepEqual(migrated.settings.filterPolicy, {
+    schemaVersion: 2,
+    lineIds: ["known_line"],
+    element: {mode: "any", ids: ["water"], minPoints: 5},
+    onlyNewCodexForm: true,
+    maxOwnedSameForm: 3,
+    levelOneMinimumPercentiles: {maxHp: 0, attack: 0, defense: 0, quick: 0},
   });
 });
 
-test("legacy player update preserves the existing public filter policy", () => {
+test("legacy player update preserves migrated public rules and disables incomparable raw Lv1 bounds", () => {
   const rules = testRules();
   const profile = {
     autoCaptureSettings: {
@@ -210,6 +232,12 @@ test("legacy player update preserves the existing public filter policy", () => {
     },
   };
   const beforePolicy = structuredClone(rules.normalizeSettings(profile.autoCaptureSettings).filterPolicy);
+  assert.deepEqual(beforePolicy.levelOneMinimumPercentiles, {
+    maxHp: 0,
+    attack: 0,
+    defense: 0,
+    quick: 0,
+  });
   const result = rules.applyPlayerUpdate(profile, {settings: {enabled: false, hpPercent: 20}});
   assert.equal(result.ok, true);
   assert.equal(profile.autoCaptureSettings.enabled, false);

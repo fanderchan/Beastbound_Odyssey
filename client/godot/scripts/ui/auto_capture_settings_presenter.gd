@@ -28,7 +28,7 @@ static func growth_guidance_text(online_safe_mode: bool) -> String:
 
 
 static func public_filter_guidance_text() -> String:
-	return "公开条件用于选择目标；元素不勾选、同形态最多或四维边界为 0 时不限。Lv1 四维只能抓回后评价。当前无论命中都保留，不会自动处理宠物。"
+	return "公开条件用于选择目标；元素不勾选、同形态最多或分位门槛为 0 时不限。只有真正捕获为 Lv1，才按该物种的四维分布评价；Lv2+ 默认保留人工判断。不读取隐藏成长，当前也不会自动放生。"
 
 
 static func contract_check() -> Dictionary:
@@ -54,8 +54,10 @@ static func contract_check() -> Dictionary:
 			and online_text.find("约 Lv20") >= 0
 			and online_text.find("保留门槛预览") >= 0
 			and local_text.find("不会识别隐藏成长") >= 0
-			and filter_text.find("Lv1 四维只能抓回后评价") >= 0
-			and filter_text.find("无论命中都保留") >= 0
+			and filter_text.find("真正捕获为 Lv1") >= 0
+			and filter_text.find("Lv2+ 默认保留") >= 0
+			and filter_text.find("不读取隐藏成长") >= 0
+			and filter_text.find("不会自动放生") >= 0
 		),
 		"roomy": roomy,
 		"nearFull": near_full,

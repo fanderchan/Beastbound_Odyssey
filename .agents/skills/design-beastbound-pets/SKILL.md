@@ -62,7 +62,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 
 ## Design hard gates
 
-- Keep Lv1 4V visible and hidden per-level quality meaningful. A freshly captured, server-identified Lv1 wild pet may be retained or released from its four public Lv1 percentiles alone, but that decision must never claim to know hidden growth.
+- Keep Lv1 4V visible and hidden per-level quality meaningful. A freshly captured, server-identified Lv1 wild pet may be evaluated from its four public species-relative Lv1 percentiles alone, but that decision must never claim to know hidden growth. The current runtime always retains the pet; do not enable automatic release until a player-visible recoverable action record and GM audit path exist.
 - The current formal Lv1 4V proxy is the authority-v1 pet's immutable `initialStats` / `growthSpeciesLevel1Stats` blood, attack, defense, and quick map. Do not invent a second quality field or expose the hidden roll.
 - Make early observation uncertain. Human players inspect actual training evidence in the owned-pet panel; capture automation must not train pets, evaluate trained pets, or use the existing Lv20 dry-run as permission to dispose of them.
 - Keep the existing observed-growth preview evidence-only, bounded, and no-mutation. It belongs to manual pet evaluation unless a later explicit product decision creates a separate protected automation workflow.
@@ -79,6 +79,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Keep normal two-rebirth, evolution, and fusion in comparable end-power bands. Let harder paths win through build choice, inheritance, appearance, or utility rather than uncontrolled raw-stat inflation.
 - Protect locked, task, riding, cultivated, bound, paid, and inheritance-relevant pets from automatic discard or consumption.
 - Keep large simulations offline; never add population scans or JSON I/O to frame, draw, HUD, or movement hot paths.
+- Audit every species profile with `node tools/pet_level_one_percentile_audit.mjs` after changing `outputBase`, `initialOutputSpread`, `distribution`, or `rareExtremeRate`; the runtime CDF must continue matching at least 10,000 authority rolls per profile.
 - Do not create or edit art, sprites, animation, or audio in this skill version. Record replacement requirements only.
 
 ## Implement as one complete slice

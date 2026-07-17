@@ -2775,23 +2775,18 @@ func _run_auto_capture_settings_check() -> void:
 	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
 	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
 	settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = {
-		"schemaVersion": 1,
+		"schemaVersion": 2,
 		"lineIds": ["man_dragon"],
 		"element": {"mode": "all", "ids": ["water"], "minPoints": 10},
 		"onlyNewCodexForm": true,
 		"maxOwnedSameForm": 3,
-		"levelOneFourV": {
-			"maxHp": {"min": 60, "max": 70},
-			"attack": {"min": 14, "max": 16},
-			"defense": {"min": 0, "max": 0},
-			"quick": {"min": 6, "max": 0},
-		},
+		"levelOneMinimumPercentiles": {"maxHp": 90, "attack": 85, "defense": 0, "quick": 40},
 	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
 	var filter_policy := settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
 	var filter_element := filter_policy.get("element", {}) as Dictionary
-	var filter_four := filter_policy.get("levelOneFourV", {}) as Dictionary
+	var filter_percentiles := filter_policy.get("levelOneMinimumPercentiles", {}) as Dictionary
 
 	var normalized_ok = (
 		bool(settings.get(AutoCaptureSettingsModel.ENABLED_KEY, false))
@@ -2802,7 +2797,7 @@ func _run_auto_capture_settings_check() -> void:
 		and int(settings.get(AutoCaptureSettingsModel.CAPTURE_PET_SLOT_KEY, 0)) == AutoCaptureSettingsModel.DEFAULT_CAPTURE_PET_SLOT
 		and (filter_policy.get("lineIds", []) as Array).has("man_dragon")
 		and (filter_element.get("ids", []) as Array).has("water")
-		and int((filter_four.get("attack", {}) as Dictionary).get("min", 0)) == 14
+		and int(filter_percentiles.get("attack", 0)) == 85
 	)
 	var presenter_check := AutoCaptureSettingsPresenter.contract_check()
 	var filter_check := AutoCaptureFilterModel.contract_check()
@@ -2826,7 +2821,7 @@ func _run_auto_capture_settings_check() -> void:
 	var local_filter_guidance_label := host.auto_settings_controls.get("autoCaptureFilterGuidanceLabel", null) as Label
 	var local_filter_line := host.auto_settings_controls.get(AutoCaptureFilterModel.UI_LINE_ID_KEY, null) as OptionButton
 	var local_filter_water := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_element_key("water"), null) as CheckBox
-	var local_filter_attack_min := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_min_key("attack"), null) as SpinBox
+	var local_filter_attack_min := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_key("attack"), null) as SpinBox
 	var local_ui_ok: bool = (
 		local_save_button != null
 		and local_save_button.text == "保存捕捉设置"
@@ -2838,14 +2833,15 @@ func _run_auto_capture_settings_check() -> void:
 		and local_guidance_label.text.find("约 Lv20") >= 0
 		and local_guidance_label.text.find("不会识别隐藏成长") >= 0
 		and local_filter_guidance_label != null
-		and local_filter_guidance_label.text.find("抓回后评价") >= 0
-		and local_filter_guidance_label.text.find("无论命中都保留") >= 0
+		and local_filter_guidance_label.text.find("真正捕获为 Lv1") >= 0
+		and local_filter_guidance_label.text.find("Lv2+ 默认保留") >= 0
+		and local_filter_guidance_label.text.find("不读取隐藏成长") >= 0
 		and local_filter_line != null
 		and str(local_filter_line.get_item_metadata(local_filter_line.selected)) == "man_dragon"
 		and local_filter_water != null
 		and local_filter_water.button_pressed
 		and local_filter_attack_min != null
-		and int(local_filter_attack_min.value) == 14
+		and int(local_filter_attack_min.value) == 85
 		and host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 	)
 	host.current_account_session = {
@@ -2871,7 +2867,7 @@ func _run_auto_capture_settings_check() -> void:
 		and online_status_label != null
 		and online_status_label.text == "修改后请保存到服务器。"
 		and online_filter_guidance_label != null
-		and online_filter_guidance_label.text.find("当前无论命中都保留") >= 0
+		and online_filter_guidance_label.text.find("不会自动放生") >= 0
 		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY)
 	)
@@ -2885,20 +2881,20 @@ func _run_auto_capture_settings_check() -> void:
 	var after_nested_settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
 	var after_nested_policy := after_nested_settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}) as Dictionary
 	var after_nested_element := after_nested_policy.get("element", {}) as Dictionary
-	var after_nested_four := after_nested_policy.get("levelOneFourV", {}) as Dictionary
+	var after_nested_percentiles := after_nested_policy.get("levelOneMinimumPercentiles", {}) as Dictionary
 	var nested_edit_ok := (
 		str(after_nested_settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, "")) == str(before_nested_settings.get(AutoCaptureSettingsModel.PREFERRED_TOOL_ID_KEY, ""))
 		and (after_nested_policy.get("lineIds", []) as Array).has("man_dragon")
 		and (after_nested_element.get("ids", []) as Array).has("water")
 		and (after_nested_element.get("ids", []) as Array).has("fire")
-		and int((after_nested_four.get("attack", {}) as Dictionary).get("max", 0)) == 16
+		and int(after_nested_percentiles.get("attack", 0)) == 85
 	)
 	host.profile_action_request_pending = true
 	host._refresh_auto_settings_panel()
 	var pending_save_button := host.auto_settings_controls.get("autoCaptureSaveButton", null) as Button
 	var pending_enabled_control := host.auto_settings_controls.get(AutoCaptureSettingsModel.ENABLED_KEY, null) as CheckBox
 	var pending_element_control := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_element_key("water"), null) as CheckBox
-	var pending_stat_control := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_min_key("attack"), null) as SpinBox
+	var pending_stat_control := host.auto_settings_controls.get(AutoCaptureFilterModel.ui_stat_key("attack"), null) as SpinBox
 	var pending_guard_ok := (
 		pending_save_button != null
 		and pending_save_button.disabled
@@ -14766,17 +14762,12 @@ func _run_auto_capture_settings_preview() -> void:
 	settings[AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY] = true
 	settings[AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY] = 31
 	settings[AutoCaptureSettingsModel.FILTER_POLICY_KEY] = {
-		"schemaVersion": 1,
+		"schemaVersion": 2,
 		"lineIds": ["man_dragon"],
 		"element": {"mode": "all", "ids": ["water"], "minPoints": 10},
 		"onlyNewCodexForm": false,
 		"maxOwnedSameForm": 10,
-		"levelOneFourV": {
-			"maxHp": {"min": 63, "max": 0},
-			"attack": {"min": 14, "max": 0},
-			"defense": {"min": 0, "max": 0},
-			"quick": {"min": 0, "max": 0},
-		},
+		"levelOneMinimumPercentiles": {"maxHp": 90, "attack": 85, "defense": 0, "quick": 40},
 	}
 	settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = {
 		"schemaVersion": 1,
@@ -14786,6 +14777,12 @@ func _run_auto_capture_settings_preview() -> void:
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	host.auto_settings_active_tab = "capture"
 	host._open_auto_settings_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var preview_scroll := host.auto_settings_content.get_parent() as ScrollContainer
+	if preview_scroll != null:
+		preview_scroll.scroll_vertical = 665
+		await host.get_tree().process_frame
 	host._set_world_log_message("自动捉宠设置已打开。")
 	if host.status_label != null:
 		host._update_hud_text()

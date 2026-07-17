@@ -27,10 +27,23 @@ const lines = new Map([
   ["bui", {lineId: "bui", lineName: "布伊系"}],
 ]);
 
+const growthProfiles = new Map([
+  ["blue_man_dragon_water10", {
+    profileId: "blue_man_dragon_v1",
+    outputBase: {maxHp: 60, attack: 14, defense: 8, quick: 6},
+    individualRules: {
+      initialOutputSpread: {maxHp: [-5, 5], attack: [-2, 2], defense: [-1, 1], quick: [-2, 2]},
+      distribution: "uniform",
+      rareExtremeRate: 0,
+    },
+  }],
+]);
+
 function filter() {
   return createPetAutoCaptureFilter({
     resolveTemplate: (formId) => templates.get(formId) || null,
     resolveLine: (lineId) => lines.get(lineId) || null,
+    resolveGrowthProfile: (formId) => growthProfiles.get(formId) || null,
   });
 }
 
@@ -44,17 +57,12 @@ function settings(overrides = {}) {
     levelComparator: "=",
     levelValue: 1,
     filterPolicy: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       lineIds: ["man_dragon"],
       element: {mode: "any", ids: ["water"], minPoints: 10},
       onlyNewCodexForm: true,
       maxOwnedSameForm: 2,
-      levelOneFourV: {
-        maxHp: {min: 60, max: 0},
-        attack: {min: 14, max: 16},
-        defense: {min: 0, max: 0},
-        quick: {min: 6, max: 0},
-      },
+      levelOneMinimumPercentiles: {maxHp: 55, attack: 60, defense: 70, quick: 60},
     },
     ...overrides,
   };
@@ -81,10 +89,19 @@ function context(overrides = {}) {
   };
 }
 
-function pet(stats = {maxHp: 60, attack: 14, defense: 8, quick: 6}) {
+function pet(stats = {maxHp: 60, attack: 14, defense: 8, quick: 6}, overrides = {}) {
   return {
+    formId: "blue_man_dragon_water10",
+    level: 1,
+    maxHp: stats.maxHp,
+    attack: stats.attack,
+    defense: stats.defense,
+    quick: stats.quick,
+    growthModelVersion: "pet_growth_authority_v1",
+    growthSpeciesProfileId: "blue_man_dragon_v1",
     initialStats: {...stats},
     growthSpeciesLevel1Stats: {...stats},
+    ...overrides,
   };
 }
 
@@ -110,7 +127,7 @@ test("pre-capture evaluation matches only server-resolved public battle and cata
   assert.equal(result.status, "matched");
   assert.equal(result.matched, true);
   assert.equal(result.retainPet, true);
-  assert.deepEqual(result.deferredChecks, ["level_one_four_v"]);
+  assert.deepEqual(result.deferredChecks, ["level_one_four_v_percentiles"]);
   assert.deepEqual(reasonCodes(result), ["pre_capture_public_rules_matched"]);
   assert.deepEqual(result.facts, {
     formId: "blue_man_dragon_water10",
@@ -126,6 +143,8 @@ test("pre-capture evaluation matches only server-resolved public battle and cata
     ownedSameFormCount: 1,
     pendingSameFormCount: 0,
     levelOneFourV: null,
+    levelOnePercentiles: null,
+    levelOnePercentileProfileId: "",
   });
   assert.deepEqual({inputSettings, inputActor, inputContext}, before);
 });
@@ -231,7 +250,7 @@ test("manual target text uses the same authoritative public display identity", (
   assert.equal(lineResult.matched, true);
 });
 
-test("post-capture evaluation reads two equal public Lv1 maps and always retains the pet", () => {
+test("post-capture evaluation calculates four species Lv1 percentiles and always retains the pet", () => {
   const captureFilter = filter();
   const inputSettings = settings();
   const preEvaluation = captureFilter.evaluatePreCapture({
@@ -252,6 +271,8 @@ test("post-capture evaluation reads two equal public Lv1 maps and always retains
   assert.equal(matched.retainPet, true);
   assert.deepEqual(matched.deferredChecks, []);
   assert.deepEqual(matched.facts.levelOneFourV, {maxHp: 60, attack: 14, defense: 8, quick: 6});
+  assert.deepEqual(matched.facts.levelOnePercentiles, {maxHp: 55, attack: 62.5, defense: 75, quick: 62.5});
+  assert.equal(matched.facts.levelOnePercentileProfileId, "blue_man_dragon_v1");
   assert.deepEqual(reasonCodes(matched), ["post_capture_public_rules_matched"]);
   assert.deepEqual({inputSettings, preEvaluation, capturedPet}, before);
 
@@ -264,12 +285,39 @@ test("post-capture evaluation reads two equal public Lv1 maps and always retains
   assert.equal(missed.matched, false);
   assert.equal(missed.retainPet, true);
   assert.deepEqual(reasonCodes(missed), [
-    "level_one_maxHp_below_min",
-    "level_one_attack_above_max",
-    "level_one_quick_below_min",
+    "level_one_maxHp_percentile_below_min",
+    "level_one_quick_percentile_below_min",
     "post_capture_public_rules_not_matched",
   ]);
-  assert.match(missed.reasons.at(-1).message, /不会自动处理/);
+  assert.match(missed.reasons.at(-1).message, /不会自动放生/);
+});
+
+test("captured Lv2+ pets bypass Lv1 percentile evaluation and default to manual retention", () => {
+  const captureFilter = filter();
+  const inputSettings = settings({levelValue: 20});
+  const preEvaluation = captureFilter.evaluatePreCapture({
+    settings: inputSettings,
+    actor: actor({level: 20}),
+    context: context(),
+  });
+  const guardedPet = new Proxy({formId: "blue_man_dragon_water10", level: 20}, {
+    get(target, property, receiver) {
+      if (!["formId", "level"].includes(String(property))) {
+        throw new Error(`Lv2+ must not read Lv1 percentile input: ${String(property)}`);
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const result = captureFilter.evaluatePostCapture({
+    settings: inputSettings,
+    pet: guardedPet,
+    preEvaluation,
+  });
+  assert.equal(result.status, "manual_review");
+  assert.equal(result.matched, true);
+  assert.equal(result.retainPet, true);
+  assert.deepEqual(reasonCodes(result), ["captured_level_not_one"]);
+  assert.match(result.reasons[0].message, /Lv20/);
 });
 
 test("post-capture fails closed on missing or inconsistent public Lv1 facts and still retains", () => {
@@ -281,12 +329,24 @@ test("post-capture fails closed on missing or inconsistent public Lv1 facts and 
   });
   const missing = captureFilter.evaluatePostCapture({
     settings: settings(),
-    pet: {initialStats: {maxHp: 60}, growthSpeciesLevel1Stats: {maxHp: 60}},
+    pet: pet({maxHp: 60, attack: 14, defense: 8, quick: 6}, {
+      initialStats: {maxHp: 60},
+      growthSpeciesLevel1Stats: {maxHp: 60},
+    }),
     preEvaluation,
   });
   assert.equal(missing.status, "unavailable");
   assert.equal(missing.retainPet, true);
   assert.deepEqual(reasonCodes(missing), ["level_one_four_v_unavailable"]);
+
+  const missingCurrent = captureFilter.evaluatePostCapture({
+    settings: settings(),
+    pet: pet(undefined, {maxHp: 0}),
+    preEvaluation,
+  });
+  assert.equal(missingCurrent.status, "unavailable");
+  assert.equal(missingCurrent.retainPet, true);
+  assert.deepEqual(reasonCodes(missingCurrent), ["level_one_four_v_unavailable"]);
 
   const inconsistentPet = pet();
   inconsistentPet.growthSpeciesLevel1Stats.attack = 15;
@@ -298,6 +358,15 @@ test("post-capture fails closed on missing or inconsistent public Lv1 facts and 
   assert.equal(inconsistent.status, "unavailable");
   assert.equal(inconsistent.retainPet, true);
   assert.deepEqual(reasonCodes(inconsistent), ["level_one_four_v_inconsistent"]);
+
+  const authorityMismatch = captureFilter.evaluatePostCapture({
+    settings: settings(),
+    pet: pet(undefined, {growthSpeciesProfileId: "forged_profile_v1"}),
+    preEvaluation,
+  });
+  assert.equal(authorityMismatch.status, "unavailable");
+  assert.equal(authorityMismatch.retainPet, true);
+  assert.deepEqual(reasonCodes(authorityMismatch), ["level_one_percentile_profile_unavailable"]);
 });
 
 test("post-capture guarded proxy proves hidden growth has zero reads", () => {
@@ -307,7 +376,10 @@ test("post-capture guarded proxy proves hidden growth has zero reads", () => {
     actor: actor(),
     context: context(),
   });
-  const allowedPetKeys = new Set(["initialStats", "growthSpeciesLevel1Stats"]);
+  const allowedPetKeys = new Set([
+    "formId", "level", "maxHp", "attack", "defense", "quick",
+    "growthModelVersion", "growthSpeciesProfileId", "initialStats", "growthSpeciesLevel1Stats",
+  ]);
   const allowedStatKeys = new Set(["maxHp", "attack", "defense", "quick"]);
   const guardedStats = (stats) => new Proxy(stats, {
     get(target, property, receiver) {
@@ -318,6 +390,14 @@ test("post-capture guarded proxy proves hidden growth has zero reads", () => {
     },
   });
   const guardedPet = new Proxy({
+    formId: "blue_man_dragon_water10",
+    level: 1,
+    maxHp: 60,
+    attack: 14,
+    defense: 8,
+    quick: 6,
+    growthModelVersion: "pet_growth_authority_v1",
+    growthSpeciesProfileId: "blue_man_dragon_v1",
     initialStats: guardedStats({maxHp: 60, attack: 14, defense: 8, quick: 6}),
     growthSpeciesLevel1Stats: guardedStats({maxHp: 60, attack: 14, defense: 8, quick: 6}),
     individualQualityScore: 999,
