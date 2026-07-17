@@ -26,6 +26,8 @@ const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_
 const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
+const PetGrowthRulePreviewModel := preload("res://scripts/progression/pet_growth_rule_preview_model.gd")
+const PetGrowthRulePreviewPresenter := preload("res://scripts/ui/pet_growth_rule_preview_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -22547,6 +22549,7 @@ func _offline_hang_gm_spinbox(label_text: String, value: float, minimum: float, 
 func _refresh_auto_capture_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
 	var filter_policy := AutoCaptureFilterModel.normalize_policy(settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}))
+	var growth_rule_policy := PetGrowthRulePreviewModel.normalize_policy(settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}))
 	var online_safe_mode: bool = _is_server_account_session() and not auth_auto_bypass
 	_add_auto_settings_section("自动捉宠")
 	_add_auto_settings_checkbox(
@@ -22657,6 +22660,35 @@ func _refresh_auto_capture_settings_tab() -> void:
 		"autoCaptureFilterGuidanceLabel",
 		AutoCaptureSettingsPresenter.public_filter_guidance_text(),
 		Color(0.72, 0.88, 0.78, 1.0)
+	)
+	_add_auto_settings_section("Lv20 成长保留预览（仅模拟）")
+	_add_auto_settings_int_spinbox(
+		"综合门槛",
+		PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY,
+		int(growth_rule_policy.get("overallMinimumPercentile", 0)),
+		0,
+		100,
+		"%分位"
+	)
+	var growth_stat_thresholds := growth_rule_policy.get("statMinimumPercentiles", {}) as Dictionary
+	for stat_key in PetGrowthRulePreviewModel.STAT_KEYS:
+		_add_auto_settings_int_spinbox(
+			"%s门槛" % str(PetGrowthRulePreviewModel.STAT_LABELS.get(stat_key, stat_key)),
+			PetGrowthRulePreviewModel.ui_stat_key(stat_key),
+			int(growth_stat_thresholds.get(stat_key, 0)),
+			0,
+			100,
+			"%分位"
+		)
+	_add_auto_capture_settings_note(
+		"autoCaptureGrowthRuleGuidanceLabel",
+		"0 表示不限；Lv20 前只观察。全部已启用门槛都达标才预览为保留；本预览不会移动或删除宠物。",
+		Color(0.72, 0.88, 0.78, 1.0)
+	)
+	_add_auto_capture_settings_note(
+		"autoCaptureGrowthRulePreviewLabel",
+		PetGrowthRulePreviewPresenter.preview_text(_current_auto_capture_growth_preview()),
+		Color(0.86, 0.90, 0.84, 1.0)
 	)
 	_add_auto_settings_section("工具与筛选")
 	_add_auto_settings_option(
@@ -22839,6 +22871,11 @@ func _on_auto_capture_settings_save_pressed() -> void:
 		)
 		_refresh_auto_settings_panel()
 		if bool(parsed.get("ok", false)):
+			var result_value = parsed.get("result", {})
+			var result := result_value as Dictionary if result_value is Dictionary else {}
+			var preview_value = result.get("growthRulePreview", {})
+			if preview_value is Dictionary and not (preview_value as Dictionary).is_empty():
+				_set_auto_capture_growth_preview(preview_value as Dictionary, true)
 			_set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
 			_set_world_log_message("捕捉设置已保存。")
 		else:
@@ -23088,6 +23125,7 @@ func _auto_capture_settings_keys() -> Array[String]:
 		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
 	]
 	keys.append_array(AutoCaptureFilterModel.ui_keys())
+	keys.append_array(PetGrowthRulePreviewModel.ui_keys())
 	return keys
 
 func _hang_settings_keys() -> Array[String]:
@@ -23115,6 +23153,16 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		_sync_auto_capture_filter_range_controls(updated_policy, key)
 		_auto_capture_settings_changed()
 		return
+	if PetGrowthRulePreviewModel.is_ui_key(key):
+		settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = PetGrowthRulePreviewModel.with_ui_value(
+			settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}),
+			key,
+			value
+		)
+		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+		_refresh_auto_capture_growth_preview()
+		_auto_capture_settings_changed()
+		return
 	match key:
 		AutoCaptureSettingsModel.ENABLED_KEY, AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY:
 			settings[key] = bool(value)
@@ -23124,6 +23172,29 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 			settings[key] = str(value)
 	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 	_auto_capture_settings_changed()
+
+
+func _current_auto_capture_growth_preview() -> Dictionary:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	return PetGrowthRulePreviewModel.evaluate_pets(
+		player_profile.get("petInstances", []),
+		settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {})
+	)
+
+
+func _refresh_auto_capture_growth_preview() -> void:
+	_set_auto_capture_growth_preview(_current_auto_capture_growth_preview())
+
+
+func _set_auto_capture_growth_preview(preview: Dictionary, server_confirmed: bool = false) -> void:
+	var label := auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
+	if label == null:
+		return
+	label.text = PetGrowthRulePreviewPresenter.preview_text(preview, server_confirmed)
+	label.add_theme_color_override(
+		"font_color",
+		Color(0.55, 0.95, 0.66, 1.0) if server_confirmed else Color(0.86, 0.90, 0.84, 1.0)
+	)
 
 
 func _sync_auto_capture_filter_range_controls(filter_policy: Dictionary, changed_key: String) -> void:

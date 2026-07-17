@@ -65,7 +65,9 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Keep Lv1 4V visible and hidden per-level quality meaningful; Lv1 alone must not settle keep/discard decisions.
 - The current formal Lv1 4V proxy is the authority-v1 pet's immutable `initialStats` / `growthSpeciesLevel1Stats` blood, attack, defense, and quick map. Do not invent a second quality field or expose the hidden roll.
 - Make early observation uncertain. Human players may inspect the visible estimate earlier, but automated growth rules require at least Lv20 / 19 observed upgrades and must use only public four-stat evidence.
+- Express growth retention rules as 0..100 percentile minimums: overall plus blood/attack/defense/quick, where 0 disables that threshold and every enabled threshold must pass. Show an immediate client preview while editing and replace it with a server-confirmed preview after saving.
 - A growth-screening result is not permission to delete. Keep the pet until the separate protection, recent-record, recovery, and feature-gate contracts all accept the operation.
+- A growth-rule preview must always report dry-run/retain/no-mutation semantics and stay bounded to the owned roster; never turn preview evaluation into a move, discard, consumption, or hidden-data read.
 - Give every species its own distribution. Do not reuse a global spread merely because the JSON accepts it.
 - Preserve stable IDs and old pets. Never reroll or silently weaken existing instances.
 - Keep server sessions authoritative for capture, random seeds, experience, stats, skills, progression, consumption, and settlement.

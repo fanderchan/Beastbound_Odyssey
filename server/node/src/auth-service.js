@@ -65,6 +65,8 @@ const {
   createAutoCaptureSettingsRules,
 } = require("./auth/auto-capture-settings");
 const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
+const {loadPetObservedGrowthScreening} = require("./auth/pet-observed-growth-screening");
+const {createPetObservedGrowthRulePreview} = require("./auth/pet-observed-growth-rule-preview");
 const {
   REASON_CODES: PET_PROTECTION_REASON_CODES,
   evaluateProfilePetAutomaticProcessing,
@@ -18333,6 +18335,9 @@ function publicProfileActionResult(action, result) {
     expPillItemId: String(source.expPillItemId || ""),
     expPillInstanceId: String(source.expPillInstanceId || ""),
     expPillLevel: Math.max(0, Math.trunc(Number(source.expPillLevel || 0))),
+    growthRulePreview: source.growthRulePreview && typeof source.growthRulePreview === "object" && !Array.isArray(source.growthRulePreview)
+      ? clone(source.growthRulePreview)
+      : {},
     schemaVersion: 1,
   };
 }
@@ -23455,6 +23460,16 @@ function defaultAutoCaptureSettings() {
 }
 
 let serverAutoCaptureSettingsRulesCache = null;
+let serverPetObservedGrowthRulePreviewCache = null;
+
+function serverPetObservedGrowthRulePreview() {
+  if (!serverPetObservedGrowthRulePreviewCache) {
+    serverPetObservedGrowthRulePreviewCache = createPetObservedGrowthRulePreview({
+      screening: loadPetObservedGrowthScreening(),
+    });
+  }
+  return serverPetObservedGrowthRulePreviewCache;
+}
 
 function serverAutoCaptureSettingsRules() {
   if (!serverAutoCaptureSettingsRulesCache) {
@@ -23463,6 +23478,7 @@ function serverAutoCaptureSettingsRules() {
       resolveForm: petTemplateForFormId,
       resolveLine: petTemplateLineById,
       normalizeCaptureToolId: normalizeBattleCaptureToolId,
+      previewGrowthRules: (profile) => serverPetObservedGrowthRulePreview().evaluateProfile(profile),
     });
   }
   return serverAutoCaptureSettingsRulesCache;

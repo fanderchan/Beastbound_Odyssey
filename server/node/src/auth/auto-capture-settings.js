@@ -1,6 +1,13 @@
 "use strict";
 
+const {
+  defaultGrowthRulePolicy,
+  normalizeGrowthRulePolicy,
+  strictPlayerGrowthRulePolicy,
+} = require("./pet-observed-growth-rule-preview");
+
 const AUTO_CAPTURE_SETTINGS_ACTION_ID = "auto_capture_settings_update";
+const GROWTH_RULE_POLICY_KEY = "growthRulePolicy";
 
 const TARGET_MODES = new Set(["all", "codex"]);
 const LEVEL_COMPARATORS = new Set(["<", "=", ">"]);
@@ -103,6 +110,9 @@ function createAutoCaptureSettingsRules(options = {}) {
   const normalizeCaptureToolId = typeof options.normalizeCaptureToolId === "function"
     ? options.normalizeCaptureToolId
     : () => emptyHandToolId;
+  const previewGrowthRules = typeof options.previewGrowthRules === "function"
+    ? options.previewGrowthRules
+    : null;
 
   function normalizeFormId(value) {
     const formId = String(value ?? "").trim();
@@ -318,6 +328,7 @@ function createAutoCaptureSettingsRules(options = {}) {
       autoDiscardLowPower,
       lowPowerThreshold: normalizeInteger(source.lowPowerThreshold, LIMITS.lowPowerThreshold),
       filterPolicy: normalizeFilterPolicy(source.filterPolicy),
+      [GROWTH_RULE_POLICY_KEY]: normalizeGrowthRulePolicy(source[GROWTH_RULE_POLICY_KEY]),
     };
   }
 
@@ -345,9 +356,19 @@ function createAutoCaptureSettingsRules(options = {}) {
     if (normalizedFilterPolicy && !normalizedFilterPolicy.ok) {
       return normalizedFilterPolicy;
     }
+    const hasGrowthRulePolicy = Object.hasOwn(payload.settings, GROWTH_RULE_POLICY_KEY);
+    const normalizedGrowthRulePolicy = hasGrowthRulePolicy
+      ? strictPlayerGrowthRulePolicy(payload.settings[GROWTH_RULE_POLICY_KEY])
+      : null;
+    if (normalizedGrowthRulePolicy && !normalizedGrowthRulePolicy.ok) {
+      return normalizedGrowthRulePolicy;
+    }
     const settings = normalizeSettings(payload.settings, {forceAutoDiscardLowPowerDisabled: true});
     if (normalizedFilterPolicy) {
       settings.filterPolicy = normalizedFilterPolicy.policy;
+    }
+    if (normalizedGrowthRulePolicy) {
+      settings[GROWTH_RULE_POLICY_KEY] = normalizedGrowthRulePolicy.policy;
     }
     return {
       ok: true,
@@ -364,6 +385,7 @@ function createAutoCaptureSettingsRules(options = {}) {
       };
     }
     const existingFilterPolicy = normalizeSettings(profile.autoCaptureSettings).filterPolicy;
+    const existingGrowthRulePolicy = normalizeSettings(profile.autoCaptureSettings)[GROWTH_RULE_POLICY_KEY];
     const normalized = normalizePlayerUpdate(payload);
     if (!normalized.ok) {
       return normalized;
@@ -371,12 +393,27 @@ function createAutoCaptureSettingsRules(options = {}) {
     if (!Object.hasOwn(payload.settings, "filterPolicy")) {
       normalized.settings.filterPolicy = existingFilterPolicy;
     }
+    if (!Object.hasOwn(payload.settings, GROWTH_RULE_POLICY_KEY)) {
+      normalized.settings[GROWTH_RULE_POLICY_KEY] = existingGrowthRulePolicy;
+    }
     profile.autoCaptureSettings = normalized.settings;
-    return {
+    const result = {
       ok: true,
       settings: normalized.settings,
       message: "自动捕捉设置已保存。",
     };
+    if (previewGrowthRules) {
+      try {
+        const preview = previewGrowthRules(profile);
+        if (isObjectRecord(preview)) {
+          result.growthRulePreview = preview;
+        }
+      } catch (_error) {
+        // Preview is read-only guidance. A temporary preview failure must not
+        // turn a validated settings save into a second, ambiguous mutation.
+      }
+    }
+    return result;
   }
 
   return Object.freeze({
@@ -392,6 +429,8 @@ module.exports = {
   FILTER_ELEMENT_IDS,
   FILTER_LEVEL_ONE_STAT_KEYS,
   FILTER_POLICY_SCHEMA_VERSION,
+  GROWTH_RULE_POLICY_KEY,
   createAutoCaptureSettingsRules,
+  defaultGrowthRulePolicy,
   defaultFilterPolicy,
 };

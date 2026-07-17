@@ -27,6 +27,7 @@
 | Client template resolution/validation | `client/godot/scripts/battle/pet_template_catalog.gd` |
 | Encounter selection | `client/godot/scripts/world/encounter_model.gd` |
 | Growth instance/observation | `client/godot/scripts/progression/pet_individual_growth_model.gd`, `pet_growth_observation_model.gd` |
+| Lv20 growth retention dry-run and Chinese explanation | `server/node/src/auth/pet-observed-growth-rule-preview.js`, `client/godot/scripts/progression/pet_growth_rule_preview_model.gd`, `client/godot/scripts/ui/pet_growth_rule_preview_presenter.gd`; persisted under `autoCaptureSettings.growthRulePolicy` |
 | Versioned cross-runtime growth algorithm (P0.2 shadow only) | `client/godot/scripts/progression/pet_growth_authority_model.gd`, `server/node/src/auth/pet-growth-authority.js`, `tools/fixtures/pet_growth_authority_v1_vectors.json` |
 | Strict server species-growth catalog (P0.2 shadow only) | `server/node/src/auth/pet-growth-catalog.js`; fixed-path reader over shared JSON, new-pet active-profile selection, and existing-instance historical-profile resolution |
 | Pure server v1 initialization, validation, and level settlement (P0.2 shadow only) | `server/node/src/auth/pet-growth-runtime.js` |
@@ -116,6 +117,7 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - The Godot v2 login path cleans both server caches but never loads either before the first fresh pull. Every full server profile passes strict projection, marker-aware no-RNG normalization, and dedicated public-cache publication. Growth UI shows only Lv1/current evidence and observed grades, never an exact hidden Lv140 result.
 - Historical legacy Lv2+ pets may have no persisted Lv1 4V. Preserve those existing instances and mark observation unavailable; never invent their missing history from an instance ID. New legacy captures now begin as real Lv1 candidates at encounter time, freeze their CSPRNG Lv1 4V/growth facts, then deterministically settle to the wild level before combat.
 - Local/offline legacy growth tools can still derive precise Lv140 values for QA. Server-marker pets must stay on the evidence-only observation path.
+- Lv20 retention rules now have a bounded no-mutation preview. Five percentile minimums use `0` as disabled and AND semantics; local edits preview immediately, while the settings action returns the server-confirmed result. This is still not permission to move, discard, or consume a pet.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
 - Distinct pet actions currently require globally unique preferred slots; all seven slots are occupied, so expand the catalog/slot contract before adding new active skill IDs.
@@ -140,10 +142,12 @@ Useful existing checks include:
 - `--auto-pet-encounter-table-check`
 - `--auto-capture-tools-check`
 - `--auto-capture-settings-check`
+- `--auto-pet-growth-rule-preview-check`
 - `--auto-pet-skill-training-check`
 - `--auto-pet-management-safety-check`
 - closest server battle-room/profile-action/storage tests
 - `node --test server/node/test/pet-growth-authority.test.js server/node/test/pet-growth-catalog.test.js server/node/test/pet-growth-runtime.test.js server/node/test/auth-profile-visibility.test.js server/node/test/pet-private-seed.test.js server/node/test/pet-private-state.test.js`
 - `node --test server/node/test/pet-capture-candidate-authority.test.js server/node/test/auth-battle-room.test.js`
+- `node --test server/node/test/pet-observed-growth-rule-preview.test.js server/node/test/auth-auto-capture-settings.test.js`
 
 Use `tools/run_godot_auto_checks.mjs --only <flags> --fail-fast` for selected client checks. Run the full local CI only for a genuine release/export gate or explicit user request.

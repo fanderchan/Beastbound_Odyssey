@@ -305,6 +305,7 @@ const trainerSkillIds = new Set(trainers.flatMap((trainer) => Array.isArray(trai
 const authServiceText = readText("server/node/src/auth-service.js");
 const growthCatalogText = readText("server/node/src/auth/pet-growth-catalog.js");
 const observedGrowthScreeningText = readText("server/node/src/auth/pet-observed-growth-screening.js");
+const observedGrowthRulePreviewText = readText("server/node/src/auth/pet-observed-growth-rule-preview.js");
 const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
 const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-authority.js");
 const petCaptureCandidateAuthorityText = readText("server/node/src/auth/pet-capture-candidate-authority.js");
@@ -315,6 +316,7 @@ const profileVisibilityText = readText("server/node/src/auth/profile-visibility.
 const protocolText = readText("server/node/src/protocol.js");
 const playerProgressText = readText("client/godot/scripts/progression/player_progress_model.gd");
 const serverAuthClientText = readText("client/godot/scripts/progression/server_auth_client_model.gd");
+const clientGrowthRulePreviewText = readText("client/godot/scripts/progression/pet_growth_rule_preview_model.gd");
 const protocolVersion = Number(protocolText.match(/const PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
 const minimumProtocolVersion = Number(protocolText.match(/const MIN_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
 const maximumProtocolVersion = Number(protocolText.match(/const MAX_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
@@ -327,6 +329,13 @@ const serverAuthority = {
     && observedGrowthScreeningText.includes("growthRuleEligible")
     && observedGrowthScreeningText.includes("retainPet: true")
     && observedGrowthScreeningText.includes("powerGrowthPercentilesByLevel"),
+  observedGrowthRulePreviewContract: observedGrowthRulePreviewText.includes("MAX_PREVIEW_PETS = 25")
+    && observedGrowthRulePreviewText.includes("mutationPerformed: false")
+    && observedGrowthRulePreviewText.includes("retainPet: true")
+    && observedGrowthRulePreviewText.includes("strictPlayerGrowthRulePolicy")
+    && authServiceText.includes("createPetObservedGrowthRulePreview")
+    && clientGrowthRulePreviewText.includes('"mutationCount": 0')
+    && clientGrowthRulePreviewText.includes("PetGrowthScreeningModel.evaluate_pet"),
   loadsPassiveCatalog: authServiceText.includes("loadBattlePassiveCatalog")
     && battlePassiveCatalogText.includes("battle_passive_skills.json"),
   acceptsClientEncounterZonePayload: authServiceText.includes("payload.encounterZone"),
@@ -367,6 +376,7 @@ const serverAuthority = {
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
 if (!serverAuthority.observedGrowthScreeningContract) issues.warnings.push("Node 尚未建立 Lv20 公开成长证据筛选合同；不能为新宠开放按成长自动处理");
+if (!serverAuthority.observedGrowthRulePreviewContract) issues.warnings.push("Lv20 成长保留门槛尚未形成服务端确认、客户端解释且零变更的预览合同；不得开放自动处置");
 if (!serverAuthority.loadsPassiveCatalog) issues.warnings.push("Node 当前未加载 battle_passive_skills.json；不能把被动目录存在当成服务端已执行");
 if (!serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 尚未接入服务端地图遇敌目录、位置校验与权威抽取");
 if (serverAuthority.acceptsClientEncounterZonePayload && !serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 当前接收客户端 encounterZone 的宠物事实；正式遇敌/捕捉前必须删除信任");
@@ -473,7 +483,7 @@ if (requestedFormId) {
     for (const [toolId, chances] of Object.entries(detail.captureChance)) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
-    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
+    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
   console.log(JSON.stringify(summary, null, 2));
@@ -481,7 +491,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
-  console.log(`服务端成长档/EXP/v1/新宠factory/捕捉候选/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

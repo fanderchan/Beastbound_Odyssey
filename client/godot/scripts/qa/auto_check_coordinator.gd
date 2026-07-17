@@ -30,6 +30,8 @@ const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_
 const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
+const PetGrowthRulePreviewModel := preload("res://scripts/progression/pet_growth_rule_preview_model.gd")
+const PetGrowthRulePreviewPresenter := preload("res://scripts/ui/pet_growth_rule_preview_presenter.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -3426,6 +3428,161 @@ func _run_auto_capture_settings_check() -> void:
 		str(terminal_error_stop_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_pet_growth_rule_preview_check() -> void:
+	host.profile_save_enabled = false
+	host.profile_action_request_pending = false
+	host.auth_auto_bypass = false
+	host.current_account_session = {
+		"accountId": "growth_rule_preview_account",
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "growth_rule_preview_token",
+	}
+	var level_twenty := _pet_growth_rule_preview_fixture(
+		"growth_preview_lv20",
+		"蓝人龙预览",
+		20,
+		{"maxHp": 239, "attack": 63, "defense": 28, "quick": 29},
+		PlayerProgressModel.PET_STATE_BATTLE
+	)
+	var level_nineteen := _pet_growth_rule_preview_fixture(
+		"growth_preview_lv19",
+		"蓝人龙幼体",
+		19,
+		{"maxHp": 230, "attack": 60, "defense": 27, "quick": 28},
+		PlayerProgressModel.PET_STATE_STORAGE
+	)
+	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile["petInstances"] = [level_twenty, level_nineteen]
+	host.player_profile["activePetInstanceId"] = "growth_preview_lv20"
+	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
+	var settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
+	settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = {
+		"schemaVersion": 1,
+		"overallMinimumPercentile": 91,
+		"statMinimumPercentiles": {"maxHp": 90, "attack": 90, "defense": 0, "quick": 40},
+	}
+	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
+	var pets_before := JSON.stringify(host.player_profile.get("petInstances", []))
+	var model_contract := PetGrowthRulePreviewModel.contract_check()
+	var presenter_contract := PetGrowthRulePreviewPresenter.contract_check()
+
+	host.auto_settings_active_tab = "capture"
+	host._open_auto_settings_panel()
+	await host.get_tree().process_frame
+	var overall_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY, null) as SpinBox
+	var hp_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("maxHp"), null) as SpinBox
+	var attack_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("attack"), null) as SpinBox
+	var defense_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("defense"), null) as SpinBox
+	var quick_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("quick"), null) as SpinBox
+	var preview_label := host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
+	var initial_text := preview_label.text if preview_label != null else ""
+	var initial_ui_ok: bool = (
+		overall_control != null and int(overall_control.value) == 91
+		and hp_control != null and int(hp_control.value) == 90
+		and attack_control != null and int(attack_control.value) == 90
+		and defense_control != null and int(defense_control.value) == 0
+		and quick_control != null and int(quick_control.value) == 40
+		and initial_text.find("若开启，将进入待处理") >= 0
+		and initial_text.find("综合 90%＜91%") >= 0
+		and initial_text.find("攻击 91.9%≥90%") >= 0
+		and initial_text.find("成长观察中，Lv20 后判断") >= 0
+		and initial_text.find("不会移动、丢弃或改写任何宠物") >= 0
+		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
+	)
+	var screenshot_ok := true
+	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if screenshot_path != "" and overall_control != null:
+		var settings_scroll := host.auto_settings_content.get_parent() as ScrollContainer
+		if settings_scroll != null:
+			settings_scroll.scroll_vertical = maxi(0, int(preview_label.position.y) - 180) if preview_label != null else 0
+			await host.get_tree().process_frame
+			await host.get_tree().process_frame
+		DirAccess.make_dir_recursive_absolute(screenshot_path.get_base_dir())
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error := screenshot_image.save_png(screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		screenshot_ok = screenshot_image != null and screenshot_error == OK
+		print("pet growth rule preview screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
+
+	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY, 85)
+	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.ui_stat_key("maxHp"), 85)
+	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.ui_stat_key("quick"), 30)
+	settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
+	var updated_policy := settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}) as Dictionary
+	var updated_stats := updated_policy.get("statMinimumPercentiles", {}) as Dictionary
+	preview_label = host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
+	var edited_text := preview_label.text if preview_label != null else ""
+	var edit_ok: bool = (
+		int(updated_policy.get("overallMinimumPercentile", 0)) == 85
+		and int(updated_stats.get("maxHp", 0)) == 85
+		and int(updated_stats.get("attack", 0)) == 90
+		and int(updated_stats.get("quick", 0)) == 30
+		and edited_text.find("若开启，将保留") >= 0
+		and edited_text.find("即时预览") >= 0
+	)
+
+	var pets: Array[Dictionary] = []
+	pets.append_array(PlayerProgressModel.party_pet_instances(host.player_profile))
+	pets.append_array(PlayerProgressModel.storage_pet_instances(host.player_profile))
+	var authoritative_preview := PetGrowthRulePreviewModel.evaluate_pets(pets, updated_policy)
+	host._panel_flow()._set_auto_capture_growth_preview(authoritative_preview, true)
+	preview_label = host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
+	var server_confirmed_ok := (
+		preview_label != null
+		and preview_label.text.find("服务器已确认预览") >= 0
+		and int(authoritative_preview.get("mutationCount", -1)) == 0
+		and bool(authoritative_preview.get("retainPet", false))
+	)
+	var pet_immutability_ok := pets_before == JSON.stringify(host.player_profile.get("petInstances", []))
+	var status := "ok" if (
+		bool(model_contract.get("ok", false))
+		and bool(presenter_contract.get("ok", false))
+		and initial_ui_ok
+		and edit_ok
+		and server_confirmed_ok
+		and pet_immutability_ok
+		and screenshot_ok
+	) else "failed"
+	print("pet growth rule preview check ready: status=%s model=%s presenter=%s initial_ui=%s edit=%s server_confirmed=%s pets_immutable=%s screenshot=%s" % [
+		status,
+		str(model_contract.get("ok", false)),
+		str(presenter_contract.get("ok", false)),
+		str(initial_ui_ok),
+		str(edit_ok),
+		str(server_confirmed_ok),
+		str(pet_immutability_ok),
+		str(screenshot_ok),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _pet_growth_rule_preview_fixture(instance_id: String, name: String, level: int, stats: Dictionary, state: String) -> Dictionary:
+	var level_one := {"maxHp": 65, "attack": 14, "defense": 9, "quick": 6}
+	return {
+		"instanceId": instance_id,
+		"petId": instance_id,
+		"name": name,
+		"state": state,
+		"formId": "blue_man_dragon_water10",
+		"templateId": "blue_man_dragon_water10",
+		"growthModelVersion": "pet_growth_authority_v1",
+		"growthSpeciesProfileId": "blue_man_dragon_v1",
+		"growthAuthority": {
+			"schemaVersion": 1,
+			"source": "server",
+			"modelVersion": "pet_growth_authority_v1",
+			"settledLevel": level,
+		},
+		"level": level,
+		"initialStats": level_one.duplicate(true),
+		"growthSpeciesLevel1Stats": level_one.duplicate(true),
+		"maxHp": int(stats.get("maxHp", 1)),
+		"attack": int(stats.get("attack", 1)),
+		"defense": int(stats.get("defense", 1)),
+		"quick": int(stats.get("quick", 1)),
+		"hp": int(stats.get("maxHp", 1)),
+	}
 
 func _run_auto_training_partner_check() -> void:
 	host.profile_save_enabled = false
@@ -14579,6 +14736,23 @@ func _run_auto_capture_settings_preview() -> void:
 	host.world_log_history.clear()
 	host.world_log_message = ""
 	host.player_profile = PlayerProgressModel.default_profile()
+	var level_twenty := _pet_growth_rule_preview_fixture(
+		"growth_preview_visual_lv20",
+		"蓝人龙预览",
+		20,
+		{"maxHp": 239, "attack": 63, "defense": 28, "quick": 29},
+		PlayerProgressModel.PET_STATE_BATTLE
+	)
+	var level_nineteen := _pet_growth_rule_preview_fixture(
+		"growth_preview_visual_lv19",
+		"蓝人龙幼体",
+		19,
+		{"maxHp": 230, "attack": 60, "defense": 27, "quick": 28},
+		PlayerProgressModel.PET_STATE_STORAGE
+	)
+	host.player_profile["petInstances"] = [level_twenty, level_nineteen]
+	host.player_profile["activePetInstanceId"] = "growth_preview_visual_lv20"
+	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
 	settings[AutoCaptureSettingsModel.ENABLED_KEY] = true
 	settings[AutoCaptureSettingsModel.TARGET_MODE_KEY] = AutoCaptureSettingsModel.TARGET_CODEX
@@ -14603,6 +14777,11 @@ func _run_auto_capture_settings_preview() -> void:
 			"defense": {"min": 0, "max": 0},
 			"quick": {"min": 0, "max": 0},
 		},
+	}
+	settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = {
+		"schemaVersion": 1,
+		"overallMinimumPercentile": 91,
+		"statMinimumPercentiles": {"maxHp": 90, "attack": 90, "defense": 0, "quick": 40},
 	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	host.auto_settings_active_tab = "capture"

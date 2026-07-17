@@ -726,6 +726,7 @@ var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
 var auto_battle_settings_check: bool = false
 var auto_capture_settings_check: bool = false
+var auto_pet_growth_rule_preview_check: bool = false
 var auto_training_partner_check: bool = false
 var auto_hang_settings_check: bool = false
 var auto_offline_hang_live_check: bool = false
@@ -1320,6 +1321,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_settings_check")
 	elif auto_capture_settings_check:
 		call_deferred("_run_auto_capture_settings_check")
+	elif auto_pet_growth_rule_preview_check:
+		call_deferred("_run_auto_pet_growth_rule_preview_check")
 	elif auto_training_partner_check:
 		call_deferred("_run_auto_training_partner_check")
 	elif auto_hang_settings_check:
@@ -1957,6 +1960,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_settings_check = true
 		elif arg == "--auto-capture-settings-check":
 			auto_capture_settings_check = true
+		elif arg == "--auto-pet-growth-rule-preview-check":
+			auto_pet_growth_rule_preview_check = true
 		elif arg == "--auto-training-partner-check":
 			auto_training_partner_check = true
 		elif arg == "--auto-hang-settings-check":
@@ -2944,6 +2949,10 @@ func _run_auto_battle_settings_check() -> void:
 
 func _run_auto_capture_settings_check() -> void:
 	await _auto_checks()._run_auto_capture_settings_check()
+
+
+func _run_auto_pet_growth_rule_preview_check() -> void:
+	await _auto_checks()._run_auto_pet_growth_rule_preview_check()
 
 
 func _auto_capture_full_pet_profile() -> Dictionary:

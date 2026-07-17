@@ -112,7 +112,7 @@ Normal two-rebirth, evolution, and fusion should land in comparable raw-stat ban
 
 ## Player information
 
-At capture, show Lv1 4V and stable visible identity. During training, show evidence from actual growth and an estimate that becomes more useful around Lv20. Automated growth rules stay ineligible until Lv20 / 19 observed upgrades, consume only public four-stat evidence, and retain the pet until a separate protected recovery workflow is enabled. Keep exact seed, hidden quality, and authoritative future roll GM-only.
+At capture, show Lv1 4V and stable visible identity. During training, show evidence from actual growth and an estimate that becomes more useful around Lv20. Automated growth rules stay ineligible until Lv20 / 19 observed upgrades, consume only public four-stat evidence, and retain the pet until a separate protected recovery workflow is enabled. Retention thresholds are minimum percentiles for overall and each visible stat: 0 means unrestricted, and all enabled thresholds must pass. Editing may preview locally, but saving must return the server's own dry-run preview before the result is called confirmed. Keep exact seed, hidden quality, and authoritative future roll GM-only.
 
 The codex answers “is this species worth chasing?” with species ranges, ecology, skills, and acquisition. The owned-pet panel answers “is this individual worth keeping?” with observed growth, training, learned skills, lock/bind status, and current stats.
 

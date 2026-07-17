@@ -11,8 +11,10 @@ const {
 } = require("../test-support/auth-service-test-context");
 const {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
+  GROWTH_RULE_POLICY_KEY,
   createAutoCaptureSettingsRules,
   defaultFilterPolicy,
+  defaultGrowthRulePolicy,
 } = require("../src/auth/auto-capture-settings");
 
 function testRules() {
@@ -46,6 +48,7 @@ test("auto-capture settings normalize dirty legacy values through injected catal
     autoDiscardLowPower: false,
     lowPowerThreshold: 31,
     filterPolicy: defaultFilterPolicy(),
+    growthRulePolicy: defaultGrowthRulePolicy(),
   });
   assert.deepEqual(rules.normalizeSettings("legacy-corrupt"), rules.defaultSettings());
 
@@ -78,6 +81,7 @@ test("auto-capture settings normalize dirty legacy values through injected catal
     autoDiscardLowPower: true,
     lowPowerThreshold: 0,
     filterPolicy: defaultFilterPolicy(),
+    growthRulePolicy: defaultGrowthRulePolicy(),
   });
 
   assert.equal(rules.normalizeSettings({targetFormId: "future_unknown_form"}).targetFormId, "");
@@ -213,6 +217,44 @@ test("legacy player update preserves the existing public filter policy", () => {
   assert.deepEqual(profile.autoCaptureSettings.filterPolicy, beforePolicy);
 });
 
+test("growth retention preview policy is strict and legacy updates preserve it", () => {
+  const rules = testRules();
+  const growthRulePolicy = {
+    schemaVersion: 1,
+    overallMinimumPercentile: 91,
+    statMinimumPercentiles: {maxHp: 90, attack: 90, defense: 0, quick: 40},
+  };
+  const accepted = rules.normalizePlayerUpdate({
+    settings: {[GROWTH_RULE_POLICY_KEY]: growthRulePolicy},
+  });
+  assert.equal(accepted.ok, true);
+  assert.deepEqual(accepted.settings[GROWTH_RULE_POLICY_KEY], growthRulePolicy);
+
+  for (const invalidPolicy of [
+    {...growthRulePolicy, schemaVersion: 2},
+    {...growthRulePolicy, overallMinimumPercentile: "91"},
+    {...growthRulePolicy, overallMinimumPercentile: 101},
+    {...growthRulePolicy, statMinimumPercentiles: {maxHp: 90, attack: 90, defense: 0}},
+    {...growthRulePolicy, statMinimumPercentiles: {maxHp: 90, attack: 90, defense: 0, quick: 40.5}},
+  ]) {
+    const rejected = rules.normalizePlayerUpdate({
+      settings: {[GROWTH_RULE_POLICY_KEY]: invalidPolicy},
+    });
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.code, "auto_capture_growth_rule_policy_invalid");
+  }
+
+  const profile = {
+    autoCaptureSettings: {
+      enabled: true,
+      [GROWTH_RULE_POLICY_KEY]: growthRulePolicy,
+    },
+  };
+  const result = rules.applyPlayerUpdate(profile, {settings: {enabled: false}});
+  assert.equal(result.ok, true);
+  assert.deepEqual(profile.autoCaptureSettings[GROWTH_RULE_POLICY_KEY], growthRulePolicy);
+});
+
 test("server-authoritative auto-capture action persists normalized settings and revision", () => {
   const store = createMemoryAuthStore();
   const service = createAuthService({store});
@@ -244,6 +286,11 @@ test("server-authoritative auto-capture action persists normalized settings and 
         capturePetSkillSlot: 7,
         autoDiscardLowPower: true,
         lowPowerThreshold: 99999,
+        growthRulePolicy: {
+          schemaVersion: 1,
+          overallMinimumPercentile: 91,
+          statMinimumPercentiles: {maxHp: 90, attack: 90, defense: 0, quick: 40},
+        },
         oldClientNoise: true,
       },
     },
@@ -264,7 +311,15 @@ test("server-authoritative auto-capture action persists normalized settings and 
     autoDiscardLowPower: false,
     lowPowerThreshold: 9999,
     filterPolicy: defaultFilterPolicy(),
+    growthRulePolicy: {
+      schemaVersion: 1,
+      overallMinimumPercentile: 91,
+      statMinimumPercentiles: {maxHp: 90, attack: 90, defense: 0, quick: 40},
+    },
   });
+  assert.equal(updated.result.growthRulePreview.dryRun, true);
+  assert.equal(updated.result.growthRulePreview.retainPet, true);
+  assert.equal(updated.result.growthRulePreview.mutationCount, 0);
 
   const restarted = createAuthService({store});
   const reloaded = restarted.getProfile(registered.session.token);
@@ -341,6 +396,8 @@ test("HTTP profile action exposes the authoritative auto-capture settings write 
   assert.equal(updated.profileSummary.profileRevision, 1);
   assert.equal(updated.profile.autoCaptureSettings.enabled, true);
   assert.equal(updated.profile.autoCaptureSettings.autoDiscardLowPower, false);
+  assert.equal(updated.result.growthRulePreview.dryRun, true);
+  assert.equal(updated.result.growthRulePreview.mutationCount, 0);
 
   const denied = await fetchJson(`${base}/profiles/me`, {
     method: "PUT",

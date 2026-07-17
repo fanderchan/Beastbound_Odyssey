@@ -59,6 +59,8 @@ Player-facing behavior should follow:
 - Later levels: narrower estimate and more stable grade.
 - GM/QA: exact seed, hidden roll, theoretical outcome, and percentile allowed.
 
+The current retention-preview policy has five 0..100 integer minimums: overall power growth percentile plus blood, attack, defense, and quick growth percentiles. `0` disables a threshold. A mature pet previews as retained only when every enabled threshold passes; an immature or unavailable pet always remains retained. The preview is bounded to 25 owned pets, reads no hidden seed/roll, returns `mutationCount = 0`, and must not move or delete anything. A client may recompute the same public formula for instant feedback, but only the response returned after the authoritative settings save is labeled server-confirmed.
+
 If per-level gains become stochastic around a hidden mean, derive each level roll deterministically from immutable pet seed + growth version + stat + level. This prevents reconnect/save-scumming while preserving visible variation.
 
 Do not use stored hidden roll to render a supposedly observed player forecast. Generate player estimates only from allowed observed history and species priors.
