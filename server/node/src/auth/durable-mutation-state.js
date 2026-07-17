@@ -31,6 +31,7 @@ const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
 const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "saveProfile",
   "profileAction",
+  "paidResetPet",
   "startHangSession",
   "stopHangSession",
   "startOfflineHang",

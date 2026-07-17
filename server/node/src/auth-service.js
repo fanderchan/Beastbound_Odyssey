@@ -142,6 +142,7 @@ const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createGmPetPaidResetConfigDomain} = require("./auth/gm-pet-paid-reset-config");
+const {createPetPaidResetDomain} = require("./auth/pet-paid-reset-domain");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
   createPresenceRevisionTracker,
@@ -308,6 +309,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
+  "paidResetPet",
 ]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
@@ -581,6 +583,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "saveProfile",
   "profileAction",
   "claimPetRecovery",
+  "paidResetPet",
   "startHangSession",
   "startOfflineHang",
   "playerRebirth",
@@ -777,6 +780,7 @@ function createAuthService(options = {}) {
   let activeSharedAssetReadData = null;
   let lastPublishedPersistentData = null;
   let activeDurableMutation = null;
+  let activeDurableOperation = null;
   let battleMaintenanceTimer = null;
   let presenceMaintenanceTimer = null;
   let activeOnlineAccountsCache = null;
@@ -3932,7 +3936,7 @@ function createAuthService(options = {}) {
     if (!receipt || typeof receipt !== "object") {
       return null;
     }
-    const rowLocalProfileMethod = methodName === "claimPetRecovery";
+    const rowLocalProfileMethod = methodName === "claimPetRecovery" || methodName === "paidResetPet";
     const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
     const action = methodName === "profileAction"
       ? normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command)
@@ -4694,6 +4698,11 @@ function createAuthService(options = {}) {
     };
     const cloneFinishedAt = process.hrtime.bigint();
     activeDurableMutation = transaction;
+    activeDurableOperation = receiptOperationId === "" ? null : Object.freeze({
+      operationId: receiptOperationId,
+      requestHash,
+      actionId,
+    });
     let result;
     try {
       result = method(...args);
@@ -4707,6 +4716,7 @@ function createAuthService(options = {}) {
       }
     } finally {
       activeDurableMutation = null;
+      activeDurableOperation = null;
     }
     const methodFinishedAt = process.hrtime.bigint();
 
@@ -5444,6 +5454,7 @@ function createAuthService(options = {}) {
       {battleActorRules},
     ),
     createPartyForLeader,
+    currentDurableOperation: () => activeDurableOperation,
     currentProfileQuestId,
     emitServiceEvent,
     ensureProfileForAccount,
@@ -5539,6 +5550,7 @@ function createAuthService(options = {}) {
     petEncounterAuthority,
     petGrowthCatalog,
     petPaidResetPolicyCatalog,
+    petRebirthGrowthCycle,
     playerLevelRuntime,
     playerPositionHasCell,
     profileActionLogLines,
@@ -5552,6 +5564,7 @@ function createAuthService(options = {}) {
     profilePetIndexById,
     profilePetInstances,
     profilePetName,
+    petRequiredByActiveQuest,
     profileCurrencyAmount,
     profileStoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
     profileStoneCoins,
@@ -5630,6 +5643,7 @@ function createAuthService(options = {}) {
   const gmQaPets = createGmQaPetsDomain(domainContext);
   const gmQaAssets = createGmQaAssetsDomain(domainContext);
   const gmPetPaidResetConfig = createGmPetPaidResetConfigDomain(domainContext);
+  const petPaidReset = createPetPaidResetDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -5660,6 +5674,7 @@ function createAuthService(options = {}) {
     updateOfflineHangConfig: offlineHang.updateConfig,
     getPetPaidResetConfig: gmPetPaidResetConfig.getConfig,
     updatePetPaidResetConfig: gmPetPaidResetConfig.updateConfig,
+    paidResetPet: petPaidReset.reset,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,
     questClaim: quest.questClaim,

@@ -84,6 +84,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "updateOfflineHangConfig",
   "getPetPaidResetConfig",
   "updatePetPaidResetConfig",
+  "paidResetPet",
   "offlineHangStatus",
   "startOfflineHang",
   "claimOfflineHang",
@@ -150,6 +151,7 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/market/buy",
   "/market/cancel",
   "/mail/send",
+  "/pets/paid-reset",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
 const IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN = /^\/pets\/recovery\/[^/]+\/claim$/;
@@ -460,6 +462,9 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/profile/action") {
         return sendResult(res, service.profileAction(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/pets/paid-reset") {
+        return sendResult(res, service.paidResetPet(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
@@ -847,7 +852,11 @@ async function sendResult(res, resultValue) {
     status = 429;
   } else if (result.code && result.code.includes("denied")) {
     status = 403;
-  } else if (result.code === "revision_conflict" || result.code === "idempotency_key_conflict") {
+  } else if (
+    result.code === "revision_conflict"
+    || result.code === "idempotency_key_conflict"
+    || result.code === "pet_paid_reset_config_revision_conflict"
+  ) {
     status = 409;
   } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {
     status = 426;

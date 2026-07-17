@@ -22,6 +22,7 @@ const mysqlStoreModule = require("../src/mysql-store");
 const {
   wrapFakeMysqlWithMailStorageAudit,
 } = require("../test-support/mysql-mail-storage-fixture");
+const {seedPaidResetAccount} = require("../test-support/pet-paid-reset-fixture");
 
 const {
   createMysqlAuthStore,
@@ -365,6 +366,65 @@ test("real record_point_save produces the strict profile plus receipt conditiona
     ["profile_binding", "profile", "mutation_receipt_capacity", "mutation_receipt"],
   );
   assert.equal(latestPlan.writes[3].key, operationId);
+});
+
+test("real paid pet reset uses the same row-local profile plus receipt conditional plan", async () => {
+  let committedPersistentData = null;
+  let latestPlan = null;
+  let latestSaveOptions = null;
+  const service = createAuthService({
+    allowFullProfileSave: true,
+    now: () => Date.parse("2026-07-17T16:00:00.000Z"),
+    store: {
+      load() {
+        return committedPersistentData === null ? {} : cloneAuthorityRoot(committedPersistentData);
+      },
+      save(nextData, saveOptions = {}) {
+        if (committedPersistentData !== null) {
+          latestSaveOptions = saveOptions;
+          latestPlan = buildPlan(nextData, committedPersistentData, saveOptions.consistencyScope);
+        }
+        const committed = cloneAuthorityRoot(nextData);
+        committed.mutationReceipts = commitDurableMutationReceiptDelta(
+          canonicalDurableMutationReceipts(committed.mutationReceipts),
+        );
+        committedPersistentData = committed;
+      },
+    },
+  });
+  const account = seedPaidResetAccount(service, {username: "prs_mysqlplan"});
+  const operationId = "paid_reset_mysql_profile_plan_0001";
+  const requestHash = "7".repeat(64);
+  const actionId = "POST /pets/paid-reset";
+  const reset = await service.invokeDurable("paidResetPet", [account.session.token, {
+    instanceId: account.fixture.pet.instanceId,
+    expectedProfileRevision: account.profileRevision,
+    expectedPriceConfigRevision: 0,
+  }], {operationId, requestHash, actionId});
+
+  assert.equal(reset.ok, true);
+  assert.equal(reset.profile.petInstances[0].level, 1);
+  assert.deepEqual(latestSaveOptions.consistencyScope, {
+    kind: "row_local_profile_v1",
+    accountId: account.account.accountId,
+    playerId: account.profileBinding.playerId,
+    operationId,
+    requestHash,
+    actionId,
+  });
+  assert.equal(latestPlan.kind, "profile_conditional_v2");
+  assert.equal(latestPlan.globalRevisionFence, false);
+  assert.equal(latestPlan.globalCompatibilityBarrier, "shared");
+  assert.deepEqual(
+    latestPlan.writes.map(operationResource),
+    ["profile_binding", "profile", "mutation_receipt_capacity", "mutation_receipt"],
+  );
+  assert.equal(latestPlan.writes[3].key, operationId);
+  assert.equal(
+    [...latestPlan.locks, ...latestPlan.writes]
+      .some((operation) => /\bserver_state\b/i.test(String(operation.sql || ""))),
+    false,
+  );
 });
 
 test("planner rejects unsafe or broader mutations to the legacy global-CAS path", async (t) => {

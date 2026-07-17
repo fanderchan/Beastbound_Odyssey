@@ -175,6 +175,7 @@ const PET_NUMBER_FIELD_KEYS = new Set([
   "partySlot",
   "storageSlot",
   "sortOrder",
+  "paidResetCount",
 ]);
 const PET_BOOLEAN_FIELD_KEYS = new Set([
   "isNew",
