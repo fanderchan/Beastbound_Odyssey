@@ -513,7 +513,7 @@ test("authority-v1 pet rebirth restarts one canonical growth cycle atomically", 
   );
   assert.equal(Object.values(rebornTarget.petCultivation.rebirthGrowthBonus).some((value) => value > 0), true);
   const rebirthEvent = rebornTarget.petCultivation.history.at(-1);
-  assert.equal(rebirthEvent.rebirthBalanceVersion, "pet_rebirth_balance_v2");
+  assert.equal(rebirthEvent.rebirthBalanceVersion, "pet_rebirth_balance_v3");
   assert.equal(rebirthEvent.targetPreparationLevel, 140);
   assert.equal(rebirthEvent.targetPreparationRatio, 1);
   assert.equal(rebirthEvent.targetPreparationMultiplier, 1.1);

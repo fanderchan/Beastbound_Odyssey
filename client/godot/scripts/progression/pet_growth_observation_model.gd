@@ -21,15 +21,6 @@ const REBIRTH_STAGE_LABELS := {
 	1: "1转成长",
 	2: "2转成长",
 }
-const REBIRTH_HP_INTERNAL_SCALE := 4.0
-const REBIRTH_POWER_THRESHOLDS := {
-	1: {"min": 0.0, "p25": 0.55, "p55": 1.05, "p85": 1.35, "p95": 1.52, "max": 1.60},
-	2: {"min": 0.0, "p25": 0.65, "p55": 1.18, "p85": 1.55, "p95": 1.76, "max": 1.85},
-}
-const REBIRTH_STAT_INTERNAL_THRESHOLDS := {
-	1: {"min": 0.0, "p25": 0.12, "p55": 0.28, "p85": 0.55, "p95": 0.85, "max": 1.30},
-	2: {"min": 0.0, "p25": 0.14, "p55": 0.32, "p85": 0.62, "p95": 0.98, "max": 1.50},
-}
 
 
 static func create_pet_instance(profile_id: String, instance_id: String, form_id: String, pet_name: String, state: String, level: int = 1, seed: String = "", sample_no: int = 0) -> Dictionary:
@@ -252,20 +243,25 @@ static func _evaluate_rebirth_growth(instance: Dictionary, stage: int) -> Dictio
 		}
 	var bonus := _rebirth_stage_bonus(instance, safe_stage)
 	var has_record := not _bonus_is_zero(bonus)
-	var stat_averages := {}
-	var stat_percentiles := {}
-	var stat_grades := {}
-	for key in STAT_KEYS:
-		var visible_growth := float(bonus.get(key, 0.0))
-		var internal_growth := _rebirth_internal_value(key, visible_growth)
-		var percentile := _rebirth_stat_percentile(safe_stage, internal_growth)
-		stat_averages[key] = snappedf(visible_growth, 0.001)
-		stat_percentiles[key] = snappedf(percentile, 0.1)
-		stat_grades[key] = _grade_for_percentile(percentile) if has_record else "未记录"
-	var power_growth := _rebirth_power_growth(bonus)
-	var power_percentile := _rebirth_power_percentile(safe_stage, power_growth)
+	var evaluated := _evaluate_rebirth_bonus(bonus, _rebirth_stage_thresholds(safe_stage))
+	var event := _rebirth_stage_event(instance, safe_stage)
+	var roll_percentile_value = event.get("rebirthBonusPercentile", null)
+	var has_roll_record := roll_percentile_value is int or roll_percentile_value is float
+	var roll_percentile := clampf(float(roll_percentile_value), 0.0, 100.0) if has_roll_record else 0.0
+	var roll_grade := str(event.get("rebirthBonusGrade", "")).strip_edges()
+	if has_roll_record and roll_grade == "":
+		roll_grade = _rebirth_grade_for_percentile(roll_percentile)
+	var terminal := {}
+	if safe_stage == 2:
+		var cumulative_bonus := _rebirth_cumulative_bonus(instance)
+		var terminal_has_record := not _bonus_is_zero(cumulative_bonus)
+		terminal = _evaluate_rebirth_bonus(cumulative_bonus, _rebirth_terminal_thresholds())
+		terminal["hasRecord"] = terminal_has_record
+		terminal["overallGrade"] = str(terminal.get("overallGrade", "D")) if terminal_has_record else "未记录"
 	return {
 		"schemaVersion": 1,
+		"evaluationVersion": str(_rebirth_evaluation().get("evaluationVersion", "")),
+		"evaluationReferenceLabel": str(_rebirth_evaluation().get("referenceLabel", "Lv140四满石全物种基准")),
 		"profileId": str(instance.get("growthSpeciesProfileId", "")).strip_edges(),
 		"level": level,
 		"observedLevels": maxi(0, level - 1),
@@ -273,12 +269,16 @@ static func _evaluate_rebirth_growth(instance: Dictionary, stage: int) -> Dictio
 		"stageLabel": label,
 		"enabled": true,
 		"hasRecord": has_record,
-		"statAverages": stat_averages,
-		"statPercentiles": stat_percentiles,
-		"statGrades": stat_grades,
-		"powerGrowthPerLevel": snappedf(power_growth, 0.001),
-		"powerPercentile": snappedf(power_percentile, 0.1),
-		"overallGrade": _grade_for_percentile(power_percentile) if has_record else "未记录",
+		"statAverages": evaluated.get("statAverages", {}),
+		"statPercentiles": evaluated.get("statPercentiles", {}),
+		"statGrades": evaluated.get("statGrades", {}) if has_record else _unrecorded_rebirth_stat_grades(),
+		"powerGrowthPerLevel": float(evaluated.get("powerGrowthPerLevel", 0.0)),
+		"powerPercentile": float(evaluated.get("powerPercentile", 0.0)),
+		"overallGrade": str(evaluated.get("overallGrade", "D")) if has_record else "未记录",
+		"hasRollRecord": has_roll_record,
+		"rollPercentile": snappedf(roll_percentile, 0.1),
+		"rollGrade": roll_grade,
+		"terminalTwoStage": terminal,
 	}
 
 
@@ -308,6 +308,20 @@ static func detail_lines_for_stage(instance: Dictionary, stage: int = 0) -> Arra
 			return lines
 	else:
 		lines.append("评价对象：%d转带来的每级转生增量。" % safe_stage)
+		lines.append("评价基准：%s。" % str(data.get("evaluationReferenceLabel", "Lv140四满石全物种基准")))
+		if bool(data.get("hasRollRecord", false)):
+			lines.append("本次运气：%s %.1f%%（与实际成品增量分开评价）。" % [
+				str(data.get("rollGrade", "D")),
+				float(data.get("rollPercentile", 0.0)),
+			])
+		if safe_stage == 2:
+			var terminal := data.get("terminalTwoStage", {}) as Dictionary
+			if bool(terminal.get("hasRecord", false)):
+				lines.append("普通二转总评价：%s    两转合计 %.3f/级    分位 %.1f%%" % [
+					str(terminal.get("overallGrade", "D")),
+					float(terminal.get("powerGrowthPerLevel", 0.0)),
+					float(terminal.get("powerPercentile", 0.0)),
+				])
 		if not bool(data.get("hasRecord", true)):
 			lines.append("旧记录没有保存该次转生增量，暂时无法拆分评级。")
 			return lines
@@ -498,7 +512,7 @@ static func _rebirth_attribute_table_rows(instance: Dictionary, stage: int, targ
 	var rows: Array[Dictionary] = []
 	var safe_level := clampi(int(instance.get("level", 1)), 1, 140)
 	var safe_target := clampi(target_level, safe_level, 140)
-	rows.append({
+	var summary_row := {
 		"label": "阶段",
 		"initial": "%d转" % (stage - 1),
 		"current": "%d转" % stage,
@@ -506,7 +520,20 @@ static func _rebirth_attribute_table_rows(instance: Dictionary, stage: int, targ
 		"growth": "-",
 		"grade": str(data.get("overallGrade", "未观察")),
 		"percentile": data.get("powerPercentile", ""),
-	})
+	}
+	if stage == 2:
+		var terminal := data.get("terminalTwoStage", {}) as Dictionary
+		if bool(terminal.get("hasRecord", false)):
+			summary_row = {
+				"label": "二转总评",
+				"initial": "两转合计",
+				"current": _rebirth_total_cell(float(terminal.get("powerGrowthPerLevel", 0.0))),
+				"target": "Lv140基准",
+				"growth": _growth_cell_text(terminal.get("powerGrowthPerLevel", 0.0)),
+				"grade": str(terminal.get("overallGrade", "未记录")),
+				"percentile": terminal.get("powerPercentile", ""),
+			}
+	rows.append(summary_row)
 	if not bool(data.get("enabled", false)):
 		return rows
 	var averages := data.get("statAverages", {}) as Dictionary
@@ -762,6 +789,18 @@ static func _rebirth_count(instance: Dictionary) -> int:
 
 static func _rebirth_stage_bonus(instance: Dictionary, stage: int) -> Dictionary:
 	var safe_stage := clampi(stage, 1, 2)
+	var event := _rebirth_stage_event(instance, safe_stage)
+	if not event.is_empty():
+		return _growth_bonus_dict(event.get("visibleGrowthBonus", {}))
+	var record = instance.get("petCultivation", {})
+	var record_dict := record as Dictionary if record is Dictionary else {}
+	if safe_stage == 1 and int(record_dict.get("rebirthCount", 0)) == 1:
+		return _growth_bonus_dict(record_dict.get("rebirthGrowthBonus", {}))
+	return _growth_bonus_dict({})
+
+
+static func _rebirth_stage_event(instance: Dictionary, stage: int) -> Dictionary:
+	var safe_stage := clampi(stage, 1, 2)
 	var record = instance.get("petCultivation", {})
 	var record_dict := record as Dictionary if record is Dictionary else {}
 	var history: Array = record_dict.get("history", []) if record_dict.get("history", []) is Array else []
@@ -772,16 +811,20 @@ static func _rebirth_stage_bonus(instance: Dictionary, stage: int) -> Dictionary
 		var entry_dict := entry as Dictionary
 		var after_stage := int(entry_dict.get("afterRebirthCount", entry_dict.get("helperStage", 0)))
 		if str(entry_dict.get("mode", "")) == "rebirth" and after_stage == safe_stage:
-			return _growth_bonus_dict(entry_dict.get("visibleGrowthBonus", {}))
+			return entry_dict.duplicate(true)
 	var last_result = record_dict.get("lastResult", {})
 	if last_result is Dictionary:
 		var result_dict := last_result as Dictionary
 		var result_stage := int(result_dict.get("afterRebirthCount", result_dict.get("helperStage", 0)))
 		if str(result_dict.get("mode", "")) == "rebirth" and result_stage == safe_stage:
-			return _growth_bonus_dict(result_dict.get("visibleGrowthBonus", {}))
-	if safe_stage == 1 and int(record_dict.get("rebirthCount", 0)) == 1:
-		return _growth_bonus_dict(record_dict.get("rebirthGrowthBonus", {}))
-	return _growth_bonus_dict({})
+			return result_dict.duplicate(true)
+	return {}
+
+
+static func _rebirth_cumulative_bonus(instance: Dictionary) -> Dictionary:
+	var record = instance.get("petCultivation", {})
+	var record_dict := record as Dictionary if record is Dictionary else {}
+	return _growth_bonus_dict(record_dict.get("rebirthGrowthBonus", {}))
 
 
 static func _bonus_is_zero(bonus: Dictionary) -> bool:
@@ -792,7 +835,7 @@ static func _bonus_is_zero(bonus: Dictionary) -> bool:
 
 
 static func _rebirth_internal_value(stat_key: String, visible_growth: float) -> float:
-	return visible_growth / REBIRTH_HP_INTERNAL_SCALE if stat_key == "maxHp" else visible_growth
+	return visible_growth / _rebirth_hp_internal_scale() if stat_key == "maxHp" else visible_growth
 
 
 static func _rebirth_power_growth(bonus: Dictionary) -> float:
@@ -802,14 +845,76 @@ static func _rebirth_power_growth(bonus: Dictionary) -> float:
 	return snappedf(total, 0.001)
 
 
-static func _rebirth_power_percentile(stage: int, power_growth: float) -> float:
-	var thresholds := REBIRTH_POWER_THRESHOLDS.get(clampi(stage, 1, 2), REBIRTH_POWER_THRESHOLDS[1]) as Dictionary
-	return _percentile_from_thresholds(power_growth, thresholds)
+static func _evaluate_rebirth_bonus(bonus: Dictionary, thresholds: Dictionary) -> Dictionary:
+	var stat_thresholds := thresholds.get("stats", {}) as Dictionary
+	var stat_averages := {}
+	var stat_percentiles := {}
+	var stat_grades := {}
+	for key in STAT_KEYS:
+		var visible_growth := float(bonus.get(key, 0.0))
+		var internal_growth := _rebirth_internal_value(key, visible_growth)
+		var threshold_table := stat_thresholds.get(key, {}) as Dictionary
+		var percentile := _percentile_from_thresholds(internal_growth, threshold_table)
+		stat_averages[key] = snappedf(visible_growth, 0.001)
+		stat_percentiles[key] = snappedf(percentile, 0.1)
+		stat_grades[key] = _rebirth_grade_for_percentile(percentile)
+	var power_growth := _rebirth_power_growth(bonus)
+	var power_percentile := _percentile_from_thresholds(power_growth, thresholds.get("power", {}) as Dictionary)
+	return {
+		"statAverages": stat_averages,
+		"statPercentiles": stat_percentiles,
+		"statGrades": stat_grades,
+		"powerGrowthPerLevel": snappedf(power_growth, 0.001),
+		"powerPercentile": snappedf(power_percentile, 0.1),
+		"overallGrade": _rebirth_grade_for_percentile(power_percentile),
+	}
 
 
-static func _rebirth_stat_percentile(stage: int, internal_growth: float) -> float:
-	var thresholds := REBIRTH_STAT_INTERNAL_THRESHOLDS.get(clampi(stage, 1, 2), REBIRTH_STAT_INTERNAL_THRESHOLDS[1]) as Dictionary
-	return _percentile_from_thresholds(internal_growth, thresholds)
+static func _unrecorded_rebirth_stat_grades() -> Dictionary:
+	var result := {}
+	for key in STAT_KEYS:
+		result[key] = "未记录"
+	return result
+
+
+static func _rebirth_balance() -> Dictionary:
+	return BalanceCatalogModel.pet_rebirth_balance()
+
+
+static func _rebirth_evaluation() -> Dictionary:
+	var value = _rebirth_balance().get("evaluation", {})
+	return value as Dictionary if value is Dictionary else {}
+
+
+static func _rebirth_stage_thresholds(stage: int) -> Dictionary:
+	var all_thresholds := _rebirth_evaluation().get("stageThresholds", {}) as Dictionary
+	var value = all_thresholds.get(str(clampi(stage, 1, 2)), {})
+	return value as Dictionary if value is Dictionary else {}
+
+
+static func _rebirth_terminal_thresholds() -> Dictionary:
+	var value = _rebirth_evaluation().get("terminalTwoStageThresholds", {})
+	return value as Dictionary if value is Dictionary else {}
+
+
+static func _rebirth_hp_internal_scale() -> float:
+	var internal_power := _rebirth_balance().get("internalPower", {}) as Dictionary
+	return maxf(0.001, float(internal_power.get("maxHpScale", 4.0)))
+
+
+static func _rebirth_grade_for_percentile(percentile: float) -> String:
+	var roll := _rebirth_balance().get("roll", {}) as Dictionary
+	var thresholds := roll.get("gradeThresholds", {}) as Dictionary
+	var value := clampf(percentile, 0.0, 100.0)
+	if value >= float(thresholds.get("S", 95.0)):
+		return "S"
+	if value >= float(thresholds.get("A", 85.0)):
+		return "A"
+	if value >= float(thresholds.get("B", 55.0)):
+		return "B"
+	if value >= float(thresholds.get("C", 25.0)):
+		return "C"
+	return "D"
 
 
 static func _rebirth_total_cell(value: float) -> String:

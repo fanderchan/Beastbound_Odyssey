@@ -8,6 +8,8 @@ const DEFAULT_BALANCE_PATH = path.resolve(
   "../../../../client/godot/data/balance/pet_rebirth_balance.json",
 );
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
+const THRESHOLD_KEYS = Object.freeze(["min", "p25", "p55", "p85", "p95", "max"]);
+const THRESHOLD_PERCENTILES = Object.freeze([0, 25, 55, 85, 95, 100]);
 
 class PetRebirthBalanceError extends Error {
   constructor(errors = []) {
@@ -83,6 +85,43 @@ function normalizedRangeTable(value, stage, errors) {
     result.push(Object.freeze({effectiveStoneCount: index, min: minimum, max: maximum}));
   }
   return result;
+}
+
+function normalizedThresholdTable(value, pathLabel, errors) {
+  if (!isObjectRecord(value)) {
+    errors.push(`${pathLabel} must be an object`);
+    return {};
+  }
+  const result = {};
+  let previous = -Infinity;
+  for (const key of THRESHOLD_KEYS) {
+    const number = finiteNumber(value[key]);
+    if (number === null || number < 0 || number < previous) {
+      errors.push(`${pathLabel}.${key} is invalid`);
+      result[key] = number === null ? 0 : number;
+      continue;
+    }
+    result[key] = number;
+    previous = number;
+  }
+  if (finiteNumber(result.max) !== null && finiteNumber(result.min) !== null && result.max <= result.min) {
+    errors.push(`${pathLabel} must span a positive range`);
+  }
+  return result;
+}
+
+function normalizedThresholdSeries(value, pathLabel, errors) {
+  const source = isObjectRecord(value) ? value : {};
+  if (!isObjectRecord(value)) errors.push(`${pathLabel} must be an object`);
+  const stats = isObjectRecord(source.stats) ? source.stats : {};
+  if (!isObjectRecord(source.stats)) errors.push(`${pathLabel}.stats must be an object`);
+  return {
+    power: normalizedThresholdTable(source.power, `${pathLabel}.power`, errors),
+    stats: Object.fromEntries(STAT_KEYS.map((key) => [
+      key,
+      normalizedThresholdTable(stats[key], `${pathLabel}.stats.${key}`, errors),
+    ])),
+  };
 }
 
 function createPetRebirthBalance(document) {
@@ -177,6 +216,49 @@ function createPetRebirthBalance(document) {
     poolRangesByStage[stage] = normalizedRangeTable(rawTables[String(stage)], stage, errors);
   }
 
+  const evaluation = isObjectRecord(document.evaluation) ? document.evaluation : {};
+  const evaluationVersion = String(evaluation.evaluationVersion || "").trim();
+  const referenceLabel = String(evaluation.referenceLabel || "").trim();
+  if (!/^pet_rebirth_evaluation_v[1-9][0-9]*$/.test(evaluationVersion)) {
+    errors.push("evaluation.evaluationVersion is invalid");
+  }
+  if (!referenceLabel || referenceLabel.length > 64) {
+    errors.push("evaluation.referenceLabel is invalid");
+  }
+  const evaluationReference = isObjectRecord(evaluation.reference) ? evaluation.reference : {};
+  const evaluationTargetLevel = integerInRange(evaluationReference.targetLevel, 1, 140);
+  const evaluationStonePoints = integerInRange(evaluationReference.stonePointsPerStat, 1, 1000);
+  const evaluationProfileCount = integerInRange(evaluationReference.profileCount, 1, 10000);
+  const evaluationSamplesPerProfile = integerInRange(evaluationReference.samplesPerProfile, 10000, 1000000);
+  if (evaluationTargetLevel !== fullPreparationLevel) {
+    errors.push("evaluation.reference.targetLevel must equal target.fullPreparationLevel");
+  }
+  if (evaluationStonePoints !== stoneCapacity) {
+    errors.push("evaluation.reference.stonePointsPerStat must equal stone.capacityPerStat");
+  }
+  if (evaluationProfileCount === null) errors.push("evaluation.reference.profileCount is invalid");
+  if (evaluationSamplesPerProfile === null) errors.push("evaluation.reference.samplesPerProfile is invalid");
+  if (evaluationReference.profileSelector !== "all_non_mm_growth_profiles") {
+    errors.push("evaluation.reference.profileSelector is invalid");
+  }
+  if (evaluationReference.stageRolls !== "independent_uniform_percentile") {
+    errors.push("evaluation.reference.stageRolls is invalid");
+  }
+  const rawStageThresholds = isObjectRecord(evaluation.stageThresholds) ? evaluation.stageThresholds : {};
+  const stageThresholds = {};
+  for (const stage of [1, 2]) {
+    stageThresholds[stage] = normalizedThresholdSeries(
+      rawStageThresholds[String(stage)],
+      `evaluation.stageThresholds.${stage}`,
+      errors,
+    );
+  }
+  const terminalTwoStageThresholds = normalizedThresholdSeries(
+    evaluation.terminalTwoStageThresholds,
+    "evaluation.terminalTwoStageThresholds",
+    errors,
+  );
+
   const compatibility = isObjectRecord(document.compatibility) ? document.compatibility : {};
   if (compatibility.applyTo !== "future_confirmed_rebirths_only") {
     errors.push("compatibility.applyTo must protect existing results");
@@ -209,6 +291,20 @@ function createPetRebirthBalance(document) {
       gradeThresholds: normalizedThresholds,
     },
     poolRangesByStage,
+    evaluation: {
+      evaluationVersion,
+      referenceLabel,
+      reference: {
+        targetLevel: evaluationTargetLevel,
+        stonePointsPerStat: evaluationStonePoints,
+        profileSelector: "all_non_mm_growth_profiles",
+        profileCount: evaluationProfileCount,
+        samplesPerProfile: evaluationSamplesPerProfile,
+        stageRolls: "independent_uniform_percentile",
+      },
+      stageThresholds,
+      terminalTwoStageThresholds,
+    },
     compatibility: {
       applyTo: compatibility.applyTo,
       existingPets: compatibility.existingPets,
@@ -287,13 +383,79 @@ function petRebirthPoolInfo(balance, {stonePoints, stage, targetLevel, percentil
   };
 }
 
+function petRebirthPercentileFromThresholds(value, thresholds) {
+  const numericValue = finiteNumber(value) ?? 0;
+  const table = isObjectRecord(thresholds) ? thresholds : {};
+  const values = THRESHOLD_KEYS.map((key) => finiteNumber(table[key]) ?? 0);
+  if (numericValue <= values[0]) return 0;
+  if (numericValue >= values[values.length - 1]) return 100;
+  for (let index = 0; index < values.length - 1; index += 1) {
+    const left = values[index];
+    const right = values[index + 1];
+    if (numericValue > right) continue;
+    if (Math.abs(right - left) <= 1e-12) return THRESHOLD_PERCENTILES[index + 1];
+    const ratio = clamp((numericValue - left) / (right - left), 0, 1);
+    return THRESHOLD_PERCENTILES[index]
+      + ratio * (THRESHOLD_PERCENTILES[index + 1] - THRESHOLD_PERCENTILES[index]);
+  }
+  return 100;
+}
+
+function petRebirthGradeForPercentile(balance, percentile) {
+  const value = clamp(percentile, 0, 100);
+  const thresholds = balance.roll.gradeThresholds;
+  if (value >= thresholds.S) return "S";
+  if (value >= thresholds.A) return "A";
+  if (value >= thresholds.B) return "B";
+  if (value >= thresholds.C) return "C";
+  return "D";
+}
+
+function petRebirthEvaluateGrowthBonus(balance, {visibleGrowthBonus, stage = 1, terminal = false} = {}) {
+  const visible = isObjectRecord(visibleGrowthBonus) ? visibleGrowthBonus : {};
+  const safeStage = Math.max(1, Math.min(balance.maxRebirthStage, Math.trunc(Number(stage || 1))));
+  const thresholds = terminal
+    ? balance.evaluation.terminalTwoStageThresholds
+    : balance.evaluation.stageThresholds[safeStage];
+  const internalGrowth = {};
+  const statPercentiles = {};
+  const statGrades = {};
+  let powerGrowth = 0;
+  for (const key of STAT_KEYS) {
+    const visibleValue = Math.max(0, finiteNumber(visible[key]) ?? 0);
+    const internalValue = key === "maxHp" ? visibleValue / balance.internalPower.maxHpScale : visibleValue;
+    const percentile = petRebirthPercentileFromThresholds(internalValue, thresholds.stats[key]);
+    internalGrowth[key] = internalValue;
+    statPercentiles[key] = percentile;
+    statGrades[key] = petRebirthGradeForPercentile(balance, percentile);
+    powerGrowth += internalValue;
+  }
+  const powerPercentile = petRebirthPercentileFromThresholds(powerGrowth, thresholds.power);
+  return {
+    evaluationVersion: balance.evaluation.evaluationVersion,
+    referenceLabel: balance.evaluation.referenceLabel,
+    stage: safeStage,
+    terminal: Boolean(terminal),
+    internalGrowth,
+    statPercentiles,
+    statGrades,
+    powerGrowth,
+    powerPercentile,
+    overallGrade: petRebirthGradeForPercentile(balance, powerPercentile),
+  };
+}
+
 module.exports = {
   DEFAULT_BALANCE_PATH,
   STAT_KEYS,
   PetRebirthBalanceError,
+  THRESHOLD_KEYS,
   createPetRebirthBalance,
   loadPetRebirthBalance,
   petRebirthEffectiveStoneCount,
+  petRebirthEvaluateGrowthBonus,
+  petRebirthGradeForPercentile,
+  petRebirthPercentileFromThresholds,
   petRebirthPoolInfo,
   petRebirthPoolRange,
   petRebirthTargetPreparation,

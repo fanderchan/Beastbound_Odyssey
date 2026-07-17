@@ -8,6 +8,7 @@ const {
   createPetRebirthBalance,
   loadPetRebirthBalance,
   petRebirthEffectiveStoneCount,
+  petRebirthEvaluateGrowthBonus,
   petRebirthPoolInfo,
   petRebirthPoolRange,
   petRebirthTargetPreparation,
@@ -22,7 +23,9 @@ function closeTo(actual, expected, tolerance = 1e-9) {
 test("pet rebirth balance loads one strict future-only shared contract", () => {
   const balance = loadPetRebirthBalance();
   assert.equal(balance.schemaVersion, 1);
-  assert.equal(balance.balanceVersion, "pet_rebirth_balance_v2");
+  assert.equal(balance.balanceVersion, "pet_rebirth_balance_v3");
+  assert.equal(balance.evaluation.evaluationVersion, "pet_rebirth_evaluation_v1");
+  assert.equal(balance.evaluation.reference.profileCount, 30);
   assert.equal(Object.isFrozen(balance), true);
   assert.equal(Object.isFrozen(balance.poolRangesByStage[1]), true);
   assert.deepEqual(balance.compatibility, {
@@ -30,6 +33,34 @@ test("pet rebirth balance loads one strict future-only shared contract", () => {
     existingPets: "unchanged",
     existingHistory: "unchanged",
   });
+});
+
+test("rebirth evaluation separates a near-median stage result from terminal two-stage quality", () => {
+  const balance = loadPetRebirthBalance();
+  const stageOneBonus = {maxHp: 1.6, attack: 0.4, defense: 0.35, quick: 0.39};
+  const stageTwoBonus = {maxHp: 1.8, attack: 0.46, defense: 0.4, quick: 0.45};
+  const terminalBonus = Object.fromEntries(Object.keys(stageOneBonus).map((key) => [
+    key,
+    stageOneBonus[key] + stageTwoBonus[key],
+  ]));
+
+  const stageOne = petRebirthEvaluateGrowthBonus(balance, {
+    visibleGrowthBonus: stageOneBonus,
+    stage: 1,
+  });
+  const terminal = petRebirthEvaluateGrowthBonus(balance, {
+    visibleGrowthBonus: terminalBonus,
+    stage: 2,
+    terminal: true,
+  });
+
+  closeTo(stageOne.powerGrowth, 1.54);
+  closeTo(stageOne.powerPercentile, 50, 0.1);
+  assert.equal(stageOne.overallGrade, "C");
+  closeTo(terminal.powerGrowth, 3.3);
+  closeTo(terminal.powerPercentile, 50, 1);
+  assert.equal(terminal.overallGrade, "C");
+  assert.equal(terminal.referenceLabel, "Lv140四满石全物种基准");
 });
 
 test("Lv80 keeps the previous MM pool while Lv140 adds only ten percent", () => {
@@ -92,6 +123,15 @@ test("target preparation scales MM investment instead of granting a free fixed b
 test("pet rebirth balance rejects a contract that can rewrite existing results", () => {
   const source = structuredClone(loadPetRebirthBalance());
   source.compatibility.existingHistory = "reroll";
+  assert.throws(
+    () => createPetRebirthBalance(source),
+    (error) => error instanceof PetRebirthBalanceError && error.code === "pet_rebirth_balance_invalid",
+  );
+});
+
+test("pet rebirth balance rejects unordered evaluation thresholds", () => {
+  const source = structuredClone(loadPetRebirthBalance());
+  source.evaluation.stageThresholds["1"].power.p55 = 0.5;
   assert.throws(
     () => createPetRebirthBalance(source),
     (error) => error instanceof PetRebirthBalanceError && error.code === "pet_rebirth_balance_invalid",

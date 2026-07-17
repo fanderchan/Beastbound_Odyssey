@@ -757,11 +757,79 @@ static func _validate_pet_rebirth_balance(errors: Array[String]) -> void:
 				errors.append("pet_rebirth_balance.poolRangesByStage.%d[%d] 区间无效" % [stage, index])
 			last_min = min_value
 			last_max = max_value
+	var evaluation := data.get("evaluation", {}) as Dictionary
+	if str(evaluation.get("evaluationVersion", "")) != "pet_rebirth_evaluation_v1":
+		errors.append("pet_rebirth_balance.evaluation.evaluationVersion 当前必须为pet_rebirth_evaluation_v1")
+	var reference_label := str(evaluation.get("referenceLabel", "")).strip_edges()
+	if reference_label == "" or reference_label.length() > 64:
+		errors.append("pet_rebirth_balance.evaluation.referenceLabel 无效")
+	var reference := evaluation.get("reference", {}) as Dictionary
+	if int(reference.get("targetLevel", 0)) != full_level:
+		errors.append("pet_rebirth_balance.evaluation.reference.targetLevel 必须等于满准备等级")
+	if int(reference.get("stonePointsPerStat", 0)) != int(stone.get("capacityPerStat", 0)):
+		errors.append("pet_rebirth_balance.evaluation.reference.stonePointsPerStat 必须使用满石")
+	if str(reference.get("profileSelector", "")) != "all_non_mm_growth_profiles":
+		errors.append("pet_rebirth_balance.evaluation.reference.profileSelector 无效")
+	if str(reference.get("stageRolls", "")) != "independent_uniform_percentile":
+		errors.append("pet_rebirth_balance.evaluation.reference.stageRolls 无效")
+	if int(reference.get("samplesPerProfile", 0)) < 10000:
+		errors.append("pet_rebirth_balance.evaluation.reference.samplesPerProfile 不得低于10000")
+	var ordinary_profile_count := 0
+	for profile in pet_growth_species_profile_list():
+		if not str(profile.get("profileId", "")).begins_with("pet_rebirth_mm_"):
+			ordinary_profile_count += 1
+	if int(reference.get("profileCount", 0)) != ordinary_profile_count:
+		errors.append("pet_rebirth_balance.evaluation.reference.profileCount 与当前非MM成长档数量不一致")
+	var stage_thresholds := evaluation.get("stageThresholds", {}) as Dictionary
+	for stage in [1, 2]:
+		_validate_pet_rebirth_threshold_series(
+			stage_thresholds.get(str(stage), {}),
+			"pet_rebirth_balance.evaluation.stageThresholds.%d" % stage,
+			errors
+		)
+	_validate_pet_rebirth_threshold_series(
+		evaluation.get("terminalTwoStageThresholds", {}),
+		"pet_rebirth_balance.evaluation.terminalTwoStageThresholds",
+		errors
+	)
 	var compatibility := data.get("compatibility", {}) as Dictionary
 	if str(compatibility.get("applyTo", "")) != "future_confirmed_rebirths_only":
 		errors.append("pet_rebirth_balance 只能作用于未来确认的转生")
 	if str(compatibility.get("existingPets", "")) != "unchanged" or str(compatibility.get("existingHistory", "")) != "unchanged":
 		errors.append("pet_rebirth_balance 必须保持既有宠物和历史不变")
+
+
+static func _validate_pet_rebirth_threshold_series(value, path_label: String, errors: Array[String]) -> void:
+	if not (value is Dictionary):
+		errors.append("%s 必须是对象" % path_label)
+		return
+	var series := value as Dictionary
+	_validate_pet_rebirth_threshold_table(series.get("power", {}), "%s.power" % path_label, errors)
+	var stats_value = series.get("stats", {})
+	if not (stats_value is Dictionary):
+		errors.append("%s.stats 必须是对象" % path_label)
+		return
+	var stats := stats_value as Dictionary
+	for key in ["maxHp", "attack", "defense", "quick"]:
+		_validate_pet_rebirth_threshold_table(stats.get(key, {}), "%s.stats.%s" % [path_label, key], errors)
+
+
+static func _validate_pet_rebirth_threshold_table(value, path_label: String, errors: Array[String]) -> void:
+	if not (value is Dictionary):
+		errors.append("%s 必须是对象" % path_label)
+		return
+	var table := value as Dictionary
+	var previous := -INF
+	for key in ["min", "p25", "p55", "p85", "p95", "max"]:
+		if not table.has(key):
+			errors.append("%s.%s 缺失" % [path_label, key])
+			continue
+		var number := float(table.get(key, -1.0))
+		if number < 0.0 or number < previous:
+			errors.append("%s.%s 无效" % [path_label, key])
+		previous = number
+	if float(table.get("max", 0.0)) <= float(table.get("min", 0.0)):
+		errors.append("%s 必须覆盖正区间" % path_label)
 
 
 static func _validate_combat_formulas(errors: Array[String]) -> void:

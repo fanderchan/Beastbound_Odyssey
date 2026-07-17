@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "balanceVersion": "pet_rebirth_balance_v2",
+  "balanceVersion": "pet_rebirth_balance_v3",
   "maxRebirthStage": 2,
   "target": {
     "minimumLevel": 80,
@@ -49,6 +49,47 @@
       {"effectiveStoneCount": 3, "min": 1.15, "max": 1.65},
       {"effectiveStoneCount": 4, "min": 1.35, "max": 1.85}
     ]
+  },
+  "evaluation": {
+    "evaluationVersion": "pet_rebirth_evaluation_v1",
+    "referenceLabel": "Lv140四满石全物种基准",
+    "reference": {
+      "targetLevel": 140,
+      "stonePointsPerStat": 50,
+      "profileSelector": "all_non_mm_growth_profiles",
+      "profileCount": 30,
+      "samplesPerProfile": 10000,
+      "stageRolls": "independent_uniform_percentile"
+    },
+    "stageThresholds": {
+      "1": {
+        "power": {"min": 1.265028, "p25": 1.402514, "p55": 1.567497, "p85": 1.732481, "p95": 1.787475, "max": 1.814973},
+        "stats": {
+          "maxHp": {"min": 0.324015, "p25": 0.370497, "p55": 0.414084, "p85": 0.457672, "p95": 0.473946, "max": 0.509780},
+          "attack": {"min": 0.299519, "p25": 0.347273, "p55": 0.388127, "p85": 0.428983, "p95": 0.447598, "max": 0.479759},
+          "defense": {"min": 0.287799, "p25": 0.334516, "p55": 0.373871, "p85": 0.413237, "p95": 0.433180, "max": 0.467095},
+          "quick": {"min": 0.289878, "p25": 0.348396, "p55": 0.389383, "p85": 0.431890, "p95": 0.455753, "max": 0.489518}
+        }
+      },
+      "2": {
+        "power": {"min": 1.485028, "p25": 1.622514, "p55": 1.787497, "p85": 1.952481, "p95": 2.007475, "max": 2.034973},
+        "stats": {
+          "maxHp": {"min": 0.379914, "p25": 0.428121, "p55": 0.471659, "p85": 0.515195, "p95": 0.532461, "max": 0.570956},
+          "attack": {"min": 0.352137, "p25": 0.402321, "p55": 0.443234, "p85": 0.484242, "p95": 0.504587, "max": 0.538634},
+          "defense": {"min": 0.338300, "p25": 0.387482, "p55": 0.426887, "p85": 0.466391, "p95": 0.488186, "max": 0.524333},
+          "quick": {"min": 0.339764, "p25": 0.402473, "p55": 0.443399, "p85": 0.486857, "p95": 0.512899, "max": 0.548130}
+        }
+      }
+    },
+    "terminalTwoStageThresholds": {
+      "power": {"min": 2.750055, "p25": 3.137255, "p55": 3.326455, "p85": 3.550855, "p95": 3.674055, "max": 3.845655},
+      "stats": {
+        "maxHp": {"min": 0.703929, "p25": 0.826657, "p55": 0.878978, "p85": 0.940282, "p95": 0.977101, "max": 1.079538},
+        "attack": {"min": 0.651657, "p25": 0.774420, "p55": 0.825160, "p85": 0.885362, "p95": 0.923175, "max": 1.017251},
+        "defense": {"min": 0.626099, "p25": 0.745204, "p55": 0.794931, "p85": 0.853946, "p95": 0.892316, "max": 0.990316},
+        "quick": {"min": 0.629642, "p25": 0.772352, "p55": 0.827361, "p85": 0.893364, "p95": 0.937713, "max": 1.036500}
+      }
+    }
   },
   "compatibility": {
     "applyTo": "future_confirmed_rebirths_only",

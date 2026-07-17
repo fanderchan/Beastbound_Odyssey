@@ -24407,7 +24407,15 @@ func _refresh_pet_panel() -> void:
 				if _pet_level_one_radar_title != null:
 					_pet_level_one_radar_title.text = "Lv1 4V分位（物种内）"
 				if _pet_growth_radar_title != null:
-					_pet_growth_radar_title.text = "实测成长分位" if pet_growth_stage == 0 else "%d转增量分位" % pet_growth_stage
+					if pet_growth_stage == 0:
+						_pet_growth_radar_title.text = "实测成长分位"
+					else:
+						_pet_growth_radar_title.text = "%d转增量分位" % pet_growth_stage
+						if observation is Dictionary and bool((observation as Dictionary).get("hasRollRecord", false)):
+							_pet_growth_radar_title.text += "｜运气 %s %.0f%%" % [
+								str((observation as Dictionary).get("rollGrade", "D")),
+								float((observation as Dictionary).get("rollPercentile", 0.0)),
+							]
 				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
 					pet_growth_radar.call("set_growth_data", PetGrowthObservationModel.radar_values_for_stage(selected, pet_growth_stage), grades)
 		else:

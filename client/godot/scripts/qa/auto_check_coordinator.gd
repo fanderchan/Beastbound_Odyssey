@@ -5080,6 +5080,8 @@ func _run_auto_pet_growth_observation_check() -> void:
 				"helperStage": 1,
 				"beforeRebirthCount": 0,
 				"afterRebirthCount": 1,
+				"rebirthBonusPercentile": 50.0,
+				"rebirthBonusGrade": "C",
 				"visibleGrowthBonus": rebirth_bonus,
 			}],
 		}
@@ -5132,6 +5134,8 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and host.pet_detail_label != null
 		and host.pet_detail_label.text.contains("1转成长评价")
 		and host.pet_detail_label.text.contains("转生增量")
+		and host.pet_detail_label.text.contains("Lv140四满石全物种基准")
+		and host.pet_detail_label.text.contains("本次运气：C 50.0%")
 		and table_ok
 		and stage_tabs_ok
 		and bool(stage_one_observation.get("enabled", false))
@@ -5191,22 +5195,108 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and server_detail.find("个体：普通") < 0
 		and int(server_observation.get("observedLevels", 0)) == 10
 	)
+	var terminal_stage_one_bonus := {"maxHp": 1.6, "attack": 0.4, "defense": 0.35, "quick": 0.39}
+	var terminal_stage_two_bonus := {"maxHp": 1.8, "attack": 0.46, "defense": 0.4, "quick": 0.45}
+	var terminal_cumulative_bonus := {"maxHp": 3.4, "attack": 0.86, "defense": 0.75, "quick": 0.84}
+	var terminal_pet := server_pet.duplicate(true)
+	terminal_pet["petCultivation"] = {
+		"schemaVersion": 1,
+		"rebirthCount": 2,
+		"rebirthGrowthBonus": terminal_cumulative_bonus,
+		"history": [
+			{
+				"schemaVersion": 1,
+				"mode": "rebirth",
+				"helperStage": 1,
+				"beforeRebirthCount": 0,
+				"afterRebirthCount": 1,
+				"rebirthBonusPercentile": 50.0,
+				"rebirthBonusGrade": "C",
+				"visibleGrowthBonus": terminal_stage_one_bonus,
+			},
+			{
+				"schemaVersion": 1,
+				"mode": "rebirth",
+				"helperStage": 2,
+				"beforeRebirthCount": 1,
+				"afterRebirthCount": 2,
+				"rebirthBonusPercentile": 50.0,
+				"rebirthBonusGrade": "C",
+				"visibleGrowthBonus": terminal_stage_two_bonus,
+			},
+		],
+	}
+	var terminal_observation := PetGrowthObservationModel.evaluate_pet_for_stage(terminal_pet, 2)
+	var terminal_evaluation := terminal_observation.get("terminalTwoStage", {}) as Dictionary
+	var terminal_lines := "\n".join(PetGrowthObservationModel.detail_lines_for_stage(terminal_pet, 2))
+	var legacy_terminal_pet := terminal_pet.duplicate(true)
+	legacy_terminal_pet["petCultivation"] = {
+		"schemaVersion": 1,
+		"rebirthCount": 2,
+		"rebirthGrowthBonus": terminal_cumulative_bonus,
+		"history": [],
+	}
+	var legacy_terminal_lines := "\n".join(PetGrowthObservationModel.detail_lines_for_stage(legacy_terminal_pet, 2))
+	var terminal_contract_ok := (
+		str(terminal_observation.get("evaluationVersion", "")) == "pet_rebirth_evaluation_v1"
+		and str(terminal_observation.get("overallGrade", "")) == "C"
+		and absf(float(terminal_observation.get("powerPercentile", 0.0)) - 50.0) <= 0.1
+		and bool(terminal_observation.get("hasRollRecord", false))
+		and str(terminal_observation.get("rollGrade", "")) == "C"
+		and str(terminal_evaluation.get("overallGrade", "")) == "C"
+		and absf(float(terminal_evaluation.get("powerGrowthPerLevel", 0.0)) - 3.3) <= 0.001
+		and absf(float(terminal_evaluation.get("powerPercentile", 0.0)) - 50.0) <= 1.0
+		and terminal_lines.contains("普通二转总评价：C")
+		and terminal_lines.contains("两转合计 3.300/级")
+		and terminal_lines.contains("本次运气：C 50.0%")
+		and terminal_lines.contains("Lv140四满石全物种基准")
+		and legacy_terminal_lines.contains("普通二转总评价：C")
+		and legacy_terminal_lines.contains("旧记录没有保存该次转生增量")
+	)
+	var terminal_profile := PlayerProgressModel.default_profile()
+	terminal_profile["petInstances"] = [terminal_pet]
+	terminal_profile["activePetInstanceId"] = str(terminal_pet.get("instanceId", ""))
+	host.player_profile = PlayerProgressModel.normalize_profile(terminal_profile)
+	host.pet_selected_instance_id = str(terminal_pet.get("instanceId", ""))
+	host.pet_growth_stage = 2
+	host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	host._refresh_pet_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var terminal_ui_text: String = host.pet_detail_label.text if host.pet_detail_label != null else ""
+	var terminal_visual_snapshot: Dictionary = host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	var terminal_table_text := ""
+	if host.pet_growth_table_grid != null:
+		for child in host.pet_growth_table_grid.get_children():
+			if child is Label:
+				terminal_table_text += " " + (child as Label).text
+	var terminal_stage_button: Variant = host.pet_growth_stage_buttons.get(2, null)
+	var terminal_ui_ok: bool = (
+		terminal_stage_button is Button
+		and not (terminal_stage_button as Button).disabled
+		and (terminal_stage_button as Button).button_pressed
+		and terminal_ui_text.contains("2转成长评价：C")
+		and terminal_ui_text.contains("普通二转总评价：C")
+		and terminal_ui_text.contains("两转合计 3.300/级")
+		and terminal_ui_text.contains("Lv140四满石全物种基准")
+		and str(terminal_visual_snapshot.get("growthRadarTitle", "")).contains("2转增量分位｜运气 C 50%")
+		and terminal_table_text.contains("二转总评")
+		and terminal_table_text.contains("两转合计")
+		and terminal_table_text.contains("Lv140基准")
+		and terminal_table_text.contains("3.300")
+	)
 	var screening_contract := PetGrowthScreeningModel.contract_check()
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
 	if screenshot_path != "":
-		var screenshot_profile := PlayerProgressModel.default_profile()
-		screenshot_profile["petInstances"] = [server_pet]
-		screenshot_profile["activePetInstanceId"] = str(server_pet.get("instanceId", ""))
-		host.player_profile = PlayerProgressModel.normalize_profile(screenshot_profile)
-		host.pet_selected_instance_id = str(server_pet.get("instanceId", ""))
-		host.pet_growth_stage = 0
-		host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
-		host._refresh_pet_panel()
-		await host.get_tree().process_frame
-		await host.get_tree().process_frame
-		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(screenshot_path)
-		screenshot_ok = screenshot_error == OK
+		DirAccess.make_dir_recursive_absolute(screenshot_path.get_base_dir())
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		await host.get_tree().create_timer(0.2).timeout
+		await RenderingServer.frame_post_draw
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error: int = screenshot_image.save_png(screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		screenshot_ok = screenshot_image != null and screenshot_error == OK
 		print("pet growth observation screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
 	var status = "ok" if (
 		bool(grant.get("ok", false))
@@ -5216,21 +5306,25 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and bool(csv.get("ok", false))
 		and ui_ok
 		and server_ui_contract_ok
+		and terminal_contract_ok
+		and terminal_ui_ok
 		and bool(screening_contract.get("ok", false))
 		and screenshot_ok
 	) else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
 		str(ui_ok),
 		str(server_ui_contract_ok),
+		str(terminal_contract_ok),
+		str(terminal_ui_ok),
 		str(table_ok),
 		str(stage_tabs_ok),
 		str(host.pet_panel != null and host.pet_panel.visible),
 		str(host.pet_detail_growth_button != null and host.pet_detail_growth_button.button_pressed),
 		str(host.pet_growth_radar != null and host.pet_growth_radar.visible),
-		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("1转成长评价")),
+		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("2转成长评价")),
 		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("转生增量")),
 		str(host.pet_growth_stage_row != null and host.pet_growth_stage_row.visible),
 		host.pet_growth_table_grid.get_child_count() if host.pet_growth_table_grid != null else -1,
@@ -8006,7 +8100,7 @@ func _run_auto_pet_rebirth_mm_formula_check() -> void:
 		bool(preview.get("ok", false))
 		and str(preview.get("rebirthRollMode", "")) == "preview_median"
 		and absf(preview_mid - 1.4) <= 0.002
-		and str(preview.get("rebirthBalanceVersion", "")) == "pet_rebirth_balance_v2"
+		and str(preview.get("rebirthBalanceVersion", "")) == "pet_rebirth_balance_v3"
 		and absf(float(preview.get("targetPreparationMultiplier", 0.0)) - 1.0) <= 0.002
 	)
 	var level_110_target := target_pet.duplicate(true)
@@ -8018,7 +8112,7 @@ func _run_auto_pet_rebirth_mm_formula_check() -> void:
 	var preview_lines_value = level_140_preview.get("lines", [])
 	var preview_lines: Array = preview_lines_value as Array if preview_lines_value is Array else []
 	var maturity_ok = (
-		PetRebirthMmModel.balance_version() == "pet_rebirth_balance_v2"
+		PetRebirthMmModel.balance_version() == "pet_rebirth_balance_v3"
 		and PetRebirthMmModel.full_preparation_level() == 140
 		and absf(float(level_110_preview.get("rebirthBonusInternalPower", 0.0)) - 1.47) <= 0.002
 		and absf(float(level_110_preview.get("targetPreparationMultiplier", 0.0)) - 1.05) <= 0.002
