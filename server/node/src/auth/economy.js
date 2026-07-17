@@ -432,9 +432,13 @@ function createEconomyDomain(ctx) {
     const unitPrice = isEquipment
       ? equipmentIntent.unitPrice
       : normalizeUnitPrice(payload.unitPrice || payload.price || 0);
-    const currency = isEquipment
-      ? equipmentIntent.currency
-      : normalizeMarketCurrency(payload.currency || payload.priceCurrency || MARKET_CURRENCY_STONE_COINS);
+    const currencyIntent = isEquipment
+      ? {ok: true, currency: equipmentIntent.currency}
+      : readMarketCurrencyIntent(payload.currency || payload.priceCurrency || MARKET_CURRENCY_STONE_COINS);
+    if (!currencyIntent.ok) {
+      return fail(currencyIntent.code, currencyIntent.message, profilePayload(prepared, prepared.profile));
+    }
+    const currency = currencyIntent.currency;
     const items = normalizeLimitedItems([{itemId, count}]);
     if (items.length <= 0 || items[0].itemId !== itemId) {
       return fail("market_item_invalid", "请选择可以上架的物品。", profilePayload(prepared, prepared.profile));
@@ -2708,6 +2712,28 @@ function createEconomyDomain(ctx) {
     return currency === MARKET_CURRENCY_DIAMONDS || currency === "diamond"
       ? MARKET_CURRENCY_DIAMONDS
       : MARKET_CURRENCY_STONE_COINS;
+  }
+
+  function readMarketCurrencyIntent(value) {
+    const currency = String(value || "").trim();
+    if (["boundStoneCoins", "boundDiamonds"].includes(currency)) {
+      return {
+        ok: false,
+        code: "market_currency_bound",
+        message: "绑定石币和绑定钻石不能用于玩家交易。",
+      };
+    }
+    if ([MARKET_CURRENCY_STONE_COINS, "coins", "coin"].includes(currency)) {
+      return {ok: true, currency: MARKET_CURRENCY_STONE_COINS};
+    }
+    if ([MARKET_CURRENCY_DIAMONDS, "diamond"].includes(currency)) {
+      return {ok: true, currency: MARKET_CURRENCY_DIAMONDS};
+    }
+    return {
+      ok: false,
+      code: "market_currency_invalid",
+      message: "请选择有效的交易货币。",
+    };
   }
 
   function normalizeTaxBps(value, fallback = MARKET_DEFAULT_TAX_BPS) {

@@ -14481,6 +14481,8 @@ func _run_auto_server_profile_contract_check() -> void:
 		and int(empty_counts.get("equipmentInstances", -1)) == 0
 		and int(empty_counts.get("equipmentSlotInstanceIds", -1)) == 0
 		and PlayerProgressModel.diamonds(empty_profile) == 0
+		and PlayerProgressModel.bound_stone_coins(empty_profile) == 0
+		and PlayerProgressModel.bound_diamonds(empty_profile) == 0
 	)
 	var profile = PlayerProgressModel.with_starter_equipment(_qa_bui_pet_profile())
 	profile = PlayerProgressModel.normalize_profile(profile)
@@ -14521,7 +14523,7 @@ func _run_auto_server_profile_contract_check() -> void:
 		and int(counts.get("equipmentSlots", 0)) >= 8
 		and int(counts.get("equipmentInstances", 0)) >= 8
 		and int(counts.get("equipmentSlotInstanceIds", 0)) >= 8
-		and int(module_counts.get("wallet", 0)) >= 2
+		and int(module_counts.get("wallet", 0)) >= 4
 		and int(module_counts.get("serverSync", 0)) >= 1
 	)
 	var counts_ok = empty_start_ok and populated_counts_ok

@@ -222,6 +222,8 @@ test("stable digests ignore object key order but retain array order and value ty
 
 test("asset summary covers currencies, backpack, pets, and equipment deterministically", () => {
   const profile = legacyProfile(1);
+  profile.boundStoneCoins = 2345;
+  profile.boundDiamonds = 67;
   profile.bank.schemaVersion = 2;
   profile.bank.slots.push({
     itemId: "weapon_wooden_club",
@@ -236,6 +238,9 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
 
   assert.equal(summary.validProfileRoot, true);
   assert.equal(summary.currencies.stoneCoins, 123456);
+  assert.equal(summary.currencies.boundStoneCoins, 2345);
+  assert.equal(summary.currencies.diamonds, 789);
+  assert.equal(summary.currencies.boundDiamonds, 67);
   assert.equal(summary.currencies.bankStoneCoins, 654321);
   assert.equal(summary.bank.equipmentEnvelopeCount, 2);
   assert.equal(summary.bank.uniqueEquipmentEnvelopeIdCount, 2);
@@ -251,6 +256,22 @@ test("asset summary covers currencies, backpack, pets, and equipment determinist
   assert.equal(summary.equipment.instanceCount, 1);
   assert.equal(summary.equipment.slotMappingCount, 1);
   assert.equal(summary.digest, profileAssetSummary(structuredClone(profile)).digest);
+});
+
+test("bound and unbound wallet balances survive legacy profile migration without reclassification", () => {
+  const source = legacyProfile(1);
+  source.boundStoneCoins = 3456;
+  source.boundDiamonds = 78;
+
+  const migrated = migrateProfile(source);
+
+  assert.equal(migrated.ok, true);
+  assert.equal(migrated.profile.stoneCoins, 123456);
+  assert.equal(migrated.profile.boundStoneCoins, 3456);
+  assert.equal(migrated.profile.diamonds, 789);
+  assert.equal(migrated.profile.boundDiamonds, 78);
+  assert.equal(migrated.assetsUnchanged, true);
+  assert.equal(migrated.contentUnchanged, true);
 });
 
 test("migration asset audits include exact private pets waiting in the recovery shelter", () => {

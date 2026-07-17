@@ -269,8 +269,10 @@ function profileAssetSummary(profileValue) {
     validProfileRoot: true,
     currencies: {
       stoneCoins: hasOwn(profile, "stoneCoins") ? profile.stoneCoins : null,
+      boundStoneCoins: hasOwn(profile, "boundStoneCoins") ? profile.boundStoneCoins : null,
       legacyCoins: hasOwn(profile, "coins") ? profile.coins : null,
       diamonds: hasOwn(profile, "diamonds") ? profile.diamonds : null,
+      boundDiamonds: hasOwn(profile, "boundDiamonds") ? profile.boundDiamonds : null,
       bankStoneCoins: hasOwn(bank, "stoneCoins") ? bank.stoneCoins : null,
     },
     backpack: {

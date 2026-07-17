@@ -11,6 +11,7 @@ const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const CurrencyWalletModel := preload("res://scripts/progression/currency_wallet_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
@@ -134,7 +135,9 @@ const PLAYER_STAT_POINT_GAINS := {
 	"quick": 1,
 }
 const STONE_COINS_KEY := "stoneCoins"
+const BOUND_STONE_COINS_KEY := "boundStoneCoins"
 const DIAMONDS_KEY := "diamonds"
+const BOUND_DIAMONDS_KEY := "boundDiamonds"
 const BANK_KEY := "bank"
 const DEV_DIAMONDS_GRANT_VERSION_KEY := "devDiamondsGrantVersion"
 const BACKPACK_SLOTS_KEY := "backpackSlots"
@@ -286,6 +289,7 @@ static func default_profile() -> Dictionary:
 		"nextPetInstanceSerial": 1,
 		"nextPetDropSerial": 1,
 		"stoneCoins": DEFAULT_STONE_COINS,
+		"boundStoneCoins": 0,
 		"bank": {
 			"stoneCoins": 0,
 			"items": [],
@@ -294,6 +298,7 @@ static func default_profile() -> Dictionary:
 			"schemaVersion": 1,
 		},
 		"diamonds": DEFAULT_DIAMONDS,
+		"boundDiamonds": 0,
 		"devDiamondsGrantVersion": DEV_DIAMONDS_GRANT_VERSION,
 		"petInstances": [],
 		"groundPetDrops": [],
@@ -2974,13 +2979,30 @@ static func _create_training_partner_from_profile(profile: Dictionary, index: in
 
 
 static func stone_coins(profile: Dictionary) -> int:
-	return clampi(int(normalize_profile(profile).get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
+	return CurrencyWalletModel.transferable_balance(normalize_profile(profile), CurrencyWalletModel.CURRENCY_STONE_COINS)
 
 
 static func with_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	normalized[STONE_COINS_KEY] = clampi(amount, 0, STONE_COIN_LIMIT)
-	return normalized
+	return CurrencyWalletModel.with_balance(
+		normalized,
+		CurrencyWalletModel.CURRENCY_STONE_COINS,
+		CurrencyWalletModel.BINDING_UNBOUND,
+		amount
+	)
+
+
+static func bound_stone_coins(profile: Dictionary) -> int:
+	return CurrencyWalletModel.balance(normalize_profile(profile), CurrencyWalletModel.CURRENCY_STONE_COINS, CurrencyWalletModel.BINDING_BOUND)
+
+
+static func with_bound_stone_coins(profile: Dictionary, amount: int) -> Dictionary:
+	return CurrencyWalletModel.with_balance(
+		normalize_profile(profile),
+		CurrencyWalletModel.CURRENCY_STONE_COINS,
+		CurrencyWalletModel.BINDING_BOUND,
+		amount
+	)
 
 
 static func bank_data(profile: Dictionary) -> Dictionary:
@@ -3144,31 +3166,43 @@ static func _last_filled_slot_index(slots: Array[Dictionary]) -> int:
 
 
 static func diamonds(profile: Dictionary) -> int:
-	return maxi(0, int(normalize_profile(profile).get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
+	return CurrencyWalletModel.transferable_balance(normalize_profile(profile), CurrencyWalletModel.CURRENCY_DIAMONDS)
 
 
 static func with_diamonds(profile: Dictionary, amount: int) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	normalized[DIAMONDS_KEY] = maxi(0, amount)
-	return normalized
+	return CurrencyWalletModel.with_balance(
+		normalized,
+		CurrencyWalletModel.CURRENCY_DIAMONDS,
+		CurrencyWalletModel.BINDING_UNBOUND,
+		amount
+	)
+
+
+static func bound_diamonds(profile: Dictionary) -> int:
+	return CurrencyWalletModel.balance(normalize_profile(profile), CurrencyWalletModel.CURRENCY_DIAMONDS, CurrencyWalletModel.BINDING_BOUND)
+
+
+static func with_bound_diamonds(profile: Dictionary, amount: int) -> Dictionary:
+	return CurrencyWalletModel.with_balance(
+		normalize_profile(profile),
+		CurrencyWalletModel.CURRENCY_DIAMONDS,
+		CurrencyWalletModel.BINDING_BOUND,
+		amount
+	)
 
 
 static func currency_amount(profile: Dictionary, currency: String) -> int:
 	var normalized := normalize_profile(profile)
-	match currency:
-		ShopCatalogModel.CURRENCY_DIAMONDS:
-			return maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
-	return clampi(int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
+	return CurrencyWalletModel.transferable_balance(normalized, currency)
+
+
+static func total_currency_amount(profile: Dictionary, currency: String) -> int:
+	return CurrencyWalletModel.total_balance(normalize_profile(profile), currency)
 
 
 static func _set_currency_amount(profile: Dictionary, currency: String, amount: int) -> Dictionary:
-	var next := profile.duplicate(true)
-	match currency:
-		ShopCatalogModel.CURRENCY_DIAMONDS:
-			next[DIAMONDS_KEY] = maxi(0, amount)
-		_:
-			next[STONE_COINS_KEY] = clampi(amount, 0, STONE_COIN_LIMIT)
-	return next
+	return CurrencyWalletModel.with_balance(profile, currency, CurrencyWalletModel.BINDING_UNBOUND, amount)
 
 
 static func grant_reward_bundle(profile: Dictionary, reward_bundle: Dictionary, source_id: String = "", mail_title: String = "系统奖励") -> Dictionary:
@@ -6848,6 +6882,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized[EQUIPMENT_STARTER_SET_VERSION_KEY] = equipment_starter_set_version
 	normalized[STONE_COINS_KEY] = clampi(int(normalized.get(STONE_COINS_KEY, DEFAULT_STONE_COINS)), 0, STONE_COIN_LIMIT)
+	normalized[BOUND_STONE_COINS_KEY] = clampi(int(normalized.get(BOUND_STONE_COINS_KEY, 0)), 0, STONE_COIN_LIMIT)
 	normalized[BANK_KEY] = _normalize_bank_data(normalized.get(BANK_KEY, {}))
 	var dev_diamonds_grant_version := int(normalized.get(DEV_DIAMONDS_GRANT_VERSION_KEY, 0))
 	var diamonds_value := maxi(0, int(normalized.get(DIAMONDS_KEY, DEFAULT_DIAMONDS)))
@@ -6855,6 +6890,7 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 		diamonds_value = maxi(DEV_DIAMONDS_MIN, diamonds_value)
 		dev_diamonds_grant_version = DEV_DIAMONDS_GRANT_VERSION
 	normalized[DIAMONDS_KEY] = diamonds_value
+	normalized[BOUND_DIAMONDS_KEY] = maxi(0, int(normalized.get(BOUND_DIAMONDS_KEY, 0)))
 	normalized[DEV_DIAMONDS_GRANT_VERSION_KEY] = dev_diamonds_grant_version
 	normalized[PET_REBIRTH_MM_STAGE2_CLAIMED_KEY] = bool(normalized.get(PET_REBIRTH_MM_STAGE2_CLAIMED_KEY, false))
 	normalized[PET_REBIRTH_MM_GUIDE_KEY] = _normalize_pet_rebirth_mm_guide(normalized.get(PET_REBIRTH_MM_GUIDE_KEY, {}))

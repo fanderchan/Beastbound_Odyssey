@@ -1641,6 +1641,10 @@ process.stdin.on("end", () => {
       profile: {
         name: "实体档案",
         level: 12,
+        stoneCoins: 321,
+        boundStoneCoins: 654,
+        diamonds: 7,
+        boundDiamonds: 89,
         petInstances: [{
           instanceId: "pet_private_entity",
           individualSeed: "bps1_" + "A".repeat(43),
@@ -1778,6 +1782,10 @@ process.stdin.on("end", () => {
     const loaded = store.load();
     assert.equal(loaded.accounts.entityuser.accountId, "acc_entity");
     assert.equal(loaded.profiles.player_entity.profile.name, "实体档案");
+    assert.equal(loaded.profiles.player_entity.profile.stoneCoins, 321);
+    assert.equal(loaded.profiles.player_entity.profile.boundStoneCoins, 654);
+    assert.equal(loaded.profiles.player_entity.profile.diamonds, 7);
+    assert.equal(loaded.profiles.player_entity.profile.boundDiamonds, 89);
     assert.equal(loaded.profiles.player_entity.profile.petInstances[0].individualSeed, `bps1_${"A".repeat(43)}`);
     assert.deepEqual(loaded.profiles.player_entity.profile.petInstances[0].growthSpeciesLevel1Stats, {
       maxHp: 81,

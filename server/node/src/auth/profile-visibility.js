@@ -3,6 +3,7 @@
 const {isValidPetPrivateSeed} = require("./pet-private-seed");
 const {quantize, roundHalfAwayFromZero} = require("./pet-growth-authority");
 const {publicEquipmentTransferSummary} = require("./equipment-transfer-envelope");
+const {publicWalletFields} = require("./currency-wallet");
 
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
@@ -911,6 +912,7 @@ function publicProfile(profile, options = {}) {
     }
     result[key] = cloneProfileValue(value, key, options);
   }
+  Object.assign(result, publicWalletFields(profile));
   return result;
 }
 

@@ -551,6 +551,7 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
     schemaVersion: 1,
     player: {name: "成长边界测试", level: 42},
     stoneCoins: 123456,
+    diamonds: 789,
     backpackSlots: [{itemId: "item_meat_small", count: 3}],
     petInstances: [
       petFixture("pet_current"),
@@ -600,6 +601,9 @@ test("publicProfile sanitizes current, legacy, dropped, and future nested pet co
 
   assert.deepEqual(actual.player, source.player);
   assert.equal(actual.stoneCoins, source.stoneCoins);
+  assert.equal(actual.boundStoneCoins, 0);
+  assert.equal(actual.diamonds, source.diamonds);
+  assert.equal(actual.boundDiamonds, 0);
   assert.deepEqual(actual.backpackSlots, source.backpackSlots);
   assert.equal(actual.petInstances[0].instanceId, "pet_current");
   assert.deepEqual(actual.petInstances[1], {

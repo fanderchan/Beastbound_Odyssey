@@ -122,6 +122,13 @@ const {
 } = require("./auth/runtime-invite-boundary");
 const {createEconomyDomain} = require("./auth/economy");
 const {
+  BINDING_UNBOUND,
+  CURRENCY_DIAMONDS,
+  CURRENCY_STONE_COINS,
+  setWalletBalance,
+  transferableWalletBalance,
+} = require("./auth/currency-wallet");
+const {
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
 } = require("./auth/market-listing-state");
@@ -16187,7 +16194,9 @@ function stableTextIndex(seedText, count) {
 }
 
 function profileStoneCoins(profile) {
-  return Math.max(0, Math.min(PROFILE_STONE_COIN_LIMIT, Math.trunc(Number(profile && profile.stoneCoins || 0))));
+  return transferableWalletBalance(profile, CURRENCY_STONE_COINS, {
+    stoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
+  });
 }
 
 function normalizeShopTransactionMode(value) {
@@ -16313,18 +16322,19 @@ function shopDefaultSellRate() {
 
 function profileCurrencyAmount(profile, currency) {
   if (String(currency || "") === SHOP_CURRENCY_DIAMONDS) {
-    return Math.max(0, Math.trunc(Number(profile && profile.diamonds || 0)));
+    return transferableWalletBalance(profile, CURRENCY_DIAMONDS);
   }
   return profileStoneCoins(profile);
 }
 
 function setProfileCurrencyAmount(profile, currency, amount) {
-  const safeAmount = Math.max(0, Math.trunc(Number(amount || 0)));
   if (String(currency || "") === SHOP_CURRENCY_DIAMONDS) {
-    profile.diamonds = safeAmount;
+    setWalletBalance(profile, CURRENCY_DIAMONDS, BINDING_UNBOUND, amount);
     return;
   }
-  profile.stoneCoins = Math.min(PROFILE_STONE_COIN_LIMIT, safeAmount);
+  setWalletBalance(profile, CURRENCY_STONE_COINS, BINDING_UNBOUND, amount, {
+    stoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
+  });
 }
 
 function addRewardItemsToBackpack(slots, rewards) {
@@ -23265,6 +23275,7 @@ function createDefaultServerProfile(account) {
     nextPetInstanceSerial: 1,
     nextPetDropSerial: 1,
     stoneCoins: DEFAULT_STONE_COINS,
+    boundStoneCoins: 0,
     bank: {
       stoneCoins: 0,
       items: [],
@@ -23273,6 +23284,7 @@ function createDefaultServerProfile(account) {
       schemaVersion: BANK_PROFILE_SCHEMA_VERSION,
     },
     diamonds: DEFAULT_DIAMONDS,
+    boundDiamonds: 0,
     devDiamondsGrantVersion: DEV_DIAMONDS_GRANT_VERSION,
     petInstances: [],
     groundPetDrops: [],

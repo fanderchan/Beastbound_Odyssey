@@ -1,5 +1,7 @@
 extends RefCounted
 
+const CurrencyWalletModel := preload("res://scripts/progression/currency_wallet_model.gd")
+
 const PROFILE_KEY := "serverSync"
 const SCHEMA_VERSION := 2
 const CONTRACT_VERSION := "profile_contract_v2"
@@ -60,6 +62,8 @@ static func module_ids() -> Array[String]:
 
 static func validation_errors() -> Array[String]:
 	var errors: Array[String] = []
+	for wallet_error in CurrencyWalletModel.validation_errors():
+		errors.append("wallet: %s" % wallet_error)
 	var seen := {}
 	var local_key_owner := {}
 	var raw_modules = contract().get("modules", [])
@@ -160,7 +164,7 @@ static func migration_manifest(profile: Dictionary) -> Dictionary:
 static func _module_definitions() -> Array[Dictionary]:
 	return [
 		_module("player", ["player"], "player_profiles", ["playerId"], "document", "client_dirty_until_server_authority", "server_wins_after_cutover", "人物基础信息、等级、经验和当前血量。"),
-		_module("wallet", ["stoneCoins", "diamonds"], "player_wallet_balances", ["playerId", "currency"], "kv_rows", "transactional", "server_recalculate_for_rewards", "石币、钻石等货币余额。"),
+		_module("wallet", ["stoneCoins", "boundStoneCoins", "diamonds", "boundDiamonds"], "player_wallet_balances", ["playerId", "currency", "binding"], "kv_rows", "transactional", "server_recalculate_for_rewards", "石币、钻石分别保存绑定与非绑定余额；只有非绑定余额可交易。"),
 		_module("playerGrowth", ["playerGrowth"], "player_growth_snapshots", ["playerId"], "document", "derived_snapshot", "rebuild_from_player_equipment_rebirth", "人物成长来源、属性点和技能来源。"),
 		_module("rebirth", ["rebirthCount", "rebirthHistory", "rebirthQuestCompletions", "rebirthTrialProofs"], "player_rebirth_state", ["playerId"], "document", "quest_transaction", "server_wins_after_cutover", "人物转生次数、历史、试炼凭证和任务完成记录。"),
 		_module("abilities", ["unlockedAbilities"], "player_abilities", ["playerId", "abilityId"], "set_rows", "reward_transaction", "server_wins_after_cutover", "远程兽栏、骑宠术等能力解锁。"),
