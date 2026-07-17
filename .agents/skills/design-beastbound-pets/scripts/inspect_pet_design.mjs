@@ -304,6 +304,7 @@ const trainerSkillIds = new Set(trainers.flatMap((trainer) => Array.isArray(trai
 
 const authServiceText = readText("server/node/src/auth-service.js");
 const growthCatalogText = readText("server/node/src/auth/pet-growth-catalog.js");
+const observedGrowthScreeningText = readText("server/node/src/auth/pet-observed-growth-screening.js");
 const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
 const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-authority.js");
 const petCaptureCandidateAuthorityText = readText("server/node/src/auth/pet-capture-candidate-authority.js");
@@ -322,6 +323,10 @@ const serverAuthority = {
   loadsPetTemplates: authServiceText.includes("pet_templates.json"),
   loadsSpeciesGrowthProfiles: authServiceText.includes("loadPetGrowthCatalog")
     && growthCatalogText.includes("pet_growth_species_profiles.json"),
+  observedGrowthScreeningContract: observedGrowthScreeningText.includes("MINIMUM_SCREENING_LEVEL = 20")
+    && observedGrowthScreeningText.includes("growthRuleEligible")
+    && observedGrowthScreeningText.includes("retainPet: true")
+    && observedGrowthScreeningText.includes("powerGrowthPercentilesByLevel"),
   loadsPassiveCatalog: authServiceText.includes("loadBattlePassiveCatalog")
     && battlePassiveCatalogText.includes("battle_passive_skills.json"),
   acceptsClientEncounterZonePayload: authServiceText.includes("payload.encounterZone"),
@@ -361,6 +366,7 @@ const serverAuthority = {
     && playerProgressText.includes("has_server_authority_marker"),
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
+if (!serverAuthority.observedGrowthScreeningContract) issues.warnings.push("Node 尚未建立 Lv20 公开成长证据筛选合同；不能为新宠开放按成长自动处理");
 if (!serverAuthority.loadsPassiveCatalog) issues.warnings.push("Node 当前未加载 battle_passive_skills.json；不能把被动目录存在当成服务端已执行");
 if (!serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 尚未接入服务端地图遇敌目录、位置校验与权威抽取");
 if (serverAuthority.acceptsClientEncounterZonePayload && !serverAuthority.petEncounterAuthorityWired) issues.warnings.push("Node 当前接收客户端 encounterZone 的宠物事实；正式遇敌/捕捉前必须删除信任");
@@ -474,7 +480,7 @@ if (requestedFormId) {
 } else {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
-  console.log(`4V正式契约: ${summary.formalLv14VContract.present ? "有" : "无"}`);
+  console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
   console.log(`服务端成长档/EXP/v1/新宠factory/捕捉候选/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);

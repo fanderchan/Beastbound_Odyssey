@@ -59,6 +59,7 @@ const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbe
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
 const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
 const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
+const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_screening_model.gd")
 const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
 const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
@@ -5000,6 +5001,7 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and server_detail.find("个体：普通") < 0
 		and int(server_observation.get("observedLevels", 0)) == 10
 	)
+	var screening_contract := PetGrowthScreeningModel.contract_check()
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
 	if screenshot_path != "":
@@ -5016,8 +5018,18 @@ func _run_auto_pet_growth_observation_check() -> void:
 		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(screenshot_path)
 		screenshot_ok = screenshot_error == OK
 		print("pet growth observation screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
-	var status = "ok" if bool(grant.get("ok", false)) and level_up_ok and not selected.is_empty() and int(selected.get("level", 1)) == 11 and bool(csv.get("ok", false)) and ui_ok and server_ui_contract_ok and screenshot_ok else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s" % [
+	var status = "ok" if (
+		bool(grant.get("ok", false))
+		and level_up_ok
+		and not selected.is_empty()
+		and int(selected.get("level", 1)) == 11
+		and bool(csv.get("ok", false))
+		and ui_ok
+		and server_ui_contract_ok
+		and bool(screening_contract.get("ok", false))
+		and screenshot_ok
+	) else "failed"
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
@@ -5049,6 +5061,8 @@ func _run_auto_pet_growth_observation_check() -> void:
 		str(csv.get("path", "")),
 		int(csv.get("rows", 0)),
 		str(csv.get("error", "")),
+		str(bool(screening_contract.get("ok", false))),
+		str((screening_contract.get("mature", {}) as Dictionary).get("status", "")),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

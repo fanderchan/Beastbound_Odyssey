@@ -20,9 +20,9 @@ Preserve the intended loop:
 4. Around Lv20, decide whether to keep, sell, continue, or discard.
 5. Pursue Lv140, rebirth luck, evolution, fusion, and inherited builds.
 
-The current repository has both a legacy generic individual-growth path and a species-profile path. P0.2 intends to unify server/client facts. Until that lands, never claim a newly added pet is fully authoritative merely because the client simulator works.
+New pets now use the authority-v1 species-profile path across capture, experience, GM leveling, and rebirth-cycle settlement. Historical pets may deliberately remain legacy; never reroll them merely to make them eligible for a new automation feature.
 
-There is not yet an independent, formally defined `4V` field or formula. Current code uses Lv1 `initialStats` / `growthSpeciesLevel1Stats` (blood, attack, defense, quick) as the practical proxy. A new pet may design those ranges, but must not silently establish a permanent global 4V meaning before P0.2 approves it.
+The formal Lv1 4V proxy is the immutable authority-v1 `initialStats` / `growthSpeciesLevel1Stats` map (blood, attack, defense, quick). It is not a hidden final-quality score and must remain identical across both public fields.
 
 Store immutable identity once on the server. Never reroll it on login, UI open, reconnect, offline挂机, or GM level-up. Use versioned fields and fixed-seed golden vectors.
 
@@ -55,7 +55,7 @@ Player-facing behavior should follow:
 
 - Lv1: visible 4V; growth evidence unavailable or very broad.
 - Early levels: unstable tendency and wide Lv140 estimate range.
-- Around Lv20: obvious good/bad individuals usually separable, but exact hidden value still not reversible.
+- Lv20: this is the first automatic growth-rule eligibility point (19 observed upgrades); obvious good/bad individuals are usually separable, but exact hidden value is still not reversible.
 - Later levels: narrower estimate and more stable grade.
 - GM/QA: exact seed, hidden roll, theoretical outcome, and percentile allowed.
 

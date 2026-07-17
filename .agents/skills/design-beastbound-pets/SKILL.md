@@ -63,8 +63,9 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 ## Design hard gates
 
 - Keep Lv1 4V visible and hidden per-level quality meaningful; Lv1 alone must not settle keep/discard decisions.
-- The repository currently has no formal independent `4V` field/formula. Until P0.2 defines it, label Lv1 blood/attack/defense/quick ranges as the current proxy and do not invent a permanent 4V contract inside one pet.
-- Make early observation uncertain and approximately Lv20 useful. Do not use hidden rolls directly as a player-facing “estimate”.
+- The current formal Lv1 4V proxy is the authority-v1 pet's immutable `initialStats` / `growthSpeciesLevel1Stats` blood, attack, defense, and quick map. Do not invent a second quality field or expose the hidden roll.
+- Make early observation uncertain. Human players may inspect the visible estimate earlier, but automated growth rules require at least Lv20 / 19 observed upgrades and must use only public four-stat evidence.
+- A growth-screening result is not permission to delete. Keep the pet until the separate protection, recent-record, recovery, and feature-gate contracts all accept the operation.
 - Give every species its own distribution. Do not reuse a global spread merely because the JSON accepts it.
 - Preserve stable IDs and old pets. Never reroll or silently weaken existing instances.
 - Keep server sessions authoritative for capture, random seeds, experience, stats, skills, progression, consumption, and settlement.
