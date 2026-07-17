@@ -7582,7 +7582,7 @@ func _run_auto_pet_cultivation_check() -> void:
 		and int(reborn_pet.get("level", 0)) == 1
 		and int(reborn_pet.get("exp", -1)) == 0
 		and int(reborn_pet.get("hp", 0)) == int(reborn_pet.get("maxHp", 1))
-		and str(reborn_pet.get("individualSeed", "")) == "phase114:elder"
+		and str(reborn_pet.get("growthSpeciesSeed", "")) == "phase114:elder"
 		and PlayerProgressModel.pet_instance_by_id(reborn_profile, "phase114_mm").is_empty()
 	)
 
@@ -7603,7 +7603,14 @@ func _run_auto_pet_cultivation_check() -> void:
 		and not host.pet_cultivation_confirm_button.disabled
 		and host.pet_cultivation_preview_label != null
 		and host.pet_cultivation_preview_label.text.find("当前等级 -> Lv1") >= 0
+		and host.pet_cultivation_preview_label.text.find("目标等级准备：Lv140，成长池 ×1.100") >= 0
 	)
+	var screenshot_ok := true
+	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if screenshot_path != "":
+		var screenshot_error: int = host.get_viewport().get_texture().get_image().save_png(screenshot_path)
+		screenshot_ok = screenshot_error == OK
+		print("pet rebirth preparation screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
 	host._on_pet_cultivation_confirm_pressed()
 	await host.get_tree().process_frame
 	var ui_reborn = PlayerProgressModel.pet_instance_by_id(host.player_profile, "phase114_elder")
@@ -7614,15 +7621,26 @@ func _run_auto_pet_cultivation_check() -> void:
 		and detail_text.find("培养：转生 1 次") >= 0
 		and host.world_log_message.find("Lv140 -> Lv1") >= 0
 	)
-	var status = "ok" if enhance_ok and actor_ok and rebirth_ok and button_ready and panel_ready and ui_ok else "failed"
-	print("pet cultivation check ready: status=%s enhance=%s actor=%s rebirth=%s button=%s panel=%s ui=%s log=%s" % [
+	var status = "ok" if enhance_ok and actor_ok and rebirth_ok and button_ready and panel_ready and screenshot_ok and ui_ok else "failed"
+	print("pet cultivation check ready: status=%s enhance=%s actor=%s rebirth=%s button=%s panel=%s screenshot=%s ui=%s direct_preview=%s direct_result=%s direct_count=%d direct_history=%d direct_level=%d direct_exp=%d direct_hp=%d/%d direct_seed=%s direct_mm_removed=%s log=%s" % [
 		status,
 		str(enhance_ok),
 		str(actor_ok),
 		str(rebirth_ok),
 		str(button_ready),
 		str(panel_ready),
+		str(screenshot_ok),
 		str(ui_ok),
+		str(bool(rebirth_preview.get("ok", false))),
+		str(bool(rebirth_result.get("ok", false))),
+		int(rebirth_record.get("rebirthCount", 0)),
+		rebirth_history.size(),
+		int(reborn_pet.get("level", 0)),
+		int(reborn_pet.get("exp", -1)),
+		int(reborn_pet.get("hp", 0)),
+		int(reborn_pet.get("maxHp", 1)),
+		str(reborn_pet.get("growthSpeciesSeed", "")),
+		str(PlayerProgressModel.pet_instance_by_id(reborn_profile, "phase114_mm").is_empty()),
 		host.world_log_message,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -7988,6 +8006,25 @@ func _run_auto_pet_rebirth_mm_formula_check() -> void:
 		bool(preview.get("ok", false))
 		and str(preview.get("rebirthRollMode", "")) == "preview_median"
 		and absf(preview_mid - 1.4) <= 0.002
+		and str(preview.get("rebirthBalanceVersion", "")) == "pet_rebirth_balance_v2"
+		and absf(float(preview.get("targetPreparationMultiplier", 0.0)) - 1.0) <= 0.002
+	)
+	var level_110_target := target_pet.duplicate(true)
+	level_110_target["level"] = 110
+	var level_110_preview := PetRebirthMmModel.rebirth_bonus_preview(level_110_target, helper_pet)
+	var level_140_target := target_pet.duplicate(true)
+	level_140_target["level"] = PetRebirthMmModel.full_preparation_level()
+	var level_140_preview := PetRebirthMmModel.rebirth_bonus_preview(level_140_target, helper_pet)
+	var preview_lines_value = level_140_preview.get("lines", [])
+	var preview_lines: Array = preview_lines_value as Array if preview_lines_value is Array else []
+	var maturity_ok = (
+		PetRebirthMmModel.balance_version() == "pet_rebirth_balance_v2"
+		and PetRebirthMmModel.full_preparation_level() == 140
+		and absf(float(level_110_preview.get("rebirthBonusInternalPower", 0.0)) - 1.47) <= 0.002
+		and absf(float(level_110_preview.get("targetPreparationMultiplier", 0.0)) - 1.05) <= 0.002
+		and absf(float(level_140_preview.get("rebirthBonusInternalPower", 0.0)) - 1.54) <= 0.002
+		and absf(float(level_140_preview.get("targetPreparationMultiplier", 0.0)) - 1.1) <= 0.002
+		and preview_lines.any(func(line): return str(line).find("Lv140满额") >= 0)
 	)
 	var seeded_a = {}
 	var seeded_b = {}
@@ -8008,14 +8045,17 @@ func _run_auto_pet_rebirth_mm_formula_check() -> void:
 		and seeded_max <= 1.65
 		and seeded_max > seeded_min
 	)
-	var status = "ok" if range_ok and interpolation_ok and preview_ok and seeded_ok else "failed"
-	print("pet rebirth mm formula check ready: status=%s ranges=%s interpolation=%s preview=%s seeded=%s full_mid=%.3f seeded_min=%.3f seeded_max=%.3f almost_full_effective=%.3f crumb_effective=%.3f" % [
+	var status = "ok" if range_ok and interpolation_ok and preview_ok and maturity_ok and seeded_ok else "failed"
+	print("pet rebirth mm formula check ready: status=%s ranges=%s interpolation=%s preview=%s maturity=%s seeded=%s full_mid=%.3f lv110_mid=%.3f lv140_mid=%.3f seeded_min=%.3f seeded_max=%.3f almost_full_effective=%.3f crumb_effective=%.3f" % [
 		status,
 		str(range_ok),
 		str(interpolation_ok),
 		str(preview_ok),
+		str(maturity_ok),
 		str(seeded_ok),
 		preview_mid,
+		float(level_110_preview.get("rebirthBonusInternalPower", 0.0)),
+		float(level_140_preview.get("rebirthBonusInternalPower", 0.0)),
 		seeded_min,
 		seeded_max,
 		almost_full_effective,

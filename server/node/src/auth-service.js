@@ -224,6 +224,10 @@ const {
   createPetRebirthGrowthCycle,
   publicPetRebirthGrowthCycleFailure,
 } = require("./auth/pet-rebirth-growth-cycle");
+const {
+  loadPetRebirthBalance,
+  petRebirthPoolInfo: balancePetRebirthPoolInfo,
+} = require("./auth/pet-rebirth-balance");
 const {publicPet, publicProfile} = require("./auth/profile-visibility");
 const {
   createFamilyManorDomain,
@@ -234,6 +238,7 @@ const {
 const playerLevelRuntime = loadPlayerLevelRuntime();
 const battleEquipmentCatalog = loadBattleEquipmentCatalog();
 const authoritativeBattleCombatFormula = loadBattleCombatFormula();
+const petRebirthBalance = loadPetRebirthBalance();
 
 const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
@@ -514,39 +519,22 @@ const PET_REBIRTH_MM_GUIDE_KEY = "petRebirthMmGuide";
 const PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE = "available";
 const PET_REBIRTH_MM_GUIDE_STATUS_ACTIVE = "active";
 const PET_REBIRTH_MM_GUIDE_STATUS_COMPLETED = "completed";
-const PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL = 80;
-const PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL = 130;
+const PET_REBIRTH_MM_GUIDE_REQUIRED_LEVEL = petRebirthBalance.target.minimumLevel;
+const PET_REBIRTH_MM_GUIDE_RECOMMENDED_LEVEL = petRebirthBalance.target.recommendedLevel;
 const PET_REBIRTH_MM_TRIAL_GROUP_ID = "pet_rebirth_mm_trial_1";
 const PET_CULTIVATION_MODE_ENHANCE = "enhance";
 const PET_CULTIVATION_MODE_REBIRTH = "rebirth";
 const PET_CULTIVATION_MAX_ENHANCE_LEVEL = 10;
 const PET_CULTIVATION_MAX_HISTORY_RECORDS = 20;
-const PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL = 79;
-const PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL = 80;
-const PET_REBIRTH_MM_MAX_STAGE = 2;
-const PET_REBIRTH_MM_STONE_CAPACITY = 50;
-const PET_REBIRTH_MM_HP_INTERNAL_SCALE = 4.0;
-const PET_REBIRTH_MM_TARGET_WEIGHT_SCALE = 1.0;
-const PET_REBIRTH_MM_STONE_WEIGHT_SCALE = 8.0;
-const PET_REBIRTH_MM_HELPER_GROWTH_WEIGHT_SCALE = 0.6;
-const PET_REBIRTH_MM_STONE_EFFECTIVE_EXPONENT = 1.35;
+const PET_REBIRTH_MM_HELPER_REQUIRED_LEVEL = petRebirthBalance.helper.requiredLevel;
+const PET_REBIRTH_MM_TARGET_REQUIRED_LEVEL = petRebirthBalance.target.minimumLevel;
+const PET_REBIRTH_MM_MAX_STAGE = petRebirthBalance.maxRebirthStage;
+const PET_REBIRTH_MM_STONE_CAPACITY = petRebirthBalance.stone.capacityPerStat;
+const PET_REBIRTH_MM_HP_INTERNAL_SCALE = petRebirthBalance.internalPower.maxHpScale;
+const PET_REBIRTH_MM_TARGET_WEIGHT_SCALE = petRebirthBalance.allocation.targetGrowthWeight;
+const PET_REBIRTH_MM_STONE_WEIGHT_SCALE = petRebirthBalance.allocation.stoneWeight;
+const PET_REBIRTH_MM_HELPER_GROWTH_WEIGHT_SCALE = petRebirthBalance.allocation.helperGrowthWeight;
 const PET_REBIRTH_MM_STAT_KEYS = ["maxHp", "attack", "defense", "quick"];
-const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
-  1: {
-    0: {min: 0.00, max: 0.10},
-    1: {min: 0.55, max: 0.95},
-    2: {min: 0.80, max: 1.25},
-    3: {min: 1.00, max: 1.45},
-    4: {min: 1.15, max: 1.65},
-  },
-  2: {
-    0: {min: 0.00, max: 0.12},
-    1: {min: 0.65, max: 1.05},
-    2: {min: 0.95, max: 1.40},
-    3: {min: 1.15, max: 1.65},
-    4: {min: 1.35, max: 1.85},
-  },
-};
 const PROFILE_ACTION_IDS = new Set([
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
@@ -19859,10 +19847,15 @@ function applyPetRebirthMmCultivationAction(profile, pet, params, now, petRebirt
     helperStage: expectedStage,
     helperLevel: Math.max(1, Math.trunc(Number(helper.level || 1))),
     helperStonePoints: clone(helperRecord.stonePoints),
+    rebirthBalanceVersion: bonusPackage.rebirthBalanceVersion,
+    rebirthBaseInternalPower: bonusPackage.rebirthBaseInternalPower,
     rebirthBonusInternalPower: bonusPackage.rebirthBonusInternalPower,
     rebirthBonusPercentile: bonusPackage.rebirthBonusPercentile,
     rebirthBonusGrade: bonusPackage.rebirthBonusGrade,
     rebirthRollSeed: rollSeed,
+    targetPreparationLevel: bonusPackage.targetPreparationLevel,
+    targetPreparationRatio: bonusPackage.targetPreparationRatio,
+    targetPreparationMultiplier: bonusPackage.targetPreparationMultiplier,
     helperGrowthWeights: clone(bonusPackage.helperGrowthWeights),
     visibleGrowthBonus: visibleBonus,
     beforeLevel: Math.max(1, Math.trunc(Number(pet.level || 1))),
@@ -20077,10 +20070,15 @@ function petRebirthMmBonusPackage(targetPet, helperPet, helperRecord, stage, rol
   return {
     visibleGrowthBonus: petCultivationGrowthBonus(visibleBonus),
     internalGrowthBonus: internalBonus,
+    rebirthBalanceVersion: petRebirthBalance.balanceVersion,
+    rebirthBaseInternalPower: snapNumber(poolInfo.basePool, 0.001),
     rebirthBonusInternalPower: snapNumber(pool, 0.001),
     rebirthBonusPercentile: snapNumber(poolInfo.percentile, 0.1),
     rebirthBonusGrade: petRebirthMmGradeForPercentile(poolInfo.percentile),
     rebirthRollSeed: rollSeed,
+    targetPreparationLevel: Math.max(1, Math.trunc(Number(poolInfo.targetPreparationLevel || 1))),
+    targetPreparationRatio: snapNumber(poolInfo.targetPreparationRatio, 0.001),
+    targetPreparationMultiplier: snapNumber(poolInfo.targetPreparationMultiplier, 0.001),
     helperGrowthWeights: helperWeights,
   };
 }
@@ -20136,48 +20134,31 @@ function petHelperGrowthWeightDistribution(helperPet) {
 }
 
 function petRebirthMmPoolInfo(helperRecord, stage, targetPet, helperPet, rollSeed) {
-  const effectiveCount = petRebirthMmEffectiveStoneCount(helperRecord);
-  const range = petRebirthMmPoolRangeForEffectiveStoneCount(effectiveCount, stage);
   const percentile = petRebirthMmPercentile(targetPet, helperPet, stage, rollSeed);
-  const minPool = Number(range.min || 0);
-  const maxPool = Number(range.max || 0);
+  const stonePoints = normalizedPetRebirthHelperRecord({petRebirthHelper: helperRecord}, stage).stonePoints;
+  const result = balancePetRebirthPoolInfo(petRebirthBalance, {
+    stonePoints,
+    stage,
+    targetLevel: Math.max(1, Math.trunc(Number(targetPet && targetPet.level || 1))),
+    percentile,
+  });
   return {
-    pool: snapNumber(minPool + (maxPool - minPool) * percentile / 100.0, 0.001),
-    percentile: snapNumber(percentile, 0.1),
-  };
-}
-
-function petRebirthMmEffectiveStoneCount(helperRecord) {
-  const points = normalizedPetRebirthHelperRecord({petRebirthHelper: helperRecord}).stonePoints;
-  let total = 0;
-  for (const key of PET_REBIRTH_MM_STAT_KEYS) {
-    const ratio = Math.max(0, Math.min(1, Number(points[key] || 0) / PET_REBIRTH_MM_STONE_CAPACITY));
-    total += Math.pow(ratio, PET_REBIRTH_MM_STONE_EFFECTIVE_EXPONENT);
-  }
-  return snapNumber(total, 0.001);
-}
-
-function petRebirthMmPoolRangeForEffectiveStoneCount(effectiveCount, stage) {
-  const safeStage = clampInt(stage, 1, PET_REBIRTH_MM_MAX_STAGE, 1);
-  const table = PET_REBIRTH_MM_POOL_RANGES_BY_STAGE[safeStage] || PET_REBIRTH_MM_POOL_RANGES_BY_STAGE[1];
-  const safeCount = Math.max(0, Math.min(4, Number(effectiveCount || 0)));
-  const lower = clampInt(Math.floor(safeCount), 0, 4, 0);
-  const upper = clampInt(lower + 1, 0, 4, lower);
-  const t = lower >= 4 ? 0 : Math.max(0, Math.min(1, safeCount - lower));
-  const lowerRange = table[lower] || table[0] || {min: 0, max: 0};
-  const upperRange = table[upper] || lowerRange;
-  const upperMin = Object.prototype.hasOwnProperty.call(upperRange, "min") ? Number(upperRange.min) : Number(lowerRange.min || 0);
-  const upperMax = Object.prototype.hasOwnProperty.call(upperRange, "max") ? Number(upperRange.max) : Number(lowerRange.max || 0);
-  return {
-    min: snapNumber(Number(lowerRange.min || 0) + (upperMin - Number(lowerRange.min || 0)) * t, 0.001),
-    max: snapNumber(Number(lowerRange.max || 0) + (upperMax - Number(lowerRange.max || 0)) * t, 0.001),
+    ...result,
+    effectiveStoneCount: snapNumber(result.effectiveStoneCount, 0.001),
+    baseMin: snapNumber(result.baseMin, 0.001),
+    baseMax: snapNumber(result.baseMax, 0.001),
+    basePool: snapNumber(result.basePool, 0.001),
+    pool: snapNumber(result.pool, 0.001),
+    percentile: snapNumber(result.percentile, 0.1),
+    targetPreparationRatio: snapNumber(result.targetPreparationRatio, 0.001),
+    targetPreparationMultiplier: snapNumber(result.targetPreparationMultiplier, 0.001),
   };
 }
 
 function petRebirthMmPercentile(targetPet, helperPet, stage, rollSeed) {
   const seed = String(rollSeed || "").trim();
   if (!seed) {
-    return 50.0;
+    return petRebirthBalance.roll.previewPercentile;
   }
   const key = [
     String(targetPet && (targetPet.growthSpeciesSeed || targetPet.instanceId || targetPet.petId) || ""),
@@ -20192,10 +20173,11 @@ function petRebirthMmPercentile(targetPet, helperPet, stage, rollSeed) {
 
 function petRebirthMmGradeForPercentile(percentile) {
   const value = Math.max(0, Math.min(100, Number(percentile || 0)));
-  if (value >= 95) return "S";
-  if (value >= 85) return "A";
-  if (value >= 55) return "B";
-  if (value >= 25) return "C";
+  const thresholds = petRebirthBalance.roll.gradeThresholds;
+  if (value >= thresholds.S) return "S";
+  if (value >= thresholds.A) return "A";
+  if (value >= thresholds.B) return "B";
+  if (value >= thresholds.C) return "C";
   return "D";
 }
 

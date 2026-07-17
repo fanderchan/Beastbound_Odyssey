@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "balanceVersion": "pet_rebirth_balance_v2",
+  "maxRebirthStage": 2,
+  "target": {
+    "minimumLevel": 80,
+    "fullPreparationLevel": 140,
+    "recommendedLevel": 130,
+    "maxPoolMultiplier": 1.1,
+    "curve": "linear"
+  },
+  "helper": {
+    "requiredLevel": 79
+  },
+  "internalPower": {
+    "maxHpScale": 4.0
+  },
+  "stone": {
+    "capacityPerStat": 50,
+    "effectiveExponent": 1.35
+  },
+  "allocation": {
+    "targetGrowthWeight": 1.0,
+    "stoneWeight": 8.0,
+    "helperGrowthWeight": 0.6
+  },
+  "roll": {
+    "distribution": "uniform_percentile",
+    "previewPercentile": 50.0,
+    "gradeThresholds": {
+      "S": 95.0,
+      "A": 85.0,
+      "B": 55.0,
+      "C": 25.0
+    }
+  },
+  "poolRangesByStage": {
+    "1": [
+      {"effectiveStoneCount": 0, "min": 0.0, "max": 0.1},
+      {"effectiveStoneCount": 1, "min": 0.55, "max": 0.95},
+      {"effectiveStoneCount": 2, "min": 0.8, "max": 1.25},
+      {"effectiveStoneCount": 3, "min": 1.0, "max": 1.45},
+      {"effectiveStoneCount": 4, "min": 1.15, "max": 1.65}
+    ],
+    "2": [
+      {"effectiveStoneCount": 0, "min": 0.0, "max": 0.12},
+      {"effectiveStoneCount": 1, "min": 0.65, "max": 1.05},
+      {"effectiveStoneCount": 2, "min": 0.95, "max": 1.4},
+      {"effectiveStoneCount": 3, "min": 1.15, "max": 1.65},
+      {"effectiveStoneCount": 4, "min": 1.35, "max": 1.85}
+    ]
+  },
+  "compatibility": {
+    "applyTo": "future_confirmed_rebirths_only",
+    "existingPets": "unchanged",
+    "existingHistory": "unchanged"
+  }
+}

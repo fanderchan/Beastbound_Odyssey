@@ -6,6 +6,7 @@ const LEVEL_CURVES_PATH := BALANCE_DIR + "/level_curves.json"
 const PLAYER_GROWTH_PATH := BALANCE_DIR + "/player_growth.json"
 const PET_GROWTH_PROFILES_PATH := BALANCE_DIR + "/pet_growth_profiles.json"
 const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_profiles.json"
+const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
 const COMBAT_FORMULAS_PATH := BALANCE_DIR + "/combat_formulas.json"
 const CAPTURE_FORMULA_PATH := BALANCE_DIR + "/capture_formula.json"
 const REWARD_ECONOMY_PATH := BALANCE_DIR + "/reward_economy.json"
@@ -20,6 +21,7 @@ const CORE_NUMERIC_DIGEST_PATHS: Array[String] = [
 	PLAYER_GROWTH_PATH,
 	PET_GROWTH_PROFILES_PATH,
 	PET_GROWTH_SPECIES_PROFILES_PATH,
+	PET_REBIRTH_BALANCE_PATH,
 	COMBAT_FORMULAS_PATH,
 	CAPTURE_FORMULA_PATH,
 	REWARD_ECONOMY_PATH,
@@ -54,6 +56,10 @@ static func pet_growth_profiles() -> Dictionary:
 
 static func pet_growth_species_profiles() -> Dictionary:
 	return _data(PET_GROWTH_SPECIES_PROFILES_PATH)
+
+
+static func pet_rebirth_balance() -> Dictionary:
+	return _data(PET_REBIRTH_BALANCE_PATH)
 
 
 static func combat_formulas() -> Dictionary:
@@ -104,6 +110,7 @@ static func balance_version_summary() -> Dictionary:
 		"battleSimulationSuiteId": str(set.get("battleSimulationSuiteId", "")),
 		"economyLedgerId": str(set.get("economyLedgerId", "")),
 		"petPowerFormulaId": str(set.get("petPowerFormulaId", "")),
+		"petRebirthBalanceVersion": str(set.get("petRebirthBalanceVersion", "")),
 	}
 
 
@@ -446,6 +453,7 @@ static func validation_errors() -> Array[String]:
 	_validate_player_growth(errors)
 	_validate_pet_growth_profiles(errors)
 	_validate_pet_growth_species_profiles(errors)
+	_validate_pet_rebirth_balance(errors)
 	_validate_combat_formulas(errors)
 	_validate_capture_formula(errors)
 	_validate_reward_economy(errors)
@@ -474,6 +482,7 @@ static func _validate_balance_sets(errors: Array[String]) -> void:
 		"battleSimulationSuiteId",
 		"economyLedgerId",
 		"petPowerFormulaId",
+		"petRebirthBalanceVersion",
 	]
 	for key in required_keys:
 		if str(active_set.get(key, "")).strip_edges() == "":
@@ -487,6 +496,7 @@ static func _validate_balance_sets(errors: Array[String]) -> void:
 		"battleSimulationSuiteId": str(active_battle_simulation_suite().get("id", "")),
 		"economyLedgerId": str(active_economy_ledger().get("id", "")),
 		"petPowerFormulaId": str(pet_power_formula().get("id", "")),
+		"petRebirthBalanceVersion": str(pet_rebirth_balance().get("balanceVersion", "")),
 	}
 	for key in expected.keys():
 		if str(active_set.get(key, "")) != str(expected.get(key, "")):
@@ -667,6 +677,91 @@ static func _validate_pet_growth_species_profiles(errors: Array[String]) -> void
 					last = value
 	if seen.is_empty():
 		errors.append("pet_growth_species_profiles 至少需要一个 profile")
+
+
+static func _validate_pet_rebirth_balance(errors: Array[String]) -> void:
+	var data := pet_rebirth_balance()
+	if data.is_empty():
+		errors.append("pet_rebirth_balance.json 缺失或不是 JSON 对象")
+		return
+	if int(data.get("schemaVersion", 0)) != 1:
+		errors.append("pet_rebirth_balance.schemaVersion 当前必须为1")
+	if str(data.get("balanceVersion", "")).strip_edges() == "":
+		errors.append("pet_rebirth_balance.balanceVersion 不能为空")
+	if int(data.get("maxRebirthStage", 0)) != 2:
+		errors.append("pet_rebirth_balance.maxRebirthStage 当前必须为2")
+	var target := data.get("target", {}) as Dictionary
+	var minimum_level := int(target.get("minimumLevel", 0))
+	var full_level := int(target.get("fullPreparationLevel", 0))
+	var recommended_level := int(target.get("recommendedLevel", 0))
+	var max_multiplier := float(target.get("maxPoolMultiplier", 0.0))
+	if minimum_level != 80:
+		errors.append("pet_rebirth_balance.target.minimumLevel 当前必须为80")
+	if full_level != 140:
+		errors.append("pet_rebirth_balance.target.fullPreparationLevel 当前必须为140")
+	if recommended_level < minimum_level or recommended_level > full_level:
+		errors.append("pet_rebirth_balance.target.recommendedLevel 必须位于准备等级范围")
+	if max_multiplier < 1.0 or max_multiplier > 1.25:
+		errors.append("pet_rebirth_balance.target.maxPoolMultiplier 必须在1.00-1.25")
+	if str(target.get("curve", "")) != "linear":
+		errors.append("pet_rebirth_balance.target.curve 当前只支持linear")
+	var helper := data.get("helper", {}) as Dictionary
+	if int(helper.get("requiredLevel", 0)) != 79:
+		errors.append("pet_rebirth_balance.helper.requiredLevel 当前必须为79")
+	var internal_power := data.get("internalPower", {}) as Dictionary
+	if float(internal_power.get("maxHpScale", 0.0)) <= 0.0:
+		errors.append("pet_rebirth_balance.internalPower.maxHpScale 必须大于0")
+	var stone := data.get("stone", {}) as Dictionary
+	if int(stone.get("capacityPerStat", 0)) != 50:
+		errors.append("pet_rebirth_balance.stone.capacityPerStat 当前必须为50")
+	var exponent := float(stone.get("effectiveExponent", 0.0))
+	if exponent < 1.0 or exponent > 3.0:
+		errors.append("pet_rebirth_balance.stone.effectiveExponent 必须在1-3")
+	var allocation := data.get("allocation", {}) as Dictionary
+	for key in ["targetGrowthWeight", "stoneWeight", "helperGrowthWeight"]:
+		var value := float(allocation.get(key, -1.0))
+		if value < 0.0 or value > 20.0:
+			errors.append("pet_rebirth_balance.allocation.%s 无效" % key)
+	var roll := data.get("roll", {}) as Dictionary
+	if str(roll.get("distribution", "")) != "uniform_percentile":
+		errors.append("pet_rebirth_balance.roll.distribution 当前只支持uniform_percentile")
+	var preview_percentile := float(roll.get("previewPercentile", -1.0))
+	if preview_percentile < 0.0 or preview_percentile > 100.0:
+		errors.append("pet_rebirth_balance.roll.previewPercentile 无效")
+	var thresholds := roll.get("gradeThresholds", {}) as Dictionary
+	var last_threshold := 101.0
+	for grade in ["S", "A", "B", "C"]:
+		var threshold := float(thresholds.get(grade, -1.0))
+		if threshold < 0.0 or threshold > 100.0 or threshold >= last_threshold:
+			errors.append("pet_rebirth_balance.roll.gradeThresholds.%s 无效" % grade)
+		last_threshold = threshold
+	var raw_tables := data.get("poolRangesByStage", {}) as Dictionary
+	for stage in [1, 2]:
+		var table_value = raw_tables.get(str(stage), [])
+		if not (table_value is Array) or (table_value as Array).size() != 5:
+			errors.append("pet_rebirth_balance.poolRangesByStage.%d 必须有5个锚点" % stage)
+			continue
+		var table := table_value as Array
+		var last_min := -INF
+		var last_max := -INF
+		for index in range(table.size()):
+			if not (table[index] is Dictionary):
+				errors.append("pet_rebirth_balance.poolRangesByStage.%d[%d] 必须是对象" % [stage, index])
+				continue
+			var anchor := table[index] as Dictionary
+			var min_value := float(anchor.get("min", -1.0))
+			var max_value := float(anchor.get("max", -1.0))
+			if int(anchor.get("effectiveStoneCount", -1)) != index:
+				errors.append("pet_rebirth_balance.poolRangesByStage.%d[%d] 锚点错误" % [stage, index])
+			if min_value < 0.0 or max_value < min_value or min_value < last_min or max_value < last_max:
+				errors.append("pet_rebirth_balance.poolRangesByStage.%d[%d] 区间无效" % [stage, index])
+			last_min = min_value
+			last_max = max_value
+	var compatibility := data.get("compatibility", {}) as Dictionary
+	if str(compatibility.get("applyTo", "")) != "future_confirmed_rebirths_only":
+		errors.append("pet_rebirth_balance 只能作用于未来确认的转生")
+	if str(compatibility.get("existingPets", "")) != "unchanged" or str(compatibility.get("existingHistory", "")) != "unchanged":
+		errors.append("pet_rebirth_balance 必须保持既有宠物和历史不变")
 
 
 static func _validate_combat_formulas(errors: Array[String]) -> void:

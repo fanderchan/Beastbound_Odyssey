@@ -512,6 +512,14 @@ test("authority-v1 pet rebirth restarts one canonical growth cycle atomically", 
     rebornTarget.petCultivation.rebirthGrowthBonus,
   );
   assert.equal(Object.values(rebornTarget.petCultivation.rebirthGrowthBonus).some((value) => value > 0), true);
+  const rebirthEvent = rebornTarget.petCultivation.history.at(-1);
+  assert.equal(rebirthEvent.rebirthBalanceVersion, "pet_rebirth_balance_v2");
+  assert.equal(rebirthEvent.targetPreparationLevel, 140);
+  assert.equal(rebirthEvent.targetPreparationRatio, 1);
+  assert.equal(rebirthEvent.targetPreparationMultiplier, 1.1);
+  assert.ok(
+    Math.abs(rebirthEvent.rebirthBonusInternalPower - rebirthEvent.rebirthBaseInternalPower * 1.1) <= 0.002,
+  );
   const retrainedToLevel20 = settlePetGrowthToLevel(rebornTarget, target.growthProfile, 20).pet;
   assert.equal(retrainedToLevel20.level, 20);
   assert.deepEqual(validatePetGrowth(retrainedToLevel20, target.growthProfile), {ok: true, code: "", errors: []});
@@ -519,7 +527,18 @@ test("authority-v1 pet rebirth restarts one canonical growth cycle atomically", 
   assert.equal(publicTarget.growthAuthority.modelVersion, "pet_growth_authority_v1");
   const publicResponseText = JSON.stringify(reborn);
   assert.equal(publicResponseText.includes(beforeTarget.petGrowth.private.privateSeed), false);
-  for (const privateField of ["privateSeed", "privateRoll", "continuousStats", "rebirthRollSeed", "helperGrowthWeights", "rebirthBonusInternalPower"]) {
+  for (const privateField of [
+    "privateSeed",
+    "privateRoll",
+    "continuousStats",
+    "rebirthRollSeed",
+    "helperGrowthWeights",
+    "rebirthBalanceVersion",
+    "rebirthBaseInternalPower",
+    "rebirthBonusInternalPower",
+    "targetPreparationRatio",
+    "targetPreparationMultiplier",
+  ]) {
     assert.equal(publicResponseText.includes(`\"${privateField}\"`), false, privateField);
   }
 
