@@ -89,6 +89,14 @@ static func online_safe_settings(value) -> Dictionary:
 	return normalized
 
 
+static func capture_update_settings(value) -> Dictionary:
+	var normalized := online_safe_settings(value)
+	# The growth policy remains in its legacy profile location for old-save and
+	# old-client compatibility, but current capture settings no longer own it.
+	normalized.erase(GROWTH_RULE_POLICY_KEY)
+	return normalized
+
+
 static func normalized_target_mode(mode_id: String) -> String:
 	var normalized_id := mode_id.strip_edges()
 	for option in target_mode_options():

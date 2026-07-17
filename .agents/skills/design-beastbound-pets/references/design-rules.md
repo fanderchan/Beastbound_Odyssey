@@ -112,9 +112,9 @@ Normal two-rebirth, evolution, and fusion should land in comparable raw-stat ban
 
 ## Player information
 
-At capture, show authentic Lv1 4V and stable visible identity. The capture tab may immediately handle only a newly captured Lv1 wild pet using its four public Lv1 percentiles; it never reads hidden growth, predicts Lv140, or auto-trains. Lv2+ captures default to retain/manual review. During training, the owned-pet panel shows evidence from actual growth and an estimate that becomes more useful around Lv20. The existing growth-rule preview remains no-mutation evidence for manual evaluation, not capture automation. Keep exact seed, hidden quality, and authoritative future roll GM-only.
+At capture, show authentic Lv1 4V and stable visible identity. The capture tab may immediately handle only a newly captured Lv1 wild pet using its four public Lv1 percentiles; it never reads hidden growth, predicts Lv140, or auto-trains. Lv2+ captures default to retain/manual review. During training, the owned-pet panel keeps a permanent species-relative Lv1 4V percentile view beside a separate observed-growth percentile view and an estimate that becomes more useful around Lv20. Never combine those independent systems into one quality score. The existing growth-rule preview remains no-mutation evidence for manual evaluation, not capture automation. Keep exact seed, hidden quality, and authoritative future roll GM-only.
 
-The codex answers “is this species worth chasing?” with species ranges, ecology, skills, and acquisition. The owned-pet panel answers “is this individual worth keeping?” with observed growth, training, learned skills, lock/bind status, and current stats.
+The codex answers “is this species worth chasing?” with species ranges, ecology, skills, and acquisition. The owned-pet panel answers “is this individual worth keeping?” with independent Lv1 4V percentiles, observed growth, training, learned skills, lock/bind status, and current stats.
 
 Player-facing Chinese must be concise. Never expose raw IDs, effect types, formula keys, audit output, or server/debug messages.
 

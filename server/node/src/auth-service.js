@@ -68,6 +68,10 @@ const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
 const {loadPetObservedGrowthScreening} = require("./auth/pet-observed-growth-screening");
 const {createPetObservedGrowthRulePreview} = require("./auth/pet-observed-growth-rule-preview");
 const {
+  PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
+  createPetGrowthEvaluationSettingsRules,
+} = require("./auth/pet-growth-evaluation-settings");
+const {
   REASON_CODES: PET_PROTECTION_REASON_CODES,
   evaluateProfilePetAutomaticProcessing,
 } = require("./auth/pet-protection-policy");
@@ -545,6 +549,7 @@ const PET_REBIRTH_MM_POOL_RANGES_BY_STAGE = {
 };
 const PROFILE_ACTION_IDS = new Set([
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
+  PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
   "player_stat_allocate",
   "backpack_unlock_slot",
   "bank_unlock_tab",
@@ -5393,6 +5398,7 @@ function createAuthService(options = {}) {
       nowFn,
       {
         autoCaptureSettingsRules: serverAutoCaptureSettingsRules(),
+        petGrowthEvaluationSettingsRules: serverPetGrowthEvaluationSettingsRules(),
         newPetFactory,
         petExpSettlement,
         petRebirthGrowthCycle,
@@ -18249,6 +18255,11 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
         return {ok: false, code: "auto_capture_settings_unavailable", message: "自动捕捉设置暂不可用。"};
       }
       return options.autoCaptureSettingsRules.applyPlayerUpdate(profile, params);
+    case PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID:
+      if (!options.petGrowthEvaluationSettingsRules || typeof options.petGrowthEvaluationSettingsRules.applyPlayerUpdate !== "function") {
+        return {ok: false, code: "pet_growth_evaluation_settings_unavailable", message: "成长评估设置暂不可用。"};
+      }
+      return options.petGrowthEvaluationSettingsRules.applyPlayerUpdate(profile, params);
     case "player_stat_allocate":
       return applyPlayerStatAllocateAction(profile, params);
     case "backpack_unlock_slot":
@@ -18345,6 +18356,9 @@ function publicProfileActionResult(action, result) {
     expPillLevel: Math.max(0, Math.trunc(Number(source.expPillLevel || 0))),
     growthRulePreview: source.growthRulePreview && typeof source.growthRulePreview === "object" && !Array.isArray(source.growthRulePreview)
       ? clone(source.growthRulePreview)
+      : {},
+    growthEvaluationPolicy: source.growthEvaluationPolicy && typeof source.growthEvaluationPolicy === "object" && !Array.isArray(source.growthEvaluationPolicy)
+      ? clone(source.growthEvaluationPolicy)
       : {},
     schemaVersion: 1,
   };
@@ -23469,6 +23483,7 @@ function defaultAutoCaptureSettings() {
 
 let serverAutoCaptureSettingsRulesCache = null;
 let serverPetObservedGrowthRulePreviewCache = null;
+let serverPetGrowthEvaluationSettingsRulesCache = null;
 
 function serverPetObservedGrowthRulePreview() {
   if (!serverPetObservedGrowthRulePreviewCache) {
@@ -23490,6 +23505,15 @@ function serverAutoCaptureSettingsRules() {
     });
   }
   return serverAutoCaptureSettingsRulesCache;
+}
+
+function serverPetGrowthEvaluationSettingsRules() {
+  if (!serverPetGrowthEvaluationSettingsRulesCache) {
+    serverPetGrowthEvaluationSettingsRulesCache = createPetGrowthEvaluationSettingsRules({
+      normalizeAutoCaptureSettings: (value) => serverAutoCaptureSettingsRules().normalizeSettings(value),
+    });
+  }
+  return serverPetGrowthEvaluationSettingsRulesCache;
 }
 
 function defaultHangSettings() {

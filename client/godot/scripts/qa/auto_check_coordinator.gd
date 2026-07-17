@@ -31,7 +31,10 @@ const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
 const PetGrowthRulePreviewModel := preload("res://scripts/progression/pet_growth_rule_preview_model.gd")
-const PetGrowthRulePreviewPresenter := preload("res://scripts/ui/pet_growth_rule_preview_presenter.gd")
+const PetGrowthManualEvaluationModel := preload("res://scripts/progression/pet_growth_manual_evaluation_model.gd")
+const PetGrowthManualEvaluationPresenter := preload("res://scripts/ui/pet_growth_manual_evaluation_presenter.gd")
+const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_manual_evaluation_panel.gd")
+const PetLevelOnePercentileModel := preload("res://scripts/progression/pet_level_one_percentile_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -2830,8 +2833,10 @@ func _run_auto_capture_settings_check() -> void:
 		and local_capacity_label.text.find("已用 1/25") >= 0
 		and local_capacity_label.text.find("剩余 24 格") >= 0
 		and local_guidance_label != null
-		and local_guidance_label.text.find("约 Lv20") >= 0
+		and local_guidance_label.text.find("刚捕获宠物") >= 0
+		and local_guidance_label.text.find("宠物面板人工观察") >= 0
 		and local_guidance_label.text.find("不会识别隐藏成长") >= 0
+		and local_guidance_label.text.find("待处理") < 0
 		and local_filter_guidance_label != null
 		and local_filter_guidance_label.text.find("真正捕获为 Lv1") >= 0
 		and local_filter_guidance_label.text.find("Lv2+ 默认保留") >= 0
@@ -2863,7 +2868,9 @@ func _run_auto_capture_settings_check() -> void:
 		and online_capacity_label.text.find("已用 1/25") >= 0
 		and online_guidance_label != null
 		and online_guidance_label.text.find("联网不会自动丢弃宠物") >= 0
-		and online_guidance_label.text.find("约 Lv20") >= 0
+		and online_guidance_label.text.find("新鲜Lv1公开四维") >= 0
+		and online_guidance_label.text.find("宠物面板人工观察") >= 0
+		and online_guidance_label.text.find("待处理") < 0
 		and online_status_label != null
 		and online_status_label.text == "修改后请保存到服务器。"
 		and online_filter_guidance_label != null
@@ -3431,27 +3438,27 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 	host.profile_action_request_pending = false
 	host.auth_auto_bypass = false
 	host.current_account_session = {
-		"accountId": "growth_rule_preview_account",
+		"accountId": "manual_growth_evaluation_account",
 		"authSource": ServerAuthClientModel.SOURCE_SERVER,
-		"serverSessionToken": "growth_rule_preview_token",
+		"serverSessionToken": "manual_growth_evaluation_token",
 	}
 	var level_twenty := _pet_growth_rule_preview_fixture(
-		"growth_preview_lv20",
-		"蓝人龙预览",
+		"manual_growth_lv20",
+		"蓝人龙观察样本",
 		20,
 		{"maxHp": 239, "attack": 63, "defense": 28, "quick": 29},
 		PlayerProgressModel.PET_STATE_BATTLE
 	)
-	var level_nineteen := _pet_growth_rule_preview_fixture(
-		"growth_preview_lv19",
-		"蓝人龙幼体",
-		19,
-		{"maxHp": 230, "attack": 60, "defense": 27, "quick": 28},
+	var level_ten := _pet_growth_rule_preview_fixture(
+		"manual_growth_lv10",
+		"蓝人龙复核样本",
+		10,
+		{"maxHp": 147, "attack": 37, "defense": 18, "quick": 17},
 		PlayerProgressModel.PET_STATE_STORAGE
 	)
 	host.player_profile = PlayerProgressModel.default_profile()
-	host.player_profile["petInstances"] = [level_twenty, level_nineteen]
-	host.player_profile["activePetInstanceId"] = "growth_preview_lv20"
+	host.player_profile["petInstances"] = [level_twenty, level_ten]
+	host.player_profile["activePetInstanceId"] = "manual_growth_lv20"
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	var settings := PlayerProgressModel.auto_capture_settings(host.player_profile)
 	settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = {
@@ -3461,92 +3468,122 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	var pets_before := JSON.stringify(host.player_profile.get("petInstances", []))
-	var model_contract := PetGrowthRulePreviewModel.contract_check()
-	var presenter_contract := PetGrowthRulePreviewPresenter.contract_check()
+	var model_contract := PetGrowthManualEvaluationModel.contract_check()
+	var level_one_contract := PetLevelOnePercentileModel.contract_check()
+	var presenter_contract := PetGrowthManualEvaluationPresenter.contract_check()
+	var panel_contract := PetGrowthManualEvaluationPanel.contract_check()
+	if not bool(model_contract.get("ok", false)):
+		print("manual pet growth evaluation model detail: %s" % JSON.stringify(model_contract))
+	var capture_payload := AutoCaptureSettingsModel.capture_update_settings(settings)
+	var capture_payload_ok := not capture_payload.has(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY)
 
 	host.auto_settings_active_tab = "capture"
 	host._open_auto_settings_panel()
 	await host.get_tree().process_frame
-	var overall_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY, null) as SpinBox
-	var hp_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("maxHp"), null) as SpinBox
-	var attack_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("attack"), null) as SpinBox
-	var defense_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("defense"), null) as SpinBox
-	var quick_control := host.auto_settings_controls.get(PetGrowthRulePreviewModel.ui_stat_key("quick"), null) as SpinBox
-	var preview_label := host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
-	var initial_text := preview_label.text if preview_label != null else ""
-	var initial_ui_ok: bool = (
-		overall_control != null and int(overall_control.value) == 91
-		and hp_control != null and int(hp_control.value) == 90
-		and attack_control != null and int(attack_control.value) == 90
-		and defense_control != null and int(defense_control.value) == 0
-		and quick_control != null and int(quick_control.value) == 40
-		and initial_text.find("若开启，将进入待处理") >= 0
-		and initial_text.find("综合 90%＜91%") >= 0
-		and initial_text.find("攻击 91.9%≥90%") >= 0
-		and initial_text.find("成长观察中，Lv20 后判断") >= 0
-		and initial_text.find("不会移动、丢弃或改写任何宠物") >= 0
+	var capture_guidance := host.auto_settings_controls.get("autoCaptureGrowthGuidanceLabel", null) as Label
+	var capture_ui_ok: bool = (
+		not host.auto_settings_controls.has(PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY)
+		and not host.auto_settings_controls.has(PetGrowthRulePreviewModel.ui_stat_key("maxHp"))
+		and not host.auto_settings_controls.has("autoCaptureGrowthRuleGuidanceLabel")
+		and not host.auto_settings_controls.has("autoCaptureGrowthRulePreviewLabel")
+		and capture_guidance != null
+		and capture_guidance.text.find("宠物面板人工观察") >= 0
+		and capture_guidance.text.find("自动训练") < 0
+		and capture_guidance.text.find("待处理") < 0
 		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 	)
+
+	host.pet_selected_instance_id = "manual_growth_lv20"
+	host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	host.pet_growth_stage = 0
+	host._open_pet_panel(false)
+	await host.get_tree().process_frame
+	host._panel_flow()._set_pet_growth_manual_evaluation_expanded(true)
+	host._panel_flow()._refresh_pet_panel()
+	await host.get_tree().process_frame
+	var initial_snapshot: Dictionary = host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	var initial_values := initial_snapshot.get("values", {}) as Dictionary
+	var initial_text := str(initial_snapshot.get("resultText", ""))
+	var table_text := ""
+	if host.pet_growth_table_grid != null:
+		for child in host.pet_growth_table_grid.get_children():
+			if child is Label:
+				table_text += " " + (child as Label).text
+	var initial_ui_ok := (
+		bool(initial_snapshot.get("visible", false))
+		and bool(initial_snapshot.get("settingsExpanded", false))
+		and int(initial_values.get("overall", -1)) == 91
+		and int(initial_values.get("maxHp", -1)) == 90
+		and int(initial_values.get("attack", -1)) == 90
+		and int(initial_values.get("defense", -1)) == 0
+		and int(initial_values.get("quick", -1)) == 40
+		and initial_text.find("可考虑放弃") >= 0
+		and initial_text.find("综合 90%＜91%") >= 0
+		and initial_text.find("攻击 91.9%≥90%") >= 0
+		and initial_text.find("不会被自动训练、移动或删除") >= 0
+		and table_text.find("预测140") >= 0
+		and bool(initial_snapshot.get("levelOneRadarVisible", false))
+		and str(initial_snapshot.get("levelOneRadarTitle", "")) == "Lv1 4V分位（物种内）"
+		and str(initial_snapshot.get("growthRadarTitle", "")) == "实测成长分位"
+		and str(initial_snapshot.get("levelOneSummary", "")).find("生命100%") >= 0
+		and str(initial_snapshot.get("levelOneSummary", "")).find("攻击62.5%") >= 0
+	)
+
+	var updated_policy := PetGrowthManualEvaluationModel.with_reference_value(settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}), "overall", 85)
+	updated_policy = PetGrowthManualEvaluationModel.with_reference_value(updated_policy, "maxHp", 85)
+	updated_policy = PetGrowthManualEvaluationModel.with_reference_value(updated_policy, "quick", 30)
+	host._panel_flow()._on_pet_growth_evaluation_policy_changed(updated_policy)
+	host._panel_flow()._refresh_pet_panel()
+	await host.get_tree().process_frame
+	var edited_snapshot: Dictionary = host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	var edited_values := edited_snapshot.get("values", {}) as Dictionary
+	var edited_text := str(edited_snapshot.get("resultText", ""))
+	var edit_ok := (
+		int(edited_values.get("overall", -1)) == 85
+		and int(edited_values.get("maxHp", -1)) == 85
+		and int(edited_values.get("attack", -1)) == 90
+		and int(edited_values.get("quick", -1)) == 30
+		and edited_text.find("建议继续培养") >= 0
+		and edited_text.find("不会被自动训练、移动或删除") >= 0
+	)
+
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
-	if screenshot_path != "" and overall_control != null:
-		var settings_scroll := host.auto_settings_content.get_parent() as ScrollContainer
-		if settings_scroll != null:
-			settings_scroll.scroll_vertical = maxi(0, int(preview_label.position.y) - 180) if preview_label != null else 0
+	if screenshot_path != "":
+		if host.pet_detail_scroll != null:
+			host.pet_detail_scroll.scroll_vertical = maxi(0, int(float(edited_snapshot.get("rootY", 0.0))) - 120)
 			await host.get_tree().process_frame
 			await host.get_tree().process_frame
 		DirAccess.make_dir_recursive_absolute(screenshot_path.get_base_dir())
+		await RenderingServer.frame_post_draw
 		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
 		var screenshot_error := screenshot_image.save_png(screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
 		screenshot_ok = screenshot_image != null and screenshot_error == OK
 		print("pet growth rule preview screenshot: status=%s path=%s" % ["ok" if screenshot_ok else "failed", screenshot_path])
 
-	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY, 85)
-	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.ui_stat_key("maxHp"), 85)
-	host._set_auto_capture_settings_value(PetGrowthRulePreviewModel.ui_stat_key("quick"), 30)
-	settings = PlayerProgressModel.auto_capture_settings(host.player_profile)
-	var updated_policy := settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}) as Dictionary
-	var updated_stats := updated_policy.get("statMinimumPercentiles", {}) as Dictionary
-	preview_label = host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
-	var edited_text := preview_label.text if preview_label != null else ""
-	var edit_ok: bool = (
-		int(updated_policy.get("overallMinimumPercentile", 0)) == 85
-		and int(updated_stats.get("maxHp", 0)) == 85
-		and int(updated_stats.get("attack", 0)) == 90
-		and int(updated_stats.get("quick", 0)) == 30
-		and edited_text.find("若开启，将保留") >= 0
-		and edited_text.find("即时预览") >= 0
-	)
-
-	var pets: Array[Dictionary] = []
-	pets.append_array(PlayerProgressModel.party_pet_instances(host.player_profile))
-	pets.append_array(PlayerProgressModel.storage_pet_instances(host.player_profile))
-	var authoritative_preview := PetGrowthRulePreviewModel.evaluate_pets(pets, updated_policy)
-	host._panel_flow()._set_auto_capture_growth_preview(authoritative_preview, true)
-	preview_label = host.auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
-	var server_confirmed_ok := (
-		preview_label != null
-		and preview_label.text.find("服务器已确认预览") >= 0
-		and int(authoritative_preview.get("mutationCount", -1)) == 0
-		and bool(authoritative_preview.get("retainPet", false))
-	)
 	var pet_immutability_ok := pets_before == JSON.stringify(host.player_profile.get("petInstances", []))
 	var status := "ok" if (
 		bool(model_contract.get("ok", false))
+		and bool(level_one_contract.get("ok", false))
 		and bool(presenter_contract.get("ok", false))
+		and bool(panel_contract.get("ok", false))
+		and capture_payload_ok
+		and capture_ui_ok
 		and initial_ui_ok
 		and edit_ok
-		and server_confirmed_ok
 		and pet_immutability_ok
 		and screenshot_ok
 	) else "failed"
-	print("pet growth rule preview check ready: status=%s model=%s presenter=%s initial_ui=%s edit=%s server_confirmed=%s pets_immutable=%s screenshot=%s" % [
+	print("manual pet growth evaluation check ready: status=%s model=%s lv1=%s presenter=%s panel=%s capture_payload=%s capture_ui=%s initial_ui=%s edit=%s pets_immutable=%s screenshot=%s" % [
 		status,
 		str(model_contract.get("ok", false)),
+		str(level_one_contract.get("ok", false)),
 		str(presenter_contract.get("ok", false)),
+		str(panel_contract.get("ok", false)),
+		str(capture_payload_ok),
+		str(capture_ui_ok),
 		str(initial_ui_ok),
 		str(edit_ok),
-		str(server_confirmed_ok),
 		str(pet_immutability_ok),
 		str(screenshot_ok),
 	])
@@ -14768,11 +14805,6 @@ func _run_auto_capture_settings_preview() -> void:
 		"onlyNewCodexForm": false,
 		"maxOwnedSameForm": 10,
 		"levelOneMinimumPercentiles": {"maxHp": 90, "attack": 85, "defense": 0, "quick": 40},
-	}
-	settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = {
-		"schemaVersion": 1,
-		"overallMinimumPercentile": 91,
-		"statMinimumPercentiles": {"maxHp": 90, "attack": 90, "defense": 0, "quick": 40},
 	}
 	host.player_profile = PlayerProgressModel.with_auto_capture_settings(host.player_profile, settings)
 	host.auto_settings_active_tab = "capture"

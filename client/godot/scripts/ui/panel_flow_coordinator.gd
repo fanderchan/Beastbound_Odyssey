@@ -26,8 +26,8 @@ const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_
 const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
-const PetGrowthRulePreviewModel := preload("res://scripts/progression/pet_growth_rule_preview_model.gd")
-const PetGrowthRulePreviewPresenter := preload("res://scripts/ui/pet_growth_rule_preview_presenter.gd")
+const PetGrowthManualEvaluationModel := preload("res://scripts/progression/pet_growth_manual_evaluation_model.gd")
+const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_manual_evaluation_panel.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -53,6 +53,7 @@ const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_ec
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetLevelOnePercentileModel := preload("res://scripts/progression/pet_level_one_percentile_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
@@ -285,6 +286,11 @@ const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 ]
 
 var host
+var _pet_growth_manual_evaluation_panel
+var _pet_growth_radar_row: HBoxContainer
+var _pet_level_one_radar: Control
+var _pet_level_one_radar_title: Label
+var _pet_growth_radar_title: Label
 var market_http_retry_state = IdempotentHttpRetryState.new()
 var mailbox_http_retry_state = IdempotentHttpRetryState.new()
 var bank_http_retry_state = IdempotentHttpRetryState.new()
@@ -6706,19 +6712,53 @@ func _build_hud() -> void:
 	pet_growth_table_grid.visible = false
 	pet_growth_table_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_growth_table_grid.add_theme_constant_override("h_separation", 5)
-	pet_growth_table_grid.add_theme_constant_override("v_separation", 5)
+	pet_growth_table_grid.add_theme_constant_override("v_separation", 2)
 	pet_detail_content.add_child(pet_growth_table_grid)
+	_pet_growth_radar_row = HBoxContainer.new()
+	_pet_growth_radar_row.visible = false
+	_pet_growth_radar_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_growth_radar_row.add_theme_constant_override("separation", 8)
+	pet_detail_content.add_child(_pet_growth_radar_row)
+	var level_one_radar_column := VBoxContainer.new()
+	level_one_radar_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	level_one_radar_column.add_theme_constant_override("separation", 2)
+	_pet_growth_radar_row.add_child(level_one_radar_column)
+	_pet_level_one_radar_title = Label.new()
+	_pet_level_one_radar_title.text = "Lv1 4V分位（物种内）"
+	_pet_level_one_radar_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pet_level_one_radar_title.add_theme_font_size_override("font_size", 13)
+	_pet_level_one_radar_title.add_theme_color_override("font_color", Color(0.95, 0.86, 0.48, 1.0))
+	level_one_radar_column.add_child(_pet_level_one_radar_title)
+	_pet_level_one_radar = PetGrowthRadarControl.new()
+	_pet_level_one_radar.custom_minimum_size = Vector2(0, 110)
+	_pet_level_one_radar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	level_one_radar_column.add_child(_pet_level_one_radar)
+	var observed_growth_radar_column := VBoxContainer.new()
+	observed_growth_radar_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	observed_growth_radar_column.add_theme_constant_override("separation", 2)
+	_pet_growth_radar_row.add_child(observed_growth_radar_column)
+	_pet_growth_radar_title = Label.new()
+	_pet_growth_radar_title.text = "实测成长分位"
+	_pet_growth_radar_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pet_growth_radar_title.add_theme_font_size_override("font_size", 13)
+	_pet_growth_radar_title.add_theme_color_override("font_color", Color(0.95, 0.86, 0.48, 1.0))
+	observed_growth_radar_column.add_child(_pet_growth_radar_title)
 	pet_growth_radar = PetGrowthRadarControl.new()
-	pet_growth_radar.visible = false
-	pet_growth_radar.custom_minimum_size = Vector2(0, 150)
+	pet_growth_radar.custom_minimum_size = Vector2(0, 110)
 	pet_growth_radar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_detail_content.add_child(pet_growth_radar)
+	observed_growth_radar_column.add_child(pet_growth_radar)
 	pet_detail_label = Label.new()
 	pet_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	pet_detail_label.add_theme_font_size_override("font_size", 14)
 	pet_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	pet_detail_content.add_child(pet_detail_label)
+	_pet_growth_manual_evaluation_panel = PetGrowthManualEvaluationPanel.new()
+	_pet_growth_manual_evaluation_panel.mount(
+		pet_detail_content,
+		_on_pet_growth_evaluation_policy_changed,
+		_on_pet_growth_evaluation_save_requested
+	)
 	var pet_manage_action_row = HBoxContainer.new()
 	pet_manage_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_manage_action_row.add_theme_constant_override("separation", 8)
@@ -22549,7 +22589,6 @@ func _offline_hang_gm_spinbox(label_text: String, value: float, minimum: float, 
 func _refresh_auto_capture_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_capture_settings(player_profile)
 	var filter_policy := AutoCaptureFilterModel.normalize_policy(settings.get(AutoCaptureSettingsModel.FILTER_POLICY_KEY, {}))
-	var growth_rule_policy := PetGrowthRulePreviewModel.normalize_policy(settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}))
 	var online_safe_mode: bool = _is_server_account_session() and not auth_auto_bypass
 	_add_auto_settings_section("自动捉宠")
 	_add_auto_settings_checkbox(
@@ -22668,35 +22707,6 @@ func _refresh_auto_capture_settings_tab() -> void:
 		"autoCaptureFilterGuidanceLabel",
 		AutoCaptureSettingsPresenter.public_filter_guidance_text(),
 		Color(0.72, 0.88, 0.78, 1.0)
-	)
-	_add_auto_settings_section("Lv20 成长保留预览（仅模拟）")
-	_add_auto_settings_int_spinbox(
-		"综合门槛",
-		PetGrowthRulePreviewModel.UI_OVERALL_MINIMUM_KEY,
-		int(growth_rule_policy.get("overallMinimumPercentile", 0)),
-		0,
-		100,
-		"%分位"
-	)
-	var growth_stat_thresholds := growth_rule_policy.get("statMinimumPercentiles", {}) as Dictionary
-	for stat_key in PetGrowthRulePreviewModel.STAT_KEYS:
-		_add_auto_settings_int_spinbox(
-			"%s门槛" % str(PetGrowthRulePreviewModel.STAT_LABELS.get(stat_key, stat_key)),
-			PetGrowthRulePreviewModel.ui_stat_key(stat_key),
-			int(growth_stat_thresholds.get(stat_key, 0)),
-			0,
-			100,
-			"%分位"
-		)
-	_add_auto_capture_settings_note(
-		"autoCaptureGrowthRuleGuidanceLabel",
-		"0 表示不限；Lv20 前只观察。全部已启用门槛都达标才预览为保留；本预览不会移动或删除宠物。",
-		Color(0.72, 0.88, 0.78, 1.0)
-	)
-	_add_auto_capture_settings_note(
-		"autoCaptureGrowthRulePreviewLabel",
-		PetGrowthRulePreviewPresenter.preview_text(_current_auto_capture_growth_preview()),
-		Color(0.86, 0.90, 0.84, 1.0)
 	)
 	_add_auto_settings_section("工具与筛选")
 	_add_auto_settings_option(
@@ -22836,16 +22846,11 @@ func _on_auto_capture_settings_save_pressed() -> void:
 		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 		var parsed := await _submit_server_profile_action(
 			"auto_capture_settings_update",
-			{"settings": settings},
+			{"settings": AutoCaptureSettingsModel.capture_update_settings(settings)},
 			"捕捉设置保存失败。"
 		)
 		_refresh_auto_settings_panel()
 		if bool(parsed.get("ok", false)):
-			var result_value = parsed.get("result", {})
-			var result := result_value as Dictionary if result_value is Dictionary else {}
-			var preview_value = result.get("growthRulePreview", {})
-			if preview_value is Dictionary and not (preview_value as Dictionary).is_empty():
-				_set_auto_capture_growth_preview(preview_value as Dictionary, true)
 			_set_auto_capture_save_status("捕捉设置已保存到服务器。", true)
 			_set_world_log_message("捕捉设置已保存。")
 		else:
@@ -23095,7 +23100,6 @@ func _auto_capture_settings_keys() -> Array[String]:
 		AutoCaptureSettingsModel.LOW_POWER_THRESHOLD_KEY,
 	]
 	keys.append_array(AutoCaptureFilterModel.ui_keys())
-	keys.append_array(PetGrowthRulePreviewModel.ui_keys())
 	return keys
 
 func _hang_settings_keys() -> Array[String]:
@@ -23122,16 +23126,6 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 		_auto_capture_settings_changed()
 		return
-	if PetGrowthRulePreviewModel.is_ui_key(key):
-		settings[AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY] = PetGrowthRulePreviewModel.with_ui_value(
-			settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {}),
-			key,
-			value
-		)
-		player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
-		_refresh_auto_capture_growth_preview()
-		_auto_capture_settings_changed()
-		return
 	match key:
 		AutoCaptureSettingsModel.ENABLED_KEY, AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY:
 			settings[key] = bool(value)
@@ -23141,30 +23135,6 @@ func _set_auto_capture_settings_value(key: String, value) -> void:
 			settings[key] = str(value)
 	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
 	_auto_capture_settings_changed()
-
-
-func _current_auto_capture_growth_preview() -> Dictionary:
-	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
-	return PetGrowthRulePreviewModel.evaluate_pets(
-		player_profile.get("petInstances", []),
-		settings.get(AutoCaptureSettingsModel.GROWTH_RULE_POLICY_KEY, {})
-	)
-
-
-func _refresh_auto_capture_growth_preview() -> void:
-	_set_auto_capture_growth_preview(_current_auto_capture_growth_preview())
-
-
-func _set_auto_capture_growth_preview(preview: Dictionary, server_confirmed: bool = false) -> void:
-	var label := auto_settings_controls.get("autoCaptureGrowthRulePreviewLabel", null) as Label
-	if label == null:
-		return
-	label.text = PetGrowthRulePreviewPresenter.preview_text(preview, server_confirmed)
-	label.add_theme_color_override(
-		"font_color",
-		Color(0.55, 0.95, 0.66, 1.0) if server_confirmed else Color(0.86, 0.90, 0.84, 1.0)
-	)
-
 
 func _auto_capture_settings_changed() -> void:
 	if _is_server_account_session() and not auth_auto_bypass:
@@ -24234,7 +24204,7 @@ func _pet_growth_table_cell(text: String, is_header: bool, grade: String) -> Lab
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = true
-	label.custom_minimum_size = Vector2(62, 26)
+	label.custom_minimum_size = Vector2(62, 22)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", _pet_growth_table_color(grade, is_header))
@@ -24290,6 +24260,71 @@ func _sync_pet_growth_stage_tabs(instance: Dictionary) -> void:
 		stage_button.button_pressed = enabled and pet_growth_stage == stage
 		stage_button.modulate = Color(1, 1, 1, 1) if enabled else Color(0.58, 0.58, 0.58, 0.72)
 
+
+func _pet_growth_evaluation_policy() -> Dictionary:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	return PetGrowthManualEvaluationModel.normalize_policy(
+		settings.get(PetGrowthManualEvaluationModel.POLICY_STORAGE_KEY, {})
+	)
+
+
+func _with_pet_growth_evaluation_policy(policy_value) -> void:
+	var settings := PlayerProgressModel.auto_capture_settings(player_profile)
+	settings[PetGrowthManualEvaluationModel.POLICY_STORAGE_KEY] = PetGrowthManualEvaluationModel.normalize_policy(policy_value)
+	player_profile = PlayerProgressModel.with_auto_capture_settings(player_profile, settings)
+
+
+func _on_pet_growth_evaluation_policy_changed(policy: Dictionary) -> void:
+	_with_pet_growth_evaluation_policy(policy)
+	if _pet_growth_manual_evaluation_panel == null:
+		return
+	if _is_server_account_session() and not auth_auto_bypass:
+		_pet_growth_manual_evaluation_panel.set_save_status("修改后请保存到服务器。")
+	else:
+		_pet_growth_manual_evaluation_panel.set_save_status("修改后请保存到本机。")
+
+
+func _on_pet_growth_evaluation_save_requested(policy: Dictionary) -> void:
+	_with_pet_growth_evaluation_policy(policy)
+	if _is_server_account_session() and not auth_auto_bypass:
+		var parsed := await _submit_server_profile_action(
+			"pet_growth_evaluation_settings_update",
+			{"policy": PetGrowthManualEvaluationModel.normalize_policy(policy)},
+			"成长评估参考线保存失败。"
+		)
+		_refresh_pet_panel()
+		if bool(parsed.get("ok", false)):
+			_pet_growth_manual_evaluation_panel.set_save_status("人工成长评估参考线已保存到服务器。", true)
+			_set_world_log_message("成长评估参考线已保存。")
+		else:
+			var message := _server_player_message(parsed, "成长评估参考线保存失败，请稍后重试。")
+			_pet_growth_manual_evaluation_panel.set_save_status(message)
+			_set_world_log_message(message)
+		return
+	var saved: bool = profile_save_enabled and host._save_player_profile_now()
+	_refresh_pet_panel()
+	if saved:
+		_pet_growth_manual_evaluation_panel.set_save_status("人工成长评估参考线已保存到本机。", true)
+		_set_world_log_message("成长评估参考线已保存。")
+	else:
+		_pet_growth_manual_evaluation_panel.set_save_status("成长评估参考线未能保存，请稍后重试。")
+		_set_world_log_message("成长评估参考线未能保存，请稍后重试。")
+
+
+func _pet_growth_manual_evaluation_snapshot() -> Dictionary:
+	var snapshot: Dictionary = _pet_growth_manual_evaluation_panel.snapshot() if _pet_growth_manual_evaluation_panel != null else {}
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	snapshot["levelOneRadarVisible"] = _pet_level_one_radar != null and _pet_level_one_radar.visible
+	snapshot["levelOneRadarTitle"] = _pet_level_one_radar_title.text if _pet_level_one_radar_title != null else ""
+	snapshot["growthRadarTitle"] = _pet_growth_radar_title.text if _pet_growth_radar_title != null else ""
+	snapshot["levelOneSummary"] = PetLevelOnePercentileModel.summary_text(selected) if not selected.is_empty() else ""
+	return snapshot
+
+
+func _set_pet_growth_manual_evaluation_expanded(expanded: bool) -> void:
+	if _pet_growth_manual_evaluation_panel != null:
+		_pet_growth_manual_evaluation_panel.set_settings_expanded(expanded)
+
 func _refresh_pet_panel() -> void:
 	if pet_panel == null or pet_list_container == null or pet_detail_label == null:
 		return
@@ -24332,8 +24367,13 @@ func _refresh_pet_panel() -> void:
 				if _pet_panel_instance_passes_filter(instance):
 					_add_pet_list_button(instance)
 		_sync_pet_growth_stage_tabs(selected)
+		var growth_visuals_visible: bool = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
+		if _pet_growth_radar_row != null:
+			_pet_growth_radar_row.visible = growth_visuals_visible
+		if _pet_level_one_radar != null:
+			_pet_level_one_radar.visible = growth_visuals_visible
 		if pet_growth_radar != null:
-			pet_growth_radar.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
+			pet_growth_radar.visible = growth_visuals_visible
 		if pet_growth_table_grid != null:
 			pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
 		if pet_detail_mode == PET_DETAIL_MODE_CODEX:
@@ -24345,6 +24385,8 @@ func _refresh_pet_panel() -> void:
 			elif str(selected.get("growthSpeciesProfileId", "")) == "":
 				pet_detail_label.text = "这只宠物暂无成长观察档。"
 				_refresh_pet_growth_table({})
+				if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
+					_pet_level_one_radar.call("set_growth_data", {}, {})
 				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
 					pet_growth_radar.call("set_growth_data", {}, {})
 			else:
@@ -24356,12 +24398,36 @@ func _refresh_pet_panel() -> void:
 					var raw_grades = (observation as Dictionary).get("statGrades", {})
 					if raw_grades is Dictionary:
 						grades = raw_grades as Dictionary
+				if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
+					_pet_level_one_radar.call(
+						"set_growth_data",
+						PetLevelOnePercentileModel.radar_values(selected),
+						PetLevelOnePercentileModel.radar_labels(selected)
+					)
+				if _pet_level_one_radar_title != null:
+					_pet_level_one_radar_title.text = "Lv1 4V分位（物种内）"
+				if _pet_growth_radar_title != null:
+					_pet_growth_radar_title.text = "实测成长分位" if pet_growth_stage == 0 else "%d转增量分位" % pet_growth_stage
 				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
 					pet_growth_radar.call("set_growth_data", PetGrowthObservationModel.radar_values_for_stage(selected, pet_growth_stage), grades)
 		else:
 			_sync_pet_growth_stage_tabs({})
 			_refresh_pet_growth_table({})
+			if _pet_growth_radar_row != null:
+				_pet_growth_radar_row.visible = false
+			if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
+				_pet_level_one_radar.call("set_growth_data", {}, {})
 			pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+	if _pet_growth_manual_evaluation_panel != null:
+		_pet_growth_manual_evaluation_panel.refresh(
+			selected,
+			_pet_growth_evaluation_policy(),
+			pet_detail_mode == PET_DETAIL_MODE_GROWTH
+				and pet_growth_stage == 0
+				and not selected.is_empty()
+				and str(selected.get("growthSpeciesProfileId", "")).strip_edges() != "",
+			profile_action_request_pending
+		)
 	if pet_detail_instance_button != null:
 		pet_detail_instance_button.visible = not selected.is_empty()
 		pet_detail_instance_button.disabled = selected.is_empty()

@@ -150,6 +150,7 @@ Design the pet together with existing挂机 behavior:
 - Only a genuinely captured Lv1 wild pet may use per-stat public Lv1 4V percentiles for immediate handling. A Lv2+ capture defaults to retain/manual review.
 - Each percentile is the inclusive CDF within that pet's own species profile: `P(same-species Lv1 visible stat <= this value)`. Higher is better. Evaluate blood, attack, defense, and quick independently; a minimum of `0` disables that stat. Never compare raw Lv1 numbers across species.
 - The Lv1 percentile calculator may read only public `outputBase`, `initialOutputSpread`, `distribution`, `rareExtremeRate`, and the captured public four-stat snapshot. It must not read `growthOutputSpread`, `innateGrowthBonus`, hidden seeds/rolls, or Lv140 projections.
+- The owned-pet panel keeps these four Lv1 percentiles visible from the immutable historical Lv1 snapshot at every later level. Display them separately from observed-growth percentiles; one chart must not replace, average, rank, or color the other.
 - Old schema-v1 raw min/max settings are not mathematically convertible across species. Preserve the non-stat public filters but migrate all four raw bounds to disabled `0` percentiles.
 - When a capture target exists, ensure pet/party AI does not accidentally kill it.
 - Never read hidden growth, predict Lv140, or auto-train to Lv20 in the capture tab. Growth-based keep/discard remains a manual owned-pet-panel decision.

@@ -23,8 +23,8 @@ static func capacity_state(party_count: int, storage_count: int, party_limit: in
 
 static func growth_guidance_text(online_safe_mode: bool) -> String:
 	if online_safe_mode:
-		return "联网不会自动丢弃宠物。捕获时先看 Lv1 四维，训练到约 Lv20 后可用保留门槛预览去留。"
-	return "捕获时先看 Lv1 四维，建议训练到约 Lv20 再判断成长；低战力丢弃不会识别隐藏成长，请谨慎使用。"
+		return "联网不会自动丢弃宠物。捕捉页只处理目标、投网和新鲜Lv1公开四维；成长请到宠物面板人工观察。"
+	return "捕捉页只处理目标、投网和刚捕获宠物；成长请到宠物面板人工观察。低战力丢弃不会识别隐藏成长，请谨慎使用。"
 
 
 static func public_filter_guidance_text() -> String:
@@ -51,9 +51,10 @@ static func contract_check() -> Dictionary:
 			and bool(full.get("warning", false))
 			and str(full.get("text", "")).find("位置已满") >= 0
 			and online_text.find("联网不会自动丢弃宠物") >= 0
-			and online_text.find("约 Lv20") >= 0
-			and online_text.find("保留门槛预览") >= 0
+			and online_text.find("新鲜Lv1公开四维") >= 0
+			and online_text.find("宠物面板人工观察") >= 0
 			and local_text.find("不会识别隐藏成长") >= 0
+			and local_text.find("刚捕获宠物") >= 0
 			and filter_text.find("真正捕获为 Lv1") >= 0
 			and filter_text.find("Lv2+ 默认保留") >= 0
 			and filter_text.find("不读取隐藏成长") >= 0
