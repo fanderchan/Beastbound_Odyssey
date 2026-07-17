@@ -114,6 +114,14 @@
     "fusion": "仅作为未来主动技能遗传候选，不在当前运行时实现。",
     "tradePolicy": "未绑定时允许交易；培养后按正式经济规则处理。",
     "commercialPolicy": "非商业宠。",
+    "paidResetPolicy": {
+      "priceTierId": "stone_rare",
+      "walletPolicyId": "bound_first_split",
+      "fixedPerOperation": true,
+      "unlimited": true,
+      "clearBindingOnSuccess": true,
+      "refundPolicy": "technical_transaction_rollback_only"
+    },
     "autoDiscardProtection": ["locked", "task", "riding", "cultivated", "bound", "new_codex", "lv1_unobserved"]
   },
   "presentation": {

@@ -21,6 +21,7 @@ const PERSISTENT_OBJECT_FIELDS = new Set([
   "marketListings",
   "mutationReceipts",
   "offlineHangConfig",
+  "petPaidResetConfig",
   "parties",
   "partyInvites",
   "profileBindings",

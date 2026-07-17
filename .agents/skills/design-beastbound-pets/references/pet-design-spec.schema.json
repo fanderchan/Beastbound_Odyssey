@@ -148,13 +148,25 @@
     },
     "progression": {
       "type": "object",
-      "required": ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy", "autoDiscardProtection"],
+      "required": ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy", "paidResetPolicy", "autoDiscardProtection"],
       "properties": {
         "rebirth": {"type": "string"},
         "evolution": {"type": "string"},
         "fusion": {"type": "string"},
         "tradePolicy": {"type": "string"},
         "commercialPolicy": {"type": "string"},
+        "paidResetPolicy": {
+          "type": "object",
+          "required": ["priceTierId", "walletPolicyId", "fixedPerOperation", "unlimited", "clearBindingOnSuccess", "refundPolicy"],
+          "properties": {
+            "priceTierId": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+            "walletPolicyId": {"enum": ["bound_first_split", "unbound_only"]},
+            "fixedPerOperation": {"const": true},
+            "unlimited": {"const": true},
+            "clearBindingOnSuccess": {"const": true},
+            "refundPolicy": {"const": "technical_transaction_rollback_only"}
+          }
+        },
         "autoDiscardProtection": {"type": "array", "items": {"type": "string"}}
       }
     },

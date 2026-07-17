@@ -54,7 +54,7 @@ Resolve every section below before implementation:
 5. **Growth and 4V**: visible Lv1 base/spread, hidden per-level distribution, role-shaped strengths/weaknesses, expected Lv20 observation quality, Lv140 band, and relation to normal two-rebirth/evolution/fusion power.
 6. **Active skills**: purpose, slot, target, effect, reliability, AI use, counterplay, 10v10 readability, client/server support, and training/inheritance policy.
 7. **Passive skill**: family identity, trigger, effect, cap, counters, element interaction, server authority, and inheritance conflict group.
-8. **Progression and economy**: rebirth/evolution/fusion eligibility, trading/binding/paid status, reset protection, auto-capture/discard safeguards, and material/value risk.
+8. **Progression and economy**: rebirth/evolution/fusion eligibility, trading/binding/paid status, the exact paid-reset price tier and wallet policy, reset protection, auto-capture/discard safeguards, and material/value risk.
 9. **Presentation**: player-facing Chinese name/description, what is visible at capture and while training, GM-only facts, and art status set to `deferred` in this version.
 10. **Evidence**: simulations, fixed seeds, catalog checks, server tests, UI/manual checks, and save compatibility.
 
@@ -78,6 +78,9 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Capture level conditions only the hidden-growth seed distribution, never Lv1 4V. Lv1 uses the species baseline distribution unchanged; higher levels suppress the upper tail within that species with a non-zero jackpot floor and a hard bounded-attempt limit. Do not apply this rule to existing pets, rewards, eggs, GM grants, rebirth, evolution, or fusion.
 - For authority-v1 rebirth, preflight both the target and the exact confirmed MM, preserve privateSeed/privateRoll/Lv1 facts, and restart one canonical Lv1 growth cycle with the cumulative rebirth bonus; never lower only the visible level or consume an automatically substituted helper.
 - Keep normal two-rebirth, evolution, and fusion in comparable end-power bands. Let harder paths win through build choice, inheritance, appearance, or utility rather than uncontrolled raw-stat inflation.
+- Give every form exactly one server-validated paid-reset price policy. All legitimately owned pets may reset repeatedly; choose price by form/acquisition value, never by the individual pet's Lv1 4V, hidden growth, observed grade, prior reset count, or充值金额.
+- Paid reset pricing is fixed per operation and unlimited. Noncommercial tiers may use bound-first split payment; a commercial tier may require unbound currency. Only a fully committed technical failure rolls the whole operation back; a successful reset never refunds currency, MM, stones, or training time.
+- Adding a form requires adding its exact row to `pet_paid_reset_policy.json`; an unknown or missing form must fail closed. Select or explicitly introduce a price tier in the design contract instead of relying on a runtime fallback.
 - Protect locked, task, riding, cultivated, bound, paid, and inheritance-relevant pets from automatic discard or consumption.
 - Keep large simulations offline; never add population scans or JSON I/O to frame, draw, HUD, or movement hot paths.
 - Audit every species profile with `node tools/pet_level_one_percentile_audit.mjs` after changing `outputBase`, `initialOutputSpread`, `distribution`, or `rareExtremeRate`; the runtime CDF must continue matching at least 10,000 authority rolls per profile.
@@ -87,12 +90,13 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 
 1. Add or reuse taxonomy before adding the form.
 2. Add the form and species growth profile together when the pet is intended for long-term cultivation.
-3. Add encounter placement and capture behavior; calculate actual Lv1 appearance probability rather than quoting only pool weight.
-4. Reuse supported skills when they express the design. Add new action/passive IDs only with client/server execution, presentation, and fixed-seed tests.
-5. Keep form defaults separate from per-instance learned/inherited skill state.
-6. Trace every shared JSON consumer in Godot and Node before changing fields or IDs.
-7. Add migration or compatibility handling before changing persistent instance semantics.
-8. Keep wiring thin in `main.gd`, broad coordinators, `auth-service.js`, and `http-server.js`; place rules in focused models/domains.
+3. Add the form's exact paid-reset policy and verify the strict catalog still covers every form.
+4. Add encounter placement and capture behavior; calculate actual Lv1 appearance probability rather than quoting only pool weight.
+5. Reuse supported skills when they express the design. Add new action/passive IDs only with client/server execution, presentation, and fixed-seed tests.
+6. Keep form defaults separate from per-instance learned/inherited skill state.
+7. Trace every shared JSON consumer in Godot and Node before changing fields or IDs.
+8. Add migration or compatibility handling before changing persistent instance semantics.
+9. Keep wiring thin in `main.gd`, broad coordinators, `auth-service.js`, and `http-server.js`; place rules in focused models/domains.
 
 ## Validate proportionally
 

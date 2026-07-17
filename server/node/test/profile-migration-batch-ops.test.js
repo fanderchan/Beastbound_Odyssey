@@ -74,6 +74,7 @@ function completeSnapshot() {
     consumedEquipmentEnvelopes: {},
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},
+    petPaidResetConfig: {},
     parties: {},
     partyInvites: {},
     families: {},

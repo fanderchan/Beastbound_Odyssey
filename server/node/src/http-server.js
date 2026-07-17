@@ -54,6 +54,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_battle_speed_gear", "label": "变速齿轮"},
   {"id": "gm_market_tax", "label": "交易所税率配置"},
   {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
+  {"id": "gm_pet_paid_reset_config", "label": "宠物重置价格配置"},
   {"id": "gm_prepare_qa_profile", "label": "补齐GM核心测试档案"},
   {"id": "gm_prepare_qa_pet_samples", "label": "准备GM宠物样本档"},
   {"id": "gm_prepare_qa_assets", "label": "准备GM装备与银行档"},
@@ -81,6 +82,8 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "updateMarketConfig",
   "getOfflineHangConfig",
   "updateOfflineHangConfig",
+  "getPetPaidResetConfig",
+  "updatePetPaidResetConfig",
   "offlineHangStatus",
   "startOfflineHang",
   "claimOfflineHang",
@@ -412,6 +415,12 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "PUT" && url.pathname === "/gm/hang/offline/config") {
         return sendResult(res, service.updateOfflineHangConfig(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/gm/pets/paid-reset/config") {
+        return sendResult(res, service.getPetPaidResetConfig(bearerToken(req)));
+      }
+      if (req.method === "PUT" && url.pathname === "/gm/pets/paid-reset/config") {
+        return sendResult(res, service.updatePetPaidResetConfig(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/hang/offline/status") {
         return sendResult(res, service.offlineHangStatus(bearerToken(req)));

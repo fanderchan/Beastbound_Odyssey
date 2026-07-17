@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "policyId": "pet_paid_reset_policy_v1",
+  "resetContract": {
+    "pricingMode": "fixed_per_operation",
+    "unlimited": true,
+    "resetLevel": 1,
+    "resetRebirthStage": 0,
+    "clearBindingOnSuccess": true,
+    "refundPolicy": "technical_transaction_rollback_only"
+  },
+  "walletPolicies": [
+    {
+      "walletPolicyId": "bound_first_split",
+      "allowedBindings": ["bound", "unbound"],
+      "debitOrder": ["bound", "unbound"],
+      "allowSplit": true
+    },
+    {
+      "walletPolicyId": "unbound_only",
+      "allowedBindings": ["unbound"],
+      "debitOrder": ["unbound"],
+      "allowSplit": false
+    }
+  ],
+  "priceTiers": [
+    {
+      "priceTierId": "stone_tutorial",
+      "currencyId": "stoneCoins",
+      "amount": 50000,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "stone_standard",
+      "currencyId": "stoneCoins",
+      "amount": 120000,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "stone_rare",
+      "currencyId": "stoneCoins",
+      "amount": 300000,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "diamond_rebirth_reward",
+      "currencyId": "diamonds",
+      "amount": 150,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "diamond_rebirth_rare",
+      "currencyId": "diamonds",
+      "amount": 300,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "diamond_rebirth_capstone",
+      "currencyId": "diamonds",
+      "amount": 450,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "diamond_commercial",
+      "currencyId": "diamonds",
+      "amount": 500,
+      "walletPolicyId": "unbound_only"
+    },
+    {
+      "priceTierId": "diamond_evolution",
+      "currencyId": "diamonds",
+      "amount": 650,
+      "walletPolicyId": "bound_first_split"
+    },
+    {
+      "priceTierId": "diamond_fusion",
+      "currencyId": "diamonds",
+      "amount": 900,
+      "walletPolicyId": "bound_first_split"
+    }
+  ],
+  "formPolicies": [
+    {"formId": "bui_normal_red_fire10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "bui_normal_yellow_wind10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "bui_normal_thick_earth10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "bui_novice_sprout_earth5_wind5", "acquisitionTier": "quest", "priceTierId": "stone_tutorial"},
+    {"formId": "wuli_normal_orange_fire10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "wuli_normal_fast_wind10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "wuli_normal_tough_earth10", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "mossback_marsh_earth7_water3", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "mossback_sunbaked_earth6_fire4", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "driftfox_mist_wind7_water3", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "driftfox_highland_wind9_earth1", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "emberhorn_red_fire8_earth2", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "emberhorn_ash_fire6_wind4", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "emberhorn_gale_fire5_wind5", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "tidefin_mist_water8_wind2", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "tidefin_sky_water5_wind5", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "tidefin_reed_water6_earth4", "acquisitionTier": "common_wild", "priceTierId": "stone_standard"},
+    {"formId": "blue_man_dragon_water10", "acquisitionTier": "rare_wild", "priceTierId": "stone_rare"},
+    {"formId": "pet_rebirth_mm_stage1", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "pet_rebirth_mm_stage2", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "rebirth_beast_earth_lv50", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "rebirth_beast_water_lv50", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "rebirth_beast_fire_lv50", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "rebirth_beast_wind_lv50", "acquisitionTier": "rebirth", "priceTierId": "stone_rare"},
+    {"formId": "rebirth_starter_earth_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_reward"},
+    {"formId": "rebirth_starter_water_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_reward"},
+    {"formId": "rebirth_starter_fire_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_reward"},
+    {"formId": "rebirth_starter_wind_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_reward"},
+    {"formId": "rebirth_starter_four_spirit_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_rare"},
+    {"formId": "rebirth_starter_shadow_cub", "acquisitionTier": "rebirth", "priceTierId": "diamond_rebirth_capstone"},
+    {"formId": "novice_tiger_mount", "acquisitionTier": "quest", "priceTierId": "stone_tutorial"},
+    {"formId": "thunder_dragon_mount", "acquisitionTier": "quest", "priceTierId": "stone_rare"}
+  ]
+}

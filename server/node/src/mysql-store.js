@@ -4364,6 +4364,9 @@ function parsePersistentDataLines(lines, options = {}) {
     if (stateDocument && stateDocument.offlineHangConfig && typeof stateDocument.offlineHangConfig === "object" && !Array.isArray(stateDocument.offlineHangConfig)) {
       data.offlineHangConfig = stateDocument.offlineHangConfig;
     }
+    if (stateDocument && stateDocument.petPaidResetConfig && typeof stateDocument.petPaidResetConfig === "object" && !Array.isArray(stateDocument.petPaidResetConfig)) {
+      data.petPaidResetConfig = stateDocument.petPaidResetConfig;
+    }
     data.serviceEventSeq = Math.max(
       Number(data.serviceEventSeq || 0),
       ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
@@ -5009,6 +5012,7 @@ function emptyPersistentData() {
     consumedEquipmentEnvelopes: {},
     marketConfig: {},
     offlineHangConfig: {},
+    petPaidResetConfig: {},
     parties: {},
     partyInvites: {},
     families: {},
@@ -6672,6 +6676,7 @@ function persistentServerStateDocument(persistent) {
     serviceEventSeq: Number(persistent.serviceEventSeq || 0),
     marketConfig: objectOrEmpty(persistent.marketConfig),
     offlineHangConfig: objectOrEmpty(persistent.offlineHangConfig),
+    petPaidResetConfig: objectOrEmpty(persistent.petPaidResetConfig),
   };
 }
 

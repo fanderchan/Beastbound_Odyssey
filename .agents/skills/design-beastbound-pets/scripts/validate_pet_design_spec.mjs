@@ -173,6 +173,20 @@ if (object(skills.newPassiveSkill)) {
 
 const progression = requireObject(spec.progression, "progression");
 for (const key of ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy"]) requireText(progression[key], `progression.${key}`);
+const paidResetPolicy = requireObject(progression.paidResetPolicy, "progression.paidResetPolicy");
+requireText(paidResetPolicy.priceTierId, "progression.paidResetPolicy.priceTierId");
+if (text(paidResetPolicy.priceTierId) && !/^[a-z][a-z0-9_]{1,79}$/.test(text(paidResetPolicy.priceTierId))) {
+  errors.push("progression.paidResetPolicy.priceTierId 只能使用稳定的小写标识");
+}
+if (!["bound_first_split", "unbound_only"].includes(text(paidResetPolicy.walletPolicyId))) {
+  errors.push("progression.paidResetPolicy.walletPolicyId 不受支持");
+}
+for (const key of ["fixedPerOperation", "unlimited", "clearBindingOnSuccess"]) {
+  if (paidResetPolicy[key] !== true) errors.push(`progression.paidResetPolicy.${key} 必须为 true`);
+}
+if (paidResetPolicy.refundPolicy !== "technical_transaction_rollback_only") {
+  errors.push("progression.paidResetPolicy.refundPolicy 必须为 technical_transaction_rollback_only");
+}
 const protections = requireStringArray(progression.autoDiscardProtection, "progression.autoDiscardProtection", 0);
 if (!protections.length) warnings.push("尚未声明自动丢弃保护条件");
 if (text(promise.acquisitionTier) === "commercial" && text(progression.commercialPolicy).length < 12) {

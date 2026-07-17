@@ -37,7 +37,7 @@ const scriptPath = path.resolve(__dirname, "../scripts/local-qa-gm-account.js");
 test("shared local QA policy is exact, explicit and fails closed on drift", () => {
   assert.equal(policy.policyId, "local_qa_full_v2");
   assert.deepEqual(policy.allowedUsernames, ["auth1373"]);
-  assert.equal(policy.serverCommandIds.length, 10);
+  assert.equal(policy.serverCommandIds.length, 11);
   assert.equal(policy.clientCommandIds.length, 29);
   assert.equal(policy.serverAuthoritativeClientCommandIds.length, 7);
   assert.equal(policy.serverCommandIds.includes("*"), false);
@@ -81,7 +81,7 @@ test("legacy permanent and wildcard local authorization is reported inactive", (
   });
   assert.equal(state.serverGrant.active, false);
   assert.equal(state.serverGrant.expiryConsistent, false);
-  assert.equal(state.serverGrant.missingCommands.length, 6);
+  assert.equal(state.serverGrant.missingCommands.length, 7);
   assert.equal(state.plugin.active, false);
   assert.equal(state.plugin.wildcard, true);
   assert.equal(state.plugin.privateMode, false);

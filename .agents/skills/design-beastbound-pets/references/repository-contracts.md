@@ -24,6 +24,8 @@
 | Capture formula | `client/godot/data/balance/capture_formula.json` |
 | Capture tools | `client/godot/data/capture_tools.json` |
 | Encounter zones and wild pools | `client/godot/data/*_map.json` |
+| All-form paid rebirth-reset defaults, wallet policies, and immutable reset contract | `client/godot/data/balance/pet_paid_reset_policy.json` |
+| Strict paid-reset catalog, GM overrides, and pure debit planning | `server/node/src/auth/pet-paid-reset-policy-catalog.js`, `gm-pet-paid-reset-config.js`, `pet-paid-reset-payment.js` |
 | Region grouping and advertised encounter groups | `client/godot/data/map_regions.json` |
 | Level-route intent | `client/godot/data/balance/progression_zones.json` |
 | Map ID registration | `client/godot/scripts/world/map_data_catalog.gd` |
@@ -111,6 +113,13 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - Preserve instance history, consume materials atomically, and add persistence tests.
 - Pause for unresolved paid value, refund, destructive material, or migration rules.
 
+### Any new pet form
+
+- Add exactly one `formPolicies[]` entry to `pet_paid_reset_policy.json`; the strict server catalog rejects missing, duplicate, or unknown forms.
+- Select a default price tier by acquisition/replacement value. Do not calculate price from the individual pet's public or hidden quality, reset count, or recharge history.
+- Use `bound_first_split` for ordinary/noncommercial system consumption unless the product calls for a stricter rule. Reserve `unbound_only` for explicit commercial-value policy.
+- Keep fixed-per-operation pricing, unlimited reset eligibility, full Lv1/0 reset, successful unbinding, and technical-rollback-only refund semantics invariant. GM may override currency, amount, and wallet policy, not these rules.
+
 ## Current gaps
 
 - All 32 current production forms link to species-specific authority-v1 growth profiles; historical pets without an authority envelope may still remain legacy and must not be rerolled.
@@ -129,6 +138,7 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - Online party encounter requests now carry only zone/interaction intent plus a server-issued one-time permit under protocol v3; client pet/count/stat/capture/EXP facts are ignored. Encounter-time candidates use independent CSPRNG identities and capture secrets that never enter public rooms, events, records, or profiles.
 - A full five-pet party plus twenty-pet stable is rejected before the capture roll and tool spend; an internal out-of-band race falls back to temporary overflow storage rather than deleting the claimed pet. Player-facing recovery/audit for historical overflow and a safe server-authoritative auto-discard policy remain P1.1 work.
 - Formal evolution and fusion runtime data/contracts are roadmap work, not established sources of truth.
+- P1.2c-2 establishes exact default/GM-overridden paid-reset quotes for all current forms and persists the GM revision. The actual atomic currency debit, full pet mutation, permanent reset counter, idempotent receipt, and COMMIT recovery remain P1.2c-3; do not claim the player reset action exists yet.
 
 Do not hide these gaps with fallback data in a new pet. Either close the relevant gap in the same slice or mark the feature deferred and avoid claiming completion.
 

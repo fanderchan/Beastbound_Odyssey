@@ -13,6 +13,7 @@
 		"gm_battle_speed_gear",
 		"gm_market_tax",
 		"gm_offline_hang_config",
+		"gm_pet_paid_reset_config",
 		"gm_prepare_qa_profile",
 		"gm_prepare_qa_pet_samples",
 		"gm_prepare_qa_assets",

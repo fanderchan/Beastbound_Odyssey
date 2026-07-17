@@ -120,15 +120,18 @@ Player-facing Chinese must be concise. Never expose raw IDs, effect types, formu
 
 ## Commercial fairness
 
-For paid pets:
+Paid rebirth reset is available to every legitimately owned pet, not only a pet marked commercial. The default economic contract is:
 
-- Declare whether value comes from raw strength, unique role, appearance, time saved, or inheritance options.
-- Provide an auditable reset/recovery rule for disastrous rebirth outcomes.
-- Keep a non-paid acquisition or counter path where practical.
-- Never silently nerf existing instances or reroll paid pets during migration.
-- Model refund, reset, binding, trade, and resale consequences before implementation.
+- Price by the form's acquisition/replacement value. Never inspect an individual pet's Lv1 4V, hidden growth, observed grade, prior reset count, or recharge history when quoting the price.
+- The price is fixed per operation and the operation may be repeated without a count limit. Ordinary pets remain eligible even when most players would not find repeated resets economical.
+- Stone-coin and noncommercial diamond tiers may combine bound and unbound balances, debiting bound first. Commercial tiers may require unbound currency. This system-consumption policy is separate from trading: only unbound currency is transferable.
+- A successful full reset returns the current form to Lv1/0 rebirth and clears pet binding, while preserving the instance's immutable Lv1 facts, base hidden growth, identity, form, skills, and evolution/fusion identity. It never refunds the price, MM, stones, or training time.
+- Only a technical failure before the entire authoritative transaction commits may roll the debit and pet mutation back together. Do not design a player-facing “refund after a bad roll” path into this reset.
+- Every form has one explicit server-validated default price policy. GM may replace a whole tier or one form with a revision-safe override; missing or unknown forms fail closed.
 
-Pause for the user before finalizing prices, permanent paid advantage, refund rules, or destructive recovery behavior.
+For commercial pets, also declare whether value comes from raw strength, unique role, appearance, time saved, or inheritance options; retain non-paid counterplay where practical; never silently nerf or reroll an existing instance during migration.
+
+Pause for the user before introducing direct real-money charging, changing the universal reset/loss rules, creating a new permanent paid advantage, or adding destructive recovery behavior. Ordinary per-form placement into the established price tiers is part of routine pet implementation.
 
 ## Completion gate
 
@@ -139,6 +142,7 @@ A pet is not complete because it exists in `pet_templates.json`. It is complete 
 - growth and Lv1 4V have a species profile and simulation evidence;
 - ecology or other acquisition is reachable;
 - capture and automatic handling are safe;
+- its exact paid-reset price tier and wallet policy resolve in the strict all-form catalog;
 - active/passive effects execute authoritatively on the server;
 - AI and manual play use the intended skills;
 - codex and owned-pet views explain the right facts;

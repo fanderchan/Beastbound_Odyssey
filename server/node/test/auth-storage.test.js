@@ -523,6 +523,39 @@ test("MySQL unrelated saves do not scan shared immutable history arrays", () => 
   assert.equal(statements.some((statement) => /\b(battle_records|battle_trace|service_events)\b/.test(statement)), false);
 });
 
+test("MySQL persists paid pet reset GM config only through the server-state document", () => {
+  const previous = {
+    schemaVersion: 1,
+    petPaidResetConfig: {},
+    serviceEventSeq: 0,
+  };
+  const next = {
+    ...previous,
+    petPaidResetConfig: {
+      schemaVersion: 1,
+      revision: 1,
+      tierOverrides: {
+        stone_standard: {
+          currencyId: "stoneCoins",
+          amount: 180000,
+          walletPolicyId: "bound_first_split",
+        },
+      },
+      formOverrides: {},
+      updatedAt: "2026-07-17T12:00:00.000Z",
+      updatedBy: "storage_test_gm",
+    },
+  };
+
+  const statements = __buildSaveStatementsFromPersistentDataForTest(next, previous);
+  assert.deepEqual([statements[0], statements.at(-1)], ["START TRANSACTION", "COMMIT"]);
+  assert.equal(statements.length, 3);
+  assert.match(statements[1], /^INSERT INTO server_state /);
+  assert.match(statements[1], /petPaidResetConfig/);
+  assert.match(statements[1], /stone_standard/);
+  assert.equal(statements[1].includes("INSERT INTO profiles"), false);
+});
+
 test("MySQL battle history is append-only across normalization and hot-window eviction", () => {
   const previous = {
     schemaVersion: 1,
@@ -653,6 +686,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
     "mutationReceipts",
     "offlineHangConfig",
     "parties",
+    "petPaidResetConfig",
     "profileBindings",
     "profiles",
     "schemaVersion",
@@ -673,7 +707,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   assert.deepEqual(contract.persistentFields, expectedPersistentFields);
   assert.deepEqual(contract.runtimeOnlyFields, expectedRuntimeOnlyFields);
   assert.deepEqual(contract.snapshotFields, [...expectedPersistentFields, ...expectedRuntimeOnlyFields].sort());
-  assert.equal(contract.persistentFields.length, 25);
+  assert.equal(contract.persistentFields.length, 26);
   assert.equal(new Set([...contract.persistentFields, ...contract.runtimeOnlyFields]).size, contract.snapshotFields.length);
   assert.deepEqual(contract.profileDocumentFields, [
     "playerId",
@@ -1184,6 +1218,7 @@ process.stdin.on("end", () => {
       schemaVersion: 2,
       marketConfig: {taxBps: 750},
       offlineHangConfig: {rewardRateBps: 5000},
+      petPaidResetConfig: {revision: 2, tierOverrides: {common: {amount: 125000}}},
     })].join("\\t") + "\\n");
   }
 });
@@ -1202,6 +1237,7 @@ process.stdin.on("end", () => {
     const loaded = store.load();
     assert.deepEqual(loaded.marketConfig, {taxBps: 750});
     assert.deepEqual(loaded.offlineHangConfig, {rewardRateBps: 5000});
+    assert.deepEqual(loaded.petPaidResetConfig, {revision: 2, tierOverrides: {common: {amount: 125000}}});
     assert.deepEqual(loaded.accounts, {});
     assert.deepEqual(loaded.profiles, {});
   } finally {
@@ -1624,6 +1660,7 @@ process.stdin.on("end", () => {
       schemaVersion: 2,
       storage: "mysql_entity_tables",
       offlineHangConfig: {rewardRateBps: 5000, maxMinutes: 480, battleIntervalSeconds: 30, revision: 2},
+      petPaidResetConfig: {revision: 3, formOverrides: {blue_man_dragon_water10: {amount: 130000}}},
     }],
     ["accounts", "acc_entity", {
       accountId: "acc_entity",
@@ -1820,6 +1857,8 @@ process.stdin.on("end", () => {
     assert.equal(loaded.serviceEventSeq, 7);
     assert.equal(loaded.offlineHangConfig.rewardRateBps, 5000);
     assert.equal(loaded.offlineHangConfig.maxMinutes, 480);
+    assert.equal(loaded.petPaidResetConfig.revision, 3);
+    assert.equal(loaded.petPaidResetConfig.formOverrides.blue_man_dragon_water10.amount, 130000);
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
   }

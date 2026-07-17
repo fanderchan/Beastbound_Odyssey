@@ -141,6 +141,7 @@ const {createGmPetCaptureRecoveryDomain} = require("./auth/gm-pet-capture-recove
 const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
+const {createGmPetPaidResetConfigDomain} = require("./auth/gm-pet-paid-reset-config");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
   createPresenceRevisionTracker,
@@ -155,6 +156,7 @@ const {
   generatePetCultivationRollSeed,
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
+const {createPetPaidResetPolicyCatalog} = require("./auth/pet-paid-reset-policy-catalog");
 const {loadPlayerLevelRuntime} = require("./auth/player-level-runtime");
 const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
@@ -686,6 +688,7 @@ function createAuthService(options = {}) {
   const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
   const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
+  const petPaidResetPolicyCatalog = options.petPaidResetPolicyCatalog || createPetPaidResetPolicyCatalog();
   // P0.4 以严格目录启动，并在 actor 进入房间时一次性派生被动事实；缺档禁止静默退化。
   const battlePassiveCatalog = options.battlePassiveCatalog || loadBattlePassiveCatalog();
   const battleActorRules = options.battleActorRules || createBattleActorRules({
@@ -5535,6 +5538,7 @@ function createAuthService(options = {}) {
     petExpSettlement,
     petEncounterAuthority,
     petGrowthCatalog,
+    petPaidResetPolicyCatalog,
     playerLevelRuntime,
     playerPositionHasCell,
     profileActionLogLines,
@@ -5625,6 +5629,7 @@ function createAuthService(options = {}) {
   const gmQaProfile = createGmQaProfileDomain(domainContext);
   const gmQaPets = createGmQaPetsDomain(domainContext);
   const gmQaAssets = createGmQaAssetsDomain(domainContext);
+  const gmPetPaidResetConfig = createGmPetPaidResetConfigDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -5653,6 +5658,8 @@ function createAuthService(options = {}) {
     cancelOfflineHang: offlineHang.cancel,
     getOfflineHangConfig: offlineHang.getConfig,
     updateOfflineHangConfig: offlineHang.updateConfig,
+    getPetPaidResetConfig: gmPetPaidResetConfig.getConfig,
+    updatePetPaidResetConfig: gmPetPaidResetConfig.updateConfig,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,
     questClaim: quest.questClaim,
@@ -6576,6 +6583,7 @@ function normalizeData(raw, options = {}) {
       : {},
     marketConfig: objectOrEmpty(data.marketConfig),
     offlineHangConfig: objectOrEmpty(data.offlineHangConfig),
+    petPaidResetConfig: objectOrEmpty(data.petPaidResetConfig),
     parties: objectOrEmpty(data.parties),
     partyInvites: objectOrEmpty(data.partyInvites),
     families: normalizeFamilies(data.families),

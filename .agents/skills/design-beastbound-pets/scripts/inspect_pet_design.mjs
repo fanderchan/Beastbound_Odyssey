@@ -2,10 +2,16 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../../../..");
+const require = createRequire(import.meta.url);
+const {
+  createPetPaidResetPolicyCatalog,
+  resolvePetPaidResetQuote,
+} = require(path.join(repoRoot, "server/node/src/auth/pet-paid-reset-policy-catalog.js"));
 const args = process.argv.slice(2);
 const jsonOutput = args.includes("--json");
 const checkMode = args.includes("--check");
@@ -137,6 +143,12 @@ const formById = indexRows(forms, "formId", "forms", issues);
 const actionById = indexRows(actions, "id", "actions", issues);
 const passiveById = indexRows(passives, "id", "passives", issues);
 const growthById = indexRows(growthProfiles, "profileId", "growthProfiles", issues);
+let paidResetPolicyCatalog = null;
+try {
+  paidResetPolicyCatalog = createPetPaidResetPolicyCatalog();
+} catch (error) {
+  issues.errors.push(`付费重置价格目录无效: ${String(error && error.message || error)}`);
+}
 
 const wildCaptureGrowthPolicy = growthDocument.wildCaptureGrowthPolicy;
 const expectedWildCapturePolicyKeys = [
@@ -358,6 +370,8 @@ const clientGrowthRulePreviewText = readText("client/godot/scripts/progression/p
 const autoCaptureSettingsText = readText("server/node/src/auth/auto-capture-settings.js");
 const petAutoCaptureFilterText = readText("server/node/src/auth/pet-auto-capture-filter.js");
 const petLevelOnePercentileText = readText("server/node/src/auth/pet-level-one-percentile.js");
+const petPaidResetPolicyCatalogText = readText("server/node/src/auth/pet-paid-reset-policy-catalog.js");
+const gmPetPaidResetConfigText = readText("server/node/src/auth/gm-pet-paid-reset-config.js");
 const clientAutoCaptureFilterText = readText("client/godot/scripts/progression/auto_capture_filter_model.gd");
 const protocolVersion = Number(protocolText.match(/const PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
 const minimumProtocolVersion = Number(protocolText.match(/const MIN_CLIENT_PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
@@ -434,6 +448,13 @@ const serverAuthority = {
     && clientProtocolVersion === protocolVersion,
   clientServerPetNoReroll: playerProgressText.includes("_normalize_server_authoritative_pet_instance")
     && playerProgressText.includes("has_server_authority_marker"),
+  paidResetCatalogWired: authServiceText.includes("createPetPaidResetPolicyCatalog")
+    && petPaidResetPolicyCatalogText.includes("pet_paid_reset_policy.json")
+    && paidResetPolicyCatalog !== null,
+  paidResetGmConfigWired: authServiceText.includes("createGmPetPaidResetConfigDomain")
+    && gmPetPaidResetConfigText.includes("gm_pet_paid_reset_config")
+    && gmPetPaidResetConfigText.includes("buildUpdatedPetPaidResetConfig")
+    && petPaidResetPolicyCatalogText.includes("expectedRevision"),
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
 if (!serverAuthority.observedGrowthScreeningContract) issues.warnings.push("Node 尚未建立 Lv20 公开成长证据筛选合同；不能为新宠开放按成长自动处理");
@@ -455,6 +476,8 @@ if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node auth
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
 if (!serverAuthority.publicGrowthProtocolBoundary) issues.warnings.push("宠物公开成长契约要求客户端与服务端锁定在同一份 v2+ 协议边界");
 if (!serverAuthority.clientServerPetNoReroll) issues.warnings.push("Godot 联网宠物仍缺少明确的无重掷 normalize 路径");
+if (!serverAuthority.paidResetCatalogWired) issues.errors.push("全形态付费重置价格目录尚未严格接入服务端");
+if (!serverAuthority.paidResetGmConfigWired) issues.errors.push("付费重置价格目录尚未接入带 revision 的 GM 配置域");
 
 function resolvedForm(formId) {
   const form = formById.get(formId);
@@ -463,6 +486,9 @@ function resolvedForm(formId) {
   const subtype = subtypeById.get(String(form.subtypeId || "")) || null;
   const activeSkillIds = subtype && Array.isArray(subtype.activeSkillIds) ? subtype.activeSkillIds.map(String) : [];
   const passiveSkillId = line ? String(line.passiveSkillId || "") : "";
+  const paidResetQuote = paidResetPolicyCatalog
+    ? resolvePetPaidResetQuote(paidResetPolicyCatalog, {}, formId)
+    : null;
   return {
     form,
     line,
@@ -476,6 +502,7 @@ function resolvedForm(formId) {
     growthProfile: compactGrowthProfile(growthById.get(String(form.growthSpeciesProfileId || ""))),
     placements: placementsByFormId.get(formId) || [],
     captureChance: captureChanceTable(form, captureFormula, captureTools),
+    paidResetPolicy: paidResetQuote && paidResetQuote.ok ? paidResetQuote.quote : null,
     serverAuthority,
   };
 }
@@ -494,6 +521,8 @@ const summary = {
     explicitEncounterPlacements: [...placementsByFormId.values()].reduce((sum, values) => sum + values.length, 0),
     encounterGroups: encounterGroupIds.size,
     mapDocuments: mapDocuments.length,
+    paidResetFormPolicies: paidResetPolicyCatalog ? paidResetPolicyCatalog.formPolicies.length : 0,
+    paidResetPriceTiers: paidResetPolicyCatalog ? paidResetPolicyCatalog.priceTiers.length : 0,
   },
   petSkillSlotContract: {
     maxInstanceSlots: Math.trunc(number(actionDocument.maxPetSkillSlots, 7)),
@@ -548,6 +577,9 @@ if (requestedFormId) {
     for (const [toolId, chances] of Object.entries(detail.captureChance)) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
+    if (detail.paidResetPolicy) {
+      console.log(`付费重置: tier=${detail.paidResetPolicy.priceTierId}, ${detail.paidResetPolicy.amount} ${detail.paidResetPolicy.currencyId}, wallet=${detail.paidResetPolicy.walletPolicy.walletPolicyId}`);
+    }
     console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, lv1Percentiles=${serverAuthority.levelOnePercentileFilterWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
@@ -556,7 +588,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
-  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/Lv1分位/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.levelOnePercentileFilterWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/Lv1分位/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录/重置价格/GM价格: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.levelOnePercentileFilterWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}/${serverAuthority.paidResetCatalogWired}/${serverAuthority.paidResetGmConfigWired}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

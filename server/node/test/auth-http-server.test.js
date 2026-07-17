@@ -627,6 +627,68 @@ test("HTTP offline hang status and GM configuration routes enforce authenticatio
   assert.equal(productionClockDenied.code, "not_found");
 });
 
+test("HTTP GM paid pet reset config publishes exact catalog and revision-safe overrides", async (t) => {
+  const store = createMemoryAuthStore();
+  const service = createAuthService({store, now: () => Date.parse("2026-07-17T12:00:00.000Z")});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const registered = await fetchJson(`${base}/auth/register`, {
+    method: "POST",
+    body: JSON.stringify({username: "httppaidresetgm", password: "test1234"}),
+  });
+  assert.equal(registered.ok, true);
+  const headers = {authorization: `Bearer ${registered.session.token}`};
+  const denied = await fetchJson(`${base}/gm/pets/paid-reset/config`, {headers});
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "gm_denied");
+
+  assert.equal(service.grantGm({
+    username: "httppaidresetgm",
+    commandIds: ["gm_pet_paid_reset_config"],
+    policyId: "test_explicit_gm_v1",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    grantedBy: "unit_test",
+  }).ok, true);
+  const tools = await fetchJson(`${base}/gm/tools`, {headers});
+  assert.equal(tools.ok, true);
+  assert.deepEqual(tools.commandIds, ["gm_pet_paid_reset_config"]);
+  const initial = await fetchJson(`${base}/gm/pets/paid-reset/config`, {headers});
+  assert.equal(initial.ok, true);
+  assert.equal(initial.config.revision, 0);
+  assert.equal(initial.resolvedForms.length, 32);
+
+  const updated = await fetchJson(`${base}/gm/pets/paid-reset/config`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({
+      expectedRevision: 0,
+      tierOverrides: {
+        stone_standard: {
+          currencyId: "stoneCoins",
+          amount: 175000,
+          walletPolicyId: "bound_first_split",
+        },
+      },
+      formOverrides: {},
+    }),
+  });
+  assert.equal(updated.ok, true, JSON.stringify(updated));
+  assert.equal(updated.config.revision, 1);
+  assert.equal(updated.resolvedForms.find((entry) => entry.formId === "bui_normal_red_fire10").amount, 175000);
+
+  const stale = await fetchJson(`${base}/gm/pets/paid-reset/config`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({expectedRevision: 0, tierOverrides: {}, formOverrides: {}}),
+  });
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "pet_paid_reset_config_revision_conflict");
+});
+
 test("HTTP server rejects incompatible protocol versions with upgrade guidance", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});

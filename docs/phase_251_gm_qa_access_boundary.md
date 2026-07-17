@@ -1,6 +1,6 @@
 # Phase251：本地 GM 初始化、限时授权与全面验收边界
 
-> 当前策略更新（2026-07-17）：Phase 288 为授权 GM 捕捉恢复显式发布 `local_qa_full_v2`，目录变为服务端 10 项、客户端 29 项、双重授权 7 项；本页以下 `v1/9/28/6` 数字保留为 Phase 251 历史验收事实，现行数量以共享策略文件和 `docs/phase_288_gm_pet_capture_recovery_audit.md` 为准。续租/撤销安全流程保持不变。
+> 当前策略更新（2026-07-17）：Phase 288 显式发布 `local_qa_full_v2`，Phase 297 又加入仅服务端使用的 `gm_pet_paid_reset_config`，现行目录为服务端 11 项、客户端 29 项、双重授权 7 项；本页以下 `v1/9/28/6` 数字保留为 Phase 251 历史验收事实，现行数量以共享策略文件和 `docs/phase_297_pet_paid_reset_price_policy.md` 为准。续租/撤销安全流程保持不变。
 
 ## 阶段目标
 
