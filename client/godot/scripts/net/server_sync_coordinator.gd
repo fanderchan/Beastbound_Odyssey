@@ -543,7 +543,12 @@ func submit_server_profile_action(action: String, payload: Dictionary = {}, fall
 	return parsed
 
 
-func submit_server_gm_command(command_id: String, payload: Dictionary = {}, fallback_message: String = "GM宠物操作失败。") -> Dictionary:
+func submit_server_gm_command(
+	command_id: String,
+	payload: Dictionary = {},
+	fallback_message: String = "GM宠物操作失败。",
+	requires_profile: bool = true
+) -> Dictionary:
 	if not is_server_account_session():
 		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
 	if host.profile_action_request_pending:
@@ -559,9 +564,14 @@ func submit_server_gm_command(command_id: String, payload: Dictionary = {}, fall
 	var parsed := ServerAuthClientModel.parse_gm_command_response(int(response.get("responseCode", 0)), response.get("body", PackedByteArray()) as PackedByteArray)
 	var log_lines := _string_array_values(parsed.get("logLines", []))
 	if bool(parsed.get("ok", false)):
-		var profile_applied := apply_server_profile_payload(parsed)
+		var profile_applied := apply_server_profile_payload(parsed) if requires_profile else false
 		parsed["profileApplied"] = profile_applied
-		if profile_applied:
+		if not requires_profile:
+			if log_lines.is_empty():
+				var success_message := str(parsed.get("message", "GM操作已完成。")).strip_edges()
+				if success_message != "":
+					log_lines.append(success_message)
+		elif profile_applied:
 			if log_lines.is_empty():
 				var success_message := str(parsed.get("message", "GM宠物操作已完成。")).strip_edges()
 				if success_message != "":

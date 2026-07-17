@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"policyId": "local_qa_full_v1",
+	"policyId": "local_qa_full_v2",
 	"allowedUsernames": [
 		"auth1373"
 	],
@@ -15,7 +15,8 @@
 		"gm_offline_hang_config",
 		"gm_prepare_qa_profile",
 		"gm_prepare_qa_pet_samples",
-		"gm_prepare_qa_assets"
+		"gm_prepare_qa_assets",
+		"gm_pet_capture_recovery"
 	],
 	"clientCommandIds": [
 		"gm_prepare_qa_profile",
@@ -45,7 +46,8 @@
 		"open_codex",
 		"gm_grant_pet",
 		"gm_level_pet",
-		"gm_offline_hang_config"
+		"gm_offline_hang_config",
+		"gm_pet_capture_recovery"
 	],
 	"serverAuthoritativeClientCommandIds": [
 		"gm_prepare_qa_profile",
@@ -53,6 +55,7 @@
 		"gm_prepare_qa_assets",
 		"gm_grant_pet",
 		"gm_level_pet",
-		"gm_offline_hang_config"
+		"gm_offline_hang_config",
+		"gm_pet_capture_recovery"
 	]
 }

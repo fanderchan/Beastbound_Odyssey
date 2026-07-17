@@ -42,6 +42,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
+const GmPetCaptureRecoveryClientModel := preload("res://scripts/progression/gm_pet_capture_recovery_client_model.gd")
 const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
 const GmToolPluginModel := preload("res://scripts/progression/gm_tool_plugin_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
@@ -613,6 +614,161 @@ func _gm_qa_assets_client_contract_ok() -> bool:
 		and str(unapplied_state.get("message", "")).find("请勿重复") >= 0
 		and not bool(wrong_manifest_state.get("ok", true))
 		and not bool(no_reserved_slot_state.get("ok", true))
+	)
+
+
+func _gm_pet_capture_recovery_client_contract_ok() -> bool:
+	var recovery_id := "pet_capture_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	var pet_instance_id := "pet_recovery_contract_1"
+	var empty_selector_payload := GmPetCaptureRecoveryClientModel.request_payload(
+		GmPetCaptureRecoveryClientModel.ACTION_SEARCH,
+		" recoverytarget ",
+		""
+	)
+	var recovery_selector_payload := GmPetCaptureRecoveryClientModel.request_payload(
+		GmPetCaptureRecoveryClientModel.ACTION_RECOVER,
+		"recoverytarget",
+		" %s " % recovery_id
+	)
+	var pet_selector_payload := GmPetCaptureRecoveryClientModel.request_payload(
+		GmPetCaptureRecoveryClientModel.ACTION_SEARCH,
+		"recoverytarget",
+		pet_instance_id
+	)
+	var spec := ServerAuthClientModel.gm_command_request(
+		"http://127.0.0.1:8787/",
+		"token_contract_test",
+		GmPetCaptureRecoveryClientModel.COMMAND_ID,
+		recovery_selector_payload
+	)
+	var body_value: Variant = JSON.parse_string(str(spec.get("body", "")))
+	var body := body_value as Dictionary if body_value is Dictionary else {}
+	var search_result := {
+		"commandId": GmPetCaptureRecoveryClientModel.COMMAND_ID,
+		"action": GmPetCaptureRecoveryClientModel.ACTION_SEARCH,
+		"target": {
+			"username": "recoverytarget",
+			"displayName": "恢复[color=red]目标",
+			"profileRevision": 7,
+			"activeBattle": false,
+			"schemaVersion": 1,
+		},
+		"capacity": {
+			"partyCount": 3,
+			"partyLimit": 5,
+			"storageCount": 18,
+			"storageLimit": 20,
+			"available": 4,
+			"schemaVersion": 1,
+		},
+		"counts": {
+			"pending": 1,
+			"completed": 0,
+			"matched": 1,
+			"returned": 1,
+			"truncated": false,
+			"schemaVersion": 1,
+		},
+		"records": [{
+			"status": "pending",
+			"recoveryId": recovery_id,
+			"petInstanceId": pet_instance_id,
+			"formId": "blue_man_dragon_water10",
+			"name": "异常[url=x]蓝人龙",
+			"level": 1,
+			"state": "standby",
+			"capturedSerial": 17,
+			"createdAt": "2026-07-17T08:00:00.000Z",
+			"completedAt": "",
+			"disposition": "",
+			"schemaVersion": 1,
+		}],
+		"schemaVersion": 1,
+	}
+	var search_state := GmPetCaptureRecoveryClientModel.status_state_from_parsed({
+		"ok": true,
+		"message": "找到 1 条捕捉恢复记录。",
+		"result": search_result,
+	})
+	var search_status := GmPetCaptureRecoveryClientModel.status_text(search_state)
+	var recover_result: Dictionary = search_result.duplicate(true)
+	recover_result["action"] = GmPetCaptureRecoveryClientModel.ACTION_RECOVER
+	recover_result["target"]["profileRevision"] = 8
+	recover_result["counts"]["pending"] = 0
+	recover_result["counts"]["completed"] = 1
+	recover_result["records"][0]["status"] = "completed"
+	recover_result["records"][0]["completedAt"] = "2026-07-17T08:01:00.000Z"
+	recover_result["records"][0]["disposition"] = "storage"
+	recover_result["recovery"] = {
+		"changed": true,
+		"replayed": false,
+		"disposition": "storage",
+		"schemaVersion": 1,
+	}
+	var recover_state := GmPetCaptureRecoveryClientModel.status_state_from_parsed({
+		"ok": true,
+		"message": "宠物已恢复到兽栏。",
+		"result": recover_result,
+	})
+	var recover_status := GmPetCaptureRecoveryClientModel.status_text(recover_state)
+	var legacy_result: Dictionary = recover_result.duplicate(true)
+	legacy_result["records"][0]["disposition"] = "overflow_fallback"
+	legacy_result["recovery"]["replayed"] = true
+	legacy_result["recovery"]["disposition"] = "overflow_fallback"
+	var legacy_state := GmPetCaptureRecoveryClientModel.status_state_from_parsed({
+		"ok": true,
+		"message": "已确认宠物原本就在档案中，本次只完成恢复记录，未生成第二只。",
+		"result": legacy_result,
+	})
+	var legacy_status := GmPetCaptureRecoveryClientModel.status_text(legacy_state)
+	var private_result: Dictionary = search_result.duplicate(true)
+	private_result["records"][0]["privateSeed"] = "private_seed_must_not_cross_client_contract"
+	var private_state := GmPetCaptureRecoveryClientModel.status_state_from_parsed({
+		"ok": true,
+		"message": "不应接受",
+		"result": private_result,
+	})
+	var account_id_result: Dictionary = search_result.duplicate(true)
+	account_id_result["target"]["accountId"] = "account_id_must_not_cross_client_contract"
+	var account_id_state := GmPetCaptureRecoveryClientModel.status_state_from_parsed({
+		"ok": true,
+		"message": "不应接受",
+		"result": account_id_result,
+	})
+	return (
+		empty_selector_payload.size() == 4
+		and str(empty_selector_payload.get("action", "")) == GmPetCaptureRecoveryClientModel.ACTION_SEARCH
+		and str(empty_selector_payload.get("targetUsername", "")) == "recoverytarget"
+		and str(empty_selector_payload.get("recoveryId", "")) == ""
+		and str(empty_selector_payload.get("petInstanceId", "")) == ""
+		and str(recovery_selector_payload.get("recoveryId", "")) == recovery_id
+		and str(recovery_selector_payload.get("petInstanceId", "")) == ""
+		and str(pet_selector_payload.get("recoveryId", "")) == ""
+		and str(pet_selector_payload.get("petInstanceId", "")) == pet_instance_id
+		and body == recovery_selector_payload
+		and str(spec.get("url", "")) == "http://127.0.0.1:8787/gm/commands/gm_pet_capture_recovery"
+		and int(spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and bool(spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_is_idempotent(spec)
+		and ServerAuthClientModel.idempotency_key_is_valid(ServerAuthClientModel.request_idempotency_key(spec))
+		and bool(search_state.get("ok", false))
+		and search_status.find("恢复[lb]color=red[rb]目标 / recoverytarget / 档案 r7") >= 0
+		and search_status.find("异常[lb]url=x[rb]蓝人龙") >= 0
+		and search_status.find("[color=red]目标") < 0
+		and search_status.find("[url=x]蓝人龙") < 0
+		and search_status.find("随身 3/5、兽栏 18/20、空位 4") >= 0
+		and search_status.find(recovery_id) >= 0
+		and search_status.find(pet_instance_id) >= 0
+		and bool(recover_state.get("ok", false))
+		and recover_status.find("宠物已恢复到兽栏") >= 0
+		and recover_status.find("→ 兽栏") >= 0
+		and bool(legacy_state.get("ok", false))
+		and legacy_status.find("未生成第二只") >= 0
+		and legacy_status.find("→ 旧版溢出保护") >= 0
+		and not bool(private_state.get("ok", true))
+		and JSON.stringify(private_state).find("private_seed_must_not_cross_client_contract") < 0
+		and not bool(account_id_state.get("ok", true))
+		and JSON.stringify(account_id_state).find("account_id_must_not_cross_client_contract") < 0
 	)
 
 
@@ -17224,7 +17380,7 @@ func _run_auto_auth_check() -> void:
 		and int(gm_tools_spec.get("method", -1)) == HTTPClient.METHOD_GET
 		and str(gm_tools_spec.get("body", "x")) == ""
 		and bool(gm_tools_valid.get("ok", false))
-		and (gm_tools_valid.get("commandIds", []) as Array).size() == 9
+		and (gm_tools_valid.get("commandIds", []) as Array).size() == 10
 		and bool(gm_tools_subset.get("ok", false))
 		and not bool(gm_tools_wildcard.get("ok", false))
 		and not bool(gm_tools_expired.get("ok", false))
@@ -17332,7 +17488,7 @@ func _run_auto_auth_check() -> void:
 		and gm_identity_text.find("GM") >= 0
 		and gm_identity_text.find("档案 r37") >= 0
 		and gm_identity_text.find("授权：有效至") >= 0
-		and gm_identity_text.find("可用功能 28 项") >= 0
+		and gm_identity_text.find("可用功能 29 项") >= 0
 		and gm_identity_text.find("account_secret_qa") < 0
 		and gm_identity_text.find("token_secret_qa") < 0
 		and gm_identity_text.find("gm_prepare") < 0
@@ -24833,6 +24989,7 @@ func _run_auto_qa_panel_check() -> void:
 		host._refresh_qa_panel()
 	var command_text = host.qa_detail_label.text if host.qa_detail_label != null else ""
 	var first_layout_ok = host._qa_panel_layout_is_usable()
+	var pet_recovery_contract_ok := _gm_pet_capture_recovery_client_contract_ok()
 	var button_ok: bool = explicit_plugin_ok and host.qa_panel != null and host.qa_panel.visible and QaPanelCatalog.validation_errors().is_empty()
 	for entry_command_id in QaPanelCatalog.entry_command_ids():
 		button_ok = button_ok and host.qa_entry_buttons.has(entry_command_id)
@@ -24846,7 +25003,7 @@ func _run_auto_qa_panel_check() -> void:
 		and qa_profile_identity_text.find(qa_username) >= 0
 		and qa_profile_identity_text.find("GM") >= 0
 		and qa_profile_identity_text.find("授权：有效至") >= 0
-		and qa_profile_identity_text.find("可用功能 28 项") >= 0
+		and qa_profile_identity_text.find("可用功能 29 项") >= 0
 		and command_text.find("只补齐") >= 0
 		and command_text.find("不会清空") >= 0
 		and command_text.find("10 只 Lv1 蓝人龙") >= 0
@@ -24872,6 +25029,58 @@ func _run_auto_qa_panel_check() -> void:
 		and not host.qa_pet_grant_button.disabled
 		and host.qa_pet_target_option != null
 		and host.qa_pet_level_up_button != null
+	)
+	var pet_recovery_local_session: Dictionary = host.current_account_session.duplicate(true)
+	var pet_recovery_initial_ui_ok: bool = (
+		host.qa_pet_recovery_username_input != null
+		and host.qa_pet_recovery_username_input.text == qa_username
+		and host.qa_pet_recovery_username_input.placeholder_text == "目标用户名"
+		and host.qa_pet_recovery_selector_input != null
+		and host.qa_pet_recovery_selector_input.placeholder_text.find("恢复ID或宠物ID") >= 0
+		and host.qa_pet_recovery_query_button != null
+		and host.qa_pet_recovery_query_button.disabled
+		and host.qa_pet_recovery_apply_button != null
+		and host.qa_pet_recovery_apply_button.disabled
+		and command_text.find("捕捉恢复审计") >= 0
+		and command_text.find("输入目标用户名") >= 0
+	)
+	var pet_recovery_server_session: Dictionary = pet_recovery_local_session.duplicate(true)
+	pet_recovery_server_session["authSource"] = ServerAuthClientModel.SOURCE_SERVER
+	pet_recovery_server_session["serverSessionToken"] = "qa_pet_recovery_contract_token"
+	host.current_account_session = pet_recovery_server_session
+	host._refresh_qa_panel()
+	var pet_recovery_query_enabled: bool = (
+		host.qa_pet_recovery_query_button != null
+		and not host.qa_pet_recovery_query_button.disabled
+		and host.qa_pet_recovery_apply_button != null
+		and host.qa_pet_recovery_apply_button.disabled
+	)
+	host.qa_pet_recovery_selector_input.text = "pet_recovery_contract_1"
+	host._panel_flow()._sync_qa_pet_recovery_controls()
+	var pet_recovery_apply_enabled: bool = (
+		host.qa_pet_recovery_query_button != null
+		and not host.qa_pet_recovery_query_button.disabled
+		and host.qa_pet_recovery_apply_button != null
+		and not host.qa_pet_recovery_apply_button.disabled
+		and host.qa_pet_recovery_apply_button.tooltip_text.find("唯一精确记录") >= 0
+	)
+	host.profile_action_request_pending = true
+	host._panel_flow()._sync_qa_pet_recovery_controls()
+	var pet_recovery_pending_blocks: bool = (
+		host.qa_pet_recovery_query_button != null
+		and host.qa_pet_recovery_query_button.disabled
+		and host.qa_pet_recovery_apply_button != null
+		and host.qa_pet_recovery_apply_button.disabled
+	)
+	host.profile_action_request_pending = false
+	host.qa_pet_recovery_selector_input.text = ""
+	host.current_account_session = pet_recovery_local_session
+	host._refresh_qa_panel()
+	var pet_recovery_ui_ok: bool = (
+		pet_recovery_initial_ui_ok
+		and pet_recovery_query_enabled
+		and pet_recovery_apply_enabled
+		and pet_recovery_pending_blocks
 	)
 	host.profile_action_request_pending = true
 	host._refresh_qa_pet_tool_controls()
@@ -25148,14 +25357,16 @@ func _run_auto_qa_panel_check() -> void:
 	host._on_qa_entry_pressed("firebud_village")
 	await host.get_tree().process_frame
 	var village_ok: bool = host.current_map_id == "firebud_village_gate" and host.world_log_message.find("火芽村入口") >= 0
-	var status = "ok" if loaded and button_ok and qa_profile_ui_ok and qa_panel_screenshot_ok and pet_tool_options_ok and gm_pet_pending_ok and gm_pet_route_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and bank_ok and market_ok and mailbox_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_battle_ok and auto_capture_ok and partner_ok and pet_panel_ok and codex_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_map_ok and gm_10v10_ok and gm_capture_ok and gm_knockaway_ok and village_ok else "failed"
-	print("qa panel check ready: status=%s loaded=%s buttons=%s qa_profile=%s screenshot=%s pet_tools=%s gm_pending=%s gm_route=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s bank=%s market=%s mailbox=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_battle=%s auto_capture=%s partner=%s pet=%s codex=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s tiger_facts=%d/%s gm_mm_level=%s gm_map=%s gm_10v10=%s gm_capture=%s gm_knockaway=%s village=%s button_count=%d map=%s target=%s log=%s" % [
+	var status = "ok" if loaded and button_ok and qa_profile_ui_ok and qa_panel_screenshot_ok and pet_tool_options_ok and pet_recovery_contract_ok and pet_recovery_ui_ok and gm_pet_pending_ok and gm_pet_route_ok and command_ok and first_layout_ok and second_layout_ok and backpack_ok and item_shop_ok and equipment_shop_ok and equipment_ok and bank_ok and market_ok and mailbox_ok and quest_ok and speed_gear_ok and numeric_open_ok and numeric_growth_ok and numeric_mm_ok and numeric_compare_ok and numeric_battle_ok and auto_battle_ok and auto_capture_ok and partner_ok and pet_panel_ok and codex_ok and stable_ok and rebirth_preview_ok and gm_grant_ok and gm_level_ok and gm_target_all_pets_ok and gm_tiger_level_ok and gm_mm_level_ok and gm_map_ok and gm_10v10_ok and gm_capture_ok and gm_knockaway_ok and village_ok else "failed"
+	print("qa panel check ready: status=%s loaded=%s buttons=%s qa_profile=%s screenshot=%s pet_tools=%s recovery_contract=%s recovery_ui=%s gm_pending=%s gm_route=%s commands=%s layout1=%s layout2=%s entry_h=%.1f detail_h=%.1f backpack=%s item_shop=%s equipment_shop=%s equipment=%s bank=%s market=%s mailbox=%s quest=%s speed_gear=%s numeric_open=%s numeric_growth=%s numeric_mm=%s numeric_compare=%s numeric_battle=%s auto_battle=%s auto_capture=%s partner=%s pet=%s codex=%s stable=%s rebirth=%s gm_grant=%s gm_level=%s gm_target_all=%s gm_tiger_level=%s tiger_facts=%d/%s gm_mm_level=%s gm_map=%s gm_10v10=%s gm_capture=%s gm_knockaway=%s village=%s button_count=%d map=%s target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ok),
 		str(qa_profile_ui_ok),
 		str(qa_panel_screenshot_ok),
 		str(pet_tool_options_ok),
+		str(pet_recovery_contract_ok),
+		str(pet_recovery_ui_ok),
 		str(gm_pet_pending_ok),
 		str(gm_pet_route_ok),
 		str(command_ok),

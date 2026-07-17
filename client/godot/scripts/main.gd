@@ -679,6 +679,10 @@ var qa_pet_grant_button: Button
 var qa_pet_level_up_button: Button
 var qa_pet_growth_profile_id: String = ""
 var qa_pet_level_instance_id: String = ""
+var qa_pet_recovery_username_input: LineEdit
+var qa_pet_recovery_selector_input: LineEdit
+var qa_pet_recovery_query_button: Button
+var qa_pet_recovery_apply_button: Button
 var numeric_workbench_panel: PanelContainer
 var numeric_workbench_profile_option: OptionButton
 var numeric_workbench_sample_option: OptionButton

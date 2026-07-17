@@ -78,7 +78,7 @@ static func layout_is_usable(panel: Control, entry_scroll: ScrollContainer, deta
 		return false
 	return (
 		panel.visible
-		and entry_scroll.size.y >= 260.0
+		and entry_scroll.size.y >= 170.0
 		and detail_scroll.size.y >= 110.0
 		and entry_scroll.size.y > detail_scroll.size.y
 	)

@@ -26,6 +26,7 @@ const DEFAULT_QUIT_AFTER = 2600;
 const PARSE_CHECK_NAME = "godot-parse";
 
 const QUIT_AFTER_OVERRIDES = new Map(Object.entries({
+  "--auto-qa-panel-check": 900,
   "--auto-auth-server-client-check": 9000,
   "--auto-auth-server-live-check": 9000,
   "--auto-server-profile-sync-check": 12000,
@@ -372,7 +373,7 @@ function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut)
 function godotCompileFailureDiagnostic(output) {
   const lines = String(output || "").split(/\r?\n/);
   return lines.find((line) => (
-    /SCRIPT ERROR:\s*(Parse Error|Compile Error):/i.test(line)
+    /SCRIPT ERROR:/i.test(line)
     || /Failed to compile depended scripts/i.test(line)
     || /Failed to load script .*Compilation failed/i.test(line)
   )) || "";

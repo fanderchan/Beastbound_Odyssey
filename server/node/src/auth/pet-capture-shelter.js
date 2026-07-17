@@ -473,7 +473,11 @@ function recoverPetCapture(profile, input) {
   const matchingPet = instances.find((pet) => petMatchesCapture(pet, record));
   if (matchingPet) {
     delete shelter.pending[record.recoveryId];
-    const disposition = matchingPet.state === "storage" ? "storage" : "party";
+    const overflowFallback = matchingPet.captureOverflowPending === true;
+    delete matchingPet.captureOverflowPending;
+    const disposition = overflowFallback
+      ? "overflow_fallback"
+      : (matchingPet.state === "storage" ? "storage" : "party");
     appendCompleted(shelter, completeRecord(record, disposition, input.completedAt));
     profile[PROFILE_KEY] = shelter;
     return {

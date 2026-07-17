@@ -57,6 +57,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_prepare_qa_profile", "label": "补齐GM核心测试档案"},
   {"id": "gm_prepare_qa_pet_samples", "label": "准备GM宠物样本档"},
   {"id": "gm_prepare_qa_assets", "label": "准备GM装备与银行档"},
+  {"id": "gm_pet_capture_recovery", "label": "审计并恢复异常捕捉宠物"},
 ];
 
 const DURABLE_HTTP_SERVICE_METHODS = new Set([
@@ -71,6 +72,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "listPetRecoveries",
   "grantGmPet",
   "levelUpGmPet",
+  "gmPetCaptureRecovery",
   "prepareGmQaProfile",
   "prepareGmQaPetSamples",
   "prepareGmQaAssets",
@@ -389,6 +391,13 @@ function createHttpServer(options = {}) {
             return sendResult(res, idempotencyFailure);
           }
           return sendResult(res, service.prepareGmQaAssets(bearerToken(req), await readJson(req)));
+        }
+        if (commandId === "gm_pet_capture_recovery") {
+          const idempotencyFailure = requiredIdempotencyKeyFailure(req);
+          if (idempotencyFailure) {
+            return sendResult(res, idempotencyFailure);
+          }
+          return sendResult(res, service.gmPetCaptureRecovery(bearerToken(req), await readJson(req)));
         }
         return sendResult(res, service.authorizeGmCommand({"token": bearerToken(req), commandId}));
       }

@@ -124,6 +124,7 @@ const {
   readBankProfileState,
 } = require("./auth/bank-profile-state");
 const {createGmPetsDomain} = require("./auth/gm-pets");
+const {createGmPetCaptureRecoveryDomain} = require("./auth/gm-pet-capture-recovery");
 const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
@@ -271,6 +272,7 @@ const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "buyMarketListing",
   "cancelMarketListing",
   "claimPetRecovery",
+  "gmPetCaptureRecovery",
   "claimMailAttachments",
   "markMailRead",
 ]);
@@ -281,6 +283,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "buyMarketListing",
   "cancelMarketListing",
   "claimPetRecovery",
+  "gmPetCaptureRecovery",
   "submitBattleCommand",
   "sendMail",
   "markMailRead",
@@ -597,6 +600,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "claimMailAttachments",
   "grantGmPet",
   "levelUpGmPet",
+  "gmPetCaptureRecovery",
   "prepareGmQaProfile",
   "prepareGmQaPetSamples",
   "prepareGmQaAssets",
@@ -5613,6 +5617,7 @@ function createAuthService(options = {}) {
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
   const gmPets = createGmPetsDomain(domainContext);
+  const gmPetCaptureRecovery = createGmPetCaptureRecoveryDomain(domainContext);
   const gmQaProfile = createGmQaProfileDomain(domainContext);
   const gmQaPets = createGmQaPetsDomain(domainContext);
   const gmQaAssets = createGmQaAssetsDomain(domainContext);
@@ -5718,6 +5723,7 @@ function createAuthService(options = {}) {
     authorizeGmCommand,
     grantGmPet: gmPets.grantGmPet,
     levelUpGmPet: gmPets.levelUpGmPet,
+    gmPetCaptureRecovery: gmPetCaptureRecovery.run,
     prepareGmQaProfile: gmQaProfile.prepareGmQaProfile,
     prepareGmQaPetSamples: gmQaPets.prepareGmQaPetSamples,
     prepareGmQaAssets: gmQaAssets.prepareGmQaAssets,

@@ -38,6 +38,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
+const GmPetCaptureRecoveryClientModel := preload("res://scripts/progression/gm_pet_capture_recovery_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
@@ -122,6 +123,8 @@ var qa_pet_samples_status_state: Dictionary = {}
 var qa_pet_samples_status_username: String = ""
 var qa_assets_status_state: Dictionary = {}
 var qa_assets_status_username: String = ""
+var qa_pet_recovery_status_state: Dictionary = {}
+var qa_pet_recovery_status_username: String = ""
 var qa_active_status_command_id: String = ""
 
 var item_stack_split_panel: PanelContainer
@@ -3144,6 +3147,30 @@ var qa_pet_level_instance_id:
 		return host.qa_pet_level_instance_id
 	set(value):
 		host.qa_pet_level_instance_id = value
+
+var qa_pet_recovery_username_input:
+	get:
+		return host.qa_pet_recovery_username_input
+	set(value):
+		host.qa_pet_recovery_username_input = value
+
+var qa_pet_recovery_selector_input:
+	get:
+		return host.qa_pet_recovery_selector_input
+	set(value):
+		host.qa_pet_recovery_selector_input = value
+
+var qa_pet_recovery_query_button:
+	get:
+		return host.qa_pet_recovery_query_button
+	set(value):
+		host.qa_pet_recovery_query_button = value
+
+var qa_pet_recovery_apply_button:
+	get:
+		return host.qa_pet_recovery_apply_button
+	set(value):
+		host.qa_pet_recovery_apply_button = value
 
 var numeric_workbench_panel:
 	get:
@@ -7987,9 +8014,50 @@ func _build_hud() -> void:
 	qa_pet_level_up_button.custom_minimum_size = Vector2(104, 38)
 	qa_pet_level_up_button.pressed.connect(_on_qa_pet_level_up_pressed)
 	qa_pet_level_row.add_child(qa_pet_level_up_button)
+	var qa_pet_recovery_label := Label.new()
+	qa_pet_recovery_label.text = "GM捕捉恢复"
+	qa_pet_recovery_label.add_theme_font_size_override("font_size", 15)
+	qa_pet_recovery_label.add_theme_color_override("font_color", Color(0.91, 0.80, 0.43, 0.98))
+	qa_pet_tool_column.add_child(qa_pet_recovery_label)
+	var qa_pet_recovery_target_row := HBoxContainer.new()
+	qa_pet_recovery_target_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_recovery_target_row.add_theme_constant_override("separation", 8)
+	qa_pet_tool_column.add_child(qa_pet_recovery_target_row)
+	qa_pet_recovery_username_input = LineEdit.new()
+	qa_pet_recovery_username_input.placeholder_text = "目标用户名"
+	qa_pet_recovery_username_input.max_length = 32
+	qa_pet_recovery_username_input.custom_minimum_size = Vector2(0, 38)
+	qa_pet_recovery_username_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_recovery_username_input.text_changed.connect(func(_new_text: String) -> void:
+		_sync_qa_pet_recovery_controls()
+	)
+	qa_pet_recovery_target_row.add_child(qa_pet_recovery_username_input)
+	qa_pet_recovery_query_button = Button.new()
+	qa_pet_recovery_query_button.text = "查询"
+	qa_pet_recovery_query_button.custom_minimum_size = Vector2(104, 38)
+	qa_pet_recovery_query_button.pressed.connect(_on_qa_pet_recovery_query_pressed)
+	qa_pet_recovery_target_row.add_child(qa_pet_recovery_query_button)
+	var qa_pet_recovery_selector_row := HBoxContainer.new()
+	qa_pet_recovery_selector_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_recovery_selector_row.add_theme_constant_override("separation", 8)
+	qa_pet_tool_column.add_child(qa_pet_recovery_selector_row)
+	qa_pet_recovery_selector_input = LineEdit.new()
+	qa_pet_recovery_selector_input.placeholder_text = "恢复ID或宠物ID（留空查询全部）"
+	qa_pet_recovery_selector_input.max_length = 160
+	qa_pet_recovery_selector_input.custom_minimum_size = Vector2(0, 38)
+	qa_pet_recovery_selector_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	qa_pet_recovery_selector_input.text_changed.connect(func(_new_text: String) -> void:
+		_sync_qa_pet_recovery_controls()
+	)
+	qa_pet_recovery_selector_row.add_child(qa_pet_recovery_selector_input)
+	qa_pet_recovery_apply_button = Button.new()
+	qa_pet_recovery_apply_button.text = "恢复"
+	qa_pet_recovery_apply_button.custom_minimum_size = Vector2(104, 38)
+	qa_pet_recovery_apply_button.pressed.connect(_on_qa_pet_recovery_apply_pressed)
+	qa_pet_recovery_selector_row.add_child(qa_pet_recovery_apply_button)
 
 	qa_entry_scroll = ScrollContainer.new()
-	qa_entry_scroll.custom_minimum_size = Vector2(0, 260)
+	qa_entry_scroll.custom_minimum_size = Vector2(0, 170)
 	qa_entry_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	qa_entry_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	qa_column.add_child(qa_entry_scroll)
@@ -13985,8 +14053,13 @@ func _apply_server_quest_action_result(parsed: Dictionary, fallback_message: Str
 func _submit_server_profile_action(action: String, payload: Dictionary = {}, fallback_message: String = "档案操作失败。") -> Dictionary:
 	return await host._server_sync().submit_server_profile_action(action, payload, fallback_message)
 
-func _submit_server_gm_command(command_id: String, payload: Dictionary = {}, fallback_message: String = "GM宠物操作失败。") -> Dictionary:
-	return await host._server_sync().submit_server_gm_command(command_id, payload, fallback_message)
+func _submit_server_gm_command(
+	command_id: String,
+	payload: Dictionary = {},
+	fallback_message: String = "GM宠物操作失败。",
+	requires_profile: bool = true
+) -> Dictionary:
+	return await host._server_sync().submit_server_gm_command(command_id, payload, fallback_message, requires_profile)
 
 func _player_status_stat_line(stat_key: String, base: Dictionary, bonus: Dictionary, current: Dictionary) -> String:
 	var base_value = int(base.get(stat_key, 0))
@@ -21662,6 +21735,13 @@ func _refresh_qa_panel() -> void:
 		qa_assets_status_username = ""
 		if qa_active_status_command_id == GmQaAssetsClientModel.COMMAND_ID:
 			qa_active_status_command_id = ""
+	if qa_pet_recovery_status_username != "" and qa_pet_recovery_status_username != current_username:
+		qa_pet_recovery_status_state.clear()
+		qa_pet_recovery_status_username = ""
+		if qa_active_status_command_id == GmPetCaptureRecoveryClientModel.COMMAND_ID:
+			qa_active_status_command_id = ""
+	if qa_pet_recovery_username_input != null and qa_pet_recovery_username_input.text.strip_edges() == "" and current_username != "":
+		qa_pet_recovery_username_input.text = current_username
 	if qa_profile_identity_label != null:
 		qa_profile_identity_label.text = "%s · %s" % [
 			GmQaProfileClientModel.identity_text(current_account_session),
@@ -21687,6 +21767,7 @@ func _refresh_qa_panel() -> void:
 		if not command_allowed:
 			command_button.tooltip_text = "当前测试授权尚未包含此功能。"
 	_refresh_qa_pet_tool_controls()
+	_sync_qa_pet_recovery_controls()
 	var prepare_button := qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	if prepare_button != null:
 		prepare_button.disabled = (
@@ -21720,8 +21801,10 @@ func _refresh_qa_panel() -> void:
 		GmQaProfileClientModel.COMMAND_ID: GmQaProfileClientModel.status_text(qa_profile_status_state),
 		GmQaPetSamplesClientModel.COMMAND_ID: GmQaPetSamplesClientModel.status_text(qa_pet_samples_status_state),
 		GmQaAssetsClientModel.COMMAND_ID: GmQaAssetsClientModel.status_text(qa_assets_status_state),
+		GmPetCaptureRecoveryClientModel.COMMAND_ID: GmPetCaptureRecoveryClientModel.status_text(qa_pet_recovery_status_state),
 	}
 	var status_command_order: Array[String] = [
+		GmPetCaptureRecoveryClientModel.COMMAND_ID,
 		GmQaProfileClientModel.COMMAND_ID,
 		GmQaPetSamplesClientModel.COMMAND_ID,
 		GmQaAssetsClientModel.COMMAND_ID,
@@ -21783,6 +21866,24 @@ func _refresh_qa_pet_tool_controls() -> void:
 			qa_pet_grant_button.disabled = true
 		if qa_pet_level_up_button != null:
 			qa_pet_level_up_button.disabled = true
+
+func _sync_qa_pet_recovery_controls() -> void:
+	var command_allowed := GmToolRuntimeModel.command_available(
+		current_account_session,
+		GmPetCaptureRecoveryClientModel.COMMAND_ID,
+		_gm_allowed_command_ids(),
+		host.gm_tool_server_access_state
+	)
+	var request_pending: bool = profile_action_request_pending or bool(qa_pet_recovery_status_state.get("pending", false))
+	var target_username: String = qa_pet_recovery_username_input.text.strip_edges() if qa_pet_recovery_username_input != null else ""
+	var selector: String = qa_pet_recovery_selector_input.text.strip_edges() if qa_pet_recovery_selector_input != null else ""
+	var available: bool = command_allowed and _is_server_account_session() and not request_pending and target_username != ""
+	if qa_pet_recovery_query_button != null:
+		qa_pet_recovery_query_button.disabled = not available
+		qa_pet_recovery_query_button.tooltip_text = "按账号查询；恢复ID或宠物ID留空时最多显示50条。" if available else "当前测试授权尚未包含此功能，或服务器正在同步。"
+	if qa_pet_recovery_apply_button != null:
+		qa_pet_recovery_apply_button.disabled = not available or selector == ""
+		qa_pet_recovery_apply_button.tooltip_text = "只恢复唯一精确记录；战斗中或宠物已满时会拒绝。" if available and selector != "" else "请先填写一个恢复ID或宠物ID。"
 
 func _reset_qa_panel_scrolls() -> void:
 	QaPanelPresenter.reset_scrolls(qa_entry_scroll, qa_detail_scroll)
@@ -22092,6 +22193,55 @@ func _on_qa_pet_level_up_pressed() -> void:
 	_set_world_log_message(str(result.get("message", "")))
 	_refresh_qa_pet_tool_controls()
 	_refresh_qa_panel()
+
+func _on_qa_pet_recovery_query_pressed() -> void:
+	await _submit_qa_pet_recovery_action(GmPetCaptureRecoveryClientModel.ACTION_SEARCH)
+
+func _on_qa_pet_recovery_apply_pressed() -> void:
+	await _submit_qa_pet_recovery_action(GmPetCaptureRecoveryClientModel.ACTION_RECOVER)
+
+func _submit_qa_pet_recovery_action(action: String) -> void:
+	if not _authorize_gm_command(GmPetCaptureRecoveryClientModel.COMMAND_ID):
+		return
+	if not _is_server_account_session():
+		_set_world_log_message("捕捉恢复审计需要连接服务器。")
+		return
+	if profile_action_request_pending:
+		_set_world_log_message("档案操作同步中，请稍候。")
+		return
+	var target_username: String = qa_pet_recovery_username_input.text.strip_edges() if qa_pet_recovery_username_input != null else ""
+	var selector: String = qa_pet_recovery_selector_input.text.strip_edges() if qa_pet_recovery_selector_input != null else ""
+	if target_username == "":
+		_set_world_log_message("请输入目标用户名。")
+		return
+	if action == GmPetCaptureRecoveryClientModel.ACTION_RECOVER and selector == "":
+		_set_world_log_message("人工恢复必须填写恢复ID或宠物ID。")
+		return
+	qa_pet_recovery_status_username = str(current_account_session.get("username", "")).strip_edges()
+	qa_pet_recovery_status_state = {"pending": true}
+	qa_active_status_command_id = GmPetCaptureRecoveryClientModel.COMMAND_ID
+	_refresh_qa_panel()
+	var parsed := await _submit_server_gm_command(
+		GmPetCaptureRecoveryClientModel.COMMAND_ID,
+		GmPetCaptureRecoveryClientModel.request_payload(action, target_username, selector),
+		"捕捉恢复操作失败。",
+		false
+	)
+	qa_pet_recovery_status_state = GmPetCaptureRecoveryClientModel.status_state_from_parsed(parsed)
+	if bool(qa_pet_recovery_status_state.get("ok", false)):
+		var result := qa_pet_recovery_status_state.get("result", {}) as Dictionary
+		var target := result.get("target", {}) as Dictionary
+		var recovery := result.get("recovery", {}) as Dictionary if result.get("recovery", {}) is Dictionary else {}
+		if (
+			action == GmPetCaptureRecoveryClientModel.ACTION_RECOVER
+			and bool(recovery.get("changed", false))
+			and str(target.get("username", "")) == str(current_account_session.get("username", ""))
+		):
+			_queue_server_profile_pull()
+	_set_world_log_message(str(qa_pet_recovery_status_state.get("message", "捕捉恢复操作已完成。")))
+	_refresh_qa_panel()
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
 
 func _qa_open_auto_settings(tab_id: String) -> void:
 	auto_settings_active_tab = tab_id

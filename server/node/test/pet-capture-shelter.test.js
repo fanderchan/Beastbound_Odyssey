@@ -160,6 +160,29 @@ test("recovery requires a real slot, preserves pending on full capacity, and res
   assert.equal(profile.petInstances.filter((pet) => pet.instanceId === "pet_captured_17").length, 1);
 });
 
+test("recovery closes a matching legacy overflow pet without cloning or leaving the overflow marker", () => {
+  const profile = {petInstances: [], nextPetInstanceSerial: 17};
+  const staged = shelter.stagePetCapture(profile, stageInput());
+  assert.equal(staged.ok, true);
+  const existing = structuredClone(profile.petRecoveryShelter.pending[staged.recoveryId].pet);
+  existing.captureOverflowPending = true;
+  profile.petInstances.push(existing);
+
+  const recovered = shelter.recoverPetCapture(profile, {
+    recoveryId: staged.recoveryId,
+    completedAt: "2026-07-17T01:04:00.000Z",
+  });
+
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.changed, true);
+  assert.equal(recovered.replayed, true);
+  assert.equal(recovered.disposition, "overflow_fallback");
+  assert.equal(profile.petInstances.length, 1);
+  assert.equal(profile.petInstances[0].captureOverflowPending, undefined);
+  assert.equal(Object.keys(profile.petRecoveryShelter.pending).length, 0);
+  assert.equal(profile.petRecoveryShelter.completed[staged.recoveryId].disposition, "overflow_fallback");
+});
+
 test("background reconciliation uses capture order, fills available slots, and leaves the source atomic", () => {
   const profile = fullProfile();
   profile.petInstances = profile.petInstances.slice(0, 23);
