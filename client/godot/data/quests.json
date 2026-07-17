@@ -1029,6 +1029,62 @@
       "nextQuestId": ""
     },
     {
+      "id": "quest_wuli_evolution_license",
+      "title": "晶甲共鸣",
+      "requiredLevel": 140,
+      "recommendedLevel": 140,
+      "giverId": "firebud_rebirth_mentor",
+      "turnInId": "firebud_rebirth_mentor",
+      "optional": true,
+      "runtimeEnabled": false,
+      "autoClaimOnReady": true,
+      "summary": "与队友击败岩脉进化守卫，证明你能承担乌力族系的终局培养。",
+      "objective": {
+        "type": "battle_victory",
+        "encounterGroupId": "earth_vein_evolution_lineage",
+        "minPartyMemberCount": 1,
+        "count": 1,
+        "text": "组队击败岩脉进化守卫"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [],
+        "abilities": [
+          {"abilityId": "pet_evolution_wuli_license", "label": "乌力族系进化资格"}
+        ]
+      },
+      "requiredMissingAbility": "pet_evolution_wuli_license",
+      "nextQuestId": ""
+    },
+    {
+      "id": "quest_driftfox_evolution_license",
+      "title": "月岚追猎",
+      "requiredLevel": 140,
+      "recommendedLevel": 140,
+      "giverId": "firebud_rebirth_mentor",
+      "turnInId": "firebud_rebirth_mentor",
+      "optional": true,
+      "runtimeEnabled": false,
+      "autoClaimOnReady": true,
+      "summary": "与队友击败岚息进化守卫，证明你能驾驭风狐族系的终局速度。",
+      "objective": {
+        "type": "battle_victory",
+        "encounterGroupId": "gale_breath_evolution_lineage",
+        "minPartyMemberCount": 1,
+        "count": 1,
+        "text": "组队击败岚息进化守卫"
+      },
+      "rewards": {
+        "stoneCoins": 0,
+        "items": [],
+        "abilities": [
+          {"abilityId": "pet_evolution_driftfox_license", "label": "风狐族系进化资格"}
+        ]
+      },
+      "requiredMissingAbility": "pet_evolution_driftfox_license",
+      "nextQuestId": ""
+    },
+    {
       "id": "quest_remote_stable_unlock",
       "title": "远程兽栏",
       "requiredLevel": 1,

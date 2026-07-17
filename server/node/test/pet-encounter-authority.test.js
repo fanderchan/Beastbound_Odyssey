@@ -28,7 +28,7 @@ function soloPosition(mapId, cellX, cellY) {
 
 test("pet encounter catalog strictly loads the shared map and pet template documents", () => {
   assert.equal(Object.keys(catalog.mapsById).length, 37);
-  assert.equal(Object.keys(catalog.formsById).length, 32);
+  assert.equal(Object.keys(catalog.formsById).length, 34);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.mapsById.firebud_village_gate.zonesById.village_grass), true);
   assert.equal(Object.isFrozen(catalog.mapsById.shadow_oath_cavern_f4.zonesById.shadow_chase_training_floor), true);

@@ -38,7 +38,7 @@ const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-p
 test("quest catalog gives every formal quest explicit pickup and recommended levels", () => {
   const questCatalog = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../client/godot/data/quests.json"), "utf8"));
   assert.equal(Array.isArray(questCatalog.quests), true);
-  assert.equal(questCatalog.quests.length, 44);
+  assert.equal(questCatalog.quests.length, 46);
   assert.equal(questCatalog.quests.every((quest) => Object.hasOwn(quest, "requiredLevel")), true);
   assert.equal(questCatalog.quests.every((quest) => Object.hasOwn(quest, "recommendedLevel")), true);
   assert.equal(questCatalog.quests.filter((quest) => Number(quest.requiredLevel) === 1).length, 38);
@@ -55,6 +55,30 @@ test("quest catalog gives every formal quest explicit pickup and recommended lev
       "quest_rebirth_6_guidance",
     ],
   );
+});
+
+test("disabled evolution license quests cannot be claimed before the route gate opens", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const player = service.register({"username": "evolutionquestgate", "password": "test1234", "displayName": "进化任务门禁"});
+  assert.equal(player.ok, true);
+  const profile = battleProfile("进化任务门禁", {"level": 140, "hp": 1200, "maxHp": 1200}, null);
+  profile.unlockedAbilities = [];
+  profile.activeQuestId = "";
+  profile.questStates = {
+    "quest_wuli_evolution_license": {
+      "questId": "quest_wuli_evolution_license",
+      "status": "ready",
+      "progress": 1,
+    },
+  };
+  assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
+
+  const claim = service.questClaim(player.session.token, {"questId": "quest_wuli_evolution_license"});
+  assert.equal(claim.ok, false);
+  assert.equal(claim.code, "quest_unavailable");
+  const after = service.getProfile(player.session.token);
+  assert.equal(after.profile.unlockedAbilities.includes("pet_evolution_wuli_license"), false);
+  assert.equal(after.profile.questStates.quest_wuli_evolution_license.status, "ready");
 });
 
 test("quest record endpoint advances and auto-claims talk quests server-side", () => {
@@ -841,7 +865,7 @@ test("party pve spirit event advances battle quest chain from server event log",
     "level": 8,
     "hp": 140,
     "maxHp": 140,
-    "attack": 20,
+    "attack": 1000,
     "defense": 20,
     "quick": 200,
     "comboRateOverride": 0,
@@ -899,10 +923,20 @@ test("party pve spirit event advances battle quest chain from server event log",
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
   assert.equal(Boolean(player && enemy), true);
   assert.equal(player.spiritIds.includes("spirit_poison_1"), true);
-  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+  const poisoned = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
     "actorId": player.actorId,
     "actionId": "spirit_poison_1",
+    "targetActorId": enemy.actorId,
+  });
+  assert.equal(poisoned.ok, true);
+  assert.equal(poisoned.room.status, "ready");
+  assert.equal(poisoned.turn.events.some((event) => event.eventType === "spirit_poison"), true);
+
+  const resolved = service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
+    "round": 2,
+    "actorId": player.actorId,
+    "actionId": "attack",
     "targetActorId": enemy.actorId,
   });
   assert.equal(resolved.ok, true);
@@ -946,7 +980,7 @@ test("group brawl quest requires an ally and a dangerous grass victory", () => {
     "level": 8,
     "hp": 140,
     "maxHp": 140,
-    "attack": 80,
+    "attack": 1000,
     "defense": 20,
     "quick": 200,
     "comboRateOverride": 0,
@@ -993,7 +1027,7 @@ test("group brawl quest requires an ally and a dangerous grass victory", () => {
     "level": 8,
     "hp": 140,
     "maxHp": 140,
-    "attack": 80,
+    "attack": 1000,
     "defense": 20,
     "quick": 200,
     "comboRateOverride": 0,

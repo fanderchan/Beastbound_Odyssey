@@ -56,7 +56,7 @@
     "reference": {
       "targetLevel": 140,
       "stonePointsPerStat": 50,
-      "profileSelector": "all_non_mm_growth_profiles",
+      "profileSelector": "all_rebirth_eligible_non_mm_growth_profiles",
       "profileCount": 30,
       "samplesPerProfile": 10000,
       "stageRolls": "independent_uniform_percentile"

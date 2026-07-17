@@ -25,6 +25,7 @@ test("pet rebirth balance loads one strict future-only shared contract", () => {
   assert.equal(balance.schemaVersion, 1);
   assert.equal(balance.balanceVersion, "pet_rebirth_balance_v3");
   assert.equal(balance.evaluation.evaluationVersion, "pet_rebirth_evaluation_v1");
+  assert.equal(balance.evaluation.reference.profileSelector, "all_rebirth_eligible_non_mm_growth_profiles");
   assert.equal(balance.evaluation.reference.profileCount, 30);
   assert.equal(Object.isFrozen(balance), true);
   assert.equal(Object.isFrozen(balance.poolRangesByStage[1]), true);

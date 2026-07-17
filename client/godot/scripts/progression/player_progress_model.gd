@@ -3511,6 +3511,8 @@ static func blocked_optional_quest_for_interaction(profile: Dictionary, interact
 	for quest in QuestModel.quests():
 		if not QuestModel.is_optional(quest):
 			continue
+		if not bool(quest.get("runtimeEnabled", true)):
+			continue
 		var quest_id := str(quest.get("id", ""))
 		if quest_id == "":
 			continue
@@ -4036,6 +4038,8 @@ static func _pet_required_by_active_quest(profile: Dictionary, instance: Diction
 
 
 static func _quest_available_for_profile(quest: Dictionary, profile: Dictionary, check_level: bool = true) -> bool:
+	if not bool(quest.get("runtimeEnabled", true)):
+		return false
 	if check_level and not QuestModel.can_accept_at_level(quest, player_level(profile, true)):
 		return false
 	var current_rebirth_count := RebirthModel.rebirth_count(profile)

@@ -31,7 +31,7 @@ function quote(catalog, formId, config = {}) {
 
 test("paid reset catalog prices every current pet form and freezes universal reset rules", () => {
   const catalog = createPetPaidResetPolicyCatalog();
-  assert.equal(catalog.formPolicies.length, 32);
+  assert.equal(catalog.formPolicies.length, 34);
   assert.equal(catalog.formPolicies.length, Object.keys(catalog.formPoliciesById).length);
   assert.deepEqual(catalog.resetContract, {
     pricingMode: "fixed_per_operation",
@@ -169,7 +169,7 @@ test("legacy empty config stays revision zero and malformed persisted config fai
   assert.equal(corrupt.code, "pet_paid_reset_config_invalid");
   const publicResult = publicPetPaidResetConfig(catalog, {});
   assert.equal(publicResult.ok, true);
-  assert.equal(publicResult.resolvedForms.length, 32);
+  assert.equal(publicResult.resolvedForms.length, 34);
   assert.equal(Object.hasOwn(publicResult.defaults, "policyPath"), false);
 });
 

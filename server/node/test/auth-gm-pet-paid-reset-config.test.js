@@ -40,7 +40,7 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
   const defaults = service.getPetPaidResetConfig(gm.session.token);
   assert.equal(defaults.ok, true);
   assert.equal(defaults.config.revision, 0);
-  assert.equal(defaults.resolvedForms.length, 32);
+  assert.equal(defaults.resolvedForms.length, 34);
   assert.equal(defaults.resolvedForms.find((entry) => entry.formId === "bui_normal_red_fire10").amount, 120000);
 
   const updated = service.updatePetPaidResetConfig(gm.session.token, {

@@ -115,7 +115,9 @@
         "earth_vein_guardian_group",
         "tide_echo_guardian_group",
         "ember_core_guardian_group",
-        "gale_breath_guardian_group"
+        "gale_breath_guardian_group",
+        "earth_vein_evolution_lineage",
+        "gale_breath_evolution_lineage"
       ],
       "bossMode": "interaction_guardian"
     },
@@ -151,7 +153,8 @@
         "shadow_oath_rebirth_water",
         "shadow_oath_rebirth_fire",
         "shadow_oath_rebirth_wind",
-        "shadow_oath_rebirth_guardian"
+        "shadow_oath_rebirth_guardian",
+        "shadow_oath_evolution_floor_core"
       ],
       "captureMapIds": ["shadow_oath_cavern", "shadow_oath_cavern_f2", "shadow_oath_cavern_f3"],
       "bossMode": "interaction_guardian"

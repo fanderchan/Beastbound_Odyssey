@@ -10,6 +10,9 @@ const {
   loadPetRebirthBalance,
   petRebirthPoolInfo,
 } = require("../server/node/src/auth/pet-rebirth-balance");
+const {
+  loadPetEvolutionRouteCatalog,
+} = require("../server/node/src/auth/pet-evolution-route-catalog");
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROFILE_PATH = path.join(ROOT, "client/godot/data/balance/pet_growth_species_profiles.json");
@@ -171,10 +174,15 @@ const stonePoints = Object.freeze(Object.fromEntries(STAT_KEYS.map((key) => [key
 
 const profileDocument = JSON.parse(fs.readFileSync(PROFILE_PATH, "utf8"));
 const allProfiles = Array.isArray(profileDocument.profiles) ? profileDocument.profiles : [];
+const evolutionRouteCatalog = loadPetEvolutionRouteCatalog();
+const terminalEvolutionProfileIds = new Set(evolutionRouteCatalog.routes
+  .filter((route) => route.result.normalSecondRebirthAllowed === false)
+  .map((route) => route.targetGrowthProfileId));
 const ordinaryProfiles = allProfiles.filter((profile) => (
   profile
   && typeof profile.profileId === "string"
   && !profile.profileId.startsWith("pet_rebirth_mm_")
+  && !terminalEvolutionProfileIds.has(profile.profileId)
   && profile.outputGrowth
 ));
 const helpers = Object.fromEntries([1, 2].map((stage) => [
@@ -241,7 +249,7 @@ const derivedEvaluation = {
   reference: {
     targetLevel,
     stonePointsPerStat,
-    profileSelector: "all_non_mm_growth_profiles",
+    profileSelector: "all_rebirth_eligible_non_mm_growth_profiles",
     profileCount: ordinaryProfiles.length,
     samplesPerProfile: sampleCount,
     stageRolls: "independent_uniform_percentile",

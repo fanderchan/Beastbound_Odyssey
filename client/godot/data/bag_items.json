@@ -427,6 +427,34 @@
       "description": "使用后获得一只 Lv1 2转小MM。"
     },
     {
+      "id": "pet_evolution_resonance_core",
+      "label": "共鸣兽核",
+      "menuLabel": "共鸣兽核",
+      "binding": "bound",
+      "stackLimit": 99,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "进化刷楼首领给予的个人绑定核心；不能交易，每次宠物进化都需要。"
+    },
+    {
+      "id": "pet_evolution_wuli_crystal_scale",
+      "label": "岩晶甲片",
+      "menuLabel": "岩晶甲片",
+      "stackLimit": 99,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "乌力族系进化材料；未绑定时可以交易。"
+    },
+    {
+      "id": "pet_evolution_driftfox_moon_plume",
+      "label": "月岚尾羽",
+      "menuLabel": "月岚尾羽",
+      "stackLimit": 99,
+      "startingCount": 0,
+      "useContexts": [],
+      "description": "风狐族系进化材料；未绑定时可以交易。"
+    },
+    {
       "id": "rebirth_starter_four_spirit_cub_egg",
       "label": "四灵幼兽蛋",
       "menuLabel": "四灵幼兽蛋",

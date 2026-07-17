@@ -10,6 +10,7 @@ const DEFAULT_BALANCE_PATH = path.resolve(
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const THRESHOLD_KEYS = Object.freeze(["min", "p25", "p55", "p85", "p95", "max"]);
 const THRESHOLD_PERCENTILES = Object.freeze([0, 25, 55, 85, 95, 100]);
+const EVALUATION_PROFILE_SELECTOR = "all_rebirth_eligible_non_mm_growth_profiles";
 
 class PetRebirthBalanceError extends Error {
   constructor(errors = []) {
@@ -238,7 +239,7 @@ function createPetRebirthBalance(document) {
   }
   if (evaluationProfileCount === null) errors.push("evaluation.reference.profileCount is invalid");
   if (evaluationSamplesPerProfile === null) errors.push("evaluation.reference.samplesPerProfile is invalid");
-  if (evaluationReference.profileSelector !== "all_non_mm_growth_profiles") {
+  if (evaluationReference.profileSelector !== EVALUATION_PROFILE_SELECTOR) {
     errors.push("evaluation.reference.profileSelector is invalid");
   }
   if (evaluationReference.stageRolls !== "independent_uniform_percentile") {
@@ -297,7 +298,7 @@ function createPetRebirthBalance(document) {
       reference: {
         targetLevel: evaluationTargetLevel,
         stonePointsPerStat: evaluationStonePoints,
-        profileSelector: "all_non_mm_growth_profiles",
+        profileSelector: EVALUATION_PROFILE_SELECTOR,
         profileCount: evaluationProfileCount,
         samplesPerProfile: evaluationSamplesPerProfile,
         stageRolls: "independent_uniform_percentile",

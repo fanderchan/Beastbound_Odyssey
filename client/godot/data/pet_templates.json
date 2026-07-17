@@ -98,6 +98,13 @@
       "activeSkillIds": ["pet_attack", "pet_defend"]
     },
     {
+      "subtypeId": "wuli_evolved_crystal_guardian",
+      "subtypeName": "晶甲乌力",
+      "lineId": "wuli",
+      "battleRole": "evolution_team_tank_disruptor",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_stone_gaze", "pet_focus_bite"]
+    },
+    {
       "subtypeId": "mossback_marsh",
       "subtypeName": "苔背兽",
       "lineId": "mossback",
@@ -110,6 +117,13 @@
       "lineId": "driftfox",
       "battleRole": "field_speed_pet",
       "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry"]
+    },
+    {
+      "subtypeId": "driftfox_evolved_moon_gale",
+      "subtypeName": "月岚风狐",
+      "lineId": "driftfox",
+      "battleRole": "evolution_speed_control_burst",
+      "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry", "pet_focus_bite"]
     },
     {
       "subtypeId": "emberhorn_badlands",
@@ -379,6 +393,39 @@
       }
     },
     {
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "formName": "晶甲乌力",
+      "lineId": "wuli",
+      "subtypeId": "wuli_evolved_crystal_guardian",
+      "elements": {
+        "fire": 0,
+        "water": 2,
+        "earth": 8,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "wuli_evolved_crystal_earth8_water2_v1",
+      "baseStats": {
+        "maxHp": 240,
+        "attack": 12,
+        "defense": 40,
+        "agility": 33
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "wuli_tough",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "低重心厚甲乌力，半透明岩晶外壳带少量水蓝脉络",
+          "neededAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"],
+          "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal/"
+        }
+      }
+    },
+    {
       "formId": "mossback_marsh_earth7_water3",
       "formName": "湿地苔背兽",
       "wildName": "野生苔背兽",
@@ -515,6 +562,39 @@
           "silhouette": "耳羽更长的高地狐兽，奔跑时尾部像风带",
           "neededAnimations": ["idle", "walk", "attack", "hit", "capture"],
           "replacementPath": "client/godot/assets/pets/driftfox/"
+        }
+      }
+    },
+    {
+      "formId": "driftfox_evolved_moon_gale_wind7_water3",
+      "formName": "月岚风狐",
+      "lineId": "driftfox",
+      "subtypeId": "driftfox_evolved_moon_gale",
+      "elements": {
+        "fire": 0,
+        "water": 3,
+        "earth": 0,
+        "wind": 7
+      },
+      "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "driftfox_evolved_moon_gale_wind7_water3_v1",
+      "baseStats": {
+        "maxHp": 150,
+        "attack": 22,
+        "defense": 12,
+        "agility": 136
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      },
+      "visual": {
+        "placeholderPalette": "f1_driftfox_highland",
+        "artPlan": {
+          "source": "original_asset_needed",
+          "silhouette": "轻型长耳风狐，双尾形成月牙与雾岚流带",
+          "neededAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"],
+          "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale/"
         }
       }
     },

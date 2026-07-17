@@ -262,6 +262,39 @@
       ]
     },
     {
+      "id": "shadow_oath_evolution_floor_core",
+      "rewardRole": "evolution_floor_core",
+      "repeatable": true,
+      "personalReward": true,
+      "economyTier": "evolution",
+      "stoneCoins": {"min": 2200, "max": 3200, "chance": 1.0},
+      "rewards": [
+        {"itemId": "pet_evolution_resonance_core", "min": 1, "max": 1, "chance": 1.0}
+      ]
+    },
+    {
+      "id": "earth_vein_evolution_lineage",
+      "rewardRole": "evolution_lineage_material",
+      "repeatable": true,
+      "personalReward": true,
+      "economyTier": "evolution",
+      "stoneCoins": {"min": 1200, "max": 1800, "chance": 1.0},
+      "rewards": [
+        {"itemId": "pet_evolution_wuli_crystal_scale", "min": 1, "max": 1, "chance": 1.0}
+      ]
+    },
+    {
+      "id": "gale_breath_evolution_lineage",
+      "rewardRole": "evolution_lineage_material",
+      "repeatable": true,
+      "personalReward": true,
+      "economyTier": "evolution",
+      "stoneCoins": {"min": 1200, "max": 1800, "chance": 1.0},
+      "rewards": [
+        {"itemId": "pet_evolution_driftfox_moon_plume", "min": 1, "max": 1, "chance": 1.0}
+      ]
+    },
+    {
       "id": "shadow_oath_rebirth_guardian",
       "rewardRole": "qualification_battle",
       "repeatable": false,

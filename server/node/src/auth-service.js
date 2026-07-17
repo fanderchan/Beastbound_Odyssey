@@ -159,6 +159,7 @@ const {
 } = require("./auth/pet-private-state");
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
 const {createPetPaidResetPolicyCatalog} = require("./auth/pet-paid-reset-policy-catalog");
+const {loadPetEvolutionRouteCatalog} = require("./auth/pet-evolution-route-catalog");
 const {loadPlayerLevelRuntime} = require("./auth/player-level-runtime");
 const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
@@ -720,9 +721,15 @@ function createAuthService(options = {}) {
     now,
     randomBytes,
   });
+  const petEvolutionRouteCatalog = options.petEvolutionRouteCatalog || loadPetEvolutionRouteCatalog({
+    growthCatalog: petGrowthCatalog,
+    paidResetCatalog: petPaidResetPolicyCatalog,
+    encounterCatalog: petEncounterAuthority.catalog,
+  });
   const manualEncounterAccess = options.manualEncounterAccess || createManualEncounterAccess({
     catalog: petEncounterAuthority.catalog,
     rebirthTrials: rebirthTrialDocument(),
+    evolutionRoutes: petEvolutionRouteCatalog,
     qualificationClaimsKey: QUALIFICATION_BATTLE_CLAIMS_KEY,
     finalProofId: PLAYER_REBIRTH_FINAL_BOSS_PROOF_ID,
     mmTrialInteractionId: "firebud_pet_mm_trial_mentor",
@@ -15153,6 +15160,9 @@ function currentProfileQuestId(profile) {
 }
 
 function questAvailableForProfile(profile, quest, checkLevel = true) {
+  if (quest && quest.runtimeEnabled === false) {
+    return false;
+  }
   if (checkLevel && questPlayerLevel(profile) < questRequiredLevel(quest)) {
     return false;
   }

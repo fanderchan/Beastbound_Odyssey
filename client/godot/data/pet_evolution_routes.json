@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "pet_evolution_routes_v1",
+  "balanceVersion": "pet_evolution_balance_v1",
+  "runtimeEnabled": false,
+  "disabledMessage": "宠物进化正在完成最终安全验证，当前不会消耗宠物或材料。",
+  "qualityProjection": {
+    "lv1FourV": "per_stat_species_percentile_projection_v1",
+    "hiddenGrowth": "private_per_stat_species_quantile_projection_v1",
+    "preserveIndependentDimensions": true,
+    "rerollAllowed": false,
+    "publicCombinedScore": false
+  },
+  "materialEncounters": [
+    {
+      "sourceId": "evolution_shared_core_floor_v1",
+      "kind": "shared_floor_core",
+      "mapId": "shadow_oath_cavern_f5",
+      "encounterZoneId": "shadow_oath_evolution_core_floor",
+      "interactionId": "shadow_oath_evolution_core_npc",
+      "encounterGroupId": "shadow_oath_evolution_floor_core",
+      "rewardTableId": "shadow_oath_evolution_floor_core",
+      "itemId": "pet_evolution_resonance_core",
+      "itemBinding": "bound",
+      "itemCountPerVictory": 1,
+      "minPlayerLevel": 140,
+      "minPlayerCount": 2,
+      "enemyCount": 10,
+      "repeatable": true,
+      "personalReward": true
+    },
+    {
+      "sourceId": "wuli_crystal_lineage_floor_v1",
+      "kind": "lineage_material",
+      "mapId": "earth_vein_cave_f4",
+      "encounterZoneId": "earth_vein_evolution_lineage_floor",
+      "interactionId": "earth_vein_evolution_lineage_npc",
+      "encounterGroupId": "earth_vein_evolution_lineage",
+      "rewardTableId": "earth_vein_evolution_lineage",
+      "itemId": "pet_evolution_wuli_crystal_scale",
+      "itemBinding": "unbound",
+      "itemCountPerVictory": 1,
+      "minPlayerLevel": 120,
+      "minPlayerCount": 2,
+      "enemyCount": 10,
+      "repeatable": true,
+      "personalReward": true
+    },
+    {
+      "sourceId": "driftfox_moon_gale_lineage_floor_v1",
+      "kind": "lineage_material",
+      "mapId": "gale_breath_cave_f4",
+      "encounterZoneId": "gale_breath_evolution_lineage_floor",
+      "interactionId": "gale_breath_evolution_lineage_npc",
+      "encounterGroupId": "gale_breath_evolution_lineage",
+      "rewardTableId": "gale_breath_evolution_lineage",
+      "itemId": "pet_evolution_driftfox_moon_plume",
+      "itemBinding": "unbound",
+      "itemCountPerVictory": 1,
+      "minPlayerLevel": 120,
+      "minPlayerCount": 2,
+      "enemyCount": 10,
+      "repeatable": true,
+      "personalReward": true
+    }
+  ],
+  "routes": [
+    {
+      "routeId": "wuli_crystal_evolution_v1",
+      "lineId": "wuli",
+      "sourceFormId": "wuli_normal_tough_earth10",
+      "targetFormId": "wuli_evolved_crystal_earth8_water2",
+      "sourceGrowthProfileId": "wuli_normal_tough_earth10_v1",
+      "targetGrowthProfileId": "wuli_evolved_crystal_earth8_water2_v1",
+      "license": {
+        "questId": "quest_wuli_evolution_license",
+        "abilityId": "pet_evolution_wuli_license",
+        "oneTime": true,
+        "directResult": false
+      },
+      "eligibility": {
+        "requiredRebirthCount": 1,
+        "requiredLevel": 140,
+        "requiredGrowthModelVersion": "pet_growth_authority_v1"
+      },
+      "cost": {
+        "stoneCoins": 300000,
+        "walletPolicyId": "bound_first_split",
+        "items": [
+          {"itemId": "pet_evolution_resonance_core", "count": 8, "sourceId": "evolution_shared_core_floor_v1"},
+          {"itemId": "pet_evolution_wuli_crystal_scale", "count": 12, "sourceId": "wuli_crystal_lineage_floor_v1"}
+        ]
+      },
+      "result": {
+        "level": 1,
+        "rebirthCount": 1,
+        "terminalPathId": "evolution_terminal_v1",
+        "normalSecondRebirthAllowed": false,
+        "fusionMaterialAllowed": false,
+        "successRate": 1.0,
+        "failureConsumes": false,
+        "preserveInstanceIdentity": true,
+        "preserveBindingAndLock": true
+      },
+      "skills": {
+        "defaultActionIds": ["pet_attack", "pet_defend", "pet_stone_gaze", "pet_focus_bite"],
+        "passiveSkillId": "wuli_hard_shell",
+        "preserveLearnedAndInherited": true
+      },
+      "effort": {
+        "sharedCoreVictories": 8,
+        "lineageVictories": 12,
+        "deterministicVictories": 20,
+        "normalizedRepeatableEffort": 150,
+        "normalizedFirstUnlockEffort": 170
+      },
+      "paidResetPriceTierId": "diamond_evolution",
+      "assetGate": {
+        "status": "deferred",
+        "formalAssetRequiredBeforeRuntime": true,
+        "placeholderAllowedForQa": true,
+        "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal/",
+        "requiredAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"]
+      },
+      "presentation": {
+        "name": "晶甲乌力",
+        "role": "团队坦克 / 单体石化",
+        "counterplay": "速度慢，怕睡眠、混乱、净化与绕前排点杀"
+      }
+    },
+    {
+      "routeId": "driftfox_moon_gale_evolution_v1",
+      "lineId": "driftfox",
+      "sourceFormId": "driftfox_highland_wind9_earth1",
+      "targetFormId": "driftfox_evolved_moon_gale_wind7_water3",
+      "sourceGrowthProfileId": "driftfox_highland_wind9_earth1_v1",
+      "targetGrowthProfileId": "driftfox_evolved_moon_gale_wind7_water3_v1",
+      "license": {
+        "questId": "quest_driftfox_evolution_license",
+        "abilityId": "pet_evolution_driftfox_license",
+        "oneTime": true,
+        "directResult": false
+      },
+      "eligibility": {
+        "requiredRebirthCount": 1,
+        "requiredLevel": 140,
+        "requiredGrowthModelVersion": "pet_growth_authority_v1"
+      },
+      "cost": {
+        "stoneCoins": 300000,
+        "walletPolicyId": "bound_first_split",
+        "items": [
+          {"itemId": "pet_evolution_resonance_core", "count": 8, "sourceId": "evolution_shared_core_floor_v1"},
+          {"itemId": "pet_evolution_driftfox_moon_plume", "count": 12, "sourceId": "driftfox_moon_gale_lineage_floor_v1"}
+        ]
+      },
+      "result": {
+        "level": 1,
+        "rebirthCount": 1,
+        "terminalPathId": "evolution_terminal_v1",
+        "normalSecondRebirthAllowed": false,
+        "fusionMaterialAllowed": false,
+        "successRate": 1.0,
+        "failureConsumes": false,
+        "preserveInstanceIdentity": true,
+        "preserveBindingAndLock": true
+      },
+      "skills": {
+        "defaultActionIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry", "pet_focus_bite"],
+        "passiveSkillId": "bui_resistant_skin",
+        "preserveLearnedAndInherited": true
+      },
+      "effort": {
+        "sharedCoreVictories": 8,
+        "lineageVictories": 12,
+        "deterministicVictories": 20,
+        "normalizedRepeatableEffort": 150,
+        "normalizedFirstUnlockEffort": 170
+      },
+      "paidResetPriceTierId": "diamond_evolution",
+      "assetGate": {
+        "status": "deferred",
+        "formalAssetRequiredBeforeRuntime": true,
+        "placeholderAllowedForQa": true,
+        "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale/",
+        "requiredAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"]
+      },
+      "presentation": {
+        "name": "月岚风狐",
+        "role": "高速控制 / 单体点杀",
+        "counterplay": "血防低，怕抗性、净化、高速集火与保护拖延"
+      }
+    }
+  ]
+}

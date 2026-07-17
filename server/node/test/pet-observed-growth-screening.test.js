@@ -50,7 +50,7 @@ test("production observed-growth catalog covers all pets and reproduces the visi
 
   assert.equal(screening.schemaVersion, 1);
   assert.equal(screening.minimumLevel, MINIMUM_SCREENING_LEVEL);
-  assert.equal(screening.profileCount, 32);
+  assert.equal(screening.profileCount, 34);
   assert.equal(screening.powerFormulaId, "stoneage_like_v1");
   assert.deepEqual(result, {
     schemaVersion: 1,

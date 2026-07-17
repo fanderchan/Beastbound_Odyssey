@@ -80,6 +80,30 @@
         {"formId": "rebirth_beast_water_lv50", "name": "玄影水灵兽", "level": 106, "catchable": false, "battleStats": {"maxHp": 1740, "attack": 208, "defense": 134, "agility": 112}}
       ],
       "previewText": "玄影洞窟顶层有十只转生守护兽。"
+    },
+    {
+      "id": "shadow_oath_evolution_core_floor",
+      "name": "玄影共鸣祭坛",
+      "rects": [[25, 12, 3, 3]],
+      "encounterRate": 1.0,
+      "manualOnly": true,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "shadow_oath_evolution_floor_core",
+      "rewardTableId": "shadow_oath_evolution_floor_core",
+      "fixedWildPets": [
+        {"formId": "rebirth_beast_earth_lv50", "name": "玄影地核兽", "level": 140, "catchable": false, "battleStats": {"maxHp": 4200, "attack": 430, "defense": 390, "agility": 210}},
+        {"formId": "rebirth_beast_water_lv50", "name": "玄影水核兽", "level": 140, "catchable": false, "battleStats": {"maxHp": 3900, "attack": 420, "defense": 350, "agility": 240}},
+        {"formId": "blue_man_dragon_water10", "name": "玄影共鸣兽王", "level": 140, "catchable": false, "battleStats": {"maxHp": 5600, "attack": 560, "defense": 410, "agility": 430}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_sleep_powder", "pet_confuse_cry", "pet_stone_gaze", "pet_focus_bite"]},
+        {"formId": "rebirth_beast_fire_lv50", "name": "玄影火核兽", "level": 140, "catchable": false, "battleStats": {"maxHp": 3700, "attack": 500, "defense": 320, "agility": 285}},
+        {"formId": "rebirth_beast_wind_lv50", "name": "玄影风核兽", "level": 140, "catchable": false, "battleStats": {"maxHp": 3500, "attack": 450, "defense": 300, "agility": 410}},
+        {"formId": "rebirth_beast_earth_lv50", "name": "玄影地核兽", "level": 139, "catchable": false, "battleStats": {"maxHp": 4140, "attack": 424, "defense": 384, "agility": 206}},
+        {"formId": "rebirth_beast_water_lv50", "name": "玄影水核兽", "level": 139, "catchable": false, "battleStats": {"maxHp": 3840, "attack": 414, "defense": 344, "agility": 236}},
+        {"formId": "rebirth_beast_fire_lv50", "name": "玄影火核兽", "level": 139, "catchable": false, "battleStats": {"maxHp": 3640, "attack": 494, "defense": 314, "agility": 280}},
+        {"formId": "rebirth_beast_wind_lv50", "name": "玄影风核兽", "level": 139, "catchable": false, "battleStats": {"maxHp": 3440, "attack": 444, "defense": 294, "agility": 404}},
+        {"formId": "blue_man_dragon_water10", "name": "玄影共鸣人龙", "level": 140, "catchable": false, "battleStats": {"maxHp": 3800, "attack": 525, "defense": 330, "agility": 390}}
+      ],
+      "previewText": "组队击败玄影共鸣兽群，可获得个人绑定的进化核心。"
     }
   ],
   "interactionPoints": [
@@ -99,6 +123,20 @@
         "玄影转生守护兽镇守着最终试炼。",
         "击败它才会记录玄影守护证明。"
       ]
+    },
+    {
+      "id": "shadow_oath_evolution_core_npc",
+      "name": "玄影共鸣兽王",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [26, 13],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "shadow_oath_evolution_core_floor",
+      "encounterGroupId": "shadow_oath_evolution_floor_core",
+      "option": "挑战",
+      "dialog": ["共鸣兽核只会回应并肩完成终局试炼的人。", "进化系统完成前，这场试炼不会开放。"]
     },
     {
       "id": "shadow_oath_stair_5_to_4",

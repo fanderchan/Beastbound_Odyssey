@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PetEvolutionBalanceModel := preload("res://scripts/progression/pet_evolution_balance_model.gd")
+const PetEvolutionRouteCatalogModel := preload("res://scripts/progression/pet_evolution_route_catalog_model.gd")
 
 const BALANCE_DIR := "res://data/balance"
 const BALANCE_SETS_PATH := BALANCE_DIR + "/balance_sets.json"
@@ -10,6 +11,16 @@ const PET_GROWTH_PROFILES_PATH := BALANCE_DIR + "/pet_growth_profiles.json"
 const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_profiles.json"
 const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
 const PET_EVOLUTION_BALANCE_PATH := BALANCE_DIR + "/pet_evolution_balance.json"
+const PET_EVOLUTION_ROUTES_PATH := "res://data/pet_evolution_routes.json"
+const PET_TEMPLATES_PATH := "res://data/pet_templates.json"
+const PET_PAID_RESET_POLICY_PATH := BALANCE_DIR + "/pet_paid_reset_policy.json"
+const BAG_ITEMS_PATH := "res://data/bag_items.json"
+const QUESTS_PATH := "res://data/quests.json"
+const BATTLE_ACTIONS_PATH := "res://data/battle_actions.json"
+const BATTLE_PASSIVES_PATH := "res://data/battle_passive_skills.json"
+const EARTH_EVOLUTION_MAP_PATH := "res://data/earth_vein_cave_f4_map.json"
+const GALE_EVOLUTION_MAP_PATH := "res://data/gale_breath_cave_f4_map.json"
+const SHADOW_EVOLUTION_MAP_PATH := "res://data/shadow_oath_cavern_f5_map.json"
 const COMBAT_FORMULAS_PATH := BALANCE_DIR + "/combat_formulas.json"
 const CAPTURE_FORMULA_PATH := BALANCE_DIR + "/capture_formula.json"
 const REWARD_ECONOMY_PATH := BALANCE_DIR + "/reward_economy.json"
@@ -26,6 +37,7 @@ const CORE_NUMERIC_DIGEST_PATHS: Array[String] = [
 	PET_GROWTH_SPECIES_PROFILES_PATH,
 	PET_REBIRTH_BALANCE_PATH,
 	PET_EVOLUTION_BALANCE_PATH,
+	PET_EVOLUTION_ROUTES_PATH,
 	COMBAT_FORMULAS_PATH,
 	CAPTURE_FORMULA_PATH,
 	REWARD_ECONOMY_PATH,
@@ -68,6 +80,10 @@ static func pet_rebirth_balance() -> Dictionary:
 
 static func pet_evolution_balance() -> Dictionary:
 	return _data(PET_EVOLUTION_BALANCE_PATH)
+
+
+static func pet_evolution_routes() -> Dictionary:
+	return _data(PET_EVOLUTION_ROUTES_PATH)
 
 
 static func combat_formulas() -> Dictionary:
@@ -464,6 +480,7 @@ static func validation_errors() -> Array[String]:
 	_validate_pet_growth_species_profiles(errors)
 	_validate_pet_rebirth_balance(errors)
 	_validate_pet_evolution_balance(errors)
+	_validate_pet_evolution_routes(errors)
 	_validate_combat_formulas(errors)
 	_validate_capture_formula(errors)
 	_validate_reward_economy(errors)
@@ -780,18 +797,32 @@ static func _validate_pet_rebirth_balance(errors: Array[String]) -> void:
 		errors.append("pet_rebirth_balance.evaluation.reference.targetLevel 必须等于满准备等级")
 	if int(reference.get("stonePointsPerStat", 0)) != int(stone.get("capacityPerStat", 0)):
 		errors.append("pet_rebirth_balance.evaluation.reference.stonePointsPerStat 必须使用满石")
-	if str(reference.get("profileSelector", "")) != "all_non_mm_growth_profiles":
+	if str(reference.get("profileSelector", "")) != "all_rebirth_eligible_non_mm_growth_profiles":
 		errors.append("pet_rebirth_balance.evaluation.reference.profileSelector 无效")
 	if str(reference.get("stageRolls", "")) != "independent_uniform_percentile":
 		errors.append("pet_rebirth_balance.evaluation.reference.stageRolls 无效")
 	if int(reference.get("samplesPerProfile", 0)) < 10000:
 		errors.append("pet_rebirth_balance.evaluation.reference.samplesPerProfile 不得低于10000")
+	var terminal_evolution_profile_ids := {}
+	var route_values = pet_evolution_routes().get("routes", [])
+	if route_values is Array:
+		for route_value in route_values as Array:
+			if not (route_value is Dictionary):
+				continue
+			var route := route_value as Dictionary
+			var result_value = route.get("result", {})
+			if not (result_value is Dictionary):
+				continue
+			var result := result_value as Dictionary
+			if result.get("normalSecondRebirthAllowed", null) == false:
+				terminal_evolution_profile_ids[str(route.get("targetGrowthProfileId", ""))] = true
 	var ordinary_profile_count := 0
 	for profile in pet_growth_species_profile_list():
-		if not str(profile.get("profileId", "")).begins_with("pet_rebirth_mm_"):
+		var profile_id := str(profile.get("profileId", ""))
+		if not profile_id.begins_with("pet_rebirth_mm_") and not terminal_evolution_profile_ids.has(profile_id):
 			ordinary_profile_count += 1
 	if int(reference.get("profileCount", 0)) != ordinary_profile_count:
-		errors.append("pet_rebirth_balance.evaluation.reference.profileCount 与当前非MM成长档数量不一致")
+		errors.append("pet_rebirth_balance.evaluation.reference.profileCount 与当前可转生非MM成长档数量不一致")
 	var stage_thresholds := evaluation.get("stageThresholds", {}) as Dictionary
 	for stage in [1, 2]:
 		_validate_pet_rebirth_threshold_series(
@@ -815,6 +846,26 @@ static func _validate_pet_evolution_balance(errors: Array[String]) -> void:
 	errors.append_array(PetEvolutionBalanceModel.validation_errors(
 		pet_evolution_balance(),
 		pet_rebirth_balance()
+	))
+
+
+static func _validate_pet_evolution_routes(errors: Array[String]) -> void:
+	errors.append_array(PetEvolutionRouteCatalogModel.validation_errors(
+		pet_evolution_routes(),
+		pet_evolution_balance(),
+		_data(PET_TEMPLATES_PATH),
+		pet_growth_species_profiles(),
+		_data(PET_PAID_RESET_POLICY_PATH),
+		_data(BAG_ITEMS_PATH),
+		_data(BATTLE_REWARDS_PATH),
+		_data(QUESTS_PATH),
+		_data(BATTLE_ACTIONS_PATH),
+		_data(BATTLE_PASSIVES_PATH),
+		{
+			"earth_vein_cave_f4": _data(EARTH_EVOLUTION_MAP_PATH),
+			"gale_breath_cave_f4": _data(GALE_EVOLUTION_MAP_PATH),
+			"shadow_oath_cavern_f5": _data(SHADOW_EVOLUTION_MAP_PATH),
+		}
 	))
 
 

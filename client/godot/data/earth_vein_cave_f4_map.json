@@ -60,6 +60,30 @@
         {"formId": "wuli_normal_orange_fire10", "name": "岩脉乌力", "level": 96, "battleStats": {"maxHp": 930, "attack": 134, "defense": 78, "agility": 78}}
       ],
       "previewText": "岩脉洞穴顶层有十只守护兽镇守地之戒。"
+    },
+    {
+      "id": "earth_vein_evolution_lineage_floor",
+      "name": "岩脉共鸣台",
+      "rects": [[25, 12, 3, 3]],
+      "encounterRate": 1.0,
+      "manualOnly": true,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "earth_vein_evolution_lineage",
+      "rewardTableId": "earth_vein_evolution_lineage",
+      "fixedWildPets": [
+        {"formId": "wuli_normal_tough_earth10", "name": "岩晶乌力", "level": 120, "catchable": false, "battleStats": {"maxHp": 2350, "attack": 300, "defense": 380, "agility": 110}},
+        {"formId": "mossback_marsh_earth7_water3", "name": "岩晶苔背兽", "level": 120, "catchable": false, "battleStats": {"maxHp": 2500, "attack": 292, "defense": 400, "agility": 104}},
+        {"formId": "bui_normal_thick_earth10", "name": "岩脉共鸣守卫", "level": 126, "catchable": false, "battleStats": {"maxHp": 3400, "attack": 390, "defense": 480, "agility": 128}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_stone_gaze", "pet_focus_bite"]},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩晶乌力", "level": 121, "catchable": false, "battleStats": {"maxHp": 2400, "attack": 304, "defense": 386, "agility": 112}},
+        {"formId": "mossback_marsh_earth7_water3", "name": "岩晶苔背兽", "level": 121, "catchable": false, "battleStats": {"maxHp": 2540, "attack": 296, "defense": 406, "agility": 106}},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩晶乌力", "level": 119, "catchable": false, "battleStats": {"maxHp": 2300, "attack": 296, "defense": 374, "agility": 108}},
+        {"formId": "bui_normal_thick_earth10", "name": "岩晶布伊", "level": 120, "catchable": false, "battleStats": {"maxHp": 2280, "attack": 315, "defense": 365, "agility": 118}},
+        {"formId": "mossback_marsh_earth7_water3", "name": "岩晶苔背兽", "level": 119, "catchable": false, "battleStats": {"maxHp": 2460, "attack": 288, "defense": 394, "agility": 102}},
+        {"formId": "wuli_normal_tough_earth10", "name": "岩晶乌力", "level": 120, "catchable": false, "battleStats": {"maxHp": 2360, "attack": 300, "defense": 382, "agility": 110}},
+        {"formId": "bui_normal_thick_earth10", "name": "岩晶布伊", "level": 119, "catchable": false, "battleStats": {"maxHp": 2240, "attack": 310, "defense": 360, "agility": 116}}
+      ],
+      "previewText": "组队击败共鸣守卫，可获得乌力族系进化材料。"
     }
   ],
   "interactionPoints": [
@@ -79,6 +103,20 @@
         "岩脉守护兽镇守着地之戒。",
         "击败它才能取得任务物品。"
       ]
+    },
+    {
+      "id": "earth_vein_evolution_lineage_npc",
+      "name": "岩脉共鸣守卫",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [26, 13],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "earth_vein_evolution_lineage_floor",
+      "encounterGroupId": "earth_vein_evolution_lineage",
+      "option": "挑战",
+      "dialog": ["岩脉深处的甲片只回应真正的团队。", "进化系统完成前，这场试炼不会开放。"]
     },
     {
       "id": "earth_vein_stair_4_to_3",

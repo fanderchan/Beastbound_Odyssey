@@ -36,6 +36,7 @@ function createManualEncounterAccess(options = {}) {
   const canReceiveItem = requiredFunction(options.canReceiveItem, "canReceiveItem");
   const canReceivePet = requiredFunction(options.canReceivePet, "canReceivePet");
   const mmTrialAccess = requiredFunction(options.mmTrialAccess, "mmTrialAccess");
+  const evolutionRoutes = requiredObject(options.evolutionRoutes, "evolutionRoutes");
 
   const manualInteractions = discoverManualEncounterInteractions(catalog);
   const rulesBySource = new Map();
@@ -126,6 +127,30 @@ function createManualEncounterAccess(options = {}) {
     sourceName: mmSource.name,
   }));
 
+  for (const rawRule of requiredArray(
+    evolutionRoutes.manualEncounterRules,
+    "evolutionRoutes.manualEncounterRules",
+  )) {
+    const mapId = requiredIdentifier(rawRule.mapId, "evolution material mapId");
+    const interactionId = requiredIdentifier(rawRule.interactionId, "evolution material interactionId");
+    const groupId = requiredIdentifier(rawRule.groupId, "evolution material groupId");
+    const source = requireManualInteraction(manualInteractions, mapId, interactionId, groupId);
+    addRule(rulesBySource, Object.freeze({
+      kind: "evolution_material",
+      mapId,
+      interactionId,
+      groupId,
+      claimId: "",
+      minAttemptLevel: requiredPositiveInteger(rawRule.minAttemptLevel, "evolution material minAttemptLevel"),
+      minParticipantCount: requiredPositiveInteger(rawRule.minParticipantCount, "evolution material minParticipantCount"),
+      rewardItemId: requiredIdentifier(rawRule.rewardItemId, "evolution material rewardItemId"),
+      rewardName: requiredText(rawRule.rewardName || rawRule.rewardItemId, "evolution material rewardName"),
+      sourceName: source.name,
+      runtimeEnabled: rawRule.runtimeEnabled === true,
+      disabledMessage: safeMessage(rawRule.disabledMessage, "宠物进化试炼暂未开放。"),
+    }));
+  }
+
   const missingRuleSources = [...manualInteractions.keys()].filter(
     (sourceKey) => !rulesBySource.has(sourceKey),
   );
@@ -176,6 +201,18 @@ function createManualEncounterAccess(options = {}) {
       const participants = normalizedParticipants(input.participants);
       if (!participants.ok) {
         return failure(true, participants.code, participants.message);
+      }
+      if (rule.kind === "evolution_material") {
+        if (!rule.runtimeEnabled) {
+          return failure(true, "manual_evolution_route_disabled", rule.disabledMessage);
+        }
+        if (participants.values.length < rule.minParticipantCount) {
+          return failure(
+            true,
+            "manual_evolution_party_required",
+            `进化材料挑战至少需要${rule.minParticipantCount}名真实玩家组队。`,
+          );
+        }
       }
       for (let index = 0; index < participants.values.length; index += 1) {
         const participant = participants.values[index];
@@ -233,6 +270,9 @@ function createManualEncounterAccess(options = {}) {
     }
     if (rule.kind === "mm_trial") {
       return authorizeMmTrial(profile, name);
+    }
+    if (rule.kind === "evolution_material") {
+      return authorizeEvolutionMaterial(rule, profile, name);
     }
     return participantFailure(
       name,
@@ -339,6 +379,25 @@ function createManualEncounterAccess(options = {}) {
     return {ok: true};
   }
 
+  function authorizeEvolutionMaterial(rule, profile, name) {
+    const level = currentLevel(profile);
+    if (level < rule.minAttemptLevel) {
+      return participantFailure(
+        name,
+        "manual_evolution_level_required",
+        `需要人物达到 Lv${rule.minAttemptLevel} 才能挑战。`,
+      );
+    }
+    if (!callbackAllows(canReceiveItem(profile, rule.rewardItemId, 1))) {
+      return participantFailure(
+        name,
+        "manual_evolution_reward_capacity_full",
+        `没有空间接收${rule.rewardName}，请先整理背包。`,
+      );
+    }
+    return {ok: true};
+  }
+
   function currentLevel(profile) {
     return Math.max(0, Math.trunc(Number(profileLevel(profile) || 0)));
   }
@@ -431,7 +490,7 @@ function addRule(rulesBySource, rule) {
 }
 
 function publicRule(rule) {
-  return Object.freeze({
+  const result = {
     kind: rule.kind,
     mapId: rule.mapId,
     interactionId: rule.interactionId,
@@ -440,7 +499,12 @@ function publicRule(rule) {
     minAttemptLevel: rule.minAttemptLevel,
     rewardItemId: String(rule.rewardItemId || ""),
     schemaVersion: 1,
-  });
+  };
+  if (rule.kind === "evolution_material") {
+    result.runtimeEnabled = rule.runtimeEnabled === true;
+    result.minParticipantCount = rule.minParticipantCount;
+  }
+  return Object.freeze(result);
 }
 
 function normalizedParticipants(value) {

@@ -61,6 +61,30 @@
         {"formId": "wuli_normal_orange_fire10", "name": "岚息乌力", "level": 96, "battleStats": {"maxHp": 940, "attack": 134, "defense": 78, "agility": 86}}
       ],
       "previewText": "岚息洞穴顶层有十只守护兽镇守风之戒。"
+    },
+    {
+      "id": "gale_breath_evolution_lineage_floor",
+      "name": "岚息共鸣台",
+      "rects": [[25, 12, 3, 3]],
+      "encounterRate": 1.0,
+      "manualOnly": true,
+      "enemyCount": 10,
+      "formationTemplate": "10v10",
+      "encounterGroupId": "gale_breath_evolution_lineage",
+      "rewardTableId": "gale_breath_evolution_lineage",
+      "fixedWildPets": [
+        {"formId": "driftfox_highland_wind9_earth1", "name": "月痕风狐", "level": 120, "catchable": false, "battleStats": {"maxHp": 1900, "attack": 390, "defense": 220, "agility": 420}},
+        {"formId": "bui_normal_yellow_wind10", "name": "岚息布伊", "level": 120, "catchable": false, "battleStats": {"maxHp": 2050, "attack": 370, "defense": 235, "agility": 385}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "月岚共鸣守卫", "level": 126, "catchable": false, "battleStats": {"maxHp": 3000, "attack": 485, "defense": 270, "agility": 490}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry", "pet_focus_bite"]},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "岚角兽", "level": 121, "catchable": false, "battleStats": {"maxHp": 2100, "attack": 430, "defense": 225, "agility": 370}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "月痕风狐", "level": 121, "catchable": false, "battleStats": {"maxHp": 1930, "attack": 396, "defense": 222, "agility": 426}},
+        {"formId": "bui_normal_yellow_wind10", "name": "岚息布伊", "level": 119, "catchable": false, "battleStats": {"maxHp": 2010, "attack": 365, "defense": 230, "agility": 378}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "月痕风狐", "level": 119, "catchable": false, "battleStats": {"maxHp": 1870, "attack": 384, "defense": 216, "agility": 414}},
+        {"formId": "emberhorn_gale_fire5_wind5", "name": "岚角兽", "level": 120, "catchable": false, "battleStats": {"maxHp": 2070, "attack": 424, "defense": 222, "agility": 364}},
+        {"formId": "driftfox_highland_wind9_earth1", "name": "月痕风狐", "level": 120, "catchable": false, "battleStats": {"maxHp": 1900, "attack": 390, "defense": 220, "agility": 420}},
+        {"formId": "bui_normal_yellow_wind10", "name": "岚息布伊", "level": 121, "catchable": false, "battleStats": {"maxHp": 2080, "attack": 375, "defense": 238, "agility": 392}}
+      ],
+      "previewText": "组队击败共鸣守卫，可获得风狐族系进化材料。"
     }
   ],
   "interactionPoints": [
@@ -80,6 +104,20 @@
         "岚息守护兽镇守着风之戒。",
         "击败它才能取得任务物品。"
       ]
+    },
+    {
+      "id": "gale_breath_evolution_lineage_npc",
+      "name": "月岚共鸣守卫",
+      "kind": "guardian",
+      "facilityType": "guardian",
+      "movementCollision": "block",
+      "cell": [26, 13],
+      "action": "挑战",
+      "trigger": "interact",
+      "encounterZoneId": "gale_breath_evolution_lineage_floor",
+      "encounterGroupId": "gale_breath_evolution_lineage",
+      "option": "挑战",
+      "dialog": ["只有能追上月岚的队伍，才配取得尾羽。", "进化系统完成前，这场试炼不会开放。"]
     },
     {
       "id": "gale_breath_stair_4_to_3",

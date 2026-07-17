@@ -10,15 +10,20 @@ const {
 const {
   createManualEncounterAccess,
 } = require("../src/auth/manual-encounter-access");
+const {
+  loadPetEvolutionRouteCatalog,
+} = require("../src/auth/pet-evolution-route-catalog");
 
 const CLAIMS_KEY = "rebirthQualificationClaims";
 const FINAL_PROOF_ID = "shadow_oath_rebirth_guardian";
 const MM_INTERACTION_ID = "firebud_pet_mm_trial_mentor";
+const evolutionRoutes = loadPetEvolutionRouteCatalog();
 
 function createAccess(overrides = {}) {
   return createManualEncounterAccess({
     catalog: loadPetEncounterCatalog(),
     rebirthTrials,
+    evolutionRoutes,
     qualificationClaimsKey: CLAIMS_KEY,
     finalProofId: FINAL_PROOF_ID,
     mmTrialInteractionId: MM_INTERACTION_ID,
@@ -73,15 +78,15 @@ function allRingItems() {
   return rebirthTrials.elementCaves.map((cave) => ({itemId: cave.ringItemId, count: 1}));
 }
 
-test("manual encounter rules exactly cover the four ring guardians, final guardian and MM trial", () => {
+test("manual encounter rules exactly cover rebirth, MM and the gated evolution material routes", () => {
   const access = createAccess();
-  assert.equal(access.rules.length, 6);
+  assert.equal(access.rules.length, 9);
   assert.deepEqual(
     access.rules.reduce((counts, rule) => ({
       ...counts,
       [rule.kind]: Number(counts[rule.kind] || 0) + 1,
     }), {}),
-    {ring_guardian: 4, final_guardian: 1, mm_trial: 1},
+    {ring_guardian: 4, final_guardian: 1, mm_trial: 1, evolution_material: 3},
   );
   for (const cave of rebirthTrials.elementCaves) {
     assert.equal(access.rules.some((rule) => (
@@ -93,6 +98,44 @@ test("manual encounter rules exactly cover the four ring guardians, final guardi
       && rule.minAttemptLevel === cave.minAttemptLevel
     )), true);
   }
+  assert.equal(access.rules.filter((rule) => rule.kind === "evolution_material").every((rule) => rule.runtimeEnabled === false), true);
+});
+
+test("evolution material encounters stay closed until the route gate opens, then enforce real-player party, level and reward capacity", () => {
+  const access = createAccess();
+  const disabledRule = access.rules.find((entry) => entry.groupId === "shadow_oath_evolution_floor_core");
+  const leader = participant("进化队长", profile(), "leader");
+  let checked = access.authorize({...requestFor(disabledRule), participants: [leader]});
+  assert.equal(checked.ok, false);
+  assert.equal(checked.code, "manual_evolution_route_disabled");
+  assert.match(checked.message, /最终安全验证/);
+
+  const enabledRoutes = {
+    ...evolutionRoutes,
+    manualEncounterRules: evolutionRoutes.manualEncounterRules.map((rule) => ({...rule, runtimeEnabled: true})),
+  };
+  const enabled = createAccess({evolutionRoutes: enabledRoutes});
+  const coreRule = enabled.rules.find((entry) => entry.groupId === "shadow_oath_evolution_floor_core");
+  const member = participant("进化队员", profile(), "member");
+  checked = enabled.authorize({...requestFor(coreRule), participants: [leader]});
+  assert.equal(checked.code, "manual_evolution_party_required");
+  assert.match(checked.message, /2名真实玩家/);
+
+  leader.profile.player.level = 139;
+  checked = enabled.authorize({...requestFor(coreRule), participants: [leader, member]});
+  assert.equal(checked.code, "manual_evolution_level_required");
+  assert.match(checked.message, /Lv140/);
+
+  leader.profile.player.level = 140;
+  leader.profile.canReceiveItem = false;
+  checked = enabled.authorize({...requestFor(coreRule), participants: [leader, member]});
+  assert.equal(checked.code, "manual_evolution_reward_capacity_full");
+  assert.match(checked.message, /共鸣兽核/);
+
+  leader.profile.canReceiveItem = true;
+  checked = enabled.authorize({...requestFor(coreRule), participants: [leader, member]});
+  assert.equal(checked.ok, true);
+  assert.deepEqual(checked.claims, []);
 });
 
 test("construction fails when a future manual encounter interaction has no qualification rule", () => {

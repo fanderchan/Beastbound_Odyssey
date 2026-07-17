@@ -659,7 +659,7 @@ test("HTTP GM paid pet reset config publishes exact catalog and revision-safe ov
   const initial = await fetchJson(`${base}/gm/pets/paid-reset/config`, {headers});
   assert.equal(initial.ok, true);
   assert.equal(initial.config.revision, 0);
-  assert.equal(initial.resolvedForms.length, 32);
+  assert.equal(initial.resolvedForms.length, 34);
 
   const updated = await fetchJson(`${base}/gm/pets/paid-reset/config`, {
     method: "PUT",

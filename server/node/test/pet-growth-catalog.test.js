@@ -63,9 +63,9 @@ test("default pet growth catalog strictly links all current species profiles and
   const catalog = loadPetGrowthCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.profileCount, 32);
-  assert.equal(catalog.formCount, 32);
-  assert.equal(catalog.profiledFormCount, 32);
+  assert.equal(catalog.profileCount, 34);
+  assert.equal(catalog.formCount, 34);
+  assert.equal(catalog.profiledFormCount, 34);
   assert.deepEqual(catalog.orphanProfileIds, []);
   assert.deepEqual(catalog.wildCaptureGrowthPolicy, DEFAULT_WILD_CAPTURE_GROWTH_POLICY);
   assert.equal(Object.isFrozen(catalog.wildCaptureGrowthPolicy), true);
@@ -127,7 +127,7 @@ test("all production growth profiles carry a 10k monotonic Lv20 observation inte
   );
   const document = JSON.parse(fs.readFileSync(profilePath, "utf8"));
 
-  assert.equal(document.profiles.length, 32);
+  assert.equal(document.profiles.length, 34);
   for (const profile of document.profiles) {
     const observation = profile.growthObservation;
     assert.equal(observation.sampleCount, 10000, profile.profileId);
