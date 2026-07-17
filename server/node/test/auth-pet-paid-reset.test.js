@@ -37,6 +37,38 @@ test("authoritative paid reset atomically debits, resets, unbinds and exposes on
   const account = seedPaidResetAccount(service, {username: "paidresethappy"});
   const before = structuredClone(internalProfileForAccount(service, account.account.accountId));
 
+  const quote = service.getPetPaidResetQuote(account.session.token, {
+    instanceId: account.fixture.pet.instanceId,
+  });
+  assert.equal(quote.ok, true);
+  assert.equal(quote.paidResetQuote.profileRevision, account.profileRevision);
+  assert.equal(quote.paidResetQuote.configRevision, 0);
+  assert.deepEqual(quote.paidResetQuote.pet, {
+    instanceId: account.fixture.pet.instanceId,
+    formId: "rebirth_starter_four_spirit_cub",
+    formName: "四灵幼兽",
+    level: 88,
+    rebirthCount: 2,
+    enhanceLevel: 3,
+    binding: "bound",
+    paidResetCount: 0,
+  });
+  assert.deepEqual(quote.paidResetQuote.payment, {
+    currencyId: "diamonds",
+    amount: 300,
+    affordable: true,
+    available: 350,
+    shortfall: 0,
+    balances: {bound: 250, unbound: 100},
+    debits: [{binding: "bound", amount: 250}, {binding: "unbound", amount: 50}],
+  });
+  assert.deepEqual(quote.paidResetQuote.result, {level: 1, rebirthCount: 0, binding: "unbound"});
+  assert.equal(quote.paidResetQuote.consequences.clears.includes("growth_observation"), true);
+  assert.equal(quote.paidResetQuote.consequences.preserves.includes("hidden_growth"), true);
+  assert.equal(quote.paidResetQuote.consequences.nonRefunded.includes("consumed_rebirth_inputs"), true);
+  assert.equal(JSON.stringify(quote).includes(account.fixture.privateSeed), false);
+  assert.deepEqual(internalProfileForAccount(service, account.account.accountId), before);
+
   const direct = service.paidResetPet(account.session.token, resetRequest(account));
   assert.equal(direct.ok, false);
   assert.equal(direct.code, "idempotency_key_required");
@@ -164,4 +196,23 @@ test("stale quote, stale profile, insufficient currency and protected pets remai
       assert.deepEqual(service.snapshot(), before);
     });
   }
+});
+
+test("read-only quote reports a shortfall without mutating the profile", () => {
+  const service = createAuthService({store: createMemoryAuthStore(), now: () => NOW_MS});
+  const account = seedPaidResetAccount(service, {
+    username: "paidresetquotepoor",
+    diamonds: 10,
+    boundDiamonds: 20,
+  });
+  const before = structuredClone(service.snapshot());
+  const result = service.getPetPaidResetQuote(account.session.token, {
+    instanceId: account.fixture.pet.instanceId,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.paidResetQuote.payment.affordable, false);
+  assert.equal(result.paidResetQuote.payment.available, 30);
+  assert.equal(result.paidResetQuote.payment.shortfall, 270);
+  assert.deepEqual(result.paidResetQuote.payment.debits, []);
+  assert.deepEqual(service.snapshot(), before);
 });

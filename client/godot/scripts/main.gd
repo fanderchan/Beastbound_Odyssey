@@ -50,6 +50,7 @@ const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
+const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -770,6 +771,7 @@ var auto_battle_result_check: bool = false
 var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
 var auto_pet_growth_check: bool = false
+var auto_pet_paid_reset_ui_check: bool = false
 var auto_pet_individual_growth_check: bool = false
 var auto_pet_cultivation_check: bool = false
 var auto_pet_rebirth_mm_check: bool = false
@@ -1379,6 +1381,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_management_check")
 	elif auto_pet_growth_check:
 		call_deferred("_run_auto_pet_growth_check")
+	elif auto_pet_paid_reset_ui_check:
+		call_deferred("_run_auto_pet_paid_reset_ui_check")
 	elif auto_pet_individual_growth_check:
 		call_deferred("_run_auto_pet_individual_growth_check")
 	elif auto_pet_cultivation_check:
@@ -2048,6 +2052,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_management_check = true
 		elif arg == "--auto-pet-growth-check":
 			auto_pet_growth_check = true
+		elif arg == "--auto-pet-paid-reset-ui-check":
+			auto_pet_paid_reset_ui_check = true
 		elif arg == "--auto-pet-individual-growth-check":
 			auto_pet_individual_growth_check = true
 		elif arg == "--auto-pet-cultivation-check":
@@ -3291,6 +3297,10 @@ func _run_auto_pet_order_check() -> void:
 
 func _run_auto_pet_growth_check() -> void:
 	await _auto_checks()._run_auto_pet_growth_check()
+
+
+func _run_auto_pet_paid_reset_ui_check() -> void:
+	await PetPaidResetUiCheck.run(self)
 
 
 func _pet_stats_differ(first: Dictionary, second: Dictionary) -> bool:

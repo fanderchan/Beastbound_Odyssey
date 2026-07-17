@@ -10,6 +10,7 @@ const {
 } = require("./currency-wallet");
 const {
   applyPetPaidReset,
+  inspectPetPaidResetEligibility,
   preflightPetPaidReset,
 } = require("./pet-paid-reset");
 
@@ -19,9 +20,32 @@ const REQUEST_KEYS = new Set([
   "expectedProfileRevision",
   "expectedPriceConfigRevision",
 ]);
+const QUOTE_REQUEST_KEYS = new Set(["instanceId", "petId"]);
+const CLEAR_CONSEQUENCE_IDS = Object.freeze([
+  "level_and_exp",
+  "rebirth_stage",
+  "rebirth_growth_bonus",
+  "rebirth_history",
+  "growth_observation",
+]);
+const PRESERVE_CONSEQUENCE_IDS = Object.freeze([
+  "pet_identity",
+  "level_one_stats",
+  "hidden_growth",
+  "enhancement",
+  "active_passive_skills",
+  "learned_inherited_skills",
+  "evolution_lineage",
+]);
+const NON_REFUND_CONSEQUENCE_IDS = Object.freeze([
+  "training_time",
+  "consumed_rebirth_inputs",
+  "consumed_cultivation_inputs",
+]);
 
 function createPetPaidResetDomain(ctx) {
   const {
+    activeBattleRoomForAccount,
     clone,
     currentDurableOperation,
     expToNextLevel,
@@ -43,6 +67,109 @@ function createPetPaidResetDomain(ctx) {
     resolveSession,
     save,
   } = ctx;
+
+  function quote(token, payloadValue = {}) {
+    const request = normalizeQuoteRequest(payloadValue);
+    if (!request.ok) {
+      return fail(request.code, request.message);
+    }
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const binding = data.profileBindings && data.profileBindings[resolved.account.accountId];
+    const profileDoc = binding && binding.playerId && data.profiles
+      ? data.profiles[binding.playerId]
+      : null;
+    if (!binding || !profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
+      return fail("profile_missing", "请先创建角色档案。", {
+        profileBinding: binding || null,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const profile = profileDoc.profile;
+    if (typeof activeBattleRoomForAccount === "function" && activeBattleRoomForAccount(data, resolved.account.accountId)) {
+      return fail("battle_profile_mutation_locked", "战斗中不能重置宠物，请在战斗结束后重试。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    if (String(profile.offlineHang && profile.offlineHang.session && profile.offlineHang.session.status || "") === "active") {
+      return fail("offline_hang_active", "正在离线挂机，请先领取或取消离线收益。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const backpackConflict = typeof rawBackpackAssetConflict === "function"
+      ? rawBackpackAssetConflict(profile)
+      : null;
+    if (backpackConflict) {
+      return fail(backpackConflict.code, backpackConflict.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const petIndex = profilePetIndexById(profile, request.instanceId);
+    const pets = profilePetInstances(profile);
+    const pet = petIndex >= 0 ? pets[petIndex] : null;
+    if (!pet) {
+      return fail("pet_missing", "没有找到这只宠物。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const protection = protectedPetFailure(
+      profile,
+      pet,
+      request.instanceId,
+      petRequiredByActiveQuest,
+      profilePetName,
+    );
+    if (protection) {
+      return fail(protection.code, protection.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const formId = String(pet.formId || pet.templateId || pet.speciesId || "").trim();
+    const quoted = resolvePetPaidResetQuote(
+      petPaidResetPolicyCatalog,
+      data.petPaidResetConfig,
+      formId,
+    );
+    if (!quoted.ok) {
+      return fail(quoted.code, quoted.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const inspected = inspectPetPaidResetEligibility(pet, {
+      quote: quoted.quote,
+      growthCycle: petRebirthGrowthCycle,
+    });
+    if (!inspected.ok) {
+      return fail(inspected.code, inspected.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    const paymentPlan = planPetPaidResetDebit(profile, quoted, {
+      stoneCoinLimit: profileStoneCoinLimit,
+    });
+    if (!paymentPlan.ok && paymentPlan.code !== "pet_paid_reset_currency_insufficient") {
+      return fail(paymentPlan.code, paymentPlan.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
+    return ok({
+      profileBinding: binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      paidResetQuote: publicQuote({binding, inspected, paymentPlan, quote: quoted.quote}),
+      message: paymentPlan.ok ? "宠物重置报价已刷新。" : "宠物重置报价已刷新，当前货币不足。",
+    });
+  }
 
   function reset(token, payloadValue = {}) {
     const operation = typeof currentDurableOperation === "function"
@@ -193,7 +320,83 @@ function createPetPaidResetDomain(ctx) {
     });
   }
 
-  return {reset};
+  return {quote, reset};
+}
+
+function normalizeQuoteRequest(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return failure("pet_paid_reset_quote_request_invalid", "宠物重置报价请求格式不正确。");
+  }
+  if (Object.keys(value).some((key) => !QUOTE_REQUEST_KEYS.has(key))) {
+    return failure("pet_paid_reset_quote_request_invalid", "宠物重置报价请求包含不受支持的字段。");
+  }
+  const instanceId = String(value.instanceId || value.petId || "").trim();
+  const alias = String(value.petId || "").trim();
+  if (
+    instanceId === ""
+    || instanceId.length > 160
+    || (alias !== "" && String(value.instanceId || "").trim() !== "" && alias !== String(value.instanceId).trim())
+  ) {
+    return failure("pet_paid_reset_pet_invalid", "宠物身份不正确，请刷新后重试。");
+  }
+  return {ok: true, instanceId};
+}
+
+function protectedPetFailure(profile, pet, instanceId, petRequiredByActiveQuest, profilePetName) {
+  const petName = profilePetName(pet);
+  if (pet.locked === true) {
+    return failure("pet_locked", `${petName} 已锁定，请先解锁后再重置。`);
+  }
+  if (typeof petRequiredByActiveQuest === "function" && petRequiredByActiveQuest(profile, pet)) {
+    return failure("pet_required_by_quest", `${petName} 是当前任务需要的宠物，不能重置。`);
+  }
+  if (String(pet.state || "") === "riding" || String(profile.ridePetInstanceId || "") === instanceId) {
+    return failure("pet_riding", `${petName} 正在骑乘，请先取消骑乘后再重置。`);
+  }
+  return null;
+}
+
+function publicQuote(input) {
+  const {binding, inspected, paymentPlan, quote} = input;
+  const cultivation = inspected.cultivation.record;
+  const balances = paymentPlan && paymentPlan.balances && typeof paymentPlan.balances === "object"
+    ? paymentPlan.balances
+    : {};
+  return {
+    schemaVersion: 1,
+    profileRevision: Math.max(0, Math.trunc(Number(binding.profileRevision || 0))),
+    configRevision: quote.configRevision,
+    pet: {
+      instanceId: inspected.instanceId,
+      formId: inspected.formId,
+      formName: String(quote.formName || inspected.pet.formName || inspected.pet.name || "宠物"),
+      level: inspected.beforeLevel,
+      rebirthCount: cultivation.rebirthCount,
+      enhanceLevel: cultivation.enhanceLevel,
+      binding: String(inspected.pet.binding || "unbound"),
+      paidResetCount: inspected.paidResetState.count,
+    },
+    payment: {
+      currencyId: quote.currencyId,
+      amount: quote.amount,
+      affordable: paymentPlan.ok === true,
+      available: Math.max(0, Math.trunc(Number(paymentPlan.available || 0))),
+      shortfall: Math.max(0, Math.trunc(Number(paymentPlan.shortfall || 0))),
+      balances: Object.fromEntries(Object.entries(balances).map(([key, value]) => [
+        key,
+        Math.max(0, Math.trunc(Number(value || 0))),
+      ])),
+      debits: paymentPlan.ok === true
+        ? paymentPlan.debits.map((debit) => ({binding: debit.binding, amount: debit.amount}))
+        : [],
+    },
+    result: {level: 1, rebirthCount: 0, binding: "unbound"},
+    consequences: {
+      clears: [...CLEAR_CONSEQUENCE_IDS],
+      preserves: [...PRESERVE_CONSEQUENCE_IDS],
+      nonRefunded: [...NON_REFUND_CONSEQUENCE_IDS],
+    },
+  };
 }
 
 function normalizeRequest(value) {
@@ -259,5 +462,6 @@ function failure(code, message) {
 
 module.exports = {
   createPetPaidResetDomain,
+  normalizeQuoteRequest,
   normalizeRequest,
 };

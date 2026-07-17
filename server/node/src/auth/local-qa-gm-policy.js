@@ -60,7 +60,7 @@ function normalizeLocalQaGmPolicy(value) {
   if (allowedUsernames.length !== 1 || allowedUsernames[0] !== EXPECTED_USERNAME) {
     throw policyError("local_qa_policy_username_scope_invalid", "本地QA策略必须且只能授权一个明确账号。");
   }
-  if (serverCommandIds.length !== 11 || clientCommandIds.length !== 29 || authoritativeClientIds.length !== 7) {
+  if (serverCommandIds.length !== 11 || clientCommandIds.length !== 30 || authoritativeClientIds.length !== 8) {
     throw policyError("local_qa_policy_catalog_size_invalid", "本地QA策略目录数量与冻结合同不一致。");
   }
   if (authoritativeClientIds.some((commandId) => (

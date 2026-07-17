@@ -84,6 +84,8 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "updateOfflineHangConfig",
   "getPetPaidResetConfig",
   "updatePetPaidResetConfig",
+  "prepareGmPetPaidResetQa",
+  "getPetPaidResetQuote",
   "paidResetPet",
   "offlineHangStatus",
   "startOfflineHang",
@@ -137,6 +139,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
 ]);
 const PURE_HTTP_READ_SERVICE_METHODS = new Set([
   "getProfile",
+  "getPetPaidResetQuote",
   "listPetRecoveries",
   "getPartyState",
 ]);
@@ -423,6 +426,18 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "PUT" && url.pathname === "/gm/pets/paid-reset/config") {
         return sendResult(res, service.updatePetPaidResetConfig(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/gm/pets/paid-reset/qa") {
+        const idempotencyFailure = requiredIdempotencyKeyFailure(req);
+        if (idempotencyFailure) {
+          return sendResult(res, idempotencyFailure);
+        }
+        return sendResult(res, service.prepareGmPetPaidResetQa(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/pets/paid-reset/quote") {
+        return sendResult(res, service.getPetPaidResetQuote(bearerToken(req), {
+          instanceId: url.searchParams.get("instanceId") || "",
+        }));
       }
       if (req.method === "GET" && url.pathname === "/hang/offline/status") {
         return sendResult(res, service.offlineHangStatus(bearerToken(req)));

@@ -38,8 +38,8 @@ test("shared local QA policy is exact, explicit and fails closed on drift", () =
   assert.equal(policy.policyId, "local_qa_full_v2");
   assert.deepEqual(policy.allowedUsernames, ["auth1373"]);
   assert.equal(policy.serverCommandIds.length, 11);
-  assert.equal(policy.clientCommandIds.length, 29);
-  assert.equal(policy.serverAuthoritativeClientCommandIds.length, 7);
+  assert.equal(policy.clientCommandIds.length, 30);
+  assert.equal(policy.serverAuthoritativeClientCommandIds.length, 8);
   assert.equal(policy.serverCommandIds.includes("*"), false);
   assert.equal(policy.clientCommandIds.includes("*"), false);
 

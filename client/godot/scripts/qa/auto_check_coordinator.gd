@@ -47,6 +47,7 @@ const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_sy
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
+const GmPetPaidResetQaClientModel := preload("res://scripts/progression/gm_pet_paid_reset_qa_client_model.gd")
 const GmPetCaptureRecoveryClientModel := preload("res://scripts/progression/gm_pet_capture_recovery_client_model.gd")
 const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
 const GmToolPluginModel := preload("res://scripts/progression/gm_tool_plugin_model.gd")
@@ -25356,18 +25357,22 @@ func _run_auto_qa_panel_check() -> void:
 	var qa_profile_entry := host.qa_entry_buttons.get(GmQaProfileClientModel.COMMAND_ID, null) as Button
 	var qa_pet_samples_entry := host.qa_entry_buttons.get(GmQaPetSamplesClientModel.COMMAND_ID, null) as Button
 	var qa_assets_entry := host.qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
+	var qa_paid_reset_entry := host.qa_entry_buttons.get(GmPetPaidResetQaClientModel.COMMAND_ID, null) as Button
 	var qa_profile_ui_ok = (
 		qa_profile_identity_text.find("测试GM") >= 0
 		and qa_profile_identity_text.find(qa_username) >= 0
 		and qa_profile_identity_text.find("GM") >= 0
 		and qa_profile_identity_text.find("授权：有效至") >= 0
-		and qa_profile_identity_text.find("可用功能 29 项") >= 0
+		and qa_profile_identity_text.find("可用功能 30 项") >= 0
 		and command_text.find("只补齐") >= 0
 		and command_text.find("不会清空") >= 0
 		and command_text.find("10 只 Lv1 蓝人龙") >= 0
 		and command_text.find("13 个空位") >= 0
 		and command_text.find("当前 76 种正式物品") >= 0
 		and command_text.find("高价值 GM 测试资产") >= 0
+		and command_text.find("付费重置验收档与审计") >= 0
+		and command_text.find("1只一转 + 1只二转四灵幼兽") >= 0
+		and command_text.find("绑定/非绑定钻石与石币") >= 0
 		and qa_profile_entry != null
 		and qa_profile_entry.text.find("补齐核心测试档") >= 0
 		and qa_profile_entry.disabled
@@ -25377,6 +25382,9 @@ func _run_auto_qa_panel_check() -> void:
 		and qa_assets_entry != null
 		and qa_assets_entry.text.find("准备装备与全物品档") >= 0
 		and qa_assets_entry.disabled
+		and qa_paid_reset_entry != null
+		and qa_paid_reset_entry.text.find("重置验收档与审计") >= 0
+		and qa_paid_reset_entry.disabled
 	)
 	var pet_tool_options_ok = (
 		host.qa_pet_species_option != null

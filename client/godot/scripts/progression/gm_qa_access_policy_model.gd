@@ -92,7 +92,7 @@ static func validation_errors_for(candidate: Dictionary) -> Array[String]:
 	var authoritative_ids := _validated_list(candidate.get("serverAuthoritativeClientCommandIds", null), false, "serverAuthoritativeClientCommandIds", errors)
 	if usernames.size() != 1:
 		errors.append("allowedUsernames 必须且只能包含一个账号。")
-	if server_ids.size() != 10 or client_ids.size() != 29 or authoritative_ids.size() != 7:
+	if server_ids.size() != 11 or client_ids.size() != 30 or authoritative_ids.size() != 8:
 		errors.append("授权策略目录数量与冻结合同不一致。")
 	for command_id in authoritative_ids:
 		if not client_ids.has(command_id) or not server_ids.has(command_id):

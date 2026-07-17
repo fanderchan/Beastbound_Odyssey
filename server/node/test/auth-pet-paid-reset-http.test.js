@@ -44,6 +44,19 @@ test("HTTP paid reset requires one operation key, rejects client pricing, and re
   const authorization = {authorization: `Bearer ${account.session.token}`};
   const before = structuredClone(internalProfileForAccount(service, account.account.accountId));
 
+  const quote = await fetchJson(
+    `${base}/pets/paid-reset/quote?instanceId=${encodeURIComponent(account.fixture.pet.instanceId)}`,
+    {headers: authorization},
+  );
+  assert.equal(quote.ok, true);
+  assert.equal(quote.paidResetQuote.profileRevision, account.profileRevision);
+  assert.equal(quote.paidResetQuote.configRevision, 0);
+  assert.equal(quote.paidResetQuote.payment.amount, 300);
+  assert.equal(quote.paidResetQuote.payment.affordable, true);
+  assert.equal(Object.hasOwn(quote.paidResetQuote, "walletPolicy"), false);
+  assert.equal(JSON.stringify(quote).includes(account.fixture.privateSeed), false);
+  assert.deepEqual(internalProfileForAccount(service, account.account.accountId), before);
+
   const missingKey = await fetchJson(`${base}/pets/paid-reset`, {
     method: "POST",
     headers: authorization,

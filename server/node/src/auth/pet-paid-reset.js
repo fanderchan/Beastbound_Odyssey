@@ -172,11 +172,28 @@ function preflightPetPaidReset(petValue, options = {}) {
     return failure("pet_paid_reset_pet_invalid", "宠物资料不完整，本次重置未执行。");
   }
   const operationId = String(options.operationId || "").trim();
+  if (!PET_PAID_RESET_OPERATION_ID_PATTERN.test(operationId)) {
+    return failure("pet_paid_reset_context_invalid", "宠物重置校验信息不完整，本次操作未执行。");
+  }
+  const inspected = inspectPetPaidResetEligibility(pet, options);
+  if (!inspected.ok) {
+    return inspected;
+  }
+  if (inspected.paidResetState.audit.records.some((record) => record.operationId === operationId)) {
+    return failure("pet_paid_reset_operation_reused", "这个操作标识已经完成过宠物重置，不能再次使用。");
+  }
+  return inspected;
+}
+
+function inspectPetPaidResetEligibility(petValue, options = {}) {
+  const pet = recordOrNull(petValue);
+  if (!pet) {
+    return failure("pet_paid_reset_pet_invalid", "宠物资料不完整，本次重置未执行。");
+  }
   const quote = recordOrNull(options.quote);
   const growthCycle = options.growthCycle;
   if (
-    !PET_PAID_RESET_OPERATION_ID_PATTERN.test(operationId)
-    || !validQuote(quote)
+    !validQuote(quote)
     || !growthCycle
     || typeof growthCycle.preflight !== "function"
     || typeof growthCycle.restart !== "function"
@@ -207,9 +224,6 @@ function preflightPetPaidReset(petValue, options = {}) {
   const paidResetState = canonicalPaidResetState(pet);
   if (!paidResetState.ok) {
     return paidResetState;
-  }
-  if (paidResetState.audit.records.some((record) => record.operationId === operationId)) {
-    return failure("pet_paid_reset_operation_reused", "这个操作标识已经完成过宠物重置，不能再次使用。");
   }
   const beforeLevel = positiveInteger(pet.level);
   if (beforeLevel < 1) {
@@ -603,5 +617,6 @@ module.exports = {
   PET_PAID_RESET_SCHEMA_VERSION,
   applyPetPaidReset,
   canonicalPaidResetState,
+  inspectPetPaidResetEligibility,
   preflightPetPaidReset,
 };

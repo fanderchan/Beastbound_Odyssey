@@ -142,6 +142,7 @@ const {createGmQaProfileDomain} = require("./auth/gm-qa-profile");
 const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createGmPetPaidResetConfigDomain} = require("./auth/gm-pet-paid-reset-config");
+const {createGmPetPaidResetQaDomain} = require("./auth/gm-pet-paid-reset-qa");
 const {createPetPaidResetDomain} = require("./auth/pet-paid-reset-domain");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
@@ -305,6 +306,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "cancelMarketListing",
   "claimPetRecovery",
   "gmPetCaptureRecovery",
+  "prepareGmPetPaidResetQa",
   "submitBattleCommand",
   "sendMail",
   "markMailRead",
@@ -1638,6 +1640,12 @@ function createAuthService(options = {}) {
     const values = Array.isArray(args) ? args : [];
     if (normalizedMethodName === "getProfile") {
       return tryGetProfileReadOnly(values[0]);
+    }
+    if (normalizedMethodName === "getPetPaidResetQuote") {
+      return {
+        handled: true,
+        result: projectPublicServiceResult(petPaidReset.quote(values[0], values[1])),
+      };
     }
     if (normalizedMethodName === "listPetRecoveries") {
       return tryListPetRecoveriesReadOnly(values[0]);
@@ -5643,6 +5651,7 @@ function createAuthService(options = {}) {
   const gmQaPets = createGmQaPetsDomain(domainContext);
   const gmQaAssets = createGmQaAssetsDomain(domainContext);
   const gmPetPaidResetConfig = createGmPetPaidResetConfigDomain(domainContext);
+  const gmPetPaidResetQa = createGmPetPaidResetQaDomain(domainContext);
   const petPaidReset = createPetPaidResetDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
@@ -5674,6 +5683,8 @@ function createAuthService(options = {}) {
     updateOfflineHangConfig: offlineHang.updateConfig,
     getPetPaidResetConfig: gmPetPaidResetConfig.getConfig,
     updatePetPaidResetConfig: gmPetPaidResetConfig.updateConfig,
+    prepareGmPetPaidResetQa: gmPetPaidResetQa.run,
+    getPetPaidResetQuote: petPaidReset.quote,
     paidResetPet: petPaidReset.reset,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,

@@ -73,6 +73,14 @@ const ERROR_CODE_MESSAGES := {
 	"pet_growth_evaluation_policy_invalid": "成长评估参考线不正确，请检查后再保存。",
 	"pet_growth_evaluation_settings_payload_invalid": "成长评估设置请求不正确，请重新打开宠物面板。",
 	"pet_growth_evaluation_settings_unavailable": "成长评估设置暂不可用，请稍后重试。",
+	"pet_paid_reset_config_revision_conflict": "宠物重置价格已经变化，请刷新报价后重新确认。",
+	"pet_paid_reset_currency_insufficient": "当前货币不足，无法重置这只宠物。",
+	"pet_paid_reset_cultivation_invalid": "这只宠物当前没有可重置的转生培养记录。",
+	"pet_paid_reset_growth_unsupported": "这只宠物仍使用旧成长档，请联系 GM 处理。",
+	"pet_paid_reset_audit_invalid": "这只宠物的重置记录异常，请联系 GM 处理。",
+	"pet_locked": "宠物已锁定，请先解锁。",
+	"pet_riding": "宠物正在骑乘，请先取消骑乘。",
+	"pet_required_by_quest": "这只宠物正被当前任务需要，暂不能重置。",
 	"movement_corner_blocked": "不能从阻挡物夹角斜穿，请换个方向。",
 	"movement_rate_limited": "移动过快，请稍候。",
 	"missing_username": "服务器会话缺少账号。",
@@ -90,6 +98,7 @@ const ERROR_CODE_MESSAGES := {
 	"server_error": "服务器暂时异常，请稍后重试。",
 	"storage_commit_timeout": "服务器仍在确认本次操作，正在使用原操作重试。",
 	"storage_queue_full": "服务器正在保存较多操作，请稍后重试。",
+	"storage_outcome_unknown": "服务器仍在确认上次操作；请保留当前页面并使用原操作重试。",
 	"storage_write_failed": "服务器存档暂时不可用，请稍后使用原操作重试。",
 	"session_cancelled": "服务器档案同步已取消。",
 	"session_expired": "登录会话已过期，请重新登录。",
@@ -1080,6 +1089,46 @@ static func offline_hang_cancel_request(base_url: String, session_token: String)
 	})
 
 
+static func pet_paid_reset_quote_request(base_url: String, session_token: String, instance_id: String) -> Dictionary:
+	return {
+		"url": "%s/pets/paid-reset/quote?instanceId=%s" % [normalized_base_url(base_url), instance_id.uri_encode()],
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func pet_paid_reset_request(
+	base_url: String,
+	session_token: String,
+	instance_id: String,
+	expected_profile_revision: int,
+	expected_price_config_revision: int,
+	operation_id: String = ""
+) -> Dictionary:
+	var spec := {
+		"url": "%s/pets/paid-reset" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"instanceId": instance_id,
+			"expectedProfileRevision": expected_profile_revision,
+			"expectedPriceConfigRevision": expected_price_config_revision,
+		}),
+		"durableMutation": true,
+	}
+	return prepare_request_with_idempotency_key(spec, operation_id) if idempotency_key_is_valid(operation_id) else prepare_request_for_send(spec)
+
+
+static func gm_pet_paid_reset_qa_request(base_url: String, session_token: String, manifest_id: String) -> Dictionary:
+	return _durable_mutation_request({
+		"url": "%s/gm/pets/paid-reset/qa" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"manifestId": manifest_id}),
+	})
+
+
 static func gm_offline_hang_config_request(base_url: String, session_token: String, config: Dictionary = {}) -> Dictionary:
 	var read_only := config.is_empty()
 	var spec := {
@@ -1638,6 +1687,26 @@ static func parse_gm_command_response(response_code: int, body: PackedByteArray)
 	parsed["logLines"] = _string_array(response.get("logLines", []))
 	parsed["auditId"] = str(response.get("auditId", ""))
 	parsed.erase("response")
+	return parsed
+
+
+static func parse_pet_paid_reset_quote_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物重置报价读取失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["paidResetQuote"] = response.get("paidResetQuote", {}) if response.get("paidResetQuote", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_pet_paid_reset_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物重置失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["paidReset"] = response.get("paidReset", {}) if response.get("paidReset", {}) is Dictionary else {}
+	parsed["logLines"] = _string_array(response.get("logLines", []))
 	return parsed
 
 
