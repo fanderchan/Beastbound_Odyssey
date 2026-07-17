@@ -1,5 +1,7 @@
 extends RefCounted
 
+const PetEvolutionBalanceModel := preload("res://scripts/progression/pet_evolution_balance_model.gd")
+
 const BALANCE_DIR := "res://data/balance"
 const BALANCE_SETS_PATH := BALANCE_DIR + "/balance_sets.json"
 const LEVEL_CURVES_PATH := BALANCE_DIR + "/level_curves.json"
@@ -7,6 +9,7 @@ const PLAYER_GROWTH_PATH := BALANCE_DIR + "/player_growth.json"
 const PET_GROWTH_PROFILES_PATH := BALANCE_DIR + "/pet_growth_profiles.json"
 const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_profiles.json"
 const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
+const PET_EVOLUTION_BALANCE_PATH := BALANCE_DIR + "/pet_evolution_balance.json"
 const COMBAT_FORMULAS_PATH := BALANCE_DIR + "/combat_formulas.json"
 const CAPTURE_FORMULA_PATH := BALANCE_DIR + "/capture_formula.json"
 const REWARD_ECONOMY_PATH := BALANCE_DIR + "/reward_economy.json"
@@ -22,6 +25,7 @@ const CORE_NUMERIC_DIGEST_PATHS: Array[String] = [
 	PET_GROWTH_PROFILES_PATH,
 	PET_GROWTH_SPECIES_PROFILES_PATH,
 	PET_REBIRTH_BALANCE_PATH,
+	PET_EVOLUTION_BALANCE_PATH,
 	COMBAT_FORMULAS_PATH,
 	CAPTURE_FORMULA_PATH,
 	REWARD_ECONOMY_PATH,
@@ -60,6 +64,10 @@ static func pet_growth_species_profiles() -> Dictionary:
 
 static func pet_rebirth_balance() -> Dictionary:
 	return _data(PET_REBIRTH_BALANCE_PATH)
+
+
+static func pet_evolution_balance() -> Dictionary:
+	return _data(PET_EVOLUTION_BALANCE_PATH)
 
 
 static func combat_formulas() -> Dictionary:
@@ -111,6 +119,7 @@ static func balance_version_summary() -> Dictionary:
 		"economyLedgerId": str(set.get("economyLedgerId", "")),
 		"petPowerFormulaId": str(set.get("petPowerFormulaId", "")),
 		"petRebirthBalanceVersion": str(set.get("petRebirthBalanceVersion", "")),
+		"petEvolutionBalanceVersion": str(set.get("petEvolutionBalanceVersion", "")),
 	}
 
 
@@ -454,6 +463,7 @@ static func validation_errors() -> Array[String]:
 	_validate_pet_growth_profiles(errors)
 	_validate_pet_growth_species_profiles(errors)
 	_validate_pet_rebirth_balance(errors)
+	_validate_pet_evolution_balance(errors)
 	_validate_combat_formulas(errors)
 	_validate_capture_formula(errors)
 	_validate_reward_economy(errors)
@@ -483,6 +493,7 @@ static func _validate_balance_sets(errors: Array[String]) -> void:
 		"economyLedgerId",
 		"petPowerFormulaId",
 		"petRebirthBalanceVersion",
+		"petEvolutionBalanceVersion",
 	]
 	for key in required_keys:
 		if str(active_set.get(key, "")).strip_edges() == "":
@@ -497,6 +508,7 @@ static func _validate_balance_sets(errors: Array[String]) -> void:
 		"economyLedgerId": str(active_economy_ledger().get("id", "")),
 		"petPowerFormulaId": str(pet_power_formula().get("id", "")),
 		"petRebirthBalanceVersion": str(pet_rebirth_balance().get("balanceVersion", "")),
+		"petEvolutionBalanceVersion": str(pet_evolution_balance().get("balanceVersion", "")),
 	}
 	for key in expected.keys():
 		if str(active_set.get(key, "")) != str(expected.get(key, "")):
@@ -797,6 +809,13 @@ static func _validate_pet_rebirth_balance(errors: Array[String]) -> void:
 		errors.append("pet_rebirth_balance 只能作用于未来确认的转生")
 	if str(compatibility.get("existingPets", "")) != "unchanged" or str(compatibility.get("existingHistory", "")) != "unchanged":
 		errors.append("pet_rebirth_balance 必须保持既有宠物和历史不变")
+
+
+static func _validate_pet_evolution_balance(errors: Array[String]) -> void:
+	errors.append_array(PetEvolutionBalanceModel.validation_errors(
+		pet_evolution_balance(),
+		pet_rebirth_balance()
+	))
 
 
 static func _validate_pet_rebirth_threshold_series(value, path_label: String, errors: Array[String]) -> void:

@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "balanceVersion": "pet_evolution_balance_v1",
+  "reference": {
+    "rebirthBalanceVersion": "pet_rebirth_balance_v3",
+    "rebirthEvaluationVersion": "pet_rebirth_evaluation_v1",
+    "baselinePath": "normal_second_rebirth_full_preparation"
+  },
+  "eligibility": {
+    "requiredRebirthCount": 1,
+    "requiredLevel": 140,
+    "requiredGrowthModelVersion": "pet_growth_authority_v1",
+    "licenseScope": "line",
+    "licenseSource": "one_time_quest_unlock_only",
+    "licenseDirectResult": false
+  },
+  "acquisition": {
+    "perAttemptSources": [
+      "repeatable_floor_boss_personal_reward",
+      "repeatable_lineage_material",
+      "stone_coin_sink"
+    ],
+    "requiresTeamPve": true,
+    "requirementsConfigurableByRoute": true,
+    "realMoneySkipAllowed": false,
+    "paymentCurrencyId": "stoneCoins",
+    "paymentWalletPolicyId": "bound_first_split"
+  },
+  "effortModel": {
+    "unit": "normalized_nonpayer_effort",
+    "normalSecondRebirth": {
+      "targetTraining": 40,
+      "helperAcquisition": 15,
+      "helperTraining": 25,
+      "helperStones": 20,
+      "total": 100
+    },
+    "evolutionRepeatable": {
+      "targetTraining": 40,
+      "floorBossCore": 60,
+      "lineageMaterials": 30,
+      "currencySink": 20,
+      "total": 150
+    },
+    "firstUnlock": {
+      "licenseQuest": 20,
+      "excludedFromRepeatableRatio": true
+    },
+    "repeatableTargetRatio": {
+      "min": 1.5,
+      "max": 2.0
+    }
+  },
+  "terminalPath": {
+    "pathId": "evolution_terminal_v1",
+    "resultLevel": 1,
+    "resultRebirthCount": 1,
+    "normalSecondRebirthAllowed": false,
+    "fusionMaterialAllowed": false,
+    "successRate": 1.0,
+    "failureConsumes": false,
+    "formTransition": "replace_form_preserve_instance"
+  },
+  "qualityProjection": {
+    "lv1FourV": "per_stat_species_percentile_projection_v1",
+    "hiddenGrowth": "private_per_stat_species_quantile_projection_v1",
+    "preserveIndependentDimensions": true,
+    "rerollAllowed": false,
+    "publicCombinedScore": false
+  },
+  "powerBudget": {
+    "preserveStageOneRebirthBonus": true,
+    "evolvedIntrinsicUpliftReference": "normal_second_rebirth_stage_2",
+    "intrinsicUpliftInternalPower": {
+      "min": 1.485028,
+      "p25": 1.622514,
+      "p55": 1.787497,
+      "p85": 1.952481,
+      "p95": 2.007475,
+      "max": 2.034973
+    },
+    "terminalComparison": "comparable_to_normal_two_rebirth",
+    "utilityMayExceedRawStats": true,
+    "rawStatInflationBeyondBandAllowed": false
+  },
+  "preserve": [
+    "instance_identity",
+    "owner_and_capture_history",
+    "name",
+    "lv1_four_v_percentiles",
+    "hidden_growth_quantiles",
+    "stage_one_rebirth_bonus_and_history",
+    "enhancement",
+    "active_passive_learned_inherited_skills",
+    "paid_reset_history",
+    "lock_and_binding_state",
+    "form_lineage_history"
+  ],
+  "clear": [
+    "level_and_exp",
+    "current_hp",
+    "growth_observation",
+    "pending_rebirth_preview"
+  ],
+  "compatibility": {
+    "applyTo": "future_confirmed_evolutions_only",
+    "existingPets": "unchanged",
+    "existingHistory": "unchanged",
+    "oldClients": "no_evolution_entry"
+  }
+}

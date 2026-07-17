@@ -36,6 +36,7 @@ const PetGrowthManualEvaluationPresenter := preload("res://scripts/ui/pet_growth
 const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_manual_evaluation_panel.gd")
 const PetLevelOnePercentileModel := preload("res://scripts/progression/pet_level_one_percentile_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+const PetEvolutionBalanceModel := preload("res://scripts/progression/pet_evolution_balance_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
@@ -5037,8 +5038,13 @@ func _run_auto_balance_catalog_check() -> void:
 		and absf(float(capture_formula.get("maxChance", 0.0)) - 0.95) <= 0.001
 	)
 	var economy_ok = absf(BalanceCatalogModel.default_shop_sell_rate(0.0) - 0.5) <= 0.001
-	var status = "ok" if catalog_ok and level_ok and player_growth_ok and pet_growth_ok and power_ok and formula_ok and economy_ok else "failed"
-	print("balance catalog check ready: status=%s catalog=%s level=%s player=%s pet=%s power=%s formula=%s economy=%s errors=%s" % [
+	var evolution_contract := PetEvolutionBalanceModel.contract_check(
+		BalanceCatalogModel.pet_evolution_balance(),
+		BalanceCatalogModel.pet_rebirth_balance()
+	)
+	var evolution_ok := bool(evolution_contract.get("ok", false))
+	var status = "ok" if catalog_ok and level_ok and player_growth_ok and pet_growth_ok and power_ok and formula_ok and economy_ok and evolution_ok else "failed"
+	print("balance catalog check ready: status=%s catalog=%s level=%s player=%s pet=%s power=%s formula=%s economy=%s evolution=%s errors=%s" % [
 		status,
 		str(catalog_ok),
 		str(level_ok),
@@ -5047,6 +5053,7 @@ func _run_auto_balance_catalog_check() -> void:
 		str(power_ok),
 		str(formula_ok),
 		str(economy_ok),
+		str(evolution_ok),
 		";".join(errors),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
