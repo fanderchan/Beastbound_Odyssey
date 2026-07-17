@@ -14,6 +14,7 @@ const {
   validatePetGrowth,
 } = require("./pet-growth-runtime");
 const {isValidPetPrivateSeed} = require("./pet-private-seed");
+const {selectWildCaptureGrowthDraw} = require("./wild-capture-growth-selection");
 
 const SCHEMA_VERSION = 1;
 const AUTHORITY = "server_pet_capture_candidate_v1";
@@ -284,8 +285,10 @@ function validateConfiguration(options) {
     || !Object.isFrozen(options.growthCatalog)
     || typeof options.growthCatalog.resolveNewPetProfile !== "function"
     || typeof options.growthCatalog.profileForFormId !== "function"
+    || !isObjectRecord(options.growthCatalog.wildCaptureGrowthPolicy)
+    || !Object.isFrozen(options.growthCatalog.wildCaptureGrowthPolicy)
   ) {
-    errors.push("growthCatalog must be an injected strict frozen catalog");
+    errors.push("growthCatalog must be an injected strict frozen catalog with wild-capture growth policy");
   }
   if (
     !isObjectRecord(options.newPetFactory)
@@ -678,22 +681,54 @@ function createPetCaptureCandidateAuthority(options = {}) {
 
   function settleCandidatePet(candidateId, template, encounterLevel) {
     const freshPet = freshLevelOnePet(candidateId, template, expToNextLevel);
-    const finalized = newPetFactory.finalizeLevelOne(freshPet, {
-      purpose: "capture_candidate_growth",
-    });
-    if (!isObjectRecord(finalized) || !isObjectRecord(finalized.pet)) {
-      throw new TypeError("newPetFactory returned an invalid pet");
-    }
+    const profile = growthCatalog.profileForFormId(template.formId);
+    let finalized;
     let pet;
-    if (finalized.growthKind === PROFILE_RESOLUTION_AUTHORITY_V1) {
-      const profile = growthCatalog.profileForFormId(template.formId);
-      if (!profile || profile.profileId !== finalized.profileId) {
-        throw new TypeError("strict growth profile resolution changed during capture preparation");
-      }
+    if (profile) {
+      const selected = selectWildCaptureGrowthDraw({
+        profile,
+        encounterLevel,
+        policy: growthCatalog.wildCaptureGrowthPolicy,
+        draw() {
+          const drawFinalized = newPetFactory.finalizeLevelOne(freshPet, {
+            purpose: "capture_candidate_growth",
+          });
+          if (
+            !isObjectRecord(drawFinalized)
+            || !isObjectRecord(drawFinalized.pet)
+            || drawFinalized.growthKind !== PROFILE_RESOLUTION_AUTHORITY_V1
+            || drawFinalized.profileId !== profile.profileId
+          ) {
+            throw new TypeError("strict growth profile resolution changed during capture preparation");
+          }
+          const privateState = drawFinalized.pet.petGrowth && drawFinalized.pet.petGrowth.private;
+          if (
+            !isObjectRecord(privateState)
+            || typeof privateState.privateSeed !== "string"
+            || !isObjectRecord(privateState.privateRoll)
+          ) {
+            throw new TypeError("newPetFactory returned incomplete authority growth state");
+          }
+          return {
+            privateSeed: privateState.privateSeed,
+            privateRoll: privateState.privateRoll,
+            value: drawFinalized,
+          };
+        },
+      });
+      finalized = selected.value;
       pet = settlePetGrowthToLevel(finalized.pet, profile, encounterLevel).pet;
-    } else if (finalized.growthKind === PROFILE_RESOLUTION_LEGACY_UNLINKED) {
-      pet = applyLegacyGrowth(finalized.pet, template, encounterLevel, legacyDocument);
     } else {
+      finalized = newPetFactory.finalizeLevelOne(freshPet, {
+        purpose: "capture_candidate_growth",
+      });
+      if (!isObjectRecord(finalized) || !isObjectRecord(finalized.pet)) {
+        throw new TypeError("newPetFactory returned an invalid pet");
+      }
+    }
+    if (!profile && finalized.growthKind === PROFILE_RESOLUTION_LEGACY_UNLINKED) {
+      pet = applyLegacyGrowth(finalized.pet, template, encounterLevel, legacyDocument);
+    } else if (!profile) {
       throw new TypeError("newPetFactory returned an unsupported capture growth route");
     }
     const nextExp = expToNextLevel(encounterLevel);
@@ -705,6 +740,23 @@ function createPetCaptureCandidateAuthority(options = {}) {
     pet.nextExp = nextExp;
     pet.hp = pet.maxHp;
     return {pet, growthKind: finalized.growthKind};
+  }
+
+  function synchronizeActorWithCandidate(actor, candidate) {
+    const pet = candidate.pet;
+    actor.formId = pet.formId;
+    actor.speciesId = pet.speciesId;
+    actor.lineId = pet.lineId;
+    actor.level = pet.level;
+    actor.hp = pet.maxHp;
+    actor.maxHp = pet.maxHp;
+    actor.attack = pet.attack;
+    actor.defense = pet.defense;
+    actor.speed = pet.quick;
+    actor.elements = clone(pet.elements);
+    actor.activeSkillIds = clone(pet.activeSkillIds);
+    actor.petSkillSlots = clone(pet.petSkillSlots);
+    actor.passiveSkillIds = clone(pet.passiveSkillIds);
   }
 
   function buildCandidate(actor, usedCandidateIds, usedPetInstanceIds, usedSecrets) {
@@ -877,6 +929,26 @@ function createPetCaptureCandidateAuthority(options = {}) {
     } catch (_error) {
       errors.push("capture candidate template facts could not be resolved");
     }
+    const pet = candidate && candidate.pet;
+    if (
+      isObjectRecord(pet)
+      && (
+        actor.formId !== pet.formId
+        || actor.speciesId !== pet.speciesId
+        || actor.lineId !== pet.lineId
+        || actor.level !== pet.level
+        || actor.maxHp !== pet.maxHp
+        || actor.attack !== pet.attack
+        || actor.defense !== pet.defense
+        || actor.speed !== pet.quick
+        || !isDeepStrictEqual(actor.elements, pet.elements)
+        || !isDeepStrictEqual(actor.activeSkillIds, pet.activeSkillIds)
+        || !isDeepStrictEqual(actor.petSkillSlots, pet.petSkillSlots)
+        || !isDeepStrictEqual(actor.passiveSkillIds, pet.passiveSkillIds)
+      )
+    ) {
+      errors.push("battle actor intrinsic pet facts do not match its frozen capture candidate");
+    }
     return errors;
   }
 
@@ -951,12 +1023,14 @@ function createPetCaptureCandidateAuthority(options = {}) {
       const usedSecrets = new Set();
       const candidates = {};
       for (const actor of candidateActors(next)) {
-        candidates[actor.actorId] = buildCandidate(
+        const candidate = buildCandidate(
           actor,
           usedCandidateIds,
           usedPetInstanceIds,
           usedSecrets,
         );
+        candidates[actor.actorId] = candidate;
+        synchronizeActorWithCandidate(actor, candidate);
       }
       next.battle[PRIVATE_CANDIDATE_KEY] = candidates;
     } catch (_error) {

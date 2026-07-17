@@ -62,12 +62,10 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 
 ## Design hard gates
 
-- Keep Lv1 4V visible and hidden per-level quality meaningful; Lv1 alone must not settle keep/discard decisions.
+- Keep Lv1 4V visible and hidden per-level quality meaningful. A freshly captured, server-identified Lv1 wild pet may be retained or released from its four public Lv1 percentiles alone, but that decision must never claim to know hidden growth.
 - The current formal Lv1 4V proxy is the authority-v1 pet's immutable `initialStats` / `growthSpeciesLevel1Stats` blood, attack, defense, and quick map. Do not invent a second quality field or expose the hidden roll.
-- Make early observation uncertain. Human players may inspect the visible estimate earlier, but automated growth rules require at least Lv20 / 19 observed upgrades and must use only public four-stat evidence.
-- Express growth retention rules as 0..100 percentile minimums: overall plus blood/attack/defense/quick, where 0 disables that threshold and every enabled threshold must pass. Show an immediate client preview while editing and replace it with a server-confirmed preview after saving.
-- A growth-screening result is not permission to delete. Keep the pet until the separate protection, recent-record, recovery, and feature-gate contracts all accept the operation.
-- A growth-rule preview must always report dry-run/retain/no-mutation semantics and stay bounded to the owned roster; never turn preview evaluation into a move, discard, consumption, or hidden-data read.
+- Make early observation uncertain. Human players inspect actual training evidence in the owned-pet panel; capture automation must not train pets, evaluate trained pets, or use the existing Lv20 dry-run as permission to dispose of them.
+- Keep the existing observed-growth preview evidence-only, bounded, and no-mutation. It belongs to manual pet evaluation unless a later explicit product decision creates a separate protected automation workflow.
 - Give every species its own distribution. Do not reuse a global spread merely because the JSON accepts it.
 - Preserve stable IDs and old pets. Never reroll or silently weaken existing instances.
 - Keep server sessions authoritative for capture, random seeds, experience, stats, skills, progression, consumption, and settlement.
@@ -75,6 +73,8 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Treat active/passive mechanics as contracts, not prose. If the server cannot execute an effect, implement focused server rules and parity tests before assigning it.
 - Refuse production placement while the server trusts client-supplied wild form, level, stats, capture override, or EXP for that path. Close or explicitly gate the authoritative encounter gap first.
 - For a catchable growth-profile pet, server-side encounter selection alone is insufficient: require an encounter-time private capture candidate whose seed, Lv1 facts, growth envelope, and current stats transfer unchanged on capture.
+- A catchable battle actor and its frozen candidate are the same individual: current-level max HP, attack, defense, quick, elements, and skills must match before the room becomes public. Battle damage may change current HP without changing those intrinsic facts.
+- Capture level conditions only the hidden-growth seed distribution, never Lv1 4V. Lv1 uses the species baseline distribution unchanged; higher levels suppress the upper tail within that species with a non-zero jackpot floor and a hard bounded-attempt limit. Do not apply this rule to existing pets, rewards, eggs, GM grants, rebirth, evolution, or fusion.
 - For authority-v1 rebirth, preflight both the target and the exact confirmed MM, preserve privateSeed/privateRoll/Lv1 facts, and restart one canonical Lv1 growth cycle with the cumulative rebirth bonus; never lower only the visible level or consume an automatically substituted helper.
 - Keep normal two-rebirth, evolution, and fusion in comparable end-power bands. Let harder paths win through build choice, inheritance, appearance, or utility rather than uncontrolled raw-stat inflation.
 - Protect locked, task, riding, cultivated, bound, paid, and inheritance-relevant pets from automatic discard or consumption.

@@ -14,6 +14,7 @@
 | --- | --- |
 | Taxonomy, elements, form defaults, capture difficulty | `client/godot/data/pet_templates.json` |
 | Species Lv1/growth distributions and observation thresholds | `client/godot/data/balance/pet_growth_species_profiles.json` |
+| Global capture-level hidden-growth tail policy | `client/godot/data/balance/pet_growth_species_profiles.json#wildCaptureGrowthPolicy`, `server/node/src/auth/wild-capture-growth-selection.js` |
 | Legacy broad growth profiles | `client/godot/data/balance/pet_growth_profiles.json` |
 | Active actions and effect payloads | `client/godot/data/battle_actions.json` |
 | Family passive definitions | `client/godot/data/battle_passive_skills.json` |
@@ -27,7 +28,7 @@
 | Client template resolution/validation | `client/godot/scripts/battle/pet_template_catalog.gd` |
 | Encounter selection | `client/godot/scripts/world/encounter_model.gd` |
 | Growth instance/observation | `client/godot/scripts/progression/pet_individual_growth_model.gd`, `pet_growth_observation_model.gd` |
-| Lv20 growth retention dry-run and Chinese explanation | `server/node/src/auth/pet-observed-growth-rule-preview.js`, `client/godot/scripts/progression/pet_growth_rule_preview_model.gd`, `client/godot/scripts/ui/pet_growth_rule_preview_presenter.gd`; persisted under `autoCaptureSettings.growthRulePolicy` |
+| Lv20 observed-growth dry-run (manual owned-pet evaluation only; not capture automation) | `server/node/src/auth/pet-observed-growth-rule-preview.js`, `client/godot/scripts/progression/pet_growth_rule_preview_model.gd`, `client/godot/scripts/ui/pet_growth_rule_preview_presenter.gd`; currently persisted under the legacy `autoCaptureSettings.growthRulePolicy` location pending UI relocation |
 | Versioned cross-runtime growth algorithm (P0.2 shadow only) | `client/godot/scripts/progression/pet_growth_authority_model.gd`, `server/node/src/auth/pet-growth-authority.js`, `tools/fixtures/pet_growth_authority_v1_vectors.json` |
 | Strict server species-growth catalog (P0.2 shadow only) | `server/node/src/auth/pet-growth-catalog.js`; fixed-path reader over shared JSON, new-pet active-profile selection, and existing-instance historical-profile resolution |
 | Pure server v1 initialization, validation, and level settlement (P0.2 shadow only) | `server/node/src/auth/pet-growth-runtime.js` |
@@ -110,14 +111,14 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 
 ## Current gaps
 
-- Only a minority of forms currently link to species-specific growth profiles; the rest use legacy generic growth.
+- All 32 current production forms link to species-specific authority-v1 growth profiles; historical pets without an authority envelope may still remain legacy and must not be rerolled.
 - Protocol v2 now makes public pet/profile projection the service response boundary. Battle pets, riding pets, and world pet-EXP items share the enabled authority-v1 dispatcher; legacy pets keep level/EXP-only behavior, while unknown or damaged authority state fails closed without falling back to a legacy writer.
-- New deterministic Lv1 rewards use the strict server new-pet factory: linked forms receive canonical authority-v1 state, while unlinked forms retain CSPRNG legacy identity and true Lv1 facts. Player rebirth rewards, world eggs, MM rewards, and encounter-time capture candidates are connected. Every catchable wild actor freezes a separate private candidate before permit consumption; a successful capture claims that candidate once and materializes its unchanged pet facts instead of rolling again after battle.
+- New pets use the strict server new-pet factory. Player rebirth rewards, world eggs, MM rewards, and encounter-time capture candidates are connected. Every catchable wild actor freezes a private Lv1 candidate, applies the global capture-level hidden-growth tail policy, settles that same pet to the encounter level, and synchronizes its intrinsic combat facts before the room is published. A successful capture claims and materializes that unchanged individual instead of rolling again.
 - Authority-v1 MM rebirth uses the dedicated server growth-cycle reset: validate the target and exact client-confirmed helper before the roll, retain private identity/Lv1 facts/initial cultivation, atomically rebuild level/continuous/public/root state at Lv1 with the cumulative growth bonus, then consume the helper. Legacy pets keep their existing reset path and are not silently upgraded.
 - The Godot v2 login path cleans both server caches but never loads either before the first fresh pull. Every full server profile passes strict projection, marker-aware no-RNG normalization, and dedicated public-cache publication. Growth UI shows only Lv1/current evidence and observed grades, never an exact hidden Lv140 result.
-- Historical legacy Lv2+ pets may have no persisted Lv1 4V. Preserve those existing instances and mark observation unavailable; never invent their missing history from an instance ID. New legacy captures now begin as real Lv1 candidates at encounter time, freeze their CSPRNG Lv1 4V/growth facts, then deterministically settle to the wild level before combat.
+- Historical legacy Lv2+ pets may have no persisted Lv1 4V. Preserve those existing instances and mark observation unavailable; never invent their missing history from an instance ID. New authority captures begin as real Lv1 candidates, preserve authentic Lv1 4V, then deterministically settle the same individual to the wild level before combat.
 - Local/offline legacy growth tools can still derive precise Lv140 values for QA. Server-marker pets must stay on the evidence-only observation path.
-- Lv20 retention rules now have a bounded no-mutation preview. Five percentile minimums use `0` as disabled and AND semantics; local edits preview immediately, while the settings action returns the server-confirmed result. This is still not permission to move, discard, or consume a pet.
+- Lv20 retention rules have a bounded no-mutation preview, but the product decision now keeps trained-pet judgment in the owned-pet panel. This preview is not permission for capture automation to train, move, discard, or consume a pet; its legacy settings placement should be relocated rather than expanded.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
 - Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
 - Distinct pet actions currently require globally unique preferred slots; all seven slots are occupied, so expand the catalog/slot contract before adding new active skill IDs.

@@ -4,6 +4,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const {MODEL_VERSION, STAT_KEYS} = require("./pet-growth-authority");
+const {
+  DEFAULT_WILD_CAPTURE_GROWTH_POLICY,
+  canonicalWildCaptureGrowthPolicy,
+  validateWildCaptureGrowthPolicy,
+} = require("./wild-capture-growth-selection");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 const DEFAULT_PROFILE_PATH = path.join(
@@ -299,6 +304,16 @@ function createPetGrowthCatalog({profileDocument, templateDocument} = {}) {
   if (templateDocument.schemaVersion !== PROFILE_SCHEMA_VERSION) {
     errors.push(`template document schemaVersion must be ${PROFILE_SCHEMA_VERSION}`);
   }
+  const wildCaptureGrowthPolicySource = Object.prototype.hasOwnProperty.call(
+    profileDocument,
+    "wildCaptureGrowthPolicy",
+  )
+    ? profileDocument.wildCaptureGrowthPolicy
+    : DEFAULT_WILD_CAPTURE_GROWTH_POLICY;
+  errors.push(...validateWildCaptureGrowthPolicy(
+    wildCaptureGrowthPolicySource,
+    "profile document wildCaptureGrowthPolicy",
+  ));
   const profiles = Array.isArray(profileDocument.profiles) ? profileDocument.profiles : null;
   const forms = Array.isArray(templateDocument.forms) ? templateDocument.forms : null;
   if (!profiles) {
@@ -393,12 +408,14 @@ function createPetGrowthCatalog({profileDocument, templateDocument} = {}) {
   const authorityProfileById = new Map(
     Array.from(profileById.entries()).map(([profileId, profile]) => [profileId, authorityProfile(profile)]),
   );
+  const wildCaptureGrowthPolicy = canonicalWildCaptureGrowthPolicy(wildCaptureGrowthPolicySource);
   return Object.freeze({
     schemaVersion: PROFILE_SCHEMA_VERSION,
     profileCount: profileById.size,
     formCount: templateByFormId.size,
     profiledFormCount: profileIdByFormId.size,
     orphanProfileIds: Object.freeze([]),
+    wildCaptureGrowthPolicy,
     profileById(profileId) {
       return authorityProfileById.get(strictLookupId(profileId)) || null;
     },

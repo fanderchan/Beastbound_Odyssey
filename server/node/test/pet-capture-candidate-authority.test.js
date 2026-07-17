@@ -145,7 +145,7 @@ function captureInput(actorId = "wild_1", accountId = "account_alpha", captureTo
   return {actorId, accountId, captureToolId};
 }
 
-test("linked capture candidates start at Lv1 in the strict factory, settle once, and ignore combat actor stats", () => {
+test("linked capture candidates settle once and synchronize the combat actor with the same pet", () => {
   const {authority, growthCatalog, expToNextLevel} = harness("linked");
   const actor = wildActor({formId: "blue_man_dragon_water10", level: 28});
   const room = battleRoom([actor]);
@@ -157,21 +157,33 @@ test("linked capture candidates start at Lv1 in the strict factory, settle once,
   assert.equal(prepared.candidateCount, 1);
   assert.equal(prepared.reused, false);
   assert.equal(Object.hasOwn(room.battle, PRIVATE_CANDIDATE_KEY), false);
-  assert.deepEqual(prepared.room.battle.actors[1], actorBefore);
+  assert.notDeepEqual(prepared.room.battle.actors[1], actorBefore);
   const candidate = candidateFor(prepared.room);
+  const preparedActor = prepared.room.battle.actors[1];
   assert.equal(candidate.growthKind, PROFILE_RESOLUTION_AUTHORITY_V1);
   assert.equal(candidate.encounterLevel, 28);
   assert.equal(candidate.pet.level, 28);
   assert.equal(candidate.pet.exp, 0);
   assert.equal(candidate.pet.nextExp, expToNextLevel(28));
   assert.equal(candidate.pet.hp, candidate.pet.maxHp);
-  assert.notEqual(candidate.pet.maxHp, actor.maxHp);
-  assert.notEqual(candidate.pet.attack, actor.attack);
-  assert.notEqual(candidate.pet.defense, actor.defense);
-  assert.notEqual(candidate.pet.quick, actor.speed);
+  assert.equal(preparedActor.formId, candidate.pet.formId);
+  assert.equal(preparedActor.speciesId, candidate.pet.speciesId);
+  assert.equal(preparedActor.lineId, candidate.pet.lineId);
+  assert.equal(preparedActor.level, candidate.pet.level);
+  assert.equal(preparedActor.hp, candidate.pet.maxHp);
+  assert.equal(preparedActor.maxHp, candidate.pet.maxHp);
+  assert.equal(preparedActor.attack, candidate.pet.attack);
+  assert.equal(preparedActor.defense, candidate.pet.defense);
+  assert.equal(preparedActor.speed, candidate.pet.quick);
+  assert.deepEqual(preparedActor.elements, candidate.pet.elements);
+  assert.deepEqual(preparedActor.activeSkillIds, candidate.pet.activeSkillIds);
+  assert.deepEqual(preparedActor.petSkillSlots, candidate.pet.petSkillSlots);
+  assert.deepEqual(preparedActor.passiveSkillIds, candidate.pet.passiveSkillIds);
   assert.equal(candidate.pet.petGrowth.settledLevel, 28);
   assert.equal(candidate.pet.petGrowth.public.level, 28);
   assert.equal(candidate.pet.petGrowth.public.levelOneFourV.maxHp, candidate.pet.initialStats.maxHp);
+  assert.deepEqual(candidate.pet.petGrowth.public.levelOneFourV, candidate.pet.initialStats);
+  assert.deepEqual(candidate.pet.growthSpeciesLevel1Stats, candidate.pet.initialStats);
   assert.equal(
     validatePetGrowth(candidate.pet, growthCatalog.profileForFormId(candidate.formId)).ok,
     true,
@@ -183,7 +195,7 @@ test("linked capture candidates start at Lv1 in the strict factory, settle once,
 });
 
 test("every production catchable form now uses authoritative growth", () => {
-  const {growthCatalog} = harness("all-catchable-linked");
+  const {authority, growthCatalog} = harness("all-catchable-linked");
   const catchableForms = TEMPLATE_DOCUMENT.forms.filter((entry) => entry.capture?.catchable === true);
 
   assert.ok(catchableForms.length > 0);
@@ -193,9 +205,24 @@ test("every production catchable form now uses authoritative growth", () => {
       .map((entry) => entry.formId),
     [],
   );
+  for (const form of catchableForms) {
+    const prepared = authority.prepareRoom(battleRoom([
+      wildActor({formId: form.formId, level: 20}),
+    ], {roomId: `all_catchable_${form.formId}`}));
+    assert.equal(prepared.ok, true, form.formId);
+    const actor = prepared.room.battle.actors[1];
+    const pet = candidateFor(prepared.room).pet;
+    assert.equal(actor.formId, pet.formId, form.formId);
+    assert.equal(actor.level, pet.level, form.formId);
+    assert.equal(actor.maxHp, pet.maxHp, form.formId);
+    assert.equal(actor.attack, pet.attack, form.formId);
+    assert.equal(actor.defense, pet.defense, form.formId);
+    assert.equal(actor.speed, pet.quick, form.formId);
+    assert.deepEqual(pet.initialStats, pet.growthSpeciesLevel1Stats, form.formId);
+  }
 });
 
-test("ten same-form wild actors get ten unique private pets, secrets, and growth identities without actor mutation", () => {
+test("ten same-form wild actors get unique private pets and synchronize each combat actor", () => {
   const {authority, randomProbe} = harness("ten-unique");
   const actors = Array.from({length: 10}, (_, index) => wildActor({
     actorId: `wild_${index + 1}`,
@@ -209,13 +236,24 @@ test("ten same-form wild actors get ten unique private pets, secrets, and growth
 
   assert.equal(prepared.ok, true);
   assert.equal(prepared.candidateCount, 10);
-  assert.deepEqual(prepared.room.battle.actors, actorsBefore);
+  assert.deepEqual(prepared.room.battle.actors[0], actorsBefore[0]);
   const candidates = Object.values(prepared.room.battle[PRIVATE_CANDIDATE_KEY]);
   assert.equal(new Set(candidates.map((entry) => entry.candidateId)).size, 10);
   assert.equal(new Set(candidates.map((entry) => entry.captureSecret)).size, 10);
   assert.equal(new Set(candidates.map((entry) => entry.pet.instanceId)).size, 10);
   assert.equal(new Set(candidates.map((entry) => entry.pet.petGrowth.private.privateSeed)).size, 10);
   assert.equal(randomProbe.callCount(), 30);
+  for (const actor of prepared.room.battle.actors.slice(1)) {
+    const pet = candidateFor(prepared.room, actor.actorId).pet;
+    assert.equal(actor.maxHp, pet.maxHp);
+    assert.equal(actor.attack, pet.attack);
+    assert.equal(actor.defense, pet.defense);
+    assert.equal(actor.speed, pet.quick);
+    assert.deepEqual(actor.elements, pet.elements);
+    assert.deepEqual(actor.activeSkillIds, pet.activeSkillIds);
+    assert.deepEqual(actor.petSkillSlots, pet.petSkillSlots);
+    assert.deepEqual(actor.passiveSkillIds, pet.passiveSkillIds);
+  }
 
   const preparedAgain = authority.prepareRoom(prepared.room);
   assert.equal(preparedAgain.ok, true);
@@ -358,9 +396,15 @@ test("prepared candidate corruption is rejected instead of silently regenerating
   assert.equal(prepared.ok, true);
   const callCount = randomProbe.callCount();
 
-  const combatOnlyMutation = clone(prepared.room);
-  combatOnlyMutation.battle.actors[1].attack += 333;
-  assert.equal(authority.validateAttempt(combatOnlyMutation, captureInput()).ok, true);
+  const battleDamage = clone(prepared.room);
+  battleDamage.battle.actors[1].hp -= 1;
+  assert.equal(authority.validateAttempt(battleDamage, captureInput()).ok, true);
+
+  const combatStatMutation = clone(prepared.room);
+  combatStatMutation.battle.actors[1].attack += 333;
+  const mutatedAttempt = authority.validateAttempt(combatStatMutation, captureInput());
+  assert.equal(mutatedAttempt.ok, false);
+  assert.equal(mutatedAttempt.code, "pet_capture_candidate_state_invalid");
 
   const corruptedPet = clone(prepared.room);
   candidateFor(corruptedPet).pet.attack += 1;

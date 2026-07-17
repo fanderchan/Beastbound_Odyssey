@@ -26,7 +26,7 @@ The formal Lv1 4V proxy is the immutable authority-v1 `initialStats` / `growthSp
 
 Store immutable identity once on the server. Never reroll it on login, UI open, reconnect, offline挂机, or GM level-up. Use versioned fields and fixed-seed golden vectors.
 
-For current production creation paths, call the focused server initializer in `server/node/src/auth/pet-private-state.js` exactly once. A pet known to be Lv1 must persist both `initialStats` and `growthSpeciesLevel1Stats` from its actual visible stats. A Lv2+ capture must still receive private identity, but must not label current battle stats as historical Lv1 facts. Do not add a new pet grant by manually composing `individualSeed`.
+For current production creation paths, route new pets through `server/node/src/auth/new-pet-factory.js`. Wild capture candidates always begin as a real Lv1 authority pet, preserve both `initialStats` and `growthSpeciesLevel1Stats`, then settle that same individual to the encounter level. Therefore a newly captured Lv2+ pet still has authentic historical Lv1 facts; never reconstruct them from its current stats or manually compose a seed.
 
 ## Species profile contract
 
@@ -55,11 +55,11 @@ Player-facing behavior should follow:
 
 - Lv1: visible 4V; growth evidence unavailable or very broad.
 - Early levels: unstable tendency and wide Lv140 estimate range.
-- Lv20: this is the first automatic growth-rule eligibility point (19 observed upgrades); obvious good/bad individuals are usually separable, but exact hidden value is still not reversible.
+- Lv20: after 19 observed upgrades, obvious good/bad individuals are usually separable for a player's manual decision, but exact hidden value is still not reversible.
 - Later levels: narrower estimate and more stable grade.
 - GM/QA: exact seed, hidden roll, theoretical outcome, and percentile allowed.
 
-The current retention-preview policy has five 0..100 integer minimums: overall power growth percentile plus blood, attack, defense, and quick growth percentiles. `0` disables a threshold. A mature pet previews as retained only when every enabled threshold passes; an immature or unavailable pet always remains retained. The preview is bounded to 25 owned pets, reads no hidden seed/roll, returns `mutationCount = 0`, and must not move or delete anything. A client may recompute the same public formula for instant feedback, but only the response returned after the authoritative settings save is labeled server-confirmed.
+The current retention-preview policy has five 0..100 integer minimums: overall power growth percentile plus blood, attack, defense, and quick growth percentiles. It is a no-mutation observation aid for the owned-pet panel, not part of capture automation. The capture tab handles only finding, net use, and newly captured pets; it must not auto-level a pet to Lv20 or dispose of trained pets.
 
 If per-level gains become stochastic around a hidden mean, derive each level roll deterministically from immutable pet seed + growth version + stat + level. This prevents reconnect/save-scumming while preserving visible variation.
 
@@ -77,7 +77,7 @@ Encounter zones live in individual `*_map.json` documents. A typical zone contro
 
 The current picker first chooses a form by relative weight, then chooses an integer level uniformly from `levelMin..levelMax`.
 
-Current online encounter creation still accepts a client-composed encounter payload containing form, level, battle stats, capture flags/overrides, and EXP. Treat this as a release-blocking authority gap: production pet placement is incomplete until the server selects or validates the encounter from authoritative map/group data or a signed one-use encounter token.
+Online encounter creation is server-authoritative: the client sends map/zone/interaction intent, while the server chooses form, level, count, capture facts, combat stats, and EXP from the registered encounter catalog and one-use permit.
 
 For one independently sampled enemy:
 
@@ -97,7 +97,29 @@ P(at least one target) = 1 - (1 - p)^n
 
 When enemy count varies, simulate the actual configured distribution. Also estimate expected movement checks/time per Lv1 appearance so rarity is understandable in player minutes, not just percentages.
 
-Keep world battle stats separate from captured individual Lv1 stats. Wild battle actors may be Lv10+, while a successful capture must follow the approved capture-level rule and server growth contract.
+For a catchable actor, do not keep a separate static combat-stat roll. Generate the private pet candidate first, settle it to the encounter level, and copy that same individual's max HP, attack, defense, quick, elements, and skills into the battle actor before the room is published. On capture, transfer the frozen individual rather than rolling again. Its current-level intrinsic stats and authentic Lv1 4V must therefore agree before and after capture; only transient battle HP may differ after taking damage.
+
+## Capture-level hidden-growth conditioning
+
+Lv1 hunting remains the best route to exceptional growth without coupling Lv1 4V to hidden growth. Apply one global policy relative to each species' own hidden-growth range:
+
+- Lv1 accepts the first ordinary species roll unchanged.
+- Selection quality uses only hidden per-level bonuses with the standard `maxHp/4 + attack + defense + quick` weights. It never reads `initialBonus` or Lv1 4V.
+- Values at or below the species median retain full weight. Values above the median receive progressively lower acceptance weight as capture level rises.
+- The uppermost value retains a strictly positive lottery weight; no level makes a jackpot impossible.
+- Runtime uses bounded rejection sampling and, after the hard limit, chooses the least powerful attempted hidden-growth roll. Never run population sampling in an encounter request.
+
+The v1 pressure and upper-tail weight are:
+
+```text
+pressure(L) = 0                                      when L = 1
+pressure(L) = (L - 1) / ((L - 1) + 9)               when L > 1
+upper(q) = (q - 0.5) / 0.5                          for q > 0.5
+accept(q, L) = 1                                     for q <= 0.5
+accept(q, L) = 0.0001 ^ (pressure(L) * upper(q)^1.2) for q > 0.5
+```
+
+Here `q` is the individual's normalized hidden-growth power within its species, not a player-visible final quality score. The configured hard limit is eight draws.
 
 ## Capture probability
 
@@ -124,12 +146,13 @@ Use `captureChanceOverride` only for a deliberate special rule. An override bypa
 
 Design the pet together with existing挂机 behavior:
 
-- Define whether auto-capture should target species, level, element, 4V, quantity, or codex state.
+- Define whether auto-capture should target species, encounter level, element, quantity, or codex state.
+- Only a genuinely captured Lv1 wild pet may use per-stat public Lv1 4V percentiles for immediate handling. A Lv2+ capture defaults to retain/manual review.
 - When a capture target exists, ensure pet/party AI does not accidentally kill it.
-- Hidden growth must not be used by auto-discard before enough observable evidence exists.
+- Never read hidden growth, predict Lv140, or auto-train to Lv20 in the capture tab. Growth-based keep/discard remains a manual owned-pet-panel decision.
 - Never auto-discard locked, task, riding, cultivated, bound, paid, rare reward, or inheritance-relevant pets.
 - Keep a player-visible recent-action log and GM audit path before enabling high-value automatic discard.
-- Treat full party + full stable as a value-loss case. The current server can place an overflow capture in `lostCapturedPets` rather than a recoverable pet slot; do not ship a rare/paid capture path without a temporary holding or recovery rule.
+- Treat full party + full stable as a pre-capture block. Do not spend the capture turn or tool when the player has no capacity; technical recovery remains invisible and only reconciles exceptional already-claimed snapshots.
 
 Calculate false-discard rates from the same species simulation used for quality thresholds.
 
@@ -143,3 +166,5 @@ For a finalized species profile:
 - Test normal battle EXP, online挂机, offline挂机, GM level, reconnect, restart, rebirth, evolution, and fusion paths as applicable.
 - Audit old-pet migration with before/after counts, IDs, seeds, visible stats, skills, and value bands.
 - Simulate encounter time and capture attempts using actual zone and tool configuration.
+- Across every species profile, audit capture levels against the Lv1 baseline: hidden-growth mean, top-5%/top-1% tail, non-zero jackpot count, Lv1 4V drift, average attempts, and the hard attempt bound.
+- Test that the battle actor and captured pet share form, level, max HP, attack, defense, quick, elements, and skills, while ordinary battle damage to current HP remains valid.

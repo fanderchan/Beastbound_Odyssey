@@ -578,6 +578,48 @@ static func _validate_pet_growth_species_profiles(errors: Array[String]) -> void
 	if data.is_empty():
 		errors.append("pet_growth_species_profiles.json 缺失或不是 JSON 对象")
 		return
+	var wild_capture_policy_value = data.get("wildCaptureGrowthPolicy", null)
+	if not (wild_capture_policy_value is Dictionary):
+		errors.append("pet_growth_species_profiles 缺少 wildCaptureGrowthPolicy")
+	else:
+		var wild_capture_policy := wild_capture_policy_value as Dictionary
+		var policy_keys := [
+			"schemaVersion", "policyId", "qualityPowerWeights", "levelPressureHalfLevel",
+			"upperTailStart", "jackpotAcceptanceFloor", "upperTailShape", "maxSelectionAttempts",
+		]
+		if wild_capture_policy.size() != policy_keys.size() or policy_keys.any(func(key): return not wild_capture_policy.has(key)):
+			errors.append("wildCaptureGrowthPolicy 字段不完整或包含未知字段")
+		if int(wild_capture_policy.get("schemaVersion", 0)) != 1:
+			errors.append("wildCaptureGrowthPolicy.schemaVersion 必须为1")
+		if str(wild_capture_policy.get("policyId", "")).strip_edges() == "":
+			errors.append("wildCaptureGrowthPolicy.policyId 不能为空")
+		var quality_weights_value = wild_capture_policy.get("qualityPowerWeights", null)
+		if not (quality_weights_value is Dictionary):
+			errors.append("wildCaptureGrowthPolicy.qualityPowerWeights 必须为对象")
+		else:
+			var quality_weights := quality_weights_value as Dictionary
+			if quality_weights.size() != STAT_KEYS.size() or STAT_KEYS.any(func(key): return not quality_weights.has(key)):
+				errors.append("wildCaptureGrowthPolicy.qualityPowerWeights 必须包含四项权重")
+			else:
+				for key in STAT_KEYS:
+					var weight := float(quality_weights.get(key, 0.0))
+					if not is_finite(weight) or weight <= 0.0 or weight > 10.0:
+						errors.append("wildCaptureGrowthPolicy.qualityPowerWeights.%s 无效" % key)
+		var half_level := int(wild_capture_policy.get("levelPressureHalfLevel", 0))
+		if half_level < 2 or half_level > 140:
+			errors.append("wildCaptureGrowthPolicy.levelPressureHalfLevel 必须在2..140")
+		var upper_tail_start := float(wild_capture_policy.get("upperTailStart", -1.0))
+		if not is_finite(upper_tail_start) or upper_tail_start <= 0.0 or upper_tail_start >= 1.0:
+			errors.append("wildCaptureGrowthPolicy.upperTailStart 必须在0..1开区间")
+		var jackpot_floor := float(wild_capture_policy.get("jackpotAcceptanceFloor", -1.0))
+		if not is_finite(jackpot_floor) or jackpot_floor <= 0.0 or jackpot_floor >= 1.0:
+			errors.append("wildCaptureGrowthPolicy.jackpotAcceptanceFloor 必须在0..1开区间")
+		var upper_tail_shape := float(wild_capture_policy.get("upperTailShape", 0.0))
+		if not is_finite(upper_tail_shape) or upper_tail_shape < 0.25 or upper_tail_shape > 8.0:
+			errors.append("wildCaptureGrowthPolicy.upperTailShape 必须在0.25..8")
+		var max_attempts := int(wild_capture_policy.get("maxSelectionAttempts", 0))
+		if max_attempts < 1 or max_attempts > 16:
+			errors.append("wildCaptureGrowthPolicy.maxSelectionAttempts 必须在1..16")
 	var seen := {}
 	for profile in pet_growth_species_profile_list():
 		var profile_id := str(profile.get("profileId", "")).strip_edges()

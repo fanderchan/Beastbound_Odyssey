@@ -1,6 +1,21 @@
 {
   "schemaVersion": 1,
   "_comment": "宠物物种级成长配置。这里定义某个 form/species 的基础属性、每级成长、个体随机范围和模拟校验目标；玩家拥有的单只宠物只保存引用和个体随机结果。",
+  "wildCaptureGrowthPolicy": {
+    "schemaVersion": 1,
+    "policyId": "wild_capture_growth_level_bias_v1",
+    "qualityPowerWeights": {
+      "maxHp": 0.25,
+      "attack": 1,
+      "defense": 1,
+      "quick": 1
+    },
+    "levelPressureHalfLevel": 10,
+    "upperTailStart": 0.5,
+    "jackpotAcceptanceFloor": 0.0001,
+    "upperTailShape": 1.2,
+    "maxSelectionAttempts": 8
+  },
   "_fieldNotes": {
     "profileId": "物种成长档 ID。pet_templates.json 的 form 以后会通过 growthSpeciesProfileId 引用这里。",
     "displayName": "给数值策划和 GM 工具看的名称。",
@@ -11,6 +26,11 @@
     "individualRules.growthOutputSpread": "捕捉或生成时一次性决定的每级成长浮动范围。",
     "individualRules.distribution": "个体随机分布。weighted_center 表示中间多、极值少；uniform 表示均匀；rare_spike 表示极少数大幅高值。",
     "individualRules.rareExtremeRate": "极值概率，用 0..1 表示。0.02 表示大约 2%。",
+    "wildCaptureGrowthPolicy": "所有服务端权威野外捕捉候选共用的等级条件化选样政策。它只改变隐藏成长种子的入选权重，不改变各物种自己的成长中心、范围、Lv1 4V 或旧宠。",
+    "wildCaptureGrowthPolicy.qualityPowerWeights": "仅在物种自身隐藏成长浮动范围内计算归一值；沿用 maxHp/4 + attack + defense + quick 的战力权重。",
+    "wildCaptureGrowthPolicy.levelPressureHalfLevel": "达到该捕捉等级时，上尾抑制压力为一半；Lv1 压力恒为 0。",
+    "wildCaptureGrowthPolicy.jackpotAcceptanceFloor": "最高等级、理论最高成长种子的最低入选权重；必须大于 0，保证高等级仍有彩票级极品。",
+    "wildCaptureGrowthPolicy.maxSelectionAttempts": "单只野宠最多尝试的私有种子数；到上限时选已尝试中成长战力最低者，保证服务端时延有界。",
     "targetAudit": "数值模拟期望，用于离线检查，不直接参与战斗。",
     "growthObservation": "成长观察评分用的离线预算表。运行时只查这里的阈值，不实时大样本计算。",
     "growthObservation.sampleCount": "生成分位阈值时使用的离线样本数；数值策划调整成长参数后应重新生成。",

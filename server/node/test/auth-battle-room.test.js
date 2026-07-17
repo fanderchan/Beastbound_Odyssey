@@ -2602,6 +2602,7 @@ test("party pve knock-away defeats return players to record point", () => {
         "formId": "wuli_normal_orange_fire10",
         "name": "击飞乌力",
         "level": 30,
+        "catchable": false,
         "battleStats": {"maxHp": 80, "attack": 500, "defense": 5, "quick": 220},
       },
     },
@@ -2658,6 +2659,7 @@ test("party pve knock-away defeats return players to record point", () => {
         "formId": "wuli_normal_orange_fire10",
         "name": "普通乌力",
         "level": 30,
+        "catchable": false,
         "battleStats": {"maxHp": 80, "attack": 115, "defense": 5, "quick": 220},
       },
     },
@@ -3009,7 +3011,13 @@ test("party pve linked-growth capture transfers the encounter candidate without 
   assert.equal(candidateBefore.pet.level, 20);
   assert.equal(Boolean(candidateBefore.pet.initialStats), true);
   assert.equal(Boolean(candidateBefore.pet.growthSpeciesLevel1Stats), true);
-  assert.notEqual(candidateBefore.pet.attack, enemy.attack);
+  assert.equal(candidateBefore.pet.maxHp, enemy.maxHp);
+  assert.equal(candidateBefore.pet.attack, enemy.attack);
+  assert.equal(candidateBefore.pet.defense, enemy.defense);
+  assert.equal(candidateBefore.pet.quick, enemy.speed);
+  assert.deepEqual(candidateBefore.pet.activeSkillIds, enemy.activeSkillIds);
+  assert.deepEqual(candidateBefore.pet.petSkillSlots, enemy.petSkillSlots);
+  assert.deepEqual(candidateBefore.pet.passiveSkillIds, enemy.passiveSkillIds);
   const publicBeforeJson = JSON.stringify(encounter.room);
   assert.equal(publicBeforeJson.includes(String(candidateBefore.pet.individualSeed)), false);
   assert.equal(publicBeforeJson.includes(String(candidateBefore.captureSecret)), false);
@@ -3051,7 +3059,11 @@ test("party pve linked-growth capture transfers the encounter candidate without 
   const ownWriteback = resolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === solo.account.accountId);
   assert.deepEqual(ownWriteback.capturedPets[0].initialStats, candidateBefore.pet.initialStats);
   assert.equal(JSON.stringify(ownWriteback).includes(String(candidateBefore.pet.individualSeed)), false);
-  assert.equal(JSON.stringify(service.getProfile(solo.session.token).profile).includes(String(candidateBefore.captureSecret)), false);
+  const publicProfile = service.getProfile(solo.session.token).profile;
+  const publicCaptured = publicProfile.petInstances.find((pet) => pet.capturedBattleActorId === enemy.actorId);
+  assert.deepEqual(publicCaptured.initialStats, candidateBefore.pet.initialStats);
+  assert.deepEqual(publicCaptured.growthSpeciesLevel1Stats, candidateBefore.pet.growthSpeciesLevel1Stats);
+  assert.equal(JSON.stringify(publicProfile).includes(String(candidateBefore.captureSecret)), false);
 });
 
 test("party pve capture rejects legacy full pet capacity before rolling or consuming a tool", () => {
@@ -3573,6 +3585,7 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
 	        "formId": "wuli_normal_orange_fire10",
 	        "name": "经验乌力",
 	        "level": 1,
+	        "catchable": false,
 	        "expReward": 200,
 	        "battleStats": {
 	          "maxHp": 10,
@@ -3922,6 +3935,7 @@ test("party pve derives enemy exp from stats and only rewards the last-hit parti
         "formId": "wuli_normal_orange_fire10",
         "name": "野生乌力",
         "level": 1,
+        "catchable": false,
         "battleStats": {
           "maxHp": 80,
           "attack": 10,
@@ -4244,6 +4258,7 @@ test("party pve wild enemies can combo when random targets match", () => {
         "formId": "wuli_normal_orange_fire10",
         "name": "野合乌力",
         "level": 1,
+        "catchable": false,
         "battleStats": {
           "maxHp": 500,
           "attack": 10,
@@ -4341,6 +4356,7 @@ test("party pve collapses adjacent same-target attacks into combo events and sha
         "formId": "wuli_normal_orange_fire10",
         "name": "合击乌力",
         "level": 1,
+        "catchable": false,
         "expReward": 100,
         "battleStats": {
           "maxHp": 30,

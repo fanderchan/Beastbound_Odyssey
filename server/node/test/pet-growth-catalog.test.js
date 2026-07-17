@@ -10,6 +10,9 @@ const {
   createPetGrowthCatalog,
   loadPetGrowthCatalog,
 } = require("../src/auth/pet-growth-catalog");
+const {
+  DEFAULT_WILD_CAPTURE_GROWTH_POLICY,
+} = require("../src/auth/wild-capture-growth-selection");
 
 function profile(overrides = {}) {
   return {
@@ -64,6 +67,9 @@ test("default pet growth catalog strictly links all current species profiles and
   assert.equal(catalog.formCount, 32);
   assert.equal(catalog.profiledFormCount, 32);
   assert.deepEqual(catalog.orphanProfileIds, []);
+  assert.deepEqual(catalog.wildCaptureGrowthPolicy, DEFAULT_WILD_CAPTURE_GROWTH_POLICY);
+  assert.equal(Object.isFrozen(catalog.wildCaptureGrowthPolicy), true);
+  assert.equal(Object.isFrozen(catalog.wildCaptureGrowthPolicy.qualityPowerWeights), true);
   assert.equal(catalog.profileIdForFormId("blue_man_dragon_water10"), "blue_man_dragon_v1");
   assert.equal(catalog.profileIdForFormId("wuli_normal_orange_fire10"), "wuli_normal_orange_fire10_v1");
   assert.equal(catalog.profileIdForFormId("mossback_marsh_earth7_water3"), "mossback_marsh_earth7_water3_v1");
@@ -261,6 +267,13 @@ test("catalog rejects hidden normalization of ranges, distributions, and numeric
   nonPositiveGrowth.profileDocument.profiles[0].outputGrowth.attack = 0.1;
   nonPositiveGrowth.profileDocument.profiles[0].individualRules.growthOutputSpread.attack = [-0.1, 0.3];
   assert.throws(() => createPetGrowthCatalog(nonPositiveGrowth), /minimum per-level growth must remain positive/);
+
+  const invalidCapturePolicy = documents();
+  invalidCapturePolicy.profileDocument.wildCaptureGrowthPolicy = {
+    ...structuredClone(DEFAULT_WILD_CAPTURE_GROWTH_POLICY),
+    jackpotAcceptanceFloor: 0,
+  };
+  assert.throws(() => createPetGrowthCatalog(invalidCapturePolicy), /jackpotAcceptanceFloor/);
 });
 
 test("catalog resolution fails closed for unknown and conflicting instance identities", () => {

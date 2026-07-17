@@ -11,6 +11,7 @@ const jsonOutput = args.includes("--json");
 const checkMode = args.includes("--check");
 const formArgIndex = args.indexOf("--form");
 const requestedFormId = formArgIndex >= 0 ? String(args[formArgIndex + 1] || "").trim() : "";
+const STAT_KEYS_FOR_INSPECTION = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 
 function readText(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -136,6 +137,42 @@ const formById = indexRows(forms, "formId", "forms", issues);
 const actionById = indexRows(actions, "id", "actions", issues);
 const passiveById = indexRows(passives, "id", "passives", issues);
 const growthById = indexRows(growthProfiles, "profileId", "growthProfiles", issues);
+
+const wildCaptureGrowthPolicy = growthDocument.wildCaptureGrowthPolicy;
+const expectedWildCapturePolicyKeys = [
+  "schemaVersion",
+  "policyId",
+  "qualityPowerWeights",
+  "levelPressureHalfLevel",
+  "upperTailStart",
+  "jackpotAcceptanceFloor",
+  "upperTailShape",
+  "maxSelectionAttempts",
+];
+if (!wildCaptureGrowthPolicy || typeof wildCaptureGrowthPolicy !== "object" || Array.isArray(wildCaptureGrowthPolicy)) {
+  issues.errors.push("成长档缺少 wildCaptureGrowthPolicy；无法保证全宠物捕捉等级成长分布");
+} else {
+  const keys = Object.keys(wildCaptureGrowthPolicy).sort();
+  const expectedKeys = [...expectedWildCapturePolicyKeys].sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
+    issues.errors.push("wildCaptureGrowthPolicy 字段不完整或包含未知字段");
+  }
+  const weights = wildCaptureGrowthPolicy.qualityPowerWeights;
+  if (
+    !weights
+    || typeof weights !== "object"
+    || Array.isArray(weights)
+    || STAT_KEYS_FOR_INSPECTION.some((key) => !Number.isFinite(Number(weights[key])) || Number(weights[key]) <= 0)
+  ) {
+    issues.errors.push("wildCaptureGrowthPolicy.qualityPowerWeights 必须包含正数血攻防敏权重");
+  }
+  if (!(number(wildCaptureGrowthPolicy.jackpotAcceptanceFloor) > 0 && number(wildCaptureGrowthPolicy.jackpotAcceptanceFloor) < 1)) {
+    issues.errors.push("wildCaptureGrowthPolicy.jackpotAcceptanceFloor 必须在 0..1 开区间，不能抹掉彩票尾巴");
+  }
+  if (!(Math.trunc(number(wildCaptureGrowthPolicy.maxSelectionAttempts)) >= 1 && Math.trunc(number(wildCaptureGrowthPolicy.maxSelectionAttempts)) <= 16)) {
+    issues.errors.push("wildCaptureGrowthPolicy.maxSelectionAttempts 必须在 1..16，保证在线生成有界");
+  }
+}
 
 const petActions = actions.filter((action) => String(action.owner || "") === "pet_skill");
 for (const action of petActions) {
@@ -309,6 +346,7 @@ const observedGrowthRulePreviewText = readText("server/node/src/auth/pet-observe
 const petExpSettlementText = readText("server/node/src/auth/pet-exp-settlement.js");
 const petEncounterAuthorityText = readText("server/node/src/auth/pet-encounter-authority.js");
 const petCaptureCandidateAuthorityText = readText("server/node/src/auth/pet-capture-candidate-authority.js");
+const wildCaptureGrowthSelectionText = readText("server/node/src/auth/wild-capture-growth-selection.js");
 const newPetFactoryText = readText("server/node/src/auth/new-pet-factory.js");
 const petRebirthGrowthCycleText = readText("server/node/src/auth/pet-rebirth-growth-cycle.js");
 const battlePassiveCatalogText = readText("server/node/src/auth/battle-passive-catalog.js");
@@ -360,6 +398,14 @@ const serverAuthority = {
     && petCaptureCandidateAuthorityText.includes("captureCandidatesByActorId")
     && petCaptureCandidateAuthorityText.includes("createHmac")
     && petCaptureCandidateAuthorityText.includes("settlePetGrowthToLevel"),
+  wildCaptureGrowthLevelBiasWired: growthCatalogText.includes("wildCaptureGrowthPolicy")
+    && wildCaptureGrowthSelectionText.includes("selectWildCaptureGrowthDraw")
+    && wildCaptureGrowthSelectionText.includes("jackpotAcceptanceFloor")
+    && petCaptureCandidateAuthorityText.includes("selectWildCaptureGrowthDraw"),
+  captureActorCandidateFactsUnified: petCaptureCandidateAuthorityText.includes("synchronizeActorWithCandidate")
+    && petCaptureCandidateAuthorityText.includes("battle actor intrinsic pet facts do not match its frozen capture candidate")
+    && petCaptureCandidateAuthorityText.includes("actor.maxHp !== pet.maxHp")
+    && petCaptureCandidateAuthorityText.includes("actor.speed !== pet.quick"),
   petRebirthGrowthCycleWired: authServiceText.includes("createPetRebirthGrowthCycle")
     && authServiceText.includes("petRebirthGrowthCycle.preflight")
     && authServiceText.includes("petRebirthGrowthCycle.restart")
@@ -387,6 +433,8 @@ if (serverAuthority.petExpDispatcherWired && !serverAuthority.petExpAuthorityV1E
 }
 if (!serverAuthority.newLevelOneFactoryWired) issues.warnings.push("Node 新 Lv1 宠物尚未统一经过严格成长 factory");
 if (!serverAuthority.petCaptureCandidatesWired) issues.warnings.push("Node 野外捕捉尚未冻结遇敌候选、使用私有随机数并原样转移");
+if (!serverAuthority.wildCaptureGrowthLevelBiasWired) issues.warnings.push("Node 尚未按捕捉等级压低隐藏成长上尾，Lv1 捕宠价值没有全宠物服务端合同");
+if (!serverAuthority.captureActorCandidateFactsUnified) issues.warnings.push("可捕捉野怪的战斗固有属性尚未与冻结宠物个体统一，捕前捕后可能不一致");
 if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node authority-v1 宠物转生尚未接入严格成长周期重启与材料预检");
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
 if (!serverAuthority.publicGrowthProtocolBoundary) issues.warnings.push("宠物公开成长契约要求客户端与服务端锁定在同一份 v2+ 协议边界");
@@ -444,6 +492,7 @@ const summary = {
     present: [...forms, ...growthProfiles].some((entry) => Object.keys(entry || {}).some((key) => /(^|_)4v$|four.?v|lv1.?4v/i.test(key))),
     note: "未检测到时，当前以 growthSpeciesLevel1Stats/initialStats 的 Lv1 血攻防敏代用；不要擅自声称已有独立 4V 公式。",
   },
+  wildCaptureGrowthPolicy: wildCaptureGrowthPolicy || null,
   serverAuthority,
   issues,
 };
@@ -483,7 +532,7 @@ if (requestedFormId) {
     for (const [toolId, chances] of Object.entries(detail.captureChance)) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
-    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
+    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
   console.log(JSON.stringify(summary, null, 2));
@@ -491,7 +540,7 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
-  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
+  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);
