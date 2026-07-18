@@ -55,6 +55,7 @@ const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.g
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
+const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -951,6 +952,7 @@ var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var pet_action_art_preview: bool = false
+var battle_visual_review_scenario: String = ""
 var pet_rename_preview: bool = false
 var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
@@ -1661,6 +1663,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
+	elif battle_visual_review_scenario != "":
+		call_deferred("_run_battle_visual_review_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
 	elif pet_order_preview:
@@ -2418,6 +2422,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
+		elif arg.begins_with("--battle-visual-review="):
+			battle_visual_review_scenario = arg.trim_prefix("--battle-visual-review=").strip_edges().to_lower()
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
 		elif arg == "--pet-order-preview":
@@ -3481,6 +3487,10 @@ func _run_pet_management_preview() -> void:
 
 func _run_pet_action_art_preview() -> void:
 	await PetActionArtPreview.new(self).run()
+
+
+func _run_battle_visual_review_preview() -> void:
+	await BattleVisualReviewPreview.new(self, battle_visual_review_scenario).run()
 
 
 func _run_pet_order_preview() -> void:
@@ -13518,7 +13528,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if state == "launched" and not launched_active:
 		return
 	var visual_scale := _battle_actor_visual_scale()
-	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and not launched_active and PetActionAssetCatalog.supports_form(form_id)
+	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and PetActionAssetCatalog.supports_form(form_id)
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
 	var large_formation := _battle_uses_10v10_formation_template()
 	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
@@ -13557,7 +13567,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		trim_color = Color(1.0, 0.88, 0.32, alpha)
 	var formal_pet_drawn := false
 	if formal_pet_supported:
-		formal_pet_drawn = _draw_formal_battle_pet_actor(form_id, side, state, pos, visual_scale, alpha)
+		formal_pet_drawn = _draw_formal_battle_pet_actor(form_id, side, state, pos, visual_scale, alpha, launch_rotation)
 	if formal_pet_drawn:
 		pass
 	elif kind == "player":
@@ -13616,7 +13626,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
 
 
-func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float) -> bool:
+func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
 	var action := PetActionAssetCatalog.action_for_battle_state(state)
 	var view := PetActionAssetCatalog.battle_view_for_side(side)
 	var texture: Texture2D
@@ -13636,7 +13646,7 @@ func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String,
 		Vector2(target_size, target_size)
 	)
 	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
-	draw_set_transform(pos, 0.0, Vector2(horizontal_scale, 1.0))
+	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
