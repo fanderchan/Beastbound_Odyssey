@@ -1,6 +1,8 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
+const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetBattleReviewModel := preload("res://scripts/battle/pet_battle_review_model.gd")
 
 var host
@@ -48,17 +50,37 @@ func run() -> void:
 		errors.append("单帧没有推进固定一帧")
 	lab.set_paused(false)
 
-	lab.start_director()
+	lab.close(false)
+	lab.open(
+		form_id,
+		PetBattleReviewModel.MODE_DIRECTOR,
+		424242,
+		false,
+		PetBattleReviewModel.REVIEW_MOUNT_FORM_ID,
+		false
+	)
 	await host.get_tree().process_frame
 	if lab.current_mode() != PetBattleReviewModel.MODE_DIRECTOR:
 		errors.append("动作必现模式没有启动")
+	if lab.current_mount_form_id() != PetBattleReviewModel.REVIEW_MOUNT_FORM_ID:
+		errors.append("骑乘动作必现没有载入指定整体坐骑")
 	if str(host.battle_state.get("reviewMode", "")) != PetBattleReviewModel.MODE_DIRECTOR:
 		errors.append("动作必现没有使用真实验收战斗状态")
-	if PetBattleReviewModel.director_steps(form_id).size() != 12:
-		errors.append("动作必现清单不是12个标准场景")
+	if not bool(host.battle_state.get("reviewMountAllPlayers", false)):
+		errors.append("骑乘动作必现没有声明10名人物全员骑乘")
+	if PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size() != 16:
+		errors.append("骑乘动作必现清单不是16个标准场景")
 	var actor_counts := _actor_counts(host.battle_state)
 	if int(actor_counts.get("ally", 0)) != 10 or int(actor_counts.get("enemy", 0)) != 10:
 		errors.append("动作必现没有保留双方10人阵型")
+	if int(actor_counts.get("player", 0)) != 10 or int(actor_counts.get("pet", 0)) != 10:
+		errors.append("骑乘动作必现不是10人物＋10战宠")
+	if (
+		int(actor_counts.get("mounted", 0)) != 10
+		or int(actor_counts.get("integratedMounted", 0)) != 10
+		or int(actor_counts.get("uniqueRideIds", 0)) != 10
+	):
+		errors.append("骑乘动作必现没有形成10个唯一整体骑乘单位：%s" % str(actor_counts))
 	lab.cycle_speed()
 	var director_frames := 0
 	while director_frames < 2400 and not lab.required_coverage_complete():
@@ -76,7 +98,7 @@ func run() -> void:
 		status,
 		form_id,
 		PetBattleReviewModel.pet_options().size(),
-		PetBattleReviewModel.director_steps(form_id).size(),
+		PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size(),
 		director_frames,
 		str(lab.coverage_counts()),
 		str(actor_counts),
@@ -86,7 +108,16 @@ func run() -> void:
 
 
 func _actor_counts(state: Dictionary) -> Dictionary:
-	var result := {"ally": 0, "enemy": 0, "pet": 0, "player": 0}
+	var result := {
+		"ally": 0,
+		"enemy": 0,
+		"pet": 0,
+		"player": 0,
+		"mounted": 0,
+		"integratedMounted": 0,
+		"uniqueRideIds": 0,
+	}
+	var ride_ids := {}
 	for value in state.get("actors", []):
 		if not (value is Dictionary):
 			continue
@@ -97,6 +128,19 @@ func _actor_counts(state: Dictionary) -> Dictionary:
 		var kind := str(actor.get("kind", ""))
 		if kind == "player":
 			result["player"] = int(result.get("player", 0)) + 1
+			var ride_id := str(actor.get("ridePetInstanceId", "")).strip_edges()
+			var ride_form_id := str(actor.get("ridePetFormId", "")).strip_edges()
+			if ride_id != "" and int(actor.get("ridePetHp", 0)) > 0 and int(actor.get("ridePetMaxHp", 0)) > 0:
+				result["mounted"] = int(result.get("mounted", 0)) + 1
+				ride_ids[ride_id] = true
+				var character_id := MountVisualProfileCatalog.character_id_for_form(ride_form_id)
+				if (
+					MountVisualProfileCatalog.runtime_presentation_mode_for_form(ride_form_id)
+					== MountVisualProfileCatalog.PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY
+					and MountedCharacterAssetCatalog.supports_combination(character_id, ride_form_id)
+				):
+					result["integratedMounted"] = int(result.get("integratedMounted", 0)) + 1
 		elif kind == "pet" or kind == "wild_pet":
 			result["pet"] = int(result.get("pet", 0)) + 1
+	result["uniqueRideIds"] = ride_ids.size()
 	return result

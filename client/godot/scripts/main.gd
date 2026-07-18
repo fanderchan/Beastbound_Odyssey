@@ -982,8 +982,10 @@ var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
 var pet_battle_review_preview_mode: String = ""
 var pet_battle_review_preview_form_id: String = ""
+var pet_battle_review_preview_mount_form_id: String = ""
 var pet_battle_review_preview_seed: int = 309001
 var pet_battle_review_preview_collapsed: bool = false
+var pet_battle_review_preview_single_loop: bool = false
 var auto_battle_settings_preview: bool = false
 var battle_spirit_source_preview: bool = false
 var auto_capture_settings_preview: bool = false
@@ -1795,7 +1797,9 @@ func _ready() -> void:
 			pet_battle_review_preview_form_id,
 			pet_battle_review_preview_mode,
 			pet_battle_review_preview_seed,
-			pet_battle_review_preview_collapsed
+			pet_battle_review_preview_collapsed,
+			pet_battle_review_preview_mount_form_id,
+			pet_battle_review_preview_single_loop
 		)
 	elif auto_battle_settings_preview:
 		call_deferred("_run_auto_battle_settings_preview")
@@ -2502,10 +2506,14 @@ func _apply_preview_window_args() -> void:
 			pet_battle_review_preview_mode = "director" if requested_review_mode == "director" else "brawl"
 		elif arg.begins_with("--pet-battle-review-form="):
 			pet_battle_review_preview_form_id = arg.trim_prefix("--pet-battle-review-form=").strip_edges()
+		elif arg.begins_with("--pet-battle-review-mount-form="):
+			pet_battle_review_preview_mount_form_id = arg.trim_prefix("--pet-battle-review-mount-form=").strip_edges()
 		elif arg.begins_with("--pet-battle-review-seed="):
 			pet_battle_review_preview_seed = maxi(1, int(arg.trim_prefix("--pet-battle-review-seed=").strip_edges()))
 		elif arg == "--pet-battle-review-collapsed":
 			pet_battle_review_preview_collapsed = true
+		elif arg == "--pet-battle-review-single-loop":
+			pet_battle_review_preview_single_loop = true
 		elif arg == "--auto-battle-settings-preview":
 			auto_battle_settings_preview = true
 		elif arg == "--battle-spirit-source-preview":
@@ -6086,9 +6094,11 @@ func _open_pet_battle_review_lab(
 	form_id: String = "",
 	mode: String = "brawl",
 	seed_value: int = 309001,
-	collapsed: bool = false
+	collapsed: bool = false,
+	mount_form_id: String = "",
+	single_loop: bool = false
 ) -> void:
-	_pet_battle_review().open(form_id, mode, seed_value, collapsed)
+	_pet_battle_review().open(form_id, mode, seed_value, collapsed, mount_form_id, single_loop)
 
 
 func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:
@@ -11218,7 +11228,8 @@ func _add_battle_float_text(actor_id: String, text: String, color: Color, delay:
 	var actor := BattleModel.actor_by_id(battle_state, actor_id)
 	if actor.is_empty():
 		return
-	var origin := _battle_slot_world_position(str(actor.get("slotId", ""))) + Vector2(0, -64.0 * _battle_actor_visual_scale())
+	var height_offset := -136.0 if _battle_actor_uses_integrated_mount_visual(actor) else -64.0
+	var origin := _battle_slot_world_position(str(actor.get("slotId", ""))) + Vector2(0, height_offset * _battle_actor_visual_scale())
 	battle_float_texts.append({
 		"text": text,
 		"position": origin,
@@ -13670,8 +13681,6 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	pos += event_offset
 	pos += _battle_actor_melee_impact_offset(actor, visual_scale)
 	pos += _battle_actor_escape_preview_offset(actor_id, side, visual_scale)
-	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
-		_draw_battle_actor_home_shadow(actor, home_pos, visual_scale, side, kind)
 	var show_actor_name := _battle_should_show_actor_label(actor)
 	var compact_labels := large_formation or _layout_size().y < 460.0
 	var hp_offset := (-42.0 if large_formation else (-54.0 if compact_labels else -82.0)) * visual_scale
@@ -13679,6 +13688,10 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if formal_pet_supported:
 		hp_offset = -132.0 * visual_scale
 		name_offset = -153.0 * visual_scale
+	elif _battle_actor_uses_integrated_mount_visual(actor):
+		# 骑乘整图在 10V10 下仍约 120px 高；人物默认血条位置会压进骑手身体。
+		hp_offset = -166.0 * visual_scale
+		name_offset = -188.0 * visual_scale
 	pos += _battle_actor_state_offset(state, side, visual_scale)
 	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
@@ -13834,9 +13847,19 @@ func _battle_actor_has_active_ride(actor: Dictionary) -> bool:
 	)
 
 
+func _battle_actor_uses_integrated_mount_visual(actor: Dictionary) -> bool:
+	if not _battle_actor_has_active_ride(actor):
+		return false
+	var form_id := str(actor.get("ridePetFormId", "")).strip_edges()
+	return (
+		MountVisualProfileCatalog.runtime_presentation_mode_for_form(form_id)
+		== MountVisualProfileCatalog.PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY
+	)
+
+
 func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, side: String, rotation_angle: float = 0.0) -> bool:
 	var form_id := str(actor.get("ridePetFormId", "")).strip_edges()
-	if MountVisualProfileCatalog.runtime_presentation_mode_for_form(form_id) != MountVisualProfileCatalog.PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY:
+	if not _battle_actor_uses_integrated_mount_visual(actor):
 		return false
 	var character_id := MountVisualProfileCatalog.character_id_for_form(form_id)
 	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
@@ -13884,7 +13907,7 @@ func _draw_battle_ground_shadow(actor: Dictionary, pos: Vector2, visual_scale: f
 		str(actor.get("kind", "")),
 		str(actor.get("actionState", "idle")),
 		visual_scale,
-		_battle_actor_has_active_ride(actor)
+		_battle_actor_uses_integrated_mount_visual(actor)
 	)
 	var center := pos + (plan.get("centerOffset", Vector2.ZERO) as Vector2)
 	var radius := plan.get("radius", Vector2(30.0, 8.0)) as Vector2
@@ -13922,37 +13945,42 @@ func _draw_battle_guard_effect(actor: Dictionary, pos: Vector2, visual_scale: fl
 	var side := str(actor.get("side", BattleModel.SIDE_ENEMY))
 	var forward := (Vector2(-0.82, -0.42) if side == BattleModel.SIDE_ALLY else Vector2(0.82, 0.42)).normalized()
 	var tangent := Vector2(-forward.y, forward.x)
-	var center := pos + (forward * 27.0 + Vector2(0.0, -29.0)) * visual_scale
+	var mounted := _battle_actor_uses_integrated_mount_visual(actor)
+	var effect_scale := visual_scale * (1.25 if mounted else 1.0)
+	var center := pos + (
+		forward * (40.0 if mounted else 27.0)
+		+ Vector2(0.0, -65.0 if mounted else -29.0)
+	) * visual_scale
 	var impact := BattleVisualPresentationModel.guard_impact_strength(
 		state == BattleVisualPresentationModel.STATE_GUARD_HIT,
 		_battle_current_event_progress(),
 		_battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
 	)
 	var shield := PackedVector2Array([
-		center + forward * 13.0 * visual_scale,
-		center + (tangent * 24.0 - forward * 3.0) * visual_scale,
-		center + (tangent * 17.0 - forward * 25.0) * visual_scale,
-		center - forward * 34.0 * visual_scale,
-		center + (-tangent * 17.0 - forward * 25.0) * visual_scale,
-		center + (-tangent * 24.0 - forward * 3.0) * visual_scale,
+		center + forward * 13.0 * effect_scale,
+		center + (tangent * 24.0 - forward * 3.0) * effect_scale,
+		center + (tangent * 17.0 - forward * 25.0) * effect_scale,
+		center - forward * 34.0 * effect_scale,
+		center + (-tangent * 17.0 - forward * 25.0) * effect_scale,
+		center + (-tangent * 24.0 - forward * 3.0) * effect_scale,
 	])
 	var fill_alpha := 0.08 + impact * 0.24
 	draw_polygon(shield, _battle_solid_colors(shield.size(), Color(0.30, 0.74, 1.0, fill_alpha)))
-	draw_polyline(shield + PackedVector2Array([shield[0]]), Color(0.62, 0.91, 1.0, 0.56 + impact * 0.38), maxf(1.6, (2.6 + impact * 1.8) * visual_scale), true)
-	var brace_a := center + tangent * 15.0 * visual_scale - forward * 10.0 * visual_scale
-	var brace_b := center - tangent * 15.0 * visual_scale - forward * 10.0 * visual_scale
-	draw_line(brace_a, brace_b, Color(0.75, 0.94, 1.0, 0.34 + impact * 0.52), maxf(1.2, 2.0 * visual_scale), true)
+	draw_polyline(shield + PackedVector2Array([shield[0]]), Color(0.62, 0.91, 1.0, 0.56 + impact * 0.38), maxf(1.6, (2.6 + impact * 1.8) * effect_scale), true)
+	var brace_a := center + tangent * 15.0 * effect_scale - forward * 10.0 * effect_scale
+	var brace_b := center - tangent * 15.0 * effect_scale - forward * 10.0 * effect_scale
+	draw_line(brace_a, brace_b, Color(0.75, 0.94, 1.0, 0.34 + impact * 0.52), maxf(1.2, 2.0 * effect_scale), true)
 	if impact > 0.01:
-		var contact := center + forward * 17.0 * visual_scale
-		draw_circle(contact, (5.0 + 5.0 * impact) * visual_scale, Color(0.86, 0.98, 1.0, 0.18 + impact * 0.36))
+		var contact := center + forward * 17.0 * effect_scale
+		draw_circle(contact, (5.0 + 5.0 * impact) * effect_scale, Color(0.86, 0.98, 1.0, 0.18 + impact * 0.36))
 		for index in range(5):
 			var ray_angle := -0.85 + float(index) * 0.42
 			var ray_direction := forward.rotated(ray_angle)
 			draw_line(
-				contact + ray_direction * 7.0 * visual_scale,
-				contact + ray_direction * (13.0 + impact * 9.0) * visual_scale,
+				contact + ray_direction * 7.0 * effect_scale,
+				contact + ray_direction * (13.0 + impact * 9.0) * effect_scale,
 				Color(0.90, 0.99, 1.0, impact * 0.82),
-				maxf(1.0, 1.8 * visual_scale),
+				maxf(1.0, 1.8 * effect_scale),
 				true
 			)
 
@@ -13962,22 +13990,6 @@ func _battle_solid_colors(count: int, color: Color) -> PackedColorArray:
 	for _index in range(maxi(0, count)):
 		colors.append(color)
 	return colors
-
-
-func _draw_battle_actor_home_shadow(actor: Dictionary, home_pos: Vector2, visual_scale: float, side: String, kind: String) -> void:
-	var alpha := 0.34
-	var color := Color(0.40, 0.74, 1.0, alpha)
-	if kind == "pet":
-		color = Color(0.54, 0.95, 0.58, alpha)
-	elif kind == "wild_pet":
-		color = Color(1.0, 0.62, 0.34, alpha)
-	elif side == BattleModel.SIDE_ALLY:
-		color = Color(0.45, 0.78, 1.0, alpha)
-	var center := home_pos + Vector2(0, 2.0) * visual_scale
-	var radius := Vector2(27.0, 8.0) * visual_scale
-	var marker := _battle_ellipse_points(center, radius, 0.0, 32)
-	draw_polygon(marker, _battle_solid_colors(marker.size(), Color(color.r, color.g, color.b, 0.08)))
-	draw_polyline(marker + PackedVector2Array([marker[0]]), color, maxf(1.2, 2.0 * visual_scale), true)
 
 
 func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: float, alpha: float, compact: bool) -> void:
@@ -14265,6 +14277,9 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 	var target_pos := _battle_slot_world_position(str(target.get("slotId", "")))
 	target_pos += _battle_actor_counter_anchor_offset(target, target_pos, visual_scale)
 	var contact_distance := BATTLE_COUNTER_CONTACT_DISTANCE if event_type == "counter_attack" or bool(battle_current_event.get("counterTriggered", false)) else BATTLE_MELEE_CONTACT_DISTANCE
+	if _battle_actor_uses_integrated_mount_visual(actor) or _battle_actor_uses_integrated_mount_visual(target):
+		# 整体骑乘轮廓显著宽于普通人物；保持足够锚点距离，避免两张 256px 整图穿插重叠。
+		contact_distance = maxf(contact_distance, 124.0)
 	var contact_offset := _battle_melee_contact_offset(base_pos, target_pos, visual_scale, contact_distance)
 	return contact_offset * lunge
 

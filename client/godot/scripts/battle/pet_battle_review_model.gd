@@ -20,6 +20,10 @@ const POOL_ALL := "all"
 const ALLY_FOCUS_ID := BattleModel.PLAYER_PET_ID
 const ENEMY_FOCUS_ID := "enemy_front_3"
 const ALLY_COMBO_IDS: Array[String] = [BattleModel.PLAYER_PET_ID, "ally_front_2", "ally_front_4"]
+const REVIEW_MOUNT_FORM_ID := "bui_novice_sprout_earth5_wind5"
+const ALLY_MOUNT_FOCUS_ID := BattleModel.PLAYER_ACTOR_ID
+const ENEMY_MOUNT_FOCUS_ID := "enemy_back_3"
+const ALLY_MOUNT_COMBO_IDS: Array[String] = ["ally_back_2", BattleModel.PLAYER_ACTOR_ID, "ally_back_4"]
 
 const REQUIRED_COVERAGE: Array[String] = [
 	"attack",
@@ -103,6 +107,11 @@ static func normalized_form_id(form_id: String) -> String:
 	return form_id if not PetTemplateCatalog.form_by_id(form_id).is_empty() else default_form_id()
 
 
+static func normalized_mount_form_id(form_id: String) -> String:
+	var normalized := form_id.strip_edges()
+	return normalized if normalized != "" and not PetTemplateCatalog.form_by_id(normalized).is_empty() else ""
+
+
 static func normalized_seed(seed_value: int) -> int:
 	var positive := absi(seed_value)
 	return positive if positive > 0 else 1
@@ -112,9 +121,11 @@ static func build_brawl_state(
 	focus_form_id: String,
 	seed_value: int,
 	placement: String = PLACEMENT_BOTH_ALL,
-	pool_id: String = POOL_FORMAL
+	pool_id: String = POOL_FORMAL,
+	mount_form_id: String = ""
 ) -> Dictionary:
 	var form_id := normalized_form_id(focus_form_id)
+	var resolved_mount_form_id := normalized_mount_form_id(mount_form_id)
 	var seed := normalized_seed(seed_value)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -134,6 +145,9 @@ static func build_brawl_state(
 	state["reviewFocusFormId"] = form_id
 	state["reviewPlacement"] = placement
 	state["reviewPoolId"] = pool_id
+	state["reviewMountAllPlayers"] = resolved_mount_form_id != ""
+	state["reviewMountFormId"] = resolved_mount_form_id
+	state["reviewExpectedMountedPlayers"] = 10 if resolved_mount_form_id != "" else 0
 	state["reviewTopInset"] = 164.0
 
 	var pool := _pool_form_ids(pool_id, form_id)
@@ -157,6 +171,8 @@ static func build_brawl_state(
 			player_actor["dodgeRateOverride"] = rng.randf_range(0.03, 0.13)
 			player_actor["criticalRateOverride"] = rng.randf_range(0.08, 0.20)
 			player_actor["comboBaseRateOverride"] = rng.randf_range(0.24, 0.52)
+			if resolved_mount_form_id != "":
+				_apply_review_mount(player_actor, resolved_mount_form_id)
 			actors[index] = player_actor
 			continue
 		var slot_number := _slot_number(str(previous.get("slotId", "")))
@@ -192,8 +208,20 @@ static func build_brawl_state(
 	return state
 
 
-static func build_director_state(focus_form_id: String, seed_value: int, step_id: String) -> Dictionary:
-	var state := build_brawl_state(focus_form_id, seed_value, PLACEMENT_BOTH_ALL, POOL_FORMAL)
+static func build_director_state(
+	focus_form_id: String,
+	seed_value: int,
+	step_id: String,
+	mount_form_id: String = ""
+) -> Dictionary:
+	var resolved_mount_form_id := normalized_mount_form_id(mount_form_id)
+	var state := build_brawl_state(
+		focus_form_id,
+		seed_value,
+		PLACEMENT_BOTH_ALL,
+		POOL_FORMAL,
+		resolved_mount_form_id
+	)
 	state["id"] = "local_pet_battle_review_director_%s_%d" % [step_id, normalized_seed(seed_value)]
 	state["reviewMode"] = MODE_DIRECTOR
 	state["reviewDirectorStep"] = step_id
@@ -203,20 +231,26 @@ static func build_director_state(focus_form_id: String, seed_value: int, step_id
 		if not (actors[index] is Dictionary):
 			continue
 		var actor := actors[index] as Dictionary
+		var actor_id := str(actor.get("id", ""))
 		actor["counterRateOverride"] = 0.0
 		actor["dodgeRateOverride"] = 0.0
 		actor["criticalRateOverride"] = 0.0
-		actor["comboBaseRateOverride"] = 1.0 if ALLY_COMBO_IDS.has(str(actor.get("id", ""))) else 0.0
-		if [ALLY_FOCUS_ID, ENEMY_FOCUS_ID].has(str(actor.get("id", ""))):
+		actor["comboBaseRateOverride"] = 1.0 if (
+			ALLY_COMBO_IDS.has(actor_id)
+			or (resolved_mount_form_id != "" and ALLY_MOUNT_COMBO_IDS.has(actor_id))
+		) else 0.0
+		if [ALLY_FOCUS_ID, ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, ENEMY_MOUNT_FOCUS_ID].has(actor_id):
 			actor["hp"] = 220
 			actor["maxHp"] = 220
 			actor["attack"] = 24
 			actor["defense"] = 10
-			actor["quick"] = 72 if str(actor.get("id", "")) == ALLY_FOCUS_ID else 54
+			actor["quick"] = 72 if [ALLY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID].has(actor_id) else 54
 		actors[index] = actor
 	state["actors"] = actors
 	if ["counter", "counter_ko", "counter_launch"].has(step_id):
 		state = _with_actor_fields(state, ENEMY_FOCUS_ID, {"counterRateOverride": 1.0, "attack": 64, "defense": 10})
+	elif step_id == "mounted_counter":
+		state = _with_actor_fields(state, ENEMY_MOUNT_FOCUS_ID, {"counterRateOverride": 1.0, "attack": 54, "defense": 10})
 	if step_id == "counter_ko":
 		state = _with_counter_outcome(state, false)
 	elif step_id == "counter_launch":
@@ -229,10 +263,10 @@ static func build_director_state(focus_form_id: String, seed_value: int, step_id
 	return state
 
 
-static func director_steps(focus_form_id: String) -> Array[Dictionary]:
+static func director_steps(focus_form_id: String, mount_form_id: String = "") -> Array[Dictionary]:
 	var skill_id := _director_skill_id(focus_form_id)
 	var skill_name := BattleActionCatalog.label_for(skill_id, "宠物技能")
-	return [
+	var standard_steps: Array[Dictionary] = [
 		{"id": "attack", "label": "普通攻击", "settle": 0.65, "events": [_attack_event(ALLY_FOCUS_ID, ENEMY_FOCUS_ID, BattleModel.SIDE_ENEMY, 18, false)]},
 		{"id": "defend_hit", "label": "防御承压", "settle": 0.75, "events": [_defend_event(ENEMY_FOCUS_ID), _attack_event(ALLY_FOCUS_ID, ENEMY_FOCUS_ID, BattleModel.SIDE_ENEMY, 30, false)]},
 		{"id": "hurt", "label": "受击恢复", "settle": 0.70, "events": [_attack_event(ENEMY_FOCUS_ID, ALLY_FOCUS_ID, BattleModel.SIDE_ALLY, 20, false)]},
@@ -246,6 +280,26 @@ static func director_steps(focus_form_id: String) -> Array[Dictionary]:
 		{"id": "dodge", "label": "近身闪避", "settle": 0.70, "events": [_dodge_event()]},
 		{"id": "down", "label": "可复活昏厥", "settle": 1.20, "events": [_down_event()]},
 	]
+	if normalized_mount_form_id(mount_form_id) == "":
+		return standard_steps
+	return [
+		standard_steps[0],
+		{"id": "mounted_attack", "label": "骑乘人物进攻", "settle": 0.80, "events": [_attack_event(ALLY_MOUNT_FOCUS_ID, ENEMY_FOCUS_ID, BattleModel.SIDE_ENEMY, 18, false)]},
+		standard_steps[1],
+		{"id": "mounted_defend_hit", "label": "骑乘人物防御承压", "settle": 0.85, "events": [_defend_event(ENEMY_MOUNT_FOCUS_ID), _attack_event(ALLY_MOUNT_FOCUS_ID, ENEMY_MOUNT_FOCUS_ID, BattleModel.SIDE_ENEMY, 30, false)]},
+		standard_steps[2],
+		standard_steps[3],
+		{"id": "mounted_counter", "label": "骑乘人物反击", "settle": 0.95, "events": [_attack_event(ALLY_MOUNT_FOCUS_ID, ENEMY_MOUNT_FOCUS_ID, BattleModel.SIDE_ENEMY, 16, true)]},
+		standard_steps[4],
+		standard_steps[5],
+		standard_steps[6],
+		standard_steps[7],
+		{"id": "mounted_combo", "label": "三骑乘人物合击", "settle": 1.15, "events": [_mounted_combo_event()]},
+		standard_steps[8],
+		standard_steps[9],
+		standard_steps[10],
+		standard_steps[11],
+	]
 
 
 static func director_step_label(step_id: String) -> String:
@@ -255,6 +309,9 @@ static func director_step_label(step_id: String) -> String:
 
 static func director_step_name(step_id: String) -> String:
 	for step in director_steps(default_form_id()):
+		if str(step.get("id", "")) == step_id:
+			return str(step.get("label", step_id))
+	for step in director_steps(default_form_id(), REVIEW_MOUNT_FORM_ID):
 		if str(step.get("id", "")) == step_id:
 			return str(step.get("label", step_id))
 	return ""
@@ -283,7 +340,7 @@ static func state_signature(state: Dictionary) -> String:
 		if not (value is Dictionary):
 			continue
 		var actor := value as Dictionary
-		rows.append("%s|%s|%s|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f" % [
+		rows.append("%s|%s|%s|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%s|%s|%d|%d|%s" % [
 			str(actor.get("id", "")),
 			str(actor.get("formId", "")),
 			str(actor.get("reviewArchetype", "")),
@@ -295,6 +352,11 @@ static func state_signature(state: Dictionary) -> String:
 			float(actor.get("dodgeRateOverride", 0.0)),
 			float(actor.get("criticalRateOverride", 0.0)),
 			float(actor.get("comboBaseRateOverride", 0.0)),
+			str(actor.get("ridePetInstanceId", "")),
+			str(actor.get("ridePetFormId", "")),
+			int(actor.get("ridePetHp", 0)),
+			int(actor.get("ridePetMaxHp", 0)),
+			str(actor.get("ridePetBattleState", "")),
 		])
 	return "\n".join(rows)
 
@@ -341,6 +403,51 @@ static func validation_errors() -> Array[String]:
 	for key in ["ally:player", "ally:pet", "enemy:player", "enemy:wild_pet"]:
 		if int(side_kind_counts.get(key, 0)) != 5:
 			errors.append("阵容不是每方5人5宠：%s" % key)
+	var mounted_first := build_brawl_state(
+		form_id,
+		309001,
+		PLACEMENT_BOTH_ALL,
+		POOL_FORMAL,
+		REVIEW_MOUNT_FORM_ID
+	)
+	var mounted_replay := build_brawl_state(
+		form_id,
+		309001,
+		PLACEMENT_BOTH_ALL,
+		POOL_FORMAL,
+		REVIEW_MOUNT_FORM_ID
+	)
+	if state_signature(mounted_first) != state_signature(mounted_replay):
+		errors.append("10骑乘人物同一随机种子不能原样重放")
+	var mounted_player_count := 0
+	var mounted_instance_ids := {}
+	for value in mounted_first.get("actors", []):
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var kind := str(actor.get("kind", ""))
+		var ride_id := str(actor.get("ridePetInstanceId", "")).strip_edges()
+		if kind != "player":
+			if ride_id != "":
+				errors.append("战宠不能被误标为骑乘人物")
+			continue
+		if ride_id == "":
+			errors.append("10骑乘验收状态存在未骑宠的人物")
+			continue
+		mounted_player_count += 1
+		if mounted_instance_ids.has(ride_id):
+			errors.append("10名人物共用了骑宠实例：%s" % ride_id)
+		mounted_instance_ids[ride_id] = true
+		if str(actor.get("ridePetFormId", "")) != REVIEW_MOUNT_FORM_ID:
+			errors.append("骑乘验收状态使用了错误坐骑形态")
+		if int(actor.get("ridePetHp", 0)) <= 0 or int(actor.get("ridePetMaxHp", 0)) <= 0:
+			errors.append("骑乘验收状态存在失去战斗资格的坐骑")
+		if str(actor.get("ridePetBattleState", "")) != "riding" or bool(actor.get("ridePetKnocked", true)):
+			errors.append("骑乘验收状态没有保持有效骑乘事实")
+	if mounted_player_count != 10 or mounted_instance_ids.size() != 10:
+		errors.append("骑乘验收场必须正好有10名骑乘人物")
+	if not bool(mounted_first.get("reviewMountAllPlayers", false)):
+		errors.append("骑乘验收状态缺少全员骑乘标记")
 	var seen_steps: Array[String] = []
 	for step in director_steps(form_id):
 		var step_id := str(step.get("id", ""))
@@ -353,6 +460,22 @@ static func validation_errors() -> Array[String]:
 	for required_id in ["attack", "defend_hit", "hurt", "counter", "counter_ko", "counter_launch", "skill", "combo", "knockaway_straight", "knockaway_bounce", "dodge", "down"]:
 		if not seen_steps.has(required_id):
 			errors.append("缺少动作必现步骤：%s" % required_id)
+	var mounted_steps := director_steps(form_id, REVIEW_MOUNT_FORM_ID)
+	if mounted_steps.size() != 16:
+		errors.append("骑乘动作必现清单必须包含16个场景")
+	var mounted_step_ids: Array[String] = []
+	for step in mounted_steps:
+		mounted_step_ids.append(str(step.get("id", "")))
+	for required_id in ["mounted_attack", "mounted_defend_hit", "mounted_counter", "mounted_combo"]:
+		if not mounted_step_ids.has(required_id):
+			errors.append("骑乘动作必现缺少场景：%s" % required_id)
+	var mounted_director_state := build_director_state(form_id, 309001, "mounted_combo", REVIEW_MOUNT_FORM_ID)
+	if (
+		(mounted_director_state.get("actors", []) as Array).size() != 20
+		or not bool(mounted_director_state.get("reviewMountAllPlayers", false))
+		or str(mounted_director_state.get("reviewMountFormId", "")) != REVIEW_MOUNT_FORM_ID
+	):
+		errors.append("骑乘动作必现没有保留10骑手＋10战宠阵容")
 	var counter_ko_state := build_director_state(form_id, 309001, "counter_ko")
 	var counter_ko_result := _apply_counter_probe(counter_ko_state)
 	if (
@@ -430,6 +553,20 @@ static func _apply_stats(actor: Dictionary, stats: Dictionary) -> void:
 	actor["defense"] = int(stats.get("defense", 10))
 	actor["quick"] = int(stats.get("quick", 60))
 	actor["reviewArchetype"] = str(stats.get("reviewArchetype", "balanced"))
+
+
+static func _apply_review_mount(actor: Dictionary, mount_form_id: String) -> void:
+	var form := PetTemplateCatalog.form_by_id(mount_form_id)
+	var mount_name := str(form.get("formName", "芽耳布伊")).strip_edges()
+	var mount_max_hp := maxi(320, int(actor.get("maxHp", 200)) + 120)
+	actor["ridePetInstanceId"] = "review_mount_%s" % str(actor.get("id", "player"))
+	actor["ridePetName"] = mount_name if mount_name != "" else "芽耳布伊"
+	actor["ridePetFormId"] = mount_form_id
+	actor["ridePetLevel"] = maxi(1, int(actor.get("level", 1)))
+	actor["ridePetHp"] = mount_max_hp
+	actor["ridePetMaxHp"] = mount_max_hp
+	actor["ridePetBattleState"] = "riding"
+	actor["ridePetKnocked"] = false
 
 
 static func _with_actor_fields(state: Dictionary, actor_id: String, fields: Dictionary) -> Dictionary:
@@ -553,6 +690,22 @@ static func _combo_event() -> Dictionary:
 		"damage": 42,
 		"speed": 94,
 		"sequence": 4,
+		"movementStyle": "melee_combo",
+		"canLaunch": false,
+		"canCounter": false,
+	}
+
+
+static func _mounted_combo_event() -> Dictionary:
+	return {
+		"type": "combo_attack",
+		"attackerId": ALLY_MOUNT_FOCUS_ID,
+		"participantIds": ALLY_MOUNT_COMBO_IDS.duplicate(),
+		"targetId": ENEMY_FOCUS_ID,
+		"targetSide": BattleModel.SIDE_ENEMY,
+		"damage": 42,
+		"speed": 94,
+		"sequence": 8,
 		"movementStyle": "melee_combo",
 		"canLaunch": false,
 		"canCounter": false,

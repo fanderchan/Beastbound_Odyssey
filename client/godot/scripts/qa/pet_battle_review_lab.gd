@@ -22,6 +22,7 @@ var collapse_button: Button
 var active: bool = false
 var mode: String = PetBattleReviewModel.MODE_BRAWL
 var focus_form_id: String = ""
+var mount_form_id: String = ""
 var placement: String = PetBattleReviewModel.PLACEMENT_BOTH_ALL
 var pool_id: String = PetBattleReviewModel.POOL_FORMAL
 var seed_value: int = DEFAULT_SEED
@@ -32,6 +33,7 @@ var completed_brawls: int = 0
 var completed_director_loops: int = 0
 var director_step_id: String = ""
 var coverage: Dictionary = {}
+var quit_after_director_loop: bool = false
 
 var _generation: int = 0
 var _observed_event_sequence: int = 0
@@ -49,13 +51,16 @@ func open(
 	requested_form_id: String = "",
 	requested_mode: String = PetBattleReviewModel.MODE_BRAWL,
 	requested_seed: int = DEFAULT_SEED,
-	start_collapsed: bool = false
+	start_collapsed: bool = false,
+	requested_mount_form_id: String = "",
+	quit_after_one_director_loop: bool = false
 ) -> void:
 	if active:
 		close(false)
 	active = true
 	mode = requested_mode if [PetBattleReviewModel.MODE_BRAWL, PetBattleReviewModel.MODE_DIRECTOR].has(requested_mode) else PetBattleReviewModel.MODE_BRAWL
 	focus_form_id = PetBattleReviewModel.normalized_form_id(requested_form_id)
+	mount_form_id = PetBattleReviewModel.normalized_mount_form_id(requested_mount_form_id)
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed)
 	placement = PetBattleReviewModel.PLACEMENT_BOTH_ALL
 	pool_id = PetBattleReviewModel.POOL_FORMAL
@@ -65,6 +70,7 @@ func open(
 	completed_brawls = 0
 	completed_director_loops = 0
 	director_step_id = ""
+	quit_after_director_loop = quit_after_one_director_loop
 	coverage.clear()
 	for coverage_id in PetBattleReviewModel.REQUIRED_COVERAGE:
 		coverage[coverage_id] = 0
@@ -118,6 +124,10 @@ func current_seed() -> int:
 
 func current_mode() -> String:
 	return mode
+
+
+func current_mount_form_id() -> String:
+	return mount_form_id
 
 
 func coverage_counts() -> Dictionary:
@@ -201,7 +211,7 @@ func start_brawl(requested_seed: int = 0) -> void:
 	_step_frames = 0
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed if requested_seed != 0 else seed_value)
 	_observed_event_sequence = 0
-	var state := PetBattleReviewModel.build_brawl_state(focus_form_id, seed_value, placement, pool_id)
+	var state := PetBattleReviewModel.build_brawl_state(focus_form_id, seed_value, placement, pool_id, mount_form_id)
 	state["reviewTopInset"] = _review_top_inset()
 	host._start_battle(state)
 	host._set_battle_auto_attack_enabled(true, false)
@@ -296,12 +306,12 @@ func return_to_real_grass() -> void:
 
 func _run_director(token: int) -> void:
 	while _director_is_current(token):
-		for step in PetBattleReviewModel.director_steps(focus_form_id):
+		for step in PetBattleReviewModel.director_steps(focus_form_id, mount_form_id):
 			if not _director_is_current(token):
 				return
 			director_step_id = str(step.get("id", ""))
 			_observed_event_sequence = 0
-			var state := PetBattleReviewModel.build_director_state(focus_form_id, seed_value, director_step_id)
+			var state := PetBattleReviewModel.build_director_state(focus_form_id, seed_value, director_step_id, mount_form_id)
 			state["reviewTopInset"] = _review_top_inset()
 			host._start_battle(state)
 			host._set_battle_auto_attack_enabled(false, false)
@@ -317,6 +327,11 @@ func _run_director(token: int) -> void:
 		if _director_is_current(token):
 			completed_director_loops += 1
 			_refresh_status()
+			if quit_after_director_loop:
+				if not await _wait_scaled(0.85, token):
+					return
+				host.get_tree().quit()
+				return
 
 
 func _director_is_current(token: int) -> bool:
@@ -457,7 +472,7 @@ func _build_ui() -> void:
 	header.add_theme_constant_override("separation", 8)
 	column.add_child(header)
 	var title := Label.new()
-	title.text = "宠物战斗动作验收场"
+	title.text = "10骑乘人物＋10战宠验收场" if mount_form_id != "" else "宠物战斗动作验收场"
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color(1.0, 0.84, 0.38, 1.0))
 	header.add_child(title)
@@ -586,6 +601,8 @@ func _refresh_status() -> void:
 	if root == null:
 		return
 	var mode_text := "自由乱斗" if mode == PetBattleReviewModel.MODE_BRAWL else "动作必现"
+	if mount_form_id != "":
+		mode_text = "全员骑乘 · %s" % mode_text
 	if director_step_id != "":
 		mode_text += " · %s" % PetBattleReviewModel.director_step_name(director_step_id)
 	if paused:
