@@ -76,7 +76,7 @@ function normalizePetEvolutionRouteCatalog(input) {
     "routes",
   ], "catalog", errors);
   if (document.schemaVersion !== 1) errors.push("catalog.schemaVersion must equal 1");
-  if (document.catalogId !== "pet_evolution_routes_v1") errors.push("catalog.catalogId must equal pet_evolution_routes_v1");
+  if (document.catalogId !== "pet_evolution_routes_v2") errors.push("catalog.catalogId must equal pet_evolution_routes_v2");
   if (document.balanceVersion !== input.evolutionBalance.balanceVersion) errors.push("catalog.balanceVersion does not match pet evolution balance");
   if (typeof document.runtimeEnabled !== "boolean") errors.push("catalog.runtimeEnabled must be boolean");
   if (!text(document.disabledMessage)) errors.push("catalog.disabledMessage must be non-empty");
@@ -344,10 +344,18 @@ function normalizeRoute(rawValue, index, deps, errors) {
 
   const eligibility = record(raw.eligibility);
   const expectedEligibility = deps.evolutionBalance.eligibility;
+  const minimumIntrinsicCombatPower = positiveInteger(
+    eligibility.minimumIntrinsicCombatPower,
+    `${label}.eligibility.minimumIntrinsicCombatPower`,
+    errors,
+  );
   if (
     Number(eligibility.requiredRebirthCount) !== expectedEligibility.requiredRebirthCount
     || Number(eligibility.requiredLevel) !== expectedEligibility.requiredLevel
     || text(eligibility.requiredGrowthModelVersion) !== expectedEligibility.requiredGrowthModelVersion
+    || Number(eligibility.requiredIntrinsicPowerPercentile) !== expectedEligibility.requiredIntrinsicPowerPercentile
+    || text(eligibility.thresholdAuditVersion) !== "pet_evolution_eligibility_p90_v1"
+    || Number(eligibility.thresholdSampleCount) < 10000
   ) errors.push(`${label}.eligibility does not match pet evolution balance`);
 
   const cost = record(raw.cost);
@@ -448,7 +456,7 @@ function normalizeRoute(rawValue, index, deps, errors) {
     sourceGrowthProfileId,
     targetGrowthProfileId,
     license: {questId, abilityId, oneTime: true, directResult: false},
-    eligibility: structuredClone(eligibility),
+    eligibility: {...structuredClone(eligibility), minimumIntrinsicCombatPower},
     cost: {stoneCoins, walletPolicyId: text(cost.walletPolicyId), items: structuredClone(itemCosts)},
     result: structuredClone(result),
     skills: {defaultActionIds, passiveSkillId, preserveLearnedAndInherited: true},
@@ -470,23 +478,16 @@ function validateGrowthPair(source, target, label, balance, errors) {
   }
   const sourceRules = record(source.individualRules);
   const targetRules = record(target.individualRules);
-  if (sourceRules.distribution !== targetRules.distribution || sourceRules.rareExtremeRate !== targetRules.rareExtremeRate) {
-    errors.push(`${label} source and target must share the same per-stat distribution family for quantile projection`);
-  }
   let center = 0;
   let radius = 0;
   for (const key of STAT_KEYS) {
-    const sourceInitial = symmetricHalfRange(record(sourceRules.initialOutputSpread)[key], `${label}.source.initial.${key}`, errors);
-    const targetInitial = symmetricHalfRange(record(targetRules.initialOutputSpread)[key], `${label}.target.initial.${key}`, errors);
-    if (sourceInitial !== null && targetInitial !== null && Math.abs(sourceInitial - targetInitial) > 0.000001) {
-      errors.push(`${label} must preserve ${key} Lv1 percentile geometry exactly`);
-    }
+    symmetricHalfRange(record(sourceRules.initialOutputSpread)[key], `${label}.source.initial.${key}`, errors);
+    symmetricHalfRange(record(targetRules.initialOutputSpread)[key], `${label}.target.initial.${key}`, errors);
     const sourceGrowth = symmetricHalfRange(record(sourceRules.growthOutputSpread)[key], `${label}.source.growth.${key}`, errors);
     const targetGrowth = symmetricHalfRange(record(targetRules.growthOutputSpread)[key], `${label}.target.growth.${key}`, errors);
     const weight = STAT_WEIGHTS[key];
     center += (Number(target.outputGrowth && target.outputGrowth[key]) - Number(source.outputGrowth && source.outputGrowth[key])) * weight;
     if (sourceGrowth !== null && targetGrowth !== null) {
-      if (targetGrowth + TOLERANCE < sourceGrowth) errors.push(`${label} target ${key} growth spread may not narrow the preserved quantile`);
       radius += Math.abs(targetGrowth - sourceGrowth) * weight;
     }
   }

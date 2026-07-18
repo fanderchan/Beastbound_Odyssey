@@ -24276,7 +24276,7 @@ func _refresh_pet_growth_table(instance: Dictionary) -> void:
 		pet_growth_table_grid.visible = false
 		return
 	pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH
-	for header in ["属性", "初始", "当前", PetGrowthObservationModel.target_column_label(instance), "成长/级", "评级"]:
+	for header in ["属性", "初始", "当前", PetGrowthObservationModel.target_column_label(instance, pet_growth_stage), "成长/级", "评级"]:
 		pet_growth_table_grid.add_child(_pet_growth_table_cell(header, true, ""))
 	for row in PetGrowthObservationModel.attribute_table_rows_for_stage(instance, pet_growth_stage, 140):
 		var grade = str(row.get("grade", ""))
@@ -24656,16 +24656,21 @@ func _refresh_pet_panel() -> void:
 					var raw_grades = (observation as Dictionary).get("statGrades", {})
 					if raw_grades is Dictionary:
 						grades = raw_grades as Dictionary
+				var level_one_display_instance := PetGrowthObservationModel.level_one_instance_for_stage(selected, pet_growth_stage)
 				if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
 					_pet_level_one_radar.call(
 						"set_growth_data",
-						PetLevelOnePercentileModel.radar_values(selected),
-						PetLevelOnePercentileModel.radar_labels(selected)
+						PetLevelOnePercentileModel.radar_values(level_one_display_instance),
+						PetLevelOnePercentileModel.radar_labels(level_one_display_instance)
 					)
 				if _pet_level_one_radar_title != null:
-					_pet_level_one_radar_title.text = "Lv1 4V分位（物种内）"
+					_pet_level_one_radar_title.text = "进化前 Lv1 4V分位（物种内）" if PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage) else "Lv1 4V分位（物种内）"
 				if _pet_growth_radar_title != null:
-					if pet_growth_stage == 0:
+					if PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage):
+						_pet_growth_radar_title.text = "进化前%d转成长分位" % pet_growth_stage
+					elif PetGrowthObservationModel.is_evolution_pet(selected) and pet_growth_stage == 2:
+						_pet_growth_radar_title.text = "进化后二代成长分位"
+					elif pet_growth_stage == 0:
 						_pet_growth_radar_title.text = "实测成长分位"
 					else:
 						_pet_growth_radar_title.text = "%d转增量分位" % pet_growth_stage
@@ -24689,8 +24694,9 @@ func _refresh_pet_panel() -> void:
 			selected,
 			_pet_growth_evaluation_policy(),
 			pet_detail_mode == PET_DETAIL_MODE_GROWTH
-				and pet_growth_stage == 0
-				and not selected.is_empty()
+					and pet_growth_stage == 0
+					and not PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage)
+					and not selected.is_empty()
 				and str(selected.get("growthSpeciesProfileId", "")).strip_edges() != "",
 			profile_action_request_pending
 		)

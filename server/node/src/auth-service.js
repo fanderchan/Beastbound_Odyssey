@@ -144,6 +144,7 @@ const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createGmPetPaidResetConfigDomain} = require("./auth/gm-pet-paid-reset-config");
 const {createGmPetPaidResetQaDomain} = require("./auth/gm-pet-paid-reset-qa");
 const {createPetPaidResetDomain} = require("./auth/pet-paid-reset-domain");
+const {createPetEvolutionDomain} = require("./auth/pet-evolution-domain");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
   createPresenceRevisionTracker,
@@ -313,6 +314,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "markMailRead",
   "claimMailAttachments",
   "paidResetPet",
+  "evolvePet",
 ]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
@@ -587,6 +589,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "profileAction",
   "claimPetRecovery",
   "paidResetPet",
+  "evolvePet",
   "startHangSession",
   "startOfflineHang",
   "playerRebirth",
@@ -1652,6 +1655,12 @@ function createAuthService(options = {}) {
       return {
         handled: true,
         result: projectPublicServiceResult(petPaidReset.quote(values[0], values[1])),
+      };
+    }
+    if (normalizedMethodName === "getPetEvolutionQuote") {
+      return {
+        handled: true,
+        result: projectPublicServiceResult(petEvolution.quote(values[0], values[1])),
       };
     }
     if (normalizedMethodName === "listPetRecoveries") {
@@ -3951,7 +3960,9 @@ function createAuthService(options = {}) {
     if (!receipt || typeof receipt !== "object") {
       return null;
     }
-    const rowLocalProfileMethod = methodName === "claimPetRecovery" || methodName === "paidResetPet";
+    const rowLocalProfileMethod = methodName === "claimPetRecovery"
+      || methodName === "paidResetPet"
+      || methodName === "evolvePet";
     const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
     const action = methodName === "profileAction"
       ? normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command)
@@ -5563,6 +5574,7 @@ function createAuthService(options = {}) {
     persistProfileForAccount,
     petExpSettlement,
     petEncounterAuthority,
+    petEvolutionRouteCatalog,
     petGrowthCatalog,
     petPaidResetPolicyCatalog,
     petRebirthGrowthCycle,
@@ -5580,6 +5592,8 @@ function createAuthService(options = {}) {
     profilePetInstances,
     profilePetName,
     petRequiredByActiveQuest,
+    petTemplateForFormId,
+    profileHasUnlockedAbility,
     profileCurrencyAmount,
     profileStoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
     profileStoneCoins,
@@ -5660,6 +5674,7 @@ function createAuthService(options = {}) {
   const gmPetPaidResetConfig = createGmPetPaidResetConfigDomain(domainContext);
   const gmPetPaidResetQa = createGmPetPaidResetQaDomain(domainContext);
   const petPaidReset = createPetPaidResetDomain(domainContext);
+  const petEvolution = createPetEvolutionDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -5693,6 +5708,8 @@ function createAuthService(options = {}) {
     prepareGmPetPaidResetQa: gmPetPaidResetQa.run,
     getPetPaidResetQuote: petPaidReset.quote,
     paidResetPet: petPaidReset.reset,
+    getPetEvolutionQuote: petEvolution.quote,
+    evolvePet: petEvolution.evolve,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,
     questClaim: quest.questClaim,

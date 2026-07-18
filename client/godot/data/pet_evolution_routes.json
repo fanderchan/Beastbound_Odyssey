@@ -1,14 +1,16 @@
 {
   "schemaVersion": 1,
-  "catalogId": "pet_evolution_routes_v1",
-  "balanceVersion": "pet_evolution_balance_v1",
+  "catalogId": "pet_evolution_routes_v2",
+  "balanceVersion": "pet_evolution_balance_v2",
   "runtimeEnabled": false,
   "disabledMessage": "宠物进化正在完成最终安全验证，当前不会消耗宠物或材料。",
   "qualityProjection": {
-    "lv1FourV": "per_stat_species_percentile_projection_v1",
-    "hiddenGrowth": "private_per_stat_species_quantile_projection_v1",
+    "lv1FourV": "fresh_target_species_roll_v1",
+    "hiddenGrowth": "fresh_target_species_roll_v1",
     "preserveIndependentDimensions": true,
-    "rerollAllowed": false,
+    "rerollAllowed": true,
+    "sourceQualityTransfer": false,
+    "preserveSourceStageSnapshots": true,
     "publicCombinedScore": false
   },
   "materialEncounters": [
@@ -81,7 +83,11 @@
       "eligibility": {
         "requiredRebirthCount": 1,
         "requiredLevel": 140,
-        "requiredGrowthModelVersion": "pet_growth_authority_v1"
+        "requiredGrowthModelVersion": "pet_growth_authority_v1",
+        "requiredIntrinsicPowerPercentile": 90,
+        "minimumIntrinsicCombatPower": 1345,
+        "thresholdAuditVersion": "pet_evolution_eligibility_p90_v1",
+        "thresholdSampleCount": 10000
       },
       "cost": {
         "stoneCoins": 300000,
@@ -144,7 +150,11 @@
       "eligibility": {
         "requiredRebirthCount": 1,
         "requiredLevel": 140,
-        "requiredGrowthModelVersion": "pet_growth_authority_v1"
+        "requiredGrowthModelVersion": "pet_growth_authority_v1",
+        "requiredIntrinsicPowerPercentile": 90,
+        "minimumIntrinsicCombatPower": 1437,
+        "thresholdAuditVersion": "pet_evolution_eligibility_p90_v1",
+        "thresholdSampleCount": 10000
       },
       "cost": {
         "stoneCoins": 300000,

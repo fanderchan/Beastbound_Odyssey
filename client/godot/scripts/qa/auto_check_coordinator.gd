@@ -5293,6 +5293,150 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and terminal_table_text.contains("Lv140基准")
 		and terminal_table_text.contains("3.300")
 	)
+	var evolution_target_source := PetGrowthObservationModel.create_pet_instance(
+		"wuli_evolved_crystal_earth8_water2_v1",
+		"evolution_history_ui_pet",
+		"wuli_evolved_crystal_earth8_water2",
+		"晶甲乌力",
+		"standby",
+		11,
+		"evolution-history-target-seed",
+		1
+	)
+	evolution_target_source["growthAuthority"] = {
+		"schemaVersion": 1,
+		"source": "server",
+		"modelVersion": PetGrowthPublicProjectionModel.MODEL_LEGACY_SPECIES_LINEAR,
+		"settledLevel": 11,
+	}
+	evolution_target_source["growthModelVersion"] = PetGrowthPublicProjectionModel.MODEL_LEGACY_SPECIES_LINEAR
+	var evolution_target_projection := PetGrowthPublicProjectionModel.project_server_pet(evolution_target_source)
+	var evolution_pet := evolution_target_projection.get("pet", {}) as Dictionary
+	var source_history_pet := PetGrowthObservationModel.create_pet_instance(
+		"wuli_normal_tough_earth10_v1",
+		"evolution_history_source_pet",
+		"wuli_normal_tough_earth10",
+		"高防乌力",
+		"standby",
+		140,
+		"evolution-history-source-seed",
+		1
+	)
+	var source_level_one := source_history_pet.get("growthSpeciesLevel1Stats", {}) as Dictionary
+	var source_stage_zero_stats := {
+		"maxHp": int(source_history_pet.get("maxHp", 1)),
+		"attack": int(source_history_pet.get("attack", 1)),
+		"defense": int(source_history_pet.get("defense", 1)),
+		"quick": int(source_history_pet.get("quick", 1)),
+	}
+	var source_stage_one_bonus := {"maxHp": 4.0, "attack": 1.2, "defense": 1.4, "quick": 1.0}
+	var source_stage_one_stats := {}
+	for key in ["maxHp", "attack", "defense", "quick"]:
+		source_stage_one_stats[key] = int(round(
+			float(source_stage_zero_stats.get(key, 1))
+			+ float(source_stage_one_bonus.get(key, 0.0)) * 139.0
+		))
+	var source_stage_zero_power := PetPowerModel.combat_power_for_stats(source_stage_zero_stats)
+	var source_stage_one_power := PetPowerModel.combat_power_for_stats(source_stage_one_stats)
+	evolution_pet["petCultivation"] = {
+		"schemaVersion": 1,
+		"rebirthCount": 1,
+		"enhanceLevel": 3,
+		"rebirthGrowthBonus": source_stage_one_bonus,
+		"history": [],
+	}
+	evolution_pet["evolutionLineage"] = {
+		"schemaVersion": 1,
+		"mode": "evolution",
+		"routeId": "wuli_crystal_evolution_v1",
+		"sourceFormId": "wuli_normal_tough_earth10",
+		"sourceFormName": "高防乌力",
+		"targetFormId": "wuli_evolved_crystal_earth8_water2",
+		"targetFormName": "晶甲乌力",
+		"completedAtSec": 1784347200,
+		"terminalStage": 2,
+		"stageSnapshots": [
+			{
+				"schemaVersion": 1,
+				"stage": 0,
+				"formId": "wuli_normal_tough_earth10",
+				"formName": "高防乌力",
+				"growthSpeciesProfileId": "wuli_normal_tough_earth10_v1",
+				"level": 140,
+				"levelOneFourV": source_level_one,
+				"stats": source_stage_zero_stats,
+				"intrinsicCombatPower": source_stage_zero_power,
+				"growthObservation": {},
+			},
+			{
+				"schemaVersion": 1,
+				"stage": 1,
+				"formId": "wuli_normal_tough_earth10",
+				"formName": "高防乌力",
+				"growthSpeciesProfileId": "wuli_normal_tough_earth10_v1",
+				"level": 140,
+				"levelOneFourV": source_level_one,
+				"stats": source_stage_one_stats,
+				"intrinsicCombatPower": source_stage_one_power,
+				"growthObservation": {},
+			},
+		],
+	}
+	var evolution_stage_one := PetGrowthObservationModel.evaluate_pet_for_stage(evolution_pet, 1)
+	var evolution_stage_two := PetGrowthObservationModel.evaluate_pet_for_stage(evolution_pet, 2)
+	var evolution_current := PetGrowthObservationModel.evaluate_pet(evolution_pet)
+	var evolution_options := PetGrowthObservationModel.growth_stage_options(evolution_pet)
+	var evolution_contract_ok := (
+		bool(evolution_target_projection.get("ok", false))
+		and evolution_options.size() == 3
+		and str((evolution_options[2] as Dictionary).get("label", "")) == "2转/进化/融合"
+		and bool((evolution_options[0] as Dictionary).get("enabled", false))
+		and bool((evolution_options[1] as Dictionary).get("enabled", false))
+		and bool((evolution_options[2] as Dictionary).get("enabled", false))
+		and bool(evolution_stage_one.get("evolutionHistory", false))
+		and str(evolution_stage_one.get("historicalFormName", "")) == "高防乌力"
+		and int(evolution_stage_one.get("intrinsicCombatPower", 0)) == source_stage_one_power
+		and str(evolution_stage_two.get("stageLabel", "")) == "进化成长"
+		and bool(evolution_stage_two.get("evolutionCurrent", false))
+		and int(evolution_current.get("stage", -1)) == 0
+		and PetGrowthObservationModel.target_column_label(evolution_pet, 1) == "Lv140实绩"
+		and PetGrowthObservationModel.target_column_label(evolution_pet, 2) == "预测140"
+	)
+	var evolution_profile := PlayerProgressModel.default_profile()
+	evolution_profile["petInstances"] = [evolution_pet]
+	evolution_profile["activePetInstanceId"] = str(evolution_pet.get("instanceId", ""))
+	host.player_profile = PlayerProgressModel.normalize_profile(evolution_profile)
+	host.pet_selected_instance_id = str(evolution_pet.get("instanceId", ""))
+	host.pet_growth_stage = 1
+	host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	host._refresh_pet_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var evolution_ui_text: String = host.pet_detail_label.text if host.pet_detail_label != null else ""
+	var evolution_ui_snapshot: Dictionary = host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	var evolution_table_text := ""
+	if host.pet_growth_table_grid != null:
+		for child in host.pet_growth_table_grid.get_children():
+			if child is Label:
+				evolution_table_text += " " + (child as Label).text
+	var evolution_stage_one_button: Variant = host.pet_growth_stage_buttons.get(1, null)
+	var evolution_stage_two_button: Variant = host.pet_growth_stage_buttons.get(2, null)
+	var evolution_ui_ok := (
+		evolution_stage_one_button is Button
+		and not (evolution_stage_one_button as Button).disabled
+		and (evolution_stage_one_button as Button).button_pressed
+		and evolution_stage_two_button is Button
+		and not (evolution_stage_two_button as Button).disabled
+		and (evolution_stage_two_button as Button).text == "2转/进化/融合"
+		and evolution_ui_text.contains("1转成长（进化前）评价")
+		and evolution_ui_text.contains("进化前形态：高防乌力")
+		and evolution_ui_text.contains("Lv140实绩战力 %d" % source_stage_one_power)
+		and evolution_table_text.contains("Lv140实绩")
+		and evolution_table_text.contains("已达成")
+		and evolution_table_text.contains(str(source_stage_one_power))
+		and str(evolution_ui_snapshot.get("levelOneRadarTitle", "")).contains("进化前 Lv1 4V分位")
+		and str(evolution_ui_snapshot.get("growthRadarTitle", "")) == "进化前1转成长分位"
+	)
 	var screening_contract := PetGrowthScreeningModel.contract_check()
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
@@ -5316,10 +5460,12 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and server_ui_contract_ok
 		and terminal_contract_ok
 		and terminal_ui_ok
+		and evolution_contract_ok
+		and evolution_ui_ok
 		and bool(screening_contract.get("ok", false))
 		and screenshot_ok
 	) else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s detail_stage=%s detail_delta=%s row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s evolution=%s evolution_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s history_stage=%s history_form=%s history_power=%d row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
@@ -5327,13 +5473,16 @@ func _run_auto_pet_growth_observation_check() -> void:
 		str(server_ui_contract_ok),
 		str(terminal_contract_ok),
 		str(terminal_ui_ok),
+		str(evolution_contract_ok),
+		str(evolution_ui_ok),
 		str(table_ok),
 		str(stage_tabs_ok),
 		str(host.pet_panel != null and host.pet_panel.visible),
 		str(host.pet_detail_growth_button != null and host.pet_detail_growth_button.button_pressed),
 		str(host.pet_growth_radar != null and host.pet_growth_radar.visible),
-		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("2转成长评价")),
-		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("转生增量")),
+		str(host.pet_detail_label != null and host.pet_detail_label.text.contains("1转成长（进化前）评价")),
+		str(evolution_stage_one.get("historicalFormName", "")),
+		source_stage_one_power,
 		str(host.pet_growth_stage_row != null and host.pet_growth_stage_row.visible),
 		host.pet_growth_table_grid.get_child_count() if host.pet_growth_table_grid != null else -1,
 		host.pet_detail_mode,

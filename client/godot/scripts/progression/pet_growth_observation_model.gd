@@ -21,6 +21,11 @@ const REBIRTH_STAGE_LABELS := {
 	1: "1转成长",
 	2: "2转成长",
 }
+const GROWTH_STAGE_TAB_LABELS := {
+	0: "0转成长",
+	1: "1转成长",
+	2: "2转/进化/融合",
+}
 
 
 static func create_pet_instance(profile_id: String, instance_id: String, form_id: String, pet_name: String, state: String, level: int = 1, seed: String = "", sample_no: int = 0) -> Dictionary:
@@ -116,16 +121,68 @@ static func level_up_once(instance: Dictionary, max_level: int = 140) -> Diction
 
 
 static func evaluate_pet(instance: Dictionary) -> Dictionary:
-	return evaluate_pet_for_stage(instance, 0)
+	return _evaluate_current_growth(instance)
 
 
 static func evaluate_pet_for_stage(instance: Dictionary, stage: int = 0) -> Dictionary:
 	var safe_stage := clampi(stage, 0, 2)
+	if is_evolution_pet(instance):
+		if safe_stage <= 1:
+			return _evaluate_evolution_history(instance, safe_stage)
+		return _evaluate_evolution_current(instance)
 	if safe_stage > 0:
 		return _evaluate_rebirth_growth(instance, safe_stage)
+	return _evaluate_current_growth(instance)
+
+
+static func _evaluate_current_growth(instance: Dictionary) -> Dictionary:
 	if _is_server_growth_pet(instance):
 		return _evaluate_server_observed_growth(instance)
 	return _evaluate_base_growth(instance)
+
+
+static func _evaluate_evolution_history(instance: Dictionary, stage: int) -> Dictionary:
+	var snapshot := _evolution_history_snapshot(instance, stage)
+	var label := "%d转成长（进化前）" % stage
+	if snapshot.is_empty():
+		return {
+			"schemaVersion": 1,
+			"profileId": "",
+			"level": 1,
+			"observedLevels": 0,
+			"stage": stage,
+			"stageLabel": label,
+			"enabled": false,
+			"hasRecord": false,
+			"overallGrade": "资料不足",
+			"evolutionHistory": true,
+		}
+	var historical_instance := _evolution_snapshot_instance(instance, snapshot)
+	var evaluated := _evaluate_server_observed_growth(historical_instance)
+	var stored = snapshot.get("growthObservation", {})
+	if not bool(evaluated.get("hasRecord", false)) and stored is Dictionary and bool((stored as Dictionary).get("hasRecord", false)):
+		evaluated = (stored as Dictionary).duplicate(true)
+	evaluated["schemaVersion"] = 1
+	evaluated["profileId"] = str(snapshot.get("growthSpeciesProfileId", ""))
+	evaluated["level"] = int(snapshot.get("level", 140))
+	evaluated["observedLevels"] = maxi(0, int(snapshot.get("level", 140)) - 1)
+	evaluated["stage"] = stage
+	evaluated["stageLabel"] = label
+	evaluated["enabled"] = true
+	evaluated["evolutionHistory"] = true
+	evaluated["historicalFormId"] = str(snapshot.get("formId", ""))
+	evaluated["historicalFormName"] = str(snapshot.get("formName", "进化前宠物"))
+	evaluated["intrinsicCombatPower"] = int(snapshot.get("intrinsicCombatPower", 0))
+	return evaluated
+
+
+static func _evaluate_evolution_current(instance: Dictionary) -> Dictionary:
+	var evaluated := _evaluate_current_growth(instance).duplicate(true)
+	evaluated["stage"] = 2
+	evaluated["stageLabel"] = "进化成长"
+	evaluated["enabled"] = true
+	evaluated["evolutionCurrent"] = true
+	return evaluated
 
 
 static func _evaluate_server_observed_growth(instance: Dictionary) -> Dictionary:
@@ -291,6 +348,34 @@ static func detail_lines_for_stage(instance: Dictionary, stage: int = 0) -> Arra
 	var lines: Array[String] = []
 	var observed_levels := int(data.get("observedLevels", 0))
 	var safe_stage := clampi(int(data.get("stage", stage)), 0, 2)
+	if bool(data.get("evolutionHistory", false)):
+		lines.append("%s评价：%s" % [
+			str(data.get("stageLabel", "%d转成长（进化前）" % safe_stage)),
+			str(data.get("overallGrade", "资料不足")),
+		])
+		if not bool(data.get("enabled", false)):
+			lines.append("进化前履历缺失，请重新拉取宠物资料。")
+			return lines
+		lines.append("进化前形态：%s    Lv%d实绩战力 %d" % [
+			str(data.get("historicalFormName", "源宠")),
+			int(data.get("level", 140)),
+			int(data.get("intrinsicCombatPower", 0)),
+		])
+		lines.append("这页保留源宠实绩，便于对照达到进化水平的培养过程。")
+		if not bool(data.get("hasRecord", false)):
+			lines.append("成长评价资料不足，但 Lv1 与 Lv140 实际四维仍可查看。")
+			return lines
+		_append_growth_detail_lines(lines, data)
+		return lines
+	if bool(data.get("evolutionCurrent", false)):
+		lines.append("进化成长评价：%s" % str(data.get("overallGrade", "未观察")))
+		lines.append("评价对象：进化后重新抽取的二代宠物4V与成长。")
+		lines.append("原宠一转增量继续生效；0转、1转页保留进化前实绩。")
+		if observed_levels <= 0:
+			lines.append("升到 Lv2 后开始按二代宠物的实际成长记录评级。")
+			return lines
+		_append_growth_detail_lines(lines, data)
+		return lines
 	lines.append("%s评价：%s" % [
 		str(data.get("stageLabel", REBIRTH_STAGE_LABELS.get(safe_stage, "成长"))),
 		str(data.get("overallGrade", "未观察")),
@@ -343,6 +428,24 @@ static func detail_lines_for_stage(instance: Dictionary, stage: int = 0) -> Arra
 	return lines
 
 
+static func _append_growth_detail_lines(lines: Array[String], data: Dictionary) -> void:
+	var averages := data.get("statAverages", {}) as Dictionary
+	var percentiles := data.get("statPercentiles", {}) as Dictionary
+	var grades := data.get("statGrades", {}) as Dictionary
+	for key in STAT_KEYS:
+		lines.append("%s成长：%s    %s/级    分位 %.1f%%" % [
+			str(STAT_LABELS.get(key, key)),
+			str(grades.get(key, "D")),
+			_growth_cell_text(averages.get(key, 0.0)),
+			float(percentiles.get(key, 0.0)),
+		])
+	lines.append("战力成长：%s    %.3f/级    分位 %.1f%%" % [
+		str(data.get("overallGrade", "D")),
+		float(data.get("powerGrowthPerLevel", 0.0)),
+		float(data.get("powerPercentile", 0.0)),
+	])
+
+
 static func radar_values(instance: Dictionary) -> Dictionary:
 	return radar_values_for_stage(instance, 0)
 
@@ -363,6 +466,12 @@ static func attribute_table_rows(instance: Dictionary, target_level: int = 140) 
 
 static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0, target_level: int = 140) -> Array[Dictionary]:
 	var safe_stage := clampi(stage, 0, 2)
+	if is_evolution_pet(instance):
+		if safe_stage <= 1:
+			return _evolution_history_attribute_rows(instance, safe_stage)
+		var current_instance := instance.duplicate(true)
+		current_instance.erase("evolutionLineage")
+		return attribute_table_rows_for_stage(current_instance, 0, target_level)
 	if _is_server_growth_pet(instance):
 		if safe_stage <= 0:
 			return _server_observation_attribute_rows(instance, target_level)
@@ -418,8 +527,55 @@ static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0,
 	return rows
 
 
-static func target_column_label(_instance: Dictionary) -> String:
+static func target_column_label(instance: Dictionary, stage: int = 0) -> String:
+	if is_evolution_history_stage(instance, stage):
+		return "Lv140实绩"
 	return "预测140"
+
+
+static func _evolution_history_attribute_rows(instance: Dictionary, stage: int) -> Array[Dictionary]:
+	var snapshot := _evolution_history_snapshot(instance, stage)
+	if snapshot.is_empty():
+		return []
+	var level := clampi(int(snapshot.get("level", 140)), 1, 140)
+	var level_one := _strict_stat_map(snapshot.get("levelOneFourV", {}) as Dictionary)
+	var actual := _strict_stat_map(snapshot.get("stats", {}) as Dictionary)
+	if level_one.is_empty() or actual.is_empty():
+		return []
+	var data := _evaluate_evolution_history(instance, stage)
+	var averages := data.get("statAverages", {}) as Dictionary
+	var percentiles := data.get("statPercentiles", {}) as Dictionary
+	var grades := data.get("statGrades", {}) as Dictionary
+	var rows: Array[Dictionary] = [{
+		"label": "等级",
+		"initial": "Lv1",
+		"current": "Lv%d" % level,
+		"target": "已达成",
+		"growth": "-",
+		"grade": str(data.get("overallGrade", "资料不足")),
+		"percentile": data.get("powerPercentile", ""),
+	}]
+	for key in STAT_KEYS:
+		rows.append({
+			"label": str(STAT_LABELS.get(key, key)),
+			"initial": int(level_one.get(key, 0)),
+			"current": int(actual.get(key, 0)),
+			"target": int(actual.get(key, 0)),
+			"growth": _growth_cell_text(averages.get(key, "")),
+			"grade": str(grades.get(key, "资料不足")),
+			"percentile": percentiles.get(key, ""),
+		})
+	var actual_power := int(snapshot.get("intrinsicCombatPower", PetPowerModel.combat_power_for_stats(actual)))
+	rows.append({
+		"label": "战力",
+		"initial": PetPowerModel.combat_power_for_stats(level_one),
+		"current": actual_power,
+		"target": actual_power,
+		"growth": _growth_cell_text(data.get("powerGrowthPerLevel", "")),
+		"grade": str(data.get("overallGrade", "资料不足")),
+		"percentile": data.get("powerPercentile", ""),
+	})
+	return rows
 
 
 static func _server_observation_attribute_rows(instance: Dictionary, target_level: int = 140) -> Array[Dictionary]:
@@ -569,12 +725,113 @@ static func growth_stage_options(instance: Dictionary) -> Array[Dictionary]:
 	var rebirth_count := _rebirth_count(instance)
 	var options: Array[Dictionary] = []
 	for stage in [0, 1, 2]:
+		var enabled := int(stage) == 0 or rebirth_count >= int(stage)
+		if is_evolution_pet(instance):
+			enabled = int(stage) == 2 or not _evolution_history_snapshot(instance, int(stage)).is_empty()
 		options.append({
 			"stage": int(stage),
-			"label": str(REBIRTH_STAGE_LABELS.get(stage, "%d转成长" % int(stage))),
-			"enabled": int(stage) == 0 or rebirth_count >= int(stage),
+			"label": str(GROWTH_STAGE_TAB_LABELS.get(stage, "%d转成长" % int(stage))),
+			"enabled": enabled,
 		})
 	return options
+
+
+static func is_evolution_pet(instance: Dictionary) -> bool:
+	return not _evolution_lineage(instance).is_empty()
+
+
+static func is_evolution_history_stage(instance: Dictionary, stage: int) -> bool:
+	var safe_stage := clampi(stage, 0, 2)
+	return safe_stage <= 1 and not _evolution_history_snapshot(instance, safe_stage).is_empty()
+
+
+static func level_one_instance_for_stage(instance: Dictionary, stage: int) -> Dictionary:
+	if not is_evolution_history_stage(instance, stage):
+		return instance
+	var snapshot := _evolution_history_snapshot(instance, clampi(stage, 0, 1))
+	var historical := _evolution_snapshot_instance(instance, snapshot)
+	var level_one := _strict_stat_map(snapshot.get("levelOneFourV", {}) as Dictionary)
+	if level_one.is_empty():
+		return instance
+	historical["level"] = 1
+	historical["hp"] = int(level_one.get("maxHp", 1))
+	for key in STAT_KEYS:
+		historical[key] = int(level_one.get(key, 1))
+	var authority := historical.get("growthAuthority", {}) as Dictionary
+	authority["settledLevel"] = 1
+	historical["growthAuthority"] = authority
+	return historical
+
+
+static func _evolution_lineage(instance: Dictionary) -> Dictionary:
+	var raw = instance.get("evolutionLineage", null)
+	if not (raw is Dictionary):
+		return {}
+	var lineage := raw as Dictionary
+	if (
+		int(lineage.get("schemaVersion", 0)) != 1
+		or str(lineage.get("mode", "")) != "evolution"
+		or int(lineage.get("terminalStage", 0)) != 2
+		or not (lineage.get("stageSnapshots", null) is Array)
+	):
+		return {}
+	return lineage
+
+
+static func _evolution_history_snapshot(instance: Dictionary, stage: int) -> Dictionary:
+	if stage < 0 or stage > 1:
+		return {}
+	var lineage := _evolution_lineage(instance)
+	if lineage.is_empty():
+		return {}
+	for raw_snapshot in lineage.get("stageSnapshots", []) as Array:
+		if not (raw_snapshot is Dictionary):
+			continue
+		var snapshot := raw_snapshot as Dictionary
+		if int(snapshot.get("stage", -1)) != stage:
+			continue
+		var level_one_value = snapshot.get("levelOneFourV", null)
+		var stats_value = snapshot.get("stats", null)
+		if (
+			str(snapshot.get("formId", "")).strip_edges() == ""
+			or str(snapshot.get("growthSpeciesProfileId", "")).strip_edges() == ""
+			or not (level_one_value is Dictionary)
+			or not (stats_value is Dictionary)
+			or _strict_stat_map(level_one_value as Dictionary).is_empty()
+			or _strict_stat_map(stats_value as Dictionary).is_empty()
+		):
+			return {}
+		return snapshot.duplicate(true)
+	return {}
+
+
+static func _evolution_snapshot_instance(instance: Dictionary, snapshot: Dictionary) -> Dictionary:
+	var historical := instance.duplicate(true)
+	historical.erase("evolutionLineage")
+	var form_id := str(snapshot.get("formId", ""))
+	var profile_id := str(snapshot.get("growthSpeciesProfileId", ""))
+	var level_one := _strict_stat_map(snapshot.get("levelOneFourV", {}) as Dictionary)
+	var stats := _strict_stat_map(snapshot.get("stats", {}) as Dictionary)
+	historical["formId"] = form_id
+	historical["templateId"] = form_id
+	historical["speciesId"] = form_id
+	historical["formName"] = str(snapshot.get("formName", form_id))
+	historical["name"] = str(snapshot.get("formName", form_id))
+	historical["growthSpeciesProfileId"] = profile_id
+	historical["level"] = clampi(int(snapshot.get("level", 140)), 1, 140)
+	historical["growthSpeciesLevel1Stats"] = level_one
+	historical["initialStats"] = level_one.duplicate(true)
+	historical["hp"] = int(stats.get("maxHp", 1))
+	for key in STAT_KEYS:
+		historical[key] = int(stats.get(key, 1))
+	historical["growthAuthority"] = {
+		"schemaVersion": 1,
+		"source": "server",
+		"modelVersion": "pet_growth_authority_v1",
+		"settledLevel": int(historical.get("level", 140)),
+	}
+	historical["growthObservation"] = snapshot.get("growthObservation", {}).duplicate(true) if snapshot.get("growthObservation", null) is Dictionary else {}
+	return historical
 
 
 static func write_observation_csv(profile_id: String = DEFAULT_PROFILE_ID, sample_count: int = 100, output_path: String = DEFAULT_CSV_PATH) -> Dictionary:

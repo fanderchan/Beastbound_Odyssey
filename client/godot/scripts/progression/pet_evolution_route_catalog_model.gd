@@ -24,7 +24,7 @@ static func validation_errors(
 		return ["pet_evolution_routes.json 缺失或不是JSON对象"]
 	var data := document as Dictionary
 	var balance := _dict(evolution_balance)
-	if int(data.get("schemaVersion", 0)) != 1 or str(data.get("catalogId", "")) != "pet_evolution_routes_v1":
+	if int(data.get("schemaVersion", 0)) != 1 or str(data.get("catalogId", "")) != "pet_evolution_routes_v2":
 		errors.append("进化路线目录版本无效")
 	if str(data.get("balanceVersion", "")) != str(balance.get("balanceVersion", "")):
 		errors.append("进化路线必须引用当前进化平衡版本")
@@ -34,7 +34,7 @@ static func validation_errors(
 	if str(data.get("disabledMessage", "")).strip_edges() == "":
 		errors.append("进化路线关闭时必须有安全提示")
 	if _dict(data.get("qualityProjection", {})) != _dict(balance.get("qualityProjection", {})):
-		errors.append("进化路线必须保持4V与隐藏成长逐项独立投影")
+		errors.append("进化路线必须保持二代4V/隐藏成长重抽与源宠履历合同")
 
 	var lines := _index(pet_templates, "lines", "lineId", "宠物族系", errors)
 	var subtypes := _index(pet_templates, "subtypes", "subtypeId", "宠物亚种", errors)
@@ -214,7 +214,7 @@ static func _validate_route(route: Dictionary, index: int, runtime_enabled: bool
 		errors.append("%s 资格任务开关或能力奖励不一致" % label)
 	var eligibility := _dict(route.get("eligibility", {}))
 	var expected_eligibility := _dict(balance.get("eligibility", {}))
-	if int(eligibility.get("requiredRebirthCount", 0)) != int(expected_eligibility.get("requiredRebirthCount", 0)) or int(eligibility.get("requiredLevel", 0)) != int(expected_eligibility.get("requiredLevel", 0)) or str(eligibility.get("requiredGrowthModelVersion", "")) != str(expected_eligibility.get("requiredGrowthModelVersion", "")):
+	if int(eligibility.get("requiredRebirthCount", 0)) != int(expected_eligibility.get("requiredRebirthCount", 0)) or int(eligibility.get("requiredLevel", 0)) != int(expected_eligibility.get("requiredLevel", 0)) or str(eligibility.get("requiredGrowthModelVersion", "")) != str(expected_eligibility.get("requiredGrowthModelVersion", "")) or int(eligibility.get("requiredIntrinsicPowerPercentile", 0)) != 90 or int(eligibility.get("minimumIntrinsicCombatPower", 0)) <= 0 or str(eligibility.get("thresholdAuditVersion", "")) != "pet_evolution_eligibility_p90_v1" or int(eligibility.get("thresholdSampleCount", 0)) < 10000:
 		errors.append("%s 资格门槛与全局进化合同不一致" % label)
 
 	var cost := _dict(route.get("cost", {}))
@@ -271,15 +271,13 @@ static func _validate_route(route: Dictionary, index: int, runtime_enabled: bool
 static func _validate_growth_uplift(source: Dictionary, target: Dictionary, budget: Dictionary, label: String, errors: Array[String]) -> void:
 	var source_rules := _dict(source.get("individualRules", {}))
 	var target_rules := _dict(target.get("individualRules", {}))
-	if str(source_rules.get("distribution", "")) != str(target_rules.get("distribution", "")) or float(source_rules.get("rareExtremeRate", -1.0)) != float(target_rules.get("rareExtremeRate", -2.0)):
-		errors.append("%s 逐项分位投影必须使用相同分布族" % label)
 	var center := 0.0
 	var radius := 0.0
 	for key in STAT_KEYS:
 		var source_initial := _half_range(_dict(source_rules.get("initialOutputSpread", {})).get(key, []))
 		var target_initial := _half_range(_dict(target_rules.get("initialOutputSpread", {})).get(key, []))
-		if source_initial < 0.0 or target_initial < 0.0 or absf(source_initial - target_initial) > 0.000001:
-			errors.append("%s %s的Lv1分位几何必须精确保留" % [label, key])
+		if source_initial < 0.0 or target_initial < 0.0:
+			errors.append("%s %s的Lv1重抽范围无效" % [label, key])
 		var source_growth := _half_range(_dict(source_rules.get("growthOutputSpread", {})).get(key, []))
 		var target_growth := _half_range(_dict(target_rules.get("growthOutputSpread", {})).get(key, []))
 		var weight := float(STAT_WEIGHTS.get(key, 1.0))

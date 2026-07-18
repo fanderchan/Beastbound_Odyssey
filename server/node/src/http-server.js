@@ -87,6 +87,8 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "prepareGmPetPaidResetQa",
   "getPetPaidResetQuote",
   "paidResetPet",
+  "getPetEvolutionQuote",
+  "evolvePet",
   "offlineHangStatus",
   "startOfflineHang",
   "claimOfflineHang",
@@ -140,6 +142,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
 const PURE_HTTP_READ_SERVICE_METHODS = new Set([
   "getProfile",
   "getPetPaidResetQuote",
+  "getPetEvolutionQuote",
   "listPetRecoveries",
   "getPartyState",
 ]);
@@ -155,6 +158,7 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/market/cancel",
   "/mail/send",
   "/pets/paid-reset",
+  "/pets/evolution",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
 const IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN = /^\/pets\/recovery\/[^/]+\/claim$/;
@@ -439,6 +443,12 @@ function createHttpServer(options = {}) {
           instanceId: url.searchParams.get("instanceId") || "",
         }));
       }
+      if (req.method === "GET" && url.pathname === "/pets/evolution/quote") {
+        return sendResult(res, service.getPetEvolutionQuote(bearerToken(req), {
+          instanceId: url.searchParams.get("instanceId") || "",
+          routeId: url.searchParams.get("routeId") || "",
+        }));
+      }
       if (req.method === "GET" && url.pathname === "/hang/offline/status") {
         return sendResult(res, service.offlineHangStatus(bearerToken(req)));
       }
@@ -480,6 +490,9 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/pets/paid-reset") {
         return sendResult(res, service.paidResetPet(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/pets/evolution") {
+        return sendResult(res, service.evolvePet(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
@@ -871,6 +884,7 @@ async function sendResult(res, resultValue) {
     result.code === "revision_conflict"
     || result.code === "idempotency_key_conflict"
     || result.code === "pet_paid_reset_config_revision_conflict"
+    || result.code === "pet_evolution_catalog_conflict"
   ) {
     status = 409;
   } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {

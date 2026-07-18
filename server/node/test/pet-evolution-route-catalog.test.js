@@ -41,7 +41,7 @@ function expectInvalid(mutator, pattern) {
 
 test("two evolution routes form a gated, deterministic and cross-catalog complete acquisition contract", () => {
   const catalog = loadPetEvolutionRouteCatalog();
-  assert.equal(catalog.catalogId, "pet_evolution_routes_v1");
+  assert.equal(catalog.catalogId, "pet_evolution_routes_v2");
   assert.equal(catalog.runtimeEnabled, false);
   assert.equal(catalog.routes.length, EXPECTED_ROUTE_COUNT);
   assert.equal(catalog.materialEncounters.length, 3);
@@ -53,6 +53,9 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
   for (const route of catalog.routes) {
     assert.equal(route.eligibility.requiredRebirthCount, 1);
     assert.equal(route.eligibility.requiredLevel, 140);
+    assert.equal(route.eligibility.requiredIntrinsicPowerPercentile, 90);
+    assert.equal(route.eligibility.thresholdAuditVersion, "pet_evolution_eligibility_p90_v1");
+    assert.equal(route.eligibility.thresholdSampleCount, 10000);
     assert.equal(route.cost.stoneCoins, 300000);
     assert.equal(route.cost.walletPolicyId, "bound_first_split");
     assert.equal(route.effort.sharedCoreVictories, 8);
@@ -79,6 +82,13 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
   assert.equal(new Set(catalog.routes.map((route) => route.lineId)).size, 2);
   assert.equal(new Set(catalog.routes.map((route) => route.lineageSourceId)).size, 2);
   assert.equal(new Set(catalog.routes.map((route) => route.sharedCoreSourceId)).size, 1);
+  assert.deepEqual(
+    Object.fromEntries(catalog.routes.map((route) => [route.routeId, route.eligibility.minimumIntrinsicCombatPower])),
+    {
+      wuli_crystal_evolution_v1: 1345,
+      driftfox_moon_gale_evolution_v1: 1437,
+    },
+  );
 });
 
 test("route catalog fails closed for a third route, premature runtime enablement and cost drift", () => {
@@ -105,6 +115,6 @@ test("route catalog rejects binding and independent-quality contract drift", () 
   }, /itemBinding does not match/);
 
   expectInvalid((document) => {
-    document.qualityProjection.rerollAllowed = true;
+    document.qualityProjection.rerollAllowed = false;
   }, /qualityProjection must exactly match/);
 });

@@ -267,6 +267,36 @@ function petFixture(instanceId) {
       total: 283,
       privateFormulaSeed: "DO_NOT_EXPOSE_POWER_SEED",
     },
+    evolutionLineage: {
+      schemaVersion: 1,
+      mode: "evolution",
+      routeId: "wuli_crystal_evolution_v1",
+      sourceFormId: "wuli_normal_orange_fire10",
+      sourceFormName: "橙乌力",
+      targetFormId: "wuli_crystal_earth8_water2",
+      targetFormName: "晶甲乌力",
+      completedAtSec: 123456,
+      terminalStage: 2,
+      privateSeed: "DO_NOT_EXPOSE_LINEAGE_SEED",
+      stageSnapshots: [{
+        schemaVersion: 1,
+        stage: 1,
+        formId: "wuli_normal_orange_fire10",
+        formName: "橙乌力",
+        growthSpeciesProfileId: "wuli_orange_v1",
+        level: 140,
+        levelOneFourV: {maxHp: 63, attack: 13, defense: 10, quick: 7, hiddenMean: 9.9},
+        stats: {maxHp: 1380, attack: 326, defense: 371, quick: 240, hiddenMean: 9.9},
+        intrinsicCombatPower: 1282,
+        growthObservation: {
+          ...fullObservation(),
+          stage: 1,
+          stageLabel: "1转成长",
+          privateRoll: {attack: 0.99},
+        },
+        privateRoll: {attack: 0.99},
+      }],
+    },
     futurePrivateGrowthState: "DO_NOT_EXPOSE_UNKNOWN_PET_FIELD",
   };
 }
@@ -383,6 +413,44 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   assert.equal(actual.combatPower, 433);
   assert.equal(actual.combatPowerBreakdown.total, 283);
   assert.equal(actual.combatPowerBreakdown.privateFormulaSeed, undefined);
+  assert.deepEqual(actual.evolutionLineage, {
+    schemaVersion: 1,
+    mode: "evolution",
+    routeId: "wuli_crystal_evolution_v1",
+    sourceFormId: "wuli_normal_orange_fire10",
+    sourceFormName: "橙乌力",
+    targetFormId: "wuli_crystal_earth8_water2",
+    targetFormName: "晶甲乌力",
+    completedAtSec: 123456,
+    terminalStage: 2,
+    stageSnapshots: [{
+      schemaVersion: 1,
+      stage: 1,
+      formId: "wuli_normal_orange_fire10",
+      formName: "橙乌力",
+      growthSpeciesProfileId: "wuli_orange_v1",
+      level: 140,
+      levelOneFourV: {maxHp: 63, attack: 13, defense: 10, quick: 7},
+      stats: {maxHp: 1380, attack: 326, defense: 371, quick: 240},
+      intrinsicCombatPower: 1282,
+      growthObservation: {
+        schemaVersion: 1,
+        profileId: "blue_man_dragon_v1",
+        level: 20,
+        observedLevels: 19,
+        stage: 1,
+        stageLabel: "1转成长",
+        enabled: true,
+        hasRecord: true,
+        statAverages: {maxHp: 10.2, attack: 2.3, defense: 1.7, quick: 1.4},
+        statPercentiles: {maxHp: 91.2, attack: 96.4, defense: 72.1, quick: 65.5},
+        statGrades: {maxHp: "A", attack: "S", defense: "B", quick: "B"},
+        powerGrowthPerLevel: 16.875,
+        powerPercentile: 94.7,
+        overallGrade: "A",
+      },
+    }],
+  });
   assert.deepEqual(privatePaths(actual), []);
   assert.equal(JSON.stringify(actual).includes("DO_NOT_EXPOSE"), false);
   assert.equal(actual.futurePrivateGrowthState, undefined);

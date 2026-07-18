@@ -208,6 +208,7 @@ const PET_PUBLIC_FIELD_KEYS = Object.freeze([
   "lastCultivationResult",
   "petRebirthHelper",
   "combatPowerBreakdown",
+  "evolutionLineage",
 ]);
 
 const GROWTH_AUTHORITY_FIELD_KEYS = Object.freeze([
@@ -367,6 +368,65 @@ function publicGrowthObservation(observation) {
     } else if (GROWTH_OBSERVATION_BOOLEAN_FIELD_KEYS.has(key) && typeof observation[key] === "boolean") {
       result[key] = observation[key];
     }
+  }
+  return result;
+}
+
+function publicEvolutionStageSnapshot(value) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const result = {};
+  for (const key of ["schemaVersion", "stage", "level", "intrinsicCombatPower"]) {
+    const numeric = hasOwn(value, key) ? finiteNumber(value[key]) : null;
+    if (numeric !== null) {
+      result[key] = numeric;
+    }
+  }
+  for (const key of ["formId", "formName", "growthSpeciesProfileId"]) {
+    if (hasOwn(value, key) && typeof value[key] === "string") {
+      result[key] = value[key];
+    }
+  }
+  if (hasOwn(value, "levelOneFourV")) {
+    result.levelOneFourV = cloneNumericMap(value.levelOneFourV, STAT_KEYS);
+  }
+  if (hasOwn(value, "stats")) {
+    result.stats = cloneNumericMap(value.stats, STAT_KEYS);
+  }
+  if (hasOwn(value, "growthObservation")) {
+    result.growthObservation = publicGrowthObservation(value.growthObservation);
+  }
+  return result;
+}
+
+function publicEvolutionLineage(value) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const result = {};
+  for (const key of ["schemaVersion", "completedAtSec", "terminalStage"]) {
+    const numeric = hasOwn(value, key) ? finiteNumber(value[key]) : null;
+    if (numeric !== null) {
+      result[key] = numeric;
+    }
+  }
+  for (const key of [
+    "mode",
+    "routeId",
+    "sourceFormId",
+    "sourceFormName",
+    "targetFormId",
+    "targetFormName",
+  ]) {
+    if (hasOwn(value, key) && typeof value[key] === "string") {
+      result[key] = value[key];
+    }
+  }
+  if (hasOwn(value, "stageSnapshots")) {
+    result.stageSnapshots = Array.isArray(value.stageSnapshots)
+      ? value.stageSnapshots.map(publicEvolutionStageSnapshot)
+      : [];
   }
   return result;
 }
@@ -777,6 +837,8 @@ function publicPet(pet) {
       result[key] = publicPetRebirthHelper(value);
     } else if (key === "combatPowerBreakdown") {
       result[key] = publicCombatPowerBreakdown(value);
+    } else if (key === "evolutionLineage") {
+      result[key] = publicEvolutionLineage(value);
     }
   }
   const identity = firstNonEmptyString(pet.instanceId, pet.petId, pet.id);

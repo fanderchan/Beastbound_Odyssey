@@ -18,8 +18,7 @@ const EXPECTED_PRESERVE = Object.freeze([
   "instance_identity",
   "owner_and_capture_history",
   "name",
-  "lv1_four_v_percentiles",
-  "hidden_growth_quantiles",
+  "source_stage_zero_and_one_public_history",
   "stage_one_rebirth_bonus_and_history",
   "enhancement",
   "active_passive_learned_inherited_skills",
@@ -32,6 +31,7 @@ const EXPECTED_CLEAR = Object.freeze([
   "current_hp",
   "growth_observation",
   "pending_rebirth_preview",
+  "source_private_growth_identity",
 ]);
 
 class PetEvolutionBalanceError extends Error {
@@ -158,6 +158,15 @@ function createPetEvolutionBalance(document, {rebirthBalance = loadPetRebirthBal
   if (eligibility.requiredGrowthModelVersion !== "pet_growth_authority_v1") {
     errors.push("eligibility.requiredGrowthModelVersion is invalid");
   }
+  if (eligibility.requiredIntrinsicPowerPercentile !== 90) {
+    errors.push("eligibility.requiredIntrinsicPowerPercentile must equal 90");
+  }
+  if (eligibility.intrinsicPowerFormula !== "round(maxHp*0.25+attack+defense+quick)") {
+    errors.push("eligibility.intrinsicPowerFormula is invalid");
+  }
+  if (eligibility.thresholdScope !== "same_source_form_stage_one_lv140") {
+    errors.push("eligibility.thresholdScope is invalid");
+  }
   if (eligibility.licenseScope !== "line") errors.push("eligibility.licenseScope must equal line");
   if (eligibility.licenseSource !== "one_time_quest_unlock_only") {
     errors.push("eligibility.licenseSource must be a one-time unlock-only quest");
@@ -235,14 +244,20 @@ function createPetEvolutionBalance(document, {rebirthBalance = loadPetRebirthBal
   }
 
   const quality = isRecord(document.qualityProjection) ? document.qualityProjection : {};
-  if (quality.lv1FourV !== "per_stat_species_percentile_projection_v1") {
+  if (quality.lv1FourV !== "fresh_target_species_roll_v1") {
     errors.push("qualityProjection.lv1FourV is invalid");
   }
-  if (quality.hiddenGrowth !== "private_per_stat_species_quantile_projection_v1") {
+  if (quality.hiddenGrowth !== "fresh_target_species_roll_v1") {
     errors.push("qualityProjection.hiddenGrowth is invalid");
   }
-  if (quality.preserveIndependentDimensions !== true || quality.rerollAllowed !== false || quality.publicCombinedScore !== false) {
-    errors.push("qualityProjection must preserve independent private quality without rerolls or a combined score");
+  if (
+    quality.preserveIndependentDimensions !== true
+    || quality.rerollAllowed !== true
+    || quality.sourceQualityTransfer !== false
+    || quality.preserveSourceStageSnapshots !== true
+    || quality.publicCombinedScore !== false
+  ) {
+    errors.push("qualityProjection must reroll both independent qualities while preserving only public source-stage history");
   }
 
   const power = isRecord(document.powerBudget) ? document.powerBudget : {};

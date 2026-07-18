@@ -136,13 +136,15 @@ if (effort.firstEvolutionRatio <= effort.repeatableRatio) {
   errors.push("first evolution must include additional one-time quest effort");
 }
 if (
-  evolution.qualityProjection.lv1FourV !== "per_stat_species_percentile_projection_v1"
-  || evolution.qualityProjection.hiddenGrowth !== "private_per_stat_species_quantile_projection_v1"
-  || evolution.qualityProjection.preserveIndependentDimensions !== true
-  || evolution.qualityProjection.rerollAllowed !== false
-  || evolution.qualityProjection.publicCombinedScore !== false
+	 evolution.qualityProjection.lv1FourV !== "fresh_target_species_roll_v1"
+	 || evolution.qualityProjection.hiddenGrowth !== "fresh_target_species_roll_v1"
+	 || evolution.qualityProjection.preserveIndependentDimensions !== true
+	 || evolution.qualityProjection.rerollAllowed !== true
+	 || evolution.qualityProjection.sourceQualityTransfer !== false
+	 || evolution.qualityProjection.preserveSourceStageSnapshots !== true
+	 || evolution.qualityProjection.publicCombinedScore !== false
 ) {
-  errors.push("evolution quality projection violates the independent no-reroll contract");
+	errors.push("evolution quality generation violates the fresh target reroll plus public history contract");
 }
 if (
   evolution.terminalPath.normalSecondRebirthAllowed !== false
@@ -171,7 +173,7 @@ const report = {
   effort: {...effort},
   qualityProjection: {...evolution.qualityProjection},
   terminalPath: {...evolution.terminalPath},
-  scope: "generic_budget_only_route_specific_stat_projection_pending",
+	scope: "fresh_target_reroll_budget_and_public_history_contract",
   errors,
   ok: errors.length === 0,
 };

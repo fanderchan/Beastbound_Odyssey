@@ -13,15 +13,19 @@ const {
 test("evolution balance locks a harder quest-unlocked floor-material terminal path", () => {
   const balance = loadPetEvolutionBalance();
   const effort = petEvolutionEffortSummary(balance);
-  assert.equal(balance.balanceVersion, "pet_evolution_balance_v1");
+  assert.equal(balance.balanceVersion, "pet_evolution_balance_v2");
   assert.equal(balance.eligibility.requiredRebirthCount, 1);
   assert.equal(balance.eligibility.requiredLevel, 140);
+  assert.equal(balance.eligibility.requiredIntrinsicPowerPercentile, 90);
+  assert.equal(balance.eligibility.thresholdScope, "same_source_form_stage_one_lv140");
   assert.equal(balance.eligibility.licenseDirectResult, false);
   assert.equal(balance.acquisition.requiresTeamPve, true);
   assert.equal(balance.terminalPath.normalSecondRebirthAllowed, false);
   assert.equal(balance.terminalPath.fusionMaterialAllowed, false);
   assert.equal(balance.terminalPath.successRate, 1);
-  assert.equal(balance.qualityProjection.rerollAllowed, false);
+  assert.equal(balance.qualityProjection.rerollAllowed, true);
+  assert.equal(balance.qualityProjection.sourceQualityTransfer, false);
+  assert.equal(balance.qualityProjection.preserveSourceStageSnapshots, true);
   assert.equal(effort.repeatableRatio, 1.5);
   assert.equal(effort.firstEvolutionRatio, 1.7);
   assert.equal(Object.isFrozen(balance), true);
@@ -76,14 +80,16 @@ test("evolution cannot stack ordinary second rebirth or raw-stat inflation", () 
   );
 });
 
-test("evolution contract cannot reroll or migrate existing pets", () => {
+test("evolution contract requires a fresh target roll, public source history and no existing-pet migration", () => {
   const source = structuredClone(loadPetEvolutionBalance());
-  source.qualityProjection.rerollAllowed = true;
+  source.qualityProjection.rerollAllowed = false;
+  source.qualityProjection.sourceQualityTransfer = true;
+  source.qualityProjection.preserveSourceStageSnapshots = false;
   source.compatibility.existingPets = "rewrite";
   assert.throws(
     () => createPetEvolutionBalance(source),
     (error) => error instanceof PetEvolutionBalanceError
-      && error.errors.some((entry) => entry.includes("rerolls"))
+      && error.errors.some((entry) => entry.includes("reroll both independent qualities"))
       && error.errors.some((entry) => entry.includes("existing pets")),
   );
 });

@@ -10,8 +10,7 @@ const PRESERVE_IDS: Array[String] = [
 	"instance_identity",
 	"owner_and_capture_history",
 	"name",
-	"lv1_four_v_percentiles",
-	"hidden_growth_quantiles",
+	"source_stage_zero_and_one_public_history",
 	"stage_one_rebirth_bonus_and_history",
 	"enhancement",
 	"active_passive_learned_inherited_skills",
@@ -24,6 +23,7 @@ const CLEAR_IDS: Array[String] = [
 	"current_hp",
 	"growth_observation",
 	"pending_rebirth_preview",
+	"source_private_growth_identity",
 ]
 
 
@@ -37,8 +37,8 @@ static func validation_errors(document, rebirth_document) -> Array[String]:
 	var rebirth := rebirth_document as Dictionary
 	if int(data.get("schemaVersion", 0)) != 1:
 		errors.append("pet_evolution_balance.schemaVersion 当前必须为1")
-	if str(data.get("balanceVersion", "")) != "pet_evolution_balance_v1":
-		errors.append("pet_evolution_balance.balanceVersion 当前必须为pet_evolution_balance_v1")
+	if str(data.get("balanceVersion", "")) != "pet_evolution_balance_v2":
+		errors.append("pet_evolution_balance.balanceVersion 当前必须为pet_evolution_balance_v2")
 
 	var reference := _dict(data.get("reference", {}))
 	var rebirth_evaluation := _dict(rebirth.get("evaluation", {}))
@@ -57,6 +57,12 @@ static func validation_errors(document, rebirth_document) -> Array[String]:
 		errors.append("进化目标必须达到二转满准备等级")
 	if str(eligibility.get("requiredGrowthModelVersion", "")) != "pet_growth_authority_v1":
 		errors.append("进化只允许 authority-v1 成长宠")
+	if int(eligibility.get("requiredIntrinsicPowerPercentile", 0)) != 90:
+		errors.append("进化源宠必须达到同形态一转Lv140战力P90")
+	if str(eligibility.get("intrinsicPowerFormula", "")) != "round(maxHp*0.25+attack+defense+quick)":
+		errors.append("进化源宠战力公式无效")
+	if str(eligibility.get("thresholdScope", "")) != "same_source_form_stage_one_lv140":
+		errors.append("进化源宠战力门槛范围无效")
 	if str(eligibility.get("licenseScope", "")) != "line":
 		errors.append("进化资格当前必须按族系解锁")
 	if str(eligibility.get("licenseSource", "")) != "one_time_quest_unlock_only":
@@ -122,12 +128,12 @@ static func validation_errors(document, rebirth_document) -> Array[String]:
 		errors.append("进化必须换形态但保留宠物实例")
 
 	var quality := _dict(data.get("qualityProjection", {}))
-	if str(quality.get("lv1FourV", "")) != "per_stat_species_percentile_projection_v1":
-		errors.append("进化Lv1 4V必须逐项按物种分位投影")
-	if str(quality.get("hiddenGrowth", "")) != "private_per_stat_species_quantile_projection_v1":
-		errors.append("进化隐藏成长必须逐项私有分位投影")
-	if quality.get("preserveIndependentDimensions", null) != true or quality.get("rerollAllowed", null) != false or quality.get("publicCombinedScore", null) != false:
-		errors.append("进化必须保持4V与隐藏成长独立、禁止重抽和总分泄露")
+	if str(quality.get("lv1FourV", "")) != "fresh_target_species_roll_v1":
+		errors.append("进化Lv1 4V必须按二代物种重新抽取")
+	if str(quality.get("hiddenGrowth", "")) != "fresh_target_species_roll_v1":
+		errors.append("进化隐藏成长必须按二代物种重新抽取")
+	if quality.get("preserveIndependentDimensions", null) != true or quality.get("rerollAllowed", null) != true or quality.get("sourceQualityTransfer", null) != false or quality.get("preserveSourceStageSnapshots", null) != true or quality.get("publicCombinedScore", null) != false:
+		errors.append("进化必须重抽独立品质、只保留源宠公开阶段履历且不泄露总分")
 
 	var power := _dict(data.get("powerBudget", {}))
 	if power.get("preserveStageOneRebirthBonus", null) != true:
