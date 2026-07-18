@@ -2,6 +2,7 @@ extends RefCounted
 
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 
 
@@ -104,6 +105,33 @@ static func run() -> Dictionary:
 		and bool(critical_step.get("counterEventEmpty", false))
 		and int(critical_step.get("ledgerHpBefore", -1)) == 220
 		and int(critical_step.get("ledgerHpAfter", -1)) == 193
+	)
+
+	var blocked_replay := _replay(_server_state(), _event_list([_damage_event(
+		"evt_blocked",
+		"basic_attack",
+		"enemy_front_3",
+		BattleModel.PLAYER_PET_ID,
+		10,
+		120,
+		110,
+		{"blocked": true}
+	)]))
+	var blocked_events: Array = blocked_replay.get("events", [])
+	var blocked_ledgers: Array = blocked_replay.get("ledgers", [])
+	var blocked_event := blocked_events[0] as Dictionary if not blocked_events.is_empty() else {}
+	var blocked_ledger := blocked_ledgers[0] as Dictionary if not blocked_ledgers.is_empty() else {}
+	var blocked_targets: Array = blocked_ledger.get("targets", []) if blocked_ledger.get("targets", []) is Array else []
+	var blocked_target_ledger := blocked_targets[0] as Dictionary if not blocked_targets.is_empty() else {}
+	var blocked_state := blocked_replay.get("state", {}) as Dictionary
+	var blocked_target := BattleModel.actor_by_id(blocked_state, BattleModel.PLAYER_PET_ID)
+	checks["blocked_guard_hit_replay"] = (
+		bool(blocked_event.get("serverBlocked", false))
+		and bool(blocked_state.get("lastBlocked", false))
+		and bool((blocked_state.get("lastBlockedPerTarget", {}) as Dictionary).get(BattleModel.PLAYER_PET_ID, false))
+		and str(blocked_target.get("actionState", "")) == BattleVisualPresentationModel.STATE_GUARD_HIT
+		and bool(blocked_ledger.get("blocked", false))
+		and bool(blocked_target_ledger.get("blocked", false))
 	)
 
 	var pair_state := _server_state()

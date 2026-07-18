@@ -35,6 +35,12 @@
       "frameCount": 6,
       "fps": 10,
       "loop": false
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "holdLastFrame": true
     }
   },
   "worldDirectionMapping": {
@@ -70,7 +76,7 @@
     "runtimeReviewStatus": "passed_1280x720_godot_world_and_battle"
   },
   "knownScope": {
-    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend"],
-    "deferred": ["skill_unique", "knockback", "victory", "down", "capture", "evolution"]
+    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend", "battle_down"],
+    "deferred": ["skill_unique", "knockback", "victory", "capture", "evolution"]
   }
 }

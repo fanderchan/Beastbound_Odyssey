@@ -11,6 +11,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
@@ -1872,6 +1873,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == "--qa-viewport"
 		or normalized.begins_with("--qa-viewport=")
 		or normalized == "--battle-debug-window"
+		or normalized.begins_with("--battle-visual-review=")
 		or normalized == "--server-step-world-move"
 	)
 
@@ -11041,6 +11043,7 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 		var multi_ride_effects := ledger.get("rideDamagePerTarget", {}) as Dictionary
 		var dodge_map := ledger.get("dodgePerTarget", {}) as Dictionary
 		var critical_map := ledger.get("criticalPerTarget", {}) as Dictionary
+		var blocked_map := ledger.get("blockedPerTarget", {}) as Dictionary
 		var multi_delay := _battle_event_duration(event) * _battle_event_result_reveal_progress(event) if _battle_event_delays_result(event) else 0.0
 		for multi_target_id in ledger.get("targetIds", []):
 			var resolved_multi_target_id := str(multi_target_id)
@@ -11054,6 +11057,8 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 			var multi_actor_damage := int(multi_split.get("actorDamage", multi_damage))
 			if multi_actor_damage > 0:
 				var multi_text := "-%d" % multi_actor_damage
+				if bool(blocked_map.get(resolved_multi_target_id, false)):
+					multi_text = "防御 %s" % multi_text
 				if bool(critical_map.get(resolved_multi_target_id, false)):
 					multi_text = "暴击 %s" % multi_text
 				_add_battle_float_text(resolved_multi_target_id, multi_text, Color(1.0, 0.82, 0.30, 0.98), multi_delay)
@@ -11074,6 +11079,8 @@ func _add_battle_event_feedback(event: Dictionary, ledger: Dictionary = {}) -> v
 	var feedback_delay := _battle_event_duration(event) * _battle_event_result_reveal_progress(event) if _battle_event_delays_result(event) else 0.0
 	if actor_damage > 0:
 		var text := "-%d" % actor_damage
+		if bool(ledger.get("blocked", false)):
+			text = "防御 %s" % text
 		if bool(ledger.get("launch", false)):
 			text = "击飞 %s" % text
 		if event_type == "combo_attack":
@@ -11121,6 +11128,8 @@ func _add_battle_float_text(actor_id: String, text: String, color: Color, delay:
 
 func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 	var duration := _battle_event_duration(event)
+	if _battle_last_event_has_down_target():
+		duration = maxf(duration, 1.25)
 	var delays_result := _battle_event_delays_result(event)
 	var reveal_progress := _battle_event_result_reveal_progress(event) if delays_result else 0.0
 	var launch_start := reveal_progress
@@ -11130,6 +11139,14 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		"damageRevealProgress": reveal_progress,
 		"launchStartProgress": launch_start,
 	}
+
+
+func _battle_last_event_has_down_target() -> bool:
+	for value in battle_state.get("lastTargetIds", []):
+		var target := BattleModel.actor_by_id(battle_state, str(value))
+		if str(target.get("actionState", "")) == "down":
+			return true
+	return false
 
 
 func _battle_event_consumes_item(event_type: String) -> bool:
@@ -13483,10 +13500,7 @@ func _draw_battle_floor_noise(rect: Rect2) -> void:
 
 
 func _battle_should_draw_formation_grid() -> bool:
-	return battle_active and [
-		"local_formation_preview_battle",
-		"local_stat_formula_test_battle",
-	].has(str(battle_state.get("id", "")))
+	return battle_active and str(battle_state.get("id", "")) == "local_stat_formula_test_battle"
 
 
 func _draw_battle_formation_grid(rect: Rect2) -> void:
@@ -13546,14 +13560,13 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	pos += _battle_actor_state_offset(state, side, visual_scale)
 	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
-	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else (0.32 if state == "down" else 1.0))
-	draw_circle(pos + Vector2(0, 28) * visual_scale, 28.0 * visual_scale, Color(0.0, 0.0, 0.0, 0.20 * alpha))
+	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else 1.0)
+	if not launched_active:
+		_draw_battle_ground_shadow(actor, pos, visual_scale, alpha)
 	if _battle_target_mode_selects_enemy() and str(actor.get("id", "")) == battle_hover_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
 		_draw_battle_target_ring(pos, visual_scale)
 	if _battle_target_mode_selects_ally() and str(actor.get("id", "")) == battle_hover_ally_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and int(actor.get("hp", 0)) > 0:
 		_draw_battle_target_ring(pos, visual_scale, Color(0.50, 1.0, 0.58, 0.96))
-	if BattleModel.is_actor_guarding(battle_state, actor_id) and int(actor.get("hp", 0)) > 0:
-		_draw_battle_guard_ring(pos, visual_scale)
 	var body_color := Color(0.20, 0.53, 0.85, alpha)
 	var trim_color := Color(1.0, 0.86, 0.40, alpha)
 	if kind == "pet":
@@ -13567,7 +13580,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		trim_color = Color(1.0, 0.88, 0.32, alpha)
 	var formal_pet_drawn := false
 	if formal_pet_supported:
-		formal_pet_drawn = _draw_formal_battle_pet_actor(form_id, side, state, pos, visual_scale, alpha, launch_rotation)
+		formal_pet_drawn = _draw_formal_battle_pet_actor(actor_id, form_id, side, state, pos, visual_scale, alpha, launch_rotation)
 	if formal_pet_drawn:
 		pass
 	elif kind == "player":
@@ -13600,6 +13613,10 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			4.0 * visual_scale,
 			true
 		)
+	if (BattleModel.is_actor_guarding(battle_state, actor_id) or state == BattleVisualPresentationModel.STATE_GUARD_HIT) and int(actor.get("hp", 0)) > 0:
+		_draw_battle_guard_effect(actor, pos, visual_scale, state)
+	if state == "down" and ["pet", "wild_pet"].has(kind):
+		_draw_battle_dizzy_halo(actor, pos, visual_scale)
 	if int(actor.get("hp", 0)) > 0 or launched_active:
 		var hp_actor := actor
 		if launched_active:
@@ -13626,14 +13643,21 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
 
 
-func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
+func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
 	var action := PetActionAssetCatalog.action_for_battle_state(state)
 	var view := PetActionAssetCatalog.battle_view_for_side(side)
 	var texture: Texture2D
 	if action == "idle":
 		texture = PetActionAssetCatalog.texture_for_elapsed(form_id, view, action, battle_pet_art_elapsed)
 	else:
-		var progress := 1.0 if ["down", "captured"].has(state) else _battle_current_event_progress()
+		var progress := 1.0 if state == "captured" else _battle_current_event_progress()
+		if state == "down":
+			var is_current_target := not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
+			progress = BattleVisualPresentationModel.down_action_progress(
+				is_current_target,
+				_battle_current_event_progress(),
+				_battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
+			)
 		if pet_action_art_preview:
 			var action_seconds := float(PetActionAssetCatalog.FRAME_COUNTS[action]) / PetActionAssetCatalog.action_fps(action)
 			progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
@@ -13740,6 +13764,84 @@ func _battle_ellipse_points(center: Vector2, radius: Vector2, rotation: float = 
 	return points
 
 
+func _draw_battle_ground_shadow(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float) -> void:
+	var plan := BattleVisualPresentationModel.ground_shadow_plan(
+		str(actor.get("kind", "")),
+		str(actor.get("actionState", "idle")),
+		visual_scale,
+		_battle_actor_has_active_ride(actor)
+	)
+	var center := pos + (plan.get("centerOffset", Vector2.ZERO) as Vector2)
+	var radius := plan.get("radius", Vector2(30.0, 8.0)) as Vector2
+	var outer := _battle_ellipse_points(center, radius, 0.0, 32)
+	var middle := _battle_ellipse_points(center, radius * Vector2(0.78, 0.74), 0.0, 28)
+	var core := _battle_ellipse_points(center, radius * Vector2(0.50, 0.46), 0.0, 24)
+	draw_polygon(outer, _battle_solid_colors(outer.size(), Color(0.01, 0.02, 0.02, float(plan.get("outerAlpha", 0.055)) * alpha)))
+	draw_polygon(middle, _battle_solid_colors(middle.size(), Color(0.01, 0.02, 0.02, float(plan.get("middleAlpha", 0.085)) * alpha)))
+	draw_polygon(core, _battle_solid_colors(core.size(), Color(0.01, 0.02, 0.02, float(plan.get("coreAlpha", 0.115)) * alpha)))
+
+
+func _draw_battle_dizzy_halo(actor: Dictionary, pos: Vector2, visual_scale: float) -> void:
+	var side := str(actor.get("side", BattleModel.SIDE_ENEMY))
+	var head_x := -25.0 if side == BattleModel.SIDE_ALLY else 25.0
+	var phase := battle_pet_art_elapsed * 2.4
+	var center := pos + Vector2(head_x, -72.0 + sin(phase * 1.6) * 2.0) * visual_scale
+	var radius := Vector2(24.0, 7.5) * visual_scale
+	var ring := _battle_ellipse_points(center, radius, 0.0, 36)
+	if not ring.is_empty():
+		draw_polyline(ring + PackedVector2Array([ring[0]]), Color(1.0, 0.80, 0.22, 0.88), maxf(1.4, 2.2 * visual_scale), true)
+	for index in range(3):
+		var angle := phase + TAU * float(index) / 3.0
+		var orbit := center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y)
+		var star_size := (3.6 if index == 0 else 3.0) * visual_scale
+		var star := PackedVector2Array([
+			orbit + Vector2(0.0, -star_size),
+			orbit + Vector2(star_size * 0.72, 0.0),
+			orbit + Vector2(0.0, star_size),
+			orbit + Vector2(-star_size * 0.72, 0.0),
+		])
+		draw_polygon(star, _battle_solid_colors(star.size(), Color(1.0, 0.90, 0.38, 0.98)))
+
+
+func _draw_battle_guard_effect(actor: Dictionary, pos: Vector2, visual_scale: float, state: String) -> void:
+	var side := str(actor.get("side", BattleModel.SIDE_ENEMY))
+	var forward := (Vector2(-0.82, -0.42) if side == BattleModel.SIDE_ALLY else Vector2(0.82, 0.42)).normalized()
+	var tangent := Vector2(-forward.y, forward.x)
+	var center := pos + (forward * 27.0 + Vector2(0.0, -29.0)) * visual_scale
+	var impact := BattleVisualPresentationModel.guard_impact_strength(
+		state == BattleVisualPresentationModel.STATE_GUARD_HIT,
+		_battle_current_event_progress(),
+		_battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
+	)
+	var shield := PackedVector2Array([
+		center + forward * 13.0 * visual_scale,
+		center + (tangent * 24.0 - forward * 3.0) * visual_scale,
+		center + (tangent * 17.0 - forward * 25.0) * visual_scale,
+		center - forward * 34.0 * visual_scale,
+		center + (-tangent * 17.0 - forward * 25.0) * visual_scale,
+		center + (-tangent * 24.0 - forward * 3.0) * visual_scale,
+	])
+	var fill_alpha := 0.08 + impact * 0.24
+	draw_polygon(shield, _battle_solid_colors(shield.size(), Color(0.30, 0.74, 1.0, fill_alpha)))
+	draw_polyline(shield + PackedVector2Array([shield[0]]), Color(0.62, 0.91, 1.0, 0.56 + impact * 0.38), maxf(1.6, (2.6 + impact * 1.8) * visual_scale), true)
+	var brace_a := center + tangent * 15.0 * visual_scale - forward * 10.0 * visual_scale
+	var brace_b := center - tangent * 15.0 * visual_scale - forward * 10.0 * visual_scale
+	draw_line(brace_a, brace_b, Color(0.75, 0.94, 1.0, 0.34 + impact * 0.52), maxf(1.2, 2.0 * visual_scale), true)
+	if impact > 0.01:
+		var contact := center + forward * 17.0 * visual_scale
+		draw_circle(contact, (5.0 + 5.0 * impact) * visual_scale, Color(0.86, 0.98, 1.0, 0.18 + impact * 0.36))
+		for index in range(5):
+			var ray_angle := -0.85 + float(index) * 0.42
+			var ray_direction := forward.rotated(ray_angle)
+			draw_line(
+				contact + ray_direction * 7.0 * visual_scale,
+				contact + ray_direction * (13.0 + impact * 9.0) * visual_scale,
+				Color(0.90, 0.99, 1.0, impact * 0.82),
+				maxf(1.0, 1.8 * visual_scale),
+				true
+			)
+
+
 func _battle_solid_colors(count: int, color: Color) -> PackedColorArray:
 	var colors := PackedColorArray()
 	for _index in range(maxi(0, count)):
@@ -13756,11 +13858,11 @@ func _draw_battle_actor_home_shadow(actor: Dictionary, home_pos: Vector2, visual
 		color = Color(1.0, 0.62, 0.34, alpha)
 	elif side == BattleModel.SIDE_ALLY:
 		color = Color(0.45, 0.78, 1.0, alpha)
-	var center := home_pos + Vector2(0, 28.0) * visual_scale
-	var radius := 20.0 * visual_scale
-	draw_circle(center, radius, Color(0.02, 0.03, 0.03, 0.14))
-	draw_circle(center, radius * 0.62, Color(color.r, color.g, color.b, 0.10))
-	draw_arc(center, radius, 0.0, PI * 2.0, 28, color, maxf(1.5, 2.4 * visual_scale), true)
+	var center := home_pos + Vector2(0, 2.0) * visual_scale
+	var radius := Vector2(27.0, 8.0) * visual_scale
+	var marker := _battle_ellipse_points(center, radius, 0.0, 32)
+	draw_polygon(marker, _battle_solid_colors(marker.size(), Color(color.r, color.g, color.b, 0.08)))
+	draw_polyline(marker + PackedVector2Array([marker[0]]), color, maxf(1.2, 2.0 * visual_scale), true)
 
 
 func _draw_battle_actor_label(actor: Dictionary, center: Vector2, visual_scale: float, alpha: float, compact: bool) -> void:
@@ -13839,7 +13941,26 @@ func _battle_actor_label(actor: Dictionary) -> String:
 
 
 func _battle_should_show_actor_label(actor: Dictionary) -> bool:
-	return _battle_actor_label(actor) != ""
+	var label := _battle_actor_label(actor)
+	var actor_id := str(actor.get("id", ""))
+	var is_focus := (
+		actor_id == battle_hover_target_id
+		or actor_id == battle_hover_ally_target_id
+		or actor_id == battle_selected_target_id
+		or actor_id == battle_selected_ally_target_id
+	)
+	if not is_focus and not battle_current_event.is_empty():
+		is_focus = (
+			actor_id == str(battle_current_event.get("attackerId", ""))
+			or actor_id == str(battle_current_event.get("targetId", ""))
+			or (battle_current_event.get("participantIds", []) as Array).has(actor_id)
+		)
+	return BattleVisualPresentationModel.should_show_actor_label(
+		label,
+		_battle_uses_10v10_formation_template(),
+		actor_id == BattleModel.player_actor_id(battle_state),
+		is_focus
+	)
 
 
 func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
@@ -13925,19 +14046,15 @@ func _draw_battle_float_texts() -> void:
 
 
 func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = Color(1.0, 0.78, 0.20, 0.96)) -> void:
-	var center := pos + Vector2(0, 28) * visual_scale
-	var radius := 32.0 * visual_scale
-	draw_arc(center, radius, 0.0, PI * 2.0, 48, color, maxf(2.0, 3.0 * visual_scale), true)
-	draw_arc(center, radius + 6.0 * visual_scale, -0.70, 0.70, 12, color, maxf(2.0, 2.5 * visual_scale), true)
-	draw_arc(center, radius + 6.0 * visual_scale, PI - 0.70, PI + 0.70, 12, color, maxf(2.0, 2.5 * visual_scale), true)
-
-
-func _draw_battle_guard_ring(pos: Vector2, visual_scale: float) -> void:
-	var center := pos + Vector2(0, -10) * visual_scale
-	var radius := 36.0 * visual_scale
-	var color := Color(0.48, 0.82, 1.0, 0.56)
-	draw_arc(center, radius, -0.2, PI + 0.2, 24, color, maxf(2.0, 4.0 * visual_scale), true)
-	draw_line(center + Vector2(-22, 6) * visual_scale, center + Vector2(22, 6) * visual_scale, color, maxf(2.0, 3.0 * visual_scale), true)
+	var center := pos + Vector2(0, 2.0) * visual_scale
+	var radius := Vector2(38.0, 12.0) * visual_scale
+	var ring := _battle_ellipse_points(center, radius, 0.0, 44)
+	draw_polyline(ring + PackedVector2Array([ring[0]]), color, maxf(1.8, 2.8 * visual_scale), true)
+	var chevron_x := radius.x + 5.0 * visual_scale
+	draw_line(center + Vector2(-chevron_x, -4.0 * visual_scale), center + Vector2(-chevron_x - 6.0 * visual_scale, 0.0), color, maxf(1.5, 2.2 * visual_scale), true)
+	draw_line(center + Vector2(-chevron_x - 6.0 * visual_scale, 0.0), center + Vector2(-chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
+	draw_line(center + Vector2(chevron_x, -4.0 * visual_scale), center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), color, maxf(1.5, 2.2 * visual_scale), true)
+	draw_line(center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), center + Vector2(chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
 
 
 func _battle_actor_is_current_launch_target(actor_id: String) -> bool:
@@ -13952,9 +14069,12 @@ func _battle_actor_state_offset(state: String, side: String, visual_scale: float
 			return Vector2(-14, -20) * visual_scale
 		"hit":
 			return Vector2(sin(battle_action_timer * 80.0) * 5.0 * visual_scale, 0)
+		BattleVisualPresentationModel.STATE_GUARD_HIT:
+			var recoil_direction := 1.0 if side == BattleModel.SIDE_ALLY else -1.0
+			return Vector2(recoil_direction * sin(battle_action_timer * 90.0) * 2.8, 3.0) * visual_scale
 		"dodge":
 			return (Vector2(18, -8) if side == BattleModel.SIDE_ALLY else Vector2(-18, 8)) * visual_scale
-		"down", "captured":
+		"captured":
 			return Vector2(0, 16) * visual_scale
 		_:
 			return Vector2.ZERO

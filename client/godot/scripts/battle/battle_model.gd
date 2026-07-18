@@ -3,6 +3,7 @@ extends RefCounted
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const CombatFormulaModel := preload("res://scripts/progression/combat_formula_model.gd")
@@ -224,17 +225,15 @@ static func _formation_preview_actors() -> Array[Dictionary]:
 	for slot in range(1, SLOTS_PER_ROW + 1):
 		actors.append(_make_actor(
 			"enemy_back_%d" % slot,
-			"乌力后%d" % slot,
+			"敌方猎人%d" % slot,
 			SIDE_ENEMY,
-			"wild_pet",
+			"player",
 			slot_id(SIDE_ENEMY, ROW_BACK, slot),
-			72,
-			72,
+			120,
+			120,
 			70 + slot * 3,
-			5,
-			6,
-			[],
-			"wuli_normal_orange_fire10"
+			18,
+			8
 		))
 	for slot in range(1, SLOTS_PER_ROW + 1):
 		actors.append(_make_actor(
@@ -1826,6 +1825,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 	state["lastStatusResistancePerTarget"] = {}
 	state["lastDodgePerTarget"] = {}
 	state["lastCriticalPerTarget"] = {}
+	state["lastBlocked"] = false
+	state["lastBlockedPerTarget"] = {}
 	state["lastFieldEffectId"] = ""
 	state["lastParticipants"] = event.get("participantIds", [])
 	state["lastDodged"] = false
@@ -2708,6 +2709,7 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	var hp_before := maxi(0, int(event.get("serverHpBefore", target.get("hp", 0))))
 	var hp_after := maxi(0, int(event.get("serverHpAfter", target.get("hp", 0))))
 	var dodged := bool(event.get("dodged", false))
+	var blocked := bool(event.get("serverBlocked", false)) and not dodged
 	var critical := bool(event.get("critical", false)) and not dodged
 	var damage := 0 if dodged else maxi(0, int(event.get("damage", 0)))
 	var launched := bool(event.get("serverLaunched", event.get("launched", false))) and not dodged
@@ -2733,7 +2735,7 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 				target["petBattleState"] = PET_STATE_REST
 			target["launchHpBefore"] = hp_before
 		else:
-			target["actionState"] = "down" if hp_after <= 0 else "hit"
+			target["actionState"] = BattleVisualPresentationModel.damage_reaction_state(hp_after, false, false, blocked)
 			target.erase("launchHpBefore")
 	if not launched and hp_after > 0 and (str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet"):
 		target["petBattleState"] = PET_STATE_BATTLE
@@ -2760,6 +2762,8 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	state["lastCritical"] = critical
 	state["lastDodgePerTarget"] = {target_id: dodged}
 	state["lastCriticalPerTarget"] = {target_id: critical}
+	state["lastBlocked"] = blocked
+	state["lastBlockedPerTarget"] = {target_id: blocked}
 	state["lastCounterEvent"] = {}
 	state["lastCounterTriggered"] = bool(event.get("counterTriggered", false))
 	state["lastReactionKind"] = "dodge" if dodged else ("critical" if critical else ("counter" if event_type == "counter_attack" else ""))
@@ -2798,6 +2802,8 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 			state["message"] = "%s 攻击了 %s，造成 %d 点伤害%s。" % [attacker_name, target_name, damage, ride_message_suffix]
 		if critical:
 			state["message"] += " 触发幸运一击。"
+		if blocked:
+			state["message"] += " %s 以防御姿态承受了攻击。" % target_name
 		if launched:
 			state["message"] += " %s 被击飞。" % target_name
 		elif hp_after <= 0:
@@ -2825,6 +2831,7 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 	var ride_knocked_per_target := {}
 	var dodge_per_target := {}
 	var critical_per_target := {}
+	var blocked_per_target := {}
 	var total_damage := 0
 	var dodged_count := 0
 	var critical_count := 0
@@ -2841,6 +2848,7 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 			continue
 		var target := (actors[target_index] as Dictionary).duplicate(true)
 		var dodged := bool(facts.get("dodged", false))
+		var blocked := bool(facts.get("blocked", false)) and not dodged
 		var critical := bool(facts.get("critical", false)) and not dodged
 		var damage := 0 if dodged else maxi(0, int(facts.get("damage", 0)))
 		var hp_after := maxi(0, int(facts.get("hpAfter", target.get("hp", 0))))
@@ -2863,7 +2871,7 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 		elif launched:
 			target["actionState"] = "launched"
 		else:
-			target["actionState"] = "down" if hp_after <= 0 else "hit"
+			target["actionState"] = BattleVisualPresentationModel.damage_reaction_state(hp_after, false, false, blocked)
 		if critical:
 			critical_count += 1
 		actors[target_index] = target
@@ -2876,6 +2884,7 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 		ride_knocked_per_target[target_id] = bool(ride_result.get("ridePetKnocked", false))
 		dodge_per_target[target_id] = dodged
 		critical_per_target[target_id] = critical
+		blocked_per_target[target_id] = blocked
 		total_damage += damage
 	if target_ids.is_empty():
 		return state
@@ -2900,6 +2909,8 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 	state["lastCritical"] = critical_count > 0
 	state["lastDodgePerTarget"] = dodge_per_target
 	state["lastCriticalPerTarget"] = critical_per_target
+	state["lastBlocked"] = not blocked_per_target.is_empty() and blocked_per_target.values().all(func(value): return bool(value))
+	state["lastBlockedPerTarget"] = blocked_per_target
 	state["lastCounterEvent"] = {}
 	state["lastCounterTriggered"] = false
 	state["lastReactionKind"] = "multi_attack"
@@ -2968,6 +2979,7 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		return state
 	var target := actors[target_index] as Dictionary
 	var hp_before := int(target.get("hp", 0))
+	var blocked := is_actor_guarding(state, target_id)
 	var dodged := _damage_event_is_dodged(state, event, attacker_id, target_id)
 	var critical := false
 	var damage := 0
@@ -2985,6 +2997,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		state["lastParticipants"] = participant_ids
 		state["lastDodged"] = true
 		state["lastCritical"] = false
+		state["lastBlocked"] = false
+		state["lastBlockedPerTarget"] = {target_id: false}
 		state["lastLaunch"] = false
 		state["lastLaunchMode"] = ""
 		state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, hp_before)
@@ -3031,7 +3045,7 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 			target["petBattleState"] = "rest"
 		target["launchHpBefore"] = hp_before
 	else:
-		target["actionState"] = "down" if next_hp <= 0 else "hit"
+		target["actionState"] = BattleVisualPresentationModel.damage_reaction_state(next_hp, false, false, blocked)
 	actors[target_index] = target
 	state["actors"] = actors
 	state = _sync_player_pet_party_from_actor(state, target)
@@ -3049,6 +3063,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastLaunchMode"] = _launch_mode_for_event(event, target_id) if launched else ""
 	state["lastDodged"] = false
 	state["lastCritical"] = critical
+	state["lastBlocked"] = blocked
+	state["lastBlockedPerTarget"] = {target_id: blocked}
 	state["lastCounterEvent"] = _counter_event_after_damage(state, event, attacker_id, target_id, target_side, hp_before, next_hp)
 	state["lastCounterTriggered"] = not (state["lastCounterEvent"] as Dictionary).is_empty()
 	state["lastReactionKind"] = "critical" if critical else ""
@@ -3080,6 +3096,8 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 		state["message"] = "%s 攻击了 %s，造成 %d 点伤害%s。" % [str(first_attacker.get("name", "我方")), target_name, damage, ride_message_suffix]
 	if critical:
 		state["message"] += " 触发幸运一击。"
+	if blocked:
+		state["message"] += " %s 以防御姿态承受了攻击。" % target_name
 	if launched:
 		if str(target.get("kind", "")) == "pet" or str(target.get("kind", "")) == "wild_pet":
 			state["message"] += " %s 被击飞，进入休息状态，无法在本场战斗中复活。" % target_name
@@ -3122,6 +3140,7 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	var ride_damage_per_target := {}
 	var dodge_per_target := {}
 	var critical_per_target := {}
+	var blocked_per_target := {}
 	var status_changes: Array[Dictionary] = []
 	var total_damage := 0
 	var dodged_count := 0
@@ -3137,6 +3156,7 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 			continue
 		var target := actors[target_index] as Dictionary
 		var hp_before := int(target.get("hp", 0))
+		var target_blocked := is_actor_guarding(state, target_id)
 		var target_dodged := _damage_event_is_dodged(state, event, attacker_id, target_id)
 		target_ids.append(target_id)
 		if target_dodged:
@@ -3145,6 +3165,7 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 			effect_per_target[target_id] = 0
 			dodge_per_target[target_id] = true
 			critical_per_target[target_id] = false
+			blocked_per_target[target_id] = false
 			dodged_count += 1
 			continue
 		var damage := _multi_attack_damage_for(state, attacker_id, target_id, action_id, action_target_count)
@@ -3165,13 +3186,14 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 				"statusId": STATUS_SLEEP,
 				"change": "remove_on_damage",
 			})
-		target["actionState"] = "down" if next_hp <= 0 else "hit"
+		target["actionState"] = BattleVisualPresentationModel.damage_reaction_state(next_hp, false, false, target_blocked)
 		actors[target_index] = target
 		effect_per_target[target_id] = damage
 		actor_damage_per_target[target_id] = player_damage
 		ride_damage_per_target[target_id] = mount_damage
 		dodge_per_target[target_id] = false
 		critical_per_target[target_id] = target_critical
+		blocked_per_target[target_id] = target_blocked
 		total_damage += damage
 	if target_ids.is_empty():
 		return state
@@ -3191,6 +3213,8 @@ static func _apply_multi_damage_event(state: Dictionary, event: Dictionary) -> D
 	state["lastCritical"] = critical_count > 0
 	state["lastDodgePerTarget"] = dodge_per_target
 	state["lastCriticalPerTarget"] = critical_per_target
+	state["lastBlocked"] = not blocked_per_target.is_empty() and blocked_per_target.values().all(func(value): return bool(value))
+	state["lastBlockedPerTarget"] = blocked_per_target
 	state["lastCounterEvent"] = {}
 	state["lastCounterTriggered"] = false
 	state["lastReactionKind"] = "multi_attack"

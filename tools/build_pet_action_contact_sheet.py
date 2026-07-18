@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
-ACTIONS = ("idle", "walk", "attack", "hurt", "defend")
+ACTIONS = ("idle", "walk", "attack", "hurt", "defend", "down")
 
 
 def label_font(size: int) -> ImageFont.ImageFont:
@@ -61,7 +61,7 @@ def main() -> None:
             action_meta = metadata["actions"][action]
             count = int(action_meta["frameCount"])
             # The contact sheet uses the peak frame; GIF/MP4 evidence verifies continuity.
-            peak_index = max(1, min(count, (count + 1) // 2 + (1 if action in {"attack", "hurt"} else 0)))
+            peak_index = count if action == "down" else max(1, min(count, (count + 1) // 2 + (1 if action in {"attack", "hurt"} else 0)))
             frame = Image.open(frame_paths(args.root, view, action, count)[peak_index - 1]).convert("RGBA")
             frame.thumbnail((tile_size, tile_size), Image.Resampling.LANCZOS)
             x = outer_padding + column * (cell_width + column_gap)

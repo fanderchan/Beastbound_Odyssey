@@ -14,6 +14,7 @@ const SUPPORTED_SCENARIOS: Array[String] = [
 	"knockaway",
 	"knockaway_bounce",
 	"defend",
+	"defend_hit",
 	"attack",
 	"skill_attack",
 	"combo",
@@ -60,6 +61,18 @@ func run() -> void:
 			await _play_and_settle(_defend_event(), 0.65)
 			await _wait(0.45)
 			await _play_and_settle(_defend_event(), 0.9)
+		"defend_hit":
+			await _play_sequence_and_settle([
+				_defend_event(),
+				_attack_event(ENEMY_ID, ALLY_ID, BattleModel.SIDE_ALLY, 30, false),
+			], 1.0)
+			_restore_actor_hp(ALLY_ID)
+			_restore_actor_hp(ENEMY_ID)
+			await _wait(0.45)
+			await _play_sequence_and_settle([
+				_defend_event(),
+				_attack_event(ENEMY_ID, ALLY_ID, BattleModel.SIDE_ALLY, 30, false),
+			], 1.0)
 		"attack":
 			await _play_twice(_attack_event(ALLY_ID, ENEMY_ID, BattleModel.SIDE_ENEMY, 18, false))
 		"skill_attack":
@@ -86,13 +99,28 @@ func _play_twice(event: Dictionary, settle_seconds: float = 1.0) -> void:
 
 
 func _play_and_settle(event: Dictionary, settle_seconds: float) -> void:
-	var queued_events: Array[Dictionary] = [event.duplicate(true)]
+	await _play_sequence_and_settle([event], settle_seconds)
+
+
+func _play_sequence_and_settle(events: Array, settle_seconds: float) -> void:
+	var queued_events: Array[Dictionary] = []
+	var guarding_ids: Array[String] = []
+	for value in events:
+		if value is Dictionary:
+			var event := (value as Dictionary).duplicate(true)
+			queued_events.append(event)
+			if str(event.get("type", "")) == "defend":
+				var defender_id := str(event.get("attackerId", ""))
+				if defender_id != "" and not guarding_ids.has(defender_id):
+					guarding_ids.append(defender_id)
+	if not guarding_ids.is_empty():
+		host.battle_state["guardingActorIds"] = guarding_ids
 	host.battle_event_queue = queued_events
 	host.battle_state["phase"] = "round_events"
 	host.battle_round_end_status_processed = true
 	host._play_next_battle_event()
 	var elapsed := 0.0
-	while elapsed < 4.0 and (
+	while elapsed < 6.0 and (
 		not host.battle_current_event.is_empty()
 		or not host.battle_event_queue.is_empty()
 		or str(host.battle_state.get("phase", "")) == "round_events"
@@ -120,7 +148,7 @@ func _formation_state() -> Dictionary:
 		if not (actors[index] is Dictionary):
 			continue
 		var previous := actors[index] as Dictionary
-		if scenario == "formation_10v10_mixed" and str(previous.get("kind", "")) == "player":
+		if str(previous.get("kind", "")) == "player":
 			actors[index] = previous.duplicate(true)
 			continue
 		var side := str(previous.get("side", BattleModel.SIDE_ENEMY))
@@ -303,9 +331,9 @@ func _restore_actor_hp(actor_id: String) -> void:
 func _intro_message() -> String:
 	match scenario:
 		"formation_10v10":
-			return "双方 10V10 同尺寸宠物压力阵型展开。"
+			return "双方前排宠物、后排人物的 10V10 阵型展开。"
 		"formation_10v10_mixed":
-			return "当前人物与宠物混合的 10V10 阵型展开。"
+			return "双方前排宠物、后排人物的 10V10 阵型展开。"
 		"counter":
 			return "受到近身攻击后，芽耳布伊准备反击。"
 		"knockaway":
@@ -314,6 +342,8 @@ func _intro_message() -> String:
 			return "芽耳布伊准备把目标撞向场边。"
 		"defend":
 			return "芽耳布伊准备进入防御姿态。"
+		"defend_hit":
+			return "芽耳布伊防御时承受攻击，观察盾面命中与承压。"
 		"attack":
 			return "芽耳布伊准备发动普通攻击。"
 		"skill_attack":

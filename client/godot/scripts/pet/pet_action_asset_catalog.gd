@@ -6,13 +6,14 @@ const VIEW_FRONT := "front_3quarter_sw"
 const VIEW_BACK := "back_3quarter_ne"
 const VIEWS: Array[String] = [VIEW_FRONT, VIEW_BACK]
 const WORLD_ACTIONS: Array[String] = ["idle", "walk"]
-const BATTLE_ACTIONS: Array[String] = ["idle", "walk", "attack", "hurt", "defend"]
+const BATTLE_ACTIONS: Array[String] = ["idle", "walk", "attack", "hurt", "defend", "down"]
 const FRAME_COUNTS := {
 	"idle": 6,
 	"walk": 8,
 	"attack": 8,
 	"hurt": 6,
 	"defend": 6,
+	"down": 8,
 }
 const ACTION_FPS := {
 	"idle": 8.0,
@@ -20,6 +21,7 @@ const ACTION_FPS := {
 	"attack": 12.0,
 	"hurt": 12.0,
 	"defend": 10.0,
+	"down": 10.0,
 }
 const LOOPING_ACTIONS: Array[String] = ["idle", "walk"]
 
@@ -88,9 +90,11 @@ static func action_for_battle_state(action_state: String) -> String:
 	var normalized := action_state.strip_edges().to_lower()
 	if ["attack", "combo", "skill", "counter_attack", "multi_attack"].has(normalized):
 		return "attack"
-	if normalized == "hit" or normalized == "launched" or normalized == "down" or normalized == "captured" or normalized.begins_with("status_"):
+	if normalized == "down":
+		return "down"
+	if normalized == "hit" or normalized == "launched" or normalized == "captured" or normalized.begins_with("status_"):
 		return "hurt"
-	if normalized == "defend":
+	if normalized == "defend" or normalized == "guard_hit":
 		return "defend"
 	if ["dodge", "escape", "switch_pet", "switch_in"].has(normalized):
 		return "walk"
@@ -142,9 +146,15 @@ static func validation_errors() -> Array[String]:
 				if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
 					errors.append("运行帧尺寸不是 256x256：%s" % path)
 				seen_count += 1
-	if seen_count != 68:
-		errors.append("正式动作帧应为 68，实际可读 %d" % seen_count)
-	if action_for_battle_state("combo") != "attack" or action_for_battle_state("hit") != "hurt" or action_for_battle_state("defend") != "defend":
+	if seen_count != 84:
+		errors.append("正式动作帧应为 84，实际可读 %d" % seen_count)
+	if (
+		action_for_battle_state("combo") != "attack"
+		or action_for_battle_state("hit") != "hurt"
+		or action_for_battle_state("defend") != "defend"
+		or action_for_battle_state("guard_hit") != "defend"
+		or action_for_battle_state("down") != "down"
+	):
 		errors.append("战斗动作映射不完整")
 	if (
 		battle_view_for_side("ally") != VIEW_BACK

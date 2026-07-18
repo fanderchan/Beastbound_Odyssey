@@ -12,6 +12,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
+const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
@@ -4328,7 +4329,7 @@ func _run_auto_battle_feedback_check() -> void:
 	var damage_recorded = host.battle_last_event_damage > 0
 	var feedback_type_ok = host.battle_last_event_type == "attack" or host.battle_last_event_type == "combo_attack"
 	var target_state = str(BattleModel.actor_by_id(host.battle_state, host.battle_last_event_target_id).get("actionState", ""))
-	var target_reacted = target_state == "hit" or target_state == "down" or target_state == "launched"
+	var target_reacted = target_state == "hit" or target_state == BattleVisualPresentationModel.STATE_GUARD_HIT or target_state == "down" or target_state == "launched"
 	var status = "ok" if loaded and zone_found and popup_created and damage_recorded and feedback_type_ok and target_reacted else "failed"
 	print("battle feedback check ready: status=%s popup=%s damage=%d event=%s target=%s target_state=%s" % [
 		status,
@@ -27039,6 +27040,22 @@ func _run_auto_battle_defense_check() -> void:
 	)
 	var guard_active = BattleModel.is_actor_guarding(host.battle_state, defender_id)
 	var guarded_damage = BattleModel.attack_damage_preview_for(host.battle_state, attacker_id, defender_id)
+	host.battle_state = BattleModel.apply_battle_event(host.battle_state, {
+		"type": "attack",
+		"attackerId": attacker_id,
+		"targetId": defender_id,
+		"targetSide": BattleModel.SIDE_ALLY,
+		"damage": guarded_damage,
+		"speed": attacker_speed,
+		"sequence": 99,
+		"movementStyle": "melee",
+		"canLaunch": false,
+		"forceDodge": false,
+		"forceCritical": false,
+	})
+	var defended_actor := BattleModel.actor_by_id(host.battle_state, defender_id)
+	var guard_hit_state_ok := str(defended_actor.get("actionState", "")) == BattleVisualPresentationModel.STATE_GUARD_HIT
+	var guard_hit_fact_ok := bool(host.battle_state.get("lastBlocked", false)) and bool((host.battle_state.get("lastBlockedPerTarget", {}) as Dictionary).get(defender_id, false))
 	var speed_gap_ok = attacker_speed > defender_speed
 	var damage_reduced = guarded_damage < normal_damage
 	var event_sorted = true
@@ -27049,14 +27066,16 @@ func _run_auto_battle_defense_check() -> void:
 		if speed > previous_speed:
 			event_sorted = false
 		previous_speed = speed
-	var status = "ok" if guard_active and speed_gap_ok and damage_reduced and event_sorted else "failed"
-	print("battle defense check ready: status=%s guard_active=%s attacker_speed=%d defender_speed=%d normal_damage=%d guarded_damage=%d event_sorted=%s" % [
+	var status = "ok" if guard_active and speed_gap_ok and damage_reduced and guard_hit_state_ok and guard_hit_fact_ok and event_sorted else "failed"
+	print("battle defense check ready: status=%s guard_active=%s attacker_speed=%d defender_speed=%d normal_damage=%d guarded_damage=%d guard_hit_state=%s guard_hit_fact=%s event_sorted=%s" % [
 		status,
 		str(guard_active),
 		attacker_speed,
 		defender_speed,
 		normal_damage,
 		guarded_damage,
+		str(guard_hit_state_ok),
+		str(guard_hit_fact_ok),
 		str(event_sorted),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)

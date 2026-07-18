@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const ASSET_MANIFEST_PATH := "res://assets/asset-manifest.json"
 const BUNDLE_META_PATH := "res://assets/pets/novice_sprout_bui/action-bundle-meta.json"
 const OWNERSHIP_RECORD_PATH := "res://assets/pets/novice_sprout_bui/identity/source-and-ownership.md"
@@ -8,6 +9,7 @@ const OWNERSHIP_RECORD_PATH := "res://assets/pets/novice_sprout_bui/identity/sou
 
 static func run() -> Dictionary:
 	var errors := PetActionAssetCatalog.validation_errors()
+	errors.append_array(BattleVisualPresentationModel.validation_errors())
 	_append_contract_errors(errors)
 	var warmed_world := PetActionAssetCatalog.warm_world_form(PetActionAssetCatalog.FORM_ID)
 	var world_texture := PetActionAssetCatalog.texture_for_elapsed(
@@ -23,13 +25,21 @@ static func run() -> Dictionary:
 		PetActionAssetCatalog.action_for_battle_state("attack"),
 		0.62
 	)
+	var down_texture := PetActionAssetCatalog.texture_for_progress(
+		PetActionAssetCatalog.FORM_ID,
+		PetActionAssetCatalog.battle_view_for_side("enemy"),
+		PetActionAssetCatalog.action_for_battle_state("down"),
+		1.0
+	)
 	if not warmed_world or world_texture == null:
 		errors.append("世界跟随动作未能预热或取帧")
 	if not warmed_battle or battle_texture == null:
 		errors.append("战斗动作未能预热或取帧")
+	if down_texture == null:
+		errors.append("战斗昏迷末帧未能加载")
 	return {
 		"ok": errors.is_empty(),
-		"frameCount": 68,
+		"frameCount": 84,
 		"views": PetActionAssetCatalog.VIEWS.size(),
 		"actions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),
 		"errors": errors,
@@ -77,7 +87,7 @@ static func _append_contract_errors(errors: Array[String]) -> void:
 		errors.append("缺少来源与归属记录：%s" % OWNERSHIP_RECORD_PATH)
 	var quality := bundle.get("quality", {}) as Dictionary
 	if bool(quality.get("formalReleaseActionPackComplete", true)):
-		errors.append("五动作试产不能误标为正式发行完整动作包")
+		errors.append("六动作试产不能误标为正式发行完整动作包")
 	if str(quality.get("ownerReviewStatus", "")) != "pending":
 		errors.append("用户尚未评审，ownerReviewStatus 必须保持 pending")
 

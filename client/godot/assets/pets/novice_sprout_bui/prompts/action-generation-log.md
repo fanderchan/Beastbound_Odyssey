@@ -18,23 +18,27 @@
 | 正面三分之四 | 攻击 | 8 | 蓄力压低、前冲撞击、触点停顿、后撤复位 | `source/front_3quarter_sw_attack_raw.png` |
 | 正面三分之四 | 受击 | 6 | 接触压缩、四足低姿后仰、耳叶甩动、回稳 | `source/front_3quarter_sw_hurt_raw.png` |
 | 正面三分之四 | 防御 | 6 | 扎稳四足、缩头护胸、短暂承压、解除 | `source/front_3quarter_sw_defend_raw.png` |
+| 正面三分之四 | 倒地 | 8 | 四足失力、降低、侧倒、二次沉降、末帧保持 | `source/front_3quarter_sw_down_raw.png` |
 | 背面三分之四 | 待机 | 6 | 背部呼吸、尾叶轻摆、回到无缝循环 | `source/back_3quarter_ne_idle_raw.png` |
 | 背面三分之四 | 行走 | 8 | 四足交替、身体前移、卷根尾随步态摆动 | `source/back_3quarter_ne_walk_raw.png` |
 | 背面三分之四 | 攻击 | 8 | 后腿蹬地、向东北前冲、触点停顿、复位 | `source/back_3quarter_ne_attack_raw.png` |
 | 背面三分之四 | 受击 | 6 | 受力压缩、向后偏移、尾叶甩动、回稳 | `source/back_3quarter_ne_hurt_raw.png` |
 | 背面三分之四 | 防御 | 6 | 四足扎稳、背部拱起、缩头承压、解除 | `source/back_3quarter_ne_defend_raw.png` |
+| 背面三分之四 | 倒地 | 8 | 后腿失力、降低、侧倒、耳尾沉降、末帧保持 | `source/back_3quarter_ne_down_raw.png` |
 
 ## 自评中退回重做的内容
 
 - 第一版身份板把耳朵做成了巨大叶片，整体接近“植物兔”，违反圆形绒耳身份锁，已弃用。
 - 第一版背面行走第 6 帧丢失卷根尾，已定向重绘并重新切帧。
 - 第一版正面受击第 4 帧变成双足站立，已定向重绘为贴地四足后仰。
+- 第一版倒地末帧闭眼微笑、四肢收拢，实际读成“安心睡觉”；已整套退回，改为惊愕失力、螺旋失焦眼、微张口和松散摊开的战斗昏迷，眩晕光圈保留为运行时独立特效。
 - 背面待机与行走原稿存在主体跨越逻辑格边界的问题，已通过 `tools/repack_chroma_sprite_grid.py` 按主体连通域重排；未放宽边缘触碰门槛。
+- 正背倒地原稿各有主体碰到生成网格边缘，已按相同连通域重排流程修正；两套八帧重新通过 `reject-edge-touch`，没有放宽切边门槛。
 
 ## 评审状态
 
 - 身份一致性自评：通过。
-- 动作轮廓与节拍自评：通过。
-- 真实 Godot 复核：通过；已在 `Main.tscn` 的 1280×720 世界跟随和战斗渲染中检查正/背视角、缩放、动作切换与清晰度，证据位于 `.run/evidence/pet_action_novice_sprout_bui/`。
+- 动作轮廓与节拍自评：六类动作通过；倒地末帧能够长期保持且没有幽灵化。
+- 真实 Godot 复核：通过；已在 `Main.tscn` 的 1280×720 世界跟随和战斗渲染中检查正/背视角、缩放、动作切换与清晰度；最新 10V10、防御受击、昏厥和贴地阴影证据位于 `.run/evidence/phase306_stoneage_battle_foundation/`。
 - 项目所有者评审：待截图与 MP4 验收。
 - 本动作包只验证一只宠物的正式资产管线；未授权批量生产其他宠物。

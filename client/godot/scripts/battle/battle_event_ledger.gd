@@ -45,6 +45,8 @@ static func build_from_applied_state(state: Dictionary, source_event: Dictionary
 		"rideDamagePerTarget": _duplicate_dict(state.get("lastRideDamagePerTarget", {})),
 		"dodged": bool(state.get("lastDodged", false)),
 		"critical": bool(state.get("lastCritical", false)),
+		"blocked": bool(state.get("lastBlocked", false)),
+		"blockedPerTarget": _duplicate_dict(state.get("lastBlockedPerTarget", {})),
 		"counterTriggered": bool(state.get("lastCounterTriggered", false)),
 		"reactionKind": str(state.get("lastReactionKind", "")),
 		"launch": bool(state.get("lastLaunch", false)),
@@ -106,6 +108,8 @@ static func playback_event(source_event: Dictionary, ledger: Dictionary) -> Dict
 	event["rideDamagePerTarget"] = ledger.get("rideDamagePerTarget", {}).duplicate(true)
 	event["dodged"] = bool(ledger.get("dodged", false))
 	event["critical"] = bool(ledger.get("critical", false))
+	event["blocked"] = bool(ledger.get("blocked", false))
+	event["blockedPerTarget"] = _duplicate_dict(ledger.get("blockedPerTarget", event.get("blockedPerTarget", {})))
 	event["counterTriggered"] = bool(ledger.get("counterTriggered", false))
 	event["reactionKind"] = str(ledger.get("reactionKind", event.get("reactionKind", "")))
 	event["launch"] = bool(ledger.get("launch", false))
@@ -147,6 +151,7 @@ static func _target_results(state: Dictionary, before_snapshots: Dictionary, tar
 	var results: Array[Dictionary] = []
 	var actor_damage_per_target := _duplicate_dict(state.get("lastActorDamagePerTarget", {}))
 	var ride_damage_per_target := _duplicate_dict(state.get("lastRideDamagePerTarget", {}))
+	var blocked_per_target := _duplicate_dict(state.get("lastBlockedPerTarget", {}))
 	for target_id in target_ids:
 		var before := _snapshot_for(before_snapshots, target_id)
 		var after := _actor_by_id(state, target_id)
@@ -161,6 +166,7 @@ static func _target_results(state: Dictionary, before_snapshots: Dictionary, tar
 			"effect": int(effect_per_target.get(target_id, 0)),
 			"actorDamage": int(actor_damage_per_target.get(target_id, 0)),
 			"rideDamage": int(ride_damage_per_target.get(target_id, 0)),
+			"blocked": bool(blocked_per_target.get(target_id, false)),
 			"ridePetInstanceIdBefore": str(before.get("ridePetInstanceId", "")),
 			"ridePetInstanceIdAfter": str(after.get("ridePetInstanceId", "")),
 			"rideHpBefore": int(before.get("ridePetHp", 0)),
