@@ -27129,6 +27129,9 @@ func _run_auto_battle_launch_check() -> void:
 	var bounce_target = BattleModel.actor_by_id(host.battle_state, target_id)
 	var bounce_launch = bool(host.battle_state.get("lastLaunch", false)) and str(bounce_target.get("actionState", "")) == "launched" and not bool(bounce_target.get("revivable", true)) and str(host.battle_state.get("lastLaunchMode", "")) == "bounce" and str(bounce_target.get("petBattleState", "")) == "rest"
 	var bounce_duration_ok = host._battle_event_duration(bounce_event) >= BATTLE_LAUNCH_BOUNCE_SECONDS - 0.001
+	var counter_launch_event := bounce_event.duplicate(true)
+	counter_launch_event["type"] = "counter_attack"
+	var counter_duration_ok = host._battle_event_duration(counter_launch_event) >= BATTLE_LAUNCH_BOUNCE_SECONDS - 0.001
 
 	started = host._start_stat_formula_test_battle()
 	await host.get_tree().process_frame
@@ -27156,7 +27159,7 @@ func _run_auto_battle_launch_check() -> void:
 	var bounce_rotation_ok = absf(host._battle_launch_rotation_for_progress(0.86)) > TAU * 1.8
 	host.battle_last_event_launch_mode = previous_launch_mode
 	var timeline_ok = target_waits_for_hit and target_moves_after_hit and target_finishes_before_end and target_holds_until_end and attacker_reaches_contact and bounce_rotation_ok
-	var duration_ok = straight_duration_ok and bounce_duration_ok
+	var duration_ok = straight_duration_ok and bounce_duration_ok and counter_duration_ok
 	var status = "ok" if straight_launch and bounce_launch and poison_no_launch and timeline_ok and duration_ok else "failed"
 	print("battle launch check ready: status=%s straight=%s bounce=%s poison_no_launch=%s timeline=%s duration=%s finish_before_end=%s hold_end=%s straight_state=%s bounce_state=%s poison_state=%s" % [
 		status,

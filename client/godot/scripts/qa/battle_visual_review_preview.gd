@@ -11,6 +11,8 @@ const SUPPORTED_SCENARIOS: Array[String] = [
 	"formation_10v10",
 	"formation_10v10_mixed",
 	"counter",
+	"counter_ko",
+	"counter_launch",
 	"knockaway",
 	"knockaway_bounce",
 	"defend",
@@ -51,6 +53,12 @@ func run() -> void:
 			_restore_actor_hp(ENEMY_ID)
 			await _wait(0.45)
 			await _play_and_settle(_attack_event(ENEMY_ID, ALLY_ID, BattleModel.SIDE_ALLY, 16, true), 1.0)
+		"counter_ko":
+			_prepare_counter_target(12)
+			await _play_and_settle(_attack_event(ALLY_ID, ENEMY_ID, BattleModel.SIDE_ENEMY, 16, true), 1.2)
+		"counter_launch":
+			_prepare_counter_target(2)
+			await _play_and_settle(_attack_event(ALLY_ID, ENEMY_ID, BattleModel.SIDE_ENEMY, 16, true), 1.2)
 		"knockaway":
 			_prepare_knockaway_target()
 			await _play_and_settle(_knockaway_event("straight"), 1.2)
@@ -176,10 +184,14 @@ func _action_state() -> Dictionary:
 	state["formationTemplate"] = ""
 	state["phase"] = "command"
 	state["message"] = _intro_message()
+	var ally_max_hp := 40 if scenario == "counter_ko" or scenario == "counter_launch" else 220
 	var actors: Array = [
 		_review_actor(ENEMY_ID, "训练幻影·芽耳布伊", BattleModel.SIDE_ENEMY, "enemy.front.3", 220, 54),
-		_review_actor(ALLY_ID, "芽耳布伊", BattleModel.SIDE_ALLY, "ally.front.3", 220, 72),
+		_review_actor(ALLY_ID, "芽耳布伊", BattleModel.SIDE_ALLY, "ally.front.3", ally_max_hp, 72),
 	]
+	if scenario == "counter_ko" or scenario == "counter_launch":
+		actors[0]["counterRateOverride"] = 1.0
+		actors[1]["counterRateOverride"] = 0.0
 	if scenario == "combo":
 		actors.append(_review_actor("ally_combo_left", "芽耳布伊·左", BattleModel.SIDE_ALLY, "ally.front.2", 220, 68))
 		actors.append(_review_actor("ally_combo_back", "芽耳布伊·后", BattleModel.SIDE_ALLY, "ally.back.3", 220, 64))
@@ -319,6 +331,10 @@ func _prepare_down_target() -> void:
 	host.battle_state = BattleModel.set_actor_hp(host.battle_state, ENEMY_ID, 26)
 
 
+func _prepare_counter_target(hp: int) -> void:
+	host.battle_state = BattleModel.set_actor_hp(host.battle_state, ALLY_ID, hp)
+
+
 func _restore_actor_hp(actor_id: String) -> void:
 	var actor := BattleModel.actor_by_id(host.battle_state, actor_id)
 	if actor.is_empty():
@@ -336,6 +352,10 @@ func _intro_message() -> String:
 			return "双方前排宠物、后排人物的 10V10 阵型展开。"
 		"counter":
 			return "受到近身攻击后，芽耳布伊准备反击。"
+		"counter_ko":
+			return "芽耳布伊近身攻击后遭到致命反击。"
+		"counter_launch":
+			return "芽耳布伊近身攻击后遭到重伤反击并被击飞。"
 		"knockaway":
 			return "芽耳布伊准备把目标直线击飞。"
 		"knockaway_bounce":

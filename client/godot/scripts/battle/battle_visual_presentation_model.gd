@@ -36,6 +36,31 @@ static func guard_impact_strength(is_guard_hit: bool, event_progress: float, res
 	return sin(normalized * PI)
 
 
+static func melee_lunge(event_progress: float, hold_for_counter: bool, result_reveal_progress: float) -> float:
+	var progress := clampf(event_progress, 0.0, 1.0)
+	if not hold_for_counter:
+		return sin(progress * PI)
+	var contact_progress := clampf(result_reveal_progress, 0.18, 0.72)
+	if progress >= contact_progress:
+		return 1.0
+	return _smooth_unit(progress / maxf(0.01, contact_progress))
+
+
+static func counter_target_anchor_factor(
+	event_progress: float,
+	result_reveal_progress: float,
+	defeated: bool,
+	launched: bool
+) -> float:
+	if defeated or launched:
+		return 1.0
+	var progress := clampf(event_progress, 0.0, 1.0)
+	var return_progress := clampf(maxf(0.62, result_reveal_progress + 0.14), 0.0, 0.88)
+	if progress <= return_progress:
+		return 1.0
+	return 1.0 - _smooth_unit((progress - return_progress) / maxf(0.01, 1.0 - return_progress))
+
+
 static func ground_shadow_plan(kind: String, action_state: String, visual_scale: float, has_ride: bool = false) -> Dictionary:
 	var radius := Vector2(30.0, 8.0)
 	match kind:
@@ -92,4 +117,19 @@ static func validation_errors() -> Array[String]:
 		errors.append("10V10 不应常驻显示全部名称")
 	if not should_show_actor_label("测试 Lv1", true, false, true):
 		errors.append("10V10 当前焦点名称必须可见")
+	if melee_lunge(1.0, true, 0.48) < 0.999:
+		errors.append("触发反击时，先手攻击者必须停在接触点")
+	if absf(melee_lunge(1.0, false, 0.48)) > 0.001:
+		errors.append("普通近战动作结束时必须返回原位")
+	if counter_target_anchor_factor(1.0, 0.48, false, false) > 0.001:
+		errors.append("承受非致命反击后必须完成归位")
+	if counter_target_anchor_factor(1.0, 0.48, true, false) < 0.999:
+		errors.append("被反击击倒后必须留在接触点")
+	if counter_target_anchor_factor(1.0, 0.48, false, true) < 0.999:
+		errors.append("被反击击飞时必须从接触点起飞")
 	return errors
+
+
+static func _smooth_unit(value: float) -> float:
+	var t := clampf(value, 0.0, 1.0)
+	return t * t * (3.0 - 2.0 * t)

@@ -139,6 +139,7 @@ const BATTLE_GRID_TEMPLATE_ORIGIN := BattleLayoutConstants.GRID_TEMPLATE_ORIGIN
 const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE_STEP
 const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
+const BATTLE_COUNTER_CONTACT_DISTANCE := 96.0
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
 const BATTLE_COMBO_RETURN_PADDING_SECONDS := 0.16
@@ -1113,6 +1114,7 @@ var battle_last_event_launch_mode: String = ""
 var battle_last_event_ledger: Dictionary = {}
 var battle_recorded_event_sequence: int = 0
 var battle_float_texts: Array[Dictionary] = []
+var battle_counter_contact_anchor_offsets: Dictionary = {}
 var battle_escape_preview_actor_ids: Array[String] = []
 var battle_escape_preview_started_msec: int = 0
 var battle_command_countdown_remaining: float = 99.0
@@ -8377,11 +8379,13 @@ func _refresh_battle_target_seed() -> void:
 
 func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
+	battle_counter_contact_anchor_offsets.clear()
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
 func _end_battle(_restore_world: bool = true) -> void:
 	battle_pet_art_elapsed = 0.0
+	battle_counter_contact_anchor_offsets.clear()
 	_panel_flow()._end_battle(_restore_world)
 
 func _finish_battle_and_return_to_world(result_override: String = "") -> Dictionary:
@@ -11188,6 +11192,9 @@ func _battle_event_duration(event: Dictionary) -> float:
 		"skill_attack":
 			return 0.74
 		"counter_attack":
+			if bool(battle_state.get("lastLaunch", false)) and bool(event.get("canLaunch", false)):
+				var launch_mode := str(event.get("launchMode", battle_state.get("lastLaunchMode", battle_last_event_launch_mode)))
+				return _battle_launch_duration_for_mode(launch_mode)
 			return 0.62
 		"skill_status":
 			return 0.58
@@ -11891,6 +11898,7 @@ func _update_battle_animation(delta: float) -> void:
 
 
 func _advance_battle_after_current_event() -> void:
+	_settle_battle_counter_contact_anchor()
 	battle_state = BattleModel.reset_action_states(battle_state)
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
@@ -13545,7 +13553,9 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and PetActionAssetCatalog.supports_form(form_id)
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
 	var large_formation := _battle_uses_10v10_formation_template()
-	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
+	var counter_anchor_offset := _battle_actor_counter_anchor_offset(actor, home_pos, visual_scale)
+	pos += counter_anchor_offset
+	var event_offset := _battle_actor_event_offset(actor, home_pos + counter_anchor_offset, visual_scale)
 	pos += event_offset
 	pos += _battle_actor_escape_preview_offset(actor_id, side, visual_scale)
 	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
@@ -14110,7 +14120,11 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 	if target.is_empty():
 		return Vector2.ZERO
 	var progress := _battle_current_event_progress()
-	var lunge := sin(progress * PI)
+	var lunge := BattleVisualPresentationModel.melee_lunge(
+		progress,
+		bool(battle_current_event.get("counterTriggered", false)) and event_type == "attack",
+		_battle_event_result_reveal_progress(battle_current_event)
+	)
 	if battle_last_event_launch and event_type != "combo_attack":
 		lunge = _battle_launch_attacker_lunge(progress)
 	elif event_type == "combo_attack":
@@ -14118,8 +14132,51 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 		if lunge <= 0.0:
 			return Vector2.ZERO
 	var target_pos := _battle_slot_world_position(str(target.get("slotId", "")))
-	var contact_offset := _battle_melee_contact_offset(base_pos, target_pos, visual_scale)
+	target_pos += _battle_actor_counter_anchor_offset(target, target_pos, visual_scale)
+	var contact_distance := BATTLE_COUNTER_CONTACT_DISTANCE if event_type == "counter_attack" or bool(battle_current_event.get("counterTriggered", false)) else BATTLE_MELEE_CONTACT_DISTANCE
+	var contact_offset := _battle_melee_contact_offset(base_pos, target_pos, visual_scale, contact_distance)
 	return contact_offset * lunge
+
+
+func _battle_actor_counter_anchor_offset(actor: Dictionary, home_pos: Vector2, visual_scale: float) -> Vector2:
+	var actor_id := str(actor.get("id", ""))
+	if actor_id == "":
+		return Vector2.ZERO
+	if str(battle_current_event.get("type", "")) == "counter_attack" and actor_id == str(battle_current_event.get("targetId", "")):
+		var counter_actor := BattleModel.actor_by_id(battle_state, str(battle_current_event.get("attackerId", "")))
+		if counter_actor.is_empty():
+			return Vector2.ZERO
+		var counter_home := _battle_slot_world_position(str(counter_actor.get("slotId", "")))
+		var full_offset := _battle_melee_contact_offset(home_pos, counter_home, visual_scale, BATTLE_COUNTER_CONTACT_DISTANCE)
+		var factor := BattleVisualPresentationModel.counter_target_anchor_factor(
+			_battle_current_event_progress(),
+			_battle_event_result_reveal_progress(battle_current_event),
+			int(actor.get("hp", 0)) <= 0 and str(actor.get("actionState", "")) != "launched",
+			str(actor.get("actionState", "")) == "launched"
+		)
+		return full_offset * factor
+	var stored_offset = battle_counter_contact_anchor_offsets.get(actor_id, Vector2.ZERO)
+	if stored_offset is Vector2 and int(actor.get("hp", 0)) <= 0 and str(actor.get("actionState", "")) != "launched":
+		return stored_offset as Vector2
+	return Vector2.ZERO
+
+
+func _settle_battle_counter_contact_anchor() -> void:
+	if str(battle_current_event.get("type", "")) != "counter_attack":
+		return
+	var target_id := str(battle_current_event.get("targetId", ""))
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	if target_id == "" or target.is_empty():
+		return
+	if int(target.get("hp", 0)) > 0 or str(target.get("actionState", "")) == "launched":
+		battle_counter_contact_anchor_offsets.erase(target_id)
+		return
+	var counter_actor := BattleModel.actor_by_id(battle_state, str(battle_current_event.get("attackerId", "")))
+	if counter_actor.is_empty():
+		return
+	var target_home := _battle_slot_world_position(str(target.get("slotId", "")))
+	var counter_home := _battle_slot_world_position(str(counter_actor.get("slotId", "")))
+	battle_counter_contact_anchor_offsets[target_id] = _battle_melee_contact_offset(target_home, counter_home, _battle_actor_visual_scale(), BATTLE_COUNTER_CONTACT_DISTANCE)
 
 
 func _battle_launched_actor_offset(actor: Dictionary, visual_scale: float) -> Vector2:
@@ -14225,12 +14282,12 @@ func _battle_current_event_progress() -> float:
 	return clampf(1.0 - battle_action_timer / battle_current_event_duration, 0.0, 1.0)
 
 
-func _battle_melee_contact_offset(from_pos: Vector2, target_pos: Vector2, visual_scale: float) -> Vector2:
+func _battle_melee_contact_offset(from_pos: Vector2, target_pos: Vector2, visual_scale: float, contact_distance: float = BATTLE_MELEE_CONTACT_DISTANCE) -> Vector2:
 	var toward := target_pos - from_pos
 	var distance := toward.length()
 	if distance <= 0.01:
 		return Vector2.ZERO
-	var stop_distance := maxf(18.0, BATTLE_MELEE_CONTACT_DISTANCE * visual_scale)
+	var stop_distance := maxf(18.0, contact_distance * visual_scale)
 	var travel_distance := maxf(0.0, distance - stop_distance)
 	return toward.normalized() * travel_distance
 
