@@ -7,7 +7,7 @@ const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const DEFAULT_POLICY_PATH = path.resolve(REPO_ROOT, "client/godot/data/gm_qa_access_policy.json");
 const LOCAL_QA_POLICY_SCHEMA_VERSION = 1;
 const LOCAL_QA_PLUGIN_SCHEMA_VERSION = 2;
-const EXPECTED_POLICY_ID = "local_qa_full_v2";
+const EXPECTED_POLICY_ID = "local_qa_full_v3";
 const EXPECTED_USERNAME = "auth1373";
 const COMMAND_ID_PATTERN = /^[a-z][a-z0-9_]{1,79}$/;
 const SERVER_COMMAND_ID_PATTERN = /^gm_[a-z0-9_]{1,76}$/;
@@ -60,7 +60,7 @@ function normalizeLocalQaGmPolicy(value) {
   if (allowedUsernames.length !== 1 || allowedUsernames[0] !== EXPECTED_USERNAME) {
     throw policyError("local_qa_policy_username_scope_invalid", "本地QA策略必须且只能授权一个明确账号。");
   }
-  if (serverCommandIds.length !== 11 || clientCommandIds.length !== 30 || authoritativeClientIds.length !== 8) {
+  if (serverCommandIds.length !== 12 || clientCommandIds.length !== 31 || authoritativeClientIds.length !== 9) {
     throw policyError("local_qa_policy_catalog_size_invalid", "本地QA策略目录数量与冻结合同不一致。");
   }
   if (authoritativeClientIds.some((commandId) => (

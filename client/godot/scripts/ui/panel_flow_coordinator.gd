@@ -30,6 +30,8 @@ const PetGrowthManualEvaluationModel := preload("res://scripts/progression/pet_g
 const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_manual_evaluation_panel.gd")
 const PetPaidResetClientModel := preload("res://scripts/progression/pet_paid_reset_client_model.gd")
 const PetPaidResetPanel := preload("res://scripts/ui/pet_paid_reset_panel.gd")
+const PetEvolutionClientModel := preload("res://scripts/progression/pet_evolution_client_model.gd")
+const PetEvolutionPanel := preload("res://scripts/ui/pet_evolution_panel.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -43,6 +45,7 @@ const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
 const GmPetPaidResetQaClientModel := preload("res://scripts/progression/gm_pet_paid_reset_qa_client_model.gd")
+const GmPetEvolutionQaClientModel := preload("res://scripts/progression/gm_pet_evolution_qa_client_model.gd")
 const GmPetCaptureRecoveryClientModel := preload("res://scripts/progression/gm_pet_capture_recovery_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
@@ -131,6 +134,8 @@ var qa_assets_status_state: Dictionary = {}
 var qa_assets_status_username: String = ""
 var qa_pet_paid_reset_status_state: Dictionary = {}
 var qa_pet_paid_reset_status_username: String = ""
+var qa_pet_evolution_status_state: Dictionary = {}
+var qa_pet_evolution_status_username: String = ""
 var qa_pet_recovery_status_state: Dictionary = {}
 var qa_pet_recovery_status_username: String = ""
 var qa_active_status_command_id: String = ""
@@ -298,6 +303,12 @@ var _pet_paid_reset_quote_pending: bool = false
 var _pet_paid_reset_quote_generation: int = 0
 var _pet_paid_reset_status_message: String = ""
 var _pet_paid_reset_pending_operations: Dictionary = {}
+var _pet_evolution_panel
+var _pet_evolution_quote: Dictionary = {}
+var _pet_evolution_quote_pending: bool = false
+var _pet_evolution_quote_generation: int = 0
+var _pet_evolution_status_message: String = ""
+var _pet_evolution_pending_operations: Dictionary = {}
 var _pet_growth_radar_row: HBoxContainer
 var _pet_level_one_radar: Control
 var _pet_level_one_radar_title: Label
@@ -6764,6 +6775,12 @@ func _build_hud() -> void:
 	pet_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	pet_detail_content.add_child(pet_detail_label)
+	_pet_evolution_panel = PetEvolutionPanel.new()
+	_pet_evolution_panel.mount(
+		pet_detail_content,
+		_on_pet_evolution_quote_refresh_requested,
+		_on_pet_evolution_confirm_requested
+	)
 	_pet_growth_manual_evaluation_panel = PetGrowthManualEvaluationPanel.new()
 	_pet_growth_manual_evaluation_panel.mount(
 		pet_detail_content,
@@ -10765,6 +10782,11 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 		_pet_paid_reset_quote_generation += 1
 		_pet_paid_reset_status_message = ""
 		_pet_paid_reset_pending_operations.clear()
+		_pet_evolution_quote.clear()
+		_pet_evolution_quote_pending = false
+		_pet_evolution_quote_generation += 1
+		_pet_evolution_status_message = ""
+		_pet_evolution_pending_operations.clear()
 		family_detail_expanded = false
 		family_request_pending = false
 		family_pending_kind = ""
@@ -16932,6 +16954,7 @@ func _open_pet_panel(stable_access_override: bool = false) -> void:
 		pet_selected_instance_id = str(active.get("instanceId", ""))
 	_refresh_pet_panel()
 	_request_pet_paid_reset_quote()
+	_request_pet_evolution_quote()
 	host._layout_hud()
 
 func _close_pet_panel() -> void:
@@ -16945,6 +16968,8 @@ func _close_pet_panel() -> void:
 	_close_pet_cultivation_panel()
 	if _pet_paid_reset_panel != null:
 		_pet_paid_reset_panel.reset_confirmation()
+	if _pet_evolution_panel != null:
+		_pet_evolution_panel.reset_confirmation()
 	if changed and hud_root != null:
 		host._layout_hud()
 
@@ -21807,6 +21832,11 @@ func _refresh_qa_panel() -> void:
 		qa_pet_paid_reset_status_username = ""
 		if qa_active_status_command_id == GmPetPaidResetQaClientModel.COMMAND_ID:
 			qa_active_status_command_id = ""
+	if qa_pet_evolution_status_username != "" and qa_pet_evolution_status_username != current_username:
+		qa_pet_evolution_status_state.clear()
+		qa_pet_evolution_status_username = ""
+		if qa_active_status_command_id == GmPetEvolutionQaClientModel.COMMAND_ID:
+			qa_active_status_command_id = ""
 	if qa_pet_recovery_status_username != "" and qa_pet_recovery_status_username != current_username:
 		qa_pet_recovery_status_state.clear()
 		qa_pet_recovery_status_username = ""
@@ -21879,11 +21909,22 @@ func _refresh_qa_panel() -> void:
 			or not _is_server_account_session()
 		)
 		prepare_paid_reset_button.tooltip_text = "一次准备固定一转、二转样本和四种验收钱包；不会重抽或补发已删除样本。"
+	var prepare_evolution_button := qa_entry_buttons.get(GmPetEvolutionQaClientModel.COMMAND_ID, null) as Button
+	if prepare_evolution_button != null:
+		prepare_evolution_button.disabled = (
+			prepare_evolution_button.disabled
+			or
+			profile_action_request_pending
+			or bool(qa_pet_evolution_status_state.get("pending", false))
+			or not _is_server_account_session()
+		)
+		prepare_evolution_button.tooltip_text = "准备两族各一只未达P90和达P90样本，并补齐两次进化材料；不会重抽或补发已删除样本。"
 	var status_text_by_command := {
 		GmQaProfileClientModel.COMMAND_ID: GmQaProfileClientModel.status_text(qa_profile_status_state),
 		GmQaPetSamplesClientModel.COMMAND_ID: GmQaPetSamplesClientModel.status_text(qa_pet_samples_status_state),
 		GmQaAssetsClientModel.COMMAND_ID: GmQaAssetsClientModel.status_text(qa_assets_status_state),
 		GmPetPaidResetQaClientModel.COMMAND_ID: GmPetPaidResetQaClientModel.status_text(qa_pet_paid_reset_status_state),
+		GmPetEvolutionQaClientModel.COMMAND_ID: GmPetEvolutionQaClientModel.status_text(qa_pet_evolution_status_state),
 		GmPetCaptureRecoveryClientModel.COMMAND_ID: GmPetCaptureRecoveryClientModel.status_text(qa_pet_recovery_status_state),
 	}
 	var status_command_order: Array[String] = [
@@ -21892,6 +21933,7 @@ func _refresh_qa_panel() -> void:
 		GmQaPetSamplesClientModel.COMMAND_ID,
 		GmQaAssetsClientModel.COMMAND_ID,
 		GmPetPaidResetQaClientModel.COMMAND_ID,
+		GmPetEvolutionQaClientModel.COMMAND_ID,
 	]
 	if status_command_order.has(qa_active_status_command_id):
 		status_command_order.erase(qa_active_status_command_id)
@@ -22026,6 +22068,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_prepare_current_gm_qa_assets()
 		"gm_pet_paid_reset_config":
 			_prepare_current_gm_pet_paid_reset_qa()
+		"gm_pet_evolution_qa":
+			_prepare_current_gm_pet_evolution_qa()
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
 		"gm_10v10_grass":
@@ -22232,6 +22276,60 @@ func _prepare_current_gm_pet_paid_reset_qa() -> void:
 		_set_world_log_message("宠物重置验收档已检查；二转样本已选中，可到宠物成长页查看报价。")
 	else:
 		_set_world_log_message(str(qa_pet_paid_reset_status_state.get("message", "宠物重置验收档准备失败。")))
+	_refresh_qa_panel()
+	if qa_detail_scroll != null:
+		qa_detail_scroll.scroll_vertical = 0
+
+
+func _prepare_current_gm_pet_evolution_qa() -> void:
+	if not _is_server_account_session():
+		_set_world_log_message("准备宠物进化验收档需要连接服务器。")
+		return
+	if profile_action_request_pending or bool(qa_pet_evolution_status_state.get("pending", false)):
+		_set_world_log_message("档案操作同步中，请稍候。")
+		return
+	qa_pet_evolution_status_username = str(current_account_session.get("username", "")).strip_edges()
+	qa_pet_evolution_status_state = {"pending": true}
+	qa_active_status_command_id = GmPetEvolutionQaClientModel.COMMAND_ID
+	profile_action_request_pending = true
+	_refresh_qa_panel()
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.gm_pet_evolution_qa_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		GmPetEvolutionQaClientModel.MANIFEST_ID
+	))
+	var parsed := ServerAuthClientModel.parse_gm_command_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	profile_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	if bool(parsed.get("ok", false)):
+		parsed["profileApplied"] = _apply_server_profile_payload(parsed)
+	else:
+		parsed["profileApplied"] = false
+		if _handle_session_invalid_response(parsed):
+			return
+	qa_pet_evolution_status_state = GmPetEvolutionQaClientModel.status_state_from_parsed(parsed)
+	if bool(qa_pet_evolution_status_state.get("ok", false)):
+		var primary_instance_id := GmPetEvolutionQaClientModel.primary_instance_id(qa_pet_evolution_status_state)
+		var primary_pet := PlayerProgressModel.pet_instance_by_id(player_profile, primary_instance_id)
+		if primary_instance_id == "" or primary_pet.is_empty():
+			qa_pet_evolution_status_state = {
+				"ok": false,
+				"message": "验收档已提交，但客户端尚未找到达标乌力样本；请勿重复操作，正在重新拉取。",
+			}
+			_queue_server_profile_pull()
+		else:
+			qa_pet_level_instance_id = primary_instance_id
+			pet_selected_instance_id = primary_instance_id
+			qa_pet_growth_profile_id = str(primary_pet.get("growthSpeciesProfileId", "")).strip_edges()
+			pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	if bool(qa_pet_evolution_status_state.get("ok", false)):
+		_set_world_log_message("宠物进化验收档已检查；达标乌力样本已选中，正式资源完成前玩家入口仍关闭。")
+	else:
+		_set_world_log_message(str(qa_pet_evolution_status_state.get("message", "宠物进化验收档准备失败。")))
 	_refresh_qa_panel()
 	if qa_detail_scroll != null:
 		qa_detail_scroll.scroll_vertical = 0
@@ -24561,6 +24659,11 @@ func _on_pet_paid_reset_confirm_requested(quote_value: Dictionary) -> void:
 		_pet_paid_reset_status_message = ""
 		if _pet_paid_reset_panel != null:
 			_pet_paid_reset_panel.reset_confirmation()
+		_pet_evolution_quote.clear()
+		_pet_evolution_status_message = ""
+		_pet_evolution_quote_generation += 1
+		if _pet_evolution_panel != null:
+			_pet_evolution_panel.reset_confirmation()
 		if _apply_server_profile_payload(parsed):
 			var result := parsed.get("paidReset", {}) as Dictionary if parsed.get("paidReset", {}) is Dictionary else {}
 			_set_world_log_message("%s 已重置为 Lv1・0转，并解除绑定。" % str(result.get("formName", pet.get("formName", "宠物"))))
@@ -24582,6 +24685,180 @@ func _on_pet_paid_reset_confirm_requested(quote_value: Dictionary) -> void:
 	_refresh_pet_paid_reset_panel()
 	if ["revision_conflict", "pet_paid_reset_config_revision_conflict"].has(code):
 		_request_pet_paid_reset_quote(true)
+
+
+func _refresh_pet_evolution_panel() -> void:
+	if _pet_evolution_panel == null:
+		return
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	var candidate: bool = (
+		_is_server_account_session()
+		and pet_detail_mode == PET_DETAIL_MODE_GROWTH
+		and not selected.is_empty()
+		and PetEvolutionClientModel.is_local_candidate(selected)
+	)
+	var quote := _pet_evolution_quote
+	if (
+		not quote.is_empty()
+		and int(quote.get("profileRevision", -1)) != server_profile_sync_expected_revision
+	):
+		quote = {}
+		if _pet_evolution_status_message == "":
+			_pet_evolution_status_message = "角色档案已变化，请刷新服务端进化条件。"
+	_pet_evolution_panel.refresh(
+		selected,
+		quote,
+		candidate,
+		_pet_evolution_quote_pending,
+		profile_action_request_pending,
+		_pet_evolution_status_message
+	)
+
+
+func _on_pet_evolution_quote_refresh_requested() -> void:
+	await _request_pet_evolution_quote(true)
+
+
+func _request_pet_evolution_quote(force: bool = false) -> void:
+	if not _is_server_account_session() or pet_detail_mode != PET_DETAIL_MODE_GROWTH:
+		return
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if selected.is_empty() or not PetEvolutionClientModel.is_local_candidate(selected):
+		_pet_evolution_quote.clear()
+		_pet_evolution_status_message = ""
+		_refresh_pet_evolution_panel()
+		return
+	var instance_id := str(selected.get("instanceId", "")).strip_edges()
+	var route_id := PetEvolutionClientModel.route_id_for_instance(selected)
+	if route_id == "":
+		_pet_evolution_quote.clear()
+		_pet_evolution_status_message = "当前没有可用的进化路线。"
+		_refresh_pet_evolution_panel()
+		return
+	if (
+		not force
+		and PetEvolutionClientModel.quote_matches_instance(_pet_evolution_quote, selected)
+		and int(_pet_evolution_quote.get("profileRevision", -1)) == server_profile_sync_expected_revision
+	):
+		_refresh_pet_evolution_panel()
+		return
+	_pet_evolution_quote_generation += 1
+	var generation := _pet_evolution_quote_generation
+	_pet_evolution_quote_pending = true
+	_pet_evolution_status_message = ""
+	if force or not PetEvolutionClientModel.quote_matches_instance(_pet_evolution_quote, selected):
+		_pet_evolution_quote.clear()
+	_refresh_pet_evolution_panel()
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.pet_evolution_quote_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		instance_id,
+		route_id
+	))
+	if generation != _pet_evolution_quote_generation:
+		return
+	_pet_evolution_quote_pending = false
+	if not _is_server_account_session():
+		return
+	var parsed := ServerAuthClientModel.parse_pet_evolution_quote_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if bool(parsed.get("ok", false)):
+		var normalized := PetEvolutionClientModel.normalized_quote(parsed.get("petEvolutionQuote", {}))
+		var current := PlayerProgressModel.pet_instance_by_id(player_profile, instance_id)
+		if normalized.is_empty() or current.is_empty() or not PetEvolutionClientModel.quote_matches_instance(normalized, current):
+			_pet_evolution_quote.clear()
+			_pet_evolution_status_message = "服务器进化条件无法确认，请稍后刷新。"
+		else:
+			_pet_evolution_quote = normalized
+			_pet_evolution_status_message = ""
+	else:
+		_pet_evolution_quote.clear()
+		if _handle_session_invalid_response(parsed):
+			return
+		_pet_evolution_status_message = _server_player_message(parsed, "当前不能进化这只宠物。")
+	_refresh_pet_evolution_panel()
+
+
+func _on_pet_evolution_confirm_requested(quote_value: Dictionary) -> void:
+	var quote := PetEvolutionClientModel.normalized_quote(quote_value)
+	var selected := PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id)
+	if (
+		quote.is_empty()
+		or selected.is_empty()
+		or not PetEvolutionClientModel.quote_matches_instance(quote, selected)
+		or profile_action_request_pending
+	):
+		return
+	var cost := quote.get("cost", {}) as Dictionary
+	if not bool(cost.get("affordable", false)):
+		_pet_evolution_status_message = "进化材料或石币不足，请补充后刷新条件。"
+		_refresh_pet_evolution_panel()
+		return
+	var fingerprint := PetEvolutionClientModel.confirmation_fingerprint(quote)
+	var operation_id := str(_pet_evolution_pending_operations.get(fingerprint, ""))
+	if not ServerAuthClientModel.idempotency_key_is_valid(operation_id):
+		operation_id = ServerAuthClientModel.new_idempotency_key()
+		if not ServerAuthClientModel.idempotency_key_is_valid(operation_id):
+			_pet_evolution_status_message = "操作标识生成失败，请稍后重试。"
+			_refresh_pet_evolution_panel()
+			return
+		_pet_evolution_pending_operations[fingerprint] = operation_id
+	profile_action_request_pending = true
+	_pet_evolution_status_message = "服务器正在确认成长门槛、材料与宠物档案……"
+	_refresh_pet_evolution_panel()
+	var pet := quote.get("pet", {}) as Dictionary
+	var spec := ServerAuthClientModel.pet_evolution_request(
+		_server_profile_base_url(),
+		_server_profile_token(),
+		str(pet.get("instanceId", "")),
+		str(quote.get("routeId", "")),
+		int(quote.get("profileRevision", 0)),
+		str(quote.get("catalogId", "")),
+		operation_id
+	)
+	var response: Dictionary = await host._auto_http_request_spec(spec)
+	var parsed := ServerAuthClientModel.parse_pet_evolution_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	profile_action_request_pending = false
+	if not _is_server_account_session():
+		return
+	if bool(parsed.get("ok", false)):
+		_pet_evolution_pending_operations.erase(fingerprint)
+		_pet_evolution_quote.clear()
+		_pet_evolution_status_message = ""
+		_pet_evolution_quote_generation += 1
+		if _pet_evolution_panel != null:
+			_pet_evolution_panel.reset_confirmation()
+		_pet_paid_reset_quote.clear()
+		_pet_paid_reset_status_message = ""
+		_pet_paid_reset_quote_generation += 1
+		if _pet_paid_reset_panel != null:
+			_pet_paid_reset_panel.reset_confirmation()
+		if _apply_server_profile_payload(parsed):
+			var result := parsed.get("petEvolution", {}) as Dictionary if parsed.get("petEvolution", {}) is Dictionary else {}
+			_set_world_log_message(str(result.get("message", "%s 已完成进化。" % str(pet.get("sourceFormName", "宠物")))))
+		else:
+			_set_world_log_message("宠物进化已提交，但档案刷新失败；正在重新拉取。")
+			_queue_server_profile_pull()
+		_refresh_pet_panel()
+		return
+	if _handle_session_invalid_response(parsed):
+		return
+	var code := str(parsed.get("code", ""))
+	if not PetEvolutionClientModel.operation_id_must_be_retained(code):
+		_pet_evolution_pending_operations.erase(fingerprint)
+		if _pet_evolution_panel != null:
+			_pet_evolution_panel.reset_confirmation()
+	_pet_evolution_status_message = _server_player_message(parsed, "宠物进化失败，请稍后重试。")
+	if ["revision_conflict", "pet_evolution_catalog_conflict"].has(code):
+		_pet_evolution_quote.clear()
+	_refresh_pet_evolution_panel()
+	if ["revision_conflict", "pet_evolution_catalog_conflict"].has(code):
+		_request_pet_evolution_quote(true)
 
 func _refresh_pet_panel() -> void:
 	if pet_panel == null or pet_list_container == null or pet_detail_label == null:
@@ -24701,6 +24978,7 @@ func _refresh_pet_panel() -> void:
 			profile_action_request_pending
 		)
 	_refresh_pet_paid_reset_panel()
+	_refresh_pet_evolution_panel()
 	if pet_detail_instance_button != null:
 		pet_detail_instance_button.visible = not selected.is_empty()
 		pet_detail_instance_button.disabled = selected.is_empty()
@@ -24965,11 +25243,15 @@ func _set_pet_detail_mode(mode: String) -> void:
 		return
 	pet_detail_mode = mode
 	_pet_paid_reset_status_message = ""
+	_pet_evolution_status_message = ""
 	if _pet_paid_reset_panel != null:
 		_pet_paid_reset_panel.reset_confirmation()
+	if _pet_evolution_panel != null:
+		_pet_evolution_panel.reset_confirmation()
 	_refresh_pet_panel()
 	if mode == PET_DETAIL_MODE_GROWTH:
 		_request_pet_paid_reset_quote()
+		_request_pet_evolution_quote()
 
 func _add_pet_section_label(text: String) -> void:
 	var label = Label.new()
@@ -25069,6 +25351,12 @@ func _select_pet_instance(instance_id: String) -> void:
 	_pet_paid_reset_status_message = ""
 	if _pet_paid_reset_panel != null:
 		_pet_paid_reset_panel.reset_confirmation()
+	_pet_evolution_quote_generation += 1
+	_pet_evolution_quote_pending = false
+	_pet_evolution_quote.clear()
+	_pet_evolution_status_message = ""
+	if _pet_evolution_panel != null:
+		_pet_evolution_panel.reset_confirmation()
 	if bool(selected.get("isNew", false)):
 		if _is_server_account_session():
 			await _submit_server_profile_action("pet_mark_seen", {"instanceId": instance_id}, "")
@@ -25079,6 +25367,7 @@ func _select_pet_instance(instance_id: String) -> void:
 				host._save_player_profile_now()
 	_refresh_pet_panel()
 	_request_pet_paid_reset_quote()
+	_request_pet_evolution_quote()
 	if pet_cultivation_panel != null and pet_cultivation_panel.visible:
 		_refresh_pet_cultivation_panel()
 

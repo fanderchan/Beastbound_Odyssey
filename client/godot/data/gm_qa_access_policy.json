@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"policyId": "local_qa_full_v2",
+	"policyId": "local_qa_full_v3",
 	"allowedUsernames": [
 		"auth1373"
 	],
@@ -14,6 +14,7 @@
 		"gm_market_tax",
 		"gm_offline_hang_config",
 		"gm_pet_paid_reset_config",
+		"gm_pet_evolution_qa",
 		"gm_prepare_qa_profile",
 		"gm_prepare_qa_pet_samples",
 		"gm_prepare_qa_assets",
@@ -24,6 +25,7 @@
 		"gm_prepare_qa_pet_samples",
 		"gm_prepare_qa_assets",
 		"gm_pet_paid_reset_config",
+		"gm_pet_evolution_qa",
 		"gm_map",
 		"gm_10v10_grass",
 		"gm_capture_grass",
@@ -56,6 +58,7 @@
 		"gm_prepare_qa_pet_samples",
 		"gm_prepare_qa_assets",
 		"gm_pet_paid_reset_config",
+		"gm_pet_evolution_qa",
 		"gm_grant_pet",
 		"gm_level_pet",
 		"gm_offline_hang_config",

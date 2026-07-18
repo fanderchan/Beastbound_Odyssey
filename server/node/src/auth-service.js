@@ -143,6 +143,7 @@ const {createGmQaPetsDomain} = require("./auth/gm-qa-pets");
 const {createGmQaAssetsDomain} = require("./auth/gm-qa-assets");
 const {createGmPetPaidResetConfigDomain} = require("./auth/gm-pet-paid-reset-config");
 const {createGmPetPaidResetQaDomain} = require("./auth/gm-pet-paid-reset-qa");
+const {createGmPetEvolutionQaDomain} = require("./auth/gm-pet-evolution-qa");
 const {createPetPaidResetDomain} = require("./auth/pet-paid-reset-domain");
 const {createPetEvolutionDomain} = require("./auth/pet-evolution-domain");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
@@ -5673,6 +5674,7 @@ function createAuthService(options = {}) {
   const gmQaAssets = createGmQaAssetsDomain(domainContext);
   const gmPetPaidResetConfig = createGmPetPaidResetConfigDomain(domainContext);
   const gmPetPaidResetQa = createGmPetPaidResetQaDomain(domainContext);
+  const gmPetEvolutionQa = createGmPetEvolutionQaDomain(domainContext);
   const petPaidReset = createPetPaidResetDomain(domainContext);
   const petEvolution = createPetEvolutionDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
@@ -5706,6 +5708,7 @@ function createAuthService(options = {}) {
     getPetPaidResetConfig: gmPetPaidResetConfig.getConfig,
     updatePetPaidResetConfig: gmPetPaidResetConfig.updateConfig,
     prepareGmPetPaidResetQa: gmPetPaidResetQa.run,
+    prepareGmPetEvolutionQa: gmPetEvolutionQa.run,
     getPetPaidResetQuote: petPaidReset.quote,
     paidResetPet: petPaidReset.reset,
     getPetEvolutionQuote: petEvolution.quote,

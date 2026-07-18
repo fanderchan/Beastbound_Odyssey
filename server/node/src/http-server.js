@@ -55,6 +55,7 @@ const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_market_tax", "label": "交易所税率配置"},
   {"id": "gm_offline_hang_config", "label": "离线挂机配置"},
   {"id": "gm_pet_paid_reset_config", "label": "宠物重置价格配置"},
+  {"id": "gm_pet_evolution_qa", "label": "宠物进化验收档"},
   {"id": "gm_prepare_qa_profile", "label": "补齐GM核心测试档案"},
   {"id": "gm_prepare_qa_pet_samples", "label": "准备GM宠物样本档"},
   {"id": "gm_prepare_qa_assets", "label": "准备GM装备与银行档"},
@@ -85,6 +86,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "getPetPaidResetConfig",
   "updatePetPaidResetConfig",
   "prepareGmPetPaidResetQa",
+  "prepareGmPetEvolutionQa",
   "getPetPaidResetQuote",
   "paidResetPet",
   "getPetEvolutionQuote",
@@ -437,6 +439,13 @@ function createHttpServer(options = {}) {
           return sendResult(res, idempotencyFailure);
         }
         return sendResult(res, service.prepareGmPetPaidResetQa(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/gm/pets/evolution/qa") {
+        const idempotencyFailure = requiredIdempotencyKeyFailure(req);
+        if (idempotencyFailure) {
+          return sendResult(res, idempotencyFailure);
+        }
+        return sendResult(res, service.prepareGmPetEvolutionQa(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/pets/paid-reset/quote") {
         return sendResult(res, service.getPetPaidResetQuote(bearerToken(req), {

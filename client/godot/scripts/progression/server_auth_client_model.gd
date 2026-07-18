@@ -78,6 +78,20 @@ const ERROR_CODE_MESSAGES := {
 	"pet_paid_reset_cultivation_invalid": "这只宠物当前没有可重置的转生培养记录。",
 	"pet_paid_reset_growth_unsupported": "这只宠物仍使用旧成长档，请联系 GM 处理。",
 	"pet_paid_reset_audit_invalid": "这只宠物的重置记录异常，请联系 GM 处理。",
+	"pet_evolution_disabled": "宠物进化尚未正式开放。",
+	"pet_evolution_asset_gate": "该进化形态的正式资源尚未完成，当前不会消耗宠物或材料。",
+	"pet_evolution_license_required": "尚未完成该族系的一次性进化资格任务。",
+	"pet_evolution_level_required": "进化要求宠物达到一转 Lv140。",
+	"pet_evolution_rebirth_required": "进化要求宠物恰好完成一转。",
+	"pet_evolution_power_below_p90": "这只宠物的一转成长战力尚未达到同形态前10%。",
+	"pet_evolution_assets_insufficient": "进化材料或石币不足。",
+	"pet_evolution_catalog_conflict": "进化规则已经变化，请刷新条件后重新确认。",
+	"pet_evolution_route_missing": "这只宠物当前没有可用的进化路线。",
+	"pet_evolution_route_mismatch": "所选进化路线与宠物形态不匹配。",
+	"pet_evolution_growth_unsupported": "这只宠物仍使用不兼容的成长档，请联系 GM 处理。",
+	"pet_evolution_history_invalid": "这只宠物的成长履历无法安全保存，请联系 GM 处理。",
+	"pet_evolution_already_completed": "这只宠物已经完成进化。",
+	"pet_evolution_helper_ineligible": "转生 MM 不能进化。",
 	"pet_locked": "宠物已锁定，请先解锁。",
 	"pet_riding": "宠物正在骑乘，请先取消骑乘。",
 	"pet_required_by_quest": "这只宠物正被当前任务需要，暂不能重置。",
@@ -1129,6 +1143,52 @@ static func gm_pet_paid_reset_qa_request(base_url: String, session_token: String
 	})
 
 
+static func pet_evolution_quote_request(base_url: String, session_token: String, instance_id: String, route_id: String) -> Dictionary:
+	return {
+		"url": "%s/pets/evolution/quote?instanceId=%s&routeId=%s" % [
+			normalized_base_url(base_url),
+			instance_id.uri_encode(),
+			route_id.uri_encode(),
+		],
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func pet_evolution_request(
+	base_url: String,
+	session_token: String,
+	instance_id: String,
+	route_id: String,
+	expected_profile_revision: int,
+	expected_catalog_id: String,
+	operation_id: String = ""
+) -> Dictionary:
+	var spec := {
+		"url": "%s/pets/evolution" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"instanceId": instance_id,
+			"routeId": route_id,
+			"expectedProfileRevision": expected_profile_revision,
+			"expectedCatalogId": expected_catalog_id,
+		}),
+		"durableMutation": true,
+	}
+	return prepare_request_with_idempotency_key(spec, operation_id) if idempotency_key_is_valid(operation_id) else prepare_request_for_send(spec)
+
+
+static func gm_pet_evolution_qa_request(base_url: String, session_token: String, manifest_id: String) -> Dictionary:
+	return _durable_mutation_request({
+		"url": "%s/gm/pets/evolution/qa" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"manifestId": manifest_id}),
+	})
+
+
 static func gm_offline_hang_config_request(base_url: String, session_token: String, config: Dictionary = {}) -> Dictionary:
 	var read_only := config.is_empty()
 	var spec := {
@@ -1706,6 +1766,26 @@ static func parse_pet_paid_reset_response(response_code: int, body: PackedByteAr
 	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
 	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
 	parsed["paidReset"] = response.get("paidReset", {}) if response.get("paidReset", {}) is Dictionary else {}
+	parsed["logLines"] = _string_array(response.get("logLines", []))
+	return parsed
+
+
+static func parse_pet_evolution_quote_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物进化条件读取失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["petEvolutionQuote"] = response.get("petEvolutionQuote", {}) if response.get("petEvolutionQuote", {}) is Dictionary else {}
+	return parsed
+
+
+static func parse_pet_evolution_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物进化失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["petEvolution"] = response.get("petEvolution", {}) if response.get("petEvolution", {}) is Dictionary else {}
 	parsed["logLines"] = _string_array(response.get("logLines", []))
 	return parsed
 
