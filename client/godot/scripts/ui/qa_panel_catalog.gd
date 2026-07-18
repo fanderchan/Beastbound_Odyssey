@@ -13,7 +13,7 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	entries.append({"id": "gm_pet_evolution_qa", "label": "进化验收档", "description": "乌力/风狐各一对P90样本、两次材料与生产门禁"})
 	entries.append({"section": "GM地图"})
 	entries.append({"id": "gm_map", "label": "进入GM测试场", "description": "完整客户端 + 三块专用测试草丛"})
-	entries.append({"id": "gm_10v10_grass", "label": "10V10草丛", "description": "固定10只，测练级、合击、自动战斗"})
+	entries.append({"id": "gm_10v10_grass", "label": "宠物动作验收场", "description": "5人5宠对阵、随机种子、动作必现；内含真实10V10草丛"})
 	entries.append({"id": "gm_capture_grass", "label": "捉宠草丛", "description": "随机图鉴宠，1-5只，Lv1-10"})
 	entries.append({"id": "gm_knockaway_grass", "label": "击飞草丛", "description": "120-140级怪，测记录点回城"})
 	entries.append({"id": "firebud_village", "label": "回火芽村", "description": "回到村口，测商店、村医、记录点"})

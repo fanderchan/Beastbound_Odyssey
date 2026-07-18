@@ -12,6 +12,16 @@ func set_world_menu_panels(controls: Array) -> void:
 	world_menu_panels = _compact_controls(controls)
 
 
+func add_input_blocker(control: Control) -> void:
+	if control != null and not input_blockers.has(control):
+		input_blockers.append(control)
+
+
+func remove_input_blocker(control: Control) -> void:
+	if control != null:
+		input_blockers.erase(control)
+
+
 func point_hits_visible_panel(point: Vector2) -> bool:
 	for control_value in input_blockers:
 		if not (control_value is Control):

@@ -57,6 +57,8 @@ const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
+const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
+const PetBattleReviewLabCheck := preload("res://scripts/qa/pet_battle_review_lab_check.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -293,6 +295,7 @@ var auth_http_request: HTTPRequest
 var profile_sync_http_request: HTTPRequest
 var server_sync_coordinator
 var panel_flow_coordinator
+var pet_battle_review_lab
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
@@ -734,6 +737,7 @@ var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
 var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
+var auto_pet_battle_review_lab_check: bool = false
 var auto_battle_settings_check: bool = false
 var auto_capture_settings_check: bool = false
 var auto_pet_growth_rule_preview_check: bool = false
@@ -971,6 +975,10 @@ var capture_capacity_preview_screenshot_path: String = ""
 var battle_preview: bool = false
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
+var pet_battle_review_preview_mode: String = ""
+var pet_battle_review_preview_form_id: String = ""
+var pet_battle_review_preview_seed: int = 309001
+var pet_battle_review_preview_collapsed: bool = false
 var auto_battle_settings_preview: bool = false
 var battle_spirit_source_preview: bool = false
 var auto_capture_settings_preview: bool = false
@@ -1217,6 +1225,12 @@ func _panel_flow():
 	return panel_flow_coordinator
 
 
+func _pet_battle_review():
+	if pet_battle_review_lab == null:
+		pet_battle_review_lab = PetBattleReviewLab.new(self)
+	return pet_battle_review_lab
+
+
 func _ready() -> void:
 	_configure_runtime_performance()
 	_apply_preview_window_args()
@@ -1333,6 +1347,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_auto_attack_check")
 	elif auto_battle_auto_10v10_check:
 		call_deferred("_run_auto_battle_auto_10v10_check")
+	elif auto_pet_battle_review_lab_check:
+		call_deferred("_run_auto_pet_battle_review_lab_check")
 	elif auto_battle_settings_check:
 		call_deferred("_run_auto_battle_settings_check")
 	elif auto_capture_settings_check:
@@ -1765,6 +1781,14 @@ func _ready() -> void:
 		call_deferred("_open_battle_formation_preview")
 	elif battle_auto_10v10_preview:
 		call_deferred("_open_battle_auto_10v10_preview")
+	elif pet_battle_review_preview_mode != "":
+		call_deferred(
+			"_open_pet_battle_review_lab",
+			pet_battle_review_preview_form_id,
+			pet_battle_review_preview_mode,
+			pet_battle_review_preview_seed,
+			pet_battle_review_preview_collapsed
+		)
 	elif auto_battle_settings_preview:
 		call_deferred("_run_auto_battle_settings_preview")
 	elif battle_spirit_source_preview:
@@ -1877,6 +1901,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized.begins_with("--qa-viewport=")
 		or normalized == "--battle-debug-window"
 		or normalized.begins_with("--battle-visual-review=")
+		or normalized.begins_with("--pet-battle-review-")
 		or normalized == "--server-step-world-move"
 	)
 
@@ -1983,6 +2008,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_auto_attack_check = true
 		elif arg == "--auto-battle-auto-10v10-check":
 			auto_battle_auto_10v10_check = true
+		elif arg == "--auto-pet-battle-review-lab-check":
+			auto_pet_battle_review_lab_check = true
 		elif arg == "--auto-battle-settings-check":
 			auto_battle_settings_check = true
 		elif arg == "--auto-capture-settings-check":
@@ -2458,6 +2485,17 @@ func _apply_preview_window_args() -> void:
 			battle_formation_preview = true
 		elif arg == "--battle-auto-10v10-preview":
 			battle_auto_10v10_preview = true
+		elif arg == "--pet-battle-review-preview":
+			pet_battle_review_preview_mode = "brawl"
+		elif arg.begins_with("--pet-battle-review-preview="):
+			var requested_review_mode := arg.trim_prefix("--pet-battle-review-preview=").strip_edges().to_lower()
+			pet_battle_review_preview_mode = "director" if requested_review_mode == "director" else "brawl"
+		elif arg.begins_with("--pet-battle-review-form="):
+			pet_battle_review_preview_form_id = arg.trim_prefix("--pet-battle-review-form=").strip_edges()
+		elif arg.begins_with("--pet-battle-review-seed="):
+			pet_battle_review_preview_seed = maxi(1, int(arg.trim_prefix("--pet-battle-review-seed=").strip_edges()))
+		elif arg == "--pet-battle-review-collapsed":
+			pet_battle_review_preview_collapsed = true
 		elif arg == "--auto-battle-settings-preview":
 			auto_battle_settings_preview = true
 		elif arg == "--battle-spirit-source-preview":
@@ -2978,6 +3016,10 @@ func _run_auto_battle_auto_attack_check() -> void:
 
 func _run_auto_battle_auto_10v10_check() -> void:
 	await _auto_checks()._run_auto_battle_auto_10v10_check()
+
+
+func _run_auto_pet_battle_review_lab_check() -> void:
+	await PetBattleReviewLabCheck.new(self).run()
 
 
 func _run_auto_battle_settings_check() -> void:
@@ -6024,6 +6066,15 @@ func _open_battle_auto_10v10_preview() -> void:
 	_set_battle_auto_attack_enabled(true, false)
 
 
+func _open_pet_battle_review_lab(
+	form_id: String = "",
+	mode: String = "brawl",
+	seed_value: int = 309001,
+	collapsed: bool = false
+) -> void:
+	_pet_battle_review().open(form_id, mode, seed_value, collapsed)
+
+
 func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:
 	var state := BattleModel.create_formation_preview_battle(zone)
 	state["id"] = "local_auto_10v10_observation_battle"
@@ -7191,11 +7242,13 @@ func _process(delta: float) -> void:
 	_flush_profile_save_if_due(delta)
 	if battle_active:
 		var battle_start := _perf_now()
-		battle_pet_art_elapsed += delta
+		battle_pet_art_elapsed += _scaled_battle_delta(delta) if pet_battle_review_lab != null and pet_battle_review_lab.is_active() else delta
 		_update_path_line_overlay()
-		_update_battle_command_countdown(delta)
+		_update_battle_command_countdown(_scaled_battle_delta(delta) if pet_battle_review_lab != null and pet_battle_review_lab.is_active() else delta)
 		_update_battle_animation(delta)
 		_update_battle_auto_attack(delta)
+		if pet_battle_review_lab != null and pet_battle_review_lab.is_active():
+			pet_battle_review_lab.update(delta)
 		if _is_server_account_session() or server_event_state != "off":
 			var server_event_start := _perf_now()
 			_poll_server_event_stream(delta)
@@ -7370,6 +7423,9 @@ func _flush_profile_save_now() -> bool:
 
 func _input(event: InputEvent) -> void:
 	if not account_authenticated and not auth_auto_bypass:
+		return
+	if pet_battle_review_lab != null and pet_battle_review_lab.is_active() and pet_battle_review_lab.handle_key_event(event):
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
@@ -8388,6 +8444,8 @@ func _end_battle(_restore_world: bool = true) -> void:
 	_panel_flow()._end_battle(_restore_world)
 
 func _finish_battle_and_return_to_world(result_override: String = "") -> Dictionary:
+	if pet_battle_review_lab != null and pet_battle_review_lab.handle_battle_finished():
+		return {"ok": true, "reviewLab": true}
 	return _panel_flow()._finish_battle_and_return_to_world(result_override)
 
 func _server_account_local_battle_writeback_blocked() -> bool:
@@ -9474,7 +9532,10 @@ func _sync_gm_speed_multiplier() -> void:
 	_panel_flow()._sync_gm_speed_multiplier()
 
 func _scaled_battle_delta(delta: float) -> float:
-	return _panel_flow()._scaled_battle_delta(delta)
+	var scaled: float = _panel_flow()._scaled_battle_delta(delta)
+	if pet_battle_review_lab != null and pet_battle_review_lab.is_active():
+		return pet_battle_review_lab.scaled_battle_delta(scaled)
+	return scaled
 
 func _cycle_gm_battle_speed_gear() -> void:
 	_panel_flow()._cycle_gm_battle_speed_gear()
@@ -11744,6 +11805,7 @@ func _battle_overlay_panel_open() -> bool:
 		or (bank_panel != null and bank_panel.visible)
 		or (auto_settings_panel != null and auto_settings_panel.visible)
 		or (account_panel != null and account_panel.visible)
+		or (pet_battle_review_lab != null and pet_battle_review_lab.is_active())
 	)
 
 
@@ -14536,12 +14598,23 @@ func _battle_grid_rank_step(viewport_size: Vector2) -> Vector2:
 
 
 func _battle_grid_template_scale(viewport_size: Vector2) -> float:
-	return minf(viewport_size.x / BATTLE_GRID_TEMPLATE_SIZE.x, viewport_size.y / BATTLE_GRID_TEMPLATE_SIZE.y)
+	var usable_height := viewport_size.y
+	if bool(battle_state.get("reviewLab", false)):
+		usable_height = maxf(1.0, viewport_size.y - float(battle_state.get("reviewTopInset", 164.0)))
+	return minf(viewport_size.x / BATTLE_GRID_TEMPLATE_SIZE.x, usable_height / BATTLE_GRID_TEMPLATE_SIZE.y)
 
 
 func _battle_grid_template_offset(viewport_size: Vector2) -> Vector2:
 	var scale := _battle_grid_template_scale(viewport_size)
-	return (viewport_size - BATTLE_GRID_TEMPLATE_SIZE * scale) * 0.5
+	var scaled_size := BATTLE_GRID_TEMPLATE_SIZE * scale
+	if bool(battle_state.get("reviewLab", false)):
+		var top_inset := float(battle_state.get("reviewTopInset", 164.0))
+		var usable_height := maxf(1.0, viewport_size.y - top_inset)
+		return Vector2(
+			(viewport_size.x - scaled_size.x) * 0.5,
+			top_inset + (usable_height - scaled_size.y) * 0.5
+		)
+	return (viewport_size - scaled_size) * 0.5
 
 
 func _viewport_world_rect() -> Rect2:

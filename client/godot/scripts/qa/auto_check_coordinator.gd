@@ -25912,9 +25912,19 @@ func _run_auto_qa_panel_check() -> void:
 	host._open_qa_panel()
 	host._on_qa_entry_pressed("gm_10v10_grass")
 	await host.get_tree().process_frame
+	var pet_review_lab = host._pet_battle_review()
+	var gm_review_lab_ok = (
+		pet_review_lab.is_active()
+		and host.battle_active
+		and bool(host.battle_state.get("reviewLab", false))
+		and (host.battle_state.get("actors", []) as Array).size() == 20
+	)
+	pet_review_lab.return_to_real_grass()
+	await host.get_tree().process_frame
 	var zone_10v10 = host._encounter_zone_by_id("gm_10v10_grass")
 	var gm_10v10_ok = (
-		host.current_map_id == GM_10V10_MAP_ID
+		gm_review_lab_ok
+		and host.current_map_id == GM_10V10_MAP_ID
 		and host.has_target_cell
 		and not zone_10v10.is_empty()
 		and EncounterModel.zone_contains_cell(zone_10v10, host.target_cell)

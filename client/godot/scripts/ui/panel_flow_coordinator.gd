@@ -13257,7 +13257,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_auto_settings_panel()
 	_close_encounter()
 	world_log_message = ""
-	if bool(next_battle_state.get("serverAuthority", false)):
+	if bool(next_battle_state.get("serverAuthority", false)) or bool(next_battle_state.get("reviewLab", false)):
 		battle_state = next_battle_state.duplicate(true)
 		server_battle_pending_closed_room.clear()
 	else:
@@ -22073,7 +22073,8 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 		"gm_map":
 			_qa_load_map(GM_10V10_MAP_ID, "default", "已进入GM练级测试场。")
 		"gm_10v10_grass":
-			_qa_route_to_gm_zone("gm_10v10_grass")
+			_close_qa_panel(false)
+			host._open_pet_battle_review_lab()
 		"gm_capture_grass":
 			_qa_route_to_gm_zone("gm_codex_capture_grass")
 		"gm_knockaway_grass":
