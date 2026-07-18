@@ -9,6 +9,9 @@ const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const ASSET_MANIFEST_PATH := "res://assets/asset-manifest.json"
 const BUNDLE_META_PATH := "res://assets/characters/novice_hunter/action-bundle-meta.json"
 const OWNERSHIP_PATH := "res://assets/characters/novice_hunter/identity/source-and-ownership.md"
+const WORLD_DIRECTIONS: Array[String] = [
+	"south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast",
+]
 
 
 static func run() -> Dictionary:
@@ -18,6 +21,16 @@ static func run() -> Dictionary:
 		errors.append("人物动作包无法预热")
 	if not PetActionAssetCatalog.warm_world_form(FORM_ID):
 		errors.append("芽耳布伊世界动作包无法预热")
+	var direction_signatures: Dictionary = {}
+	for direction in WORLD_DIRECTIONS:
+		var character_view := CharacterActionAssetCatalog.world_view_for_direction(direction)
+		var character_flip := CharacterActionAssetCatalog.world_flip_h_for_direction(direction)
+		var mount_view := PetActionAssetCatalog.world_view_for_direction(direction)
+		var mount_flip := PetActionAssetCatalog.world_flip_h_for_direction(direction)
+		if character_view != mount_view or character_flip != mount_flip:
+			errors.append("人物与坐骑八方向映射不一致：%s" % direction)
+		var signature := "%s:%s" % [character_view, str(character_flip)]
+		direction_signatures[signature] = true
 	for view in MountVisualProfileCatalog.REQUIRED_VIEWS:
 		for action in MountVisualProfileCatalog.REQUIRED_ACTIONS:
 			var count := int(PetActionAssetCatalog.FRAME_COUNTS[action])
@@ -40,6 +53,9 @@ static func run() -> Dictionary:
 		"characterFrames": 56,
 		"mountFramesReused": 28,
 		"bakedCombinationSheets": 0,
+		"runtimeDirections": WORLD_DIRECTIONS.size(),
+		"uniquePresentedFacings": direction_signatures.size(),
+		"independentSourceViews": CharacterActionAssetCatalog.VIEWS.size(),
 		"rigClass": MountVisualProfileCatalog.RUNTIME_RIG_CLASS,
 		"errors": errors,
 	}
