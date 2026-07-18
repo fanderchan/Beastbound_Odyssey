@@ -155,6 +155,8 @@ const BATTLE_GRID_TEMPLATE_ORIGIN := BattleLayoutConstants.GRID_TEMPLATE_ORIGIN
 const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE_STEP
 const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
+const BATTLE_COUNTER_KO_SECONDS := 2.35
+const BATTLE_COUNTER_KO_REVEAL_PROGRESS := 0.22
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
 const BATTLE_COMBO_RETURN_PADDING_SECONDS := 0.16
@@ -6484,8 +6486,60 @@ func _run_auto_battle_visual_timing_check() -> void:
 	var auto_settle_ok = host.battle_auto_attack_delay >= BATTLE_AUTO_ROUND_SETTLE_DELAY - 0.001
 	host.battle_auto_attack_enabled = false
 
-	var status = "ok" if delayed_hp_ok and combo_launch_timing_ok and slot_stable_ok and no_fixed_lunge_ok and final_frame_hold_ok and advances_after_final_frame and auto_settle_ok else "failed"
-	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s slot_stable=%s no_fixed_lunge=%s final_frame=%s advance_after_final=%s auto_settle=%s reveal=%.2f combo_reveal=%.2f waits_old=%s waits_before=%s flies_after=%s finish_before_end=%s hold_end=%s" % [
+	started = host._start_stat_formula_test_battle()
+	await host.get_tree().process_frame
+	var counter_ko_ok = false
+	var counter_ko_duration = 0.0
+	var counter_ko_reveal = 0.0
+	if started:
+		var counter_attacker_id = "enemy_front_3"
+		var counter_target_id = "ally_attack_high"
+		host.battle_state = BattleModel.set_actor_hp(host.battle_state, counter_target_id, 1)
+		_set_host_battle_event_queue([{
+			"type": "counter_attack",
+			"attackerId": counter_attacker_id,
+			"targetId": counter_target_id,
+			"targetSide": BattleModel.SIDE_ALLY,
+			"damage": 200,
+			"speed": 120,
+			"sequence": 0,
+			"movementStyle": "melee",
+			"canLaunch": false,
+			"canCounter": false,
+			"forceDodge": false,
+			"forceCritical": false,
+		}])
+		host.battle_state["phase"] = "round_events"
+		host._play_next_battle_event()
+		var counter_target = BattleModel.actor_by_id(host.battle_state, counter_target_id)
+		counter_ko_duration = host.battle_current_event_duration
+		counter_ko_reveal = host._battle_event_result_reveal_progress(host.battle_current_event)
+		var target_home = host._battle_slot_world_position(str(counter_target.get("slotId", "")))
+		host.battle_action_timer = counter_ko_duration * (1.0 - 0.25)
+		var impact_visual = host._battle_actor_for_visual_draw(counter_target)
+		var contact_offset = host._battle_actor_counter_anchor_offset(impact_visual, target_home, host._battle_actor_visual_scale())
+		host.battle_action_timer = counter_ko_duration * (1.0 - 0.52)
+		var stagger_visual = host._battle_actor_for_visual_draw(counter_target)
+		var stagger_offset = host._battle_actor_counter_anchor_offset(stagger_visual, target_home, host._battle_actor_visual_scale())
+		host.battle_action_timer = counter_ko_duration * (1.0 - 0.90)
+		var down_visual = host._battle_actor_for_visual_draw(counter_target)
+		var home_offset = host._battle_actor_counter_anchor_offset(down_visual, target_home, host._battle_actor_visual_scale())
+		var counter_attacker = BattleModel.actor_by_id(host.battle_state, counter_attacker_id)
+		var rested_counter = host._battle_actor_for_visual_draw(counter_attacker)
+		counter_ko_ok = (
+			counter_ko_duration >= BATTLE_COUNTER_KO_SECONDS - 0.001
+			and absf(counter_ko_reveal - BATTLE_COUNTER_KO_REVEAL_PROGRESS) <= 0.001
+			and str(impact_visual.get("actionState", "")) == "hit"
+			and str(stagger_visual.get("actionState", "")) == BattleVisualPresentationModel.STATE_WOUNDED_RETURN
+			and contact_offset.length() > stagger_offset.length()
+			and stagger_offset.length() > 2.0
+			and str(down_visual.get("actionState", "")) == "down"
+			and home_offset.length() <= 0.01
+			and str(rested_counter.get("actionState", "")) == "idle"
+		)
+
+	var status = "ok" if delayed_hp_ok and combo_launch_timing_ok and slot_stable_ok and no_fixed_lunge_ok and final_frame_hold_ok and advances_after_final_frame and auto_settle_ok and counter_ko_ok else "failed"
+	print("battle visual timing check ready: status=%s delayed_hp=%s combo_launch=%s slot_stable=%s no_fixed_lunge=%s final_frame=%s advance_after_final=%s auto_settle=%s counter_ko=%s reveal=%.2f combo_reveal=%.2f counter_reveal=%.2f counter_duration=%.2f waits_old=%s waits_before=%s flies_after=%s finish_before_end=%s hold_end=%s" % [
 		status,
 		str(delayed_hp_ok),
 		str(combo_launch_timing_ok),
@@ -6494,8 +6548,11 @@ func _run_auto_battle_visual_timing_check() -> void:
 		str(final_frame_hold_ok),
 		str(advances_after_final_frame),
 		str(auto_settle_ok),
+		str(counter_ko_ok),
 		reveal_progress,
 		combo_reveal,
+		counter_ko_reveal,
+		counter_ko_duration,
 		str(waits_at_old_launch_time),
 		str(waits_before_combo_hit),
 		str(flies_after_combo_hit),

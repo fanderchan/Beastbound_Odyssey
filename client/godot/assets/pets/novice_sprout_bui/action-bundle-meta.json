@@ -36,6 +36,11 @@
       "fps": 10,
       "loop": false
     },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false
+    },
     "down": {
       "frameCount": 8,
       "fps": 10,
@@ -76,7 +81,7 @@
     "runtimeReviewStatus": "passed_1280x720_godot_world_and_battle"
   },
   "knownScope": {
-    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend", "battle_down"],
+    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend", "battle_wounded_return", "battle_down"],
     "deferred": ["skill_unique", "knockback", "victory", "capture", "evolution"]
   }
 }

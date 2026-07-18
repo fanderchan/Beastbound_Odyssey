@@ -6,13 +6,14 @@ const VIEW_FRONT := "front_3quarter_sw"
 const VIEW_BACK := "back_3quarter_ne"
 const VIEWS: Array[String] = [VIEW_FRONT, VIEW_BACK]
 const WORLD_ACTIONS: Array[String] = ["idle", "walk"]
-const BATTLE_ACTIONS: Array[String] = ["idle", "walk", "attack", "hurt", "defend", "down"]
+const BATTLE_ACTIONS: Array[String] = ["idle", "walk", "attack", "hurt", "defend", "stagger", "down"]
 const FRAME_COUNTS := {
 	"idle": 6,
 	"walk": 8,
 	"attack": 8,
 	"hurt": 6,
 	"defend": 6,
+	"stagger": 8,
 	"down": 8,
 }
 const ACTION_FPS := {
@@ -21,6 +22,7 @@ const ACTION_FPS := {
 	"attack": 12.0,
 	"hurt": 12.0,
 	"defend": 10.0,
+	"stagger": 10.0,
 	"down": 10.0,
 }
 const LOOPING_ACTIONS: Array[String] = ["idle", "walk"]
@@ -92,6 +94,8 @@ static func action_for_battle_state(action_state: String) -> String:
 		return "attack"
 	if normalized == "down":
 		return "down"
+	if normalized == "wounded_return":
+		return "stagger"
 	if normalized == "hit" or normalized == "launched" or normalized == "captured" or normalized.begins_with("status_"):
 		return "hurt"
 	if normalized == "defend" or normalized == "guard_hit":
@@ -146,13 +150,14 @@ static func validation_errors() -> Array[String]:
 				if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
 					errors.append("运行帧尺寸不是 256x256：%s" % path)
 				seen_count += 1
-	if seen_count != 84:
-		errors.append("正式动作帧应为 84，实际可读 %d" % seen_count)
+	if seen_count != 100:
+		errors.append("正式动作帧应为 100，实际可读 %d" % seen_count)
 	if (
 		action_for_battle_state("combo") != "attack"
 		or action_for_battle_state("hit") != "hurt"
 		or action_for_battle_state("defend") != "defend"
 		or action_for_battle_state("guard_hit") != "defend"
+		or action_for_battle_state("wounded_return") != "stagger"
 		or action_for_battle_state("down") != "down"
 	):
 		errors.append("战斗动作映射不完整")

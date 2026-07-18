@@ -31,15 +31,23 @@ static func run() -> Dictionary:
 		PetActionAssetCatalog.action_for_battle_state("down"),
 		1.0
 	)
+	var stagger_texture := PetActionAssetCatalog.texture_for_progress(
+		PetActionAssetCatalog.FORM_ID,
+		PetActionAssetCatalog.battle_view_for_side("ally"),
+		PetActionAssetCatalog.action_for_battle_state("wounded_return"),
+		0.55
+	)
 	if not warmed_world or world_texture == null:
 		errors.append("世界跟随动作未能预热或取帧")
 	if not warmed_battle or battle_texture == null:
 		errors.append("战斗动作未能预热或取帧")
 	if down_texture == null:
 		errors.append("战斗昏迷末帧未能加载")
+	if stagger_texture == null:
+		errors.append("致死反击负伤退行帧未能加载")
 	return {
 		"ok": errors.is_empty(),
-		"frameCount": 84,
+		"frameCount": 100,
 		"views": PetActionAssetCatalog.VIEWS.size(),
 		"actions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),
 		"errors": errors,
@@ -87,7 +95,7 @@ static func _append_contract_errors(errors: Array[String]) -> void:
 		errors.append("缺少来源与归属记录：%s" % OWNERSHIP_RECORD_PATH)
 	var quality := bundle.get("quality", {}) as Dictionary
 	if bool(quality.get("formalReleaseActionPackComplete", true)):
-		errors.append("六动作试产不能误标为正式发行完整动作包")
+		errors.append("七动作试产不能误标为正式发行完整动作包")
 	if str(quality.get("ownerReviewStatus", "")) != "pending":
 		errors.append("用户尚未评审，ownerReviewStatus 必须保持 pending")
 

@@ -1,0 +1,19 @@
+Use case: identity-preserve
+Asset type: production HD 2D creature wounded-retreat animation sheet for Beastbound Odyssey
+Input images: the authoritative identity board, back-view hurt posture, back-view quadruped walk anatomy, and a 2x4 layout-only guide.
+Primary request: the exact same creature, seen from back_3quarter_ne facing upper-right, performs a slow exhausted backward retreat after receiving a lethal counterattack. It keeps facing the opponent while dragging its tired body backward toward its home position; it does not turn around and does not collapse yet.
+Sheet: exactly 8 equal cells in a strict 2 rows x 4 columns grid, read left-to-right across row 1 then row 2.
+Action beats:
+1 recoil low from the hit;
+2 forelegs tremble, round ears sag backward, body weight sinks;
+3 uneven backward step, one forepaw reluctantly lifts while another drags;
+4 rear legs pull the body backward, head held low;
+5 brief stumble with one knee nearly buckling, still conscious;
+6 another weak backward step, paw scraping low, tail and ear sprouts droop;
+7 body shudders and catches balance with legs spread;
+8 reaches a low exhausted brace, legs trembling and ready to collapse in the next separate action.
+Back-view body language: fatigue is clear through dropped shoulders, low spine, uneven legs, sagging ears and tail leaf; never rotate toward a front view.
+Identity invariants: same small quadruped and 1:1 head-body proportions; warm sand-yellow fur; huge round furry ears each with one fixed two-leaf sprout; olive leaf-vein back marking; four light-earth-brown paws; one curled root tail with exactly one leaf; identical outline, lighting, and hand-painted 2.5D style.
+Motion constraints: centered because runtime supplies translation; stable feet/bottom anchor; same body scale; full body inside central 60-65%; clear uneven leg changes and low posture; no normal cheerful walk; no headbutt; no collapse/down pose; no detached body parts or FX.
+No blood, wounds, gore, sweat icons, stars, motion lines, dust, slash arcs, shadows, floor, scenery, text, labels, UI, borders, or second creature.
+Background: perfectly flat solid #FF00FF, no gradient or texture. Generous magenta padding on all sides. Nothing may cross a cell edge.

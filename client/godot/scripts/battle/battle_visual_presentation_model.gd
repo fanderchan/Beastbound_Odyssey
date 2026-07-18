@@ -1,6 +1,8 @@
 extends RefCounted
 
 const STATE_GUARD_HIT := "guard_hit"
+const STATE_WOUNDED_RETURN := "wounded_return"
+const MELEE_CONTACT_ACTION_PROGRESS := 0.62
 
 
 static func damage_reaction_state(hp_after: int, dodged: bool, launched: bool, blocked: bool) -> String:
@@ -38,12 +40,61 @@ static func guard_impact_strength(is_guard_hit: bool, event_progress: float, res
 
 static func melee_lunge(event_progress: float, hold_for_counter: bool, result_reveal_progress: float) -> float:
 	var progress := clampf(event_progress, 0.0, 1.0)
-	if not hold_for_counter:
-		return sin(progress * PI)
 	var contact_progress := clampf(result_reveal_progress, 0.18, 0.72)
-	if progress >= contact_progress:
+	if progress <= contact_progress:
+		return _smooth_unit(progress / maxf(0.01, contact_progress))
+	if hold_for_counter:
 		return 1.0
-	return _smooth_unit(progress / maxf(0.01, contact_progress))
+	var hold_end := melee_contact_hold_end_progress(contact_progress)
+	if progress <= hold_end:
+		return 1.0
+	var motion_end := melee_motion_end_progress(contact_progress)
+	if progress >= motion_end:
+		return 0.0
+	return 1.0 - _smooth_unit((progress - hold_end) / maxf(0.01, motion_end - hold_end))
+
+
+static func melee_action_progress(event_progress: float, result_reveal_progress: float) -> float:
+	var progress := clampf(event_progress, 0.0, 1.0)
+	var contact_progress := clampf(result_reveal_progress, 0.18, 0.72)
+	if progress <= contact_progress:
+		return MELEE_CONTACT_ACTION_PROGRESS * _smooth_unit(progress / maxf(0.01, contact_progress))
+	var hold_end := melee_contact_hold_end_progress(contact_progress)
+	if progress <= hold_end:
+		return MELEE_CONTACT_ACTION_PROGRESS
+	var motion_end := melee_motion_end_progress(contact_progress)
+	if progress >= motion_end:
+		return 1.0
+	return lerpf(
+		MELEE_CONTACT_ACTION_PROGRESS,
+		1.0,
+		_smooth_unit((progress - hold_end) / maxf(0.01, motion_end - hold_end))
+	)
+
+
+static func melee_contact_hold_end_progress(result_reveal_progress: float) -> float:
+	var contact_progress := clampf(result_reveal_progress, 0.18, 0.72)
+	return minf(contact_progress + 0.07, melee_motion_end_progress(contact_progress) - 0.05)
+
+
+static func melee_motion_end_progress(result_reveal_progress: float) -> float:
+	var contact_progress := clampf(result_reveal_progress, 0.18, 0.72)
+	return clampf(maxf(0.52, contact_progress + 0.24), 0.48, 0.88)
+
+
+static func melee_impact_strength(
+	event_progress: float,
+	result_reveal_progress: float,
+	event_duration_seconds: float = 1.0
+) -> float:
+	var age := (
+		clampf(event_progress, 0.0, 1.0) - clampf(result_reveal_progress, 0.0, 1.0)
+	) * maxf(0.01, event_duration_seconds)
+	if age < -0.035 or age > 0.18:
+		return 0.0
+	if age < 0.0:
+		return _smooth_unit((age + 0.035) / 0.035)
+	return 1.0 - _smooth_unit(age / 0.18)
 
 
 static func counter_target_anchor_factor(
@@ -52,13 +103,69 @@ static func counter_target_anchor_factor(
 	defeated: bool,
 	launched: bool
 ) -> float:
-	if defeated or launched:
+	if launched:
 		return 1.0
 	var progress := clampf(event_progress, 0.0, 1.0)
+	if defeated:
+		var return_start := counter_ko_return_start_progress(result_reveal_progress)
+		var return_end := counter_ko_return_end_progress(result_reveal_progress)
+		if progress <= return_start:
+			return 1.0
+		if progress >= return_end:
+			return 0.0
+		return 1.0 - _exhausted_return_progress(
+			(progress - return_start) / maxf(0.01, return_end - return_start)
+		)
 	var return_progress := clampf(maxf(0.62, result_reveal_progress + 0.14), 0.0, 0.88)
 	if progress <= return_progress:
 		return 1.0
 	return 1.0 - _smooth_unit((progress - return_progress) / maxf(0.01, 1.0 - return_progress))
+
+
+static func counter_ko_return_start_progress(result_reveal_progress: float) -> float:
+	return clampf(maxf(0.28, result_reveal_progress + 0.08), 0.24, 0.62)
+
+
+static func counter_ko_return_end_progress(result_reveal_progress: float) -> float:
+	var return_start := counter_ko_return_start_progress(result_reveal_progress)
+	return clampf(maxf(0.78, return_start + 0.44), return_start + 0.20, 0.88)
+
+
+static func counter_ko_is_impacting(
+	event_progress: float,
+	result_reveal_progress: float,
+	defeated: bool,
+	launched: bool
+) -> bool:
+	if not defeated or launched:
+		return false
+	var progress := clampf(event_progress, 0.0, 1.0)
+	return progress >= result_reveal_progress and progress < counter_ko_return_start_progress(result_reveal_progress)
+
+
+static func counter_ko_is_staggering(
+	event_progress: float,
+	result_reveal_progress: float,
+	defeated: bool,
+	launched: bool
+) -> bool:
+	if not defeated or launched:
+		return false
+	var progress := clampf(event_progress, 0.0, 1.0)
+	return progress >= counter_ko_return_start_progress(result_reveal_progress) and progress < counter_ko_return_end_progress(result_reveal_progress)
+
+
+static func counter_ko_stagger_progress(event_progress: float, result_reveal_progress: float) -> float:
+	var return_start := counter_ko_return_start_progress(result_reveal_progress)
+	var return_end := counter_ko_return_end_progress(result_reveal_progress)
+	return clampf((event_progress - return_start) / maxf(0.01, return_end - return_start), 0.0, 1.0)
+
+
+static func counter_ko_down_progress(event_progress: float, result_reveal_progress: float) -> float:
+	var return_end := counter_ko_return_end_progress(result_reveal_progress)
+	if event_progress <= return_end:
+		return 0.0
+	return clampf((event_progress - return_end) / maxf(0.01, 1.0 - return_end), 0.0, 1.0)
 
 
 static func ground_shadow_plan(kind: String, action_state: String, visual_scale: float, has_ride: bool = false) -> Dictionary:
@@ -121,13 +228,36 @@ static func validation_errors() -> Array[String]:
 		errors.append("触发反击时，先手攻击者必须停在接触点")
 	if absf(melee_lunge(1.0, false, 0.48)) > 0.001:
 		errors.append("普通近战动作结束时必须返回原位")
+	if melee_lunge(0.48, false, 0.48) < 0.999 or melee_action_progress(0.48, 0.48) < 0.60:
+		errors.append("近战位移与前爪触击帧必须在伤害揭示时对齐")
+	if melee_impact_strength(0.48, 0.48, 0.62) < 0.999 or melee_impact_strength(0.80, 0.48, 0.62) > 0.001:
+		errors.append("近战冲击脉冲必须只在接触瞬间出现")
 	if counter_target_anchor_factor(1.0, 0.48, false, false) > 0.001:
 		errors.append("承受非致命反击后必须完成归位")
-	if counter_target_anchor_factor(1.0, 0.48, true, false) < 0.999:
-		errors.append("被反击击倒后必须留在接触点")
+	if counter_target_anchor_factor(0.56, 0.22, true, false) >= 0.99:
+		errors.append("被普通反击击倒后必须负伤退回，而不是留在接触点")
+	if counter_target_anchor_factor(1.0, 0.22, true, false) > 0.001:
+		errors.append("被普通反击击倒后必须在原阵位完成归位")
 	if counter_target_anchor_factor(1.0, 0.48, false, true) < 0.999:
 		errors.append("被反击击飞时必须从接触点起飞")
+	if not counter_ko_is_impacting(0.24, 0.22, true, false):
+		errors.append("普通致死反击必须保留接触点受击阶段")
+	if not counter_ko_is_staggering(0.50, 0.22, true, false):
+		errors.append("普通致死反击必须存在负伤退行阶段")
+	if counter_ko_down_progress(0.70, 0.22) > 0.001 or counter_ko_down_progress(1.0, 0.22) < 0.999:
+		errors.append("普通致死反击只能归位后倒下并保持末帧")
 	return errors
+
+
+static func _exhausted_return_progress(value: float) -> float:
+	var t := clampf(value, 0.0, 1.0)
+	if t < 0.22:
+		return lerpf(0.0, 0.12, _smooth_unit(t / 0.22))
+	if t < 0.48:
+		return lerpf(0.12, 0.44, _smooth_unit((t - 0.22) / 0.26))
+	if t < 0.70:
+		return lerpf(0.44, 0.57, _smooth_unit((t - 0.48) / 0.22))
+	return lerpf(0.57, 1.0, _smooth_unit((t - 0.70) / 0.30))
 
 
 static func _smooth_unit(value: float) -> float:

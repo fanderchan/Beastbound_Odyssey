@@ -1,0 +1,18 @@
+Use case: identity-preserve
+Asset type: production HD 2D creature attack animation sheet for Beastbound Odyssey
+Input images: Image 1 is the authoritative identity board; Image 2 is the current front three-quarter attack sheet and provides only grid, scale, palette, rendering style, and facing reference.
+Primary request: replace the current forehead/headbutt motion with a clearly readable forepaw pounce-and-swipe attack for the exact same creature.
+View: front_3quarter_sw, facing lower-left, matching Image 2 exactly.
+Sheet: exactly 8 equal cells in a strict 2 rows x 4 columns grid, read left-to-right across row 1 then row 2.
+Action beats:
+1 neutral combat-ready pose;
+2 lower hindquarters and brace, eyes focused, forequarters tense;
+3 lift the nearer forepaw and push from the hind legs;
+4 compact forward pounce with both forepaws visibly leading, head held behind the paws;
+5 unmistakable peak forepaw strike: one paw extended toward the opponent and the other bracing, face determined, paw is the contact point, NOT forehead or muzzle;
+6 strong follow-through and landing compression;
+7 recover weight backward, visibly settle;
+8 return to combat-ready pose.
+Identity invariants: same small quadruped, same 1:1 head-body proportions, warm sand-yellow fur, cream heart-shaped muzzle and chest, huge round furry ears each with one fixed two-leaf sprout, olive leaf-vein back marking, four light-earth-brown paws, one curled root tail with exactly one leaf, same eye shape, outline, lighting, and hand-painted 2.5D style as the references.
+Motion constraints: full body visible in every cell; body occupies the central 60-70% safe area; stable bottom/feet anchor and same body scale across all cells; clear silhouette changes; the head never becomes the striking point; do not turn this into a headbutt; no standing on two legs; no detached attack FX, dust, text, labels, UI, borders, shadows, floor, scenery, or second creature.
+Background: perfectly flat solid #FF00FF in every cell, no gradients, no lighting variation, no grid lines. Leave generous magenta padding on all four sides of every cell. Nothing may cross a cell edge.

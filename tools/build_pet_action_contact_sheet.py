@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
-ACTIONS = ("idle", "walk", "attack", "hurt", "defend", "down")
+ACTIONS = ("idle", "walk", "attack", "hurt", "defend", "stagger", "down")
 
 
 def label_font(size: int) -> ImageFont.ImageFont:

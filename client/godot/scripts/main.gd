@@ -140,6 +140,8 @@ const BATTLE_GRID_TEMPLATE_LANE_STEP := BattleLayoutConstants.GRID_TEMPLATE_LANE
 const BATTLE_GRID_TEMPLATE_RANK_STEP := BattleLayoutConstants.GRID_TEMPLATE_RANK_STEP
 const BATTLE_MELEE_CONTACT_DISTANCE := 34.0
 const BATTLE_COUNTER_CONTACT_DISTANCE := 96.0
+const BATTLE_COUNTER_KO_SECONDS := 2.35
+const BATTLE_COUNTER_KO_REVEAL_PROGRESS := 0.22
 const BATTLE_COMBO_STAGGER_SECONDS := 0.24
 const BATTLE_COMBO_ACTION_SECONDS := 0.92
 const BATTLE_COMBO_RETURN_PADDING_SECONDS := 0.16
@@ -1114,7 +1116,6 @@ var battle_last_event_launch_mode: String = ""
 var battle_last_event_ledger: Dictionary = {}
 var battle_recorded_event_sequence: int = 0
 var battle_float_texts: Array[Dictionary] = []
-var battle_counter_contact_anchor_offsets: Dictionary = {}
 var battle_escape_preview_actor_ids: Array[String] = []
 var battle_escape_preview_started_msec: int = 0
 var battle_command_countdown_remaining: float = 99.0
@@ -8379,13 +8380,11 @@ func _refresh_battle_target_seed() -> void:
 
 func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
-	battle_counter_contact_anchor_offsets.clear()
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
 func _end_battle(_restore_world: bool = true) -> void:
 	battle_pet_art_elapsed = 0.0
-	battle_counter_contact_anchor_offsets.clear()
 	_panel_flow()._end_battle(_restore_world)
 
 func _finish_battle_and_return_to_world(result_override: String = "") -> Dictionary:
@@ -11136,6 +11135,9 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		duration = maxf(duration, 1.25)
 	var delays_result := _battle_event_delays_result(event)
 	var reveal_progress := _battle_event_result_reveal_progress(event) if delays_result else 0.0
+	if _battle_last_event_is_nonlaunch_counter_ko(event):
+		duration = maxf(duration, BATTLE_COUNTER_KO_SECONDS)
+		reveal_progress = BATTLE_COUNTER_KO_REVEAL_PROGRESS
 	var launch_start := reveal_progress
 	return {
 		"durationSeconds": duration,
@@ -11151,6 +11153,14 @@ func _battle_last_event_has_down_target() -> bool:
 		if str(target.get("actionState", "")) == "down":
 			return true
 	return false
+
+
+func _battle_last_event_is_nonlaunch_counter_ko(event: Dictionary) -> bool:
+	if str(event.get("type", "")) != "counter_attack" or bool(battle_state.get("lastLaunch", false)):
+		return false
+	var target_id := str(battle_state.get("lastTargetId", event.get("targetId", "")))
+	var target := BattleModel.actor_by_id(battle_state, target_id)
+	return not target.is_empty() and int(target.get("hp", 0)) <= 0 and str(target.get("actionState", "")) == "down"
 
 
 func _battle_event_consumes_item(event_type: String) -> bool:
@@ -11898,7 +11908,6 @@ func _update_battle_animation(delta: float) -> void:
 
 
 func _advance_battle_after_current_event() -> void:
-	_settle_battle_counter_contact_anchor()
 	battle_state = BattleModel.reset_action_states(battle_state)
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
@@ -13557,6 +13566,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	pos += counter_anchor_offset
 	var event_offset := _battle_actor_event_offset(actor, home_pos + counter_anchor_offset, visual_scale)
 	pos += event_offset
+	pos += _battle_actor_melee_impact_offset(actor, visual_scale)
 	pos += _battle_actor_escape_preview_offset(actor_id, side, visual_scale)
 	if large_formation and event_offset.length() > 2.0 and int(actor.get("hp", 0)) > 0:
 		_draw_battle_actor_home_shadow(actor, home_pos, visual_scale, side, kind)
@@ -13623,6 +13633,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			4.0 * visual_scale,
 			true
 		)
+	_draw_battle_melee_impact_effect(actor, pos, visual_scale)
 	if (BattleModel.is_actor_guarding(battle_state, actor_id) or state == BattleVisualPresentationModel.STATE_GUARD_HIT) and int(actor.get("hp", 0)) > 0:
 		_draw_battle_guard_effect(actor, pos, visual_scale, state)
 	if state == "down" and ["pet", "wild_pet"].has(kind):
@@ -13661,13 +13672,33 @@ func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: Stri
 		texture = PetActionAssetCatalog.texture_for_elapsed(form_id, view, action, battle_pet_art_elapsed)
 	else:
 		var progress := 1.0 if state == "captured" else _battle_current_event_progress()
+		var event_type := str(battle_current_event.get("type", ""))
+		var reveal_progress := _battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
+		if action == "attack" and ["attack", "skill_attack", "counter_attack"].has(event_type):
+			var participant_ids: Array = battle_current_event.get("participantIds", [str(battle_current_event.get("attackerId", ""))])
+			if participant_ids.has(actor_id):
+				if event_type == "attack" and bool(battle_current_event.get("counterTriggered", false)) and progress >= reveal_progress:
+					progress = BattleVisualPresentationModel.MELEE_CONTACT_ACTION_PROGRESS
+				elif not battle_last_event_launch:
+					progress = BattleVisualPresentationModel.melee_action_progress(progress, reveal_progress)
+		if action == "stagger":
+			progress = BattleVisualPresentationModel.counter_ko_stagger_progress(
+				_battle_current_event_progress(),
+				reveal_progress
+			)
 		if state == "down":
 			var is_current_target := not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
-			progress = BattleVisualPresentationModel.down_action_progress(
-				is_current_target,
-				_battle_current_event_progress(),
-				_battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
-			)
+			if is_current_target and _battle_last_event_is_nonlaunch_counter_ko(battle_current_event):
+				progress = BattleVisualPresentationModel.counter_ko_down_progress(
+					_battle_current_event_progress(),
+					reveal_progress
+				)
+			else:
+				progress = BattleVisualPresentationModel.down_action_progress(
+					is_current_target,
+					_battle_current_event_progress(),
+					reveal_progress
+				)
 		if pet_action_art_preview:
 			var action_seconds := float(PetActionAssetCatalog.FRAME_COUNTS[action]) / PetActionAssetCatalog.action_fps(action)
 			progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
@@ -13974,16 +14005,35 @@ func _battle_should_show_actor_label(actor: Dictionary) -> bool:
 
 
 func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
-	if _battle_current_event_result_revealed() or not _battle_event_delays_result(battle_current_event):
+	if battle_current_event.is_empty():
 		return actor
 	var actor_id := str(actor.get("id", ""))
-	if actor_id == "" or actor_id != str(battle_current_event.get("targetId", "")):
+	if actor_id == "":
 		return actor
-	var snapshot = battle_current_event_actor_snapshots.get(actor_id, {})
-	if snapshot is Dictionary:
-		var snapshot_actor := snapshot as Dictionary
-		if not snapshot_actor.is_empty():
-			return snapshot_actor.duplicate(true)
+	var event_progress := _battle_current_event_progress()
+	var reveal_progress := _battle_event_result_reveal_progress(battle_current_event)
+	var counter_ko := _battle_last_event_is_nonlaunch_counter_ko(battle_current_event)
+	if counter_ko and actor_id == str(battle_current_event.get("attackerId", "")):
+		if event_progress >= BattleVisualPresentationModel.melee_motion_end_progress(reveal_progress):
+			var rested_attacker := actor.duplicate(true)
+			rested_attacker["actionState"] = "idle"
+			return rested_attacker
+	if actor_id != str(battle_current_event.get("targetId", "")):
+		return actor
+	if not _battle_current_event_result_revealed() and _battle_event_delays_result(battle_current_event):
+		var snapshot = battle_current_event_actor_snapshots.get(actor_id, {})
+		if snapshot is Dictionary:
+			var snapshot_actor := snapshot as Dictionary
+			if not snapshot_actor.is_empty():
+				return snapshot_actor.duplicate(true)
+	if counter_ko:
+		var visual_target := actor.duplicate(true)
+		if BattleVisualPresentationModel.counter_ko_is_impacting(event_progress, reveal_progress, true, false):
+			visual_target["actionState"] = "hit"
+			return visual_target
+		if BattleVisualPresentationModel.counter_ko_is_staggering(event_progress, reveal_progress, true, false):
+			visual_target["actionState"] = BattleVisualPresentationModel.STATE_WOUNDED_RETURN
+			return visual_target
 	return actor
 
 
@@ -14079,6 +14129,13 @@ func _battle_actor_state_offset(state: String, side: String, visual_scale: float
 			return Vector2(-14, -20) * visual_scale
 		"hit":
 			return Vector2(sin(battle_action_timer * 80.0) * 5.0 * visual_scale, 0)
+		BattleVisualPresentationModel.STATE_WOUNDED_RETURN:
+			var stagger_progress := BattleVisualPresentationModel.counter_ko_stagger_progress(
+				_battle_current_event_progress(),
+				_battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
+			)
+			var weary_step := sin(stagger_progress * TAU * 2.5)
+			return Vector2(weary_step * 2.4, 3.0 + absf(weary_step) * 2.8) * visual_scale
 		BattleVisualPresentationModel.STATE_GUARD_HIT:
 			var recoil_direction := 1.0 if side == BattleModel.SIDE_ALLY else -1.0
 			return Vector2(recoil_direction * sin(battle_action_timer * 90.0) * 2.8, 3.0) * visual_scale
@@ -14138,6 +14195,67 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 	return contact_offset * lunge
 
 
+func _battle_actor_melee_impact_offset(actor: Dictionary, visual_scale: float) -> Vector2:
+	var strength := _battle_actor_melee_impact_strength(str(actor.get("id", "")))
+	if strength <= 0.0:
+		return Vector2.ZERO
+	var attacker := BattleModel.actor_by_id(battle_state, str(battle_current_event.get("attackerId", "")))
+	if attacker.is_empty():
+		return Vector2(0.0, -3.0 * strength) * visual_scale
+	var target_home := _battle_slot_world_position(str(actor.get("slotId", "")))
+	var attacker_home := _battle_slot_world_position(str(attacker.get("slotId", "")))
+	var away := (target_home - attacker_home).normalized()
+	if away.length() <= 0.01:
+		away = Vector2(1.0, 0.25).normalized()
+	return (away * 9.0 + Vector2(0.0, -3.0)) * visual_scale * strength
+
+
+func _battle_actor_melee_impact_strength(actor_id: String) -> float:
+	if battle_current_event.is_empty() or actor_id == "" or actor_id != str(battle_current_event.get("targetId", "")):
+		return 0.0
+	if bool(battle_current_event.get("dodged", false)):
+		return 0.0
+	var event_type := str(battle_current_event.get("type", ""))
+	if not ["attack", "skill_attack", "combo_attack", "counter_attack", "multi_attack"].has(event_type):
+		return 0.0
+	return BattleVisualPresentationModel.melee_impact_strength(
+		_battle_current_event_progress(),
+		_battle_event_result_reveal_progress(battle_current_event),
+		battle_current_event_duration
+	)
+
+
+func _draw_battle_melee_impact_effect(actor: Dictionary, pos: Vector2, visual_scale: float) -> void:
+	var strength := _battle_actor_melee_impact_strength(str(actor.get("id", "")))
+	if strength <= 0.01:
+		return
+	var attacker := BattleModel.actor_by_id(battle_state, str(battle_current_event.get("attackerId", "")))
+	var toward_attacker := Vector2(-1.0, -0.2)
+	if not attacker.is_empty():
+		var target_home := _battle_slot_world_position(str(actor.get("slotId", "")))
+		var attacker_home := _battle_slot_world_position(str(attacker.get("slotId", "")))
+		toward_attacker = (attacker_home - target_home).normalized()
+	var center := pos + Vector2(0.0, -61.0) * visual_scale + toward_attacker * 25.0 * visual_scale
+	var radius := (22.0 + 16.0 * (1.0 - strength)) * visual_scale
+	var outer := Color(1.0, 0.58, 0.12, 0.94 * strength)
+	var core := Color(1.0, 0.96, 0.72, 0.96 * strength)
+	draw_circle(center, radius * 0.44, Color(1.0, 0.73, 0.24, 0.16 * strength))
+	draw_arc(center, radius, 0.0, TAU, 24, outer, maxf(1.8, 3.6 * visual_scale), true)
+	for ray_index in range(8):
+		var angle := -0.35 + float(ray_index) * TAU / 8.0
+		var direction := Vector2(cos(angle), sin(angle))
+		draw_line(
+			center + direction * radius * 0.58,
+			center + direction * radius * (1.12 + 0.14 * strength),
+			outer,
+			maxf(1.5, 3.0 * visual_scale),
+			true
+		)
+	draw_line(center + Vector2(-7.0, 0.0) * visual_scale, center + Vector2(7.0, 0.0) * visual_scale, core, maxf(2.0, 4.0 * visual_scale), true)
+	draw_line(center + Vector2(0.0, -7.0) * visual_scale, center + Vector2(0.0, 7.0) * visual_scale, core, maxf(2.0, 4.0 * visual_scale), true)
+	draw_circle(center, maxf(3.0, 6.5 * visual_scale * strength), core)
+
+
 func _battle_actor_counter_anchor_offset(actor: Dictionary, home_pos: Vector2, visual_scale: float) -> Vector2:
 	var actor_id := str(actor.get("id", ""))
 	if actor_id == "":
@@ -14155,28 +14273,7 @@ func _battle_actor_counter_anchor_offset(actor: Dictionary, home_pos: Vector2, v
 			str(actor.get("actionState", "")) == "launched"
 		)
 		return full_offset * factor
-	var stored_offset = battle_counter_contact_anchor_offsets.get(actor_id, Vector2.ZERO)
-	if stored_offset is Vector2 and int(actor.get("hp", 0)) <= 0 and str(actor.get("actionState", "")) != "launched":
-		return stored_offset as Vector2
 	return Vector2.ZERO
-
-
-func _settle_battle_counter_contact_anchor() -> void:
-	if str(battle_current_event.get("type", "")) != "counter_attack":
-		return
-	var target_id := str(battle_current_event.get("targetId", ""))
-	var target := BattleModel.actor_by_id(battle_state, target_id)
-	if target_id == "" or target.is_empty():
-		return
-	if int(target.get("hp", 0)) > 0 or str(target.get("actionState", "")) == "launched":
-		battle_counter_contact_anchor_offsets.erase(target_id)
-		return
-	var counter_actor := BattleModel.actor_by_id(battle_state, str(battle_current_event.get("attackerId", "")))
-	if counter_actor.is_empty():
-		return
-	var target_home := _battle_slot_world_position(str(target.get("slotId", "")))
-	var counter_home := _battle_slot_world_position(str(counter_actor.get("slotId", "")))
-	battle_counter_contact_anchor_offsets[target_id] = _battle_melee_contact_offset(target_home, counter_home, _battle_actor_visual_scale(), BATTLE_COUNTER_CONTACT_DISTANCE)
 
 
 func _battle_launched_actor_offset(actor: Dictionary, visual_scale: float) -> Vector2:
