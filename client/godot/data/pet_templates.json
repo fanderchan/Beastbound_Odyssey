@@ -301,6 +301,13 @@
         "catchable": false,
         "difficulty": 99
       },
+      "riding": {
+        "rideable": true,
+        "mountRole": "universal_companion",
+        "levelCapRequired": 40,
+        "attackStyle": "melee",
+        "formulaId": "stoneage_like_ride_v1"
+      },
       "visual": {
         "placeholderPalette": "bui_yellow",
         "artPlan": {

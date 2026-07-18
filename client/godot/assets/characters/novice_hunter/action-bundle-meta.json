@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "character_action_novice_hunter_v1",
+  "characterId": "novice_hunter_v1",
+  "displayName": "见习猎人",
+  "identityLock": "identity/identity-lock.md",
+  "sourceFrameSize": [512, 512],
+  "runtimeFrameSize": [256, 256],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": {
+    "idle": {"frameCount": 6, "fps": 8, "loop": true},
+    "walk": {"frameCount": 8, "fps": 11, "loop": true},
+    "ride_idle": {"frameCount": 6, "fps": 8, "loop": true},
+    "ride_walk": {"frameCount": 8, "fps": 11, "loop": true}
+  },
+  "worldDirectionMapping": {
+    "south": {"view": "front_3quarter_sw", "flipH": false},
+    "southwest": {"view": "front_3quarter_sw", "flipH": false},
+    "west": {"view": "front_3quarter_sw", "flipH": false},
+    "north": {"view": "back_3quarter_ne", "flipH": false},
+    "northeast": {"view": "back_3quarter_ne", "flipH": false},
+    "east": {"view": "back_3quarter_ne", "flipH": false},
+    "southeast": {"view": "front_3quarter_sw", "flipH": true},
+    "northwest": {"view": "back_3quarter_ne", "flipH": true}
+  },
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "createdForRepository": true,
+    "ownershipRecord": "identity/source-and-ownership.md",
+    "replacementPath": "Regenerate from the identity lock, then pass grid, edge, continuity, Godot and mounted-composition gates."
+  },
+  "quality": {
+    "resolution": "hd_512_source_with_256_runtime_frames",
+    "worldLocomotionComplete": true,
+    "quadrupedRidingPoseComplete": true,
+    "selfReviewStatus": "passed_after_chroma_despill",
+    "ownerReviewStatus": "pending"
+  },
+  "knownScope": {
+    "included": ["world_idle", "world_walk", "quadruped_ride_idle", "quadruped_ride_walk"],
+    "deferred": ["battle_attack", "battle_hurt", "battle_down", "weapon_specific", "other_body_archetypes"]
+  }
+}

@@ -1,5 +1,8 @@
 extends CharacterBody2D
 
+const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
+const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
+
 @export var walk_speed: float = 160.0
 @export var sprint_speed: float = 260.0
 @export var click_move_speed: float = 190.0
@@ -21,6 +24,9 @@ const FACING_KEYS := [
 @onready var body: Polygon2D = $Body
 @onready var left_foot: Polygon2D = $LeftFoot
 @onready var right_foot: Polygon2D = $RightFoot
+@onready var shadow: Polygon2D = $Shadow
+@onready var formal_sprite: Sprite2D = $FormalSprite
+@onready var mount_composite: Node2D = $MountComposite
 
 const IDLE_ANIMATION_STEP_SECONDS := 0.125
 const AUTO_MOVE_ARRIVE_DISTANCE := 4.0
@@ -40,17 +46,33 @@ var last_body_position := Vector2(INF, INF)
 var last_body_scale := Vector2(INF, INF)
 var last_left_foot_visible: bool = false
 var last_right_foot_visible: bool = false
+var formal_asset_enabled: bool = false
+var riding_form_id: String = ""
+var last_formal_texture: Texture2D
+var last_formal_flip_h: bool = false
 
 
 func _ready() -> void:
+	formal_asset_enabled = CharacterActionAssetCatalog.warm()
 	face_direction(Vector2.DOWN)
 	_set_animation_state("idle")
+	_set_placeholder_visible(not formal_asset_enabled)
+	if formal_sprite != null:
+		formal_sprite.visible = formal_asset_enabled
+	_update_formal_animation()
 
 
 func _process(delta: float) -> void:
 	var animation_delta := delta * _effective_speed_multiplier() if animation_state == "walk" else delta
 	animation_time += animation_delta
 	animation_visual_elapsed += animation_delta
+	if formal_asset_enabled:
+		var frame_step := 1.0 / maxf(1.0, CharacterActionAssetCatalog.action_fps(_formal_action()))
+		if animation_visual_elapsed < frame_step:
+			return
+		animation_visual_elapsed = fmod(animation_visual_elapsed, frame_step)
+		_update_formal_animation()
+		return
 	if animation_state == "idle" and animation_visual_elapsed < IDLE_ANIMATION_STEP_SECONDS:
 		return
 	animation_visual_elapsed = 0.0
@@ -217,6 +239,8 @@ func face_direction(direction: Vector2) -> void:
 	facing_key = str(FACING_KEYS[index])
 	if facing_mark != null:
 		facing_mark.rotation = float(index) * PI / 4.0 + PI / 2.0
+	if formal_asset_enabled:
+		_update_formal_animation()
 
 
 func get_facing_key() -> String:
@@ -229,6 +253,33 @@ func get_animation_state() -> String:
 
 func get_animation_clip_key() -> String:
 	return "%s_%s" % [animation_state, facing_key]
+
+
+func set_riding_form(form_id: String) -> bool:
+	var normalized := form_id.strip_edges()
+	var mounted := false
+	if mount_composite != null and mount_composite.has_method("set_mount_form"):
+		mounted = bool(mount_composite.call("set_mount_form", normalized))
+	riding_form_id = normalized if mounted else ""
+	if mounted:
+		var profile := MountVisualProfileCatalog.profile_for_form(riding_form_id)
+		if mount_composite.has_method("set_presentation_scale"):
+			mount_composite.call("set_presentation_scale", float(profile.get("worldPresentationScale", 0.58)))
+	if formal_sprite != null:
+		formal_sprite.visible = formal_asset_enabled and not mounted
+	if shadow != null:
+		shadow.visible = not mounted
+	_set_placeholder_visible(not formal_asset_enabled and not mounted)
+	_update_formal_animation()
+	return mounted
+
+
+func get_riding_form_id() -> String:
+	return riding_form_id
+
+
+func uses_formal_character_art() -> bool:
+	return formal_asset_enabled
 
 
 func _facing_index_for_direction(direction: Vector2) -> int:
@@ -245,6 +296,45 @@ func _set_animation_state(next_state: String) -> void:
 	animation_state = next_state
 	animation_time = 0.0
 	animation_visual_elapsed = IDLE_ANIMATION_STEP_SECONDS
+	if formal_asset_enabled:
+		_update_formal_animation()
+
+
+func _formal_action() -> String:
+	if riding_form_id != "":
+		return "ride_walk" if animation_state == "walk" else "ride_idle"
+	return animation_state
+
+
+func _update_formal_animation() -> void:
+	if not formal_asset_enabled:
+		return
+	if riding_form_id != "":
+		if mount_composite != null and mount_composite.has_method("set_visual_state"):
+			mount_composite.call("set_visual_state", facing_key, animation_state, animation_time)
+		return
+	if formal_sprite == null:
+		return
+	var view := CharacterActionAssetCatalog.world_view_for_direction(facing_key)
+	var texture := CharacterActionAssetCatalog.texture_for_elapsed(view, animation_state, animation_time)
+	if texture != null and texture != last_formal_texture:
+		formal_sprite.texture = texture
+		last_formal_texture = texture
+	var flip_h := CharacterActionAssetCatalog.world_flip_h_for_direction(facing_key)
+	if flip_h != last_formal_flip_h:
+		formal_sprite.flip_h = flip_h
+		last_formal_flip_h = flip_h
+
+
+func _set_placeholder_visible(value: bool) -> void:
+	if body != null:
+		body.visible = value
+	if facing_mark != null:
+		facing_mark.visible = value
+	if left_foot != null:
+		left_foot.visible = value and last_left_foot_visible
+	if right_foot != null:
+		right_foot.visible = value and last_right_foot_visible
 
 
 func _update_placeholder_animation() -> void:

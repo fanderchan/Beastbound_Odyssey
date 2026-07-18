@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "characterId": "novice_hunter_v1",
+  "createdAt": "2026-07-18",
+  "generator": "OpenAI built-in image generation",
+  "projectOriginal": true,
+  "externalSourceAssetsUsed": false,
+  "identityLock": "../identity/identity-lock.md",
+  "promptDirectory": "../prompts",
+  "acceptedRawFiles": [
+    "identity-board-raw.png",
+    "front_3quarter_sw_idle_raw.png",
+    "back_3quarter_ne_idle_raw.png",
+    "front_3quarter_sw_walk_raw.png",
+    "back_3quarter_ne_walk_raw.png",
+    "front_3quarter_sw_ride_idle_raw.png",
+    "back_3quarter_ne_ride_idle_raw.png",
+    "front_3quarter_sw_ride_walk_raw.png",
+    "back_3quarter_ne_ride_walk_raw.png"
+  ]
+}

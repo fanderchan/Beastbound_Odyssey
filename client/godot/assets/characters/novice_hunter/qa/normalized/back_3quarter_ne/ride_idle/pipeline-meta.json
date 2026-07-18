@@ -1,0 +1,219 @@
+{
+  "target": "player",
+  "mode": "back_ride_idle",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/novice_hunter/source/back_3quarter_ne_ride_idle_repacked.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 125,
+  "rows": 3,
+  "cols": 2,
+  "cell_size": 512,
+  "fit_scale": 0.78,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 24,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "ride_idle-1",
+    "ride_idle-2",
+    "ride_idle-3",
+    "ride_idle-4",
+    "ride_idle-5",
+    "ride_idle-6"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        186,
+        83,
+        433,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        334,
+        399
+      ],
+      "paste_position": [
+        89,
+        56
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        418
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        189,
+        85,
+        430,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        326,
+        396
+      ],
+      "paste_position": [
+        93,
+        58
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        418,
+        627,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        189,
+        86,
+        429,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        324,
+        395
+      ],
+      "paste_position": [
+        94,
+        58
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        418,
+        1254,
+        836
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        190,
+        86,
+        428,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        322,
+        395
+      ],
+      "paste_position": [
+        95,
+        58
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        836,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        191,
+        88,
+        428,
+        379
+      ],
+      "edge_touch": false,
+      "output_size": [
+        320,
+        393
+      ],
+      "paste_position": [
+        96,
+        59
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        627,
+        836,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        191,
+        90,
+        428,
+        378
+      ],
+      "edge_touch": false,
+      "output_size": [
+        320,
+        389
+      ],
+      "paste_position": [
+        96,
+        61
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

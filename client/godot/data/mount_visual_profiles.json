@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "designRule": "Runtime layered composition; never bake character-by-pet combination sheets.",
+  "rigClasses": {
+    "quadruped_straddle": {
+      "status": "runtime_ready",
+      "riderActions": {"idle": "ride_idle", "walk": "ride_walk"},
+      "description": "四足兽跨坐：坐骑底层、骑手层、近侧头身遮挡层。"
+    },
+    "biped_shoulder": {
+      "status": "contract_reserved",
+      "description": "双足或高肩宠：骑手靠近肩背，使用较高挂点。"
+    },
+    "flying_harness": {
+      "status": "contract_reserved",
+      "description": "飞行宠：骑手由背带挂点承载，允许俯仰补偿。"
+    },
+    "serpentine_platform": {
+      "status": "contract_reserved",
+      "description": "蛇形或无明显背部宠：使用背台或悬浮承载点。"
+    }
+  },
+  "forms": {
+    "bui_novice_sprout_earth5_wind5": {
+      "rigClass": "quadruped_straddle",
+      "characterId": "novice_hunter_v1",
+      "riderPoseSet": "quadruped_straddle_v1",
+      "mountScale": 1.08,
+      "riderScale": 0.76,
+      "riderAnchor": [128, 150],
+      "worldPresentationScale": 0.58,
+      "battlePresentationScale": 0.88,
+      "shadow": {"offset": [0, 4], "size": [180, 32], "alpha": 0.25},
+      "views": {
+        "front_3quarter_sw": {
+          "groundAnchorY": 230,
+          "frontOccluderRegions": [[0, 42, 130, 186]],
+          "actions": {
+            "idle": {
+              "seatAnchors": [[150, 84], [150, 83], [150, 82], [150, 83], [150, 84], [150, 85]]
+            },
+            "walk": {
+              "seatAnchors": [[150, 82], [151, 80], [150, 83], [149, 84], [150, 81], [151, 80], [150, 82], [149, 84]]
+            }
+          }
+        },
+        "back_3quarter_ne": {
+          "groundAnchorY": 224,
+          "frontOccluderRegions": [[145, 32, 111, 193]],
+          "actions": {
+            "idle": {
+              "seatAnchors": [[116, 90], [116, 89], [116, 88], [116, 89], [116, 90], [116, 91]]
+            },
+            "walk": {
+              "seatAnchors": [[116, 88], [115, 86], [116, 89], [117, 90], [116, 87], [115, 86], [116, 88], [117, 90]]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "target": "player",
+  "mode": "front_ride_walk",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/novice_hunter/source/front_3quarter_sw_ride_walk_repacked.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 90,
+  "rows": 4,
+  "cols": 2,
+  "cell_size": 512,
+  "fit_scale": 0.78,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 0,
+  "min_component_area": 24,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "ride_walk-1",
+    "ride_walk-2",
+    "ride_walk-3",
+    "ride_walk-4",
+    "ride_walk-5",
+    "ride_walk-6",
+    "ride_walk-7",
+    "ride_walk-8"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        543,
+        362
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        193,
+        71,
+        341,
+        327
+      ],
+      "edge_touch": false,
+      "output_size": [
+        230,
+        399
+      ],
+      "paste_position": [
+        141,
+        56
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        543,
+        0,
+        1086,
+        362
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        194,
+        72,
+        341,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        229,
+        396
+      ],
+      "paste_position": [
+        141,
+        58
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        362,
+        543,
+        724
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        193,
+        75,
+        341,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        230,
+        391
+      ],
+      "paste_position": [
+        141,
+        60
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        543,
+        362,
+        1086,
+        724
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        193,
+        76,
+        341,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        230,
+        390
+      ],
+      "paste_position": [
+        141,
+        61
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        724,
+        543,
+        1086
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        195,
+        81,
+        340,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        226,
+        382
+      ],
+      "paste_position": [
+        143,
+        65
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        543,
+        724,
+        1086,
+        1086
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        195,
+        82,
+        340,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        226,
+        380
+      ],
+      "paste_position": [
+        143,
+        66
+      ]
+    },
+    {
+      "grid": [
+        3,
+        0
+      ],
+      "source_box": [
+        0,
+        1086,
+        543,
+        1448
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        193,
+        76,
+        341,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        230,
+        390
+      ],
+      "paste_position": [
+        141,
+        61
+      ]
+    },
+    {
+      "grid": [
+        3,
+        1
+      ],
+      "source_box": [
+        543,
+        1086,
+        1086,
+        1448
+      ],
+      "component_mode": "all",
+      "component_count": 1,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        194,
+        76,
+        341,
+        326
+      ],
+      "edge_touch": false,
+      "output_size": [
+        229,
+        390
+      ],
+      "paste_position": [
+        141,
+        61
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

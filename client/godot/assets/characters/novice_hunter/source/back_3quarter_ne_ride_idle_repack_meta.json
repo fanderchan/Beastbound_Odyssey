@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "input": "client/godot/assets/characters/novice_hunter/source/back_3quarter_ne_ride_idle_raw.png",
+  "output": "client/godot/assets/characters/novice_hunter/source/back_3quarter_ne_ride_idle_repacked.png",
+  "rows": 3,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.7677551020408163,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        202,
+        45,
+        523,
+        431
+      ],
+      "sourceArea": 55377,
+      "outputSize": [
+        251,
+        301
+      ],
+      "pastePosition": [
+        188,
+        84
+      ],
+      "cellMargins": [
+        188,
+        84,
+        188,
+        33
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        742,
+        47,
+        1058,
+        431
+      ],
+      "sourceArea": 55456,
+      "outputSize": [
+        247,
+        299
+      ],
+      "pastePosition": [
+        817,
+        86
+      ],
+      "cellMargins": [
+        190,
+        86,
+        190,
+        33
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        206,
+        446,
+        521,
+        828
+      ],
+      "sourceArea": 54568,
+      "outputSize": [
+        246,
+        298
+      ],
+      "pastePosition": [
+        190,
+        505
+      ],
+      "cellMargins": [
+        190,
+        87,
+        191,
+        33
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        740,
+        447,
+        1052,
+        829
+      ],
+      "sourceArea": 54912,
+      "outputSize": [
+        244,
+        298
+      ],
+      "pastePosition": [
+        818,
+        505
+      ],
+      "cellMargins": [
+        191,
+        87,
+        192,
+        33
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        2,
+        0
+      ],
+      "sourceBbox": [
+        210,
+        840,
+        521,
+        1220
+      ],
+      "sourceArea": 54251,
+      "outputSize": [
+        243,
+        296
+      ],
+      "pastePosition": [
+        192,
+        925
+      ],
+      "cellMargins": [
+        192,
+        89,
+        192,
+        33
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        2,
+        1
+      ],
+      "sourceBbox": [
+        739,
+        843,
+        1048,
+        1220
+      ],
+      "sourceArea": 53891,
+      "outputSize": [
+        242,
+        294
+      ],
+      "pastePosition": [
+        819,
+        927
+      ],
+      "cellMargins": [
+        192,
+        91,
+        193,
+        33
+      ]
+    }
+  ]
+}

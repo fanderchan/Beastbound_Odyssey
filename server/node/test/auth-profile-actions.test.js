@@ -1329,6 +1329,40 @@ test("server pet riding advances novice tiger tutorial quest", () => {
   assert.equal(battlePet.questMessages.some((message) => String(message).includes("设置战斗宠物")), true);
 });
 
+test("sprout Bui uses the shared rideable pet contract", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({"username": "ridingbui", "password": "test1234", "displayName": "布伊骑手"});
+  const token = registered.session.token;
+  const profile = battleProfile("布伊骑手", {"level": 1, "hp": 120, "maxHp": 120}, null);
+  profile.unlockedAbilities = ["riding"];
+  profile.petInstances.push({
+    "instanceId": "pet_bui_mount",
+    "petId": "pet_bui_mount",
+    "formId": "bui_novice_sprout_earth5_wind5",
+    "templateId": "bui_novice_sprout_earth5_wind5",
+    "speciesId": "bui_novice_sprout_earth5_wind5",
+    "lineId": "bui",
+    "name": "芽耳布伊",
+    "state": "standby",
+    "level": 1,
+    "hp": 80,
+    "maxHp": 80,
+    "attack": 11,
+    "defense": 9,
+    "quick": 46,
+  });
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
+  const riding = service.profileAction(token, {
+    "action": "pet_state_cycle",
+    "payload": {"instanceId": "pet_bui_mount"},
+  });
+  assert.equal(riding.ok, true);
+  assert.equal(riding.result.state, "riding");
+  assert.equal(riding.profile.ridePetInstanceId, "pet_bui_mount");
+  assert.equal(riding.profile.petInstances.find((pet) => pet.instanceId === "pet_bui_mount").state, "riding");
+});
+
 test("riding tutorial reconciles an already active non-mount battle pet", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "ridingreadyquest", "password": "test1234", "displayName": "双宠玩家"});

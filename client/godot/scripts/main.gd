@@ -14,6 +14,8 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
+const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
@@ -55,6 +57,7 @@ const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.g
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
+const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_check.gd")
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
@@ -802,6 +805,7 @@ var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_pet_action_asset_check: bool = false
+var auto_character_mount_art_check: bool = false
 var auto_pet_skill_training_check: bool = false
 var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
@@ -999,6 +1003,7 @@ var startup_map_id: String = START_MAP_ID
 var startup_spawn_name: String = "default"
 var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
+var player_mount_visual_ride_id_cache: String = "__uninitialized__"
 var account_authenticated: bool = false
 var auth_auto_bypass: bool = false
 var auth_mode_register: bool = false
@@ -1447,6 +1452,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif auto_pet_action_asset_check:
 		call_deferred("_run_auto_pet_action_asset_check")
+	elif auto_character_mount_art_check:
+		call_deferred("_run_auto_character_mount_art_check")
 	elif auto_pet_skill_training_check:
 		call_deferred("_run_auto_pet_skill_training_check")
 	elif auto_village_healer_check:
@@ -2138,6 +2145,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--auto-pet-action-asset-check":
 			auto_pet_action_asset_check = true
+		elif arg == "--auto-character-mount-art-check":
+			auto_character_mount_art_check = true
 		elif arg == "--auto-pet-skill-training-check":
 			auto_pet_skill_training_check = true
 		elif arg == "--auto-village-healer-check":
@@ -5491,6 +5500,12 @@ func _run_auto_pet_action_asset_check() -> void:
 	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
 
+func _run_auto_character_mount_art_check() -> void:
+	var result := CharacterMountArtCheck.run()
+	print("character mount art check ready: %s" % JSON.stringify(result))
+	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
+
+
 func _run_auto_pet_skill_training_check() -> void:
 	await _auto_checks()._run_auto_pet_skill_training_check()
 
@@ -7238,6 +7253,7 @@ func _path_has_same_screen_y(path_cells: Array[Vector2i]) -> bool:
 func _process(delta: float) -> void:
 	var frame_start := _perf_now()
 	_sync_keyboard_movement_input_gate()
+	_sync_player_mount_visual_if_needed()
 	_update_runtime_frame_budget()
 	_flush_profile_save_if_due(delta)
 	if battle_active:
@@ -7762,7 +7778,30 @@ func _spawn_player() -> void:
 	else:
 		player.global_position = IsoMapModel.grid_to_world(map_data, IsoMapModel.spawn_cell(map_data))
 	player.set_movement_bounds(_player_movement_bounds())
+	_sync_player_mount_visual_if_needed(true)
 	_sync_gm_speed_multiplier()
+
+
+func _sync_player_mount_visual_if_needed(force: bool = false) -> void:
+	if player == null or not player.has_method("set_riding_form"):
+		return
+	var ride_instance_id := str(player_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
+	if not force and ride_instance_id == player_mount_visual_ride_id_cache:
+		return
+	player_mount_visual_ride_id_cache = ride_instance_id
+	var ride_form_id := ""
+	if ride_instance_id != "":
+		var instances = player_profile.get("petInstances", [])
+		if instances is Array:
+			for value in instances as Array:
+				if not (value is Dictionary):
+					continue
+				var instance := value as Dictionary
+				if str(instance.get("instanceId", "")) != ride_instance_id:
+					continue
+				ride_form_id = str(instance.get("formId", instance.get("templateId", ""))).strip_edges()
+				break
+	player.call("set_riding_form", ride_form_id)
 
 
 func _spawn_pet() -> void:
@@ -13667,8 +13706,10 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		pass
 	elif kind == "player":
 		if _battle_actor_has_active_ride(actor):
-			_draw_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
-			_draw_battle_rider_actor(actor, pos + Vector2(0, -25) * visual_scale, visual_scale, alpha, body_color, trim_color)
+			var formal_mount_drawn := _draw_formal_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
+			if not formal_mount_drawn:
+				_draw_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
+				_draw_battle_rider_actor(actor, pos + Vector2(0, -25) * visual_scale, visual_scale, alpha, body_color, trim_color)
 		else:
 			draw_rect(Rect2(pos + Vector2(-19, -38) * visual_scale, Vector2(38, 56) * visual_scale), body_color, true)
 			draw_circle(pos + Vector2(0, -48) * visual_scale, 13.0 * visual_scale, Color(0.96, 0.72, 0.46, alpha))
@@ -13786,6 +13827,47 @@ func _battle_actor_has_active_ride(actor: Dictionary) -> bool:
 		and int(actor.get("ridePetHp", 0)) > 0
 		and int(actor.get("ridePetMaxHp", 0)) > 0
 	)
+
+
+func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, side: String, rotation_angle: float = 0.0) -> bool:
+	var form_id := str(actor.get("ridePetFormId", "")).strip_edges()
+	if not MountVisualProfileCatalog.supports_form(form_id):
+		return false
+	var state := str(actor.get("actionState", "idle")).strip_edges().to_lower()
+	var action := "walk" if ["attack", "combo", "skill", "counter_attack", "multi_attack", "dodge", "escape"].has(state) else "idle"
+	var view := PetActionAssetCatalog.battle_view_for_side(side)
+	var frame_index := CharacterActionAssetCatalog.frame_index_for_elapsed(action, battle_pet_art_elapsed)
+	var mount_texture := PetActionAssetCatalog.texture_for_elapsed(form_id, view, action, battle_pet_art_elapsed)
+	var rider_action := MountVisualProfileCatalog.rider_action_for(action)
+	var rider_texture := CharacterActionAssetCatalog.texture_for_frame(view, rider_action, frame_index + 1)
+	var plan := MountVisualProfileCatalog.composition_plan(form_id, view, action, frame_index)
+	if mount_texture == null or rider_texture == null or plan.is_empty():
+		return false
+	var presentation_scale := float(plan.get("battlePresentationScale", 0.88)) * visual_scale * 0.72
+	var mount_scale := float(plan.get("mountScale", 1.0)) * presentation_scale
+	var rider_scale := float(plan.get("riderScale", 1.0)) * presentation_scale
+	var mount_rect := Rect2(
+		Vector2(-128.0 * mount_scale, -float(plan.get("groundAnchorY", 224.0)) * mount_scale),
+		Vector2(256.0, 256.0) * mount_scale
+	)
+	var seat_anchor := plan.get("seatAnchor", Vector2(128, 110)) as Vector2
+	var rider_anchor := plan.get("riderAnchor", Vector2(128, 150)) as Vector2
+	var seat_position := mount_rect.position + seat_anchor * mount_scale
+	var rider_rect := Rect2(seat_position - rider_anchor * rider_scale, Vector2(256.0, 256.0) * rider_scale)
+	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
+	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
+	draw_texture_rect(mount_texture, mount_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	draw_texture_rect(rider_texture, rider_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	var occluder_regions = plan.get("frontOccluderRegions", [])
+	for source_region_value in occluder_regions as Array:
+		var source_region := source_region_value as Rect2
+		var destination_region := Rect2(
+			mount_rect.position + source_region.position * mount_scale,
+			source_region.size * mount_scale
+		)
+		draw_texture_rect_region(mount_texture, destination_region, source_region, Color(1.0, 1.0, 1.0, alpha))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	return true
 
 
 func _draw_battle_rider_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, body_color: Color, trim_color: Color) -> void:

@@ -10,6 +10,25 @@
       "releaseStatus": "self_review_passed_owner_review_pending",
       "source": "project_original_ai_assisted",
       "replacementPath": "assets/pets/novice_sprout_bui/identity/identity-lock.md"
+    },
+    {
+      "assetId": "character_action_novice_hunter_v1",
+      "type": "character_action_bundle",
+      "characterId": "novice_hunter_v1",
+      "path": "res://assets/characters/novice_hunter/action-bundle-meta.json",
+      "runtimeEnabled": true,
+      "releaseStatus": "self_review_passed_owner_review_pending",
+      "source": "project_original_ai_assisted",
+      "replacementPath": "assets/characters/novice_hunter/identity/identity-lock.md"
+    },
+    {
+      "assetId": "mount_visual_profiles_v1",
+      "type": "runtime_mount_composition_contract",
+      "path": "res://data/mount_visual_profiles.json",
+      "runtimeEnabled": true,
+      "releaseStatus": "quadruped_canary_ready",
+      "source": "project_original_configuration",
+      "replacementPath": "data/mount_visual_profiles.json"
     }
   ]
 }
