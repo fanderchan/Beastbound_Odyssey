@@ -5,6 +5,12 @@
 [node name="Pet" type="Node2D"]
 script = ExtResource("1_pet")
 
+[node name="FormalSprite" type="Sprite2D" parent="."]
+visible = false
+texture_filter = 1
+position = Vector2(0, -38)
+scale = Vector2(0.36, 0.36)
+
 [node name="Body" type="Polygon2D" parent="."]
 color = Color(0.30, 0.68, 0.36, 1)
 polygon = PackedVector2Array(-13, -13, 13, -13, 13, 13, -13, 13)

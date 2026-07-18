@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "input": "temporary-generation-artifact:back_idle_v2_raw.png",
+  "inputRetained": false,
+  "output": "client/godot/assets/pets/novice_sprout_bui/source/back_3quarter_ne_idle_raw.png",
+  "rows": 2,
+  "cols": 3,
+  "key": "#FF00FF",
+  "sharedScale": 1.0,
+  "allowUpscale": false,
+  "discardedSmallComponents": [
+    {
+      "area": 7687,
+      "bbox": [
+        957,
+        431,
+        1140,
+        549
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        166,
+        119,
+        479,
+        452
+      ],
+      "sourceArea": 54407,
+      "outputSize": [
+        319,
+        339
+      ],
+      "pastePosition": [
+        96,
+        132
+      ],
+      "cellMargins": [
+        96,
+        132,
+        97,
+        41
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        586,
+        115,
+        955,
+        444
+      ],
+      "sourceArea": 53092,
+      "outputSize": [
+        375,
+        335
+      ],
+      "pastePosition": [
+        580,
+        136
+      ],
+      "cellMargins": [
+        68,
+        136,
+        69,
+        41
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        1029,
+        113,
+        1343,
+        445
+      ],
+      "sourceArea": 52246,
+      "outputSize": [
+        320,
+        338
+      ],
+      "pastePosition": [
+        1120,
+        133
+      ],
+      "cellMargins": [
+        96,
+        133,
+        96,
+        41
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        146,
+        554,
+        459,
+        882
+      ],
+      "sourceArea": 50985,
+      "outputSize": [
+        319,
+        334
+      ],
+      "pastePosition": [
+        96,
+        649
+      ],
+      "cellMargins": [
+        96,
+        137,
+        97,
+        41
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        536,
+        556,
+        868,
+        896
+      ],
+      "sourceArea": 50323,
+      "outputSize": [
+        338,
+        346
+      ],
+      "pastePosition": [
+        599,
+        637
+      ],
+      "cellMargins": [
+        87,
+        125,
+        87,
+        41
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        1,
+        2
+      ],
+      "sourceBbox": [
+        998,
+        567,
+        1311,
+        886
+      ],
+      "sourceArea": 50124,
+      "outputSize": [
+        319,
+        325
+      ],
+      "pastePosition": [
+        1120,
+        658
+      ],
+      "cellMargins": [
+        96,
+        146,
+        97,
+        41
+      ]
+    }
+  ]
+}

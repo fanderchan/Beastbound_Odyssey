@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "pet_action_novice_sprout_bui_v1",
+  "formId": "bui_novice_sprout_earth5_wind5",
+  "displayName": "芽耳布伊",
+  "identityLock": "identity/identity-lock.md",
+  "sourceFrameSize": [512, 512],
+  "runtimeFrameSize": [256, 256],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 11,
+      "loop": true
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false
+    }
+  },
+  "worldDirectionMapping": {
+    "south": {"view": "front_3quarter_sw", "flipH": false},
+    "southwest": {"view": "front_3quarter_sw", "flipH": false},
+    "west": {"view": "front_3quarter_sw", "flipH": false},
+    "north": {"view": "back_3quarter_ne", "flipH": false},
+    "northeast": {"view": "back_3quarter_ne", "flipH": false},
+    "east": {"view": "back_3quarter_ne", "flipH": false},
+    "southeast": {"view": "front_3quarter_sw", "flipH": true},
+    "northwest": {"view": "back_3quarter_ne", "flipH": true}
+  },
+  "battleViewMapping": {
+    "ally": "back_3quarter_ne",
+    "enemy": "front_3quarter_sw"
+  },
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "createdForRepository": true,
+    "ownershipRecord": "identity/source-and-ownership.md",
+    "promptEvidence": "prompts/action-generation-log.md",
+    "replacementPath": "Regenerate from the identity lock and action beats, then pass the same normalization and Godot acceptance gates."
+  },
+  "quality": {
+    "resolution": "hd_512_source_with_256_runtime_frames",
+    "formalBattleViewsComplete": true,
+    "canaryMinimumActionPackComplete": true,
+    "formalReleaseActionPackComplete": false,
+    "selfReviewStatus": "passed_after_runtime_review",
+    "ownerReviewStatus": "pending",
+    "runtimeReviewStatus": "passed_1280x720_godot_world_and_battle"
+  },
+  "knownScope": {
+    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend"],
+    "deferred": ["skill_unique", "knockback", "victory", "down", "capture", "evolution"]
+  }
+}

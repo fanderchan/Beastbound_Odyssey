@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "assetId": "pet_action_novice_sprout_bui_v1",
+      "type": "pet_action_bundle",
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "path": "res://assets/pets/novice_sprout_bui/action-bundle-meta.json",
+      "runtimeEnabled": true,
+      "releaseStatus": "self_review_passed_owner_review_pending",
+      "source": "project_original_ai_assisted",
+      "replacementPath": "assets/pets/novice_sprout_bui/identity/identity-lock.md"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
@@ -52,6 +53,8 @@ const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.g
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
+const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
+const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -789,6 +792,7 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_pet_action_asset_check: bool = false
 var auto_pet_skill_training_check: bool = false
 var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
@@ -946,6 +950,7 @@ var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
+var pet_action_art_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
@@ -1085,6 +1090,7 @@ var battle_event_queue: Array[Dictionary] = []
 var battle_current_event: Dictionary = {}
 var battle_current_event_duration: float = 0.0
 var battle_current_event_actor_snapshots: Dictionary = {}
+var battle_pet_art_elapsed: float = 0.0
 var battle_event_advance_pending: bool = false
 var battle_round_end_status_processed: bool = false
 var battle_player_zero_hp_seen: bool = false
@@ -1417,6 +1423,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_pet_action_asset_check:
+		call_deferred("_run_auto_pet_action_asset_check")
 	elif auto_pet_skill_training_check:
 		call_deferred("_run_auto_pet_skill_training_check")
 	elif auto_village_healer_check:
@@ -1651,6 +1659,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_compare_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
+	elif pet_action_art_preview:
+		call_deferred("_run_pet_action_art_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
 	elif pet_order_preview:
@@ -2090,6 +2100,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-pet-action-asset-check":
+			auto_pet_action_asset_check = true
 		elif arg == "--auto-pet-skill-training-check":
 			auto_pet_skill_training_check = true
 		elif arg == "--auto-village-healer-check":
@@ -2404,6 +2416,8 @@ func _apply_preview_window_args() -> void:
 			equipment_compare_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
+		elif arg == "--pet-action-art-preview":
+			pet_action_art_preview = true
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
 		elif arg == "--pet-order-preview":
@@ -3463,6 +3477,10 @@ func _run_pet_management_preview() -> void:
 	pet_selected_instance_id = "pet_bui_speed"
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
+
+
+func _run_pet_action_art_preview() -> void:
+	await PetActionArtPreview.new(self).run()
 
 
 func _run_pet_order_preview() -> void:
@@ -5410,6 +5428,12 @@ func _run_auto_pet_template_catalog_check() -> void:
 	await _auto_checks()._run_auto_pet_template_catalog_check()
 
 
+func _run_auto_pet_action_asset_check() -> void:
+	var result := PetActionAssetCheck.run()
+	print("pet action asset check ready: %s" % JSON.stringify(result))
+	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
+
+
 func _run_auto_pet_skill_training_check() -> void:
 	await _auto_checks()._run_auto_pet_skill_training_check()
 
@@ -7152,6 +7176,7 @@ func _process(delta: float) -> void:
 	_flush_profile_save_if_due(delta)
 	if battle_active:
 		var battle_start := _perf_now()
+		battle_pet_art_elapsed += delta
 		_update_path_line_overlay()
 		_update_battle_command_countdown(delta)
 		_update_battle_animation(delta)
@@ -8339,9 +8364,12 @@ func _refresh_battle_target_seed() -> void:
 	_panel_flow()._refresh_battle_target_seed()
 
 func _start_battle(next_battle_state: Dictionary) -> void:
+	battle_pet_art_elapsed = 0.0
+	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
 func _end_battle(_restore_world: bool = true) -> void:
+	battle_pet_art_elapsed = 0.0
 	_panel_flow()._end_battle(_restore_world)
 
 func _finish_battle_and_return_to_world(result_override: String = "") -> Dictionary:
@@ -10698,6 +10726,7 @@ func _play_next_battle_event() -> void:
 		var event := battle_event_queue.pop_front() as Dictionary
 		var actor_snapshots := _battle_actor_snapshots_by_id()
 		battle_state = BattleModel.apply_battle_event(battle_state, event)
+		PetActionAssetCatalog.warm_battle_state(battle_state)
 		_update_battle_player_zero_hp_seen()
 		battle_state["phase"] = "round_events"
 		if bool(battle_state.get("lastEventApplied", false)):
@@ -12392,6 +12421,9 @@ func _set_pet_follow_enabled(enabled: bool, instance_id: String = "") -> void:
 		return
 	pet.visible = enabled
 	if enabled:
+		var followed_pet := PlayerProgressModel.pet_instance_by_id(player_profile, pet_follow_instance_id) if pet_follow_instance_id != "" else PlayerProgressModel.active_pet(player_profile)
+		if pet.has_method("set_pet_form"):
+			pet.call("set_pet_form", str(followed_pet.get("formId", followed_pet.get("templateId", ""))))
 		pet.global_position = player.global_position + Vector2(-56, 36)
 		pet_follow_points.clear()
 		pet_follow_points.append(pet.global_position)
@@ -13480,11 +13512,13 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var actor_id := str(actor.get("id", ""))
 	var side := str(actor.get("side", ""))
 	var kind := str(actor.get("kind", ""))
+	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
 	var state := str(actor.get("actionState", "idle"))
 	var launched_active := state == "launched" and _battle_actor_is_current_launch_target(actor_id)
 	if state == "launched" and not launched_active:
 		return
 	var visual_scale := _battle_actor_visual_scale()
+	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and not launched_active and PetActionAssetCatalog.supports_form(form_id)
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
 	var large_formation := _battle_uses_10v10_formation_template()
 	var event_offset := _battle_actor_event_offset(actor, home_pos, visual_scale)
@@ -13496,6 +13530,9 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var compact_labels := large_formation or _layout_size().y < 460.0
 	var hp_offset := (-42.0 if large_formation else (-54.0 if compact_labels else -82.0)) * visual_scale
 	var name_offset := (-62.0 if large_formation else (-70.0 if compact_labels else -94.0)) * visual_scale
+	if formal_pet_supported:
+		hp_offset = -132.0 * visual_scale
+		name_offset = -153.0 * visual_scale
 	pos += _battle_actor_state_offset(state, side, visual_scale)
 	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
@@ -13518,7 +13555,12 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	elif kind == "player" and actor_id == BattleModel.PLAYER_ACTOR_ID:
 		body_color = Color(0.78, 0.24, 0.23, alpha)
 		trim_color = Color(1.0, 0.88, 0.32, alpha)
-	if kind == "player":
+	var formal_pet_drawn := false
+	if formal_pet_supported:
+		formal_pet_drawn = _draw_formal_battle_pet_actor(form_id, side, state, pos, visual_scale, alpha)
+	if formal_pet_drawn:
+		pass
+	elif kind == "player":
 		if _battle_actor_has_active_ride(actor):
 			_draw_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
 			_draw_battle_rider_actor(actor, pos + Vector2(0, -25) * visual_scale, visual_scale, alpha, body_color, trim_color)
@@ -13572,6 +13614,29 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_actor_label(actor, pos + Vector2(0, name_offset), visual_scale, alpha, compact_labels)
 	if int(actor.get("hp", 0)) > 0:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
+
+
+func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float) -> bool:
+	var action := PetActionAssetCatalog.action_for_battle_state(state)
+	var view := PetActionAssetCatalog.battle_view_for_side(side)
+	var texture: Texture2D
+	if action == "idle":
+		texture = PetActionAssetCatalog.texture_for_elapsed(form_id, view, action, battle_pet_art_elapsed)
+	else:
+		var progress := 1.0 if ["down", "captured"].has(state) else _battle_current_event_progress()
+		if pet_action_art_preview:
+			var action_seconds := float(PetActionAssetCatalog.FRAME_COUNTS[action]) / PetActionAssetCatalog.action_fps(action)
+			progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
+		texture = PetActionAssetCatalog.texture_for_progress(form_id, view, action, progress)
+	if texture == null:
+		return false
+	var target_size := 156.0 * visual_scale
+	var target_rect := Rect2(
+		pos + Vector2(-target_size * 0.5, -target_size * 0.92),
+		Vector2(target_size, target_size)
+	)
+	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	return true
 
 
 func _battle_actor_has_active_ride(actor: Dictionary) -> bool:

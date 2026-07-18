@@ -1,0 +1,175 @@
+{
+  "target": "creature",
+  "mode": "actions",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/pets/novice_sprout_bui/source/identity-board-raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 180,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 512,
+  "fit_scale": 0.82,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 1,
+  "min_component_area": 1,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "identity-1",
+    "identity-2",
+    "identity-3",
+    "identity-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 115816,
+      "selected_component_bbox": [
+        105,
+        160,
+        560,
+        603
+      ],
+      "crop_bbox": [
+        104,
+        159,
+        561,
+        604
+      ],
+      "edge_touch": false,
+      "output_size": [
+        344,
+        335
+      ],
+      "paste_position": [
+        84,
+        131
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 106943,
+      "selected_component_bbox": [
+        28,
+        127,
+        502,
+        599
+      ],
+      "crop_bbox": [
+        27,
+        126,
+        503,
+        600
+      ],
+      "edge_touch": false,
+      "output_size": [
+        358,
+        357
+      ],
+      "paste_position": [
+        77,
+        109
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 106119,
+      "selected_component_bbox": [
+        130,
+        76,
+        539,
+        509
+      ],
+      "crop_bbox": [
+        129,
+        75,
+        540,
+        510
+      ],
+      "edge_touch": false,
+      "output_size": [
+        309,
+        327
+      ],
+      "paste_position": [
+        101,
+        139
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 103164,
+      "selected_component_bbox": [
+        10,
+        109,
+        565,
+        507
+      ],
+      "crop_bbox": [
+        9,
+        108,
+        566,
+        508
+      ],
+      "edge_touch": false,
+      "output_size": [
+        419,
+        301
+      ],
+      "paste_position": [
+        46,
+        165
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

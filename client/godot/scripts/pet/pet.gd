@@ -1,5 +1,7 @@
 extends Node2D
 
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+
 @export var follow_speed: float = 170.0
 @export var speed_multiplier: float = 1.0
 
@@ -18,6 +20,7 @@ const FACING_KEYS := [
 @onready var facing_mark: Polygon2D = $FacingMark
 @onready var left_foot: Polygon2D = $LeftFoot
 @onready var right_foot: Polygon2D = $RightFoot
+@onready var formal_sprite: Sprite2D = $FormalSprite
 
 const IDLE_ANIMATION_STEP_SECONDS := 0.125
 
@@ -32,6 +35,10 @@ var last_body_position := Vector2(INF, INF)
 var last_body_scale := Vector2(INF, INF)
 var last_left_foot_visible: bool = false
 var last_right_foot_visible: bool = false
+var current_form_id: String = ""
+var formal_asset_enabled: bool = false
+var last_formal_texture: Texture2D
+var last_formal_flip_h: bool = false
 
 
 func _ready() -> void:
@@ -57,6 +64,13 @@ func _process(delta: float) -> void:
 	else:
 		_set_animation_state("idle")
 	animation_visual_elapsed += animation_delta
+	if formal_asset_enabled:
+		var frame_step := 1.0 / maxf(1.0, PetActionAssetCatalog.action_fps(animation_state))
+		if animation_visual_elapsed < frame_step:
+			return
+		animation_visual_elapsed = fmod(animation_visual_elapsed, frame_step)
+		_update_formal_animation()
+		return
 	if animation_state == "idle" and not was_moving and animation_visual_elapsed < IDLE_ANIMATION_STEP_SECONDS:
 		return
 	animation_visual_elapsed = 0.0
@@ -85,6 +99,17 @@ func clear_follow_target() -> void:
 	_set_animation_state("idle")
 
 
+func set_pet_form(form_id: String) -> void:
+	current_form_id = form_id.strip_edges()
+	formal_asset_enabled = PetActionAssetCatalog.warm_world_form(current_form_id)
+	_set_placeholder_visible(not formal_asset_enabled)
+	if formal_sprite != null:
+		formal_sprite.visible = formal_asset_enabled
+	last_formal_texture = null
+	last_formal_flip_h = not PetActionAssetCatalog.world_flip_h_for_direction(facing_key)
+	_update_formal_animation()
+
+
 func face_direction(direction: Vector2) -> void:
 	if direction.length() <= 0.001:
 		return
@@ -92,6 +117,8 @@ func face_direction(direction: Vector2) -> void:
 	facing_key = str(FACING_KEYS[index])
 	if facing_mark != null:
 		facing_mark.rotation = float(index) * PI / 4.0 + PI / 2.0
+	if formal_asset_enabled:
+		_update_formal_animation()
 
 
 func get_facing_key() -> String:
@@ -139,6 +166,31 @@ func _update_placeholder_animation() -> void:
 		_set_body_transform(Vector2.ZERO, Vector2(1.0, breathe))
 		_set_body_color(Color(0.30, 0.68, 0.36, 1.0))
 		_set_foot_visible(false, false)
+
+
+func _update_formal_animation() -> void:
+	if not formal_asset_enabled or formal_sprite == null:
+		return
+	var view := PetActionAssetCatalog.world_view_for_direction(facing_key)
+	var texture := PetActionAssetCatalog.texture_for_elapsed(current_form_id, view, animation_state, animation_time)
+	if texture != null and texture != last_formal_texture:
+		formal_sprite.texture = texture
+		last_formal_texture = texture
+	var flip_h := PetActionAssetCatalog.world_flip_h_for_direction(facing_key)
+	if flip_h != last_formal_flip_h:
+		formal_sprite.flip_h = flip_h
+		last_formal_flip_h = flip_h
+
+
+func _set_placeholder_visible(value: bool) -> void:
+	if body != null:
+		body.visible = value
+	if facing_mark != null:
+		facing_mark.visible = value
+	if left_foot != null:
+		left_foot.visible = value and last_left_foot_visible
+	if right_foot != null:
+		right_foot.visible = value and last_right_foot_visible
 
 
 func _set_body_transform(next_position: Vector2, next_scale: Vector2) -> void:
