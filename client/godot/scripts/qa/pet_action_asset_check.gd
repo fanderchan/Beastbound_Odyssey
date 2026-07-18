@@ -55,6 +55,18 @@ static func _append_contract_errors(errors: Array[String]) -> void:
 			errors.append("资产 manifest 未记录原创 AI 辅助来源")
 	if str(bundle.get("formId", "")) != PetActionAssetCatalog.FORM_ID:
 		errors.append("动作合同 formId 与目录不一致")
+	var battle_mapping := bundle.get("battleViewMapping", {}) as Dictionary
+	var ally_mapping := battle_mapping.get("ally", {}) as Dictionary
+	var enemy_mapping := battle_mapping.get("enemy", {}) as Dictionary
+	if (
+		str(ally_mapping.get("view", "")) != PetActionAssetCatalog.VIEW_BACK
+		or not bool(ally_mapping.get("flipH", false))
+		or str(ally_mapping.get("facing", "")) != "northwest"
+		or str(enemy_mapping.get("view", "")) != PetActionAssetCatalog.VIEW_FRONT
+		or not bool(enemy_mapping.get("flipH", false))
+		or str(enemy_mapping.get("facing", "")) != "southeast"
+	):
+		errors.append("战斗双方没有按敌左己右布局面对面")
 	var runtime_frame_size := bundle.get("runtimeFrameSize", []) as Array
 	if runtime_frame_size.size() != 2 or int(runtime_frame_size[0]) != 256 or int(runtime_frame_size[1]) != 256:
 		errors.append("动作合同运行帧尺寸不是 256x256")

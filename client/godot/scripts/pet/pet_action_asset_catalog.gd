@@ -80,6 +80,10 @@ static func battle_view_for_side(side: String) -> String:
 	return VIEW_BACK if side.strip_edges().to_lower() == "ally" else VIEW_FRONT
 
 
+static func battle_flip_h_for_side(side: String) -> bool:
+	return ["ally", "enemy"].has(side.strip_edges().to_lower())
+
+
 static func action_for_battle_state(action_state: String) -> String:
 	var normalized := action_state.strip_edges().to_lower()
 	if ["attack", "combo", "skill", "counter_attack", "multi_attack"].has(normalized):
@@ -142,7 +146,12 @@ static func validation_errors() -> Array[String]:
 		errors.append("正式动作帧应为 68，实际可读 %d" % seen_count)
 	if action_for_battle_state("combo") != "attack" or action_for_battle_state("hit") != "hurt" or action_for_battle_state("defend") != "defend":
 		errors.append("战斗动作映射不完整")
-	if battle_view_for_side("ally") != VIEW_BACK or battle_view_for_side("enemy") != VIEW_FRONT:
+	if (
+		battle_view_for_side("ally") != VIEW_BACK
+		or battle_view_for_side("enemy") != VIEW_FRONT
+		or not battle_flip_h_for_side("ally")
+		or not battle_flip_h_for_side("enemy")
+	):
 		errors.append("战斗视角映射不正确")
 	return errors
 

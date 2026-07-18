@@ -13632,10 +13632,13 @@ func _draw_formal_battle_pet_actor(form_id: String, side: String, state: String,
 		return false
 	var target_size := 156.0 * visual_scale
 	var target_rect := Rect2(
-		pos + Vector2(-target_size * 0.5, -target_size * 0.92),
+		Vector2(-target_size * 0.5, -target_size * 0.92),
 		Vector2(target_size, target_size)
 	)
+	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
+	draw_set_transform(pos, 0.0, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
 
 

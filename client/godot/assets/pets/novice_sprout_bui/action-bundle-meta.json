@@ -48,8 +48,8 @@
     "northwest": {"view": "back_3quarter_ne", "flipH": true}
   },
   "battleViewMapping": {
-    "ally": "back_3quarter_ne",
-    "enemy": "front_3quarter_sw"
+    "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
+    "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
   },
   "source": {
     "kind": "project_original_ai_assisted",
