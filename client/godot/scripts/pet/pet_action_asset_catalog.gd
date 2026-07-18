@@ -1,7 +1,10 @@
 extends RefCounted
 
+const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
+
 const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const ROOT := "res://assets/pets/novice_sprout_bui/views"
+const WORLD_ROOT := "res://assets/pets/novice_sprout_bui/world/directions"
 const VIEW_FRONT := "front_3quarter_sw"
 const VIEW_BACK := "back_3quarter_ne"
 const VIEWS: Array[String] = [VIEW_FRONT, VIEW_BACK]
@@ -16,6 +19,10 @@ const FRAME_COUNTS := {
 	"stagger": 8,
 	"down": 8,
 }
+const WORLD_FRAME_COUNTS := {
+	"idle": 1,
+	"walk": 4,
+}
 const ACTION_FPS := {
 	"idle": 8.0,
 	"walk": 11.0,
@@ -24,6 +31,10 @@ const ACTION_FPS := {
 	"defend": 10.0,
 	"stagger": 10.0,
 	"down": 10.0,
+}
+const WORLD_ACTION_FPS := {
+	"idle": 4.0,
+	"walk": 10.0,
 }
 const LOOPING_ACTIONS: Array[String] = ["idle", "walk"]
 
@@ -41,7 +52,7 @@ static func warm_world_form(form_id: String) -> bool:
 		return false
 	if _world_warmed:
 		return true
-	_world_warmed = _warm_actions(WORLD_ACTIONS)
+	_world_warmed = _warm_world_actions()
 	return _world_warmed
 
 
@@ -51,8 +62,6 @@ static func warm_battle_form(form_id: String) -> bool:
 	if _battle_warmed:
 		return true
 	_battle_warmed = _warm_actions(BATTLE_ACTIONS)
-	if _battle_warmed:
-		_world_warmed = true
 	return _battle_warmed
 
 
@@ -70,14 +79,11 @@ static func warm_battle_state(state: Dictionary) -> bool:
 
 
 static func world_view_for_direction(facing: String) -> String:
-	match facing.strip_edges().to_lower():
-		"north", "northeast", "east", "northwest":
-			return VIEW_BACK
-	return VIEW_FRONT
+	return WorldVisualDirectionContract.normalize_direction(facing)
 
 
 static func world_flip_h_for_direction(facing: String) -> bool:
-	return ["southeast", "northwest"].has(facing.strip_edges().to_lower())
+	return false
 
 
 static func battle_view_for_side(side: String) -> String:
@@ -109,6 +115,17 @@ static func action_fps(action: String) -> float:
 	return float(ACTION_FPS.get(_normalized_action(action), ACTION_FPS["idle"]))
 
 
+static func world_action_fps(action: String) -> float:
+	var normalized_action := _normalized_world_action(action)
+	return float(WORLD_ACTION_FPS[normalized_action])
+
+
+static func world_frame_index_for_elapsed(action: String, elapsed_seconds: float) -> int:
+	var normalized_action := _normalized_world_action(action)
+	var count := int(WORLD_FRAME_COUNTS[normalized_action])
+	return int(floor(maxf(0.0, elapsed_seconds) * world_action_fps(normalized_action))) % count
+
+
 static func texture_for_elapsed(form_id: String, view: String, action: String, elapsed_seconds: float) -> Texture2D:
 	if not supports_form(form_id):
 		return null
@@ -129,6 +146,33 @@ static func texture_for_progress(form_id: String, view: String, action: String, 
 	var count := int(FRAME_COUNTS[normalized_action])
 	var frame_index := mini(count - 1, int(floor(clampf(progress, 0.0, 1.0) * float(count))))
 	return _cached_texture(view, normalized_action, frame_index + 1)
+
+
+static func world_texture_for_elapsed(form_id: String, direction: String, action: String, elapsed_seconds: float) -> Texture2D:
+	if not supports_form(form_id):
+		return null
+	return world_texture_for_frame(
+		form_id,
+		direction,
+		action,
+		world_frame_index_for_elapsed(action, elapsed_seconds) + 1
+	)
+
+
+static func world_texture_for_frame(form_id: String, direction: String, action: String, frame_index: int) -> Texture2D:
+	if not supports_form(form_id):
+		return null
+	var path := world_frame_path(direction, action, frame_index)
+	var texture = _texture_cache.get(path)
+	return texture as Texture2D if texture is Texture2D else null
+
+
+static func world_frame_path(direction: String, action: String, frame_index: int) -> String:
+	var normalized_direction := WorldVisualDirectionContract.normalize_direction(direction)
+	var normalized_action := _normalized_world_action(action)
+	var count := int(WORLD_FRAME_COUNTS[normalized_action])
+	var safe_index := clampi(frame_index, 1, count)
+	return _world_frame_path(normalized_direction, normalized_action, safe_index)
 
 
 static func validation_errors() -> Array[String]:
@@ -152,6 +196,25 @@ static func validation_errors() -> Array[String]:
 				seen_count += 1
 	if seen_count != 100:
 		errors.append("正式动作帧应为 100，实际可读 %d" % seen_count)
+	var seen_world_count := 0
+	for direction in WorldVisualDirectionContract.DIRECTIONS:
+		for action_value in WORLD_FRAME_COUNTS.keys():
+			var action := str(action_value)
+			for frame_index in range(1, int(WORLD_FRAME_COUNTS[action]) + 1):
+				var path := _world_frame_path(direction, action, frame_index)
+				if not ResourceLoader.exists(path):
+					errors.append("缺少宠物世界八向帧：%s" % path)
+					continue
+				var texture = load(path)
+				if not (texture is Texture2D):
+					errors.append("宠物世界八向帧不是 Texture2D：%s" % path)
+					continue
+				var typed_texture := texture as Texture2D
+				if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
+					errors.append("宠物世界八向帧尺寸不是 256x256：%s" % path)
+				seen_world_count += 1
+	if seen_world_count != 40:
+		errors.append("宠物世界八向帧应为 40，实际可读 %d" % seen_world_count)
 	if (
 		action_for_battle_state("combo") != "attack"
 		or action_for_battle_state("hit") != "hurt"
@@ -187,6 +250,23 @@ static func _warm_actions(actions: Array[String]) -> bool:
 	return ok
 
 
+static func _warm_world_actions() -> bool:
+	var ok := true
+	for direction in WorldVisualDirectionContract.DIRECTIONS:
+		for action_value in WORLD_FRAME_COUNTS.keys():
+			var action := str(action_value)
+			for frame_index in range(1, int(WORLD_FRAME_COUNTS[action]) + 1):
+				var path := _world_frame_path(direction, action, frame_index)
+				if _texture_cache.has(path):
+					continue
+				var texture = load(path)
+				if texture is Texture2D:
+					_texture_cache[path] = texture
+				else:
+					ok = false
+	return ok
+
+
 static func _cached_texture(view: String, action: String, frame_index: int) -> Texture2D:
 	var path := _frame_path(_normalized_view(view), action, frame_index)
 	var texture = _texture_cache.get(path)
@@ -197,9 +277,17 @@ static func _frame_path(view: String, action: String, frame_index: int) -> Strin
 	return "%s/%s/%s/%s-%d.png" % [ROOT, _normalized_view(view), action, action, frame_index]
 
 
+static func _world_frame_path(direction: String, action: String, frame_index: int) -> String:
+	return "%s/%s/%s/%s-%d.png" % [WORLD_ROOT, direction, action, action, frame_index]
+
+
 static func _normalized_view(view: String) -> String:
 	return view if VIEWS.has(view) else VIEW_FRONT
 
 
 static func _normalized_action(action: String) -> String:
 	return action if FRAME_COUNTS.has(action) else "idle"
+
+
+static func _normalized_world_action(action: String) -> String:
+	return action if WORLD_FRAME_COUNTS.has(action) else "idle"

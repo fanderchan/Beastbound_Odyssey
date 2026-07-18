@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "bundleId": "pet_action_novice_sprout_bui_v1",
   "formId": "bui_novice_sprout_earth5_wind5",
   "displayName": "芽耳布伊",
@@ -48,19 +48,40 @@
       "holdLastFrame": true
     }
   },
-  "worldDirectionMapping": {
-    "south": {"view": "front_3quarter_sw", "flipH": false},
-    "southwest": {"view": "front_3quarter_sw", "flipH": false},
-    "west": {"view": "front_3quarter_sw", "flipH": false},
-    "north": {"view": "back_3quarter_ne", "flipH": false},
-    "northeast": {"view": "back_3quarter_ne", "flipH": false},
-    "east": {"view": "back_3quarter_ne", "flipH": false},
-    "southeast": {"view": "front_3quarter_sw", "flipH": true},
-    "northwest": {"view": "back_3quarter_ne", "flipH": true}
+  "worldVisual": {
+    "strategy": "independent_8",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "runtimeMirroring": false,
+    "actions": {
+      "idle": {"frameCount": 1, "loop": true},
+      "walk": {"frameCount": 4, "loop": true}
+    },
+    "totalFrameCount": 40,
+    "runtimeMountedComposition": false,
+    "mountedPresentationBundle": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1"
   },
   "battleViewMapping": {
     "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
     "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
+  },
+  "battleCompatibility": {
+    "preserved": true,
+    "viewCount": 2,
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "totalFrameCount": 100,
+    "worldDirectionSource": false
   },
   "source": {
     "kind": "project_original_ai_assisted",
@@ -74,6 +95,7 @@
   "quality": {
     "resolution": "hd_512_source_with_256_runtime_frames",
     "formalBattleViewsComplete": true,
+    "worldLocomotionDirectionContract": "independent_8_no_runtime_mirroring",
     "canaryMinimumActionPackComplete": true,
     "formalReleaseActionPackComplete": false,
     "selfReviewStatus": "passed_after_runtime_review",

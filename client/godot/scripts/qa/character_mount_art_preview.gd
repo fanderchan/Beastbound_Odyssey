@@ -1,7 +1,7 @@
 extends Node2D
 
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
-const MountComposite2D := preload("res://scripts/player/mount_composite_2d.gd")
+const MountedCharacter2D := preload("res://scripts/player/mounted_character_2d.gd")
 const FORM_ID := "bui_novice_sprout_earth5_wind5"
 
 var elapsed: float = 0.0
@@ -21,8 +21,8 @@ func _ready() -> void:
 	_build_labels()
 	front_character = _character_sprite(Vector2(235, 430), false)
 	back_character = _character_sprite(Vector2(445, 430), true)
-	front_mount = _mount_composite(Vector2(790, 472), "southwest")
-	back_mount = _mount_composite(Vector2(1060, 472), "northeast")
+	front_mount = _mounted_character(Vector2(745, 500), "southwest")
+	back_mount = _mounted_character(Vector2(1065, 500), "northeast")
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture-mount-art="):
 			capture_path = arg.trim_prefix("--capture-mount-art=").strip_edges()
@@ -104,22 +104,23 @@ func _character_sprite(position_value: Vector2, back_view: bool) -> Sprite2D:
 	return sprite
 
 
-func _mount_composite(position_value: Vector2, facing: String) -> Node2D:
-	var composite := Node2D.new()
-	composite.set_script(MountComposite2D)
-	composite.position = position_value
-	add_child(composite)
-	composite.call("set_mount_form", FORM_ID)
-	composite.call("set_presentation_scale", 0.86)
-	composite.call("set_visual_state", facing, "walk", 0.0)
-	return composite
+func _mounted_character(position_value: Vector2, facing: String) -> Node2D:
+	var mounted := Node2D.new()
+	mounted.set_script(MountedCharacter2D)
+	mounted.position = position_value
+	add_child(mounted)
+	mounted.call("set_mount_form", FORM_ID)
+	# Keep the real world ratio: mounted 0.58 / on-foot 0.36.
+	mounted.call("set_presentation_scale", 1.224)
+	mounted.call("set_visual_state", facing, "walk", 0.0)
+	return mounted
 
 
 func _build_labels() -> void:
 	_add_label("人物正式美术", Vector2(76, 34), 30, Color("f4de94"))
 	_add_label("见习猎人 · 正面 / 背面行走", Vector2(78, 94), 19, Color("d8e5d4"))
 	_add_label("芽耳布伊骑乘", Vector2(550, 34), 30, Color("f4de94"))
-	_add_label("坐骑本体 + 骑手姿态 + 前景遮挡", Vector2(552, 94), 19, Color("d8e5d4"))
+	_add_label("AI 整体生成 · 单张人骑宠运行帧", Vector2(552, 94), 19, Color("d8e5d4"))
 	_add_label("正向", Vector2(716, 528), 18, Color("d8c78f"))
 	_add_label("背向", Vector2(1015, 528), 18, Color("d8c78f"))
 

@@ -8,7 +8,19 @@
       "path": "res://assets/pets/novice_sprout_bui/action-bundle-meta.json",
       "runtimeEnabled": true,
       "releaseStatus": "self_review_passed_owner_review_pending",
+      "ownerReviewStatus": "pending",
       "source": "project_original_ai_assisted",
+      "worldVisual": {
+        "strategy": "independent_8",
+        "directions": 8,
+        "runtimeMirroring": false,
+        "frameCount": 40
+      },
+      "battleCompatibility": {
+        "views": 2,
+        "frameCount": 100,
+        "preserved": true
+      },
       "replacementPath": "assets/pets/novice_sprout_bui/identity/identity-lock.md"
     },
     {
@@ -18,27 +30,64 @@
       "path": "res://assets/characters/novice_hunter/action-bundle-meta.json",
       "runtimeEnabled": true,
       "releaseStatus": "self_review_passed_owner_review_pending",
+      "ownerReviewStatus": "pending",
       "source": "project_original_ai_assisted",
+      "worldVisual": {
+        "strategy": "independent_8",
+        "directions": 8,
+        "runtimeMirroring": false,
+        "onFootFrameCount": 40
+      },
+      "legacyTwoViewCompatibility": {
+        "views": 2,
+        "frameCount": 56,
+        "preserved": true,
+        "runtimeMountedComposition": false
+      },
       "replacementPath": "assets/characters/novice_hunter/identity/identity-lock.md"
     },
     {
+      "assetId": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1",
+      "type": "mounted_character_action_bundle",
+      "characterId": "novice_hunter_v1",
+      "mountFormId": "bui_novice_sprout_earth5_wind5",
+      "path": "res://assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/action-bundle-meta.json",
+      "runtimeEnabled": true,
+      "releaseStatus": "self_review_passed_owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "source": "project_original_ai_assisted",
+      "worldVisual": {
+        "strategy": "ai_generated_integrated_independent_8",
+        "directions": 8,
+        "runtimeMirroring": false,
+        "runtimeLayeredComposition": false,
+        "runtimeBodyLayerCount": 1,
+        "frameCount": 40
+      },
+      "replacementPath": "assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/identity/identity-lock.md"
+    },
+    {
       "assetId": "mount_visual_profiles_v1",
-      "type": "runtime_mount_composition_contract",
+      "type": "mount_visual_selection_contract",
       "path": "res://data/mount_visual_profiles.json",
       "runtimeEnabled": true,
-      "releaseStatus": "quadruped_canary_ready",
+      "releaseStatus": "integrated_mounted_pair_ready_owner_review_pending",
+      "ownerReviewStatus": "pending",
       "source": "project_original_configuration",
+      "worldVisualStrategy": "ai_generated_integrated_independent_8",
+      "runtimeLayeredComposition": false,
       "replacementPath": "data/mount_visual_profiles.json"
     },
     {
       "assetId": "mount_interface_bui_novice_sprout_v1",
-      "type": "mount_interface_bundle",
+      "type": "legacy_mount_interface_bundle",
       "formId": "bui_novice_sprout_earth5_wind5",
       "path": "res://assets/mounts/bui_novice_sprout_earth5_wind5/interface-bundle-meta.json",
-      "runtimeEnabled": true,
-      "releaseStatus": "self_review_passed_owner_review_pending",
+      "runtimeEnabled": false,
+      "releaseStatus": "superseded_by_integrated_mounted_art",
+      "ownerReviewStatus": "rejected_layered_approach",
       "source": "project_original_ai_assisted",
-      "replacementPath": "assets/mounts/bui_novice_sprout_earth5_wind5/source-and-ownership.md"
+      "replacementPath": "assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/action-bundle-meta.json"
     }
   ]
 }

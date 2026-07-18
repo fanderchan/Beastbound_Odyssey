@@ -1,7 +1,9 @@
 extends Node2D
 
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
-const MountComposite2D := preload("res://scripts/player/mount_composite_2d.gd")
+const MountedCharacter2D := preload("res://scripts/player/mounted_character_2d.gd")
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+
 const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const DIRECTIONS: Array[String] = [
 	"south",
@@ -42,10 +44,12 @@ var capture_path: String = ""
 var capture_complete: bool = false
 var active_direction_index: int = -1
 var active_character: Sprite2D
+var active_pet: Sprite2D
 var active_mount: Node2D
 var active_title: Label
 var active_mapping: Label
 var grid_characters: Array[Sprite2D] = []
+var grid_pets: Array[Sprite2D] = []
 var grid_mounts: Array[Node2D] = []
 
 
@@ -60,6 +64,7 @@ func _ready() -> void:
 			capture_path = arg.trim_prefix("--capture-mount-directions=").strip_edges()
 			grid_mode = true
 	CharacterActionAssetCatalog.warm()
+	PetActionAssetCatalog.warm_world_form(FORM_ID)
 	if grid_mode:
 		_build_grid()
 	else:
@@ -74,7 +79,7 @@ func _process(delta: float) -> void:
 		if capture_path != "" and not capture_complete and elapsed >= 1.8:
 			capture_complete = true
 			var error := get_viewport().get_texture().get_image().save_png(capture_path)
-			print("mount direction grid capture: path=%s error=%d" % [capture_path, error])
+			print("true eight direction grid capture: path=%s error=%d" % [capture_path, error])
 			get_tree().quit(0 if error == OK else 1)
 		return
 	_update_cycle()
@@ -94,34 +99,38 @@ func _draw() -> void:
 
 
 func _build_grid() -> void:
-	_add_label("人物 / 芽耳布伊骑乘 · 八方向总览", Vector2(42, 24), 30, Color("f4de94"))
-	_add_label("每格左侧为人物，右侧为运行时分层骑乘；这里如实显示当前母版复用与镜像", Vector2(43, 61), 16, Color("c8d8cf"))
+	_add_label("人物 / 宠物 / 人骑宠 · 真八方向视觉验收", Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("每格均为独立源方向，不做水平镜像；三栏按游戏内世界比例等比缩放", Vector2(43, 58), 16, Color("c8d8cf"))
 	for index in range(DIRECTIONS.size()):
 		var direction := DIRECTIONS[index]
 		var rect := _grid_rect(index)
 		_add_label(
-			"%d  %s · %s" % [index + 1, DIRECTION_NAMES[direction], _mapping_text(direction)],
-			rect.position + Vector2(18, 12),
-			16,
+			"%d  %s · 独立源图" % [index + 1, DIRECTION_NAMES[direction]],
+			rect.position + Vector2(15, 10),
+			15,
 			Color("edd689")
 		)
-		_add_label("人物", rect.position + Vector2(52, 49), 13, Color("b9cbc1"))
-		_add_label("骑乘", rect.position + Vector2(197, 49), 13, Color("b9cbc1"))
-		var character := _character_sprite(rect.position + Vector2(82, 202), 0.43)
-		grid_characters.append(character)
-		var mount := _mount_composite(rect.position + Vector2(220, 215), direction, 0.43)
-		grid_mounts.append(mount)
+		_add_label("人", rect.position + Vector2(49, 43), 13, Color("b9cbc1"))
+		_add_label("宠", rect.position + Vector2(139, 43), 13, Color("b9cbc1"))
+		_add_label("骑", rect.position + Vector2(229, 43), 13, Color("b9cbc1"))
+		# 正式世界比例是人物/跟宠 0.36、骑乘组合 0.58。验收格整体缩小，
+		# 但保持 0.58 / 0.36 的真实比例，避免把骑手误展示成比步行人物更小。
+		grid_characters.append(_character_sprite(rect.position + Vector2(52, 223), 0.29))
+		grid_pets.append(_pet_sprite(rect.position + Vector2(137, 220), 0.29))
+		grid_mounts.append(_mounted_character(rect.position + Vector2(233, 226), direction, 0.467))
 
 
 func _build_cycle() -> void:
-	_add_label("人物 / 芽耳布伊骑乘 · 八方向逐项录像", Vector2(42, 24), 30, Color("f4de94"))
-	_add_label("左：人物原动作层　　右：坐骑 + 骑手姿态 + 宠物前景遮挡", Vector2(43, 61), 16, Color("c8d8cf"))
-	_add_label("不骑宠", Vector2(255, 128), 24, Color("e8d58f"))
-	_add_label("骑芽耳布伊", Vector2(864, 128), 24, Color("e8d58f"))
-	active_title = _add_label("", Vector2(520, 108), 28, Color("fff0b2"))
-	active_mapping = _add_label("", Vector2(505, 147), 16, Color("b9cbc1"))
-	active_character = _character_sprite(Vector2(333, 438), 0.92)
-	active_mount = _mount_composite(Vector2(928, 488), DIRECTIONS[0], 0.91)
+	_add_label("人物 / 宠物 / 人骑宠 · 真八方向逐项录像", Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("独立八向源图 · 无运行时镜像 · 骑手、坐骑与运动轴必须一致", Vector2(43, 58), 16, Color("c8d8cf"))
+	_add_label("人物", Vector2(190, 126), 23, Color("e8d58f"))
+	_add_label("宠物", Vector2(596, 126), 23, Color("e8d58f"))
+	_add_label("人骑宠", Vector2(994, 126), 23, Color("e8d58f"))
+	active_title = _add_label("", Vector2(520, 98), 26, Color("fff0b2"))
+	active_mapping = _add_label("", Vector2(519, 158), 15, Color("b9cbc1"))
+	active_character = _character_sprite(Vector2(214, 475), 0.72)
+	active_pet = _pet_sprite(Vector2(624, 477), 0.72)
+	active_mount = _mounted_character(Vector2(1031, 489), DIRECTIONS[0], 1.16)
 	for index in range(DIRECTIONS.size()):
 		var x := 34.0 + float(index) * 153.0
 		_add_label("%d %s" % [index + 1, DIRECTION_NAMES[DIRECTIONS[index]]], Vector2(x + 37, 655), 15, Color("cfdcd4"))
@@ -130,8 +139,8 @@ func _build_cycle() -> void:
 func _update_grid() -> void:
 	for index in range(DIRECTIONS.size()):
 		var direction := DIRECTIONS[index]
-		var character := grid_characters[index]
-		_update_character(character, direction, elapsed)
+		_update_character(grid_characters[index], direction, elapsed)
+		_update_pet(grid_pets[index], direction, elapsed)
 		grid_mounts[index].call("set_visual_state", direction, "walk", elapsed)
 
 
@@ -141,17 +150,22 @@ func _update_cycle() -> void:
 	if next_index != active_direction_index:
 		active_direction_index = next_index
 		active_title.text = "第 %d / 8 方向：%s" % [next_index + 1, DIRECTION_NAMES[direction]]
-		active_mapping.text = _mapping_text(direction)
+		active_mapping.text = "人物、宠物、骑乘均为 %s 独立源图" % DIRECTION_NAMES[direction]
 		queue_redraw()
 	var local_elapsed := fmod(elapsed, DIRECTION_SECONDS)
 	_update_character(active_character, direction, local_elapsed)
+	_update_pet(active_pet, direction, local_elapsed)
 	active_mount.call("set_visual_state", direction, "walk", local_elapsed)
 
 
 func _update_character(sprite: Sprite2D, direction: String, animation_elapsed: float) -> void:
-	var view := CharacterActionAssetCatalog.world_view_for_direction(direction)
-	sprite.flip_h = CharacterActionAssetCatalog.world_flip_h_for_direction(direction)
-	sprite.texture = CharacterActionAssetCatalog.texture_for_elapsed(view, "walk", animation_elapsed)
+	sprite.flip_h = false
+	sprite.texture = CharacterActionAssetCatalog.world_texture_for_elapsed(direction, "walk", animation_elapsed)
+
+
+func _update_pet(sprite: Sprite2D, direction: String, animation_elapsed: float) -> void:
+	sprite.flip_h = false
+	sprite.texture = PetActionAssetCatalog.world_texture_for_elapsed(FORM_ID, direction, "walk", animation_elapsed)
 
 
 func _character_sprite(position_value: Vector2, scale_value: float) -> Sprite2D:
@@ -163,29 +177,34 @@ func _character_sprite(position_value: Vector2, scale_value: float) -> Sprite2D:
 	return sprite
 
 
-func _mount_composite(position_value: Vector2, direction: String, scale_value: float) -> Node2D:
-	var composite := Node2D.new()
-	composite.set_script(MountComposite2D)
-	composite.position = position_value
-	add_child(composite)
-	composite.call("set_mount_form", FORM_ID)
-	composite.call("set_presentation_scale", scale_value)
-	composite.call("set_visual_state", direction, "walk", 0.0)
-	return composite
+func _pet_sprite(position_value: Vector2, scale_value: float) -> Sprite2D:
+	return _character_sprite(position_value, scale_value)
+
+
+func _mounted_character(position_value: Vector2, direction: String, scale_value: float) -> Node2D:
+	var mounted := Node2D.new()
+	mounted.set_script(MountedCharacter2D)
+	mounted.position = position_value
+	add_child(mounted)
+	mounted.call("set_mount_form", FORM_ID)
+	mounted.call("set_presentation_scale", scale_value)
+	mounted.call("set_visual_state", direction, "walk", 0.0)
+	return mounted
 
 
 func _draw_grid_panels() -> void:
 	for index in range(DIRECTIONS.size()):
 		var rect := _grid_rect(index)
 		draw_style_box(_panel_style(), rect)
-		_draw_direction_arrow(rect.position + Vector2(152, 64), DIRECTIONS[index], 21.0)
+		_draw_direction_arrow(rect.position + Vector2(274, 27), DIRECTIONS[index], 17.0)
 
 
 func _draw_cycle_panels() -> void:
-	draw_style_box(_panel_style(), Rect2(54, 177, 535, 430))
-	draw_style_box(_panel_style(), Rect2(691, 177, 535, 430))
+	draw_style_box(_panel_style(), Rect2(34, 177, 365, 430))
+	draw_style_box(_panel_style(), Rect2(457, 177, 365, 430))
+	draw_style_box(_panel_style(), Rect2(880, 177, 365, 430))
 	var direction := DIRECTIONS[maxi(0, active_direction_index)]
-	_draw_direction_arrow(Vector2(640, 355), direction, 55.0)
+	_draw_direction_arrow(Vector2(640, 203), direction, 42.0)
 	for index in range(DIRECTIONS.size()):
 		var rect := Rect2(34.0 + float(index) * 153.0, 641, 142, 54)
 		var active := index == active_direction_index
@@ -198,12 +217,12 @@ func _draw_direction_arrow(center: Vector2, direction: String, length: float) ->
 	var start := center - vector * length * 0.45
 	var finish := center + vector * length * 0.55
 	var color := Color("f2d46e")
-	draw_line(start, finish, color, 4.0, true)
+	draw_line(start, finish, color, 3.0, true)
 	var perpendicular := Vector2(-vector.y, vector.x)
 	draw_colored_polygon(PackedVector2Array([
 		finish,
-		finish - vector * 13.0 + perpendicular * 8.0,
-		finish - vector * 13.0 - perpendicular * 8.0,
+		finish - vector * 10.0 + perpendicular * 6.0,
+		finish - vector * 10.0 - perpendicular * 6.0,
 	]), color)
 
 
@@ -227,13 +246,6 @@ func _panel_style() -> StyleBoxFlat:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(13)
 	return style
-
-
-func _mapping_text(direction: String) -> String:
-	var view := CharacterActionAssetCatalog.world_view_for_direction(direction)
-	var view_name := "正面母版" if view == CharacterActionAssetCatalog.VIEW_FRONT else "背面母版"
-	var mirror_name := "水平镜像" if CharacterActionAssetCatalog.world_flip_h_for_direction(direction) else "未镜像"
-	return "%s · %s" % [view_name, mirror_name]
 
 
 func _add_label(text_value: String, position_value: Vector2, font_size: int, color: Color) -> Label:

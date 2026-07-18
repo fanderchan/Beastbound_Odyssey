@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
+const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 
 @export var walk_speed: float = 160.0
@@ -26,7 +27,7 @@ const FACING_KEYS := [
 @onready var right_foot: Polygon2D = $RightFoot
 @onready var shadow: Polygon2D = $Shadow
 @onready var formal_sprite: Sprite2D = $FormalSprite
-@onready var mount_composite: Node2D = $MountComposite
+@onready var mounted_character: Node2D = $MountedCharacter
 
 const IDLE_ANIMATION_STEP_SECONDS := 0.125
 const AUTO_MOVE_ARRIVE_DISTANCE := 4.0
@@ -67,7 +68,12 @@ func _process(delta: float) -> void:
 	animation_time += animation_delta
 	animation_visual_elapsed += animation_delta
 	if formal_asset_enabled:
-		var frame_step := 1.0 / maxf(1.0, CharacterActionAssetCatalog.action_fps(_formal_action()))
+		var animation_fps := (
+			MountedCharacterAssetCatalog.world_action_fps(animation_state)
+			if riding_form_id != ""
+			else CharacterActionAssetCatalog.world_action_fps(animation_state)
+		)
+		var frame_step := 1.0 / maxf(1.0, animation_fps)
 		if animation_visual_elapsed < frame_step:
 			return
 		animation_visual_elapsed = fmod(animation_visual_elapsed, frame_step)
@@ -258,13 +264,12 @@ func get_animation_clip_key() -> String:
 func set_riding_form(form_id: String) -> bool:
 	var normalized := form_id.strip_edges()
 	var mounted := false
-	if mount_composite != null and mount_composite.has_method("set_mount_form"):
-		mounted = bool(mount_composite.call("set_mount_form", normalized))
+	if mounted_character != null and mounted_character.has_method("set_mount_form"):
+		mounted = bool(mounted_character.call("set_mount_form", normalized))
 	riding_form_id = normalized if mounted else ""
 	if mounted:
-		var profile := MountVisualProfileCatalog.profile_for_form(riding_form_id)
-		if mount_composite.has_method("set_presentation_scale"):
-			mount_composite.call("set_presentation_scale", float(profile.get("worldPresentationScale", 0.58)))
+		if mounted_character.has_method("set_presentation_scale"):
+			mounted_character.call("set_presentation_scale", MountVisualProfileCatalog.world_presentation_scale_for_form(riding_form_id))
 	if formal_sprite != null:
 		formal_sprite.visible = formal_asset_enabled and not mounted
 	if shadow != null:
@@ -300,30 +305,22 @@ func _set_animation_state(next_state: String) -> void:
 		_update_formal_animation()
 
 
-func _formal_action() -> String:
-	if riding_form_id != "":
-		return "ride_walk" if animation_state == "walk" else "ride_idle"
-	return animation_state
-
-
 func _update_formal_animation() -> void:
 	if not formal_asset_enabled:
 		return
 	if riding_form_id != "":
-		if mount_composite != null and mount_composite.has_method("set_visual_state"):
-			mount_composite.call("set_visual_state", facing_key, animation_state, animation_time)
+		if mounted_character != null and mounted_character.has_method("set_visual_state"):
+			mounted_character.call("set_visual_state", facing_key, animation_state, animation_time)
 		return
 	if formal_sprite == null:
 		return
-	var view := CharacterActionAssetCatalog.world_view_for_direction(facing_key)
-	var texture := CharacterActionAssetCatalog.texture_for_elapsed(view, animation_state, animation_time)
+	var texture := CharacterActionAssetCatalog.world_texture_for_elapsed(facing_key, animation_state, animation_time)
 	if texture != null and texture != last_formal_texture:
 		formal_sprite.texture = texture
 		last_formal_texture = texture
-	var flip_h := CharacterActionAssetCatalog.world_flip_h_for_direction(facing_key)
-	if flip_h != last_formal_flip_h:
-		formal_sprite.flip_h = flip_h
-		last_formal_flip_h = flip_h
+	if last_formal_flip_h:
+		formal_sprite.flip_h = false
+		last_formal_flip_h = false
 
 
 func _set_placeholder_visible(value: bool) -> void:

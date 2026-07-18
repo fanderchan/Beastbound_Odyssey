@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1",
+  "characterId": "novice_hunter_v1",
+  "mountFormId": "bui_novice_sprout_earth5_wind5",
+  "displayName": "见习猎人骑乘芽耳布伊",
+  "identityLock": "identity/identity-lock.md",
+  "runtimeFrameSize": [256, 256],
+  "worldVisual": {
+    "strategy": "ai_generated_integrated_independent_8",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {"frameCount": 1, "fps": 4, "loop": true},
+      "walk": {"frameCount": 4, "fps": 10, "loop": true}
+    },
+    "totalFrameCount": 40,
+    "runtimeMirroring": false,
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 1
+  },
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "createdForRepository": true,
+    "ownershipRecord": "source-and-ownership.md",
+    "generationContract": "prompts/generation-contract.md",
+    "replacementPath": "Regenerate each complete rider-and-mount direction as one image, then rerun whole-subject normalization and visual/runtime gates."
+  },
+  "postProcessing": {
+    "allowed": ["background_removal", "whole_subject_crop", "whole_subject_scale", "baseline_alignment"],
+    "forbidden": ["separate_rider_mount_pixel_composition", "runtime_seat_anchor_composition", "runtime_horizontal_mirroring"]
+  },
+  "quality": {
+    "selfReviewStatus": "passed_integrated_8_direction_32_frame_walk_grid",
+    "ownerReviewStatus": "pending",
+    "runtimeReviewStatus": "passed_1280x720_metal_direction_review_and_battle_check"
+  },
+  "knownScope": {
+    "included": ["world_idle", "world_walk", "battle_mounted_idle_walk_presentation"],
+    "deferred": ["mounted_attack_unique", "mounted_hurt_unique", "mounted_down_unique", "other_character_mount_pairs"]
+  }
+}

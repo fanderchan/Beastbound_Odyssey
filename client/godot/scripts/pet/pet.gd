@@ -65,7 +65,7 @@ func _process(delta: float) -> void:
 		_set_animation_state("idle")
 	animation_visual_elapsed += animation_delta
 	if formal_asset_enabled:
-		var frame_step := 1.0 / maxf(1.0, PetActionAssetCatalog.action_fps(animation_state))
+		var frame_step := 1.0 / maxf(1.0, PetActionAssetCatalog.world_action_fps(animation_state))
 		if animation_visual_elapsed < frame_step:
 			return
 		animation_visual_elapsed = fmod(animation_visual_elapsed, frame_step)
@@ -171,15 +171,13 @@ func _update_placeholder_animation() -> void:
 func _update_formal_animation() -> void:
 	if not formal_asset_enabled or formal_sprite == null:
 		return
-	var view := PetActionAssetCatalog.world_view_for_direction(facing_key)
-	var texture := PetActionAssetCatalog.texture_for_elapsed(current_form_id, view, animation_state, animation_time)
+	var texture := PetActionAssetCatalog.world_texture_for_elapsed(current_form_id, facing_key, animation_state, animation_time)
 	if texture != null and texture != last_formal_texture:
 		formal_sprite.texture = texture
 		last_formal_texture = texture
-	var flip_h := PetActionAssetCatalog.world_flip_h_for_direction(facing_key)
-	if flip_h != last_formal_flip_h:
-		formal_sprite.flip_h = flip_h
-		last_formal_flip_h = flip_h
+	if last_formal_flip_h:
+		formal_sprite.flip_h = false
+		last_formal_flip_h = false
 
 
 func _set_placeholder_visible(value: bool) -> void:

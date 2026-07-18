@@ -15,6 +15,7 @@ const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visu
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
+const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
@@ -13705,15 +13706,13 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if formal_pet_drawn:
 		pass
 	elif kind == "player":
+		var integrated_mount_drawn := false
 		if _battle_actor_has_active_ride(actor):
-			var formal_mount_drawn := _draw_formal_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
-			if not formal_mount_drawn:
-				_draw_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
-				_draw_battle_rider_actor(actor, pos + Vector2(0, -25) * visual_scale, visual_scale, alpha, body_color, trim_color)
-		else:
-			draw_rect(Rect2(pos + Vector2(-19, -38) * visual_scale, Vector2(38, 56) * visual_scale), body_color, true)
-			draw_circle(pos + Vector2(0, -48) * visual_scale, 13.0 * visual_scale, Color(0.96, 0.72, 0.46, alpha))
-			draw_line(pos + Vector2(-18, -8) * visual_scale, pos + Vector2(18, -8) * visual_scale, trim_color, 4.0 * visual_scale, true)
+			integrated_mount_drawn = _draw_formal_battle_mount_actor(actor, pos, visual_scale, alpha, side, launch_rotation)
+		if not integrated_mount_drawn:
+			# 未完成专属 AI 整图的骑乘组合只降级为徒步人物；绝不猜测坐骑外形，
+			# 也绝不重新启用人物 + 宠物的运行时分层拼接。
+			_draw_battle_on_foot_player_actor(pos, visual_scale, alpha, body_color, trim_color)
 	elif kind == "pet":
 		var pet_body_center := pos + Vector2(0, -14) * visual_scale
 		draw_circle(pet_body_center, 25.0 * visual_scale, body_color)
@@ -13765,6 +13764,12 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_actor_label(actor, pos + Vector2(0, name_offset), visual_scale, alpha, compact_labels)
 	if int(actor.get("hp", 0)) > 0:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
+
+
+func _draw_battle_on_foot_player_actor(pos: Vector2, visual_scale: float, alpha: float, body_color: Color, trim_color: Color) -> void:
+	draw_rect(Rect2(pos + Vector2(-19, -38) * visual_scale, Vector2(38, 56) * visual_scale), body_color, true)
+	draw_circle(pos + Vector2(0, -48) * visual_scale, 13.0 * visual_scale, Color(0.96, 0.72, 0.46, alpha))
+	draw_line(pos + Vector2(-18, -8) * visual_scale, pos + Vector2(18, -8) * visual_scale, trim_color, 4.0 * visual_scale, true)
 
 
 func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
@@ -13831,119 +13836,35 @@ func _battle_actor_has_active_ride(actor: Dictionary) -> bool:
 
 func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, side: String, rotation_angle: float = 0.0) -> bool:
 	var form_id := str(actor.get("ridePetFormId", "")).strip_edges()
-	if not MountVisualProfileCatalog.supports_form(form_id):
+	if MountVisualProfileCatalog.runtime_presentation_mode_for_form(form_id) != MountVisualProfileCatalog.PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY:
+		return false
+	var character_id := MountVisualProfileCatalog.character_id_for_form(form_id)
+	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
 		return false
 	var state := str(actor.get("actionState", "idle")).strip_edges().to_lower()
 	var action := "walk" if ["attack", "combo", "skill", "counter_attack", "multi_attack", "dodge", "escape"].has(state) else "idle"
-	var view := PetActionAssetCatalog.battle_view_for_side(side)
-	var frame_index := CharacterActionAssetCatalog.frame_index_for_elapsed(action, battle_pet_art_elapsed)
-	var mount_texture := PetActionAssetCatalog.texture_for_elapsed(form_id, view, action, battle_pet_art_elapsed)
-	var rider_action := MountVisualProfileCatalog.rider_action_for(action)
-	var rider_texture := CharacterActionAssetCatalog.texture_for_frame(view, rider_action, frame_index + 1)
-	var plan := MountVisualProfileCatalog.composition_plan(form_id, view, action, frame_index)
-	if mount_texture == null or rider_texture == null or plan.is_empty():
-		return false
-	var presentation_scale := float(plan.get("battlePresentationScale", 0.88)) * visual_scale * 0.72
-	var mount_scale := float(plan.get("mountScale", 1.0)) * presentation_scale
-	var rider_scale := float(plan.get("riderScale", 1.0)) * presentation_scale
-	var mount_rect := Rect2(
-		Vector2(-128.0 * mount_scale, -float(plan.get("groundAnchorY", 224.0)) * mount_scale),
-		Vector2(256.0, 256.0) * mount_scale
+	# 战场敌左己右：己方读取背向左上，敌方读取正向右下。
+	# 两侧都使用独立源图，不再运行时镜像或拼接人物、宠物、鞍垫和近景层。
+	var direction := MountVisualProfileCatalog.battle_direction_for_side(form_id, side)
+	var texture := MountedCharacterAssetCatalog.world_texture_for_elapsed(
+		character_id,
+		form_id,
+		direction,
+		action,
+		battle_pet_art_elapsed
 	)
-	var seat_anchor := plan.get("seatAnchor", Vector2(128, 110)) as Vector2
-	var rider_anchor := plan.get("riderAnchor", Vector2(128, 150)) as Vector2
-	var seat_position := mount_rect.position + seat_anchor * mount_scale
-	var rider_rect := Rect2(seat_position - rider_anchor * rider_scale, Vector2(256.0, 256.0) * rider_scale)
-	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
-	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
-	draw_texture_rect(mount_texture, mount_rect, false, Color(1.0, 1.0, 1.0, alpha))
-	var saddle_back_texture := plan.get("saddleBackTexture", null) as Texture2D
-	var saddle_back_scale := float(plan.get("saddleBackScale", 0.0)) * mount_scale
-	if saddle_back_texture != null and saddle_back_scale > 0.0:
-		var saddle_back_anchor := plan.get("saddleBackAnchor", Vector2(128, 138)) as Vector2
-		var saddle_back_rect := Rect2(
-			seat_position - saddle_back_anchor * saddle_back_scale,
-			Vector2(256.0, 256.0) * saddle_back_scale
-		)
-		draw_texture_rect(saddle_back_texture, saddle_back_rect, false, Color(1.0, 1.0, 1.0, alpha))
-	draw_texture_rect(rider_texture, rider_rect, false, Color(1.0, 1.0, 1.0, alpha))
-	var occluder_regions = plan.get("frontOccluderRegions", [])
-	for source_region_value in occluder_regions as Array:
-		var source_region := source_region_value as Rect2
-		var destination_region := Rect2(
-			mount_rect.position + source_region.position * mount_scale,
-			source_region.size * mount_scale
-		)
-		draw_texture_rect_region(mount_texture, destination_region, source_region, Color(1.0, 1.0, 1.0, alpha))
+	if texture == null:
+		return false
+	var presentation_scale := MountVisualProfileCatalog.battle_presentation_scale_for_form(form_id) * visual_scale * 0.72
+	var ground_anchor_y := MountedCharacterAssetCatalog.world_ground_anchor_y(character_id, form_id)
+	var texture_rect := Rect2(
+		Vector2(-128.0 * presentation_scale, -ground_anchor_y * presentation_scale),
+		Vector2(256.0, 256.0) * presentation_scale
+	)
+	draw_set_transform(pos, rotation_angle, Vector2.ONE)
+	draw_texture_rect(texture, texture_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
-
-
-func _draw_battle_rider_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, body_color: Color, trim_color: Color) -> void:
-	var rider_body := body_color
-	if str(actor.get("id", "")) == BattleModel.PLAYER_ACTOR_ID:
-		rider_body = Color(0.78, 0.24, 0.23, alpha)
-	var rider_scale := visual_scale * 0.82
-	draw_rect(Rect2(pos + Vector2(-14, -37) * rider_scale, Vector2(28, 42) * rider_scale), rider_body, true)
-	draw_circle(pos + Vector2(0, -45) * rider_scale, 10.5 * rider_scale, Color(0.96, 0.72, 0.46, alpha))
-	draw_line(pos + Vector2(-13, -13) * rider_scale, pos + Vector2(13, -13) * rider_scale, trim_color, 3.0 * visual_scale, true)
-
-
-func _draw_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_scale: float, alpha: float, side: String, launch_rotation: float) -> void:
-	var form_id := str(actor.get("ridePetFormId", "")).to_lower()
-	if form_id.find("dragon") >= 0:
-		_draw_battle_dragon_mount(pos, visual_scale, alpha, side, launch_rotation)
-	else:
-		_draw_battle_tiger_mount(pos, visual_scale, alpha, side, launch_rotation)
-
-
-func _draw_battle_tiger_mount(pos: Vector2, visual_scale: float, alpha: float, side: String, launch_rotation: float) -> void:
-	var facing := -1.0 if side == BattleModel.SIDE_ALLY else 1.0
-	var body_center := pos + Vector2(0, -16) * visual_scale
-	var head_center := pos + Vector2(30.0 * facing, -24) * visual_scale
-	var body_color := Color(0.88, 0.56, 0.22, alpha)
-	var stripe_color := Color(0.22, 0.13, 0.08, 0.82 * alpha)
-	var body_points := _battle_ellipse_points(body_center, Vector2(42, 21) * visual_scale, launch_rotation)
-	var head_points := _battle_ellipse_points(head_center, Vector2(17, 14) * visual_scale, launch_rotation)
-	draw_polygon(body_points, _battle_solid_colors(body_points.size(), body_color))
-	draw_polygon(head_points, _battle_solid_colors(head_points.size(), body_color.lightened(0.08)))
-	draw_polygon(PackedVector2Array([
-		head_center + _battle_rotated_visual_offset(Vector2(-9 * facing, -12), visual_scale, launch_rotation),
-		head_center + _battle_rotated_visual_offset(Vector2(-1 * facing, -25), visual_scale, launch_rotation),
-		head_center + _battle_rotated_visual_offset(Vector2(4 * facing, -10), visual_scale, launch_rotation),
-	]), PackedColorArray([body_color.lightened(0.18), body_color.lightened(0.18), body_color.lightened(0.18)]))
-	for stripe_index in range(3):
-		var x := (-20.0 + float(stripe_index) * 17.0) * visual_scale
-		draw_line(
-			body_center + _battle_rotated_visual_offset(Vector2(x / visual_scale, -14), visual_scale, launch_rotation),
-			body_center + _battle_rotated_visual_offset(Vector2((x + 8.0 * visual_scale) / visual_scale, -1), visual_scale, launch_rotation),
-			stripe_color,
-			2.2 * visual_scale,
-			true
-		)
-	draw_circle(head_center + _battle_rotated_visual_offset(Vector2(7 * facing, -3), visual_scale, launch_rotation), 3.0 * visual_scale, Color(0.06, 0.08, 0.07, alpha))
-	draw_line(pos + Vector2(-27, 5) * visual_scale, pos + Vector2(25, 5) * visual_scale, Color(0.16, 0.10, 0.06, 0.68 * alpha), 4.0 * visual_scale, true)
-
-
-func _draw_battle_dragon_mount(pos: Vector2, visual_scale: float, alpha: float, side: String, launch_rotation: float) -> void:
-	var facing := -1.0 if side == BattleModel.SIDE_ALLY else 1.0
-	var body_center := pos + Vector2(0, -15) * visual_scale
-	var head_center := pos + Vector2(34.0 * facing, -26) * visual_scale
-	var body_color := Color(0.42, 0.72, 0.48, alpha)
-	var trim := Color(0.86, 0.96, 0.50, alpha)
-	var body_points := _battle_ellipse_points(body_center, Vector2(46, 24) * visual_scale, launch_rotation)
-	var head_points := _battle_ellipse_points(head_center, Vector2(19, 15) * visual_scale, launch_rotation)
-	draw_polygon(body_points, _battle_solid_colors(body_points.size(), body_color))
-	draw_polygon(head_points, _battle_solid_colors(head_points.size(), body_color.lightened(0.10)))
-	for spike_index in range(3):
-		var x := (-22.0 + float(spike_index) * 20.0) * visual_scale
-		draw_polygon(PackedVector2Array([
-			body_center + _battle_rotated_visual_offset(Vector2(x / visual_scale, -18), visual_scale, launch_rotation),
-			body_center + _battle_rotated_visual_offset(Vector2((x + 7.0 * visual_scale) / visual_scale, -36), visual_scale, launch_rotation),
-			body_center + _battle_rotated_visual_offset(Vector2((x + 14.0 * visual_scale) / visual_scale, -18), visual_scale, launch_rotation),
-		]), PackedColorArray([trim, trim, trim]))
-	draw_circle(head_center + _battle_rotated_visual_offset(Vector2(8 * facing, -3), visual_scale, launch_rotation), 3.3 * visual_scale, Color(0.06, 0.08, 0.07, alpha))
-	draw_line(pos + Vector2(-30, 6) * visual_scale, pos + Vector2(28, 6) * visual_scale, Color(0.12, 0.20, 0.13, 0.68 * alpha), 4.5 * visual_scale, true)
 
 
 func _battle_ellipse_points(center: Vector2, radius: Vector2, rotation: float = 0.0, segments: int = 24) -> PackedVector2Array:

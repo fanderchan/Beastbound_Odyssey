@@ -1,5 +1,7 @@
 # Phase 310：正式人物与通用分层骑乘美术
 
+> 2026-07-18 最终更正：Phase 310/311 的运行时分层骑乘路线已被项目所有者否决并由 Phase 312 取代。本文只保留为历史复现与取舍证据，其挂点、骑手层、鞍垫和近景遮挡不再是现行世界或战斗方案。现行合同见 `docs/phase_312_true_eight_direction_integrated_mount_art.md`。
+
 > 2026-07-18 更正：本阶段首版骑乘构图因人物反向、比例过小和硬贴感被项目所有者否决；旧截图/录像只保留为复现证据，不能作为视觉通过结论。现行骑手帧、比例、鞍垫接口和验收证据以 `docs/phase_311_mount_proportion_direction_layering_correction.md` 为准。
 
 日期：2026-07-18

@@ -12,9 +12,9 @@ static func run() -> Dictionary:
 	errors.append_array(BattleVisualPresentationModel.validation_errors())
 	_append_contract_errors(errors)
 	var warmed_world := PetActionAssetCatalog.warm_world_form(PetActionAssetCatalog.FORM_ID)
-	var world_texture := PetActionAssetCatalog.texture_for_elapsed(
+	var world_texture := PetActionAssetCatalog.world_texture_for_elapsed(
 		PetActionAssetCatalog.FORM_ID,
-		PetActionAssetCatalog.world_view_for_direction("southwest"),
+		"southwest",
 		"walk",
 		0.36
 	)
@@ -47,9 +47,12 @@ static func run() -> Dictionary:
 		errors.append("致死反击负伤退行帧未能加载")
 	return {
 		"ok": errors.is_empty(),
-		"frameCount": 100,
-		"views": PetActionAssetCatalog.VIEWS.size(),
-		"actions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),
+		"battleFrameCount": 100,
+		"battleViews": PetActionAssetCatalog.VIEWS.size(),
+		"battleActions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),
+		"worldFrameCount": 40,
+		"worldDirections": 8,
+		"worldUsesRuntimeMirroring": false,
 		"errors": errors,
 	}
 
