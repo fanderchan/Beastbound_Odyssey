@@ -1,0 +1,323 @@
+{
+  "target": "player",
+  "mode": "ride_walk",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/novice_hunter/source/back_3quarter_ne_ride_walk_v2_raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 110,
+  "rows": 2,
+  "cols": 4,
+  "cell_size": 256,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 8,
+  "frame_labels": [
+    "ride_walk-1",
+    "ride_walk-2",
+    "ride_walk-3",
+    "ride_walk-4",
+    "ride_walk-5",
+    "ride_walk-6",
+    "ride_walk-7",
+    "ride_walk-8"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        384,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 58522,
+      "selected_component_bbox": [
+        107,
+        59,
+        370,
+        479
+      ],
+      "crop_bbox": [
+        107,
+        59,
+        370,
+        479
+      ],
+      "edge_touch": false,
+      "output_size": [
+        141,
+        225
+      ],
+      "paste_position": [
+        57,
+        15
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        384,
+        0,
+        768,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 57878,
+      "selected_component_bbox": [
+        91,
+        61,
+        348,
+        478
+      ],
+      "crop_bbox": [
+        91,
+        61,
+        348,
+        478
+      ],
+      "edge_touch": false,
+      "output_size": [
+        137,
+        223
+      ],
+      "paste_position": [
+        59,
+        16
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        768,
+        0,
+        1152,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 56748,
+      "selected_component_bbox": [
+        71,
+        59,
+        318,
+        479
+      ],
+      "crop_bbox": [
+        71,
+        59,
+        318,
+        479
+      ],
+      "edge_touch": false,
+      "output_size": [
+        132,
+        225
+      ],
+      "paste_position": [
+        62,
+        15
+      ]
+    },
+    {
+      "grid": [
+        0,
+        3
+      ],
+      "source_box": [
+        1152,
+        0,
+        1536,
+        512
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 56836,
+      "selected_component_bbox": [
+        51,
+        61,
+        301,
+        478
+      ],
+      "crop_bbox": [
+        51,
+        61,
+        301,
+        478
+      ],
+      "edge_touch": false,
+      "output_size": [
+        134,
+        223
+      ],
+      "paste_position": [
+        61,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        384,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 58044,
+      "selected_component_bbox": [
+        107,
+        26,
+        374,
+        445
+      ],
+      "crop_bbox": [
+        107,
+        26,
+        374,
+        445
+      ],
+      "edge_touch": false,
+      "output_size": [
+        143,
+        224
+      ],
+      "paste_position": [
+        56,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        384,
+        512,
+        768,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 57095,
+      "selected_component_bbox": [
+        89,
+        27,
+        345,
+        445
+      ],
+      "crop_bbox": [
+        89,
+        27,
+        345,
+        445
+      ],
+      "edge_touch": false,
+      "output_size": [
+        137,
+        224
+      ],
+      "paste_position": [
+        59,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        768,
+        512,
+        1152,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 56222,
+      "selected_component_bbox": [
+        68,
+        30,
+        316,
+        447
+      ],
+      "crop_bbox": [
+        68,
+        30,
+        316,
+        447
+      ],
+      "edge_touch": false,
+      "output_size": [
+        133,
+        223
+      ],
+      "paste_position": [
+        61,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        3
+      ],
+      "source_box": [
+        1152,
+        512,
+        1536,
+        1024
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 56269,
+      "selected_component_bbox": [
+        50,
+        29,
+        300,
+        444
+      ],
+      "crop_bbox": [
+        50,
+        29,
+        300,
+        444
+      ],
+      "edge_touch": false,
+      "output_size": [
+        134,
+        222
+      ],
+      "paste_position": [
+        61,
+        17
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

@@ -13857,6 +13857,15 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
 	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(mount_texture, mount_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	var saddle_back_texture := plan.get("saddleBackTexture", null) as Texture2D
+	var saddle_back_scale := float(plan.get("saddleBackScale", 0.0)) * mount_scale
+	if saddle_back_texture != null and saddle_back_scale > 0.0:
+		var saddle_back_anchor := plan.get("saddleBackAnchor", Vector2(128, 138)) as Vector2
+		var saddle_back_rect := Rect2(
+			seat_position - saddle_back_anchor * saddle_back_scale,
+			Vector2(256.0, 256.0) * saddle_back_scale
+		)
+		draw_texture_rect(saddle_back_texture, saddle_back_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_texture_rect(rider_texture, rider_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	var occluder_regions = plan.get("frontOccluderRegions", [])
 	for source_region_value in occluder_regions as Array:

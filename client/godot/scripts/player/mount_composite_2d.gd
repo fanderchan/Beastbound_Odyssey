@@ -72,6 +72,15 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(horizontal_scale, 1.0))
 	_draw_shadow(plan.get("shadow", {}) as Dictionary, scale_factor)
 	draw_texture_rect(mount_texture, mount_rect, false)
+	var saddle_back_texture := plan.get("saddleBackTexture", null) as Texture2D
+	var saddle_back_scale := float(plan.get("saddleBackScale", 0.0)) * mount_scale
+	if saddle_back_texture != null and saddle_back_scale > 0.0:
+		var saddle_back_anchor := plan.get("saddleBackAnchor", Vector2(128, 138)) as Vector2
+		var saddle_back_rect := Rect2(
+			seat_position - saddle_back_anchor * saddle_back_scale,
+			Vector2(256.0, 256.0) * saddle_back_scale
+		)
+		draw_texture_rect(saddle_back_texture, saddle_back_rect, false)
 	draw_texture_rect(rider_texture, rider_rect, false)
 	var occluder_regions = plan.get("frontOccluderRegions", [])
 	for source_region_value in occluder_regions as Array:

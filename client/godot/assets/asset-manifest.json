@@ -29,6 +29,16 @@
       "releaseStatus": "quadruped_canary_ready",
       "source": "project_original_configuration",
       "replacementPath": "data/mount_visual_profiles.json"
+    },
+    {
+      "assetId": "mount_interface_bui_novice_sprout_v1",
+      "type": "mount_interface_bundle",
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "path": "res://assets/mounts/bui_novice_sprout_earth5_wind5/interface-bundle-meta.json",
+      "runtimeEnabled": true,
+      "releaseStatus": "self_review_passed_owner_review_pending",
+      "source": "project_original_ai_assisted",
+      "replacementPath": "assets/mounts/bui_novice_sprout_earth5_wind5/source-and-ownership.md"
     }
   ]
 }

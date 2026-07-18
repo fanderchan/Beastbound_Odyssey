@@ -38,7 +38,7 @@
     "resolution": "hd_512_source_with_256_runtime_frames",
     "worldLocomotionComplete": true,
     "quadrupedRidingPoseComplete": true,
-    "selfReviewStatus": "passed_after_chroma_despill",
+    "selfReviewStatus": "passed_v2_direction_proportion_layering_correction",
     "ownerReviewStatus": "pending"
   },
   "knownScope": {

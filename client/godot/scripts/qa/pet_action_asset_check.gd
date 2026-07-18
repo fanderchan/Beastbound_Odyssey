@@ -61,7 +61,11 @@ static func _append_contract_errors(errors: Array[String]) -> void:
 		return
 	var matching_assets: Array = []
 	for value in manifest.get("assets", []):
-		if value is Dictionary and str(value.get("formId", "")) == PetActionAssetCatalog.FORM_ID:
+		if (
+			value is Dictionary
+			and str(value.get("type", "")) == "pet_action_bundle"
+			and str(value.get("formId", "")) == PetActionAssetCatalog.FORM_ID
+		):
 			matching_assets.append(value)
 	if matching_assets.size() != 1:
 		errors.append("资产 manifest 中芽耳布伊动作包应恰好一项，实际 %d" % matching_assets.size())

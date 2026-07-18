@@ -10,6 +10,7 @@ const REQUIRED_ACTIONS: Array[String] = ["idle", "walk"]
 
 static var _catalog_loaded: bool = false
 static var _catalog_cache: Dictionary = {}
+static var _interface_texture_cache: Dictionary = {}
 
 
 static func catalog() -> Dictionary:
@@ -64,6 +65,9 @@ static func composition_plan(form_id: String, view: String, action: String, fram
 	var anchor_value = anchor_values[clampi(frame_index, 0, anchor_values.size() - 1)]
 	if not (anchor_value is Array) or (anchor_value as Array).size() != 2:
 		return {}
+	var saddle_back_layer = view_profile.get("saddleBackLayer", {})
+	var saddle_back := saddle_back_layer as Dictionary if saddle_back_layer is Dictionary else {}
+	var saddle_back_path := str(saddle_back.get("texturePath", "")).strip_edges()
 	return {
 		"rigClass": str(profile.get("rigClass", "")),
 		"riderPoseSet": str(profile.get("riderPoseSet", "")),
@@ -72,6 +76,9 @@ static func composition_plan(form_id: String, view: String, action: String, fram
 		"riderAnchor": _vector2(profile.get("riderAnchor", [128, 150])),
 		"seatAnchor": _vector2(anchor_value),
 		"groundAnchorY": float(view_profile.get("groundAnchorY", 224.0)),
+		"saddleBackTexture": _interface_texture(saddle_back_path),
+		"saddleBackScale": float(saddle_back.get("scale", 0.0)),
+		"saddleBackAnchor": _vector2(saddle_back.get("anchor", [128, 138])),
 		"frontOccluderRegions": _rect2_array(view_profile.get("frontOccluderRegions", [])),
 		"shadow": (profile.get("shadow", {}) as Dictionary).duplicate(true) if profile.get("shadow", {}) is Dictionary else {},
 		"worldPresentationScale": float(profile.get("worldPresentationScale", 1.0)),
@@ -118,6 +125,16 @@ static func validation_errors() -> Array[String]:
 				errors.append("坐骑缺少视角：%s/%s" % [form_id, view])
 				continue
 			var view_profile := view_value as Dictionary
+			var saddle_back_layer = view_profile.get("saddleBackLayer", {})
+			if not (saddle_back_layer is Dictionary):
+				errors.append("坐骑鞍垫后层配置无效：%s/%s" % [form_id, view])
+			else:
+				var saddle_back := saddle_back_layer as Dictionary
+				var saddle_back_path := str(saddle_back.get("texturePath", "")).strip_edges()
+				if saddle_back_path == "" or not ResourceLoader.exists(saddle_back_path):
+					errors.append("坐骑缺少鞍垫后层素材：%s/%s" % [form_id, view])
+				if float(saddle_back.get("scale", 0.0)) <= 0.0:
+					errors.append("坐骑鞍垫后层比例无效：%s/%s" % [form_id, view])
 			var regions := _rect2_array(view_profile.get("frontOccluderRegions", []))
 			if regions.is_empty():
 				errors.append("坐骑没有前景遮挡区：%s/%s" % [form_id, view])
@@ -138,6 +155,18 @@ static func validation_errors() -> Array[String]:
 					if point.x < 0.0 or point.x > 256.0 or point.y < 0.0 or point.y > 256.0:
 						errors.append("挂点越界：%s/%s/%s" % [form_id, view, action])
 	return errors
+
+
+static func _interface_texture(path: String) -> Texture2D:
+	if path == "":
+		return null
+	if _interface_texture_cache.has(path):
+		return _interface_texture_cache[path] as Texture2D
+	if not ResourceLoader.exists(path):
+		return null
+	var texture := load(path) as Texture2D
+	_interface_texture_cache[path] = texture
+	return texture
 
 
 static func _vector2(value) -> Vector2:

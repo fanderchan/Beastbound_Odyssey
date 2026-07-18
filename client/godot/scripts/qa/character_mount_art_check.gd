@@ -9,6 +9,9 @@ const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const ASSET_MANIFEST_PATH := "res://assets/asset-manifest.json"
 const BUNDLE_META_PATH := "res://assets/characters/novice_hunter/action-bundle-meta.json"
 const OWNERSHIP_PATH := "res://assets/characters/novice_hunter/identity/source-and-ownership.md"
+const MOUNT_INTERFACE_META_PATH := "res://assets/mounts/bui_novice_sprout_earth5_wind5/interface-bundle-meta.json"
+const FRAME_EDGE_MARGIN := 4
+const MIN_RENDERED_RIDER_HEIGHT_RATIO := 0.82
 const WORLD_DIRECTIONS: Array[String] = [
 	"south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast",
 ]
@@ -40,8 +43,16 @@ static func run() -> Dictionary:
 					errors.append("组合计划缺失：%s/%s/%d" % [view, action, frame_index + 1])
 					continue
 				var rider_action := MountVisualProfileCatalog.rider_action_for(action)
-				if CharacterActionAssetCatalog.texture_for_frame(view, rider_action, frame_index + 1) == null:
+				var rider_texture := CharacterActionAssetCatalog.texture_for_frame(view, rider_action, frame_index + 1)
+				if rider_texture == null:
 					errors.append("骑手帧无法加载：%s/%s/%d" % [view, rider_action, frame_index + 1])
+					continue
+				_append_frame_edge_errors(errors, rider_texture, view, rider_action, frame_index + 1)
+				if plan.get("saddleBackTexture", null) == null or float(plan.get("saddleBackScale", 0.0)) <= 0.0:
+					errors.append("鞍垫后层无法加载：%s/%s/%d" % [view, action, frame_index + 1])
+				if frame_index == 0:
+					var mount_texture := PetActionAssetCatalog.texture_for_progress(FORM_ID, view, action, 0.0)
+					_append_proportion_errors(errors, rider_texture, mount_texture, plan, view, action)
 	var template := PetTemplateCatalog.runtime_template_for_form(FORM_ID)
 	var riding = template.get("riding", {})
 	if not (riding is Dictionary) or not bool((riding as Dictionary).get("rideable", false)):
@@ -52,6 +63,7 @@ static func run() -> Dictionary:
 		"ok": errors.is_empty(),
 		"characterFrames": 56,
 		"mountFramesReused": 28,
+		"mountInterfaceLayers": 2,
 		"bakedCombinationSheets": 0,
 		"runtimeDirections": WORLD_DIRECTIONS.size(),
 		"uniquePresentedFacings": direction_signatures.size(),
@@ -59,6 +71,27 @@ static func run() -> Dictionary:
 		"rigClass": MountVisualProfileCatalog.RUNTIME_RIG_CLASS,
 		"errors": errors,
 	}
+
+
+static func _append_frame_edge_errors(errors: Array[String], texture: Texture2D, view: String, action: String, frame_index: int) -> void:
+	var used := texture.get_image().get_used_rect()
+	if (
+		used.position.x < FRAME_EDGE_MARGIN
+		or used.position.y < FRAME_EDGE_MARGIN
+		or used.position.x + used.size.x > texture.get_width() - FRAME_EDGE_MARGIN
+		or used.position.y + used.size.y > texture.get_height() - FRAME_EDGE_MARGIN
+	):
+		errors.append("骑手帧触碰安全边：%s/%s/%d" % [view, action, frame_index])
+
+
+static func _append_proportion_errors(errors: Array[String], rider_texture: Texture2D, mount_texture: Texture2D, plan: Dictionary, view: String, action: String) -> void:
+	if mount_texture == null:
+		errors.append("比例检查缺少坐骑帧：%s/%s" % [view, action])
+		return
+	var rider_height := float(rider_texture.get_image().get_used_rect().size.y) * float(plan.get("riderScale", 1.0))
+	var mount_height := float(mount_texture.get_image().get_used_rect().size.y) * float(plan.get("mountScale", 1.0))
+	if mount_height <= 0.0 or rider_height / mount_height < MIN_RENDERED_RIDER_HEIGHT_RATIO:
+		errors.append("骑手相对坐骑过小：%s/%s（%.3f）" % [view, action, rider_height / maxf(1.0, mount_height)])
 
 
 static func _append_bundle_errors(errors: Array[String]) -> void:
@@ -80,6 +113,8 @@ static func _append_bundle_errors(errors: Array[String]) -> void:
 		errors.append("用户未评审前 ownerReviewStatus 必须保持 pending")
 	if not FileAccess.file_exists(OWNERSHIP_PATH):
 		errors.append("缺少人物来源与权属记录")
+	if not FileAccess.file_exists(MOUNT_INTERFACE_META_PATH):
+		errors.append("缺少芽耳布伊骑乘接口资产合同")
 
 
 static func _append_manifest_errors(errors: Array[String]) -> void:
@@ -96,6 +131,7 @@ static func _append_manifest_errors(errors: Array[String]) -> void:
 		return
 	var character_matches: Array = []
 	var mount_contract_matches: Array = []
+	var mount_interface_matches: Array = []
 	for value in assets as Array:
 		if not (value is Dictionary):
 			continue
@@ -104,6 +140,8 @@ static func _append_manifest_errors(errors: Array[String]) -> void:
 			character_matches.append(asset)
 		if str(asset.get("assetId", "")) == "mount_visual_profiles_v1":
 			mount_contract_matches.append(asset)
+		if str(asset.get("assetId", "")) == "mount_interface_bui_novice_sprout_v1":
+			mount_interface_matches.append(asset)
 		if str(asset.get("type", "")) == "baked_character_mount_sheet":
 			errors.append("禁止登记人物×宠物烘焙组合图")
 	if character_matches.size() != 1:
@@ -120,3 +158,11 @@ static func _append_manifest_errors(errors: Array[String]) -> void:
 		var mount_asset := mount_contract_matches[0] as Dictionary
 		if str(mount_asset.get("path", "")) != MountVisualProfileCatalog.DATA_PATH:
 			errors.append("骑乘组合合同 manifest 路径不正确")
+	if mount_interface_matches.size() != 1:
+		errors.append("芽耳布伊骑乘接口在 manifest 中应恰好一项")
+	else:
+		var interface_asset := mount_interface_matches[0] as Dictionary
+		if str(interface_asset.get("path", "")) != MOUNT_INTERFACE_META_PATH:
+			errors.append("芽耳布伊骑乘接口 manifest 路径不正确")
+		if str(interface_asset.get("source", "")) != "project_original_ai_assisted":
+			errors.append("芽耳布伊骑乘接口未记录原创 AI 辅助来源")

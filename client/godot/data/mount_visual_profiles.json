@@ -26,14 +26,19 @@
       "characterId": "novice_hunter_v1",
       "riderPoseSet": "quadruped_straddle_v1",
       "mountScale": 1.08,
-      "riderScale": 0.76,
-      "riderAnchor": [128, 150],
+      "riderScale": 0.94,
+      "riderAnchor": [128, 146],
       "worldPresentationScale": 0.58,
       "battlePresentationScale": 0.88,
       "shadow": {"offset": [0, 4], "size": [180, 32], "alpha": 0.25},
       "views": {
         "front_3quarter_sw": {
           "groundAnchorY": 230,
+          "saddleBackLayer": {
+            "texturePath": "res://assets/mounts/bui_novice_sprout_earth5_wind5/interface/front_3quarter_sw/saddle_back.png",
+            "scale": 0.52,
+            "anchor": [128, 138]
+          },
           "frontOccluderRegions": [[0, 42, 130, 186]],
           "actions": {
             "idle": {
@@ -46,6 +51,11 @@
         },
         "back_3quarter_ne": {
           "groundAnchorY": 224,
+          "saddleBackLayer": {
+            "texturePath": "res://assets/mounts/bui_novice_sprout_earth5_wind5/interface/back_3quarter_ne/saddle_back.png",
+            "scale": 0.52,
+            "anchor": [128, 138]
+          },
           "frontOccluderRegions": [[145, 32, 111, 193]],
           "actions": {
             "idle": {

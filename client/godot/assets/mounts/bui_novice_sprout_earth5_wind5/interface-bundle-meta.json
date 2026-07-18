@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "mount_interface_bui_novice_sprout_v1",
+  "formId": "bui_novice_sprout_earth5_wind5",
+  "rigClass": "quadruped_straddle",
+  "layers": {
+    "saddleBack": {
+      "frameCount": 2,
+      "runtimeFrameSize": [256, 256],
+      "views": ["front_3quarter_sw", "back_3quarter_ne"]
+    }
+  },
+  "bakedCharacterMountSheets": 0,
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "ownershipRecord": "source-and-ownership.md"
+  },
+  "quality": {
+    "selfReviewStatus": "passed_v2_proportion_and_layering_correction",
+    "ownerReviewStatus": "pending"
+  }
+}
