@@ -1,0 +1,739 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "lean",
+  "formId": "wuli_normal_tough_earth10",
+  "kind": "pet",
+  "characterId": null,
+  "generator": "OpenAI built-in image generation",
+  "sourceOrigin": "generated from the tracked Beastbound Wuli identity lock",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "replacementPath": "regenerate from archived prompts, representative raw sheets and the complete local .run production archive",
+  "fullSourceValidationRequiredBeforeInstall": true,
+  "repositoryPolicy": "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and duplicate clean/raw intermediates remain in the local production archive.",
+  "actions": {
+    "front_3quarter_sw": {
+      "idle": {
+        "originalGeneratedSha256": "0731f6c2c3acd22e7efaae17e3db9017b25a5a2fffc9d905861857e4283ece8a",
+        "originalGeneratedDecodedRgbaSha256": "a3f597633f3196e3bf614177015ab497c2ac9eb24e28604e422fbe575521e74f",
+        "rawArchiveSha256": "0731f6c2c3acd22e7efaae17e3db9017b25a5a2fffc9d905861857e4283ece8a",
+        "rawDecodedRgbaSha256": "a3f597633f3196e3bf614177015ab497c2ac9eb24e28604e422fbe575521e74f",
+        "promptSha256": "9e042960f57961c446fa142656cb0bdeba2d8fa717bb9b040a147fc11b4f113d",
+        "pipelineSha256": "c231c3558b32205272dff332bdb118f908a9c2132fe8774d2ef563174cc8f9bc",
+        "qcSha256": "945c3a5398ed4831abc95171af2e52d0a2649f4506e18911180d578d2059a44c",
+        "sourceFrameRgbaSha256": [
+          "09784e2a5293b5ba5b88ed280b0fa5e3eb1782fa2b025bcebf000574fd2943ac",
+          "08f121bc043d6ca5a72136d7f90d988f0c0ff9f41a94edc3effac6566f7eecb6",
+          "e093fe640366fce3d7d2c290e7d428d13020897501e98676db9e9e0b16a55302",
+          "618a065e0ebec329dbc8149385c7d166b868a2a56e4ca8b7d8d1994a051d1e7a",
+          "d19432a5c2321046b968d99dc42a389cbe8b2900a3b11431b2f0e1ac2f94fccf",
+          "958c32404d9070d5478855a26a93e29a7731b1cf4794d44c77f8f38845f24886"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "f0208e8ccbb49abb78555ae52943984a865207abc5960f5bf1497e66cc6ae4bf",
+          "dca65300296d24a61626521ce9a99ed213d9c28796977261a45f58db500c6416",
+          "b92c0085a17d81e158619578a4be15507f490d489a2238fa0c106509c6094fc6",
+          "a21855937962c1cc2a03f074e9fae994bfe44882960493d4befafd47941deb1f",
+          "747a47b489e0ba6817a03fb9678fe265345d360e20754c20274bef80e1131912",
+          "5e6bd921a64e5494ca6ec7069529a855ab7021a36fad308008106dddfeb9e771"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": false
+      },
+      "walk": {
+        "originalGeneratedSha256": "654e9d6f45cb5714979b427133e5e56f5a6a03073e27908e14218d81ac9c0521",
+        "originalGeneratedDecodedRgbaSha256": "1ad1f5fdb2618705ab01d29659fb1f5a8e0baa9fd265badab82c31cac24a6a41",
+        "rawArchiveSha256": "654e9d6f45cb5714979b427133e5e56f5a6a03073e27908e14218d81ac9c0521",
+        "rawDecodedRgbaSha256": "1ad1f5fdb2618705ab01d29659fb1f5a8e0baa9fd265badab82c31cac24a6a41",
+        "promptSha256": "f3511822b1239d097e731718d41f60b26c524531586b7cd5472a9ebc8e57dbba",
+        "pipelineSha256": "84ec40e11556d2e01310d9b97ecb1c709eedc56c406856ebfb98d284cafaf204",
+        "qcSha256": "ccf726b8fa478bf332315fa92aeca10165f23d395d55538906257524181085cb",
+        "sourceFrameRgbaSha256": [
+          "2803c46165db7b6c21359c3156f4890efea4add55bed74edf17c1716f6ab6f0d",
+          "bdad17fd9ee830efdb8ae1e9c77c87463e5612a2af6e173cade77e2a23ab8638",
+          "2ad239e28fd03007b7c186debc297ecd9247011823c3fcff7979aacf0c41948e",
+          "72e49cd24f0fd0f0a7011f33447d86728e92494182fb884945dbd2ddd1679946",
+          "e7c73686ca54c4e84adc1c0dee4a0cc78fccdc17bba085c0d6b6bd0742b376ef",
+          "6bc3aeb3d252fe3cb95c11d54d23e5ffcd22812cd66a9c1f707559deacc729ee",
+          "f536872331828225561ad24d368e481499641fca9dc0b1fe1dabf09f40ee3566",
+          "35635ea3ccabd0bf3f747dd4fbee6b6d8d8b40dfa193a40f437d711afab319f1"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "57d1bf64bb9eeeb949f7c34d3fa7fb80a07efb00a8a18d72e6cad760dffd8c72",
+          "baac0f845f9e560b1861023c2ccc26290cb8c2f1e63fd2830afc3a21fe7ac59b",
+          "0079893d6c1e0d818d38405bafc8dd6c1def71597633e519be3a731e78205fd3",
+          "3c167761240cdd3b29f5534e9647723d5ee887fe51d76584793fcd73536fce74",
+          "c61b47b776a58ba2c3a0a59ef7ee1103963004eaa82baeb59496b534d4f30519",
+          "4fa94f5f825e5dce4bb9dce6ba54813291c03ddd65b9898fcfe5f59870f92886",
+          "a6ec4630f1efe021049a9da0f7ec9c5612ded0b116a1c8077c2e57952332b3e7",
+          "1d09678e55f2df9bd9e5c266252eb049a8e4d10a37a8dfeeb22233cd9f970f50"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "attack": {
+        "originalGeneratedSha256": "66736f0b0be6fde83ccbc3790aa541adc8b3f1d9e871ff82ce72ce4b18d125cc",
+        "originalGeneratedDecodedRgbaSha256": "0696048c5d37c33dbd3be2d0b97d9a2f350bbd25467347c3e6e4702e59ca5746",
+        "rawArchiveSha256": "66736f0b0be6fde83ccbc3790aa541adc8b3f1d9e871ff82ce72ce4b18d125cc",
+        "rawDecodedRgbaSha256": "0696048c5d37c33dbd3be2d0b97d9a2f350bbd25467347c3e6e4702e59ca5746",
+        "promptSha256": "b6275164fce7de8e953f7f86224649a24288146d958588bf5bd54756092288aa",
+        "pipelineSha256": "6485ee62f4965b4994799d14565398ecdfd82d620534b50104d21c977c77c188",
+        "qcSha256": "becc37b7e6b27ca418c243c24b7c9f9ac2dbdcaccb8ecc556a2e55e52d36034b",
+        "sourceFrameRgbaSha256": [
+          "e22eca73bb675bce92c25bd8ea40022b98e7c07d19e41a23d2c1067d6f6579fa",
+          "e5e3e6210ab92d752b2cdce57b7ddc01188aea6fbd461e7f4bfbdbf299cae012",
+          "304924a3fdf57fc1b1a0c371c2fce8cbdd610c42013fc437aa01d0370ff1fa89",
+          "4b2e8ab335d8eb8043c10e4464835f05490192aa87acfc344c245818afede54b",
+          "940a5b4ed8a2c16ce24178bfc8d66fa8142f422ed660484ddccdb14d87621943",
+          "f35c204a4d0d7798f9f76e9738997e68c67fd83d1fd2fcdb0e0f526d0e0d6d62",
+          "40885c7bd7beccc6b6bda8f5cb04f0fecaa4af6ff99ea2cb9f84df78bdbbe115",
+          "4ce74194d0c6b6a3b625762c2e90ed192d56675350c77b9701631f19ff772f74"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "110750b855323177ca1a8c4c351d75a7248687ab35be9956dbcc9a6e1701765d",
+          "8083ed5c29abe32a1aed2f3e275d43565869287da404ec0789ef3e5ba9fb8f49",
+          "c9381698992162c01da21ceda652d04487940463c1205abb43833a26db9c82e9",
+          "7661945f146910041c9c9e2ab7bafcb37774e46a2dd38a214b7b35f66734738d",
+          "c9eb81ff180d7b814b1d55bee12291b93b4b69343c5b97c49d2fdece175d9937",
+          "be7d1492513b460e93f4d8f50eadeebd270d52bfc1ed878f336d321503807031",
+          "6a1a076430e5c4a7024f2ca2ba263652c49a4a6b69f935e4aeae5f00e859f75c",
+          "b79dc16ed62324cb07c979f697d3d87cf27ee218e443a94b7d30d01457cc1e34"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "skill": {
+        "originalGeneratedSha256": "e5f80fef889a69a9721fa0c78117bcdd0d37cd1259f723b21afee4be1d06a2cd",
+        "originalGeneratedDecodedRgbaSha256": "eb00f70892e8c64c203efc54b66370b1051a8e871d7bf0907fc0cd5ca718c735",
+        "rawArchiveSha256": "e5f80fef889a69a9721fa0c78117bcdd0d37cd1259f723b21afee4be1d06a2cd",
+        "rawDecodedRgbaSha256": "eb00f70892e8c64c203efc54b66370b1051a8e871d7bf0907fc0cd5ca718c735",
+        "promptSha256": "bc2d80438d0d453cac7241d7739727cbc4038bcfb137cf92f7ad0ce2c606a146",
+        "pipelineSha256": "cd4da46b17469228afca3d2334b67ef671cf7f4a2630bad86ef8e303cf39a4a4",
+        "qcSha256": "43d51af0c850a05898ea8032576a644b3dfbfe9de09970666704cda0d156ca4c",
+        "sourceFrameRgbaSha256": [
+          "ce5840dbb878f20347b21f0664b50e2a1e850bab63c52553266844be185bbef5",
+          "45c7c3a0cb338886b4ba2609fa51e57acd8e1478f892df76fa9b1a13241ffceb",
+          "afcfa169431ab130a64a0924d8c4e02f2926d5988b2b1f6e0023d2ba0937d93b",
+          "12393e6a7884421f2abdd0a9ada0627d02f92eb57c90057f883c2ede1c553299",
+          "65f1ffda0a4f0e0273e8d6c66fa141e3b28874e5be2f2c3798a59eadbcaada17",
+          "38f5cb4c933965b6e97affa7ce38c4e3d5271f1e4accde1b1f8942a85e909f9d",
+          "5fde1feb98218fb52019372c12ae75730024fad66d22918bc4ea5dfe4a1b2f0b",
+          "a12a012bfc9e3def41b30227de6ee5b851eb723466c0ef2cf165aacafa4df61c"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "dbf28097d3beb43ab016a394b392fcf2358d7e94b7b7bb33dc657581ebdc0ac2",
+          "ed4bc02cd8707183c2116f7ebc2d7c8a244912f534f5f36204bbac4884e517dd",
+          "1202e464ed57bb7a34fc054d463ce1771a1fb1bc5d78fd66cbcb270fef78a624",
+          "55e5f845e8b395c1f5436171368435aac13fcd1e69136956e7ff7862dcc833c7",
+          "17f3a1c3ebff0df986c27755e612bb0f966fcd8a98edff12bc7d3b26f58eb240",
+          "f97b9f3772439a1cb40481a304b413585e866741b1e260d019bb757ff4b65442",
+          "775308d78cf286ebaa565d2ea2e13ec6cd06585ae1f6d62feeaf6bf858b67cb8",
+          "8df70c984e372585dab54b4d68075c7a1049443d31075bf10e7a3ab2133aa9c3"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "hurt": {
+        "originalGeneratedSha256": "1e8e76326c6f8a8a71f68902f6ee29a105794cfb48652f3cac435d044ff72c04",
+        "originalGeneratedDecodedRgbaSha256": "b7853fd3c0df9e57cb8e77637266fce9910260b328365280cd7bc642c18e1554",
+        "rawArchiveSha256": "1e8e76326c6f8a8a71f68902f6ee29a105794cfb48652f3cac435d044ff72c04",
+        "rawDecodedRgbaSha256": "b7853fd3c0df9e57cb8e77637266fce9910260b328365280cd7bc642c18e1554",
+        "promptSha256": "eb7b68c2e2dec314a3a9cec9e08255bcec22830514b1ffcb5d559e81d2ec6732",
+        "pipelineSha256": "a11c06bb478bcef7a19f206db088dba93ce3553e4e6e34cd222440554eb1ac8a",
+        "qcSha256": "cb39a732c7880608b74ebcbc28e981545decd4977dc5d1ed2485e347e32cf9ae",
+        "sourceFrameRgbaSha256": [
+          "bbedc59948b92d0faa93cad38b3c24292d03154288533c156c5ef5b0ab78741c",
+          "468453ec8568c47f5c4774cf58e759f5ae21d634cbfaeb8c32a398a2a8906aea",
+          "5bf68c5f500c2df299345a8b755b3e7414c4b51e350e3a27cbb61f607277b233",
+          "dc628548f9637685768ccb62864e6f37a0031297fb53e1e11403bee45101f928",
+          "b97d35417081e35801690850e3876ff8af88199896199c767f7e0888e8ed6996",
+          "59bed3b7f062021176e2a3ec4a85184b5d56c44212fff0704a39d4445c86604f"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "94661f87c4144c36571eec0b7bf5cdb2e53ea5b3170aab057d341e5c3430189a",
+          "bc113ed168c33b74e7a90ce73e607aef8c32a1476d81c19ec7fbabfcfd9799ef",
+          "8dbd88b748e9b12ba6bcf83398eb5b6edfc58c589e8d05b30c2f52057bf3c450",
+          "f0582a927179ac443adbf427265db4a3e2470d7b9d2895c269623aac6e254278",
+          "d4f3487f234509ae36f45b35a7788a8cab0b3f44a6e0db3733e2529753e2bc31",
+          "bf30d75818dea552aed5f2347110f0432440d29ff7c8436f8a55edc3c5ac31d1"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "defend": {
+        "originalGeneratedSha256": "2e05d44d6c939bb0b4af5a3371ab86226c2c7e5041b9fbaf38b2a3107234ff4b",
+        "originalGeneratedDecodedRgbaSha256": "328419f643c83e0fc16254e12e5d1addefd937b0e55372f87c9098442de1cf7c",
+        "rawArchiveSha256": "2e05d44d6c939bb0b4af5a3371ab86226c2c7e5041b9fbaf38b2a3107234ff4b",
+        "rawDecodedRgbaSha256": "328419f643c83e0fc16254e12e5d1addefd937b0e55372f87c9098442de1cf7c",
+        "promptSha256": "fe6300b8f22fe06c27f99889136b7eeeed860bdcb198b55d94abeb84d9996b75",
+        "pipelineSha256": "b662248827ce19083d79c0b9dbea068dfc15ebd8195782899b2ff2e341a8da8b",
+        "qcSha256": "ebeb71cc1afc6743bffdd3cc98d21c7aa505a37daf997e7b4ce7d491748ded0d",
+        "sourceFrameRgbaSha256": [
+          "988acc5da414358ec48bcd5430978a8933b7fcda7f29c26e42001521540fa211",
+          "7f2bed393da940f3279185631e8ca47f1de01f8fa564b1b1e1fec0ae91dbadda",
+          "56b7a5b472eb65d5f6bb2eb1e335002465879ee3ba2b6e84d3ae5b8de92bb789",
+          "00e6ddaf6050c571cf524596c636ffc78af0a97f50c8b9cb90690a9c518374f8",
+          "c912445b8b102846a9c428ba67065e135d09ef83f6026e2315b8fe7853cd1514",
+          "59f2260e124e7fd9bf68cdc2e421f75785b911e84d2b0ddcb9f69b207d953e66"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "af753d5d7bf338f96a9a231b4284f49465ba2f667864e2aaa57a4b2e5a9f44bf",
+          "467552990b058403317f1f174a5abeb518d9a0c27e6c06f4628060c9df6bf854",
+          "9c9bc382841f0242b254a9cd4f9e1dcbb14d92a118cf702725f0a4541c8d88e8",
+          "e179b07524acbcd7273580e33a8f121386400494b638d9b5228b325bef7b49f0",
+          "6e6ab886a641e6b8dacf253cbdf800491daf389d9f311257807f657c0b454785",
+          "b9aa1e5657e531b5fe1396c17fc52f1ab5cc2e9d71409c3c9e4f8704911e4ba2"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "dodge": {
+        "originalGeneratedSha256": "084028489f1c9572afbe24b1fc3be325f6a419365c44b833d4c89efac27200f1",
+        "originalGeneratedDecodedRgbaSha256": "79d68de52971bbf6f6edfd59ed82d9986db1a94e14b95808022143807ee13188",
+        "rawArchiveSha256": "084028489f1c9572afbe24b1fc3be325f6a419365c44b833d4c89efac27200f1",
+        "rawDecodedRgbaSha256": "79d68de52971bbf6f6edfd59ed82d9986db1a94e14b95808022143807ee13188",
+        "promptSha256": "76e7ca185f35b29b53c6b0e8836d840fa3e7a3bb911c0a1156375c42e98d8af3",
+        "pipelineSha256": "1b8c6a8f40c52a36926d574a58bf9d0aaa4933b42000314bc41606099cd45879",
+        "qcSha256": "7642b96a0918ef2f54beaa57efc4deba7c9bb88b92e4552830205af37f25fec6",
+        "sourceFrameRgbaSha256": [
+          "02d680de63923864cfdeca6e3f006f9f93fcfc64bf365535526bb0f4c2995a1b",
+          "431349178574547123db977722a96156eadaac19597d1b5759215df45bf23086",
+          "6a49a194ed05c372672e5ebef5ac6d087f959a361f86ddf865629a52c458cd90",
+          "bb316d68ad252a144fdd72876a654cbfc6f02aa2e50e2cfa6c674423f0112851",
+          "a6ec6bff54a52f862f389411d8d77e8bfb2bf019f517c141ca3e3ff3b0357dc0",
+          "5dc19721eee4dcec6648443da128670d54792f8a3d6f52ee8420e8eff30d449a",
+          "fbfe8367f5841c6c79261f20f81855572623f4dc39300b27b181a7340c5df549",
+          "c7e74b75da9a8f6b29c23b9a846375d17e88968d715841da3cebbabeccfb3c75"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "7f7f2e08c168e66a8c40b0a0b7b087e267c1f2df16375ed9b94511f79145dac7",
+          "9aa1cef2ef429febcef53f6180352e29740bb5448e8266cabd874af83480c53c",
+          "618e54d1e3e58a45ddf2459dcd72c8ff29b935734b9227044adc6b2cbbce91d5",
+          "c9a34e90e8f2dbc7e5d1921573b69f42dc3f8802310d927fbc8ad4d68e8a9fd9",
+          "1d3440b4cc6526a650251e63cf8d74fbadb8a6d9c3bb3e287bcd95316beba0f5",
+          "57811a5686c413971dd025101db3cf0a9611e5da9260ab779dce305946fb5d05",
+          "9ccc280e648550a77331a08f99a9548480feee7c6776613cbb463985565802f8",
+          "856e2c5296f51967d452c7a1ca8e2466a79c390e6762a9d54671dd3505c6d637"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "counter": {
+        "originalGeneratedSha256": "2f306acf61b27f63c5897a4682aee98aeaa14e9a7c65f7a9f1d52c580b4389c0",
+        "originalGeneratedDecodedRgbaSha256": "4ec381366c35a28526e735eb64d3b1be6ab1c9e7cc55fcafe0e614a42ab51152",
+        "rawArchiveSha256": "2f306acf61b27f63c5897a4682aee98aeaa14e9a7c65f7a9f1d52c580b4389c0",
+        "rawDecodedRgbaSha256": "4ec381366c35a28526e735eb64d3b1be6ab1c9e7cc55fcafe0e614a42ab51152",
+        "promptSha256": "af226347e4a2cbd71d56219927738ed6ee0a7b53f964ae4157608fb4b99221ca",
+        "pipelineSha256": "26e7bd8e35de9727b4bc6863c29c00c873dab1cb8be0a57c5a64157abf0f2f2d",
+        "qcSha256": "e8dda50936253008eb6a40076fceaf98fde4f0d12f92e801c833274dd9f6418e",
+        "sourceFrameRgbaSha256": [
+          "bfd3d8d36aac2a43906a0d21f5c95d5f91f3ee2d8fec7c8703954e0eb8979f5d",
+          "edec1efb8a93dded3a8c813b2d90babe1478ab938030745907575591ed3dd9cb",
+          "a497447a66c33e3dbe7e26e2c51e7c6777222b8ccc71889405c88680cc0305ed",
+          "6624ce2de1ce1aa3f8ed50b2d480119d204d2b1c6992f1c56fc8a395866b3301",
+          "0a42797b12ad015c6715e8a6673db0fed2851b9b7a2f9e223d0211774ce2303b",
+          "885fd6f1be9c06f0cb8acb1e0e97693e36d19a3a46cdd7637e0310c3433a34d8",
+          "1d044eb616b60bf93e10d02f8616249d3c4fd93454da4650263e475626df8704",
+          "1d25084cf0228549a12fdead535025d0f42c001c4b8009743564433ab1fc63f2"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "173c729e51bd15f049e4df8b0683b7a31b218de3ecba5f4637405f4ac168d771",
+          "fe11fee30590769623d587a33e870394200807efac53f34534bf10bb63700585",
+          "21211405713486fda7ad2b4a3419973b70e54b0106d577a3069046462e50d760",
+          "7f191c9d69378a29f443666d5f3129e005f3e33f52cdf98eff7324f6e12ef618",
+          "807a8df426bf284437caab4d6c485f24989422f1885ffea816fbe036ce93f250",
+          "88460b8c5544857ce3af42699f4091d12312dee97021ae4f2057773ba25596b7",
+          "ee7b45995af2c174bd7325e3c2be4ce3fef6405d8216cf3ea390e375bc696a4e",
+          "684b313d8789eaba16148b278aa4803193f11e59bd338294f1584b3aaff4dca7"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "stagger": {
+        "originalGeneratedSha256": "236fc9925c632e827c9b3616b5902a4c27feb5e20130d85f221e484cf0bec2fa",
+        "originalGeneratedDecodedRgbaSha256": "a9dafbe6303d4b987e3c90528af945c48eb529b87169a9aa99cea394f786c8f4",
+        "rawArchiveSha256": "236fc9925c632e827c9b3616b5902a4c27feb5e20130d85f221e484cf0bec2fa",
+        "rawDecodedRgbaSha256": "a9dafbe6303d4b987e3c90528af945c48eb529b87169a9aa99cea394f786c8f4",
+        "promptSha256": "3f238f9077e56a7b1dfdf57b86d6214d56d89fc9daf3ebdaa44baef49f5324ac",
+        "pipelineSha256": "211774bbc54fa38e24c72e4b076be1f736c624e73500a96501ad45005b52466f",
+        "qcSha256": "20f497a6f7b6744ba7898db14e4e0a44c1fa2af42f085a6e061f544ff818b332",
+        "sourceFrameRgbaSha256": [
+          "310808f8079deceabb0458874df77e81d9a3b175aee334dad78b803605e62591",
+          "6f1892b2733bc718e13d8dc616d391ce1a2dfcf564f34cbae37355a5eed9e4c7",
+          "7fd69b3ee55a005ef1d36a90e91909ff0918cb8470b2917b9c62ccb832f68a7c",
+          "b04cb0c8974587a63a36401b3949401669e561109cc9bc4d460b158cc3d741d7",
+          "da9e4c641152afeeb5ae768cdd5447f46ec1e363e9547d61318dafcfbd4e105d",
+          "c74b9abf7b9c58006c84bba05d698e1cadb91637fb1d04415831707d8f94fc02",
+          "26fe87fa4f231ae1e170c555f9c2c33d8b9e0c8d13ed61a73b0adba4a320dd87",
+          "d6f38bf4c7ec0510776475461a1454b685744047dcbc8213f841f368be22272e"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "d04b3e7f2a7301309736bde0524e169ae53357d906d65856a1d3d0b51d28915f",
+          "f03289e0b6d15f68e86e8dfd4f3b5b10eb7a33c8359c2cf53dbea072cff9b619",
+          "7cd2e4207173fc8c06165c3767849d7d8c74067f1148b251920a6644bb946ad9",
+          "d924def3f76e77f58c85482bc32ffe6a876b8f4a97cc755bd921be35dabfa47f",
+          "881fbb5c74f5aee9cb9bde779e1ed6daa05f0fe0520410028e3b3d31c1a0a914",
+          "b01342a1ce65dc56525c27eae383670cf2deece2827aa9a9d11f09e3ed660f15",
+          "07d6f167d08e858fd3c616cb9ebe62a9c21b615c32f7eae69fa6dd5941bc9df2",
+          "3534caea1f5e40108243f0cd7bed24346862a6d740f54fd037ca5596319c3ded"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "knockaway": {
+        "originalGeneratedSha256": "ddb64fc95bfeddd1b53f5bb245e7cb7341b784f8af1abcffefa756500162d0ef",
+        "originalGeneratedDecodedRgbaSha256": "8f13277eee05e670929dcf51d8cc5b8918bcf523d4752eca681679a84a9e87f1",
+        "rawArchiveSha256": "ddb64fc95bfeddd1b53f5bb245e7cb7341b784f8af1abcffefa756500162d0ef",
+        "rawDecodedRgbaSha256": "8f13277eee05e670929dcf51d8cc5b8918bcf523d4752eca681679a84a9e87f1",
+        "promptSha256": "aa6b442915d7372604b0e14d0b8080846498baa0fbddf7c9c45d6c8000fa852f",
+        "pipelineSha256": "a88fffd5cc907cb3c73d5825f151973ccb29773d28580ed69a4c8321d116803e",
+        "qcSha256": "28ea0af3218604c0a95d30ae994e5f88dd02b92e572c8781dfdc4c21ec2012c0",
+        "sourceFrameRgbaSha256": [
+          "ae3be50aa525c57c8bf0cdeb7b09ee9f2d1b9572d31f44d337886066cc419587",
+          "34bc23450dc342a90b27210be0f33b9f620ef156fa837ad519623a36cc3aca67",
+          "02905de70acfb1b912d48d496518932f46092f14da557bfc59367f943f2770ce",
+          "7f16ad0e9251f801b8dd5f7a58f4b0f7506b1de090429c2c57403a3c5cc9bcc2",
+          "1f204c04d65abfac1dbd47886825bb84f69433e03c95f0411ad089dbaf970f9c",
+          "43ac668d10f2837ece0868a2d9d88b57e84e36dbe18202a4f762f725e6325fde",
+          "0c8df2d92d027c6a108978aaf82a54cc35139d27ddb4ab3571ac6e755ab10f1f",
+          "dbc219691010d16af65ea111bd8c29c27d87f20fa90cffc7f99c36809da0f02b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "cc1d686cd6b0b3d4c4920bdeb3c58ad8bb622985ab80d45032697f67ea6a4397",
+          "fe167a79cac4ae7e062cb1cf99f2adf9e21cfcb3d9735215e8b4e48c1cf2d6e9",
+          "dcb6b43a76ebb1329c79a7c08084ace1879838b714ee93d59e80074c01298a07",
+          "345b825c0bae7c1f9342aa52b1e39ea166a3d44cb771a73fa74ee159c7801d72",
+          "16277bb5fe1b38b59a3df9e5ead6b2ff589293bc79d3fb592fa64fc41f2414da",
+          "63a64e3349e4fcf9243baafdfe2f3bfe689e406ba95a85248000855a223bafa0",
+          "f5f3c0dc5ea7fcefe5f4347ca1aa05351e7467474e462aff3953c89cb8fcc4d9",
+          "5088aacbf2617fd0d7596750ce46adbe5fa6dc44725fcd5067e3b3bfa5a27ef0"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "down": {
+        "originalGeneratedSha256": "90c5eaa468ea0122578e0f0e83c8580ddc906c137a259f5ec09d31047d8c3207",
+        "originalGeneratedDecodedRgbaSha256": "30f5932cd9657b4ed715a20f5c0d0a825b11d53f2b427f156a66e81b410e0b0c",
+        "rawArchiveSha256": "90c5eaa468ea0122578e0f0e83c8580ddc906c137a259f5ec09d31047d8c3207",
+        "rawDecodedRgbaSha256": "30f5932cd9657b4ed715a20f5c0d0a825b11d53f2b427f156a66e81b410e0b0c",
+        "promptSha256": "ccfae92dde11334c74108998eba0ab3b762c985b72521f82261980cfd4383018",
+        "pipelineSha256": "20519db750ce2a66f867747e34083418cc145862a8ea1bde60a8aaafd0fdffd9",
+        "qcSha256": "efb1359ae5bf6a7cf372c9d5476f7b7162e95efdbeaf3dc49b4b4dc32943b350",
+        "sourceFrameRgbaSha256": [
+          "9e5e3a0f0553ff5ec197581cdf52366edab2f2205b2236de876cfb275001ff35",
+          "5cae6a148d9cd7cad1836527ef8dfae1604d26dc1dc31ca7be44241a39c89b01",
+          "d0c47b8917f316c38ee06ca632804ef606813a32969bdde68d6a84b6a2c93508",
+          "e7290149c1bacf9af2eb230cc898de2cb591b8a96285ba86b541d7033972c4f3",
+          "dbaa88e04bd3dd09618b102a1a033a29e67cdfea94b303ec4607317c1e2ba199",
+          "f644b0dcbdcf20b844e97c252c5c15d8ab2cb1adb59b6b0ead49810c1082dff4",
+          "b0ef92946979a5ffe4d54cc6077461236f7a121ce66e64ae0003c046a6b38ea5",
+          "f8c5811f7b4bd0d75de115c26830eaff69dc423b9c73d6eee5b601f222be1afc"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "786209b48960eb18838c53a870255b848e18545c424c6e41c890f013f6b3539f",
+          "a2e88297223afbdb441e2b1c705bf07a2e68bc06a0865a424cee73bf9ea4bdf7",
+          "b45c4032c8f84833f56ded1308aab796c066c5028d07f1f0ea10402ee6835d06",
+          "4d231d9ad9cef9d663db97abf0a4016947a7393e5ba215901596d893d897d1b1",
+          "083b8a72db115712790c2407c99bbc0d0fd18d148eb5655b8f172647427266e1",
+          "e53636a57585764cb0b29d64293b9e006f31745731336745d18b0d95542cb4fd",
+          "750edb6b4a9192d226785beb0d286c70f01d8a7e2e3c461f4bde0159c973f7d8",
+          "67d82275f6f529c70a56161e2dbe5c24fc613f139236ecbf1edd733843fbc359"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "revive": {
+        "originalGeneratedSha256": "5bbb8692de4a251ad141bc03ad175e728d1d81ae4b1331dd72da283060562090",
+        "originalGeneratedDecodedRgbaSha256": "10d85d43caa32dc8b18e1eac2c83083efb3d9ecc145a3b60663c164082ee967f",
+        "rawArchiveSha256": "5bbb8692de4a251ad141bc03ad175e728d1d81ae4b1331dd72da283060562090",
+        "rawDecodedRgbaSha256": "10d85d43caa32dc8b18e1eac2c83083efb3d9ecc145a3b60663c164082ee967f",
+        "promptSha256": "85d5a91776aae9ac4ae51fd64fa8d53212fcbd0f73346127e4ae0fdce3393be7",
+        "pipelineSha256": "c126099c2030a39ca37a8d08a18ba2775fe04cbcf06b5d974696034fa7887b13",
+        "qcSha256": "114a19af84de6bfbb6162ffe5300e00f0acf2291c22adef751551a5369dc6e7a",
+        "sourceFrameRgbaSha256": [
+          "56571d1be7e5df2defac9debcb9b96dfa1ef2aeee1f2c8e0c88740b2f3d6e215",
+          "6b9ac9bdd14e3c03b6aea48ff4bcfb359106302db019f265aedb8495781ddcb9",
+          "24b40125dd366a109e098ba187f94c1ca1f2841981c96e8b2a8489623cd5bf91",
+          "5dfcd66ea7bfd521b54e28136d0eb5576a0ca859534d3e8fa15affbaeaca23f4",
+          "c962d00bb6f1adaa9d420eba1b29ae31c99668a4a5048b746d286341e9bb1ea3",
+          "5fb58f6a23ee6c5f11fb35f971cd96da3d11581861ea45cdb44d05068c600377",
+          "ee682af20f75cbf5c44c7df8b11bbbd616c167a4fca0ea1ca8b496d493c982ed",
+          "4a2a9ae81158350290fb1c05927067cf033f603d8155c8bec2bc74ed50e3d1ee"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "df3c3104cf6b83949066feffb377700a8edf3ef3b7bb58f1e6005d6777fae356",
+          "a4600dd97dad223ed669eea97c58588cc3692def91344815e5c4d14ab86d1447",
+          "e7bb98fb896eea8293498d199f0ae98ce37eea40b20380f0f9bc57f164aa563f",
+          "8dc096e85a6a0e112ff7261657e55f7a9c4ebaf0fad5dbe1cda9dfbcd559328b",
+          "b8c28fd5635ebcee49d18f3ffb17f2ebcc7260835f2af20e1484bfcac1f178d3",
+          "94321c39371963098346586b6fd094bdddc72082bce540b8521b1d6117a2c5b2",
+          "51985bb944b04a9fc68a6dbe71617b5356a38fd839f4999fc14f30dd0b225488",
+          "2ceca8edf6077f40ba59a61e37f70d0ca7e963607940a1e1b5e4147b37689039"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      }
+    },
+    "back_3quarter_ne": {
+      "idle": {
+        "originalGeneratedSha256": "e063341ddfcf36e5614ab8a60d1358585473ecb6fa69c262b2f3375c4fbe4edc",
+        "originalGeneratedDecodedRgbaSha256": "10a2a2521d2ee54734eac7ee46a266daae066d0d5f65eab98ad5afe5acd31483",
+        "rawArchiveSha256": "e063341ddfcf36e5614ab8a60d1358585473ecb6fa69c262b2f3375c4fbe4edc",
+        "rawDecodedRgbaSha256": "10a2a2521d2ee54734eac7ee46a266daae066d0d5f65eab98ad5afe5acd31483",
+        "promptSha256": "75623c79b7e3605e017af882af943d6885163b5734dfeac098dd83080b8bb337",
+        "pipelineSha256": "c89fdb6e091a67e130ab7a92eb7cfa49f7ba1ec01027ecb7009ca3f9b81fc885",
+        "qcSha256": "cb096f93087dc527bab214b7b8052ee5ee4ee2c8838a6afeaa6b934b13ee94c7",
+        "sourceFrameRgbaSha256": [
+          "42a1ac815b44af446b8c099f86d37a139105604f3dbdcbfc5d7ba6bfeacf7b60",
+          "acd83223e43cbc807e2d71cfd2f49c51ecce6ace3109fc592c0d00df12a4b739",
+          "a9c3a4b1cee5f17d535671c93cec62737f250b69cb7ed7250d28e42349986da2",
+          "b2b4790289520cb2d791153be6fd46fe4c5c47c58a00a7fe58d011d05296e9ab",
+          "e418bf9b0b03715a4543f16121367cd9149eeb06f65cd0b94ad9552370ecd11e",
+          "d9073d8f8923fdc31aba972f7d619a1fbf6aebefd1076d0d29cd60beb3e8420b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "e88254eecc8ac32ec61890863b8da99f1ce0328b8c544a8b1b7d11e0cc12f71c",
+          "e111b7d072533a46c5d24e795d3e470b5ef9867f21e99e5a8b7bccd638dddb2d",
+          "100139b5217636238d945df0bb2e0703deddbfde44d32741211f8f5e51f12f20",
+          "8cd0004c2b5040ff69b99b5b1e89ac573fad69c87d7ac4c3c02612d6ec699d5d",
+          "f2b9fcca09c324ce7b4076597dd3bb095f7d3287b56d65806e790a676958272a",
+          "3e2d840c39ec7c3b2f0a92e6486ad88989deeeebcd317eeb310a7e4e667ba730"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": false
+      },
+      "walk": {
+        "originalGeneratedSha256": "c341c909a23aebe6fe5fa3ea85627b533f1700cbab0aa333b5600c62d6273db0",
+        "originalGeneratedDecodedRgbaSha256": "4d71e5d0d60ca13b9976e9d80f537cc1a2aa057bee18f3acb6a45a8034d26236",
+        "rawArchiveSha256": "c341c909a23aebe6fe5fa3ea85627b533f1700cbab0aa333b5600c62d6273db0",
+        "rawDecodedRgbaSha256": "4d71e5d0d60ca13b9976e9d80f537cc1a2aa057bee18f3acb6a45a8034d26236",
+        "promptSha256": "7333bc878d4a9f2e6e583f9c53bda5b23f21e1093bb0c3f6af7cbabbe910aa4f",
+        "pipelineSha256": "2517ac7c3e6200f35400b2fcc3eb6b99ec070dbcc86429dd361671b3fafd8899",
+        "qcSha256": "ff581eb389efbc59b447c0f86d46acafbb5cae3149bd2d2624ce716a9cd795b0",
+        "sourceFrameRgbaSha256": [
+          "b6189c789f4eb2e817c958e97cbac378ed0221bf0ab3a97bb8eb1d07323e6fe9",
+          "44d3dbacd5b40b04020fc7f1230e8eaf0beee9741186edfbf299ea4e88e36220",
+          "e0659ba0a0e2836c4a8b92055b8aa8e2ad83782b3d629847daca5d270900d6aa",
+          "005b3caf8ff3e3607c15aa076e02ddd59a2c6a86c4038e513b61100136a168a1",
+          "ff5408aacc8c696c207b771096acd0f8e85900a22fae0dd34af3e48286c15581",
+          "a7dd5f80f03fd6884e783d5cf3991cdf608beaa5d886457b42aefa542b6aba5f",
+          "0f619391bd1a5a243815ebdcc4bd87a36be27adac670bfd05889e3619ad77acc",
+          "f0581155245a2e002f2c69ccda171f36b60deebe2077ff6de4fc21525edbd4c4"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "718e1982b5bc7b13d943ed826410a12bbe5abbb9b4054a0f9fe9ef55ed46e7b3",
+          "6e2e2e40fba2803a4aa804e8dfa2cf90a2d6f6ab3676e4095fc310967874eba0",
+          "1ad06c77e799c413e90dbfa08d86a7829e8520e54aa5a9ca5e49710e2f8c5325",
+          "f674fec4a36b73f65d818c8be3b02289c0079b1b83bff73476b3ae721cafc844",
+          "4b593ae4b209c272222afb01c1921fee42943d791e949fedce96df0fe7d59d2b",
+          "6afbc17981812578d5ac76c322a5850c1daed80ea8f1d836abf42ca8c1529f20",
+          "e36667d3a162cddcb0111214bac594326b8e0012c2091c785ed634102254ea81",
+          "1e0a8fbfbf4f7ce77b2b2c0ec46630f7bddd015752225adb2ae9ddee79e0d74c"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "attack": {
+        "originalGeneratedSha256": "7a01f94810f66cc4a9d4fc414e0f9161a9441592cdbb1056f9c4658c9f103604",
+        "originalGeneratedDecodedRgbaSha256": "73098bc51a66702755cff1bc90386add26bb37060f96df66d8877b75d2eebbc6",
+        "rawArchiveSha256": "7a01f94810f66cc4a9d4fc414e0f9161a9441592cdbb1056f9c4658c9f103604",
+        "rawDecodedRgbaSha256": "73098bc51a66702755cff1bc90386add26bb37060f96df66d8877b75d2eebbc6",
+        "promptSha256": "db08110bb5cb7f04efadcb96eb698b644996410ef6c8c3e7dc37fbb1a974cefc",
+        "pipelineSha256": "6768f6cacbdc7207870f5ec6cf92c7c9c6fa0adf3eb47c6f9b68831ba2e7930b",
+        "qcSha256": "9369bacf2ee8eecb180bc9e6743b34b198973e50bc0d4791d8b07d923689cd4d",
+        "sourceFrameRgbaSha256": [
+          "ad8c60b3ba061a85ced16530e3f99c2bcb7f40100eb8b45d769fe9b8a6c642ee",
+          "08b79ab8ef0970c07bc96e229adc20fb3a4c2fc64f47f264852df287409c9d54",
+          "f26a74ee72999ac2911b4785f0722a994f8decb0fa5064af540f0842c7455dbb",
+          "00650b0a2f03636bc0e74db2a9fb8a3a5e7f3fea74115ba3a51f02a4077d3ef1",
+          "2b8f285487e6be9d518782067f02f6a3eb4a28d9d963ed4cb849c57325ca6098",
+          "d2859d21e65f9f8de3d19202cccad01f7b2fa9ea461e0239f85f331175b3ab50",
+          "b6ae386dea149220e7f8dc92d4804f85040b5ba8512af8ef0047449c0532109b",
+          "e8639e9a23e340a0fb780eae603816b56682c92bb96701896af880f0f052b04a"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "8b3b8dd849cdd4d9a9b1fc63cf9337e5b69f94cdfa9640ea1fea1f6ab59ddb04",
+          "0f75699163643176895b5b0e60756e362455dc166aa740687f33d344eb8ffbbf",
+          "14a4a1f4db1e20396b57aa03e49247d6974fe8b665a46465e52e3cb2ae54fb30",
+          "41eda15a36ade56560d038e832ec8c0c4ef8c2a90d67ea2622ef1d8fec3533f3",
+          "56e1c4aa192c1520d60eb0fb3c42975ee3682432544e7e69e3c9bc2f72a642d5",
+          "1a84aae2216b365f96b2133675d5304166e9d46a4d69863ab6d5c43b55261e8a",
+          "8ece08c6683fcb48f565af2e8de8e973a3f03963c5654667ea48e9bab801f47c",
+          "554f100be04504dc99f3cd82ba1f2cd94de3288bbababc5b30dccfb64c5461a7"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "skill": {
+        "originalGeneratedSha256": "24ca34ccfee77bcd14363f0d8204cdf18a9b0a2edd6b871dd76465e7d8bee388",
+        "originalGeneratedDecodedRgbaSha256": "0be234d763e618e4d7022cfa0aeba2dc37419a539ed32e98985dbd01c1d1df38",
+        "rawArchiveSha256": "24ca34ccfee77bcd14363f0d8204cdf18a9b0a2edd6b871dd76465e7d8bee388",
+        "rawDecodedRgbaSha256": "0be234d763e618e4d7022cfa0aeba2dc37419a539ed32e98985dbd01c1d1df38",
+        "promptSha256": "21e5e343f83e67033e58c6513dc91866b7d2d8965593ee9fe40eea69218fae5c",
+        "pipelineSha256": "473275b45fd2828a05c73db6de100e205a3c2e0431a6b4c62590b1dc09795baf",
+        "qcSha256": "3f107733287a1ff9665b7671f1c2761ae013ccf1490b6e2467c7e33cae308139",
+        "sourceFrameRgbaSha256": [
+          "7a2f5ba23ed811d50fbd74299d865fed410aabfaaa9f95122fe197da814b2be5",
+          "33b856729e7dadde4a1a8f6fd92f4a46c4f37d7721ab4588cb13d3f542bcc4fb",
+          "62f747212ae514a27cb35d88eff4104a550997e0bf51b4e60b4a433895e9209e",
+          "cd3cd992776d01bbf27d255cf730f3261654ed73611d3bd01a9cd62c134ded68",
+          "81c64bd28129f77408b25092d9518d2714f2bed7f7eb7e61e4fcb75d025ff811",
+          "3ea0a261fe3d8f5d97f01385aeffa44076983ea5a5e82c15033aeb5934e99b3e",
+          "da28899ef1897bf64c2d89ea8231b19172c14feda7ffedd537e6940e12a4a421",
+          "296057a462b4f707fcaf9b8169cddd18b8aa75c5e0e42bfcbfe4bfae7b37c10b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "09e0c9e5d035740b904a6e91b68c9047e290a1f4abd2dfe21bca9a81ebf037b0",
+          "3fc471ec446067fa874b2b2529e8aba46e66a1929bc735720ff8199f25c9aec3",
+          "6b32b4fc3aa1161cc8b37ff1edd5b81af64d72c55c5a848b58b00f1ea9e422dd",
+          "03330484fd3b0375c03bf79437cb9d8d083d1c32e11450423f5180e6a97e68e3",
+          "76c7b52187053e9557a0c13faca2424f6facfe1be624af882ec187e448d6fee7",
+          "9e6b0a2b728fde2ab3f0825a095b96193e4247956c2ce47c307bbed5cdd570c2",
+          "ccf6e3d8441f2fce9384d8369347dbc4011e01a7d0d78d7258f87fa82aae0177",
+          "93fa30d40cee6e737553bbbc5846aeb482c68fa89e77b051cbb32347e64f71ee"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "hurt": {
+        "originalGeneratedSha256": "de64733f9627f5e9c13fe04cdc65404533d009f880b07705782c5120381838a1",
+        "originalGeneratedDecodedRgbaSha256": "957d2dbe00d9215cfc65d88bf85593ae588723990028a258ae967cb881a6a6c0",
+        "rawArchiveSha256": "de64733f9627f5e9c13fe04cdc65404533d009f880b07705782c5120381838a1",
+        "rawDecodedRgbaSha256": "957d2dbe00d9215cfc65d88bf85593ae588723990028a258ae967cb881a6a6c0",
+        "promptSha256": "6a97db895d437263fc1a40f606a1c2cec6c63bc97eb3ab94e0db6d287a348e6b",
+        "pipelineSha256": "f6b4d9ca8e61be915466b429b1355095bf9367d369e239cd69d0e433e9f815cb",
+        "qcSha256": "e16692e4a932e3634efe5e8af5018004e49ea0bf078c2b10e9204170c8ff58e0",
+        "sourceFrameRgbaSha256": [
+          "4b03ba38b0c693f74d8f1297e99e106918ecab40ada54623171d2e4a8d5e16e7",
+          "e57c32727910d6e3a678aec790a28b7319e57ae7dac77992e3bbe424ed97f26b",
+          "072f0e572709c92387b51484d1708212e45e71beddf4f8a8c3fdc6ee1157c98b",
+          "3b22c387d273ea030469a3a35c4cf0e702c451cbd82f45169b55f1657082a83f",
+          "c4f79549684e1795a5724e72d382362748653c9c41efb0090776da37bfef0cc2",
+          "4b027abae82edc3981e0a762f50ed980bad83ea1e535073c278ac903beeac7a5"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "02c7565c002f6757c408a1a23584c1b0b2ebfa572e751e656a8835437698d584",
+          "e9a9bd59211ccd447c221f87010c9d90b99d45607d42ad4e40c8a3c33ad61196",
+          "e86cce9a97510a96e7024a473213c0a8ad1141d5a3a64a96f5f8982b272927f4",
+          "4c2900da2739b338bef91cb7cfc1d14b7541d6cb2c92b2c5946e27b3e4f9c2ed",
+          "016aadde05558fd9c2b3c5eddb7193b6a58d0011a5244a5e4e825fc9688a58c7",
+          "4556b552efc5126c4128dd30bd37cb1ebec4ed1b67e5dfbb19ac6e762ce12d16"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "defend": {
+        "originalGeneratedSha256": "2798d157fda68fd9d9e231b8e1fbe0e46579db5d9ac2514d8b4e9e98d0d84d8c",
+        "originalGeneratedDecodedRgbaSha256": "c8b689ffbfb78dc9d7e6e94db18ba88b91a4da30585716e1f4765856802380c4",
+        "rawArchiveSha256": "2798d157fda68fd9d9e231b8e1fbe0e46579db5d9ac2514d8b4e9e98d0d84d8c",
+        "rawDecodedRgbaSha256": "c8b689ffbfb78dc9d7e6e94db18ba88b91a4da30585716e1f4765856802380c4",
+        "promptSha256": "bc4d9e08b8459c4cba975a770ab3ec5e5cb8f14bf4191678d68b79742258b90a",
+        "pipelineSha256": "d8cf628c241d1347ed82acadb04d8eecbffe562d1729ff2a14cd442420e9a486",
+        "qcSha256": "44f2476cda8965b98920eb43583d2b73ae685a9daa22a374916a2014749e3f50",
+        "sourceFrameRgbaSha256": [
+          "d8b903abe738fe8a661fc4457ee296e9548bb9ec54513392195ce19836161012",
+          "09298da89312e85f5396a6b14187e0ac53138e13a229b1317210ccd53f437d52",
+          "0d71fd7f619ecbce1be9a36215be0cbb41640469d8dacf76ca6b7634368d0ee5",
+          "d8a33f9326454ec39e947f2524580f318eb3acd1f1d3af0d27cd706cf0d4f7d4",
+          "9480bf2875e4815c8df1cadb80cfd08477017e46a2813e5856fed212e67f652f",
+          "83739e1150be94f8ff3e9f508d33d7e2fd49bc919360726873123fe0c5403849"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "65d7e3f1713038a257ea7c349ac3856abe99080c67b65be319fbd122fe8d4cb8",
+          "0c0ade8ff07855a058f5f4d5b58554d2580c2d6b37037f7645e4f3970d1a889e",
+          "27b2ca2d2859490134f54e5961b26edf71049a512b1bef422923ecf0395190bf",
+          "1c69feeb91a62f4fb79771d3534fc8e0e4094800c81b62e6fcefc3980d611954",
+          "ea72a8fef33e885b2199e9b8f4d93641b6b1ed9296748438d9014cd329700536",
+          "23cffbc4b059c2b8e8c24aaba2cccb2a5f840507afea28e4893affe340ed5a21"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "dodge": {
+        "originalGeneratedSha256": "8a3514b393d8b9ac1b271dfa65f6bfcbd710f9f0d755e4eb41c7be12e297b947",
+        "originalGeneratedDecodedRgbaSha256": "9e410a886a5b4cbeae8e4047be93008c3b182fb933400e8c7ccc00c7b374c3df",
+        "rawArchiveSha256": "8a3514b393d8b9ac1b271dfa65f6bfcbd710f9f0d755e4eb41c7be12e297b947",
+        "rawDecodedRgbaSha256": "9e410a886a5b4cbeae8e4047be93008c3b182fb933400e8c7ccc00c7b374c3df",
+        "promptSha256": "d1365598e1f612b13f134c4d67667c8bde7ac5b1fdce76fd5226f7be33fad983",
+        "pipelineSha256": "d4cd9f9184022db6fca9052a1aa2ca0bf2e4316e1ff8cf6219c059b158dd9fc6",
+        "qcSha256": "b8600967cd2879e020699b106b220658dd9d56cb3ea05dbcbf241cb77e744b0a",
+        "sourceFrameRgbaSha256": [
+          "2bd31fc30eacd26e7a68f6b6bf47bfddf14773770f39f01a6c92ec8e96e81428",
+          "47eb7d9a36c123a2400556b58d9fb79b5c786160c9682b908e287b4f94f2da14",
+          "fcbabaf6937291edf0f80eb29d8bae75da0f4c4b4619b2ada8b1652179e43229",
+          "133e04a87cd7867cc7dbba25c1fbfe77fbffd2285a66ebf142c502277e59fab5",
+          "816fef38e33d709c8c85d0b7d6e3e466b21fdc92236c59fda28a89be2a1ecd85",
+          "ab128d62b2c0e40f800699e288dfc5608563ec4c846279f71a89761dbd9e3d0a",
+          "7d8c33045b96e696cb078ce87eca5ae07e015c0b5aaee215f7d6008539eed24a",
+          "0d76ed0c87f89175150d1a026d26dff42a7d65decf2fecef386569f74bfd9ec6"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "421ca7b9053b4495ca5e0ccd27b468cb8ab0168465fa3019b2501824f0abc116",
+          "6cc01901734e7de636ac618a5f7e322a73a8a900b188bb818b74bb4f203e4b35",
+          "5651a56b00c77eedd050f7d2a006285fe5ca8df921df577a9738f0320b042c9c",
+          "76dc1f4761ca80caa60bc762568d214057cffc9603d91aefcabe00cabccb435c",
+          "a51a494c740b8329bc6ba11002e7c9c8d5f0364ce6152926a346e008ecf6a488",
+          "082d60c616c213b135ada34a183a7b287cab0b70d2191a2cca0bd64dfd813ed0",
+          "8b34672ff27847855e63289986037b86ee3b4de20e0d95ff59ad1be7f21eacf9",
+          "f5914f5081b1bcdb2f1be78f8cb83f3908c7e72a9f38811d9832146018537dce"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "counter": {
+        "originalGeneratedSha256": "64e3c96693bcfdfe91a676b6f5e234fe1425019984d2a7eb6662bef7e47f908b",
+        "originalGeneratedDecodedRgbaSha256": "3d044c49203f9e09c6b7d75003475da9d3d084216daab5bb5b2ca69f0da7daf2",
+        "rawArchiveSha256": "64e3c96693bcfdfe91a676b6f5e234fe1425019984d2a7eb6662bef7e47f908b",
+        "rawDecodedRgbaSha256": "3d044c49203f9e09c6b7d75003475da9d3d084216daab5bb5b2ca69f0da7daf2",
+        "promptSha256": "629557f4a9d51a08c8abd30cf931b94b1a8bf0b5f559cec9b477ae0abf239769",
+        "pipelineSha256": "d1d6a085c4790972173550acbf25eff30bf20931f253e1e5d6a08571bd2e0bb1",
+        "qcSha256": "48126244d2ca32a4d5a91ed6f39b26cd4cd17e57a0ae10d07dc579e95ed6d8bd",
+        "sourceFrameRgbaSha256": [
+          "cc690d644575b0d09b5a74d04fb6d918d69c683055d05e014901e59d0fe62719",
+          "5c0b2eb49523519570bf725481e8e44f8f779362254ac54278365ff2210bc19d",
+          "78de8e6c639508d6d53813458b58d3a6895fb17c35e982ce5a08507967be5ccc",
+          "203dd0c70063b5e7ef9b8ec0507e40d374335ebdf857103efda820c9e751825e",
+          "4dac8598bf70a35e77352cbf9bb6805f689ab1d711d5f52d164941fe3750d89e",
+          "ec830ecb9ce356fb46d4c56c6570b8c0cae11360869e72cfc189f21ad5a3acc4",
+          "425af42ee57edf158f86e7f56583e68db6890ba31b0a883d614badcee6846354",
+          "f8b484620f2394bd0ececbf9cc045743d6bb54ca114c95002bf266eac08c26a1"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "863bee592e260399ece1170bc3b1e182e2650ac8e22b77955c43d5a7a8633e30",
+          "7f8940e09e46ef036e4e6a0f0024078f611ca733b95d87ddde44092de55056e4",
+          "c20f5f289e97af2b7222a81dd4c26ec1e15a87345c7665b936d726e8ced7bc29",
+          "25dd3f1e8ff9220f5617e1b1ec4b8aca75b29d5216b9fd2e3d061fcca25d4cd1",
+          "61dd25a9fffd45f160104c2ff6b110b4a6c6ec65e1293b29b9828d29abe5f096",
+          "7484fe239b5e2e4dd95655d7046ec23cf4b1b731ad77cad740853f7edef68985",
+          "079983c6935a0c556b63de535809bf63e2dd30d04693c1788e2e9ab4b68ef482",
+          "8ed54f01b6b9c6968a6136c8777649b886c7ea3b67ec804084a99ffd5c814a1c"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "stagger": {
+        "originalGeneratedSha256": "edc695a556f15fda8242d8758283f38f9c50cb2ef8268765f79ccf8fa7067854",
+        "originalGeneratedDecodedRgbaSha256": "8aeaa192515d561b7ef8585fcc1ca1d69e14933a4a83f6b7eb9063c457b97213",
+        "rawArchiveSha256": "edc695a556f15fda8242d8758283f38f9c50cb2ef8268765f79ccf8fa7067854",
+        "rawDecodedRgbaSha256": "8aeaa192515d561b7ef8585fcc1ca1d69e14933a4a83f6b7eb9063c457b97213",
+        "promptSha256": "eabd81b33d93dfc2fbdba2e10847b8be4cb62a52c3d0bce45c34e3597dab249b",
+        "pipelineSha256": "690e3522de19e738b5e07bb1e7b08f1e1da9244e0787d90d1ccec19d3820ec1e",
+        "qcSha256": "9bc152495f71d2e5ecc7425476615bfb1d2c0fe0aae5686143da5f326deeca94",
+        "sourceFrameRgbaSha256": [
+          "ce54f3a2820e2ecf4a263f16beeb1368b421ec576ca62ab0afd3dbb77edab129",
+          "c62b39854357dd858dedd511801254bb6a27e4bca2d22d5075b976c794abc14d",
+          "d87b12df04df46045c63f5bb2cebda99ea88abe6925341c4687977d58666eaae",
+          "cf47dba7a0d350bf34cc8918502b099db5946a2577a5718a2e493c66ec462f63",
+          "415a79d5e97b342db0d4a16dcf7b31a09414d95eef806f6a64291226f2e5aae8",
+          "19b6965fc5645de3f8873e234978580d9f1b2343fb46d9d84855a1893f547ceb",
+          "e4a8535f9da07971588fdbe66e166b6dd839ff8d55b8df11bb5d233c95f909b3",
+          "9452f0beabe4078a0089f9874bc1e39912b64a15c32327bdc6a9b5fc29a10616"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0ca21a1bc5354a3765e0e3f88e4dd0200660a3ceba916a79f09300947b3cfafc",
+          "b510d27d9d8f6f98ba3fe80116f64866b1cae1ab4385488bd0e100b35d273c0b",
+          "6c50e6529f4a63769373651f52e4171d393fdaac680948993424b85d1a21e5bf",
+          "dd5b78e638cc0846a4799abb17b0f55d21f6356faedf0da7a00c032a42be0636",
+          "45dae6a7e676a130604c2a62c67d7953df7d0fd5513154f14421d2ffdba08c64",
+          "e1b6198544d61848a25414ff7b1569d6a6550fad52854f0e5a909da7e0f5f033",
+          "548262df817f340846864540574b8d3834abe083f7b764f549e42d8a4da6e863",
+          "26fd8f950ad3abfcb2b4be9e60b37e84f051424d1f235e62fdfd2d865d2ec088"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "knockaway": {
+        "originalGeneratedSha256": "ad0a91d03738eebc0bae82376bbba5dc781f404a8713f109e682c2c9e04f279a",
+        "originalGeneratedDecodedRgbaSha256": "760748e12d7c44a7bff78fbe0c4c26209f83dbd89d53b7c05427b5b5768cd518",
+        "rawArchiveSha256": "ad0a91d03738eebc0bae82376bbba5dc781f404a8713f109e682c2c9e04f279a",
+        "rawDecodedRgbaSha256": "760748e12d7c44a7bff78fbe0c4c26209f83dbd89d53b7c05427b5b5768cd518",
+        "promptSha256": "a6d17b920cf325aea703a9e10d4e103698110b92cb2720f673d8e30168dcdbf6",
+        "pipelineSha256": "49a0aa458655771268bac8f376b14604eeb054221da655963daa11dde8bff20e",
+        "qcSha256": "975c5cb328a65c80245b1d0da1880526bd251486b76f6f8fcd0abe51285badc6",
+        "sourceFrameRgbaSha256": [
+          "df5445d3a5efe70477c62bc2b327a52f4b262540ac5e7f0092d44db18d0f3802",
+          "151f0da22f10e5509ae958a5b7c201cde30b4ab25511385058e1f6043428b425",
+          "9f860362a28bf67c36446bd811f8bdd9a1ec79fc6d42fdcd1ac0f92e0112e43d",
+          "ecf8c0761ed05157b5f61942d3070bf73169cb524150057fb4b210b2a37f7d9b",
+          "f91f1ab8dd38d6988dcb7107082656f3d900e97b6cadd9876e14a21c40523d46",
+          "15ce89fa9ea57b87823648e18e7c60e0666f01de0ed78375ced9a4ee2312a99e",
+          "63233fbb25b9e526d01c9c3d0662ce64efbc84f84d95b252ee60a6e26ea5dbd4",
+          "0154c20df624884000a2dce29031a849e6f37d9895f5d28c9460639a4ddfb9d6"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "c04d8bd6450c2e3544126a8b23b4a9a7cf06c32dca21ff69debaa14b371cf488",
+          "cc34328b67e3b92724e72f09f8bdfbb7bbc5533d1da6bf4ec400d6bbb29fbe72",
+          "5ced6aef778a8ad12c65494820ee3a82489acfba48426b62e48a5a5ce8ca3459",
+          "9e94660db2ff7328645b0ac5c734a012f7688f0d178181811e550baf1e29d7f9",
+          "42d80bd043d4d0a27aeb0e4cb5a186e0ec718c120cdf048eec372cb09e8870fa",
+          "38f4b83d385826f3f466ce52dac497942e4f06239a25332ee38f959ad1b5b335",
+          "eccf2374fe564ec29437847710cfac00bcc112d12b744d289f15b25c5750bf6c",
+          "89ab175e74b3a684db6850ae29eaf325b6812490231d92161e4cae5eb23eafc4"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "down": {
+        "originalGeneratedSha256": "b536446c79ee68d8a021880f25bc7b1e98579e36c7717d85f1239232a7c1092e",
+        "originalGeneratedDecodedRgbaSha256": "3ebfc7dce96f1b6c1b713b93a81e6b05fa9dd12827606623c75a2e79cfc18b66",
+        "rawArchiveSha256": "b536446c79ee68d8a021880f25bc7b1e98579e36c7717d85f1239232a7c1092e",
+        "rawDecodedRgbaSha256": "3ebfc7dce96f1b6c1b713b93a81e6b05fa9dd12827606623c75a2e79cfc18b66",
+        "promptSha256": "b8e0bafaadd2fa3de1189dcb33f745d1d67fcee5be74ba18d5ac96de759c9bbb",
+        "pipelineSha256": "677db860c22964ae496584ad858080826d9e81a8baefb173d7b4f14bb3593a9d",
+        "qcSha256": "ea6e041bc791378156adae29b9778b40bf3546ca1b2eaa2e755c832a800a5e62",
+        "sourceFrameRgbaSha256": [
+          "8111021304997302e5ae271eb8ecbaf32657d90e160ca1cecb130fbeae3325a5",
+          "074c6550ed2d64daf98f6c984f991057acfada75e7d727cf6708c3e550d78eba",
+          "c8a203d7964901199bbe492922d597e85c9dc19842101806481cdfb0c379c219",
+          "a2d6f6ef870c01f255ad69146f7ae2c0e246a6932d2d63dc7062c7483080a3bf",
+          "dc03968b2d2f43c075033967258f8614798f1a664793b8ba2b8277fc071e4e98",
+          "5d840748d1f0a6023f70145337a9d137355ab6592451529b384138996f2f81e9",
+          "8ab70fe58ff284d4291c5bf0dcd7f1f78bdc216d79aca667273ff4692f7867b2",
+          "65f10d2bb4d8413c58e0b0204fe7e1967e4ddf36c1e5c54dda27d433c188c9a4"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "b6fa25415e535f6b8480740af5f87bf0fde5f66293c7320949bd4480ff910c9f",
+          "bdc8b1bdab775d11ac6dff64ed3473530e904e2ecb6245108bc165112d62e339",
+          "336d2c96ae1c5a90cdc25d262ce25a19751921603b846681086636bf671a91c5",
+          "1f6b585ef142b9b7fb4ec4a15ae77c6a501a139c760f7c46ded3e5911f93a961",
+          "4cd21e0a307520f0af63f8837627e3e56b93e56357cdce5a262ca2592a7c766f",
+          "b4f0a152402070b517cd439b3097c479c8256c140a448f5fb345c4dc493882c0",
+          "2702f7a64ba1f450b979e481e4b1488ea6ea9182b6a40ef7d4ab53fad24698f8",
+          "9150b4f8f7ab8aada0215167c1c90e9874a71f3de9881e2cb5c9d9d4ac41f0fa"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      },
+      "revive": {
+        "originalGeneratedSha256": "4871082085856ae7f8c524922a361de5c137124cb81f60e7a14530ddeaa235b4",
+        "originalGeneratedDecodedRgbaSha256": "3dc7563f27bbfce1c24773ec93e3b9885d5a9874fdbc1101fc5ec6ac9c1ebec0",
+        "rawArchiveSha256": "4871082085856ae7f8c524922a361de5c137124cb81f60e7a14530ddeaa235b4",
+        "rawDecodedRgbaSha256": "3dc7563f27bbfce1c24773ec93e3b9885d5a9874fdbc1101fc5ec6ac9c1ebec0",
+        "promptSha256": "5a950064e808669d10117b33b002047459d989fa387204ae3140be56558a47d5",
+        "pipelineSha256": "fbc0c7432d2e0fbbce3bdef0b788f96ef0918833f783679c40af46e8de83d4de",
+        "qcSha256": "130d89c4bad873d6e58615d9467158aea9460f944d5bf82ddeaded2b0edddce5",
+        "sourceFrameRgbaSha256": [
+          "ae69abd15429f6b21ae0b39868c36efaf74b09253ebfc9274c476ade8a4d984a",
+          "d0aff82d80c4adba962e8e27920250092a13789791780eca3d0397d244c5a77f",
+          "7b067d5320fe980acd4d93a3f93ace4eaca70324e1acb55324ba3cfcfa07f8b6",
+          "4b8a783fde763ba7d7ca2b335c347aaac1faccd88f581255f50fb85d84724d91",
+          "0e92eefb0170a78318bd96bef3bd6dddaac0c5bcb801940b54d0775a45ad51d5",
+          "822c7f21144657b62e6e218c480ad11610c9d895f292be85988dbf00bc1319cf",
+          "2ed4c698e1004ab6f713efc2736286aa4640c77feca565ab9c6896bc341ff860",
+          "3a26e534267cfd3b24779522d08fdab39b9cc4eda3c75fea6ddfe93d3c128962"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0be38f7197a7fddda1a7102d48cd90b4e064768b4f976cea1dbdb83aaeae27de",
+          "9a7d8137573ce43f54e1b4b3cce70cb26c228cc38dc7bb126be0143192104ff8",
+          "1d1362afc40799e23d9e872ee7ea490ab79c5042c184c3f432c949c0c7950dbb",
+          "eb8e9984f53e35d308ee5f4899ae10a9be3bc21f2dc7706ca6a000eac61aa97e",
+          "c0391d9084470ea3abf5890f670f45f23e22777c1e6c2c7f30c050816ab7d27b",
+          "d8ad54e7437fc834daa40ba756cf67af188ed75e6f6132915bfcb59d1f06ef6c",
+          "982b003fde1a88d0439a1009bad62fcfff1bb245cb76d8f92a5193afe9f74260",
+          "181ddb99ecf6e97c528048b00d5f4e8bbb06c71ebe582573784e40a65cc4a4b0"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false
+      }
+    }
+  }
+}

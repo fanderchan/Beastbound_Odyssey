@@ -1,0 +1,3 @@
+PROMPT ARCHIVE - normalized from the approved built-in image-generation call.
+
+Create a production HD 2.5D hand-painted animation sheet for the exact Beastbound pet form wuli_normal_tough_earth10. Formal view: front three-quarter facing lower-left/southwest; independently authored and never mirrored. Preserve the tracked identity, anatomy, palette, silhouette, scale, lighting and complete uncropped subject. Action contract: lateral evasive sidestep and return, distinct from walking and attacking. Use exactly 8 chronological row-major phases. Solid exact #FF00FF chroma background; no text, labels, borders, extra characters, detached shadows, duplicated limbs or baked status halo. Owner review remains pending and runtime remains disabled.
