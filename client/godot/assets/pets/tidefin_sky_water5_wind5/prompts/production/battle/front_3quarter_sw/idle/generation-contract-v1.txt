@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D standalone pet battle animation sheet
+Primary request: Render exactly 6 sequential frames of the exact Cloud Tidefin creature from IMAGE 1 performing a gentle battle idle loop, arranged in an exact 3 columns x 2 rows equal grid, read left-to-right top then bottom.
+Identity lock: pearl-white agile river-beast quadruped; narrow long-backed torso; four real load-bearing legs, each visible foot exactly three rounded webbed toes; broad rounded muzzle, low round ears, large alert eyes, short strong neck; one small forehead fin, one swept cheek fin on each side, low long scalloped satin shoulder-back fin ridges leaving a continuous clear central back channel, shallow two-lobed vertical tail fork. Fins are opaque satin tissue, never wings or transparent effects.
+View contract: front three-quarter southwest source view, head and travel axis toward lower-left, rear and tail toward upper-right. Maintain this facing in every cell; no mirroring or camera turn.
+Action sequence: calm alert breathing, small weight shifts through all four legs, slight fin and shallow fork-tail sway, then settle seamlessly; no running or attack.
+Continuity: exact same individual and markings every frame; genuine subtle pose progression, stable scale and anatomy.
+Containment: one complete subject per equal cell, centered with generous flat magenta margin; nothing crosses cell edges.
+Style: original high-definition warm hand-painted 2.5D fantasy game sprite, collectible Stone-Age-inspired readability without copying any copyrighted art, crisp at 160px.
+Background: perfectly flat solid #FF00FF only, uniform. No ground, shadow, scenery, detached effects, text, labels, borders, UI, logo or watermark.
+Avoid: simple recolor of another creature, four toes, extra/missing limbs, fin topology drift, shoulder fins becoming wings, wrong tail, duplicated frames, outward-facing pose, cropping.

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_sky_water5_wind5",
+  "kind": "pet",
+  "scope": "standalone_pet_battle180",
+  "archiveMode": "lean",
+  "componentMode": "all",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "1cb026f9377d557938569b9fbc2e8c89ef9cf1bbf560ef0e27e5b47c8fafc780",
+  "sourceFramesTracked": false,
+  "rawGenerationSheetsTracked": false,
+  "rawGenerationSheetCount": 24,
+  "rawGenerationSheets": [
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sha256": "787987c8b808cce8ddf0cc44d192b814515db3037f727c383a3f82dec1616afa",
+      "sizeBytes": 1737635
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sha256": "a5fd3b6018305d44a76aac8236bdebb980b21c177007168f9d80871b8210bf64",
+      "sizeBytes": 1779433
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sha256": "8cef9a628fdcc5d72dfead81e7e482f2a079ef63b1cd7613dabc5e64022bc69b",
+      "sizeBytes": 1712485
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sha256": "d4241c09c5479aa10309099e2ea5c77c2f1454b04a7ce244bcf8ef8e83fba161",
+      "sizeBytes": 1723256
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sha256": "e2753634865d54fd97ba65d7e601094c6182c532db6bf16976b9aff0d9ef113b",
+      "sizeBytes": 1469787
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sha256": "d02afebc5120bcd4001427bc0c854d1e22459e3d50c1dcde5b5cddd9c3ab517c",
+      "sizeBytes": 1761015
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sha256": "673a828ca34c17b79b5bbfe69fad03918c739a40e276add432e51731bc74c5b9",
+      "sizeBytes": 1776477
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sha256": "74a81947a72728706431ef313883f3a0721e4e67a99efd0f2697227197722d71",
+      "sizeBytes": 1640646
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sha256": "1a84c492f58a5e7eab18ee6ec88821ee9213538d04d5c4d0d1f68e679ece6fe1",
+      "sizeBytes": 1477080
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sha256": "34880e18928ee58ba8fed1934458786af5e3722258894169d6d1ad614928f28c",
+      "sizeBytes": 1727045
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sha256": "16f60a08c757777fc4c664db3131cb09dbd2010fb83b4d853dc52b185d460278",
+      "sizeBytes": 1670553
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sha256": "637e62eef84d59ad3df55a9487d1762869ecd78e2865b80bb96618bbef3d3596",
+      "sizeBytes": 1523806
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sha256": "0003f73c3e086cd9f7349368f6b90afadd52a0ea403ff217682cd6109fe4895d",
+      "sizeBytes": 1710552
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sha256": "04784ceab56d5f4f40c9139c22bd62b4ea025f54798ea36196f260b0e239b5cd",
+      "sizeBytes": 1797825
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sha256": "d2cddcf7ca13d162b3952dbfea7a365dd5d071c20628b538dea9c52e9eb0c3d3",
+      "sizeBytes": 1795887
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sha256": "7ccf9415313d973a5f6192aa2cc57d99293e08cf545286f5d123749a6d5dca43",
+      "sizeBytes": 1621329
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sha256": "d789dcc96ba854cde71d3b510871b7c73d060623d149cd6472a1c1c73b91d6ce",
+      "sizeBytes": 1630411
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sha256": "20e9122315dc41eea03b13c05ba6d6e241bc4370a16bf3e325c78fad2c3ae781",
+      "sizeBytes": 1760734
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sha256": "5dd5406a4ca966b5d80df45ae3747d53bcd8600da01a3d078f250a185475eb53",
+      "sizeBytes": 1757086
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sha256": "b9199bbaab20204b8ebfb7ebfb24c2789cb6a2e744b017b71f331d94968ee90e",
+      "sizeBytes": 1717823
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sha256": "e0bf869cb706e80df638a2e3e6f7abe00b86e4196d127a8350a14b590895dc04",
+      "sizeBytes": 1728047
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sha256": "547aebc91e547b299d4d05ba977c6c22e7f548c2f9cc2bc96fca06f545e54289",
+      "sizeBytes": 1813719
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sha256": "af26847e6309abafe7d51d6bd51a972d6bf941014cdf93c4348d728d38c76212",
+      "sizeBytes": 1617851
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sha256": "52902f0db15de00dfa844a46bf3ebccfaa455b9d4fd00a3343034939664bc288",
+      "sizeBytes": 1764849
+    }
+  ],
+  "workingArchive": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

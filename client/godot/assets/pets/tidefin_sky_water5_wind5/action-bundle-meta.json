@@ -3,7 +3,7 @@
   "formId": "tidefin_sky_water5_wind5",
   "displayName": "云潮鳍兽",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_and_formal_two_view_12_action_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -32,73 +32,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -134,19 +134,84 @@
     "novice_hunter_v1"
   ],
   "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "prompt": "prompts/identity-board-v1.txt",
-    "correctionPrompt": "prompts/identity-board-toe-correction-v2.txt"
+    "correctionPrompt": "prompts/identity-board-toe-correction-v2.txt",
+    "formalProductionLedger": "source/formal-production/source-ledger.json",
+    "promptDirectory": "prompts/production",
+    "workingArchive": ".run/art_full_g11_g12/tidefin_sky_water5_wind5/pet"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/tidefin/sky/identity-build/contact-sheet.png",
-    "contactSheetSha256": "7ef3d68532ebba3ffcd843c2895a2f89d094c6a1093f993e8e6383d04d82cda1"
+    "contactSheetSha256": "7ef3d68532ebba3ffcd843c2895a2f89d094c6a1093f993e8e6383d04d82cda1",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "bbb7a37bde95b56a43e949ea9c06d6c49555a3e3f4210fbf6498aef166675780",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "f0537703189ca65a50395826e7628c723fd73c22f5307c111216d426880504c6",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "74b45515010fc72c8746b6f01fef16898ce34f9458a5d04202d2177d36b3c176"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "云潮鳍兽 identity and four key poses only. The first four-toe candidate was rejected and the accepted board was regenerated with exactly three webbed toes. World and battle matrices are intentionally not produced in this owner-review gate."
+  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "generatedSourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "authoredSourceMirroring": false,
+    "battlePresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "downReviveContinuity": {
+      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
+      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+    },
+    "bundleDigest": "1cb026f9377d557938569b9fbc2e8c89ef9cf1bbf560ef0e27e5b47c8fafc780",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+  }
 }
