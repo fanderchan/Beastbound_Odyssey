@@ -8,16 +8,17 @@
   "ownership": "project-owned original generated Beastbound artwork",
   "replacementPath": "regenerate from archived contracts and .run/art_batch_full_g13_g15/four_spirit_cub/pet/battle",
   "runtimeFrameCount": 180,
-  "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
+  "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
   "temporalStaticReview": {
-    "status": "passed_static_contact_review",
+    "status": "candidate_static_review_passed_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
-    "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
-    "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
-    "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
+    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
+    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
+    "backSkill": "coil, 16px airborne release, landing, and anchor recovery are readable",
+    "backDefend": "active brace sequence excludes archive frame 4 because it reads as sleeping/down"
   },
-  "runtimeBundleDigest": "06f953aa20667c5894e3397a3cd166ed8a2065580d18c3a22649d23caa3fa50f",
+  "runtimeBundleDigest": "df295cb0f3c433e2e23cd836132254c2fcb06fe307b0458f54663b4a5ac4e193",
   "sourceFramesTracked": false,
   "representativeRawSheets": {
     "front_3quarter_sw": {
@@ -39,22 +40,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/idle/build/pipeline-meta.json",
         "pipelineSha256": "51de362905e470915ec307f06eff6d9c63fee11a225b6fd0e90a356d23a5f480",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.879067,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "5c1b4242ebc18643639a732458fa013a8ef576a72b4bddd4cda7294951ec82c3",
-          "1ab715bbae78a0af15a70da5bee8ee4b97ac4b09f4635808dfb3dd6447246434",
-          "116d2261ae009156d6a35d93d190d0bca6b27d94a961193d2718f818fbadc1a9",
-          "d6b22f7ae9be1e1192ad93588461d09e9958d41a6874e307c9809f92838229b8",
-          "5fb2b14bb70cd04223090d70bd456f66360a039bac5a5cdb6e1db1d8daf7c82f",
-          "c602397ae51668bc48084a981640104383d7420a84037322b343f2720f422990"
+          "f73b24fc27148c567c8e7608fa09a885c6367b40e8d649e5a429db4df3db0f13",
+          "92b30f58e801db04c7eccf976a20fc8255b265d9b755f7fa5dfe88fab0949308",
+          "3cb0a83358fe961e2c339bab49049109cc3b5ee5671c20097d6f91e9a7048457",
+          "77905eaa88534563d3dcfa552e95f3f0673096bd92c8272929b350c5584fa685",
+          "45021b143c9d8741343ace2f576b09dca556c57d74c33e2e5b934973809e5ccd",
+          "2405cbe37cdd33eba43249bb85f46ec9584d1c1c746b4d2544b521767bf9d7c4"
         ],
         "runtimeFrameRgbaSha256": [
-          "cee45a78f442a6397d0d3d780cb9a708f9d8a0d24979ba37b2925ac251f11f1d",
-          "b5a927cac079e8f308d7e5487fa955867a0ca9bfd161973a60b30ccd7567398a",
-          "e90689c48e5c8186d3a5c0d766de89f4d047857c4fa4f6160dbd0fa390e2db13",
-          "75f50bafb9973a74efc6950d1d1e5de931faaf2e553ae707b0b81c5eef85c0e7",
-          "53d182144681644aebe9232c4c50f155e74311f6485753ebcb7cdd66704acea8",
-          "bcfcc7b6c321b9b612507c0d785e7ac05a02b97d06f6fe0783a96ac615656c04"
+          "a056894b8bd8dc1fe9d436c6e5be208e7651136b8829473228abf961c1e29a56",
+          "66b55a1df2e8c0022bfcda151148628216ebffc87dfc4c1991ed89fa55f785c8",
+          "06a5a15f4902a8b075eb64d24e5439ad618c6a56b65ebd13452a8145caa9f732",
+          "08882c0b3aea6e49b0a43f7cd21f7bbf444d5992681a304305069f8d604f5bcb",
+          "1fca297c047a48539a1c2ab71b7b3aa5e074fdd08ab55e28e29e0022a7573856",
+          "76f24efd2338cf27acd23fc45edebd6c8499d9b60d1c3e50e527cb30cf3c31ef"
         ]
       },
       "walk": {
@@ -65,26 +107,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/walk/build/pipeline-meta.json",
         "pipelineSha256": "10146caaec278ef6f22c176764cca31611619e1d3cb490dc7ccf47c238423539",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.891684,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "ff4c2620c9f08ce3e50bd838d8968e8cc1287e8a85251613b8c7460f84fedbf3",
-          "3002cf383676499eb9d97f05dc9afe3acb65455dab2939f3eb38f4347399c8e8",
-          "f55376b261385ba3e322da425bda41fd34734aca7d76eff50fb185eac80a1560",
-          "30074e5f0f4e68b29791c3d4145908c1458e3ecd8e5b62e5acaf92e2a26915cf",
-          "eed619bf9b2f223869278e2afd0589009011f6ee98130da20c0103adab96ae8e",
-          "812fd7e85b1e1cef2336fec606c8c868ce57c73fba9fceb4dff9eb6c1d4ae061",
-          "ec6b52a5e6ade8f69c5b6ad08b4897d26b2de5948ef4fdfe84253128043d24a3",
-          "a0a43800ee05045bcb85186590ec076e9633dc7cdea92ecdee0120945202b773"
+          "6028c8c283b74eb41ea36e003b25cfe69468bcce951627f983fa44cee5821ef7",
+          "9c711bb953dde0eca13691c3a5c7da0e304ff0120465f585d59fa2fb8b3fb6c0",
+          "ac4eab954449bda35c5ad00168c4c499cd1012baf2cf59b5694a0d2391aedc74",
+          "cf9d40779f2fe40865d07d5c2e59bf27d72e2fab056ea6f18ccfd54b5c562099",
+          "3f55acc52045705c412d81eb475a8c13bee62f756987635537874af548a8b477",
+          "76f2ffe04c953f3eeb5815f33bee454a007dfdb98cb02b6f9c6a55d7360dac9b",
+          "38aa07d2ea9ed5c46e53afa19f154996a7bd9b0d1e605f9117d6f05dde5ee706",
+          "ab4c43158270b54f36ab65498dd1b4812e82575c1a447a0787435673f5746b7a"
         ],
         "runtimeFrameRgbaSha256": [
-          "da257d11aed6f264b40b2903237d91a532fa60ba56ad24955d0325a4222af575",
-          "4351acdad417832c0b541a762f7d614c74a5942d5210c3bb62b11006eb3ceb91",
-          "7b2d1d095fd5058bb24196c4d3b3cb7c04b6bb1013ad365602378f19c3b8dd29",
-          "e8379f445a2d9dab33e8900adae8317a4bf97c32168a1740da2c5dae3e30e5b7",
-          "bfc0b86e861372514325344997e03fae7286f7e1f5d79d584113eda05644ee1f",
-          "2cd299cff69ccdee296de0e6ae1acd4c32b0d4bbf4d3363b3eabe04884af4680",
-          "e705cabc25f85f8e642efb321bef0e72139bfd101cb3cf06fd2ca862955b2b08",
-          "3a5ec4cb494f0154f0c2ffe0266c81e42ca4839368bacc80697dd801ec8a120d"
+          "964d47ed9935961684b78ae014d5f5f924644a4fc6d4f14b497c0de4c753c200",
+          "0bebae5b4ba235332c2dc9b92d6d444568a264c843ce963dadf4da136b3e96e3",
+          "762209c90a6d0ddc8b54f38c1fd05ac45ad9c24bb4230092b98f8c3aba3cee91",
+          "2b5224688db1dc592c68dee813e8b4a629610316e95c8191593b3cc3a6f41a43",
+          "af802e53ec87b27d1cfc25db7b79b59ee9e92bd1aedcc9a32e084623a264f102",
+          "ac4ca62ffc090197648ae36869aac1efead9252328c0874295356fb4383654ff",
+          "8cc15781c5e98bffe5fccf364680896539d92c95052b66a0eaa7f35448937f0d",
+          "bc2a512741de437e37aac556d5546615d040d648f6473f15ea6f071e74ac4663"
         ]
       },
       "attack": {
@@ -95,26 +188,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/attack/build/pipeline-meta.json",
         "pipelineSha256": "46a64a378320a43edfe1aea0b84dac678a5ff40e3e2be65ef4645742c0665381",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.832472,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "f58fb0fe557e44b5f8fbf286e755c1920540f1b4f9883ea03cbee1e8dd813607",
-          "7b4ade6f6ed99b90c217cc6d9fa680979ee363475491ad47ab33d6d215f99bb1",
-          "e933a76e954bcb9f27761ac80b6c4d92177da2e527dd0f0931f7073a7fe9d7da",
-          "ceb084684e6209fca74486668698f99080cad071046df3b2c472e3c5b3b53cbb",
-          "3a454350b8c29a3a3f3c92a1d78bd086aeb88fce5ae4a95ef8da3b40168bd670",
-          "a1e91fca0bb30e6d5f10e9d4a8431ad582270bf160d63e95849c70a46dcbeb91",
-          "49f41373ef314a42d96bb6dff7e53a5b6ca629575fc5fc981bc54300e25ad3e6",
-          "bc4e6e7a7dc5acef1bc6bb62aee45aba91c3a520a96fc1ca3c901267956a2d5b"
+          "0553fd9a5e9dac9869e0030b8e10480d461d812e91890d3a5bc5799a7776d713",
+          "4783c3758c4568a93fe4844b914fcd34dda93c79eaa7496d33bbd0c4df4a49d6",
+          "27a6af641d01740902b3601a421f4d15258a223c83043ca0437239c83ad505f8",
+          "88ce8151b3bb8bca63818fbac2ded61551a9e102782e84d11c407560555506e3",
+          "53aa1b5f0a4c8a9f5e2b8101308767c47fcd50c27cf182e3d632e69e89276b02",
+          "6d5dd08357b8d62aaa0c3922a21d9ff4b3e515f1947caada3c6c15c7b5cddac3",
+          "9d2e8b33cd5b763f21d9edb3aa39e42e58365e7662d4fc257a966f17e8926c63",
+          "a9a35afdbc8c0e3c165b55f70d6d069259bb0235731ac44c3e953f6ffbfa589f"
         ],
         "runtimeFrameRgbaSha256": [
-          "529aa9f9c66c4e03d633e0aaf7ba60b5d89156fb6ec005cbd2f53678615bf8fb",
-          "3f51063a2b09ef1bae8f33b615e49dc9d98c2f946803900fab69fd47c6e55917",
-          "16fcc021457445d540491cbef8399c98f5c8a7d707154db5ef3e5b3f0c340b40",
-          "0c3717f992b178884f9e75e098c748eb06db2b87160baa1686b46b44bee4e7a7",
-          "b46ed3ba6700b12431812191c6a9b1c7814a7ac8047845edc8259fb4144a034f",
-          "f331b5f1c570b2df5bc87fa316d404d69fa0f6b8770e70c3f96e298b395b5dd1",
-          "16b15ad2f04f839095ea58e7d9a13df458a22499f62f34747adafeefa99d905d",
-          "5af18b7291de1d50c3909ecab75039163963f5d363a53733cb41009338b7f760"
+          "675ed665ee85e1db5a5e90f57ea1f650db1dde0e66555f4e644dca82e119293b",
+          "dbccec85c5dbb662cbc38cd4203f16796939a6dcbe73e76157087c0531f08e2b",
+          "f97e29b793a8c37293d319ba214c8f123e82063ab9258509a35f541cafcb2aa1",
+          "0743e9d84968d479d02482aa45622955598122fd79933e5d660ac51c75c27b71",
+          "7c0f45b324bbd1c557644ca6fb3adfabd7c7d0f51ec99a804e6a33286322d4d5",
+          "95cc5d31dfa09ce1c914538834908c250245c350a5751cba86f73c8bc76cbb97",
+          "66f8b821d69e5726503f65cc9cd031ba1fc09d08efb29e6b72fce56344241c3c",
+          "a3be081b6c5be95e2bcb8ed06e0845bfc0e10008429742c0b9bdc6b4324a198a"
         ]
       },
       "skill": {
@@ -125,26 +269,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/skill/build/pipeline-meta.json",
         "pipelineSha256": "bcd8e7d1bfe6452233193df32474dc0d9974c97a926a2a7af84f0273f848d342",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.787571,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "54a76a93f88930a00180f0b0f88eea347346e91ce93a3768319ed9b9015df4c2",
-          "49b6f2865df68cbed538c9c4fbaeacc7650d345e672780eff9edbc18df11cc39",
-          "86817467e1d8e6ceb538b0c6eacef2b7c1dee3d5986bac9191fb1dc13e765c10",
-          "f5e593839b1ba3a626e6ad2caea28222205916fac900293222f4517625f5f7e7",
-          "2a8fe2a1479afa22b55cdf29d2550114b406c4d11cd4a6dfd7ad42357b240584",
-          "983f093016889d7de47692c6e0dd16771077ede83202a549fe064fb7ae1ede54",
-          "6fed9f26f380aa0532ecd81311917e93cb0f8462cc04d700f8ee7c8190d213c0",
-          "6ee0f545ad2b8c8c70eecf8c0bfb829cafade426e7bed95aa5526d5ddcb20074"
+          "81d28c8e41624f9a2096260fe65eb80c31d2f65c98d65ee1c0c338d34b073b4a",
+          "711b400cf82ec68e6a4037c958578691afa7f188435c764f74a5bed9dda5e69a",
+          "86ceb6a0cb5c17dbb9829b3dcf8d52eec969d63426e04f903403ceef0786c98d",
+          "727582eae9e551265fcf1602fef8517b17e594d8c1076a68f9ef72bea6e20ac9",
+          "76fe0384c088e51d48a5b113a4b9b4e248cac95c86649161d1221fec70410cc7",
+          "170a139c6ad16626e5058049cdb4e4067675bdacafa0059cd1d9f2cef9c1c3eb",
+          "9257e1353129b72060cfb969618e32e88ac6afa6ddb20c344ad9391d5c11249e",
+          "2bdbc662d92c258bd6c74f9011c3b7cea44a41b3a89c38eedfb5d24795ad1628"
         ],
         "runtimeFrameRgbaSha256": [
-          "b4a2dbd8cf224ba24c300da895a3e109ac6c8cdb94442717e908a96b99130362",
-          "4aec7a91ce2ca89d98a5ec76b8cab41544913bc0807a3d7c72ebb3133010bac5",
-          "545071e02d88e27626f899d4faad9ca25333e98228672641421306a79d0ac15f",
-          "5f19f532cc24ecb262be9bb4e62919344a6d3278fb4a4b33ca9489a99426da0b",
-          "31b1da7c6b1b57ab562cea80a01c30141a710ee31b8f5aba39a28ba8c4210262",
-          "6c02efe21d2563cf2df69d75e7904c737fc148b158e8d7e4638f61489089d34f",
-          "5dde2d01d0b84ef883e80e3de3cd53611ebc845068dc9cc2a2eb9cb7d0a154ca",
-          "e1d9d4cf75d551b81b4833afdc3424a748da4d16b3efb4fc14c97a788d9b3041"
+          "851ca1a440558c72a2f7bd8d0590e4306a649d7711f00ba0dc049abb70cc5d87",
+          "6aac9b57c23b8bdc43bfd48672dc2cb48761599d9fd23557a0daf390abd079ac",
+          "37baf136dfc7b3d64357cd09644847a73ad0bfb45b9ebd4272daa62f575af749",
+          "a9f512dc1516c1a4edad7c4b1d3e8c33d3638748b159d9f82f148662019d8ff1",
+          "7a14e29068e0698402751042721cbbc027350b53bb1339b27bfe0e5170037025",
+          "a4739a1fad107cf477043580a5f9417c0cdaf2c931e73aba1337252296c2f2ed",
+          "7142650196c49f9191f6ea0ab20733e821a36a1205dd0a7658a6d7be42a35fa9",
+          "e7afe0d4059988a741688f6eba51dffda85cef42c9a2ea04c9265dae557ef7c0"
         ]
       },
       "hurt": {
@@ -155,22 +350,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/hurt/build/pipeline-meta.json",
         "pipelineSha256": "18904102a41f964ee7dee524fa750ce2f451bbb481dc988aff07ec27fb55d162",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.957424,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "e4f1be597eddf2d82777a7ce2b377488481745f52f83f40b2b2a614bd0728975",
-          "8d20538a1773c620270fe68382754dd4159b4c7d2cd13fb76350afc10f466fdc",
-          "4dc16eb84578371776bb8cfcdb3ff3aed1464c62fb1d3e02c2ad16ebbb6e2f0c",
-          "73df2fd839586e2489e55034c7332244fe88801e34488d3ca40f7630829eca4c",
-          "aca09d26830a7fd2c77a30be0a296c86b67c798dc8d6ee94d41867de4eb4d684",
-          "fce27431c88b68c3559b2a7f8d313da33707f8300bc4c4303941a9a8fb9e9aaf"
+          "3e1ca8e76e0400b415d3e2970e5ff94d33ef89408ab4fc45839383a93a2cdd78",
+          "899377f775cdcc7a603fa135d48853357fe9faa55465f8b9955d78d89b147835",
+          "8a9040a3e5d2a8efe6f270036d280709be3606e169f61b6425c1a6086abc0a09",
+          "672cde66be633c84e2ba644ff20e38d6e16fd50f24fd380a5ae6d5ee9933ef58",
+          "41248894a5eb5a80613e81c2d967d99581edf5edb97110e0b24207df521d7d56",
+          "96ce69f580ebc33ccce0f9676d063bd9ddc1a11dc0d878de70a68bfb00c9668b"
         ],
         "runtimeFrameRgbaSha256": [
-          "4ab0797bb99e8f407f11239295a791878fe596250adbadecf936fc73df91ef88",
-          "d2e30e584ed89beecbc13e86fd0e50d027f7c13490523f83a59231cf7290b4e0",
-          "394ce4188f622b1c1f3f00edbd53828619801244d61396839ecb26e6e17997ac",
-          "9fed88a6e47f4995d65f650e789c951def6d2f88feef1be3b20694208c37411b",
-          "25b2c3b64357611d92533fee0886f7d8ca64bad1dda2a6286e9000a4248b442d",
-          "5b1dc6bbb0abac5a2e3ea4d0789a8cd2b58e25935a79d2e3dd07ffaf1aef5d76"
+          "7e6a961f42339dd530a5aa0e78d10f951a5e9e433bd429b999937c129477a007",
+          "6daae30b4367cc4ab9d441ce2688de8945109f0d0580e4aa4e1e544499c94ec7",
+          "53a1e2896912e149059944ca7fb3539f726e5866965941489cfdbe76af2e6091",
+          "012f8531c657247f1250cd881ba0f5c90976b1c9076b5440608a64320a0962af",
+          "e24b8cf46d012676e8b1fc250623636b921718be616cc16a344b787b499daebe",
+          "ace4b991b0c5a365c9778a1b82f9883894d41e87e20e1b31836ec078a6731fca"
         ]
       },
       "defend": {
@@ -181,22 +417,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/defend/build/pipeline-meta.json",
         "pipelineSha256": "e8b2deb08be3dce5b780cdcd49b749ff2c6a3010fea6edd591d0d43b4b34aeae",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.79831,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "ce9c3945a77f2d86fdc81f4ffb8b009f252f0aa5aa5834ca0a5a6eb25a30e544",
-          "1518e70d0f1d1957f3d7886a8795e8efc4d3121f7d48ad559ebd706bb27a54a4",
-          "1f4b33b9e27dff3c08d85dac1330e8006275277f9f9ffe674918e452fed5becb",
-          "9d79735e60b74e0e124b30c7b90bb3e1d9737e58f23c3f6981438d3006a49b75",
-          "1d840dba40a423f62ce1eb9f9b33367ca4bdf3f2c4fb4f10258315578bb942bf",
-          "6e3f60f9fe2374ea521253c272bcddf31b108b444736ba5319866d8b22ee3cd2"
+          "35770acbeb85de15221eb818d10b5ea6da076723ceb6eb93802b9b65f2e8d83e",
+          "927068ae3cb21e03c891e3c4d297680d0efede2065abf544707a68e1428de37b",
+          "76cd8cc762d16c4a7da90b6e817a02695bf195e9987af3a5f4cef9e623ce904e",
+          "5dad9a3c213385c467b4e123efae17e78125528953718faabcae35e858ffb8c0",
+          "2fb1d91a13ff107b5105a1f6d0cef63c532e38d828fb552673122348af0677e2",
+          "4e0411f4ac8b1933153a44734cce90cddacaaa9f7dfd0c9b3845563731dd9e09"
         ],
         "runtimeFrameRgbaSha256": [
-          "5ba4d2c46774b14d3f4dd33d5a388a1a35f97a58b088de471e4039629060c54a",
-          "3b96269f5f6682b8c3695313d7844517f8931d28bdf61181b810a7316906f06b",
-          "99d6168a5f6a7f6d6a4ba78568848895abdfe5b9fd0b1d4f8e00eb58bfb1804d",
-          "66e6ee16a41f58f693d79a8bc2c21cf88f472b465e331ba9186ffb8e21d94534",
-          "f0a1fb64e8b99b53f72013aaac8f36657a3f39065fc9705e5ef2a17371b9b68b",
-          "255e4b0d2c4554aaa7f2f7bb0d9485f6ca5e9dfd2744f0e5a9df9d283896190c"
+          "ff3454589ccf7904ede75f2885130f9528120c52f9afc54b55bceb66401b9d58",
+          "2a6a79f2a6304a0146db1758ad657be44319fac58cbf24c41a1ff632bd110cbe",
+          "dd24c980ddedd61019f81fc0863dde86e22cf0cde909d217f81675acefc73cc3",
+          "98b9e851ef273815e7d9d4fe9923b9aae49e4b38799ac00957e2f667123f6078",
+          "f9f4710f5106f35cdd25d37bff993c2f6e8825a54963a08c80501b0f1c3a07df",
+          "07e0b402716b2a7d3c1cc46a06603f1580ee5e15e1ed9391c4a4708a5acafc8f"
         ]
       },
       "dodge": {
@@ -207,26 +484,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/dodge/build/pipeline-meta.json",
         "pipelineSha256": "bca04e0c54b10067307183932850e8d53ac1b5672b2c0ca35967ff47d2aeaa9b",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 1.062984,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "aded5a6454ef36cd224a5adb6e51905f6736f8adb1211f59415c3d8b486ce2d2",
-          "3441b0ee26bd45e9b6d85d6eef71cdc65b982c5be006e8fe06b0cb9fdd9182f5",
-          "f167a5ea8d7c56c9fb28cbef635339e68b4f8d4921e0ae68a6dc84cf67adc16b",
-          "9ad4ffbcf7594060b338ccf47fc039c3b1e7888baf4dd94451fd201ad70c5da0",
-          "e5fcb30302275ba1bc3b342713c4f410561ce35d3bc98a872af516ea00bdf04f",
-          "77b0821d957d0107981ab77001acde3048cf20a337a76a46ccc728862992981d",
-          "5145fe9ed48d0ec28b251a8dd5732caa14fe1209c559b3ad34b2d6793be3df39",
-          "c1071704458c9617224d8215e58ce5f4a22dc659533cb45e3c6df2e0cf12ca33"
+          "480ba37f75fb65e8f06dc14b90d1eb0db8580020ff4a7aadd2f8b8310789ffd1",
+          "d0ec94b4e5194345ed5ee395447a3288b599132b66e316b7aff19a89b54851cf",
+          "1b438dc57772df9abb72564d9118a5c58f66207ed0f4bb240b11c8af0c213b77",
+          "e0863a8e0aee489f5330c25d6cb9c5a8fe949e88864ece916411261848ac451b",
+          "f2fc3a36f4d1cbe22fe5790dfb544f69cca4c9d9165711f992fbe64702b14fcf",
+          "8011de141dd9454d44656796c3ef14b6e2d5b7e117c611d5abf34f9617a50927",
+          "586bf7a9ff315781bf54d7c5e42af166ab3ebbdf6c3c3a6e379ab5fd7cca1155",
+          "60e53341e0e033a55d44374774decaa49849b53b65a631324944f98e4fc941db"
         ],
         "runtimeFrameRgbaSha256": [
-          "0790a82088ea5babdf35083f259c0289c0530d967a8e17f5214606dbd5fdc363",
-          "5d53276ecbdcbba0dcdb166a1e0c28bda0f6b98e306481ea8a2b6f1df0eb7528",
-          "77609268e06c304d196d3ae7654357f0f4f5234f0c0cc9c1175b545b4a30769d",
-          "83b3761f4466f4b5a62125a18c03143517872d778f03dfb179fceb2e112c44bc",
-          "cbea4b2ce82c33ac23a583f5287a1572e37e6231ed7d6e974089bc854cc89a21",
-          "927b7f9dded47ea14f8de42d95e94dd0d0d90512fc5cb815d6961dd254616092",
-          "4cf0f470e905c838acd52d1ffa34f86041e88f1e9acbe4de62adbfbf2e3d4074",
-          "06c57c8a83096e0a6e487cf19412de70cf2a1b27da30305429bb91ed7e082966"
+          "32c5bc49b2ff2b96b7401e2a2d0b80094b8bf9abcad781ec886a02228c9d42a9",
+          "f9bc854a4ca3d8c762168c82804369c9ceae3eb27029fac0fd342804e46db6ab",
+          "2e60b81a92e53e41a089c65ea197d50b33aa5f9e2098db7490c911519b8884aa",
+          "c37170f7fade2a854a10594ce485984368d349a51a2a0b6bf7a38090375c744f",
+          "f0111bc68741f133c3e9646ede366de71c84d3b68ef09269879e2d639292cb74",
+          "214332b22d67cf49b510e7c5d0abf99d242b8818a6372114b60a0d280916304a",
+          "029ba1cf8411fec368b82debb83b09e98fd9c8bb6ecdac36e09052b84c9702c3",
+          "b1d848480a75c4b3517c1af5d9a3cea1d5765f5e6f059006dd0e30368079bc35"
         ]
       },
       "counter": {
@@ -237,26 +565,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/counter/build/pipeline-meta.json",
         "pipelineSha256": "3f03a4974606fd887b23c48785cda2963a7566fa7bde4ca835f64c323dee277c",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.846042,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "11f4b3602c47ba3cae752bb7b975c9938980020e39329a99048b2936e2f30e4d",
-          "9335835e7b3acf23350b36afba0ef233590d14096d25f73c1f5fa8e0e93a653e",
-          "ba53be3c9027cedfb748e60c06b3f553b1afbe83932d9156d2dfbe7abec4f738",
-          "e42cd9ac31a3b05d3050db3bc64f7aabccd7c0c5ef11e82159889c9202defa74",
-          "d5d3ae31d69f55996e0dee329749d055782b3da1ff3885ba87e2e15ed3541bcc",
-          "a9d9537fe1483e793e3bcae9cc85efa734d33f4d7160a161930d4a38a5bcc3fc",
-          "f72f9f735d70cd37c7ea28e5d5cc1229b8f2d39a99212c81d9cfce6cdb40d0ae",
-          "dd582b601df20ecec7cea7f5c31f221f40e767490880fdf41cc9586bcf1f48f0"
+          "9c8cae4ea18bfd73352390481e542d38fcc601158a1b86e03267a7a892aeb57d",
+          "a8c0e2d1668fb826f30b00f62b088d1eaead3d4357a0959123e7f42fa1365aa6",
+          "9cb13c297f1c7ba6dfdaa7a5a67f0961e1ebbf1d96fdf89a2eacbb3754e764bf",
+          "ef668a3cd9bd0aa3454b5170931d3e08c258ac54f715db24c8863d6f367f7300",
+          "46730b6ef5cfa7cc6f68c67ed851ecf5fd8b5de387172c48ec23f1e459454fed",
+          "1addc9acf1b2105ebf7ace68176b396ffe743af99cd042e9fd956669ef26618d",
+          "295e2a4c5de861c7a35c82a36361601d58dacaadc0e7d8333d4acb62e8bf6050",
+          "872b7d2e4751011cb34704dd9c3f380e737aefebb3b48b4cb3a1137fcb7cbe5c"
         ],
         "runtimeFrameRgbaSha256": [
-          "c380ba196a746fb6523336eb297e927d68f68a22e6b15e0bdfd2659d98c84d8f",
-          "1ac0c2df7e6ebde76680ab1dab668992a907be93a3aaf7d518219a6aaaf0983b",
-          "9609c0b56bc0f887aaa35078cf3ddff534b4d9a1cc81fbd4e78b1ea182d89a9d",
-          "c33298e8f4b2f531a2f4cf60ec37c4e4f60c3500070b07551e6c25b0cbc1da04",
-          "7d4369665e6692988af4b0dd2230ba4ce8d58a9ea00c5071811ef7a19f097c32",
-          "a8fb235f7cf9a7283f6b7481ae0f9609810904c70ecf7db82fd9ddf13aedc251",
-          "6491bfe06d22f051fa68dc24a3857c1ef0e3e59530c61bf132ad7a9ac234b837",
-          "9d45fb96204c0ad6b24394b94fe15a1388b342ad829d246c228e7cf437cd8b0b"
+          "b094fd2ce0615a0b9066745153a27d452bda1e2e3c0a12ce752a2c3d34e66bfc",
+          "1572e55489caaa5917a6553efd4a0fab5d4c5e2bc5e37c600eba02f99bf7f33a",
+          "e411132ff30825d0349d7cf530df66b6de4d7fd9d0257d4c8150f0aca64e84b2",
+          "106dbc2ed4ce84aa07ceb93cf532dea3736c1b3a18d78e2a2bd975903324898e",
+          "e4f261b26d25514c0bc5484062e527039fec671cfeaf9c9cf8ec2e6743ff321f",
+          "1e569f9c241b77c055172d16b27052113ea9aca5eb97e3ed0f4716a3f1bbe3f2",
+          "1a7cb7e24f759a35474a04e1707eeb14281a2dd7e6b81a247298686d1141d44a",
+          "fb8d508690fe01102da5a9cf048c9491db04bde3db08fbdb80e63242bc6733af"
         ]
       },
       "stagger": {
@@ -267,26 +646,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/stagger/build/pipeline-meta.json",
         "pipelineSha256": "c2a382c6f79062c71a90d1739e9634631ba39c2ead1924eecad6ff9ae371613a",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.930808,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "32f8c98097e544e4017f87909c3476edb1a7654380f58fcbe3782cb103261bf9",
-          "e2ebff6bb2edd3c1366e2bef364c884fc87da074709c2f70b33506ec77843785",
-          "1132ec8830e3d8c738fb1f2c633a9c2a435ff3f6be2315f27f1f5c701fc02c1e",
-          "67fc37602165c0da35c13bd250a27ea0d084b691ea49bd71439eabd4bb6709a3",
-          "23b5a19659faa6d0f3eae779d9d510805191f89ac44238ced12178f77653353f",
-          "dede2705a48345a98d41ab289eef9fdba2924bcd59c722bd38c2f6fff75d4157",
-          "1ffadf5805dce17b813ee4cd96a9724836e11384af61cdc60140f7c794d48427",
-          "1c6b9c7e5d65c0edf59ac7587618e30f2b665ea36a49507fc9074e785826507a"
+          "2b49460d0233be9a5daf1b4b77dfe59966dfd2c1fc96d6a17ef63939b74b6553",
+          "4ba494a3b00124490f699f2df57320c78bdff4513673b2dcf9a9ca2bd3609006",
+          "69e53fefe24125898cf3c4d94f41d98e717eea7a4d83087705d2b20491922f24",
+          "3dfd8f11cabed5fe40e6c0ea7d3b010ea5dadb24d746c23b21a16d1367aad61e",
+          "d45bceaf5f5aa765ba1507290afa570d2f47e78b888bf8e134b140980cf29cf5",
+          "c13cf5ab4caa5e7303a808a046855fca2e31330ebe14acfb0a2186cda2f8cd9b",
+          "d629462caec2799bb71ce12ef9967c4baee9132750120fc22e814b31778b5586",
+          "21a358441f2e93ff2672ee1d8d45f1eef120991d2eb7a55d189b648e2ed02334"
         ],
         "runtimeFrameRgbaSha256": [
-          "d4f429e77b48c69026d033c816b816e5beec45c0b9ba5b2a7b40781c35ce7f46",
-          "87baa31cc00ec4f3af7fe3b7664195782692e4935f9d81c703597a7a6471a0a0",
-          "77e46c29555dd4a3269fa77518f4013ef2cadf3105f76d304ab20039efca7ebc",
-          "3ec24d8d3dfeaba8bb4bc542c4765137eab728930089025b932f13b4468a4681",
-          "30964733d334efe89bb316d847dff2dbd0291739c845ec44fb1dbb55506d88c7",
-          "2f2b753bf5bcec6c17225313769e5230d009124abe6e7eb64d74ef6116e6f954",
-          "4bd8f649f7bf47441c0348c5231ce32b1a3150be3c56819bd104eb6d3415ea3c",
-          "164aa384e4521cb52cc70175b5843de25608ce2d61f7322d671956036404043d"
+          "ebf89ad49004d4afadd69cf2b59aa2e52f960b48b170957c2c281077677cc352",
+          "4e7a4fd0d0af96e6997c9a1fdc7cea3eba492557f37d81d55ee38f1406045e4a",
+          "510e359098b81f1207d8b554f380cd2fe432d3d9e88b888035adb5fa0315bfc2",
+          "f254e43e91e6be391b0da0c49e7aa953aa31f6e158f890e0af2aca0e0cb7f110",
+          "693376ef625e863e0f1c964e2e119ddd766bc38ac80d08c6491f96d95f3d01b1",
+          "4c08d4c31689f960cce404743f368f81faba1c89fe1eef207b1d331263b873c5",
+          "ad8ea9678f11feb022b2d069b1436d37c9993fa33cfb64af39f6afa13a3f7374",
+          "52824025c59961c3081457d3cfa7ee1276c4a2d05f989a8a71dd1cd004d9f188"
         ]
       },
       "knockaway": {
@@ -297,26 +727,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/knockaway/build/pipeline-meta.json",
         "pipelineSha256": "9d500e8a262a0c24ca9a40099f6d26fa4dfbed60dc7f27ec659b394a6079daf5",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.91429,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "ba792c617325f333e25a8c64da8d2ba000512c696273b1f16115f2712fc66151",
-          "6622d6aae67b94ddb6ee286a4e35d2b220845ab44565c046765fe9e0761eb0b9",
-          "e794e92bbed1c1e2b380117f18ef7d6ae7fbc76477ceb7ab90378028da7c15c0",
-          "c5cc9bee7af36805bd83f9ed7ae5aed1e528c3c426b1b939f4311fa0dd5d415e",
-          "78b18e10d62538eb230e4e2fc8b7525e215df1c5d6323d883cef6c005ce29dfd",
-          "a14bdbeb590d7aa3a05062219d2e031d9ab9151e3c4b41d4d236530bb2b9f4a9",
-          "88678716a0b92c63504a4abd43672d3b9cfe1ffc0c4b0af8dec23120c7ab6b4d",
-          "fc07509eb7bee95e3104fe73615ffc3127ef25970cd10a1f86a3a7da36d44511"
+          "81599314af5d3a49309e86ecfa85ecf74826947115de3e97834d5a9410ce4dbe",
+          "c465d5fddd2ae8e581ebb60bb6196b63450199c6475e8040321ee877b845f777",
+          "6ecd0f2da5bed4f016abf2ee7947cb248921e6d4db9fdc3769776cb2c881b80b",
+          "23d8329a735ab8223e3a6149df9343b2662530cb18d394ff62a73e32a18ea98c",
+          "14cbeb97bdac1c6335ef869a29fbaa7babe338291981d1edd46cc6220071ef8c",
+          "ea1b10eb85392454e47f1f50d7907cdb8626a6caf0d5497267048516133e3529",
+          "cf54313dc44bfb9e14b289eb038713c6a467c9b512a2f542879d999f44b36ee8",
+          "7490d15b3853134ba33cc4625d92d0192d82a8205e34a0a3a20815bc0d26e0c4"
         ],
         "runtimeFrameRgbaSha256": [
-          "78f27b03fddbb3b9d96254649f26209812e9b027df0e0ada616788ce78df657e",
-          "ba77ecf6b329b86c04cfe85432433c5f79a6a0b50280986f3904c39734fc60a2",
-          "cd8043454e94ffa0c16d1a905b4a40b93554e1756e066fc4226ccc4c75c18d27",
-          "46d2208076242f69a441e72b919525913f9044b68189552b2bdb8b7019315369",
-          "682250af8ed980527b2a15e10da78f700c05be062d05a87c50c7a05bbef82ed8",
-          "f9c2dfa78882b118c7b4e2806704337839b03c13af925ba689d223a454636b17",
-          "4f66b79f91a9bd754e238f652aab5cc82ba1babc65d8b822a5e55f2cc57a6b98",
-          "9849ac108c2772ff1a03f264781580738fb2b962586b8324fab0afb71ca2f379"
+          "fcd7f7356b8c5a7f74643dab0751eb07881fe2f4bd0e97d1910d211083647074",
+          "d080d7d3cc7a83ffb14a2baeeef27481ec8afae5d7d28af527989ab5bc02e4e7",
+          "02915126043dbd4b1f17f2ab39cba313e9bce3a630230bfb70f0a329c0d2cab0",
+          "be44fac232e2d35ba0c3773ffdcf6f5cf4d7027e41ca4913c88110ba29645569",
+          "3239448e25a3b4ca32460eb15def3d73ac29d410c732b80243b015d0e75b92f4",
+          "57883a993acfaeb9536d25b8a216465641f182e57b38b88a6d083e1789fd553e",
+          "6f5d79718e2895360b07e1c99ccdd20f73c1e9a88abd884f7398d930cdae5339",
+          "b56a2b0d07784a6d5a11ae7581f0ba98b9eaf70b16be6d81bf0f6f73ccc1bfd1"
         ]
       },
       "down": {
@@ -329,57 +810,75 @@
         "pipelineSha256": "22253d95c391044832d05397d846bea1b9b44eb02086be766d744b0c8462c391",
         "postProcessRepairs": [
           {
-            "id": "faint-eye-semantics-v1",
-            "date": "2026-07-20",
-            "view": "front_3quarter_sw",
-            "method": "AI-guided deterministic face-local X-to-spiral replacement",
-            "expressionReference": "/Users/fander/.codex/generated_images/019f7b96-823b-7e20-a832-4d9534bc0dbd/exec-9762fdbf-201c-422a-9548-aebb42f55f8c.png",
-            "expressionReferenceRuntimeRejected": true,
-            "reasonRejected": "whole-body shape and registration drift",
-            "alreadyCompliant": false,
-            "forbidden": [
-              "X eye",
-              "cross eye",
-              "closed sleeping eye",
-              "smile",
-              "death symbol"
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.948278,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
             ],
-            "required": "open spiral/unfocused eye and reversible unconscious pose",
-            "source512": {
-              "inputRgbaSha256": "f4a52dcc68da7ca2e6ce2c11f8c899bb31f85625a4c8362b0216f68c19778eb3",
-              "outputRgbaSha256": "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591",
-              "alphaSha256": "0bf5428cc8492bdfb2232071674a63799bda736e71eec4517fd6a9a134abfff2",
-              "alphaPreserved": true,
-              "changedPixelCount": 598
-            },
-            "runtime256": {
-              "inputRgbaSha256": "623e7ad987d553151f2ce28a85f84907f4b726069355165b21e102a7cfc9e50f",
-              "outputRgbaSha256": "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd",
-              "alphaSha256": "c23dabf3099d280e72845deec55ebf60841ed4920db5f1d4c987ed1af219e474",
-              "alphaPreserved": true,
-              "changedPixelCount": 197
-            }
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "shared scale with down/revive partner; exact continuity preserved"
           }
         ],
         "sourceFrameRgbaSha256": [
-          "dbe063f407cc3ad6fc4cb153649f4cf58dc65df58b241d8621b39ca6d3bac1f1",
-          "ee941d3c63e71253407cd4e54d32cbf5ef9b63ab3e32fbef8b3c8c6906ab17d0",
-          "2620ec6ecd993f462c277b0aeb72ab3685c1aa843963796444e431e6e9bd5267",
-          "eac55ffbcc54fb29f3b39e59da96c4cf022deaf8de1d58e7bad86eaf86848a21",
-          "0c0cb9c7e1230fe4826df0f6310b2ee92f0988a11a27eb1658ce2289b7d7350c",
-          "947449661a9e38cb71e696e6220549b099bf5e2928d9336c6cada8cdc8709e42",
-          "e981a32149bedbeeaaaa463e10712de861f8c248537745b3f13f3f32f71ed67f",
-          "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591"
+          "4e79e063833d75937f34a0e2101a69ac1cd025fa6dd1728556b9872d67c6746a",
+          "6b04af136f30722794f7856776b8d3ff91c8618901de49c4b77faed1e1303150",
+          "7552c729fa6de388b9bdbcaa6ef02f8ecf31b40b5e5486840713018235f1c873",
+          "e45c1c0c2af489f3bb7d444955388473a5ae5286ddc53d940ab948ac075c12bb",
+          "0b71d702445d45f4b4fa084b51bb1c7a338ef297fc6387e00e6a257e1a749f90",
+          "c35534ac976ac6cbc0937a13afe514b50d424eb82ee7ca95ae3f46384fbfc9cc",
+          "ed5845957f8efff27d79fd798fce6d2243972d91bc564a39efb8e350acc12264",
+          "608057c9415d356a1d7164394e6e9b9b8eed61a1e2bdf9bd86f85aec1fe83e85"
         ],
         "runtimeFrameRgbaSha256": [
-          "d091a8d0ec0d13565caec1a4a763ec5de2b3c4ad0570fc506a6ba1181c8fed6f",
-          "b76a7d36fa244f248080df5d2efe05963f74ea14a84d50490ded6993460f9d4f",
-          "1269732ac14476e4992f3b08e8f4a38805226ff5c1736e2edc5c0c0f3dc09d2b",
-          "4556c50a8bca7a2fb2830f61a8fa55744426cbcfdd3766ab20c62da7ca80aaec",
-          "739707f73ab6fe7e4d08c48f6435e35f68a31233c9f46773983f071e590a6226",
-          "dba5ee8624a2b30ef4e59769d4e565f034f24f3dc5b3d2794edba3c2c2eef810",
-          "99b9c443ed003c42efc77c7176e7bf4b83da1fa50731bfc8005ba41ad18362ba",
-          "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd"
+          "dee1ecec75d7d22a486a01877cd184c00248d7dbb33fa5ca101b838e094eeb51",
+          "91b2ae8c6c31a8608c791e09949068a2d42d465be25b42096f04a0c634a12a8f",
+          "e8bc8cc7aac5d13f55a9e132fb44eeee2186dc32761915f997f8a41bd67aadf4",
+          "69eec6ee3a41ab5bd04b50f4e3e7a935bd4392520bac99fd62860438f773f9d6",
+          "e9ab48e15478588ef38db27c97def2db5644601453c973db7d70ebc77876e5ab",
+          "cade49ec923e70ee36e143e1efb6d4198091e4eaa1fc98f131b5093afbd5ac54",
+          "dc93b9a0f17e9a668376fbe914d0fd1476a8f0c36fef98b7773695d3dac7916a",
+          "31591d469c20cf7e207324e588201291598813757d829f134a162d5db76ab863"
         ]
       },
       "revive": {
@@ -390,26 +889,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/revive/build/pipeline-meta.json",
         "pipelineSha256": "b91690225715d4d9e0dfaf1648b690b2ce12db47c6e36725fa5dd13dcea51124",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.948278,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "shared scale with down/revive partner; exact continuity preserved"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591",
-          "34cc430e2a66d0e30ae638642ec939be1f4966ca10590d90786bc09a35e0db7c",
-          "420a8f57f3644fd0c3fbca8c7a6c3260ecdb363846fb2436946f10372f0b1cfd",
-          "3a89b6ad66aeaa5324a1c5e53f11009a814fb39f604941e89e403e9eac645ea3",
-          "1d70dc2ac90656009c7021b3ddfef74dbf71638b4c1dcc57bdcbcfa4903160fc",
-          "b51ab85ffae951a1837b1c933870e0c4118e2e1734ec123e1fb96af228a3234e",
-          "0b4bfaf31a43ca170e1dcbf22fe5ce9a119f9fd86865c2d82165e9cb92883023",
-          "abfd94d7aeb46f6fcd7633397023884e78ef801a230f05eb66c992f0e3fb2469"
+          "608057c9415d356a1d7164394e6e9b9b8eed61a1e2bdf9bd86f85aec1fe83e85",
+          "b9f17b9e39b5941dcdbe5dc35270f826561d72f2c586932b521814e0b863f65f",
+          "b7c25239d04886005b20308b63ae3299170aa26e306844cef93cd4e458bd3f8e",
+          "d0a71a714edb3143de76589b77c48e8f74113aff1a9a64e4eba7ea694958c5a2",
+          "321b94dfa88080586a73356843cc72a2ff7af45420264401c6adc1200b46b05e",
+          "9a03a20fcea3bff8ad8f73978acfd92856da7f1c32862fef4e87922e5c6a864b",
+          "3f49fbe3f77e14c478bf7ad0525a2bf91a5ff076b39be8618eaebd9299c5da0b",
+          "23a3f9188716c4aae60e8b62cccd5717a87efae084e32de1faa1ca43517e0642"
         ],
         "runtimeFrameRgbaSha256": [
-          "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd",
-          "29bda1e5d87d59373437b8168b8b2eedc27cd54b973026ba197abed5614a3d37",
-          "8b818f8d2996debffe0fe82b1db3a07d619c243ff0652b8d168b23d3c1de820c",
-          "cd1e8ef6e1c0a32b349eeeeb350b9123ac56e57d61c9b144b2407d75d5b6b308",
-          "e821ce89f3365a2d71694768cad472a6cc970ed217a3547ef2ad7a89567b6312",
-          "f8d8726d85d3f27444c3e61522d7a95cbdc55ecc454b652d1b50920a72d7b34f",
-          "15d7ba2ed0a05950c8bf12346d6251cf0fda8c32221d345da2b5b33556b6c352",
-          "f1d083f641aaf82c73cdda2d7a471ba871ec16ff2fa9c7fc6c25345e436fd74b"
+          "31591d469c20cf7e207324e588201291598813757d829f134a162d5db76ab863",
+          "d13135561cd8dae513b4c119f96c18c681077ef806036056dc2ae3b4cfa39c90",
+          "e42641a38a03feacbfb85b35e8bfbe6f944e9c46d70deb665fcb65e99047d47c",
+          "ca867e2090e9297ecfe9825dddea3cb55859e30f93639e834f2a477dab2382cd",
+          "eca3ebeb45d5732626d5e8f78100c39acacd6b00c75c1c1a915bca4a2e40c355",
+          "88f6e9639f9b8fd1d26ef61b76f77f38d6a80695b0998e6183c4510bbd5e8a9c",
+          "fc7b5097d58cc2b3c4c43fcdfe0513eca278fc4abac7ac039f9c7cd12a008486",
+          "25ce738b7a215debd18c7541861e7348252cfca50a8b799d32bb9466f4f11a2d"
         ],
         "continuityOverride": {
           "method": "exact down-8 copy after pipeline",
@@ -428,22 +978,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/idle/build/pipeline-meta.json",
         "pipelineSha256": "10b7cf4c2166b3821d50b42eda8cd99fc40a800582268329958fc47746a84c25",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.665316,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "e023f03259e0c25a029bbfae644f4e17b5dc9134543e1f1c9534adb685b58897",
-          "b5e83f7580a6dd56c4ebd7f213750cf73290f30e366b9f5444b19c25e0233da8",
-          "664f3cb425874848bbf82bf6c1bd150e56bfeb244ea10c7a7bb0d6b676aae063",
-          "71088de81026164ebb4fb5233d90363b58be8c5d170bbbfb7fc93210519a929c",
-          "81bffc73a84f524ac9967035f31c4f3f8e44f88efa32571ee25f603cfcd8c49f",
-          "665d47295355d4438e06308fdef3dba4927ceb1f2a9418bc31ba743915520fd0"
+          "0a3b330505ed90a2c9850c10d177861e225c4726f9596a171a8013bcc8cbbc35",
+          "88c3fa611ffb4f116f334a41334e2920d8009133909f5ffb25cc84887b2d16bc",
+          "626dd5c4c7b4b810bf4c76f23a41441233b9df3449d1b15d5eae9e14bb4eae5a",
+          "f161510c5aed895f8cc0ed33c3e4e87f1b0936f5edc5b853efcc863d95dcbfbd",
+          "58c0fcebfb8b3d53b44752698875aff753761963e4c32abfe8eed7c1b0591d7a",
+          "205780d7b594d18c316d9e52423e00ba8bfd56e49f22390f277ef58de7885c7e"
         ],
         "runtimeFrameRgbaSha256": [
-          "ed2a45848e9349c3c67d2527edd66b8237848fd320fd029489f94f84c516a731",
-          "2807baa5c3cc30622aff8e8f055654dceb017669776d53423e94666d2d35243d",
-          "1fa4de897fc94be63dc69e66dfaa9a05cd5f0290cff22b8ce7c89d9f7a2578c3",
-          "82c229669b3cd47b08bd25b5327a88b898f6f52fb0b14d3bd8ceffcdf70e6ecd",
-          "c0e63f6804e634e8d7572ca99c4a0a0f2cfdc2c0449fc17729cc89b5debad208",
-          "d481fc1dd43a4d56d27926a429dab433e1c043ab6a0758da7f3098f75cfccb4e"
+          "18c944e8adace619555b50b4889f963405d546b30bf6c4f6b21bea7658d6849b",
+          "3a9ed17b11040abf666148a691602d2ddf464ad2e248d632751eb9746bb7b61d",
+          "11520ef85875579fcc7e3ad63ed6e85f26b2b7a7c362cf59ee89ea1cbaa9dae1",
+          "7a03084fd5810fd54533614ff50f9b8a7585a11c864e5c738c1fc533c3cd512f",
+          "644597be5fc8c7fd70b4b85e75783774d3c54d56949805deff532ff02a2abcdd",
+          "369078d3c5bf7a544207c32420579ed9bfdc6be7ca3ce34fc7e2ea076ee3a0bf"
         ]
       },
       "walk": {
@@ -454,26 +1045,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/walk/build/pipeline-meta.json",
         "pipelineSha256": "974235f39b8fa9fefc5ea1d95fa82c8e75d8f5d2e9a9fb60f802f75ec2cbb5ec",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.684611,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "a91e25e02a3ad6568b840ab4acc774242e47a6d161fdb9b847ec46e6ba546cd1",
-          "89a0dfe787af2059ede643a226df68d82ad1c6103e84e9fab19a8dcd36e19d46",
-          "8504682d468c36836b7ce250ff6bb95254a00e57733e4176f3ab535eae09fd4f",
-          "da3e3709a1976a87102d7b5bf05b03ad3b0ae576b9715caf951faee917bb7fd0",
-          "1b6a2ae26cb05e6c6bf6facbf5f0af10150e8d5c9f4f18b50aa28f0a1dace0be",
-          "f4b2d5fed7c66679743a4b8c0ed8143c31d4c7c81dd9f5ff796533edce942dd3",
-          "3cf7bb946e3d331431afa8c0a5cbcb38dd3f8b73fae98d49a7bc8401cc48c35a",
-          "b1bc27c77df51924a02356d5c2737670fc8ada7a26f872a5281b9905b8b79b22"
+          "1e7caee4f96deac516520f84a48145b8e5aeef9ed8fba89f9e0d9f4ed658a220",
+          "0d9cf20e47d095b19703d71288adf32ea49a115523d7e88e254f1f167b6f23f7",
+          "814974ca73967b89b8fd1eac937d8494d571ab5e7328cadb423e1fdfa9227a93",
+          "c90d97d49aa50da4ce988121fd73c5674a14086ac0fc735fdba08a8de9d208b5",
+          "52eb12f042f9dc2ba653669d55f395b5e77bb84a01e985794338a9f7e4b77bc8",
+          "372a90b8655b2057a0889dbc3652f413d89fdf0f4cf04b1a1d202b8b42f546f7",
+          "636e68da6c650a40352c7d9f6b34b4001ece28bbb49668c31cf33199f3d97a84",
+          "42a4285f69af60e0445c57d808d635319829c0980ace62c3018c3aca655fa1e5"
         ],
         "runtimeFrameRgbaSha256": [
-          "39a252cb195947ba4ed4079e07ab4c37b17f89e0aa5a27b4be20ee067244e581",
-          "20a8d2ac144f3ee10f3b6e57f0890c5ac19cac517aa61611e531e206902cbe54",
-          "fd25d28467552f9842ad58467ee372bdb189d343fb1eec0a874e3cd4f849773f",
-          "49a897b931992284772ac1deb90c0dc3fe858c7c7203f63da536deabe4d92ac4",
-          "078e582782376507c7c96b2fe46b63e59b0385f9909362af77351562e8f177a0",
-          "5fdb5179af71fa46af0c93bb1ff5a2a4e9109660c83193d9f4c8fa1fd69b7246",
-          "0ffd96ba6fb40d138cd62265add769b296a43a64bdd73c307a9f278db2720263",
-          "707d9d5907742e2849d0c3e912e2188a189c513b820550e0d8213ffba1ba7fca"
+          "1e2a508f3ee24dcca18a081dc2413f08f41b46e55dd04c286d8023607c06ab94",
+          "03868ec229bcaac95e511fc6172094e068c0ab4eaa5ba7e789055fd2fca7d4ee",
+          "9869738a487662c876321565346df2bd3dabe3545f8653812c3cf55bbfa7fec9",
+          "77100f0e5a5d10caff61fc2075d3bd59d98c2b2ad9e834f7f95669f0c71ddd31",
+          "e34346322a616f81e59378e08b0493d74a490f3cb59617d6844db7cd6a11a198",
+          "5480f90afc865cc92e4697325996b3d938f064eb93b53e49087ab2b510d1fd7e",
+          "e519cacf95025ec54c03d5d7146645b572483cb1f3ef129cf256014905b9b67a",
+          "494cfb707f23d6df7080452b5128f6f835c25922e83013d8bd06f5cec445d8e9"
         ]
       },
       "attack": {
@@ -484,26 +1126,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/attack/build/pipeline-meta.json",
         "pipelineSha256": "3875c9338f3b3c176d0aedb04fe5ca4f044867b92d294c43e5b93ccda86628b7",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 1.060001,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "16342fdaba2c30fe0e5bbca01ec5b0bad85a9772433c230649e545959d3a60ac",
-          "b17213757612ee2ede9199383fabf8c01c7acaf1356424110417cf3474f62309",
-          "ee5efacdca083271632c0527b884bc4ae61225b0fbfe1f574000a6a0cf054cce",
-          "144c9f0232ba8393789e1d171b176746983b4f58ea5c81f86b4df4185bd42865",
-          "f5c5c5b1bd33395d001c7ef7d88665260cedb532b04ef99db4dd60ea98c1974c",
-          "37144ecd0da262816d7041b04376041036c2e1411ce7e457cb66f079b6e9bf98",
-          "9c163962b075d1b8b509b050362ee6d81aa7f93263d2458431d1345be36acd43",
-          "818ccc98bad98f0a9251441b330f4c2bd1c7c7e9321c8749b033fa900bee2648"
+          "dd8b26f6c27a89fb8f3539e1b4dc913e2ff04db8e765c78a52d2d8d2cba116d0",
+          "ef66e62e0612c10573e54549f288ff6eb66dcead075eef9bd7c3a073224da518",
+          "ef2403e02c0c75ebf21b3b737c662ed6abc0258c7a0aa4f5d51517f4ca20ab9f",
+          "5e66344b0f04e21edb047be62acac087e16dcd41c852f87c24cc496717c57898",
+          "82ea65e9cb415d06a810bf9d8e9cf284442a10f95a16d6894008dc33d86a96f9",
+          "6a813412530eb86eb0f44c3b0cc5cb440f323f4c9f92f936cfbcef3a175d7eac",
+          "89ccae17845fab77a1a71f183b8f02067c9b89cffbfded7ccead0327ce2016b6",
+          "3be0ed498a8ce98c3f3ba591d02d3f119daaba625c4c02c339d541735bfb1695"
         ],
         "runtimeFrameRgbaSha256": [
-          "7f5795b94498f2c58a8a03d182fe2094c4f37f5a440ffda9b6cc3b7dbe10b3ed",
-          "99d2c7cdfb88e965086cc5ddc372244a19d6047a74646feccc10e4db23329ccd",
-          "c9ae5b7167d55ee9e7323be7fd908e08a4492ba55a406c72eabe000cc7af0574",
-          "4d49775bfb4c1490186b310b4a6deeee98c7129c3ff8a5292793eb7c47cd3137",
-          "3f361542bb0f55e70fe76edc2a31b2c61599d8974a5fef854f46c15b9d60bc0e",
-          "229a5995818ff96b921a148e57e5b04d279ffd31e61d555c2dbfddfb8d4b4851",
-          "859c6d7349370a826da5a777d44e1ca9b60ee543a620cbb8c2c230b7bd5dd175",
-          "34a709de695879266b719f58ea9518edd932ad26b74d0cb164fe1acc9e770233"
+          "899666851198686f2bf339dea54ce442de2f79bf8acd284255e3ee95f8ac55d7",
+          "7a06d445be9cf1336dafe92834bded927826d8c9637892f97f7274ce578866d0",
+          "12c84a9b42bab570cd2c1d11c3da98710b01b2e54e247e37eef18da121b88d93",
+          "1c07bfdfa98ed6d036883097d810f569c245384090163822ba0571bcca4ef165",
+          "f12f98fcf5f94d44046aab20b6dabc7d4061656d2831bac74fdb3c77aca2c301",
+          "5360c470cf0f5abbf4bdf93ffcf8de7c3e181d4f8d6b3ca0cf2aeed23b50abf9",
+          "cf5997cf5a88f61eb4b2f49b5c2922ce2200bf696cd3c3ee9c6e64893657b9ae",
+          "c5cbee2e878ed9583b7d87293269828f0daea6654358e788c8654e71e128d933"
         ]
       },
       "skill": {
@@ -514,26 +1207,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/skill/build/pipeline-meta.json",
         "pipelineSha256": "5c9cc1f34edf9b16c6bc38470565d0609453d0231c36acf895b78cd7989a1f51",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.922169,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                -2,
+                2
+              ],
+              [
+                -4,
+                -6
+              ],
+              [
+                4,
+                -16
+              ],
+              [
+                12,
+                -12
+              ],
+              [
+                14,
+                -5
+              ],
+              [
+                6,
+                -2
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "readable coil, airborne release, and return while preserving the authored skill poses"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "a7f0d6b5c445c14e6018db405599557359b079fa54b78aa6945c4c52714a88f1",
-          "25e3774c23479258b57afea437477caabf105f35a90ec0f39293293915ce3a1f",
-          "eceb08216eed4fd93b26282daa8ae16a42435a93873d895cd6557df0e020f075",
-          "a9b4a1c5f28413b3652c23788369085c451903916a704aace21a0b8d692477e3",
-          "969f9e98e730e3c64d8e53b4911f9fbcf02977926a5c36488d6a7ecc40234460",
-          "acd1b47038fddffa8366ce4937f407a6b4ec71171ba7d1db85da68c765e4af0c",
-          "ae8d73dbbf6e581b5a8da4212b8e1f450dee3f37896605c012bb9c62a47fd120",
-          "a9b9a89aa5416560bc615434b842a4a65da83cd3464c695d5f6225bd360df640"
+          "a345781ffa7d1f2c9bae56648aa8b70fa4de2c212030a7846b4587a36d8c6e9f",
+          "8446a62dfa5ed43e94fe0693c39475ee7f96abc26f69d099e905669eb75b17e1",
+          "7695e7679beb428cac1872ee185aa45a5a32b0dd8c06379bef141e98681bbbc9",
+          "683ea65d8c9210f932b398f335d29fcd712b47b4b80e401ac23047c401e7849e",
+          "6ce51d88e27a66a977e24e93f7640e9ade8c06f0a20144e9dd61fa9f4f1550ea",
+          "6497fa12b4f642eb8fbf99eabf1c7c9451ae4ccb23946c82b0e7a238d877c07b",
+          "168d71280499c1c6bcc1b7ac65676d8bd66a6876c91a114f6aadada1311883a9",
+          "5d93fc2cc3b2a0d74c1f9a3c77de190457b14290b6490e415511b6546c949488"
         ],
         "runtimeFrameRgbaSha256": [
-          "b74ac0d74a408ad8b1c98c828cd65e249a77d7fcba432d212f66c580e6ae367a",
-          "366eb52b81e3fc22b0a9bd9cd5639006eee166581f2e53bb1288a00ee03e1903",
-          "77abe48a2becc6fd4f55b2be90d0e28ccd86e38617ef8975cb2d23c62e7a8fc8",
-          "1d27762e2487c6395666cff02c4a4bb1fe065869152aba4525cbeb7e77371e6a",
-          "5f1ba526cc85825f34bb47fa13eec42cfd6be083d1a88bb853d085e1cbe2518d",
-          "2d3d648759bf03a8fa7a755031ba28a562cbfac1bce78418a058d7ad42d7a0f2",
-          "657120aca820e03478297028577ea2c6fba7552a2bbe5c08410e5944963983b0",
-          "8d86052ab9d5d72eae7e4a4eef88507f40058085782187ee522690fcb5fdddac"
+          "939ad3a59b6b0e3c6197c0e4eee158a6a61de8c4fcc117ef192cc173c8bfb616",
+          "9b3004554d71c7eaf5e6f25d54254ec00f489d521a47849dd024af01181b2fd5",
+          "12ed37b1e4838ec9f18190960b2346e8fe3941f43a48a4d00feab87fe233309d",
+          "f4c474581f112784263e814701fcd528545d577f59a22022916b50174dae0032",
+          "4e566609cafa9b1404a37bfcac1cea69fd98f4c27defd3d92457e2d2f512bdcb",
+          "9d11ff7483bec594ba0e144d8f5791a32a39f91326cbb80282d6bc09c6527149",
+          "de656f00edf7cdc658d6b52df07eda9ea7859212917909ac61898d0cb985ec16",
+          "ede3efc6d6b875b5369d3beb656e57f1edc7717bfea5e8597ed03a2016e0c1a2"
         ]
       },
       "hurt": {
@@ -544,22 +1288,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/hurt/build/pipeline-meta.json",
         "pipelineSha256": "ed3e0a681d5247d7fb06439da472aace100b56adf3c9a910ad88c03b53d450ae",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.801999,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "5c4f8e45e4b369beb6ebfad3e4b0402602161a944ed907c81477f59160ec6e01",
-          "22dff8428dfc3f54d23eddf439ac0356999fdced2fa1b29ccb9ecefe6109ceea",
-          "028ee10c7e55802d023b538e249b6c58740fcf6e2c52be42f4831d91bde6814a",
-          "1acaee88aab611271106a7989788a927e9173e8b7428d021fcc10fcd48288e88",
-          "11b1ff11bd9ae7086acb9c9c5bb9b9bfef4c729f5b2c30692238002e63876dec",
-          "7a587b3747c3f199b2418a8129f7f53df28343e39c6cb9932d06d6bfbad39042"
+          "b6b85dd77751fa6b00c4c128bba7d050a1be07acb3d4dda9bcea01eb691a2b67",
+          "4c85e9a1ba6a5bbb5336daa3188f18533e60f53a03052a1fa207c12a631da0a3",
+          "0b37e10280b4428b8cb9f806f7d330caf659d4d21105d8a3c3b71d9b05c50e02",
+          "497e7e9f12b14a2c4e28bc22a3cfb9cc7650e5a901b62cca939a51233737f700",
+          "8ddbd9c3f8118c0ddad5c894fd5e69b486e6a5d4854600059e067a25476daef4",
+          "b9271304d61efd214b4f4c651941e784e9febb5ae9f33a69802d53978351377b"
         ],
         "runtimeFrameRgbaSha256": [
-          "99023ff8e62510b7baea264ab169135a27f52e096c9fbe31ef2e8eaad7dbc0b9",
-          "7c55d927eeabfab083aa6e8a94f5eac747cbde82b7434eccffb9584f3ba6c788",
-          "310de9d354be829d333342f16c5bbd9e3eefaed60ea315e674792863fbfbd4eb",
-          "96a089a62cd61e7b05aa1d40329b38f353f41341602afe9c1cc1e28e38a7bfb2",
-          "f3c3188c695514518c99103358c94d3003960fb29f2ba001df79a97a00857bbb",
-          "541c5ac9b30c8720e015496588ba2c2645cbe5a45626e54fb9e3c221037ee85f"
+          "3bbd361d844427e9cf1b59e4f64e7b92fb5b2ace8e46c892f0f34a462cc5d3ec",
+          "93613c4e3c0734a35e85a86666eb184214a9bf4d5c3496a7ebf88518c57ba2b2",
+          "2f1a74b84a1f85504e199e93125065207fe6422370187f7f4df9b6fdda4411d7",
+          "55786ac0cda8ecb01e583cf4f88d309878af244b259cdcef5cfc9fe516e10363",
+          "ee96c825ba4e429b3b9cae692724c50e31885651420ee676887d5b05f406741a",
+          "2943cda50bb81520b800ae0404b24e604c53df35197dad711c32629429340a02"
         ]
       },
       "defend": {
@@ -570,22 +1355,63 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/defend/build/pipeline-meta.json",
         "pipelineSha256": "6f0cf3ea4ae6d64b61b29ac6d669ad9786daba648544a29aa0aae70d31a14950",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.805561,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              2,
+              5,
+              6
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                -2,
+                1
+              ],
+              [
+                -5,
+                3
+              ],
+              [
+                -4,
+                2
+              ],
+              [
+                -2,
+                1
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "active planted impact brace and recovery; archive frame 4 is excluded because it reads as sleeping/down"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "d1a4ab3843f1ae2f8ba15999dd2cd754f0bdc730844985208fc5eeaa92b7ad03",
-          "e62b53fb0ffdfea1cd64544fe244d7a21f65e6b423d77f91c38881c11f6834b0",
-          "14604543235276ceed8c1c4b5e034c3192280c68b2269ba2f3731f3742e23ee3",
-          "f92711f24c763ddb6a076c59cfae9183917c531c8cc704b4b669c94071ee40c5",
-          "a92d8d9cbfe5d22c82ac603b6658e59aadca0d6502e4a3c8a22714c852fb537c",
-          "72837fc88a32424b26d4d39c7177dabff474621818dd91f0886163358c5b396b"
+          "003ff499a02b13b5daa067467ee025125e9e9006bf64a429ec16ef7e338dd5c2",
+          "1ad82368df3f043e97095f46045b1af2672210dc6d7a5cc1c393da1a604ac7ed",
+          "10ecb8ae62d7136d98fa8e3cda72a957fad14a20a953555136aea6ae8fe235fb",
+          "9ef7ccf14ff2aabf846640859ad51ab069e6b99b6c5015ad653e3629809d614d",
+          "65011e87fc91ecf1f607ee1eb41c8e381a763241d728a5b43bae82a13fc53d31",
+          "eede3586cd56504b88f3c9ec7fea9456e5eb60d3f72db5a291eadc590065514c"
         ],
         "runtimeFrameRgbaSha256": [
-          "f467247418ad18c756eff54d18433ace3d57dc42da7e99df1fafc6065b8fb822",
-          "6b9da4c32b607dce836ea2c213e721c32883e185e5823e68265bcc0608be7d89",
-          "aff6fab770e105aa9aa09e2fc8209edb016d1e8f9936b062fce2eee91ff6fb38",
-          "c144d74626c4d086d43bdc0f90285d2090704e5ca7974e315e41e32858f2877d",
-          "947c09c13fa4f2b69b1ba8c00efeef77bc581533572fc4e24be496be362a2d91",
-          "af4a8fddf79c5cf88c6ade0901dcbba170f761b4e6d82546259e61c302ac6733"
+          "6148ca306dc01b59e185f73ffd3727a904ba0e1993246da1709fd22929fe7bce",
+          "961d31730835dca52ff19e09fdfa9e1351a03e69581d89f8d7b5a427cd8b2ee8",
+          "56fff273d2ad34cc62a07e188b34299b1707e030ab695a2d77c402be203a0604",
+          "7c56cbaf79bb992972b494f25a8b80262f92c8ab6acdcb5df620d5fc4cae6a24",
+          "42beb4472ff7c627af4231997c8833264bc6ac5d3cb3f3e135f21a63c909c7c9",
+          "097ed88d8a39a52266e73cc28f58c973d4dc3ffbf9dbb286ed43d3845a115407"
         ]
       },
       "dodge": {
@@ -596,26 +1422,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/dodge/build/pipeline-meta.json",
         "pipelineSha256": "3baa910aee1302f96800fdd83be13dd2c18f100f6f0c4db554c04090faeed209",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.997341,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "61365aeb3ae9d3bde55edfca5f215fc89b57475791f0e9c7c96601665111a0fd",
-          "d8a0a924ed99b9faeaec09152040652c1ee1512d9a21337973417a1f6835158e",
-          "28360b7bea64cfbf4d5b833db299a75b81b19cfa4bdc4475d5d300e2f90ab52d",
-          "820f4bac2de1d1d37cdacc6f6137af012565359d5fa5990bfaa4f14194c24b01",
-          "39455a6f3aca28819662fcfe3b9a1d0cf4d74d339fadfdbc8d5ec1c8727c8ded",
-          "f2abd46e7ea8865f6cef2308a255e0cadfe7ed418f0c5a81371a05dae69000a7",
-          "6b0c155a151481593a37f8048b8cfba65456635ef3b00f89f131f41a645a85f6",
-          "46c5a642b53eddacff9c759c17d15eed778fc685352ef8244290b7454fb4c13e"
+          "88f30f29c56c7de99645a2ef2f477f19ad39f1985d36fe0d72826b2409f58d4e",
+          "1fa1f553394a95bfa4af5b01a7930cae47943bd3484d551d8492dac34d368f80",
+          "48d39ac2fa65017816b701199ba233d6e6ab2bcef66cc799740e9b5568e725a6",
+          "80a7ca35e70fdfc44ef197703da31885fcf14d258fe59b1d8d8820f6f989164b",
+          "e80cc100ac34ec7b132d8ef219fea0f58de0f2e889fb6ed5aa644d60c42e5c1c",
+          "0e1bfe98c40f0d6dcebefb23496ab2ba4816ac8a93d8585ba8ca5eae2f7a3d55",
+          "9b3bdd430b31939edab3356cae8a6d5ea837f5f1c2eb0b0032ec86f744b56f23",
+          "366f05e9032db8c5c192d2692a58e4b8a5bdd0782a7ba6a3cee79055aa625d59"
         ],
         "runtimeFrameRgbaSha256": [
-          "e293cd7ddfd2124359154cc6e231087735a1111a9ef5761ddc86ba62fed384cd",
-          "fb698e6b96c81bc759c28a30125a4a614b2c8c7c4ad8608717cc5e76347d67f1",
-          "a4bf478a9580b6e7e2c7c9159a3c80d271ce817891e29f7a7326cf9edb90ad53",
-          "b32dcfa10c8d64e88fce42816c741985ba77f8f542c61db6786d232ad5d0c220",
-          "9baa5e607de21496d2b479daff42669d58093f8c932ceb0ab6e86ee002cd522d",
-          "231aadd94359eea80d5ed464fbbd0f96736526d7a84f42c92fb274cfc0da472b",
-          "a84131873cbbfac9acec8977169ca7a79b27f67659e43f40d257a5d74dcfcd4e",
-          "0d0f70df982ab9bdd7c9d520415d9b2737c0a1deff4e7d7f625c2b5fce74dbab"
+          "17ee307e6af2e887eadf4becc45b9972aae19276d84eb1db0c9c8cf50b437013",
+          "480c971a8579c2d6d9f432a3dcc3bf5291b1cf765cdb03ac58af52caf8c7568b",
+          "73c1ede61a15ef1cc38286e50f614768ce90cd15905bc2f6f783589809859c59",
+          "719ce3053dd2798b8f08f3db10ed324875dd410ec128d38d33b8a8555cd7fe80",
+          "bdc3ef1947b72488fe7a597b8fc376dd73a099c4108ff1ddff60640d795622f3",
+          "01176eec1afefb50c82e7b504d8940d6b22d74a675ffa65c7f3399265b009e61",
+          "468dce7dc26c67a6ab4a26ab82c470b0bb52005df7892d86773e4bf05556834d",
+          "4f6e5b9bca74338ad601a9031e1a66f6b93957c8f75648984f9f8eb3941d94fd"
         ]
       },
       "counter": {
@@ -626,26 +1503,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/counter/build/pipeline-meta.json",
         "pipelineSha256": "9fd4351fe23d23e61a582d322071e2533230f11d19315a9a9672438fde49565c",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.709909,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "154cd09252ad2d5efd562ee71aec80faf2c1dbfad3f16fe6611849c992d46966",
-          "797bcbe0c0e22237560c06704bceb094c8b9e563767b4d73670fe6656476bc36",
-          "fb3e5329ca927c695a5710100bbeecbc38d527d114a14c6a1b3f7d90df062756",
-          "00c4a41a3a087d9394d829922ca56594191055103c9b0c8276ac50fbecf1c6de",
-          "48486ae49cc14b01fcce8c9c070ae556b3c2143b1780270383822dbcd3bd061d",
-          "95f53912821cb9d79358fedb078d570a1955616a37d960a6c468594ec364ce04",
-          "e8e2194b82ad8b84f05fb9dd2775df53c0a3274669f37e8a90467601c6c78087",
-          "4065ec51335b754561bb7da533adda5773247d27fcca37e773c2186de51d29c2"
+          "434fd41a974ce31111a7e40b7322eedfe7d93ee17294256d9e49d8e7c82a25b4",
+          "b6fc170a2aec7074be74497191557b4e9f3e741328007a2fd24255ce7aa54ec4",
+          "c4b2c0c654d26ee3105d66c4f65c61883746e174369a131094759e1cb0dcdce1",
+          "27be580b7ec2b40d126506e55ad08b48b2a532fc7c6a30657291c77239a688f7",
+          "1411227c99aeb7cefc2b9fdbf1ea291472936736ccb530ed2b53a280fb496a17",
+          "a5006395944249d873363eb3c5252d30bac4752240487e2889706116c426a524",
+          "f5a4f9736b500b173b6a99310886fc89f1592416514af1e6fb0248047123d297",
+          "d981d9078bb6ffc4e88ccd7269f08d337ba3ab2011f0e4f5ec186d2a8b2b171d"
         ],
         "runtimeFrameRgbaSha256": [
-          "512183299d60b59c39538a121d7357db58a56ea480391c1bdd08ee069781303a",
-          "ca570d1a5dbf47d2a82ea4a5ee37fa9ad20c4cf1366b910f78ca32fc70e900fb",
-          "b43b0477feb4750b0aba6d0bb23c814302e4c6c0f2742f30bcd8dcd9a4b522f4",
-          "d1e2db8b84c4c9c19bc72b8231b7c99f22283b0f69a05da94aec44ed2faa1fb6",
-          "8e81f02118bd345d402e6024100cf1947881e36c5f355e014a27c202c899ea38",
-          "90b94334c2a09fa20cbcf46b824d191723751863f72f6280a949ff1fda53f2b2",
-          "00caba62a6e902252fca64d06eacd78f876374c7abd96fc12707879438002535",
-          "23db925457a1f1958b234a468389241acdeb38a80e2691e50101a22ae6aaebb3"
+          "bce95c6f4f7c9b12ad25dfd290bb4e1db23644497da4d85e3bbaba6a3f33cf9b",
+          "e76ebd0768173fad9684cd80a3eb269129c5209025b674aa0f78eaaaf54b4388",
+          "72f940b453ec6b7279401e6e6596f52a04cc15bc5e4ab523b80a17294d4c06fc",
+          "98a565a34b1351ff62f2f23e2853e422acb81c3b7716d1ccf561c870fb3c71e1",
+          "6755c5a1c6fefffa6c1faa37561ba80179148d3bddc3cf88dd62abe49e2cc388",
+          "dfb796aec9a8f63babca50c618fd0c3606f43a7f875d7d6289aa829ac70ddcd9",
+          "b60b3f3c4458237a2a913f11752efc8f3bd1b83f3c8e7e801088d071a093edc3",
+          "0d6d9574b87439aaf6bdfcbfe40bdd54a9a35dfa04bea0b8193fe3ff7ff6917c"
         ]
       },
       "stagger": {
@@ -656,26 +1584,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/stagger/build/pipeline-meta.json",
         "pipelineSha256": "65c5630f9899e8ff20751e285871e957a4f2ae9e43a26c5b1ca24adff2e6ffd9",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.646801,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "e9e3b6624ced4e1de582cb67f71f5d2b1a6bdfde2692675721bd1576c49514cf",
-          "39fcb287fd041776c552076c38b385307138080512341a2858cb95100227cb71",
-          "2e95eb28d404d42929065e897eaeee11fed3a82d40056992bd399a3221253eae",
-          "57bb37beddd74471c72122ce9dc4575c139665ed86c1f7b0808d10c7a8710aad",
-          "b030958f8640d6042751ae8bd90ecfba0cdd6c14b7d2b7f4372f36484f8638a1",
-          "f0435f94f6859b3218dfe691aa6d12c50bc9f004b470806a16d11c0473b38921",
-          "1f7a04dd719118fd6f3d97948f804f19ef9ebfb9d77d1198b26e709e3273a458",
-          "8f4c9fbdc7fc4f382c6b39824136e767d61a178533dad406dc76dae46650d56c"
+          "9d32434454e7675ca04032180dc24c0bde6f25bf0abe9ef65f382316700be857",
+          "fb7c34e4d7b9c5dc250bd6f1362fa3b2417794b8642357f9d43b46968d3d6ef8",
+          "712831ccc1a2a1059c9357b0b1e5113c489aa0bd3bb2a9c5ce5f5fdeee62f3a1",
+          "a57e3a2549aeeacf49a1650a83fb82591247ec3b8abb175dbf61a421499a509f",
+          "2e3e53fbd819a50aca5eb9267dcf96b1d0e5d0722fb0eadbd9bae584e585a28e",
+          "1e036af4c0e5c902d97ee67b6f763fddba1383313b34262d22e32f2650231581",
+          "059529c39130276b07b707a999199f9c2ea816ed1d6ffc18f9ea327d06fce75c",
+          "06f5d8e85466c1c73960b5f7a0112275a9426182f6e52f95431ee1b1297688cb"
         ],
         "runtimeFrameRgbaSha256": [
-          "35fe3171d5a8cce1e16610310172fae6555ffc4667796c0ace368b7dd2787db8",
-          "80d84610907d06598d0955fdf4932a3e337297878dc681e23b4a59c5c7a2571d",
-          "32d2311b0bf40ef0e1f99f7bd510fd9a60dcc2411e7445c2cd4cbba8d0947dea",
-          "9cda7c65ff2cac4219eca65d65bcdf2c06fca6b17eab22508180c9219f83a5ca",
-          "294bbb72b2cddd292484e047b7d3b1fab0230d65e97b44bfb8b69b88b059bf13",
-          "3f5f82ec7e96a9ea75ef9fc69235ceee3a037169c8c61b34513d2fe185e0ed20",
-          "179426c5e57c90b6b8d6d9164f5590c6aa9789e593d538bd384a8392b6b388c7",
-          "50d92faa60fa0aed20fa0fff7a20ceca1677f4f1b901d2c154021d4d33039567"
+          "22ba7d0d240c6ad055116f57689cc042bad8f7547863ecf61dbd990773fa6dc9",
+          "5c2dd0aba86c3b0977b867a100f291f62ab0ccf34a35b6b76e22673836a8510c",
+          "a257c428cc3d3d51cbac7be9b2fe767efc7f7706586f5ee5c098a491062b76b7",
+          "71b9ea87a60825089e36ab8b47484258aee631a2be5c2e6e2061a11414534b06",
+          "cf2f54274acf5e4279f965147b93978e121c94c39e3a6f42f3b51341fedbb1f0",
+          "76a08f1098e6d4629dfe7965f697baae959cd5718fe19ba3e4e8d89b6a8b7bd5",
+          "a8fefc0482a163792b3009d08a4d1116890a470b69e296efafd43847b676e601",
+          "465cf608a2b2f2fdccf8eeb7be52357fa0a35aa86dc1e5de37f79815990bfdc6"
         ]
       },
       "knockaway": {
@@ -686,26 +1665,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/knockaway/build/pipeline-meta.json",
         "pipelineSha256": "68c2eba550c6b472cdda503ab7fb28f62ff3f7c4f1b9666f1f62dd0b73e04f1a",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.757058,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "identity order and fixed battle anchor"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "34badcc0563f938d6b62593478879b9902197979fd0d045301e10a95807e4992",
-          "803f38a9f87d3cce8974e5a2e9998bc565094503b7f7bff4642180c6956ded43",
-          "d609ed041a8f5b8339f7c0cca758bbca487fc4a96cafea2b76416e4be79f1518",
-          "ae6307cbb98d61e7d59e4ce7440125ab4bef144e8b1a1516ac24b217e80651d5",
-          "e9eb3f23420336ae808b66be5f1a224f22b1960f002c2fcd6c6855391d474dfb",
-          "351c39fa7f833ae914d4ecfaaa7a5bffc31779e8959c9b1a34d0aec66d919459",
-          "9900949ba1437b31b5ce1ec05e30d598be1fe6031216b379b8148f70f5e70b6a",
-          "f0a8128fe8fa2555e880b41894ab7b0933b0f7fdcd385ca567b7be2d654e100a"
+          "e60f17f0b16925159bf93887d173a63e3f8629b9b9bb14b6ad637d3498a0dfee",
+          "d26c09ea614a08c08bbebb9503a55b0f70456b5598da9385fe2e66297527fab0",
+          "4dc39f0608029274c668a8ccd3cebe80c83c95558f7571a52f2c363ad0c9dd62",
+          "8d9827deff269b93bddd68979fb356aeae405e71e2bff61a513d7442a33890cc",
+          "ed08c7faac7151857595583194441a4bdebe84aa0471662621585ae3edc54327",
+          "6123996c0f1549b2cb6114aa1be1aefa002b84201ce5df9ac3e2fc1bf712bbfe",
+          "e015b0053f51458bf3c0a7855d6ab2bada65bba7576ce958d144488acb346cc2",
+          "674cadf959402316294c6904ecaa56954e9c9633b16cf435c97dcfc990956102"
         ],
         "runtimeFrameRgbaSha256": [
-          "ddb24fd7b074dcf0ed2cfdaa218ae128d098637bd2347046b7a959bd581df702",
-          "89bea5f2fb7d9891f8b58d214c4c6e65c361988531b24e269e4c373faddd0837",
-          "3463dde37162dd8e63f8b8dd12eefa96dc7548ab5aa38de91d6eb0a9003d99b4",
-          "d2f26e5c9fe8303db7aa9a53fd1600e4ab09d8af707af5903323597a443e934f",
-          "e5dc1e1e103c500eee802c0023f121f62f6e8eeee3c7c69a597bc01fbc08d877",
-          "2d4d087202ab433c80302187706a5a5859564046684ebd89b41d8e9cf6f7695e",
-          "e6e42878c1302f304282729933798d8cd2d61c7b61ba9a5d45a171d1815c2359",
-          "72fa5975eeefdf04d5d992a8f79bb3fe7499030caa88036641bbd20e6bca9ea7"
+          "bb364c68f01b560b866bdf0b13f87365bfe5058f86510a6de2f92af9af73430e",
+          "7d8c20e7a7148f3d6ebd4346a470647198bd902ff9e03bb4cca1ff292149821e",
+          "4d2ad9659a1e9c3e7547452e025278114961f363c1cc8ff0ce08324ebb32ce60",
+          "5a1a159125e6e7efeeed8469e183298b457e61f1f225095261aae9cfe6efb091",
+          "72eb48dce8e1abf8dffb980cdfb57da440fbe953bdd48a2432b18b6003a9f575",
+          "d759371ecf92286e8545bf57e4bdae15647370762447d1ef3882d607035d00f0",
+          "37564f0d91df78ecfb239750f1d34c2196dbb7129795a60551155876f286306d",
+          "2350534d3b4300f02b560f745702220578b9abf65429b08a7e4f6220cb330931"
         ]
       },
       "down": {
@@ -718,57 +1748,75 @@
         "pipelineSha256": "ff90b512e9df32058649ed7deb7959e282b5fa278d6f6513475052383720b003",
         "postProcessRepairs": [
           {
-            "id": "faint-eye-semantics-v1",
-            "date": "2026-07-20",
-            "view": "back_3quarter_ne",
-            "method": "AI-guided deterministic face-local X-to-spiral replacement",
-            "expressionReference": "/Users/fander/.codex/generated_images/019f7b96-823b-7e20-a832-4d9534bc0dbd/exec-2ea2f5c7-7917-4c0d-9ef3-a7415e5b10d3.png",
-            "expressionReferenceRuntimeRejected": true,
-            "reasonRejected": "whole-body shape and registration drift",
-            "alreadyCompliant": false,
-            "forbidden": [
-              "X eye",
-              "cross eye",
-              "closed sleeping eye",
-              "smile",
-              "death symbol"
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.931539,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
             ],
-            "required": "open spiral/unfocused eye and reversible unconscious pose",
-            "source512": {
-              "inputRgbaSha256": "0ff60dc69e152e9127b9ededd2d9c1961e2e0808a3273152af33877468f85f68",
-              "outputRgbaSha256": "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58",
-              "alphaSha256": "6c3b23a6ac2b9e007a4662df8764c2b3e6a752fe17fb154254a8adda8dfc919a",
-              "alphaPreserved": true,
-              "changedPixelCount": 259
-            },
-            "runtime256": {
-              "inputRgbaSha256": "32ad538efff261be7befea4559122db8e84bcda1cf5014854499aeb48da3f0d3",
-              "outputRgbaSha256": "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969",
-              "alphaSha256": "940429a872591c64771b2e2c282440b84249f489e8b5cc2e4660bab5d92c1b96",
-              "alphaPreserved": true,
-              "changedPixelCount": 91
-            }
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "shared scale with down/revive partner; exact continuity preserved"
           }
         ],
         "sourceFrameRgbaSha256": [
-          "6c7fff1af208f2399d0aaeb9881136fb745fa497b30e7831f9155363e1bbd8f7",
-          "b4d133984953b42c93aa3dc6f7afe857aaf2be70a70d3b5bfb315f57b79ba426",
-          "26f91b9b28b9d26018ecde81a31db2891572b3643977767e2dd4fca4b09cb01f",
-          "f103645da7539e35e67fc37e6f623aedefa5363444d141a412879084a713348d",
-          "749c7741def612584aef953d0efb0d9946ca3dbdcb76f71e90ccf96773c5f96a",
-          "6c8a6bda0fee2f618d1f58760c69779b65b659548ad48e1301cb0ac5eed6a546",
-          "a49986d97c81def5d1d97bb6f038df8da32a24ba4bbbe1d05523483854d552a5",
-          "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58"
+          "9d294e6fdbeada3343220ae1ac2aad76226998926d3438597413f6d4d804794c",
+          "c7b3544af7dada2549c601a29c57099acc9f28e1a505388f5f923e544a43a515",
+          "c85f0e9f78de02ba770e4900aee0a36887c5337882d82e1250b3478ed63b0535",
+          "4fa7ca118466d1b4d377233da98871bed50bd6477865c806dc6f674c67e11ac7",
+          "b915f38a7666d7de9860f188bf5cfdc853ca579f4d2c19efcc4cb9894af5dfae",
+          "7c33a7f0a123feac43bc603f4fb8600077e319a4e2c87637e9dbb68a8daa6b6d",
+          "2f51b64b2a625421b09dd388ed972cc9c94655c641055ec3750b2221209b1825",
+          "b653daee1ca940bc5fd3142d3e11aa470077414221a97826859f342e248541cf"
         ],
         "runtimeFrameRgbaSha256": [
-          "8217408093059577f4b7204e0e1348f5a3604c81fb5ac4ed33cc0b8cc47a76ff",
-          "64b0cead401f3a098eef7fe7139983755b67b1339e3f172ef7611bff6ed7a59b",
-          "f20eae7cfe523245327076e878db654cca6b6173de6c2c393bb0aaf8f1b71cc7",
-          "cb13d2c370bc9406c2885f3f1bda76862ca7f8ad9b8001a9c45925031fd5be62",
-          "0ad7f55f45840a5c665c798d79b1950a0fb64037264a0b0d8587f3799459f163",
-          "c0425b75d1ff8eb043453b1e0a3df2034bdb9714a58fa05992620edaed6350c0",
-          "e8dd5a9df85f1a6ecab505885908118630ac85228c606619c9ca71322403527e",
-          "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969"
+          "632fb6f08051ff379be42c206cdcef9c8497e6da95cf7ddd7e39f9df748cf436",
+          "af7ebd010803e0cce72ed68e36b90c514074d623c5a174d96b299871b0d14d51",
+          "a0cac3d1b748d66f5769d9c120d03a26322b5cb52386e5287b31d87e007b6ad8",
+          "191daa64ee11442919330575c36f48b41ddd91fe07f3ff382f392eb7a3e56bd5",
+          "88782ce4ab1288b937b976de032bcb612ba4102ae7f88fc0d0593dc3b116a765",
+          "86f4367b90098bf5e3f891ee42f1dda7799514b3dd6fb7d23959c648f6a77ed3",
+          "cf62cdc2b87fff4f471ce93d96d80c98baef36d1757c3fa4d2c0e480a9a58c25",
+          "704b1d48aa95cf10bbc4a463b477cc82f33b10c5053aadcd01e62658a1ca60f1"
         ]
       },
       "revive": {
@@ -779,26 +1827,77 @@
         "promptRecordType": "exact_saved_generation_prompt",
         "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/revive/build/pipeline-meta.json",
         "pipelineSha256": "ff1cc50d2137ac80232213b19624516946d4886a3b03a8fac45a83473c3813f3",
-        "postProcessRepairs": [],
+        "postProcessRepairs": [
+          {
+            "type": "deterministic_scale_anchor_resequence",
+            "centralToolCommit": "b54152fe",
+            "appliedScale": 0.931539,
+            "frameOrder": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "offsetsRuntimePx": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                0
+              ]
+            ],
+            "note": "shared scale with down/revive partner; exact continuity preserved"
+          }
+        ],
         "sourceFrameRgbaSha256": [
-          "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58",
-          "296b06b44993014b22a837f6ba5e59ce2f284fc2488e894c1236386fc171b63c",
-          "2d9d6173af2958a388778674e2d2d78c726f7ab287fcc5394b9765c1e3f1150d",
-          "dc5535c476e8806d069d74446e5b7d703788e6fe469ba303287192b7edc7a6e1",
-          "e1c61bdb23cebc6b99efffe3d6de82945a90dee543cfa1e60ad1875e41474dea",
-          "788c220d9d86882b35df228a881c023ef8a1b440de3e7db5eb1ec5115bef0156",
-          "be00ed54a35e4196151f6c0b5edcdc12757801f41bd4e0e845fa840ad678cee4",
-          "de519fb0c1ea53dec76b5a1069ff5e0a6f75ac287fa69ec1a2fa4b329896cf16"
+          "b653daee1ca940bc5fd3142d3e11aa470077414221a97826859f342e248541cf",
+          "73f119b39f2db915846537c4a7152e098699140b04c02f1cb446f8ead08a7064",
+          "4022da60e96c0c49de490e1f2c0235a6882c07cde0525b3a994f951e71149dca",
+          "034650def33e3a5a478888de413417fc80fa086d82f36e2d86aef73077e8f46d",
+          "dd30a272ae8acfdcf04bc58f8e9ba83e0079e2037d9461fd3429ba1adf2647ca",
+          "e0098ada2112a75f4c68a41323c0f69fe13d3cc973c17032dbd02c5003efb767",
+          "de8ed149c39989d26a0ded683c73dfe772815fbc43b63fcd346595ba419bb057",
+          "61e593b30f2e2010b4eb3fb04e25bb377f439cb7582986da2d294d7c57f6d6d3"
         ],
         "runtimeFrameRgbaSha256": [
-          "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969",
-          "526263e1999dd677bbfaa8dd3bd9de1248570f55de3cc13ee02d4d7ecb50748d",
-          "cebc3cea67b460b0fa640a0efdaa380464d67dee3e6906e074d906e2581cd160",
-          "4b9f1fa5991837e985ee95dd68baf82e051fd1876a1f0392655227172a82b67e",
-          "c49d87f538f239de617698aad5252f10fa368e45aa016065fa7baada6d49cae7",
-          "aa120fcd450d882fc1ec8befe06fc7070406895f1ee76fe865fb708cecf93685",
-          "3f031ca793e281665b7163dae2b8f051fd14995bdb9e3d5ee61fc3f7c8a6a209",
-          "02c702a908f675745d450593ee3f11d82f25242686c49e0a779b11198f45b22d"
+          "704b1d48aa95cf10bbc4a463b477cc82f33b10c5053aadcd01e62658a1ca60f1",
+          "edeb83ef16ac6f650370cac408fed1f69ef85e8de8de1716078244ac3d820800",
+          "4e978eff31c1b4393216521ba4d2dced83ab009c5cbe5aafb3e0017a455f1fec",
+          "5630c18f8df07e7486b78302cfb91192d8b8ecd7b8ff207416756a1b5fbd7323",
+          "987a2d779932a657c63340850d5cc17c91dea36f55a6eedd69cf1cb4391973fa",
+          "969953dc430baa6cb37bde3ad53d8f12be2e293e59871fcfd84cd7f56b149bd2",
+          "3eeb954d0953291655d9344e8e6e9ea9b563d83c15e5b1ad7c5e98b80b32e1de",
+          "4ebb49fdc05107b510129aab0b57a9be2374139c04252d7d7147079f728f9169"
         ],
         "continuityOverride": {
           "method": "exact down-8 copy after pipeline",
@@ -810,5 +1909,20 @@
     }
   },
   "runtimeEnabled": false,
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "runtimeStatusEffectLayering": {
+    "reversibleFaintArtCue": "spiral_unfocused_or_prone_closed_eye",
+    "runtimeOverlay": "stun_halo",
+    "bakedIntoPetFrames": false,
+    "delivery": "runtime_battle_status_layer_required",
+    "validationStatus": "pending_real_client_battle_replay"
+  },
+  "candidateRepairProvenance": {
+    "baseCommit": "aa5575f601529003cdc6b29a817f8a0b4d233267",
+    "centralToolCommit": "b54152fe",
+    "authorityRoot": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle",
+    "repairManifest": ".run/starter_earth_four_repair_stage/four_spirit_cub/repair-manifest.json",
+    "repairManifestSha256": "15ad1c7692c200aefda04f7d3b8daef883b9993c5c2ad625c5febfb491796abf",
+    "formalMutationPerformed": false
+  }
 }

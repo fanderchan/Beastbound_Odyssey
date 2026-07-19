@@ -4,19 +4,31 @@
   "kind": "pet",
   "archiveMode": "lean",
   "runtimeFrameCount": 180,
-  "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
+  "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
   "temporalStaticReview": {
-    "status": "passed_static_contact_review",
+    "status": "candidate_static_review_passed_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
-    "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
-    "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
-    "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
+    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
+    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
+    "dodge": "front and back views use explicit evade arcs and return to the authored anchor",
+    "backSkill": "coil/charge, airborne forward release, and anchor recovery are readable",
+    "backKnockaway": "impact produces a 26px airborne lift with authored tumble/roll poses"
   },
-  "bundleDigest": "e9c7cdc377b171649413fa7c7dbd8385bb48d11c3f107b9f16ccc937ed8ac9ba",
+  "bundleDigest": "f63fda0cb91ce9a35699ca1ca3a883b15d0ae52abbf427aa77e231707746bd75",
   "sourceLedger": "source/battle/source-ledger.json",
   "contactSheet": "qa/battle/contact-sheet.png",
   "qcSummary": "qa/battle/qc-summary.json",
   "runtimeEnabled": false,
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "bundleDigestAlgorithm": "sha256(canonical-json(baseCommit,formId,runtime file and decoded RGBA hashes))",
+  "candidateBaseCommit": "aa5575f601529003cdc6b29a817f8a0b4d233267",
+  "candidateReviewStatus": "approved_as_install_candidate",
+  "runtimeStatusEffectLayering": {
+    "reversibleFaintArtCue": "spiral_unfocused_or_prone_closed_eye",
+    "runtimeOverlay": "stun_halo",
+    "bakedIntoPetFrames": false,
+    "delivery": "runtime_battle_status_layer_required",
+    "validationStatus": "pending_real_client_battle_replay"
+  }
 }

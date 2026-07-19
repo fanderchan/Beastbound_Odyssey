@@ -143,10 +143,14 @@
     "groupContactSheet": ".run/art_batch_phase320/rebirth_cubs/contact-sheet.png",
     "groupContactSheetSha256": "efff879d2dbe8db1824e9b8e65b3d766391d6987d5f7652bbf4b1381163ae266",
     "comparison160": ".run/art_batch_phase320/rebirth_cubs/comparison-160px.png",
-    "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425"
+    "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425",
+    "battleCandidateContactSheet": ".run/starter_earth_four_repair_stage/install_delta_aa5575f6/proposed_formal/client/godot/assets/pets/rebirth_starter_earth_cub/qa/battle/contact-sheet.png",
+    "battleCandidateContactSheetSha256": "71e2277f100374e03ecde7d7323c54fe13f5eb93ce5d888eba0275b1c466013b",
+    "battleCandidateComparison": ".run/starter_earth_four_repair_stage/comparison/earth_cub/formal-vs-staged-two-view-12-actions.png",
+    "battleCandidateComparisonSha256": "97567b66c41751aad3c018f6a650585741faa86b53d9de296517523126dd9da8"
   },
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；倒地末帧仅使用螺旋/失焦昏厥眼，禁止 X 眼、睡眠闭眼、微笑或死亡符号；owner review 与真实 Godot 10V10 回放仍待完成，runtimeEnabled 保持 false。",
+  "notes": "独立宠物双视角十二动作候选已完成比例与动作语义修复；可复活昏厥保留螺旋、失焦或趴伏闭眼，不要求 literal X。眩晕圈由运行时战斗状态层叠加，不烘焙进宠物帧。正式安装和真实客户端回放仍待执行，runtimeEnabled 保持 false。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -178,14 +182,16 @@
         "facing": "northwest"
       }
     },
-    "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
+    "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
     "temporalStaticReview": {
-      "status": "passed_static_contact_review",
+      "status": "candidate_static_review_passed_runtime_replay_pending",
       "reviewDate": "2026-07-20",
-      "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
-      "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
-      "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
-      "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
+      "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
+      "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+      "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
+      "dodge": "front and back views use explicit evade arcs and return to the authored anchor",
+      "backSkill": "coil/charge, airborne forward release, and anchor recovery are readable",
+      "backKnockaway": "impact produces a 26px airborne lift with authored tumble/roll poses"
     },
     "actions": [
       "idle",
@@ -214,13 +220,59 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "e9c7cdc377b171649413fa7c7dbd8385bb48d11c3f107b9f16ccc937ed8ac9ba",
+    "bundleDigest": "f63fda0cb91ce9a35699ca1ca3a883b15d0ae52abbf427aa77e231707746bd75",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
-  }
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeStatusEffectLayering": {
+      "reversibleFaintArtCue": "spiral_unfocused_or_prone_closed_eye",
+      "runtimeOverlay": "stun_halo",
+      "bakedIntoPetFrames": false,
+      "delivery": "runtime_battle_status_layer_required",
+      "validationStatus": "pending_real_client_battle_replay"
+    },
+    "bundleDigestAlgorithm": "sha256(canonical-json(baseCommit,formId,runtime file and decoded RGBA hashes))",
+    "scaleNormalization": {
+      "front_3quarter_sw": {
+        "selectedIdleScale": 0.698075,
+        "actionIdleScaleLimits": {
+          "idle": 1.0,
+          "walk": 0.859396,
+          "attack": 0.878096,
+          "skill": 0.991729,
+          "hurt": 0.958047,
+          "defend": 0.708706,
+          "dodge": 0.918908,
+          "counter": 0.910647,
+          "stagger": 0.92791,
+          "knockaway": 0.812658,
+          "down_revive_shared": 0.909851
+        },
+        "method": "largest common per-view idle reference reachable by every edge-safe action"
+      },
+      "back_3quarter_ne": {
+        "selectedIdleScale": 0.720741,
+        "actionIdleScaleLimits": {
+          "idle": 1.0,
+          "walk": 1.022134,
+          "attack": 0.789517,
+          "skill": 1.03769,
+          "hurt": 1.087079,
+          "defend": 1.01724,
+          "dodge": 0.952186,
+          "counter": 1.02013,
+          "stagger": 0.854888,
+          "knockaway": 0.731717,
+          "down_revive_shared": 0.784035
+        },
+        "method": "largest common per-view idle reference reachable by every edge-safe action"
+      }
+    },
+    "candidateRepairManifest": ".run/starter_earth_four_repair_stage/earth_cub/repair-manifest.json"
+  },
+  "candidateReviewStatus": "approved_as_install_candidate"
 }
