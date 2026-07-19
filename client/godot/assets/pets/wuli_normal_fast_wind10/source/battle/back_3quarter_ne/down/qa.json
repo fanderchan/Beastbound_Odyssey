@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "down",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "down-1",
+      "bbox": [
+        57,
+        100,
+        199,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-2",
+      "bbox": [
+        58,
+        115,
+        198,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-3",
+      "bbox": [
+        53,
+        138,
+        203,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-4",
+      "bbox": [
+        45,
+        173,
+        210,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-5",
+      "bbox": [
+        50,
+        171,
+        207,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-6",
+      "bbox": [
+        52,
+        188,
+        204,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-7",
+      "bbox": [
+        41,
+        185,
+        216,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "down-8",
+      "bbox": [
+        42,
+        189,
+        215,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}
