@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "formId": "novice_tiger_mount",
+  "characterId": null,
+  "archivePolicy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
+  "generatedBy": "OpenAI built-in image generation",
+  "runtimeFrameCount": 220,
+  "bundleDigest": "9611a72869379d8c015a6379eb53fa742eb0e1db11f1504c3307c1be7917e470",
+  "rawBattleSheets": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/idle.png",
+      "sha256": "6b7fe14e9e26b461851927e0777ec4711f6eb93f7b7b222faec68dd15900bd3f"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/walk.png",
+      "sha256": "fb6c6260b931d89e3d772e8df646c9699c287c7de694c5d7d21da43b4198854a"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/attack.png",
+      "sha256": "cab2e18855bae046040e4b03da33f22528a3674e826fc4ed4cc70f0eb4c59ce3"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/skill.png",
+      "sha256": "1e27410fb49b2fd3c78356b4de03bf8af4ebea359403b985ef391a4b3860f83a"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/hurt.png",
+      "sha256": "02ec860ce67e7262929048ddc21da12b78291698ecbaf069c57482ccaf6453ce"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/defend.png",
+      "sha256": "8c9be0035119dcf39e0c3e22ae4640ecc707bc50a46688db8bd0b8b3108161c8"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/dodge.png",
+      "sha256": "60a13459229d2b0e23c8e93de5170cd3c21148bc12d09138427a7840c49185c3"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/counter.png",
+      "sha256": "d6ee4eab279f7301404bb4f27dc9b4003d05c00e18c35438bea684623a0eaad0"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/stagger.png",
+      "sha256": "47433420a24b08700a05515d1207def17b661380f22701565a604f2a2c8f5508"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/knockaway.png",
+      "sha256": "0c6fa80d7ad94b1d72028fa9f4a2701d1c7282d89f9bf859bdfdf4aa02fa5b2f"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/down.png",
+      "sha256": "7fe2cf1c3285059591d9e4d852248827ee438d5ac745c7458ce9129fd105ab69"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/front_3quarter_sw/revive.png",
+      "sha256": "1147acb8762f9b6cee75ac543280391b7184b177b663632ec03e7265aef26c8e"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/idle.png",
+      "sha256": "809b459fcda70374e90bf560480d25cac4602b43be4f473027f818094d5e51e6"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/walk.png",
+      "sha256": "69e894b26335ed0c15a338044cad412deea4b63287f9f7a6cca0117101d12955"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/attack.png",
+      "sha256": "b7be61a6658871a4af8b2c1101a51400f2d2466ccd64531d43473ef662a6ee27"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/skill.png",
+      "sha256": "d001ac0d20c8000ad57aafc046923e7a7d6c452c0b04799a297c0ad9860135ef"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/hurt.png",
+      "sha256": "f8938d1501f20fe06e312166720ace16efa7979f6b8cde7ac47c48b6b77ff5f6"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/defend.png",
+      "sha256": "440b219b5fce91da708d357b8e9de1947bf3a3a47b9bd13b7c3563995520bf28"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/dodge.png",
+      "sha256": "feea0b3eb33ff3b2e609b6d03852893c11d4df23664804c9f596e2d4324c48e6"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/counter.png",
+      "sha256": "408f473429e279eb62e95e1d4a2c25cfd33946709523d2ddf4ee6ef027768470"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/stagger.png",
+      "sha256": "7b0cd289974ef052535c0a9fdaf307e5f1b09e4a9631854df6420c1099283a75"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/knockaway.png",
+      "sha256": "6489788e2be4da8acfc607745aa16cac42cdc8d47d17ce794f5f36ccb22547ac"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/down.png",
+      "sha256": "c72ff762f14bbb6dd91a520e01bde836b053762f19a80e4c94917acb8b353dcb"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "workingPath": ".run/art_batch_phase320/novice_tiger/formal-production/raw/pet-battle/back_3quarter_ne/revive.png",
+      "sha256": "49cf108cad2f0a7befc818c6e65124b031d003798f0d011faac9e26140156dea"
+    }
+  ],
+  "workingArchive": ".run/art_batch_phase320/novice_tiger/formal-production",
+  "processing": [
+    "tools/repack_chroma_sprite_grid.py",
+    "tools/build_pet_art_bundle.py",
+    "shared scale",
+    "feet anchor",
+    "4px runtime alpha safety edge"
+  ]
+}

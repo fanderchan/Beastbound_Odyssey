@@ -1,50 +1,222 @@
 {
   "schemaVersion": 1,
   "formId": "novice_tiger_mount",
-  "displayName": "新手老虎",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_true8_world_and_formal_two_view_12_action_owner_review_pending",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
     "board": "identity/identity-board-transparent.png",
     "poses": {
       "front_3quarter_sw": "identity/front_3quarter_sw.png",
-      "back_3quarter_ne": "identity/back_3quarter_ne.png",
-      "south": "identity/south.png",
-      "west": "identity/west.png"
+      "back_3quarter_ne": "identity/back_3quarter_ne.png"
     }
   },
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
-    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
-  },
-  "worldVisual": {
-    "status": "not_produced",
-    "strategy": "independent_8",
-    "runtimeMirroring": false,
-    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
-    "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
-  "supportedMountedCharacterIds": ["novice_hunter_v1"],
-  "sourceArchive": {"policy": "tracked_lossless_webp_with_original_sha256", "raw": "source/identity-board-raw.webp", "sourceMetadata": "source/identity-board-source-meta.json", "pipelineMetadata": "source/identity-board-pipeline-meta.json", "prompt": "prompts/identity-board-v1.txt"},
-  "evidence": {"contactSheet": ".run/art_batch_phase320/novice_tiger/identity-build/contact-sheet.png", "contactSheetSha256": "4e60691e758da2c817dd4508c83936542b640bb57b5eb8a729b4fd29d4029f11"},
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "kind": "pet",
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "generatedSourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "authoredSourceMirroring": false,
+    "battlePresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "downReviveContinuity": {
+      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
+      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+    },
+    "bundleDigest": "9611a72869379d8c015a6379eb53fa742eb0e1db11f1504c3307c1be7917e470",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+  },
+  "worldVisual": {
+    "status": "self_review_passed_owner_pending",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 1,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "owner_review_pending"
+      }
+    },
+    "totalFrameCount": 40,
+    "generationPolicy": "each direction independently authored; no world runtime mirror"
+  },
+  "sourceArchive": {
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
+    "formalProductionLedger": "source/formal-production/source-ledger.json",
+    "promptDirectory": "prompts/production",
+    "workingArchive": ".run/art_batch_phase320/novice_tiger/formal-production",
+    "representativeRebuildHandoff": ".run/art_batch_phase320/novice_tiger/formal-production/archive-handoff"
+  },
+  "evidence": {
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "10ab504560c2d018831a1b2f698720252866fc2ddad74df8a4aec51d368e1821",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "f667c76800d828b58ff2a0d7dd643603097ba0b52a85fb07e8270a8036c070ed",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "4be2cc6b2c8dde6b67b7602b85109ac350d3215b85a40bad7b8ecbd02c59eb43",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "61e8fa1db2be29c14436e7a7d991e0afdd84ea7814b4fb67dd223571e3c23060",
+    "worldCycleGif": "qa/world/true8-world-cycle.gif",
+    "worldCycleGifSha256": "eae88c87c7875dcafd7e3be38669187bc6ba3561f56170b562e56e8aa1b38583"
+  },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+  "notes": "新手老虎的身份、真八向世界动作与双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "displayName": "新手老虎",
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ]
 }
