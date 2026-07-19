@@ -25,6 +25,19 @@ MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
+EXPECTED_BATTLE_VIEW_MAPPING = {
+    "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": True,
+        "facing": "southeast",
+    },
+    "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": True,
+        "facing": "northwest",
+    },
+}
+
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -194,7 +207,54 @@ def _materialize_staging(root: Path, *, mounted: bool = False) -> tuple[Path, di
         "totalFrameCount": sum(value[0] for value in MODULE.ACTION_SPECS.values()) * 2,
         "errors": [],
         "ownerReviewStatus": "pending",
+        "actionEvidence": [],
     }
+    for view_index, view in enumerate(MODULE.FORMAL_VIEWS):
+        for action_index, (action, (frame_count, _fps, _loop)) in enumerate(
+            MODULE.ACTION_SPECS.items()
+        ):
+            action_qa_dir = qa_dir / "actions" / view
+            action_qa_dir.mkdir(parents=True, exist_ok=True)
+            action_contact = action_qa_dir / f"{action}-contact.png"
+            contact_image = Image.new(
+                "RGB",
+                (96, 64),
+                (25 + view_index * 40, 40 + action_index * 5, 75),
+            )
+            ImageDraw.Draw(contact_image).text((6, 6), f"{view}/{action}", fill=(240, 220, 160))
+            contact_image.save(action_contact)
+
+            action_gif = action_qa_dir / f"{action}.gif"
+            gif_frames = [
+                Image.new(
+                    "RGB",
+                    (24, 24),
+                    (
+                        20 + view_index * 70,
+                        30 + (action_index * 13 + frame_index * 17) % 200,
+                        80 + frame_index * 7,
+                    ),
+                )
+                for frame_index in range(frame_count)
+            ]
+            gif_frames[0].save(
+                action_gif,
+                save_all=True,
+                append_images=gif_frames[1:],
+                duration=110,
+                loop=0,
+            )
+            qc_summary["actionEvidence"].append(
+                {
+                    "view": view,
+                    "action": action,
+                    "frameCount": frame_count,
+                    "contactSheet": f"qa/actions/{view}/{action}-contact.png",
+                    "contactSheetSha256": MODULE.sha256_file(action_contact),
+                    "gif": f"qa/actions/{view}/{action}.gif",
+                    "gifSha256": MODULE.sha256_file(action_gif),
+                }
+            )
     qc_path = qa_dir / "qc-summary.json"
     _write_json(qc_path, qc_summary)
     manifest["review"]["contactSheetSha256"] = MODULE.sha256_file(contact_path)
@@ -241,6 +301,57 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             self.assertFalse(metadata["runtimeEnabled"])
             self.assertEqual(metadata["ownerReviewStatus"], "pending")
             self.assertEqual(metadata["battleVisual"]["status"], "owner_review_pending")
+            self.assertEqual(metadata["battleViewMapping"], EXPECTED_BATTLE_VIEW_MAPPING)
+            self.assertEqual(
+                metadata["battleVisual"]["battleViewMapping"],
+                EXPECTED_BATTLE_VIEW_MAPPING,
+            )
+
+    def test_action_evidence_is_relocated_and_qc_paths_match_installed_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            destination = root / "asset-root"
+
+            MODULE.install_bundle(_options(staging, destination, archive_mode="lean"))
+
+            installed_qc_path = destination / "qa/battle/qc-summary.json"
+            installed_qc = json.loads(installed_qc_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(installed_qc["actionEvidence"]), 24)
+            for evidence in installed_qc["actionEvidence"]:
+                view = evidence["view"]
+                action = evidence["action"]
+                self.assertEqual(
+                    evidence["contactSheet"],
+                    f"qa/battle/actions/{view}/{action}-contact.png",
+                )
+                self.assertEqual(
+                    evidence["gif"],
+                    f"qa/battle/actions/{view}/{action}.gif",
+                )
+                self.assertTrue((destination / evidence["contactSheet"]).is_file())
+                self.assertTrue((destination / evidence["gif"]).is_file())
+            self.assertFalse((destination / "qa/actions").exists())
+
+            install_manifest = json.loads(
+                (destination / "source/battle/install-manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            installed_hashes = install_manifest["installedFileHashes"]
+            self.assertEqual(
+                installed_hashes["qa/battle/qc-summary.json"],
+                MODULE.sha256_file(installed_qc_path),
+            )
+            self.assertIn(
+                "qa/battle/actions/front_3quarter_sw/idle.gif",
+                installed_hashes,
+            )
+
+            repeated = MODULE.install_bundle(
+                _options(staging, destination, archive_mode="lean")
+            )
+            self.assertFalse(repeated["changed"])
 
     def test_lean_archive_validates_full_source_but_tracks_runtime_and_compact_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -314,6 +425,68 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             self.assertTrue(first["changed"])
             self.assertFalse(second["changed"])
             self.assertEqual(marker_mtime, (destination / "action-bundle-meta.json").stat().st_mtime_ns)
+            metadata = json.loads(
+                (destination / "action-bundle-meta.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(metadata["battleViewMapping"], EXPECTED_BATTLE_VIEW_MAPPING)
+            self.assertEqual(
+                metadata["battleVisual"]["battleViewMapping"],
+                EXPECTED_BATTLE_VIEW_MAPPING,
+            )
+
+    def test_install_repairs_legacy_false_and_string_battle_view_mapping(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root, mounted=True)
+            destination = root / "mounted-root"
+            _write_json(
+                destination / "action-bundle-meta.json",
+                {
+                    "schemaVersion": 1,
+                    "mountFormId": "fixture_pet_v1",
+                    "characterId": "novice_hunter_v1",
+                    "runtimeEnabled": False,
+                    "legacyMarker": "preserve-me",
+                    "battleViewMapping": {
+                        "ally": {
+                            "view": "back_3quarter_ne",
+                            "flipH": False,
+                            "facing": "northeast",
+                        },
+                        "enemy": {
+                            "view": "front_3quarter_sw",
+                            "flipH": False,
+                            "facing": "southwest",
+                        },
+                    },
+                    "battleVisual": {
+                        "battleViewMapping": {
+                            "ally": "back_3quarter_ne",
+                            "enemy": "front_3quarter_sw",
+                        }
+                    },
+                },
+            )
+
+            repaired = MODULE.install_bundle(
+                _options(staging, destination, mounted=True)
+            )
+
+            self.assertTrue(repaired["changed"])
+            metadata = json.loads(
+                (destination / "action-bundle-meta.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(metadata["legacyMarker"], "preserve-me")
+            self.assertEqual(metadata["battleViewMapping"], EXPECTED_BATTLE_VIEW_MAPPING)
+            self.assertEqual(
+                metadata["battleVisual"]["battleViewMapping"],
+                EXPECTED_BATTLE_VIEW_MAPPING,
+            )
+
+            repeated = MODULE.install_bundle(
+                _options(staging, destination, mounted=True)
+            )
+            self.assertFalse(repeated["changed"])
 
     def test_missing_frame_fails_before_destination_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -432,6 +605,11 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             self.assertEqual(metadata["characterId"], "novice_hunter_v1")
             self.assertTrue(metadata["battleVisual"]["integratedWholeFrame"])
             self.assertFalse(metadata["battleVisual"]["runtimeLayeredComposition"])
+            self.assertEqual(metadata["battleViewMapping"], EXPECTED_BATTLE_VIEW_MAPPING)
+            self.assertEqual(
+                metadata["battleVisual"]["battleViewMapping"],
+                EXPECTED_BATTLE_VIEW_MAPPING,
+            )
 
     def test_cli_emits_machine_readable_failure_summary(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

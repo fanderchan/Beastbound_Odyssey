@@ -13,6 +13,8 @@ Staging layout (all paths below are relative to ``--staging``)::
     bundle-manifest.json
     qa/contact-sheet.png
     qa/qc-summary.json
+    qa/actions/<view>/<action>-contact.png
+    qa/actions/<view>/<action>.gif
     views/<view>/<action>/
       source-frames/<action>-N.png
       runtime-frames/<action>-N.png
@@ -56,6 +58,18 @@ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 ARCHIVE_MODES = ("full", "lean")
 
 FORMAL_VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
+CANONICAL_BATTLE_VIEW_MAPPING: dict[str, dict[str, Any]] = {
+    "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": True,
+        "facing": "southeast",
+    },
+    "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": True,
+        "facing": "northwest",
+    },
+}
 ACTION_SPECS: dict[str, tuple[int, int, bool]] = {
     "idle": (6, 8, True),
     "walk": (8, 10, True),
@@ -94,10 +108,18 @@ class CopyEntry:
     sha256: str
 
 
+@dataclass(frozen=True)
+class GeneratedEntry:
+    destination_relative: Path
+    payload: bytes
+    sha256: str
+
+
 @dataclass
 class ValidatedBundle:
     manifest: dict[str, Any]
     copies: list[CopyEntry]
+    generated: list[GeneratedEntry]
     frame_hashes: dict[str, str]
     bundle_digest: str
     action_metadata: dict[str, Any]
@@ -360,7 +382,145 @@ def _validate_manifest(options: InstallOptions) -> dict[str, Any]:
     return manifest
 
 
-def _validate_overall_qa(staging: Path, manifest: dict[str, Any]) -> list[CopyEntry]:
+def _battle_qa_destination(raw: Any, label: str) -> Path:
+    """Relocate staging QA paths beneath the installed ``qa/battle`` root.
+
+    Production staging bundles historically use ``qa/actions/...`` while the
+    installed bundle keeps all battle evidence beneath ``qa/battle``.  The
+    installed QC document must name the installed path, not leak the staging
+    layout into runtime-facing provenance.
+    """
+
+    if not isinstance(raw, str) or not raw.strip():
+        raise BattleBundleError(f"{label} must be a non-empty relative path")
+    relative = Path(raw)
+    if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+        raise BattleBundleError(f"{label} must be a safe relative QA path")
+    if relative.parts[:2] == ("qa", "battle"):
+        return relative
+    if relative.parts[0] != "qa":
+        raise BattleBundleError(f"{label} must stay beneath the staging qa directory")
+    return Path("qa/battle").joinpath(*relative.parts[1:])
+
+
+def _validate_qa_image(path: Path, expected_format: str, label: str) -> int:
+    try:
+        with Image.open(path) as opened:
+            if opened.format != expected_format:
+                raise BattleBundleError(f"{label} must be {expected_format}: {path}")
+            frame_count = getattr(opened, "n_frames", 1)
+            opened.seek(frame_count - 1)
+            opened.load()
+    except (EOFError, OSError, UnidentifiedImageError) as exc:
+        raise BattleBundleError(f"invalid {label}: {path}: {exc}") from exc
+    return frame_count
+
+
+def _validate_action_evidence(
+    staging: Path,
+    qc: dict[str, Any],
+) -> tuple[list[CopyEntry], dict[str, Any]]:
+    action_evidence = qc.get("actionEvidence")
+    installed_qc = copy.deepcopy(qc)
+    if action_evidence is None:
+        return [], installed_qc
+    if not isinstance(action_evidence, list):
+        raise BattleBundleError("battle QC actionEvidence must be a list")
+
+    expected_pairs = {
+        (view, action) for view in FORMAL_VIEWS for action in ACTION_SPECS
+    }
+    seen_pairs: set[tuple[str, str]] = set()
+    seen_destinations: set[Path] = set()
+    copies: list[CopyEntry] = []
+    rewritten: list[dict[str, Any]] = []
+    for index, raw_evidence in enumerate(action_evidence):
+        if not isinstance(raw_evidence, dict):
+            raise BattleBundleError(f"battle QC actionEvidence[{index}] must be an object")
+        evidence = copy.deepcopy(raw_evidence)
+        view = evidence.get("view")
+        action = evidence.get("action")
+        if not isinstance(view, str) or not isinstance(action, str):
+            raise BattleBundleError(
+                f"battle QC actionEvidence[{index}] view/action must be strings"
+            )
+        pair = (view, action)
+        if pair not in expected_pairs:
+            raise BattleBundleError(
+                f"battle QC actionEvidence[{index}] has invalid view/action: {pair}"
+            )
+        if pair in seen_pairs:
+            raise BattleBundleError(f"battle QC actionEvidence duplicates {view}/{action}")
+        seen_pairs.add(pair)
+        expected_frames = ACTION_SPECS[action][0]
+        if evidence.get("frameCount") != expected_frames:
+            raise BattleBundleError(
+                f"battle QC actionEvidence {view}/{action} frameCount must be {expected_frames}"
+            )
+
+        assets = (
+            (
+                "contactSheet",
+                "contactSheetSha256",
+                "PNG",
+                Path("qa/battle/actions") / view / f"{action}-contact.png",
+            ),
+            (
+                "gif",
+                "gifSha256",
+                "GIF",
+                Path("qa/battle/actions") / view / f"{action}.gif",
+            ),
+        )
+        for path_field, hash_field, image_format, expected_destination in assets:
+            source = _safe_relative(
+                staging,
+                evidence.get(path_field),
+                f"actionEvidence[{index}].{path_field}",
+            )
+            _require_file(source, f"{view}/{action} {path_field}")
+            destination = _battle_qa_destination(
+                evidence.get(path_field),
+                f"actionEvidence[{index}].{path_field}",
+            )
+            if destination != expected_destination:
+                raise BattleBundleError(
+                    f"battle QC {view}/{action} {path_field} must install as "
+                    f"{expected_destination.as_posix()}"
+                )
+            if destination in seen_destinations:
+                raise BattleBundleError(f"battle QC evidence destination is duplicated: {destination}")
+            seen_destinations.add(destination)
+            digest = _assert_hash(
+                source,
+                evidence.get(hash_field),
+                f"actionEvidence[{index}].{hash_field}",
+            )
+            decoded_frames = _validate_qa_image(
+                source,
+                image_format,
+                f"{view}/{action} {path_field}",
+            )
+            if image_format == "GIF" and decoded_frames != expected_frames:
+                raise BattleBundleError(
+                    f"battle QC {view}/{action} gif must contain {expected_frames} frames"
+                )
+            copies.append(CopyEntry(source, destination, digest))
+            evidence[path_field] = destination.as_posix()
+        rewritten.append(evidence)
+
+    missing = expected_pairs - seen_pairs
+    if missing:
+        summary = ", ".join(f"{view}/{action}" for view, action in sorted(missing))
+        raise BattleBundleError(f"battle QC actionEvidence coverage is incomplete: {summary}")
+    installed_qc["actionEvidence"] = rewritten
+    return copies, installed_qc
+
+
+def _validate_overall_qa(
+    staging: Path,
+    manifest: dict[str, Any],
+) -> tuple[list[CopyEntry], list[GeneratedEntry]]:
     review = manifest["review"]
     contact = _safe_relative(staging, review.get("contactSheet"), "review.contactSheet")
     qc_path = _safe_relative(staging, review.get("qcSummary"), "review.qcSummary")
@@ -368,11 +528,7 @@ def _validate_overall_qa(staging: Path, manifest: dict[str, Any]) -> list[CopyEn
     _require_file(qc_path, "battle QC summary")
     _assert_hash(contact, review.get("contactSheetSha256"), "review.contactSheetSha256")
     _assert_hash(qc_path, review.get("qcSummarySha256"), "review.qcSummarySha256")
-    try:
-        with Image.open(contact) as image:
-            image.verify()
-    except (OSError, UnidentifiedImageError) as exc:
-        raise BattleBundleError(f"invalid battle contact sheet: {contact}: {exc}") from exc
+    _validate_qa_image(contact, "PNG", "battle contact sheet")
     qc = _read_json(qc_path, "battle QC summary")
     _scan_for_forbidden_state(qc, "qcSummary")
     expected_frames = sum(value[0] for value in ACTION_SPECS.values()) * len(FORMAL_VIEWS)
@@ -384,10 +540,21 @@ def _validate_overall_qa(staging: Path, manifest: dict[str, Any]) -> list[CopyEn
         raise BattleBundleError("battle QC summary coverage is incomplete")
     if qc.get("totalFrameCount") != expected_frames:
         raise BattleBundleError(f"battle QC totalFrameCount must be {expected_frames}")
-    return [
-        CopyEntry(contact, Path("qa/battle/contact-sheet.png"), sha256_file(contact)),
-        CopyEntry(qc_path, Path("qa/battle/qc-summary.json"), sha256_file(qc_path)),
-    ]
+    evidence_copies, installed_qc = _validate_action_evidence(staging, qc)
+    qc_payload = _pretty_json_bytes(installed_qc)
+    return (
+        [
+            CopyEntry(contact, Path("qa/battle/contact-sheet.png"), sha256_file(contact)),
+            *evidence_copies,
+        ],
+        [
+            GeneratedEntry(
+                Path("qa/battle/qc-summary.json"),
+                qc_payload,
+                sha256_bytes(qc_payload),
+            )
+        ],
+    )
 
 
 def _validate_action(
@@ -572,9 +739,12 @@ def _bundle_digest(manifest: dict[str, Any], hashes: dict[str, str]) -> str:
 def validate_bundle(options: InstallOptions) -> ValidatedBundle:
     manifest = _validate_manifest(options)
     staging = options.staging.resolve()
-    copies = _validate_overall_qa(staging, manifest)
+    copies, generated = _validate_overall_qa(staging, manifest)
     frame_images: dict[str, dict[str, list[Image.Image]]] = {view: {} for view in FORMAL_VIEWS}
     all_hashes = {str(entry.destination_relative): entry.sha256 for entry in copies}
+    all_hashes.update(
+        {str(entry.destination_relative): entry.sha256 for entry in generated}
+    )
     for view in FORMAL_VIEWS:
         for action, (frame_count, _fps, _loop) in ACTION_SPECS.items():
             action_copies, _source_images, runtime_images, action_hashes = _validate_action(
@@ -594,7 +764,7 @@ def validate_bundle(options: InstallOptions) -> ValidatedBundle:
         }
         for action, (frame_count, fps, loop) in ACTION_SPECS.items()
     }
-    return ValidatedBundle(manifest, copies, all_hashes, digest, action_metadata)
+    return ValidatedBundle(manifest, copies, generated, all_hashes, digest, action_metadata)
 
 
 def _copies_for_archive_mode(validated: ValidatedBundle, archive_mode: str) -> list[CopyEntry]:
@@ -699,10 +869,12 @@ def _build_target_metadata(
     result["runtimeFrameSize"] = [RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE]
     result["views"] = list(FORMAL_VIEWS)
     result["actions"] = validated.action_metadata
+    result["battleViewMapping"] = copy.deepcopy(CANONICAL_BATTLE_VIEW_MAPPING)
     result["battleVisual"] = {
         "status": "owner_review_pending",
         "kind": options.kind,
         "views": list(FORMAL_VIEWS),
+        "battleViewMapping": copy.deepcopy(CANONICAL_BATTLE_VIEW_MAPPING),
         "actions": list(ACTION_SPECS),
         "sourceFrameSize": [SOURCE_FRAME_SIZE, SOURCE_FRAME_SIZE],
         "runtimeFrameSize": [RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE],
@@ -810,6 +982,9 @@ def install_bundle(
     installed_hashes = {
         str(entry.destination_relative): entry.sha256 for entry in selected_copies
     }
+    installed_hashes.update(
+        {str(entry.destination_relative): entry.sha256 for entry in validated.generated}
+    )
     if source_ledger is not None:
         installed_hashes["source/battle/source-ledger.json"] = sha256_bytes(
             _pretty_json_bytes(source_ledger)
@@ -857,6 +1032,11 @@ def install_bundle(
     try:
         if destination.exists():
             shutil.copytree(destination, replacement, dirs_exist_ok=True)
+        battle_qa_root = replacement / "qa/battle"
+        if battle_qa_root.exists():
+            if battle_qa_root.is_symlink():
+                raise BattleBundleError(f"refusing to replace symlink: {battle_qa_root}")
+            shutil.rmtree(battle_qa_root)
         for view in FORMAL_VIEWS:
             for action in ACTION_SPECS:
                 for relative in (
@@ -874,6 +1054,12 @@ def install_bundle(
             shutil.copy2(entry.source, target)
             if sha256_file(target) != entry.sha256:
                 raise BattleBundleError(f"copy verification failed: {entry.destination_relative}")
+        for entry in validated.generated:
+            target = replacement / entry.destination_relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(entry.payload)
+            if sha256_file(target) != entry.sha256:
+                raise BattleBundleError(f"generated file verification failed: {entry.destination_relative}")
         if source_ledger is not None:
             ledger_path = replacement / "source/battle/source-ledger.json"
             _write_json(ledger_path, source_ledger)
