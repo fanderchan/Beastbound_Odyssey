@@ -15725,6 +15725,9 @@ func _on_backpack_use_pressed() -> void:
 	if BackpackModel.item_can_world_pet_egg(item_id):
 		_use_backpack_pet_egg_item(item_id)
 		return
+	if BackpackModel.item_can_world_pet_tame_permit(item_id):
+		_use_backpack_pet_tame_permit_item(item_id)
+		return
 	if BackpackModel.item_can_world_pet_ride_permit(item_id):
 		_use_backpack_pet_ride_permit_item(item_id)
 		return
@@ -16150,7 +16153,7 @@ func _use_backpack_pet_egg_item(item_id: String) -> void:
 		host._update_hud_text()
 
 
-func _use_backpack_pet_ride_permit_item(item_id: String) -> void:
+func _use_backpack_pet_tame_permit_item(item_id: String) -> void:
 	if _is_server_account_session():
 		var parsed = await _submit_server_profile_action("world_item_use", {"itemId": item_id}, "使用驯宠证失败。")
 		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
@@ -16162,6 +16165,32 @@ func _use_backpack_pet_ride_permit_item(item_id: String) -> void:
 			host._update_hud_text()
 		return
 	if _local_profile_mutation_blocked_for_server_only("使用驯宠证"):
+		return
+	var result = PlayerProgressModel.use_world_pet_tame_permit_item(player_profile, item_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		host._save_player_profile_now()
+	_set_world_log_message(str(result.get("message", "")))
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+	_refresh_pet_panel()
+	_refresh_quick_bar()
+	if status_label != null:
+		host._update_hud_text()
+
+
+func _use_backpack_pet_ride_permit_item(item_id: String) -> void:
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action("world_item_use", {"itemId": item_id}, "使用骑宠证失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		_refresh_pet_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			host._update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("使用骑宠证"):
 		return
 	var result = PlayerProgressModel.use_world_pet_ride_permit_item(player_profile, item_id)
 	player_profile = result.get("profile", player_profile)
@@ -25315,6 +25344,9 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 		"isNew": bool(instance.get("isNew", false)),
 		"locked": bool(instance.get("locked", false)),
 	})
+	var tame_check := PlayerProgressModel.can_tame_pet(player_profile, instance_id)
+	if not bool(tame_check.get("ok", false)):
+		button.tooltip_text += "\n驯宠：%s" % str(tame_check.get("message", "当前不能放出游街。"))
 	button.pressed.connect(func() -> void:
 		_select_pet_instance(instance_id)
 	)
@@ -25350,6 +25382,7 @@ func _open_pet_context_menu(instance_id: String, screen_position: Vector2) -> vo
 	pet_context_menu.clear()
 	pet_context_menu.add_item("收回" if already_following else "驯宠", PET_CONTEXT_TAME)
 	pet_context_menu.set_item_disabled(0, selected.is_empty() or (not already_following and not bool(tame_check.get("ok", false))))
+	pet_context_menu.set_item_tooltip(0, "" if already_following or bool(tame_check.get("ok", false)) else str(tame_check.get("message", "当前不能放出游街。")))
 	pet_context_menu.position = Vector2i(roundi(screen_position.x), roundi(screen_position.y))
 	pet_context_menu.popup()
 

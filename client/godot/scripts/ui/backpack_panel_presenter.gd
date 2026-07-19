@@ -94,12 +94,17 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		and item_count > 0
 		and BackpackModel.item_can_world_pet_egg(item_id)
 	)
+	var can_world_pet_tame_permit := (
+		item_id != ""
+		and item_count > 0
+		and BackpackModel.item_can_world_pet_tame_permit(item_id)
+	)
 	var can_world_pet_ride_permit := (
 		item_id != ""
 		and item_count > 0
 		and BackpackModel.item_can_world_pet_ride_permit(item_id)
 	)
-	var can_world_use := can_world_pet_use or can_world_player_use or can_world_pet_egg or can_world_pet_ride_permit
+	var can_world_use := can_world_pet_use or can_world_player_use or can_world_pet_egg or can_world_pet_tame_permit or can_world_pet_ride_permit
 	var can_world_encounter_stone := (
 		item_id != ""
 		and item_count > 0
@@ -119,6 +124,7 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		"canWorldPetUse": can_world_pet_use,
 		"canWorldPlayerUse": can_world_player_use,
 		"canWorldPetEgg": can_world_pet_egg,
+		"canWorldPetTamePermit": can_world_pet_tame_permit,
 		"canWorldPetRidePermit": can_world_pet_ride_permit,
 		"canWorldUse": can_world_use,
 		"canWorldEncounterStone": can_world_encounter_stone,

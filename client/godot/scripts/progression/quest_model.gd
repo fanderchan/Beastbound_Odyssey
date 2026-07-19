@@ -490,7 +490,7 @@ static func ability_label_for(ability_id: String) -> String:
 		"riding":
 			return "骑虎证"
 		"taming":
-			return "驯宠证"
+			return "基础驯宠术"
 	return ability_id
 
 

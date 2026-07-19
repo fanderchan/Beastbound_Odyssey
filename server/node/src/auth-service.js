@@ -66,6 +66,13 @@ const {
 } = require("./auth/auto-capture-settings");
 const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
 const {
+  PROFILE_KEY: PET_TAME_PERMIT_PROFILE_KEY,
+  defaultState: defaultPetTamePermitState,
+  permitIdForTaming: petTamePermitIdForTaming,
+  permitItemIdForTaming: petTamePermitItemIdForTaming,
+  planUnlock: planPetTamePermitUnlock,
+} = require("./auth/pet-tame-permit");
+const {
   PROFILE_KEY: PET_RIDE_PERMIT_PROFILE_KEY,
   defaultState: defaultPetRidePermitState,
   hasRequiredPermit: hasRequiredPetRidePermit,
@@ -19004,6 +19011,9 @@ function applyWorldItemUseAction(profile, params, options = {}) {
   if (useType === "pet_form_egg" || useType === "pet_rebirth_mm_egg") {
     return applyWorldPetEggItemAction(profile, itemId, options.newPetFactory);
   }
+  if (useType === "pet_tame_permit") {
+    return applyWorldPetTamePermitItemAction(profile, itemId);
+  }
   if (useType === "pet_ride_permit") {
     return applyWorldPetRidePermitItemAction(profile, itemId);
   }
@@ -19016,6 +19026,38 @@ function applyWorldItemUseAction(profile, params, options = {}) {
 function worldUseForItem(itemId) {
   const item = bagItemById(itemId);
   return objectOrEmpty(item && item.worldUse);
+}
+
+function applyWorldPetTamePermitItemAction(profile, itemId) {
+  const itemLabel = bagItemLabel(itemId);
+  const worldUse = worldUseForItem(itemId);
+  const formId = String(worldUse.formId || "").trim();
+  const permitId = String(worldUse.permitId || "").trim();
+  const template = petTemplateForFormId(formId);
+  const taming = objectOrEmpty(template.taming);
+  if (
+    !formId || !Boolean(taming.tameable) ||
+    petTamePermitIdForTaming(taming) !== permitId ||
+    petTamePermitItemIdForTaming(taming) !== itemId
+  ) {
+    return {ok: false, code: "tame_permit_catalog_mismatch", message: `${itemLabel} 与宠物驯宠资料不匹配。`};
+  }
+  const plan = planPetTamePermitUnlock(profile, taming, itemId);
+  if (!plan.ok) {
+    return plan;
+  }
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
+  }
+  profile[PET_TAME_PERMIT_PROFILE_KEY] = plan.state;
+  return {
+    ok: true,
+    message: `使用${itemLabel}，永久获得${String(template.formName || "宠物")}放出游街资格。`,
+    itemId,
+    formId,
+    permitId: plan.permitId,
+  };
 }
 
 function applyWorldPetRidePermitItemAction(profile, itemId) {
@@ -23421,6 +23463,7 @@ function createDefaultServerProfile(account) {
     groundPetDrops: [],
     ridePetInstanceId: "",
     petRidePermits: defaultPetRidePermitState(),
+    petTamePermits: defaultPetTamePermitState(),
     backpackSlots: defaultStartingBackpackSlots(),
     backpackExtraSlots: 0,
     quickSlots: ["", "", ""],

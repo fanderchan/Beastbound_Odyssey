@@ -1,45 +1,47 @@
 "use strict";
 
-const PROFILE_KEY = "petRidePermits";
+const {readState: readPetRidePermitState} = require("./pet-ride-permit");
+
+const PROFILE_KEY = "petTamePermits";
 const SCHEMA_VERSION = 1;
 
 function defaultState() {
   return {schemaVersion: SCHEMA_VERSION, permitIds: []};
 }
 
-function permitIdForRiding(riding) {
-  return String(riding && riding.permitId || "").trim();
+function permitIdForTaming(taming) {
+  return String(taming && taming.permitId || "").trim();
 }
 
-function permitItemIdForRiding(riding) {
-  return String(riding && riding.permitItemId || "").trim();
+function permitItemIdForTaming(taming) {
+  return String(taming && taming.permitItemId || "").trim();
 }
 
 function readState(profile) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
-    return invalidState("骑乘资格资料异常。");
+    return invalidState("驯宠资格资料异常。");
   }
   if (!Object.hasOwn(profile, PROFILE_KEY)) {
     return {ok: true, legacyMissing: true, state: defaultState(), permitIds: []};
   }
   const raw = profile[PROFILE_KEY];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return invalidState("骑乘资格资料异常。");
+    return invalidState("驯宠资格资料异常。");
   }
   if (!Number.isInteger(raw.schemaVersion) || raw.schemaVersion !== SCHEMA_VERSION) {
-    return invalidState("骑乘资格版本异常。");
+    return invalidState("驯宠资格版本异常。");
   }
   if (!Array.isArray(raw.permitIds)) {
-    return invalidState("骑乘资格列表异常。");
+    return invalidState("驯宠资格列表异常。");
   }
   const permitIds = [];
   for (const rawPermitId of raw.permitIds) {
     if (typeof rawPermitId !== "string") {
-      return invalidState("骑乘资格编号异常。");
+      return invalidState("驯宠资格编号异常。");
     }
     const permitId = rawPermitId.trim();
     if (!permitId || permitIds.includes(permitId)) {
-      return invalidState("骑乘资格编号异常。");
+      return invalidState("驯宠资格编号异常。");
     }
     permitIds.push(permitId);
   }
@@ -51,8 +53,8 @@ function readState(profile) {
   };
 }
 
-function hasRequiredPermit(profile, riding) {
-  const permitId = permitIdForRiding(riding);
+function hasRequiredPermit(profile, taming) {
+  const permitId = permitIdForTaming(taming);
   if (!permitId) {
     return true;
   }
@@ -61,26 +63,35 @@ function hasRequiredPermit(profile, riding) {
     return false;
   }
   if (snapshot.legacyMissing) {
-    return Boolean(riding && riding.legacyProfilesGranted);
+    const legacyRidePermitId = String(taming && taming.legacyRidePermitId || "").trim();
+    if (!legacyRidePermitId) {
+      return false;
+    }
+    const rideSnapshot = readPetRidePermitState(profile);
+    return Boolean(
+      rideSnapshot.ok &&
+      !rideSnapshot.legacyMissing &&
+      rideSnapshot.permitIds.includes(legacyRidePermitId)
+    );
   }
   return snapshot.permitIds.includes(permitId);
 }
 
-function planUnlock(profile, riding, itemId) {
-  const permitId = permitIdForRiding(riding);
-  const expectedItemId = permitItemIdForRiding(riding);
+function planUnlock(profile, taming, itemId) {
+  const permitId = permitIdForTaming(taming);
+  const expectedItemId = permitItemIdForTaming(taming);
   if (!permitId || !expectedItemId) {
-    return {ok: false, code: "ride_permit_not_configured", message: "这只宠物没有配置骑宠证。"};
+    return {ok: false, code: "tame_permit_not_configured", message: "这只宠物没有配置驯宠证。"};
   }
   if (String(itemId || "").trim() !== expectedItemId) {
-    return {ok: false, code: "ride_permit_item_mismatch", message: "骑宠证与宠物不匹配。"};
+    return {ok: false, code: "tame_permit_item_mismatch", message: "驯宠证与宠物不匹配。"};
   }
   const snapshot = readState(profile);
   if (!snapshot.ok) {
-    return {ok: false, code: "ride_permit_state_invalid", message: snapshot.message};
+    return {ok: false, code: "tame_permit_state_invalid", message: snapshot.message};
   }
-  if (hasRequiredPermit(profile, riding)) {
-    return {ok: false, code: "ride_permit_owned", message: "已经获得这项骑乘资格。"};
+  if (hasRequiredPermit(profile, taming)) {
+    return {ok: false, code: "tame_permit_owned", message: "已经获得这项驯宠资格。"};
   }
   return {
     ok: true,
@@ -101,8 +112,8 @@ module.exports = {
   SCHEMA_VERSION,
   defaultState,
   hasRequiredPermit,
-  permitIdForRiding,
-  permitItemIdForRiding,
+  permitIdForTaming,
+  permitItemIdForTaming,
   planUnlock,
   readState,
 };

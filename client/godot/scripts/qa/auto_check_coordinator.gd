@@ -1671,6 +1671,7 @@ func _run_auto_animation_state_check() -> void:
 func _run_auto_pet_follow_check() -> void:
 	host.profile_save_enabled = false
 	host._set_pet_follow_enabled(false)
+	var tame_permit_item_id := "bui_novice_sprout_taming_certificate"
 	var egg_profile := PlayerProgressModel.with_backpack_slots(PlayerProgressModel.default_profile(), [
 		{"itemId": PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG, "count": 1},
 	])
@@ -1682,20 +1683,54 @@ func _run_auto_pet_follow_check() -> void:
 	host.pet_selected_instance_id = pet_instance_id
 	host._open_pet_panel()
 	await host.get_tree().process_frame
-	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(24, 24))
+	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(320, 250))
 	await host.get_tree().process_frame
 	var no_cert_context_disabled = (
 		host.pet_context_menu != null
 		and host.pet_context_menu.get_item_count() == 1
 		and host.pet_context_menu.get_item_text(0) == "驯宠"
 		and host.pet_context_menu.is_item_disabled(0)
+		and host.pet_context_menu.get_item_tooltip(0).find("芽耳布伊 驯宠证") >= 0
 	)
 	if host.pet_context_menu != null:
 		host.pet_context_menu.hide()
-	host.player_profile = PlayerProgressModel.with_unlocked_ability(egg_profile, PlayerProgressModel.ABILITY_TAMING)
+	egg_profile = PlayerProgressModel.with_backpack_slots(
+		egg_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(egg_profile), tame_permit_item_id, 1)
+	)
+	var tame_use_result := PlayerProgressModel.use_world_pet_tame_permit_item(egg_profile, tame_permit_item_id)
+	var tame_profile := tame_use_result.get("profile", egg_profile) as Dictionary
+	var tame_state = tame_profile.get("petTamePermits", {}) as Dictionary
+	var ride_state = tame_profile.get("petRidePermits", {}) as Dictionary
+	var tame_unlock_ok = (
+		bool(tame_use_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(tame_profile, tame_permit_item_id) == 0
+		and (tame_state.get("permitIds", []) as Array).has("tame_bui_novice_sprout")
+		and (ride_state.get("permitIds", []) as Array).is_empty()
+	)
+	var riding_ready_profile := PlayerProgressModel.with_unlocked_ability(tame_profile, PlayerProgressModel.ABILITY_RIDING)
+	var separate_ride_check := PlayerProgressModel.can_ride_pet(riding_ready_profile, pet_instance_id)
+	var separate_ride_ok = (
+		not bool(separate_ride_check.get("ok", true))
+		and str(separate_ride_check.get("message", "")).find("芽耳布伊 骑宠证") >= 0
+	)
+	var legacy_compensation_profile := egg_profile.duplicate(true)
+	legacy_compensation_profile.erase("petTamePermits")
+	legacy_compensation_profile["petRidePermits"] = {
+		"schemaVersion": 1,
+		"permitIds": ["ride_bui_novice_sprout"],
+	}
+	legacy_compensation_profile = PlayerProgressModel.normalize_profile(legacy_compensation_profile)
+	var legacy_compensation_ok := bool(PlayerProgressModel.can_tame_pet(legacy_compensation_profile, pet_instance_id).get("ok", false))
+	var legacy_without_purchase_profile := egg_profile.duplicate(true)
+	legacy_without_purchase_profile.erase("petTamePermits")
+	legacy_without_purchase_profile["petRidePermits"] = {"schemaVersion": 1, "permitIds": []}
+	legacy_without_purchase_profile = PlayerProgressModel.normalize_profile(legacy_without_purchase_profile)
+	var no_blanket_grant_ok := not bool(PlayerProgressModel.can_tame_pet(legacy_without_purchase_profile, pet_instance_id).get("ok", true))
+	host.player_profile = tame_profile
 	host._refresh_pet_panel()
 	await host.get_tree().process_frame
-	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(24, 24))
+	host._panel_flow()._open_pet_context_menu(pet_instance_id, Vector2(320, 250))
 	await host.get_tree().process_frame
 	var cert_context_enabled = (
 		host.pet_context_menu != null
@@ -1703,6 +1738,13 @@ func _run_auto_pet_follow_check() -> void:
 		and host.pet_context_menu.get_item_text(0) == "驯宠"
 		and not host.pet_context_menu.is_item_disabled(0)
 	)
+	var tame_screenshot_ok := true
+	var tame_screenshot_path := OS.get_environment("BEASTBOUND_PET_TAME_SCREENSHOT_PATH").strip_edges()
+	if tame_screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(tame_screenshot_path.get_base_dir())
+		var tame_image: Image = host.get_viewport().get_texture().get_image()
+		tame_screenshot_ok = tame_image != null and tame_image.save_png(tame_screenshot_path) == OK
+		print("pet tame screenshot: status=%s path=%s" % ["ok" if tame_screenshot_ok else "failed", tame_screenshot_path])
 	host._panel_flow()._on_pet_context_menu_id_pressed(1)
 	await host.get_tree().process_frame
 	var visible_after_tame: bool = host.pet_follow_enabled and host.pet.visible and host.pet_follow_instance_id == pet_instance_id
@@ -1718,17 +1760,30 @@ func _run_auto_pet_follow_check() -> void:
 	var pet_clip: String = host.pet.get_animation_clip_key()
 	var follows_player: bool = host.pet.global_position.distance_to(host.player.global_position) < 260.0
 	var pet_clip_ok = pet_clip.begins_with("walk_")
-	var status = "ok" if hidden_by_default and no_cert_context_disabled and cert_context_enabled and visible_after_tame and pet_moved and pet_walking and pet_clip_ok and follows_player else "failed"
-	print("pet follow check ready: status=%s hidden_by_default=%s no_cert_disabled=%s cert_enabled=%s visible_after_tame=%s pet_moved=%s pet_walking=%s pet_clip=%s follows_player=%s" % [
+	var following_screenshot_ok := true
+	var following_screenshot_path := OS.get_environment("BEASTBOUND_PET_FOLLOWING_SCREENSHOT_PATH").strip_edges()
+	if following_screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(following_screenshot_path.get_base_dir())
+		var following_image: Image = host.get_viewport().get_texture().get_image()
+		following_screenshot_ok = following_image != null and following_image.save_png(following_screenshot_path) == OK
+		print("pet following screenshot: status=%s path=%s" % ["ok" if following_screenshot_ok else "failed", following_screenshot_path])
+	var status = "ok" if hidden_by_default and no_cert_context_disabled and tame_unlock_ok and separate_ride_ok and legacy_compensation_ok and no_blanket_grant_ok and cert_context_enabled and tame_screenshot_ok and visible_after_tame and pet_moved and pet_walking and pet_clip_ok and follows_player and following_screenshot_ok else "failed"
+	print("pet follow check ready: status=%s hidden_by_default=%s no_cert_disabled=%s tame_unlock=%s separate_ride=%s legacy_compensation=%s no_blanket_grant=%s cert_enabled=%s menu_shot=%s visible_after_tame=%s pet_moved=%s pet_walking=%s pet_clip=%s follows_player=%s following_shot=%s" % [
 		status,
 		str(hidden_by_default),
 		str(no_cert_context_disabled),
+		str(tame_unlock_ok),
+		str(separate_ride_ok),
+		str(legacy_compensation_ok),
+		str(no_blanket_grant_ok),
 		str(cert_context_enabled),
+		str(tame_screenshot_ok),
 		str(visible_after_tame),
 		str(pet_moved),
 		str(pet_walking),
 		pet_clip,
 		str(follows_player),
+		str(following_screenshot_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -10154,7 +10209,7 @@ func _run_auto_riding_system_check() -> void:
 		and str(PlayerProgressModel.pet_instance_by_id(clear_profile, "pet_ride_tiger_check").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 	)
 
-	var permit_item_id := "bui_novice_sprout_taming_certificate"
+	var permit_item_id := "bui_novice_sprout_riding_certificate"
 	var bui = PlayerProgressModel.create_pet_instance_from_form(
 		"pet_bui_permit_check",
 		"芽耳布伊",
@@ -10168,7 +10223,7 @@ func _run_auto_riding_system_check() -> void:
 	var permit_blocked_check := PlayerProgressModel.can_ride_pet(bui_profile, "pet_bui_permit_check")
 	var permit_blocked_ok = (
 		not bool(permit_blocked_check.get("ok", true))
-		and str(permit_blocked_check.get("message", "")).find("芽耳布伊 驯宠证") >= 0
+		and str(permit_blocked_check.get("message", "")).find("芽耳布伊 骑宠证") >= 0
 		and PlayerProgressModel.cycled_pet_state_for_profile(bui_profile, "pet_bui_permit_check") == PlayerProgressModel.PET_STATE_BATTLE
 	)
 	bui_profile = PlayerProgressModel.with_backpack_slots(
@@ -10180,6 +10235,7 @@ func _run_auto_riding_system_check() -> void:
 	var permit_unlock_ok = (
 		bool(permit_use_result.get("ok", false))
 		and PlayerProgressModel.backpack_item_count(permit_profile, permit_item_id) == 0
+		and ((permit_profile.get("petTamePermits", {}) as Dictionary).get("permitIds", []) as Array).is_empty()
 		and bool(PlayerProgressModel.can_ride_pet(permit_profile, "pet_bui_permit_check").get("ok", false))
 		and PlayerProgressModel.cycled_pet_state_for_profile(permit_profile, "pet_bui_permit_check") == PlayerProgressModel.PET_STATE_RIDING
 	)
@@ -10331,6 +10387,8 @@ func _run_auto_shop_check() -> void:
 		and ShopCatalogModel.buy_price_for(shop_id, "encounter_stone_low") == 24
 		and ShopCatalogModel.buy_price_for("firebud_diamond_shop", "bui_novice_sprout_taming_certificate") == 600
 		and not ShopCatalogModel.is_sellable("firebud_diamond_shop", "bui_novice_sprout_taming_certificate")
+		and ShopCatalogModel.buy_price_for("firebud_diamond_shop", "bui_novice_sprout_riding_certificate") == 600
+		and not ShopCatalogModel.is_sellable("firebud_diamond_shop", "bui_novice_sprout_riding_certificate")
 	)
 	var default_coin_ok = PlayerProgressModel.stone_coins(base_profile) == PlayerProgressModel.DEFAULT_STONE_COINS
 
@@ -10584,10 +10642,18 @@ func _run_auto_shop_check() -> void:
 			await host.get_tree().process_frame
 		var permit_button_text: String = (permit_button as Button).text if permit_button is Button else ""
 		var permit_detail_text: String = host.shop_detail_label.text if host.shop_detail_label != null else ""
+		var ride_permit_button = host.shop_item_buttons.get("bui_novice_sprout_riding_certificate", null)
+		if ride_permit_button is Control and ride_permit_button.get_parent() != null and ride_permit_button.get_parent().get_parent() is ScrollContainer:
+			(ride_permit_button.get_parent().get_parent() as ScrollContainer).ensure_control_visible(ride_permit_button as Control)
+			await host.get_tree().process_frame
+		var ride_permit_button_text: String = (ride_permit_button as Button).text if ride_permit_button is Button else ""
 		var permit_shop_ui_ok = (
 			permit_button_text.find("芽耳布伊") >= 0
+			and permit_button_text.find("驯宠证") >= 0
 			and permit_button_text.find("600钻石") >= 0
-			and permit_detail_text.find("永久获得芽耳布伊骑乘资格") >= 0
+			and permit_detail_text.find("永久获得芽耳布伊放出游街资格") >= 0
+			and ride_permit_button_text.find("骑宠证") >= 0
+			and ride_permit_button_text.find("600钻石") >= 0
 		)
 		var permit_shop_image: Image = host.get_viewport().get_texture().get_image()
 		var permit_shop_save_ok := permit_shop_image != null and permit_shop_image.save_png(permit_shop_screenshot_path) == OK

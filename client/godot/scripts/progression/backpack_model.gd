@@ -14,6 +14,7 @@ const CONTEXT_WORLD_PLAYER_EXP := "world_player_exp"
 const CONTEXT_WORLD_PET_EXP := "world_pet_exp"
 const CONTEXT_WORLD_MM_STONE := "world_mm_stone"
 const CONTEXT_WORLD_PET_EGG := "world_pet_egg"
+const CONTEXT_WORLD_PET_TAME_PERMIT := "world_pet_tame_permit"
 const CONTEXT_WORLD_PET_RIDE_PERMIT := "world_pet_ride_permit"
 const CONTEXT_EQUIPMENT := "equipment"
 const BINDING_UNBOUND := "unbound"
@@ -233,6 +234,27 @@ static func world_pet_egg_pet_name_for(item_id: String) -> String:
 	if str(world_use_for(item_id).get("type", "")) != "pet_form_egg":
 		return ""
 	return str(world_use_for(item_id).get("petName", "")).strip_edges()
+
+
+static func item_can_world_pet_tame_permit(item_id: String) -> bool:
+	return (
+		item_has_context(item_id, CONTEXT_WORLD_PET_TAME_PERMIT)
+		and str(world_use_for(item_id).get("type", "")) == "pet_tame_permit"
+		and world_pet_tame_permit_form_id_for(item_id) != ""
+		and world_pet_tame_permit_id_for(item_id) != ""
+	)
+
+
+static func world_pet_tame_permit_form_id_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_tame_permit":
+		return ""
+	return str(world_use_for(item_id).get("formId", "")).strip_edges()
+
+
+static func world_pet_tame_permit_id_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_tame_permit":
+		return ""
+	return str(world_use_for(item_id).get("permitId", "")).strip_edges()
 
 
 static func item_can_world_pet_ride_permit(item_id: String) -> bool:

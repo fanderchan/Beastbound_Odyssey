@@ -81,6 +81,7 @@ test("profiles sync with revision conflict protection", () => {
   assert.deepEqual(emptyProfile.profile.equipmentEnhancement, {});
   assert.deepEqual(emptyProfile.profile.equipmentWearCounters, {});
   assert.deepEqual(emptyProfile.profile.petRidePermits, {schemaVersion: 1, permitIds: []});
+  assert.deepEqual(emptyProfile.profile.petTamePermits, {schemaVersion: 1, permitIds: []});
   assert.equal(emptyProfile.profileSummary.profileRevision, 0);
   assert.equal(emptyProfile.profileSummary.storageMode, "server_document");
 
@@ -1364,14 +1365,15 @@ test("sprout Bui uses the shared rideable pet contract", () => {
   assert.equal(riding.profile.petInstances.find((pet) => pet.instanceId === "pet_bui_mount").state, "riding");
 });
 
-test("new players buy and consume the Bui certificate before riding while duplicate use preserves it", () => {
+test("Bui taming and riding certificates unlock separate permanent abilities", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const registered = service.register({username: "buipermit", password: "test1234", displayName: "新布伊骑手"});
   const token = registered.session.token;
   const profile = battleProfile("新布伊骑手", {level: 1, hp: 120, maxHp: 120}, null);
-  profile.diamonds = 1200;
+  profile.diamonds = 2400;
   profile.unlockedAbilities = ["riding"];
   profile.petRidePermits = {schemaVersion: 1, permitIds: []};
+  profile.petTamePermits = {schemaVersion: 1, permitIds: []};
   profile.petInstances.push({
     instanceId: "pet_bui_permit",
     petId: "pet_bui_permit",
@@ -1390,16 +1392,39 @@ test("new players buy and consume the Bui certificate before riding while duplic
   });
   assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
 
-  const purchased = service.shopTransaction(token, {
+  const purchasedTame = service.shopTransaction(token, {
     mode: "buy",
     shopId: "firebud_diamond_shop",
     itemId: "bui_novice_sprout_taming_certificate",
     amount: 1,
   });
-  assert.equal(purchased.ok, true);
-  assert.equal(purchased.transaction.price, 600);
-  assert.equal(purchased.profile.diamonds, 600);
-  assert.equal(profileItemCount(purchased.profile, "bui_novice_sprout_taming_certificate"), 1);
+  assert.equal(purchasedTame.ok, true);
+  assert.equal(purchasedTame.transaction.price, 600);
+  assert.equal(purchasedTame.profile.diamonds, 1800);
+  assert.equal(profileItemCount(purchasedTame.profile, "bui_novice_sprout_taming_certificate"), 1);
+
+  const tameUnlocked = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {itemId: "bui_novice_sprout_taming_certificate"},
+  });
+  assert.equal(tameUnlocked.ok, true);
+  assert.deepEqual(tameUnlocked.profile.petTamePermits, {
+    schemaVersion: 1,
+    permitIds: ["tame_bui_novice_sprout"],
+  });
+  assert.deepEqual(tameUnlocked.profile.petRidePermits, {schemaVersion: 1, permitIds: []});
+  assert.equal(profileItemCount(tameUnlocked.profile, "bui_novice_sprout_taming_certificate"), 0);
+
+  const purchasedRide = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_diamond_shop",
+    itemId: "bui_novice_sprout_riding_certificate",
+    amount: 1,
+  });
+  assert.equal(purchasedRide.ok, true);
+  assert.equal(purchasedRide.transaction.price, 600);
+  assert.equal(purchasedRide.profile.diamonds, 1200);
+  assert.equal(profileItemCount(purchasedRide.profile, "bui_novice_sprout_riding_certificate"), 1);
 
   const blockedCycle = service.profileAction(token, {
     action: "pet_state_cycle",
@@ -1416,16 +1441,20 @@ test("new players buy and consume the Bui certificate before riding while duplic
     assert.equal(cycled.result.state, expectedState);
   }
 
-  const unlocked = service.profileAction(token, {
+  const rideUnlocked = service.profileAction(token, {
     action: "world_item_use",
-    payload: {itemId: "bui_novice_sprout_taming_certificate"},
+    payload: {itemId: "bui_novice_sprout_riding_certificate"},
   });
-  assert.equal(unlocked.ok, true);
-  assert.deepEqual(unlocked.profile.petRidePermits, {
+  assert.equal(rideUnlocked.ok, true);
+  assert.deepEqual(rideUnlocked.profile.petRidePermits, {
     schemaVersion: 1,
     permitIds: ["ride_bui_novice_sprout"],
   });
-  assert.equal(profileItemCount(unlocked.profile, "bui_novice_sprout_taming_certificate"), 0);
+  assert.deepEqual(rideUnlocked.profile.petTamePermits, {
+    schemaVersion: 1,
+    permitIds: ["tame_bui_novice_sprout"],
+  });
+  assert.equal(profileItemCount(rideUnlocked.profile, "bui_novice_sprout_riding_certificate"), 0);
 
   const riding = service.profileAction(token, {
     action: "pet_state_cycle",
@@ -1434,21 +1463,37 @@ test("new players buy and consume the Bui certificate before riding while duplic
   assert.equal(riding.ok, true);
   assert.equal(riding.result.state, "riding");
 
-  const purchasedAgain = service.shopTransaction(token, {
+  const purchasedTameAgain = service.shopTransaction(token, {
     mode: "buy",
     shopId: "firebud_diamond_shop",
     itemId: "bui_novice_sprout_taming_certificate",
     amount: 1,
   });
-  assert.equal(purchasedAgain.ok, true);
-  assert.equal(purchasedAgain.profile.diamonds, 0);
-  const duplicate = service.profileAction(token, {
+  assert.equal(purchasedTameAgain.ok, true);
+  assert.equal(purchasedTameAgain.profile.diamonds, 600);
+  const duplicateTame = service.profileAction(token, {
     action: "world_item_use",
     payload: {itemId: "bui_novice_sprout_taming_certificate"},
   });
-  assert.equal(duplicate.ok, false);
-  assert.equal(duplicate.code, "ride_permit_owned");
+  assert.equal(duplicateTame.ok, false);
+  assert.equal(duplicateTame.code, "tame_permit_owned");
   assert.equal(profileItemCount(service.getProfile(token).profile, "bui_novice_sprout_taming_certificate"), 1);
+
+  const purchasedRideAgain = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_diamond_shop",
+    itemId: "bui_novice_sprout_riding_certificate",
+    amount: 1,
+  });
+  assert.equal(purchasedRideAgain.ok, true);
+  assert.equal(purchasedRideAgain.profile.diamonds, 0);
+  const duplicateRide = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {itemId: "bui_novice_sprout_riding_certificate"},
+  });
+  assert.equal(duplicateRide.ok, false);
+  assert.equal(duplicateRide.code, "ride_permit_owned");
+  assert.equal(profileItemCount(service.getProfile(token).profile, "bui_novice_sprout_riding_certificate"), 1);
 });
 
 test("riding tutorial reconciles an already active non-mount battle pet", () => {

@@ -22,6 +22,7 @@ const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individ
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
 const PetRidePermitModel := preload("res://scripts/progression/pet_ride_permit_model.gd")
+const PetTamePermitModel := preload("res://scripts/progression/pet_tame_permit_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerGrowthModel := preload("res://scripts/progression/player_growth_model.gd")
@@ -305,6 +306,7 @@ static func default_profile() -> Dictionary:
 		"groundPetDrops": [],
 		"ridePetInstanceId": "",
 		"petRidePermits": PetRidePermitModel.default_state(),
+		"petTamePermits": PetTamePermitModel.default_state(),
 		"backpackSlots": BackpackModel.starting_slots(),
 		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
@@ -476,13 +478,23 @@ static func can_tame_pet(profile: Dictionary, instance_id: String) -> Dictionary
 	var selected_id := instance_id.strip_edges()
 	if selected_id == "":
 		return {"ok": false, "message": "请选择要驯宠的宠物。"}
-	if not has_unlocked_ability(normalized, ABILITY_TAMING):
-		return {"ok": false, "message": "尚未学会驯宠证。"}
 	var instance := pet_instance_by_id(normalized, selected_id)
 	if instance.is_empty():
 		return {"ok": false, "message": "没有找到这只宠物。"}
-	if not bool(instance.get("tameEligible", false)):
-		return {"ok": false, "message": "%s 还不能驯宠。" % str(instance.get("name", "宠物"))}
+	var tame_config := _tame_config_for_instance(instance)
+	if not tame_config.is_empty():
+		if not PetTamePermitModel.has_required_permit(normalized, tame_config):
+			var permit_item_id := PetTamePermitModel.permit_item_id_for_taming(tame_config)
+			return {
+				"ok": false,
+				"code": "pet_tame_permit_required",
+				"message": "需要先使用%s。" % BackpackModel.label_for(permit_item_id, "对应驯宠证"),
+			}
+	else:
+		if not has_unlocked_ability(normalized, ABILITY_TAMING):
+			return {"ok": false, "message": "尚未学会基础驯宠术。"}
+		if not bool(instance.get("tameEligible", false)):
+			return {"ok": false, "message": "%s 还不能驯宠。" % str(instance.get("name", "宠物"))}
 	var state := str(instance.get("state", PET_STATE_STANDBY))
 	if state == PET_STATE_STORAGE:
 		return {"ok": false, "message": "%s 在兽栏里，不能驯宠。" % str(instance.get("name", "宠物"))}
@@ -512,7 +524,7 @@ static func can_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary
 		var permit_item_id := PetRidePermitModel.permit_item_id_for_riding(ride_config)
 		return {
 			"ok": false,
-			"message": "需要先使用%s。" % BackpackModel.label_for(permit_item_id, "对应驯宠证"),
+			"message": "需要先使用%s。" % BackpackModel.label_for(permit_item_id, "对应骑宠证"),
 		}
 	var state := str(instance.get("state", PET_STATE_STANDBY))
 	if state == PET_STATE_STORAGE:
@@ -6715,9 +6727,49 @@ static func use_world_pet_rebirth_mm_egg(profile: Dictionary, item_id: String) -
 	return use_world_pet_egg_item(profile, item_id)
 
 
-static func use_world_pet_ride_permit_item(profile: Dictionary, item_id: String) -> Dictionary:
+static func use_world_pet_tame_permit_item(profile: Dictionary, item_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var item_label := BackpackModel.label_for(item_id, "驯宠证")
+	if not BackpackModel.item_can_world_pet_tame_permit(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能使用。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var form_id := BackpackModel.world_pet_tame_permit_form_id_for(item_id)
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 对应宠物不存在。" % item_label}
+	var raw_taming = template.get("taming", {})
+	var taming := raw_taming as Dictionary if raw_taming is Dictionary else {}
+	if (
+		not bool(taming.get("tameable", false))
+		or PetTamePermitModel.permit_id_for_taming(taming) != BackpackModel.world_pet_tame_permit_id_for(item_id)
+		or PetTamePermitModel.permit_item_id_for_taming(taming) != item_id
+	):
+		return {"ok": false, "profile": normalized, "message": "%s 与宠物驯宠资料不匹配。" % item_label}
+	var plan := PetTamePermitModel.plan_unlock(normalized, taming, item_id)
+	if not bool(plan.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(plan.get("message", "无法使用%s。" % item_label)),
+			"code": str(plan.get("code", "tame_permit_failed")),
+		}
+	normalized[PetTamePermitModel.PROFILE_KEY] = (plan.get("state", {}) as Dictionary).duplicate(true)
+	normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "使用%s，永久获得%s放出游街资格。" % [item_label, str(template.get("formName", "宠物"))],
+		"itemId": item_id,
+		"permitId": str(plan.get("permitId", "")),
+		"formId": form_id,
+	}
+
+
+static func use_world_pet_ride_permit_item(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "骑宠证")
 	if not BackpackModel.item_can_world_pet_ride_permit(item_id):
 		return {"ok": false, "profile": normalized, "message": "%s 不能使用。" % item_label}
 	if backpack_item_count(normalized, item_id) <= 0:
@@ -8411,6 +8463,20 @@ static func _first_battle_pet_id(profile: Dictionary) -> String:
 		if instance_id != "" and str(instance.get("state", PET_STATE_STANDBY)) == PET_STATE_BATTLE:
 			return instance_id
 	return ""
+
+
+static func _tame_config_for_instance(instance: Dictionary) -> Dictionary:
+	var form_id := str(instance.get("formId", instance.get("templateId", ""))).strip_edges()
+	if form_id == "":
+		return {}
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	var raw_config = template.get("taming", {})
+	if not (raw_config is Dictionary):
+		return {}
+	var config := (raw_config as Dictionary).duplicate(true)
+	if not bool(config.get("tameable", false)):
+		return {}
+	return config
 
 
 static func _ride_config_for_instance(instance: Dictionary) -> Dictionary:
