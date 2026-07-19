@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "lean",
+  "formId": "wuli_normal_orange_fire10",
+  "kind": "pet",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "representativeRaw": "source/world/representative-directions-a-raw.png",
+  "representativeRawSha256": "79468481011c27bf2935a43aad584524043b9368bf703f853287a354a34ce914",
+  "representativeRawDecodedRgbaSha256": "407266827ba4da8d4c9052c6c8fddf62d3ac5ec17c9e813d7b9568e877cd4768",
+  "prompt": "source/world/prompt-used.md",
+  "promptSha256": "da1db5f7a64556fc4813092da8f44345a312b6664487b5c9d4f41ace7d6d2415",
+  "sourceSheets": [
+    {
+      "name": "directions-a",
+      "rawSha256": "79468481011c27bf2935a43aad584524043b9368bf703f853287a354a34ce914",
+      "rawDecodedRgbaSha256": "407266827ba4da8d4c9052c6c8fddf62d3ac5ec17c9e813d7b9568e877cd4768",
+      "pipelineMetadata": "source/world/directions-a-pipeline-meta.json",
+      "pipelineSha256": "e0851687a9476c9a5489a479c8b498b934b6c3f829bfca68f8761934c57cfd67",
+      "repackMetadata": "source/world/directions-a-repack-meta.json",
+      "repackSha256": "ed47b94a49d89d90c1e7013aa0a8856d1cbbd06f79a807c173129a47e9a504e5",
+      "rawTracked": true
+    },
+    {
+      "name": "directions-b",
+      "rawSha256": "87384ee246491015a8d2d2a9da05bc4d260032118fe3ad09187e13c82541b6fd",
+      "rawDecodedRgbaSha256": "72e32a65fadf9ccdf221548acc2d24f075f31a3401430a6d054dbc7c7f03b0b1",
+      "pipelineMetadata": "source/world/directions-b-pipeline-meta.json",
+      "pipelineSha256": "3b65e46ba6579ec33bf94812c023623dc4f498ea90099033be7b66f5d9f3c5e7",
+      "repackMetadata": "source/world/directions-b-repack-meta.json",
+      "repackSha256": "64b665a5a37742eddd119fbe63d9273f52336f59e11bb0991fb02ba38fe4978b",
+      "rawTracked": false
+    }
+  ],
+  "fullLocalProductionArchive": "/Users/fander/projects/Beastbound_Odyssey/.run/art_batch_phase322/wuli/orange/world",
+  "runtimeFrames": 40,
+  "sourceFramesTracked": false
+}
