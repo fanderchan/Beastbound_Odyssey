@@ -223,6 +223,47 @@ class PetArtBatchAuditTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assertIn("missing_png", _issue_codes(report))
 
+    def test_deep_magenta_transparent_edge_contamination_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            frame_path = pet_root / "views/front_3quarter_sw/idle/idle-1.png"
+            with Image.open(frame_path) as opened:
+                frame = opened.convert("RGBA")
+            draw = ImageDraw.Draw(frame)
+            draw.rounded_rectangle(
+                (58, 58, 180, 224),
+                radius=24,
+                outline=(112, 4, 136, 220),
+                width=2,
+            )
+            frame.save(frame_path)
+
+            completed, report = _run(root, catalog)
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn("magenta_edge_contamination", _issue_codes(report))
+
+    def test_legitimate_solid_purple_subject_does_not_trigger_edge_spill_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            frame_path = pet_root / "views/front_3quarter_sw/idle/idle-1.png"
+            image = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+            ImageDraw.Draw(image).rounded_rectangle(
+                (58, 58, 180, 224),
+                radius=24,
+                fill=(105, 34, 148, 255),
+            )
+            image.save(frame_path)
+
+            completed, report = _run(root, catalog)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertNotIn("magenta_edge_contamination", _issue_codes(report))
+
     def test_planned_missing_assets_are_pending_and_nonblocking(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

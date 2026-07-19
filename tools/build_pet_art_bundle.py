@@ -37,6 +37,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from cleanup_sprite_alpha_components import alpha_components
+from sprite_alpha_despill import despill_transparent_alpha
 
 
 TOOL_NAME = "build_pet_art_bundle.py"
@@ -289,7 +290,11 @@ def chroma_to_alpha(
         output_alpha[output_alpha < alpha_threshold] = 0
         rgba[:, :, 3] = output_alpha
         rgba[output_alpha == 0, :3] = 0
-        return Image.fromarray(rgba, mode="RGBA"), {
+        cleaned, despill_meta = despill_transparent_alpha(
+            Image.fromarray(rgba, mode="RGBA"),
+            alpha_threshold,
+        )
+        return cleaned, {
             "inputBackgroundMode": "transparent_alpha",
             "cornerAlpha": corner_alphas,
             "borderConnectedPixels": 0,
@@ -302,6 +307,7 @@ def chroma_to_alpha(
                 float(np.count_nonzero(output_alpha == 0)) / output_alpha.size,
                 6,
             ),
+            "transparentAlphaDespill": despill_meta,
         }
 
     corner_distances = [
@@ -348,7 +354,10 @@ def chroma_to_alpha(
 
     rgba[:, :, 3] = output_alpha
     rgba[output_alpha == 0, :3] = 0
-    cleaned = Image.fromarray(rgba, mode="RGBA")
+    cleaned, despill_meta = despill_transparent_alpha(
+        Image.fromarray(rgba, mode="RGBA"),
+        alpha_threshold,
+    )
     return cleaned, {
         "inputBackgroundMode": "chroma_key",
         "cornerChromaDistances": [round(value, 3) for value in corner_distances],
@@ -357,6 +366,7 @@ def chroma_to_alpha(
         "transparentPixels": int(np.count_nonzero(output_alpha == 0)),
         "partialAlphaPixels": int(np.count_nonzero((output_alpha > 0) & (output_alpha < 255))),
         "backgroundRatio": round(float(np.count_nonzero(connected)) / connected.size, 6),
+        "postChromaEdgeDespill": despill_meta,
     }
 
 

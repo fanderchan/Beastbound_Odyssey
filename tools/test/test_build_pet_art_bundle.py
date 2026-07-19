@@ -150,6 +150,50 @@ class PetArtBundleBuilderTests(unittest.TestCase):
                 "transparent_alpha",
             )
 
+    def test_transparent_alpha_magenta_spill_is_despilled_without_alpha_erosion(self) -> None:
+        image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle((18, 18, 77, 77), radius=14, fill=(112, 67, 31, 255))
+        # Simulate an already-transparent helper that kept magenta RGB on the
+        # antialiased contour.  The central pipeline must recolor, not delete it.
+        draw.rounded_rectangle((17, 17, 78, 78), radius=15, outline=(116, 4, 132, 180), width=2)
+        alpha_before = np.asarray(image.getchannel("A"), dtype=np.uint8).copy()
+
+        cleaned, metadata = builder.chroma_to_alpha(
+            image,
+            builder.DEFAULT_KEY,
+            40.0,
+            150.0,
+            8,
+        )
+        alpha_after = np.asarray(cleaned.getchannel("A"), dtype=np.uint8)
+        self.assertTrue(np.array_equal(alpha_before, alpha_after))
+        despill = metadata["transparentAlphaDespill"]
+        self.assertGreater(despill["despilledPixels"], 0)
+        self.assertEqual(despill["alphaPixelsChanged"], 0)
+        self.assertLess(
+            despill["strongMagentaEdgePixelsAfter"],
+            despill["strongMagentaEdgePixelsBefore"],
+        )
+
+    def test_transparent_alpha_legitimate_purple_subject_is_not_recolored(self) -> None:
+        image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+        ImageDraw.Draw(image).rounded_rectangle(
+            (18, 18, 77, 77),
+            radius=14,
+            fill=(105, 34, 148, 255),
+        )
+        before = np.asarray(image, dtype=np.uint8).copy()
+        cleaned, metadata = builder.chroma_to_alpha(
+            image,
+            builder.DEFAULT_KEY,
+            40.0,
+            150.0,
+            8,
+        )
+        self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
+        self.assertEqual(metadata["transparentAlphaDespill"]["despilledPixels"], 0)
+
     def assert_case_fails(self, case_name: str, message: str) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -20,6 +20,8 @@ from typing import Any, Iterable
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from sprite_alpha_despill import magenta_edge_metrics
+
 
 SCHEMA_VERSION = 1
 CANONICAL_DIRECTIONS = (
@@ -57,6 +59,8 @@ ALPHA_THRESHOLD = 24
 MAX_BASELINE_DRIFT_PX = 2
 MAX_CENTER_DRIFT_PX = 12.0
 MAX_ALPHA_HEIGHT_RATIO = 1.12
+MAX_STRONG_MAGENTA_EDGE_RATIO = 0.45
+MIN_STRONG_MAGENTA_EDGE_PIXELS = 12
 
 
 @dataclass(frozen=True)
@@ -390,6 +394,22 @@ def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]
     magenta_count = _possible_magenta_fringe_pixels(rgba)
     if magenta_count:
         issues.append(_issue("magenta_fringe", f"检测到 {magenta_count} 个疑似洋红残边像素"))
+    edge_metrics = magenta_edge_metrics(rgba, ALPHA_THRESHOLD)
+    strong_edge_count = int(edge_metrics["strongMagentaEdgePixels"])
+    strong_edge_ratio = float(edge_metrics["strongMagentaEdgeRatio"])
+    if (
+        strong_edge_count >= MIN_STRONG_MAGENTA_EDGE_PIXELS
+        and strong_edge_ratio > MAX_STRONG_MAGENTA_EDGE_RATIO
+    ):
+        issues.append(
+            _issue(
+                "magenta_edge_contamination",
+                "透明边缘强紫污染 "
+                f"{strong_edge_count}/{edge_metrics['edgePixelCount']} "
+                f"({strong_edge_ratio:.1%})，门槛 "
+                f"{MAX_STRONG_MAGENTA_EDGE_RATIO:.0%}/{MIN_STRONG_MAGENTA_EDGE_PIXELS}px",
+            )
+        )
     return {
         "sha256": hashlib.sha256(rgba.tobytes()).hexdigest(),
         "mirrorSha256": hashlib.sha256(ImageOps.mirror(rgba).tobytes()).hexdigest(),
@@ -399,6 +419,9 @@ def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]
         "centerX": round((bbox[0] + bbox[2]) / 2.0, 3),
         "bottomExclusive": bbox[3],
         "magentaFringePixels": magenta_count,
+        "transparentEdgePixels": edge_metrics["edgePixelCount"],
+        "strongMagentaEdgePixels": strong_edge_count,
+        "strongMagentaEdgeRatio": strong_edge_ratio,
     }, issues
 
 
