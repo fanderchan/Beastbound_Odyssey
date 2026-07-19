@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "tool": "repack_components.py",
+  "creativeGeneration": false,
+  "input": ".run/bui_family_art/novice_sprout_bui/pet/revive/raw-sheet.png",
+  "inputSha256": "fb36641506df4a94417891bae8c7e6c4bfe1cfcd0ae2df3c5c5f2c3ed84b9f8e",
+  "sourceGrid": [
+    2,
+    4
+  ],
+  "selectedRows": [
+    0,
+    1
+  ],
+  "outputGrid": [
+    2,
+    4
+  ],
+  "chroma": {
+    "inputBackgroundMode": "chroma_key",
+    "cornerChromaDistances": [
+      25.08,
+      24.515,
+      42.568,
+      35.693
+    ],
+    "borderConnectedPixels": 1283684,
+    "keyedCandidatePixels": 1283872,
+    "transparentPixels": 1276662,
+    "partialAlphaPixels": 7198,
+    "backgroundRatio": 0.816319
+  },
+  "detectedLargeComponents": 8,
+  "frames": [
+    {
+      "sourceBbox": [
+        40,
+        296,
+        400,
+        433
+      ],
+      "sourceArea": 30194,
+      "outputCell": [
+        0,
+        0
+      ],
+      "paste": [
+        68,
+        335
+      ],
+      "cutoutSize": [
+        376,
+        153
+      ]
+    },
+    {
+      "sourceBbox": [
+        435,
+        247,
+        756,
+        439
+      ],
+      "sourceArea": 33402,
+      "outputCell": [
+        0,
+        1
+      ],
+      "paste": [
+        599,
+        280
+      ],
+      "cutoutSize": [
+        337,
+        208
+      ]
+    },
+    {
+      "sourceBbox": [
+        788,
+        208,
+        1104,
+        444
+      ],
+      "sourceArea": 39693,
+      "outputCell": [
+        0,
+        2
+      ],
+      "paste": [
+        1114,
+        236
+      ],
+      "cutoutSize": [
+        332,
+        252
+      ]
+    },
+    {
+      "sourceBbox": [
+        1136,
+        170,
+        1393,
+        444
+      ],
+      "sourceArea": 39387,
+      "outputCell": [
+        0,
+        3
+      ],
+      "paste": [
+        1655,
+        198
+      ],
+      "cutoutSize": [
+        273,
+        290
+      ]
+    },
+    {
+      "sourceBbox": [
+        32,
+        757,
+        382,
+        902
+      ],
+      "sourceArea": 34575,
+      "outputCell": [
+        1,
+        0
+      ],
+      "paste": [
+        73,
+        839
+      ],
+      "cutoutSize": [
+        366,
+        161
+      ]
+    },
+    {
+      "sourceBbox": [
+        422,
+        630,
+        695,
+        893
+      ],
+      "sourceArea": 38539,
+      "outputCell": [
+        1,
+        1
+      ],
+      "paste": [
+        623,
+        721
+      ],
+      "cutoutSize": [
+        289,
+        279
+      ]
+    },
+    {
+      "sourceBbox": [
+        762,
+        614,
+        1052,
+        887
+      ],
+      "sourceArea": 39582,
+      "outputCell": [
+        1,
+        2
+      ],
+      "paste": [
+        1127,
+        711
+      ],
+      "cutoutSize": [
+        306,
+        289
+      ]
+    },
+    {
+      "sourceBbox": [
+        1107,
+        608,
+        1371,
+        894
+      ],
+      "sourceArea": 40493,
+      "outputCell": [
+        1,
+        3
+      ],
+      "paste": [
+        1652,
+        698
+      ],
+      "cutoutSize": [
+        280,
+        302
+      ]
+    }
+  ]
+}

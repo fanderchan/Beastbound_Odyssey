@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "tool": "repack_components.py",
+  "creativeGeneration": false,
+  "input": ".run/bui_family_art/novice_sprout_bui/pet/counter/raw-sheet.png",
+  "inputSha256": "230fe5e8030bb1a3d52869d363ef64b24b16e9fb9981267577e4457475582b64",
+  "sourceGrid": [
+    4,
+    6
+  ],
+  "selectedRows": [
+    0,
+    2
+  ],
+  "outputGrid": [
+    2,
+    6
+  ],
+  "chroma": {
+    "inputBackgroundMode": "chroma_key",
+    "cornerChromaDistances": [
+      26.439,
+      25.199,
+      46.152,
+      35.623
+    ],
+    "borderConnectedPixels": 1077627,
+    "keyedCandidatePixels": 1077636,
+    "transparentPixels": 1059994,
+    "partialAlphaPixels": 17608,
+    "backgroundRatio": 0.685283
+  },
+  "detectedLargeComponents": 24,
+  "frames": [
+    {
+      "sourceBbox": [
+        41,
+        97,
+        247,
+        279
+      ],
+      "sourceArea": 24480,
+      "outputCell": [
+        0,
+        0
+      ],
+      "paste": [
+        145,
+        290
+      ],
+      "cutoutSize": [
+        222,
+        198
+      ]
+    },
+    {
+      "sourceBbox": [
+        296,
+        79,
+        487,
+        278
+      ],
+      "sourceArea": 24520,
+      "outputCell": [
+        0,
+        1
+      ],
+      "paste": [
+        664,
+        273
+      ],
+      "cutoutSize": [
+        207,
+        215
+      ]
+    },
+    {
+      "sourceBbox": [
+        510,
+        111,
+        744,
+        289
+      ],
+      "sourceArea": 23024,
+      "outputCell": [
+        0,
+        2
+      ],
+      "paste": [
+        1155,
+        294
+      ],
+      "cutoutSize": [
+        250,
+        194
+      ]
+    },
+    {
+      "sourceBbox": [
+        769,
+        68,
+        974,
+        263
+      ],
+      "sourceArea": 22492,
+      "outputCell": [
+        0,
+        3
+      ],
+      "paste": [
+        1681,
+        277
+      ],
+      "cutoutSize": [
+        221,
+        211
+      ]
+    },
+    {
+      "sourceBbox": [
+        1001,
+        113,
+        1189,
+        277
+      ],
+      "sourceArea": 17057,
+      "outputCell": [
+        0,
+        4
+      ],
+      "paste": [
+        2202,
+        308
+      ],
+      "cutoutSize": [
+        204,
+        180
+      ]
+    },
+    {
+      "sourceBbox": [
+        1254,
+        78,
+        1425,
+        291
+      ],
+      "sourceArea": 23346,
+      "outputCell": [
+        0,
+        5
+      ],
+      "paste": [
+        2722,
+        259
+      ],
+      "cutoutSize": [
+        187,
+        229
+      ]
+    },
+    {
+      "sourceBbox": [
+        47,
+        645,
+        252,
+        804
+      ],
+      "sourceArea": 20956,
+      "outputCell": [
+        1,
+        0
+      ],
+      "paste": [
+        145,
+        825
+      ],
+      "cutoutSize": [
+        221,
+        175
+      ]
+    },
+    {
+      "sourceBbox": [
+        256,
+        610,
+        440,
+        810
+      ],
+      "sourceArea": 22783,
+      "outputCell": [
+        1,
+        1
+      ],
+      "paste": [
+        668,
+        784
+      ],
+      "cutoutSize": [
+        200,
+        216
+      ]
+    },
+    {
+      "sourceBbox": [
+        503,
+        644,
+        743,
+        786
+      ],
+      "sourceArea": 22549,
+      "outputCell": [
+        1,
+        2
+      ],
+      "paste": [
+        1152,
+        842
+      ],
+      "cutoutSize": [
+        256,
+        158
+      ]
+    },
+    {
+      "sourceBbox": [
+        762,
+        594,
+        969,
+        817
+      ],
+      "sourceArea": 20724,
+      "outputCell": [
+        1,
+        3
+      ],
+      "paste": [
+        1680,
+        761
+      ],
+      "cutoutSize": [
+        223,
+        239
+      ]
+    },
+    {
+      "sourceBbox": [
+        1016,
+        679,
+        1197,
+        802
+      ],
+      "sourceArea": 14743,
+      "outputCell": [
+        1,
+        4
+      ],
+      "paste": [
+        2205,
+        861
+      ],
+      "cutoutSize": [
+        197,
+        139
+      ]
+    },
+    {
+      "sourceBbox": [
+        1248,
+        632,
+        1410,
+        807
+      ],
+      "sourceArea": 18304,
+      "outputCell": [
+        1,
+        5
+      ],
+      "paste": [
+        2727,
+        809
+      ],
+      "cutoutSize": [
+        178,
+        191
+      ]
+    }
+  ]
+}

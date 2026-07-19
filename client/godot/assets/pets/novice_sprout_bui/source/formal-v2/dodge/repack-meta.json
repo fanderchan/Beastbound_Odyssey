@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "tool": "repack_components.py",
+  "creativeGeneration": false,
+  "input": ".run/bui_family_art/novice_sprout_bui/pet/dodge/raw-sheet.png",
+  "inputSha256": "77f2accf47aaa96580c4413d8cc804d1e0fc78c580876039f8bd4104fdf3abe8",
+  "sourceGrid": [
+    3,
+    4
+  ],
+  "selectedRows": [
+    0,
+    2
+  ],
+  "outputGrid": [
+    2,
+    4
+  ],
+  "chroma": {
+    "inputBackgroundMode": "chroma_key",
+    "cornerChromaDistances": [
+      23.281,
+      24.536,
+      44.565,
+      37.175
+    ],
+    "borderConnectedPixels": 1234312,
+    "keyedCandidatePixels": 1234347,
+    "transparentPixels": 1222535,
+    "partialAlphaPixels": 11784,
+    "backgroundRatio": 0.784754
+  },
+  "detectedLargeComponents": 12,
+  "frames": [
+    {
+      "sourceBbox": [
+        111,
+        90,
+        372,
+        312
+      ],
+      "sourceArea": 36414,
+      "outputCell": [
+        0,
+        0
+      ],
+      "paste": [
+        117,
+        250
+      ],
+      "cutoutSize": [
+        277,
+        238
+      ]
+    },
+    {
+      "sourceBbox": [
+        468,
+        150,
+        764,
+        296
+      ],
+      "sourceArea": 28769,
+      "outputCell": [
+        0,
+        1
+      ],
+      "paste": [
+        612,
+        326
+      ],
+      "cutoutSize": [
+        312,
+        162
+      ]
+    },
+    {
+      "sourceBbox": [
+        859,
+        103,
+        1094,
+        319
+      ],
+      "sourceArea": 27657,
+      "outputCell": [
+        0,
+        2
+      ],
+      "paste": [
+        1154,
+        256
+      ],
+      "cutoutSize": [
+        251,
+        232
+      ]
+    },
+    {
+      "sourceBbox": [
+        1166,
+        63,
+        1387,
+        307
+      ],
+      "sourceArea": 29514,
+      "outputCell": [
+        0,
+        3
+      ],
+      "paste": [
+        1673,
+        228
+      ],
+      "cutoutSize": [
+        237,
+        260
+      ]
+    },
+    {
+      "sourceBbox": [
+        86,
+        667,
+        317,
+        880
+      ],
+      "sourceArea": 25710,
+      "outputCell": [
+        1,
+        0
+      ],
+      "paste": [
+        132,
+        771
+      ],
+      "cutoutSize": [
+        247,
+        229
+      ]
+    },
+    {
+      "sourceBbox": [
+        402,
+        680,
+        688,
+        862
+      ],
+      "sourceArea": 27396,
+      "outputCell": [
+        1,
+        1
+      ],
+      "paste": [
+        617,
+        802
+      ],
+      "cutoutSize": [
+        302,
+        198
+      ]
+    },
+    {
+      "sourceBbox": [
+        817,
+        664,
+        1068,
+        849
+      ],
+      "sourceArea": 26456,
+      "outputCell": [
+        1,
+        2
+      ],
+      "paste": [
+        1146,
+        799
+      ],
+      "cutoutSize": [
+        267,
+        201
+      ]
+    },
+    {
+      "sourceBbox": [
+        1200,
+        684,
+        1413,
+        885
+      ],
+      "sourceArea": 25272,
+      "outputCell": [
+        1,
+        3
+      ],
+      "paste": [
+        1677,
+        783
+      ],
+      "cutoutSize": [
+        229,
+        217
+      ]
+    }
+  ]
+}

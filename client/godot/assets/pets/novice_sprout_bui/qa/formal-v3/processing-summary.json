@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "totalRuntimeFrames": 80,
+  "actions": {
+    "skill": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/novice_sprout_bui/pet/canonical/skill.png",
+      "repackedInputSha256": "d2fb28ec1a2e8c75624bb978106a02f52a0230b40ceb9814f46986495eba8096",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4989323843
+      }
+    },
+    "dodge": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/novice_sprout_bui/pet/canonical/dodge.png",
+      "repackedInputSha256": "8918259681b39fb6519c06a0cb6e42376a06d25a948d91fa385759366cc0f581",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.5260869565
+      }
+    },
+    "counter": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/novice_sprout_bui/pet/canonical/counter.png",
+      "repackedInputSha256": "02c6f9b753b0f8ee1a9e36eff001fac3a4ad41cdb9a4362cd651a8d01829dbd4",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.62
+      }
+    },
+    "knockaway": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/novice_sprout_bui/pet/canonical/knockaway.png",
+      "repackedInputSha256": "0a3f054ef17ec859c8bdbbdf102c26733729425d253171b2b6f70692d70906d2",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.6015209125
+      }
+    },
+    "revive": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/novice_sprout_bui/pet/canonical/revive.png",
+      "repackedInputSha256": "a49f6b4d086a0db278bb6b16c03bbdbd20a17ea00263533510daeab387f8b93e",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4134228188
+      }
+    }
+  }
+}

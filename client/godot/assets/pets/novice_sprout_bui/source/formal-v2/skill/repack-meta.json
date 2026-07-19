@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "tool": "ffmpeg whole-row crop and pad",
+  "creativeGeneration": false,
+  "input": "raw-sheet-lossless.webp",
+  "sourceLayout": "generated 4x3 visual rows with nonuniform row gutters",
+  "output": "repacked-transparent-grid.png",
+  "outputGrid": [4, 3],
+  "operations": [
+    "crop full generated rows without changing any subject pixels",
+    "pad shorter full rows with #FF00FF",
+    "vertical stack into an equal 4x3 processing grid"
+  ],
+  "forbiddenOperationsConfirmedAbsent": [
+    "creative_redraw",
+    "pose_generation",
+    "mirroring",
+    "body_part_composition",
+    "mask_seam_repair"
+  ]
+}

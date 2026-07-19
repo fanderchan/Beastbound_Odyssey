@@ -1,8 +1,10 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "bundleId": "pet_action_novice_sprout_bui_v1",
   "formId": "bui_novice_sprout_earth5_wind5",
   "displayName": "芽耳布伊",
+  "artStatus": "owner_review_pending",
+  "runtimeEnabled": false,
   "identityLock": "identity/identity-lock.md",
   "sourceFrameSize": [512, 512],
   "runtimeFrameSize": [256, 256],
@@ -26,6 +28,12 @@
       "fps": 12,
       "loop": false
     },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
@@ -36,16 +44,40 @@
       "fps": 10,
       "loop": false
     },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
       "holdLastFrame": true
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -73,6 +105,12 @@
     "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
     "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
   },
+  "battleVisual": {
+    "battleViewMapping": {
+      "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
+      "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
+    }
+  },
   "battleCompatibility": {
     "preserved": true,
     "viewCount": 2,
@@ -80,7 +118,10 @@
       "front_3quarter_sw",
       "back_3quarter_ne"
     ],
-    "totalFrameCount": 100,
+    "actionCountPerView": 12,
+    "totalFrameCount": 180,
+    "runtimeEnabled": false,
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
     "worldDirectionSource": false
   },
   "source": {
@@ -89,7 +130,13 @@
     "externalSourceAssetsUsed": false,
     "createdForRepository": true,
     "ownershipRecord": "identity/source-and-ownership.md",
-    "promptEvidence": "prompts/action-generation-log.md",
+    "promptEvidence": [
+      "prompts/action-generation-log.md",
+      "prompts/formal-v2-battle-generation.md"
+    ],
+    "formalV2Source": "source/formal-v2",
+    "formalV2Qa": "qa/formal-v2/two-view-12-actions-contact-sheet.png",
+    "finalFacingInQa": "qa/formal-v3/final-facing-in-two-side-contact.png",
     "replacementPath": "Regenerate from the identity lock and action beats, then pass the same normalization and Godot acceptance gates."
   },
   "quality": {
@@ -97,13 +144,27 @@
     "formalBattleViewsComplete": true,
     "worldLocomotionDirectionContract": "independent_8_no_runtime_mirroring",
     "canaryMinimumActionPackComplete": true,
-    "formalReleaseActionPackComplete": false,
-    "selfReviewStatus": "passed_after_runtime_review",
+    "formalReleaseActionPackComplete": true,
+    "selfReviewStatus": "static_two_view_12_action_review_passed",
     "ownerReviewStatus": "pending",
-    "runtimeReviewStatus": "passed_1280x720_godot_world_and_battle"
+    "runtimeReviewStatus": "legacy_core_actions_passed_1280x720; formal_v2_actions_pending_parent_runtime_review"
   },
   "knownScope": {
-    "included": ["world_follow", "battle_idle", "battle_attack", "battle_hurt", "battle_defend", "battle_wounded_return", "battle_down"],
-    "deferred": ["skill_unique", "knockback", "victory", "capture", "evolution"]
+    "included": [
+      "world_follow_true8",
+      "battle_idle",
+      "battle_walk",
+      "battle_attack",
+      "battle_skill",
+      "battle_hurt",
+      "battle_defend",
+      "battle_dodge",
+      "battle_counter",
+      "battle_wounded_return",
+      "battle_knockaway",
+      "battle_down",
+      "battle_revive"
+    ],
+    "deferred": ["victory", "capture", "evolution", "owner_approval"]
   }
 }

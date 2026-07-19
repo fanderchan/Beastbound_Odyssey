@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "tool": "repack_components.py",
+  "creativeGeneration": false,
+  "input": ".run/bui_family_art/novice_sprout_bui/pet/knockaway/raw-sheet.png",
+  "inputSha256": "8fb4eb8d54758dfeee295e7d2f89a949ee530fd09f7c8f7c9a52fc7dc2ce4e46",
+  "sourceGrid": [
+    4,
+    2
+  ],
+  "selectedRows": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "outputGrid": [
+    4,
+    2
+  ],
+  "chroma": {
+    "inputBackgroundMode": "chroma_key",
+    "cornerChromaDistances": [
+      23.495,
+      23.707,
+      42.107,
+      36.524
+    ],
+    "borderConnectedPixels": 1291263,
+    "keyedCandidatePixels": 1291682,
+    "transparentPixels": 1283383,
+    "partialAlphaPixels": 8288,
+    "backgroundRatio": 0.820869
+  },
+  "detectedLargeComponents": 8,
+  "frames": [
+    {
+      "sourceBbox": [
+        253,
+        81,
+        549,
+        294
+      ],
+      "sourceArea": 39077,
+      "outputCell": [
+        0,
+        0
+      ],
+      "paste": [
+        100,
+        259
+      ],
+      "cutoutSize": [
+        312,
+        229
+      ]
+    },
+    {
+      "sourceBbox": [
+        848,
+        36,
+        1162,
+        283
+      ],
+      "sourceArea": 41500,
+      "outputCell": [
+        0,
+        1
+      ],
+      "paste": [
+        603,
+        225
+      ],
+      "cutoutSize": [
+        330,
+        263
+      ]
+    },
+    {
+      "sourceBbox": [
+        251,
+        307,
+        561,
+        549
+      ],
+      "sourceArea": 39024,
+      "outputCell": [
+        1,
+        0
+      ],
+      "paste": [
+        93,
+        742
+      ],
+      "cutoutSize": [
+        326,
+        258
+      ]
+    },
+    {
+      "sourceBbox": [
+        785,
+        321,
+        1113,
+        563
+      ],
+      "sourceArea": 35424,
+      "outputCell": [
+        1,
+        1
+      ],
+      "paste": [
+        596,
+        742
+      ],
+      "cutoutSize": [
+        344,
+        258
+      ]
+    },
+    {
+      "sourceBbox": [
+        268,
+        615,
+        544,
+        815
+      ],
+      "sourceArea": 33751,
+      "outputCell": [
+        2,
+        0
+      ],
+      "paste": [
+        110,
+        1296
+      ],
+      "cutoutSize": [
+        292,
+        216
+      ]
+    },
+    {
+      "sourceBbox": [
+        784,
+        586,
+        1103,
+        816
+      ],
+      "sourceArea": 35417,
+      "outputCell": [
+        2,
+        1
+      ],
+      "paste": [
+        600,
+        1266
+      ],
+      "cutoutSize": [
+        335,
+        246
+      ]
+    },
+    {
+      "sourceBbox": [
+        250,
+        871,
+        552,
+        1070
+      ],
+      "sourceArea": 30228,
+      "outputCell": [
+        3,
+        0
+      ],
+      "paste": [
+        97,
+        1809
+      ],
+      "cutoutSize": [
+        318,
+        215
+      ]
+    },
+    {
+      "sourceBbox": [
+        763,
+        870,
+        1130,
+        1087
+      ],
+      "sourceArea": 35240,
+      "outputCell": [
+        3,
+        1
+      ],
+      "paste": [
+        576,
+        1791
+      ],
+      "cutoutSize": [
+        383,
+        233
+      ]
+    }
+  ]
+}
