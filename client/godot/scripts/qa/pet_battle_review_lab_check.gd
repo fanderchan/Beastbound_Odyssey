@@ -3,6 +3,7 @@ extends RefCounted
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetBattleReviewModel := preload("res://scripts/battle/pet_battle_review_model.gd")
 
 var host
@@ -51,6 +52,7 @@ func run() -> void:
 	lab.set_paused(false)
 
 	lab.close(false)
+	var revive_step_ids: Array[String] = [PetBattleReviewModel.REVIVE_REVIEW_STEP_ID]
 	lab.open(
 		form_id,
 		PetBattleReviewModel.MODE_DIRECTOR,
@@ -88,19 +90,68 @@ func run() -> void:
 		director_frames += 1
 	if not lab.required_coverage_complete():
 		errors.append("动作必现没有覆盖完整清单：%s" % str(lab.missing_coverage_ids()))
+	var director_coverage: Dictionary = lab.coverage_counts()
+
+	lab.close(false)
+	lab.open(
+		form_id,
+		PetBattleReviewModel.MODE_DIRECTOR,
+		424242,
+		false,
+		PetBattleReviewModel.REVIEW_MOUNT_FORM_ID,
+		false,
+		revive_step_ids
+	)
+	await host.get_tree().process_frame
+	if lab.current_director_step_ids() != revive_step_ids:
+		errors.append("--pet-battle-review-steps=revive 没有保留显式复起筛选")
+	var revive_frames := 0
+	while revive_frames < 360 and int(lab.coverage_counts().get(PetBattleReviewModel.REVIVE_REVIEW_STEP_ID, 0)) <= 0:
+		await host.get_tree().process_frame
+		revive_frames += 1
+	var revive_sequence: Dictionary = lab.last_revive_sequence()
+	var revive_coverage: Dictionary = lab.coverage_counts()
+	var expected_revive_frames := PetActionAssetCatalog.frame_count_for_action(form_id, "revive")
+	var expected_frame_indices: Array[int] = []
+	for frame_index in range(1, expected_revive_frames + 1):
+		expected_frame_indices.append(frame_index)
+	if int(revive_coverage.get(PetBattleReviewModel.REVIVE_REVIEW_STEP_ID, 0)) != 1:
+		errors.append("显式复起覆盖数不是1：%s" % str(revive_coverage))
+	if not bool(revive_sequence.get("ok", false)):
+		errors.append("显式复起序列没有完成：%s" % str(revive_sequence))
+	if revive_sequence.get("transitions", []) != ["down", "revive", "idle"]:
+		errors.append("显式复起没有保持 down→revive→idle：%s" % str(revive_sequence.get("transitions", [])))
+	if revive_sequence.get("frameIndices", []) != expected_frame_indices:
+		errors.append("显式复起没有逐帧覆盖正式动作：%s" % str(revive_sequence.get("frameIndices", [])))
+	if (
+		str(revive_sequence.get("actorId", "")) != PetBattleReviewModel.ENEMY_FOCUS_ID
+		or str(revive_sequence.get("catalogAction", "")) != "revive"
+		or int(revive_sequence.get("frameCount", 0)) != expected_revive_frames
+		or str(revive_sequence.get("finalActionState", "")) != "idle"
+		or int(revive_sequence.get("finalHp", 0)) <= 0
+	):
+		errors.append("显式复起没有由同一战宠播放正式动作并回到待机：%s" % str(revive_sequence))
+	if (
+		not bool(revive_sequence.get("visualOnly", false))
+		or int(revive_sequence.get("eventSequenceBefore", -1)) != int(revive_sequence.get("eventSequenceAfter", -2))
+	):
+		errors.append("显式复起错误冒充了正式战斗结算事件：%s" % str(revive_sequence))
 
 	lab.close(false)
 	await host.get_tree().process_frame
 	if lab.is_active() or host.battle_active:
 		errors.append("退出验收场后仍残留战斗或控制面板")
 	var status := "ok" if errors.is_empty() else "failed"
-	print("pet battle review lab check ready: status=%s form=%s options=%d steps=%d director_frames=%d coverage=%s actors=%s errors=%s" % [
+	print("pet battle review lab check ready: status=%s form=%s options=%d steps=%d director_frames=%d revive_frames=%d coverage=%s revive_coverage=%s revive=%s actors=%s errors=%s" % [
 		status,
 		form_id,
 		PetBattleReviewModel.pet_options().size(),
 		PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size(),
 		director_frames,
-		str(lab.coverage_counts()),
+		revive_frames,
+		str(director_coverage),
+		str(revive_coverage),
+		str(revive_sequence),
 		str(actor_counts),
 		str(errors),
 	])

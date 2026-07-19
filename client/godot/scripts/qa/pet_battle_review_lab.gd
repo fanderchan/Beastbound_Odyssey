@@ -45,6 +45,7 @@ var _option_refreshing: bool = false
 var _step_frames: int = 0
 var _scaled_delta_frame: int = -1
 var _scaled_delta_cache: float = 0.0
+var _last_revive_sequence: Dictionary = {}
 
 
 func _init(host_node) -> void:
@@ -90,8 +91,9 @@ func open(
 		focus_form_id,
 		mount_form_id
 	)
+	_last_revive_sequence.clear()
 	coverage.clear()
-	for coverage_id in PetBattleReviewModel.REQUIRED_COVERAGE:
+	for coverage_id in PetBattleReviewModel.coverage_ids():
 		coverage[coverage_id] = 0
 	host._close_qa_panel(false)
 	host._set_gm_speed_multiplier(1)
@@ -163,6 +165,10 @@ func current_director_step_ids() -> Array[String]:
 
 func coverage_counts() -> Dictionary:
 	return coverage.duplicate(true)
+
+
+func last_revive_sequence() -> Dictionary:
+	return _last_revive_sequence.duplicate(true)
 
 
 func missing_coverage_ids() -> Array[String]:
@@ -307,7 +313,7 @@ func cycle_speed() -> void:
 
 
 func clear_coverage() -> void:
-	for coverage_id in PetBattleReviewModel.REQUIRED_COVERAGE:
+	for coverage_id in PetBattleReviewModel.coverage_ids():
 		coverage[coverage_id] = 0
 	completed_brawls = 0
 	completed_director_loops = 0
@@ -350,9 +356,13 @@ func _run_director(token: int) -> void:
 			_refresh_status()
 			if not await _wait_scaled(0.55, token):
 				return
-			_queue_director_events(step.get("events", []))
-			if not await _wait_until_director_events_finish(token):
-				return
+			if str(step.get("visualSequence", "")) == PetBattleReviewModel.REVIVE_REVIEW_STEP_ID:
+				if not await _play_revive_review_sequence(step, token):
+					return
+			else:
+				_queue_director_events(step.get("events", []))
+				if not await _wait_until_director_events_finish(token):
+					return
 			if not await _wait_scaled(float(step.get("settle", 0.75)), token):
 				return
 		if _director_is_current(token):
@@ -415,6 +425,98 @@ func _wait_scaled(seconds: float, token: int) -> bool:
 		await host.get_tree().process_frame
 		elapsed += scaled_battle_delta(host.get_process_delta_time())
 	return _director_is_current(token)
+
+
+func _play_revive_review_sequence(step: Dictionary, token: int) -> bool:
+	var actor_id := str(step.get("actorId", PetBattleReviewModel.ENEMY_FOCUS_ID))
+	var actor := BattleModel.actor_by_id(host.battle_state, actor_id)
+	var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+	var catalog_action := PetActionAssetCatalog.action_for_battle_state("revive", form_id)
+	var frame_count := PetActionAssetCatalog.frame_count_for_action(form_id, catalog_action)
+	var action_fps := PetActionAssetCatalog.action_fps(catalog_action, form_id)
+	var event_sequence_before := int(host.battle_recorded_event_sequence)
+	if (
+		actor.is_empty()
+		or catalog_action != "revive"
+		or frame_count <= 0
+		or action_fps <= 0.0
+	):
+		_last_revive_sequence = {
+			"ok": false,
+			"actorId": actor_id,
+			"formId": form_id,
+			"catalogAction": catalog_action,
+			"frameCount": frame_count,
+		}
+		return false
+
+	var transitions: Array[String] = [str(actor.get("actionState", ""))]
+	var frame_indices: Array[int] = []
+	host.battle_state["reviewVisualOnly"] = true
+	host.battle_state["reviewVisualActorId"] = actor_id
+	host.battle_state["reviewVisualAction"] = catalog_action
+	host.battle_state["reviewVisualPhase"] = "down_hold"
+	_set_review_actor_fields(actor_id, {
+		"hp": 0,
+		"actionState": "revive",
+		"reviewActionProgress": 0.0,
+		"reviewActionFrameIndex": 1,
+	})
+	transitions.append("revive")
+	for frame_index in range(frame_count):
+		if not _director_is_current(token):
+			return false
+		var progress := float(frame_index) / float(frame_count)
+		_set_review_actor_fields(actor_id, {
+			"reviewActionProgress": progress,
+			"reviewActionFrameIndex": frame_index + 1,
+		})
+		host.battle_state["reviewVisualPhase"] = "revive"
+		frame_indices.append(frame_index + 1)
+		host.queue_redraw()
+		if not await _wait_scaled(1.0 / action_fps, token):
+			return false
+
+	actor = BattleModel.actor_by_id(host.battle_state, actor_id)
+	var restored_hp := maxi(1, int(ceil(float(actor.get("maxHp", 1)) * 0.25)))
+	_set_review_actor_fields(actor_id, {
+		"hp": restored_hp,
+		"actionState": "idle",
+	}, ["reviewActionProgress", "reviewActionFrameIndex"])
+	host.battle_state["reviewVisualPhase"] = "idle"
+	transitions.append("idle")
+	host.queue_redraw()
+	_last_revive_sequence = {
+		"ok": true,
+		"visualOnly": bool(host.battle_state.get("reviewVisualOnly", false)),
+		"actorId": actor_id,
+		"formId": form_id,
+		"catalogAction": catalog_action,
+		"transitions": transitions,
+		"frameIndices": frame_indices,
+		"frameCount": frame_count,
+		"fps": action_fps,
+		"eventSequenceBefore": event_sequence_before,
+		"eventSequenceAfter": int(host.battle_recorded_event_sequence),
+		"finalActionState": str(BattleModel.actor_by_id(host.battle_state, actor_id).get("actionState", "")),
+		"finalHp": int(BattleModel.actor_by_id(host.battle_state, actor_id).get("hp", 0)),
+	}
+	_increment_coverage(PetBattleReviewModel.REVIVE_REVIEW_STEP_ID)
+	return true
+
+
+func _set_review_actor_fields(actor_id: String, fields: Dictionary, erase_fields: Array[String] = []) -> void:
+	var actors: Array = host.battle_state.get("actors", [])
+	var actor_index := BattleModel.actor_index(host.battle_state, actor_id)
+	if actor_index < 0:
+		return
+	var actor := actors[actor_index] as Dictionary
+	for key in fields.keys():
+		actor[str(key)] = fields[key]
+	for key in erase_fields:
+		actor.erase(key)
+	actors[actor_index] = actor
+	host.battle_state["actors"] = actors
 
 
 func _record_latest_event() -> void:
@@ -647,7 +749,7 @@ func _refresh_status() -> void:
 	if coverage_label != null:
 		var labels := PetBattleReviewModel.coverage_labels()
 		var parts: Array[String] = []
-		for coverage_id in PetBattleReviewModel.REQUIRED_COVERAGE:
+		for coverage_id in PetBattleReviewModel.coverage_ids():
 			var count := int(coverage.get(coverage_id, 0))
 			parts.append("%s%s%d" % ["✓" if count > 0 else "·", str(labels.get(coverage_id, coverage_id)), count])
 		coverage_label.text = "覆盖（乱斗%d局/必现%d轮）：%s" % [completed_brawls, completed_director_loops, "  ".join(parts)]

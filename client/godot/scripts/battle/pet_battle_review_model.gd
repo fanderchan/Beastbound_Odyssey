@@ -30,6 +30,7 @@ const DODGE_REVIEW_STEP_IDS: Array[String] = [
 	"dodge_counter",
 	"mounted_dodge_counter",
 ]
+const REVIVE_REVIEW_STEP_ID := "revive"
 
 const REQUIRED_COVERAGE: Array[String] = [
 	"attack",
@@ -45,6 +46,8 @@ const REQUIRED_COVERAGE: Array[String] = [
 	"knockaway_straight",
 	"knockaway_bounce",
 ]
+
+const OPTIONAL_COVERAGE: Array[String] = [REVIVE_REVIEW_STEP_ID]
 
 const ARCHETYPES: Array[Dictionary] = [
 	{"id": "balanced", "hp": Vector2i(220, 300), "attack": Vector2i(24, 36), "defense": Vector2i(10, 20), "quick": Vector2i(55, 100)},
@@ -269,6 +272,16 @@ static func build_director_state(
 		state = BattleModel.set_actor_hp(state, ENEMY_FOCUS_ID, 24)
 	elif step_id == "down":
 		state = BattleModel.set_actor_hp(state, ENEMY_FOCUS_ID, 26)
+	elif step_id == REVIVE_REVIEW_STEP_ID:
+		state = _with_actor_fields(state, ENEMY_FOCUS_ID, {
+			"hp": 0,
+			"actionState": "down",
+			"petBattleState": "battle",
+			"revivable": true,
+		})
+		state["reviewVisualOnly"] = true
+		state["reviewVisualActorId"] = ENEMY_FOCUS_ID
+		state["reviewVisualAction"] = REVIVE_REVIEW_STEP_ID
 	state["petParty"] = BattleModel.default_player_pet_party(BattleModel.actor_by_id(state, BattleModel.PLAYER_PET_ID))
 	return state
 
@@ -326,6 +339,7 @@ static func normalized_director_step_ids(
 	var valid_ids: Array[String] = []
 	for step in director_steps(focus_form_id, mount_form_id):
 		valid_ids.append(str(step.get("id", "")))
+	valid_ids.append(REVIVE_REVIEW_STEP_ID)
 	var result: Array[String] = []
 	for value in requested_step_ids:
 		var step_id := value.strip_edges().to_lower()
@@ -340,6 +354,8 @@ static func director_steps_for_ids(
 	requested_step_ids: Array[String]
 ) -> Array[Dictionary]:
 	var all_steps := director_steps(focus_form_id, mount_form_id)
+	if requested_step_ids.is_empty():
+		return all_steps
 	var normalized_ids := normalized_director_step_ids(requested_step_ids, focus_form_id, mount_form_id)
 	if normalized_ids.is_empty():
 		return all_steps
@@ -349,6 +365,8 @@ static func director_steps_for_ids(
 			if str(step.get("id", "")) == step_id:
 				result.append(step)
 				break
+		if step_id == REVIVE_REVIEW_STEP_ID:
+			result.append(_revive_review_step())
 	return result
 
 
@@ -358,6 +376,8 @@ static func director_step_label(step_id: String) -> String:
 
 
 static func director_step_name(step_id: String) -> String:
+	if step_id == REVIVE_REVIEW_STEP_ID:
+		return str(_revive_review_step().get("label", step_id))
 	for step in director_steps(default_form_id()):
 		if str(step.get("id", "")) == step_id:
 			return str(step.get("label", step_id))
@@ -381,7 +401,15 @@ static func coverage_labels() -> Dictionary:
 		"down": "昏厥",
 		"knockaway_straight": "直飞",
 		"knockaway_bounce": "弹飞",
+		"revive": "复起",
 	}
+
+
+static func coverage_ids() -> Array[String]:
+	var result := REQUIRED_COVERAGE.duplicate()
+	for coverage_id in OPTIONAL_COVERAGE:
+		result.append(coverage_id)
+	return result
 
 
 static func state_signature(state: Dictionary) -> String:
@@ -519,6 +547,23 @@ static func validation_errors() -> Array[String]:
 	for required_id in ["mounted_attack", "mounted_defend_hit", "mounted_counter", "mounted_combo", "mounted_dodge", "mounted_dodge_counter"]:
 		if not mounted_step_ids.has(required_id):
 			errors.append("骑乘动作必现缺少场景：%s" % required_id)
+	var revive_steps := director_steps_for_ids(form_id, REVIEW_MOUNT_FORM_ID, [REVIVE_REVIEW_STEP_ID])
+	if (
+		revive_steps.size() != 1
+		or str(revive_steps[0].get("id", "")) != REVIVE_REVIEW_STEP_ID
+		or str(revive_steps[0].get("visualSequence", "")) != REVIVE_REVIEW_STEP_ID
+		or not (revive_steps[0].get("events", []) as Array).is_empty()
+	):
+		errors.append("显式复起步骤没有保持独立视觉序列合同：%s" % str(revive_steps))
+	var revive_state := build_director_state(form_id, 309001, REVIVE_REVIEW_STEP_ID, REVIEW_MOUNT_FORM_ID)
+	var revive_actor := BattleModel.actor_by_id(revive_state, ENEMY_FOCUS_ID)
+	if (
+		int(revive_actor.get("hp", 1)) != 0
+		or str(revive_actor.get("actionState", "")) != "down"
+		or not bool(revive_state.get("reviewVisualOnly", false))
+		or str(revive_state.get("reviewVisualActorId", "")) != ENEMY_FOCUS_ID
+	):
+		errors.append("显式复起步骤没有从同一战宠的稳定昏厥保持开始")
 	var dodge_review_steps := director_steps_for_ids(form_id, REVIEW_MOUNT_FORM_ID, DODGE_REVIEW_STEP_IDS)
 	var dodge_review_ids: Array[String] = []
 	for step in dodge_review_steps:
@@ -573,6 +618,17 @@ static func _pool_form_ids(pool_id: String, fallback_form_id: String) -> Array[S
 	if result.is_empty():
 		result.append(fallback_form_id)
 	return result
+
+
+static func _revive_review_step() -> Dictionary:
+	return {
+		"id": REVIVE_REVIEW_STEP_ID,
+		"label": "战宠昏厥后复起",
+		"settle": 0.65,
+		"events": [],
+		"visualSequence": REVIVE_REVIEW_STEP_ID,
+		"actorId": ENEMY_FOCUS_ID,
+	}
 
 
 static func _all_form_ids() -> Array[String]:

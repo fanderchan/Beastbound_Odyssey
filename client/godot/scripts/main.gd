@@ -13858,6 +13858,13 @@ func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: Stri
 		if pet_action_art_preview:
 			var action_seconds := float(PetActionAssetCatalog.frame_count_for_action(form_id, action)) / PetActionAssetCatalog.action_fps(action, form_id)
 			progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
+		if (
+			bool(battle_state.get("reviewLab", false))
+			and actor_id == str(battle_state.get("reviewVisualActorId", ""))
+		):
+			var review_actor := BattleModel.actor_by_id(battle_state, actor_id)
+			if review_actor.has("reviewActionProgress"):
+				progress = clampf(float(review_actor.get("reviewActionProgress", progress)), 0.0, 1.0)
 		texture = PetActionAssetCatalog.texture_for_progress(form_id, view, action, progress)
 	if texture == null:
 		return false
