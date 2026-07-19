@@ -735,5 +735,14 @@
         "sourceFramesTracked": false
       }
     }
-  }
+  },
+  "runtimeFrameCount": 180,
+  "worldFrameCountObserved": 0,
+  "runtimeBundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json",
+      "sha256": "26dc292d1534b3497509a50b6c82e61233dd4a3dfee30438f74e3274478f7794"
+    }
+  ]
 }

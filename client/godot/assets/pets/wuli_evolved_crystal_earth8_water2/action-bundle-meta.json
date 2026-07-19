@@ -138,15 +138,26 @@
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-down-revive-sequence-v1-manifest.json"
+    ]
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
-    "identityBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb"
+    "identityBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "b801d4153175dd5f5d6eb9456ad1a25d97ad33db959736be18ef6c18695f8d26",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "5ab3bede1987a2a59c4a4805e2524363d664f6b95a4e121217f8381b33ba21b7",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "bd8e1514b5204a77cf0746b23a7fd67f38219c800b207a0f946daa188552dbcd",
+    "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
+    "battleDownReviveSequenceBeforeAfterSha256": "6dc4d4b75ea34a5307ed48cd253d191b13a5dd22a654cb72ead4c3c300c19c81"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate.",
+  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -205,13 +216,31 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "677d84f22b148ebc23dcde3c88e34bfa85639d66d2bf6880a9c140294b4b10dd",
+    "bundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+    "minimumBattleRuntimeEdgeMargin": 13,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "down-revive-monotonic-sequence-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 32,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ]
   }
 }

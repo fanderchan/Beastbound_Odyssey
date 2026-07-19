@@ -138,15 +138,26 @@
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json"
+    ]
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
-    "identityBoardSha256": "ed70f62ed743c034851d4b0fe2d63f94b0270701754d9abaa4ec81804caa17d6"
+    "identityBoardSha256": "ed70f62ed743c034851d4b0fe2d63f94b0270701754d9abaa4ec81804caa17d6",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "d6585af6d9b156d2da8b06511464fcae65b137ccd6d9451ee422044e5460732b",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "795609e09db5e05b4712e6406fa42f076bdd135b2e0f8b850e298e56c081d398",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "3c306f317469c20f0cb08660cf1a08f1d4d922cea89780f5134ed91871d039a8",
+    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
+    "battleKoExpressionBeforeAfterSha256": "4591270f04bf8606956ca4c296002660e98c43fa55b121e4e9d84e3bd97cf735"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate.",
+  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. KO 终态已仅在眼部局部 RGB 改为清楚螺旋失焦眼；身体、光影、轮廓与 alpha 不变，禁止 X 眼、死亡符号和笑脸。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -205,13 +216,33 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "6ac00f9751b5a2a886a9d8d5e0a5dab8b6a8bb069582504f74b55ea0ff3ba66b",
+    "bundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+    "minimumBattleRuntimeEdgeMargin": 13,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "ko-expression-local-rgb-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 2,
+        "alphaExact": true,
+        "bodyLightingOutlineExactOutsideEyeMasks": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ]
   }
 }

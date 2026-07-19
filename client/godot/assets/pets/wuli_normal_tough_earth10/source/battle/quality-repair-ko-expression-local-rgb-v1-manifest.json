@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "formId": "wuli_normal_tough_earth10",
+  "repairId": "ko-expression-local-rgb-v1",
+  "purpose": "replace alert/sleeping terminal eyes with readable non-lethal KO spirals",
+  "visualRule": "clear spiral or unfocused eye; no X/death symbol, no smile; prone body and loose limbs stay untouched",
+  "scope": {
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "views": [
+      "front_3quarter_sw"
+    ],
+    "runtimeFramesChanged": 2,
+    "changedRegion": "approved eye masks only",
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0
+  },
+  "method": "deterministic local RGB repaint; alpha and every RGB pixel outside approved eye masks are byte-preserved",
+  "frameRecords": [
+    {
+      "view": "front_3quarter_sw",
+      "runtimeFrames": [
+        "views/front_3quarter_sw/down/down-8.png",
+        "views/front_3quarter_sw/revive/revive-1.png"
+      ],
+      "beforeSha256": "12282f4b814b7aad884f5581c2a9d7baed0e82425fea07ddee51fea4e26966a6",
+      "afterSha256": "46191634c20a9cb6d6d860a7332bf18dccf335458820dbecde61c4c760aaff4b",
+      "alphaSha256Before": "3d7bf85122f1086e39452f0b56f7566be70eaa6222ca271b4fa40074ebbaa81c",
+      "alphaSha256After": "3d7bf85122f1086e39452f0b56f7566be70eaa6222ca271b4fa40074ebbaa81c",
+      "alphaExact": true,
+      "outsideApprovedEyeMaskRgbExact": true,
+      "changedRgbPixels": 150,
+      "changedRgbBounds": [
+        66,
+        225,
+        84,
+        236
+      ]
+    }
+  ],
+  "alphaExactForEveryChangedFrame": true,
+  "outsideApprovedEyeMaskRgbExactForEveryChangedFrame": true,
+  "bodyLightingOutlineExactOutsideEyeMasks": true,
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "runtimeBundleDigestAfterRepair": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
+    "sha256": "4591270f04bf8606956ca4c296002660e98c43fa55b121e4e9d84e3bd97cf735"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

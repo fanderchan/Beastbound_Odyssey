@@ -735,5 +735,14 @@
         "sourceFramesTracked": false
       }
     }
-  }
+  },
+  "runtimeFrameCount": 180,
+  "worldFrameCountObserved": 0,
+  "runtimeBundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
+      "sha256": "e4b7b3d0746c6abdb3ff389f1a004d8fb5db448174778fb3501b3cdf79be8056"
+    }
+  ]
 }

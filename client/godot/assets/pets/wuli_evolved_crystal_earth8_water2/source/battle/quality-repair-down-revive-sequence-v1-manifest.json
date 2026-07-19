@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "repairId": "down-revive-monotonic-sequence-v1",
+  "purpose": "front down rose again at frame 4 and both revive views moved up and down instead of recovering monotonically; the final prone frame also lacked a stable two-frame hold",
+  "rule": "down must move from alert to imbalance to prone hold without rising; revive starts at the identical prone hold and rises without dipping back",
+  "scope": {
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "runtimeFramesReassigned": 32
+  },
+  "sourceFramePolicy": "existing authored standalone poses only; no generated or interpolated frames",
+  "mappings": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "0b0e9f13db5f90dd58d6aa0e14b3a1596800a67e9fe1eade461ccabb1589ea9f",
+      "installedSha256": "0b0e9f13db5f90dd58d6aa0e14b3a1596800a67e9fe1eade461ccabb1589ea9f"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 4,
+      "sourceSha256": "ed8a2cd2e945c52b8a4a48adc64a25cd697fec1e65a0b6eb3c82a455bc109767",
+      "installedSha256": "ed8a2cd2e945c52b8a4a48adc64a25cd697fec1e65a0b6eb3c82a455bc109767"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 2,
+      "sourceSha256": "3359faad12e97529835ae9aac9cb9eba2046441fccad961f1184ac43b07f43c4",
+      "installedSha256": "3359faad12e97529835ae9aac9cb9eba2046441fccad961f1184ac43b07f43c4"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 3,
+      "sourceSha256": "cc4d84f4784a949c781094230193d58fbe120b8c998a9697e9191698121f9b72",
+      "installedSha256": "cc4d84f4784a949c781094230193d58fbe120b8c998a9697e9191698121f9b72"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "73d70c7201439e4472848280cd3c97115d4afb20ccb0836aaa7873428c8a9804",
+      "installedSha256": "73d70c7201439e4472848280cd3c97115d4afb20ccb0836aaa7873428c8a9804"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "d2f364aef32f2f61e3cca19dd766e3aa618e4d77664add6d695631ac6888a17d",
+      "installedSha256": "d2f364aef32f2f61e3cca19dd766e3aa618e4d77664add6d695631ac6888a17d"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 8,
+      "sourceSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "installedSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "installedSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "installedSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 7,
+      "sourceSha256": "bfd4b221cb8413cd575f5cb8b515f1c03b1011f9a42608f63c695f2776dec2b7",
+      "installedSha256": "bfd4b221cb8413cd575f5cb8b515f1c03b1011f9a42608f63c695f2776dec2b7"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 6,
+      "sourceSha256": "02ede398c2b84af93d973d2efd0c6ea0325db6af8d665ac6abda04f8120e1b8e",
+      "installedSha256": "02ede398c2b84af93d973d2efd0c6ea0325db6af8d665ac6abda04f8120e1b8e"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 5,
+      "sourceSha256": "accf96476e5a2e7ef50ac6e0b20bdf789b3371aed6299cfa23189aa8eda1a732",
+      "installedSha256": "accf96476e5a2e7ef50ac6e0b20bdf789b3371aed6299cfa23189aa8eda1a732"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 2,
+      "sourceSha256": "37f0c62adb5ccc5acf950c2bb767a694a80b9e18336b3dd2d509b0773c172911",
+      "installedSha256": "37f0c62adb5ccc5acf950c2bb767a694a80b9e18336b3dd2d509b0773c172911"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 3,
+      "sourceSha256": "c08345eae65f4e5653ce5a0047f9fa29d0b444808786a47690a83b190ebe4d6a",
+      "installedSha256": "c08345eae65f4e5653ce5a0047f9fa29d0b444808786a47690a83b190ebe4d6a"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 4,
+      "sourceSha256": "6bb22560e52441772ed2459d604b024e6f605751f738902aa3afb35ee1dc75b3",
+      "installedSha256": "6bb22560e52441772ed2459d604b024e6f605751f738902aa3afb35ee1dc75b3"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "942b644ab41e203e7d7b3997ed015542a067a15b1d093faa390fd0a55e07c5a3",
+      "installedSha256": "942b644ab41e203e7d7b3997ed015542a067a15b1d093faa390fd0a55e07c5a3"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "bd51986417b30581de9b0e77d6a0476a99a21bd80a6f200e35ea0ff073a52938",
+      "installedSha256": "bd51986417b30581de9b0e77d6a0476a99a21bd80a6f200e35ea0ff073a52938"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "43de71049626a462393e551fa407e39fe7da441392a29ac1f137c71d4cd07e55",
+      "installedSha256": "43de71049626a462393e551fa407e39fe7da441392a29ac1f137c71d4cd07e55"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "601258f6db3516336949647b846d17924817087facf9d3922605e899fe2c7067",
+      "installedSha256": "601258f6db3516336949647b846d17924817087facf9d3922605e899fe2c7067"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 4,
+      "sourceSha256": "f8ca3cb37e9947d249718600c2bf6d95970c73511f8b90c4b0a37a589d152771",
+      "installedSha256": "f8ca3cb37e9947d249718600c2bf6d95970c73511f8b90c4b0a37a589d152771"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "a8216befc7f7a6ce4e4a4a4c4e1504d1f5d077efa9fa9207818d11eb935112af",
+      "installedSha256": "a8216befc7f7a6ce4e4a4a4c4e1504d1f5d077efa9fa9207818d11eb935112af"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "98fa8c68a3bbf7003e226d611357d75db8ee7fb6d15a146545089c2d7fe97d60",
+      "installedSha256": "98fa8c68a3bbf7003e226d611357d75db8ee7fb6d15a146545089c2d7fe97d60"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 8,
+      "sourceSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "installedSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "installedSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "installedSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "d63af1ff159948c3598b3d0b325874c9df7d9e175c0800463e1ee57bd00e7982",
+      "installedSha256": "d63af1ff159948c3598b3d0b325874c9df7d9e175c0800463e1ee57bd00e7982"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 6,
+      "sourceSha256": "9fbc5cee9fdcdd4f82754c4eb21122c83b36351a4fb66eae381a741a2afe3392",
+      "installedSha256": "9fbc5cee9fdcdd4f82754c4eb21122c83b36351a4fb66eae381a741a2afe3392"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 6,
+      "sourceSha256": "9fbc5cee9fdcdd4f82754c4eb21122c83b36351a4fb66eae381a741a2afe3392",
+      "installedSha256": "9fbc5cee9fdcdd4f82754c4eb21122c83b36351a4fb66eae381a741a2afe3392"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "4a389b0505b66c655ca19c46ec4f0603dc1393e0db9c96d612bd33140d8fbf38",
+      "installedSha256": "4a389b0505b66c655ca19c46ec4f0603dc1393e0db9c96d612bd33140d8fbf38"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 4,
+      "sourceSha256": "4c5229523b5b9967591516b15dcb60dee7cdcc6e4dace895735ded247d90d016",
+      "installedSha256": "4c5229523b5b9967591516b15dcb60dee7cdcc6e4dace895735ded247d90d016"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 4,
+      "sourceSha256": "4c5229523b5b9967591516b15dcb60dee7cdcc6e4dace895735ded247d90d016",
+      "installedSha256": "4c5229523b5b9967591516b15dcb60dee7cdcc6e4dace895735ded247d90d016"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "a46558ae49f7c07a2c4663801a3b6e8a4ef5e3286cf2195f5dbd2916ec95a46d",
+      "installedSha256": "a46558ae49f7c07a2c4663801a3b6e8a4ef5e3286cf2195f5dbd2916ec95a46d"
+    }
+  ],
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "runtimeBundleDigestAfterRepair": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
+    "sha256": "6dc4d4b75ea34a5307ed48cd253d191b13a5dd22a654cb72ead4c3c300c19c81"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

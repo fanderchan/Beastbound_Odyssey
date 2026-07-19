@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "formId": "mossback_marsh_earth7_water3",
+  "repairId": "down-revive-monotonic-sequence-v1",
+  "purpose": "both down views rose again at frame 5 and front revive dipped after reaching frame 4; existing poses were reordered by visible body height while retaining the authored terminal prone and standing poses",
+  "rule": "down must move from alert to imbalance to prone hold without rising; revive starts at the identical prone hold and rises without dipping back",
+  "scope": {
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "runtimeFramesReassigned": 32
+  },
+  "sourceFramePolicy": "existing authored standalone poses only; no generated or interpolated frames",
+  "mappings": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "ec9714d25e6fdef07376bfaa2870bcde69a65c1c3cf5ad60d0f4890d9fed2a9e",
+      "installedSha256": "ec9714d25e6fdef07376bfaa2870bcde69a65c1c3cf5ad60d0f4890d9fed2a9e"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "1459671281d729b9181d7c3af1be83261f0ee049cfe3d928b64b06b4476ab9ba",
+      "installedSha256": "1459671281d729b9181d7c3af1be83261f0ee049cfe3d928b64b06b4476ab9ba"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 5,
+      "sourceSha256": "1c2570c4e1f022b64a3de12b302e91db10272a5613ce047f70eb986640b3bf28",
+      "installedSha256": "1c2570c4e1f022b64a3de12b302e91db10272a5613ce047f70eb986640b3bf28"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 3,
+      "sourceSha256": "32d7c99f78f2e757e6ff5f68244824e2a8af78043a034597cdeee825791887c6",
+      "installedSha256": "32d7c99f78f2e757e6ff5f68244824e2a8af78043a034597cdeee825791887c6"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 6,
+      "sourceSha256": "98968a26879b2d49f2b23f57a00b2bda691b26830de1084beef36f8f3fa57f96",
+      "installedSha256": "98968a26879b2d49f2b23f57a00b2bda691b26830de1084beef36f8f3fa57f96"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 4,
+      "sourceSha256": "9cf5f899530bb861b8ad5356644b9f55471dc178a34615b529f2524b78c0f093",
+      "installedSha256": "9cf5f899530bb861b8ad5356644b9f55471dc178a34615b529f2524b78c0f093"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "1fb596f707431889940fc609d52715f4a3b052d91d9f6e7d9a97322a11944b7d",
+      "installedSha256": "1fb596f707431889940fc609d52715f4a3b052d91d9f6e7d9a97322a11944b7d"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "06207ccad43cb460d6b4ade2f04493c9a8b5f6db096e99d1e1191f0aff5f3e7b",
+      "installedSha256": "06207ccad43cb460d6b4ade2f04493c9a8b5f6db096e99d1e1191f0aff5f3e7b"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "06207ccad43cb460d6b4ade2f04493c9a8b5f6db096e99d1e1191f0aff5f3e7b",
+      "installedSha256": "06207ccad43cb460d6b4ade2f04493c9a8b5f6db096e99d1e1191f0aff5f3e7b"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "80bd59f7760b0646682569cf6bde8ff950261000c4cbc9e1f4a3cc347af9257b",
+      "installedSha256": "80bd59f7760b0646682569cf6bde8ff950261000c4cbc9e1f4a3cc347af9257b"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 5,
+      "sourceSha256": "1c8c609a7ead49563f7fc8cd73095b044d0f14a6172e447972947cfbc9f07e2a",
+      "installedSha256": "1c8c609a7ead49563f7fc8cd73095b044d0f14a6172e447972947cfbc9f07e2a"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 3,
+      "sourceSha256": "efec5f4e75e396ff9081e45f815cb91a75d77e66045dda77b5a4737b7a512d93",
+      "installedSha256": "efec5f4e75e396ff9081e45f815cb91a75d77e66045dda77b5a4737b7a512d93"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 6,
+      "sourceSha256": "92cf1b5a226dba09c0a93f0a2725a139a187fcaba0da1bdb82915c79925a98b5",
+      "installedSha256": "92cf1b5a226dba09c0a93f0a2725a139a187fcaba0da1bdb82915c79925a98b5"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 4,
+      "sourceSha256": "2481f47311f6e69db511bd40233f04b3021127fa459aa79cfd97ab4a9f49dd0e",
+      "installedSha256": "2481f47311f6e69db511bd40233f04b3021127fa459aa79cfd97ab4a9f49dd0e"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "fcf87837c65b593423ffc96d6ee7e00a4b48478b5c7fa599898c35eb070b9aed",
+      "installedSha256": "fcf87837c65b593423ffc96d6ee7e00a4b48478b5c7fa599898c35eb070b9aed"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "c966f9302ed765013a52934b3f952cae258fa17dc0925a9f8676f43b4b64ae61",
+      "installedSha256": "c966f9302ed765013a52934b3f952cae258fa17dc0925a9f8676f43b4b64ae61"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "f374f4946ac2b95e160bd36d11f63297284841a792fe560de3b7ebdf39cb5d48",
+      "installedSha256": "f374f4946ac2b95e160bd36d11f63297284841a792fe560de3b7ebdf39cb5d48"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "443bce2d2a16cb166958f020e5e817c38efa35e99c7d2ef3992c3ef96b6afcc6",
+      "installedSha256": "443bce2d2a16cb166958f020e5e817c38efa35e99c7d2ef3992c3ef96b6afcc6"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 5,
+      "sourceSha256": "89539e9dfd9213a0b222808ae035fbcfe3567d262e3cff88e3e6dcf6a964da89",
+      "installedSha256": "89539e9dfd9213a0b222808ae035fbcfe3567d262e3cff88e3e6dcf6a964da89"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 3,
+      "sourceSha256": "c4bab33934f8bbf2f0881f56765cd8c79764334bd04d37223048dca9cc447ec2",
+      "installedSha256": "c4bab33934f8bbf2f0881f56765cd8c79764334bd04d37223048dca9cc447ec2"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 4,
+      "sourceSha256": "9ee754fb4e8bee81b9b85b7fd0d94a101c0a19b1ebee3eed9d5b91e5bffffcc1",
+      "installedSha256": "9ee754fb4e8bee81b9b85b7fd0d94a101c0a19b1ebee3eed9d5b91e5bffffcc1"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "94dde3214d16a7b8ba5978e73924a6663744fba8d6608a2d7bf0ee78fc330402",
+      "installedSha256": "94dde3214d16a7b8ba5978e73924a6663744fba8d6608a2d7bf0ee78fc330402"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "bc872f3b82234810dd01496c1cc5d96a45d2dc08fa0204ccb9768702bc4fc117",
+      "installedSha256": "bc872f3b82234810dd01496c1cc5d96a45d2dc08fa0204ccb9768702bc4fc117"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "c062d000f298acbb45d25fbc779655ad30194a4f9aabc231fc8499e68d3da43c",
+      "installedSha256": "c062d000f298acbb45d25fbc779655ad30194a4f9aabc231fc8499e68d3da43c"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "c062d000f298acbb45d25fbc779655ad30194a4f9aabc231fc8499e68d3da43c",
+      "installedSha256": "c062d000f298acbb45d25fbc779655ad30194a4f9aabc231fc8499e68d3da43c"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "e716fc253ff4ca6006897b5a6c5146fc2f05feac7046df6a553690948f50d850",
+      "installedSha256": "e716fc253ff4ca6006897b5a6c5146fc2f05feac7046df6a553690948f50d850"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "3fa6cd2621792873ffa84c37b0ffb196fe0644843db3f0a65dfc9785705a6508",
+      "installedSha256": "3fa6cd2621792873ffa84c37b0ffb196fe0644843db3f0a65dfc9785705a6508"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 5,
+      "sourceSha256": "09d330785936c239a4c96e958108d27d5705788ca4334e634ccde521867c2c54",
+      "installedSha256": "09d330785936c239a4c96e958108d27d5705788ca4334e634ccde521867c2c54"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 4,
+      "sourceSha256": "12fe0b62216e2bf0beb890f691a1ddd24e946bfc281a8ec515195eeddd32304e",
+      "installedSha256": "12fe0b62216e2bf0beb890f691a1ddd24e946bfc281a8ec515195eeddd32304e"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "de86d0e9a844663a3623f93c1b93480637cd262be388010709b72fb67fc08142",
+      "installedSha256": "de86d0e9a844663a3623f93c1b93480637cd262be388010709b72fb67fc08142"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "f416654913f6736ae1713a0a626515a71e4705da6db58c672ea724f107cb0935",
+      "installedSha256": "f416654913f6736ae1713a0a626515a71e4705da6db58c672ea724f107cb0935"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "612ce1c30ee3e44f73d908e4de73242ada1e1d613b0520fd9ca940f0672afd57",
+      "installedSha256": "612ce1c30ee3e44f73d908e4de73242ada1e1d613b0520fd9ca940f0672afd57"
+    }
+  ],
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "runtimeBundleDigestAfterRepair": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
+    "sha256": "64d4f4c2f64160b9778c80f6e1722c3a021ba9a2c632519803a33410584e68c4"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

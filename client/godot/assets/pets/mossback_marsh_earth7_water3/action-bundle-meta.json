@@ -139,15 +139,29 @@
     "sourceMetadata": "source/identity-board-source-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
+      "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/mossback/wetland/identity-build/contact-sheet.png",
-    "contactSheetSha256": "d8389d6f679ddc813ff0467eb44d90f76184f11db9e0aae5692e4bf9c8d44b68"
+    "contactSheetSha256": "d8389d6f679ddc813ff0467eb44d90f76184f11db9e0aae5692e4bf9c8d44b68",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "b241128a35f7065a72516b2b704c13369b2cd273aed1a2b26ddd1bbd97a46be7",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "517ccb3dd49954087eb116a233678b86b49f37b4009f4dbdfa142fa2bf99ad35",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "3b89ee3b817ee8cc67fbf37c63420dfe4c64549506d64c5af43c8ca1fb416104",
+    "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
+    "battleDownReviveSequenceBeforeAfterSha256": "64d4f4c2f64160b9778c80f6e1722c3a021ba9a2c632519803a33410584e68c4",
+    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
+    "battleKoExpressionBeforeAfterSha256": "cc71915cc7f62c523823253a414706b6d2ade80bf82d7e1da56109c45a8acb19"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Wetland Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate.",
+  "notes": "Wetland Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate. Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。 KO 终态已仅在眼部局部 RGB 改为清楚螺旋失焦眼；身体、光影、轮廓与 alpha 不变，禁止 X 眼、死亡符号和笑脸。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -206,13 +220,42 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "42d8a331a1916a5d577519a5491233af56a8ab12a49339bb89616cf4771e6522",
+    "bundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+    "minimumBattleRuntimeEdgeMargin": 11,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "down-revive-monotonic-sequence-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 32,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "ko-expression-local-rgb-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 4,
+        "alphaExact": true,
+        "bodyLightingOutlineExactOutsideEyeMasks": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ]
   }
 }

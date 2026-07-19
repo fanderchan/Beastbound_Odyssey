@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "formId": "mossback_marsh_earth7_water3",
+  "repairId": "ko-expression-local-rgb-v1",
+  "purpose": "replace alert/sleeping terminal eyes with readable non-lethal KO spirals",
+  "visualRule": "clear spiral or unfocused eye; no X/death symbol, no smile; prone body and loose limbs stay untouched",
+  "scope": {
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "runtimeFramesChanged": 4,
+    "changedRegion": "approved eye masks only",
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0
+  },
+  "method": "deterministic local RGB repaint; alpha and every RGB pixel outside approved eye masks are byte-preserved",
+  "frameRecords": [
+    {
+      "view": "front_3quarter_sw",
+      "runtimeFrames": [
+        "views/front_3quarter_sw/down/down-8.png",
+        "views/front_3quarter_sw/revive/revive-1.png"
+      ],
+      "beforeSha256": "06207ccad43cb460d6b4ade2f04493c9a8b5f6db096e99d1e1191f0aff5f3e7b",
+      "afterSha256": "bbe9b4f934907ceca6695cc813bfbe60c043f205002721f0ce7cac932e366f22",
+      "alphaSha256Before": "d315fe1bf0d00b4e5d11856dbfd863b22a82a5071412175936a1ee383a2eebc3",
+      "alphaSha256After": "d315fe1bf0d00b4e5d11856dbfd863b22a82a5071412175936a1ee383a2eebc3",
+      "alphaExact": true,
+      "outsideApprovedEyeMaskRgbExact": true,
+      "changedRgbPixels": 75,
+      "changedRgbBounds": [
+        108,
+        225,
+        119,
+        234
+      ]
+    },
+    {
+      "view": "back_3quarter_ne",
+      "runtimeFrames": [
+        "views/back_3quarter_ne/down/down-8.png",
+        "views/back_3quarter_ne/revive/revive-1.png"
+      ],
+      "beforeSha256": "c062d000f298acbb45d25fbc779655ad30194a4f9aabc231fc8499e68d3da43c",
+      "afterSha256": "b038568d10ab9faadc7a8739c0acb8928af69e3f91b87667cf97fc9a9250c02b",
+      "alphaSha256Before": "2e9825ffaf394e3895530a5e4f88fc6ff9d0e00922c91c223a85cb97d80b42d7",
+      "alphaSha256After": "2e9825ffaf394e3895530a5e4f88fc6ff9d0e00922c91c223a85cb97d80b42d7",
+      "alphaExact": true,
+      "outsideApprovedEyeMaskRgbExact": true,
+      "changedRgbPixels": 75,
+      "changedRgbBounds": [
+        161,
+        225,
+        172,
+        234
+      ]
+    }
+  ],
+  "alphaExactForEveryChangedFrame": true,
+  "outsideApprovedEyeMaskRgbExactForEveryChangedFrame": true,
+  "bodyLightingOutlineExactOutsideEyeMasks": true,
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "runtimeBundleDigestAfterRepair": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
+    "sha256": "cc71915cc7f62c523823253a414706b6d2ade80bf82d7e1da56109c45a8acb19"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}
