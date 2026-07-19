@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedSha256": "eb50d77be437c7923c8e1ceaa498d54ab48128a8c9339fd42a97cf8c5f1da279",
+  "originalGeneratedDecodedRgbaSha256": "fa60e5b5d5b0705dd705baa658586ce787951c99973814a6b2ba0a394ac23e33",
+  "rawArchive": "raw-sheet-lossless.png",
+  "rawArchiveSha256": "eb50d77be437c7923c8e1ceaa498d54ab48128a8c9339fd42a97cf8c5f1da279",
+  "rawDecodedRgbaSha256": "fa60e5b5d5b0705dd705baa658586ce787951c99973814a6b2ba0a394ac23e33",
+  "prompt": "prompt-used.txt",
+  "promptSha256": "af041b84bc3fc7fddfa4cc3d6379a5d67f1394315e25b88462e10caee93ebe11",
+  "pipelineMetadata": "pipeline-meta.json",
+  "pipelineSha256": "f41e41c2414df1171d4c3901652d9ba897a604399e23f24846770f15ce824288",
+  "qc": "qa.json",
+  "qcSha256": "cccf45d77c3c96a482b3b349d0eded10761a49ddfd73d6296acd413dceca25ee",
+  "unalteredGeneratorOutputSha256": "673a828ca34c17b79b5bbfe69fad03918c739a40e276add432e51731bc74c5b9",
+  "pipelineInputPreparation": "uniform outer chroma padding only; no pose creation"
+}

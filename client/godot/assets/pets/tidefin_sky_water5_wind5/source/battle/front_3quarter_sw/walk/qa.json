@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "walk",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "minimumSourceEdgeMargin": 30,
+  "minimumRuntimeEdgeMargin": 15,
+  "manualSemanticReview": "self_review_passed_owner_pending"
+}
