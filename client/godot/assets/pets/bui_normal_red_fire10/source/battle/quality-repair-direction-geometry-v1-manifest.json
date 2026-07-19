@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "status": "install_ready_geometry_only_owner_runtime_pending",
+  "formId": "bui_normal_red_fire10",
+  "repairId": "direction-geometry-v1",
+  "declaredHead": "a8f94a5e",
+  "headVerification": "caller_provided_no_git_operation",
+  "purpose": "repair direction and apparent scale continuity with existing authored poses",
+  "scope": {
+    "battleRuntimeFrames": 180,
+    "replacedFrames": 4,
+    "preservedFrames": 176,
+    "affectedSequences": [
+      {
+        "view": "back_3quarter_ne",
+        "action": "attack"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "action": "hurt"
+      },
+      {
+        "view": "front_3quarter_sw",
+        "action": "attack"
+      }
+    ]
+  },
+  "sourcePolicy": "current formal same-view same-action runtime frame; exact encoded byte copy",
+  "overlayClass": "explicit_post_install_runtime_sequence_repair",
+  "source512Validation": {
+    "revalidated": false,
+    "claim": "none",
+    "reason": "approved candidate contains runtime256 only; this manifest is not a normal full-bundle source install"
+  },
+  "transformPolicy": {
+    "mirror": false,
+    "resample": false,
+    "recolor": false,
+    "despill": false,
+    "chromaCleanup": false
+  },
+  "colorAndEdgePolicy": {
+    "currentFormalColorPreservedBySourceReuse": true,
+    "unprovenEdgeCleanupApplied": false,
+    "edgeCleanupStatus": "geometry_repaired_edge_cleanup_pending_v5_non_blocking",
+    "redStatusStatement": "几何已修；边缘清理仍待 v5。方向修复仅复用当前正式包同动作帧，没有执行未证明的边色清理。"
+  },
+  "currentBefore": {
+    "runtimeBundleDigest": "5f364b21a06e552f890ac268097b457b7e47999a4ea6f82688564989cd17d021",
+    "encodedAggregateSha256": "e623a6523d18ac8a81bf0fe576f0396cf9659cafc0c943d377961d1a03c81d28",
+    "decodedRgbaAggregateSha256": "54a9a2efd98150c57b05a03be2ff0cefac3f669f39ec04bf03fa7ad737e4aa58"
+  },
+  "candidateAfter": {
+    "runtimeBundleDigest": "0011d40d2a0567c629ed3cddc7a08d5f3e20390c645ce56626f470e3752b278f",
+    "encodedAggregateSha256": "b8861811c8146f64e81eba74cdb9b24cf31c9efc15115d9808cb796764c11f56",
+    "decodedRgbaAggregateSha256": "f76b8a1400c8dfe8a9c3665f37dbeabf27cd493cd389f1ee4bd2f6309ae23dcf"
+  },
+  "frameLedger": "source/battle/direction-geometry-v1-frame-ledger.json",
+  "frameLedgerSha256": "ce5757cef4364ce2f7441d4c65c6e603b53393d18f54122d284d4514babcf2e2",
+  "qaSummary": "qa/battle/repairs/direction-geometry-v1-summary.json",
+  "qaSummarySha256": "0c9efb3058357dd209b0ea335f2b55d7f5fdfad6ae799b98b53e18e4bbc03576",
+  "beforeAfterContact": "qa/battle/repairs/direction-geometry-v1-before-after.png",
+  "beforeAfterContactSha256": "2ac36768ce536e9f72f52be6375cf266120b7741324098dc78d80d9a3a51a9ef",
+  "changedFrames": [
+    {
+      "relativePath": "back_3quarter_ne/attack/attack-7.png",
+      "destinationPath": "views/back_3quarter_ne/attack/attack-7.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "fe43e8100c4e7b7779b0a735e41e2b365f420ac0f8f54a838769c5c3ac641f50",
+      "currentBeforeDecodedRgbaSha256": "041b05936dcfafd72047ff3324d492498317bc415629a353c0082a83bfe230ac",
+      "currentBeforeAlphaSha256": "52565fc3f95e01be405f115c43295659b7367cd3de6b63f77bf66d3494dafaee",
+      "candidateAfterEncodedSha256": "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
+      "candidateAfterDecodedRgbaSha256": "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
+      "candidateAfterAlphaSha256": "b1b6a7b19ea837bb8fc475c51b8a24a3cd58ac0b0f32dcc10e529390956ddc51",
+      "sameActionSourcePath": "back_3quarter_ne/attack/attack-5.png",
+      "sameActionSourceEncodedSha256": "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
+      "sameActionSourceDecodedRgbaSha256": "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    },
+    {
+      "relativePath": "back_3quarter_ne/attack/attack-8.png",
+      "destinationPath": "views/back_3quarter_ne/attack/attack-8.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "ed8ec8696065d11ef8aef393977aa03ba0276951cc296be6a7d2bc471bb59885",
+      "currentBeforeDecodedRgbaSha256": "3e0272ada0a22a792b4bd6fb3444e3e49c76a47777cf9c233e8027a23bf082db",
+      "currentBeforeAlphaSha256": "880f3ed19b66ddfd864d05c5edee1edd187d0a05068092f52979335ec1d39872",
+      "candidateAfterEncodedSha256": "a1ad9fdd271ebca710816fee956ce3a189955468ab06c9b725e9c89745355d65",
+      "candidateAfterDecodedRgbaSha256": "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2",
+      "candidateAfterAlphaSha256": "a5bfcdda8636c7c333b0f8e442114e2070c9e0f17e8b13f0ea1896fa3331befa",
+      "sameActionSourcePath": "back_3quarter_ne/attack/attack-1.png",
+      "sameActionSourceEncodedSha256": "a1ad9fdd271ebca710816fee956ce3a189955468ab06c9b725e9c89745355d65",
+      "sameActionSourceDecodedRgbaSha256": "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    },
+    {
+      "relativePath": "back_3quarter_ne/hurt/hurt-5.png",
+      "destinationPath": "views/back_3quarter_ne/hurt/hurt-5.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "5f1735ab36291819793b510f2959df79fba7f54465d7631f977cb11984a4d394",
+      "currentBeforeDecodedRgbaSha256": "2de783c7973eef32687e00c84f0662d6e7302dbba7a332a3fd0ce0704213f1fc",
+      "currentBeforeAlphaSha256": "7fbfbfe7f1a96f8e8abf6a25f8fd126f82e0f1137d3b1f05f8d95d99a3535b45",
+      "candidateAfterEncodedSha256": "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
+      "candidateAfterDecodedRgbaSha256": "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
+      "candidateAfterAlphaSha256": "c813720750ae6f6d74524a3870f6081017fbd6adca90058136faa0fc86ba3c22",
+      "sameActionSourcePath": "back_3quarter_ne/hurt/hurt-3.png",
+      "sameActionSourceEncodedSha256": "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
+      "sameActionSourceDecodedRgbaSha256": "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    },
+    {
+      "relativePath": "front_3quarter_sw/attack/attack-8.png",
+      "destinationPath": "views/front_3quarter_sw/attack/attack-8.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "c70f55298911c93d810fad531cf4e0f804b3293407d73e3109ad6f7780faa25c",
+      "currentBeforeDecodedRgbaSha256": "b325c2d621fcbae17cd6944ab7cc93838f90a23bc00069f80592626536a2dab3",
+      "currentBeforeAlphaSha256": "55dc7d458dcf09f3cec1fa8c9d87cb1b4b17908e03be3f7ed77f75ae9678a906",
+      "candidateAfterEncodedSha256": "e06ef60f53a786e41937c01fe8b6d2bab8e07541504359daa0876f0230fb162a",
+      "candidateAfterDecodedRgbaSha256": "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642",
+      "candidateAfterAlphaSha256": "08bb2ee48c98bc67953fcf8f647ca43a8b546fb4447c205931a445dd42b2a105",
+      "sameActionSourcePath": "front_3quarter_sw/attack/attack-1.png",
+      "sameActionSourceEncodedSha256": "e06ef60f53a786e41937c01fe8b6d2bab8e07541504359daa0876f0230fb162a",
+      "sameActionSourceDecodedRgbaSha256": "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    }
+  ],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

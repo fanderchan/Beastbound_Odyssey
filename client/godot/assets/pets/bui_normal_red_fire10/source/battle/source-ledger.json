@@ -112,7 +112,7 @@
           "0e7125b162e3dadaa97c047b83936ec36a95a0b14c2e0c48a9d885ccc6f704d4",
           "7dc92e1c75232ce2a67ef4287a202ee29810cba3de047adf819b4727fd1e3b59",
           "3f602dc6ed332dd0d4c735361d5965eff7a28642ec44f80fe8b9fd10cc398398",
-          "c70f55298911c93d810fad531cf4e0f804b3293407d73e3109ad6f7780faa25c"
+          "e06ef60f53a786e41937c01fe8b6d2bab8e07541504359daa0876f0230fb162a"
         ],
         "runtimeFrameDecodedRgbaSha256": [
           "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642",
@@ -122,7 +122,7 @@
           "1dba6fb7bc364fc1de60955bb88ee02d83033eef8afd80928e4465286dfd1333",
           "661eaeaa7714bc590c07c516cc7349f6f2782f429c400274d99bedb6348bbb9b",
           "b2c4b7c1a1afef9d5736f4f0ca67e3452ccd6dcf0e80cc6dc33b852901de9799",
-          "b325c2d621fcbae17cd6944ab7cc93838f90a23bc00069f80592626536a2dab3"
+          "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642"
         ]
       },
       "skill": {
@@ -425,8 +425,8 @@
           "587b5ae799c20ed6eba93cb763f139e2b8cfad01d16ed7cfc0a25f27579bc3ad",
           "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
           "a8108cc0ad2e884017a82cb817010815c30baf40b3d816f79905e9644fc35c74",
-          "fe43e8100c4e7b7779b0a735e41e2b365f420ac0f8f54a838769c5c3ac641f50",
-          "ed8ec8696065d11ef8aef393977aa03ba0276951cc296be6a7d2bc471bb59885"
+          "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
+          "a1ad9fdd271ebca710816fee956ce3a189955468ab06c9b725e9c89745355d65"
         ],
         "runtimeFrameDecodedRgbaSha256": [
           "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2",
@@ -435,8 +435,8 @@
           "b759eb1ed460b2ba3172f649a2fb4335463911e4e9761492138ad49cfef716b2",
           "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
           "50f284898c6ea15b918a31926a5c90f4fbd75e9ad3d87a797444467e5247061f",
-          "041b05936dcfafd72047ff3324d492498317bc415629a353c0082a83bfe230ac",
-          "3e0272ada0a22a792b4bd6fb3444e3e49c76a47777cf9c233e8027a23bf082db"
+          "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
+          "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2"
         ]
       },
       "skill": {
@@ -477,7 +477,7 @@
           "72cb93ef95611d6b9e39999fb56739ede251aea5a6842ab492dde6d7b509d017",
           "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
           "a3a3994df35dbe691788804fcb44fd53a5ae94724489f376e08a0fc4a44f23f0",
-          "5f1735ab36291819793b510f2959df79fba7f54465d7631f977cb11984a4d394",
+          "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
           "61dded0b55749879894b26dcf85bcd8ee3877e8f700efc2c735407850ba17517"
         ],
         "runtimeFrameDecodedRgbaSha256": [
@@ -485,7 +485,7 @@
           "0c69e5a0ddeb231117b6aa5301e83e39b6cc8a9b78b50c494b8c80b807751505",
           "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
           "4f211ad6ab4f778620fde0440679be0fd8d098162ec7961edc7ef7a30e2c3fac",
-          "2de783c7973eef32687e00c84f0662d6e7302dbba7a332a3fd0ce0704213f1fc",
+          "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
           "97cd81179af73275b7b71984655bac315d5881304e1cb68a43ce1e5cb0e3f53b"
         ]
       },
@@ -693,5 +693,43 @@
     "repairs": [
       "same-view down-8 is copied byte-for-byte to revive-1"
     ]
+  },
+  "runtimeBundleDigest": "0011d40d2a0567c629ed3cddc7a08d5f3e20390c645ce56626f470e3752b278f",
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+      "sha256": "f332cceeeb89b722d22cd04d589853f3ba2ae547990744d308ac7110ea999ec3"
+    }
+  ],
+  "directionGeometryRepairs": [
+    {
+      "id": "direction-geometry-v1",
+      "operation": "exact_same_action_same_view_byte_copy",
+      "frameCount": 4,
+      "frameLedger": "source/battle/direction-geometry-v1-frame-ledger.json",
+      "frameLedgerSha256": "ce5757cef4364ce2f7441d4c65c6e603b53393d18f54122d284d4514babcf2e2",
+      "manifest": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+      "manifestSha256": "f332cceeeb89b722d22cd04d589853f3ba2ae547990744d308ac7110ea999ec3",
+      "edgeCleanupStatus": "geometry_repaired_edge_cleanup_pending_v5_non_blocking"
+    }
+  ],
+  "directionGeometryRepairLimitations": {
+    "overlayClass": "explicit_post_install_runtime_sequence_repair",
+    "source512Revalidated": false,
+    "legacyInstallManifestAudit": {
+      "present": true,
+      "manifestSha256": "6c34b3905739e7ac000bfb2b5ac9ebdbc27c0e5db8ce064629488abfa8766d79",
+      "trackedFileCount": 191,
+      "matchCount": 191,
+      "mismatchCount": 0,
+      "missingCount": 0,
+      "policy": "preserved_unmodified_not_authoritative_for_this_versioned_overlay"
+    },
+    "legacyInstallManifestPolicy": "preserved unmodified; versioned direction-geometry manifest is authoritative only for this overlay",
+    "canonicalDeriveClaimed": false,
+    "currentBeforeRuntimeLedgerMismatchCount": 0,
+    "candidateAfterRuntimeLedgerMismatchCount": 0,
+    "candidateAfterRuntimeLedgerMismatches": [],
+    "note": "Only affected action sequences are refreshed in the legacy/source ledger. The independent full battle180 frame ledger is authoritative for this runtime overlay."
   }
 }

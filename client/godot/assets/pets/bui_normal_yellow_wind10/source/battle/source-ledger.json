@@ -456,8 +456,8 @@
           "01a2bdeda139a747f4a461fce2a75e3a0fae560c48addb33bb022c51520696dc",
           "f11f284e3b7ecb3d9859ab47865c663ba4bfdea305a7ca476b59de4b93b905d6",
           "85ff485f96ff916249dbd2609f96c64342815098c28178e5345cb00f46dbb2c1",
-          "93211462fcdcb95455e3acd5577e86311cdca24dd5d282d2f0d3aa6186cc4b94",
-          "17dc3be79f7a05f8bdf9e1dd7e603eae621eeb66ac2bfbf10bc0830a9480e30d",
+          "1073b36a80823a445f89f4a03166b3b2435ba95ed8c07f7af3486020dac30ff1",
+          "e7d6d5218a42e30ed89734c9e42e6fb8e59c2095829c25d36d0171adaf6ac466",
           "3fc30fad5f4cd39e0393d6aa3a2d87ca941cb3e76bcebb26b116c0d55d7bf9eb"
         ],
         "representativeRawTracked": false,
@@ -735,5 +735,122 @@
         "sourceFramesTracked": false
       }
     }
+  },
+  "runtimeFrameCount": 180,
+  "worldFrameCountObserved": 0,
+  "runtimeBundleDigest": "eb18628476f11a1f145745cbaa5fe1c194c789887a1bf80dc2b20245c24e24bf",
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
+      "sha256": "ca638a25057bf2f06da0fd76db128d559abd8c38f6f54a8a505e1035c1fc856c"
+    },
+    {
+      "path": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+      "sha256": "364666bd34a2c09ddae56a6386ebc542e2c7e832e03aed341b9e2f3ecb6021cc"
+    }
+  ],
+  "directionGeometryRepairs": [
+    {
+      "id": "direction-geometry-v1",
+      "operation": "exact_same_action_same_view_byte_copy",
+      "frameCount": 2,
+      "frameLedger": "source/battle/direction-geometry-v1-frame-ledger.json",
+      "frameLedgerSha256": "239818d0bcceccb1502169e184a159f6c28461584b53a02e150cd5ed5bed41af",
+      "manifest": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+      "manifestSha256": "364666bd34a2c09ddae56a6386ebc542e2c7e832e03aed341b9e2f3ecb6021cc",
+      "edgeCleanupStatus": "not_in_scope_no_edge_cleanup_applied"
+    }
+  ],
+  "directionGeometryRepairLimitations": {
+    "overlayClass": "explicit_post_install_runtime_sequence_repair",
+    "source512Revalidated": false,
+    "legacyInstallManifestAudit": {
+      "present": true,
+      "manifestSha256": "8e6ec9933d5c29a6ec513d9044e8f2a595beef6a62124cb96ad1c6d0b8b5ca95",
+      "trackedFileCount": 307,
+      "matchCount": 244,
+      "mismatchCount": 63,
+      "missingCount": 0,
+      "policy": "preserved_unmodified_not_authoritative_for_this_versioned_overlay"
+    },
+    "legacyInstallManifestPolicy": "preserved unmodified; versioned direction-geometry manifest is authoritative only for this overlay",
+    "canonicalDeriveClaimed": false,
+    "currentBeforeRuntimeLedgerMismatchCount": 12,
+    "candidateAfterRuntimeLedgerMismatchCount": 12,
+    "candidateAfterRuntimeLedgerMismatches": [
+      {
+        "path": "views/front_3quarter_sw/down/down-5.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "c47bfe9cd4f58dd1092de94b78c4718677416774aab6ce98e2bb4bf4e90e3e10",
+        "runtimeSha256": "a718e23935d54e788cb90ad4d75ec887f39fb44cd54af8e82c81ccaa6f24087d"
+      },
+      {
+        "path": "views/front_3quarter_sw/down/down-6.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "ed2e49096a6a2bf927c05b59ccde63a9eaa29fc26644a6fc78277783d1fef1b8",
+        "runtimeSha256": "a718e23935d54e788cb90ad4d75ec887f39fb44cd54af8e82c81ccaa6f24087d"
+      },
+      {
+        "path": "views/front_3quarter_sw/down/down-7.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "98ea10eb9c56db16618dcc18f08207a318db8dee204c35a85223dcb08bb557b9",
+        "runtimeSha256": "a718e23935d54e788cb90ad4d75ec887f39fb44cd54af8e82c81ccaa6f24087d"
+      },
+      {
+        "path": "views/front_3quarter_sw/revive/revive-4.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "18140b15fe1baf157ff6f2915c6a0cfa583bf020769eb7c6e3d0a1ad4070e872",
+        "runtimeSha256": "d74f239af98b94da2fce8a982d83bf77808de772fbd62e7fc99d0d42f89bad23"
+      },
+      {
+        "path": "views/front_3quarter_sw/revive/revive-5.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "d74f239af98b94da2fce8a982d83bf77808de772fbd62e7fc99d0d42f89bad23",
+        "runtimeSha256": "13558f3517cdc45ddc318a4fcb9ef9153f0332532a6d6a20b3687d31fc9dff89"
+      },
+      {
+        "path": "views/front_3quarter_sw/revive/revive-6.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "13558f3517cdc45ddc318a4fcb9ef9153f0332532a6d6a20b3687d31fc9dff89",
+        "runtimeSha256": "18140b15fe1baf157ff6f2915c6a0cfa583bf020769eb7c6e3d0a1ad4070e872"
+      },
+      {
+        "path": "views/back_3quarter_ne/down/down-5.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "09a4f607fc1d6feb8538c47bdd8b080b9e7c99db6bd52da2e7b772609562f951",
+        "runtimeSha256": "466d0a545d320044937fe5856c9c9b7b8688f5aaf9216afcb34bc0b49a983729"
+      },
+      {
+        "path": "views/back_3quarter_ne/down/down-6.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "bbb90ede2869cdc09fe245a2ce15b0448fa5cbd9eb5a06060d6545beda5a13ae",
+        "runtimeSha256": "466d0a545d320044937fe5856c9c9b7b8688f5aaf9216afcb34bc0b49a983729"
+      },
+      {
+        "path": "views/back_3quarter_ne/down/down-7.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "5b965fca610484d7357bfc36a9ac0f60e5ef7055ca2de355b6274511dc04653a",
+        "runtimeSha256": "466d0a545d320044937fe5856c9c9b7b8688f5aaf9216afcb34bc0b49a983729"
+      },
+      {
+        "path": "views/back_3quarter_ne/revive/revive-4.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "342cc412f15087febc456c005b3321a2f6e86f789ede7726f59d99b29fca0f06",
+        "runtimeSha256": "9a4f081e1a5e838482a2f71cd31eba0082cce9ee2e147fa72a022fca4d143fc7"
+      },
+      {
+        "path": "views/back_3quarter_ne/revive/revive-5.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "9a4f081e1a5e838482a2f71cd31eba0082cce9ee2e147fa72a022fca4d143fc7",
+        "runtimeSha256": "dc5e6707214dd12f252dca30289856d2373cee268ab87b1f131a1a37035bda45"
+      },
+      {
+        "path": "views/back_3quarter_ne/revive/revive-6.png",
+        "field": "runtimeFrameRgbaSha256",
+        "ledgerSha256": "dc5e6707214dd12f252dca30289856d2373cee268ab87b1f131a1a37035bda45",
+        "runtimeSha256": "342cc412f15087febc456c005b3321a2f6e86f789ede7726f59d99b29fca0f06"
+      }
+    ],
+    "note": "Only affected action sequences are refreshed in the legacy/source ledger. The independent full battle180 frame ledger is authoritative for this runtime overlay."
   }
 }

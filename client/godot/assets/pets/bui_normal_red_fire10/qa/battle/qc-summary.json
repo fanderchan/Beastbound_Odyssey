@@ -30,7 +30,7 @@
   "downArtChanged": false,
   "creativeArtChanged": false,
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "f36dd12039ec1606caa07fd60551015946d699af142d7f888ebc764243adefcb",
+  "contactSheetSha256": "803a77fcd321334cc90be73756dd2e91eca2580a3c9bf4f4fb4e91d152173ce5",
   "continuityEvidence": [
     {
       "view": "front_3quarter_sw",
@@ -70,8 +70,8 @@
     "views/back_3quarter_ne/attack/attack-4.png": "587b5ae799c20ed6eba93cb763f139e2b8cfad01d16ed7cfc0a25f27579bc3ad",
     "views/back_3quarter_ne/attack/attack-5.png": "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
     "views/back_3quarter_ne/attack/attack-6.png": "a8108cc0ad2e884017a82cb817010815c30baf40b3d816f79905e9644fc35c74",
-    "views/back_3quarter_ne/attack/attack-7.png": "fe43e8100c4e7b7779b0a735e41e2b365f420ac0f8f54a838769c5c3ac641f50",
-    "views/back_3quarter_ne/attack/attack-8.png": "ed8ec8696065d11ef8aef393977aa03ba0276951cc296be6a7d2bc471bb59885",
+    "views/back_3quarter_ne/attack/attack-7.png": "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
+    "views/back_3quarter_ne/attack/attack-8.png": "a1ad9fdd271ebca710816fee956ce3a189955468ab06c9b725e9c89745355d65",
     "views/back_3quarter_ne/counter/counter-1.png": "71c13450f6fe8669ccaf6f9cd504f79be618105b467b08137748b66659af1f4e",
     "views/back_3quarter_ne/counter/counter-2.png": "774113954404a6eea192caf6d4157d6660d6bda7cb6b93ba1a7101cf3e61f09d",
     "views/back_3quarter_ne/counter/counter-3.png": "f561a6f774d3ceb620175a20b4842773b88e636868ff0d7dbbafd300ea715394",
@@ -106,7 +106,7 @@
     "views/back_3quarter_ne/hurt/hurt-2.png": "72cb93ef95611d6b9e39999fb56739ede251aea5a6842ab492dde6d7b509d017",
     "views/back_3quarter_ne/hurt/hurt-3.png": "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
     "views/back_3quarter_ne/hurt/hurt-4.png": "a3a3994df35dbe691788804fcb44fd53a5ae94724489f376e08a0fc4a44f23f0",
-    "views/back_3quarter_ne/hurt/hurt-5.png": "5f1735ab36291819793b510f2959df79fba7f54465d7631f977cb11984a4d394",
+    "views/back_3quarter_ne/hurt/hurt-5.png": "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
     "views/back_3quarter_ne/hurt/hurt-6.png": "61dded0b55749879894b26dcf85bcd8ee3877e8f700efc2c735407850ba17517",
     "views/back_3quarter_ne/idle/idle-1.png": "934a70330a6e194c4d979d50be83d640ae60caec5d9e20d794fab2a175665d69",
     "views/back_3quarter_ne/idle/idle-2.png": "5a2e8c0c7f2d1f8a6a609413e08b4cfab784d6990fe9433fb4120d8e447bc341",
@@ -161,7 +161,7 @@
     "views/front_3quarter_sw/attack/attack-5.png": "0e7125b162e3dadaa97c047b83936ec36a95a0b14c2e0c48a9d885ccc6f704d4",
     "views/front_3quarter_sw/attack/attack-6.png": "7dc92e1c75232ce2a67ef4287a202ee29810cba3de047adf819b4727fd1e3b59",
     "views/front_3quarter_sw/attack/attack-7.png": "3f602dc6ed332dd0d4c735361d5965eff7a28642ec44f80fe8b9fd10cc398398",
-    "views/front_3quarter_sw/attack/attack-8.png": "c70f55298911c93d810fad531cf4e0f804b3293407d73e3109ad6f7780faa25c",
+    "views/front_3quarter_sw/attack/attack-8.png": "e06ef60f53a786e41937c01fe8b6d2bab8e07541504359daa0876f0230fb162a",
     "views/front_3quarter_sw/counter/counter-1.png": "e0caf05ad9a0d2f6df19a7fdd145ec4ed936a2187e2e803a9c2f53998f562289",
     "views/front_3quarter_sw/counter/counter-2.png": "378f409b2d25ccaeaa7740c9e0191b14796f47eb99b70c49f6908d6d7e317f00",
     "views/front_3quarter_sw/counter/counter-3.png": "946ecc006a6f09aba6937eb6f8be8cb429f79cea212de1f3e2380164c65a38d1",
@@ -252,8 +252,8 @@
     "views/back_3quarter_ne/attack/attack-4.png": "b759eb1ed460b2ba3172f649a2fb4335463911e4e9761492138ad49cfef716b2",
     "views/back_3quarter_ne/attack/attack-5.png": "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
     "views/back_3quarter_ne/attack/attack-6.png": "50f284898c6ea15b918a31926a5c90f4fbd75e9ad3d87a797444467e5247061f",
-    "views/back_3quarter_ne/attack/attack-7.png": "041b05936dcfafd72047ff3324d492498317bc415629a353c0082a83bfe230ac",
-    "views/back_3quarter_ne/attack/attack-8.png": "3e0272ada0a22a792b4bd6fb3444e3e49c76a47777cf9c233e8027a23bf082db",
+    "views/back_3quarter_ne/attack/attack-7.png": "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
+    "views/back_3quarter_ne/attack/attack-8.png": "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2",
     "views/back_3quarter_ne/counter/counter-1.png": "b04cfed26d228af2f7c8981c9b5bf205e506a0dad016cec1ffcafb65005438c3",
     "views/back_3quarter_ne/counter/counter-2.png": "e94417c92e77736832db46118634b241ffaeaf12bbc17e1681ac6b68362a4f76",
     "views/back_3quarter_ne/counter/counter-3.png": "17b89e658e17f5f632ef57d5d9dbf4e6e813200041c8f13b00c49f0d83e6441f",
@@ -288,7 +288,7 @@
     "views/back_3quarter_ne/hurt/hurt-2.png": "0c69e5a0ddeb231117b6aa5301e83e39b6cc8a9b78b50c494b8c80b807751505",
     "views/back_3quarter_ne/hurt/hurt-3.png": "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
     "views/back_3quarter_ne/hurt/hurt-4.png": "4f211ad6ab4f778620fde0440679be0fd8d098162ec7961edc7ef7a30e2c3fac",
-    "views/back_3quarter_ne/hurt/hurt-5.png": "2de783c7973eef32687e00c84f0662d6e7302dbba7a332a3fd0ce0704213f1fc",
+    "views/back_3quarter_ne/hurt/hurt-5.png": "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
     "views/back_3quarter_ne/hurt/hurt-6.png": "97cd81179af73275b7b71984655bac315d5881304e1cb68a43ce1e5cb0e3f53b",
     "views/back_3quarter_ne/idle/idle-1.png": "2ad0f7c9e3d95ed3921459fe508c94a1888a1a560a8fa727cec6b2c64fe8a53d",
     "views/back_3quarter_ne/idle/idle-2.png": "167cf29967c8dcda743c1d1ae38299b0299da851ba87e349437ae3f8ea4ab539",
@@ -343,7 +343,7 @@
     "views/front_3quarter_sw/attack/attack-5.png": "1dba6fb7bc364fc1de60955bb88ee02d83033eef8afd80928e4465286dfd1333",
     "views/front_3quarter_sw/attack/attack-6.png": "661eaeaa7714bc590c07c516cc7349f6f2782f429c400274d99bedb6348bbb9b",
     "views/front_3quarter_sw/attack/attack-7.png": "b2c4b7c1a1afef9d5736f4f0ca67e3452ccd6dcf0e80cc6dc33b852901de9799",
-    "views/front_3quarter_sw/attack/attack-8.png": "b325c2d621fcbae17cd6944ab7cc93838f90a23bc00069f80592626536a2dab3",
+    "views/front_3quarter_sw/attack/attack-8.png": "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642",
     "views/front_3quarter_sw/counter/counter-1.png": "1743a545360efb8abcd12d4cad17a7e68a915ded870ffa1859d5b48559ae4595",
     "views/front_3quarter_sw/counter/counter-2.png": "36e01494ff9787e734fca02b5bb024310454ec4b11233f93d5ec68e41c7fac62",
     "views/front_3quarter_sw/counter/counter-3.png": "814defa8a7410da19c98ff518628acddc7ab44f02694eda851592ffc33ba3a8e",
@@ -434,8 +434,8 @@
     "views/back_3quarter_ne/attack/attack-4.png": "2f5a34ba66f919eec134cb066ba5f9bed6268f90a331e6041de4526c752c7d6a",
     "views/back_3quarter_ne/attack/attack-5.png": "b1b6a7b19ea837bb8fc475c51b8a24a3cd58ac0b0f32dcc10e529390956ddc51",
     "views/back_3quarter_ne/attack/attack-6.png": "2d960b2f4173b94f2ebf699799e8456d3905570ed8aa853c6ff05988f5723953",
-    "views/back_3quarter_ne/attack/attack-7.png": "52565fc3f95e01be405f115c43295659b7367cd3de6b63f77bf66d3494dafaee",
-    "views/back_3quarter_ne/attack/attack-8.png": "880f3ed19b66ddfd864d05c5edee1edd187d0a05068092f52979335ec1d39872",
+    "views/back_3quarter_ne/attack/attack-7.png": "b1b6a7b19ea837bb8fc475c51b8a24a3cd58ac0b0f32dcc10e529390956ddc51",
+    "views/back_3quarter_ne/attack/attack-8.png": "a5bfcdda8636c7c333b0f8e442114e2070c9e0f17e8b13f0ea1896fa3331befa",
     "views/back_3quarter_ne/counter/counter-1.png": "afe73cefd1e172ef2d650589b20f00a1492cbc98c606f6d9f60786d3d00c434c",
     "views/back_3quarter_ne/counter/counter-2.png": "611454ea31d99652086d8b66dec2bdf7bb20daf4f083b7df998cfbf4c3219aff",
     "views/back_3quarter_ne/counter/counter-3.png": "ec594ee29876a5b5028f75d635278949288cea1dec641e82f7fa466bfaa3e8c6",
@@ -470,7 +470,7 @@
     "views/back_3quarter_ne/hurt/hurt-2.png": "e3927002c0ef20bc4fce8248dc1e2c4880d0647a206304e65d04025236ad7586",
     "views/back_3quarter_ne/hurt/hurt-3.png": "c813720750ae6f6d74524a3870f6081017fbd6adca90058136faa0fc86ba3c22",
     "views/back_3quarter_ne/hurt/hurt-4.png": "d6ee9c94c4a540c4090cb09eeefef74491759c4009e0f44dd15c8067e9a9940e",
-    "views/back_3quarter_ne/hurt/hurt-5.png": "7fbfbfe7f1a96f8e8abf6a25f8fd126f82e0f1137d3b1f05f8d95d99a3535b45",
+    "views/back_3quarter_ne/hurt/hurt-5.png": "c813720750ae6f6d74524a3870f6081017fbd6adca90058136faa0fc86ba3c22",
     "views/back_3quarter_ne/hurt/hurt-6.png": "8dc96287ad70b8c5adafae0a06c72b3fb43300cce2bc05aff524775ca671821d",
     "views/back_3quarter_ne/idle/idle-1.png": "5645bc1bdaa083c341e22fbbef669bcd9876b6db3fc1ad39dfd714429656697f",
     "views/back_3quarter_ne/idle/idle-2.png": "3ea66cd7750d7a31f29024c1fd080de3762ec637e4d66f0f4d65c20e2fe9e8dd",
@@ -525,7 +525,7 @@
     "views/front_3quarter_sw/attack/attack-5.png": "14b3046bffdf2dc72b4281c23ad827161d06dd591862546cdf8e0a7f8650ff64",
     "views/front_3quarter_sw/attack/attack-6.png": "84218d4b9d9ae0b5fd701724a322aa1d4ecb68ce3bdbdde76d208cad138f5a93",
     "views/front_3quarter_sw/attack/attack-7.png": "4d8bb62f456ee680d23ed89ab7f4ae9d04c30d92966ea8473ba2c781f504bde8",
-    "views/front_3quarter_sw/attack/attack-8.png": "55dc7d458dcf09f3cec1fa8c9d87cb1b4b17908e03be3f7ed77f75ae9678a906",
+    "views/front_3quarter_sw/attack/attack-8.png": "08bb2ee48c98bc67953fcf8f647ca43a8b546fb4447c205931a445dd42b2a105",
     "views/front_3quarter_sw/counter/counter-1.png": "94dab0bed86bf87f102d78e02fd6f403a2980bb74c1e3aecf84fe1b15964af67",
     "views/front_3quarter_sw/counter/counter-2.png": "78ff91292be7bb6203944bde7422f4f3ba64857c94a88d950eed5afc441de8d9",
     "views/front_3quarter_sw/counter/counter-3.png": "e58518ee4fd9ca84953fdc6c80a3074c568cc08226f9f62f32fa95de9a01a51f",
@@ -626,5 +626,36 @@
     "repairs": [
       "same-view down-8 is copied byte-for-byte to revive-1"
     ]
+  },
+  "runtimeBundleDigest": "0011d40d2a0567c629ed3cddc7a08d5f3e20390c645ce56626f470e3752b278f",
+  "qualityRepairs": [
+    {
+      "id": "direction-geometry-v1",
+      "status": "passed_geometry_only_owner_runtime_pending",
+      "actions": [
+        "attack",
+        "hurt"
+      ],
+      "views": [
+        "back_3quarter_ne",
+        "front_3quarter_sw"
+      ],
+      "frameCount": 4,
+      "manifest": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+      "manifestSha256": "f332cceeeb89b722d22cd04d589853f3ba2ae547990744d308ac7110ea999ec3",
+      "qaSummary": "qa/battle/repairs/direction-geometry-v1-summary.json",
+      "qaSummarySha256": "0c9efb3058357dd209b0ea335f2b55d7f5fdfad6ae799b98b53e18e4bbc03576",
+      "beforeAfterContact": "qa/battle/repairs/direction-geometry-v1-before-after.png",
+      "beforeAfterContactSha256": "2ac36768ce536e9f72f52be6375cf266120b7741324098dc78d80d9a3a51a9ef",
+      "runtimeOperation": "exact_same_action_same_view_byte_copy",
+      "edgeCleanupStatus": "geometry_repaired_edge_cleanup_pending_v5_non_blocking"
+    }
+  ],
+  "directionGeometryReview": {
+    "repairId": "direction-geometry-v1",
+    "status": "passed_geometry_only_owner_runtime_pending",
+    "geometryVisualApproval": "approved",
+    "noRecolorOrEdgeCleanup": true,
+    "edgeCleanupStatus": "geometry_repaired_edge_cleanup_pending_v5_non_blocking"
   }
 }

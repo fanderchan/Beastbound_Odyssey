@@ -163,14 +163,40 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "a03da9ad4f7b52166e67e3a348a494da228f09f198b1ec2b0888068499baaa67",
+    "bundleDigest": "eb18628476f11a1f145745cbaa5fe1c194c789887a1bf80dc2b20245c24e24bf",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "eb18628476f11a1f145745cbaa5fe1c194c789887a1bf80dc2b20245c24e24bf",
+    "minimumBattleRuntimeEdgeMargin": 9,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "down-revive-monotonic-sequence-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 32,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "direction-geometry-v1",
+        "status": "passed_geometry_only_owner_runtime_pending",
+        "runtimeFrameCount": 2,
+        "ownerVisualGate": "geometry_approved_runtime_owner_pending",
+        "edgeCleanupStatus": "not_in_scope_no_edge_cleanup_applied"
+      }
+    ],
+    "runtimeContentDigestAlgorithm": "sha256(sorted relative path + NUL + raw encoded file sha256 bytes)"
   },
   "worldVisual": {
     "status": "not_produced",
@@ -217,9 +243,28 @@
     "consolidatedRawArchiveStatus": "pending_parent_dedup_archive"
   },
   "evidence": {
-    "battleContactSheet": "qa/formal-v1/two-view-12-actions-contact-sheet.png",
-    "finalFacingInContactSheet": "qa/formal-v1/final-facing-in-two-side-contact.png"
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "finalFacingInContactSheet": "qa/formal-v1/final-facing-in-two-side-contact.png",
+    "battleContactSheetSha256": "12cb1f2bd9306d37f75645d353284457a50b32ae73d19ef170f9b5f28acadf30",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "41e8f62a5ccf307dc73d7aae9cfde677d95418dd7823cbccd9bf1f9a8206ba63",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "104df821830380f5d6b3c3a3965f8d19cadfa22370e39e741d965cb564abe039",
+    "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
+    "battleDownReviveSequenceBeforeAfterSha256": "7bf14baf08d1a850d81ddeda53c24915fc0b3cc4731fd6686ff700f21d5892c1",
+    "battleDirectionGeometryBeforeAfter": "qa/battle/repairs/direction-geometry-v1-before-after.png",
+    "battleDirectionGeometryBeforeAfterSha256": "40a4c5ed9cd5a7c9cdfc6120c8b455f16474a611d56dbed64294ba083ea374be",
+    "battleDirectionGeometrySummary": "qa/battle/repairs/direction-geometry-v1-summary.json",
+    "battleDirectionGeometrySummarySha256": "38c895f2cb979c9bae963170e792bf5f70178459db0a14b025821868abb95d50",
+    "battleDirectionGeometryManifest": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+    "battleDirectionGeometryManifestSha256": "364666bd34a2c09ddae56a6386ebc542e2c7e832e03aed341b9e2f3ecb6021cc"
   },
   "ownerReviewStatus": "pending",
-  "notes": "All 180 standalone battle runtime frames are installed for review. The independent eight-direction world set is still pending. Runtime remains disabled until real Godot battle review and owner acceptance."
+  "notes": "All 180 standalone battle runtime frames are installed for review. The independent eight-direction world set is still pending. Runtime remains disabled until real Godot battle review and owner acceptance. Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。 Direction geometry approved: back attack frames 6-7 now reuse authored same-action poses; no recolor or edge cleanup was applied.",
+  "sourceArchive": {
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
+      "source/battle/quality-repair-direction-geometry-v1-manifest.json"
+    ]
+  }
 }

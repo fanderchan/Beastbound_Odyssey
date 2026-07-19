@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "status": "install_ready_geometry_only_owner_runtime_pending",
+  "formId": "bui_normal_yellow_wind10",
+  "repairId": "direction-geometry-v1",
+  "declaredHead": "a8f94a5e",
+  "headVerification": "caller_provided_no_git_operation",
+  "purpose": "repair direction and apparent scale continuity with existing authored poses",
+  "scope": {
+    "battleRuntimeFrames": 180,
+    "replacedFrames": 2,
+    "preservedFrames": 178,
+    "affectedSequences": [
+      {
+        "view": "back_3quarter_ne",
+        "action": "attack"
+      }
+    ]
+  },
+  "sourcePolicy": "current formal same-view same-action runtime frame; exact encoded byte copy",
+  "overlayClass": "explicit_post_install_runtime_sequence_repair",
+  "source512Validation": {
+    "revalidated": false,
+    "claim": "none",
+    "reason": "approved candidate contains runtime256 only; this manifest is not a normal full-bundle source install"
+  },
+  "transformPolicy": {
+    "mirror": false,
+    "resample": false,
+    "recolor": false,
+    "despill": false,
+    "chromaCleanup": false
+  },
+  "colorAndEdgePolicy": {
+    "currentFormalColorPreservedBySourceReuse": true,
+    "unprovenEdgeCleanupApplied": false,
+    "edgeCleanupStatus": "not_in_scope_no_edge_cleanup_applied",
+    "redStatusStatement": null
+  },
+  "currentBefore": {
+    "runtimeBundleDigest": "688e048df1ddf616a0ee2406bd4114c842152aa0b6ec5eebe51a4e53711da99c",
+    "encodedAggregateSha256": "582b55455719e27eba6bea967f36c19b51b8d9cc06c2f04f305ccb77bc819752",
+    "decodedRgbaAggregateSha256": "69287a04f834b1e6e19d9c832ccf97f2b1b0ae5e8f5c8bb2246048e0a623aa76"
+  },
+  "candidateAfter": {
+    "runtimeBundleDigest": "eb18628476f11a1f145745cbaa5fe1c194c789887a1bf80dc2b20245c24e24bf",
+    "encodedAggregateSha256": "97d7ae6d383c79bb62831e9bdaa9ca5fcce93bdfb6a82468a24264504b48bd3d",
+    "decodedRgbaAggregateSha256": "fd64c2d77a7f65dbf148cc9866a0099a62e6a6623d9f1fe0d3c1b7ed372f32e7"
+  },
+  "frameLedger": "source/battle/direction-geometry-v1-frame-ledger.json",
+  "frameLedgerSha256": "239818d0bcceccb1502169e184a159f6c28461584b53a02e150cd5ed5bed41af",
+  "qaSummary": "qa/battle/repairs/direction-geometry-v1-summary.json",
+  "qaSummarySha256": "38c895f2cb979c9bae963170e792bf5f70178459db0a14b025821868abb95d50",
+  "beforeAfterContact": "qa/battle/repairs/direction-geometry-v1-before-after.png",
+  "beforeAfterContactSha256": "40a4c5ed9cd5a7c9cdfc6120c8b455f16474a611d56dbed64294ba083ea374be",
+  "changedFrames": [
+    {
+      "relativePath": "back_3quarter_ne/attack/attack-6.png",
+      "destinationPath": "views/back_3quarter_ne/attack/attack-6.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "069d48056eb59ede5a976b80c6d6138c828acf216f5d521baed9d9cc1619c02c",
+      "currentBeforeDecodedRgbaSha256": "93211462fcdcb95455e3acd5577e86311cdca24dd5d282d2f0d3aa6186cc4b94",
+      "currentBeforeAlphaSha256": "a02d8a9b5deee15012184e00c8240b1e9274d7944141f0d390a1714a4c040731",
+      "candidateAfterEncodedSha256": "1dd4cfe72f8e9d51989fc737aff6f00b58d3c4f564c4bcb78979656d98670f03",
+      "candidateAfterDecodedRgbaSha256": "1073b36a80823a445f89f4a03166b3b2435ba95ed8c07f7af3486020dac30ff1",
+      "candidateAfterAlphaSha256": "800fa86cc6c8ef52349e4eebee4268d00f8a5607edc0f03ab896af40aa387de6",
+      "sameActionSourcePath": "back_3quarter_ne/attack/attack-2.png",
+      "sameActionSourceEncodedSha256": "1dd4cfe72f8e9d51989fc737aff6f00b58d3c4f564c4bcb78979656d98670f03",
+      "sameActionSourceDecodedRgbaSha256": "1073b36a80823a445f89f4a03166b3b2435ba95ed8c07f7af3486020dac30ff1",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    },
+    {
+      "relativePath": "back_3quarter_ne/attack/attack-7.png",
+      "destinationPath": "views/back_3quarter_ne/attack/attack-7.png",
+      "operation": "replace",
+      "currentBeforeEncodedSha256": "f6ec459023c43c50e379def208b9ea46aea73a88b29fe1f56f85b3c891fdd15e",
+      "currentBeforeDecodedRgbaSha256": "17dc3be79f7a05f8bdf9e1dd7e603eae621eeb66ac2bfbf10bc0830a9480e30d",
+      "currentBeforeAlphaSha256": "c6b68abf0518c92f3369ed15c80b125c55c0df7f8024748dfdefbfac8f238710",
+      "candidateAfterEncodedSha256": "ed03e554b8d91010aa52bf3315629a9d876be69861567c4bf8724a09e0209342",
+      "candidateAfterDecodedRgbaSha256": "e7d6d5218a42e30ed89734c9e42e6fb8e59c2095829c25d36d0171adaf6ac466",
+      "candidateAfterAlphaSha256": "cad875134043623a87c63fc046a41232ac0214925972ec589a2cd2e0785e18ba",
+      "sameActionSourcePath": "back_3quarter_ne/attack/attack-1.png",
+      "sameActionSourceEncodedSha256": "ed03e554b8d91010aa52bf3315629a9d876be69861567c4bf8724a09e0209342",
+      "sameActionSourceDecodedRgbaSha256": "e7d6d5218a42e30ed89734c9e42e6fb8e59c2095829c25d36d0171adaf6ac466",
+      "byteExactToSameActionSource": true,
+      "decodedRgbaExactToSameActionSource": true,
+      "mirror": false,
+      "resampled": false,
+      "recolored": false,
+      "despilled": false,
+      "chromaCleanup": false
+    }
+  ],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

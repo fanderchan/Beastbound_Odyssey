@@ -224,7 +224,19 @@
       "repairs": [
         "same-view down-8 is copied byte-for-byte to revive-1"
       ]
-    }
+    },
+    "legacyBundleDigestPreserved": "59037a2a9bfed13815d5544f4f5e3bbf69055fc2f721eb08c537da09fd76fcbd",
+    "runtimeBundleDigest": "0011d40d2a0567c629ed3cddc7a08d5f3e20390c645ce56626f470e3752b278f",
+    "runtimeContentDigestAlgorithm": "sha256(sorted relative path + NUL + raw encoded file sha256 bytes)",
+    "qualityRepairs": [
+      {
+        "id": "direction-geometry-v1",
+        "status": "passed_geometry_only_owner_runtime_pending",
+        "runtimeFrameCount": 4,
+        "ownerVisualGate": "geometry_approved_runtime_owner_pending",
+        "edgeCleanupStatus": "geometry_repaired_edge_cleanup_pending_v5_non_blocking"
+      }
+    ]
   },
   "worldVisual": {
     "status": "self_review_passed_owner_pending",
@@ -272,10 +284,24 @@
     "consolidatedRawArchiveStatus": "pending_parent_dedup_archive"
   },
   "evidence": {
-    "battleContactSheet": "qa/formal-v1/two-view-12-actions-contact-sheet.png",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
     "finalFacingInContactSheet": "qa/formal-v1/final-facing-in-two-side-contact.png",
-    "worldContactSheet": "qa/world-v1/true8-world-contact-8x5.png"
+    "worldContactSheet": "qa/world-v1/true8-world-contact-8x5.png",
+    "battleContactSheetSha256": "803a77fcd321334cc90be73756dd2e91eca2580a3c9bf4f4fb4e91d152173ce5",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleDirectionGeometryBeforeAfter": "qa/battle/repairs/direction-geometry-v1-before-after.png",
+    "battleDirectionGeometryBeforeAfterSha256": "2ac36768ce536e9f72f52be6375cf266120b7741324098dc78d80d9a3a51a9ef",
+    "battleDirectionGeometrySummary": "qa/battle/repairs/direction-geometry-v1-summary.json",
+    "battleDirectionGeometrySummarySha256": "0c9efb3058357dd209b0ea335f2b55d7f5fdfad6ae799b98b53e18e4bbc03576",
+    "battleDirectionGeometryManifest": "source/battle/quality-repair-direction-geometry-v1-manifest.json",
+    "battleDirectionGeometryManifestSha256": "f332cceeeb89b722d22cd04d589853f3ba2ae547990744d308ac7110ea999ec3",
+    "battleQcSha256": "1f503ea5178f6924fe0dc92b5d92007f3d11e68f709bad1411fb47f53709025b"
   },
   "ownerReviewStatus": "pending",
-  "notes": "All 220 runtime frames are installed for review. Runtime remains disabled until real Godot battle review and owner acceptance."
+  "notes": "All 220 runtime frames are installed for review. Runtime remains disabled until real Godot battle review and owner acceptance. 几何已修；边缘清理仍待 v5。方向修复仅复用当前正式包同动作帧，没有执行未证明的边色清理。",
+  "sourceArchive": {
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-direction-geometry-v1-manifest.json"
+    ]
+  }
 }
