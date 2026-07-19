@@ -923,6 +923,31 @@ def resize_rgba_premultiplied(
     return Image.fromarray(output, mode="RGBA")
 
 
+def derive_runtime_frame(
+    source: Image.Image,
+    key: tuple[int, int, int],
+    residual_distance: float,
+    fringe_cleanup_alpha: int,
+) -> tuple[Image.Image, int]:
+    """Derive the canonical 256px runtime frame from a 512px source frame.
+
+    The bundle builder and the fail-closed installer must call this exact
+    function.  Keeping resize and final alpha cleanup together prevents either
+    tool from silently accepting a different decoded RGBA result.
+    """
+
+    runtime = resize_rgba_premultiplied(
+        source,
+        (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE),
+    )
+    return clean_resample_alpha(
+        runtime,
+        key,
+        residual_distance,
+        fringe_cleanup_alpha,
+    )
+
+
 def render_frames(
     prepared_frames: Sequence[PreparedFrame], options: BuildOptions
 ) -> tuple[list[RenderedFrame], float, int]:
@@ -967,12 +992,8 @@ def render_frames(
             options,
             effective_source_margin,
         )
-        runtime = resize_rgba_premultiplied(
+        runtime, runtime_cleaned_fringe = derive_runtime_frame(
             source,
-            (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE),
-        )
-        runtime, runtime_cleaned_fringe = clean_resample_alpha(
-            runtime,
             options.key,
             options.residual_magenta_distance,
             options.fringe_cleanup_alpha,

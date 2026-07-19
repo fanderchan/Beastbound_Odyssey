@@ -17,8 +17,13 @@ from PIL import Image, ImageDraw
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+TOOLS_DIR = REPO_ROOT / "tools"
 TOOL_PATH = REPO_ROOT / "tools" / "install_pet_battle_bundle.py"
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "install_pet_battle_bundle" / "manifest_v1.json"
+sys.path.insert(0, str(TOOLS_DIR))
+
+import build_pet_art_bundle as BUILDER  # noqa: E402
+
 SPEC = importlib.util.spec_from_file_location("install_pet_battle_bundle", TOOL_PATH)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -146,7 +151,12 @@ def _materialize_staging(root: Path, *, mounted: bool = False) -> tuple[Path, di
             frames: list[dict[str, Any]] = []
             for frame_index in range(1, frame_count + 1):
                 source = _source_frame(view_index, action_index, frame_index)
-                runtime = MODULE._clean_resampled_runtime(source, (255, 0, 255), 30.0, 96)
+                runtime, _cleaned_fringe = BUILDER.derive_runtime_frame(
+                    source,
+                    (255, 0, 255),
+                    30.0,
+                    96,
+                )
                 source_path = source_dir / f"{action}-{frame_index}.png"
                 runtime_path = runtime_dir / f"{action}-{frame_index}.png"
                 source.save(source_path)
@@ -283,6 +293,46 @@ def _options(
 
 
 class InstallPetBattleBundleTest(unittest.TestCase):
+    def test_runtime_derivation_matches_builder_premultiplied_transparent_edges(self) -> None:
+        source = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(source)
+        draw.rounded_rectangle(
+            (123, 91, 390, 468),
+            radius=61,
+            fill=(112, 67, 31, 231),
+        )
+        draw.polygon(
+            ((339, 126), (438, 171), (357, 235)),
+            fill=(38, 178, 65, 91),
+        )
+
+        expected, _cleaned_fringe = BUILDER.derive_runtime_frame(
+            source,
+            (255, 0, 255),
+            30.0,
+            96,
+        )
+        actual = MODULE._clean_resampled_runtime(
+            source,
+            (255, 0, 255),
+            30.0,
+            96,
+        )
+        legacy_straight = source.resize(
+            (MODULE.RUNTIME_FRAME_SIZE, MODULE.RUNTIME_FRAME_SIZE),
+            Image.Resampling.LANCZOS,
+        )
+        legacy_straight, _legacy_cleaned = BUILDER.clean_resample_alpha(
+            legacy_straight,
+            (255, 0, 255),
+            30.0,
+            96,
+        )
+
+        self.assertEqual(MODULE.rgba_hash(actual), MODULE.rgba_hash(expected))
+        self.assertEqual(actual.getchannel("A").tobytes(), legacy_straight.getchannel("A").tobytes())
+        self.assertNotEqual(MODULE.rgba_hash(actual), MODULE.rgba_hash(legacy_straight))
+
     def test_valid_pet_bundle_installs_180_frames_and_pending_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

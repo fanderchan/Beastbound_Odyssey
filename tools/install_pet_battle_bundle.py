@@ -39,6 +39,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +47,13 @@ from typing import Any, Callable, Iterable
 
 import numpy as np
 from PIL import Image, UnidentifiedImageError
+
+
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from build_pet_art_bundle import derive_runtime_frame  # noqa: E402
 
 
 TOOL_NAME = "install_pet_battle_bundle.py"
@@ -284,19 +292,13 @@ def _clean_resampled_runtime(
     residual_distance: float,
     fringe_cleanup_alpha: int,
 ) -> Image.Image:
-    runtime = source.resize((RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE), Image.Resampling.LANCZOS)
-    rgba = np.asarray(runtime.convert("RGBA"), dtype=np.uint8).copy()
-    rgb = rgba[:, :, :3].astype(np.float32)
-    distance = np.sqrt(np.sum(np.square(rgb - np.asarray(key, dtype=np.float32)), axis=2))
-    fringe = (
-        (rgba[:, :, 3] > 0)
-        & (rgba[:, :, 3] <= fringe_cleanup_alpha)
-        & (distance <= residual_distance)
+    runtime, _cleaned_fringe = derive_runtime_frame(
+        source,
+        key,
+        residual_distance,
+        fringe_cleanup_alpha,
     )
-    rgba[fringe] = 0
-    rgba[rgba[:, :, 3] < 2] = 0
-    rgba[rgba[:, :, 3] == 0, :3] = 0
-    return Image.fromarray(rgba, mode="RGBA")
+    return runtime
 
 
 def _validate_manifest(options: InstallOptions) -> dict[str, Any]:
