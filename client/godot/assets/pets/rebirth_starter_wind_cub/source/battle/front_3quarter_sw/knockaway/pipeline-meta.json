@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "ef5fa4903bffa235c1a161e7ac1c03bd8663436028004d3788a4afaa1560961d",
+  "slots": [
+    "knockaway-1",
+    "knockaway-2",
+    "knockaway-3",
+    "knockaway-4",
+    "knockaway-5",
+    "knockaway-6",
+    "knockaway-7",
+    "knockaway-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "knockaway-1",
+      "sourceRgbaSha256": "0480e5a071574b7e3b92da3d66c09cd30b899b1ab8cbb13491b9e7687e4a2439",
+      "runtimeRgbaSha256": "a676470121b3f73dc11aea6041864e07b2f76fab1addeae302c3444187116987"
+    },
+    {
+      "slot": "knockaway-2",
+      "sourceRgbaSha256": "1383612bfab29b2543ad6d5716eafe361e8b6fd2afa48c883d57d83aa9c8819e",
+      "runtimeRgbaSha256": "98bb61c3f155a8de1af20f0881f7250a62fcc6a9ca2f47a2f38cf65194a26e6c"
+    },
+    {
+      "slot": "knockaway-3",
+      "sourceRgbaSha256": "886c88903edec4d63bcff52b194d849928cdca130be17018fbf88e6bca68e275",
+      "runtimeRgbaSha256": "6e6ae0b697a2960663a5145c2c48831bfe4b4773586b6e93599b115872a86b4f"
+    },
+    {
+      "slot": "knockaway-4",
+      "sourceRgbaSha256": "48f86863147c13f761389fb51aec2052f2a7e9e7fd0fd459366235ce0a072018",
+      "runtimeRgbaSha256": "5011665ee51bbeb3ce3264c3d0778ad05a058d955067e6964ae982bbc90c1678"
+    },
+    {
+      "slot": "knockaway-5",
+      "sourceRgbaSha256": "f811a2e310997937ed2185b6420568917802ceb578b190d22331e855d2e9a9df",
+      "runtimeRgbaSha256": "4b16a88c48b9266f1931e3ce4023821a2a2c886c2f3590c358f5bce4799bdc1f"
+    },
+    {
+      "slot": "knockaway-6",
+      "sourceRgbaSha256": "79e944790212ca18419d94eac3841f015f37c9136f15a877b19fdd2e722495d2",
+      "runtimeRgbaSha256": "8b7bfe0fcf3cdf18f7d94f729fcac0b4b448cebaf7c81c408b2d4b84dbe355a2"
+    },
+    {
+      "slot": "knockaway-7",
+      "sourceRgbaSha256": "6d85634468a843e33c143cd4d193cd7d71a586de0737e46313e2371e8ce30a5c",
+      "runtimeRgbaSha256": "19f0d42dbcb1cee2ae1afd534f3c1153305039982e33cbc411a3d96c7ceae0bb"
+    },
+    {
+      "slot": "knockaway-8",
+      "sourceRgbaSha256": "cc8805941b73e86c9f2fe52799caeee99d4d574f2b9f4aabb9b487d93ad8f509",
+      "runtimeRgbaSha256": "6e700fe293366345a4e2505450155fcce4a52ed58f6a1ec7b1a2f5defcd74799"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "knockaway-a",
+    "knockaway-b"
+  ],
+  "deterministicExpansion": true
+}

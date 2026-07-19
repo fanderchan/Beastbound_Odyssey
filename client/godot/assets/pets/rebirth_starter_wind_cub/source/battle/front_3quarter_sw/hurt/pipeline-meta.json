@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "ef5fa4903bffa235c1a161e7ac1c03bd8663436028004d3788a4afaa1560961d",
+  "slots": [
+    "hurt-1",
+    "hurt-2",
+    "hurt-3",
+    "hurt-4",
+    "hurt-5",
+    "hurt-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "hurt-1",
+      "sourceRgbaSha256": "386985a0bb64df4b48c7f546981d36af4609cfc13870d3e576574cb77a27010b",
+      "runtimeRgbaSha256": "5db9dcc0759badb21a93e11782c7e676e36306ad0ec9829892104c583f2f97b5"
+    },
+    {
+      "slot": "hurt-2",
+      "sourceRgbaSha256": "c09336a72bcfc5a54edfb3a6cbe206dbc44263e5035b0c4ef90d4e06c4658794",
+      "runtimeRgbaSha256": "4aca1fbeaca5dec28983392b963efc0cf3fae517c19d8f0821e52a62a13298fa"
+    },
+    {
+      "slot": "hurt-3",
+      "sourceRgbaSha256": "a86648093e941e1a200d28501f96a3d8afb2bcda1cddf285dbb27a61aee58610",
+      "runtimeRgbaSha256": "6a50f83283d10beb5e470833dfa647faa7188e9aa75a83ae47bbaf9e8d4ce344"
+    },
+    {
+      "slot": "hurt-4",
+      "sourceRgbaSha256": "4616106190e823f68b16ebd4ee4509087c779715b46cd3780176916d54e8e923",
+      "runtimeRgbaSha256": "bccd4fcacafdaa60abb8deb28a8e76eb7d96676331cbae1c89f18a815c2c3f64"
+    },
+    {
+      "slot": "hurt-5",
+      "sourceRgbaSha256": "9e49d8d37ad526380d8309b3c088d53446c170b59e44e6285f1dd8f942613901",
+      "runtimeRgbaSha256": "639b26aae162e89a102dac9671955ab43e0c308d57090120c83a8874797bed7f"
+    },
+    {
+      "slot": "hurt-6",
+      "sourceRgbaSha256": "8bafad64690f40a80b9b20a2d048e501eefd488cb58112ec9e51ebdcb720ba1f",
+      "runtimeRgbaSha256": "303c0e2064bbc47b1954e15e05230ef551099839ba218c0502def0f8548f6fd1"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "hurt-a",
+    "hurt-b"
+  ],
+  "deterministicExpansion": true
+}

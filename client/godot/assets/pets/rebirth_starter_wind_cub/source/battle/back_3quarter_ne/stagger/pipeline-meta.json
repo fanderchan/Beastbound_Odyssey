@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "ea6535c4262762febc45c4cf8a9e3d1026b0fa90af8bace5cc8f4afbdb6c4d4d",
+  "slots": [
+    "stagger-1",
+    "stagger-2",
+    "stagger-3",
+    "stagger-4",
+    "stagger-5",
+    "stagger-6",
+    "stagger-7",
+    "stagger-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "stagger-1",
+      "sourceRgbaSha256": "5d5dd94f14f32f95ff0ac2643850fe77604e015c6aad1dcaf0cb78f032495495",
+      "runtimeRgbaSha256": "f8c4ae30870f1e5775db8dc656fd1ddb55e9f3811f6c83e5fa092d003d950737"
+    },
+    {
+      "slot": "stagger-2",
+      "sourceRgbaSha256": "b7ee377622c6bdbcbe62ff57f6c139c031f549361968311695732182b1eff30a",
+      "runtimeRgbaSha256": "b7a8aa87b8630e6588b8a29a5dc8e3be32f0af562ff41d9bd88cd578482af7ec"
+    },
+    {
+      "slot": "stagger-3",
+      "sourceRgbaSha256": "5e909c5634a202cc306c02a2edf43d741618a28fb28eef1170813eb279ee517d",
+      "runtimeRgbaSha256": "09d40b2fc9d13192c63e6a2d2816a73e97282b185d5c2c0a02f72e92bb61374b"
+    },
+    {
+      "slot": "stagger-4",
+      "sourceRgbaSha256": "98af339ff97a9ce9a4f1aa736bcb32d1200bb92ac9caa16dd9b6634fc41c737f",
+      "runtimeRgbaSha256": "aa2871bc3c527723bd311182e9f5358f03b5e62a54d1336eafaca39dc46a015c"
+    },
+    {
+      "slot": "stagger-5",
+      "sourceRgbaSha256": "e1b8c53fdf5dda04a387a6d7241493c15b2ff4d4a668c55e3b9b7cedf369015d",
+      "runtimeRgbaSha256": "dfec1b19c7dea975bf6bedc585b10ea5d1a185a50257513278061fdc66817617"
+    },
+    {
+      "slot": "stagger-6",
+      "sourceRgbaSha256": "93647ebeddb0a41ca1565d267b806b3df201b6ebdd89cf50cc2675cd252d92ec",
+      "runtimeRgbaSha256": "a620de51fdb3020c8b99c4f7c6250c85db92c76eaadbc02428fd03f19b79932f"
+    },
+    {
+      "slot": "stagger-7",
+      "sourceRgbaSha256": "540967d494091732ad94a4293f6301b3a54915e4a3d81e0fd07890013585808d",
+      "runtimeRgbaSha256": "48721588aeedf97bcef6c55d5a22bc6e4f2fa1ce13abadcd53e822eeaaa9adea"
+    },
+    {
+      "slot": "stagger-8",
+      "sourceRgbaSha256": "1ccd6bf93b1c7058d6ee09e01f1ba7acb13098d262dd7b5731195a24635a0833",
+      "runtimeRgbaSha256": "34cb2546413a80b54d06b89945f62219afb5109541d99981a5a5dbd964aa3ac7"
+    }
+  ],
+  "creativeSource": "generated/back_3quarter_ne-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "stagger-a",
+    "stagger-b"
+  ],
+  "deterministicExpansion": true
+}

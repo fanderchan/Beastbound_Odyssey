@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "idle",
+  "frameCount": 6,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "ownerReviewStatus": "pending",
+  "semanticReview": "key poses and full strip self-reviewed; owner visual review remains pending"
+}

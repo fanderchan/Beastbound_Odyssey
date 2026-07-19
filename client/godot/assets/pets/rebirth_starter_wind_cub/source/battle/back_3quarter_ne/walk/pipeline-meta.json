@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "ea6535c4262762febc45c4cf8a9e3d1026b0fa90af8bace5cc8f4afbdb6c4d4d",
+  "slots": [
+    "walk-1",
+    "walk-2",
+    "walk-3",
+    "walk-4",
+    "walk-5",
+    "walk-6",
+    "walk-7",
+    "walk-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "walk-1",
+      "sourceRgbaSha256": "bd712d32fc34a86d256f5c6e94ac23516e7e730ca350871cf1626c9529fcd653",
+      "runtimeRgbaSha256": "c11f5164e0d942b00eb47b005c5012bec0daabd8a85b956203223018db5e18e9"
+    },
+    {
+      "slot": "walk-2",
+      "sourceRgbaSha256": "e25f63dc42e6906f5cd9101f663c10497ca5d473cc87f3ce14dced97b75b9ccc",
+      "runtimeRgbaSha256": "27e78d2d654a6b7fd5a8abd5add98942905885be2b0d83f1f436b70ae9a32eca"
+    },
+    {
+      "slot": "walk-3",
+      "sourceRgbaSha256": "19235a69abb52cf6c1b7d60e77c9dc4d8102c03e096b43c6aa9e5179e390a4de",
+      "runtimeRgbaSha256": "f9e7e75373ba0cff370606dd289a3555a46468c7a02462375b5faf5b01015ae1"
+    },
+    {
+      "slot": "walk-4",
+      "sourceRgbaSha256": "e8c3800fb4e801dc5361c98c42ba0e9da2cb32cc16ec81d55f1754eb80ef49b9",
+      "runtimeRgbaSha256": "72e6b50aea3a87bfe7a2d9ee027cfe218c3355e09923d491114fbdb7470746f5"
+    },
+    {
+      "slot": "walk-5",
+      "sourceRgbaSha256": "9fd6ddf8c601f5c7e5d6b2f4719d3840c40378499421d47c8e4336582273b714",
+      "runtimeRgbaSha256": "12eabe96e361fd39558e0c043712eeedcc9ee1e5e38a7d40d2d2022c48eb0531"
+    },
+    {
+      "slot": "walk-6",
+      "sourceRgbaSha256": "3577e3169ec295d9418c0d3219af1b2f603affba9acf47ac4a247506c4394538",
+      "runtimeRgbaSha256": "c49827e59a9cc1784dd1acb683278692c1a9a9ba78021214d8b74430e2b94857"
+    },
+    {
+      "slot": "walk-7",
+      "sourceRgbaSha256": "7a9cf49d12970a150e2d15db0a4f893dddc91e4c2dd7fa60bc9570c3094ad851",
+      "runtimeRgbaSha256": "5d2674796d7ee0aa0873c8ef6f16da336c97b1730dddf8f9f0763be52baf81cf"
+    },
+    {
+      "slot": "walk-8",
+      "sourceRgbaSha256": "588ba4c5f3e9be7c6cba787195bf0868f7ef8911ae8e9272eb4e058770980f03",
+      "runtimeRgbaSha256": "672d7dc4cec7d9f4bc5a9862d8a6f6b0795fd5e880b032d85d5aa946d874aa67"
+    }
+  ],
+  "creativeSource": "generated/back_3quarter_ne-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "walk-a",
+    "walk-b"
+  ],
+  "deterministicExpansion": true
+}

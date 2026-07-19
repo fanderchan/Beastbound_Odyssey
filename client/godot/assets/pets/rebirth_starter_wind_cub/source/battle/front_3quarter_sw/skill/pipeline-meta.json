@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "ef5fa4903bffa235c1a161e7ac1c03bd8663436028004d3788a4afaa1560961d",
+  "slots": [
+    "skill-1",
+    "skill-2",
+    "skill-3",
+    "skill-4",
+    "skill-5",
+    "skill-6",
+    "skill-7",
+    "skill-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "skill-1",
+      "sourceRgbaSha256": "700281e9f3877d9caebffbec6b0003d5402556bc1ec7110ef78e670b2ee710c3",
+      "runtimeRgbaSha256": "6bc474692c6b16019842fa4ec3d043d91605f2b429c18b895db0d80db5f5afea"
+    },
+    {
+      "slot": "skill-2",
+      "sourceRgbaSha256": "5bc2f51e3f49795c92bf51e4c60b384c08fd75dcb75878a982f4ec48e58fbe5b",
+      "runtimeRgbaSha256": "be89e574e48a9ecdfd4b66fd9741e7ee3591a467e2050e05cfaaba22e3e32044"
+    },
+    {
+      "slot": "skill-3",
+      "sourceRgbaSha256": "4b5959aac766f62491a4c03bf708b2377f22b745346663ca67734634d4382b59",
+      "runtimeRgbaSha256": "7603f624b23bf86a01f27846a2d0c95a311c367924846645a093fdc352580dd8"
+    },
+    {
+      "slot": "skill-4",
+      "sourceRgbaSha256": "9fc3d0cfe74deee6501f80abe1e2e6c81cac1e7575f3834154737a2a03eed6f3",
+      "runtimeRgbaSha256": "66de22f92a71bc99703934a3166bd62b1a00349039630d9f7ac98b0e02131f5d"
+    },
+    {
+      "slot": "skill-5",
+      "sourceRgbaSha256": "6414a6277964d852c096862cc612680d01281390320ce80d1b971c027e5b6c4e",
+      "runtimeRgbaSha256": "8cdfff1bca186598b7a2631993deaf8b7588ad9a7d7da45e39849da636e878dc"
+    },
+    {
+      "slot": "skill-6",
+      "sourceRgbaSha256": "a9fadd12e75d5e3fa566deedf2a839c66ae69caa831bb37bf27744c4b202e739",
+      "runtimeRgbaSha256": "3ac7d5e7b70a4a04281d74c6658ef10d38d7b902fea19d43effbaca0727aaaf3"
+    },
+    {
+      "slot": "skill-7",
+      "sourceRgbaSha256": "521635bd57dc1ea96a0ff412bcdccfb573494ca0e606790adc4c7331965050e3",
+      "runtimeRgbaSha256": "3afff7809a7ae673864ea10e65d9a19aa211c743c738c1ab2e3da53f753dff1e"
+    },
+    {
+      "slot": "skill-8",
+      "sourceRgbaSha256": "dd41c657c80e618d00c7a674443ab0efb405b129e5a7e0412fb33d2ecb63c598",
+      "runtimeRgbaSha256": "56001c50f7ae4bd755fe28173d9a1d41cea3ac6fd065061c269acad5d0625b44"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "skill-a",
+    "skill-b"
+  ],
+  "deterministicExpansion": true
+}
