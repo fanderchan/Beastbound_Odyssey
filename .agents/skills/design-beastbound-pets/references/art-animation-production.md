@@ -108,6 +108,19 @@ Do not claim every character appearance is supported because one protagonist com
 9. Run deterministic checks, then real `Main.tscn` screenshot/video review.
 10. Fix the first failed matrix before producing another pet or mounted combination.
 
+## Source evidence without repository bloat
+
+Formal installation must validate the complete production bundle before copying anything: original lossless generation sheets, exact prompts, 512px transparent source frames, deterministic processing metadata, per-action QC, and derived 256px runtime frames. Repository size is not a reason to skip that gate.
+
+The tracked runtime repository may use the validated `lean` archive mode when the same pixels would otherwise be stored repeatedly. Lean mode must retain:
+
+- every 256px runtime frame and combined contact/QC evidence;
+- every action's exact prompt, processing metadata, QC record, and immutable source/runtime hashes;
+- one lossless representative generation sheet for each independently authored battle view;
+- a source ledger that records all omitted 512px/source-archive hashes, ownership, origin, replacement path, and that full source validation occurred before install.
+
+Per-frame 512px splits and duplicate raw/clean/input intermediates may stay in the ignored local production archive because they are not runtime inputs. Never use lean mode to discard the only lossless generated source, hide a failed frame, weaken deterministic runtime derivation, or claim owner approval. Use `full` mode when an external source archive does not exist and the repository copy is the only durable evidence.
+
 ## Mandatory review scenes
 
 Use the isolated pet battle review lab and formal runtime path. At minimum record or inspect:
