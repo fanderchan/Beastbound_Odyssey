@@ -289,8 +289,11 @@ static func _append_bundle_errors(errors: Array[String]) -> void:
 		_append_pending_owner_review_error(errors, character_bundle, "人物")
 	var mounted_bundle := _read_json(MOUNTED_BUNDLE_META_PATH, "整体骑乘动作合同", errors)
 	if not mounted_bundle.is_empty():
-		if str(mounted_bundle.get("bundleId", "")) != MOUNTED_BUNDLE_ID:
-			errors.append("整体骑乘动作合同 bundleId 不一致")
+		var metadata_bundle_id := str(mounted_bundle.get("bundleId", "")).strip_edges()
+		if metadata_bundle_id == "":
+			errors.append("整体骑乘动作合同缺少 bundleId")
+		elif bool(mounted_bundle.get("runtimeEnabled", false)) and metadata_bundle_id != MOUNTED_BUNDLE_ID:
+			errors.append("已启用的整体骑乘动作合同 bundleId 不一致")
 		if str(mounted_bundle.get("characterId", "")) != CHARACTER_ID:
 			errors.append("整体骑乘动作合同 characterId 不一致")
 		if str(mounted_bundle.get("mountFormId", "")) != FORM_ID:
@@ -338,8 +341,11 @@ static func _append_runtime_size_error(errors: Array[String], bundle: Dictionary
 
 
 static func _append_pending_owner_review_error(errors: Array[String], bundle: Dictionary, label: String) -> void:
-	var quality = bundle.get("quality", {})
-	if not (quality is Dictionary) or str((quality as Dictionary).get("ownerReviewStatus", "")) != "pending":
+	var owner_status := str(bundle.get("ownerReviewStatus", "")).strip_edges()
+	if owner_status == "":
+		var quality = bundle.get("quality", {})
+		owner_status = str((quality as Dictionary).get("ownerReviewStatus", "")).strip_edges() if quality is Dictionary else ""
+	if owner_status != "pending":
 		errors.append("%s用户未评审前 ownerReviewStatus 必须保持 pending" % label)
 
 

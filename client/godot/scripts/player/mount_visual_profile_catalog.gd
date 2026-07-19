@@ -8,10 +8,35 @@ const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_
 const DATA_PATH := "res://data/mount_visual_profiles.json"
 const PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY := "integrated_mounted_body"
 const PRESENTATION_MODE_ON_FOOT_CHARACTER_FALLBACK := "on_foot_character_fallback"
+const QA_DEFAULT_WORLD_PRESENTATION_SCALE := 0.36
+const QA_DEFAULT_BATTLE_PRESENTATION_SCALE := 0.88
 
 static var _catalog_loaded: bool = false
 static var _catalog_cache: Dictionary = {}
 static var _world_plan_cache: Dictionary = {}
+static var _qa_preview_forms: Dictionary = {}
+
+
+static func enable_qa_preview_form(form_id: String) -> bool:
+	var normalized := form_id.strip_edges()
+	if not OS.is_debug_build() or normalized == "":
+		return false
+	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+	if not MountedCharacterAssetCatalog.is_qa_preview_enabled(character_id, normalized):
+		return false
+	_qa_preview_forms[normalized] = true
+	_clear_world_plan_cache_for_form(normalized)
+	return true
+
+
+static func disable_qa_preview_form(form_id: String) -> void:
+	var normalized := form_id.strip_edges()
+	_qa_preview_forms.erase(normalized)
+	_clear_world_plan_cache_for_form(normalized)
+
+
+static func is_qa_preview_enabled(form_id: String) -> bool:
+	return OS.is_debug_build() and bool(_qa_preview_forms.get(form_id.strip_edges(), false))
 
 
 static func catalog() -> Dictionary:
@@ -66,11 +91,34 @@ static func shadow_for_form(form_id: String) -> Dictionary:
 
 
 static func _profile_for_form_internal(form_id: String) -> Dictionary:
+	var normalized := form_id.strip_edges()
 	var forms = catalog().get("forms", {})
-	if not (forms is Dictionary):
+	if forms is Dictionary:
+		var value = (forms as Dictionary).get(normalized, {})
+		if value is Dictionary and not (value as Dictionary).is_empty():
+			return value as Dictionary
+	if not is_qa_preview_enabled(normalized):
 		return {}
-	var value = (forms as Dictionary).get(form_id.strip_edges(), {})
-	return value as Dictionary if value is Dictionary else {}
+	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+	if not MountedCharacterAssetCatalog.supports_combination(character_id, normalized):
+		return {}
+	return {
+		"characterId": character_id,
+		"mountedBundleId": MountedCharacterAssetCatalog.bundle_id_for_combination(character_id, normalized),
+		"worldVisualStrategy": MountedCharacterAssetCatalog.WORLD_VISUAL_STRATEGY,
+		"worldPresentationScale": QA_DEFAULT_WORLD_PRESENTATION_SCALE,
+		"battlePresentationScale": QA_DEFAULT_BATTLE_PRESENTATION_SCALE,
+		"battleDirections": {
+			"ally": "northwest",
+			"enemy": "southeast",
+		},
+		"shadow": {
+			"offset": [0, 4],
+			"size": [170, 28],
+			"alpha": 0.25,
+		},
+		"qaDerived": true,
+	}
 
 
 static func battle_direction_for_side(form_id: String, side: String) -> String:
@@ -196,3 +244,10 @@ static func _vector2(value) -> Vector2:
 	if value is Array and (value as Array).size() == 2:
 		return Vector2(float((value as Array)[0]), float((value as Array)[1]))
 	return Vector2.ZERO
+
+
+static func _clear_world_plan_cache_for_form(form_id: String) -> void:
+	var prefix := "%s|" % form_id.strip_edges()
+	for key_value in _world_plan_cache.keys():
+		if str(key_value).begins_with(prefix):
+			_world_plan_cache.erase(key_value)

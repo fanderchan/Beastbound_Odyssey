@@ -1,6 +1,9 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
+const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetBattleReviewModel := preload("res://scripts/battle/pet_battle_review_model.gd")
 
 const SPEED_STEPS: Array[float] = [0.25, 0.5, 1.0, 2.0]
@@ -63,6 +66,15 @@ func open(
 	mode = requested_mode if [PetBattleReviewModel.MODE_BRAWL, PetBattleReviewModel.MODE_DIRECTOR].has(requested_mode) else PetBattleReviewModel.MODE_BRAWL
 	focus_form_id = PetBattleReviewModel.normalized_form_id(requested_form_id)
 	mount_form_id = PetBattleReviewModel.normalized_mount_form_id(requested_mount_form_id)
+	# Pending production art is visible only inside an explicit debug review lab.
+	# Normal world and battle paths continue to require runtimeEnabled in the
+	# authoritative pet-art catalog.
+	PetActionAssetCatalog.enable_qa_preview_form(focus_form_id)
+	if mount_form_id != "":
+		PetActionAssetCatalog.enable_qa_preview_form(mount_form_id)
+		var mount_character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+		if MountedCharacterAssetCatalog.enable_qa_preview_combination(mount_character_id, mount_form_id):
+			MountVisualProfileCatalog.enable_qa_preview_form(mount_form_id)
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed)
 	placement = PetBattleReviewModel.PLACEMENT_BOTH_ALL
 	pool_id = PetBattleReviewModel.POOL_FORMAL
@@ -96,6 +108,14 @@ func close(restore_world: bool = true) -> void:
 	if not active and root == null:
 		return
 	active = false
+	PetActionAssetCatalog.disable_qa_preview_form(focus_form_id)
+	if mount_form_id != "":
+		PetActionAssetCatalog.disable_qa_preview_form(mount_form_id)
+		MountVisualProfileCatalog.disable_qa_preview_form(mount_form_id)
+		MountedCharacterAssetCatalog.disable_qa_preview_combination(
+			MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID,
+			mount_form_id
+		)
 	_generation += 1
 	director_step_id = ""
 	paused = false

@@ -2,7 +2,10 @@ extends Node2D
 
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
 const MountedCharacter2D := preload("res://scripts/player/mounted_character_2d.gd")
+const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
+const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
 const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const DIRECTIONS: Array[String] = [
@@ -38,6 +41,7 @@ const DIRECTION_VECTORS := {
 const DIRECTION_SECONDS := 1.8
 
 var elapsed: float = 0.0
+var form_id: String = FORM_ID
 var grid_mode: bool = true
 var recording_mode: bool = false
 var capture_path: String = ""
@@ -57,19 +61,33 @@ func _ready() -> void:
 	get_window().size = Vector2i(1280, 720)
 	get_window().content_scale_size = Vector2i(1280, 720)
 	for arg in OS.get_cmdline_user_args():
-		if arg == "--record-mount-directions":
+		if arg.begins_with("--mount-review-form="):
+			var requested_form_id := arg.trim_prefix("--mount-review-form=").strip_edges()
+			if not PetTemplateCatalog.form_by_id(requested_form_id).is_empty():
+				form_id = requested_form_id
+		elif arg == "--record-mount-directions":
 			recording_mode = true
 			grid_mode = false
 		elif arg.begins_with("--capture-mount-directions="):
 			capture_path = arg.trim_prefix("--capture-mount-directions=").strip_edges()
 			grid_mode = true
 	CharacterActionAssetCatalog.warm()
-	PetActionAssetCatalog.warm_world_form(FORM_ID)
+	_enable_qa_assets_if_needed()
+	PetActionAssetCatalog.warm_world_form(form_id)
 	if grid_mode:
 		_build_grid()
 	else:
 		_build_cycle()
 	queue_redraw()
+
+
+func _exit_tree() -> void:
+	PetActionAssetCatalog.disable_qa_preview_form(form_id)
+	MountVisualProfileCatalog.disable_qa_preview_form(form_id)
+	MountedCharacterAssetCatalog.disable_qa_preview_combination(
+		MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID,
+		form_id
+	)
 
 
 func _process(delta: float) -> void:
@@ -99,7 +117,7 @@ func _draw() -> void:
 
 
 func _build_grid() -> void:
-	_add_label("人物 / 宠物 / 人骑宠 · 真八方向视觉验收", Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("人物 / %s / 人骑宠 · 真八方向视觉验收" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
 	_add_label("每格均为独立源方向，不做水平镜像；三栏按游戏内世界比例等比缩放", Vector2(43, 58), 16, Color("c8d8cf"))
 	for index in range(DIRECTIONS.size()):
 		var direction := DIRECTIONS[index]
@@ -120,7 +138,7 @@ func _build_grid() -> void:
 
 
 func _build_cycle() -> void:
-	_add_label("人物 / 宠物 / 人骑宠 · 真八方向逐项录像", Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("人物 / %s / 人骑宠 · 真八方向逐项录像" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
 	_add_label("独立八向源图 · 无运行时镜像 · 骑手、坐骑与运动轴必须一致", Vector2(43, 58), 16, Color("c8d8cf"))
 	_add_label("人物", Vector2(190, 126), 23, Color("e8d58f"))
 	_add_label("宠物", Vector2(596, 126), 23, Color("e8d58f"))
@@ -164,7 +182,7 @@ func _update_character(sprite: Sprite2D, direction: String, animation_elapsed: f
 
 func _update_pet(sprite: Sprite2D, direction: String, animation_elapsed: float) -> void:
 	sprite.flip_h = false
-	sprite.texture = PetActionAssetCatalog.world_texture_for_elapsed(FORM_ID, direction, "walk", animation_elapsed)
+	sprite.texture = PetActionAssetCatalog.world_texture_for_elapsed(form_id, direction, "walk", animation_elapsed)
 
 
 func _character_sprite(position_value: Vector2, scale_value: float) -> Sprite2D:
@@ -185,7 +203,7 @@ func _mounted_character(position_value: Vector2, direction: String, scale_value:
 	mounted.set_script(MountedCharacter2D)
 	mounted.position = position_value
 	add_child(mounted)
-	mounted.call("set_mount_form", FORM_ID)
+	mounted.call("set_mount_form", form_id)
 	mounted.call("set_presentation_scale", scale_value)
 	mounted.call("set_visual_state", direction, "walk", 0.0)
 	return mounted
@@ -255,3 +273,18 @@ func _add_label(text_value: String, position_value: Vector2, font_size: int, col
 	label.add_theme_color_override("font_color", color)
 	add_child(label)
 	return label
+
+
+func _enable_qa_assets_if_needed() -> void:
+	if not PetActionAssetCatalog.supports_world_form(form_id):
+		PetActionAssetCatalog.enable_qa_preview_form(form_id)
+	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
+		MountedCharacterAssetCatalog.enable_qa_preview_combination(character_id, form_id)
+	if not MountVisualProfileCatalog.supports_form(form_id):
+		MountVisualProfileCatalog.enable_qa_preview_form(form_id)
+
+
+func _form_display_name() -> String:
+	var form := PetTemplateCatalog.form_by_id(form_id)
+	return str(form.get("formName", form_id))

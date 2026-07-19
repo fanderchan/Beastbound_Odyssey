@@ -65,7 +65,7 @@ func _process(delta: float) -> void:
 		_set_animation_state("idle")
 	animation_visual_elapsed += animation_delta
 	if formal_asset_enabled:
-		var frame_step := 1.0 / maxf(1.0, PetActionAssetCatalog.world_action_fps(animation_state))
+		var frame_step := 1.0 / maxf(1.0, PetActionAssetCatalog.world_action_fps(animation_state, current_form_id))
 		if animation_visual_elapsed < frame_step:
 			return
 		animation_visual_elapsed = fmod(animation_visual_elapsed, frame_step)

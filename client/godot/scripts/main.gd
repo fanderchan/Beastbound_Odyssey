@@ -58,6 +58,7 @@ const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.g
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
+const MountedActionAssetCheck := preload("res://scripts/qa/mounted_action_asset_check.gd")
 const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_check.gd")
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
@@ -806,6 +807,10 @@ var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
 var auto_pet_action_asset_check: bool = false
+var auto_pet_action_asset_form_id: String = ""
+var auto_mounted_action_asset_check: bool = false
+var auto_mounted_action_asset_form_id: String = ""
+var auto_mounted_action_asset_world_only: bool = false
 var auto_character_mount_art_check: bool = false
 var auto_pet_skill_training_check: bool = false
 var auto_village_healer_check: bool = false
@@ -1456,6 +1461,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_template_catalog_check")
 	elif auto_pet_action_asset_check:
 		call_deferred("_run_auto_pet_action_asset_check")
+	elif auto_mounted_action_asset_check:
+		call_deferred("_run_auto_mounted_action_asset_check")
 	elif auto_character_mount_art_check:
 		call_deferred("_run_auto_character_mount_art_check")
 	elif auto_pet_skill_training_check:
@@ -2152,6 +2159,14 @@ func _apply_preview_window_args() -> void:
 			auto_pet_template_catalog_check = true
 		elif arg == "--auto-pet-action-asset-check":
 			auto_pet_action_asset_check = true
+		elif arg.begins_with("--auto-pet-action-asset-form="):
+			auto_pet_action_asset_form_id = arg.trim_prefix("--auto-pet-action-asset-form=").strip_edges()
+		elif arg == "--auto-mounted-action-asset-check":
+			auto_mounted_action_asset_check = true
+		elif arg.begins_with("--auto-mounted-action-asset-form="):
+			auto_mounted_action_asset_form_id = arg.trim_prefix("--auto-mounted-action-asset-form=").strip_edges()
+		elif arg == "--auto-mounted-action-asset-world-only":
+			auto_mounted_action_asset_world_only = true
 		elif arg == "--auto-character-mount-art-check":
 			auto_character_mount_art_check = true
 		elif arg == "--auto-pet-skill-training-check":
@@ -5512,8 +5527,17 @@ func _run_auto_pet_template_catalog_check() -> void:
 
 
 func _run_auto_pet_action_asset_check() -> void:
-	var result := PetActionAssetCheck.run()
+	var result := PetActionAssetCheck.run(auto_pet_action_asset_form_id)
 	print("pet action asset check ready: %s" % JSON.stringify(result))
+	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
+
+
+func _run_auto_mounted_action_asset_check() -> void:
+	var result := MountedActionAssetCheck.run(
+		auto_mounted_action_asset_form_id,
+		not auto_mounted_action_asset_world_only
+	)
+	print("mounted action asset check ready: %s" % JSON.stringify(result))
 	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
 
@@ -8496,6 +8520,7 @@ func _refresh_battle_target_seed() -> void:
 func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
+	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
 func _end_battle(_restore_world: bool = true) -> void:
@@ -10862,6 +10887,7 @@ func _play_next_battle_event() -> void:
 		var actor_snapshots := _battle_actor_snapshots_by_id()
 		battle_state = BattleModel.apply_battle_event(battle_state, event)
 		PetActionAssetCatalog.warm_battle_state(battle_state)
+		MountedCharacterAssetCatalog.warm_battle_state(battle_state)
 		_update_battle_player_zero_hp_seen()
 		battle_state["phase"] = "round_events"
 		if bool(battle_state.get("lastEventApplied", false)):
@@ -13795,7 +13821,7 @@ func _draw_battle_on_foot_player_actor(pos: Vector2, visual_scale: float, alpha:
 
 
 func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
-	var action := PetActionAssetCatalog.action_for_battle_state(state)
+	var action := PetActionAssetCatalog.action_for_battle_state(state, form_id)
 	var view := PetActionAssetCatalog.battle_view_for_side(side)
 	var texture: Texture2D
 	if action == "idle":
@@ -13830,7 +13856,7 @@ func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: Stri
 					reveal_progress
 				)
 		if pet_action_art_preview:
-			var action_seconds := float(PetActionAssetCatalog.FRAME_COUNTS[action]) / PetActionAssetCatalog.action_fps(action)
+			var action_seconds := float(PetActionAssetCatalog.frame_count_for_action(form_id, action)) / PetActionAssetCatalog.action_fps(action, form_id)
 			progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
 		texture = PetActionAssetCatalog.texture_for_progress(form_id, view, action, progress)
 	if texture == null:
@@ -13840,7 +13866,7 @@ func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: Stri
 		Vector2(-target_size * 0.5, -target_size * 0.92),
 		Vector2(target_size, target_size)
 	)
-	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side) else 1.0
+	var horizontal_scale := -1.0 if PetActionAssetCatalog.battle_flip_h_for_side(side, form_id) else 1.0
 	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -13874,17 +13900,75 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
 		return false
 	var state := str(actor.get("actionState", "idle")).strip_edges().to_lower()
-	var action := "walk" if ["attack", "combo", "skill", "counter_attack", "multi_attack", "dodge", "escape"].has(state) else "idle"
-	# 战场敌左己右：己方读取背向左上，敌方读取正向右下。
-	# 两侧都使用独立源图，不再运行时镜像或拼接人物、宠物、鞍垫和近景层。
-	var direction := MountVisualProfileCatalog.battle_direction_for_side(form_id, side)
-	var texture := MountedCharacterAssetCatalog.world_texture_for_elapsed(
-		character_id,
-		form_id,
-		direction,
-		action,
-		battle_pet_art_elapsed
-	)
+	var texture: Texture2D
+	var horizontal_scale := 1.0
+	if MountedCharacterAssetCatalog.supports_battle_combination(character_id, form_id):
+		var action := MountedCharacterAssetCatalog.battle_action_for_state(character_id, form_id, state)
+		var view := MountedCharacterAssetCatalog.battle_view_for_side(side)
+		horizontal_scale = -1.0 if MountedCharacterAssetCatalog.battle_flip_h_for_side(character_id, form_id, side) else 1.0
+		if action == "idle":
+			texture = MountedCharacterAssetCatalog.battle_texture_for_elapsed(
+				character_id,
+				form_id,
+				view,
+				action,
+				battle_pet_art_elapsed
+			)
+		else:
+			var progress := 1.0 if state == "captured" else _battle_current_event_progress()
+			var event_type := str(battle_current_event.get("type", ""))
+			var reveal_progress := _battle_event_result_reveal_progress(battle_current_event) if not battle_current_event.is_empty() else 0.0
+			var actor_id := str(actor.get("id", ""))
+			if action == "attack" and ["attack", "skill_attack", "counter_attack"].has(event_type):
+				var participant_ids: Array = battle_current_event.get("participantIds", [str(battle_current_event.get("attackerId", ""))])
+				if participant_ids.has(actor_id):
+					if event_type == "attack" and bool(battle_current_event.get("counterTriggered", false)) and progress >= reveal_progress:
+						progress = BattleVisualPresentationModel.MELEE_CONTACT_ACTION_PROGRESS
+					elif not battle_last_event_launch:
+						progress = BattleVisualPresentationModel.melee_action_progress(progress, reveal_progress)
+			if action == "stagger":
+				progress = BattleVisualPresentationModel.counter_ko_stagger_progress(
+					_battle_current_event_progress(),
+					reveal_progress
+				)
+			if state == "down":
+				var is_current_target := not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
+				if is_current_target and _battle_last_event_is_nonlaunch_counter_ko(battle_current_event):
+					progress = BattleVisualPresentationModel.counter_ko_down_progress(
+						_battle_current_event_progress(),
+						reveal_progress
+					)
+				else:
+					progress = BattleVisualPresentationModel.down_action_progress(
+						is_current_target,
+						_battle_current_event_progress(),
+						reveal_progress
+					)
+			if pet_action_art_preview:
+				var action_seconds := (
+					float(MountedCharacterAssetCatalog.battle_frame_count(character_id, form_id, action))
+					/ MountedCharacterAssetCatalog.battle_action_fps(character_id, form_id, action)
+				)
+				progress = fmod(battle_pet_art_elapsed, action_seconds) / action_seconds
+			texture = MountedCharacterAssetCatalog.battle_texture_for_progress(
+				character_id,
+				form_id,
+				view,
+				action,
+				progress
+			)
+	else:
+		var world_action := "walk" if ["attack", "combo", "skill", "counter_attack", "multi_attack", "dodge", "escape"].has(state) else "idle"
+		# Legacy canary compatibility: until its formal mounted battle repaint is
+		# complete, the released Bui combination keeps its independent world frames.
+		var direction := MountVisualProfileCatalog.battle_direction_for_side(form_id, side)
+		texture = MountedCharacterAssetCatalog.world_texture_for_elapsed(
+			character_id,
+			form_id,
+			direction,
+			world_action,
+			battle_pet_art_elapsed
+		)
 	if texture == null:
 		return false
 	var presentation_scale := MountVisualProfileCatalog.battle_presentation_scale_for_form(form_id) * visual_scale * 0.72
@@ -13893,7 +13977,7 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 		Vector2(-128.0 * presentation_scale, -ground_anchor_y * presentation_scale),
 		Vector2(256.0, 256.0) * presentation_scale
 	)
-	draw_set_transform(pos, rotation_angle, Vector2.ONE)
+	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(texture, texture_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true

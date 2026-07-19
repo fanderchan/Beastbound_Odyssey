@@ -87,6 +87,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Audit every species profile with `node tools/pet_level_one_percentile_audit.mjs` after changing `outputBase`, `initialOutputSpread`, `distribution`, or `rareExtremeRate`; the runtime CDF must continue matching at least 10,000 authority rolls per profile.
 - A concept/numeric-only request keeps `presentation.artStatus=deferred` and records a future brief. Any non-deferred visual status must include a validated `presentation.artProduction` contract; read `references/art-animation-production.md` and route generation/review through `$stoneage9-art-director`.
 - Do not call a runtime pet visually complete because it has an identity image, a side-view loop, two mirrored source views, or only `idle/walk`. Use the scope-specific world, battle, mounted, review-scene, and owner-approval gates.
+- Validate battle facing from the final rendered board, never from source-view filenames alone. Beastbound's pet and integrated-mounted paths share one canonical mapping: enemy uses `front_3quarter_sw + flipH=true`, ally uses `back_3quarter_ne + flipH=true`, and both final silhouettes face the arena centre. Reject any per-bundle override, contact sheet, or one-sided preview that lets a mounted actor face away from its opponent or disagree with its same-side battle pet.
 
 ## Route formal visual production
 
@@ -131,7 +132,7 @@ Then select affected checks:
 - Encounter/capture: encounter table, capture tools/settings/result, map/region, server battle-room capture, and hang settlement checks.
 - Management/inheritance: pet safety, stable capacity, skill training, rebirth/evolution/fusion transaction and replay tests.
 - UI/runtime: launch the real 1280x720 client; add idle/moving/input performance evidence when touching visible or hot paths.
-- Formal art/animation: validate the production contract, asset manifest and action catalog; review true-eight world loops plus the focused battle scenarios in `references/art-animation-production.md`, then record a real 1280×720 Godot MP4. Automated checks do not replace owner visual approval.
+- Formal art/animation: validate the production contract, asset manifest and action catalog; review true-eight world loops plus the focused battle scenarios in `references/art-animation-production.md`, then record a real 1280×720 Godot MP4. The evidence must show both formations simultaneously and prove the applied view/flip mapping faces inward for pet and mounted actors. Automated checks do not replace owner visual approval.
 
 Report exact commands, results, generated CSV/JSON paths, and residual risks. For hand-feel, provide concrete play steps, observation metrics, and pass criteria.
 

@@ -57,10 +57,30 @@ If a supported combination is missing, show the on-foot character. Never guess a
 
 The current fixed 10V10 battlefield renders two formal diagonals, not all eight world facings:
 
-- ally lower-left: `back_3quarter_ne`, facing the enemy;
-- enemy upper-right: `front_3quarter_sw`, facing the ally.
+- enemy upper-left / screen-left formation: `front_3quarter_sw`, facing the ally;
+- ally lower-right / screen-right formation: `back_3quarter_ne`, facing the enemy.
 
 Produce both views for required pet and mounted battle actions. Do not multiply every battle row into eight unused directions unless the battle camera/facing contract changes.
+
+### Final-facing contract: inspect rendered geometry, not the filename
+
+The two source-view names describe authored camera views, not their final on-board direction. Beastbound's canonical presentation mapping is:
+
+| Side | Authored source view | Applied `flipH` | Required final direction |
+| --- | --- | --- | --- |
+| `enemy` | `front_3quarter_sw` | `true` | southeast, toward arena centre |
+| `ally` | `back_3quarter_ne` | `true` | northwest, toward arena centre |
+
+Standalone pets and integrated mounted whole-frame actors must use the same mapping. Mounted rendering delegates to the pet battle-facing contract; bundle metadata may describe the mapping but must not override it. If generated frames only look correct with `flipH=false`, normalize or regenerate that pack instead of creating a private exception.
+
+This is a mandatory visual and automated gate:
+
+- assert both source view and applied flip for `enemy` and `ally`;
+- render both formations together, with same-side pet and mounted actors visible at once;
+- reject outward-facing silhouettes, a mounted/pet disagreement, or a pass inferred from separate source contact sheets;
+- inspect at least idle, approach/contact, return/down and one counter/knock-away moment on both sides.
+
+A complete 12-action/180-frame bundle still fails when this final-facing gate fails.
 
 The release semantic matrix is:
 
@@ -99,7 +119,7 @@ Do not claim every character appearance is supported because one protagonist com
 
 1. Inspect the pet design contract, existing character pack, asset manifests and closest same-body-plan pet.
 2. Write the identity lock and full subject/direction/action matrix.
-3. Approve cardinal and formal battle key poses at actual relative scale.
+3. Approve cardinal and formal battle key poses at actual relative scale, then prove both teams face inward after the runtime view/flip mapping is applied.
 4. Generate standalone pet true-eight idle/walk and its contact sheet/video.
 5. Generate each supported mounted combination as true-eight whole-frame art and review seat, anatomy and gait.
 6. Generate both battle views for core pet and mounted actions from the same identity board.
@@ -141,6 +161,7 @@ Use fixed seeds/director scenes for rare combinations, then one natural randomiz
 - Identity, anatomy, scale, palette, markings, body count and equipment do not drift.
 - World and battle baselines, alpha bounds and frame edges remain stable.
 - At 1280×720, events remain readable with the message/log panel ignored.
+- Both teams face the arena centre in the same real-client frame; mounted actors and their same-side battle pets use identical final-facing mappings during idle, contact, return and down states.
 - No unit leaves a stale shadow/marker, crosses the wrong facing, slides home, or overlaps its target beyond the authored contact distance.
 - The MP4 comes from the real Godot Metal path, has verified metadata and decodes fully.
 - Asset checks, catalog/manifest checks, relevant Godot action/mount/battle checks and `git diff --check` pass.

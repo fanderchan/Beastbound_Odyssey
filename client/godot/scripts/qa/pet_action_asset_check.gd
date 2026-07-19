@@ -8,35 +8,45 @@ const BUNDLE_META_PATH := "res://assets/pets/novice_sprout_bui/action-bundle-met
 const OWNERSHIP_RECORD_PATH := "res://assets/pets/novice_sprout_bui/identity/source-and-ownership.md"
 
 
-static func run() -> Dictionary:
-	var errors := PetActionAssetCatalog.validation_errors()
+static func run(requested_form_id: String = "") -> Dictionary:
+	var form_id := requested_form_id.strip_edges()
+	var explicit_form_requested := form_id != ""
+	if form_id == "":
+		form_id = PetActionAssetCatalog.FORM_ID
+	var was_runtime_supported := PetArtCatalog.supports_form(form_id)
+	var preview_enabled_here := false
+	if explicit_form_requested or not was_runtime_supported:
+		preview_enabled_here = PetActionAssetCatalog.enable_qa_preview_form(form_id)
+	var require_full_battle := explicit_form_requested or form_id != PetActionAssetCatalog.FORM_ID
+	var errors := PetActionAssetCatalog.validation_errors_for_form(form_id, require_full_battle)
 	errors.append_array(PetArtCatalog.validation_errors())
 	errors.append_array(BattleVisualPresentationModel.validation_errors())
-	_append_contract_errors(errors)
-	var warmed_world := PetActionAssetCatalog.warm_world_form(PetActionAssetCatalog.FORM_ID)
+	if form_id == PetActionAssetCatalog.FORM_ID:
+		_append_contract_errors(errors)
+	var warmed_world := PetActionAssetCatalog.warm_world_form(form_id)
 	var world_texture := PetActionAssetCatalog.world_texture_for_elapsed(
-		PetActionAssetCatalog.FORM_ID,
+		form_id,
 		"southwest",
 		"walk",
 		0.36
 	)
-	var warmed_battle := PetActionAssetCatalog.warm_battle_form(PetActionAssetCatalog.FORM_ID)
+	var warmed_battle := PetActionAssetCatalog.warm_battle_form(form_id)
 	var battle_texture := PetActionAssetCatalog.texture_for_progress(
-		PetActionAssetCatalog.FORM_ID,
+		form_id,
 		PetActionAssetCatalog.battle_view_for_side("ally"),
-		PetActionAssetCatalog.action_for_battle_state("attack"),
+		PetActionAssetCatalog.action_for_battle_state("attack", form_id),
 		0.62
 	)
 	var down_texture := PetActionAssetCatalog.texture_for_progress(
-		PetActionAssetCatalog.FORM_ID,
+		form_id,
 		PetActionAssetCatalog.battle_view_for_side("enemy"),
-		PetActionAssetCatalog.action_for_battle_state("down"),
+		PetActionAssetCatalog.action_for_battle_state("down", form_id),
 		1.0
 	)
 	var stagger_texture := PetActionAssetCatalog.texture_for_progress(
-		PetActionAssetCatalog.FORM_ID,
+		form_id,
 		PetActionAssetCatalog.battle_view_for_side("ally"),
-		PetActionAssetCatalog.action_for_battle_state("wounded_return"),
+		PetActionAssetCatalog.action_for_battle_state("wounded_return", form_id),
 		0.55
 	)
 	if not warmed_world or world_texture == null:
@@ -47,13 +57,33 @@ static func run() -> Dictionary:
 		errors.append("战斗昏迷末帧未能加载")
 	if stagger_texture == null:
 		errors.append("致死反击负伤退行帧未能加载")
+	if require_full_battle:
+		for state in ["skill", "dodge", "counter_attack", "launched", "revive"]:
+			var action := PetActionAssetCatalog.action_for_battle_state(state, form_id)
+			var texture := PetActionAssetCatalog.texture_for_progress(
+				form_id,
+				PetActionAssetCatalog.battle_view_for_side("enemy"),
+				action,
+				0.5
+			)
+			if texture == null:
+				errors.append("十二动作状态未能加载：%s -> %s" % [state, action])
+	var battle_actions := PetActionAssetCatalog.battle_actions_for_form(form_id)
+	var battle_frame_count := 0
+	for action in battle_actions:
+		battle_frame_count += PetActionAssetCatalog.frame_count_for_action(form_id, action) * PetActionAssetCatalog.VIEWS.size()
+	if preview_enabled_here:
+		PetActionAssetCatalog.disable_qa_preview_form(form_id)
+		if not was_runtime_supported and PetActionAssetCatalog.supports_form(form_id):
+			errors.append("QA 结束后 owner pending 宠物仍可进入普通运行路径：%s" % form_id)
 	return {
 		"ok": errors.is_empty(),
+		"formId": form_id,
 		"artCatalogForms": PetArtCatalog.all_form_records().size(),
 		"artCatalogRuntimeForms": PetArtCatalog.runtime_form_records().size(),
-		"battleFrameCount": 100,
+		"battleFrameCount": battle_frame_count,
 		"battleViews": PetActionAssetCatalog.VIEWS.size(),
-		"battleActions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),
+		"battleActions": battle_actions.size(),
 		"worldFrameCount": 40,
 		"worldDirections": 8,
 		"worldUsesRuntimeMirroring": false,
@@ -105,8 +135,12 @@ static func _append_contract_errors(errors: Array[String]) -> void:
 	if not FileAccess.file_exists(OWNERSHIP_RECORD_PATH):
 		errors.append("缺少来源与归属记录：%s" % OWNERSHIP_RECORD_PATH)
 	var quality := bundle.get("quality", {}) as Dictionary
-	if bool(quality.get("formalReleaseActionPackComplete", true)):
-		errors.append("七动作试产不能误标为正式发行完整动作包")
+	if bool(quality.get("formalReleaseActionPackComplete", false)):
+		var action_specs := bundle.get("actions", {}) as Dictionary
+		for action in PetActionAssetCatalog.FULL_BATTLE_ACTIONS:
+			var spec_value = action_specs.get(action, {})
+			if not (spec_value is Dictionary) or int((spec_value as Dictionary).get("frameCount", 0)) <= 0:
+				errors.append("正式十二动作完成标记缺少动作事实：%s" % action)
 	if str(quality.get("ownerReviewStatus", "")) != "pending":
 		errors.append("用户尚未评审，ownerReviewStatus 必须保持 pending")
 
