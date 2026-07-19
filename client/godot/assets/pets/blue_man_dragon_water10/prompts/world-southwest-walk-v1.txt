@@ -1,0 +1,11 @@
+Create a seamless 4-frame world-walk animation strip for this exact Blue Man Dragon facing SOUTHWEST/lower-left in one fixed true 45-degree three-quarter view. Preserve the exact referenced identity, camera, body proportions, deep cobalt-blue scales, cream muzzle, continuous pale-aqua belly plates, amber eyes, exactly one pair of swept main crown fins, exactly one pair of cheek fins, one short central navy forehead scale, two arms, two digitigrade legs, three cream blunt claws per hand and foot where perspective permits, one thick unbranched balance tail with one aqua wedge fin, and the same HD hand-painted 2.5D RPG sprite style.
+
+Exactly 4 isolated full-body frames in one horizontal row, equal cells, identical scale, common feet ground baseline, stable head/torso volume and the same southwest travel axis.
+Frame beats left to right:
+1 southwest-facing left-foot-forward/right-foot-back contact, right arm forward, tail counterbalances;
+2 passing/compression over the planted foot, opposite limbs cross naturally;
+3 right-foot-forward/left-foot-back contact, left arm forward, tail counterbalances opposite;
+4 opposite passing/rise, completing a seamless loop back to frame 1.
+It must read as a real alternating bipedal walk toward southwest, not four identical images, not whole-body vertical bobbing, not running, and not a turn through other facings. Hips, knees, feet, arms and tail move coherently while head and torso stay stable.
+
+Keep every creature compact and centered with at least 45px empty margin in its cell. No tail, crown fin, cheek fin, hand or foot may cross a cell boundary; nothing cropped. Perfectly uniform flat chroma-key magenta #FF00FF background. No extra fins, horns, wings, limbs, tails or claws; no text, labels, borders, shadow, scenery, effects, UI, logo or watermark.

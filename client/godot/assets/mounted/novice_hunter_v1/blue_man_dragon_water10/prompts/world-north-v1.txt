@@ -1,0 +1,14 @@
+Use case: stylized-concept
+Asset type: production 2D game sprite animation board, one exact integrated rider-and-mount subject
+
+Reference images: Image 1 is the locked integrated novice-hunter-riding-blue-man-dragon identity and is authoritative for anatomy, scale, saddle, contact, palette and rendering. Image 2 is the accepted SOUTH animation board and is authoritative for the exact same subject identity, world-sprite scale and gait cadence, but do not rotate or mirror its pixels. Image 3 is the exact blue man dragon identity. Image 4 is the exact novice hunter identity.
+
+Create one independently drawn NORTH-facing world-movement animation board. Rider and dragon both face directly away from the viewer/up-screen in a clear rear view in every pose. Show the hunter's back, cross-body strap/pouch, brown hair/bone hairpin, ochre fur-trimmed tunic, red sash and boots; show the dragon's paired head-fin backs, dark navy dorsal ridge, thick tail, rear legs and saddle contact. Do not show a front-facing human or dragon face. Preserve the exact bear-sized upright bipedal cobalt-blue species, paired main fins, paired cheek fins, central short scute, two arms, two digitigrade legs and three claws per extremity.
+
+Layout: precise 3-column by 2-row board on perfectly flat solid #FF00FF. Six equal invisible square cells; no divider, label, text, shadow, floor or scenery. Top-left idle; top-middle contact A; top-right passing A; bottom-left opposite contact B; bottom-middle passing B; bottom-right repeated idle loop check. Same camera, scale, saddle, proportions and ground baseline with generous padding.
+
+Pelvis stays weight-bearing in the low saddle; thighs, boots, hands, reins and rear-view occlusion remain coherent. Show a genuine alternating four-phase bipedal gait with distinct leg contacts, hip/knee/ankle changes, tail counterbalance and rider weight response. No translated or vertical-bob clones. Each cell is one newly drawn integrated whole-frame rider+saddle+mount illustration.
+
+Style: original high-definition hand-painted 2.5D East Asian pet-RPG world sprite, modern-HD nostalgic spirit, crisp at 160px map scale, soft scale texture, plum-navy outline, saturated cobalt/cyan palette.
+
+Avoid: front/three-quarter/side view, visible front faces, rider and dragon facing different axes, mirroring, collage, quadrupedal dragon, anatomy drift, extra/missing fins or limbs, wrong claws, thin tail, miniature/floating rider, missing boots/hands, detached reins, changed outfit, armor/weapons/effects, text, shadows or contaminated background.

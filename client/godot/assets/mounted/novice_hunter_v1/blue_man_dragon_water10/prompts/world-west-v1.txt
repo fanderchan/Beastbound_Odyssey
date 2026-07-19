@@ -1,0 +1,14 @@
+Use case: stylized-concept
+Asset type: production 2D game sprite animation board, one exact integrated rider-and-mount subject
+
+Reference images: Image 1 is the locked integrated novice-hunter-riding-blue-man-dragon identity and is authoritative for anatomy, scale, saddle, contact, palette and rendering. Image 2 is the accepted SOUTH animation board and is authoritative for the exact same subject identity, world-sprite scale and five-pose gait cadence, but do not rotate or mirror its pixels. Image 3 is the exact blue man dragon species identity. Image 4 is the exact novice hunter identity.
+
+Create one independently drawn WEST-facing world-movement animation board. Rider and dragon both face directly left in a clean side profile in every pose. Preserve the exact adult rider and ochre fur-trimmed hunter outfit, and the exact bear-sized upright bipedal cobalt-blue dragon with pale-cyan belly plates, amber eye, cream muzzle/claws, thick tail, dark navy dorsal plates, two large paired turquoise-membrane head fins, two small paired cheek fins, one central short navy scute, two arms, two digitigrade legs and three claws per hand/foot. Preserve believable hidden far-side anatomy rather than deleting or duplicating limbs.
+
+Layout: precise 3-column by 2-row board on perfectly flat solid #FF00FF. Six equal invisible square cells, no dividers, labels, text, shadow, floor or scenery. One complete centered whole-body integrated subject per cell with generous padding. Top-left idle. Top-middle walk phase 1 contact A. Top-right phase 2 passing A. Bottom-left phase 3 opposite contact B. Bottom-middle phase 4 passing B. Bottom-right repeated idle loop check. Same camera, orthographic/isometric 2.5D projection, scale, proportions, saddle position and ground baseline in all cells.
+
+Rider pelvis stays weight-bearing in the low saddle behind the neck; thighs straddle, hands hold short reins, boots and near/far occlusion remain coherent. Show a genuine four-phase alternating bipedal side-profile gait with visibly different hips, knees, ankles, foot contacts, tail counterbalance and natural rider weight transfer. No translated/vertical-bob clones. Every cell is one newly drawn whole-frame rider+saddle+mount illustration, never a collage.
+
+Style: original high-definition hand-painted 2.5D East Asian pet-RPG world sprite, modern-HD nostalgic spirit, crisp at 160px map scale, soft scale texture, plum-navy outline, saturated cobalt/cyan palette.
+
+Avoid: facing right, three-quarter/front/back view, rider and dragon on different axes, mirrored artwork, quadrupedal dragon, anatomy/identity drift, extra/missing fins or limbs, wrong claws, thin tail, miniature/floating rider, missing hands/boots, detached reins, changed costume, armor, weapons, effects, text, shadows or contaminated background.

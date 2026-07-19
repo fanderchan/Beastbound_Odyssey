@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": ".run/art_batch_phase320/blue_man_dragon/world-production/prepared/north.png",
+  "output": ".run/art_batch_phase320/blue_man_dragon/world-production/repacked/north.png",
+  "rows": 1,
+  "cols": 4,
+  "key": "#F706F5",
+  "sharedScale": 1.0,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        141,
+        157,
+        414,
+        635
+      ],
+      "sourceArea": 82211,
+      "outputSize": [
+        279,
+        484
+      ],
+      "pastePosition": [
+        105,
+        272
+      ],
+      "cellMargins": [
+        105,
+        272,
+        105,
+        48
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        615,
+        160,
+        875,
+        630
+      ],
+      "sourceArea": 78906,
+      "outputSize": [
+        266,
+        476
+      ],
+      "pastePosition": [
+        600,
+        280
+      ],
+      "cellMargins": [
+        111,
+        280,
+        112,
+        48
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        1065,
+        157,
+        1343,
+        639
+      ],
+      "sourceArea": 83444,
+      "outputSize": [
+        284,
+        488
+      ],
+      "pastePosition": [
+        1080,
+        268
+      ],
+      "cellMargins": [
+        102,
+        268,
+        103,
+        48
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        0,
+        3
+      ],
+      "sourceBbox": [
+        1535,
+        157,
+        1810,
+        632
+      ],
+      "sourceArea": 82132,
+      "outputSize": [
+        281,
+        481
+      ],
+      "pastePosition": [
+        1571,
+        275
+      ],
+      "cellMargins": [
+        104,
+        275,
+        104,
+        48
+      ]
+    }
+  ]
+}

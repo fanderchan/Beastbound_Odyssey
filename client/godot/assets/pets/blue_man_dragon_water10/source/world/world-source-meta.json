@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "createdAt": "2026-07-19",
+  "generator": "OpenAI built-in image generation",
+  "archivePolicy": "tracked_lossless_webp_with_original_file_and_decoded_pixel_sha256",
+  "externalSourceAssetsUsed": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "sources": [
+    {
+      "sourceId": "idle-8-direction",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/idle-8-direction.png",
+      "originalPngSha256": "bbbab210fdd919d036f7cc251fa885586d599dae556e1e796b114303abd39b4a",
+      "originalMode": "RGB",
+      "originalSize": [
+        1536,
+        1024
+      ],
+      "originalDecodedPixelSha256": "06ddefca75d9ede7425f0431db2a0fdccde1130569c91832103d9f25a0a8cc07",
+      "losslessWebp": "source/world/raw/world-idle-8-direction-raw.webp",
+      "losslessWebpSha256": "b3612fbbf47a5d1235af9993b0ad02304097aa3dd84a7589d10878b58a7592b4",
+      "losslessWebpDecodedPixelSha256": "06ddefca75d9ede7425f0431db2a0fdccde1130569c91832103d9f25a0a8cc07",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-south",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/south.png",
+      "originalPngSha256": "f134e7e628d3e2684781a16a5385d430337ac3a7afb88418b50cfb6c40f9dc95",
+      "originalMode": "RGB",
+      "originalSize": [
+        1983,
+        793
+      ],
+      "originalDecodedPixelSha256": "be5489e312b1c624e206a0a9fd174b1ec9cf42d26603d93c4080f8ab7d628df9",
+      "losslessWebp": "source/world/raw/world-walk-south-raw.webp",
+      "losslessWebpSha256": "0bf9e6007b9b71442910ab25a93ed1cfc99aa1cfd51f1ba60857a97c287e59bb",
+      "losslessWebpDecodedPixelSha256": "be5489e312b1c624e206a0a9fd174b1ec9cf42d26603d93c4080f8ab7d628df9",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-southwest",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/southwest.png",
+      "originalPngSha256": "bf506bf2fd5a646b65c1d175649136d19fd7672952ceceeb58f998e6597ed66d",
+      "originalMode": "RGB",
+      "originalSize": [
+        1774,
+        887
+      ],
+      "originalDecodedPixelSha256": "9adad82345658f7b94ec872e18478cfd2bc32332dbb5d055b0d9183cf87a0a08",
+      "losslessWebp": "source/world/raw/world-walk-southwest-raw.webp",
+      "losslessWebpSha256": "965b5ddd73133e5f89cb02085f8f446f2c64644cbc23b7bddec561afc584c372",
+      "losslessWebpDecodedPixelSha256": "9adad82345658f7b94ec872e18478cfd2bc32332dbb5d055b0d9183cf87a0a08",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-west",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/west.png",
+      "originalPngSha256": "632c81e0c38a62bae950e647479833d62063bff1cc9e341f603481a59370a3dc",
+      "originalMode": "RGB",
+      "originalSize": [
+        1983,
+        793
+      ],
+      "originalDecodedPixelSha256": "d573d9b4a9c5fbecb32dfa5e891ed4937996f7902cb872641012b8f11573f81f",
+      "losslessWebp": "source/world/raw/world-walk-west-raw.webp",
+      "losslessWebpSha256": "4b9daef00e33fad1244ee761a07899eb7d4a75a315e40a90a70b0a4b2981cb59",
+      "losslessWebpDecodedPixelSha256": "d573d9b4a9c5fbecb32dfa5e891ed4937996f7902cb872641012b8f11573f81f",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-northwest",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/northwest.png",
+      "originalPngSha256": "78fb0c0e0e2cb086307abc72bb8a2e5e39846871b57152d937198ceae1fcaa25",
+      "originalMode": "RGB",
+      "originalSize": [
+        1774,
+        887
+      ],
+      "originalDecodedPixelSha256": "d767af1365d601aac1d4cf518b1886b1a16c1b126ec84edb8ae3264db842beca",
+      "losslessWebp": "source/world/raw/world-walk-northwest-raw.webp",
+      "losslessWebpSha256": "377d327538c28a5de0e340058ad429fff0da817f446a462aeb88f2ce8a83e112",
+      "losslessWebpDecodedPixelSha256": "d767af1365d601aac1d4cf518b1886b1a16c1b126ec84edb8ae3264db842beca",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-north",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/north.png",
+      "originalPngSha256": "8e23c132287f01a847bec698416dd56770fae7a8119cbcc0bf9fe250464bfc9c",
+      "originalMode": "RGB",
+      "originalSize": [
+        1957,
+        804
+      ],
+      "originalDecodedPixelSha256": "1efb8de689aeb974c7d3ed6f5f5ceba96922872e5836d9998288dc78799e8e41",
+      "losslessWebp": "source/world/raw/world-walk-north-raw.webp",
+      "losslessWebpSha256": "040125b50a06cb1715d9a359d71d691f906fb326aacfd87d40a76cfd4216fc31",
+      "losslessWebpDecodedPixelSha256": "1efb8de689aeb974c7d3ed6f5f5ceba96922872e5836d9998288dc78799e8e41",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-northeast",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/northeast.png",
+      "originalPngSha256": "bcca2d2a88b3868c7ad24c6f2c1ccab184072822a12681113653e6ddad952f73",
+      "originalMode": "RGB",
+      "originalSize": [
+        1983,
+        793
+      ],
+      "originalDecodedPixelSha256": "0d9ec792ced9fbcb7036e9ecfc263493c92462988b4aecebe53c1ca263d14017",
+      "losslessWebp": "source/world/raw/world-walk-northeast-raw.webp",
+      "losslessWebpSha256": "fad2b0da5fe2a607e35a6433a3568da392f6811752fa5c06ed438aa3928ca89b",
+      "losslessWebpDecodedPixelSha256": "0d9ec792ced9fbcb7036e9ecfc263493c92462988b4aecebe53c1ca263d14017",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-east",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/east.png",
+      "originalPngSha256": "3a37c7616e4f889c8b1e674d1565fcebd0d8edbd8516196e6d678bcf794685bd",
+      "originalMode": "RGB",
+      "originalSize": [
+        2172,
+        724
+      ],
+      "originalDecodedPixelSha256": "71f21e0efdb300e64879fd2105459f0dc0d631585dffb6fa4d1e5bd91011c48b",
+      "losslessWebp": "source/world/raw/world-walk-east-raw.webp",
+      "losslessWebpSha256": "6772089a20bec66ce06e6af6d1a1e382e9e823aa1edbcde500064a73a68aedb2",
+      "losslessWebpDecodedPixelSha256": "71f21e0efdb300e64879fd2105459f0dc0d631585dffb6fa4d1e5bd91011c48b",
+      "decodedPixelsMatchOriginal": true
+    },
+    {
+      "sourceId": "walk-southeast",
+      "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/southeast.png",
+      "originalPngSha256": "2491095b5816834f2c63a136e2da18528621d80556b31a08d5d1dea7d6185553",
+      "originalMode": "RGB",
+      "originalSize": [
+        2172,
+        724
+      ],
+      "originalDecodedPixelSha256": "37c7644087579a4a1bf7a6cd25fde6cc6f8653c330f5a82ca0f18001328f9577",
+      "losslessWebp": "source/world/raw/world-walk-southeast-raw.webp",
+      "losslessWebpSha256": "301786a804918a980f32183a32758035eeca2e0aaf12d1e51507e113ff7bfa2e",
+      "losslessWebpDecodedPixelSha256": "37c7644087579a4a1bf7a6cd25fde6cc6f8653c330f5a82ca0f18001328f9577",
+      "decodedPixelsMatchOriginal": true
+    }
+  ],
+  "promptFiles": [
+    "prompts/world-idle-8-direction-v1.txt",
+    "prompts/world-south-walk-v1.txt",
+    "prompts/world-southwest-walk-v1.txt",
+    "prompts/world-west-walk-v1.txt",
+    "prompts/world-northwest-walk-v1.txt",
+    "prompts/world-north-walk-v1.txt",
+    "prompts/world-northeast-walk-v1.txt",
+    "prompts/world-east-walk-v1.txt",
+    "prompts/world-southeast-walk-v1.txt"
+  ],
+  "processing": {
+    "idle": "tools/build_pet_art_bundle.py; independent 8-direction cells; 512 source and 256 runtime",
+    "walk": "tools/repack_chroma_sprite_grid.py followed by tools/build_pet_art_bundle.py; four independent gait phases per direction",
+    "strategy": "independent_8_no_runtime_mirroring",
+    "frameAnchor": "bottom-center"
+  }
+}

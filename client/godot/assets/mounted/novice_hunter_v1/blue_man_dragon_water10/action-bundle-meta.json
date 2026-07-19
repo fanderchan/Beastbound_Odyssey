@@ -3,7 +3,7 @@
   "mountFormId": "blue_man_dragon_water10",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_key_pose_gate",
+  "productionScope": "mounted_world_true_eight_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [256, 256],
   "views": ["front_3quarter_sw", "back_3quarter_ne"],
@@ -34,7 +34,7 @@
     "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "ai_generated_integrated_independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
@@ -50,8 +50,15 @@
       "southeast"
     ],
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}
+      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "produced_owner_review_pending"},
+      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "produced_owner_review_pending"}
+    },
+    "qaPresentationCalibration": {
+      "onFootCanvasPx": 160,
+      "mountedPresentationScaleRatioToOnFoot": 1.22252,
+      "recommendedMountedCanvasPx": 196,
+      "scope": "qa_recommendation_only_shared_runtime_profile_unchanged",
+      "battlePresentationScaleIndependent": true
     }
   },
   "sourceArchive": {
@@ -61,10 +68,30 @@
     "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
     "prompt": "prompts/generation-contract.md"
   },
+  "worldSourceArchive": {
+    "policy": "eight_independent_tracked_lossless_webp_with_original_sha256",
+    "rawDirectory": "source/world-raw",
+    "sourceFramesDirectory": "source/world-frames/directions",
+    "sourceMetadata": "source/world-source-meta.json",
+    "pipelineMetadata": "source/world-pipeline-meta.json",
+    "promptPattern": "prompts/world-{direction}-v1.txt",
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "sourceFrameCount": 40,
+    "runtimeFrameCount": 40
+  },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/blue_man_dragon/mounted-keypose-build/contact-sheet.png",
-    "contactSheetSha256": "0e83343e8d3a44bdfaf039d88b56e5ed1097609e83f0bdeeaf03ad3d02684b61"
+    "contactSheetSha256": "0e83343e8d3a44bdfaf039d88b56e5ed1097609e83f0bdeeaf03ad3d02684b61",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "73c9fffa8453c19fff04b84758dac946414f9206b4a8561e953f1a2ae2a402b1",
+    "worldCycleGif": "qa/world/true8-mounted-world-cycle.gif",
+    "worldCycleGifSha256": "2b5f9953566f031dc647d64c2f53fcc6990103a4abc497ee52d00ead0878980e",
+    "map160ProportionEvidence": "qa/world/map-160px-proportion-calibrated.png",
+    "map160ProportionEvidenceSha256": "db3a5838c3038536a629660a42a162b7ef653af27b5f1dfb77fd4a4a2853f0ad",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "215f4e5c223b4f77c321b2a602ddee1c3db398a094c7ed23333fcbcaf273bc62"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated front/back mounted key poses only. World and battle mounted animation matrices are intentionally not produced in this gate."
+  "notes": "Integrated front/back key poses plus independently generated true-eight mounted world idle/walk are self-reviewed. runtimeEnabled remains false and battle mounted animation remains unproduced until owner review and later catalog integration."
 }

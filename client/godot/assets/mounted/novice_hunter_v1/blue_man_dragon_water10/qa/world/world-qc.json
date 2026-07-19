@@ -1,0 +1,649 @@
+{
+  "schemaVersion": 1,
+  "bundle": "novice_hunter_v1+blue_man_dragon_water10",
+  "status": "owner_review_pending",
+  "runtimeEnabled": false,
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "sourceFrameCount": 40,
+  "runtimeFrameCount": 40,
+  "integratedWholeFrame": true,
+  "runtimeMirroring": false,
+  "runtimeLayeredComposition": false,
+  "mapScaleCalibration": {
+    "onFootCanvasPx": 160,
+    "mountedPresentationScaleRatioToOnFoot": 1.22252,
+    "recommendedMountedCanvasPx": 196,
+    "scope": "qa_recommendation_only_shared_runtime_profile_unchanged",
+    "battlePresentationScaleIndependent": true
+  },
+  "mirrorPairs": [
+    {
+      "left": "west",
+      "right": "east",
+      "pixelMirrorEqual": false
+    },
+    {
+      "left": "southwest",
+      "right": "southeast",
+      "pixelMirrorEqual": false
+    },
+    {
+      "left": "northwest",
+      "right": "northeast",
+      "pixelMirrorEqual": false
+    }
+  ],
+  "frames": [
+    {
+      "direction": "south",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "992e1f7c9f951b8f755f715656671ba82e434de1e50caf54dc24886a2ea596d0",
+      "sourceRgbaSha256": "ecc946d201ff0826ae99517b860c136cc34db796041bb10008db87df5cecba41",
+      "runtimeBbox": [
+        84,
+        51,
+        178,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "0b9cad8abdf2c71f77ce442f677df9f12ec33d40e48c91aa1fbb68d0c2fe465c",
+      "sourceRgbaSha256": "1123588e640490b3c55c545658b789f212e2c7103ec6bb02ae19a1ac2144d16c",
+      "runtimeBbox": [
+        75,
+        51,
+        170,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "3a31c06cee0c942860f38fd8a378e1f8b7eed4ed3996fd8fca2da63af94dfa1d",
+      "sourceRgbaSha256": "fb91ee8a2a686517ccbb07f1903502e086a93586490358c59989dc59eacf4869",
+      "runtimeBbox": [
+        86,
+        53,
+        180,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "f49144df1dda5b987f290f1711c01dafdc18a8bc4e5a4c480773075e6568fb8f",
+      "sourceRgbaSha256": "dae18ac05a13f97fd5fa135a32999bd3031ab8381881518959dfaf8d0a038ab2",
+      "runtimeBbox": [
+        75,
+        49,
+        170,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "cf7cacd31c14f263e6f2e0041c7245ce73dd21b59d6595ff6b3a386db8608453",
+      "sourceRgbaSha256": "bff5552d784346750e6a72ddb14f34e359edfbb24c62a59282b5595fcb31b670",
+      "runtimeBbox": [
+        78,
+        54,
+        172,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southwest",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "2b6cb2772dcabcfd9806267a979358c19ab42907e4db9285e7ac293cc213fe96",
+      "sourceRgbaSha256": "9b461546c286d55835d29d16ac159f0e0e38704678ec32281ce14c5ac415eae8",
+      "runtimeBbox": [
+        59,
+        63,
+        218,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "f3f32b9f56eb62562919ca32180e6fcb6522f9a5edecb5f31e7348389a566e9e",
+      "sourceRgbaSha256": "2f262b4af0c2a06f18e76a11eab557aa41d15ac5935146ca36f24d1fa7aec8de",
+      "runtimeBbox": [
+        66,
+        67,
+        226,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "29df53392c8953031c12136ac95c6ec8e1b328324477e8d0de8eaf90f8d4fa44",
+      "sourceRgbaSha256": "305055549705f14f76a6cda97784a56ff08b9848920c4cd140573d732da4b54f",
+      "runtimeBbox": [
+        71,
+        69,
+        232,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "5cd665c9b0f12ccf6005de09991524cc430a182f5da4aee8025e09a490456101",
+      "sourceRgbaSha256": "454decc67595e709bb048818ee07f67c85f9e0f9ccae1b4cec4ac9412bb5c7c9",
+      "runtimeBbox": [
+        65,
+        72,
+        237,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "d556d1c40dbee2461bf794b59f47f1492ca6a8179a07b066a7f37d59494fef1a",
+      "sourceRgbaSha256": "ee3f4458af01f794f2da904178891c94fe9063b48a891620a6d059fd0d047b29",
+      "runtimeBbox": [
+        64,
+        63,
+        225,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "west",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "9fbb47841dc0bee4fbcff7b21054fd5df27449387c4b0e36517d3ff98760acdd",
+      "sourceRgbaSha256": "41fed016a68396e41e0ee3554969affc4c59b1f88ea21aa09570816e38556789",
+      "runtimeBbox": [
+        53,
+        73,
+        234,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "e71e0e8cd501db0df3e70f2b6bd4f858db3b6528d21aa5e10955c534b1697816",
+      "sourceRgbaSha256": "b766faf93c8f254e15ea580dd6fe858ed7a2b54236ecbc9aaba426d7a76f4a75",
+      "runtimeBbox": [
+        52,
+        75,
+        237,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "ecaa4021ef33e25120f9f04a108dfe2111d7ea1e7279ef0a3e188ee254d3e6d7",
+      "sourceRgbaSha256": "ecc2a6796913c033bfc05c56958cb449ed6b1bc1e5caf2a2df5eb7c6d4bbe80d",
+      "runtimeBbox": [
+        53,
+        73,
+        237,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "014d7b3e2bfb72940428788337a052ef1291c74964606dd613708c6f1a242933",
+      "sourceRgbaSha256": "f5a893e2f7f426da579be151d76536edad6c32545494a61cb34f1705422e3847",
+      "runtimeBbox": [
+        53,
+        76,
+        235,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "2cd9f0718d317a86cdc55d6b77f6e3b5eea1bc0793dbe50658be0d42f7ee4618",
+      "sourceRgbaSha256": "83557164f16a653e00261e07b8ca0222fa425676671966fb9063058b58f2d7ef",
+      "runtimeBbox": [
+        53,
+        72,
+        238,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northwest",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "892aa05e9798d2524bb0e224189b8eb4986798053322456d46f05458b3a3fd57",
+      "sourceRgbaSha256": "a31a3175250a762fffe86c2937f68e804a8128f95edb4d993bb2de12ddac1f0f",
+      "runtimeBbox": [
+        58,
+        75,
+        206,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "04c4eb33898e713dc88e1ef2b5b5e316c7d7d88f0ca26ccd78e3680c63085a18",
+      "sourceRgbaSha256": "e178103357988bd6a5e792038aaa2640893307d4bb072091be91ffc803dafca0",
+      "runtimeBbox": [
+        52,
+        78,
+        208,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "899b0f021180426e76a80623761ffbbfa77b295e02208f751c4f232917fb8b8f",
+      "sourceRgbaSha256": "9b905bb3a2b67bba220a6c5bc46e76b15ab71ed4196120322d8539b509b181c2",
+      "runtimeBbox": [
+        58,
+        72,
+        219,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "82d1a931cae5e78e1c3457e98f040c85195ac54f30fcbee744bf5bea408ea370",
+      "sourceRgbaSha256": "efff7cb6e8f016bd145cc9b002e228d3f58f7bd0a61bf26079484d9457a73ce0",
+      "runtimeBbox": [
+        56,
+        73,
+        216,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "f386486885d538fc78f7ad5f2e5830f9a09dd5b0df688f8a605ad5d4cf1e29e7",
+      "sourceRgbaSha256": "45cb206c9814609181b8425ca98330e815c8233600222d2733ee30055154866f",
+      "runtimeBbox": [
+        47,
+        75,
+        208,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "north",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "1cf197479d70aa6514ceaf46fb4f48311d8fed31b6052ae8a9da782346502305",
+      "sourceRgbaSha256": "c62e49fc2b12236e671b7dcd4d50043ef5b19e147d1e3af46f4790706365e2c1",
+      "runtimeBbox": [
+        81,
+        63,
+        174,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "7013975ed198f3312b64f3c7bfb01567bdd208d2a72a55144f612b99e055a4c6",
+      "sourceRgbaSha256": "d537015fe68bf754fa783d12f6b24b189dec039808d5603c82003a2080e4a845",
+      "runtimeBbox": [
+        85,
+        55,
+        184,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "37e56f542803decd77dac9a88d1561dc7ad132084dc59bb5b7cecd86a4ec023e",
+      "sourceRgbaSha256": "040954bcaa14fe8d74257b7259f58ac7786693c2ad89dc0e175b04a0e4511306",
+      "runtimeBbox": [
+        79,
+        58,
+        172,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "3e597070773e8c4b4b295c8ff67d1f6c6adbaa3b43bc1eefdf95ce55ccf2cb42",
+      "sourceRgbaSha256": "16e797f2553be7dd207ffb451a7c28dcc307c39d7ecc358f317142aab86153ef",
+      "runtimeBbox": [
+        83,
+        59,
+        175,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "8422645bfb9f3d59e95812897ce50deeab7f1ee84060007179951cbdf84bcba6",
+      "sourceRgbaSha256": "b1690f4bbadc9fd08d1712733d39f8ac6258865ccabc36cea16895ebcb8b46b6",
+      "runtimeBbox": [
+        77,
+        56,
+        168,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northeast",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "048e7e6564852571eb6a8465653498ca725e637d7182034387cc43ce9f2941d4",
+      "sourceRgbaSha256": "5932fe89715640f699671fa21e86e7d11fa1b2f621603773f91f0e07af35ec9b",
+      "runtimeBbox": [
+        57,
+        76,
+        194,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "dc14d93ec11eac3abf62f504c55e98bbce58066959f09ff1edbf06a254bea6da",
+      "sourceRgbaSha256": "f94313f156c56e4e4dbf38cf44f8cbd2ddcb66871a199e6deea63bdb36d93c3d",
+      "runtimeBbox": [
+        38,
+        74,
+        191,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "4343d7736b8d2017d08fe3956cec7a70fab980a15a4b77139a021293df0b0fe3",
+      "sourceRgbaSha256": "2df7fdebf11cc94b9dd0711c4fd0740cfdeb9a749a397094f268068f9b9e95ef",
+      "runtimeBbox": [
+        55,
+        74,
+        199,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "61ba3a72eddb2b00de628550af102164ab0c7abf7e4e3482155a2f8fadd1f03d",
+      "sourceRgbaSha256": "13efca317a3971e18cbaed2513161e4d9586cdf71e7a1accf5161856d3464fa8",
+      "runtimeBbox": [
+        46,
+        76,
+        190,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "0bcbf9bb4f6fc6f6f7af755e32e061963c3adb1f6912d9d3c568d8a21862394f",
+      "sourceRgbaSha256": "5da8fd50b4db8cc7a03dbe247aa675dd5d71986641597b435433e432b77fff13",
+      "runtimeBbox": [
+        54,
+        78,
+        202,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "east",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "0b062af507f686ae9e1d95c997dc567210e7a0d5b6097c13a732b0f2f7d49b8b",
+      "sourceRgbaSha256": "12113cd06751a2f12473a72f73ab19780cc4ab4f0a4a129af0909470a93b1918",
+      "runtimeBbox": [
+        25,
+        70,
+        201,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "1f0009f4ccfec5a79cabc79fbbb27efb87f862a828d9cf3104d69d128378720b",
+      "sourceRgbaSha256": "02e669dfcea6b31649e52982fc87114d6e373d4339a09eab1cef898c55a5861d",
+      "runtimeBbox": [
+        20,
+        71,
+        202,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "88b7d025d15260a287f6f44d2207598d90f8ba83026e61d8c41425a36cf1789d",
+      "sourceRgbaSha256": "98ba56b1787dc707bea3ab997e9fc483cb05f77bc0ebedef11da63549583e4e1",
+      "runtimeBbox": [
+        26,
+        71,
+        205,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "2107bccdd6b4481debb655dd7ae3d0c1ef27a7c90f1c18dabc20f55c13912f5a",
+      "sourceRgbaSha256": "e9833843f0e80a5a85720a8a917691ddb3dd058c6c76e8e9eab623706f03dfbd",
+      "runtimeBbox": [
+        25,
+        68,
+        204,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "d6a2d03f75de9849be00f5b56845c800a5d21cceda8bbc71215056cdcc3cf8b5",
+      "sourceRgbaSha256": "00c261a7d7262e7ab43890d7e3b217332638bff55b1fa8cc340509685957a8f3",
+      "runtimeBbox": [
+        28,
+        72,
+        210,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southeast",
+      "action": "idle",
+      "index": 1,
+      "runtimeRgbaSha256": "18e0b8375f6e85ca12af16282050798862e828c97a470bb1e5aea2f668ea0469",
+      "sourceRgbaSha256": "450be9cb18d6b0e9950130b571041c62da5d5dda716d9560c6e373d5bcc168f1",
+      "runtimeBbox": [
+        41,
+        60,
+        195,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "index": 1,
+      "runtimeRgbaSha256": "b2eb739f673991b73b8215645708ef59e9790fc49af9e56d22b3b815920f11f3",
+      "sourceRgbaSha256": "3158462ee6e089fb555c8ac1d67624bc91c4d051c3414be689518aad5958af00",
+      "runtimeBbox": [
+        45,
+        63,
+        199,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "index": 2,
+      "runtimeRgbaSha256": "a18320140a8a57e84f178a2733c30dcb9bc6141097862cccb172cc33d78bd30b",
+      "sourceRgbaSha256": "90bfc05ea692ed6cbc4a266db8591ca7e5cb67a09c03d73eb97c50f71e942a8d",
+      "runtimeBbox": [
+        35,
+        60,
+        188,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "index": 3,
+      "runtimeRgbaSha256": "c58cd297f0ea99572689016acab4886f3e26de456e27ae6e5f27ef5a17a7c3ec",
+      "sourceRgbaSha256": "ab2788f4fd8166121abfa286e09d4ef685a0aa4db5e7d945007cbbaf7ccea601",
+      "runtimeBbox": [
+        54,
+        59,
+        208,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "index": 4,
+      "runtimeRgbaSha256": "c2ff0abf20c80d06be4092b7fe7d83ac6c5181062c257db03282bf9a1ce9545e",
+      "sourceRgbaSha256": "f3c6ec22fa6a613060f53fdc4e38e5dd0569aff5f283b7c3a2338dcc5b3ee2c3",
+      "runtimeBbox": [
+        32,
+        56,
+        184,
+        253
+      ],
+      "edgeMargin": 3,
+      "residualMagentaPixels": 0
+    }
+  ],
+  "errors": [],
+  "ok": true
+}

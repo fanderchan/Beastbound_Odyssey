@@ -3,7 +3,7 @@
   "formId": "blue_man_dragon_water10",
   "displayName": "蓝人龙",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_and_world_true8_pet_body",
   "runtimeEnabled": false,
   "runtimeFrameSize": [256, 256],
   "views": ["front_3quarter_sw", "back_3quarter_ne"],
@@ -33,9 +33,11 @@
     "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "owner_review_pending",
     "strategy": "independent_8",
     "runtimeMirroring": false,
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
     "directions": [
       "south",
       "southwest",
@@ -47,9 +49,12 @@
       "southeast"
     ],
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}
-    }
+      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "owner_review_pending"},
+      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "owner_review_pending"}
+    },
+    "totalFrameCount": 40,
+    "runtimeMountedComposition": false,
+    "generationPolicy": "one independently generated source per direction; no runtime mirror; four explicit alternating gait phases"
   },
   "supportedMountedCharacterIds": ["novice_hunter_v1"],
   "sourceArchive": {
@@ -57,12 +62,27 @@
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "world": {
+      "rawDirectory": "source/world/raw",
+      "sourceFrames512": "source/world/frames-512",
+      "sourceMetadata": "source/world/world-source-meta.json",
+      "pipelineMetadata": "source/world/pipeline",
+      "promptDirectory": "prompts"
+    }
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/blue_man_dragon/identity-build-clean/contact-sheet.png",
-    "contactSheetSha256": "b4eb42a3b54863c2cfa3b1397d32eb2eae7dd92ca0d642a9b96186d84e526b2d"
+    "contactSheetSha256": "b4eb42a3b54863c2cfa3b1397d32eb2eae7dd92ca0d642a9b96186d84e526b2d",
+    "worldSource512Contact": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-idle-walk-source-512.png",
+    "worldSource512ContactSha256": "ef7495cce5a0856832ae9ae12141e4a49879c1e3bc3262baff2d6730ebc1a8e5",
+    "worldMap160Contact": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-idle-walk-map-160.png",
+    "worldMap160ContactSha256": "8471d695fa850b7562d8e4223702a7be2ffa43a8415380c2d3eb5a09f2277637",
+    "worldWalkTrue8Gif": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-walk-true8-160.gif",
+    "worldWalkTrue8GifSha256": "96cf70364062b3b6080db116b734e4b66681e2cfa1a442680c34daacde26a185",
+    "worldQcSummary": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-qc-summary.json",
+    "worldQcSummarySha256": "b824360c3e9c03ad6b0617f83aaa27e202afcce1d95e490750d0ace7b2f98796"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+  "notes": "Identity and formal pet-body world true-8 idle/walk are produced and self-reviewed. Owner review remains pending, runtime is disabled, and all battle actions remain intentionally not produced."
 }

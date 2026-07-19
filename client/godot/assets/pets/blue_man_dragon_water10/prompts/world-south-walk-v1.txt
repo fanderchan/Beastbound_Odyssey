@@ -1,0 +1,10 @@
+Create a seamless 4-frame world-walk animation strip for this exact Blue Man Dragon facing SOUTH/front. Preserve exact identity, anatomy, proportions, colors, fin count, claws, tail length, rendering style and camera. Exactly 4 isolated full-body frames in one horizontal row, equal cells, identical scale, same feet ground baseline and stable torso/head size.
+
+Frame beats left to right:
+1 left foot forward/right foot back contact, right arm forward, tail counterbalances;
+2 passing/compression, weight over planted foot, opposite limbs crossing naturally;
+3 right foot forward/left foot back contact, left arm forward, tail counterbalances opposite;
+4 opposite passing/rise, completing a seamless loop back to frame 1.
+It must read as a real alternating bipedal walk, not four identical images, not whole-body vertical bobbing, and not running. Head and torso remain stable while hips, knees, feet, arms and tail move coherently. All 4 frames face straight south.
+
+Make each creature compact and centered inside its cell with at least 45px empty margin, no tail/fin crossing cell boundaries and nothing cropped. Uniform chroma-key magenta #FF00FF background. No text, labels, borders, shadow, scenery, effects, UI, logo, or watermark.
