@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D pet battle animation sheet
+Primary request: Render exactly 6 sequential frames of the exact 1转小MM performing idle, arranged in an exact 3 columns x 2 rows grid, read left-to-right across the top row then the bottom row.
+References: IMAGE 1 is the binding exact 1转小MM identity for this view. IMAGE 2 is motion timing and equal-cell layout reference only; replace its brown earth-beast identity completely. Preserve IMAGE 1 species and palette in every frame.
+Identity lock: a squat friendly non-human ritual stone spirit: rounded segmented warm-gray river-stone biped body, one embedded oval moss-brown wooden face mask with exactly two narrow cyan glowing eye slits and one tiny carved mouth groove, two short stone ear knots, two thick arms, two broad stone feet, exactly three blunt stone fingers on every visible hand, muted cyan and ochre carvings, narrow amber seams, and exactly one incomplete ritual ring made of three separate stone arcs (top, left, right) mounted at three fixed upper-back sockets; broad clear upper-back carrying channel; never a human girl, robot or four-legged animal.
+View contract: back three-quarter northeast source view, head and travel axis toward upper-right away from camera, rear/tail toward lower-left, rider back visible when mounted; this is the ally source before the required runtime flipH=true. Keep this same source facing through every frame; no camera drift, turn-around or source mirroring.
+Action sequence: grounded alert weight-and-seam breathing loop; tiny hand, mask and three-arc ring settling; return exactly to start.
+Continuity: one coherent animation with genuine pose progression, stable scale, stable palette and consistent anatomy; exact same individual in every cell.
+Containment: one complete subject per equal cell, inside the central 58 to 66 percent, generous #FF00FF margin around every limb, plate, horn, ring or tail; nothing crosses a cell edge.
+Style: original high-definition warm hand-painted 2.5D fantasy game sprite, Stone-Age-inspired readability without copying copyrighted art, crisp at 160 px.
+Background: perfectly flat solid #FF00FF only. No ground, shadow, scenery, detached effects, particles, text, labels, borders, UI, logo or watermark.
+Avoid: extra/missing anatomy, species drift, duplicated frames, flipped facing, cropping, sleep smile, death/gore.
