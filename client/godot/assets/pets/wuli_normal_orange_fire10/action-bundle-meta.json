@@ -3,7 +3,7 @@
   "formId": "wuli_normal_orange_fire10",
   "displayName": "普通乌力",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -170,6 +170,18 @@
       "front_3quarter_sw",
       "back_3quarter_ne"
     ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
     "actions": [
       "idle",
       "walk",
@@ -197,7 +209,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "781e281e8f6af03886f9b7e3d73b2c049cf8bab64c55d4f0359fb0c49f09ed86",
+    "bundleDigest": "291efca17ea9525a296319837cd711fc22d733f321bf59f5a416f837dab83474",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -205,30 +217,24 @@
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
-    "battleViewMapping": {
-      "ally": {
-        "view": "back_3quarter_ne",
-        "flipH": true,
-        "facing": "northwest"
-      },
-      "enemy": {
-        "view": "front_3quarter_sw",
-        "flipH": true,
-        "facing": "southeast"
-      }
-    },
-    "runtimeBodyLayerCount": 1
+    "safeRepairReplay": {
+      "repairId": "wuli_normal_orange_fire10-safe-prebatchc-restore-v1",
+      "restoredFromPreBatchCBackup": true,
+      "broadRuntimeDespillApplied": false,
+      "downReviveContinuity": "exact_same_view_RGBA_hold",
+      "koExpressionReview": "passed"
+    }
   },
   "battleViewMapping": {
-    "ally": {
-      "view": "back_3quarter_ne",
-      "flipH": true,
-      "facing": "northwest"
-    },
     "enemy": {
       "view": "front_3quarter_sw",
       "flipH": true,
       "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
     }
   }
 }

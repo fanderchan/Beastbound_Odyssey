@@ -18,6 +18,7 @@
   },
   "petAndMountedMappingMatched": true,
   "finalFacing": "both teams face battle center",
-  "contactSheetSha256": "820f6ea23bb6e6724eefc22fb55162325d65fa1acea058fab27d8652ff7ca964",
-  "errors": []
+  "contactSheetSha256": "e8f8ebe07c311b83dbbd85c2934c0f6799e849537e9f3711e0346552bb2f922c",
+  "errors": [],
+  "broadRuntimeDespillApplied": false
 }

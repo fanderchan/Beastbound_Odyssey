@@ -152,8 +152,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 76,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "2dd28c9a994984abe673f79df01c5eeb2d991c0f8f6d0d0958bd88324b0a392c",
-      "runtimeRgbaSha256": "68441d38dd2113dd1d95618530629ddba74d058bd7ce2b30da2850b9a122eaa1"
+      "sourceRgbaSha256": "2095732f20e237e3116c3a99bdb21630955476d268a7240f6d340ab8b6d6b10b",
+      "runtimeRgbaSha256": "21c3bea993697f5d7ff214e80ce5ee06bfa425cbcc1ab966668f35aa7cf7bc79"
     },
     {
       "slot": "revive-2",
@@ -253,8 +253,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 92,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "da0f0768d55d4a87d09eb537a65c418e38de4158ce6aab6c8436f088e7666778",
-      "runtimeRgbaSha256": "1eeacf14c853e693052ec1974e440c9c652f671e60651550865ef9e64655eb77"
+      "sourceRgbaSha256": "bf459417bfbacda2b24fc9998ee7761950b7da00950bc0cae0296f2232b76be6",
+      "runtimeRgbaSha256": "a089d2f6d408da50b195c5480ee0e6fd889b4690a5e50c746f87903b7dbc1617"
     },
     {
       "slot": "revive-3",
@@ -354,8 +354,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 102,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "c1a1dda7d6fe35e001f1c6a4a13c4905e2abad9fd95922b38aca703d8c2b0088",
-      "runtimeRgbaSha256": "f54a17cef69aa9756856c6d71cff6bf6d1897e2d8529d369934977d3b9341c72"
+      "sourceRgbaSha256": "da0f0768d55d4a87d09eb537a65c418e38de4158ce6aab6c8436f088e7666778",
+      "runtimeRgbaSha256": "1eeacf14c853e693052ec1974e440c9c652f671e60651550865ef9e64655eb77"
     },
     {
       "slot": "revive-4",
@@ -556,8 +556,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 90,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "bf459417bfbacda2b24fc9998ee7761950b7da00950bc0cae0296f2232b76be6",
-      "runtimeRgbaSha256": "a089d2f6d408da50b195c5480ee0e6fd889b4690a5e50c746f87903b7dbc1617"
+      "sourceRgbaSha256": "c1a1dda7d6fe35e001f1c6a4a13c4905e2abad9fd95922b38aca703d8c2b0088",
+      "runtimeRgbaSha256": "f54a17cef69aa9756856c6d71cff6bf6d1897e2d8529d369934977d3b9341c72"
     },
     {
       "slot": "revive-6",
@@ -758,8 +758,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 113,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "8e0a1b16ac0c644b441e93f34ed0d3a78825f116d5abc087d176f460366b5e66",
-      "runtimeRgbaSha256": "d0912b4c79045f5279ac2b7f973c8926bec8bc6b1fe6443244ef76c6f7cec5ba"
+      "sourceRgbaSha256": "436b27028c920b9d5963a1340cda48d549ff00134e76a66f7326f0a8d308d6ee",
+      "runtimeRgbaSha256": "026e45bc1c7453df50ffbe1a1ba5a1d1342bfe8801f504af3e9d56f45291c070"
     },
     {
       "slot": "revive-8",
@@ -859,10 +859,18 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 95,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "436b27028c920b9d5963a1340cda48d549ff00134e76a66f7326f0a8d308d6ee",
-      "runtimeRgbaSha256": "026e45bc1c7453df50ffbe1a1ba5a1d1342bfe8801f504af3e9d56f45291c070"
+      "sourceRgbaSha256": "8e0a1b16ac0c644b441e93f34ed0d3a78825f116d5abc087d176f460366b5e66",
+      "runtimeRgbaSha256": "d0912b4c79045f5279ac2b7f973c8926bec8bc6b1fe6443244ef76c6f7cec5ba"
     }
   ],
+  "continuityPostprocess": {
+    "tool": "repair_down_revive_continuity.py",
+    "creativeChanges": false,
+    "contract": "revive-1 reuses the exact final faint pose from down-8 in the same authored view",
+    "sourceFrame": "front_3quarter_sw/down/source-frames/down-8.png",
+    "sourceRgbaSha256": "2095732f20e237e3116c3a99bdb21630955476d268a7240f6d340ab8b6d6b10b",
+    "runtimeRgbaSha256": "21c3bea993697f5d7ff214e80ce5ee06bfa425cbcc1ab966668f35aa7cf7bc79"
+  },
   "originalGeneratedSize": [
     1774,
     887
@@ -879,5 +887,23 @@
         "metadataSha256": "606105b5c6e13d92e3d331bd46d86cd8335cdfaef01941bdb007add24e3c0c1d"
       }
     ]
+  },
+  "postProcessing": {
+    "temporalOrderRepair": {
+      "sourceFrameOrder": [
+        1,
+        5,
+        2,
+        4,
+        3,
+        6,
+        8,
+        7
+      ],
+      "creativePoseChange": false,
+      "reason": "existing authored poses reordered into monotonic action time"
+    },
+    "downReviveContinuity": "revive-1 replaced with exact same-view down-8 runtime and source identity",
+    "creativePoseChange": false
   }
 }

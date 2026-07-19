@@ -205,13 +205,20 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "801b47c06259fe471d3ab90a36087e86bd463c4efa631e2fc6e6bc5c61c01ad3",
+    "bundleDigest": "ccc8270d92417e98b846292020520b891eefd8dd9c2b2198c273dcbacf68ba5e",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "safeRepairReplay": {
+      "repairId": "wuli_normal_fast_wind10-safe-prebatchc-restore-v1",
+      "restoredFromPreBatchCBackup": true,
+      "broadRuntimeDespillApplied": false,
+      "downReviveContinuity": "exact_same_view_RGBA_hold",
+      "koExpressionReview": "passed"
+    }
   }
 }

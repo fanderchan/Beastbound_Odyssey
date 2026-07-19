@@ -8,107 +8,15 @@
   "emptyFrames": [],
   "duplicateFrames": [],
   "edgeTouchFrames": [],
+  "warnings": [],
   "identityDriftFrames": [],
-  "residualMagentaFrames": [],
-  "transparentRgbLeakFrames": [],
-  "visualSelfReview": "passed",
-  "ownerReviewStatus": "pending",
-  "frames": [
-    {
-      "slot": "down-1",
-      "bbox": [
-        39,
-        64,
-        217,
-        240
-      ],
-      "minimumEdgeMargin": 16,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-2",
-      "bbox": [
-        54,
-        81,
-        204,
-        239
-      ],
-      "minimumEdgeMargin": 17,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-3",
-      "bbox": [
-        45,
-        99,
-        211,
-        239
-      ],
-      "minimumEdgeMargin": 17,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-4",
-      "bbox": [
-        36,
-        107,
-        219,
-        239
-      ],
-      "minimumEdgeMargin": 17,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-5",
-      "bbox": [
-        38,
-        109,
-        218,
-        239
-      ],
-      "minimumEdgeMargin": 17,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-6",
-      "bbox": [
-        40,
-        131,
-        216,
-        241
-      ],
-      "minimumEdgeMargin": 15,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-7",
-      "bbox": [
-        44,
-        151,
-        210,
-        241
-      ],
-      "minimumEdgeMargin": 15,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "down-8",
-      "bbox": [
-        43,
-        159,
-        213,
-        239
-      ],
-      "minimumEdgeMargin": 17,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    }
-  ]
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
+  "koExpressionReview": {
+    "status": "passed",
+    "frontVisibleEye": "occluded_or_authored_back_view",
+    "mouth": "slack_neutral_no_smile",
+    "forbiddenSymbols": [
+      "x_eye"
+    ]
+  }
 }

@@ -19,7 +19,7 @@
         "rawDecodedRgbaSha256": "ec36bef66ac42e47d98fa3d6638b0d0dc8c214d3bef14d4798d449462af66908",
         "promptSha256": "0108359364d187655ff3a6c410b3961c2a22282ad5194cd97cd5212b1742e988",
         "pipelineSha256": "0deae96d32828b3efad6a83086b5e72bdef17b0b9cb99907bfe8b25deee4587b",
-        "qcSha256": "3080097b7bf8163c9baa1e99ea4fc9b6d6370b4d36692d2846ca1f0daf3d634e",
+        "qcSha256": "4834673b7eb4541d1b81ae71f8fc2e0e1add34cd55789baddbff7f169f83dd74",
         "sourceFrameRgbaSha256": [
           "6e78f50a3286743416ec423602d77bf0aa4a7ba78a92bef7464a463822eaab5f",
           "8d380fd29a5279afd9979b03de6084fac827a283b60b5987619099fbfc0c5438",
@@ -46,7 +46,7 @@
         "rawDecodedRgbaSha256": "a0586114625270cd7204b6e5b199b011f09b90ef3a081a1d86ceb502e19a9e1d",
         "promptSha256": "45ebc7abfb449430cb5e653bd7103dbf8f0237b72b93208626de6548592bae9c",
         "pipelineSha256": "3705ac5eb2aff6c26587728c64f379ff5605fe3f8a23bb1dcc811a2b80e52602",
-        "qcSha256": "1c7916dcbe493345182d4d32c0e90bc508ad21d49e44b64ee252264b8d25535a",
+        "qcSha256": "81adc5d0611bb8080bc8ace6e4fb1a859f1e0a05bc5a0ecb5e3b660419c928d5",
         "sourceFrameRgbaSha256": [
           "e62139fc15c466fb08614b5d4049228e12e2f8566b2e8ff194f5fd3ea4c27d31",
           "19f520cf4ecf00554869901711f9ea529967436fbb3aa00d962a611b5c6824ad",
@@ -77,7 +77,7 @@
         "rawDecodedRgbaSha256": "99e9385a4eb35f0e349de971458ff8d5a0e4fdb670f6d4d7aab265cb04958454",
         "promptSha256": "f30ebda5cc01f9a934428a5befe62c873015f9a6333ae5fe5f251eafcec5b466",
         "pipelineSha256": "15e54ffbfb40d9d4aa9a906a0c22d52878e7927e4e70c43096033c562bc5c418",
-        "qcSha256": "ec4dd02b8cef255d55fd562660353f311efd6398c96a6b3a2913c15b7ec0553c",
+        "qcSha256": "fe48bf50aaf6e34b2546de165a4a281c371019cde0f7e8e91b9dac8cefc1fce2",
         "sourceFrameRgbaSha256": [
           "5c44ddb9b2982bf7e4e43ac9d5453bb91883f0b941fea44cf6e3904275666735",
           "d3480f2180ce2bc391e21a6d9945360df9424357f570627b75da238fcfd40930",
@@ -108,7 +108,7 @@
         "rawDecodedRgbaSha256": "34145c2a277a2d4ab3d8f250c58342189c1c3d5b148cdb9d86fe3564cc5da697",
         "promptSha256": "14852831fd8f4d8f16a4d5e2d93727f190a3195104131cfe7b3c5ea68dd6fce3",
         "pipelineSha256": "8b5ce44f452870df9e85ff968f38468db5d5a18961f3266d038f44323c3e8441",
-        "qcSha256": "5625987669b99cfb62da4f814ac1e82ee3c064b8797ea6b4d2e13c11df0143f2",
+        "qcSha256": "50f73e8c4d3a3033d5a7a0c6bbc901683502f99f418a21f733c0707380842724",
         "sourceFrameRgbaSha256": [
           "19b959a792717d6399687e417548af55fc17d34a6d781155bf07203735c59a85",
           "85a0822958807d58db860aa481ab4e1af909a13376ee10df7468c6542de6c3ab",
@@ -139,7 +139,7 @@
         "rawDecodedRgbaSha256": "8c609a24de0c2f54583cb530f60e0695c357ffe58020bf9f2f5bac75661f4713",
         "promptSha256": "f22abad2afd56e42aca17717e42dca31b08c03deef22c13d5cc7a9e284d5e4b5",
         "pipelineSha256": "6800367b5d28d3c33fad5fd5e43fb754a8c5ab2f83ee482c8888565699f374ff",
-        "qcSha256": "5f3696f1e3416ff7d0ebde82448ed0862c1049ff731e62b172df8a5156dab4bd",
+        "qcSha256": "88e9da83a6bb44e4c951a4734f4acde56db9e701be486f5a7a44f01d5ceb7ef6",
         "sourceFrameRgbaSha256": [
           "e212ae4b856e72316f41895142dc9884e6a018a942a8e74d30e6c758df098110",
           "a171c49a8c76b66d3528a2cd4a11324b681a952df9ed7cb598821e681ac61d58",
@@ -166,7 +166,7 @@
         "rawDecodedRgbaSha256": "53bb520eadc7f844f2c9876763a529789de06c8f238616bdb1c73985814ff179",
         "promptSha256": "00d21b7e82d75c993a59894414348b176a4e6bba4b98e191b5049b3b0e4c81c9",
         "pipelineSha256": "a6fe4ce4e8b4ee85e01dbaee329457b49a80b7787f176e2a5f1e41486065e2f2",
-        "qcSha256": "6cece0f24e4930b4d0581e00f622071a62c7bf0c8b0f06b4d6c1ec14fa7e135a",
+        "qcSha256": "47358ce438a77c9d3cf59d10a388180af42b407b92553637ccf92ee591937ad8",
         "sourceFrameRgbaSha256": [
           "f75df197dca01e6ae0bfe14dd188701940ebb45a46a308956e31277781570ecb",
           "c59e396938db6b49a46e922d72a37543d9ddfda2447849788debd5d30a13e7e1",
@@ -193,7 +193,7 @@
         "rawDecodedRgbaSha256": "20df9ac6f313d4ca7f2e96b76f451d28d0c33f6b71ba5ac07ebdbe3eeaa2827e",
         "promptSha256": "d18e35eb6279b1bb35c0afab9231f89e9a8914d6f94f92329667efdb2a8df6c4",
         "pipelineSha256": "f4c7ac2edab29832ff6f044226a3b216411a275b8b2bc2947f6b826c2a70863c",
-        "qcSha256": "357b639a6654557dbbe7cd7dc7f451ba8ccda5c4f0e63e962acdf312368a19e9",
+        "qcSha256": "cb2702e3489f97d2d646cd1c2fdb8a6eaba6c698a7d1049a70ccb4d9263ce55c",
         "sourceFrameRgbaSha256": [
           "3c57f99bd138d88245ea0c78e30902bd543ea720b37446c8671be5f9637177d6",
           "5e1f5770db4d30cbfee66d965a09695ab4717dcaa8480680aa19b561f4b5d231",
@@ -224,7 +224,7 @@
         "rawDecodedRgbaSha256": "7e6cd930098b87f65fbaed371ef3992de49de4f3c46cfe9b66fbf064278f61e2",
         "promptSha256": "ab46137db43d004325c3006d887a91277feede8d7f8bc7866207e40509a9c8ab",
         "pipelineSha256": "299850fa3fa7a0b7c48317ca59e8d51ce1d6697c8cd8dcdfd2edecd8e7891077",
-        "qcSha256": "76c745cc41aeb1b45b1e4d3616937d689d0aeb18ce90aebb912f5e642250ff06",
+        "qcSha256": "ca6feddfb918e49d65d6c8526b1e07c04a2b150f6479fe328f44fef691a1e9b7",
         "sourceFrameRgbaSha256": [
           "b9b5bd0a7c599292aeaf5af01fc4fb4be623e4632d0b14cc9b3d4c92614bf3d1",
           "33b186ab5db1ce15afe4501dead4e167a193f3ed101e1291fb5d91f56b22a4ff",
@@ -255,7 +255,7 @@
         "rawDecodedRgbaSha256": "7dac2acdf52d6f563dc13e4e94b40b53d4a5b2c6171fe9912695dc25349b7d2d",
         "promptSha256": "7a5b9f185a92944cfcc75f7252281b6a7f0c82b625f9d1b8ea8c7fabb017e0a0",
         "pipelineSha256": "b9c3c52d6cdeee9bac71804faf40d4fd560f5ffa2edb8e77e321393a6d9f10bc",
-        "qcSha256": "d3a2da18e14de9a6f2f4003e1aebf59954b2ec1e4c3e499c90e3c77af762135b",
+        "qcSha256": "133a6412a3549803e7af93f0f0b326d1cf6479a4bb607dc97b9d0dae339426df",
         "sourceFrameRgbaSha256": [
           "dd883ac10a88a3ecb1f06dc562bf2beae0d9b75b3a378241c8c2b242ec1583c5",
           "4f30de6ced0679fc9de600083c151ffee7d68dce3198e7d804d508ced0545193",
@@ -286,7 +286,7 @@
         "rawDecodedRgbaSha256": "79b18329ed9d2c59b2de376f4fcc2977dc1f6324af4dd270cc26c725007987ab",
         "promptSha256": "3db192751dddfe06790fac0b2968e93e9683d772b9a2d02b438cd6e45a5b7dc7",
         "pipelineSha256": "ffc93ab5056451ee79182708424b3923884d3235ffae0f2a443c985d51cce553",
-        "qcSha256": "710131e5267a4bf4c5d8c3c2ca9ee8e324b7819af3edd3179892811d5a005bf0",
+        "qcSha256": "392ee36149b560a05672751ce3adeadd387bba51ca9d8547e60ea6d68c4a523f",
         "sourceFrameRgbaSha256": [
           "ea1b8be96fc2a45309601585a44d058c92db38a52600d4d7d7fbda2cfeac39fb",
           "c66c2fa1d2b654e264e9a2b54d4acd4b888dc9d5ae3ed1cf5f53b2fd1d12efa2",
@@ -317,7 +317,7 @@
         "rawDecodedRgbaSha256": "aca023313400ac76386cf9ccd8a296b6972e117bb342878ed73eb9f141e0b8f5",
         "promptSha256": "762117ca68be2e3aed6605c09ab3025188d84ebadd071037ef8b89def3f2dfeb",
         "pipelineSha256": "bd2897b9cd32e4e4786617f3563402da5f9773cdf1ef73b093c1043b23631583",
-        "qcSha256": "c096aa63208f3988d33d914db69522803922d3ba7fc088ef413c0f91662815bf",
+        "qcSha256": "8302c8611bee51a737f0764882bd2a791d7cd2e934f746811a916779d6125794",
         "sourceFrameRgbaSha256": [
           "6bc2128753a6279152c404cb7a3b8058f51a8e62bdeb78dd8be40e29e24444b4",
           "b079b2e012b2329f54d950a03c00020898d15ee3d2cb9134c6d219c9e9284db9",
@@ -347,27 +347,27 @@
         "rawArchiveSha256": "4030dc72f63437fa08764a4066714a2d25330acaec626cf505cd4dc74127afed",
         "rawDecodedRgbaSha256": "f471c5e90fbfd722f673dc8377938c1ee4051fe00a348b56e66aab7fd7d7409a",
         "promptSha256": "5aa3bc49123e0a6f2231377a8407881e204fa4a69ca8c4cc08bcda52bb77f572",
-        "pipelineSha256": "0d4c8f71520040e17d15a088245f3b26f0361582874ed6287e859d9c32db294c",
-        "qcSha256": "0a98eacfb7b705cc46cba7e9cb65269983fe6fe93acf0a43340bd4d1fdf5ce6c",
+        "pipelineSha256": "ad1c09453241dce7c03852c95f5dee2e02a94641484ff4d0412de23bfac75cec",
+        "qcSha256": "29ade2fc875ea665f76c7d4f1ff7cf27450685e38f4cca711be0d7ec44dea3fc",
         "sourceFrameRgbaSha256": [
-          "2dd28c9a994984abe673f79df01c5eeb2d991c0f8f6d0d0958bd88324b0a392c",
-          "da0f0768d55d4a87d09eb537a65c418e38de4158ce6aab6c8436f088e7666778",
-          "c1a1dda7d6fe35e001f1c6a4a13c4905e2abad9fd95922b38aca703d8c2b0088",
-          "380921389db06faaed018ce60da440a8f1bd42d2b857c9c89d397a0d639e79fa",
+          "2095732f20e237e3116c3a99bdb21630955476d268a7240f6d340ab8b6d6b10b",
           "bf459417bfbacda2b24fc9998ee7761950b7da00950bc0cae0296f2232b76be6",
+          "da0f0768d55d4a87d09eb537a65c418e38de4158ce6aab6c8436f088e7666778",
+          "380921389db06faaed018ce60da440a8f1bd42d2b857c9c89d397a0d639e79fa",
+          "c1a1dda7d6fe35e001f1c6a4a13c4905e2abad9fd95922b38aca703d8c2b0088",
           "fbae5550a4bd75bac3cad928bda3506bd645268a388a16ad0c9b6c49901404ac",
-          "8e0a1b16ac0c644b441e93f34ed0d3a78825f116d5abc087d176f460366b5e66",
-          "436b27028c920b9d5963a1340cda48d549ff00134e76a66f7326f0a8d308d6ee"
+          "436b27028c920b9d5963a1340cda48d549ff00134e76a66f7326f0a8d308d6ee",
+          "8e0a1b16ac0c644b441e93f34ed0d3a78825f116d5abc087d176f460366b5e66"
         ],
         "runtimeFrameRgbaSha256": [
-          "68441d38dd2113dd1d95618530629ddba74d058bd7ce2b30da2850b9a122eaa1",
-          "1eeacf14c853e693052ec1974e440c9c652f671e60651550865ef9e64655eb77",
-          "f54a17cef69aa9756856c6d71cff6bf6d1897e2d8529d369934977d3b9341c72",
-          "55701b0be4a6607211b4041f7de04a370bf61187e594094294bb2aaefa3811ed",
+          "21c3bea993697f5d7ff214e80ce5ee06bfa425cbcc1ab966668f35aa7cf7bc79",
           "a089d2f6d408da50b195c5480ee0e6fd889b4690a5e50c746f87903b7dbc1617",
+          "1eeacf14c853e693052ec1974e440c9c652f671e60651550865ef9e64655eb77",
+          "55701b0be4a6607211b4041f7de04a370bf61187e594094294bb2aaefa3811ed",
+          "f54a17cef69aa9756856c6d71cff6bf6d1897e2d8529d369934977d3b9341c72",
           "b87dace19cb10eb8171ff118960f208dad8cef83c745b31879f460d7c610de15",
-          "d0912b4c79045f5279ac2b7f973c8926bec8bc6b1fe6443244ef76c6f7cec5ba",
-          "026e45bc1c7453df50ffbe1a1ba5a1d1342bfe8801f504af3e9d56f45291c070"
+          "026e45bc1c7453df50ffbe1a1ba5a1d1342bfe8801f504af3e9d56f45291c070",
+          "d0912b4c79045f5279ac2b7f973c8926bec8bc6b1fe6443244ef76c6f7cec5ba"
         ],
         "representativeRawTracked": false,
         "sourceFramesTracked": false
@@ -381,7 +381,7 @@
         "rawDecodedRgbaSha256": "25729a047627e838d6436b093296cf08cc3025bf32fa642d4331389049ea9b6f",
         "promptSha256": "266dfe2b020933614d2d16c2a718d13c262cf09bd4fd550e871b94db785f477a",
         "pipelineSha256": "ce191aa322855e6f7a3f19fd239406dd3317293d4bc19c3b775dfa210a752b1c",
-        "qcSha256": "74e0295b805fa1c0c8144a290e05c71835d076a45503b79562381d1d0931a008",
+        "qcSha256": "470da74761cc21db7cbec84272e5a6f63d452202daada6198f79103cd07bf81a",
         "sourceFrameRgbaSha256": [
           "ac1b70c0c456131fd9254997b1279017b972093b8003217084e176eecd86a158",
           "ae92ad8a3e6c820216b8945cd2f5e4d3277f192fbebb522ae16d1a491b34ada2",
@@ -408,7 +408,7 @@
         "rawDecodedRgbaSha256": "17aefbaea9e19394ea40ef16a910bb2ff6d8f5ca019f39d5c0b99af1f9948376",
         "promptSha256": "2a2b876e4716d46f644a40ed6aa7fe282a48c34cdfe16161c64c7a73f67bbbe7",
         "pipelineSha256": "6b6330962c7bea4bd30365c3d6c39a5352c1ba44037ba3b90480fa42779189e9",
-        "qcSha256": "749946d7030799acce96983f2f460a9246ae4a4a266a8b3190b3f653de26ae99",
+        "qcSha256": "e27ca1b017a3284256ba5505adcbd43dae58cf6b584aa51392e9804580dd08dd",
         "sourceFrameRgbaSha256": [
           "937db654b2ef8a7320da839782e9ae20de43878ac482f8891ea51b419c999963",
           "4c0ad77da6f3b921c7b83626601030f62874473287fa9b7302720adabf6cb008",
@@ -439,7 +439,7 @@
         "rawDecodedRgbaSha256": "5824a8715de81a7aa01748bbfa286adb3090d7e27aebabecb851a9974ce8954a",
         "promptSha256": "7161b85a0a984ecfcf5acf030fc948f3bd57e0f3c8c78921e02b94070659a256",
         "pipelineSha256": "79cf893a3aa5d506b888efba32bff2e4b05d854a450fbdff4493ecfc5a5b976a",
-        "qcSha256": "d3ae730d679e1e4c03cb96554820c23709bae1fadb81e0d2dbab05879f71ba90",
+        "qcSha256": "b53183ead4fea4cb62628e42029b69cfdebb57a57b98d3e9c2aed946f3c86975",
         "sourceFrameRgbaSha256": [
           "ad25c1ce257672437ce8dfe533259bbb4f6f1b083793e9711759c943c2756583",
           "cf423eb5a77d933c7b17715ca93ad84823f95f43835506dc11fff810c19eb061",
@@ -470,7 +470,7 @@
         "rawDecodedRgbaSha256": "45acbcf7878bbfad89c32c4f9fd59bbcce769e8b17fd5536c90a29012649fae9",
         "promptSha256": "fd6531fab5e6ab5c543242260f1ccdb7e39567087e97b302747f48515dc7d960",
         "pipelineSha256": "de1ac94d6fb5148ec7101e3a9e7f820b050a90aaae41acab17d7b54a6111f70e",
-        "qcSha256": "af55353d7fe0f6e16c9c72489b2187947ab9e09dc4f9f97ef56bc1b949fdcbc1",
+        "qcSha256": "7d008cac0bb67a9646762fc05cd8f1bab543cf291a09b475b112c47de34e5f76",
         "sourceFrameRgbaSha256": [
           "47227c48ba866487648105aad224a753c8946b0057492ab42c8f6a3d37f9775a",
           "5563ac58003f379b673689f1f0af9cb11a111603c571092ba0ea69de37604155",
@@ -501,7 +501,7 @@
         "rawDecodedRgbaSha256": "9b271ef1802383fc4e521863ca2893a8be12592fd27c649c46cec91d4d2ff0a4",
         "promptSha256": "beacc6ace3120637694fa4788c966b56b998a76fd31ef68d3187bd01c84d38eb",
         "pipelineSha256": "c07fad5e6fcc42f6c2c15e0ab308a9874ab0ed9b97b84beb140ab87fe20889d5",
-        "qcSha256": "d7970d298524e5405645d9deadfe9667d03d83c6d8e34251ca2f78d683cca81c",
+        "qcSha256": "992c46db719fc450dc9cdcc2c25c623e6ac65c3fb6025e72dbd5658c00674fa3",
         "sourceFrameRgbaSha256": [
           "9751bcac0958a9de8e2c0882a83a0075fc0cf28f06a16e8fcc128082452d10e8",
           "d4ba82305d8f9c85ff13d986dd98daf851d0d73c06008b20da45b694f46cf514",
@@ -528,7 +528,7 @@
         "rawDecodedRgbaSha256": "6914eea19a913674815a3207c141d0ac7e3da450cdd3e40c990c0cbcf6f5e01c",
         "promptSha256": "ee4c6e11c01b52fcb54abfd504761d666e79b23b4f53536aaecc82dda6be7704",
         "pipelineSha256": "3954c9a295927907da1f59d00d7b9b0717759a3c17e1d5643c710d1e15f20c73",
-        "qcSha256": "f079692b73e676ab467da312d20f8c966a8e39566e26dc080e134d594fbdbaba",
+        "qcSha256": "3c9b3c179c02478506bf2add883ec65a88d50a4eb0c60633ec247a2346b43bdb",
         "sourceFrameRgbaSha256": [
           "ff269b518342b22a834acb95629968f92a6ecd8d22b7fba2bae7e226a4857460",
           "5d63b0b9dec7a5fbbc75dc42eaabdfb6792842d52aac12f4042777acf64502f9",
@@ -555,7 +555,7 @@
         "rawDecodedRgbaSha256": "f12cc48ff88e2a9467766e7061d061d38f46662b69b826811fbaf4c04a56cbb6",
         "promptSha256": "678f3bfb0c8727e06cc81032789e5d174f98425f8b7190c0e1771165bb69636b",
         "pipelineSha256": "dd6cede947e92cec78d4e177855acebc67987fa8158309999d899ab8a3a07610",
-        "qcSha256": "4020b76127dd8515d07523b3518744acf92775c5abaebaff8349046cd8eb1f09",
+        "qcSha256": "63b51ef3483948e32005b659ae11643c8f1840ec88a089cecb6a5e15132d3b6c",
         "sourceFrameRgbaSha256": [
           "740ad536bbd231edf06da4133b6a735707b9c599358701fd9a0df2e12bc2e5d8",
           "37b079b57dbab825edfde098999418a443aeac99eff8a0378ea874f7235c2a04",
@@ -586,7 +586,7 @@
         "rawDecodedRgbaSha256": "6bc3accdfe9844270e80cf2b9e0fdea6889afe4711657e5dd60c9f472784be49",
         "promptSha256": "22c4ac827c6055a060f7193edeb51ef7bb202916316deed5c93a903fc8d82bb0",
         "pipelineSha256": "df4bd4f2e5ddb55c85cc68f4322be3e4f3c2e2462f5589fabdb6671507a7d4b5",
-        "qcSha256": "4659e6b696fb8d942d61a06768788b9f3a9d2b8a391ebb40fc8b58274997b8f7",
+        "qcSha256": "fb0870cad04d0365d0f8cf5f629833663f1758fc1a28f25801af24b6cfedda10",
         "sourceFrameRgbaSha256": [
           "34792314a471cf4d646e1eada95d120da28a6d23ea2f096e8f941222559138d6",
           "9b4f40984f9caed54b95445edffecac31a560d915e55de3e2d4eb2cc11221d3f",
@@ -617,7 +617,7 @@
         "rawDecodedRgbaSha256": "aba2a51817efa9e3263f1351e0eb4822f7aabab791611a3f7cdf6b3167352a17",
         "promptSha256": "70e7dc9ed0afe7fadcf41226abf3a1be33d775527b8f1084149f59fc0346de52",
         "pipelineSha256": "3339bc1cdf1ae489f196080996833efdf333dee8153ef4da7da90f1a09a257bf",
-        "qcSha256": "27bf4f34754de750ee459a7b75a6d0793efca00e37e5d136dcf59f92f9506d36",
+        "qcSha256": "f22635d855395118480078bc46c8e922f868363977a7e4e225d4f5e10cb83960",
         "sourceFrameRgbaSha256": [
           "c29caa94d45ff9611e1831d5ea4872afc0b5cdb1e0cd89a931f089ed05dab6b3",
           "0cc0237b36e93d050da1dcd0c3fc8bce962324aa213f74c080c90dd04113b67c",
@@ -648,7 +648,7 @@
         "rawDecodedRgbaSha256": "d13e33da05bef29fb90c4e89ec8b653bfc0f5fc0c86959c860c9def14daa7348",
         "promptSha256": "edd344ead1d68aca77c6a2892473316fa7c1ee77520b3c73474a6a3d4da93d81",
         "pipelineSha256": "8cb72ddec4dc6d0d7d457e78565af14cad1e0d1c6bc7d464493f835c1ef0cc2a",
-        "qcSha256": "eb79d24785f5371691841201ea1fb87e4dfeca2bb1add4ddc54a3a36ae4e0c0d",
+        "qcSha256": "063c52cd3d60e5f0d41201a8edfe405192292eb57ef5271ac5e82639c5eddea9",
         "sourceFrameRgbaSha256": [
           "d5975be6cd7bdd594f2bd01fa82d053fa0e48b8c7d04df134c2eadf51c45e7c7",
           "3bf4652573ea8697f8da6e1721f4bcb1d138fb8b90bbbdfb4696cb899d20b52c",
@@ -679,7 +679,7 @@
         "rawDecodedRgbaSha256": "b1ae6458610a91c85874ed0d59544b455c5a8bedb94b89d0f9a7986b3b1552c3",
         "promptSha256": "ef2991f368f671da2d2383a8a2cb128dedfc7500d8d3e4b4ece3f2681c9dfe89",
         "pipelineSha256": "890d78533799e69255e7bf35145bdf1a9479f514ee7ec58eb36cd70843b0bb55",
-        "qcSha256": "9e8a57079f55d947ec4ef9ff0660e9eea834e30038fdba31e2a964a9c3282fe4",
+        "qcSha256": "8199fb0b5a33ffb36f46db85f1aad32b6e7fc25cbc7fa07d31e0161737b213ff",
         "sourceFrameRgbaSha256": [
           "b4443ec37a7904e84c807746a7122700660640c38448d28d6adbe99329e18053",
           "f9dcef4d40ce441fcace3b59c479b580125083f2187218e1f1ac37f7ff30e5a8",
@@ -709,23 +709,23 @@
         "rawArchiveSha256": "0576dadf1b9b2c50f1f5e1b5ac2011f2b1e429d64568074e1698e81138edb8ae",
         "rawDecodedRgbaSha256": "320235c599fc671b93df60858ab342ca991a99e6268ee7e3e98497d1a44390b4",
         "promptSha256": "ca9a9b1adbe5f6b768803a636b98e8db673176b3c6d55be028556aaa4556ed96",
-        "pipelineSha256": "850fb86a469a50e5ab95fb403a7489b423bbd64d434c78f76ddff7daf2d8ad09",
-        "qcSha256": "5e5764e5bbbd1eee04ac1d04770392f5be1dcf24e2be6977d4b77116508eaad9",
+        "pipelineSha256": "9f5f604ff37c71bde793e06ea3a3acc3c832ebc3261237c39dbeb1a60b8715ef",
+        "qcSha256": "a7d9763e3c5cc8057bae48261f7ffb61ea03245f3a3ff40fe0bc96bad08c75ea",
         "sourceFrameRgbaSha256": [
-          "0e1ec1f3279e9ae471ee21c64734e205e8adacb7c974b3a3f19479af56bca03b",
+          "88818836fede18d717e0953eac0851cba2425bb061b3b0df7e15f32595789ead",
           "95de6faf510932e27b3afb68fb9062e06b665d12fbbea02e0d72db29ed6274c1",
-          "0590f000134c095fb335aa1e12850714bd0a75319f2c1df18382dd4b389f88f6",
           "d54bec5a999d6bb2a4ec9b6fa8e2a3d57e69043cf6d750cda0b008b5fac113c2",
+          "0590f000134c095fb335aa1e12850714bd0a75319f2c1df18382dd4b389f88f6",
           "ba23d2a3fa70df1483a58e7fe17a513f4a132779315bb53f3c112e653822c8ed",
           "7921a253d8e578b973ce0a602f84437adc0b7ee5e2d9e06ba1f4b3c197e57ede",
           "4ce52cb593f544692217bb0e5426907bcdf17c382fc1b5e0d80c620419afb4dd",
           "71934facff976fd9994071aa99961e7293da1b100e6aac955b8205ab273c773f"
         ],
         "runtimeFrameRgbaSha256": [
-          "9c118df41d585893a24a9ecd61d7d0e1185acaefdab6df8b0f52715b93f75799",
+          "f4e1101b9e57808156e5f330b733c8c39f4b3165526ff3d6926c495e86f0fe1a",
           "59df806ec74b001f52b7b7237f628a2969c7cb67fc68aab58c0a37c88c1ec780",
-          "f3211707454a5c166a624ecf8e826d1faa137b54a43a882bb6f97b7ac7bd3747",
           "d292baeb7756236e39a6cd51ff5558231143975d56c063f57b1c115801ae5b19",
+          "f3211707454a5c166a624ecf8e826d1faa137b54a43a882bb6f97b7ac7bd3747",
           "f4679bdd3f574a4ac5a30bc206ec49a7950a618b6920c33bc9a3456fc1c9468b",
           "b246f39ebc5ec5fd00c6e54dc402eb847d50905d3c5abdedb8355c2c4d74bcc0",
           "459414dc3e14627f62da812f8f1689e440199a6ff59764b98f4b3303444aafc2",
@@ -734,6 +734,15 @@
         "representativeRawTracked": false,
         "sourceFramesTracked": false
       }
+    }
+  },
+  "postInstallRepairs": {
+    "safeTemporalAndKoReplay": {
+      "status": "passed",
+      "restoredFromPreBatchCBackup": true,
+      "broadRuntimeDespillApplied": false,
+      "downReviveContinuity": "exact_same_view_RGBA_hold",
+      "koExpressionReview": "passed"
     }
   }
 }
