@@ -1,35 +1,33 @@
 {
   "schemaVersion": 1,
   "tool": "build_pet_art_bundle.py",
-  "input": "/Users/fander/projects/Beastbound_Odyssey/.run/art_batch_phase322/moon_gale_fox/standalone-battle-production/repacked/down.png",
-  "inputSha256": "42639506b5e270d50bc64f9e8325d322d91fb27a61415fc7d91e7e48a23ffd20",
+  "input": ".run/art_batch_phase322/moss_fox_family/driftfox_evolved_moon_gale_wind7_water3/pet/battle/raw/front_3quarter_sw-down-continuity-repair.png",
+  "inputSha256": "3b6e15ed30730badf50da1ebe720c511d3e26048303086901c8691ceabb54601",
   "inputSize": [
-    1254,
-    1254
+    2048,
+    1024
   ],
-  "rows": 4,
+  "rows": 2,
   "cols": 4,
   "rowStart": 0,
   "rowCount": 2,
   "inputCellSize": [
-    313,
-    313
+    512,
+    512
   ],
-  "inputCellSizeMode": "distributed_integer_boundaries",
+  "inputCellSizeMode": "uniform",
   "inputGridBoundaries": {
     "x": [
       0,
-      313,
-      627,
-      940,
-      1254
+      512,
+      1024,
+      1536,
+      2048
     ],
     "y": [
       0,
-      313,
-      627,
-      940,
-      1254
+      512,
+      1024
     ]
   },
   "gridMode": "uniform",
@@ -46,26 +44,26 @@
     "down-8"
   ],
   "key": "#FF00FF",
-  "transparentDistance": 40.0,
-  "opaqueDistance": 150.0,
+  "transparentDistance": 100.0,
+  "opaqueDistance": 200.0,
   "alphaThreshold": 8,
   "componentMode": "largest",
   "minComponentArea": 64,
   "maxDetachedComponentRatio": 0.12,
   "componentPadding": 2,
-  "fitScale": 0.78,
-  "sharedScale": 1.4216129032,
+  "fitScale": 0.82,
+  "sharedScale": 1.0037155967,
   "allowUpscale": true,
-  "anchor": "bottom-center",
+  "anchor": "feet",
   "footBandRatio": 0.12,
   "sourceFrameSize": 512,
   "runtimeFrameSize": 256,
-  "safeMargin": 14,
-  "effectiveSourceMargin": 28,
+  "safeMargin": 12,
+  "effectiveSourceMargin": 24,
   "sourceResampleGuard": 2,
   "sourceEdgeMargin": 4,
-  "maxDimensionDrift": 0.55,
-  "residualMagentaDistance": 0.0,
+  "maxDimensionDrift": 0.75,
+  "residualMagentaDistance": 70.0,
   "fringeCleanupAlpha": 96,
   "outputs": {
     "sourceFrames": "source-frames",
@@ -85,12 +83,12 @@
       "sourceCellBox": [
         0,
         0,
-        313,
-        313
+        512,
+        512
       ],
       "sourceCellSize": [
-        313,
-        313
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -100,91 +98,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 79269,
-        "keyedCandidatePixels": 79294,
-        "transparentPixels": 78127,
-        "partialAlphaPixels": 1164,
-        "partialInverseOutOfGamutPixels": 229,
-        "backgroundRatio": 0.809123,
+        "borderConnectedPixels": 232720,
+        "keyedCandidatePixels": 232962,
+        "transparentPixels": 230946,
+        "partialAlphaPixels": 1990,
+        "partialInverseOutOfGamutPixels": 508,
+        "partialInverseAdjustedPixels": 507,
+        "backgroundRatio": 0.887756,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 140,
+          "repairedPixels": 139,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 1,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 221,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 140,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 4108,
-          "strongMagentaEdgePixelsBefore": 1358,
-          "strongMagentaEdgePixelsAfter": 14,
-          "strongMagentaEdgeRatioAfter": 0.003423,
-          "despilledPixels": 1358,
+          "edgePixelCount": 5536,
+          "strongMagentaEdgePixelsBefore": 28,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 28,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 19842,
+          "area": 31197,
           "bbox": [
-            55,
-            89,
-            257,
-            286
+            162,
+            231,
+            411,
+            486
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        55,
-        89,
-        257,
-        286
+        162,
+        231,
+        411,
+        486
       ],
       "paddedCropBbox": [
-        53,
-        87,
-        259,
-        288
+        160,
+        229,
+        413,
+        488
       ],
       "paddedCropSize": [
-        206,
-        201
+        253,
+        259
       ],
-      "subjectSpan": 202.0,
-      "horizontalAnchorInCrop": 103.0,
+      "subjectSpan": 255.0,
+      "horizontalAnchorInCrop": 94.9454,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.081818,
+      "dimensionDriftFromMedian": 0.069343,
       "sourceOutputSize": [
-        293,
-        286
+        254,
+        260
       ],
       "sourcePastePosition": [
-        110,
-        200
+        161,
+        228
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        291,
-        282
+        252,
+        258
       ],
       "sourceVisibleBbox": [
-        112,
-        202,
-        401,
-        482
+        163,
+        230,
+        413,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.4223301,
-        1.42288557
+        1.00395257,
+        1.003861
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 48,
+      "sourceLowAlphaMagentaPixelsCleared": 21,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        56,
-        101,
-        201,
-        241
+        81,
+        115,
+        207,
+        243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 16,
+      "runtimeLowAlphaMagentaPixelsCleared": 5,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "efa40001c5be7b9f2b515e264ae7a061e50ab1eb2bc2fcf86b1f59fb9c4413fa",
-      "runtimeRgbaSha256": "ef10916c32d352a51f5d0580be843cca5d7333ae4495a19a6d3b72ace93b861d"
+      "sourceRgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
+      "runtimeRgbaSha256": "9990aeb4fa0f94e41a362e695e27638f8aed7724426542e9901b3900c520277e"
     },
     {
       "slot": "down-2",
@@ -193,14 +206,14 @@
         1
       ],
       "sourceCellBox": [
-        313,
+        512,
         0,
-        627,
-        313
+        1024,
+        512
       ],
       "sourceCellSize": [
-        314,
-        313
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -210,91 +223,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 80763,
-        "keyedCandidatePixels": 80783,
-        "transparentPixels": 79714,
-        "partialAlphaPixels": 1065,
-        "partialInverseOutOfGamutPixels": 193,
-        "backgroundRatio": 0.821748,
+        "borderConnectedPixels": 233333,
+        "keyedCandidatePixels": 233728,
+        "transparentPixels": 231588,
+        "partialAlphaPixels": 2116,
+        "partialInverseOutOfGamutPixels": 553,
+        "partialInverseAdjustedPixels": 552,
+        "backgroundRatio": 0.890095,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 125,
+          "repairedPixels": 125,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 237,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 143,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 3866,
-          "strongMagentaEdgePixelsBefore": 1290,
-          "strongMagentaEdgePixelsAfter": 23,
-          "strongMagentaEdgeRatioAfter": 0.005923,
-          "despilledPixels": 1290,
+          "edgePixelCount": 5326,
+          "strongMagentaEdgePixelsBefore": 38,
+          "strongMagentaEdgePixelsAfter": 1,
+          "strongMagentaEdgeRatioAfter": 0.000188,
+          "despilledPixels": 38,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 18568,
+          "area": 30556,
           "bbox": [
-            52,
-            100,
-            261,
-            286
+            136,
+            249,
+            402,
+            486
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        52,
-        100,
-        261,
-        286
+        136,
+        249,
+        402,
+        486
       ],
       "paddedCropBbox": [
-        50,
-        98,
-        263,
-        288
+        134,
+        247,
+        404,
+        488
       ],
       "paddedCropSize": [
-        213,
-        190
-      ],
-      "subjectSpan": 209.0,
-      "horizontalAnchorInCrop": 106.5,
-      "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.05,
-      "sourceOutputSize": [
-        303,
-        270
-      ],
-      "sourcePastePosition": [
-        106,
-        214
-      ],
-      "resizedVisibleBbox": [
-        0,
-        2,
-        301,
-        268
-      ],
-      "sourceVisibleBbox": [
-        106,
-        216,
-        407,
-        482
-      ],
-      "sourceBaselineExclusive": 482,
-      "actualScale": [
-        1.42253521,
-        1.42105263
-      ],
-      "sourceLowAlphaMagentaPixelsCleared": 40,
-      "residualMagentaPixelsSource": 0,
-      "runtimeVisibleBbox": [
-        54,
-        108,
-        204,
+        270,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 7,
+      "subjectSpan": 266.0,
+      "horizontalAnchorInCrop": 121.795,
+      "residualMagentaPixelsBeforeResize": 0,
+      "dimensionDriftFromMedian": 0.029197,
+      "sourceOutputSize": [
+        271,
+        242
+      ],
+      "sourcePastePosition": [
+        132,
+        246
+      ],
+      "resizedVisibleBbox": [
+        2,
+        2,
+        269,
+        240
+      ],
+      "sourceVisibleBbox": [
+        134,
+        248,
+        401,
+        486
+      ],
+      "sourceBaselineExclusive": 486,
+      "actualScale": [
+        1.0037037,
+        1.00414938
+      ],
+      "sourceLowAlphaMagentaPixelsCleared": 36,
+      "residualMagentaPixelsSource": 0,
+      "runtimeVisibleBbox": [
+        66,
+        124,
+        201,
+        243
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 6,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "0c5eb072904d7d050cf12abbc3fd4edb7527e46942233d91c605a89ef4d63a59",
-      "runtimeRgbaSha256": "48766f17480350f8e4ffdd62c363e9945696d0950c375bba6ee66e18e274e4d1"
+      "sourceRgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
+      "runtimeRgbaSha256": "d42afeb31967f2b3462a76d8093d7d3fb7dfc233e276e9a4e1c70056d7368bd5"
     },
     {
       "slot": "down-3",
@@ -303,14 +331,14 @@
         2
       ],
       "sourceCellBox": [
-        627,
+        1024,
         0,
-        940,
-        313
+        1536,
+        512
       ],
       "sourceCellSize": [
-        313,
-        313
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -320,91 +348,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 81802,
-        "keyedCandidatePixels": 82018,
-        "transparentPixels": 81176,
-        "partialAlphaPixels": 840,
-        "partialInverseOutOfGamutPixels": 127,
-        "backgroundRatio": 0.834978,
+        "borderConnectedPixels": 235282,
+        "keyedCandidatePixels": 235616,
+        "transparentPixels": 233779,
+        "partialAlphaPixels": 1808,
+        "partialInverseOutOfGamutPixels": 453,
+        "partialInverseAdjustedPixels": 448,
+        "backgroundRatio": 0.89753,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 106,
+          "repairedPixels": 106,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 152,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 106,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 3010,
-          "strongMagentaEdgePixelsBefore": 963,
-          "strongMagentaEdgePixelsAfter": 9,
-          "strongMagentaEdgeRatioAfter": 0.002996,
-          "despilledPixels": 963,
+          "edgePixelCount": 4453,
+          "strongMagentaEdgePixelsBefore": 37,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 37,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 16793,
+          "area": 28362,
           "bbox": [
-            62,
-            111,
-            248,
-            285
+            137,
+            268,
+            404,
+            486
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        62,
-        111,
-        248,
-        285
+        137,
+        268,
+        404,
+        486
       ],
       "paddedCropBbox": [
-        60,
-        109,
-        250,
-        287
+        135,
+        266,
+        406,
+        488
       ],
       "paddedCropSize": [
-        190,
-        178
+        271,
+        222
       ],
-      "subjectSpan": 186.0,
-      "horizontalAnchorInCrop": 95.0,
+      "subjectSpan": 267.0,
+      "horizontalAnchorInCrop": 120.2783,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.154545,
+      "dimensionDriftFromMedian": 0.025547,
       "sourceOutputSize": [
-        270,
-        253
+        272,
+        223
       ],
       "sourcePastePosition": [
-        121,
-        231
+        135,
+        265
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        268,
-        251
+        270,
+        221
       ],
       "sourceVisibleBbox": [
-        123,
-        233,
-        389,
-        482
+        137,
+        267,
+        405,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.42105263,
-        1.42134831
+        1.00369004,
+        1.0045045
       ],
       "sourceLowAlphaMagentaPixelsCleared": 23,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        61,
-        116,
-        195,
-        241
+        68,
+        133,
+        203,
+        244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 14,
+      "runtimeLowAlphaMagentaPixelsCleared": 3,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "34ccb116638ccc9f171436feec5e3de29dabf78a5dfbada084197161bdf0abff",
-      "runtimeRgbaSha256": "294f0fd054563de87a4fe1abba26a86edafa701f602ad29fce7b008579fe2b6a"
+      "sourceRgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
+      "runtimeRgbaSha256": "984c8d8f3c7d66cd59e79bb4af1c4cc150d44a4a9761b76c508ddbffe1086932"
     },
     {
       "slot": "down-4",
@@ -413,14 +456,14 @@
         3
       ],
       "sourceCellBox": [
-        940,
+        1536,
         0,
-        1254,
-        313
+        2048,
+        512
       ],
       "sourceCellSize": [
-        314,
-        313
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -430,91 +473,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 82443,
-        "keyedCandidatePixels": 82443,
-        "transparentPixels": 81603,
-        "partialAlphaPixels": 839,
-        "partialInverseOutOfGamutPixels": 158,
-        "backgroundRatio": 0.838841,
+        "borderConnectedPixels": 237460,
+        "keyedCandidatePixels": 237738,
+        "transparentPixels": 236458,
+        "partialAlphaPixels": 1258,
+        "partialInverseOutOfGamutPixels": 325,
+        "partialInverseAdjustedPixels": 324,
+        "backgroundRatio": 0.905838,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 54,
+          "repairedPixels": 54,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 133,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 61,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 2942,
-          "strongMagentaEdgePixelsBefore": 975,
-          "strongMagentaEdgePixelsAfter": 8,
-          "strongMagentaEdgeRatioAfter": 0.002724,
-          "despilledPixels": 975,
+          "edgePixelCount": 3414,
+          "strongMagentaEdgePixelsBefore": 35,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 35,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 16679,
+          "area": 25684,
           "bbox": [
-            44,
-            142,
-            267,
-            286
+            139,
+            306,
+            415,
+            486
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        44,
-        142,
-        267,
-        286
+        139,
+        306,
+        415,
+        486
       ],
       "paddedCropBbox": [
-        42,
-        140,
-        269,
-        288
+        137,
+        304,
+        417,
+        488
       ],
       "paddedCropSize": [
-        227,
-        148
+        280,
+        184
       ],
-      "subjectSpan": 223.0,
-      "horizontalAnchorInCrop": 113.5,
+      "subjectSpan": 276.0,
+      "horizontalAnchorInCrop": 117.9612,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.013636,
+      "dimensionDriftFromMedian": 0.007299,
       "sourceOutputSize": [
-        323,
-        210
+        281,
+        185
       ],
       "sourcePastePosition": [
-        94,
-        275
+        138,
+        303
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        321,
-        207
+        279,
+        183
       ],
       "sourceVisibleBbox": [
-        96,
-        277,
-        415,
-        482
+        140,
+        305,
+        417,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.42290749,
-        1.41891892
+        1.00357143,
+        1.00543478
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 36,
+      "sourceLowAlphaMagentaPixelsCleared": 16,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        48,
-        138,
-        207,
-        241
+        70,
+        152,
+        209,
+        243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 12,
+      "runtimeLowAlphaMagentaPixelsCleared": 4,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "decff29490d25226194f868092951e103299a7813d8195e9a2a76d32f86170fd",
-      "runtimeRgbaSha256": "68db269ec2af657e0762b49a61db2b02dbc125c5c9738662a70756a2ed0616ba"
+      "sourceRgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
+      "runtimeRgbaSha256": "c3f1c81e4fb34a6847bffc43097eab6c205ac564bcac229be8efddbd8ea3a7c3"
     },
     {
       "slot": "down-5",
@@ -524,13 +582,13 @@
       ],
       "sourceCellBox": [
         0,
-        313,
-        313,
-        627
+        512,
+        512,
+        1024
       ],
       "sourceCellSize": [
-        313,
-        314
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -540,91 +598,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 83117,
-        "keyedCandidatePixels": 83117,
-        "transparentPixels": 82330,
-        "partialAlphaPixels": 786,
-        "partialInverseOutOfGamutPixels": 143,
-        "backgroundRatio": 0.845699,
+        "borderConnectedPixels": 238531,
+        "keyedCandidatePixels": 238697,
+        "transparentPixels": 237303,
+        "partialAlphaPixels": 1373,
+        "partialInverseOutOfGamutPixels": 372,
+        "partialInverseAdjustedPixels": 370,
+        "backgroundRatio": 0.909924,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 84,
+          "repairedPixels": 83,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 1,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 169,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 92,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 2895,
-          "strongMagentaEdgePixelsBefore": 931,
-          "strongMagentaEdgePixelsAfter": 10,
-          "strongMagentaEdgeRatioAfter": 0.003454,
-          "despilledPixels": 931,
+          "edgePixelCount": 3412,
+          "strongMagentaEdgePixelsBefore": 39,
+          "strongMagentaEdgePixelsAfter": 1,
+          "strongMagentaEdgeRatioAfter": 0.000293,
+          "despilledPixels": 39,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 15906,
+          "area": 24840,
           "bbox": [
-            34,
-            153,
-            278,
-            285
+            142,
+            307,
+            414,
+            486
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        34,
-        153,
-        278,
-        285
+        142,
+        307,
+        414,
+        486
       ],
       "paddedCropBbox": [
-        32,
-        151,
-        280,
-        287
+        140,
+        305,
+        416,
+        488
       ],
       "paddedCropSize": [
-        248,
-        136
+        276,
+        183
       ],
-      "subjectSpan": 244.0,
-      "horizontalAnchorInCrop": 124.0,
+      "subjectSpan": 272.0,
+      "horizontalAnchorInCrop": 112.85,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.109091,
+      "dimensionDriftFromMedian": 0.007299,
       "sourceOutputSize": [
-        353,
-        193
+        277,
+        184
       ],
       "sourcePastePosition": [
-        80,
-        291
+        141,
+        304
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        351,
-        191
+        275,
+        182
       ],
       "sourceVisibleBbox": [
-        82,
-        293,
-        431,
-        482
+        143,
+        306,
+        416,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.4233871,
-        1.41911765
+        1.00362319,
+        1.00546448
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 30,
+      "sourceLowAlphaMagentaPixelsCleared": 23,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        41,
-        146,
-        216,
-        241
+        71,
+        153,
+        208,
+        244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 13,
+      "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "271ea0902e48068b531efd304e8eea8457f606156a99d36ce065b38b9586648c",
-      "runtimeRgbaSha256": "eb9f5d2d529c53236b125f402bb0fe5aa25149ce569ca82641455268294c9741"
+      "sourceRgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
+      "runtimeRgbaSha256": "141646362a334a46bed6cafadcca183d274355eb21acc96e6bfa312b4fb905fd"
     },
     {
       "slot": "down-6",
@@ -633,14 +706,14 @@
         1
       ],
       "sourceCellBox": [
-        313,
-        313,
-        627,
-        627
+        512,
+        512,
+        1024,
+        1024
       ],
       "sourceCellSize": [
-        314,
-        314
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -650,100 +723,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 83451,
-        "keyedCandidatePixels": 84042,
-        "transparentPixels": 83231,
-        "partialAlphaPixels": 808,
-        "partialInverseOutOfGamutPixels": 137,
-        "backgroundRatio": 0.846393,
+        "borderConnectedPixels": 238924,
+        "keyedCandidatePixels": 239157,
+        "transparentPixels": 237898,
+        "partialAlphaPixels": 1231,
+        "partialInverseOutOfGamutPixels": 327,
+        "partialInverseAdjustedPixels": 326,
+        "backgroundRatio": 0.911423,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 52,
+          "repairedPixels": 52,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 139,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 52,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 2883,
-          "strongMagentaEdgePixelsBefore": 940,
-          "strongMagentaEdgePixelsAfter": 13,
-          "strongMagentaEdgeRatioAfter": 0.004519,
-          "despilledPixels": 940,
+          "edgePixelCount": 3334,
+          "strongMagentaEdgePixelsBefore": 30,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 30,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 15205,
+          "area": 24246,
           "bbox": [
-            43,
-            159,
-            270,
-            285
-          ]
-        },
-        {
-          "area": 84,
-          "bbox": [
-            40,
-            174,
-            44,
-            202
+            146,
+            312,
+            430,
+            485
           ]
         }
       ],
-      "detachedComponentRatio": 0.005524,
+      "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        43,
-        159,
-        270,
-        285
+        146,
+        312,
+        430,
+        485
       ],
       "paddedCropBbox": [
-        41,
-        157,
-        272,
-        287
+        144,
+        310,
+        432,
+        487
       ],
       "paddedCropSize": [
-        231,
-        130
+        288,
+        177
       ],
-      "subjectSpan": 227.0,
-      "horizontalAnchorInCrop": 115.5,
+      "subjectSpan": 284.0,
+      "horizontalAnchorInCrop": 113.2744,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.031818,
+      "dimensionDriftFromMedian": 0.036496,
       "sourceOutputSize": [
-        328,
-        185
+        289,
+        178
       ],
       "sourcePastePosition": [
-        92,
-        299
+        143,
+        310
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        326,
-        183
+        287,
+        176
       ],
       "sourceVisibleBbox": [
-        94,
-        301,
-        418,
-        482
+        145,
+        312,
+        430,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.41991342,
-        1.42307692
+        1.00347222,
+        1.00564972
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 22,
+      "sourceLowAlphaMagentaPixelsCleared": 16,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        47,
-        150,
-        209,
-        241
+        72,
+        156,
+        215,
+        243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 4,
+      "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "ad0448d13980da5e10e02f1862be374a2c13c19f15bb52dd4213a9d8d90d9b44",
-      "runtimeRgbaSha256": "09ff4173f9b1f0f3aa835698634a6e18cc7617d061e626e2adb5b9c7a5a26b40"
+      "sourceRgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
+      "runtimeRgbaSha256": "7a808bba0a6964177e918a3ddf9f0bd9078951ba40b25b4bf75e5ec1a436afd9"
     },
     {
       "slot": "down-7",
@@ -752,14 +831,14 @@
         2
       ],
       "sourceCellBox": [
-        627,
-        313,
-        940,
-        627
+        1024,
+        512,
+        1536,
+        1024
       ],
       "sourceCellSize": [
-        313,
-        314
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -769,109 +848,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 86354,
-        "keyedCandidatePixels": 86688,
-        "transparentPixels": 86066,
-        "partialAlphaPixels": 621,
-        "partialInverseOutOfGamutPixels": 107,
-        "backgroundRatio": 0.878635,
+        "borderConnectedPixels": 242764,
+        "keyedCandidatePixels": 243013,
+        "transparentPixels": 241896,
+        "partialAlphaPixels": 1102,
+        "partialInverseOutOfGamutPixels": 320,
+        "partialInverseAdjustedPixels": 320,
+        "backgroundRatio": 0.926071,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 77,
+          "repairedPixels": 77,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 104,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 77,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 2301,
-          "strongMagentaEdgePixelsBefore": 768,
-          "strongMagentaEdgePixelsAfter": 10,
-          "strongMagentaEdgeRatioAfter": 0.004346,
-          "despilledPixels": 768,
+          "edgePixelCount": 2978,
+          "strongMagentaEdgePixelsBefore": 23,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 23,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 11860,
+          "area": 20246,
           "bbox": [
-            46,
-            199,
-            263,
-            285
-          ]
-        },
-        {
-          "area": 249,
-          "bbox": [
-            44,
-            225,
-            54,
-            262
-          ]
-        },
-        {
-          "area": 106,
-          "bbox": [
-            44,
-            196,
-            54,
-            214
+            153,
+            341,
+            432,
+            486
           ]
         }
       ],
-      "detachedComponentRatio": 0.020995,
+      "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        46,
-        199,
-        263,
-        285
+        153,
+        341,
+        432,
+        486
       ],
       "paddedCropBbox": [
-        44,
-        197,
-        265,
-        287
+        151,
+        339,
+        434,
+        488
       ],
       "paddedCropSize": [
-        221,
-        90
+        283,
+        149
       ],
-      "subjectSpan": 217.0,
-      "horizontalAnchorInCrop": 110.5,
+      "subjectSpan": 279.0,
+      "horizontalAnchorInCrop": 100.8535,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.013636,
+      "dimensionDriftFromMedian": 0.018248,
       "sourceOutputSize": [
-        314,
-        128
+        284,
+        150
       ],
       "sourcePastePosition": [
-        99,
-        356
+        152,
+        338
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        312,
-        126
+        282,
+        148
       ],
       "sourceVisibleBbox": [
-        101,
-        358,
-        411,
-        482
+        154,
+        340,
+        434,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.42081448,
-        1.42222222
+        1.00353357,
+        1.00671141
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 20,
+      "sourceLowAlphaMagentaPixelsCleared": 16,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        51,
-        179,
-        206,
-        241
+        77,
+        169,
+        217,
+        243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 8,
+      "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "a075066e82c18d0a44203ab463dabbbc219b153661a6767e9cd7d536689c9807",
-      "runtimeRgbaSha256": "d6f0cb3f168ea70141cf01465620a9780cfdb34cf93041fa11a009d8781bfb64"
+      "sourceRgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
+      "runtimeRgbaSha256": "6fb00e48ab86dc19f410eee132d9adec050da49a224680c6d1d55bc1e140ca7f"
     },
     {
       "slot": "down-8",
@@ -880,14 +956,14 @@
         3
       ],
       "sourceCellBox": [
-        940,
-        313,
-        1254,
-        627
+        1536,
+        512,
+        2048,
+        1024
       ],
       "sourceCellSize": [
-        314,
-        314
+        512,
+        512
       ],
       "chroma": {
         "inputBackgroundMode": "chroma_key",
@@ -897,91 +973,106 @@
           0.0,
           0.0
         ],
-        "borderConnectedPixels": 90086,
-        "keyedCandidatePixels": 90127,
-        "transparentPixels": 89733,
-        "partialAlphaPixels": 394,
-        "partialInverseOutOfGamutPixels": 79,
-        "backgroundRatio": 0.913688,
+        "borderConnectedPixels": 242407,
+        "keyedCandidatePixels": 243756,
+        "transparentPixels": 242690,
+        "partialAlphaPixels": 1045,
+        "partialInverseOutOfGamutPixels": 263,
+        "partialInverseAdjustedPixels": 262,
+        "backgroundRatio": 0.924709,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 0,
+          "strongGreenPixelsBefore": 47,
+          "repairedPixels": 47,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 97,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 48,
+          "alphaPixelsChanged": 0
+        },
         "postChromaEdgeDespill": {
-          "edgePixelCount": 1514,
-          "strongMagentaEdgePixelsBefore": 523,
-          "strongMagentaEdgePixelsAfter": 1,
-          "strongMagentaEdgeRatioAfter": 0.000666,
-          "despilledPixels": 523,
+          "edgePixelCount": 2758,
+          "strongMagentaEdgePixelsBefore": 26,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 26,
           "alphaPixelsChanged": 0
         }
       },
       "componentMode": "largest",
       "components": [
         {
-          "area": 8863,
+          "area": 19452,
           "bbox": [
-            43,
-            221,
-            268,
-            285
+            163,
+            357,
+            443,
+            485
           ]
         }
       ],
       "detachedComponentRatio": 0.0,
       "selectedBbox": [
-        43,
-        221,
-        268,
-        285
+        163,
+        357,
+        443,
+        485
       ],
       "paddedCropBbox": [
-        41,
-        219,
-        270,
-        287
+        161,
+        355,
+        445,
+        487
       ],
       "paddedCropSize": [
-        229,
-        68
+        284,
+        132
       ],
-      "subjectSpan": 225.0,
-      "horizontalAnchorInCrop": 114.5,
+      "subjectSpan": 280.0,
+      "horizontalAnchorInCrop": 96.0982,
       "residualMagentaPixelsBeforeResize": 0,
-      "dimensionDriftFromMedian": 0.022727,
+      "dimensionDriftFromMedian": 0.021898,
       "sourceOutputSize": [
-        326,
-        97
+        285,
+        132
       ],
       "sourcePastePosition": [
-        93,
-        387
+        160,
+        356
       ],
       "resizedVisibleBbox": [
         2,
         2,
-        324,
-        95
+        283,
+        130
       ],
       "sourceVisibleBbox": [
-        95,
-        389,
-        417,
-        482
+        162,
+        358,
+        443,
+        486
       ],
-      "sourceBaselineExclusive": 482,
+      "sourceBaselineExclusive": 486,
       "actualScale": [
-        1.42358079,
-        1.42647059
+        1.00352113,
+        1.0
       ],
-      "sourceLowAlphaMagentaPixelsCleared": 14,
+      "sourceLowAlphaMagentaPixelsCleared": 4,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        48,
-        194,
-        209,
-        241
+        81,
+        179,
+        222,
+        244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 6,
+      "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "035de958505516ef8d656528207e96a638dc0ede6ce72253bd9d3ddc39995466",
-      "runtimeRgbaSha256": "7e9de6234bc17bd9e1e413ef770d4e27b96cbe7a5b5b3c1cce165d8194f0fadc"
+      "sourceRgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+      "runtimeRgbaSha256": "6436c6910de97cf1445ca79dcc8b795e407f52d5b0151c68d659a2bb8f29c028"
     }
   ]
 }
