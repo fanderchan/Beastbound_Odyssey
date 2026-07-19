@@ -18,8 +18,8 @@
       "slot": "revive-1",
       "bbox": [
         24,
-        146,
-        232,
+        152,
+        233,
         245
       ],
       "minimumEdgeMargin": 11,
@@ -110,5 +110,12 @@
       "residualMagentaPixels": 0,
       "transparentRgbLeakPixels": 0
     }
-  ]
+  ],
+  "continuity": {
+    "rule": "revive-1 == down-8 byte-for-byte",
+    "sourceFrameEqual": true,
+    "runtimeFrameEqual": true,
+    "sourceByteSha256": "50bcce7930b8d65ec2926be067d9760ff44a0179aa1c9697c89e53b891b39938",
+    "runtimeByteSha256": "490d5ffb9ae9738154f96313c2db71c97d80f2b89334b505bba637a2cd78d2f2"
+  }
 }
