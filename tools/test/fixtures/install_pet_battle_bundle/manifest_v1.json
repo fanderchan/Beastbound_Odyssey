@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "formId": "fixture_pet_v1",
+  "kind": "pet",
+  "bundleId": "fixture_pet_v1_battle_v1",
+  "artStatus": "in_production",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": {
+    "idle": {"frameCount": 6, "fps": 8, "loop": true},
+    "walk": {"frameCount": 8, "fps": 10, "loop": true},
+    "attack": {"frameCount": 8, "fps": 12, "loop": false},
+    "skill": {"frameCount": 8, "fps": 12, "loop": false},
+    "hurt": {"frameCount": 6, "fps": 12, "loop": false},
+    "defend": {"frameCount": 6, "fps": 10, "loop": false},
+    "dodge": {"frameCount": 8, "fps": 12, "loop": false},
+    "counter": {"frameCount": 8, "fps": 12, "loop": false},
+    "stagger": {"frameCount": 8, "fps": 10, "loop": false},
+    "knockaway": {"frameCount": 8, "fps": 12, "loop": false},
+    "down": {"frameCount": 8, "fps": 10, "loop": false},
+    "revive": {"frameCount": 8, "fps": 10, "loop": false}
+  },
+  "visualContract": {
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false
+  },
+  "provenance": {
+    "generator": "OpenAI built-in image generation",
+    "ownership": "project-owned original generated artwork",
+    "sourceOrigin": "generated from the tracked identity lock and prompt",
+    "replacementPath": "regenerate from the tracked prompt and raw archive"
+  },
+  "review": {
+    "selfReviewStatus": "passed",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "qa/contact-sheet.png",
+    "contactSheetSha256": "REPLACED_BY_TEST",
+    "qcSummary": "qa/qc-summary.json",
+    "qcSummarySha256": "REPLACED_BY_TEST"
+  }
+}
