@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D pet battle animation sheet
+Primary request: Render exactly 8 sequential frames of the exact 2转小MM performing walk, arranged in an exact 4 columns x 2 rows grid, read left-to-right across the top row then the bottom row.
+References: IMAGE 1 is the binding exact 2转小MM identity for this view. IMAGE 2 is motion timing and equal-cell layout reference only; replace its brown earth-beast identity completely. Preserve IMAGE 1 species and palette in every frame.
+Identity lock: the same friendly ritual stone-spirit bloodline at stage two: squat rounded segmented warm-gray river-stone biped, one oval wooden face mask with exactly two cyan eye slits and one tiny carved mouth groove, integrated three-point stone-and-wood brow crest, wider engraved shoulder plates, exactly three blunt fingers on each visible hand, broad stone feet, gold-and-cyan seams, and exactly two concentric incomplete ritual rings, each ring made of exactly three separate arcs (outer top/left/right plus inner top/left/right, six arcs and six sockets total) with a clear central riding channel; never human, robotic, royal, four-legged, single-ring or triple-ring.
+View contract: back three-quarter northeast source view, head and travel axis toward upper-right away from camera, rear/tail toward lower-left, rider back visible when mounted; this is the ally source before the required runtime flipH=true. Keep this same source facing through every frame; no camera drift, turn-around or source mirroring.
+Action sequence: powerful biped travel with alternating stone-foot contacts, arm counter-swing and controlled delayed follow-through across both three-arc rings.
+Continuity: one coherent animation with genuine pose progression, stable scale, stable palette and consistent anatomy; exact same individual in every cell.
+Containment: one complete subject per equal cell, inside the central 58 to 66 percent, generous #FF00FF margin around every limb, plate, horn, ring or tail; nothing crosses a cell edge.
+Style: original high-definition warm hand-painted 2.5D fantasy game sprite, Stone-Age-inspired readability without copying copyrighted art, crisp at 160 px.
+Background: perfectly flat solid #FF00FF only. No ground, shadow, scenery, detached effects, particles, text, labels, borders, UI, logo or watermark.
+Avoid: extra/missing anatomy, species drift, duplicated frames, flipped facing, cropping, sleep smile, death/gore.

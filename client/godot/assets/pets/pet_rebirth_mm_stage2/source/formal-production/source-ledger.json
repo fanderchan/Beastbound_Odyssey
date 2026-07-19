@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "kind": "pet",
+  "scope": "standalone_pet_battle180",
+  "archiveMode": "lean",
+  "componentMode": "all",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "ecfcbca2c2fb2c6a7a421928e08b3936415dcd702d498bd0cdc2dd69d179defd",
+  "sourceFramesTracked": false,
+  "rawGenerationSheetsTracked": false,
+  "rawGenerationSheetCount": 24,
+  "rawGenerationSheets": [
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sha256": "5c9818ddea22109dec511ecc1ac89b8b0a5bfb3ac162d6994d8298825ded6a0f",
+      "sizeBytes": 2065279
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sha256": "128a2ed0b01cd6d3d45fbdd8c6b2c0e524565c62a109f52cec14aba10969ed54",
+      "sizeBytes": 1886991
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sha256": "4c9d95c91cdd2a6fa3a1c228e0939b6a852e3afaa67a773be4992137c14e148b",
+      "sizeBytes": 2183187
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sha256": "e822226f2cba95183ca45bc2b5ea11bb1577e188e112042eff753a912696dd77",
+      "sizeBytes": 2213930
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sha256": "b48019b019688fad1f8d81ae5a449fa94e2d59bc6187ef12fcca853d9b3e3938",
+      "sizeBytes": 1686498
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sha256": "e68d34702f7ad63ed5c0e942c7371b910b41bb70ee46c8b24617ae3b2f3ab6af",
+      "sizeBytes": 1950593
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sha256": "be37b9da54c8cd82ab181d4746e40a0322a05d44669183577dc3c61c407a8130",
+      "sizeBytes": 2094695
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sha256": "314be28bbffc3f76ed06a9dc6f601cdeb86ae70f4142d315bb50734bdde11ffc",
+      "sizeBytes": 2044803
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sha256": "4f6e313e10f5546a904032a7435fc9c5ef829d24fce907699f6a341c45f83039",
+      "sizeBytes": 2213049
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sha256": "f04d23483edba9a98c2a90084e92e20b4e0e2d3de8052eeb4cd49aad1eaff6a9",
+      "sizeBytes": 2185598
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sha256": "0746c7cf1c473cdcca885cef4ddfbf790bef5ead5bb3f98ce6893ae27faa0a1c",
+      "sizeBytes": 1807459
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sha256": "eb1dd05eea52937bbfa39e93d301b61cbce6a8f159f0cdb76560856fd8072991",
+      "sizeBytes": 1839558
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sha256": "82cedb7ad594477afa53ed1930c7556d819227964a3c303a343eb556ff8370cf",
+      "sizeBytes": 2271582
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sha256": "7a00cae472aa352463c073ced85abb609cd5f4e2f99b11775ff789ffd5d640a4",
+      "sizeBytes": 2032799
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sha256": "1f0d6f5553ceb0f29b9b3af6e858ee92312dd4f53fd78c1b96417672e686e07a",
+      "sizeBytes": 2223969
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sha256": "b3590ad3cc7bd0ad1d5829cf4bb9c0661abdedb48a64687f276e03aca66e73bd",
+      "sizeBytes": 2062504
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sha256": "8bd13051e373191d8ebe7a3adef0d5889cee0554dfe73382082767629c4af113",
+      "sizeBytes": 1776117
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sha256": "06c397f6bb45080340f568785e68cfcaee333acd1642f966ac8d53940cf7c4f3",
+      "sizeBytes": 2342897
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sha256": "b4b065a4feeaa1321302c9566fdfa1f6c7d255929fc66274b3843fe698539abd",
+      "sizeBytes": 2200920
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sha256": "cb6e3d075957f1016a230b717b8a97545b4c2c1440313c665415183a6a6b6011",
+      "sizeBytes": 2034944
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sha256": "b10c342984699d0733eaf5a446eceb81fdc17d05090165f9e23f83ca93550fc8",
+      "sizeBytes": 2139838
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sha256": "a0568c6df24062907762639643f7a7d95fffbfaaf65e2875c1030328c2fa097e",
+      "sizeBytes": 2295050
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sha256": "9b5fed180a2054b2ef22a77126a5c7380334a9a9b55933d22ec8be92f42cec7d",
+      "sizeBytes": 2011659
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sha256": "4d7e56cdb34507e3e7e43a9931a3351eae1abee220fd0a58255b7b7b2eb966e0",
+      "sizeBytes": 1978421
+    }
+  ],
+  "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}
