@@ -3140,6 +3140,7 @@ function serverStateResourceLock(stateDocument) {
     kind: "lock",
     resource: "server_state",
     key: "auth",
+    valueProjection: "server_state_authority_v2",
     sql: "SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE",
     params: [],
     expectedRow: {
@@ -6580,6 +6581,12 @@ function assertMysqlResourceLockRow(result, lock) {
   const row = rows[0] || {};
   for (const [field, expectedValue] of Object.entries(lock.expectedRow || {})) {
     let actualValue = row[field];
+    if (
+      lock.valueProjection === "server_state_authority_v2"
+      && field === "document_json"
+    ) {
+      actualValue = mysqlServerStateAuthorityProjection(actualValue);
+    }
     let matches;
     if (expectedValue === null) {
       matches = actualValue === null;
@@ -6601,6 +6608,33 @@ function assertMysqlResourceLockRow(result, lock) {
       throw mysqlResourceRevisionConflict(lock.resource, lock.key);
     }
   }
+}
+
+function mysqlServerStateAuthorityProjection(value) {
+  let state = value;
+  if (typeof state === "string") {
+    try {
+      state = JSON.parse(state);
+    } catch {
+      return null;
+    }
+  }
+  if (!isRecord(state)) {
+    return null;
+  }
+  // Old entity-table snapshots included a diagnostic `counts` object. It was
+  // never authority, and keeping it in the lock comparison makes the first
+  // post-upgrade mutation fail forever even though every gameplay field still
+  // matches. Project only the operational contract here; the owning UPDATE
+  // rewrites the row to the current compact document in the same transaction.
+  return {
+    schemaVersion: Number(state.schemaVersion),
+    storage: String(state.storage || ""),
+    serviceEventSeq: Number(state.serviceEventSeq || 0),
+    marketConfig: objectOrEmpty(state.marketConfig),
+    offlineHangConfig: objectOrEmpty(state.offlineHangConfig),
+    petPaidResetConfig: objectOrEmpty(state.petPaidResetConfig),
+  };
 }
 
 function mysqlStoreRevisionFromQueryResult(result) {

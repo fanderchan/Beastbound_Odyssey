@@ -34,6 +34,7 @@ const {
 } = require("../test-support/auth-service-test-context");
 const {
   DEFAULT_MYSQL_CLI_OUTPUT_MAX_BUFFER_BYTES,
+  __buildMysqlSavePlanFromPersistentDataForTest,
   __buildSaveStatementsFromPersistentDataForTest,
   __entityChangedForTest,
   __runMysqlPoolSavePlanForTest,
@@ -161,6 +162,11 @@ function createMysqlCasPoolFixture(options = {}) {
           const normalizedSql = sql.trim();
           if (/^SELECT revision AS storeRevision FROM auth_store_revisions WHERE scope_key = 'auth' FOR (?:UPDATE|SHARE)$/i.test(normalizedSql)) {
             return [[{storeRevision: state.revision}], []];
+          }
+          if (/^SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE$/i.test(normalizedSql)) {
+            return options.serverStateRow === undefined
+              ? [[], []]
+              : [[{document_json: structuredClone(options.serverStateRow)}], []];
           }
           if (/^SELECT scope_key, schema_generation, data_generation,[\s\S]+FROM mail_storage_control WHERE scope_key = \? FOR SHARE$/i.test(normalizedSql)) {
             return [[structuredClone(state.mailStorageControl)], []];
@@ -2596,6 +2602,81 @@ process.stdin.on("end", () => {
   } finally {
     fs.rmSync(tempDir, {recursive: true, force: true});
   }
+});
+
+test("mysql server state lock ignores retired diagnostic counts but preserves authority checks", async () => {
+  const before = {
+    schemaVersion: 1,
+    serviceEventSeq: 3744,
+    marketConfig: {
+      schemaVersion: 1,
+      defaultTaxBps: 100,
+      itemTaxBps: {},
+      taxCollected: {stoneCoins: 5, diamonds: 0},
+    },
+    offlineHangConfig: {},
+    petPaidResetConfig: {},
+    accounts: {},
+    sessions: {},
+    profileBindings: {},
+    profiles: {},
+    mutationReceipts: {},
+    mailMessages: {},
+    marketListings: {},
+    consumedEquipmentEnvelopes: {},
+    parties: {},
+    families: {},
+    manors: {},
+    manorBattles: {},
+    manorWars: {},
+    chatMessages: [],
+    battleRecords: [],
+    battleTrace: [],
+    gmUserGrants: {},
+    gmCommandGrants: {},
+    gmCommandAudit: [],
+    authEvents: [],
+    serviceEvents: [],
+  };
+  const after = structuredClone(before);
+  after.serviceEventSeq += 1;
+  const plan = __buildMysqlSavePlanFromPersistentDataForTest(after, before);
+  const serverStateLock = plan.resourceLocks.find((lock) => lock.resource === "server_state");
+  assert.equal(plan.kind, "legacy_global_cas");
+  assert.equal(serverStateLock.valueProjection, "server_state_authority_v2");
+
+  const legacyRow = {
+    ...structuredClone(serverStateLock.expectedRow.document_json),
+    counts: {accounts: 1107, profiles: 709, sessions: 1217},
+  };
+  delete legacyRow.petPaidResetConfig;
+  const accepted = createMysqlCasPoolFixture({serverStateRow: legacyRow});
+  const result = await __runMysqlPoolSavePlanForTest(accepted.pool, plan, {
+    revisionCasEnabled: true,
+    expectedRevision: 0,
+  });
+  assert.equal(result.revision, 1);
+  assert.equal(accepted.state.transactions[0].committed, true);
+  assert.equal(accepted.state.transactions[0].rolledBack, false);
+  assert.equal(accepted.state.queriedStatements.some((sql) => /^INSERT INTO server_state\b/i.test(sql)), true);
+
+  const rejected = createMysqlCasPoolFixture({
+    serverStateRow: {...legacyRow, serviceEventSeq: legacyRow.serviceEventSeq - 1},
+  });
+  await assert.rejects(
+    __runMysqlPoolSavePlanForTest(rejected.pool, plan, {
+      revisionCasEnabled: true,
+      expectedRevision: 0,
+    }),
+    (error) => {
+      assert.equal(error && error.code, "mysql_resource_revision_conflict");
+      assert.equal(error && error.resource, "server_state");
+      assert.equal(error && error.resourceKey, "auth");
+      return true;
+    },
+  );
+  assert.equal(rejected.state.transactions[0].committed, false);
+  assert.equal(rejected.state.transactions[0].rolledBack, true);
 });
 
 test("mysql strict new mail conflicts roll back the complete legacy transaction", async () => {
