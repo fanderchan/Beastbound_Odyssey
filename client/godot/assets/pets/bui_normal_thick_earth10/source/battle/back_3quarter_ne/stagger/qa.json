@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "stagger",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "stagger-1",
+      "bbox": [
+        48,
+        74,
+        210,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-2",
+      "bbox": [
+        36,
+        97,
+        220,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-3",
+      "bbox": [
+        44,
+        98,
+        214,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-4",
+      "bbox": [
+        44,
+        104,
+        212,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-5",
+      "bbox": [
+        56,
+        54,
+        199,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-6",
+      "bbox": [
+        48,
+        62,
+        208,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-7",
+      "bbox": [
+        56,
+        73,
+        200,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-8",
+      "bbox": [
+        39,
+        114,
+        217,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}

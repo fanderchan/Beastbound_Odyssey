@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "bui_normal_thick_earth10",
+  "kind": "pet",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": [
+    "idle",
+    "walk",
+    "attack",
+    "skill",
+    "hurt",
+    "defend",
+    "dodge",
+    "counter",
+    "stagger",
+    "knockaway",
+    "down",
+    "revive"
+  ],
+  "totalFrameCount": 180,
+  "errors": [],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "actionEvidence": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/idle-contact.png",
+      "contactSheetSha256": "7ee7e9708c60ad67d411758b36119efe17e2ff20c0d359dd812daa0b2a7dece6",
+      "gif": "qa/battle/actions/front_3quarter_sw/idle.gif",
+      "gifSha256": "fe158bcf1574264e31979cdb6a10833cca49e063ddcdcb2930a5735783e3253d",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/idle-contact.png",
+      "contactSheetSha256": "69f7e9e47fb39574417d0169fba493b9206128273407f402839c0305c46e37c4",
+      "gif": "qa/battle/actions/back_3quarter_ne/idle.gif",
+      "gifSha256": "d013446cd6528620d80cc9ac4129f6b3f176f10924b8773da540df2e98aac58b",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/walk-contact.png",
+      "contactSheetSha256": "378398fe099bb2d06d85c7dd4f08ef5cb6ef8b8653b994b8fd12091a63a8fd09",
+      "gif": "qa/battle/actions/front_3quarter_sw/walk.gif",
+      "gifSha256": "37e5b2c620707f8e19fe05708fd34b899c64d2afd049ca844c660b205991af68",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/walk-contact.png",
+      "contactSheetSha256": "8d77e4cb15aa05b888c975257a817681760603c3ee55cc44519f94e10431b7a5",
+      "gif": "qa/battle/actions/back_3quarter_ne/walk.gif",
+      "gifSha256": "0b2cb8330c1a93522737bc75c39b64e7d2fc6bb1c7ca3968df81ebe3e1e9984f",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/attack-contact.png",
+      "contactSheetSha256": "69c8fb573a3b58bd28b50698bb57834c9092c91d723a6d6e38a96dcf0d8a16bc",
+      "gif": "qa/battle/actions/front_3quarter_sw/attack.gif",
+      "gifSha256": "97ad7436f49c5c283a683cfc852cea79d676e542d3c1d19be695196111f975d4",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/attack-contact.png",
+      "contactSheetSha256": "c4dfa71317f9af58cf12d66becfef72cce20856af3e5b20a7f0cf995feb27397",
+      "gif": "qa/battle/actions/back_3quarter_ne/attack.gif",
+      "gifSha256": "84f5d4c423d48d38128073f05791d97e14530a467282e0bb0d4ccd11108edaa7",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/skill-contact.png",
+      "contactSheetSha256": "a9e4e29399c654f07e930c15619c966b9fb3f56f832ab38937f6446ab24ae56f",
+      "gif": "qa/battle/actions/front_3quarter_sw/skill.gif",
+      "gifSha256": "f143e2a9faa6f5174707c52ba7319b6194a44505e7d5188d8cbfe3cd6b432b36",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/skill-contact.png",
+      "contactSheetSha256": "8f516c1c63caa752e67b607d19c07d3c20806d326f754043c5b291ad5bf26a6b",
+      "gif": "qa/battle/actions/back_3quarter_ne/skill.gif",
+      "gifSha256": "338522001ac1d199e866f321e7660b83d54066198b732b7703eefdb23d1fba2f",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/hurt-contact.png",
+      "contactSheetSha256": "5ac2e9abf3516fe35d4b7fe764858e4b5164d2744bff21b833ed22fdd1f5564d",
+      "gif": "qa/battle/actions/front_3quarter_sw/hurt.gif",
+      "gifSha256": "925fd8310831128af21897643e65f548ad236e889c5c8bc7ca83c5afe08a9821",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/hurt-contact.png",
+      "contactSheetSha256": "e003725c2d97985a6c6adffa3c6ccbc02d3dd4f5338f7e6250c7a321e3df9d8e",
+      "gif": "qa/battle/actions/back_3quarter_ne/hurt.gif",
+      "gifSha256": "95b5986ce9fe327ed4e39df8284e8b67e914ff905b6e2f4b3876112d4f97fdee",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/defend-contact.png",
+      "contactSheetSha256": "724b7720ff1b22d3aa094d88f2c871d0760459f2fa7549839d0cabd718da6feb",
+      "gif": "qa/battle/actions/front_3quarter_sw/defend.gif",
+      "gifSha256": "d4d1d621c3a1fbf48befdede9d89b0cc8e2be42b7cc0b2f52716e553ae44b895",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frameCount": 6,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/defend-contact.png",
+      "contactSheetSha256": "9426b0f5fd7eb062289695f6c512be23d5bc2fec9d15fd92a1fe95c85162a833",
+      "gif": "qa/battle/actions/back_3quarter_ne/defend.gif",
+      "gifSha256": "e5d26d5db589c55762511da45dbea44b778eed140e3e0f532205937fb3651920",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/dodge-contact.png",
+      "contactSheetSha256": "52da1a1f811c9559adf9ee9c76b70789a97f2ade2c803f7f89f446a1a7ff0eeb",
+      "gif": "qa/battle/actions/front_3quarter_sw/dodge.gif",
+      "gifSha256": "148900c39717831aba1d424528536e1c88bf0089ca6388c4d6a3fa04a50d0011",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/dodge-contact.png",
+      "contactSheetSha256": "dc3f6475fb495bdd8783fa076feebe8b985d0be21501603ea1260c613ca12da0",
+      "gif": "qa/battle/actions/back_3quarter_ne/dodge.gif",
+      "gifSha256": "709a743d3b50979f400f69884452e5366f1dbb93819dd7ad031f898e8697e9b6",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/counter-contact.png",
+      "contactSheetSha256": "aa63e9feec144d106cdac98bde1e5ee6d2341632aa074341e19eae838332de3d",
+      "gif": "qa/battle/actions/front_3quarter_sw/counter.gif",
+      "gifSha256": "60f927359ae84d6db11af7e17bb481acc34dc4e31020de752bb092822eea2567",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/counter-contact.png",
+      "contactSheetSha256": "de31818cdd17ee9d0a1b579b9ff82378fd0d3818c4bbda10dd60004e9357afe7",
+      "gif": "qa/battle/actions/back_3quarter_ne/counter.gif",
+      "gifSha256": "9163197f6a9a2951ddf35fe38d5e94b4d42d295d4c899d159119d061b860cfa8",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/stagger-contact.png",
+      "contactSheetSha256": "ba311cc21ca772e0d1ad76b7c4e0f5c54b4f9ff38f52dcceb585c74e537be181",
+      "gif": "qa/battle/actions/front_3quarter_sw/stagger.gif",
+      "gifSha256": "bbe4fcec5853ddc8f68829522877243668b0e300edd80b33cc12f54b1ddc1635",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/stagger-contact.png",
+      "contactSheetSha256": "55f0780202d868cc0ddfe262659228fe5559f4df76051a5185c3c35dbcc7cc6d",
+      "gif": "qa/battle/actions/back_3quarter_ne/stagger.gif",
+      "gifSha256": "95e093cff95efe2375f324708f543de2ca9281eec76105441f71c56a51b918b0",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/knockaway-contact.png",
+      "contactSheetSha256": "ab99684d39dd51f4862ec137737f377853058af14fc784859ce449557b83ddf6",
+      "gif": "qa/battle/actions/front_3quarter_sw/knockaway.gif",
+      "gifSha256": "4178834c94646d30079ee1d73e07db24f3c83083f6b945eb1669ec6b2290e482",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/knockaway-contact.png",
+      "contactSheetSha256": "20b65af563b03ca43f2878ad09e454ea901b03bc84f3511a00b23d546ed0bb6d",
+      "gif": "qa/battle/actions/back_3quarter_ne/knockaway.gif",
+      "gifSha256": "1462591f37709b98fe541e86b3f39529c5815b58599b9e267c851aef05f188fe",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
+      "contactSheetSha256": "0d0ccab412eb1f71b29b4a36367e27ff925d7b7c3ff1f9cd62596bce033fca9f",
+      "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
+      "gifSha256": "ea87483008a7185806000ab8b32c1aadeaab05104f8e7681cac2412d5a54407a",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
+      "contactSheetSha256": "f70f2e09e0f0a4d6f6478be0aa3dd01b736fd3aecaf2aaa904c89e7ec50b076f",
+      "gif": "qa/battle/actions/back_3quarter_ne/down.gif",
+      "gifSha256": "0ecb56cbf91c462153c9d5f3fdf0c75a6d63a60e77debc744e19474ddb75ad15",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
+      "contactSheetSha256": "a256c0a952982baf9ebccc08aeeb6f18586e72d21fd8718207b8e5bf3321b27c",
+      "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
+      "gifSha256": "58e989280c53130b27fc0acabd7af2f9c22a6d7a04b87386486fe263dbd9e0b8",
+      "minimumRuntimeEdgeMargin": 11
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frameCount": 8,
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
+      "contactSheetSha256": "3440763b22d1662790b3a429c9227c31b5feefc25c50afc23e62b8cfbfb7355a",
+      "gif": "qa/battle/actions/back_3quarter_ne/revive.gif",
+      "gifSha256": "d15430617e8f6bb1c50e54ec77874c32a8117ee8b0bc16139eca87f422630023",
+      "minimumRuntimeEdgeMargin": 11
+    }
+  ]
+}

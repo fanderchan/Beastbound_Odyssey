@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "revive",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "revive-1",
+      "bbox": [
+        31,
+        152,
+        225,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-2",
+      "bbox": [
+        32,
+        125,
+        224,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-3",
+      "bbox": [
+        33,
+        102,
+        224,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-4",
+      "bbox": [
+        34,
+        81,
+        223,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-5",
+      "bbox": [
+        30,
+        124,
+        225,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-6",
+      "bbox": [
+        38,
+        91,
+        217,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-7",
+      "bbox": [
+        39,
+        123,
+        216,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-8",
+      "bbox": [
+        41,
+        88,
+        216,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ],
+  "continuity": {
+    "rule": "revive-1 == down-8 byte-for-byte",
+    "sourceFrameEqual": true,
+    "runtimeFrameEqual": true,
+    "sourceByteSha256": "e39410f7a2e2b1dc252febe571d78ac481a06ab91a78903f67758e29049fdad6",
+    "runtimeByteSha256": "271603c48ee844cbe805c7a56230d2966c50ace360c4d1681a145acc397f683c"
+  }
+}
