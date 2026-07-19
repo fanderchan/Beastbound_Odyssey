@@ -150,7 +150,19 @@ def _materialize_staging(root: Path, *, mounted: bool = False) -> tuple[Path, di
 
             frames: list[dict[str, Any]] = []
             for frame_index in range(1, frame_count + 1):
-                source = _source_frame(view_index, action_index, frame_index)
+                if action == "revive" and frame_index == 1:
+                    down_hold = (
+                        staging
+                        / "views"
+                        / view
+                        / "down"
+                        / "source-frames"
+                        / "down-8.png"
+                    )
+                    with Image.open(down_hold) as image:
+                        source = image.convert("RGBA").copy()
+                else:
+                    source = _source_frame(view_index, action_index, frame_index)
                 runtime, _cleaned_fringe = BUILDER.derive_runtime_frame(
                     source,
                     (255, 0, 255),
@@ -564,6 +576,36 @@ class InstallPetBattleBundleTest(unittest.TestCase):
 
             with self.assertRaisesRegex(MODULE.BattleBundleError, "not deterministically derived"):
                 MODULE.install_bundle(_options(staging, root / "asset-root"))
+
+    def test_down_hold_must_exactly_match_revive_start_in_both_views(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            action_root = staging / "views/back_3quarter_ne/revive"
+            source_path = action_root / "source-frames/revive-1.png"
+            runtime_path = action_root / "runtime-frames/revive-1.png"
+            with Image.open(source_path) as image:
+                changed_source = image.convert("RGBA").copy()
+            ImageDraw.Draw(changed_source).rectangle(
+                (246, 246, 254, 254),
+                fill=(249, 237, 91, 255),
+            )
+            changed_runtime, _cleaned_fringe = BUILDER.derive_runtime_frame(
+                changed_source,
+                (255, 0, 255),
+                30.0,
+                96,
+            )
+            changed_source.save(source_path)
+            changed_runtime.save(runtime_path)
+            _refresh_action_integrity(action_root)
+
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "runtime back_3quarter_ne down-8 must exactly match revive-1 RGBA",
+            ):
+                MODULE.install_bundle(_options(staging, root / "asset-root"))
+            self.assertFalse((root / "asset-root").exists())
 
     def test_duplicate_frames_are_rejected_independent_of_qc_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

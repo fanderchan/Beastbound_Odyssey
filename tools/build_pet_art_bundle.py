@@ -835,7 +835,7 @@ def normalize_canvas(
         raise BundleBuildError(
             f"slot {prepared.slot}: source normalization produced {residual} residual magenta pixels"
         )
-    return canvas, {
+    render_metadata: dict[str, object] = {
         "sourceOutputSize": [width, height],
         "sourcePastePosition": [x, y],
         "resizedVisibleBbox": list(resized_visible_bbox),
@@ -845,6 +845,7 @@ def normalize_canvas(
         "sourceLowAlphaMagentaPixelsCleared": cleaned_fringe,
         "residualMagentaPixelsSource": residual,
     }
+    return canvas, render_metadata
 
 
 def clean_resample_alpha(
@@ -854,21 +855,23 @@ def clean_resample_alpha(
     fringe_cleanup_alpha: int,
     alpha_threshold: int = 2,
 ) -> tuple[Image.Image, int]:
+    """Normalize transparent RGB/alpha without guessing an authored color is spill.
+
+    Resampling does not retain the exact per-pixel eligibility mask produced by
+    the original chroma-key operation.  A color-distance cleanup here would
+    therefore be an unprovenanced global despill and could erase legitimate
+    purple outlines or translucent effects.  Proven chroma cleanup belongs in
+    ``chroma_to_alpha`` where the exact same-operation mask exists; this stage
+    only canonicalizes fully transparent pixels and the sub-threshold alpha
+    floor.  The legacy color arguments remain in the public signature because
+    installed bundle metadata still records them.
+    """
+
+    del key, residual_distance, fringe_cleanup_alpha
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
-    rgb = rgba[:, :, :3].astype(np.float32)
-    distance = np.sqrt(
-        np.sum(np.square(rgb - np.asarray(key, dtype=np.float32)), axis=2)
-    )
-    fringe = (
-        (rgba[:, :, 3] > 0)
-        & (rgba[:, :, 3] <= fringe_cleanup_alpha)
-        & (distance <= residual_distance)
-    )
-    cleaned_fringe = int(np.count_nonzero(fringe))
-    rgba[fringe] = 0
     rgba[rgba[:, :, 3] < alpha_threshold] = 0
     rgba[rgba[:, :, 3] == 0, :3] = 0
-    return Image.fromarray(rgba, mode="RGBA"), cleaned_fringe
+    return Image.fromarray(rgba, mode="RGBA"), 0
 
 
 def resize_rgba_premultiplied(
@@ -931,9 +934,10 @@ def derive_runtime_frame(
 ) -> tuple[Image.Image, int]:
     """Derive the canonical 256px runtime frame from a 512px source frame.
 
-    The bundle builder and the fail-closed installer must call this exact
-    function.  Keeping resize and final alpha cleanup together prevents either
-    tool from silently accepting a different decoded RGBA result.
+    The bundle builder, fail-closed installer and any audit derivation must call
+    this exact function and must not append color, alpha or resize processing
+    before comparing the result.  Keeping the complete derivation here prevents
+    either tool from silently accepting a different decoded RGBA result.
     """
 
     runtime = resize_rgba_premultiplied(
@@ -1019,20 +1023,21 @@ def render_frames(
             raise BundleBuildError(
                 f"slot {prepared.slot}: runtime frame contains {runtime_residual} residual magenta pixels"
             )
+        frame_metadata: dict[str, object] = {
+            **prepared.metadata,
+            **render_meta,
+            "runtimeVisibleBbox": list(runtime_bbox),
+            "runtimeLowAlphaMagentaPixelsCleared": runtime_cleaned_fringe,
+            "residualMagentaPixelsRuntime": runtime_residual,
+            "sourceRgbaSha256": rgba_hash(source),
+            "runtimeRgbaSha256": rgba_hash(runtime),
+        }
         rendered.append(
             RenderedFrame(
                 prepared=prepared,
                 source=source,
                 runtime=runtime,
-                metadata={
-                    **prepared.metadata,
-                    **render_meta,
-                    "runtimeVisibleBbox": list(runtime_bbox),
-                    "runtimeLowAlphaMagentaPixelsCleared": runtime_cleaned_fringe,
-                    "residualMagentaPixelsRuntime": runtime_residual,
-                    "sourceRgbaSha256": rgba_hash(source),
-                    "runtimeRgbaSha256": rgba_hash(runtime),
-                },
+                metadata=frame_metadata,
             )
         )
     return rendered, common_scale, effective_source_margin

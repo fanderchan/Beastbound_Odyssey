@@ -733,6 +733,27 @@ def _reject_mirrored_views(
                 )
 
 
+def validate_down_revive_continuity(
+    frame_images: dict[str, dict[str, list[Image.Image]]],
+    *,
+    frame_kind: str,
+) -> None:
+    """Require revive to begin from the exact held KO frame in both views."""
+
+    for view in FORMAL_VIEWS:
+        try:
+            down_hold = frame_images[view]["down"][-1]
+            revive_start = frame_images[view]["revive"][0]
+        except (KeyError, IndexError) as exc:
+            raise BattleBundleError(
+                f"{frame_kind} {view} down/revive continuity frames are missing"
+            ) from exc
+        if rgba_hash(down_hold) != rgba_hash(revive_start):
+            raise BattleBundleError(
+                f"{frame_kind} {view} down-8 must exactly match revive-1 RGBA"
+            )
+
+
 def _bundle_digest(manifest: dict[str, Any], hashes: dict[str, str]) -> str:
     payload = {"manifest": manifest, "installedFileHashes": dict(sorted(hashes.items()))}
     return hashlib.sha256(_json_bytes(payload)).hexdigest()
@@ -742,20 +763,31 @@ def validate_bundle(options: InstallOptions) -> ValidatedBundle:
     manifest = _validate_manifest(options)
     staging = options.staging.resolve()
     copies, generated = _validate_overall_qa(staging, manifest)
-    frame_images: dict[str, dict[str, list[Image.Image]]] = {view: {} for view in FORMAL_VIEWS}
+    source_frame_images: dict[str, dict[str, list[Image.Image]]] = {
+        view: {} for view in FORMAL_VIEWS
+    }
+    runtime_frame_images: dict[str, dict[str, list[Image.Image]]] = {
+        view: {} for view in FORMAL_VIEWS
+    }
     all_hashes = {str(entry.destination_relative): entry.sha256 for entry in copies}
     all_hashes.update(
         {str(entry.destination_relative): entry.sha256 for entry in generated}
     )
     for view in FORMAL_VIEWS:
         for action, (frame_count, _fps, _loop) in ACTION_SPECS.items():
-            action_copies, _source_images, runtime_images, action_hashes = _validate_action(
+            action_copies, source_images, runtime_images, action_hashes = _validate_action(
                 staging, view, action, frame_count
             )
             copies.extend(action_copies)
             all_hashes.update(action_hashes)
-            frame_images[view][action] = runtime_images
-    _reject_mirrored_views(frame_images[FORMAL_VIEWS[0]], frame_images[FORMAL_VIEWS[1]])
+            source_frame_images[view][action] = source_images
+            runtime_frame_images[view][action] = runtime_images
+    _reject_mirrored_views(
+        runtime_frame_images[FORMAL_VIEWS[0]],
+        runtime_frame_images[FORMAL_VIEWS[1]],
+    )
+    validate_down_revive_continuity(runtime_frame_images, frame_kind="runtime")
+    validate_down_revive_continuity(source_frame_images, frame_kind="source")
     digest = _bundle_digest(manifest, all_hashes)
     action_metadata = {
         action: {

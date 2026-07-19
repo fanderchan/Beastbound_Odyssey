@@ -105,6 +105,17 @@ One semantic scenario does not always require a unique sprite row: shield contac
 
 Keep the dizzy halo and orbiting stars outside the `down` body frames so revive can remove them immediately. The body must still read as unconscious when effects are hidden.
 
+### Reversible KO frame continuity
+
+Frame suffixes are playback order, not contact-sheet layout. Enforce the same chronology in both formal views:
+
+- `down-1..8` moves from surprise/balance loss through collapse to one stable unconscious ground hold; it must never stand back up, swap chronology, or become a sleep loop.
+- `down-8` and `revive-1` are exact byte-for-byte decoded RGBA matches in both the 512px source frames and 256px runtime frames.
+- `revive-1..8` starts at that held pose and recovers toward ready/idle without teleporting, re-collapsing, or replaying `down` in the wrong order.
+- The installer and read-only catalog audit must fail closed when either runtime view breaks the exact handoff. Source continuity remains a formal production gate even when a lean archive omits per-frame source copies after validation.
+
+The body still owns the unconscious expression: unfocused or spiral eyes when visible, slack mouth and sprawled weight. Never use a smile, restful closed-eye sleep, X/death eyes, grave imagery, blood or gore. Dizzy halos, orbiting stars and status icons remain independent runtime effects and cannot rescue a body strip that reads as asleep.
+
 ## Supported mounted combinations
 
 Every pet is designed as rideable, but runtime visual support is explicit rather than magical. The design contract lists at least one supported character appearance for a non-deferred pet art plan. Each supported character-pet pair needs:
@@ -123,10 +134,16 @@ Do not claim every character appearance is supported because one protagonist com
 4. Generate standalone pet true-eight idle/walk and its contact sheet/video.
 5. Generate each supported mounted combination as true-eight whole-frame art and review seat, anatomy and gait.
 6. Generate both battle views for core pet and mounted actions from the same identity board.
-7. Normalize frames deterministically; preserve prompt, raw source, processed frames, parameters and ownership metadata.
+7. Normalize frames deterministically through the one shared runtime-derivation implementation; preserve prompt, raw source, processed frames, parameters and ownership metadata.
 8. Integrate through focused catalogs/models and manifest paths; do not scatter hardcoded texture paths through `main.gd`.
 9. Run deterministic checks, then real `Main.tscn` screenshot/video review.
 10. Fix the first failed matrix before producing another pet or mounted combination.
+
+## Color cleanup and canonical runtime derivation
+
+Do not infer spill from color alone. A despill or color repair may touch pixels only when the exact eligibility mask was produced by the same chroma-key operation from the same raw input. Already-transparent art without that mask must remain byte-preserving or fail closed. Never substitute an all-true image mask, a hue/distance threshold, component size, or a visual guess; those can erase legitimate purple contours, natural green materials and translucent VFX. Preserve alpha exactly and record the mask provenance, affected-pixel count, before/after decoded RGBA hashes and focused visual evidence for every permitted repair.
+
+The normalized 512px source frame is the authority for its 256px runtime frame. Builder, fail-closed installer and derivation audit must call one canonical runtime function that owns premultiplied resize and final transparent-pixel normalization. No caller may append a private resize, alpha cleanup, despill or color pass before comparing hashes. Change the shared function and parity tests together; include a transparent authored-color fixture and a builder-to-installer decoded-RGBA equality fixture.
 
 ## Source evidence without repository bloat
 
@@ -160,6 +177,8 @@ Use fixed seeds/director scenes for rare combinations, then one natural randomiz
 - Contact sheets show every required subject, direction, action and formal view together.
 - Identity, anatomy, scale, palette, markings, body count and equipment do not drift.
 - World and battle baselines, alpha bounds and frame edges remain stable.
+- Both formal views satisfy exact decoded-RGBA `down-8 == revive-1` continuity in runtime, and full-source validation proves the same handoff before lean archival.
+- Transparent frames with no exact chroma eligibility mask receive no global color cleanup; runtime hashes come only from the shared canonical derivation.
 - At 1280×720, events remain readable with the message/log panel ignored.
 - Both teams face the arena centre in the same real-client frame; mounted actors and their same-side battle pets use identical final-facing mappings during idle, contact, return and down states.
 - No unit leaves a stale shadow/marker, crosses the wrong facing, slides home, or overlaps its target beyond the authored contact distance.

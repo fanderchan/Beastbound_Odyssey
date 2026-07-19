@@ -281,7 +281,7 @@ class PetArtBundleBuilderTests(unittest.TestCase):
         self.assertEqual(metadata["alphaPixelsChanged"], 0)
         self.assertEqual(metadata["skippedReason"], "no_chroma_provenance")
 
-    def test_large_proven_green_region_is_preserved_as_authored_vfx(self) -> None:
+    def test_large_unproven_green_region_is_preserved_as_authored_vfx(self) -> None:
         image = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
         ImageDraw.Draw(image).rectangle((128, 96, 416, 448), fill=(118, 54, 32, 255))
         partial = np.zeros((512, 512), dtype=np.bool_)
@@ -289,7 +289,10 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             image.putpixel((127, y), (24, 205, 18, 64))
             partial[y, 127] = True
         inverse_valid = np.ones((512, 512), dtype=np.bool_)
-        proven_green = partial.copy()
+        # A partial-alpha matte alone does not prove that this authored green
+        # strip is chroma damage.  Only an exact same-operation anomaly mask may
+        # authorize recoloring.
+        proven_green = np.zeros((512, 512), dtype=np.bool_)
         before = np.asarray(image, dtype=np.uint8).copy()
 
         started = time.perf_counter()
@@ -360,6 +363,34 @@ class PetArtBundleBuilderTests(unittest.TestCase):
         resized = builder.resize_rgba_premultiplied(image, (137, 119))
         actual_alpha = np.asarray(resized.getchannel("A"), dtype=np.uint8)
         self.assertTrue(np.array_equal(expected_alpha, actual_alpha))
+
+    def test_runtime_derivation_does_not_globally_delete_unprovenanced_color(self) -> None:
+        source = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(source)
+        draw.rounded_rectangle((112, 92, 398, 472), radius=52, fill=(112, 67, 31, 255))
+        # This low-alpha magenta patch is deliberately indistinguishable from a
+        # chroma fringe by color alone.  Without the exact same-operation keying
+        # mask it must survive canonical runtime derivation.
+        draw.rectangle((172, 172, 211, 211), fill=(255, 0, 255, 64))
+        expected_alpha = np.asarray(
+            source.getchannel("A").resize((256, 256), Image.Resampling.LANCZOS),
+            dtype=np.uint8,
+        ).copy()
+        expected_alpha[expected_alpha < 2] = 0
+
+        runtime, cleaned_pixels = builder.derive_runtime_frame(
+            source,
+            builder.DEFAULT_KEY,
+            70.0,
+            96,
+        )
+        actual = np.asarray(runtime.convert("RGBA"), dtype=np.uint8)
+
+        self.assertEqual(cleaned_pixels, 0)
+        self.assertTrue(np.array_equal(expected_alpha, actual[:, :, 3]))
+        self.assertGreater(int(actual[95, 95, 3]), 0)
+        self.assertGreater(int(actual[95, 95, 0]), int(actual[95, 95, 1]))
+        self.assertGreater(int(actual[95, 95, 2]), int(actual[95, 95, 1]))
 
     def assert_case_fails(self, case_name: str, message: str) -> None:
         with tempfile.TemporaryDirectory() as temporary:

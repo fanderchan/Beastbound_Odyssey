@@ -17,9 +17,11 @@ from PIL import Image, UnidentifiedImageError
 
 from install_pet_battle_bundle import (
     ACTION_SPECS,
+    BattleBundleError,
     CANONICAL_BATTLE_VIEW_MAPPING,
     FORMAL_VIEWS,
     RUNTIME_FRAME_SIZE,
+    validate_down_revive_continuity,
 )
 
 
@@ -117,6 +119,9 @@ def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
     valid_frames = 0
     view_counts: dict[str, int] = {}
     action_counts: dict[str, int] = {action: 0 for action in ACTION_SPECS}
+    continuity_images: dict[str, dict[str, list[Image.Image]]] = {
+        view: {"down": [], "revive": []} for view in FORMAL_VIEWS
+    }
     for view in FORMAL_VIEWS:
         view_count = 0
         for action, (frame_count, _fps, _loop) in ACTION_SPECS.items():
@@ -126,7 +131,27 @@ def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
                     valid_frames += 1
                     view_count += 1
                     action_counts[action] += 1
+                    if (action == "down" and index == frame_count) or (
+                        action == "revive" and index == 1
+                    ):
+                        with Image.open(frame_path) as image:
+                            continuity_images[view][action].append(
+                                image.convert("RGBA").copy()
+                            )
         view_counts[view] = view_count
+
+    if all(
+        continuity_images[view][action]
+        for view in FORMAL_VIEWS
+        for action in ("down", "revive")
+    ):
+        try:
+            validate_down_revive_continuity(
+                continuity_images,
+                frame_kind="runtime",
+            )
+        except BattleBundleError as exc:
+            errors.append(str(exc))
 
     expected_per_view = sum(spec[0] for spec in ACTION_SPECS.values())
     expected_total = expected_per_view * len(FORMAL_VIEWS)

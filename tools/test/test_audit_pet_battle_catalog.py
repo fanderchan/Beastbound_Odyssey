@@ -155,6 +155,51 @@ class AuditPetBattleCatalogTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("catalog 不存在所选 formId", result.stderr)
 
+    def test_down_hold_and_revive_start_must_match_in_each_runtime_view(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _write_complete_bundle(root, "broken_continuity_pet")
+            changed = Image.new("RGBA", (256, 256), (90, 40, 170, 255))
+            changed.save(
+                root
+                / "assets/broken_continuity_pet/views/back_3quarter_ne/revive/revive-1.png"
+            )
+            _write_json(
+                root / "catalog.json",
+                {
+                    "forms": [
+                        {
+                            "formId": "broken_continuity_pet",
+                            "displayName": "连续性错误宠",
+                            "pet": {"root": "assets/broken_continuity_pet"},
+                        }
+                    ]
+                },
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(TOOL),
+                    "--repo-root",
+                    str(root),
+                    "--catalog",
+                    "catalog.json",
+                    "--json",
+                    "--require-complete",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 1, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertFalse(report["forms"][0]["complete"])
+            self.assertIn(
+                "runtime back_3quarter_ne down-8 must exactly match revive-1 RGBA",
+                report["forms"][0]["errors"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
