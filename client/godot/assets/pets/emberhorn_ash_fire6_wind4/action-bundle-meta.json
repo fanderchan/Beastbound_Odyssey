@@ -144,7 +144,7 @@
     "groupContactSheetSha256": "187fecc32dee9e3e7f7e66873a32d56999b563f684300ff41b5c850d09a91f14"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate.",
+  "notes": "Formal two-view battle pack is installed for isolated QA. Runtime remains disabled and owner review remains pending; world and mounted production are deferred.",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -203,13 +203,33 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "3426b636c5b5e6bc5e5cfa5490e369066cd8bba83bfe00654e75179a48cb0273",
+    "bundleDigest": "bffbb5a5ca50386e35acf9a1ae0a11b5b7bc5adc59f59f75d5eb37888e77d1c7",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "scaleConsistency": {
+      "status": "self_review_passed_owner_pending",
+      "ordinaryActionTargetLinearRatio": [
+        0.8,
+        1.1
+      ],
+      "observedOrdinaryActionLinearRatio": [
+        0.798,
+        1.053
+      ],
+      "allowedPoseCompressionActions": [
+        "knockaway",
+        "down"
+      ],
+      "beforeContactSheet": "qa/battle/contact-sheet-before-scale-fix.png",
+      "afterContactSheet": "qa/battle/contact-sheet-after-scale-fix.png",
+      "beforeStats": "qa/battle/scale-before-fix.json",
+      "afterStats": "qa/battle/scale-after-fix.json",
+      "finalFacingContactSheet": "qa/battle/presentation-facing-contact.png"
+    }
   }
 }

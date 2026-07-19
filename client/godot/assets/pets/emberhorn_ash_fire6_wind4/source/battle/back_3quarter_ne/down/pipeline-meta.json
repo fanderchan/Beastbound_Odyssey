@@ -879,8 +879,21 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 51,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "6725532868d846fc4de1b7105926abf80e52ac121d8bb7e46ec718b1eefa9c2d",
-      "runtimeRgbaSha256": "c45de11a7f3626cb4ab55ff85d2b98ad88ac16de30ab6335a5d6efdd5d9fd965"
+      "sourceRgbaSha256": "cf348b045874e641b621c0ed0f032d66ed260af07bb731e08c667879094d063b",
+      "runtimeRgbaSha256": "ebf99261c8cecf3c16d84f2ebe1d4e277b4b995eeb40210701cb806c1e85162f"
     }
-  ]
+  ],
+  "postProcessing": {
+    "wholeSpriteScaleNormalization": {
+      "creativePoseChange": false,
+      "anchor": "existing_bottom_center",
+      "frames": [
+        {
+          "frame": 8,
+          "requestedFactor": 1.516442,
+          "appliedFactor": 1.516442
+        }
+      ]
+    }
+  }
 }

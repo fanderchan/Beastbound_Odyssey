@@ -1,0 +1,390 @@
+{
+  "front_3quarter_sw": {
+    "idle": {
+      "areaMin": 17500,
+      "areaMax": 18318,
+      "areaMedian": 18054.5,
+      "linearRatioMin": 0.985,
+      "linearRatioMedian": 1.0,
+      "linearRatioMax": 1.007,
+      "widthRange": [
+        140,
+        142
+      ],
+      "heightRange": [
+        125,
+        129
+      ]
+    },
+    "walk": {
+      "areaMin": 17303,
+      "areaMax": 19454,
+      "areaMedian": 18525.0,
+      "linearRatioMin": 0.979,
+      "linearRatioMedian": 1.013,
+      "linearRatioMax": 1.038,
+      "widthRange": [
+        142,
+        143
+      ],
+      "heightRange": [
+        121,
+        137
+      ]
+    },
+    "attack": {
+      "areaMin": 12690,
+      "areaMax": 16616,
+      "areaMedian": 14943.0,
+      "linearRatioMin": 0.838,
+      "linearRatioMedian": 0.91,
+      "linearRatioMax": 0.959,
+      "widthRange": [
+        133,
+        177
+      ],
+      "heightRange": [
+        78,
+        124
+      ]
+    },
+    "skill": {
+      "areaMin": 13524,
+      "areaMax": 16303,
+      "areaMedian": 14772.0,
+      "linearRatioMin": 0.865,
+      "linearRatioMedian": 0.905,
+      "linearRatioMax": 0.95,
+      "widthRange": [
+        135,
+        138
+      ],
+      "heightRange": [
+        98,
+        119
+      ]
+    },
+    "hurt": {
+      "areaMin": 12635,
+      "areaMax": 15561,
+      "areaMedian": 14463.0,
+      "linearRatioMin": 0.837,
+      "linearRatioMedian": 0.895,
+      "linearRatioMax": 0.928,
+      "widthRange": [
+        133,
+        150
+      ],
+      "heightRange": [
+        91,
+        117
+      ]
+    },
+    "defend": {
+      "areaMin": 13774,
+      "areaMax": 20022,
+      "areaMedian": 14839.0,
+      "linearRatioMin": 0.873,
+      "linearRatioMedian": 0.907,
+      "linearRatioMax": 1.053,
+      "widthRange": [
+        142,
+        142
+      ],
+      "heightRange": [
+        97,
+        141
+      ]
+    },
+    "dodge": {
+      "areaMin": 11856,
+      "areaMax": 19050,
+      "areaMedian": 14874.0,
+      "linearRatioMin": 0.81,
+      "linearRatioMedian": 0.908,
+      "linearRatioMax": 1.027,
+      "widthRange": [
+        150,
+        152
+      ],
+      "heightRange": [
+        78,
+        127
+      ]
+    },
+    "counter": {
+      "areaMin": 12360,
+      "areaMax": 13650,
+      "areaMedian": 13615.0,
+      "linearRatioMin": 0.827,
+      "linearRatioMedian": 0.868,
+      "linearRatioMax": 0.87,
+      "widthRange": [
+        120,
+        182
+      ],
+      "heightRange": [
+        74,
+        105
+      ]
+    },
+    "stagger": {
+      "areaMin": 12420,
+      "areaMax": 14310,
+      "areaMedian": 13462.0,
+      "linearRatioMin": 0.829,
+      "linearRatioMedian": 0.863,
+      "linearRatioMax": 0.89,
+      "widthRange": [
+        134,
+        167
+      ],
+      "heightRange": [
+        82,
+        106
+      ]
+    },
+    "knockaway": {
+      "areaMin": 4096,
+      "areaMax": 6710,
+      "areaMedian": 4811.0,
+      "linearRatioMin": 0.476,
+      "linearRatioMedian": 0.516,
+      "linearRatioMax": 0.61,
+      "widthRange": [
+        64,
+        110
+      ],
+      "heightRange": [
+        45,
+        68
+      ]
+    },
+    "down": {
+      "areaMin": 6215,
+      "areaMax": 13524,
+      "areaMedian": 7660.5,
+      "linearRatioMin": 0.587,
+      "linearRatioMedian": 0.651,
+      "linearRatioMax": 0.865,
+      "widthRange": [
+        99,
+        196
+      ],
+      "heightRange": [
+        55,
+        82
+      ]
+    },
+    "revive": {
+      "areaMin": 13000,
+      "areaMax": 13761,
+      "areaMedian": 13587.5,
+      "linearRatioMin": 0.849,
+      "linearRatioMedian": 0.868,
+      "linearRatioMax": 0.873,
+      "widthRange": [
+        125,
+        196
+      ],
+      "heightRange": [
+        69,
+        104
+      ]
+    }
+  },
+  "back_3quarter_ne": {
+    "idle": {
+      "areaMin": 18330,
+      "areaMax": 19881,
+      "areaMedian": 19456.0,
+      "linearRatioMin": 0.971,
+      "linearRatioMedian": 1.0,
+      "linearRatioMax": 1.011,
+      "widthRange": [
+        130,
+        141
+      ],
+      "heightRange": [
+        139,
+        143
+      ]
+    },
+    "walk": {
+      "areaMin": 12376,
+      "areaMax": 18906,
+      "areaMedian": 15844.5,
+      "linearRatioMin": 0.798,
+      "linearRatioMedian": 0.902,
+      "linearRatioMax": 0.986,
+      "widthRange": [
+        136,
+        149
+      ],
+      "heightRange": [
+        91,
+        137
+      ]
+    },
+    "attack": {
+      "areaMin": 13110,
+      "areaMax": 14706,
+      "areaMedian": 14340.5,
+      "linearRatioMin": 0.821,
+      "linearRatioMedian": 0.859,
+      "linearRatioMax": 0.869,
+      "widthRange": [
+        114,
+        201
+      ],
+      "heightRange": [
+        71,
+        115
+      ]
+    },
+    "skill": {
+      "areaMin": 13968,
+      "areaMax": 14640,
+      "areaMedian": 14435.0,
+      "linearRatioMin": 0.847,
+      "linearRatioMedian": 0.861,
+      "linearRatioMax": 0.867,
+      "widthRange": [
+        120,
+        171
+      ],
+      "heightRange": [
+        83,
+        122
+      ]
+    },
+    "hurt": {
+      "areaMin": 14444,
+      "areaMax": 17408,
+      "areaMedian": 15288.0,
+      "linearRatioMin": 0.862,
+      "linearRatioMedian": 0.886,
+      "linearRatioMax": 0.946,
+      "widthRange": [
+        128,
+        157
+      ],
+      "heightRange": [
+        92,
+        136
+      ]
+    },
+    "defend": {
+      "areaMin": 13563,
+      "areaMax": 18360,
+      "areaMedian": 14675.0,
+      "linearRatioMin": 0.835,
+      "linearRatioMedian": 0.868,
+      "linearRatioMax": 0.971,
+      "widthRange": [
+        135,
+        160
+      ],
+      "heightRange": [
+        92,
+        136
+      ]
+    },
+    "dodge": {
+      "areaMin": 14268,
+      "areaMax": 14606,
+      "areaMedian": 14411.0,
+      "linearRatioMin": 0.856,
+      "linearRatioMedian": 0.861,
+      "linearRatioMax": 0.866,
+      "widthRange": [
+        106,
+        147
+      ],
+      "heightRange": [
+        98,
+        136
+      ]
+    },
+    "counter": {
+      "areaMin": 14448,
+      "areaMax": 17028,
+      "areaMedian": 15985.5,
+      "linearRatioMin": 0.862,
+      "linearRatioMedian": 0.906,
+      "linearRatioMax": 0.936,
+      "widthRange": [
+        122,
+        172
+      ],
+      "heightRange": [
+        84,
+        132
+      ]
+    },
+    "stagger": {
+      "areaMin": 12960,
+      "areaMax": 14647,
+      "areaMedian": 13966.0,
+      "linearRatioMin": 0.816,
+      "linearRatioMedian": 0.847,
+      "linearRatioMax": 0.868,
+      "widthRange": [
+        135,
+        176
+      ],
+      "heightRange": [
+        82,
+        100
+      ]
+    },
+    "knockaway": {
+      "areaMin": 8040,
+      "areaMax": 14080,
+      "areaMedian": 10738.5,
+      "linearRatioMin": 0.643,
+      "linearRatioMedian": 0.743,
+      "linearRatioMax": 0.851,
+      "widthRange": [
+        88,
+        134
+      ],
+      "heightRange": [
+        60,
+        128
+      ]
+    },
+    "down": {
+      "areaMin": 5724,
+      "areaMax": 14480,
+      "areaMedian": 6636.5,
+      "linearRatioMin": 0.542,
+      "linearRatioMedian": 0.584,
+      "linearRatioMax": 0.863,
+      "widthRange": [
+        89,
+        181
+      ],
+      "heightRange": [
+        54,
+        100
+      ]
+    },
+    "revive": {
+      "areaMin": 14097,
+      "areaMax": 14803,
+      "areaMedian": 14422.0,
+      "linearRatioMin": 0.851,
+      "linearRatioMedian": 0.861,
+      "linearRatioMax": 0.872,
+      "widthRange": [
+        111,
+        181
+      ],
+      "heightRange": [
+        80,
+        127
+      ]
+    }
+  }
+}

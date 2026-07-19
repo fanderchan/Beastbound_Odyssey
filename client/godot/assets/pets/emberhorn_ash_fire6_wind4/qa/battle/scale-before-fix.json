@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "stage": "before_scale_fix",
+  "views": {
+    "front_3quarter_sw": {
+      "idle": {
+        "areaMin": 17000,
+        "areaMedian": 17388.0,
+        "areaMax": 18048,
+        "linearRatioMin": 0.989,
+        "linearRatioMedian": 1.0,
+        "linearRatioMax": 1.019
+      },
+      "walk": {
+        "areaMin": 17958,
+        "areaMedian": 18376.0,
+        "areaMax": 18886,
+        "linearRatioMin": 1.016,
+        "linearRatioMedian": 1.028,
+        "linearRatioMax": 1.042
+      },
+      "attack": {
+        "areaMin": 6699,
+        "areaMedian": 7238.5,
+        "areaMax": 8296,
+        "linearRatioMin": 0.621,
+        "linearRatioMedian": 0.645,
+        "linearRatioMax": 0.691
+      },
+      "skill": {
+        "areaMin": 12610,
+        "areaMedian": 13811.5,
+        "areaMax": 15618,
+        "linearRatioMin": 0.852,
+        "linearRatioMedian": 0.891,
+        "linearRatioMax": 0.948
+      },
+      "hurt": {
+        "areaMin": 12090,
+        "areaMedian": 14467.0,
+        "areaMax": 16303,
+        "linearRatioMin": 0.834,
+        "linearRatioMedian": 0.912,
+        "linearRatioMax": 0.968
+      },
+      "defend": {
+        "areaMin": 15141,
+        "areaMedian": 16483.0,
+        "areaMax": 19740,
+        "linearRatioMin": 0.933,
+        "linearRatioMedian": 0.974,
+        "linearRatioMax": 1.065
+      },
+      "dodge": {
+        "areaMin": 9963,
+        "areaMedian": 11362.5,
+        "areaMax": 13202,
+        "linearRatioMin": 0.757,
+        "linearRatioMedian": 0.808,
+        "linearRatioMax": 0.871
+      },
+      "counter": {
+        "areaMin": 4895,
+        "areaMedian": 5172.5,
+        "areaMax": 6213,
+        "linearRatioMin": 0.531,
+        "linearRatioMedian": 0.545,
+        "linearRatioMax": 0.598
+      },
+      "stagger": {
+        "areaMin": 10877,
+        "areaMedian": 12664.0,
+        "areaMax": 13248,
+        "linearRatioMin": 0.791,
+        "linearRatioMedian": 0.853,
+        "linearRatioMax": 0.873
+      },
+      "knockaway": {
+        "areaMin": 4096,
+        "areaMedian": 4811.0,
+        "areaMax": 6710,
+        "linearRatioMin": 0.485,
+        "linearRatioMedian": 0.526,
+        "linearRatioMax": 0.621
+      },
+      "down": {
+        "areaMin": 6215,
+        "areaMedian": 7497.5,
+        "areaMax": 8740,
+        "linearRatioMin": 0.598,
+        "linearRatioMedian": 0.657,
+        "linearRatioMax": 0.709
+      },
+      "revive": {
+        "areaMin": 7540,
+        "areaMedian": 8716.0,
+        "areaMax": 10287,
+        "linearRatioMin": 0.659,
+        "linearRatioMedian": 0.708,
+        "linearRatioMax": 0.769
+      }
+    },
+    "back_3quarter_ne": {
+      "idle": {
+        "areaMin": 22792,
+        "areaMedian": 24163.0,
+        "areaMax": 26243,
+        "linearRatioMin": 0.971,
+        "linearRatioMedian": 1.0,
+        "linearRatioMax": 1.042
+      },
+      "walk": {
+        "areaMin": 7920,
+        "areaMedian": 12026.0,
+        "areaMax": 17500,
+        "linearRatioMin": 0.573,
+        "linearRatioMedian": 0.705,
+        "linearRatioMax": 0.851
+      },
+      "attack": {
+        "areaMin": 4590,
+        "areaMedian": 10207.5,
+        "areaMax": 10742,
+        "linearRatioMin": 0.436,
+        "linearRatioMedian": 0.65,
+        "linearRatioMax": 0.667
+      },
+      "skill": {
+        "areaMin": 6600,
+        "areaMedian": 7329.0,
+        "areaMax": 8250,
+        "linearRatioMin": 0.523,
+        "linearRatioMedian": 0.551,
+        "linearRatioMax": 0.584
+      },
+      "hurt": {
+        "areaMin": 12410,
+        "areaMedian": 17128.0,
+        "areaMax": 18753,
+        "linearRatioMin": 0.717,
+        "linearRatioMedian": 0.842,
+        "linearRatioMax": 0.881
+      },
+      "defend": {
+        "areaMin": 11120,
+        "areaMedian": 12863.0,
+        "areaMax": 15375,
+        "linearRatioMin": 0.678,
+        "linearRatioMedian": 0.73,
+        "linearRatioMax": 0.798
+      },
+      "dodge": {
+        "areaMin": 5312,
+        "areaMedian": 6425.0,
+        "areaMax": 8178,
+        "linearRatioMin": 0.469,
+        "linearRatioMedian": 0.516,
+        "linearRatioMax": 0.582
+      },
+      "counter": {
+        "areaMin": 7304,
+        "areaMedian": 8549.0,
+        "areaMax": 9200,
+        "linearRatioMin": 0.55,
+        "linearRatioMedian": 0.595,
+        "linearRatioMax": 0.617
+      },
+      "stagger": {
+        "areaMin": 9828,
+        "areaMedian": 10566.5,
+        "areaMax": 12192,
+        "linearRatioMin": 0.638,
+        "linearRatioMedian": 0.661,
+        "linearRatioMax": 0.71
+      },
+      "knockaway": {
+        "areaMin": 8040,
+        "areaMedian": 10738.5,
+        "areaMax": 14080,
+        "linearRatioMin": 0.577,
+        "linearRatioMedian": 0.667,
+        "linearRatioMax": 0.763
+      },
+      "down": {
+        "areaMin": 5724,
+        "areaMedian": 6518.0,
+        "areaMax": 8900,
+        "linearRatioMin": 0.487,
+        "linearRatioMedian": 0.519,
+        "linearRatioMax": 0.607
+      },
+      "revive": {
+        "areaMin": 6588,
+        "areaMedian": 8121.0,
+        "areaMax": 9200,
+        "linearRatioMin": 0.522,
+        "linearRatioMedian": 0.58,
+        "linearRatioMax": 0.617
+      }
+    }
+  }
+}
