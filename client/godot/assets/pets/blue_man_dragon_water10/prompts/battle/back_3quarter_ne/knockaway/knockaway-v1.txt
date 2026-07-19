@@ -1,0 +1,19 @@
+Create an exact 4 columns x 2 rows sprite sheet containing 8 sequential body-pose frames of ONE original Beastbound Blue Man Dragon being violently knocked away.
+
+IDENTITY LOCK: young stocky deep cobalt-blue bipedal dragon; cyan crown and cheek fins; short central navy forehead scale; continuous pale-aqua segmented belly; two arms; two digitigrade legs; three cream claws per visible hand/foot; one thick unbranched tail with one pale-aqua wedge fin. No wings, horns, clothes, armor, extra limbs or extra tail.
+
+VIEW LOCK: preserve the same back three-quarter northeast identity throughout. The body may pitch or rotate from force, but it must remain unmistakably the same away-facing dragon and must never flip into a front view or mirrored opposite side.
+
+FRAME ORDER:
+1 grounded just before launch;
+2 impact folds the torso and lifts the heels;
+3 both feet leave the ground, claws splayed;
+4 airborne body tucks and pitches backward;
+5 peak airborne rotation, tail following the same momentum;
+6 begins to untuck while still airborne;
+7 braces limbs for the continuing trajectory;
+8 compact exit pose suitable for runtime launch/removal.
+
+Keep body scale and anatomy consistent. Center each body in its cell using bottom-center normalization; actual screen-space launch trajectory and impact effects are separate runtime layers. No ground shadow, impact burst, dust, speed line, trail, labels, text, halo, stars, glow or baked effect. No death or gore.
+
+OUTPUT: exactly 4x2 equal cells, one complete sprite per cell with generous margins, opaque flat #FF00FF chroma background, high-definition painted 2.5D game sprite style.

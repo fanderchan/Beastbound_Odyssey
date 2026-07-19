@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "stagger",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 10,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 14,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        86,
+        195,
+        426,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7a22507bc78f7f421f99c7c2f6ad18f01fa122a5eaf49a4db181b2784428794b"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        76,
+        168,
+        437,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "c58b8714420aca942966883f79834a43e26e3f225bea9642c5bbf41a6e613d39"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        102,
+        156,
+        411,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a4c14b44d89517b39eb5c390d37f82067e26a558181cc16434437872aead472f"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        82,
+        158,
+        429,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "342265d612d1e88131a26f066d1e75586bdcd7b5242a2cdb2d07315a06130d46"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        86,
+        161,
+        426,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "850d5e1b751f02dffee9e134950d9469a320cd843b8e357cb287d91ca92ead0a"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        90,
+        144,
+        421,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "51291c5bb1c066149a792086ebd632c7cf0928b3c84e64788163c861405cfb1a"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        116,
+        118,
+        396,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d0baeee411045d0df9b3349f72721e072866f789db519d980e1782a279d7bdbd"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/stagger/stagger-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        117,
+        109,
+        395,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "72117b2c210837a1316e440b894580e587f22dca630fd61b95c39c2c5e2ee7b0"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        43,
+        97,
+        214,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "22f4e91abe1efa2ca7cc70732037914d8fdf918b0224ebefbe9d4f5ceb52ebff"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        83,
+        219,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b543bdc3421a4a072cc16feb20873555d0b8dfc70ecc2fd0b2b394ad131b5949"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        50,
+        78,
+        206,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "eade9ada726da4ab2bd279ca4e4f2a1474fce2169ba178a32d8b1eb6598d6838"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        40,
+        78,
+        215,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5f3ceaff0f7fcbed4629aac0d5a84982284d1010cae1ec47dbfb9da15c9f93f1"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        43,
+        80,
+        214,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7b1a22ff335abd4178136e2045b89b0b375607289d9006bb189abb0aaeefb0be"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        45,
+        71,
+        211,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0694030ea523d66500c8c6b5bc50ab218beae9c93485ae1f9b0064d55dff1809"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        57,
+        59,
+        198,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b44bb4ccd8f27a25d2b4ce57637736c7701fbf3133d5383639b897f551e6892a"
+    },
+    {
+      "file": "views/back_3quarter_ne/stagger/stagger-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        58,
+        54,
+        198,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a466fcbbe2fdd3285b1d2679d6e68501e597e9009a1b2d4c4686f40854fed6d6"
+    }
+  ]
+}

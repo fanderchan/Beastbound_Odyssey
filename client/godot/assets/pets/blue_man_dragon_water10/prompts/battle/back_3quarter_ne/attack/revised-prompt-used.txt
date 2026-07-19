@@ -1,0 +1,12 @@
+Create the BACK THREE-QUARTER NORTHEAST counterpart of the exact same Blue Man Dragon 8-frame normal claw attack. Reference 1 locks back-view idle identity; reference 2 locks the back-view contact pose; reference 3 locks the approved front-view animation timing. Preserve exact creature, anatomy, colors, dorsal fins, tail, claw count, scale and hand-painted 2.5D style. Every frame faces northeast/away from camera and shows coherent back anatomy.
+
+Exactly 8 isolated full-body frames in a 4x2 row-major grid:
+1 alert anticipation, weight back, near claw begins pulling behind;
+2 deeper crouched wind-up with shoulder/hip coil;
+3 push-off step northeast and near claw raises;
+4 fast near-claw extension;
+5 decisive contact, near claw fully extended, rear foot planted;
+6 follow-through past contact, hips rotated, tail counterbalances;
+7 controlled recoil and claw retract;
+8 settle to back-view neutral.
+Match the front animation's anticipation/contact/recovery timing, but render genuinely from the back camera. It is a weighted claw strike, not headbutt, not run, no teleport. Equal scale and stable body volume. Make every dragon compact and centered with at least 35px empty margin inside each equal cell; no tail/fin/claw crosses a boundary, nothing cropped. Uniform chroma-key magenta #FF00FF. No text, labels, borders, shadows, motion lines, particles, impact effects, scenery, UI, logo, or watermark.

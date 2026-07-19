@@ -1,0 +1,10 @@
+Revise the supplied exact 4x2 Blue Man Dragon down-animation sprite sheet while preserving the same character, action timing, cell order and flat magenta background.
+
+MANDATORY REPAIR:
+- Remove every white surprise/sweat mark beside the head. There must be absolutely no punctuation, status mark, halo, stars, impact mark, icon, text or other effect in any cell.
+- Keep all eight bodies in the same back-three-quarter-northeast identity. During the fall, do not rotate the face toward the viewer; preserve the away-facing side and dorsal/back read.
+- Frame 1 stunned standing; frame 2 knees buckle; frame 3 balance breaks; frame 4 descends; frame 5 reaches ground; frame 6 completes collapse; frames 7 and 8 stable reversible unconscious side-lying hold.
+- Final expression is neutral unconscious, eyes closed, mouth not smiling. Not peaceful sleep, not happiness, not death, no injury, no gore.
+- Preserve exactly two arms, two legs, one unbranched tail with one aqua wedge fin, the cyan crown/cheek fins, navy dorsal plates and cobalt-blue scales. No wings, horns, extra anatomy, armor or clothing.
+
+OUTPUT: exactly 4 columns x 2 rows, equal cells, one complete sprite in each cell, no separator lines, generous margins, opaque flat #FF00FF background, no shadow or baked effect.

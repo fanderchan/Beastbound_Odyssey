@@ -1,0 +1,19 @@
+Create an exact 4 columns x 2 rows sprite sheet containing 8 sequential frames of ONE original Beastbound Blue Man Dragon recovering from a reversible unconscious battle KO.
+
+IDENTITY LOCK: young stocky deep cobalt-blue bipedal dragon; cyan crown and cheek fins; short central navy forehead scale; continuous pale-aqua segmented belly; two arms; two digitigrade legs; three cream claws per visible hand/foot; one thick unbranched tail with one pale-aqua wedge fin. No wings, horns, clothes, armor, extra limbs or extra tail.
+
+VIEW LOCK: the recovery returns to the exact back three-quarter northeast view, facing diagonally away upper-right. Preserve the same side and identity through every pose. Never mirror or rotate to a front-facing view.
+
+FRAME ORDER:
+1 exact stable unconscious side-lying starting pose, eyes closed and mouth neutral;
+2 first sign of waking, head and one forearm stir;
+3 eyes open in surprise, forearm braces against the ground;
+4 rolls chest upward and gathers knees beneath body;
+5 pushes into a low kneel/crouch;
+6 rises unsteadily with tail counterbalancing;
+7 regains both-foot stance and lifts head;
+8 fully restored back-three-quarter battle-ready idle.
+
+This must visibly continue from down instead of teleporting directly to idle. It is recovery from unconsciousness, not waking happily from sleep. No halo, stars, resurrection beam, glow, shadow, dust, labels, text or other baked effect. Runtime removes the separate KO halo and may add effects independently.
+
+OUTPUT: exactly 4x2 equal cells, one complete sprite per cell with generous margins, opaque flat #FF00FF chroma background, high-definition painted 2.5D game sprite style and clean antialiasing.

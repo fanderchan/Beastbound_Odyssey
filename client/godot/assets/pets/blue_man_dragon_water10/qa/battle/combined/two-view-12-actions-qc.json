@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": {
+    "idle": {
+      "frontFrameCount": 6,
+      "backFrameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "walk": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "attack": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "skill": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "hurt": {
+      "frontFrameCount": 6,
+      "backFrameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "defend": {
+      "frontFrameCount": 6,
+      "backFrameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "dodge": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "counter": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "stagger": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "knockaway": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "down": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    },
+    "revive": {
+      "frontFrameCount": 8,
+      "backFrameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "static_self_review_passed_owner_pending"
+    }
+  },
+  "viewCount": 2,
+  "actionCountPerView": 12,
+  "sourceFrameCount": 180,
+  "runtimeFrameCount": 180,
+  "minimumMargin": {
+    "source512": 30,
+    "runtime256": 14
+  },
+  "magentaResidualPixels": 0,
+  "duplicateRuntimeFrameCount": 1,
+  "expectedIntentionalDuplicateRuntimeFrames": [
+    "back_3quarter_ne/down/down-8.png == back_3quarter_ne/revive/revive-1.png"
+  ],
+  "directionReview": "pass_static",
+  "identityConsistencyReview": "pass_static",
+  "actionSemanticsReview": "pass_static",
+  "downReviveContinuityReview": "pass_static",
+  "backScaleRepairs": {
+    "attack": "rebuilt from the same generated source at fitScale 1.0",
+    "down": "rebuilt from the same generated source at fitScale 1.0",
+    "revive": "rebuilt at fitScale 1.0 with exact down-8 to revive-1 continuity"
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+  "status": "static_self_review_passed_owner_pending"
+}

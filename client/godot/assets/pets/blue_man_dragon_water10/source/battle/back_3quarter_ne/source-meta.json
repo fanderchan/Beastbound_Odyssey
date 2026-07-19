@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "generationMethod": "OpenAI built-in image generation followed only by deterministic chroma cleanup, component isolation, whole-frame scale normalization and bottom-center alignment",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "actions": {
+    "idle": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/idle-raw.webp",
+        "archiveFileSha256": "112f1cf8cc18ee7393aa5510e23364ed9e54b5370f6a22cc85c38e55a9352300",
+        "decodedRgbaSha256": "0945b10e9223a2915f406af28d29e12d009e43b45589ec1a999460bb708c3b74",
+        "originalPngSha256": "f7836c196712061a3c08223a26d2f55fb17df584106fe352d805f7c37d4c7ccf",
+        "originalRgbaSha256": "0945b10e9223a2915f406af28d29e12d009e43b45589ec1a999460bb708c3b74",
+        "originalSize": [
+          2172,
+          724
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-1076137a-a794-47a9-8f6c-9a845662ec80"
+      },
+      "pipelineInputArchive": {
+        "sameAsRawArchive": true,
+        "inputPngSha256": "f7836c196712061a3c08223a26d2f55fb17df584106fe352d805f7c37d4c7ccf",
+        "inputRgbaSha256": "0945b10e9223a2915f406af28d29e12d009e43b45589ec1a999460bb708c3b74",
+        "inputSize": [
+          2172,
+          724
+        ]
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/idle-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/idle/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/idle"
+    },
+    "walk": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/walk-raw.webp",
+        "archiveFileSha256": "83be78fe43440d98dd31e5a08fceec0f1643d45501cf59d320c46fea0abdc118",
+        "decodedRgbaSha256": "3f7daebba7d3f5ca9a4354229abf8e798adc18b3a3a085c6ed07a69314ff054c",
+        "originalPngSha256": "ef314022d3c5eef2e1bd48fb6d4eecdcea1c6a41ea46ed01a99028a8b1455388",
+        "originalRgbaSha256": "3f7daebba7d3f5ca9a4354229abf8e798adc18b3a3a085c6ed07a69314ff054c",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/walk-pipeline-input.webp",
+        "archiveFileSha256": "ae631a38acf5e849311676e0c1b318da4bf43c18d84e97096f1ca907f1b3852d",
+        "decodedRgbaSha256": "b616301526606727be1b03ea77fe8d11739da648e2875a4631c93a8d162b312f",
+        "originalPngSha256": "0b21cf9c32f3aa4134bb5ecc33464116b2890833e253753e3cf4f17819c72249",
+        "originalRgbaSha256": "b616301526606727be1b03ea77fe8d11739da648e2875a4631c93a8d162b312f",
+        "originalSize": [
+          1772,
+          886
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/walk-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/walk/walk-v1.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/walk"
+    },
+    "attack": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/attack-raw.webp",
+        "archiveFileSha256": "840bc07ec222c751f710e8b9f1b3fe38af881414428b5454f940537d4581b65b",
+        "decodedRgbaSha256": "e7ba67d16f91b62fad428098de3fec4e2429a92507b098a825a4ed32ba18bf25",
+        "originalPngSha256": "0c6077cdd1cffc00a8439c36dbc550dcc1a481e484c62f52c6448132796e6130",
+        "originalRgbaSha256": "e7ba67d16f91b62fad428098de3fec4e2429a92507b098a825a4ed32ba18bf25",
+        "originalSize": [
+          1536,
+          1024
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-af07d894-2ad1-4b0b-9286-30b05fa663e6"
+      },
+      "pipelineInputArchive": {
+        "sameAsRawArchive": true,
+        "inputPngSha256": "0c6077cdd1cffc00a8439c36dbc550dcc1a481e484c62f52c6448132796e6130",
+        "inputRgbaSha256": "e7ba67d16f91b62fad428098de3fec4e2429a92507b098a825a4ed32ba18bf25",
+        "inputSize": [
+          1536,
+          1024
+        ]
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/attack-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/attack/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/attack"
+    },
+    "skill": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/skill-raw.webp",
+        "archiveFileSha256": "53f8777ca2bdc09c7fd176e1e9da5661e3719e3f44ed2f94dabaac20cb3df726",
+        "decodedRgbaSha256": "2827895d081bddb08caae40ab3ddf8f449d98d3fc0ecd1599df45153d9d858e1",
+        "originalPngSha256": "82a3ed3eed6d33e04da87100e775c204be759161309925d5e6494b30eedbe86f",
+        "originalRgbaSha256": "2827895d081bddb08caae40ab3ddf8f449d98d3fc0ecd1599df45153d9d858e1",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-c1950147-6514-4afc-a6bc-63f99d483541"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/skill-pipeline-input.webp",
+        "archiveFileSha256": "42bdd46646afdc42452b4e9d2c052a79759856e27f1c92832d0ac7cf97a081ef",
+        "decodedRgbaSha256": "7da73ae9067445401c6d45ce1fb5b5bb232644bb23ae3200e42965cad870582e",
+        "originalPngSha256": "7c3291f855a064cb25438fe47237b021327e87f6ac7a69ac37f1b77a5dbf0e03",
+        "originalRgbaSha256": "7da73ae9067445401c6d45ce1fb5b5bb232644bb23ae3200e42965cad870582e",
+        "originalSize": [
+          1776,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/skill-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/skill/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/skill"
+    },
+    "hurt": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/hurt-raw.webp",
+        "archiveFileSha256": "d5a018eb9c0db4dd54f2486aee0418d9635230b7c4ff0f220e49a196a86ee2c5",
+        "decodedRgbaSha256": "39168d6d0a08028ef3abc90d7dcc46f01a098a4a0c8cc6d3c156e3c61f13a648",
+        "originalPngSha256": "fbad59897f2289a31477ca0dc838ff21b2ed834ab6d523d35bbcda4ef643e256",
+        "originalRgbaSha256": "39168d6d0a08028ef3abc90d7dcc46f01a098a4a0c8cc6d3c156e3c61f13a648",
+        "originalSize": [
+          1536,
+          1024
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/hurt-pipeline-input.webp",
+        "archiveFileSha256": "b0727c5c2123e67bc1c33b1ac392cfeb697b74b84d9fdccec4a86ee2c2ccdd9b",
+        "decodedRgbaSha256": "0b6c931b2144d417cdd30a82f0ddf749efb6cbe65f1c1b79e480147756bc59b3",
+        "originalPngSha256": "f2d14c2c17f7bb977c1fdb207eb51fcad719134666c704a2faf1041813d613be",
+        "originalRgbaSha256": "0b6c931b2144d417cdd30a82f0ddf749efb6cbe65f1c1b79e480147756bc59b3",
+        "originalSize": [
+          1536,
+          1024
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/hurt-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/hurt/hurt-v1.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/hurt"
+    },
+    "defend": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/defend-raw.webp",
+        "archiveFileSha256": "3f29c73864915979b70288117f1d735233a9a300f8779cd78cd26b2c53821291",
+        "decodedRgbaSha256": "48528e2b4c17e7622948e3da93898dccfd2f636d67b70af58a6fb6dd433089ae",
+        "originalPngSha256": "3815c8a76925d40375b5a5a6263d8931c7d0f8968bf55644ebcba6b5bef3f7e9",
+        "originalRgbaSha256": "48528e2b4c17e7622948e3da93898dccfd2f636d67b70af58a6fb6dd433089ae",
+        "originalSize": [
+          2172,
+          724
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-4f186fb3-41a3-46c6-b323-f5190ee07145"
+      },
+      "pipelineInputArchive": {
+        "sameAsRawArchive": true,
+        "inputPngSha256": "3815c8a76925d40375b5a5a6263d8931c7d0f8968bf55644ebcba6b5bef3f7e9",
+        "inputRgbaSha256": "48528e2b4c17e7622948e3da93898dccfd2f636d67b70af58a6fb6dd433089ae",
+        "inputSize": [
+          2172,
+          724
+        ]
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/defend-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/defend/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/defend"
+    },
+    "dodge": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/dodge-raw.webp",
+        "archiveFileSha256": "9bb9fe1c68c36710871f6b2884ecad87477c6a4b75383dddd4b83bec96d70c4f",
+        "decodedRgbaSha256": "cd1a6296a47689917c5ce2fe0f2234fb64edad1594b31517a5b07e7e49533178",
+        "originalPngSha256": "2f56c54fb244940878ac4959cf2d91eeb57dbbf4ded3a49fd36c845e92cddf7b",
+        "originalRgbaSha256": "cd1a6296a47689917c5ce2fe0f2234fb64edad1594b31517a5b07e7e49533178",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-67acde07-e68b-4d23-9ab4-1eabce8ad9a6"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/dodge-pipeline-input.webp",
+        "archiveFileSha256": "d68b11f2886270b395506d8144fc8936cd8b341cc3e8f30b0414790061a13089",
+        "decodedRgbaSha256": "d4c84ecadb6ed980b7e999e306a2950d810511cf51a981859f77b18bacac863e",
+        "originalPngSha256": "24f68a3cd838e82769f35def41e056cac3b7a4fda7c73dac9e2ee456e8892160",
+        "originalRgbaSha256": "d4c84ecadb6ed980b7e999e306a2950d810511cf51a981859f77b18bacac863e",
+        "originalSize": [
+          1776,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/dodge-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/dodge/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/dodge"
+    },
+    "counter": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/counter-raw.webp",
+        "archiveFileSha256": "59dbea858c646f50fc3658d1a8fb45ffc6a81d83100445c56bd175fb10bda5bd",
+        "decodedRgbaSha256": "93fb7585db9df3a188e7dd3e569e9d9ad6f0fd2f9c3c3d841b864ca5b77d3f09",
+        "originalPngSha256": "a47cea91c8c3cf79b88f3b662aabf9e71e2057c083617ff8e552939eccf5862e",
+        "originalRgbaSha256": "93fb7585db9df3a188e7dd3e569e9d9ad6f0fd2f9c3c3d841b864ca5b77d3f09",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "exec-ad3d8543-fea3-438b-a4fd-f3ddcdcd969a"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/counter-pipeline-input.webp",
+        "archiveFileSha256": "91166400a6714399812ac04a26f23587b40c963a0fcd85b87dd3192362173646",
+        "decodedRgbaSha256": "1546562866c1e42adb72d09e57167a464a58362a31cee818c7cc54bf2b9326cd",
+        "originalPngSha256": "cead4ece952afa8499745846e9d809eabd1a1e67136ca991370a6cdd08d6dbd4",
+        "originalRgbaSha256": "1546562866c1e42adb72d09e57167a464a58362a31cee818c7cc54bf2b9326cd",
+        "originalSize": [
+          1776,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/counter-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/counter/revised-prompt-used.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/counter"
+    },
+    "stagger": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/stagger-raw.webp",
+        "archiveFileSha256": "9ed5eb8e1436d3ae4adab25f5edf3ebd2e04d11a658b271ff2e2e1403e07bf69",
+        "decodedRgbaSha256": "d84f6541da30bd24c47214588a850bd408a25650ccb6ceeb10e81a7f4c3c98c6",
+        "originalPngSha256": "fd8409583b29a8c04300aa887e7d8e61e4f7dc3f5ae1368028459820e786e40e",
+        "originalRgbaSha256": "d84f6541da30bd24c47214588a850bd408a25650ccb6ceeb10e81a7f4c3c98c6",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/stagger-pipeline-input.webp",
+        "archiveFileSha256": "d8b51f347903ecaba075e86cef8d70369ae6063932ef3982d5060ec102b08b95",
+        "decodedRgbaSha256": "791eee8640f21a9766174ed97916f0bccc8236138472e7b86f99ac97cd6a2f21",
+        "originalPngSha256": "c61573dacd7cd505dcde12a1ed652e16d783d8b9fbb2f5a6e7d4d8d49f7cbdb3",
+        "originalRgbaSha256": "791eee8640f21a9766174ed97916f0bccc8236138472e7b86f99ac97cd6a2f21",
+        "originalSize": [
+          1772,
+          886
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/stagger-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/stagger/stagger-v1.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/stagger"
+    },
+    "knockaway": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/knockaway-raw.webp",
+        "archiveFileSha256": "d54e41c81e38dd906be97c75c5616e780e39c8d55714a534207ca801c88d15a8",
+        "decodedRgbaSha256": "be2f14d84321b687cdf115bbd4b6b7e83a454c03b718b9d85b251b6a105bf0e6",
+        "originalPngSha256": "639a9eef2f6954350a8c14fd2d9bffdbbb516fcd294751683153ef525ebfd69f",
+        "originalRgbaSha256": "be2f14d84321b687cdf115bbd4b6b7e83a454c03b718b9d85b251b6a105bf0e6",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/knockaway-pipeline-input.webp",
+        "archiveFileSha256": "105b571ebc98c33b2012f1d64fd9f259dba75edc4b73619864b049c055cf3c65",
+        "decodedRgbaSha256": "f593a4cd6a9083ddadd0e91f972fa912d3dc22c38a57724c0c6fa6403f300c66",
+        "originalPngSha256": "f9ca950be1ddff1f7f2fff580cea97d535d3b42692924ee553fe23b119ec7481",
+        "originalRgbaSha256": "f593a4cd6a9083ddadd0e91f972fa912d3dc22c38a57724c0c6fa6403f300c66",
+        "originalSize": [
+          1772,
+          886
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/knockaway-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/knockaway/knockaway-v1.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/knockaway"
+    },
+    "down": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/down-raw.webp",
+        "archiveFileSha256": "207fe291df6a82ca3daad64e56f6371130d660b49d1fa24bf42ecb4508a7209d",
+        "decodedRgbaSha256": "d928965f626f6982b4e8034df07bcd8a312862e2a029ffdde29f4cb765ce6306",
+        "originalPngSha256": "d326c90ed0461cb75720fe06c0148083cff355db8b051d072aba7232efa10a3e",
+        "originalRgbaSha256": "d928965f626f6982b4e8034df07bcd8a312862e2a029ffdde29f4cb765ce6306",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/down-pipeline-input.webp",
+        "archiveFileSha256": "70b92035752475e68bd6aca6262682a8e1cefc719606a2038aa9d4a645c2806c",
+        "decodedRgbaSha256": "f35cea428318dec08eae8856d3033767f8661f57af28b6291182021acc318263",
+        "originalPngSha256": "1bf088f91c9b3798779f051806c15c864efcad7b8754cfcf4e01688e56bc5c84",
+        "originalRgbaSha256": "f35cea428318dec08eae8856d3033767f8661f57af28b6291182021acc318263",
+        "originalSize": [
+          1772,
+          886
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/down-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/down/down-v1.txt",
+        "prompts/battle/back_3quarter_ne/down/down-v2-remove-effects.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/down"
+    },
+    "revive": {
+      "rawArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/raw/revive-raw.webp",
+        "archiveFileSha256": "b21bc128ad55427291fbff1644c5e19572f064f31e184b29d737283a97aa5d8a",
+        "decodedRgbaSha256": "e6982f809e29659a26f860f2785390f43f114f7433e32d908fef345592c05d67",
+        "originalPngSha256": "b3270b7a56d654a03b2bf6b52cf69820035a20eca501015939e2e320fa534f30",
+        "originalRgbaSha256": "e6982f809e29659a26f860f2785390f43f114f7433e32d908fef345592c05d67",
+        "originalSize": [
+          1774,
+          887
+        ],
+        "decodedPixelsEqual": true,
+        "generationCallId": "recorded_in_action_prompt_lineage"
+      },
+      "pipelineInputArchive": {
+        "archivePath": "source/battle/back_3quarter_ne/input/revive-pipeline-input.webp",
+        "archiveFileSha256": "89d4955aef7499cecdbd04610d46a9dfe6e486a0542295c654d06e0decf6501d",
+        "decodedRgbaSha256": "d8e4bf49fa7b8b8699c3e813115cccdafc53e3f1bf9575750c4493e5387d09bf",
+        "originalPngSha256": "239bd460f217908554be3d83075185e83fa70e630e83ed9d88156531cda2b69c",
+        "originalRgbaSha256": "d8e4bf49fa7b8b8699c3e813115cccdafc53e3f1bf9575750c4493e5387d09bf",
+        "originalSize": [
+          1772,
+          886
+        ],
+        "decodedPixelsEqual": true,
+        "sameAsRawArchive": false
+      },
+      "pipelineMetadata": "source/battle/back_3quarter_ne/pipeline/revive-pipeline-meta.json",
+      "promptFiles": [
+        "prompts/battle/back_3quarter_ne/revive/revive-v1.txt"
+      ],
+      "sourceFrameDirectory": "source/battle/back_3quarter_ne/frames-512/revive"
+    }
+  }
+}

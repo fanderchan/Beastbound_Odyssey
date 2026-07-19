@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "front_3quarter_sw",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "skill",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 14,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        134,
+        170,
+        377,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "052745a5b88b42f361adb05a2d8254e154799de50e4d5f9dff774e4fda6b1a91"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        118,
+        196,
+        394,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b3c2aae85781dc0d4e3064195aa2be55a05cb407b5859e772a2d5240ab43e52c"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        108,
+        183,
+        404,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7ebac1d60f55bcfde8e4cf0d8ab3a71b640cca47f228c282418b1d4bcb89d0d3"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        98,
+        202,
+        413,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "bc8ee7e057cec197e4c0b9aa7bd1cfecb909e4af2effa37047d571acb0ca64af"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        126,
+        178,
+        387,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6e9391f6c2696b77b5bd4ce4733e046550dd9aa502201bb90cfa478ddf6fd4f6"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        72,
+        219,
+        439,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d9ee45b1d841dea1885aa6eb960ca0b4d6e10181dd6bb388dc02e858f8b02fde"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        118,
+        217,
+        393,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3e19708993cf84cbad5e962e94d944631b798add146adec133a06a6184fb169b"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/skill/skill-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        138,
+        183,
+        375,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b997aad24cc0647ceb486d32b81199e3052c352e2aa400a0962668d23be4e25c"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/front_3quarter_sw/skill/skill-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        67,
+        84,
+        189,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ee23dc8531eeb3f5a8f41e6880801f1298a41a8b299d2047e8848098e49c3611"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        59,
+        97,
+        197,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2766ce8def8567455a02262cd24d8c817acac0c403a049f023923e253782afad"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        54,
+        91,
+        202,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "41868e76cb0a125726883f017100ba83910896fea43c6c69ca398ee7319aea8a"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        49,
+        101,
+        207,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b2a72d1c32fda588861adb21877e3329d2f9d8feb89fee031a175afc4bc3ea13"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        63,
+        89,
+        194,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "bf6a0d5ecb7b3df3551c350407ea23ab0ada524b5564bf6ede11fca3651c576b"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        36,
+        109,
+        220,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "30d35848258acc31872b27b85c6e2810e34406b278c0737b76f9f105dde894cb"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        59,
+        108,
+        197,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b175202244e9de90f57a90cb0e2df84322e04c9785ce553fbb52364af2043afd"
+    },
+    {
+      "file": "views/front_3quarter_sw/skill/skill-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        69,
+        91,
+        188,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "46386fa4eeee81e110bbeddd9aa401baf3814c24a20a6b8d739bed227f38105d"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+Create a production-quality HD 2D game sprite animation sheet for the exact same Blue Man Dragon shown in Image 1. Preserve identity exactly: compact upright cobalt-blue scaled dragon; cyan/turquoise swept cheek, head and back fins; cream segmented chest and belly; amber eyes; short broad snout; three pale claws on each hand and foot; thick finned tail; no wings, horns, clothes or accessories. Keep the exact front three-quarter southwest view, facing lower-left, exact body proportions, colors, rendering style, camera and scale in every frame. Image 2 is the semantic key pose for this action; use it as the action lock, not as a single frame to duplicate. Every frame must be a genuinely redrawn consecutive pose with real changes in joints, torso, head, fins and tail. Never duplicate a frame, never fake motion by translating an unchanged whole character, and never mirror or reorder frames. One complete dragon only in each equal cell. All anatomy must remain inside its own cell with at least 40 pixels of clear background from every cell boundary; no tail, fin, claw, or limb may cross cell boundaries or be cropped. Keep a consistent apparent scale and coherent ground relationship. Uniform solid chroma-key magenta #FF00FF background. Body animation only: no text, labels, borders, shadows, ground, scenery, UI, logos, water, projectile, aura, impact, speed line, trail, dust, stars, halo, swirl, blood or detached effects.
+
+Make exactly EIGHT frames in a landscape sprite sheet arranged as 4 columns x 2 rows, read row-major left-to-right then top-to-bottom. This is an active self-recovery from the exact reversible battle-KO body state in Image 2:
+1) starts fully down on its side, slack and unconscious, no smile,
+2) eyes refocus and one claw braces against the ground,
+3) head and chest lift with visible effort while the tail begins to assist balance,
+4) rolls toward the belly and brings knees underneath,
+5) reaches a low kneeling/crouched support pose with one hand still down,
+6) pushes strongly upward through arms and legs,
+7) stands wobbling, torso low and arms out for balance,
+8) regains an alert upright battle-ready stance.
+Show continuous contact and weight transfer; never teleport from lying to standing. No sleeping smile, death pose, halo, healing glow, stars, dust, aura or detached effect.

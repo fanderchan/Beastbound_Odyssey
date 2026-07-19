@@ -1,0 +1,17 @@
+Create an exact 3 columns x 2 rows sprite sheet containing 6 sequential frames of ONE original Beastbound Blue Man Dragon reacting to an ordinary damaging hit and regaining balance.
+
+IDENTITY LOCK: young stocky deep cobalt-blue bipedal dragon, cyan crown and cheek fins, one short central navy forehead scale, continuous pale-aqua segmented belly plate, two arms, two digitigrade legs, three cream claws per visible hand/foot, one thick unbranched tail with one pale-aqua wedge fin. No wings, horns, clothing, armor, extra limbs or extra tail.
+
+VIEW LOCK: exact fixed back three-quarter northeast view in all six frames, facing diagonally away toward upper-right. Dark dorsal plates/back remain dominant. Never rotate toward camera, change side or mirror.
+
+FRAME ORDER, left-to-right top row then bottom row:
+1 braced pre-impact posture;
+2 clear first recoil, shoulders jerk backward and claws open;
+3 peak impact compression, torso curls and one knee bends, face distressed but not unconscious;
+4 weight shifts forward to stop the recoil;
+5 pushes back toward stable footing;
+6 recovered battle-ready posture.
+
+Same body scale and stable bottom-center ground anchor. This is hurt feedback, not defend, dodge, down, sleep or death. Do not collapse fully. No blood, wound, shadow, impact flash, numbers, streak, labels, text, halo, stars, glow or baked effect.
+
+OUTPUT: exactly 3x2 equal cells, one complete sprite per cell, generous margins, opaque flat #FF00FF chroma background. Smooth high-definition painted 2.5D game sprite style and clean antialiasing.

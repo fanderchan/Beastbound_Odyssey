@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "walk",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 10,
+  "loop": true,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 14,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        96,
+        115,
+        415,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "4e6f3e101f55d936695db81a7efec5369cd3108b2ee46a2ff5ba805296c54098"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        104,
+        121,
+        408,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "e00cb59b16c386333afaa53f6f927cfc6e667d5b004fedcce7133e90555141d7"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        106,
+        114,
+        406,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ff5f5976f0fed9e2aba393d1b0df1c1125125b6cf73c77fe7fa1570d197c8c67"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        99,
+        116,
+        413,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "fe980cd585b88221a437245544ef0b41f78bb68006078fdd87d6f713b05404ae"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        99,
+        118,
+        413,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "e131072a7c0c79850c37430cd0999e00d7b9128acf627ce5fcb70437c95101f1"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        97,
+        109,
+        415,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5fd3696f064e3e1ac9595df641e95d9fe7b468e52ad0f395f0e3ec5b08805ab6"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        92,
+        113,
+        420,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "f8d330c3ef53732a632f0a6a6880705dd2e2734db93c18c51426134b74972beb"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/walk/walk-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        104,
+        114,
+        407,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d83c6c9a139948b851df35ffe04e1352c1683924d7bad714dbfdf62b3dcd4c49"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/walk/walk-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        48,
+        57,
+        208,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "eff3b4dbba2f54cfcac3886d353481d67c9451c45985d9b1e87c06f4fd780618"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        51,
+        60,
+        204,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "84fba5e6d08df4d086d2cf8a059fe9a7adabaa59a328187656b728a9a67a8760"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        52,
+        56,
+        203,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "44bbf8b9224d36736dcab9d77ebafdd4b27e4cf2d1735177fa356242ecbf946b"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        49,
+        57,
+        207,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "64cb0c0b99ef2883e36de82a159d97418b1a59bad75a415840579a5e0ec5d4f2"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        49,
+        58,
+        207,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "48c24c1e8e38597a46f65ad537533bdb25fc1c1f7652a2bc244cf570d40ebb4e"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        48,
+        54,
+        208,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "1a58faf2133b593d0510eb2649c38c5f2c2b1963f3e03ad65f89388792e1ccc0"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        45,
+        56,
+        211,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "91616d0ee3a1cedd4ded557cbd7bde9658e53f8fdda03fae878e8fed18be5de7"
+    },
+    {
+      "file": "views/back_3quarter_ne/walk/walk-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        52,
+        56,
+        204,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "9ee971eb09ddf1ad31661e096d2344c0f9cda3765b253dd4f244137ebea1a8c4"
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "idle",
+  "expectedFrameCount": 6,
+  "sourceFrameCount": 6,
+  "runtimeFrameCount": 6,
+  "gifFrameCount": 6,
+  "fps": 8,
+  "loop": true,
+  "uniqueRuntimeFrames": 6,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        113,
+        109,
+        398,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "46943db2e23f0ba90203a7b88a1017631921f9a1a26fc7159a36383463b67a7f"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        113,
+        109,
+        400,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d1c2017770807cc47e2f7bf959d8601554ed59e21074863741424de16b5bc839"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        112,
+        109,
+        400,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "232e65c61b1f45b851d221ccb5e4947824991a9fb63b4c02f5d7558c2477c68e"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        117,
+        109,
+        396,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3001f8b19a9dcb8f8eeae88d19e2e6e340babbbf373155f22cfd464265eb3b90"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        114,
+        109,
+        399,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "8b44e89b6b6875330a7925ce79ce0466441cff020e541174fd6b5f2130dd53ea"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/idle/idle-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        119,
+        109,
+        393,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2711388cac43b1e89c72dfda2cea1fa827c9269bc40ec648cac9f0fae11a2cbd"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/idle/idle-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        56,
+        54,
+        199,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "f21382d21b1671c092962c97d3f79a3dac67825fa3fe8ec04b5423921f2c8c9f"
+    },
+    {
+      "file": "views/back_3quarter_ne/idle/idle-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        56,
+        54,
+        200,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ad7eaa7f04b803a52af7407217e128fb20a7d64eb8fd421192ba26f4d6c42eb1"
+    },
+    {
+      "file": "views/back_3quarter_ne/idle/idle-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        56,
+        54,
+        200,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "89f4906a6dfb198835f93e6657dd2e107fb6fae09cd1d39de62bbad2aadb163f"
+    },
+    {
+      "file": "views/back_3quarter_ne/idle/idle-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        58,
+        54,
+        198,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a3fa237ee6d4e97beaf18fc842bbc493c0bc8db91826fcbc8158e4c25a9be6bd"
+    },
+    {
+      "file": "views/back_3quarter_ne/idle/idle-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        56,
+        54,
+        200,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5aa4e940eb94c567cf14c7676c8177ad240437e066e72b57306e182e5ec4821b"
+    },
+    {
+      "file": "views/back_3quarter_ne/idle/idle-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        59,
+        54,
+        197,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ba33f347946657358ce752355215c83d1abdf70c0da0ab1506089ec01e6c39c1"
+    }
+  ]
+}

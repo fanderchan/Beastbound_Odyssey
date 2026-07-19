@@ -3,10 +3,14 @@
   "formId": "blue_man_dragon_water10",
   "displayName": "蓝人龙",
   "artStatus": "in_production",
-  "productionScope": "identity_and_world_true8_pet_body",
+  "productionScope": "identity_world_true8_and_formal_two_view_pet_battle",
   "runtimeEnabled": false,
   "runtimeFrameSize": [256, 256],
   "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "battleViewMapping": {
+    "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
+    "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
     "sourceFrameSize": [512, 512],
@@ -19,18 +23,40 @@
     }
   },
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
-    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
+    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "owner_review_pending"},
+    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "owner_review_pending"},
+    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "owner_review_pending"},
+    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"},
+    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"},
+    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"}
+  },
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "battleViewMapping": {
+      "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
+      "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
+    },
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "sourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "runtimeEnabled": false,
+    "directionPolicy": "enemy uses front_3quarter_sw + flipH=true toward southeast; ally uses back_3quarter_ne + flipH=true toward northwest",
+    "downReviveContinuity": "back down-8 and revive-1 are exact RGBA matches",
+    "scaleRepairs": {
+      "backAttack": "same generated source rebuilt at fitScale 1.0",
+      "backDown": "same generated source rebuilt at fitScale 1.0",
+      "backRevive": "same generated source rebuilt at fitScale 1.0 with down-to-revive continuity"
+    },
+    "realGodotBattleEvidence": "docs/phase_322_mounted_battle_final_facing_gate.md"
   },
   "worldVisual": {
     "status": "owner_review_pending",
@@ -69,6 +95,14 @@
       "sourceMetadata": "source/world/world-source-meta.json",
       "pipelineMetadata": "source/world/pipeline",
       "promptDirectory": "prompts"
+    },
+    "battle": {
+      "rawDirectory": "source/battle/<view>/raw",
+      "pipelineInputDirectory": "source/battle/<view>/input",
+      "sourceFrames512": "source/battle/<view>/frames-512",
+      "sourceMetadata": "source/battle/<view>/source-meta.json",
+      "pipelineMetadata": "source/battle/<view>/pipeline",
+      "promptDirectory": "prompts/battle/<view>/<action>"
     }
   },
   "evidence": {
@@ -81,8 +115,14 @@
     "worldWalkTrue8Gif": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-walk-true8-160.gif",
     "worldWalkTrue8GifSha256": "96cf70364062b3b6080db116b734e4b66681e2cfa1a442680c34daacde26a185",
     "worldQcSummary": ".run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/blue-man-dragon-world-qc-summary.json",
-    "worldQcSummarySha256": "b824360c3e9c03ad6b0617f83aaa27e202afcce1d95e490750d0ace7b2f98796"
+    "worldQcSummarySha256": "b824360c3e9c03ad6b0617f83aaa27e202afcce1d95e490750d0ace7b2f98796",
+    "battleTwoViewContact": "qa/battle/combined/two-view-12-actions-contact-sheet.png",
+    "battleTwoViewContactSha256": "6201bbc72e1bc7bbbd4ed54c70d7186846eeac9001e4a138cb02bef608375721",
+    "battleTwoViewQc": "qa/battle/combined/two-view-12-actions-qc.json",
+    "battleTwoViewQcSha256": "dc0d5956ecd9704cd2beec13652bb4939661c8912d06181dfb574c726222955f",
+    "battleFrontSourceMetaSha256": "0ae98417681b0f0ee561d714be3d05c2599740cc461a4dbf9cae4bde504aff41",
+    "battleBackSourceMetaSha256": "6f8d6fc54b84c8ca25135fe9a0e6259a63ddf7f84ecccba4941cc17795a234c3"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and formal pet-body world true-8 idle/walk are produced and self-reviewed. Owner review remains pending, runtime is disabled, and all battle actions remain intentionally not produced."
+  "notes": "Identity, pet-body world true-8 idle/walk, and formal two-view 12-action battle frames are produced and statically self-reviewed. Owner review plus real Godot battle playback remain pending, so runtime stays disabled and artStatus stays in_production."
 }

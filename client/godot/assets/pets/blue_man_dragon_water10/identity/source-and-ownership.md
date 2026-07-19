@@ -22,3 +22,13 @@
 - 步态采用明确的 `接触 / 经过 / 接触 / 经过` 四相循环，左右脚交替；不是仅做上下浮动。标准化后四帧逐方向均唯一，八向待机也不存在镜像哈希复用。
 - 工程自评证据位于 `.run/art_batch_phase320/blue_man_dragon/world-production/evidence-v1/`，包含 512px 原始比例总表、160px 地图比例总表、八方向同步 GIF 和机器 QC 摘要。
 - 当前 `ownerReviewStatus=pending` 且 `runtimeEnabled=false`。这些文件不得被描述为项目所有者已批准，也不得在未完成战斗动作与整体验收前启用为正式运行资产。
+
+## 正式双视角战斗动作
+
+- 范围：蓝人龙宠物本体的 `front_3quarter_sw` 与 `back_3quarter_ne` 两个正式战斗视角；每个视角包含 `idle / walk / attack / skill / hurt / defend / dodge / counter / stagger / knockaway / down / revive` 十二个动作，共 180 张 512px 源帧和 180 张 256px 运行帧。
+- 生成方式：OpenAI 内置图像生成；逐动作实际提示词保存在 `../prompts/battle/<view>/<action>/`。所有原始生成图均以像素无损 WebP 归档在 `../source/battle/<view>/raw/`，管线输入、逐帧标准化参数和原始/归档像素哈希分别位于相邻的 `input/`、`pipeline/` 与 `source-meta.json`。
+- 身份延续：全部动作锁定 `identity-lock.md` 的钴蓝幼年直立人龙、青色冠鳍与颊鳍、奶油色分节腹甲、海军蓝背脊、两臂两腿、单一不分叉尾巴和稳定三爪结构；没有翅膀、角、武器或额外肢体。
+- 确定性修复：背视角 `attack`、`down`、`revive` 曾存在明显比例偏小；仅使用同一张原始生成图按统一基线重排到 `fitScale=1.0`，没有重新抽取角色。背视角 `down-8` 与 `revive-1` 现在为完全相同的 RGBA 帧，保证倒地到复活连续。
+- 透明边处理：安装时仅清除色键残留与 `alpha<=8` 的缩放尘点，确保 512px 源帧至少 28px、256px 运行帧至少 14px 安全边；没有改变角色轮廓、姿势或内部颜色。
+- 每个动作均附带 GIF、接触表和机器 QC：`../qa/battle/<view>/<action>/`。两视角十二动作总表与汇总 QC 位于 `../qa/battle/combined/`。
+- 当前只完成静态工程自评；真实 Godot 战斗播放、10v10 混合动作和项目所有者审美验收仍为 `pending`。因此 `artStatus=in_production`、`ownerReviewStatus=pending`、`runtimeEnabled=false`，不得宣称已正式批准或直接启用。

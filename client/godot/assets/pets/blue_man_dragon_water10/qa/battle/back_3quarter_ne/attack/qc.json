@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "attack",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        106,
+        102,
+        403,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "056752eee807e4d1f653ca5f658ec5b62b28096b8be7ee834ba1f3c8bcd2651a"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        71,
+        165,
+        438,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a4f8c902423cc183aba36f868b2d33a56bb8bf720a98e6439ef999275d038ce4"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        51,
+        107,
+        464,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2017bbbf9c872d3191ad0ae457c2027c2a52a8eb2158765f7ba09ace17372508"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        31,
+        107,
+        480,
+        479
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d2edb74c2d722b01f3ff65e9c2e217a2a97425106a0f9d36937be78e929e0814"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        39,
+        112,
+        473,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "aa50bf394c4c755713cb48575d0118fb5ae2d5547ab89e0bcdec0fe363d6a618"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        70,
+        109,
+        443,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d81083b31a214ac537d5cb1a022ea31b69510c4d90bdd1d27073bdda2ebb2ca1"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        88,
+        107,
+        423,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "11aebecda8a7c0528e5395271c314a47032242fc046af82d54236e3831a9568e"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/attack/attack-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        110,
+        112,
+        402,
+        479
+      ],
+      "minimumMargin": 33,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "38a4dcd618f38513d1502e1cfdccfbac91869bedcbd11abcc5bf209e11bd64e8"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/attack/attack-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        54,
+        51,
+        202,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d61faf06de642dc48abd47d75b5cc6b6407e81845a80fb5f48d41d3972c89ed0"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        82,
+        219,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "71281d9d7ee2009ab8b934a56795a4e1002fa5799c800260701681b9ac956691"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        25,
+        53,
+        231,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5b3db7d63829c5e856b644de55389dfd77be98889428ff472eca6e6b96fea382"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        16,
+        53,
+        239,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "568999f060f0c6075604e8f3a7b49611664e3c300d9dac9e359cc66e7f1e2240"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        20,
+        56,
+        235,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "702b4caaa616e88d17e5fb56cc8a611819f3d558eaedbb65e596d4343945afe8"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        36,
+        54,
+        220,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "cf293f22b54245b0855ea7ef72f109a99575bef0ae1c529a8e98684386f50374"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        45,
+        53,
+        211,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "da1c351a50d5d2360fe8b001e9fa48a66a9052e387dfca5ec28d565c200e1bb9"
+    },
+    {
+      "file": "views/back_3quarter_ne/attack/attack-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        55,
+        56,
+        200,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "e57bf0438071ef3e35654b866c6516e7ad16884624b23c49c56caa6cd42f214b"
+    }
+  ]
+}

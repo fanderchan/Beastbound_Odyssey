@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "front_3quarter_sw",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "revive",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 10,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        79,
+        331,
+        433,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "493a4c7de8f7cdaebf9bea63ce620b9f041fdf68d7fc7700ed50e13bb09579b4"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        75,
+        309,
+        437,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "4e5c92a5d74c123479db22bac074ff811d8fc85dad9d7875023381a4c4be8f79"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        71,
+        250,
+        440,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3af2379c407b569b1b8fba780bd93834409d71ebb57ba7e1eb43ab63333a2e08"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        75,
+        259,
+        436,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6f0ad95a0bb39487cd771b03a2734a8ef2be8883a3985c4a2fe366aef44b31ed"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        87,
+        259,
+        425,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2823a9504acf6b4c9e565645177ff5cb874d3a1b54dfdeaba00c608abe7a2d19"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        91,
+        226,
+        421,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "022a056acec6b72f567a6c325746ba08e40a22349f4b8b305ad9646f438a40ab"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        89,
+        200,
+        422,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7274fca19b297bcc01f1d0d92e4a95370bed5e07ef3c58e2121d7773a5dc1e89"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        123,
+        167,
+        389,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "1f31ca18e172e9815e5462084e9893988568a1c806f7e5d04d4dab1d3b5b1011"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/front_3quarter_sw/revive/revive-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        39,
+        165,
+        216,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "72b3c89ed6797bf8fe7db2b5530fcf34c4d75664c04616541e38aba17b7bf19b"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        154,
+        219,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5b4b9d3dffdb643ec2d9386524d5a861e54f188342b33573ab3f59c996ff4f3e"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        35,
+        125,
+        220,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "267bbd8c488f129bc5a16769dc77d24199b145eeb37f07a4b09b76f8f74ba08c"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        129,
+        218,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d3c8d54cf49c1fc462f9d440e92eff00b171acc6231f464fd1e88ba5c87b1f56"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        43,
+        129,
+        213,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "dcdfca4190ba17aebef25442fd1dc4c911a07905167b1de13a1d0e93db9f0100"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        45,
+        113,
+        210,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3929fb48328492b03a2a812fc4c4fca02270d54b8e45ea9feaea96266cdf8aca"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        44,
+        100,
+        211,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "01c9a89b0ab46680065ccbacb01f477d9262877437c5757839e05e4312c8e049"
+    },
+    {
+      "file": "views/front_3quarter_sw/revive/revive-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        61,
+        83,
+        195,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7f508179a89e00defa67f732c4d319b9a5d163622c1749a8f2ec802bac38d6cc"
+    }
+  ]
+}

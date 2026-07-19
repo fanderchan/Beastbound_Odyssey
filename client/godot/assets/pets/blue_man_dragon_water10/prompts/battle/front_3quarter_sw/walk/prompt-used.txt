@@ -1,0 +1,12 @@
+Create a production-quality HD 2D game sprite animation sheet for the exact same Blue Man Dragon shown in Image 1. Preserve identity exactly: compact upright cobalt-blue scaled dragon; cyan/turquoise swept cheek, head and back fins; cream segmented chest and belly; amber eyes; short broad snout; three pale claws on each hand and foot; thick finned tail; no wings, horns, clothes or accessories. Keep the exact front three-quarter southwest view, facing lower-left, exact body proportions, colors, rendering style, camera and scale in every frame. Image 2 is the semantic key pose for this action; use it as the action lock, not as a single frame to duplicate. Every frame must be a genuinely redrawn consecutive pose with real changes in joints, torso, head, fins and tail. Never duplicate a frame, never fake motion by translating an unchanged whole character, and never mirror or reorder frames. One complete dragon only in each equal cell. All anatomy must remain inside its own cell with at least 40 pixels of clear background from every cell boundary; no tail, fin, claw, or limb may cross cell boundaries or be cropped. Keep a consistent apparent size and common ground relationship. Uniform solid chroma-key magenta #FF00FF background. Body animation only: no text, labels, borders, shadows, ground, scenery, UI, logos, water, projectile, aura, impact, speed line, trail, dust, stars, halo, blood or detached effects.
+
+Make exactly EIGHT frames in a landscape sprite sheet arranged as 4 columns x 2 rows, read row-major left-to-right then top-to-bottom. This is a clean in-place battle walk cycle moving conceptually toward lower-left while remaining centered in each cell:
+1) left-leg contact with opposite arm forward,
+2) down/compression as weight accepts,
+3) passing pose with rear foot lifting,
+4) up pose with body at highest point,
+5) right-leg contact, the true opposite of frame 1,
+6) down/compression on the other side,
+7) opposite passing pose,
+8) up/recovery leading smoothly back to frame 1.
+Show clear alternating planted feet, knee and ankle articulation, shoulder counter-rotation, subtle head bob and a thick tail that counterbalances the hips. Do not slide an unchanged body sideways and do not make it run, limp, stagger, attack or jump.

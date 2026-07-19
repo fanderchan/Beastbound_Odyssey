@@ -1,0 +1,19 @@
+Create an exact 4 columns x 2 rows sprite sheet containing 8 sequential frames of ONE original Beastbound Blue Man Dragon performing a battle locomotion walk cycle.
+
+IDENTITY LOCK: young stocky bipedal dragon; deep cobalt-blue scales; one pair of swept cyan-blue crown fins; one pair of cyan cheek fins; one short central navy forehead scale; a continuous pale-aqua segmented belly plate; two arms; two digitigrade legs; three cream claws per visible hand and foot; one thick unbranched tail ending in one pale-aqua wedge fin. No wings, no horns, no clothing, no armor, no extra limbs, no extra tail.
+
+VIEW LOCK: every frame is the exact same back three-quarter northeast view as the references. The dragon faces diagonally away toward the upper-right. Its dark navy dorsal plates and back dominate; only a narrow side of muzzle/cheek may show. Never rotate toward the camera, never switch sides, never mirror.
+
+FRAME ORDER, left-to-right top row then left-to-right bottom row:
+1 left-foot contact, right foot lifting, right arm forward;
+2 passing pose, lifted foot moving under body;
+3 right-foot contact, left foot beginning to lift;
+4 passing pose, left foot crossing under body;
+5 stronger left-foot contact, tail counter-swings;
+6 passing pose with low controlled body rise;
+7 stronger right-foot contact, opposite arm swing;
+8 passing pose that closes cleanly into frame 1.
+
+This must be real alternating gait, not eight copies with vertical bobbing. Keep body scale, anatomy, back-facing angle and ground line consistent. The body stays centered in each cell with generous margins; movement translation will be handled by runtime. No shadow, dust, motion streak, labels, separators, border, UI, text, halo, stars, glow or other effect.
+
+OUTPUT: exactly 4x2 equal cells, one complete sprite per cell, opaque flat #FF00FF chroma background filling every cell. Smooth high-definition painted 2.5D game sprite style, crisp silhouette and clean antialiasing.

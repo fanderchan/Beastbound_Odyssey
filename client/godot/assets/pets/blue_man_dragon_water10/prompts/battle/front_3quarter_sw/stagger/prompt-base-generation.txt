@@ -1,0 +1,12 @@
+Create a production-quality HD 2D game sprite animation sheet for the exact same Blue Man Dragon shown in Image 1. Preserve identity exactly: compact upright cobalt-blue scaled dragon; cyan/turquoise swept cheek, head and back fins; cream segmented chest and belly; amber eyes; short broad snout; three pale claws on each hand and foot; thick finned tail; no wings, horns, clothes or accessories. Keep the exact front three-quarter southwest view, facing lower-left, exact body proportions, colors, rendering style, camera and scale in every frame. Image 2 is the semantic key pose for this action; use it as the action lock, not as a single frame to duplicate. Every frame must be a genuinely redrawn consecutive pose with real changes in joints, torso, head, fins and tail. Never duplicate a frame, never fake motion by translating an unchanged whole character, and never mirror or reorder frames. One complete dragon only in each equal cell. All anatomy must remain inside its own cell with at least 40 pixels of clear background from every cell boundary; no tail, fin, claw, or limb may cross cell boundaries or be cropped. Keep a consistent apparent size and common ground relationship. Uniform solid chroma-key magenta #FF00FF background. Body animation only: no text, labels, borders, shadows, ground, scenery, UI, logos, water, projectile, aura, impact, speed line, trail, dust, stars, halo, blood or detached effects.
+
+Make exactly EIGHT frames in a landscape sprite sheet arranged as 4 columns x 2 rows, read row-major left-to-right then top-to-bottom. This is a wounded, exhausted stagger sequence after battle damage, NOT a walk cycle:
+1) already bent forward, one arm protecting the torso and tail hanging low,
+2) takes a tentative uneven step while the bad leg lags,
+3) the bad foot visibly drags and shoulders tilt,
+4) head and near shoulder drop as the torso nearly buckles,
+5) forces a second weighted step with asymmetrical arms,
+6) deepest near-collapse: knees fold, tail almost rests, face strained,
+7) catches balance with one claw reaching down and one foot planted,
+8) ends in an exhausted guarded hunch, still able to stand.
+Maintain asymmetry, pain, low tail, irregular timing and visibly dragging weight throughout. Do not make a healthy alternating walk, run, dodge, knockaway, full fall, sleep or death.

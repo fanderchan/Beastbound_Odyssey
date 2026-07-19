@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "hurt",
+  "expectedFrameCount": 6,
+  "sourceFrameCount": 6,
+  "runtimeFrameCount": 6,
+  "gifFrameCount": 6,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 6,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        104,
+        108,
+        408,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3dba679d58085204c0e4655d2b824676353a5acba9dd140cba908b4909fcbf37"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        101,
+        141,
+        410,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6e80bd26a79228380dbcbc3b7b8d97661b971a0b9b2c9372d3b1b136000237a2"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        123,
+        181,
+        389,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "49b376ca5a4384fdf4d2b70f94687fcd71c028657c448ff546771b149966fa9b"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        101,
+        127,
+        411,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2dd54894e4fbfd69738918783bce1cc2a69fcaec4647a58f05fc5c83d42e4f2f"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        105,
+        123,
+        407,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "e68986e2ca9593c94647603c9a532d868b9197ea3a5811d640f473d5c5d9e9c0"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/hurt/hurt-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        107,
+        121,
+        404,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "246c848f686780f7a31fe34e511f61310a715b4747e833b7dbcc92a4a2d2dfe2"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        52,
+        54,
+        204,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "9a99c373d6056664460f789099ba095126c37508a6f5930a211c52cd7dd71463"
+    },
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        50,
+        70,
+        205,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2174a97d18da4740b9a13d10a9bfa5af9969cced33f7eec687f36c2e1089f63d"
+    },
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        61,
+        90,
+        195,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "82241220bfc5f0620972eeaecf737b85c0f2c46fc1aabb672dc6656a03ce785a"
+    },
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        50,
+        63,
+        206,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a3a00c10235abc06d3b91365f404833229ed0064fae2013265326b91e25af07f"
+    },
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        52,
+        61,
+        204,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "57af724a0696215aff4a4e119c95e244cd1c0ed11a4b4d75c980f01fb7034820"
+    },
+    {
+      "file": "views/back_3quarter_ne/hurt/hurt-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        53,
+        60,
+        202,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "8d88bcdae5bb4579c9e7ae544c8cb0c7b24937a35900b1c12b7575ebd7c264f1"
+    }
+  ]
+}

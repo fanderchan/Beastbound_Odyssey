@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "front_3quarter_sw",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "counter",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 14,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        122,
+        138,
+        390,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ebfbbf2bd445c28537acbfb6744fe826594f5e5d4297650bacaf862e843795f1"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        84,
+        145,
+        428,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "78f536fc0a88c974296e4652f68b6213710972df7cc8cfcd0b2bdb8d9e8f248f"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        116,
+        184,
+        397,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b0f6327f8bd7185e0c009f1b4f5bdd6a826f6388f2d62e26ecea41c9d7b11644"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        123,
+        175,
+        389,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "8929651443fcbf800241313a8652b2ae9191c9bb32b7c6921e2c5cb468dd5051"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        102,
+        187,
+        410,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "1898bbdb9fc8c70fb1d6e3bf98b8aa9f453faf63d7c5cc68ded7d76f7de98cc5"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        72,
+        193,
+        439,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "00ccd8234d08e61407a232a6a86b60bd6342b386be9238c7dd116b79bc41d5ff"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        102,
+        159,
+        410,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0c287f2df4b9cf7b2e3e3ac01532436bb7d32cfc5967549e40c4157df6c1f162"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/counter/counter-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        124,
+        143,
+        387,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "271cc8d33c967ccd3c1bdbec53ef846cfa67798a253909fb21ed7114196c9d88"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/front_3quarter_sw/counter/counter-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        60,
+        68,
+        195,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "9a29228ab3b517dcb0ac6269893b7c8d823125d32f0f1623ed9d4185d0b2e185"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        42,
+        72,
+        214,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d90b874dc13fc150ed8b3e694d6b7174bc4ea6f79c50a8cbd8edc942383caa72"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        58,
+        91,
+        199,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "b1e60fa423b9a3a5a504aebb64815211ba921cf1cd6bd330ef92883b0831061a"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        61,
+        87,
+        195,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "513e4209b606b5d4e83c1ee3adc4eeb7c552896e7e5c204ce219280ae56e1897"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        50,
+        93,
+        205,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "c0387ca7f7607f8c94ddb38796fc29467319ca8d4e35e54f783f644e28bbd1ee"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        35,
+        96,
+        220,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6d60b7daf0ac3f6caba4f4f11671da6265e92c06703b2ff8be746c87b1c39135"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        51,
+        79,
+        206,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "751661a03b6dda4918f3308aae43da01d559731ee15e6bd3f5fff5b75fa0c157"
+    },
+    {
+      "file": "views/front_3quarter_sw/counter/counter-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        61,
+        71,
+        194,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3e44f2a159047862e22f8f8759b07a9e0469354e14e1e7c24278e487c27fee6c"
+    }
+  ]
+}

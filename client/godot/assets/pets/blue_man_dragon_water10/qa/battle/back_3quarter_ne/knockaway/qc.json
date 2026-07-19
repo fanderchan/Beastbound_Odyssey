@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "knockaway",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 14,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        118,
+        109,
+        394,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6b5670ad02d1e9fa781f7d00f86c3b6f49a177030e45e599de8c90b827299eaa"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        118,
+        164,
+        395,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "fe5bd5708c506216b96b4c3fb2721e12f957e5fa998f8c32f5849a3c3d7e39d5"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        130,
+        199,
+        383,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7f232930f7ad7f74fb8629111edf5d5398b0233b3316f1cf362a322d955ec0ac"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        108,
+        224,
+        404,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "99d92eec7ff5cda272174c7f2d7649cea1e4ee47caa29c1d0ca3efc647e347d8"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        104,
+        214,
+        409,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "096cbca48ddf2cacf31c954542eb0350bafda61e35ebd0615b25211e231796ee"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        124,
+        176,
+        389,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d084ac2ad3e2d4c768aa2240d41b245092543ebb99a8fbe68dc70de60a2592d7"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        114,
+        205,
+        398,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "776b528122c672ac999456eb0ca430d864ab0201362e508c247f6af7aa86a8ea"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/knockaway/knockaway-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        159,
+        308,
+        353,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "007d41255293e5dbc9b4451adc6f535ea0a0e857bbe08d5f29d6d6eb575d8a39"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        59,
+        54,
+        198,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "75de6c0310242d2eb2d94bb4d88362be28154568047c0255314427da593bca70"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        58,
+        81,
+        198,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0f77eab554e7911e6ae7417e64284e7d1603704a6f712ea18b7803492f9fb719"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        65,
+        99,
+        192,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "63a4eaf770e3781cf1e63cfdedeb631e97af6849cc6f5274ca7a003ab39b96e4"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        53,
+        111,
+        203,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "f9e4bf49b4b9806e1d94d7132f68b0979f18761bd90082e8aef12b110b2f783b"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        52,
+        106,
+        205,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "085518d9a3025f5afadee960bc2393aef2a3c090d80c4f266958edd8192debc3"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        62,
+        87,
+        195,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "80aed52ebb900504c9802560e37448afd0933b76be42ed9c90e004d16de5faff"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        57,
+        102,
+        199,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "bb2bec4b190d57f553abadb9b60ca7250a30f0062592c3f2e5a5e4626750702b"
+    },
+    {
+      "file": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        79,
+        153,
+        177,
+        242
+      ],
+      "minimumMargin": 14,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5c004ecee8ec68d0be3a4f00f9945590b4e2566e3dbd667d497ab14f62884a9a"
+    }
+  ]
+}

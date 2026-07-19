@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "front_3quarter_sw",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "down",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 10,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        113,
+        163,
+        399,
+        481
+      ],
+      "minimumMargin": 31,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d4f2c7307d0ac89773e8fd1b7a0b8d6605196e40d50f6e88976ae1bb5585b25f"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        86,
+        217,
+        426,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3e647464ed4906bc72b6623ee38d435fa1d5f66898e2214e59a80f98eb204544"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        84,
+        229,
+        431,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "5ddae2c557c20a2216e73728327bedfbd1a65ffdf9c4b4a8b5b0712486d08400"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        98,
+        284,
+        414,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "05d9f5734010fb16f6a4ce02267f09a3f08afff3bd7ac64f51768b9c109d419d"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        88,
+        302,
+        423,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d0045bb7aff2e7f49139b714b9399e26a6eb6fc2168d58b0527eedc607f4c505"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        72,
+        334,
+        438,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "86a3c49e729d70ae7705184651ca0a3f563e85ee25da8504c2c0e60c3d62f14b"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        72,
+        340,
+        440,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "f051cb72d39b5d7b8fd2ea07fad4c96f9b412564cf5cfa070f94be78c3248858"
+    },
+    {
+      "file": "source/battle/front_3quarter_sw/frames-512/down/down-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        72,
+        339,
+        439,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "033f264c15398b768456177fcaf10b0502f809cd639315833428faadf0ea4d98"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/front_3quarter_sw/down/down-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        57,
+        81,
+        200,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7d0af7520e284f66a9fbb507977d1f36ba0748b69976b0b4c50c518a56fee7d1"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        44,
+        108,
+        212,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0569020ef2af74e27f5bef27ba434dc2531553ee34ee8cde3e0be6a206886f0b"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        42,
+        114,
+        215,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "fe4744d12162ecffab287850052e592084180506760d62e6217b3a84d7de15ee"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        49,
+        142,
+        207,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "eeba3aeeb9ec1c660c4b079e52ff189a706b7a46e0ce723b49c6293b9bc7437e"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        45,
+        151,
+        211,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "01a0105dee2dc4fffe3bee70f524fc749061fceb84132aab7535f353eb60541c"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        167,
+        219,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3916de8126901078677d5b03bb575763e2b29bab6a75154cd11f2dc1cf1a39ca"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        37,
+        170,
+        219,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0cd6677e1889cbb659ae7926d4e8863dcbe08fc6b83f756e7cda9777ef9f28fa"
+    },
+    {
+      "file": "views/front_3quarter_sw/down/down-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        36,
+        169,
+        219,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "31426a7da90251437324b407edddcb1645fa41dba2ac296805154b18d6a80068"
+    }
+  ]
+}

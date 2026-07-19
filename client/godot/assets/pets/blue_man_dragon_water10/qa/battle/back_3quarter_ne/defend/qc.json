@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "defend",
+  "expectedFrameCount": 6,
+  "sourceFrameCount": 6,
+  "runtimeFrameCount": 6,
+  "gifFrameCount": 6,
+  "fps": 10,
+  "loop": false,
+  "uniqueRuntimeFrames": 6,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        129,
+        108,
+        384,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ee09170521d298308a894bde57d42de5cdb9388b5947ecfea843b4b870331583"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        138,
+        108,
+        374,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "de79db65abc559f4290226026fa44c98665f70c5747f705ffd5cdee928aa237c"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        125,
+        179,
+        387,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "94a90dc305f489c47f89636d24cb9adffa3f3bbe1f1e485b6ff2657c9daac061"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        119,
+        220,
+        393,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "2b73182bdda333951e7281c35a7e2f51c047e79143b006141fd38265f572b511"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        133,
+        150,
+        379,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "002889f2859f39bee1b5484c3aa5a14ee67b2025f750a56f968da3646b7d949a"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/defend/defend-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        140,
+        108,
+        372,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "dff5ec158ca9d540987a5e0263686cea82124423a811347a6d7e268bc63054fe"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/defend/defend-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        64,
+        54,
+        192,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "0c33091f4a04181e0e1d97cd35d435ddba43d7a95913f06b7782a29ab4db7b46"
+    },
+    {
+      "file": "views/back_3quarter_ne/defend/defend-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        68,
+        54,
+        187,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "1e97d66903806e0ca913bf44aac47d98e4d6ed0042ed342d93fd8eece9d9b940"
+    },
+    {
+      "file": "views/back_3quarter_ne/defend/defend-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        62,
+        89,
+        194,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "4d88ce67ef005376635752661c35c0f007d01c8aa550335b35010ed7678a612d"
+    },
+    {
+      "file": "views/back_3quarter_ne/defend/defend-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        59,
+        110,
+        197,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "a40d3924d51bd70cbab08cda9638029cbf97cdab7e0050c4ff4cb1fc347c8eaa"
+    },
+    {
+      "file": "views/back_3quarter_ne/defend/defend-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        66,
+        75,
+        190,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ee2409d81b6a9775a107795371bf4a93a7a0eceb74871dd7bd949c2a6dd3aa8c"
+    },
+    {
+      "file": "views/back_3quarter_ne/defend/defend-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        69,
+        54,
+        186,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7d37cbdb3d16879acc1202cf29ffebb9826ae57f0b15be1867c3724a3ba673f1"
+    }
+  ]
+}

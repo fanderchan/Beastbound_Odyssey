@@ -1,0 +1,12 @@
+Create a production-quality HD 2D game sprite animation sheet for the exact same Blue Man Dragon shown in Image 1. Preserve identity exactly: compact upright cobalt-blue scaled dragon; cyan/turquoise swept cheek, head and back fins; cream segmented chest and belly; amber eyes; short broad snout; three pale claws on each hand and foot; thick finned tail; no wings, horns, clothes or accessories. Keep the exact front three-quarter southwest view, facing lower-left, exact body proportions, colors, rendering style, camera and scale in every frame. Image 2 is the semantic key pose for this action; use it as the action lock, not as a single frame to duplicate. Every frame must be a genuinely redrawn consecutive pose with real changes in joints, torso, head, fins and tail. Never duplicate a frame, never fake motion by translating an unchanged whole character, and never mirror or reorder frames. One complete dragon only in each equal cell. All anatomy must remain inside its own cell with at least 40 pixels of clear background from every cell boundary; no tail, fin, claw, or limb may cross cell boundaries or be cropped. Keep a consistent apparent scale and coherent ground relationship. Uniform solid chroma-key magenta #FF00FF background. Body animation only: no text, labels, borders, shadows, ground, scenery, UI, logos, water, projectile, aura, impact, speed line, trail, dust, stars, halo, swirl, blood or detached effects.
+
+Make exactly EIGHT frames in a landscape sprite sheet arranged as 4 columns x 2 rows, read row-major left-to-right then top-to-bottom. This is a reversible BATTLE KNOCKOUT collapse, not sleep and not death:
+1) upright but suddenly dazed and off balance,
+2) knees buckle, shoulders slump and claws reach instinctively for balance,
+3) torso tips hard to the side while one knee and one hand approach the ground,
+4) loses balance fully, hip and shoulder descending as the tail follows,
+5) body reaches the ground in a soft side collapse,
+6) final settling: limbs loosen, tail and head drop, eyes unfocused or closed from unconsciousness, mouth slack but NOT smiling,
+7) stable revivable unconscious side pose with slack limbs and no restful curl,
+8) a tiny final physical settle into the same clearly unconscious battle-KO state, not a copied frame.
+The face must communicate dazed unconsciousness: no smile, no peaceful sleeping expression, no corpse stiffness, no injury gore. No halo, circling stars or dizzy rings; those are separate runtime overlays.

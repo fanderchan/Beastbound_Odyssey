@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "view": "back_3quarter_ne",
+  "directionIntent": "back three-quarter view facing northeast toward the enemy line",
+  "action": "dodge",
+  "expectedFrameCount": 8,
+  "sourceFrameCount": 8,
+  "runtimeFrameCount": 8,
+  "gifFrameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "uniqueRuntimeFrames": 8,
+  "sourceMinimumMargin": 30,
+  "runtimeMinimumMargin": 15,
+  "magentaResidualPixels": 0,
+  "identityStaticReview": "pass",
+  "actionSemanticStaticReview": "pass",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "sourceFrames": [
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-1.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        120,
+        107,
+        393,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "46f680daadfa11be951a4c87d518bcf80bdde8b23ebfb240cf9c2e6967192d84"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-2.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        100,
+        200,
+        415,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "ab68152a504286a590d3d2ba63fb646d2f2130b15ecc2b368b320802686213ff"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-3.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        95,
+        165,
+        415,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "7ff53a234047aa1749c27e486de6a4678be6caa5cf18430c651b35ea34300622"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-4.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        108,
+        153,
+        404,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "1788e3c865956df454e4d2e1166b8af5b992472cfd0fa023890a3462f36e6cab"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-5.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        113,
+        156,
+        399,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "88852cf5140ab51b29f281d9cb7cd0c142df010c8bf7087012808d8e7587411b"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-6.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        160,
+        137,
+        353,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "3a4b3b9edd38e3478aea6322ff5cedc13f38012f8bdaef56b06b5c3a21ffc17d"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-7.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        114,
+        167,
+        399,
+        480
+      ],
+      "minimumMargin": 32,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "8b652b1062eef03ea86ef51228d680d1d6d0b5eb8b4504eff09aa2191bf9fff0"
+    },
+    {
+      "file": "source/battle/back_3quarter_ne/frames-512/dodge/dodge-8.png",
+      "size": [
+        512,
+        512
+      ],
+      "alphaBbox": [
+        130,
+        108,
+        381,
+        482
+      ],
+      "minimumMargin": 30,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "94bf7f91bb0fb63bb69b4202c09fe34b9f7d7d60cb65dc1ed05af55b3b0597d5"
+    }
+  ],
+  "runtimeFrames": [
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        60,
+        53,
+        197,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "6efa445a1fe2b0cebdd3cac6ab5653346efb9cdfdd0e14aae4cbe9a9e8535e7e"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        50,
+        100,
+        206,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "978828ca90a9ab49701882819c9834277f82bff9d7d5b426a3d14cb081290a12"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        48,
+        82,
+        208,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "14206b9c54f2b40f5f5622584344440493185eabe2f9eb68fc55b1de48a2eed8"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        54,
+        77,
+        202,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "8ce4129f6356b83642af17716630a3ba3162890d1665fe5e576cdba5b4f38de0"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        57,
+        78,
+        199,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "4f94a49eb7cee94a8232938f90444535258851b5b8e1514a3e3d37611955ff11"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        80,
+        68,
+        176,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "d6115a5c44c9cc19009f5d76d6ac0536db03eab2f6a6310954caa170e40dfdb6"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        56,
+        84,
+        199,
+        240
+      ],
+      "minimumMargin": 16,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "f316091fe259eb9a2e4a15b2bed3feadb7b45fcf1f5f2f66d1f559405184bd98"
+    },
+    {
+      "file": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "size": [
+        256,
+        256
+      ],
+      "alphaBbox": [
+        64,
+        54,
+        191,
+        241
+      ],
+      "minimumMargin": 15,
+      "magentaResidualPixels": 0,
+      "rgbaSha256": "faf584c214d4482ccb535ebe3e76ae5ecd3e76602134b38dd750d62e951abf19"
+    }
+  ]
+}

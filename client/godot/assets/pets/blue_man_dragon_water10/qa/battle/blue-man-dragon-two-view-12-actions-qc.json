@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "status": "static_self_review_passed_owner_pending",
+  "artStatus": "in_production_until_real_godot_video",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": [
+    "idle",
+    "walk",
+    "attack",
+    "skill",
+    "hurt",
+    "defend",
+    "dodge",
+    "counter",
+    "stagger",
+    "knockaway",
+    "down",
+    "revive"
+  ],
+  "expectedRuntimeFrameCount": 180,
+  "actualRuntimeFrameCount": 180,
+  "uniqueRuntimeRgbaFrameCount": 179,
+  "expectedDuplicateGroups": [
+    [
+      "back_3quarter_ne/down-8",
+      "back_3quarter_ne/revive-1"
+    ]
+  ],
+  "unexpectedDuplicateCount": 0,
+  "minimumRuntimeMargin": 15,
+  "minimumSourceMargin": 30,
+  "rawLosslessArchiveCount": 24,
+  "rawDecodedPixelsEqual": true,
+  "gifCount": 24,
+  "gifFrameCountMatch": true,
+  "repairs": {
+    "backAttackScale": "pass after deterministic fitScale 1.00 repair",
+    "backDownReviveScale": "pass after deterministic fitScale 1.00 repair",
+    "backDownReviveContinuity": "exact RGBA match"
+  },
+  "semanticSelfReview": {
+    "idle": "stable living idle loop",
+    "walk": "alternating battle locomotion, no whole-body slide",
+    "attack": "weighted single-claw strike",
+    "skill": "two-arm/body charge and release, runtime VFX separate",
+    "hurt": "ordinary hit recoil and regain-balance",
+    "defend": "sustained crossed/closed guard, runtime shield pressure separate",
+    "dodge": "healthy lateral evasion and settled return",
+    "counter": "compact reactive strike distinct from normal attack",
+    "stagger": "wounded uneven return, not healthy walk",
+    "knockaway": "launch body articulation; trajectory and rotation remain runtime-directed",
+    "down": "reversible unconscious collapse/hold; no smile, sleep, death, halo or stars",
+    "revive": "continuous recovery from held down pose to ready stance"
+  },
+  "formalViewSelfReview": {
+    "front_3quarter_sw": "pass: toward lower-left",
+    "back_3quarter_ne": "pass: away-facing toward upper-right"
+  },
+  "identitySelfReview": "pass in unified contact sheet; owner visual acceptance pending",
+  "realGodotReview": "pending; static assets are not runtime-enabled",
+  "evidence": {
+    "combinedContact": "qa/battle/blue-man-dragon-two-view-12-actions-contact.png",
+    "perActionRoot": "qa/battle/<view>/<action>/",
+    "sourceMetadata": "source/battle/<view>/source-meta.json"
+  }
+}

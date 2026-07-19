@@ -1,0 +1,19 @@
+Create an exact 4 columns x 2 rows sprite sheet containing 8 sequential frames of ONE original Beastbound Blue Man Dragon making a wounded, exhausted return step sequence.
+
+IDENTITY LOCK: young stocky deep cobalt-blue bipedal dragon; cyan crown/cheek fins; short central navy forehead scale; continuous pale-aqua segmented belly; two arms; two digitigrade legs; three cream claws per visible hand/foot; one thick unbranched tail ending in one pale-aqua wedge fin. No wings, horns, clothes, armor, extra limbs or extra tail.
+
+VIEW LOCK: fixed back three-quarter northeast view, facing away toward the upper-right in every frame. Keep dorsal plates/back dominant. Never face the camera, switch side or mirror.
+
+FRAME ORDER:
+1 weight drops after a heavy blow, head low;
+2 first uneven step, one knee buckles and tail drags for balance;
+3 weak passing step with shoulders slumped;
+4 catches balance briefly with one claw extended;
+5 second short dragging step on the opposite foot;
+6 tired passing step, torso still low and asymmetric;
+7 reaches the original slot and plants both feet shakily;
+8 settles into a wounded standing hold, still conscious.
+
+This must read as wounded return, never a healthy walk loop. Keep body scale stable and bottom-center alignment consistent; runtime handles translation. It must not become sleep, death or full unconscious down. No shadow, blood, wound, dust, streak, labels, text, halo, stars, glow or baked effect.
+
+OUTPUT: exactly 4x2 equal cells, one complete sprite per cell, generous margins, flat opaque #FF00FF chroma background, clean high-definition painted 2.5D game sprite rendering.
