@@ -1,0 +1,22 @@
+Edit the approved Reed Tidefin battle down hold into a clearly revivable knockout.
+
+Preserve the exact creature identity, teal-green body, cream jaw and belly,
+reed-green fins, orange spiral markings, front three-quarter southwest view,
+low prone silhouette, scale and painterly high-definition 2.5D sprite style.
+
+The final hold must read as temporarily unconscious, never sleeping: visible
+eyes use spiral or unfocused pupils under limp half-open lids; do not use closed
+sleeping eyes or X eyes.  The mouth is slack and neutral or slightly open with
+no smile.  The head hangs heavily and the forelimbs remain loose and splayed,
+not tucked into a cozy pose.  Do not draw the runtime dizziness halo or stars
+inside the creature sprite.
+
+Output one creature only on flat #FF00FF chroma, with no shadow, halo, effects,
+text, border or UI and with generous empty margins.
+
+Generation reference inputs:
+- existing front_3quarter_sw down-8 runtime frame
+- existing front_3quarter_sw down-7 runtime frame
+
+Generated source retained outside the repository at:
+/Users/fander/.codex/generated_images/019f7b93-a0eb-7593-a967-2327ff2a719a/exec-7ffdaf8d-d309-4c99-927c-6b53230d97be.png

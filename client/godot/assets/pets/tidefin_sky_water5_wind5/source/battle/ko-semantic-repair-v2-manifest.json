@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_sky_water5_wind5",
+  "id": "revivable-ko-eyes-v2",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+  "alphaExactForEveryEditedFrame": true,
+  "rgbPixelsChangedOutsideSemanticMask": 0,
+  "down8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+  "beforeAfterEvidenceSha256": "83305dbb53e090e747d453e8d3cba81a29b85d05244d73d23dca436f554e2c19",
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "restoredFromVerifiedBaseline": true,
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "0f8c0300cd8e0e1f41e5702b9cae517314304eebb3acad910b29c084afe9d3d0",
+  "runtimeEnabled": false,
+  "restoredBaselineBackup": ".run/art_batch_phase320/battle-alpha-despill-batch-e/tidefin_sky_water5_wind5/backup-before",
+  "restoredBaselineFrameCount": 180,
+  "restoredBaselineByteExact": true
+}

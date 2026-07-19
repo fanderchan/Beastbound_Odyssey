@@ -137,7 +137,10 @@
     "prompt": "prompts/identity-board-v1.txt",
     "formalProductionLedger": "source/formal-production/source-ledger.json",
     "promptDirectory": "prompts/production",
-    "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage1/pet"
+    "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage1/pet",
+    "qualityRepairManifests": [
+      "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_mm/stage1-identity-build/contact-sheet.png",
@@ -147,14 +150,20 @@
     "comparison160px": ".run/art_batch_phase320/rebirth_mm/comparison-160px.png",
     "comparison160pxSha256": "090650e47f5d5eebf04365214b56611fa48238ce6cdb3b33a33dc28ce4702f14",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "ed3b98d604e75b7794bb21bdbe4238af880ae7393733e783a3137a5254fde159",
+    "battleContactSheetSha256": "61a6ca52a86b9a6b70625a5c72d3b80bda57320fe384d7aec67cecd611ce1b53",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "2feccdbae5fa53130c394bc1f6113799e3659162842cc4ea07f72d89a2114807",
+    "battleQcSha256": "dfa323cea2dc1d12d7885c025abf6b06400c842aaba5677beef2d82e8aeaa94b",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "fc5cc4064ec04b4f361416638941c362238091be8dd85a3ff8d3728eaf8ac476"
+    "battleFacingContractPreviewSha256": "cfcc72d71fe898cf877653a5c76ccaa04e1608948282b38afa5e13b41bf22a2b",
+    "battleKoSemanticBeforeAfter": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+    "battleKoSemanticBeforeAfterSha256": "95fc461bb55c019705b880f12ea4768c6b3fb651cd23e1a5ff56f61e842468f6",
+    "finalBattleReviewManifest": "source/formal-production/final-battle-review-v1-manifest.json",
+    "finalBattleReviewManifestSha256": "eb0854560a117e50fd8d8b36adcebb5293e2d0e3dbfc084b1209aa8989d401b0",
+    "battleKoSequenceBeforeAfter": "qa/battle/repairs/revivable-ko-sequence-v3-before-after.png",
+    "battleKoSequenceBeforeAfterSha256": "760e6e758e4d5a4aa247bf760b50a721fdad354503a4ae52521cb295a62e6e76"
   },
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 KO 倒地全时序已按可复活昏厥语义局部修正；禁止 X 眼、闭眼笑睡态和死亡符号，alpha、姿势、背面与非脸部像素保持。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -168,7 +177,7 @@
     }
   },
   "battleVisual": {
-    "status": "static_self_review_passed_owner_pending",
+    "status": "ko_sequence_semantic_self_review_passed_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -202,13 +211,96 @@
       "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
       "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
     },
-    "bundleDigest": "62c7c37dce8ee9f93d445a93e594d4a5d48614fdc6ab9d0fe9fd4d6da9ccb4c0",
+    "bundleDigest": "369c97a6e76a6a19ea258ebab65944e450cd66a454b8d71ae1cc6506f4d6b119",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "facingContractPreview": "qa/battle/facing-contract-preview.png",
-    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+    "totalFrameCount": 180,
+    "runtimeBundleDigest": "369c97a6e76a6a19ea258ebab65944e450cd66a454b8d71ae1cc6506f4d6b119",
+    "minimumBattleRuntimeEdgeMargin": 13,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [],
+    "koSemanticRepair": {
+      "id": "revivable-ko-eyes-v2",
+      "views": [
+        "front_3quarter_sw"
+      ],
+      "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+      "alphaExactForEveryEditedFrame": true,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "down8Revive1ExactRgba": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+      "beforeAfterEvidenceSha256": "95fc461bb55c019705b880f12ea4768c6b3fb651cd23e1a5ff56f61e842468f6",
+      "ownerReviewStatus": "self_review_passed_owner_pending",
+      "restoredFromVerifiedBaseline": true
+    },
+    "sequenceReview": {
+      "id": "battle180-sequence-review-v1",
+      "contactSheet": "qa/battle/contact-sheet.png",
+      "contactSheetSha256": "eaa5d39052b5ad9d1b7ce57ed6dcb1692d4f6b916b4b6dc3e5634ae48f7f849b",
+      "reviewedViews": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "downMonotonicNoMidSequenceStandUp": true,
+      "reviveStartsFromExactDownHoldAndRecoversProgressively": true,
+      "knockawayRotationAndTrajectoryFramesContinuous": true,
+      "attackSkillCounterFramesOrderedOutAndBack": true,
+      "koExpression": "reusable_unconscious_no_x_no_sleep_no_smile",
+      "selfReviewStatus": "passed",
+      "ownerReviewStatus": "pending"
+    },
+    "godotBattleLoadReview": {
+      "status": "passed",
+      "godotVersion": "4.7.stable",
+      "actions": 12,
+      "views": 2,
+      "framesLoaded": 180,
+      "textureSize": [
+        256,
+        256
+      ],
+      "finalPresentationFlipH": {
+        "enemy": true,
+        "ally": true
+      },
+      "checkScript": ".run/batch_e_battle_load_check.gd"
+    },
+    "koSequenceSemanticRepair": {
+      "id": "revivable-ko-sequence-v3",
+      "runtimeDownFramesChanged": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sourceDownFramesRepaired": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "alphaExact": true,
+      "backDownReviveByteExact": true,
+      "despillApplied": false,
+      "manifest": "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json",
+      "manifestSha256": "ee3b41580833aa9b4a39e9360226eb3c9fb1f432c453d465ac81d01406c64bb9",
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    }
   }
 }

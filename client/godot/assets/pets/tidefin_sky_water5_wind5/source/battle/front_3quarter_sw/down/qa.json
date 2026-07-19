@@ -11,5 +11,10 @@
   "identityDriftFrames": [],
   "minimumSourceEdgeMargin": 30,
   "minimumRuntimeEdgeMargin": 15,
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "self_review_passed_owner_pending",
+  "semanticRepair": {
+    "id": "revivable-ko-sequence-v3",
+    "rule": "reversible unconscious; no X/death symbol; no peaceful sleep or smile",
+    "alphaExact": true
+  }
 }

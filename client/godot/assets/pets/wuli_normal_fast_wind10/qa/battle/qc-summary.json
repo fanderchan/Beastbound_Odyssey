@@ -124,9 +124,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "6b71cf2134a4d6d59c4a6a09f1791f33a0815870c78d9f0198db7b572a19aa96",
+      "contactSheetSha256": "e48c2690c1f0a8ede0a1fd2b69a2c7bd623fcf080c515f67f6ac31417a803721",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "4cd5867816fcc98f3a08c50ebe8fb0f5d3478729146dd8dfb962c6981998a65a"
+      "gifSha256": "6dd3632695fea240d17eb5c7a280f95acf9956c58e05525e66d8c01f76b5be35"
     },
     {
       "view": "front_3quarter_sw",
@@ -265,5 +265,55 @@
   "broadRuntimeDespill": {
     "applied": false,
     "restoredFromPreBatchCBackup": true
+  },
+  "strictDownReviveReview": {
+    "status": "passed",
+    "manualFrameByFrameReview": true,
+    "views": {
+      "front_3quarter_sw": {
+        "down": {
+          "status": "passed",
+          "view": "front_3quarter_sw",
+          "action": "down",
+          "manualFrameByFrameReview": true,
+          "broadRuntimeDespillApplied": false,
+          "temporalRule": "monotonic loss of support into stable unconscious hold",
+          "koExpression": "visible unfocused spiral eye; no smile, sleep expression, or X eye"
+        },
+        "revive": {
+          "status": "passed",
+          "view": "front_3quarter_sw",
+          "action": "revive",
+          "manualFrameByFrameReview": true,
+          "broadRuntimeDespillApplied": false,
+          "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+          "startContinuity": "revive-1 exact RGBA equals same-view down-8"
+        }
+      },
+      "back_3quarter_ne": {
+        "down": {
+          "status": "passed",
+          "view": "back_3quarter_ne",
+          "action": "down",
+          "manualFrameByFrameReview": true,
+          "broadRuntimeDespillApplied": false,
+          "temporalRule": "monotonic loss of support into stable unconscious hold",
+          "koExpression": "face occluded or authored rear KO cue; no false sleep cue required"
+        },
+        "revive": {
+          "status": "passed",
+          "view": "back_3quarter_ne",
+          "action": "revive",
+          "manualFrameByFrameReview": true,
+          "broadRuntimeDespillApplied": false,
+          "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+          "startContinuity": "revive-1 exact RGBA equals same-view down-8"
+        }
+      }
+    },
+    "down8Revive1ExactRgbaBothViews": true,
+    "contactSheet": "qa/battle/strict-down-revive-contact.png",
+    "contactSheetSha256": "ecf1e6c1c00015234c84de944907f0ab558d850b491196d88d3dc398ed9ea280",
+    "broadRuntimeDespillApplied": false
   }
 }

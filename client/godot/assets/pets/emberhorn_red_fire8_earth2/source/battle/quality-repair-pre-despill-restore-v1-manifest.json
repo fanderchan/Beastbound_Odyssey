@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "formId": "emberhorn_red_fire8_earth2",
+  "repairId": "battle180-pre-despill-restore-v1",
+  "purpose": "fully restore the complete battle180 pre-despill archive after the heuristic edge tool was suspended",
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "scope": {
+    "battleRuntimeFramesRestored": 180,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "restore": {
+    "archiveFrameCount": 180,
+    "framesDifferentBeforeRestore": 4,
+    "framesByteExactImmediatelyAfterRestore": 180,
+    "archiveRoot": ".run/art_batch_phase320/battle-alpha-despill-batch-g/emberhorn_red_fire8_earth2/backup-before"
+  },
+  "continuity": {
+    "method": "same-view revive-1 is a byte copy of down-8",
+    "down8Revive1ByteExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "koLocalRgbRepair": {
+    "repairId": "ko-expression-local-rgb-v1",
+    "records": [
+      {
+        "view": "front_3quarter_sw",
+        "center": [
+          91,
+          217
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 49,
+        "changedRgbBounds": [
+          87,
+          214,
+          96,
+          221
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/emberhorn_red_fire8_earth2/ko-baseline/front_3quarter_sw/down-8.png"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "center": [
+          189,
+          226
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 48,
+        "changedRgbBounds": [
+          185,
+          223,
+          194,
+          230
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/emberhorn_red_fire8_earth2/ko-baseline/back_3quarter_ne/down-8.png"
+      }
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true,
+    "newSilhouettePixels": 0,
+    "runtimeOverlay": false
+  },
+  "thunderReviveSequence": null,
+  "validation": {
+    "battleFrameCount": 180,
+    "alphaExactAgainstExpectedSourceFrameCount": 180,
+    "byteExactUneditedFrameCount": 176,
+    "byteExactExpectedSourceFrameCount": 176,
+    "intendedKoRgbPixelsChanged": 194,
+    "intendedSequencePixelsChangedFromArchivedOriginal": 0,
+    "unexpectedChangedPixels": 0,
+    "changedRuntimeFrames": [
+      "views/front_3quarter_sw/down/down-8.png",
+      "views/front_3quarter_sw/revive/revive-1.png",
+      "views/back_3quarter_ne/down/down-8.png",
+      "views/back_3quarter_ne/revive/revive-1.png"
+    ],
+    "intendedSequenceFrames": []
+  },
+  "runtimeBundleDigestAfterRepair": "6bffc778959e21389dfda397f24fb37320d1ea9ab73e00c85f6ee55f70793ab7",
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "koEnlargedEvidence": {
+    "path": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "sha256": "73983802b566e3624af405814358266f78d413eb90599505a2d88548474875eb"
+  },
+  "supersededRuntimeRepair": {
+    "repairId": "battle180-continuity-alpha-despill-v1",
+    "activeRuntimeArtifactRemoved": true,
+    "historicalWorkingEvidence": ".run/art_batch_phase320/battle-alpha-despill-batch-g/emberhorn_red_fire8_earth2"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

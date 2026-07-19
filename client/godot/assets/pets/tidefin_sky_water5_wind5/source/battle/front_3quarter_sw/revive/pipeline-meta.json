@@ -180,8 +180,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "4a1f927b675a0e0b4be3e65f0f4376ba046d2e00f102b6ec4ff877a4154908c5",
-      "runtimeRgbaSha256": "f83d703c5e7d52dde7e15fc47e2f1e2432f5a0e3ed68b34909057bc61d547989"
+      "sourceRgbaSha256": "2b204dd6e40d12b6232b80628f99f1da535a2980f80fa51cb288e8bdaf052645",
+      "runtimeRgbaSha256": "79cefaf1a67e82821271c8a676e99b91da4ed065d560b9c5a3f81cae41c3a83a"
     },
     {
       "slot": "revive-2",
@@ -289,7 +289,7 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "36ef98f3dc7ae026badb3be0468cd2ef518c4e1e01d6be71097606058bf6b8e6",
+      "sourceRgbaSha256": "f5aea5c2123f6c9d3298e5f9fcbf4cc61e299c4bd9e05435c112bae785eab2c7",
       "runtimeRgbaSha256": "586c4323ad351df111fc715dec0124f6e610f1c4bd00bf1937aa383010bdbe33"
     },
     {
@@ -416,7 +416,7 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "c2b21087bb7507933380b172776f809283fb0d3219464f32aee11923f92c7b90",
+      "sourceRgbaSha256": "6420119993a28ab77b448c6080497f6ce1af1b76ff5052533ae5bd41c543d0cf",
       "runtimeRgbaSha256": "da0d2e319c3a40e8706c71fa710f408eed6846aac24e73b62f62235fbd2da169"
     },
     {
@@ -1000,26 +1000,5 @@
       "sourceRgbaSha256": "fdedffca0498e0b33b4a26da66c4281822678773a228493c8ce4448b5f896c7a",
       "runtimeRgbaSha256": "2dd7d4a46cb19d530cf40eeb24c494b41a2a3721402d0f1b5b18ae16ce90b1cc"
     }
-  ],
-  "postProcessing": {
-    "transparentEdgeDespill": "shape-preserving RGB cleanup; alpha silhouette retained",
-    "downReviveContinuity": "revive-1 replaced with exact same-view down-8 source/runtime RGBA",
-    "creativePoseChange": false,
-    "wholeSpriteScaleNormalization": {
-      "creativePoseChange": false,
-      "anchor": "existing_bottom_center",
-      "frames": [
-        {
-          "frame": 2,
-          "requestedFactor": 1.090154,
-          "appliedFactor": 1.090154
-        },
-        {
-          "frame": 3,
-          "requestedFactor": 1.085192,
-          "appliedFactor": 1.085192
-        }
-      ]
-    }
-  }
+  ]
 }

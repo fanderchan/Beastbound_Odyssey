@@ -8,6 +8,7 @@
   "emptyFrames": [],
   "duplicateFrames": [],
   "edgeTouchFrames": [],
+  "warnings": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed"
 }

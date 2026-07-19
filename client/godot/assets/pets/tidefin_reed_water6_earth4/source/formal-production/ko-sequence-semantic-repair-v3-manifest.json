@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_reed_water6_earth4",
+  "id": "revivable-ko-sequence-v3",
+  "purpose": "repair the complete front KO progression so collapse reads as reversible unconsciousness rather than death or peaceful sleep",
+  "rule": "early imbalance -> unfocused/spiral eyes -> stable prone hold; no X/death symbol, no closed-eye smile, no baked dizzy halo; revive starts from exact hold",
+  "scope": {
+    "view": "front_3quarter_sw",
+    "runtimeDownFramesChanged": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "sourceDownFramesRepaired": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "sourceReviveFramesSynchronized": [
+      1
+    ],
+    "backRuntimeFramesChanged": 0,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0
+  },
+  "method": "image-generation semantic references followed by deterministic local RGB repair; alpha byte-preserved; RGB outside explicit face masks byte-preserved; no despill",
+  "imageGenerationReferences": [
+    "/Users/fander/.codex/generated_images/019f7c54-53cb-77d2-8d2f-b3ad0d201976/exec-6f6e609a-151a-4e51-b348-a20c54458211.png"
+  ],
+  "records": [
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 2,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-2-ko-sequence-v3.png",
+      "beforeAlphaSha256": "d936051cf8fc88d897edb1681e86d78c6f0f5552388bc5515149517afce461ca",
+      "afterAlphaSha256": "d936051cf8fc88d897edb1681e86d78c6f0f5552388bc5515149517afce461ca",
+      "afterSha256": "d86700817d503f8b0c36dbb7592d00f4cd2b13454fa48b7d52e6eb36486999f8",
+      "changedRgbPixels": 1509,
+      "changedRgbBounds": [
+        169,
+        365,
+        240,
+        432
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 3,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-3-ko-sequence-v3.png",
+      "beforeAlphaSha256": "d647cc3b3c449ccf3ae4ef626fa157c3ea4b0fa6a993a311faff6e03775c8140",
+      "afterAlphaSha256": "d647cc3b3c449ccf3ae4ef626fa157c3ea4b0fa6a993a311faff6e03775c8140",
+      "afterSha256": "e838d133443d4fd17b90f1d1170b0cc84248595ed185177763ac870192160e06",
+      "changedRgbPixels": 1494,
+      "changedRgbBounds": [
+        167,
+        366,
+        238,
+        434
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 4,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-4-ko-sequence-v3.png",
+      "beforeAlphaSha256": "4b1b94e6c2df1dc129c6208120b82cce51b075395faa8daeeb2677d8332dde10",
+      "afterAlphaSha256": "4b1b94e6c2df1dc129c6208120b82cce51b075395faa8daeeb2677d8332dde10",
+      "afterSha256": "1b4c6c5acfe1ff4863c4a8514222700884fbcc533301172836b09e573c1b92d5",
+      "changedRgbPixels": 1913,
+      "changedRgbBounds": [
+        188,
+        379,
+        259,
+        442
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 5,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-5-ko-sequence-v3.png",
+      "beforeAlphaSha256": "7cbbbd84210361d3036b5ac92c914ea793958f77a92170e5c62239acb4b40061",
+      "afterAlphaSha256": "7cbbbd84210361d3036b5ac92c914ea793958f77a92170e5c62239acb4b40061",
+      "afterSha256": "5280d22c06c73881139d555321ad8b25fb40a1b6d76d8e16415d4305492e61a7",
+      "changedRgbPixels": 1794,
+      "changedRgbBounds": [
+        184,
+        387,
+        257,
+        447
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 6,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-6-ko-sequence-v3.png",
+      "beforeAlphaSha256": "caa19bc4fc35f2e306cbd4855c01b2fbd7e9ae622300c6017bb04b2457a27c1b",
+      "afterAlphaSha256": "caa19bc4fc35f2e306cbd4855c01b2fbd7e9ae622300c6017bb04b2457a27c1b",
+      "afterSha256": "13ef754e87258e5931d326f98722160e5b8d9c4ce735ac8ea1d05ac4179157dc",
+      "changedRgbPixels": 1679,
+      "changedRgbBounds": [
+        167,
+        400,
+        242,
+        454
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 7,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-7-ko-sequence-v3.png",
+      "beforeAlphaSha256": "1a8bab8ce367e701ebe531673fa651946122ae8d06cbd96e34584531727c2a1a",
+      "afterAlphaSha256": "1a8bab8ce367e701ebe531673fa651946122ae8d06cbd96e34584531727c2a1a",
+      "afterSha256": "b5161da396291c8b5031cd31e73b94e189d813fba40684b485aa98837786bb1b",
+      "changedRgbPixels": 1911,
+      "changedRgbBounds": [
+        149,
+        398,
+        221,
+        458
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "source",
+      "action": "down",
+      "frame": 8,
+      "path": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-8-ko-sequence-v3.png",
+      "beforeAlphaSha256": "a15040be3159817a55e9d48c2d308844b5576c01f0e6be362ee11fac7af5bfc2",
+      "afterAlphaSha256": "a15040be3159817a55e9d48c2d308844b5576c01f0e6be362ee11fac7af5bfc2",
+      "afterSha256": "39d7dab9cf6f0ced0a6d3bc9efb42915c42177038226757fccfb9362e42645ba",
+      "changedRgbPixels": 1638,
+      "changedRgbBounds": [
+        147,
+        404,
+        218,
+        461
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 2,
+      "path": "views/front_3quarter_sw/down/down-2.png",
+      "beforeSha256": "6b394d1a657efd9127223c97569ad0282dd963cc0f509371d18ae61a35b1c6d6",
+      "afterSha256": "8f8b1c46a3f253e855a0adcf09daf09260890bbddff6e1a1878e4498fa347b59",
+      "beforeAlphaSha256": "3eca3981c0e252fc5688c90f7edaa6b2dad334891b8d74312df6bf37c207d911",
+      "afterAlphaSha256": "3eca3981c0e252fc5688c90f7edaa6b2dad334891b8d74312df6bf37c207d911",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 607,
+      "changedRgbBounds": [
+        83,
+        181,
+        121,
+        217
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 3,
+      "path": "views/front_3quarter_sw/down/down-3.png",
+      "beforeSha256": "85c924e26a8149a950a4633ff9b6177dffd14f20d43b556f8f697a7d1fd44ebf",
+      "afterSha256": "0a248af408a185ab4389c5441256dafd52468773bbef7462d15274fb1aa33ba3",
+      "beforeAlphaSha256": "0d59d99e884ff28cf54790cc2be585d4de2e7a6a4d82aa85032c8b94139764bf",
+      "afterAlphaSha256": "0d59d99e884ff28cf54790cc2be585d4de2e7a6a4d82aa85032c8b94139764bf",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 600,
+      "changedRgbBounds": [
+        82,
+        182,
+        120,
+        218
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 4,
+      "path": "views/front_3quarter_sw/down/down-4.png",
+      "beforeSha256": "9e85e539cdfa6e6ea3ca2c609f3f4db24e5c9a1c895410d22484b86df66e9ea3",
+      "afterSha256": "ee30eae4a69995e2ed7906e15a2ae72bd7ddfc97be5eb5c50147d54e7fa46959",
+      "beforeAlphaSha256": "57893451a9f3d0dc32f8672335df0918ec229d2cc2bb80a72fe606db2df36e1f",
+      "afterAlphaSha256": "57893451a9f3d0dc32f8672335df0918ec229d2cc2bb80a72fe606db2df36e1f",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 773,
+      "changedRgbBounds": [
+        93,
+        188,
+        131,
+        222
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 5,
+      "path": "views/front_3quarter_sw/down/down-5.png",
+      "beforeSha256": "5b284875c335981a733667caefd9ad9043fc2b840ec27e6f740bfccd0f82ed25",
+      "afterSha256": "457eaab610cb7c001a6f58de38d7cd5ef183b63a6a3a292155c4484caa28a8a2",
+      "beforeAlphaSha256": "f70ae014249544cf2224fba1efe3418b77895a9eb1450c6378fa6c8ca53e6d14",
+      "afterAlphaSha256": "f70ae014249544cf2224fba1efe3418b77895a9eb1450c6378fa6c8ca53e6d14",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 769,
+      "changedRgbBounds": [
+        91,
+        192,
+        130,
+        225
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 6,
+      "path": "views/front_3quarter_sw/down/down-6.png",
+      "beforeSha256": "ccffbd17cd14cbec862000b8d97257c559a68cdd4ff526239374dfedd82b1dfd",
+      "afterSha256": "736bc5e3a495d70df1231bdd9d620e9776a865c58e1d5df10976a90502573bf5",
+      "beforeAlphaSha256": "d4e36452b34fcc561e6c8c811a6932e911140e54a35ea573226139fc5425fce9",
+      "afterAlphaSha256": "d4e36452b34fcc561e6c8c811a6932e911140e54a35ea573226139fc5425fce9",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 672,
+      "changedRgbBounds": [
+        82,
+        199,
+        122,
+        228
+      ],
+      "alphaExact": true
+    },
+    {
+      "kind": "runtime",
+      "action": "down",
+      "frame": 7,
+      "path": "views/front_3quarter_sw/down/down-7.png",
+      "beforeSha256": "8ccbd1675ae015f256fd0bbf8375aad3471bd712461e01ecf732a6fd4d0b56c1",
+      "afterSha256": "6511dde12bc9ba71c399ac0f33989a2492a9e9750bcfd3e3fc94f73b0b0753f2",
+      "beforeAlphaSha256": "84e51257922ab89d50ee25f86c57bcdaa6e0f501d3db08d14352b6a7ccf4ab91",
+      "afterAlphaSha256": "84e51257922ab89d50ee25f86c57bcdaa6e0f501d3db08d14352b6a7ccf4ab91",
+      "outsideSemanticMaskRgbExact": true,
+      "changedRgbPixels": 777,
+      "changedRgbBounds": [
+        73,
+        198,
+        112,
+        230
+      ],
+      "alphaExact": true
+    }
+  ],
+  "sourceDown8Revive1ExactBytes": true,
+  "runtimeDown8Revive1ExactBytes": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "backDownReviveByteExactBeforeAfter": true,
+  "alphaExactForEveryChangedRuntimeFrame": true,
+  "outsideSemanticMaskRgbExactForEveryChangedRuntimeFrame": true,
+  "despillApplied": false,
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
+  "evidence": {
+    "path": "qa/battle/repairs/revivable-ko-sequence-v3-before-after.png",
+    "sha256": "ce7eeea6ab035be2bfd14c5cecf6072dab4d8a2487ba000c2bc6451d092d6edb"
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

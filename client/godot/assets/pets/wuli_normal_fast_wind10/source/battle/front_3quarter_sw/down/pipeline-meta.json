@@ -273,8 +273,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 98,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "43e30f3bd336f8904fe4239887fa2a5306455a5d03ff09d2651939466102f2f7",
-      "runtimeRgbaSha256": "bd88b17018d7a2ce7a2b991271bc7e3b85153fb26d325eef0b8b81217d6c8970"
+      "sourceRgbaSha256": "17a93ad06e7aa93c17b391122a661ed87b118125574272c0483eacf4f3a65647",
+      "runtimeRgbaSha256": "95308d82b355704bf60aa9214a4430c3a381864fbe4cdbfa32a13a0c14612a84"
     },
     {
       "slot": "down-3",
@@ -374,8 +374,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 74,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "b83b017dff7f20abe830f8e9c58462e9e4ae862fba32e81a9874b336e1f680ee",
-      "runtimeRgbaSha256": "75724170c35e431c04e8308011109b24ef3a81e90a9f5e99d1980903c89f40b3"
+      "sourceRgbaSha256": "2dafd2774e65b5260267526479203b405ab3d95330b1036b0f036e67db6d6e28",
+      "runtimeRgbaSha256": "107f39fe7d7b032bf018e57b9b04e96928927c92807edcccc019fb97ae966ffb"
     },
     {
       "slot": "down-4",
@@ -475,8 +475,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 74,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "07fc7263aa9d6abaa5f5e0489944c4478add03f9ccba31347a1a62a34de9cd33",
-      "runtimeRgbaSha256": "2561ea8efad92d64b43ef4b190e2b690c18ec6a34175c2d6da3b8479919341a9"
+      "sourceRgbaSha256": "fcf607d597f89d20c2b8d2b024958bc758ecf772bf8edda14b8de35f0341f1ed",
+      "runtimeRgbaSha256": "7ff1bbb68566ae051873cfb645b7a8b103897bb5f162fab613bf35732b0f4450"
     },
     {
       "slot": "down-5",
@@ -576,8 +576,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 75,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "aa58aa73efb0e5f88ce5d1e22ec4b3daa604ab4b6acc2a6127b9a7669abd6913",
-      "runtimeRgbaSha256": "eb5995061e3dd0249a1614ffcb03739aafb5c063cbb390999bf6c68480201b01"
+      "sourceRgbaSha256": "b8e4a043cff2602d8745d95f699b977d577f23bd65905c69e91c226eb6e4fc73",
+      "runtimeRgbaSha256": "489ede8a8d3ac23772f1c95c7d2216d0b0fafb2fc57b26db8bb1379dd23c8deb"
     },
     {
       "slot": "down-6",
@@ -677,8 +677,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 59,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "a7e1f59e961622caeb7279e5bb8907b6c8720b6d49d010645369e89b7a8fd83b",
-      "runtimeRgbaSha256": "d434f48b270b0758f9e9f5c6df407db11d77b2f0dc2edb732babe2bc6c0b9468"
+      "sourceRgbaSha256": "eca8c792d71eea1adbdf877b0a348852c5618faba26b685c0ba2a8e3755117f6",
+      "runtimeRgbaSha256": "bf8a8c395079da766fcf34088db25e3d1989588eee52dd9f6ddc9649ecca856a"
     },
     {
       "slot": "down-7",
@@ -778,8 +778,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 48,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "206d2e3c0768811a71e6d2b582793ce8e2992c4137e1bc533543107b9af02cf9",
-      "runtimeRgbaSha256": "67706e2a356908d7f012bbb77898683af60b98e2b021a7259f895e90f0b0b1cc"
+      "sourceRgbaSha256": "c767d2cc8897d1f6a505228e0c42a3ffd8ec15c448515cf77ec8480a165b63df",
+      "runtimeRgbaSha256": "1085fb4c7aef8a94042c994e1490e0aa74ec09ac4e0116bda5cd3be1d1586f4e"
     },
     {
       "slot": "down-8",
@@ -879,7 +879,7 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 63,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "2af76ecc060b9f06720e21792a893c07ead53b8eff0fc5e9522e0e5568e62e81",
+      "sourceRgbaSha256": "22f9fe0e60b0484811d516ff0c8be5b0c9439ac63f392c3d75832512d36825d3",
       "runtimeRgbaSha256": "98017d645c937d0f76edc05198dc8cd24e11f6920997bbdb2c49560da64f7c3b"
     }
   ],
@@ -899,5 +899,29 @@
         "metadataSha256": "acbf13e7e8623955bbc50fa0b93e661cc094efca64615fedc2d2f298eb31e3c7"
       }
     ]
+  },
+  "postProcessing": {
+    "strictKoExpressionRepair": {
+      "status": "passed",
+      "frames": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "expression": "visible unfocused spiral eye from early imbalance through stable hold",
+      "mouth": "impact yelp or slack neutral; never a sleep smile",
+      "forbidden": [
+        "sleep_closed_eye",
+        "smile",
+        "x_eye"
+      ],
+      "alphaExact": true,
+      "broadRuntimeDespillApplied": false,
+      "sourceProxyArchive": ".run/art_batch_phase320/strict-temporal-repair/wuli_normal_fast_wind10/source-proxy/front_3quarter_sw/down"
+    }
   }
 }

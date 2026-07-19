@@ -143,21 +143,32 @@
     "correctionPrompt": "prompts/identity-board-toe-correction-v2.txt",
     "formalProductionLedger": "source/formal-production/source-ledger.json",
     "promptDirectory": "prompts/production",
-    "workingArchive": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet"
+    "workingArchive": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet",
+    "qualityRepairManifests": [
+      "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/tidefin/reed/identity-build/contact-sheet.png",
     "contactSheetSha256": "b2c2b535a732bf20e96cda358b7fd1dc3b3cd5be6af874423d8eae9561174dc6",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "797ec8fd8307629c9adb86a1b74fe1d428ff6d5268dc2c0325dedc1b3fd4f4b6",
+    "battleContactSheetSha256": "4cbbd88e58adf64035d3917e4f1ca845de52046ed8bf8e740f14bf6e60d3efed",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "6d2f7aaebd0a87ebb4eeba90029df7972c1ed607c51bd0b6fd463d75a1d69b57",
+    "battleQcSha256": "0dca063231d029956d476dc632dbaf2ae84ba8000865c2fdd1b3071436793798",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "c43c1f947d43e56af4c0fe430837becd1214f69430628da1f2872e0048fa670f"
+    "battleFacingContractPreviewSha256": "2630cc3405baca9bd05fe3bca43e8a09ecae724913d6cd51485387ce3d772e6e",
+    "battleKoCorrectionBeforeAfter": "qa/battle/repairs/reed-front-ko-correction-v1-before-after.png",
+    "battleKoCorrectionBeforeAfterSha256": "59eaebef58fd69e9b17cf2c2f7da33ba1a21550b3131861a54c64d15d0b5bc14",
+    "battleKoSemanticBeforeAfter": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+    "battleKoSemanticBeforeAfterSha256": "7cd8db88c98fe0f53581d9029ea4903ddfb1885236598629b8af2b748e609eb6",
+    "finalBattleReviewManifest": "source/formal-production/final-battle-review-v1-manifest.json",
+    "finalBattleReviewManifestSha256": "c8901c9cf43bc37fc5b38554045f36d9b749515b066db12d144e6236facc5b8e",
+    "battleKoSequenceBeforeAfter": "qa/battle/repairs/revivable-ko-sequence-v3-before-after.png",
+    "battleKoSequenceBeforeAfterSha256": "ce7eeea6ab035be2bfd14c5cecf6072dab4d8a2487ba000c2bc6451d092d6edb"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 KO 倒地全时序已按可复活昏厥语义局部修正；禁止 X 眼、闭眼笑睡态和死亡符号，alpha、姿势、背面与非脸部像素保持。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -171,7 +182,7 @@
     }
   },
   "battleVisual": {
-    "status": "static_self_review_passed_owner_pending",
+    "status": "ko_sequence_semantic_self_review_passed_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -205,13 +216,112 @@
       "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
       "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
     },
-    "bundleDigest": "bdc69d42b17706292094527a4ae48e67e84b8d49f2a3dcdea5092855b645dd1e",
+    "bundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "facingContractPreview": "qa/battle/facing-contract-preview.png",
-    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+    "totalFrameCount": 180,
+    "runtimeBundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
+    "minimumBattleRuntimeEdgeMargin": 13,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [],
+    "semanticCorrection": {
+      "id": "front-ko-hold-correction-v1",
+      "view": "front_3quarter_sw",
+      "downHold": "views/front_3quarter_sw/down/down-8.png",
+      "reviveHold": "views/front_3quarter_sw/revive/revive-1.png",
+      "exactRgbaContinuity": true,
+      "expression": "spiral_or_unfocused_eyes_slack_neutral_mouth_no_smile_no_x_eyes",
+      "posture": "limp_low_prone_non_sleeping",
+      "runtimeDizzinessFxBakedIntoSprite": false,
+      "prompt": "prompts/production/battle/front_3quarter_sw/down/down-8-ko-correction-v1.txt",
+      "processedSource": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-8-ko-v1.png",
+      "processedSourceSha256": "0fa2f9ac4c796d4849708ea44e6004300e6674e3a1da500771d538c60bf69603",
+      "generatedOriginal": "/Users/fander/.codex/generated_images/019f7b93-a0eb-7593-a967-2327ff2a719a/exec-7ffdaf8d-d309-4c99-927c-6b53230d97be.png",
+      "runtimeSha256AtCorrectionInstall": "10b73932a9d0baf335701904b8a23ad20509b793773651fa601ddc1bd7cececa"
+    },
+    "koSemanticRepair": {
+      "id": "revivable-ko-eyes-v2",
+      "views": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+      "alphaExactForEveryEditedFrame": true,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "down8Revive1ExactRgba": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+      "beforeAfterEvidenceSha256": "7cd8db88c98fe0f53581d9029ea4903ddfb1885236598629b8af2b748e609eb6",
+      "ownerReviewStatus": "self_review_passed_owner_pending",
+      "restoredFromVerifiedBaseline": true
+    },
+    "sequenceReview": {
+      "id": "battle180-sequence-review-v1",
+      "contactSheet": "qa/battle/contact-sheet.png",
+      "contactSheetSha256": "8faa0425b2e4a8a669cc9b0a49ac82ab42b44d645ecf87d8641897f09635eab5",
+      "reviewedViews": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "downMonotonicNoMidSequenceStandUp": true,
+      "reviveStartsFromExactDownHoldAndRecoversProgressively": true,
+      "knockawayRotationAndTrajectoryFramesContinuous": true,
+      "attackSkillCounterFramesOrderedOutAndBack": true,
+      "koExpression": "reusable_unconscious_no_x_no_sleep_no_smile",
+      "selfReviewStatus": "passed",
+      "ownerReviewStatus": "pending"
+    },
+    "godotBattleLoadReview": {
+      "status": "passed",
+      "godotVersion": "4.7.stable",
+      "actions": 12,
+      "views": 2,
+      "framesLoaded": 180,
+      "textureSize": [
+        256,
+        256
+      ],
+      "finalPresentationFlipH": {
+        "enemy": true,
+        "ally": true
+      },
+      "checkScript": ".run/batch_e_battle_load_check.gd"
+    },
+    "koSequenceSemanticRepair": {
+      "id": "revivable-ko-sequence-v3",
+      "runtimeDownFramesChanged": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sourceDownFramesRepaired": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "alphaExact": true,
+      "backDownReviveByteExact": true,
+      "despillApplied": false,
+      "manifest": "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json",
+      "manifestSha256": "38a22304c59a2bd6681e01b17a956620bca20e5f4a31028ac645569430a28cf8",
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    }
   }
 }

@@ -1,0 +1,70 @@
+{
+  "status": "passed",
+  "manualFrameByFrameReview": true,
+  "views": {
+    "front_3quarter_sw": {
+      "down": {
+        "status": "passed",
+        "view": "front_3quarter_sw",
+        "action": "down",
+        "manualFrameByFrameReview": true,
+        "broadRuntimeDespillApplied": false,
+        "temporalRule": "monotonic loss of support into stable unconscious hold",
+        "koExpression": "visible unfocused spiral eye; no smile, sleep expression, or X eye"
+      },
+      "revive": {
+        "status": "passed",
+        "view": "front_3quarter_sw",
+        "action": "revive",
+        "manualFrameByFrameReview": true,
+        "broadRuntimeDespillApplied": false,
+        "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+        "startContinuity": "revive-1 exact RGBA equals same-view down-8",
+        "authoredSourceFrameOrder": [
+          1,
+          3,
+          5,
+          2,
+          4,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    "back_3quarter_ne": {
+      "down": {
+        "status": "passed",
+        "view": "back_3quarter_ne",
+        "action": "down",
+        "manualFrameByFrameReview": true,
+        "broadRuntimeDespillApplied": false,
+        "temporalRule": "monotonic loss of support into stable unconscious hold",
+        "koExpression": "face occluded or authored rear KO cue; no false sleep cue required"
+      },
+      "revive": {
+        "status": "passed",
+        "view": "back_3quarter_ne",
+        "action": "revive",
+        "manualFrameByFrameReview": true,
+        "broadRuntimeDespillApplied": false,
+        "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+        "startContinuity": "revive-1 exact RGBA equals same-view down-8",
+        "authoredSourceFrameOrder": [
+          1,
+          2,
+          8,
+          7,
+          3,
+          5,
+          6,
+          4
+        ]
+      }
+    }
+  },
+  "down8Revive1ExactRgbaBothViews": true,
+  "contactSheet": "qa/battle/strict-down-revive-contact.png",
+  "contactSheetSha256": "6908a1c59345ad2744db8cbb9a00aeddac2f30250395261b7d31039bf1d5b492",
+  "broadRuntimeDespillApplied": false
+}

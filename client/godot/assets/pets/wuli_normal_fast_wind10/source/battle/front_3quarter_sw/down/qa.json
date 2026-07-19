@@ -11,12 +11,13 @@
   "warnings": [],
   "identityDriftFrames": [],
   "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
-  "koExpressionReview": {
+  "strictTemporalReview": {
     "status": "passed",
-    "frontVisibleEye": "unfocused_spiral",
-    "mouth": "slack_neutral_no_smile",
-    "forbiddenSymbols": [
-      "x_eye"
-    ]
+    "view": "front_3quarter_sw",
+    "action": "down",
+    "manualFrameByFrameReview": true,
+    "broadRuntimeDespillApplied": false,
+    "temporalRule": "monotonic loss of support into stable unconscious hold",
+    "koExpression": "visible unfocused spiral eye; no smile, sleep expression, or X eye"
   }
 }

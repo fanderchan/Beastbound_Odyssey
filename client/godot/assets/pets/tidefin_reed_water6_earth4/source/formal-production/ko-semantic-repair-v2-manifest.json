@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_reed_water6_earth4",
+  "id": "revivable-ko-eyes-v2",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+  "alphaExactForEveryEditedFrame": true,
+  "rgbPixelsChangedOutsideSemanticMask": 0,
+  "down8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+  "beforeAfterEvidenceSha256": "7cd8db88c98fe0f53581d9029ea4903ddfb1885236598629b8af2b748e609eb6",
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "restoredFromVerifiedBaseline": true,
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "68c8332790041c08c4c325d29d9cac5919c9d1f447ff16f862aa679057d4e6ca",
+  "runtimeEnabled": false,
+  "restoredBaselineBackup": ".run/art_batch_phase320/battle-alpha-despill-batch-e/tidefin_reed_water6_earth4/backup-before",
+  "restoredBaselineFrameCount": 180,
+  "restoredBaselineByteExact": true
+}

@@ -8,6 +8,16 @@
   "emptyFrames": [],
   "duplicateFrames": [],
   "edgeTouchFrames": [],
+  "warnings": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
+  "strictTemporalReview": {
+    "status": "passed",
+    "view": "back_3quarter_ne",
+    "action": "down",
+    "manualFrameByFrameReview": true,
+    "broadRuntimeDespillApplied": false,
+    "temporalRule": "monotonic loss of support into stable unconscious hold",
+    "koExpression": "face occluded or authored rear KO cue; no false sleep cue required"
+  }
 }

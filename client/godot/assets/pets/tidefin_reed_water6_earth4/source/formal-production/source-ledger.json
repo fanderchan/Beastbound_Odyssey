@@ -6,7 +6,7 @@
   "archiveMode": "lean",
   "componentMode": "all",
   "runtimeFrameCount": 180,
-  "runtimeBundleDigest": "bdc69d42b17706292094527a4ae48e67e84b8d49f2a3dcdea5092855b645dd1e",
+  "runtimeBundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
   "sourceFramesTracked": false,
   "rawGenerationSheetsTracked": false,
   "rawGenerationSheetCount": 24,
@@ -134,5 +134,104 @@
   ],
   "workingArchive": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet",
   "runtimeEnabled": false,
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "worldFrameCountObserved": 0,
+  "repairManifests": [
+    {
+      "path": "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json",
+      "sha256": "38a22304c59a2bd6681e01b17a956620bca20e5f4a31028ac645569430a28cf8"
+    }
+  ],
+  "semanticCorrection": {
+    "id": "front-ko-hold-correction-v1",
+    "view": "front_3quarter_sw",
+    "downHold": "views/front_3quarter_sw/down/down-8.png",
+    "reviveHold": "views/front_3quarter_sw/revive/revive-1.png",
+    "exactRgbaContinuity": true,
+    "expression": "spiral_or_unfocused_eyes_slack_neutral_mouth_no_smile_no_x_eyes",
+    "posture": "limp_low_prone_non_sleeping",
+    "runtimeDizzinessFxBakedIntoSprite": false,
+    "prompt": "prompts/production/battle/front_3quarter_sw/down/down-8-ko-correction-v1.txt",
+    "processedSource": "source/formal-production/semantic-corrections/front_3quarter_sw/down/down-8-ko-v1.png",
+    "processedSourceSha256": "0fa2f9ac4c796d4849708ea44e6004300e6674e3a1da500771d538c60bf69603",
+    "generatedOriginal": "/Users/fander/.codex/generated_images/019f7b93-a0eb-7593-a967-2327ff2a719a/exec-7ffdaf8d-d309-4c99-927c-6b53230d97be.png",
+    "runtimeSha256AtCorrectionInstall": "10b73932a9d0baf335701904b8a23ad20509b793773651fa601ddc1bd7cececa"
+  },
+  "koSemanticRepair": {
+    "id": "revivable-ko-eyes-v2",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+    "alphaExactForEveryEditedFrame": true,
+    "rgbPixelsChangedOutsideSemanticMask": 0,
+    "down8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+    "beforeAfterEvidenceSha256": "7cd8db88c98fe0f53581d9029ea4903ddfb1885236598629b8af2b748e609eb6",
+    "ownerReviewStatus": "self_review_passed_owner_pending",
+    "restoredFromVerifiedBaseline": true,
+    "manifest": "source/formal-production/ko-semantic-repair-v2-manifest.json",
+    "manifestSha256": "5a3bcfa0d19b8a29afd07323d2527435dd377a2b0909528aaae2b64dd20a8865"
+  },
+  "sequenceReview": {
+    "id": "battle180-sequence-review-v1",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "4cbbd88e58adf64035d3917e4f1ca845de52046ed8bf8e740f14bf6e60d3efed",
+    "reviewedViews": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "downMonotonicNoMidSequenceStandUp": true,
+    "reviveStartsFromExactDownHoldAndRecoversProgressively": true,
+    "knockawayRotationAndTrajectoryFramesContinuous": true,
+    "attackSkillCounterFramesOrderedOutAndBack": true,
+    "koExpression": "reversible_unconscious_progression_no_x_no_sleep_no_smile",
+    "selfReviewStatus": "passed",
+    "ownerReviewStatus": "pending"
+  },
+  "godotBattleLoadReview": {
+    "status": "passed",
+    "godotVersion": "4.7.stable",
+    "actions": 12,
+    "views": 2,
+    "framesLoaded": 180,
+    "textureSize": [
+      256,
+      256
+    ],
+    "finalPresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "checkScript": ".run/batch_e_battle_load_check.gd"
+  },
+  "koSequenceSemanticRepair": {
+    "id": "revivable-ko-sequence-v3",
+    "runtimeFrames": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "sourceFrames": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "alphaExact": true,
+    "backUnchanged": true,
+    "manifest": "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json",
+    "manifestSha256": "38a22304c59a2bd6681e01b17a956620bca20e5f4a31028ac645569430a28cf8",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
+  }
 }

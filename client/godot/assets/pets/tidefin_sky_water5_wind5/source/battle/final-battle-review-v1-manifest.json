@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_sky_water5_wind5",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "97d9a70bbe5c234de04c2f1385c2c737a74b959df097afc12a480d22d1d38083",
+  "runtimeEnabled": false,
+  "sequenceReview": {
+    "id": "battle180-sequence-review-v1",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "ee0e1297ea838002e577526666b9ffca3fa842ac911132668e4cbcaab1d5f17b",
+    "reviewedViews": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "downMonotonicNoMidSequenceStandUp": true,
+    "reviveStartsFromExactDownHoldAndRecoversProgressively": true,
+    "knockawayRotationAndTrajectoryFramesContinuous": true,
+    "attackSkillCounterFramesOrderedOutAndBack": true,
+    "koExpression": "reversible_unconscious_progression_no_x_no_sleep_no_smile",
+    "selfReviewStatus": "passed",
+    "ownerReviewStatus": "pending"
+  },
+  "godotBattleLoadReview": {
+    "status": "passed",
+    "godotVersion": "4.7.stable",
+    "actions": 12,
+    "views": 2,
+    "framesLoaded": 180,
+    "textureSize": [
+      256,
+      256
+    ],
+    "finalPresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "checkScript": ".run/batch_e_battle_load_check.gd"
+  },
+  "catalogAudit": "passed 180/180",
+  "battleActionCatalogCheck": "passed",
+  "ownerReviewStatus": "pending"
+}

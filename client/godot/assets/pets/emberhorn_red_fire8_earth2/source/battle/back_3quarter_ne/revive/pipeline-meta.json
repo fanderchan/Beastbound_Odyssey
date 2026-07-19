@@ -910,5 +910,21 @@
   "postProcessing": {
     "downReviveContinuity": "revive-1 replaced with the exact same-view down-8 RGBA frame",
     "creativePoseChange": false
+  },
+  "installedSemanticRepair": {
+    "id": "down-revive-ko-semantics-v2",
+    "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+    "mapping": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "alphaPolicy": "mapped authored alpha exact; local RGB face edits only",
+    "despillApplied": false
   }
 }

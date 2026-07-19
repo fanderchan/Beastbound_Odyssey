@@ -211,13 +211,26 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "9439de35c5c72053fc484342b93ed196797d4374528f47fd8c6adab802c01752",
+    "bundleDigest": "8cf30dcf1713aa03ea151017a81ad64d5e1a11ff8a89f617c2b7d48494d96636",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "safeRepairReplay": {
+      "repairId": "tidefin_mist_water8_wind2-safe-prebatchc-restore-v1",
+      "restoredFromPreBatchCBackup": true,
+      "broadRuntimeDespillApplied": false,
+      "downReviveContinuity": "exact_same_view_RGBA_hold",
+      "koExpressionReview": "passed"
+    },
+    "strictDownReviveRepair": {
+      "repairId": "tidefin_mist_water8_wind2-strict-down-revive-v2",
+      "status": "passed",
+      "down8Revive1ExactRgbaBothViews": true,
+      "broadRuntimeDespillApplied": false
+    }
   }
 }

@@ -11,12 +11,13 @@
   "warnings": [],
   "identityDriftFrames": [],
   "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
-  "koExpressionReview": {
+  "strictTemporalReview": {
     "status": "passed",
-    "frontVisibleEye": "occluded_or_authored_back_view",
-    "mouth": "slack_neutral_no_smile",
-    "forbiddenSymbols": [
-      "x_eye"
-    ]
+    "view": "back_3quarter_ne",
+    "action": "revive",
+    "manualFrameByFrameReview": true,
+    "broadRuntimeDespillApplied": false,
+    "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+    "startContinuity": "revive-1 exact RGBA equals same-view down-8"
   }
 }

@@ -9,5 +9,7 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "monotonic_ko_not_sleeping_self_review_passed_owner_pending",
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "semanticRepairManifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
 }

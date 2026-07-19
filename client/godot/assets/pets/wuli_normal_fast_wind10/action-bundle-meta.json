@@ -205,7 +205,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "ccc8270d92417e98b846292020520b891eefd8dd9c2b2198c273dcbacf68ba5e",
+    "bundleDigest": "69eb1ef657db9f8ba9000d099332e47b6d69a0bba30711aa0ab35208ee304f60",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -219,6 +219,12 @@
       "broadRuntimeDespillApplied": false,
       "downReviveContinuity": "exact_same_view_RGBA_hold",
       "koExpressionReview": "passed"
+    },
+    "strictDownReviveRepair": {
+      "repairId": "wuli_normal_fast_wind10-strict-down-revive-v2",
+      "status": "passed",
+      "down8Revive1ExactRgbaBothViews": true,
+      "broadRuntimeDespillApplied": false
     }
   }
 }
