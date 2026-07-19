@@ -18,8 +18,8 @@
       "flipH": true
     }
   },
-  "bundleDigest": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
-  "runtimeSha256": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
+  "bundleDigest": "2891621ce4222cd57aad9d9c4915c8dc68dc5744d93b74ca6834713b8a26b3c2",
+  "runtimeSha256": "2891621ce4222cd57aad9d9c4915c8dc68dc5744d93b74ca6834713b8a26b3c2",
   "status": "passed",
   "formId": "thunder_dragon_mount",
   "totalFrameCount": 180,
@@ -34,11 +34,11 @@
     "back_3quarter_ne": true
   },
   "minimumBattleRuntimeEdgeMargin": 4,
-  "runtimeBundleDigest": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
+  "runtimeBundleDigest": "2891621ce4222cd57aad9d9c4915c8dc68dc5744d93b74ca6834713b8a26b3c2",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "184d68b1d0661ef9196a3236ce5765236d7cfae07b730a02f360c7be5ad288a1",
+  "contactSheetSha256": "14e19e6f727980fcfbe27cb56f36d0500776f8cd2b46608ba428c6b625266d61",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
-  "facingContractPreviewSha256": "f1d3162eb824a7487f804df6bec2fd4dc1f129de726dd2886dc775aacc77ca1b",
+  "facingContractPreviewSha256": "10768331bf63bc83aad2f03b6e5c943dc3a0a7c955fb5cbed04ba7117a095a7e",
   "actionEvidence": [
     {
       "view": "front_3quarter_sw",
@@ -66,9 +66,9 @@
       "frameCount": 8,
       "minimumRuntimeEdgeMargin": 4,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/attack-contact.png",
-      "contactSheetSha256": "8b17c431837e390e8275a691feb4f0715fd735fbc767f4d0e3c629b2463f9ab1",
+      "contactSheetSha256": "888f1b9ef5bba9e2cdb75558db09ca58eea9b47ac57198fec24364908b5a00c4",
       "gif": "qa/battle/actions/front_3quarter_sw/attack.gif",
-      "gifSha256": "fd49269ef43d9cbc0d5ef30c543d32d65527dd2ecfd8de411ee075868346ef1f"
+      "gifSha256": "d81e1b38bb3e536c0cd8b89ab1a07c11b178831cc00f2fd05690f31f9a0bd2cd"
     },
     {
       "view": "front_3quarter_sw",
@@ -136,9 +136,9 @@
       "frameCount": 8,
       "minimumRuntimeEdgeMargin": 4,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/knockaway-contact.png",
-      "contactSheetSha256": "342f9f88a3e3fbc7053b1156ec52350bacf77dc413a6fff1410992949c2049d8",
+      "contactSheetSha256": "73d1501e858835f991afc3d3fdd52c46edc16348556ac4efcc6891d528090a95",
       "gif": "qa/battle/actions/front_3quarter_sw/knockaway.gif",
-      "gifSha256": "33b45adc45fe8380148f7a0afb76090e6c3c946860e04e9b61e13e8780285b5a"
+      "gifSha256": "4a1d8cae947da353f33c67b33a311d4898fed65b3cd6cf45fdd9ba87c3e58d6f"
     },
     {
       "view": "front_3quarter_sw",
@@ -348,6 +348,21 @@
       "beforeAfterContactSha256": "2a760877e404582f41bc1f4174d92cd6d7d4c1d066850990ed87d921e3697090",
       "finalSequenceContact": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
       "finalSequenceContactSha256": "6b4f62784766fe1ab50c8841d7da427592a2f71bd3764444da90b1f4fa3fd154",
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    },
+    {
+      "id": "battle180-semantic-proportion-rebase-v1",
+      "targetActions": [
+        "front_3quarter_sw/attack",
+        "front_3quarter_sw/knockaway"
+      ],
+      "runtimeFrameCount": 9,
+      "manifest": "source/formal-production/quality-repair-semantic-proportion-rebase-v1-manifest.json",
+      "manifestSha256": "dad09da5a1866c3bd887d89dc19457f94ccdfea43da31dea231ad998634deff3",
+      "beforeAfterContact": "qa/battle/repairs/semantic-proportion-rebase-v1-before-after.png",
+      "beforeAfterContactSha256": "ee9ee5a5e2932989c4f42860db1a04925c00d4e870e7fb322beeaa22874f3a4a",
+      "allNonTargetRuntimeFramesByteExact": true,
+      "downReviveFramesChanged": 0,
       "ownerReviewStatus": "self_review_passed_owner_pending"
     }
   ],

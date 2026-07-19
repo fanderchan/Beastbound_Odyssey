@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "formId": "thunder_dragon_mount",
+  "repairId": "battle180-semantic-proportion-rebase-v1",
+  "purpose": "rebase the already visually approved Batch-B semantic/proportion repairs onto the current formal battle180 while preserving all later KO/color/provenance work",
+  "base": {
+    "targetTreeBaselineCommit": "b2525b9ff57b6e8a5773d6f421f86cfd1b24da3b",
+    "repositoryHeadAtBuild": "b2525b9ff57b6e8a5773d6f421f86cfd1b24da3b",
+    "liveFormalRuntimeBundleDigest": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
+    "approvedCandidateRoot": ".run/art_batch_phase320/batch-b-semantic-proportion-repair-v1",
+    "approvedCandidateSummarySha256": "0e335b20aeca7ea23e7ad41c21ba23505b6fa9044a23d040e1b9ab04b8baa332"
+  },
+  "scope": {
+    "runtimeFramesChanged": 9,
+    "targetActions": [
+      "front_3quarter_sw/attack",
+      "front_3quarter_sw/knockaway"
+    ],
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0,
+    "downReviveFramesChanged": 0
+  },
+  "repairSummary": [
+    "front attack: approved uniform action-level scale and shared bottom-center anchor",
+    "front knockaway-8: same-strip frame-7 complete-body rigid continuation; no new generation or mirror"
+  ],
+  "method": "exact overlay of the approved staged target frames after proving every current target frame is byte-identical to the candidate's approved before baseline",
+  "prohibitions": {
+    "mirroring": false,
+    "nonUniformScale": false,
+    "perFrameSquash": false,
+    "globalDespill": false,
+    "wholeFrameColorRewrite": false,
+    "newGeneration": false
+  },
+  "frameRecords": [
+    {
+      "path": "views/front_3quarter_sw/attack/attack-1.png",
+      "currentFormalSha256": "2f3c8fa4d1a6862019f823e8a04e684d8432fd130b30a62ed64dc1f581c5d38a",
+      "approvedCandidateBeforeSha256": "2f3c8fa4d1a6862019f823e8a04e684d8432fd130b30a62ed64dc1f581c5d38a",
+      "approvedCandidateAfterSha256": "10389bb329151260d95df9e9695ea055460b7425d9723a8e116cb063c23daeb5",
+      "proposedSha256": "10389bb329151260d95df9e9695ea055460b7425d9723a8e116cb063c23daeb5",
+      "currentDecodedRgbaSha256": "c2ee51bdc5d1ce7b664808d1077986981d4d20c5b58163a676e2c0821a5c6814",
+      "proposedDecodedRgbaSha256": "2521532dd6c654882dbd18333d35bd42628f56f75bd65e7e0b6be9db5e2c2cd7",
+      "currentAlphaSha256": "3bad8ace62fefb4f99dda5b21e5d16a96d94c86767ae60587c995d28f378b63a",
+      "proposedAlphaSha256": "133a1d955fc1aff2c7c32dadea73b6f02f63701066ac4a108a096444af254d1e",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-2.png",
+      "currentFormalSha256": "5581e18d857ca751a79599d038f7087d278f5feb516553b2d25a9abcd9297271",
+      "approvedCandidateBeforeSha256": "5581e18d857ca751a79599d038f7087d278f5feb516553b2d25a9abcd9297271",
+      "approvedCandidateAfterSha256": "4bbde9c3161de42ae85f512c7cf11d0e7ea651cf0c2b10a2cd8684667b20b14d",
+      "proposedSha256": "4bbde9c3161de42ae85f512c7cf11d0e7ea651cf0c2b10a2cd8684667b20b14d",
+      "currentDecodedRgbaSha256": "2d47025f4426c91c97c535b78defd4cb6fa77ea0817609e465ce567166030905",
+      "proposedDecodedRgbaSha256": "8228a6f147d1289b9c126fd1de1a85459bbac590e46ba76f372555cbdc6d6bde",
+      "currentAlphaSha256": "a610a75a86b84d5a4555335a3e4d5a918a207c8a65324b8fdaec88569104910b",
+      "proposedAlphaSha256": "3bf0bb4f10b424f6c2859ee818defd50c0e46fdcfd16ccdcf2eb92e8a520a389",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-3.png",
+      "currentFormalSha256": "bad4a1112a9e104b0f37eaccfc48183c3fa3ea05aa25f4823e0f9d1c8e09c16a",
+      "approvedCandidateBeforeSha256": "bad4a1112a9e104b0f37eaccfc48183c3fa3ea05aa25f4823e0f9d1c8e09c16a",
+      "approvedCandidateAfterSha256": "06a598010677a8382fbddbaf279aeefb48f4600e07d9fa4f4554af5644047cd0",
+      "proposedSha256": "06a598010677a8382fbddbaf279aeefb48f4600e07d9fa4f4554af5644047cd0",
+      "currentDecodedRgbaSha256": "7d896885df9f2c99c7648980fa46e36558b6505279e5d25e3a1c904d2a7b5ddb",
+      "proposedDecodedRgbaSha256": "2c772aeefd0454d9bdef1648c3f948261ab33fb12c1e59023c824df78f4c7e4d",
+      "currentAlphaSha256": "a9f81ea99b4d55c5a3d7ca4688f674fbd864ebebdb8545804bc11a132929934d",
+      "proposedAlphaSha256": "aec1f0db4cf6c53893e36f40903b92b7ab1e83d0ec3376d122fcd71fa4b5ecc9",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-4.png",
+      "currentFormalSha256": "d039516c10fcee89e8edee302e9433f81ab449c4b0eef418c33adfbb6e8d4f2c",
+      "approvedCandidateBeforeSha256": "d039516c10fcee89e8edee302e9433f81ab449c4b0eef418c33adfbb6e8d4f2c",
+      "approvedCandidateAfterSha256": "ee34f4c86c76dcb7581b68298ba4d32be7a4d7fa2d0768585eabbf5bc728a3e2",
+      "proposedSha256": "ee34f4c86c76dcb7581b68298ba4d32be7a4d7fa2d0768585eabbf5bc728a3e2",
+      "currentDecodedRgbaSha256": "cfbf0261a85e2ca9bb9e3ea78144253cbcdcbe0f97a841c3f3dc36a8affb28be",
+      "proposedDecodedRgbaSha256": "7a91b38afca7a4e5e4424b93221afd91c91984beca459da01d531f2533a8fb00",
+      "currentAlphaSha256": "14a0442b6ac8f2bd7d4d0858592d3b0f77709950c97f14315299b7201e13b2dc",
+      "proposedAlphaSha256": "31dd72d97e4362890ee35c99d10105aba4a909b744cc1a4341ee6183946c7aa5",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-5.png",
+      "currentFormalSha256": "f073a2a5952fefbdc101eeb165d865ac2097da7c586d66840407b99693150c41",
+      "approvedCandidateBeforeSha256": "f073a2a5952fefbdc101eeb165d865ac2097da7c586d66840407b99693150c41",
+      "approvedCandidateAfterSha256": "f3c17d142bd23836f318047e1211f733275969ce1df48c1125b60ab97bcd8553",
+      "proposedSha256": "f3c17d142bd23836f318047e1211f733275969ce1df48c1125b60ab97bcd8553",
+      "currentDecodedRgbaSha256": "97d3e856fd4c65b32c7f2a83c7f208fbc44be409fedc299d19be39788d1dd565",
+      "proposedDecodedRgbaSha256": "659745f68e16e82c0759087bf51ae6ab79188df0e020b6c94a954266099ce8c0",
+      "currentAlphaSha256": "9a400746186be13b148f71820ed5922e0087c5a832d9033cd40267ab836d150e",
+      "proposedAlphaSha256": "ce0c29d8624f85463943f606065c4967a499b3c555417c5595ee397083a19cfe",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-6.png",
+      "currentFormalSha256": "a190cad7c63f2b04d16e3b488b917a025ab8df7c267f45f6e16136ef52351e3a",
+      "approvedCandidateBeforeSha256": "a190cad7c63f2b04d16e3b488b917a025ab8df7c267f45f6e16136ef52351e3a",
+      "approvedCandidateAfterSha256": "4a1753e47908f907834f2c30828af0f0fc0a83d0a115bba00b30cdea4de509dd",
+      "proposedSha256": "4a1753e47908f907834f2c30828af0f0fc0a83d0a115bba00b30cdea4de509dd",
+      "currentDecodedRgbaSha256": "a65791de9ea8eaa65de523d8f79e8b8c88a22f3ca78ebe8ed5d3d2d593e3ec3e",
+      "proposedDecodedRgbaSha256": "78b96dc2cc46d91da359c3a98989833cba49901e34e3d8ac1eb327b218f59ea0",
+      "currentAlphaSha256": "010e8e0a9c9ad6b5d1bac1ee355eedc84c69d5060be259eadde5f49ec49c4dce",
+      "proposedAlphaSha256": "3bc1a9b85c1d5d4c7ab94be25b65db58544279282a2e6007aa62db0ed4266cad",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-7.png",
+      "currentFormalSha256": "fa60b2433ca51d1b79e4ed5619845d0a473bfbd59820dbe1f1b644bd94030f3d",
+      "approvedCandidateBeforeSha256": "fa60b2433ca51d1b79e4ed5619845d0a473bfbd59820dbe1f1b644bd94030f3d",
+      "approvedCandidateAfterSha256": "4916921efc609e62caba6179c1f0c66d564a86a3f21474452a746261f4fd3270",
+      "proposedSha256": "4916921efc609e62caba6179c1f0c66d564a86a3f21474452a746261f4fd3270",
+      "currentDecodedRgbaSha256": "74edf53b98cce4a410dfc21da4ef8343053ab9adc62e610a55999887aa4b35f6",
+      "proposedDecodedRgbaSha256": "d241a3eeaa66854571f6c40aa737c029e0af85f0ba61847fc6224e94be1b45ca",
+      "currentAlphaSha256": "4188e880bab957a43c3c98ce7e8bd4b6a63b2ca10138fa94010fc0e1a5be778a",
+      "proposedAlphaSha256": "d019698e2cddf9927a7025727d97252f0ce75032e1e2ead686f13370a845cc73",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-8.png",
+      "currentFormalSha256": "3091f18d5d25a5a48b6427f769f710c679be139b42122769a7a995a11a2c5f31",
+      "approvedCandidateBeforeSha256": "3091f18d5d25a5a48b6427f769f710c679be139b42122769a7a995a11a2c5f31",
+      "approvedCandidateAfterSha256": "28c05f4016800292b3694c8f875f27ed8e96d17d24fec4bc645c7424b6e4a413",
+      "proposedSha256": "28c05f4016800292b3694c8f875f27ed8e96d17d24fec4bc645c7424b6e4a413",
+      "currentDecodedRgbaSha256": "ede6e03174fc471918044f8c4cc84e1f0ff3110c8d42b0a215c61bc041986a3e",
+      "proposedDecodedRgbaSha256": "b2e0b01138fe032e1319168e5a1473e86b4412bf12dff0db01fb1bcb19b75ce6",
+      "currentAlphaSha256": "6944b23b9772ef99c4409b1df39f3a2293c072d808bda196d8bfed857edc57af",
+      "proposedAlphaSha256": "34f06e61b4961526e5862fabb019b71b16a9477e15587315ffc633b7fd19f7ec",
+      "approvedLineageExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-8.png",
+      "currentFormalSha256": "b31f6646a8c8a49bf6b20858a29d4823cc97a38efe6007ffff465e625f90e4c0",
+      "approvedCandidateBeforeSha256": "b31f6646a8c8a49bf6b20858a29d4823cc97a38efe6007ffff465e625f90e4c0",
+      "approvedCandidateAfterSha256": "276df55d1ac7e4d76944ba51efa8c3ee5423ed06b9f61fbaadf8e0ac577c7a3a",
+      "proposedSha256": "276df55d1ac7e4d76944ba51efa8c3ee5423ed06b9f61fbaadf8e0ac577c7a3a",
+      "currentDecodedRgbaSha256": "2b91b7552b6b1971f2404f2ebf7cfc6b6d65d73a7070c6c4b164cc9ba5a25a65",
+      "proposedDecodedRgbaSha256": "2a27fd725aab3ef92991cdcdca1a031e96343e09b810306f355902ba1c585803",
+      "currentAlphaSha256": "c7a2a04015764ba9256af433507ced1edc50945993cec975261f11b4036f8bcc",
+      "proposedAlphaSha256": "baf57ff64e09a187d5948cfad6b2c8541940fe3ff49e32925606bc077a112ab1",
+      "approvedLineageExact": true
+    }
+  ],
+  "preservation": {
+    "allNonTargetRuntimeFramesByteExactToCurrentFormal": true,
+    "allDownReviveFramesByteExactToCurrentFormal": true,
+    "currentKoAndColorRepairHistoryRetained": true,
+    "down8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "runtimeBundleDigestAfterRepair": "2891621ce4222cd57aad9d9c4915c8dc68dc5744d93b74ca6834713b8a26b3c2",
+  "evidence": {
+    "beforeAfter": "qa/battle/repairs/semantic-proportion-rebase-v1-before-after.png",
+    "beforeAfterSha256": "ee9ee5a5e2932989c4f42860db1a04925c00d4e870e7fb322beeaa22874f3a4a",
+    "fullBattle180": "qa/battle/contact-sheet.png",
+    "fullBattle180Sha256": "14e19e6f727980fcfbe27cb56f36d0500776f8cd2b46608ba428c6b625266d61",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "facingContractPreviewSha256": "10768331bf63bc83aad2f03b6e5c943dc3a0a7c955fb5cbed04ba7117a095a7e"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

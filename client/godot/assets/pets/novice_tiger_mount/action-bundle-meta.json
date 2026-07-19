@@ -144,7 +144,7 @@
       "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
       "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
     },
-    "bundleDigest": "8088ad7ebc895064641b14b2fa9d3a3ae5f9bfacb85ea8a051590a707b36611e",
+    "bundleDigest": "0246149b3239d1872ca1e888b839e2eb36990543a08df46d22d6650a0d140903",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
@@ -153,7 +153,7 @@
     "facingContractPreview": "qa/battle/facing-contract-preview.png",
     "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
     "totalFrameCount": 180,
-    "runtimeBundleDigest": "8088ad7ebc895064641b14b2fa9d3a3ae5f9bfacb85ea8a051590a707b36611e",
+    "runtimeBundleDigest": "0246149b3239d1872ca1e888b839e2eb36990543a08df46d22d6650a0d140903",
     "minimumBattleRuntimeEdgeMargin": 4,
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
@@ -194,6 +194,22 @@
         ],
         "runtimeFrameCountReviewed": 32,
         "alphaPolicy": "mapped authored alpha exact; local RGB face edits only",
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "battle180-semantic-proportion-rebase-v1",
+        "targetActions": [
+          "front_3quarter_sw/attack",
+          "front_3quarter_sw/stagger",
+          "back_3quarter_ne/idle",
+          "back_3quarter_ne/hurt",
+          "back_3quarter_ne/attack",
+          "back_3quarter_ne/dodge",
+          "back_3quarter_ne/counter"
+        ],
+        "runtimeFrameCount": 52,
+        "downReviveFramesChanged": 0,
+        "despillApplied": false,
         "ownerVisualGate": "self_review_passed_owner_pending"
       }
     ],
@@ -252,16 +268,17 @@
     "representativeRebuildHandoff": ".run/art_batch_phase320/novice_tiger/formal-production/archive-handoff",
     "qualityRepairManifests": [
       "source/formal-production/quality-repair-pre-despill-restore-v1-manifest.json",
-      "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json"
+      "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "source/formal-production/quality-repair-semantic-proportion-rebase-v1-manifest.json"
     ]
   },
   "evidence": {
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "c3972d622569b79044c16b60f9349f75dcd461ea077586bf2f6f15b0eb331486",
+    "battleContactSheetSha256": "faa218a7368df1716c28255ca318e01f61a11b1ae8a0746030e8bc0f00df742f",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "8f5883e519e3c8f585d3a9d02012718cd948c836444bb235e1b6dae0d3be360d",
+    "battleQcSha256": "c8bde453f784d5eb369453781a27b4576e78283528acec38ce2d7e3e48b88639",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "b788c4d2555de0dcc8f6d7c891bc7fe6364f2f37ec6087a005115f8bfb5ad46e",
+    "battleFacingContractPreviewSha256": "7f15d92287d9e880660668bfc257ad3bcc647c145593544b17871a60f5feaaa3",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
     "worldContactSheetSha256": "61e8fa1db2be29c14436e7a7d991e0afdd84ea7814b4fb67dd223571e3c23060",
     "worldCycleGif": "qa/world/true8-world-cycle.gif",
@@ -271,10 +288,12 @@
     "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
     "battleDownReviveKoSemanticsBeforeAfterSha256": "325682dd0773cf1a2ca89a7a3eb12c1467d10bd484efbd7f129976253085e84a",
     "battleDownReviveKoSemanticsSequence": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
-    "battleDownReviveKoSemanticsSequenceSha256": "e14491dd21e7922b8ca5ed99697838f98ae59911396190452371212833f3b470"
+    "battleDownReviveKoSemanticsSequenceSha256": "e14491dd21e7922b8ca5ed99697838f98ae59911396190452371212833f3b470",
+    "battleSemanticProportionRebaseBeforeAfter": "qa/battle/repairs/semantic-proportion-rebase-v1-before-after.png",
+    "battleSemanticProportionRebaseBeforeAfterSha256": "5432b8c6571f0bddb383f71170abf555fb1f1a35e3899c4748f4ce9139c8ce8e"
   },
   "ownerReviewStatus": "pending",
-  "notes": "新手老虎的身份、真八向世界动作与双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。",
+  "notes": "新手老虎的身份、真八向世界动作与双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。 Batch-B 已批准的动作语义/比例修复已在当前 formal 基线上重基：仅目标动作帧变化，后来完成的 KO、颜色、Down/Revive 连续性和来源记录全部保留。",
   "displayName": "新手老虎",
   "supportedMountedCharacterIds": [
     "novice_hunter_v1"
