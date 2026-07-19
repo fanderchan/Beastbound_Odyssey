@@ -6,6 +6,8 @@ sheet on a solid ``#FF00FF`` background.  This tool does not create or alter
 creative poses.  It only removes the chroma background, isolates frame cells,
 normalizes every frame with one shared scale and anchor rule, performs strict
 QC, and publishes transparent 512px source frames plus 256px runtime frames.
+An explicit contiguous row range may be selected so one honestly archived
+generation sheet can provide independently authored front/back action rows.
 
 The build fails closed for empty/cropped frames, unsafe output bounds, large
 detached components, residual magenta, or excessive generated scale drift.
@@ -54,6 +56,8 @@ class BuildOptions:
     rows: int
     cols: int
     slots: tuple[str, ...]
+    row_start: int = 0
+    row_count: int | None = None
     key: tuple[int, int, int] = DEFAULT_KEY
     transparent_distance: float = 40.0
     opaque_distance: float = 150.0
@@ -99,6 +103,10 @@ class RenderedFrame:
     metadata: dict[str, object]
 
 
+def selected_row_count(options: BuildOptions) -> int:
+    return options.rows - options.row_start if options.row_count is None else options.row_count
+
+
 def parse_hex_color(value: str) -> tuple[int, int, int]:
     text = value.strip().lstrip("#")
     if len(text) != 6:
@@ -134,11 +142,17 @@ def validate_options(options: BuildOptions) -> None:
         raise BundleBuildError(f"input does not exist: {options.input_path}")
     if options.rows <= 0 or options.cols <= 0:
         raise BundleBuildError("rows and cols must be positive")
-    expected = options.rows * options.cols
+    if options.row_start < 0 or options.row_start >= options.rows:
+        raise BundleBuildError("row-start must select a row inside the input grid")
+    row_count = selected_row_count(options)
+    if row_count <= 0 or options.row_start + row_count > options.rows:
+        raise BundleBuildError("row-count must be positive and stay inside the input grid")
+    expected = row_count * options.cols
     if len(options.slots) != expected:
         raise BundleBuildError(
             f"expected exactly {expected} explicit slot names for "
-            f"{options.rows}x{options.cols}, got {len(options.slots)}"
+            f"rows {options.row_start}..{options.row_start + row_count - 1} "
+            f"of {options.rows}x{options.cols}, got {len(options.slots)}"
         )
     if len(set(options.slots)) != len(options.slots):
         raise BundleBuildError("slot names must be unique")
@@ -533,7 +547,8 @@ def prepare_frames(sheet: Image.Image, options: BuildOptions) -> list[PreparedFr
     cell_height = sheet.height // options.rows
     frames: list[PreparedFrame] = []
     for index, slot in enumerate(options.slots):
-        row, col = divmod(index, options.cols)
+        selected_row, col = divmod(index, options.cols)
+        row = options.row_start + selected_row
         box = (
             col * cell_width,
             row * cell_height,
@@ -862,13 +877,13 @@ def write_bundle(
 
         source_sheet = compose_sheet(
             [frame.source for frame in rendered],
-            options.rows,
+            selected_row_count(options),
             options.cols,
             SOURCE_FRAME_SIZE,
         )
         runtime_sheet = compose_sheet(
             [frame.runtime for frame in rendered],
-            options.rows,
+            selected_row_count(options),
             options.cols,
             RUNTIME_FRAME_SIZE,
         )
@@ -897,6 +912,8 @@ def write_bundle(
             "inputSize": list(input_sheet.size),
             "rows": options.rows,
             "cols": options.cols,
+            "rowStart": options.row_start,
+            "rowCount": selected_row_count(options),
             "inputCellSize": [
                 input_sheet.width // options.cols,
                 input_sheet.height // options.rows,
@@ -984,10 +1001,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rows", required=True, type=int, help="Input sheet row count.")
     parser.add_argument("--cols", required=True, type=int, help="Input sheet column count.")
     parser.add_argument(
+        "--row-start",
+        type=int,
+        default=0,
+        help="Zero-based first input-grid row to process.",
+    )
+    parser.add_argument(
+        "--row-count",
+        type=int,
+        help="Contiguous input-grid rows to process; defaults to all rows from row-start.",
+    )
+    parser.add_argument(
         "--slots",
         required=True,
         nargs="+",
-        help="Explicit row-major frame names; count must equal rows*cols.",
+        help="Explicit row-major frame names for the selected rows; count must equal row-count*cols.",
     )
     parser.add_argument("--key", type=parse_hex_color, default=DEFAULT_KEY)
     parser.add_argument("--transparent-distance", type=float, default=40.0)
@@ -1025,6 +1053,8 @@ def options_from_args(args: argparse.Namespace) -> BuildOptions:
         rows=args.rows,
         cols=args.cols,
         slots=tuple(args.slots),
+        row_start=args.row_start,
+        row_count=args.row_count,
         key=args.key,
         transparent_distance=args.transparent_distance,
         opaque_distance=args.opaque_distance,

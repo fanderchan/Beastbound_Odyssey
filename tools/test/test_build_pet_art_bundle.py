@@ -190,6 +190,70 @@ class PetArtBundleBuilderTests(unittest.TestCase):
     def test_large_detached_component_fails_closed(self) -> None:
         self.assert_case_fails("detached_component", "detached component ratio")
 
+    def test_contiguous_row_ranges_share_one_honest_generation_sheet(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_path = root / "shared-front-back.png"
+            rows, cols = 4, 2
+            cell_width, cell_height = 128, 128
+            sheet = Image.new(
+                "RGB",
+                (cell_width * cols, cell_height * rows),
+                builder.DEFAULT_KEY,
+            )
+            draw = ImageDraw.Draw(sheet)
+            for index in range(rows * cols):
+                row, col = divmod(index, cols)
+                x = col * cell_width
+                y = row * cell_height
+                draw.rounded_rectangle(
+                    (x + 24, y + 18, x + 102, y + 116),
+                    radius=16,
+                    fill=(40 + index * 17, 100 + row * 20, 170 - col * 30),
+                )
+                draw.rectangle(
+                    (x + 38 + index, y + 48, x + 48 + index, y + 62),
+                    fill=(238, 214, 86),
+                )
+            sheet.save(input_path, format="PNG")
+
+            top = builder.build_bundle(
+                builder.BuildOptions(
+                    input_path=input_path,
+                    output_dir=root / "top",
+                    rows=rows,
+                    cols=cols,
+                    row_start=0,
+                    row_count=2,
+                    slots=tuple(f"front-{index}" for index in range(1, 5)),
+                )
+            )
+            bottom = builder.build_bundle(
+                builder.BuildOptions(
+                    input_path=input_path,
+                    output_dir=root / "bottom",
+                    rows=rows,
+                    cols=cols,
+                    row_start=2,
+                    row_count=2,
+                    slots=tuple(f"back-{index}" for index in range(1, 5)),
+                )
+            )
+
+            self.assertEqual(top["inputSha256"], bottom["inputSha256"])
+            self.assertEqual(top["rowStart"], 0)
+            self.assertEqual(bottom["rowStart"], 2)
+            self.assertEqual(top["rowCount"], 2)
+            self.assertEqual(bottom["rowCount"], 2)
+            self.assertEqual([frame["grid"][0] for frame in top["frames"]], [0, 0, 1, 1])
+            self.assertEqual([frame["grid"][0] for frame in bottom["frames"]], [2, 2, 3, 3])
+            self.assertGreater(
+                bottom["frames"][0]["sourceCellBox"][1],
+                top["frames"][-1]["sourceCellBox"][1],
+            )
+            with Image.open(root / "bottom/sheet-runtime-transparent.png") as output:
+                self.assertEqual(output.size, (cols * 256, 2 * 256))
+
     def test_explicit_slot_count_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
