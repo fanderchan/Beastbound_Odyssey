@@ -9,7 +9,7 @@
   "ownership": "project-owned original generated artwork",
   "replacementPath": "regenerate with the tracked prompt and local validated source archive",
   "fullSourceValidationRequiredBeforeInstall": true,
-  "repositoryPolicy": "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and duplicate clean/raw intermediates remain in the local production archive.",
+  "repositoryPolicy": "Runtime frames and compact provenance are tracked. The KO hold-eye repair is a localized RGB-only runtime correction with exact alpha proof; no generic edge-despill postprocess is installed or claimed.",
   "actions": {
     "front_3quarter_sw": {
       "idle": {
@@ -37,7 +37,23 @@
           "fe13b867681a50ef7f455385f9e4ff056e23156d7b0a90097b33f94e85c6a813"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "af0d3e76100191697c4e694bb15e27e0ff3536f46b4189ad9a226f7b3f6909bc",
+          "0edc793c6c378544e5f2095bcb1b5c0ae4ae0919ff9cbf367e39a025313e5191",
+          "cadeae7ff5313ec944eda24a62226a27a3f4525ed17b708dfb7c56f01d342a88",
+          "6e4c47bfbda090e0abe4a3852733329ac45f37cdbf7c2e0de7888b566fa7566e",
+          "28f38131a1830c6dfd87812e33411d3c6d09796d00db2a81e750a38b0092fcd1",
+          "7c02596616a1f7890efeba470b283f621bd38137177d978050fccdc51b4bc2d5"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "3c56778fbe2a4cbf013e37974d377c099ce9a2a13709b94e0ab5c6c27ff77795",
+          "64fef04fbd7264935c375fc51e6cfb1a87c3ad8650e58c160eb6118ae59f718c",
+          "de1e45e17eb9488e7689d1088c6a68d86ac114e495a45f48fb035b25c93e6ee8",
+          "fc5a9ed6918879887dc248e4e3665ab6ef15c2d7c0e66f831d2d7bdec25e0bec",
+          "f3f9aee392a12ba331ae108dba85859363ceb8d34af4024b9a43e90621d3b763",
+          "8b25007812348b92de5afe0cced12057176f04163ec9629149877f3939e9c9cb"
+        ]
       },
       "walk": {
         "originalGeneratedSha256": "c24bf96a1d79c4b585c1480b7816275abedd99df16bab8b66ae1a904bde06655",
@@ -68,7 +84,27 @@
           "a9633df8bdd25df1e8d97df45929b6b0ca8a845d82be5fc7a36d29755a11fd6a"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "077e3660e67e29cc69d296f6faa646e0a1e139735d785ba4129bb7d817946ce1",
+          "76ff3dcde0622ba9bd0b58b3d630507cf61b48df4ed483718573bb33e2661978",
+          "4a3fd2464cba57bad1067bacc760639551015a3783e49b41ec793bb7cbe82956",
+          "a08d5c8403e2917c3d5e3293ff883abcaa16e430da0d5e39919f89f2fdd6ee51",
+          "1763c3afdbe716f2ae8836428985f9f5ddaeee669d574fdb344396ab342f1a45",
+          "2b6a2498c5c7f517ee539dc9dde3a7bfb0b39041ef098e1a8b44c412da65eae7",
+          "efdcde2f3e2e6bb330ac2e496e1f98d3f67b4af1092acf3a06d9a487917880b9",
+          "c3f319798c9e63e08ebae6b56b476ca56a526ff14457820acc512b87be09a334"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "67b36d9362b3b4b687055294849354adb33b4902fdf737e8689af2241fa483eb",
+          "9f7988ea3e4129641c8a7bc7306404774162561012c4efd64478e28cacdff862",
+          "5dc27f80108be4c68432c1abeddf6d6f985a5247ca3f1d5c60c390b9f0cdd6d0",
+          "12ed9e2a8e3b7d351592941070a475993d502a6fd0af0ba1e4a1099bfc2cb0be",
+          "33a0aa74f751fbdfe60ca6e61173c9216dd7ece3936379cca9292d6121504a83",
+          "8c9ff939742ae20477a4c80321b7783f2445b2d3d41e47745a17d1c3ef5af440",
+          "0e5d2bcea1c451eae096a45386a8ee9abe514970a47893cf5c450c4369423e7a",
+          "38715a190a4cb13347482b614e320ca5aa131e5ac2014935e024af8336d9cfe1"
+        ]
       },
       "attack": {
         "originalGeneratedSha256": "a12c1ca35723a40be01e7f449603b3d3946ee875b143c01dcedaa46f523a4317",
@@ -99,7 +135,27 @@
           "fa632651e4c6c249bbfba2db060af28b59bac022732261d343569822340dd2b2"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "0d37f703671891c9895e26956b2c4c5f47a7ca96800c10c47486cc12ac2992ab",
+          "554fafdd6cff3a1c096487c164cc2aed43fb9746e5c7a3aa35b9245cca3f0c06",
+          "04b2e31e0d2703a17384f9a5b215744a04526f0498b95246bfe17fa09e4f26be",
+          "a847f9871e36963c6ac2623e13c9c2434bb96337c834f27feb265f96541fbb6b",
+          "4f59221e03269a4107e1a6a9184de10e896812cc9c260be99c352092b146c4ad",
+          "b2711b57f7cf17357008020ea5ddd6e01d4874c0e61161f1d9c50737027dc8db",
+          "7b08237c4e5683852807e4d544f33c77dfb69ed706b8b8fdc162f4ab3b824d30",
+          "87906f1ce2e700d06fca72f68d11cf9afea39e66db7ce7eb0ea4182c5c82be5b"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "6f3b579637051230cecafa563edb21966eb537e3ade753e78bb4e23549974b1d",
+          "fc0786b7cfbb411a2b17579fea07e7f5348d123428f40a2e12fc716bbc83e22b",
+          "e483491b63c67409b178ac7b26a8d29b41225d56c2837348cc8a5fa329fbc094",
+          "a8e53922462602255e2e8c64c2514894b8b1c7913ef3794a32fda232a353a9d9",
+          "35e4c871a8b9c5d8aedd490697d612aacb8b8764bcb30d5a769c4f9116394f1a",
+          "2305b5e07d95fda6d9e58cb4537199833795b0893054fe117973bec9cc25bad7",
+          "518a2ba07c9eccd9806df9ec2e316448e2f8aadfab2e67de17b682c9034a10b6",
+          "72665db57a034d5b40ab86bfd4f6f692e38b53b64ee8a3deb540d82ce2ef7eac"
+        ]
       },
       "skill": {
         "originalGeneratedSha256": "4de2d2d5bd8c0dc31b9f31df22b9d912ba9bfc871b84e6218ec124107828dc76",
@@ -130,7 +186,27 @@
           "d59b52addb3b2d753fc3b113dedb9478431c57978b63263acf6abfcbbc9bf33d"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "c75ac9db2e28671bba6f7d082be6105aa829ba817d734f85b99844f1944c35d4",
+          "12861aceb55b5330f35ac6768d41336e198dfbacdb9342f9da317a46439b176f",
+          "e8596dabccdc9b958cf7966724673d4be9c02671f7f6c05b46cc105578fe06e0",
+          "4cd0f738e79360c0f348fe29fe7cf7cd1155b61e814835baaa177fe0e729b585",
+          "2d62da18e30bccaff8228e16a12c6033ba4f92a3bbeebf12c50aebbcbe397ff7",
+          "af01b83e4133ee618e659791e66ed5a2d0f568dcc6c66081307373a4abc455a8",
+          "c646fc7b3a1ec2fc0fead1059fcab3ed75a16ff8bfb59ac43f4b1ab949761a77",
+          "d85e01bccb07036682b168a5722f2f7d413a459dbcc4fb7039e18fd38ac1e223"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "351f59b8538200a87df876bfc70dc5e1b16f0401941a9ff56f9aecf58650efc9",
+          "4366edb3f322b910d35375ee685cd9ff56a4a31f21663a4601be78ac6a4e3129",
+          "e01da9b1e04008d3e54f86782ffb8597baac617e0ee4fac53d05e870ecbda364",
+          "a228b2272cb40462cfa0b97142d1169b06ad3af73b1d048ee2cc54c83d1e8bc7",
+          "1a9b9c37f4f7e1b079d1e8597dda0b1aba9ce12098a1cfba56b593181f681d3d",
+          "c9f75d83cb42360de053061dd930f04ed12c92097adc1c1679bf14a90950549e",
+          "90110e8bb2b657f295ceea53023cfab66987684e2aef921bdb8ffcb033997bf7",
+          "221218f733842e623ea7744b374d338347c076ed23d9fa3fa542522705ff4bfa"
+        ]
       },
       "hurt": {
         "originalGeneratedSha256": "4a114805b4e62f9657fd317671c3a36e388ea3f7260776064f545f43a1a079a2",
@@ -157,7 +233,23 @@
           "dcd657d64af6c449d5f0ea9c809dad985a87fba2a5e047b4b6aa506535d46453"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "93e4094989792c70ab70c39f14f97a2c9288518883d7044d69ab724977b9b86d",
+          "50eae7d50f8c664e98c150a2a564d34b38d06c7e7cd80eeb62210db562daaaac",
+          "8c9db141d4d0a1c6ec9167998cc58ef44aa79eff797b643b5aed784eb665cb97",
+          "18b638f440924879a0588d1e91370372b6a4e86127d3b5898dc5c65679331a19",
+          "5c930eb5bb6fc4c8de624e0d01be8fc1d3c92cb65fbd7229fbf50d23be808414",
+          "7375bf6e30dd0b630770fa84d1ed74ad0016787b3500d0db632140d699c6d6a2"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "1e01b8d4accedfb0a0972d5b7ea1599375ceeedcc16260ba5a6c901e0be3e88e",
+          "031a69442ed4a6b6ffaa697f81c5bde243284eba42e1af31b873ca7c0ddf1587",
+          "53129c355305239c9112d814a2abec095a2a6111416c02be5e040a9900146667",
+          "91332ab53d729f854cac6a330fabb559bd66e7aa31a78c24a4d68d6c30ef7bb1",
+          "583e46ef9ed84cbf90516e4977e51f9d25d7996cbb70c66de2ff9392613baaef",
+          "b40fe721df648e7d23056debb73d19fab81dc0f7f0f2568e309b3d1fbea1ad30"
+        ]
       },
       "defend": {
         "originalGeneratedSha256": "d4c10efd929bfcfcd2faeebdc6348718ff903b928eff1968fa3683591d580230",
@@ -184,7 +276,23 @@
           "e566bbacd26dc247ba65124b582bcfd89a34c6c10089c854f137857bde802bec"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "feb76d1c07791ad9933988c504c6173a467f549306fed8dd7c8803020b3a3b57",
+          "f6f560c81ddd25b505a267014ecfdfcd998c505b0a205f68c22421bf69d68a32",
+          "5f69d8a30ef177744f5bebe023df3ab74509ab4ec8f97379434ec4895df2b089",
+          "e97d0e38d40629a8b96d4c34631fe2d60d2377180d22615c10e8a033c50c0188",
+          "a6f14f16b730b1b0e63da16352fa796a34500a7ad975adbe184ba7090bc7d0d9",
+          "1113f5335efcf2a7eedf5984b3128250e2682eb14d35004364e0c60ebb596b1a"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "2cac5c6e4adb4d3c99e114765040d155c5f529c2d7c7f64e80a668b9311d7aab",
+          "9bb8274dd01dde0fdeecaf4af34871f70e2fcf7176fc93b9a941b76d176e0507",
+          "c82cac042ddec33dfbdfb538f27d70b42b559c18fd2cebcfd5611d5bd2ffb9bf",
+          "31b30ae8942cd516adbd04175062db27a10e6c8b97827c9dc3fd1552f0bc3ded",
+          "392ca1b64a306d3081017a944629cbbb4d0ea535994b8e6909e2b6dc5db5efd8",
+          "0216e03c4d68ab53356c0c0822a8f842f66ed609095a59f4797907c8d5ad6d57"
+        ]
       },
       "dodge": {
         "originalGeneratedSha256": "17b2f8584b64c0de91bdf365e68762666e6e91f019199105a3a038cd43c07756",
@@ -215,7 +323,27 @@
           "91a319967ab8910a6a161316a848bd7f8b85e7ba3f94208453c373a20856ee0b"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "828bbbc0d5486fbac845177353aad26a2f623b7fe7229993ac10f4cb837312b0",
+          "dd522b591f19bd0935aa4345f256c849812db22f6ffcd9f185397c27142487f9",
+          "ae5de80bb12b1925920cf4e5bfd14f689a53da50961965768db2ed8eccc37a82",
+          "2dfc95cf89aa9fbd897c43b0aa2ff6b995c957b705cd6a6afc64e3f49b0bad8d",
+          "557276e79fdeb24118fcb16389ea7a4606e3807bb4f3a839bb5fe801f000c255",
+          "2b9920fd2fb77b72dc76653954bb7ad9f27c7ec50f6018e62795c14e949fc288",
+          "cf370a2e014d6d82b108ac0130e1e38483056e372483e3569f8dddba03ea0000",
+          "649ab2f3dee7dc1bb305c0e28762030153082665d5f2e261c6b99200d91b9d78"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "02038fc95f1b22f0656b0d21145730dbc02a1f854470553c0629ffb9332d812f",
+          "d437c77625259d4cd8fc8a919b80ad05686bf835b4ba8b6a65501b0dd5e7959b",
+          "469bb76c17ae37e0cf4139aad2385912e1ecf433de5981b72847940a74c98d28",
+          "4b6107860a5f77e51d2d09d2064b74e11851cb42a6d54f606cbb02fe8538af81",
+          "6037d7f3cf6fcd7deef537eb826d62657fd8cbf87c2ad782aad9a7ceb2203c27",
+          "fadb2cfc312e92159f79f339c582a775fcb79cedfa25bb6e9216e863788e6e84",
+          "b094559b18741b3289f5c26e42dae26339ca8b77b3c7f623905703768cc0e3e2",
+          "8288ae5f33a820c5de89963140c173b09affbf4fbd1645c67b0c21e25e1b91d6"
+        ]
       },
       "counter": {
         "originalGeneratedSha256": "ec787f4c637e71021704ae74cfdddfc9aafdd8cd24a2ab72e685530fbcb76b40",
@@ -246,7 +374,27 @@
           "0381d7ac78147207d4b4a98ee09165bd7d9d4d163d62c2b8d733555359bc40f0"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "e610c4d5eacba3b18ae0ddf1b5caefccafb3edc4eb059acbc6b5fdd3091b2d8d",
+          "07faf89428f54002fdae0826525a5b54ecbbebc5b107e3167b35f294587f0248",
+          "eeaf41b89d165a3fc0433aafdc2d0e5bacb3fe4b9240b8cc38fc28ffe76509d2",
+          "272e674dc1b454f7fc2a5e556dbd4ac5e6c5bb2f51064bd8361893cf519a9ef7",
+          "495ef8c8c657d480c816ebf868e24c38b474cca20c31ccf303330e5d5125fbe8",
+          "660ca057bee9c951e5e67bd86a1469a3b5490f7d1859fdd7d51381beb4dea95d",
+          "e463e95aef19814faf758eb6fc352570ed580529ca7d218586a2720f30e0cef2",
+          "396e693db98251f4a457983caf0f15c39b76a6401140c81590537339aa55fb12"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "f9065f28e5f8036607eae86da86adc8da7a1a77dcb0fd0f0dc16da985063606f",
+          "199b07b8f5b859cf726f32c40b78eef3cd020048a4707bae27221af4206006da",
+          "a45ed5340827dc8a1caedc3384129e0ef5fabe0bf3731887e25a20101665a32e",
+          "f408319de2b9c5e115a927210ac34ccf16e5bbf4ad5f76c17a569e2cce307029",
+          "22798103b4e0425174b771d00a5716a59586be5e1a52a25e2a2ef070169e335e",
+          "e8eec88aa59c633b8147ab021d670a71a0f3988c7472a4587241023dd2273d7c",
+          "ca213e8ab50699b13938f4949a22a53be8caaa79bc7dfd4b9dae79bc6305d3d9",
+          "25975d8f7a3792330bcb8a10ce4913d0fe997a48ef1534964647acaa41562a5a"
+        ]
       },
       "stagger": {
         "originalGeneratedSha256": "9148370dcc36229d3bbbfea2e572c36c70d20f9082f7f535c1dbae6188dae46a",
@@ -277,7 +425,27 @@
           "b404e3618d8042abb054bc9565520f6baf544ca0ecb4e8e9573fb501a841c930"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "459933641cda8053b441f79829cb7d9422726a10efcfad288459c8fc9aa70e0e",
+          "f89245de75fc4e02f7eae90d1f2555c75d0e8761fa02bf5737c4d127376f6d66",
+          "3f12f2ed7d6cfb73694bb7acba949f747d61b42ac2ad4f6d5b0a06070879482b",
+          "60e9d633517e24889f175dcfc709012d1c18a1bb7afb650bed9040310e4698cd",
+          "23e4e5443db7fc2b312d4418d22397eec055d0e1f843064083142074c7f24bed",
+          "5f614ad687d8608794ec25a860bfbd68d85cdd2b40c1d031f7b6c22133e6ceef",
+          "fb111d026befb2fda2432b34af8a5283c7d68a518acf5f3727b484f87648fc9a",
+          "439dd130bd697113662f49bb76c8389599911869980ebfc23f612f0aea4087f5"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "c59125b4267af1aa7a394a3df19e0d0c4240b6665196aadb92b99ae8b7fbb6e7",
+          "683993c54d0ad4ed290dcb6b9d9009834ceb62a5a1de1edb6ea1ae6ec3d2f88c",
+          "1a9a485121312a41b2b36cec16a83cad4707cc807dfd5bdba5cd898d1b88dd99",
+          "45071032c1c48195cb95bca073ad9cf967a8aa67716667cdc776144ee698a016",
+          "5f09398486306b682e77dfdf3b7b2666c9abca3a8e60f61068e079da58b21250",
+          "bb7a7432356c42d5cf99d8175fddd15e36419c34ed5f502fa6f8912a1c871446",
+          "1ef9cccd28cc6eb2ed2fb97a0b41be8b1e5272f18f1bdb92d00c2df9e28c2d92",
+          "973554274a06e183c2b0289e0f424aa11e0fa368906066f3d526e64a42484e87"
+        ]
       },
       "knockaway": {
         "originalGeneratedSha256": "99b742c7d69b234f09d5aaa1f28e96e0147204cc9435597f37f914c89e96389d",
@@ -308,7 +476,27 @@
           "7e1c3e80584c990c9a1901c3d3d6eb3a98612a3e74483374420c96b46220b4fd"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "128d2b0acf75dc2fa46a1a7882cba7887ff55e92368c75b53f2caea21f202135",
+          "158b78db807a7525cfa83f332ef77caf5281aa714b0f6f7f49ce53b828794de0",
+          "54bf775475589732fc0e3d6e38a038dc747937623fc201c6817fa9c44d619817",
+          "8d41a6b48fa588d188e0930d14a2572e8c5d89b703626fc083b06d7ce10d3750",
+          "8ecce848b1cf4000dab203ba44ec4113fe660cd094f4d579997c69327396802d",
+          "b9a56e52c573aca58d7898a219806a376d2ceabbbb75f2d8042a3e52ea995d5a",
+          "5d49070f9170f3a6a681d762b623a2ae6cd5a4110c0778bb2cf4c5f367990a5e",
+          "b5e0e5a45961f36f0f561efa064aa0946f9eda7e0711b7922367e83db1a0f86e"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "cfa9f14fd6d49940db866468a3973bbe75a77d571ea6f2896834265c1bc5ae8f",
+          "b1ef34d4e714f16a414fc0919730b7d044dad195e7223b9a1797fee869545b86",
+          "75611ec0994d7cbdaea5e9b13143d6e5e3198db2a59bceee119eb5ad2b51b3ab",
+          "60b4bb3ff3209616b18f16d800352a0cbfece709e54568d26cea30d1c47569ec",
+          "9f1e9ea707a1e878c4a261a456fd5f483eb36bbabaca4261b62ddefe49330f5f",
+          "f661ce86c142ec110135d81682ae33c6a651e36f95349c8f56cb66346f21f9e3",
+          "95e7c181d886e98da076c5985f500ab083c61e8def1d38aea7c236d0a6f6bd80",
+          "66999c06dd102ae502a52bd9ea42c3e02e24b9626950a98343667199fc730eec"
+        ]
       },
       "down": {
         "originalGeneratedSha256": "9c484cbab58b6149a373f909960ba166e46bc33b1e7be961530f51e391737336",
@@ -336,10 +524,30 @@
           "bb7a2cb63a020e142208a8037a8af29eb295168ab0b9f0e3d9f1e130e008bc72",
           "104520b3261b473b11d172aa281e458ab3bf3fca1577f07c41d83148ecd3f824",
           "f44b7761b0cb9b403f866d570712e00ff48d58dd1c40d69e0543738e6fc99b46",
-          "668ffeb04e0fc0b7ebe7388db4f3cd359b41a49a93780bb705cb6b318221ea5b"
+          "1f0a3f38ad9bc74418649f04f14df8b0834788d2e8617a84348e42598f03089b"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "a839b7e7ab9a7d86e63a3d036dbf9da5ff5699f012acecb6e04801aa8c371e4a",
+          "ee8acb0f53780cebebc4619e89de1e8313759b55d04b96e5a97a9ac48bc7e47f",
+          "67fbd02a0168c448eeee7320700fe68a55357a3ffadf87fa3e341f951aec8715",
+          "78fb46d1e95f24d11dba0cec345873ab86ee81f6e1641f6de505f0ab136b9104",
+          "fd6e8d8f07c860d3efc6a518dadc8c542082d9ea12657bb06027c3797d6d2823",
+          "2bf3f860d88768467ba4e12381054a61823542741056f032d88384300b6c757a",
+          "b978a3b4b8e67f6c516212d8226797fd758091b96410586d328726f7631af51f",
+          "0a8f9b693379ea1c2f531b3c6402d7696241bee0f58051372fdc8d7e1588de35"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "77afc8bd48580510bff9038ca2bd07cb19869a873b81fc0be263cdbf17eaea12",
+          "dc9dd813737d63a0ca122e304619b6444edd933d150d395d3b4d2f5a4a69a981",
+          "e1c3e1203085721ea2b2f587f8c7b9d97acc2cde0fbb285e889ce3d232aa8780",
+          "7eb5f6ad6c92a0156e27a2be41eda1e6c4d308347eb30e8cd8ba59e8937b72d6",
+          "f973dfc39e5353fb2060216877bd2c925e8486f1f708512d0f5048323f2e147b",
+          "8722653d88826e31372d68fb97badf4befa78972ca1ed94ebf95739b8b89792c",
+          "80f75f4b6e159e078315e0a01d4905420b95a59ed3bd6d558b9cded1d8722ff8",
+          "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1"
+        ]
       },
       "revive": {
         "originalGeneratedSha256": "cc1b33ec83f4375e3391520bfdab35a802d2b8616db18d035bf92feffe7b77b5",
@@ -360,7 +568,7 @@
           "3433b8b18af97858c0ebb8050d5278f196e651187db682ad297390b87f65fafa"
         ],
         "runtimeFrameRgbaSha256": [
-          "668ffeb04e0fc0b7ebe7388db4f3cd359b41a49a93780bb705cb6b318221ea5b",
+          "1f0a3f38ad9bc74418649f04f14df8b0834788d2e8617a84348e42598f03089b",
           "f23b5b9d619ee547332455f12210d9c11b1371b90e88fc76b518461aa44d204c",
           "000ea1d92a970a5f7bfb79ddd268c13a14917ffab7ae586603016e473f065aa3",
           "2016ebdaa5e0b7d0de4c7ea9383399d52f9582305d8627b70eb7612b5f303b72",
@@ -370,7 +578,27 @@
           "e19475e96aca198aa07aaaf32038294ed8678856ad222274d0f6ca8e4a135d10"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "0a8f9b693379ea1c2f531b3c6402d7696241bee0f58051372fdc8d7e1588de35",
+          "8bae46d8e98268b39ed1972b36b481068a6bbf7c94072b7227c89b4f7174b122",
+          "8b482af74e8398483352ff37be65a4fe49ed12ef40fa14476822dcaaa370557d",
+          "4c74ed56516b23f4f8f599a11a7a49818122a803a9e6185b9d8c7aa859523afa",
+          "2d092e54418c4a5af74327c72093ec1d299a0cf07e0c680a5b63ef5759eaa9aa",
+          "ac0e0ff5c90112d455c4da32c79739a849e4513e65d73889bb6ae7c5a1d593f7",
+          "c97920941f3a350d9784fa05c5fa8bf6ae378e4e291a501d8bcb6282af8fa0cb",
+          "0f9b87f924d53c855934370f3d93f713efc52ddb6258476c11fb2a92b625994e"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+          "9875bd0b50163f3bab92f435aec83f55f409acaa70d03731a2c1165cf42a7307",
+          "d84ac4221ba30f0a70a2d24332fc06bac40f8deee1a29b27958f2537d796448c",
+          "4abb16812c3cd3da173cac06a349bc3447125349cace0ae8fa6ce3ff9ab9471f",
+          "ecee537e5180497c684996c8e2019d6b521104916239d247d9331b32905d5ae2",
+          "6a4321898b29157e52de5d866aedcfc26e1d8408d13c0e0c8daf99134deaded7",
+          "a998a4b2a58a13d18d512516526a8a46f1201b3e201f5e6ca679f5d78f8142dd",
+          "870a9fd858b4abb669ab29c05ba5adebf3d0881549db681394cd98f6c309a2f7"
+        ]
       }
     },
     "back_3quarter_ne": {
@@ -399,7 +627,23 @@
           "6d5de01f10ac3d58272097f2797b10636600bceccba9f353088a69dfe3ac202f"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "a504103be4a10665d0e9f601276740a39c4cb9482f1c159215641efce0222944",
+          "40e62f82478dd9ab9c8dc8d6559fc9506e5a5ca4d6889da55361198aea39e1df",
+          "c6681ced89d1030c9d4b0b48b773b6b18ac3adb3cc14851a578afc92767b4607",
+          "e1c5b1721778931885345b77d7726b8de1dac2ce051e9ec12429ebbe8298806f",
+          "b03a6fcd7e5ff0eb63f51a9803f3247c4304f7d18dcad4ecbc647377dd53dc01",
+          "04d105e515b9ed6ce6df265465df2de3f9eaecce6eb2b8127828975b8b31c603"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "73938774917c2e832fe279a7e65709b373c4534791eae8f3fb0620697b9360a5",
+          "8c6987a1de6d9292d389303abcb892c248ebed326990d96ce0ce12ceb40283b8",
+          "f8e1f4bf55e516ec1a477338ff500a483be84f49ed11143ebe7a14c7047968cf",
+          "b89f70556070e402018867ae80e7f9e5c6dc8a72bd36ffe28c60ef7d9459cc7c",
+          "61c19f63187818f63d302d6a87fa3ffa76dcf5f49a743c8120ce17eeab8dc2ac",
+          "b0078addad55729932df5c9c16c19d95bb1a150e742b0b736969edabd2d36463"
+        ]
       },
       "walk": {
         "originalGeneratedSha256": "8d4934382246fc37851d047bfee51321a7eea20acf65bc5f68a2c06655988acf",
@@ -430,7 +674,27 @@
           "2ea75804f10e4e09f1a691846416e131982b12973b1ef0f2f7120dab1f9870b5"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "6a1f427a9a6e54463f6378bf06b481a02d9ce8a6e20e509285015cfbb661c6ce",
+          "e42d235c7148a4a17a5ce27a1755d73ac14a0a7757c61918575f1751297d1b4e",
+          "95fb9a286b269b64bd95f2a0f944e72d57047475203a728da3c4f445f5e0bf58",
+          "d7ab7d0b9f72bfb9c2fbdac605e68b1378b09c1f141b9730c21abde97c60783f",
+          "cbc04c189fe78abc885e0fa29601b3f47a34b30993f5fac5bbfc6469a714e1a7",
+          "000e547b90050fccea1459475dffa03cf5f94ca8568728d9ec91cf921958d38c",
+          "273ec8c66793d078717ed6a5efca4528348b86bf241731a3155559393112c180",
+          "c960f00fc4b0a358f4b33f11a3593fc0c4268b71e8630bc34586257ba1a573d5"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "fa93473235c02a054ab1db3b6d91c0731280c9de436d488e47f19822aa9bcfa6",
+          "4446fb13e50cb9fe256a48d4e951d6c5f35824ae86290aaf1151f1e3d84921c6",
+          "b49660219cb3db72fe1ac042c3b9428579f1c23bd5890d069b9b7ad9f80a6c8d",
+          "46fb30a12cdf91aa711c41987d66e8ff72930ccc13984ba5b0b46a7dbfb3bfda",
+          "16f4bce87048930e245c8efe4ec3671eab079277d0db9cd5ec6e373b383e62a1",
+          "4b03153ad0e410425ae1a32b383df183775d0f3cd997aec339c08f2de3cb97e2",
+          "a1cda9e7c888c66c4d26a268fc9a195b15a92d9a495cec2dd9b10e8b83484267",
+          "f0c0fab1848a5c76c2fd0d86ebdf0cc57e5b3f5d3e093ce4e51eb82bc76ac0ad"
+        ]
       },
       "attack": {
         "originalGeneratedSha256": "1176b6ba47a68f89bd1e5f8369b4bb86208153c992d2c30ca494a6665dcad38b",
@@ -461,7 +725,27 @@
           "a6b2f533e41af8774b419b384bd6a292ffb04414415191f3b9836de1e066542c"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "5aa2b5c4456cab5cab8b8b671a8d86fd16505b4cb94649f2a0855d695369cd7c",
+          "87030036f0956cbbe4cf454730eaf8405bb9d9444059b0e241ea1a3e2b1ba457",
+          "2a6b16af3bcb581bdd6e7eaef42dacb434bebc4cf5d570698f301b03cc41d550",
+          "ce77ea1e772385c1d1add2047a1019549b3a984ca8ad7797721e3cf9e59a226a",
+          "15affceb5deabdf1ad6fc05e5b0c52fa1f1a8e38e05afe2d4b9178c3f80b69c5",
+          "374a427950932ebe7747f88c339947433f2b86b2f349622ac0af83b7c351e6cd",
+          "34a35661a7b4c34f474a6bae9ec2196547e16ea6ac141b0073fee33d2739de55",
+          "0e5932c53bbf39ba7821ee8e8a715c53aaaca758b0571ebb1c6e8ec085b163e4"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "ca4174368373d2dfc292f29aa1e0861efeca276e21a672d41cc63f09c83a097f",
+          "53a73f67b3d529f3b318c069ac2607ed437ad8865f90faef7f50a80122ca3e21",
+          "17976dcb2ef45c305b38e1739c99747a8e346ab2f57414564f3982b4719a0890",
+          "6c4ac7d59b622885bfbf351a5a3fa951bfbca70cbcbcd16c209b7a67a7b2d587",
+          "01d4c56d78e01a2d838f9a2792ff42306d844b79d6582fcd7803d331d2ef1bb5",
+          "5306896bf7d76a70465bc425d1a3eea8479243a8f65f1c3143ffcc1cd644f221",
+          "8829a03b601c66423df8bd4ef22c69e0246a95be0d9ca8394537991b253076a9",
+          "1c77bbb04de4b2e4cd7744f8b8ddd1b73a0a85776cfd0edb9f91bd7ddb95e67c"
+        ]
       },
       "skill": {
         "originalGeneratedSha256": "52ca01ed5eeb40a65f725d4d2311504a32a8e67e27544f3a943a945b2a2e505c",
@@ -492,7 +776,27 @@
           "e33e09eb4ee85693ea374895a635ae561f315bc0bb6d1f867f336757c19392cd"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "d72c42bfcfbd93c7e1d8428217ecb2930a09f9a8f13e2adf988b9bbfcf2f154c",
+          "9a8b9bc4313a2b69c56d92491e9c4d308a540322d3fd3fc9d1669e4fbb111116",
+          "1f1c10231f3a1b5642336dafcd352a41095f54dd2d60c612b0c886cfc785db7a",
+          "05578bbf79ab1041197b0b6a12607cf4d5bbb5ba73b17248c6310caaf149e3e8",
+          "4988378d19de48a6bd5e819add5cf4c695b6c172a78158201c8aed9bac47eb5a",
+          "77dd034390dd711a88f6fd234202640f4c7856c093745be9c50bcffcbd03db87",
+          "f391ac265237d7c7a0e741c0ff1af769e87612102f028772570b4b8a2ef1d4b8",
+          "24bc8aeba70319dab61198ad35f113c01da65dc77c8214a61bf0fd59787b7857"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "d0f99deade90afc0f055f79ca5ac048d2561f6b339f10acdbb54d3e561c4e9e9",
+          "fae20412f2a3030a8eee54611384bb6c531e418b748dec18212a81936bc4def3",
+          "8b900f0f629871c8f314880b610907f9cd319616840b42e61c6310206fb7dbda",
+          "8df9c5b44358552f6035b1d6d47d75dcd450ae506b3e353f06022c10c179af08",
+          "4f4c763a75913d09ffb8e5f5840dcf43307dbae597cc332dc440cda1e714278f",
+          "245a84136935e4320788d20c0a57e723f63db5f28e463c278363a6964e3b84fc",
+          "545fe73d83756b1b932bc3ab37292140076103703e2f0a03eb9d6d74ae77254b",
+          "b2263e3e70e1c576fe5e54848b9f73dcf20f69e0b425bf50332cd3aea49587f6"
+        ]
       },
       "hurt": {
         "originalGeneratedSha256": "f3bfe1311d3d640d125caf233a1c4bf35f57b793adff7ac300f099429b1a6b3d",
@@ -519,7 +823,23 @@
           "86539d434159af1b86f90f00baa402f86be5ad346ffc9d109edf43f08c81f4e3"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "ff6708405a0eff23f6b3c90b943631fe74fcc9573edb1ecab73d15846fb6d8a0",
+          "c6afbf6751c9160021546ddc17378fff89010a9d0d960f26d762827057596457",
+          "7fd85d0861b1a03a6371126f14845a39f6564ba55ea8fc114a3c218e276ed273",
+          "ada07206d2933d8d946682dc6ab15c9d8832077ab714dfd56eb884f9a5e1af83",
+          "58dfa234960f4ce104229e9db1ec2897142b08b230f5d61ee4281ae96e6d1390",
+          "3053fe39e8981b1e29b325e15871b26bdfdfdecd0a60dc8523ca854d39dcc007"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "a47b0d3b22fecbdd0751b9e3b563b5f7300250a45b3a87111cc0d6552cc7dbb7",
+          "f165bad834efbedd5d6321a23db209b6b93aca81b2814c3cbbda900ee922117d",
+          "ece18077504757fc653b268612af6ee7fdd8227d14ba3791c5fc98fd4ff695ae",
+          "06133c7253d3c43a8c0493d9b7bf14318be61178418bc0ac103ed505b357e365",
+          "e68885c25643615f1a36cf59092dad09d0d6e79d96400f768ba5ce8dd853e985",
+          "98480e1719a98cd58a12d44a6ab466a480bf4dbcfb92c6bf6c0519318001ae35"
+        ]
       },
       "defend": {
         "originalGeneratedSha256": "f353b283befa175d310b6d60b55d673c67ece0d4514c6fecc622b0c145d25fab",
@@ -546,7 +866,23 @@
           "a80de27b9b4830341195619113d3add4c9d26c76d2253c1c22e8dda62415fc4e"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "a5a33d50cc9bd61d64730b62fc3b5b4525fee2ef79c5aae8b5a89f053476daa7",
+          "db8773ad397d6a94df96e89e85e758103d1ded4162fc31fcfd0426245580f5c5",
+          "d6da60ee7dbb401f9056b872a0c1a7491607f674bbc62b910cea8ff43dab2722",
+          "1bf25c3d861b0427de51433a5e4d58343d7bca57080b1ccd4cf70a28b88e43a0",
+          "9b05046e09ea58d1a3291ac6d9c2a59832a0e8d152cf952c82541fc8a60c10c9",
+          "25385c066215124e89e0e285d8e480b6ab488aef5fe87ca592e07fca9a975597"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "e7dfd85917b206429e00685274193740f5b89120ddfae1340fd4c436cfb4fc61",
+          "2bee0f5bb169d40874a0fd215b4f6803ef0ee34c72e0a5a76ff38318f34e29e5",
+          "905a8ce2227cef3bbd82f2e1f6304a22984115a03692fd8cb2842bcc0c19c196",
+          "1410073bff4ec497a2041ae495eec19b7a24d2c39e5af441aeedfc2eb251f192",
+          "7aed71fe12c610472d4a9bc86aeceda37b19c6cf7906e2eb6e0ee706cc099a25",
+          "f676af8a1f3afcb12e9b315b0f7ad2b1904615878dc89993f37547052022ab04"
+        ]
       },
       "dodge": {
         "originalGeneratedSha256": "a88eab3fd59f10f03d4b3c3d5e2ad0b0f283ce7ca7a03375c9a56f42d1ad6ae9",
@@ -577,7 +913,27 @@
           "4b72f8165c206c54b104a3a6ec0b91dea83bab04676e1df88a251c310fa218ec"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "ac8e35461ad92453cac029f607918499d4bb14f078ad488b9fdb9a12072fbd3b",
+          "e69cf4a3dba09206d40c499087eabb9b672a085c4384029f9b4d1b36a52cea25",
+          "28a67e81499b9a0ca71d9b2ff36a6939698c25bdc35ad5f5ad5026c90ec1b513",
+          "37c1255f1587bd4d3aaa6573013c07701a782611f5263bbb765e693d0dee2acc",
+          "ecf55a3e075f885e33ecf1162c1a83e03fc0c99a822e9218bb703f01cb04f3ef",
+          "ce2f9dd3e6b8749864eff675a7b40bd86e8926bae1aad0db2c93535ed826cdbf",
+          "3a5f3197b65123b6778d4b6ed9ab2adf9f66dae3e32a85687ed07e1892b9291e",
+          "a46e1c0c32ea537ef7063f4271254cec0bf063be924f12b7eb883516a244146b"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "ce5f8fe47a935c1b0ac53e4e7ab719c566ed8ec87b86c8e1582c8c7c6d280153",
+          "c75cad2e1f2d2dbdf42fe3d2825f3344bcb66981db2207560e6a8277a296bc53",
+          "5b705796aeaaf1de82e90e2d237c3378c7537f1af92c3c93e125c10429c1ccab",
+          "179b82a3fc74ac23f7e089b5386ca268d6fc07adce7d252b28646d2f5823ba7a",
+          "aa38d311c0461ff1b39bb28ef601a6a6bb8499ca02bd5f5a75d708cbad64ea7b",
+          "840f56822859855d6ab37a9994bfd48a149294837ad82c83e650f53c6a82f7cc",
+          "3cc4f98f8b0aef4a63b0e395946e4296dfa162303ea4469460ef18a6a94eec43",
+          "cd58787a2e5f66584d8fa24e432dea38e72350e5e1bd5166942a9f98de4df270"
+        ]
       },
       "counter": {
         "originalGeneratedSha256": "e0239a575d3bb4229545850f2d80e797719b0581f41f601f444b4873394ed4ed",
@@ -608,7 +964,27 @@
           "9df46d7a6f3e9ea8a0c5855fba2f1a6ec238946bc409e4449ac9c126697396e1"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "07d5f981548a1ca31d2694192629e6c805d3527e8675105da470c4c1bc489ede",
+          "08486882daf62c3d28d4a6d9f8e1a51897d41157b4b224c5d2505c5599a25d11",
+          "f3df65f5700e1de7b364fe6ec0788053cc81f3f0792410921269495a535e5830",
+          "1f45323d4b241aaa79d8a00ee83f39e9db2a80b9f90f6f45cf0254964a80f503",
+          "1daf031e280ed57a68dda39cdcba387021eaa9537848117867dce03af2c653c0",
+          "81ae9e12ebae19466ff2bbcf153c68493e4818666e25559c74a12dd37d107d6f",
+          "19075f24a42c328cac7be26336b599b3e7e0130dab66a4d471b31b913f73338c",
+          "acc79f78576065e8da5fbf5888fdcce447d95b8abbaf4175350d38a338e50696"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "770013a4ba0feb2c84e94a2bf4150d7fa913ab522a5a4dbfe62d161286240359",
+          "6de5810650432493ad5427c620b5958fed3a2674097d1424ead7ec818ee25dc9",
+          "cf633b92a0dbe0bd74cbe04db9a7219b338385a2f03eecf082a05b5990bd04c8",
+          "69cc526425a438851a017d37cd94526ecdd22e014606263cc2ac382be714b820",
+          "c41b88fad75ed26d48a378abca4df45ffcd0d468d446f13b23efb1c2973ba8e1",
+          "3fcfe833af4fdb1e701bc4eb6bb4fb6dcd15445c6a388e904ad9e7cb34b0ead9",
+          "213bc1d91ddc4f6bf2c268d88bd25413c66385f98c3dc8e7acca3be007a20a70",
+          "468b14c8577c9050cae53ef8080e6784107f4b2e6fe59b28ee2cb9c130bd3c69"
+        ]
       },
       "stagger": {
         "originalGeneratedSha256": "57205c7cdc1888b3482dd7b74e508ea64ca85af7be3f9094067e6f090ae9fd69",
@@ -639,7 +1015,27 @@
           "a620e1e83e32f8bf0933c3f8a921799e4cc71c016372c275cebd34eef5213783"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "846ed2feb6fb5bf8869accc02db5429c24b64c826e699f64d3c7edb2cec09157",
+          "cbd1d595f4ff3fe0c9b2b454bd8503f884a6dbe284f58f8aa08d8d92e143faa0",
+          "ae458357aa4b990cc1698b77778fefc03350c73bc3bc209938c9db945544ae4f",
+          "5f3e32a456469a25420b0a9996a37c50d69f0ca465d7265ca66be674d7f28054",
+          "a7d4d6dbaadbea23148d5a98f717d352cfd32cf6c8cc4b2b5ef98857e560549f",
+          "a13a0bf03ada6d9bad15354f1296d621a7ba818cf313f9d59d5de769b4f1466a",
+          "2217ab787142d3127f6fdf1e032c0f2fc1fae7ae35e66de3cbf5c968b99b2961",
+          "a198037dccb05cd4b70f914c5935d584996009bfa6bef9f62dd2bc8a2e8b80f6"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "8c1befcb6460f4b1de35d5702707024db0dd1047a45d97fd9890df061ae11d02",
+          "48d3062cb8c4de55400650f5037b589f0645826a2338ff0930ba2ead5a4eca72",
+          "13fe35cd36af351a458f70961b484b834e20304f1d56475ba057e784c00df779",
+          "e627da4cba9d07b0acbe9abf18ca5131054a6b2319d909e03757ec09bb4d8caa",
+          "40dbe0fb93a216eb5e6bf9e1aaeab3c37bb10c4ad1c7b4e28bc1e96a0c361ffb",
+          "14cee9c678d450b8802fb408a466230688a00f93e90826f6f897340a44234292",
+          "3571db37478d3591d07f010978b1fc3e7d992f5803385a3bc3ce42e1488b9911",
+          "59a5901785722e7639f6fb8c6afdf0b5d2d7c198012984ddc71a4fdba1c62b48"
+        ]
       },
       "knockaway": {
         "originalGeneratedSha256": "6f83ca9fc6aaefbc0910f67b7e53ea9b614236ec7810ffbc6156bce445634779",
@@ -670,7 +1066,27 @@
           "f0e66be5958d846cfdb77d6f3e1299a37ce521cf6daba80a8a5cf09d883c62a4"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "347209c1520f73d435c1c03a969dfd6b045e9298e3ccc7b4123b4dc06377194b",
+          "e424a692bd96d8fa52b7e41b5f67f379cc84e79957b82b399ee53fd3ecc42be3",
+          "cd3d0cf0157a8506b6c51d0f74f319c6820176fae83819efa7f6fd29a207c657",
+          "543d097a5611770b64153856d00b4ad384d2e0c117c950f5fc3f8972ff94124c",
+          "5033496bd26e1c5de50b9cf120785223bf45e80dde30eccd883f0d6e17919dc5",
+          "4f9c484a3135ba36f1b561bf3ead9af51df05cccff7468fa3046fe100af5dcde",
+          "1cd25e091f39d54e5f13ef15ac8098b314357bcfba8054ef40dc951b8a97cd49",
+          "5488f101e9c90da13c325bc80eb5f9841f04f6a458d24fcf489a1d407a059ae7"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "e67d5fc73a250c444769b92f8538b92f189dce5c1209c9b491ea8ded3b89f764",
+          "6a04acc4b8a1786d53c1038b0a645698b3fcd9a92530b19cf9dff79b0b1e3f64",
+          "d1f067e12d7f0f22134898e7bf40b946a0cf4cef1be7470f32de8b8855f1b7a7",
+          "ddd7fa510a2784d235644a59b468c32bc263f5747808e09276f32a195efb3997",
+          "010491aa0f58e919fd6c740d7b22a5ca31546ed01f76ea306e9212bc24786d7b",
+          "f1f88205d5dec4fb565caa00eabe6bad243bf1329a5aec0ec34a110334c050e8",
+          "8cf554d9815e11eb20be8f5a8675e81f77de68a0eb9c94e9bd0f1ccde6b21e4a",
+          "41421acb0044ee717e97d7ff6a8eb39e4b8bd4105622be7b10c2eb75b7c75ac7"
+        ]
       },
       "down": {
         "originalGeneratedSha256": "6545066e8adc429f36982168a75f440f591ca3a81f7e0e309458a1cba7877221",
@@ -698,10 +1114,30 @@
           "5f91d688a30716146c4a998c6b842a86fa341729710bf3be98ccc4f3e12186f6",
           "57aca24761863407b0def06cbd43cbf5cc2251fd409a19d615396406fc6c78a1",
           "513c2e65b8b576272b56a677753268b6a2611836840618d2dcdb9c515f43b1a9",
-          "ebf99261c8cecf3c16d84f2ebe1d4e277b4b995eeb40210701cb806c1e85162f"
+          "bb36b353c03f7c33c0b5e9a74c2851ccaaf5eb8f9b70b599dc3b71b677bfbca1"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "57889e576f9259760df8afaf9c19e7815d998121ef225a07955d2a3a454f02a9",
+          "6ae1f12dd50c483723c33ea01d98b4cc137195499cd59b7cbe135ef41588a50d",
+          "d7a94dc6fa5419d652d8e90ae7debcf412fb288a326dc30e8c6945840463091e",
+          "ccba06c8d7a61538b3d1f9b02ed2954578f03824da4c35c14a32d0425f1f2844",
+          "e344805813fdedb982f424a212d94d9fd5a6c1c45e7cdcdc5d8b75beedf878d7",
+          "6bcfbaadb52d42e45b0455e4f3cb114d5be38b3be5bb6c45ac3b2636be8f8d26",
+          "c81979e2ea6c62b546a54689747b38d4adada6aa86a6b78b5226cb4cb7bc9eb9",
+          "dc6f65e53445e5dc83e6a6ed6ede3de0c687771a06943818d70a4926287a1c1c"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "b6162b721b960becb4d94e1590f2358d2551a61939b4e4c2ec8048f8df598fa5",
+          "c85800ef689f084765fa34280c4a2beca55fcae34434ea7582a2f66b5c16db14",
+          "d0ef48d690200018a0e37633e011cbf7eb1143e9cff8cb2b9675adb65c4e737c",
+          "bd1fce60beb4c79b3c9d345fefedee6a854a3da3d58cb01183239a0caa8a151f",
+          "b613aa914a68665b9d6137521035f5c8cfc461893ae1808bd987fe1f774bf939",
+          "7bea636f3cac8c150a76b71bf648d2ecbff5a8e3a85efa5b4ff3505b59ca0030",
+          "ad4662bf19d83f1109031f9e050eb3052b775fc85474bd2b9e0b4db978cf3373",
+          "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4"
+        ]
       },
       "revive": {
         "originalGeneratedSha256": "0fe890fb8890fad49eaaa37360164304e64fc6096cf4ebfb44e7209aa8c93be6",
@@ -722,7 +1158,7 @@
           "9f3b027dc9b796fb7b110d0bdd1fdf6206b7f55e80b6375b0c140fa87e53cf79"
         ],
         "runtimeFrameRgbaSha256": [
-          "ebf99261c8cecf3c16d84f2ebe1d4e277b4b995eeb40210701cb806c1e85162f",
+          "bb36b353c03f7c33c0b5e9a74c2851ccaaf5eb8f9b70b599dc3b71b677bfbca1",
           "9022bccd752bd1ad0ff422b630ce82304ed4e9075a9514cf62cdaef390022f03",
           "3c7b7890ee591b6c7bc6e12dbf2a9882b3c53c5427b2f43edc37744cf2d13bce",
           "90a387c0b6db0d5570bed1cb81338f8537f991e561775b16be76b64bee21ea60",
@@ -732,8 +1168,99 @@
           "5298944702dea04a3dec796e0cb68be1769f47f56eddbc4e1cfd0f954219e7f1"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "dc6f65e53445e5dc83e6a6ed6ede3de0c687771a06943818d70a4926287a1c1c",
+          "225c8ee7fb722e1108ba02ccee5f441b919e0a8a150b482be22a123d1d6742c1",
+          "c1627f38cddf011f66e732d32769851475e06c13d4bb769753c5d938beaea9fe",
+          "0943574efbb88acf4c768074c5da8c1af524b48ed7b2e552750d5edf356370d5",
+          "ae0bbe9e5d528d726c597c62240533ef886d862497cdd406e502dfacec2f3db9",
+          "c3c9cbc6cbdbcfed9be2c665770d0723578eb3149cd24e0048be6da57b05449b",
+          "201ea7cf199c66456a54eebbaaa8a86808449b2e83ff06cece7954609b67de07",
+          "b5653cfca3a4181285dfcd8454cb0f18f8268ddb1181645cf17fe8d0ca711861"
+        ],
+        "runtimeFrameAlphaSha256": [
+          "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+          "d6c01d300ef86dff94983d7624b8fb4fc95c87ce035dcaf58372515f5f9d5d5b",
+          "60396b804686abb94658193b62dc041599f638d5c7e724e58ef0a1e26c77c0d4",
+          "7c42060a95d26ac5d2d9b83b3b3b42d6bafcea2e3a8119f49f079af8fa043f46",
+          "11bd04eb5fd349e60815037a218c9e21dafe03517d91ee4ddb1b72453da57e12",
+          "8002fc655fbcc52f04a68a5d45797ab4cd36f00acd8e9cf81560d1b73ff1f941",
+          "10f4716c58fba58c7a0dc6da61435c7f74340a61199e32838d30d58d033666f5",
+          "f2d140e39326a4e51bd528ce962225ff54fdf1053b7cf46467c7bee2f06c6ab1"
+        ]
       }
     }
+  },
+  "koHoldEyeRepair": {
+    "tool": "repair_emberhorn_ko_eyes.py",
+    "scope": "down-8 face interior RGB only; exact byte copy to same-view revive-1",
+    "bodyAndSilhouetteChanged": false,
+    "alphaChanged": false,
+    "mouthChanged": false,
+    "expression": "clear spiral/unfocused KO eye; no X eye",
+    "views": [
+      {
+        "view": "front_3quarter_sw",
+        "eyeBox": [
+          91,
+          214,
+          99,
+          222
+        ],
+        "changedVisiblePixels": 72,
+        "changedBbox": [
+          91,
+          214,
+          100,
+          223
+        ],
+        "alphaSha256Before": "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+        "alphaSha256After": "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+        "alphaExact": true,
+        "noXEye": true,
+        "noSmileEdit": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "eyeBox": [
+          160,
+          209,
+          168,
+          217
+        ],
+        "changedVisiblePixels": 74,
+        "changedBbox": [
+          160,
+          209,
+          169,
+          218
+        ],
+        "alphaSha256Before": "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+        "alphaSha256After": "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+        "alphaExact": true,
+        "noXEye": true,
+        "noSmileEdit": true
+      }
+    ]
+  },
+  "temporalReview": {
+    "schemaVersion": 1,
+    "formId": "emberhorn_ash_fire6_wind4",
+    "status": "passed",
+    "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+    "baseline": "current HEAD battle180; no despill",
+    "actions": {
+      "attack": "anticipation, contact and recovery remain ordered",
+      "skill": "wind-up, effect beat and recovery remain ordered",
+      "counter": "reaction, return strike and recovery remain ordered",
+      "knockaway": "launch, travel and terminal fall remain continuous",
+      "down": "loss of balance, fall and stable KO hold remain continuous",
+      "revive": "starts from the exact same-view KO hold and rises cleanly"
+    },
+    "repairs": [
+      "localized opaque face-interior RGB spiral eye on down-8",
+      "same-view repaired down-8 is copied byte-for-byte to revive-1"
+    ]
   }
 }

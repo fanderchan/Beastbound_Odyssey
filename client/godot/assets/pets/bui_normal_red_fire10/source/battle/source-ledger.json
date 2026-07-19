@@ -1,0 +1,697 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "legacy_in_place",
+  "formId": "bui_normal_red_fire10",
+  "kind": "pet",
+  "generator": "OpenAI built-in image generation",
+  "sourceOrigin": "existing tracked legacy Bui production archive and runtime frames",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "replacementPath": "regenerate through the tracked Bui identity lock and formal pet-art pipeline",
+  "fullSourceValidationRequiredBeforeNewArtInstall": true,
+  "repositoryPolicy": "Legacy runtime frames remain tracked; this repair records hashes without claiming unavailable full 512px source coverage.",
+  "repair": {
+    "tool": "repair_legacy_bui_continuity.py",
+    "creativeChange": false,
+    "contract": "same-view down-8 is byte-copied to revive-1; all down frames remain unchanged",
+    "continuityEvidence": [
+      {
+        "view": "front_3quarter_sw",
+        "downFrame": "views/front_3quarter_sw/down/down-8.png",
+        "reviveFrame": "views/front_3quarter_sw/revive/revive-1.png",
+        "fileSha256": "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af",
+        "decodedRgbaSha256": "28b74b64efb00546cd7f2fa227a156c5d31396c86a56bda391a5a33fa049fb57",
+        "previousReviveFileSha256": "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af",
+        "downFrameUnchanged": true,
+        "fileContentExact": true,
+        "decodedRgbaExact": true,
+        "gif": "qa/battle/continuity/front_3quarter_sw/revive.gif",
+        "gifSha256": "f0c9f2864ce718873334bb0c11c683293b237e13fd351c308d51cde934cbffec",
+        "contactSheet": "qa/battle/continuity/front_3quarter_sw/revive-contact.png",
+        "contactSheetSha256": "b291dd9373f5072f8734caa383e361073b5bfe981eed08ce997e859085a35539"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "downFrame": "views/back_3quarter_ne/down/down-8.png",
+        "reviveFrame": "views/back_3quarter_ne/revive/revive-1.png",
+        "fileSha256": "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953",
+        "decodedRgbaSha256": "9c64a146733d3a422cce5bbe7d2a15d810212387f9b5a86d1b18555e2670bad4",
+        "previousReviveFileSha256": "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953",
+        "downFrameUnchanged": true,
+        "fileContentExact": true,
+        "decodedRgbaExact": true,
+        "gif": "qa/battle/continuity/back_3quarter_ne/revive.gif",
+        "gifSha256": "99c1ead192b38b266a2ad7c5b2e432930f7f6b9cd10d39a4cfeff999737a59ed",
+        "contactSheet": "qa/battle/continuity/back_3quarter_ne/revive-contact.png",
+        "contactSheetSha256": "ea581a826799455e1a85329136219c13ac6e649dc595c7df9a81416f351daead"
+      }
+    ]
+  },
+  "actions": {
+    "front_3quarter_sw": {
+      "idle": {
+        "frameCount": 6,
+        "fps": 8,
+        "loop": true,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "0a19f04f9441af2219327a4116257ba1f7b0667e205a1db348b73b98c044c47c",
+          "c3511a81094cdd05f3947dce2f058611f90a01184f90580cd2374f963736ac1c",
+          "b59e0f5c933ededfa2b95151e0f40c365a885bebf2c3b5c8793df8c5ce7a3a2f",
+          "d2dd39d14241f6df24cba47db0ab53500220cd5e095a808837d74df71a469209",
+          "e197480395f3b75414979b68d532249f115d767950d45dc280e825c1ddda4475",
+          "407cf191f127abc133eb8c28bdccb490b1eecc3fad0091e94dd415880205139e"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "ef596ef491a5531115f236327da4bf1b5d39b5c405c9d53390c0caf56b78e84a",
+          "83931ddf5b34c413a84770c5ad77fb1180e28f70bea2de139e24778c89cda8c9",
+          "32dfc0820efd9605e83a24687ce3a51c82d39a4d6e59301a59bea7b0415c44be",
+          "1e627af833161005357305bbb35ecc49bdc0d7d9dc235961aa0fe127e0438a73",
+          "a0ec03ecc2e6382e84ce6714fa627a66df136b910b7e9d64d1adf4c4b4e3f8e7",
+          "ce140f0e353c855c183d127a92e37582a09cb6ba3bce1725f35061b07b30c5ab"
+        ]
+      },
+      "walk": {
+        "frameCount": 8,
+        "fps": 11,
+        "loop": true,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "2f7e443ba28dbd3a3c3e45d670190ad9af27a8a714655fb9fedfc4528eb77810",
+          "5828026a7ffb3fb34927169e59250db5dfbb3fff21a72b69091408e78898a97b",
+          "ccc52c2ee786694b6fd73693efab7246c6842bc4d1fc486b62b1917b63d40753",
+          "8358338f81cfc908f956528d1bc7790314374d6e1c61c9ad5db4bbee799adc94",
+          "7d44992b1c96ec57b052fb2cdf9b797fb3c0e074bdcc2e9cb4f24e1504daaa42",
+          "485be7442037d3f140693dab1212a7e06694a1a1f508f729c871d9fe178c1249",
+          "bacf8e061c12854b7533df7621e6d8ae13680025c25c7f40e8e7e6278ccc897d",
+          "71019965de1c6d42accddf5c0098f8e4a9dcd00627b7f2b48b58823a7bf1158a"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "56de2eeee6f6cbb02b9b3f62c505c2fce76a3fa90315bee83dfeea3934e0b1a3",
+          "fddea75f89f34feeeb2053d1e8ed6be5b0803f60e5a78bbbb65984e9dff1203a",
+          "b1322c5cfdda3ebf795458de64de68a6ef77a757f4381d792a636f214612ba4f",
+          "6a33a956e14d6d60ac011a6230381c384d42e28e13bacb66e36484ee0312ba68",
+          "b0ad08512f03c9476d1a8bfdc2432c6cd2c0e7255f5ee966ae5d9858bf54add4",
+          "0e794da07305ba5e3a5d610a905d9b1916550cc3f7eede96c480abad48ba73f0",
+          "408fdc4711799383500e6513ab2961ab7b54ccb399b2d7474d7c55586906441c",
+          "4e382dd675e05e22b5848fb9f23ffd730cc4ca46712b225e25edc636f90cb7ad"
+        ]
+      },
+      "attack": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "e06ef60f53a786e41937c01fe8b6d2bab8e07541504359daa0876f0230fb162a",
+          "e897117a78549caac11a14fcd9183fc813371f5ee1d2fa2b1b2e86bb29ac59dd",
+          "0c6957636a6c43171679df855d1a97cdede2343d8cd2e2d47a564fbd43dbb914",
+          "092cfa514d57c02c4c7ecdccd4e6de59428cc06f6e2ddd8a7619d3a0e41bcacb",
+          "0e7125b162e3dadaa97c047b83936ec36a95a0b14c2e0c48a9d885ccc6f704d4",
+          "7dc92e1c75232ce2a67ef4287a202ee29810cba3de047adf819b4727fd1e3b59",
+          "3f602dc6ed332dd0d4c735361d5965eff7a28642ec44f80fe8b9fd10cc398398",
+          "c70f55298911c93d810fad531cf4e0f804b3293407d73e3109ad6f7780faa25c"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "8e0fb7a8c044b0e120bd7f0050203994f5d50b4792b29d8ff6ce1e636331e642",
+          "19a46ddc50a193ee1cce2c05856aca5cd96d9e79da86e06c7682f47cd3e4d3a2",
+          "980afb217831aea0a5bfa3966988650077eb41953dfdb012fd059008aaceb733",
+          "392e929c989316def7d98da54d9957f4260a1d91344d4633a3565daab7408086",
+          "1dba6fb7bc364fc1de60955bb88ee02d83033eef8afd80928e4465286dfd1333",
+          "661eaeaa7714bc590c07c516cc7349f6f2782f429c400274d99bedb6348bbb9b",
+          "b2c4b7c1a1afef9d5736f4f0ca67e3452ccd6dcf0e80cc6dc33b852901de9799",
+          "b325c2d621fcbae17cd6944ab7cc93838f90a23bc00069f80592626536a2dab3"
+        ]
+      },
+      "skill": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "321e58e5244aba4c28599cbb7448abb71c4f81a0c2ab3e878e2815de65d59fd7",
+          "6696769b0408ff00b881b0e08935a3c26e8e6b6cfe78a3047836b00a2e2c902c",
+          "a6a3fad8cb771bc3875afc2721bb986de7b2e05ad9b23785bda0c32b7a752bd3",
+          "07e35e8dec5da64e3cdad3370fc5bba8775744b208e6fd2044754073e9296b83",
+          "b796a0bd18dcfadfccf4d74413023b4a770fc408a23045aa06c09cf22f1f658f",
+          "399b7195bcf7aaf1935f0966a5630acfab39a7eda218556782fd74ed1aacc3d6",
+          "27288b84b31ccfff6793f6127a72aafd818965761aea1e89dffb31582f44c281",
+          "edf29bc30d5e96609aa1fc69cfe30d4fc7240a91aa2aab4042fe34f92083990a"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "9dc47ad934b5f815991fc615256e063a4884c0cabc9fe3b86c2f82b7e32999b9",
+          "bba8f6fd8eee43ec5cdacd6295563a1cb8e76b841735d57e66dc496ab818995e",
+          "8bb8caf561299462ad9c2c3ed17a6838f9c1fdf51c4967d7e8e8cfb715f357a0",
+          "228015d0ed407520ad8478482bc5d27b155f82838c5b325b16ac207d914c7cb0",
+          "c34ce4930f7b312bb804a176d6321f1254f78b5e66439731d48a71d2cd6a8416",
+          "3e8115aac4f3602ea63d99567516bcd09bb888c1cdbc42e70992aa32223453db",
+          "096c69e6a72ef5df5f55d928a889d8164ad3a4eeacdba13375d4e0b50e19a2da",
+          "d0fed8a46132c46d90b61e1050304c9f7d0d24d8b06b1234711852fa64eca1cd"
+        ]
+      },
+      "hurt": {
+        "frameCount": 6,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "3fd216320831f1ba0af826282ed41b25e404ddb3c4e3ebf2fab92fbfe07e5d30",
+          "2ad13e42fd029016aee58d972ef07709326c455e65085d985b63f5d91b7580f2",
+          "e7a7cb6a5b5460d3c6d5d0c4e38c70bbced9d1e4616a664774d000337e4b949a",
+          "82e1a23d90cf68df3d26cc5ef005b04f5f6355a0b1130bacff582f96555178c7",
+          "298fc8c93f6783c0129d00c314659df9454f797017e30a73f76328b1566724b3",
+          "5dd17eadc54579251d159503afe136611b9fb41385e9d70ac98ca275b542ab27"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "32d18cf7601750919a500047544233ea32c1bc1e2e4eefd7ac07257e4cc8c1a8",
+          "aed216e172b65b65e8084d36dfef0d226c54aa2ee07c8d78a5e8c69cecb8f9f8",
+          "04f033e7f9fb527e702b1ab4a91c10c1e31ef70b08dc7e96407ebb3d59367955",
+          "6cb88fef32ab6bbcbeb397856427b0c66939bc6a6341f66a2dc69ff77852a583",
+          "d17eef6ed2c260a9ef4b05d5aad17c23be230dfda716b88862359dc0e12b20de",
+          "7c62f0f5c88ad5bc1796ece2b4cd2b13b31a786b5222d4d3cffc072e4d10cfbc"
+        ]
+      },
+      "defend": {
+        "frameCount": 6,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "6ceae7b3d12e462cbe2852ae7808ddca680331b21aabd691ffaf986b462bce58",
+          "303f7780d42b6b9512bcebd18a2d8cd085357a05b341a1181fd119c783f1c1cf",
+          "1d4af19f0d75c0300d4e00698f47f8f6a7752eb4ebe1a763c19b894613863b9d",
+          "bde732bd617460147355e159a0ee87f3a5a0d3bfce4252958cdd564a09f6dcc7",
+          "07d57f6a13d72c2e596912636c7bd044f49297ab9d9420f9261289e03edd3350",
+          "c8c69f8a3dad58b6b7125e486d2a85de9e491d1b9cf1c22724b1ae42f7cecd59"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "b5dc7b3a6af813d07a82b3cbf36ffaa6b730a134f62d969bdf4c3eadf9442be6",
+          "b17aa7e4e49d4dc611475f608550adb88252fd3b79ad1373b9db05ccf7ad1cd5",
+          "31344bc5ebc0134a2cfc3ef931c093491cd4b8a49b6825231f76b9624e2eb7a4",
+          "e950958e9eccd0dfc49790b1fe29d852d7a55b32664f2510e7477072ac8232e6",
+          "0302b1a63c1d0515f2179e19fdb842eb4293feb564c017c9852ca247f09fce2f",
+          "8570d50f9bbd8359fc8d84c33d65bfa2fb0c89f257a2020a5d02c95a99475898"
+        ]
+      },
+      "dodge": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "f427c14009aa08c33bc52ca554a8e76246147945ec15192072565eab0064f8cc",
+          "744de48c9f20a309a7db89308ee6b0472e180560f9b153132e54f6e00376b753",
+          "94598f2bff0ef3ecb111f197e9107e0d073b246297cb00d38a0d26b722c00c91",
+          "6b3123d4c89cf8b763e5b5b684f1f6f42ce67aaad642cff0292f5b39ca77c58a",
+          "02b089d45b6a64d5404653d17ce2487bf52bf0445ebbda8fe4059289fd8038c3",
+          "01232253af9fa49eabdb666bc8fa6527485225267862a1c90bc0533ec87589d1",
+          "6b8ed9a1fa4e8693edc1efe153a30c5735f604518be515b0b3c9e2d89b1b8cdb",
+          "0a0624b59f844ea5aee7d7d82e9928f858086cc04e93b67b0fc12cea762c98e6"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "c82e24f9758aa1de2b752337f8e9b53b61b2f933c1bd9616c7de2bab161e2b38",
+          "18eec2654d9247361c1ccff1394f600cd8877edb82ff295bb4b7b2ea74333bcf",
+          "9c885dc03dd9cc10b9fb648192ccdaa53860ae2a3562e02c6c15e7c1058c6c37",
+          "9bfd1dddcef30c4765bcb1a49cef84804ce81e1ae403f01df78104792ac7e600",
+          "ef188556437223f61e963c7b69b4f50ab4c4188106ec12da959989b73a5a9365",
+          "816cd7a32c1bd18f1e827e17dc1d7a3c98c13279d0cd282a9155d55af7fef8f4",
+          "81f1d8f585a348213b53742de84b58be5f9609bdd8190ea18f4e3d6e6c870296",
+          "65437928d21fcf950724b1e54d2cb1508a63cf51b65397e959c59f3a38096ecd"
+        ]
+      },
+      "counter": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "e0caf05ad9a0d2f6df19a7fdd145ec4ed936a2187e2e803a9c2f53998f562289",
+          "378f409b2d25ccaeaa7740c9e0191b14796f47eb99b70c49f6908d6d7e317f00",
+          "946ecc006a6f09aba6937eb6f8be8cb429f79cea212de1f3e2380164c65a38d1",
+          "57892da5208771e8be4098e377b6721c06f101390de78db85170070919bd0d44",
+          "1eef53b7428a26337e2219e4cde9f2e79f39f5d649c051b0bb9a526afaf50b2f",
+          "0cb1c1b0b9c40d147b9887e514e12301d494825bc8505c044b1f28d2d0e2f2cd",
+          "5efc1f66e9fe6e81705c67f8ea52fb0132c75e42a393520a4dcb56e7067fa0b2",
+          "32250f3b752943eb6ba7123feea281420ad2447a655bfce626e8f8f1f537bdc4"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "1743a545360efb8abcd12d4cad17a7e68a915ded870ffa1859d5b48559ae4595",
+          "36e01494ff9787e734fca02b5bb024310454ec4b11233f93d5ec68e41c7fac62",
+          "814defa8a7410da19c98ff518628acddc7ab44f02694eda851592ffc33ba3a8e",
+          "b59f6e344003ef397f84c17e7d8a04b57025de7a885bc96702ad7e88973be997",
+          "db22afc973dd3e676a8b5e88af610194133fa82880778d59c783cd30df72141d",
+          "eec2ca57fabd7ceb51a478b48c281fedd1f7ac508f048f1f2e353739830f0424",
+          "104b09c0d1c62d1ef70f6414207432bdda183998e648d59de48b0e7ae26e7eac",
+          "f2222977923c007c7e522d219b8a19f1f25068a2407b0e1eeb45477fce6f38ce"
+        ]
+      },
+      "stagger": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "d6c1b5cb4699144a990fefd0aba2f1be540ec00cf0ad4b3455710e6e2d641e23",
+          "49fba47c2b11a4f3b957cd81a1e09152b2a886e7e92888a9bc0efb1f9d297fd6",
+          "b3f89dfe20d3235410281838c64243408ba6511fe74d7d942e00f6e1f0fad580",
+          "ca41cf413a1f341814b0a01b522678ad118dfe9a83442f9bfa2c999a488f2fa8",
+          "17ea2420d0dc37f856e12cc259d8a2f2a3e502a1d846c4dd4016323bfc227c12",
+          "2842535eb94f4864f3e0c4328db6e912273ca0bcc6dec100dcb378fa37d0bbc5",
+          "dc0793a4e868d2f44144593e2380313ffb1ebf132db0a67b58034c607fe2a3ce",
+          "66e76568049d37aa5279250c58005b535f1502b597b0fa9df26f6e70f5fb5730"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "787bef0fefe8ac09f460c01fbda3e2202b9dbe2841ac6710e68f4ca0b4fc797d",
+          "01d8053a75deaa0a96342f5ea02065c56ca8ff26b4a317ddea60fd4a0f2d9187",
+          "349f5d5a4f0c50719df43e3aa814385e2c94072e558a3ecf2d0b03cf6c0ff6eb",
+          "6c90629e8667c0347d4db9563ba08b8f1e8ea22b1fe6b3a51db704773d54bd15",
+          "7653a748a0bf174901f711dbf6cede29374d39f59739ba4d248f5fb8a41fb4d2",
+          "3c8a87c4b366c1f126be92bcdf284ef3ba14b63b079756387c072c2b872b6a01",
+          "b19066674fbbc93d0a03742fd086f93a57dc66707cf5283d2255ad352f9b55ca",
+          "d049eeb0c90dc9f7559b2c67ed0a9a8b6dfef7edcac1b6e305cc4038d4310da6"
+        ]
+      },
+      "knockaway": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "35a2f090d6224fc8a34a4f9a0acc943b36bf980b5844930d3bbc74f9c0f4135c",
+          "ff6d6369e1a9c46d862301ac79ad4e3743012f92bc0b2ce0e570a8baa3b33fa7",
+          "d4f405e75229d40f9bf10c16a4f1eac91f14600520b4a74c58c38c522a2cbde2",
+          "e0c982a7bf055e25dd645547481928da76f8e2eec99fbd4ba1429140bee30cb6",
+          "732c691c06d9ad04420d0b268e12f423bd5b432909d687cc47f10a21cae5b15e",
+          "f9004b4645049930c24e9d967f900c2fab9521a73c28f03142cfad724226f5df",
+          "9e94afecdef4aadb20e15c519b933fc70cc82851de39a69f0723bf86937288bf",
+          "e44c59371d2b540b0162dc8f5878caea9bf3694b9f43ed91db082ac94794bf83"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "debaf76129133e76211d6909d085c42a4afd82956a5983b28332b0a60ee1bdf3",
+          "4d66a1cd8316f60ef00a6bcd4619558c115302dd7c52529f7d675f6ba9d990c5",
+          "ae665fa06995643b0b79539cf0631e9d338dd6d087951d97912cc0e0eed4044f",
+          "cc7419449cd22dc00e50cc8a20ee2b563f3df80654a45de31389d794771dcaeb",
+          "528559240ddc99e1da8da2ab841db88aef53856f50396904d99d9971cb709c64",
+          "564812de5b51b03243903e16798902352f6a0dc93a21de24f8391a874cebda9d",
+          "b9ce41d7ba2da17caee8802914b47d0a422d1e69f137af3aeecdd076cb3954e9",
+          "19f233adeded232e24b5514a331a140edbf77d554e795940876137fc22cb128d"
+        ]
+      },
+      "down": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "73883b232cef5dd060c91e04db2c41c6a49e3f424c17f4d2d0856e4c25f0cc6d",
+          "1517b9fe4c4d9dde44fe11165c77376fbf2fe5c55f83fc6ec3867e4675f9f554",
+          "565c28ee0a0478f50c9468e222fc20078499071d0f3f39bd514fe2fd6af5b7eb",
+          "2707339922f3b7b95bd788d9f07fe6ce00746807c20a1cc6c71cfbb6360b7b72",
+          "cf97bdfb39e495a1c7dbc73acf9c6191d706d9b9f82e33448f2ffe808745eb7a",
+          "c9d3adebbbfae6deec1fe89817da78b9a5a8c52edc0f18398de1b7946246ef8e",
+          "1f3c1ae1a41b6f1f0f4b3e2ec04110843cfe6fe42779a49458d946324dc1afb2",
+          "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "62f22dd0af6b7c4c6a1bbdcbc6151f5ad5094c03499b3ecc1899d3864eaed446",
+          "509ad8edc4ecd599d75964e2360d337594f816960aad3ca836b9959d3e663e96",
+          "323e9a8d611ba8888db7bdb1a047d74f15dabfcbaae8e962a7eb1186f510f2c7",
+          "68fd5be6375c1112bd25418a2651ae6cdd81e5d51a9cb1c9d41cdbd0669d627b",
+          "85fe2c1b8519f84a2ced6f531496056f99feb7b0b0e006c552b0d41a5a3d2542",
+          "76c0537ca946b0b303f019f9c76e02fa22fc5423aacb837cd2150a256ad33787",
+          "e21e53383e2c33525cac7f68ca020641513931d702ac60635c2d81230a8665bf",
+          "28b74b64efb00546cd7f2fa227a156c5d31396c86a56bda391a5a33fa049fb57"
+        ]
+      },
+      "revive": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af",
+          "f87327cc99b4f1608da99a2b394b021b695c554ab01d236bfc3f8aa820890847",
+          "3c05d7e396826e00f7bf60c2c741b7acbe59df8ffe16aa7229d66d196855d0b1",
+          "715ceeafc8a9c40127542a1a0c8f4d177ee08aa3a390bd2524088ca53722eb39",
+          "325f95482c71775de0590366da2a8630b03f5dea44811ed71ca700a047aba5b0",
+          "a8272458a9ec138e8e0fa85706190940d18d9b81b81d920cc8b00ab8b52d9513",
+          "57e23df16003b91de7122157988fb8e832a96c3fca5247e7ac2643be0241bbd7",
+          "f301b7d178516dd76bce40dc87dc75fdbeaf82252f17ca3312f9ccb08b4ab712"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "28b74b64efb00546cd7f2fa227a156c5d31396c86a56bda391a5a33fa049fb57",
+          "e93754600cf62415b68db766dadbb47ae9cab0c38c9181c075550e24f9880765",
+          "ea7f35840e2255ac2df5de6bf06a935bf90fd8304afb1cd87f2d8d141cde3348",
+          "d9ae09c33b5dde1749ec2d9392bf61571026bedadfa15e4387ee19dca1010f95",
+          "e9fcdbf0f72548b1d09f326e668d2160da8af11f3b2d55969460e24e75c0f0a9",
+          "5832027af16c800803f5c75a9526de0473d71824bc5bff91943994d57a64b2cf",
+          "ee9be282900ea620afe4196761dc9beeb6d77cb75e0b32a4119e2d2e79a517b3",
+          "995785ccf05d2953ff68fc95a5823f4edfaa6287af627220674538d0c893edf4"
+        ]
+      }
+    },
+    "back_3quarter_ne": {
+      "idle": {
+        "frameCount": 6,
+        "fps": 8,
+        "loop": true,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "934a70330a6e194c4d979d50be83d640ae60caec5d9e20d794fab2a175665d69",
+          "5a2e8c0c7f2d1f8a6a609413e08b4cfab784d6990fe9433fb4120d8e447bc341",
+          "f6a21ba1ed8c695959a1a1aaf516d345e9ca4ba09f16ad51650907b14091b95d",
+          "28a66a9eab5e7cd493b6f8a6cbd0993111425cddf2d16ba83cc984d6d9ba7904",
+          "11e28f72360d5a1759dbbd89dd29eec3f3da8598ca40ac0d2bc32f9c5f9d0534",
+          "f91947190c0b80afa4f8e75305c69b7fdace9f19fab0113b3e0b3afe8d4c49bf"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "2ad0f7c9e3d95ed3921459fe508c94a1888a1a560a8fa727cec6b2c64fe8a53d",
+          "167cf29967c8dcda743c1d1ae38299b0299da851ba87e349437ae3f8ea4ab539",
+          "3e35c681707ba55b8b2fc7b9e810c14cb15a2ac5d6a0b1c811ae83c7a1d5dcf4",
+          "8e0438ff602f4a554731546b476a492db6da85c0af2bc424e7a92597f49e0992",
+          "5216106599a26d260eea12246ae9b6b4a0bd012fec51612cc781a6ad5e71a305",
+          "555e116dd6e2efb8509d24fad5aa57a491171cfb232fdbcd324df6cd528529bc"
+        ]
+      },
+      "walk": {
+        "frameCount": 8,
+        "fps": 11,
+        "loop": true,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "6d8d03eb49ec4e340bad0946f0a984f14ac7238d9ead9eba0d51114a7b8ccf6e",
+          "610fe64fe0502bdae766c7ad5c2f0ba8e73f5a4016cff7a8ef99c5c113bc23fe",
+          "71ece84a73eebb95da1c083eb2da5db1836e8013398f8fc52ee1996e62cf4cc1",
+          "69c6f151648b1394712bc438af26d4d2e0a75452bc86a17f1df57c055eff5d11",
+          "9c68e1df3e4add15a8491a8a0c0b7f8ef0cdb10ecc0511e0d94cd253d0cd5873",
+          "bb1eec3925b328ec1774bc96f29669f668605e3ed3d4efcd9325a7dbe001fdc3",
+          "f0661b7e7ca956a13070f46643a476aa63b8cd107eea196c60003adeb100b02b",
+          "7e7425680c1b94ead653b9ec9c8d74141c9a7fff8363182de6c4c163397072e9"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "b69a374eaa919edc55c5f54afbf55f54af674c96c312b4fc9b117cde4cf8efc2",
+          "ba062b2466a0b8541015354fd09d9f3d4bbfd29a3f578c593f03e479e2e47ba1",
+          "aca81422799f185ebe86e319421ef69fc4b74ace1293e689f3c54f63cfa51744",
+          "1c984d57666c01125f2dbdc51c6c6d07b9530ee4533b3b3042eb746ae312b80f",
+          "a254b9aa228cd0af9c4df0bccf6c4c9a5bdc8215e7b46748a54d9eedda05b874",
+          "9974b161a73ae9f78fa287d58d445d4b7e6ed6f79be9238db996f61081053ae8",
+          "265375203577bb9ccde602f6a9a39293b80f4514a93ed82799f5f9fee6457269",
+          "8ba22127ce198b031ee27df1a5b6093d3bc02b0b4cecaad489b422cb682784a0"
+        ]
+      },
+      "attack": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "a1ad9fdd271ebca710816fee956ce3a189955468ab06c9b725e9c89745355d65",
+          "375211675f67399f3fa9f440e0979ae5810d546e3a661f0efad6fba5d28f2890",
+          "f92ee6439a1d8ebf80e79d019b0b24a44790105ce792719e4b2c4cac7a2b85fc",
+          "587b5ae799c20ed6eba93cb763f139e2b8cfad01d16ed7cfc0a25f27579bc3ad",
+          "f50eefc8220b277d1407b3a1740d14dc391814a7a8634f8189cbdbffb585cb1b",
+          "a8108cc0ad2e884017a82cb817010815c30baf40b3d816f79905e9644fc35c74",
+          "fe43e8100c4e7b7779b0a735e41e2b365f420ac0f8f54a838769c5c3ac641f50",
+          "ed8ec8696065d11ef8aef393977aa03ba0276951cc296be6a7d2bc471bb59885"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "60800f09ea0df883dcda913477b2d0f1c64dcc48feec12d863699266d9c0d4b2",
+          "a8dcd6804a02679f452e725fa0b786f1e847a426940bdae54f0abbe7f75a5bb5",
+          "02b78876bf4e448fddc53d51cfcb871d3d5bfbf5508bb8397073280c964e4a6b",
+          "b759eb1ed460b2ba3172f649a2fb4335463911e4e9761492138ad49cfef716b2",
+          "bffc512d1d4bab1a37c7930d21a0b1165808bb2d1329529403538c3824d4ad81",
+          "50f284898c6ea15b918a31926a5c90f4fbd75e9ad3d87a797444467e5247061f",
+          "041b05936dcfafd72047ff3324d492498317bc415629a353c0082a83bfe230ac",
+          "3e0272ada0a22a792b4bd6fb3444e3e49c76a47777cf9c233e8027a23bf082db"
+        ]
+      },
+      "skill": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "6fba24bc5ee3e2a47ee37656de11dca2766b7d8cac525224d5ef33b9d57b7d3d",
+          "526ff0d7db33e6fb5d6faf7bdd58add44b39fc00ed4a1216944d0f6ab676fffc",
+          "b740c5724e0a9e9bf59b63a8a06b35b0c76484253e5c07390d2019868524cace",
+          "5c81934d4036235988673d312a3bde13b818c4bd3d47d969b49c6c4eb8137772",
+          "76995b75bb9ab61d29226418e17dc65c874a74d73ce88083683040fc0a1f7da3",
+          "e2a5a2a25f1a40674ac066c866cf6788f9b783ffc12ea3f8b63fc78fa560bb62",
+          "f5b1241a791fe24da65c0dda10c72788110eed47e33e7d86f41b1ef974e5096f",
+          "a5713a33269fcf4bf3ac5b7573b4c215b4854c1cc068585780e1b36c07daea39"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "b19ed7f60617559aefbad5d34904876a3d7de174c75c00361d961846d085b5be",
+          "8237212c153aeb1e3f1d103bb47015ad759e7f0067f8b6d2ac1995768bebd4e7",
+          "91279bc18e3af23c66037106b85a88212f24f761985c5890702b6b1ab4eefa84",
+          "07d93063642bfb5b5a272d63c515a8f55e66b30134b87fb26d06f5b3af8cb195",
+          "b983c85a248eddbb96c85c29142bc035d00d0d2a4dc9e7e060c54d91b5f88a1c",
+          "a393537362fade6a0074a37f8ddea7760f760032f033fce57fe51d6c698172f6",
+          "e59b5128318dd2f0cf19fc641ed46308a8cf92e77df405e469b68ffa45599bbe",
+          "76b203e8efab8b3d34e0f9041e055c11fedf063b094b2352bf74ef78effb455a"
+        ]
+      },
+      "hurt": {
+        "frameCount": 6,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "266551eaec3368943060cd3d1997f69c8fc52443f1cd98c6e60f7d023e434d03",
+          "72cb93ef95611d6b9e39999fb56739ede251aea5a6842ab492dde6d7b509d017",
+          "66db1aa87555cc811dd17faed1ac5f7a6874a36f1b4cdc6a4ee1cb71ec82be20",
+          "a3a3994df35dbe691788804fcb44fd53a5ae94724489f376e08a0fc4a44f23f0",
+          "5f1735ab36291819793b510f2959df79fba7f54465d7631f977cb11984a4d394",
+          "61dded0b55749879894b26dcf85bcd8ee3877e8f700efc2c735407850ba17517"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "6349029d0bb8da8d5edbbf302ffbc5cf8f6954b0c0d55cb49935d59edabfafde",
+          "0c69e5a0ddeb231117b6aa5301e83e39b6cc8a9b78b50c494b8c80b807751505",
+          "3846f76a688030fb3052b5d810d031835f627335e6ec77272ca48a1798965db3",
+          "4f211ad6ab4f778620fde0440679be0fd8d098162ec7961edc7ef7a30e2c3fac",
+          "2de783c7973eef32687e00c84f0662d6e7302dbba7a332a3fd0ce0704213f1fc",
+          "97cd81179af73275b7b71984655bac315d5881304e1cb68a43ce1e5cb0e3f53b"
+        ]
+      },
+      "defend": {
+        "frameCount": 6,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "dbd0b69a445d3caffaed9f1e5d9ea38e38ca3edb56a319fbd920d7b8ce8a4eab",
+          "1fe25a94b6950fd6a305b1b31b23e9e1769682805dcaadcec256a658f4d898e8",
+          "b115b8926891dc9f98a9cbcc86b53d7db0080f7f4e6383b5eddaa97433fa91e1",
+          "9c544523a18e0ab60e4b9f399377118584d9f8b7337d01f321307216326329c9",
+          "3d7058bdbec44a50ce827b8bb2020ecad381aac9525987d861ed8c304e6a1bd6",
+          "0d2824df5bdfa5bb19ec7d2e5ea709fb7235eebd67c9dad701cf637f367e916f"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "4ef6b50401a9fda85d692deb71e392638ab90157544151008d70b66cd0fa7b10",
+          "7c4067037f026e39fee12e318ec50af4e6d36ea10ec5f8a183217d6bb2a3a710",
+          "71319b786e569e2bbe46ba8e1f1f43650d7e52d830f03ed2c06f0f68949cd5dd",
+          "536c7133a33eedf3db61c5a93b85857c7a8b1da3f4cf795220037f5e9fcc14ad",
+          "5e1a73e20b2d22f226739d86d0cf62b2261b9784e184e2ace98ccc9a3a9d16f9",
+          "4bd82e0c3b1de0b41eafe3506b2355ff71c0c9c46f9b30a7d9626b677f0e9973"
+        ]
+      },
+      "dodge": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "0f1eea8f1c2e533175fe2b803cf3a434fc550c0824b98b99b22b5a9b8549c24f",
+          "d3f33747ec09f75e0ff674fd20c87071960bdda90517bfb2148cd615f92ae785",
+          "7b6e438519e60cd3d13d30d32e108e1595a8083fdc9c6da19db7264565f0ff43",
+          "366d47bb56c22513c67acf21c6388ad44dbb53bfa00f6e5b0ba75349aae5f20c",
+          "91826b7dbd1b07a00f27f5a7b2f84a23e807bec89ae0e0643a472f0a1fd5b728",
+          "9c6cd4657d8caf57765723757bb5b3ecbee766bac516c9bfa88b0df3f01ce16c",
+          "8c6a76ffeac9a7bd818c6563951352b582887aec4aabbecdd4be4fdd244ea232",
+          "b14460634848a26494eea0d7097f50e62f8750031c045fee8fbcb056f7d7c52e"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "519eda5f8c79f891a3eeef7f1ef6cb756adf58ee944d85959211c59421f9921b",
+          "c45e32d969ce80e702ebdd6b31aa8d3d6753f4029b7bd9667166ae04cb2355df",
+          "b7bd11f7bc446cfdbc1fabe02d75cf3a47ff614a10bc992165f107dbfab0bfa1",
+          "1a83b353c1843be6656fc1edbef060d9dae154d60fd39d268921f07e78eccb97",
+          "b8549bfeb75d0c43e67d373a57d402d0ba673ba7ed2b954c68006c48f9541fd2",
+          "6110b21f2759ebfa777b03c1d77b4bf3da2da00b8b05253636de902ced047819",
+          "e6ad0ae403a1daf7f824bf73ddd2e6c430ec954c5ab3e512bddb79214fd16753",
+          "d85841421c44018ec285030ee392dce56181f94cd69c71d506b4a9e43f7517dd"
+        ]
+      },
+      "counter": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "71c13450f6fe8669ccaf6f9cd504f79be618105b467b08137748b66659af1f4e",
+          "774113954404a6eea192caf6d4157d6660d6bda7cb6b93ba1a7101cf3e61f09d",
+          "f561a6f774d3ceb620175a20b4842773b88e636868ff0d7dbbafd300ea715394",
+          "f050202143171eb4c41e25d5f1f6ddb42cfd4dd263ad777211f03f18a5d11fc5",
+          "5e82c9febdf0c28f62e39cd60af2465f390a25c0f84aef367fbc043226cdf54b",
+          "2f51c679e05374c2b442715ff1b73582c5fb14c62bf8b685f077e1e654cc69ad",
+          "cf78ba2783ea9287e99d4f113430c6ec2ccd4637b8d165a5a512b376dbce2cf9",
+          "73677a895cdd82169d67f887ebf6a7139324020c07e665d8c904506e01534135"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "b04cfed26d228af2f7c8981c9b5bf205e506a0dad016cec1ffcafb65005438c3",
+          "e94417c92e77736832db46118634b241ffaeaf12bbc17e1681ac6b68362a4f76",
+          "17b89e658e17f5f632ef57d5d9dbf4e6e813200041c8f13b00c49f0d83e6441f",
+          "7c89c568e468c028621cb940cd927602a0900d00437231f18dd280160096c58e",
+          "3ba11b255aaed995d47891619e3b24274e7720dda849faf19a3e0b33043df487",
+          "97df3fe5529c044e4478a8ee3576ee4024a58f52c4bb2ea3a14f8e7cc9ef5eab",
+          "e4bd3b68c8d2eb978f00598e6dfe88aeea7769fcc064fe4a5d46f69eb52b5092",
+          "41f6164db3909247c6ba941d644e5cc3b3fd87577af0c4db92bbe5b1825a63f3"
+        ]
+      },
+      "stagger": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "77f03b68dfb6442e67515fcbb59e781d0eb8a7f3a1e2cc121c432656d855d248",
+          "72200b09da8329379bdb4d79c86b5e12d379292e962fd895735a88956c515a76",
+          "3e5d0949940391d8119b764ce539b2c4712d1e32ab702974c163df9fc9329722",
+          "e3633e3dde8024a3222522c1a0f3b010b31dd960569349cdbd47762b5b66c445",
+          "c1af260b726ae29b1cee54ba1bf91f35a65fcca6c88c7609ed475ea6e0a4b18f",
+          "87a64b790073db9ba79ef0fdf635ea0de0369099b79746dd2e273c6e4c0d68d4",
+          "f72cae3878d269a42f4de1bb945990df03af5f49541ff00dc8765a51e365b846",
+          "3a45c9904b563715aa6256000785cdd7e36186f122a5842755c063fe776af447"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "063e771f6a69bc7e3fbc05f253b22bb74563d8a78a84c1f9bb7bf7002ce8cbf7",
+          "6224efedc80064a723a30b80e49ce8d20b6e5e69c1577c221f13372928f03778",
+          "4ec0295aac1c7fac8cd143ab45c1a22db6c7383da4192ad056d260e98ad28e72",
+          "d533192ef00e24887f5468de3db77bfb74ae8f634df4e428df40e4a645190e51",
+          "e9cb09eb7a82e9bdffa8dc3b1200836fefb86b70c58e865f47408e50bba40d60",
+          "915cf33105c98e6a2fa7652ce45102a4ec991282747f83d1277cc0bc6933dffa",
+          "2fc85097bc80defe40f6e100ce2c2c8f3e0197959f86026422f1931c2bd9bfcb",
+          "62b44ee7f89e60e0cfbc517ee0609c2c205bacb011459c5babcf8f29b2309600"
+        ]
+      },
+      "knockaway": {
+        "frameCount": 8,
+        "fps": 12,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "442dca3efa3397bb6c1e21a8b284ab4b288ebe68f4dd745629f454f9e0b34839",
+          "63aa0154904b5e4e788ae32eebbda83330c8106043ba4d0bf6269b8d3a604eda",
+          "8a737bed2248d0fe9fc59503551c481904b4bc7de44236004c486c6c7f39334f",
+          "222f3b208bb45c129c87a0d8fbe5e5313b9ca0e2bfe44e6aa4f54aa361db4575",
+          "74abdd2a4abce00e69a84ebcb82a00e449374dfc34f49a2b688ca174f887bf49",
+          "11d1fd6c9036fa34f126cd2eebe538355c6cfdea6e2a944742f1dcf184cf55a7",
+          "4a6885e3a9b4dbfb647d91be4bc43474bf87c07246170c60e67d23da5d578706",
+          "fb55e3f89617a82642466fd219a530ef026abc08b8e49c8988241a4641ab3504"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "01c4fdd7fff2155e035a0b64141cb7f2f305218c20dfded81138a9c91f45ca8c",
+          "bdb21b99d70448f8bc7346004bb3a4d46fb5fc403f198f1729f5e6aaba0643d3",
+          "168bae2658f6afc310840df10640ad4da9056162c5a98763cc58f66931904caf",
+          "69aadbc721502aa9dee1f842b75fd4e70487c9ccb84d9195ce3853e7df7a42c3",
+          "9f9ca9a5f45a73e21656ad51d1d2750844a5b3328ed3f8cd4d495f09d628496c",
+          "d53e0fe623a120e46f143dc25984c5d2e6cf02f13a43ac6237f17562564b79dc",
+          "2aefaeecba26a1ff7063fa5b36dea776361eb18f776b642c90b4a4dcb0716093",
+          "ce6ca560aef2a44b904e3fcd02ea594abe42e48fbc1371c3a0cc3a81b2e72d18"
+        ]
+      },
+      "down": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "a54dd5e34b7ae548af3b725c825dc824b84f4d4bc37d632e340e7ca5868105b6",
+          "0ade06adab7935612a11d0c1d9e2f914dbf9976bf30ba3d397f5ccab21d6b02f",
+          "908f39d018fe99991a4c96c9bf132b3c1aecc9ba490531fad01ac8662bde614a",
+          "fba49bf68c11487b2f5122a1522c087413e9496dd4e5db4925f69d87c56191ae",
+          "0ff1c78c8b47486dc2c48d10f31a2b19cc47e34bcae4dab4a29258fb504d11e1",
+          "8d92890267f762f7b7fcd2afae71e753a28b3252a6790f03adb53b1952ed80c1",
+          "3024971d688391d5cf52d4e81b3809f48227c69c7738f78ad29f5da7145837ef",
+          "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "5075fadfb008e45acb98ed14fdf3520180c24d3984527fdefd5d19da7b05f66d",
+          "919668a1ce15cad25ceb6275c57c138f15812b1eafdf7a1339865b0c651ab923",
+          "dc4497ed5f6f8096f311aaada5c7c31d40b3857fd6090f6bee6a1d3142661f43",
+          "ca2a951e34780ff62b31517e7081ba749e336d2e4b5cb55acf42c99a31089397",
+          "9b290dce4e6040750c469013f4677306195afe7918e30fe95bd432dead82b3f2",
+          "1e9c13bffc72adba11fb09ee7fbe8f972795ef167b34ea481d7e43548c25ec38",
+          "670434ec2c04e646a93389cd1e7863828e572a850d27274fdb93c0fc4b28fbec",
+          "9c64a146733d3a422cce5bbe7d2a15d810212387f9b5a86d1b18555e2670bad4"
+        ]
+      },
+      "revive": {
+        "frameCount": 8,
+        "fps": 10,
+        "loop": false,
+        "runtimeFramesTracked": true,
+        "sourceFramesTracked": false,
+        "runtimeFrameFileSha256": [
+          "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953",
+          "119d99a9a17e2caad2c26d232262b862f075ab644fcdfec2490af08edbd64d21",
+          "51d36db7abd533897634089089eda2831a132c9b8e212eef5f112993e3dc8e07",
+          "fe9f1d64647301698d11771719954987d2aabcab3b9321b10079b67a903c085c",
+          "39ebea0bf3a07b6907568edcf628aa71c66ddd58d994169f8fd3433cf6b47b88",
+          "f78aea17217e0b6e6922da5436b9781788d49aae869ba6a8ed741d9518081d55",
+          "0a2798a91ff4f313d30cf72dbe32eda2c3a8ac31896474f779edabab68397b63",
+          "c15f151db625a674a3e59dcc4721a4f215bcad67c4ed75532cd5a663d81f9d05"
+        ],
+        "runtimeFrameDecodedRgbaSha256": [
+          "9c64a146733d3a422cce5bbe7d2a15d810212387f9b5a86d1b18555e2670bad4",
+          "39b0508d14514ff1d222b9a99989a16acf2f22bd2ccb9afd4f0672c73f15b7fb",
+          "8200e015288fc00183da9b72b6f9ac4900b6cfc2575acef04b12214202460c8e",
+          "5c66c20371f8f2062473bb4bede07da71748d74a0e34647335a5da58ecf8da66",
+          "294b5473279569eadf33d18261566665cf9081e2aeffe3f5536de616de5ee5b9",
+          "ea88e36c8e3942c9145a2d58b5b9453a4fd43cb08a314e37b191d0dc0b386324",
+          "8558ca8cd7e1ba12fd250cc5cb16f1878b8db3463d3b751f0f07c461dc0f83d1",
+          "55763eac9d4221d5e8fc220760f6b5201b836eb44706caae5ea170a2baabb28b"
+        ]
+      }
+    }
+  },
+  "temporalReview": {
+    "schemaVersion": 1,
+    "formId": "bui_normal_red_fire10",
+    "status": "passed",
+    "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+    "baseline": "current HEAD battle180; no despill",
+    "actions": {
+      "attack": "anticipation, contact and recovery remain ordered",
+      "skill": "wind-up, effect beat and recovery remain ordered",
+      "counter": "reaction, return strike and recovery remain ordered",
+      "knockaway": "launch, travel and terminal fall remain continuous",
+      "down": "loss of balance, fall and stable hold remain continuous",
+      "revive": "starts from the exact same-view down hold and rises cleanly"
+    },
+    "repairs": [
+      "same-view down-8 is copied byte-for-byte to revive-1"
+    ]
+  }
+}

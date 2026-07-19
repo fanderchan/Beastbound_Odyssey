@@ -7,12 +7,29 @@
   "productionGroup": "G02",
   "productionScope": "world_true8_and_formal_battle_matrix",
   "runtimeEnabled": false,
-  "sourceFrameSize": [512, 512],
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
   "battleViewMapping": {
-    "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
-    "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    },
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    }
   },
   "identity": {
     "status": "self_review_passed_owner_pending",
@@ -27,18 +44,79 @@
     "sourceViewsIndependentlyDrawn": true
   },
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "owner_review_pending"},
-    "walk": {"frameCount": 8, "fps": 11, "loop": true, "status": "owner_review_pending"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "owner_review_pending"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "holdLastFrame": true, "status": "owner_review_pending"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 11,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "holdLastFrame": true,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
   },
   "battleVisual": {
     "status": "self_review_passed_owner_pending",
@@ -49,23 +127,139 @@
     "runtimeLayeredComposition": false,
     "runtimeBodyLayerCount": 1,
     "battleViewMapping": {
-      "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
-      "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "runtimeEnabled": false,
+    "bundleDigest": "59037a2a9bfed13815d5544f4f5e3bbf69055fc2f721eb08c537da09fd76fcbd",
+    "archiveMode": "legacy_in_place",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "downReviveContinuity": {
+      "contract": "exact_same_view_file_and_decoded_rgba_hold",
+      "downArtChanged": false,
+      "creativeArtChanged": false,
+      "views": [
+        {
+          "view": "front_3quarter_sw",
+          "downFrame": "views/front_3quarter_sw/down/down-8.png",
+          "reviveFrame": "views/front_3quarter_sw/revive/revive-1.png",
+          "fileSha256": "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af",
+          "decodedRgbaSha256": "28b74b64efb00546cd7f2fa227a156c5d31396c86a56bda391a5a33fa049fb57",
+          "previousReviveFileSha256": "ed3d81fb0598d701a9fb98d4142805617df46406cf67cbfb9c6779c83c5117af",
+          "downFrameUnchanged": true,
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "gif": "qa/battle/continuity/front_3quarter_sw/revive.gif",
+          "gifSha256": "f0c9f2864ce718873334bb0c11c683293b237e13fd351c308d51cde934cbffec",
+          "contactSheet": "qa/battle/continuity/front_3quarter_sw/revive-contact.png",
+          "contactSheetSha256": "b291dd9373f5072f8734caa383e361073b5bfe981eed08ce997e859085a35539"
+        },
+        {
+          "view": "back_3quarter_ne",
+          "downFrame": "views/back_3quarter_ne/down/down-8.png",
+          "reviveFrame": "views/back_3quarter_ne/revive/revive-1.png",
+          "fileSha256": "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953",
+          "decodedRgbaSha256": "9c64a146733d3a422cce5bbe7d2a15d810212387f9b5a86d1b18555e2670bad4",
+          "previousReviveFileSha256": "81fcaf46aeee521a407d728c6b6bedbbf529e27b685746c80250acd3d00dc953",
+          "downFrameUnchanged": true,
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "gif": "qa/battle/continuity/back_3quarter_ne/revive.gif",
+          "gifSha256": "99c1ead192b38b266a2ad7c5b2e432930f7f6b9cd10d39a4cfeff999737a59ed",
+          "contactSheet": "qa/battle/continuity/back_3quarter_ne/revive-contact.png",
+          "contactSheetSha256": "ea581a826799455e1a85329136219c13ac6e649dc595c7df9a81416f351daead"
+        }
+      ]
+    },
+    "temporalReview": {
+      "schemaVersion": 1,
+      "formId": "bui_normal_red_fire10",
+      "status": "passed",
+      "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+      "baseline": "current HEAD battle180; no despill",
+      "actions": {
+        "attack": "anticipation, contact and recovery remain ordered",
+        "skill": "wind-up, effect beat and recovery remain ordered",
+        "counter": "reaction, return strike and recovery remain ordered",
+        "knockaway": "launch, travel and terminal fall remain continuous",
+        "down": "loss of balance, fall and stable hold remain continuous",
+        "revive": "starts from the exact same-view down hold and rises cleanly"
+      },
+      "repairs": [
+        "same-view down-8 is copied byte-for-byte to revive-1"
+      ]
     }
   },
   "worldVisual": {
     "status": "self_review_passed_owner_pending",
     "strategy": "independent_8",
-    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
     "runtimeMirroring": false,
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "owner_review_pending"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "owner_review_pending"}
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "owner_review_pending"
+      }
     },
     "totalFrameCount": 40,
     "runtimeMountedComposition": false
   },
-  "supportedMountedCharacterIds": ["novice_hunter_v1"],
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
   "source": {
     "kind": "project_original_ai_assisted",
     "generator": "OpenAI built-in image generation",

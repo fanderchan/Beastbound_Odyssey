@@ -203,7 +203,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "bffbb5a5ca50386e35acf9a1ae0a11b5b7bc5adc59f59f75d5eb37888e77d1c7",
+    "bundleDigest": "7a436ec5eb39b5d08a9ddcf571c5f238821c3ebb5be1fe6a8d11361833feae00",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -230,6 +230,105 @@
       "beforeStats": "qa/battle/scale-before-fix.json",
       "afterStats": "qa/battle/scale-after-fix.json",
       "finalFacingContactSheet": "qa/battle/presentation-facing-contact.png"
+    },
+    "downReviveContinuity": {
+      "contract": "exact_same_view_file_and_decoded_rgba_hold",
+      "downArtChanged": true,
+      "creativeArtChanged": true,
+      "views": [
+        {
+          "view": "front_3quarter_sw",
+          "downFrame": "views/front_3quarter_sw/down/down-8.png",
+          "reviveFrame": "views/front_3quarter_sw/revive/revive-1.png",
+          "fileSha256": "0a8f9b693379ea1c2f531b3c6402d7696241bee0f58051372fdc8d7e1588de35",
+          "decodedRgbaSha256": "1f0a3f38ad9bc74418649f04f14df8b0834788d2e8617a84348e42598f03089b",
+          "alphaSha256": "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "alphaExact": true
+        },
+        {
+          "view": "back_3quarter_ne",
+          "downFrame": "views/back_3quarter_ne/down/down-8.png",
+          "reviveFrame": "views/back_3quarter_ne/revive/revive-1.png",
+          "fileSha256": "dc6f65e53445e5dc83e6a6ed6ede3de0c687771a06943818d70a4926287a1c1c",
+          "decodedRgbaSha256": "bb36b353c03f7c33c0b5e9a74c2851ccaaf5eb8f9b70b599dc3b71b677bfbca1",
+          "alphaSha256": "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "alphaExact": true
+        }
+      ]
+    },
+    "koHoldEyeRepair": {
+      "tool": "repair_emberhorn_ko_eyes.py",
+      "scope": "down-8 face interior RGB only; exact byte copy to same-view revive-1",
+      "bodyAndSilhouetteChanged": false,
+      "alphaChanged": false,
+      "mouthChanged": false,
+      "views": [
+        {
+          "view": "front_3quarter_sw",
+          "eyeBox": [
+            91,
+            214,
+            99,
+            222
+          ],
+          "changedVisiblePixels": 72,
+          "changedBbox": [
+            91,
+            214,
+            100,
+            223
+          ],
+          "alphaSha256Before": "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+          "alphaSha256After": "7908d650caf6cad4408f77a4d5c1109ab05eb8abf8dc14688d7e63765755d8d1",
+          "alphaExact": true,
+          "noXEye": true,
+          "noSmileEdit": true
+        },
+        {
+          "view": "back_3quarter_ne",
+          "eyeBox": [
+            160,
+            209,
+            168,
+            217
+          ],
+          "changedVisiblePixels": 74,
+          "changedBbox": [
+            160,
+            209,
+            169,
+            218
+          ],
+          "alphaSha256Before": "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+          "alphaSha256After": "792fc1801420672c0d5e716bada5eaca4e00985865d94322544ab68f073c2cd4",
+          "alphaExact": true,
+          "noXEye": true,
+          "noSmileEdit": true
+        }
+      ]
+    },
+    "temporalReview": {
+      "schemaVersion": 1,
+      "formId": "emberhorn_ash_fire6_wind4",
+      "status": "passed",
+      "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+      "baseline": "current HEAD battle180; no despill",
+      "actions": {
+        "attack": "anticipation, contact and recovery remain ordered",
+        "skill": "wind-up, effect beat and recovery remain ordered",
+        "counter": "reaction, return strike and recovery remain ordered",
+        "knockaway": "launch, travel and terminal fall remain continuous",
+        "down": "loss of balance, fall and stable KO hold remain continuous",
+        "revive": "starts from the exact same-view KO hold and rises cleanly"
+      },
+      "repairs": [
+        "localized opaque face-interior RGB spiral eye on down-8",
+        "same-view repaired down-8 is copied byte-for-byte to revive-1"
+      ]
     }
   }
 }

@@ -6,8 +6,14 @@
   "artStatus": "owner_review_pending",
   "runtimeEnabled": false,
   "identityLock": "identity/identity-lock.md",
-  "sourceFrameSize": [512, 512],
-  "runtimeFrameSize": [256, 256],
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
   "views": [
     "front_3quarter_sw",
     "back_3quarter_ne"
@@ -94,21 +100,132 @@
     ],
     "runtimeMirroring": false,
     "actions": {
-      "idle": {"frameCount": 1, "loop": true},
-      "walk": {"frameCount": 4, "loop": true}
+      "idle": {
+        "frameCount": 1,
+        "loop": true
+      },
+      "walk": {
+        "frameCount": 4,
+        "loop": true
+      }
     },
     "totalFrameCount": 40,
     "runtimeMountedComposition": false,
     "mountedPresentationBundle": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1"
   },
   "battleViewMapping": {
-    "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
-    "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    },
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    }
   },
   "battleVisual": {
     "battleViewMapping": {
-      "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
-      "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "status": "self_review_passed_owner_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeEnabled": false,
+    "bundleDigest": "d9d86bda4a30a3707d4104b24895e4a28f8dedd4cfc55f93fac10e4de135b414",
+    "archiveMode": "legacy_in_place",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "downReviveContinuity": {
+      "contract": "exact_same_view_file_and_decoded_rgba_hold",
+      "downArtChanged": false,
+      "creativeArtChanged": false,
+      "views": [
+        {
+          "view": "front_3quarter_sw",
+          "downFrame": "views/front_3quarter_sw/down/down-8.png",
+          "reviveFrame": "views/front_3quarter_sw/revive/revive-1.png",
+          "fileSha256": "afa51b72b436657d9355d02ab3673aef79ce0d1b8a5812ac8da251ab54b83757",
+          "decodedRgbaSha256": "312a2c4e76e74bc12a48a89df995e5b3f3fb0298915e8d925f893c80f0a82bac",
+          "previousReviveFileSha256": "afa51b72b436657d9355d02ab3673aef79ce0d1b8a5812ac8da251ab54b83757",
+          "downFrameUnchanged": true,
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "gif": "qa/battle/continuity/front_3quarter_sw/revive.gif",
+          "gifSha256": "4ea5d74506ef305f16ba88f6bed82087358f05c4938ae6253ecbfe84a819dd34",
+          "contactSheet": "qa/battle/continuity/front_3quarter_sw/revive-contact.png",
+          "contactSheetSha256": "e56f3bcbdf7e4e6c0e41956267f780104955cd2c14360b4fcb4edde4e52a6a9a"
+        },
+        {
+          "view": "back_3quarter_ne",
+          "downFrame": "views/back_3quarter_ne/down/down-8.png",
+          "reviveFrame": "views/back_3quarter_ne/revive/revive-1.png",
+          "fileSha256": "35127020590b698695375e0e630b054c69f026b8b7309f849ceb414f216a0c79",
+          "decodedRgbaSha256": "4b29ee038a089fb9580f53d7eb87366f5d76c9faca4a6e20d2694fd7bb6f3bce",
+          "previousReviveFileSha256": "35127020590b698695375e0e630b054c69f026b8b7309f849ceb414f216a0c79",
+          "downFrameUnchanged": true,
+          "fileContentExact": true,
+          "decodedRgbaExact": true,
+          "gif": "qa/battle/continuity/back_3quarter_ne/revive.gif",
+          "gifSha256": "42d5330b816ab94da0cc56da7cf81d943e15c84c33d5ee08d965b4278daf1c29",
+          "contactSheet": "qa/battle/continuity/back_3quarter_ne/revive-contact.png",
+          "contactSheetSha256": "9d68b33c01fe2c524ab6ebbcc37aacb69dc1e075c35a606772d247c56b66b778"
+        }
+      ]
+    },
+    "temporalReview": {
+      "schemaVersion": 1,
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "status": "passed",
+      "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+      "baseline": "current HEAD battle180; no despill",
+      "actions": {
+        "attack": "anticipation, contact and recovery remain ordered",
+        "skill": "wind-up, effect beat and recovery remain ordered",
+        "counter": "reaction, return strike and recovery remain ordered",
+        "knockaway": "launch, travel and terminal fall remain continuous",
+        "down": "loss of balance, fall and stable hold remain continuous",
+        "revive": "starts from the exact same-view down hold and rises cleanly"
+      },
+      "repairs": [
+        "same-view down-8 is copied byte-for-byte to revive-1"
+      ]
     }
   },
   "battleCompatibility": {
@@ -165,6 +282,12 @@
       "battle_down",
       "battle_revive"
     ],
-    "deferred": ["victory", "capture", "evolution", "owner_approval"]
-  }
+    "deferred": [
+      "victory",
+      "capture",
+      "evolution",
+      "owner_approval"
+    ]
+  },
+  "ownerReviewStatus": "pending"
 }

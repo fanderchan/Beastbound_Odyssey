@@ -91,5 +91,11 @@
         "sharedScale": 1.4134228188
       }
     }
+  },
+  "downReviveContinuity": "exact_same_view_file_and_decoded_rgba",
+  "continuityRepair": {
+    "tool": "repair_legacy_bui_continuity.py",
+    "creativeChange": false,
+    "contract": "revive-1 is an exact byte copy of same-view down-8; down art is unchanged"
   }
 }

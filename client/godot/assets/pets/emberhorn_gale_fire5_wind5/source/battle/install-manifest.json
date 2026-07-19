@@ -4,11 +4,11 @@
   "formId": "emberhorn_gale_fire5_wind5",
   "kind": "pet",
   "characterId": null,
-  "bundleDigest": "9824378dd71b8968c2d5d2c699f315d8e34efe740030228aacdee90f619b5c18",
+  "bundleDigest": "26745727c271bf41245654e4934c067f33766d4843d8accd6c4a76a7071d7c09",
   "archiveMode": "lean",
   "installedFileHashes": {
-    "qa/battle/contact-sheet.png": "dc6f5b859608d4dbea103356366d92e74550bbc489a5ca70f9c3f287ba6ea8d5",
-    "qa/battle/qc-summary.json": "01df85e7823a1aa6d2306c2bf9ac8c08ebf20eb8f4f77fbfb26ce6f9fa15b070",
+    "qa/battle/contact-sheet.png": "ceef4f8ba99b08d878d0d0bfeab466621452bd811854a3776c3edb51e2037da4",
+    "qa/battle/qc-summary.json": "de210aae35e0f8de45fdc6a86dcfa2507834cf29195beea2d03da00c94d0e82b",
     "source/battle/back_3quarter_ne/attack/pipeline-meta.json": "5179c7dfe9643eeed97c480d044e7bfaf0b7e2ec2578373b77ccb9851f1e4c99",
     "source/battle/back_3quarter_ne/attack/prompt-used.txt": "80cb92d16d5a7210c9b167d3a78dc8dbea099a0d17957c1c11e828243b0f0a14",
     "source/battle/back_3quarter_ne/attack/qa.json": "ef064572306745be1e8207fc7d544a694fb3ebc586b72f3b0a4542e7363342bd",
@@ -85,7 +85,7 @@
     "source/battle/front_3quarter_sw/walk/pipeline-meta.json": "f50939f2751246fa129e31e705e8644360a39dcf54640ba0c4b8195002fce2a1",
     "source/battle/front_3quarter_sw/walk/prompt-used.txt": "1c2e008af267227b0105e3012dc750f97b7c5939f8e01ad512bbfc6bc328de3b",
     "source/battle/front_3quarter_sw/walk/qa.json": "538c4ac83964de10be7072fefec2b16846ed96b319d9dc23a5f3690dff5d2903",
-    "source/battle/source-ledger.json": "22803a004d9d7e42c520d708195a9a8849bf7e6ca29a470a31d12346d4a35940",
+    "source/battle/source-ledger.json": "95b4417ee7fb2ed0312b43f852e5987979919bfe3d949589a6bba7ca33b7d1df",
     "views/back_3quarter_ne/attack/attack-1.png": "b90c7ca603d6c78fce1cc8bf8cebd945350ab1afcfd9d3d491ace4b1c47742a0",
     "views/back_3quarter_ne/attack/attack-2.png": "fd2a90b4b37b7eb090a25efef3bee56d4172bfc1ebd0568295a3eb273f4893cc",
     "views/back_3quarter_ne/attack/attack-3.png": "c637cf9c65bae5a048f8ddf13fd3e5290bd2b7a2f6ab064c37d836b67f4f0d53",
@@ -123,7 +123,7 @@
     "views/back_3quarter_ne/down/down-5.png": "60ee13e9301988a7f95c17271c773525a9774dcde32ef3353f246c584bc46792",
     "views/back_3quarter_ne/down/down-6.png": "5280e517b231020cda05059b0b640def97c418f4fa82bc8d8a95e1d63d272e9c",
     "views/back_3quarter_ne/down/down-7.png": "2838d96951f0b55289a594067e0c4bafe329902e497163a2b52909df34b12149",
-    "views/back_3quarter_ne/down/down-8.png": "4a95d29e81304e8ad95bc206b9adc6ceb319b296de08dfddef9f91f2de5a7c90",
+    "views/back_3quarter_ne/down/down-8.png": "4f392f9b8bec7e09d8d4fab2d1135d86b9d81c80d451cf410d55b9e7f706a22a",
     "views/back_3quarter_ne/hurt/hurt-1.png": "a0d852627ce6103c7a7272ac98e0974e8fe8c55ce9a8844047444df961fc3cd0",
     "views/back_3quarter_ne/hurt/hurt-2.png": "cc7cec929d41921c7c45f9d976ab676d19e4eedb9037355ef499a2615a96b23f",
     "views/back_3quarter_ne/hurt/hurt-3.png": "db8a20245b18c75c448ede7f376340d844543bc2a465b16e1d4b3822ee1b8ba7",
@@ -144,7 +144,7 @@
     "views/back_3quarter_ne/knockaway/knockaway-6.png": "41c7133fcd93a98b60388aaf1ed8d71bf4d3ad840ce278bed5a69e3ef47b2398",
     "views/back_3quarter_ne/knockaway/knockaway-7.png": "90da8411d2c6f7e3c0cff1731610fbb32f2840f640cd6ba25050a9072e15cbaa",
     "views/back_3quarter_ne/knockaway/knockaway-8.png": "94fcec13257e3b2b01f87ecb175977ef5e653de69729ad8d97d7228690501157",
-    "views/back_3quarter_ne/revive/revive-1.png": "4a95d29e81304e8ad95bc206b9adc6ceb319b296de08dfddef9f91f2de5a7c90",
+    "views/back_3quarter_ne/revive/revive-1.png": "4f392f9b8bec7e09d8d4fab2d1135d86b9d81c80d451cf410d55b9e7f706a22a",
     "views/back_3quarter_ne/revive/revive-2.png": "4196c54a648037e9cc685a26891dce609846f41635503b118517506de3c77e20",
     "views/back_3quarter_ne/revive/revive-3.png": "b28359f06426bc0a0c6ba4281019f45bfdbfe52c79637d52fa5b45d30b3ca09b",
     "views/back_3quarter_ne/revive/revive-4.png": "0ab8200714446878a4f874055274e13730a77e86840d3e502f38a7ab8eb9fade",
@@ -213,7 +213,7 @@
     "views/front_3quarter_sw/down/down-5.png": "00127b980efe1886bb89a932c01517d2899a5c16d51c9ac28e525f73380682a9",
     "views/front_3quarter_sw/down/down-6.png": "3d76baf754faf032b5762f64684ffc64d636115de3f2b91ab377bf3d9f5d05b4",
     "views/front_3quarter_sw/down/down-7.png": "f08ae81f623149ad2e2377ba6767d38ed0b9b827540e60b1cf1c808b2a85b8a7",
-    "views/front_3quarter_sw/down/down-8.png": "25e5ea53102b665066c4d458e0454c662affe3c8bc8cc13775f7d4f6b1c5be03",
+    "views/front_3quarter_sw/down/down-8.png": "6f16688317c6fa25930d9f409521398be91ea36dfd7e6f13160c05642438e646",
     "views/front_3quarter_sw/hurt/hurt-1.png": "180cc5b16d65b5e7876ced0bd6636af67a0d5d59eab736d7b54a05536b9bef1a",
     "views/front_3quarter_sw/hurt/hurt-2.png": "beb256dd12f7cd1f61cb7b78709e38eef50d4a391b1a51a083d151eae45e237f",
     "views/front_3quarter_sw/hurt/hurt-3.png": "57100ccf369d523988865a0c7cc008962307c9c98fcfb7957e31ade8f0f07c22",
@@ -234,7 +234,7 @@
     "views/front_3quarter_sw/knockaway/knockaway-6.png": "af3dd01d6bd1183e9f57fd004b14cc52f0ff3b144dea28a19819108b044fb441",
     "views/front_3quarter_sw/knockaway/knockaway-7.png": "82563251a18ad77ea2f1a9284baef2f8423b6d4ef189bf0f9569481b5a99f018",
     "views/front_3quarter_sw/knockaway/knockaway-8.png": "0831c767cce2acaf0fb409d07d958cf6ee76ea2eb424e4ad77fa14594bce4516",
-    "views/front_3quarter_sw/revive/revive-1.png": "25e5ea53102b665066c4d458e0454c662affe3c8bc8cc13775f7d4f6b1c5be03",
+    "views/front_3quarter_sw/revive/revive-1.png": "6f16688317c6fa25930d9f409521398be91ea36dfd7e6f13160c05642438e646",
     "views/front_3quarter_sw/revive/revive-2.png": "c346a40e14d1ee66f96709e85f839566851c6b5b60473a8dad920e5f9f8f5c9b",
     "views/front_3quarter_sw/revive/revive-3.png": "130b882c132610a93082deb633ecf7948d1a9f17c027ed11b82503f4772b36aa",
     "views/front_3quarter_sw/revive/revive-4.png": "01fa382d8e66f3947424fc3c9f00c4c61fc47eded073533c093d37fc9546d104",
@@ -268,8 +268,8 @@
     "views/front_3quarter_sw/walk/walk-8.png": "10406f877d6f7fcffb645339a813ff7665f832c6c6b89754f485e12bc8153493"
   },
   "validatedSourceFileHashes": {
-    "qa/battle/contact-sheet.png": "dc6f5b859608d4dbea103356366d92e74550bbc489a5ca70f9c3f287ba6ea8d5",
-    "qa/battle/qc-summary.json": "01df85e7823a1aa6d2306c2bf9ac8c08ebf20eb8f4f77fbfb26ce6f9fa15b070",
+    "qa/battle/contact-sheet.png": "ceef4f8ba99b08d878d0d0bfeab466621452bd811854a3776c3edb51e2037da4",
+    "qa/battle/qc-summary.json": "de210aae35e0f8de45fdc6a86dcfa2507834cf29195beea2d03da00c94d0e82b",
     "source/battle/back_3quarter_ne/attack/pipeline-meta.json": "5179c7dfe9643eeed97c480d044e7bfaf0b7e2ec2578373b77ccb9851f1e4c99",
     "source/battle/back_3quarter_ne/attack/prompt-used.txt": "80cb92d16d5a7210c9b167d3a78dc8dbea099a0d17957c1c11e828243b0f0a14",
     "source/battle/back_3quarter_ne/attack/qa.json": "ef064572306745be1e8207fc7d544a694fb3ebc586b72f3b0a4542e7363342bd",
@@ -752,5 +752,76 @@
     "views/front_3quarter_sw/walk/walk-8.png": "10406f877d6f7fcffb645339a813ff7665f832c6c6b89754f485e12bc8153493"
   },
   "runtimeEnabled": false,
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "runtimeRepair": {
+    "tool": "repair_emberhorn_ko_eyes.py",
+    "scope": "down-8 face interior RGB only; exact byte copy to same-view revive-1",
+    "bodyAndSilhouetteChanged": false,
+    "alphaChanged": false,
+    "mouthChanged": false,
+    "views": [
+      {
+        "view": "front_3quarter_sw",
+        "eyeBox": [
+          84,
+          215,
+          92,
+          223
+        ],
+        "changedVisiblePixels": 74,
+        "changedBbox": [
+          84,
+          215,
+          93,
+          224
+        ],
+        "alphaSha256Before": "c390c80e5a39c12bcad3d3d34ae1d3b7c8e75cbc366925405227808a5f9a0474",
+        "alphaSha256After": "c390c80e5a39c12bcad3d3d34ae1d3b7c8e75cbc366925405227808a5f9a0474",
+        "alphaExact": true,
+        "noXEye": true,
+        "noSmileEdit": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "eyeBox": [
+          151,
+          224,
+          160,
+          232
+        ],
+        "changedVisiblePixels": 76,
+        "changedBbox": [
+          151,
+          224,
+          161,
+          233
+        ],
+        "alphaSha256Before": "de352c9b083d4aec719d9c5980874078399e800409c2f4fd1d5a66d2599603cb",
+        "alphaSha256After": "de352c9b083d4aec719d9c5980874078399e800409c2f4fd1d5a66d2599603cb",
+        "alphaExact": true,
+        "noXEye": true,
+        "noSmileEdit": true
+      }
+    ]
+  },
+  "temporalReview": {
+    "schemaVersion": 1,
+    "formId": "emberhorn_gale_fire5_wind5",
+    "status": "passed",
+    "reviewMethod": "full chronological battle180 contact plus critical action-strip inspection",
+    "baseline": "current HEAD battle180; no despill",
+    "actions": {
+      "attack": "anticipation, contact and recovery remain ordered",
+      "skill": "wind-up, effect beat and recovery remain ordered",
+      "counter": "reaction, return strike and recovery remain ordered",
+      "knockaway": "launch, travel and terminal fall remain continuous",
+      "down": "loss of balance, fall and stable KO hold remain continuous",
+      "revive": "starts from the exact same-view KO hold and rises cleanly"
+    },
+    "repairs": [
+      "localized opaque face-interior RGB spiral eye on down-8",
+      "same-view repaired down-8 is copied byte-for-byte to revive-1"
+    ]
+  },
+  "validationScope": "formal battle180 restored from the current HEAD baseline, localized RGB-only KO eye repair with per-view alpha preservation, chronological action review and exact hold/revive continuity; no generic despill postprocess"
 }
