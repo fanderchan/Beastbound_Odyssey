@@ -59,8 +59,7 @@ ALPHA_THRESHOLD = 24
 MAX_BASELINE_DRIFT_PX = 2
 MAX_CENTER_DRIFT_PX = 12.0
 MAX_ALPHA_HEIGHT_RATIO = 1.12
-MAX_STRONG_MAGENTA_EDGE_RATIO = 0.45
-MIN_STRONG_MAGENTA_EDGE_PIXELS = 12
+MAX_STRONG_MAGENTA_EDGE_RATIO = 0.02
 
 
 @dataclass(frozen=True)
@@ -398,7 +397,7 @@ def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]
     strong_edge_count = int(edge_metrics["strongMagentaEdgePixels"])
     strong_edge_ratio = float(edge_metrics["strongMagentaEdgeRatio"])
     if (
-        strong_edge_count >= MIN_STRONG_MAGENTA_EDGE_PIXELS
+        strong_edge_count > 0
         and strong_edge_ratio > MAX_STRONG_MAGENTA_EDGE_RATIO
     ):
         issues.append(
@@ -407,7 +406,7 @@ def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]
                 "透明边缘强紫污染 "
                 f"{strong_edge_count}/{edge_metrics['edgePixelCount']} "
                 f"({strong_edge_ratio:.1%})，门槛 "
-                f"{MAX_STRONG_MAGENTA_EDGE_RATIO:.0%}/{MIN_STRONG_MAGENTA_EDGE_PIXELS}px",
+                f"{MAX_STRONG_MAGENTA_EDGE_RATIO:.0%}",
             )
         )
     return {

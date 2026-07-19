@@ -27,6 +27,9 @@ GREEN_MIN_CHANNEL = 35.0
 GREEN_DOMINANCE_MIN = 18.0
 GREEN_LOCAL_DOMINANCE_GAP = 12.0
 GREEN_REFERENCE_RADIUS = 12
+GREEN_AUTO_REPAIR_MAX_COMPONENT_PIXELS = 4
+CHROMA_KEY_RGB = (255.0, 0.0, 255.0)
+CHROMA_RESIDUE_DISTANCE_MAX = 96.0
 
 
 def _aligned_slices(
@@ -70,6 +73,59 @@ def _magenta_dominance(rgb: np.ndarray) -> np.ndarray:
 def _green_dominance(rgb: np.ndarray) -> np.ndarray:
     values = rgb.astype(np.float32)
     return values[:, :, 1] - np.maximum(values[:, :, 0], values[:, :, 2])
+
+
+def _known_chroma_residue_mask(rgb: np.ndarray) -> np.ndarray:
+    """Return only pixels still close to the pipeline's literal magenta key.
+
+    Dark or muted purple is a valid creature color.  Without a keying mask we
+    cannot infer whether such a pixel is spill, so the read-only audit uses this
+    deliberately conservative near-key definition instead of hue alone.
+    """
+
+    values = rgb.astype(np.float32)
+    key = np.asarray(CHROMA_KEY_RGB, dtype=np.float32)
+    distance_squared = np.sum(np.square(values - key[None, None, :]), axis=2)
+    return distance_squared <= CHROMA_RESIDUE_DISTANCE_MAX * CHROMA_RESIDUE_DISTANCE_MAX
+
+
+def _small_target_components(mask: np.ndarray, max_pixels: int) -> np.ndarray:
+    """Keep only tiny 4-connected anomaly islands.
+
+    A coherent translucent green ribbon or elemental accent is authored art,
+    even when it touches the body.  The automatic chroma repair is therefore
+    limited to tiny inverse artifacts; larger regions are left for visual QA.
+    """
+
+    height, width = mask.shape
+    visited = np.zeros_like(mask)
+    accepted = np.zeros_like(mask)
+    target_y, target_x = np.nonzero(mask)
+    for y, x in zip(target_y.tolist(), target_x.tolist()):
+        if visited[y, x]:
+            continue
+        visited[y, x] = True
+        queue: deque[tuple[int, int]] = deque([(x, y)])
+        component: list[tuple[int, int]] = []
+        while queue:
+            current_x, current_y = queue.popleft()
+            component.append((current_x, current_y))
+            for next_x, next_y in (
+                (current_x - 1, current_y),
+                (current_x + 1, current_y),
+                (current_x, current_y - 1),
+                (current_x, current_y + 1),
+            ):
+                if not (0 <= next_x < width and 0 <= next_y < height):
+                    continue
+                if visited[next_y, next_x] or not mask[next_y, next_x]:
+                    continue
+                visited[next_y, next_x] = True
+                queue.append((next_x, next_y))
+        if len(component) <= max_pixels:
+            for component_x, component_y in component:
+                accepted[component_y, component_x] = True
+    return accepted
 
 
 def _component_labels_for_targets(
@@ -169,6 +225,7 @@ def _nearest_clean_edge_reference(
     rgba: np.ndarray,
     edge: np.ndarray,
     alpha_threshold: int,
+    eligible_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rgb = rgba[:, :, :3]
     alpha = rgba[:, :, 3]
@@ -179,6 +236,10 @@ def _nearest_clean_edge_reference(
         & (rgb[:, :, 2] >= MAGENTA_MIN_CHANNEL)
         & (dominance >= MAGENTA_DOMINANCE_MIN)
     )
+    if eligible_mask is not None:
+        if eligible_mask.shape != strong.shape:
+            raise ValueError("despill eligibility mask must match the image dimensions")
+        strong &= eligible_mask
     visible = alpha >= alpha_threshold
     green_dominance = _green_dominance(rgb)
     clean = (
@@ -224,7 +285,12 @@ def _nearest_clean_edge_reference(
 def magenta_edge_metrics(image: Image.Image, alpha_threshold: int = 24) -> dict[str, Any]:
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
     edge = transparent_edge_mask(rgba[:, :, 3], alpha_threshold)
-    contamination, _, _ = _nearest_clean_edge_reference(rgba, edge, alpha_threshold)
+    contamination, _, _ = _nearest_clean_edge_reference(
+        rgba,
+        edge,
+        alpha_threshold,
+        _known_chroma_residue_mask(rgba[:, :, :3]),
+    )
     edge_count = int(np.count_nonzero(edge))
     contamination_count = int(np.count_nonzero(contamination))
     return {
@@ -242,6 +308,7 @@ def despill_chroma_partial_anomalies(
     partial_candidate: np.ndarray,
     inverse_valid: np.ndarray,
     alpha_threshold: int = 8,
+    proven_green_anomaly: np.ndarray | None = None,
 ) -> tuple[Image.Image, dict[str, Any]]:
     """Repair only mathematically suspect low-alpha chroma fringe RGB.
 
@@ -259,6 +326,10 @@ def despill_chroma_partial_anomalies(
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
     if partial_candidate.shape != rgba.shape[:2] or inverse_valid.shape != rgba.shape[:2]:
         raise ValueError("chroma anomaly masks must match the image dimensions")
+    if proven_green_anomaly is None:
+        proven_green_anomaly = np.zeros(rgba.shape[:2], dtype=np.bool_)
+    elif proven_green_anomaly.shape != rgba.shape[:2]:
+        raise ValueError("proven green anomaly mask must match the image dimensions")
 
     original_alpha = rgba[:, :, 3].copy()
     rgb = rgba[:, :, :3]
@@ -282,8 +353,13 @@ def despill_chroma_partial_anomalies(
     )
     green_inverse = (
         low_alpha_partial
+        & proven_green_anomaly
         & (rgb[:, :, 1] >= GREEN_MIN_CHANNEL)
         & (green_dominance >= GREEN_DOMINANCE_MIN)
+    )
+    green_inverse = _small_target_components(
+        green_inverse,
+        GREEN_AUTO_REPAIR_MAX_COMPONENT_PIXELS,
     )
     anomalous = invalid_inverse | green_inverse
 
@@ -345,6 +421,8 @@ def despill_chroma_partial_anomalies(
         "strongGreenPixelsAfter": int(np.count_nonzero(strong_green_after)),
         "referenceRadius": GREEN_REFERENCE_RADIUS,
         "referenceAlphaMinimum": REFERENCE_ALPHA_MIN,
+        "greenAutoRepairMaxComponentPixels": GREEN_AUTO_REPAIR_MAX_COMPONENT_PIXELS,
+        "provenGreenAnomalyPixels": int(np.count_nonzero(proven_green_anomaly)),
         "alphaPixelsChanged": int(np.count_nonzero(rgba[:, :, 3] != original_alpha)),
     }
 
@@ -353,36 +431,74 @@ def despill_resampled_green_edges(
     image: Image.Image,
     alpha_threshold: int = 2,
 ) -> tuple[Image.Image, dict[str, Any]]:
-    """Apply the same local-contrast rule to low-alpha resize fringe."""
+    """Preserve resized art when no chroma provenance mask exists.
 
-    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
+    Premultiplied resizing prevents hidden RGB from inventing a green fringe.
+    Any remaining low-alpha green may be a legitimate connected VFX or body
+    accent, so this compatibility entry point is intentionally a no-op.
+    """
+
+    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
     alpha = rgba[:, :, 3]
-    resampled_fringe = (
+    strong_green = (
         (alpha >= alpha_threshold)
         & (alpha <= GREEN_EDGE_ALPHA_MAX)
+        & (rgba[:, :, 1] >= GREEN_MIN_CHANNEL)
+        & (_green_dominance(rgba[:, :, :3]) >= GREEN_DOMINANCE_MIN)
     )
-    inverse_valid = np.ones(alpha.shape, dtype=np.bool_)
-    return despill_chroma_partial_anomalies(
-        image,
-        resampled_fringe,
-        inverse_valid,
-        alpha_threshold,
-    )
+    count = int(np.count_nonzero(strong_green))
+    return Image.fromarray(rgba, mode="RGBA"), {
+        "invalidInversePixelsBefore": 0,
+        "strongGreenPixelsBefore": count,
+        "repairedPixels": 0,
+        "unresolvedInvalidInversePixels": 0,
+        "unresolvedStrongGreenPixels": count,
+        "preservedNaturalGreenPixels": count,
+        "strongGreenPixelsAfter": count,
+        "referenceRadius": 0,
+        "referenceAlphaMinimum": REFERENCE_ALPHA_MIN,
+        "greenAutoRepairMaxComponentPixels": 0,
+        "provenGreenAnomalyPixels": 0,
+        "alphaPixelsChanged": 0,
+        "skippedReason": "no_chroma_provenance",
+    }
 
 
 def despill_transparent_alpha(
     image: Image.Image,
     alpha_threshold: int = 8,
+    eligible_mask: np.ndarray | None = None,
 ) -> tuple[Image.Image, dict[str, Any]]:
-    """Replace polluted edge RGB while preserving every alpha value exactly."""
+    """Replace proven polluted edge RGB while preserving alpha exactly.
+
+    Already-transparent art has no trustworthy keying provenance.  The safe
+    default is therefore a byte-preserving no-op; callers that performed the
+    chroma key in the same operation may pass the exact eligible pixel mask.
+    """
 
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
     original_alpha = rgba[:, :, 3].copy()
     edge = transparent_edge_mask(original_alpha, alpha_threshold)
+    if eligible_mask is None:
+        conservative = magenta_edge_metrics(
+            Image.fromarray(rgba, mode="RGBA"),
+            alpha_threshold=max(alpha_threshold, 24),
+        )
+        count = int(conservative["strongMagentaEdgePixels"])
+        return Image.fromarray(rgba, mode="RGBA"), {
+            "edgePixelCount": int(np.count_nonzero(edge)),
+            "strongMagentaEdgePixelsBefore": count,
+            "strongMagentaEdgePixelsAfter": count,
+            "strongMagentaEdgeRatioAfter": conservative["strongMagentaEdgeRatio"],
+            "despilledPixels": 0,
+            "alphaPixelsChanged": 0,
+            "skippedReason": "no_chroma_provenance",
+        }
     contamination, references, _ = _nearest_clean_edge_reference(
         rgba,
         edge,
         alpha_threshold,
+        eligible_mask,
     )
     before_count = int(np.count_nonzero(contamination))
     if before_count:
@@ -408,12 +524,24 @@ def despill_transparent_alpha(
     rgba[original_alpha == 0, :3] = 0
     rgba[:, :, 3] = original_alpha
     result = Image.fromarray(rgba, mode="RGBA")
-    after = magenta_edge_metrics(result, alpha_threshold=max(alpha_threshold, 24))
+    result_rgba = np.asarray(result, dtype=np.uint8)
+    result_edge = transparent_edge_mask(result_rgba[:, :, 3], alpha_threshold)
+    after_contamination, _, _ = _nearest_clean_edge_reference(
+        result_rgba,
+        result_edge,
+        alpha_threshold,
+        eligible_mask,
+    )
+    after_count = int(np.count_nonzero(after_contamination))
+    after_edge_count = int(np.count_nonzero(result_edge))
     return result, {
         "edgePixelCount": int(np.count_nonzero(edge)),
         "strongMagentaEdgePixelsBefore": before_count,
-        "strongMagentaEdgePixelsAfter": after["strongMagentaEdgePixels"],
-        "strongMagentaEdgeRatioAfter": after["strongMagentaEdgeRatio"],
+        "strongMagentaEdgePixelsAfter": after_count,
+        "strongMagentaEdgeRatioAfter": round(
+            after_count / after_edge_count if after_edge_count else 0.0,
+            6,
+        ),
         "despilledPixels": before_count,
         "alphaPixelsChanged": int(np.count_nonzero(rgba[:, :, 3] != original_alpha)),
     }

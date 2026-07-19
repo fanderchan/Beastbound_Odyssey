@@ -236,7 +236,7 @@ class PetArtBatchAuditTest(unittest.TestCase):
             draw.rounded_rectangle(
                 (58, 58, 180, 224),
                 radius=24,
-                outline=(112, 4, 136, 220),
+                outline=(240, 4, 244, 220),
                 width=2,
             )
             frame.save(frame_path)
@@ -263,6 +263,46 @@ class PetArtBatchAuditTest(unittest.TestCase):
             completed, report = _run(root, catalog)
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertNotIn("magenta_edge_contamination", _issue_codes(report))
+
+    def test_legitimate_contrasting_purple_rim_does_not_trigger_edge_spill_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            frame_path = pet_root / "views/front_3quarter_sw/idle/idle-1.png"
+            image = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(image)
+            draw.rounded_rectangle((58, 58, 180, 224), radius=24, fill=(112, 67, 31, 255))
+            draw.rounded_rectangle(
+                (57, 57, 181, 225),
+                radius=25,
+                outline=(105, 34, 148, 220),
+                width=2,
+            )
+            image.save(frame_path)
+
+            completed, report = _run(root, catalog)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertNotIn("magenta_edge_contamination", _issue_codes(report))
+
+    def test_less_than_twelve_near_key_pixels_still_fail_when_ratio_exceeds_two_percent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            frame_path = pet_root / "views/front_3quarter_sw/idle/idle-1.png"
+            image = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(image)
+            draw.rectangle((120, 120, 125, 125), fill=(112, 67, 31, 255))
+            for x, y in ((120, 120), (121, 120), (122, 120), (123, 120)):
+                image.putpixel((x, y), (240, 4, 244, 220))
+            image.save(frame_path)
+
+            completed, report = _run(root, catalog)
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn("magenta_edge_contamination", _issue_codes(report))
 
     def test_planned_missing_assets_are_pending_and_nonblocking(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

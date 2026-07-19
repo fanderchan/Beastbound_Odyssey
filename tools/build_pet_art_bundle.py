@@ -39,7 +39,6 @@ from PIL import Image, ImageDraw, ImageFont
 from cleanup_sprite_alpha_components import alpha_components
 from sprite_alpha_despill import (
     despill_chroma_partial_anomalies,
-    despill_resampled_green_edges,
     despill_transparent_alpha,
 )
 
@@ -350,6 +349,7 @@ def chroma_to_alpha(
     partial_inverse_out_of_gamut = 0
     partial_inverse_adjusted = 0
     partial_inverse_valid = np.ones(partial.shape, dtype=np.bool_)
+    proven_green_anomaly = np.zeros(partial.shape, dtype=np.bool_)
     if np.any(partial):
         partial_matte = np.maximum(matte[partial, None], 1.0 / 255.0)
         inverse = (
@@ -396,18 +396,36 @@ def chroma_to_alpha(
         rgba[:, :, :3][partial] = np.rint(
             np.clip(adjusted_inverse, 0.0, 255.0)
         ).astype(np.uint8)
+        adjusted_rgb = rgba[:, :, :3][partial].astype(np.float32)
+        observed_magenta_dominance = (
+            np.minimum(observed[:, 0], observed[:, 2]) - observed[:, 1]
+        )
+        adjusted_green_dominance = adjusted_rgb[:, 1] - np.maximum(
+            adjusted_rgb[:, 0],
+            adjusted_rgb[:, 2],
+        )
+        proven_partial_green = (
+            (observed[:, 0] >= 180.0)
+            & (observed[:, 2] >= 180.0)
+            & (observed_magenta_dominance >= 80.0)
+            & (adjusted_rgb[:, 1] >= 35.0)
+            & (adjusted_green_dominance >= 18.0)
+        )
+        proven_green_anomaly[partial] = proven_partial_green
 
     rgba[:, :, 3] = output_alpha
     rgba[output_alpha == 0, :3] = 0
     edge_cleaned, despill_meta = despill_transparent_alpha(
         Image.fromarray(rgba, mode="RGBA"),
         alpha_threshold,
+        partial,
     )
     cleaned, anomaly_meta = despill_chroma_partial_anomalies(
         edge_cleaned,
         partial,
         partial_inverse_valid,
         alpha_threshold,
+        proven_green_anomaly,
     )
     return cleaned, {
         "inputBackgroundMode": "chroma_key",
@@ -789,7 +807,6 @@ def normalize_canvas(
         "RGBA", (SOURCE_FRAME_SIZE, SOURCE_FRAME_SIZE), (0, 0, 0, 0)
     )
     canvas.alpha_composite(resized, (x, y))
-    canvas, resized_green_cleanup = despill_resampled_green_edges(canvas)
     canvas, cleaned_fringe = clean_resample_alpha(
         canvas,
         options.key,
@@ -825,7 +842,6 @@ def normalize_canvas(
         "sourceVisibleBbox": list(bbox),
         "sourceBaselineExclusive": baseline_exclusive,
         "actualScale": [round(actual_scale_x, 8), round(actual_scale_y, 8)],
-        "sourceResampleGreenCleanup": resized_green_cleanup,
         "sourceLowAlphaMagentaPixelsCleared": cleaned_fringe,
         "residualMagentaPixelsSource": residual,
     }
@@ -955,7 +971,6 @@ def render_frames(
             source,
             (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE),
         )
-        runtime, runtime_green_cleanup = despill_resampled_green_edges(runtime)
         runtime, runtime_cleaned_fringe = clean_resample_alpha(
             runtime,
             options.key,
@@ -992,7 +1007,6 @@ def render_frames(
                     **prepared.metadata,
                     **render_meta,
                     "runtimeVisibleBbox": list(runtime_bbox),
-                    "runtimeResampleGreenCleanup": runtime_green_cleanup,
                     "runtimeLowAlphaMagentaPixelsCleared": runtime_cleaned_fringe,
                     "residualMagentaPixelsRuntime": runtime_residual,
                     "sourceRgbaSha256": rgba_hash(source),

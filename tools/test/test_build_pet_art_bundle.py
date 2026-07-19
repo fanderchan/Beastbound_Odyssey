@@ -152,14 +152,14 @@ class PetArtBundleBuilderTests(unittest.TestCase):
                 "transparent_alpha",
             )
 
-    def test_transparent_alpha_magenta_spill_is_despilled_without_alpha_erosion(self) -> None:
+    def test_transparent_alpha_contrasting_purple_rim_is_preserved_without_provenance(self) -> None:
         image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         draw.rounded_rectangle((18, 18, 77, 77), radius=14, fill=(112, 67, 31, 255))
-        # Simulate an already-transparent helper that kept magenta RGB on the
-        # antialiased contour.  The central pipeline must recolor, not delete it.
+        # An already-transparent input provides no proof that this contrasting
+        # purple contour is spill rather than authored fur or a marking.
         draw.rounded_rectangle((17, 17, 78, 78), radius=15, outline=(116, 4, 132, 180), width=2)
-        alpha_before = np.asarray(image.getchannel("A"), dtype=np.uint8).copy()
+        before = np.asarray(image, dtype=np.uint8).copy()
 
         cleaned, metadata = builder.chroma_to_alpha(
             image,
@@ -168,15 +168,31 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             150.0,
             8,
         )
-        alpha_after = np.asarray(cleaned.getchannel("A"), dtype=np.uint8)
-        self.assertTrue(np.array_equal(alpha_before, alpha_after))
+        self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
         despill = metadata["transparentAlphaDespill"]
-        self.assertGreater(despill["despilledPixels"], 0)
+        self.assertEqual(despill["despilledPixels"], 0)
         self.assertEqual(despill["alphaPixelsChanged"], 0)
-        self.assertLess(
-            despill["strongMagentaEdgePixelsAfter"],
-            despill["strongMagentaEdgePixelsBefore"],
+        self.assertEqual(despill["skippedReason"], "no_chroma_provenance")
+
+    def test_explicit_chroma_provenance_can_clean_known_spill_without_alpha_erosion(self) -> None:
+        image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle((18, 18, 77, 77), radius=14, fill=(112, 67, 31, 255))
+        draw.rounded_rectangle((17, 17, 78, 78), radius=15, outline=(116, 4, 132, 180), width=2)
+        before = np.asarray(image, dtype=np.uint8).copy()
+        eligible = np.all(before[:, :, :3] == np.asarray((116, 4, 132)), axis=2)
+
+        cleaned, metadata = alpha_despill.despill_transparent_alpha(
+            image,
+            8,
+            eligible,
         )
+        after = np.asarray(cleaned, dtype=np.uint8)
+        self.assertTrue(np.array_equal(before[:, :, 3], after[:, :, 3]))
+        self.assertGreater(metadata["despilledPixels"], 0)
+        self.assertEqual(metadata["strongMagentaEdgePixelsAfter"], 0)
+        self.assertEqual(metadata["alphaPixelsChanged"], 0)
+        self.assertFalse(np.array_equal(before[:, :, :3], after[:, :, :3]))
 
     def test_transparent_alpha_legitimate_purple_subject_is_not_recolored(self) -> None:
         image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
@@ -249,12 +265,23 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             8,
         )
         self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
-        self.assertGreaterEqual(metadata["preservedNaturalGreenPixels"], 1)
-        self.assertGreaterEqual(metadata["unresolvedStrongGreenPixels"], 1)
         self.assertEqual(metadata["repairedPixels"], 0)
         self.assertEqual(metadata["alphaPixelsChanged"], 0)
 
-    def test_sparse_green_reference_search_stays_bounded_for_512_frame(self) -> None:
+    def test_connected_translucent_green_vfx_is_preserved_without_provenance(self) -> None:
+        image = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((12, 12, 32, 32), fill=(112, 67, 31, 255))
+        draw.rectangle((33, 20, 42, 23), fill=(34, 225, 62, 80))
+        before = np.asarray(image, dtype=np.uint8).copy()
+
+        cleaned, metadata = alpha_despill.despill_resampled_green_edges(image, 2)
+        self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
+        self.assertEqual(metadata["repairedPixels"], 0)
+        self.assertEqual(metadata["alphaPixelsChanged"], 0)
+        self.assertEqual(metadata["skippedReason"], "no_chroma_provenance")
+
+    def test_large_proven_green_region_is_preserved_as_authored_vfx(self) -> None:
         image = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
         ImageDraw.Draw(image).rectangle((128, 96, 416, 448), fill=(118, 54, 32, 255))
         partial = np.zeros((512, 512), dtype=np.bool_)
@@ -262,17 +289,21 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             image.putpixel((127, y), (24, 205, 18, 64))
             partial[y, 127] = True
         inverse_valid = np.ones((512, 512), dtype=np.bool_)
+        proven_green = partial.copy()
+        before = np.asarray(image, dtype=np.uint8).copy()
 
         started = time.perf_counter()
-        _, metadata = alpha_despill.despill_chroma_partial_anomalies(
+        cleaned, metadata = alpha_despill.despill_chroma_partial_anomalies(
             image,
             partial,
             inverse_valid,
             8,
+            proven_green,
         )
         elapsed = time.perf_counter() - started
-        self.assertEqual(metadata["repairedPixels"], 345)
-        self.assertEqual(metadata["unresolvedStrongGreenPixels"], 0)
+        self.assertEqual(metadata["repairedPixels"], 0)
+        self.assertEqual(metadata["strongGreenPixelsBefore"], 0)
+        self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
         self.assertLess(elapsed, 2.0, f"sparse 512px cleanup took {elapsed:.3f}s")
 
     def test_bundle_source_and_runtime_resize_keep_green_fix_and_alpha_shape(self) -> None:
@@ -302,14 +333,8 @@ class PetArtBundleBuilderTests(unittest.TestCase):
                 ],
                 0,
             )
-            self.assertEqual(
-                metadata["frames"][0]["sourceResampleGreenCleanup"]["alphaPixelsChanged"],
-                0,
-            )
-            self.assertEqual(
-                metadata["frames"][0]["runtimeResampleGreenCleanup"]["alphaPixelsChanged"],
-                0,
-            )
+            self.assertNotIn("sourceResampleGreenCleanup", metadata["frames"][0])
+            self.assertNotIn("runtimeResampleGreenCleanup", metadata["frames"][0])
             for path in (
                 output_dir / "source-frames/frame-1.png",
                 output_dir / "runtime-frames/frame-1.png",
