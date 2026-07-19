@@ -254,6 +254,59 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             with Image.open(root / "bottom/sheet-runtime-transparent.png") as output:
                 self.assertEqual(output.size, (cols * 256, 2 * 256))
 
+    def test_non_divisible_generated_sheet_uses_exact_integer_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_path = root / "imagegen-1254.png"
+            size = 1254
+            rows = cols = 4
+            x_boundaries = builder.grid_boundaries(size, cols)
+            y_boundaries = builder.grid_boundaries(size, rows)
+            sheet = Image.new("RGB", (size, size), builder.DEFAULT_KEY)
+            draw = ImageDraw.Draw(sheet)
+            for row in range(rows):
+                for col in range(cols):
+                    left = x_boundaries[col]
+                    top = y_boundaries[row]
+                    right = x_boundaries[col + 1]
+                    bottom = y_boundaries[row + 1]
+                    draw.rounded_rectangle(
+                        (left + 72, top + 54, right - 72, bottom - 40),
+                        radius=28,
+                        fill=(60 + row * 25, 120 + col * 18, 190),
+                    )
+            sheet.save(input_path, format="PNG")
+
+            metadata = builder.build_bundle(
+                builder.BuildOptions(
+                    input_path=input_path,
+                    output_dir=root / "bottom-half",
+                    rows=rows,
+                    cols=cols,
+                    row_start=2,
+                    row_count=2,
+                    slots=tuple(f"back-{index}" for index in range(1, 9)),
+                )
+            )
+
+            self.assertEqual(metadata["inputSize"], [1254, 1254])
+            self.assertEqual(
+                metadata["inputCellSizeMode"],
+                "distributed_integer_boundaries",
+            )
+            self.assertEqual(metadata["inputGridBoundaries"]["x"], [0, 313, 627, 940, 1254])
+            self.assertEqual(metadata["inputGridBoundaries"]["y"], [0, 313, 627, 940, 1254])
+            self.assertEqual(metadata["frames"][0]["sourceCellBox"], [0, 627, 313, 940])
+            self.assertEqual(metadata["frames"][-1]["sourceCellBox"], [940, 940, 1254, 1254])
+            self.assertEqual(
+                sum(
+                    metadata["inputGridBoundaries"]["x"][index + 1]
+                    - metadata["inputGridBoundaries"]["x"][index]
+                    for index in range(cols)
+                ),
+                size,
+            )
+
     def test_explicit_slot_count_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -8,6 +8,9 @@ normalizes every frame with one shared scale and anchor rule, performs strict
 QC, and publishes transparent 512px source frames plus 256px runtime frames.
 An explicit contiguous row range may be selected so one honestly archived
 generation sheet can provide independently authored front/back action rows.
+Grid boundaries are derived directly from the untouched source dimensions;
+when a generated sheet is not evenly divisible, neighboring cells differ by
+at most one pixel and every exact crop box remains recorded in the manifest.
 
 The build fails closed for empty/cropped frames, unsafe output bounds, large
 detached components, residual magenta, or excessive generated scale drift.
@@ -105,6 +108,15 @@ class RenderedFrame:
 
 def selected_row_count(options: BuildOptions) -> int:
     return options.rows - options.row_start if options.row_count is None else options.row_count
+
+
+def grid_boundaries(length: int, count: int) -> tuple[int, ...]:
+    """Return deterministic integer partitions that cover the source exactly."""
+    if length < count:
+        raise BundleBuildError(
+            f"grid axis length {length} cannot provide {count} positive cells"
+        )
+    return tuple(index * length // count for index in range(count + 1))
 
 
 def parse_hex_color(value: str) -> tuple[int, int, int]:
@@ -538,22 +550,17 @@ def prepare_frame(
 
 
 def prepare_frames(sheet: Image.Image, options: BuildOptions) -> list[PreparedFrame]:
-    if sheet.width % options.cols != 0 or sheet.height % options.rows != 0:
-        raise BundleBuildError(
-            f"input size {sheet.size} is not evenly divisible by "
-            f"{options.rows}x{options.cols}"
-        )
-    cell_width = sheet.width // options.cols
-    cell_height = sheet.height // options.rows
+    x_boundaries = grid_boundaries(sheet.width, options.cols)
+    y_boundaries = grid_boundaries(sheet.height, options.rows)
     frames: list[PreparedFrame] = []
     for index, slot in enumerate(options.slots):
         selected_row, col = divmod(index, options.cols)
         row = options.row_start + selected_row
         box = (
-            col * cell_width,
-            row * cell_height,
-            (col + 1) * cell_width,
-            (row + 1) * cell_height,
+            x_boundaries[col],
+            y_boundaries[row],
+            x_boundaries[col + 1],
+            y_boundaries[row + 1],
         )
         try:
             prepared = prepare_frame(sheet.crop(box), slot, row, col, box, options)
@@ -918,6 +925,16 @@ def write_bundle(
                 input_sheet.width // options.cols,
                 input_sheet.height // options.rows,
             ],
+            "inputCellSizeMode": (
+                "uniform"
+                if input_sheet.width % options.cols == 0
+                and input_sheet.height % options.rows == 0
+                else "distributed_integer_boundaries"
+            ),
+            "inputGridBoundaries": {
+                "x": list(grid_boundaries(input_sheet.width, options.cols)),
+                "y": list(grid_boundaries(input_sheet.height, options.rows)),
+            },
             "slots": list(options.slots),
             "key": color_text(options.key),
             "transparentDistance": options.transparent_distance,
