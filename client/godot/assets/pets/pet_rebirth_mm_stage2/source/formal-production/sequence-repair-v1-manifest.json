@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "id": "front-down-monotonic-v1",
+  "view": "front_3quarter_sw",
+  "action": "down",
+  "problem": "frames 6 and 7 stood back up after the body was already prone",
+  "result": "frame 6 holds low; frame 7 enters final prone body; frame 8 reveals KO eyes",
+  "changedFrames": [
+    "down-6",
+    "down-7"
+  ],
+  "down8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "beforeAfterEvidence": "qa/battle/repairs/mm2-front-down-monotonic-v1-before-after.png",
+  "beforeAfterEvidenceSha256": "43f56ed8d314d1eabc7f3ec03debc2ddcc3cbf729eb97979597f5077b22bdc61",
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "f225f208fc346694dae27942e7360236f5073d18bc84dcafb285d556902a2e94",
+  "runtimeEnabled": false
+}

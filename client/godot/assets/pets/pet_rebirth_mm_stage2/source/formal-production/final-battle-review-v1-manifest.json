@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "f225f208fc346694dae27942e7360236f5073d18bc84dcafb285d556902a2e94",
+  "runtimeEnabled": false,
+  "sequenceReview": {
+    "id": "battle180-sequence-review-v1",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "e38e0b85aea050166bc875238ee84f07405cf0cd314296adecea650d0c3bbe98",
+    "reviewedViews": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "downMonotonicNoMidSequenceStandUp": true,
+    "reviveStartsFromExactDownHoldAndRecoversProgressively": true,
+    "knockawayRotationAndTrajectoryFramesContinuous": true,
+    "attackSkillCounterFramesOrderedOutAndBack": true,
+    "koExpression": "reusable_unconscious_no_x_no_sleep_no_smile",
+    "selfReviewStatus": "passed",
+    "ownerReviewStatus": "pending",
+    "correctiveRepair": "front-down-monotonic-v1"
+  },
+  "godotBattleLoadReview": {
+    "status": "passed",
+    "godotVersion": "4.7.stable",
+    "actions": 12,
+    "views": 2,
+    "framesLoaded": 180,
+    "textureSize": [
+      256,
+      256
+    ],
+    "finalPresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "checkScript": ".run/batch_e_battle_load_check.gd"
+  },
+  "catalogAudit": "passed 180/180",
+  "battleActionCatalogCheck": "passed",
+  "ownerReviewStatus": "pending"
+}

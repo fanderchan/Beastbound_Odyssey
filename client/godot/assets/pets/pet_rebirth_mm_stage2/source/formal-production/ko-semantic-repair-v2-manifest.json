@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "id": "revivable-ko-eyes-v2",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+  "alphaExactForEveryEditedFrame": true,
+  "rgbPixelsChangedOutsideSemanticMask": 0,
+  "down8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+  "beforeAfterEvidenceSha256": "b1bd26451e8649c9b222b3fccf8f594260fc86f178ab2cdd0c135f6f317eb714",
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "restoredFromVerifiedBaseline": true,
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "f225f208fc346694dae27942e7360236f5073d18bc84dcafb285d556902a2e94",
+  "runtimeEnabled": false,
+  "restoredBaselineBackup": ".run/art_batch_phase320/battle-alpha-despill-batch-e/pet_rebirth_mm_stage2/backup-before",
+  "restoredBaselineFrameCount": 180,
+  "restoredBaselineByteExact": true
+}

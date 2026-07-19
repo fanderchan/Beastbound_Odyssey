@@ -3,7 +3,7 @@
   "formId": "pet_rebirth_mm_stage2",
   "displayName": "2转小MM",
   "artStatus": "in_production",
-  "productionScope": "identity_and_formal_two_view_12_action_battle_owner_review_pending",
+  "productionScope": "identity_and_formal_two_view_12_action_battle_semantic_repair_staged_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -137,24 +137,66 @@
     "prompt": "prompts/identity-board-v1.txt",
     "formalProductionLedger": "source/formal-production/source-ledger.json",
     "promptDirectory": "prompts/production",
-    "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet"
+    "workingArchive": "source/formal-production"
   },
   "evidence": {
-    "contactSheet": ".run/art_batch_phase320/rebirth_mm/stage2-identity-build/contact-sheet.png",
-    "contactSheetSha256": "c798b8e760b56021ed204c77ec72735cf782eebb0b2f510d9f64f7199f6dfef8",
-    "groupContactSheet": ".run/art_batch_phase320/rebirth_mm/contact-sheet.png",
-    "groupContactSheetSha256": "7b4cda5572cfbc2314159269b631b184f6e01a79353de27296017b2f91f56c0d",
-    "comparison160px": ".run/art_batch_phase320/rebirth_mm/comparison-160px.png",
-    "comparison160pxSha256": "090650e47f5d5eebf04365214b56611fa48238ce6cdb3b33a33dc28ce4702f14",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "4b51d7a7f87c294ec66b7647be659408351c09fb2284a1affb6237a2a39d824a",
+    "battleContactSheetSha256": "70fe154416b96bc7179b54f0e2f809fc3d047ed18b7287d623d8df5541cc0f0e",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "f3523f03fb0091ac3234b3c8ba720da8fea100a195fa7dab7e0dc2bce1db0bd6",
+    "battleQcSha256": "f6556faaa10419ca88fdd88086d60d9260d38c5198a77d55709148981e388f82",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "31b9d123f7fd510edd34bcea449c95d7a5ab8757d3de07ea84f4f56513eb3301"
+    "battleFacingContractPreviewSha256": "d0fc98089030321291b2b6e8962dcc39907f6ae92f85f51a582aee4e1039df1f",
+    "semanticRepairManifest": "source/formal-production/mm2-semantic-repair-v1-manifest.json",
+    "semanticRepairManifestSha256": "30fc428053e121c2405236610d248ec812e8dc1884ad1a5ddf61b64879334984",
+    "semanticRepairStrictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
+    "semanticRepairStrictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
+    "continuityEvidence": [
+      {
+        "view": "front_3quarter_sw",
+        "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+        "contactSheetSha256": "156433c48b59feac4db1aea608f95927fabcebe52789f63a7a3831e2adb9db71",
+        "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+        "gifSha256": "b7fb76f604e0ffc445bf8d82824e18c6afa681e32cfccad5a237ef2d7795b8c8",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+        "sequenceManifestSha256": "20c4a54a979f4e35a579dd668122b5b71721f5033e71fe66359276ebdfaa0562",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+        "contactSheetSha256": "2e8a650b20ad2c39c19a3b5c85080aedae655077b546a143fdfa462dbcae777a",
+        "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+        "gifSha256": "d599eeb6720dcc7dd1b92e9fb643f5e6037caff87582961d00285284d93bfb7a",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+        "sequenceManifestSha256": "35815a6e07fc9c251d098fdf7df1b0cef118d4e6405da801e399b208363e5322",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      }
+    ],
+    "repairEvidence": [
+      {
+        "path": "qa/battle/repairs/semantic-attack4-direction-before-after.png",
+        "sha256": "95585d9d1b22a1a506d1d33d1705d849dbb74d9118c881a6e482a1048a811b7e"
+      },
+      {
+        "path": "qa/battle/repairs/semantic-knockaway-before-after.png",
+        "sha256": "e8287da53a75273fba8e753189e48f8f942b4cf828b76ba810644f736a7e9d30"
+      },
+      {
+        "path": "qa/battle/repairs/semantic-down-group-before-after.png",
+        "sha256": "2dde628008e722ac0c06f99bf992a448164d520f111853dc666e1803a2d5a9f1"
+      },
+      {
+        "path": "qa/battle/repairs/semantic-component-cleanup-before-after.png",
+        "sha256": "c43b637a864bb68dc45c4231708ed63359d11a99f9026f1c377a37c66902c1ca"
+      }
+    ]
   },
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "notes": "MM2 semantic repair candidate is staged with a guarded 180-frame overlay and static QA. Runtime remains disabled; owner aesthetic review, guarded install, Godot load, and real battle replay remain pending.",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -168,7 +210,7 @@
     }
   },
   "battleVisual": {
-    "status": "static_self_review_passed_owner_pending",
+    "status": "semantic_repair_staged_static_self_review_passed_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -202,13 +244,146 @@
       "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
       "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
     },
-    "bundleDigest": "ecfcbca2c2fb2c6a7a421928e08b3936415dcd702d498bd0cdc2dd69d179defd",
+    "bundleDigest": "4900f6988d756faff09af2d1814b2e00950ccc2015c938ae370320eb581cafe9",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "facingContractPreview": "qa/battle/facing-contract-preview.png",
-    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+    "totalFrameCount": 180,
+    "runtimeBundleDigest": "4900f6988d756faff09af2d1814b2e00950ccc2015c938ae370320eb581cafe9",
+    "minimumBattleRuntimeEdgeMargin": 13,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      "mm2-semantic-repair-v1"
+    ],
+    "koSemanticRepair": {
+      "id": "revivable-ko-eyes-v2",
+      "views": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "expression": "clear_spiral_or_unfocused_eyes_no_x_no_sleep_no_smile",
+      "alphaExactForEveryEditedFrame": true,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "down8Revive1ExactRgba": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "beforeAfterEvidence": "qa/battle/repairs/revivable-ko-eyes-v2-before-after.png",
+      "beforeAfterEvidenceSha256": "b1bd26451e8649c9b222b3fccf8f594260fc86f178ab2cdd0c135f6f317eb714",
+      "ownerReviewStatus": "self_review_passed_owner_pending",
+      "restoredFromVerifiedBaseline": true
+    },
+    "sequenceRepair": {
+      "id": "front-down-monotonic-v1",
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "problem": "frames 6 and 7 stood back up after the body was already prone",
+      "result": "frame 6 holds low; frame 7 enters final prone body; frame 8 reveals KO eyes",
+      "changedFrames": [
+        "down-6",
+        "down-7"
+      ],
+      "down8Revive1ExactRgba": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "beforeAfterEvidence": "qa/battle/repairs/mm2-front-down-monotonic-v1-before-after.png",
+      "beforeAfterEvidenceSha256": "43f56ed8d314d1eabc7f3ec03debc2ddcc3cbf729eb97979597f5077b22bdc61",
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    },
+    "sequenceReview": {
+      "id": "battle180-semantic-repair-review-v1",
+      "contactSheet": "qa/battle/contact-sheet.png",
+      "contactSheetSha256": "70fe154416b96bc7179b54f0e2f809fc3d047ed18b7287d623d8df5541cc0f0e",
+      "reviewedViews": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "downReviveContinuityEvidence": [
+        {
+          "view": "front_3quarter_sw",
+          "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+          "contactSheetSha256": "156433c48b59feac4db1aea608f95927fabcebe52789f63a7a3831e2adb9db71",
+          "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+          "gifSha256": "b7fb76f604e0ffc445bf8d82824e18c6afa681e32cfccad5a237ef2d7795b8c8",
+          "gifDecodedFrameCount": 16,
+          "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+          "sequenceManifestSha256": "20c4a54a979f4e35a579dd668122b5b71721f5033e71fe66359276ebdfaa0562",
+          "down8Revive1EncodedExact": true,
+          "down8Revive1DecodedRgbaExact": true
+        },
+        {
+          "view": "back_3quarter_ne",
+          "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+          "contactSheetSha256": "2e8a650b20ad2c39c19a3b5c85080aedae655077b546a143fdfa462dbcae777a",
+          "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+          "gifSha256": "d599eeb6720dcc7dd1b92e9fb643f5e6037caff87582961d00285284d93bfb7a",
+          "gifDecodedFrameCount": 16,
+          "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+          "sequenceManifestSha256": "35815a6e07fc9c251d098fdf7df1b0cef118d4e6405da801e399b208363e5322",
+          "down8Revive1EncodedExact": true,
+          "down8Revive1DecodedRgbaExact": true
+        }
+      ],
+      "knockawayBodyCentreStable": true,
+      "attack4FinalFlipHInward": true,
+      "detachedNeighborComponentsRemoved": true,
+      "centralSkillEnergyPreserved": true,
+      "selfReviewStatus": "passed",
+      "ownerReviewStatus": "pending"
+    },
+    "godotBattleLoadReview": {
+      "status": "pending_candidate_install_and_real_client_review",
+      "actions": 12,
+      "views": 2,
+      "framesStaticallyDecoded": 180,
+      "textureSize": [
+        256,
+        256
+      ],
+      "finalPresentationFlipH": {
+        "enemy": true,
+        "ally": true
+      }
+    },
+    "runtimeEnabled": false,
+    "minimumBattleRuntimeEdgeMarginAtAlpha8": 14,
+    "semanticRepair": {
+      "id": "mm2-semantic-repair-v1",
+      "replacementFrameCount": 41,
+      "preserveFrameCount": 139,
+      "manifest": "source/formal-production/mm2-semantic-repair-v1-manifest.json",
+      "manifestSha256": "30fc428053e121c2405236610d248ec812e8dc1884ad1a5ddf61b64879334984",
+      "strictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
+      "strictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
+      "repairEvidence": [
+        {
+          "path": "qa/battle/repairs/semantic-attack4-direction-before-after.png",
+          "sha256": "95585d9d1b22a1a506d1d33d1705d849dbb74d9118c881a6e482a1048a811b7e"
+        },
+        {
+          "path": "qa/battle/repairs/semantic-knockaway-before-after.png",
+          "sha256": "e8287da53a75273fba8e753189e48f8f942b4cf828b76ba810644f736a7e9d30"
+        },
+        {
+          "path": "qa/battle/repairs/semantic-down-group-before-after.png",
+          "sha256": "2dde628008e722ac0c06f99bf992a448164d520f111853dc666e1803a2d5a9f1"
+        },
+        {
+          "path": "qa/battle/repairs/semantic-component-cleanup-before-after.png",
+          "sha256": "c43b637a864bb68dc45c4231708ed63359d11a99f9026f1c377a37c66902c1ca"
+        }
+      ],
+      "selfReviewStatus": "passed",
+      "ownerReviewStatus": "pending",
+      "installationStatus": "not-installed"
+    }
   }
 }

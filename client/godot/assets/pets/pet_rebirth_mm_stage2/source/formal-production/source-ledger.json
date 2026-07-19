@@ -2,137 +2,643 @@
   "schemaVersion": 1,
   "formId": "pet_rebirth_mm_stage2",
   "kind": "pet",
-  "scope": "standalone_pet_battle180",
+  "scope": "standalone_pet_battle180_semantic_repair_overlay",
   "archiveMode": "lean",
   "componentMode": "all",
   "runtimeFrameCount": 180,
-  "runtimeBundleDigest": "ecfcbca2c2fb2c6a7a421928e08b3936415dcd702d498bd0cdc2dd69d179defd",
+  "runtimeBundleDigest": "4900f6988d756faff09af2d1814b2e00950ccc2015c938ae370320eb581cafe9",
   "sourceFramesTracked": false,
   "rawGenerationSheetsTracked": false,
   "rawGenerationSheetCount": 24,
   "rawGenerationSheets": [
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/attack/raw-sheet.png",
       "sha256": "5c9818ddea22109dec511ecc1ac89b8b0a5bfb3ac162d6994d8298825ded6a0f",
       "sizeBytes": 2065279
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/counter/raw-sheet.png",
       "sha256": "128a2ed0b01cd6d3d45fbdd8c6b2c0e524565c62a109f52cec14aba10969ed54",
       "sizeBytes": 1886991
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/defend/raw-sheet.png",
       "sha256": "4c9d95c91cdd2a6fa3a1c228e0939b6a852e3afaa67a773be4992137c14e148b",
       "sizeBytes": 2183187
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/dodge/raw-sheet.png",
       "sha256": "e822226f2cba95183ca45bc2b5ea11bb1577e188e112042eff753a912696dd77",
       "sizeBytes": 2213930
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/down/raw-sheet.png",
       "sha256": "b48019b019688fad1f8d81ae5a449fa94e2d59bc6187ef12fcca853d9b3e3938",
       "sizeBytes": 1686498
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/hurt/raw-sheet.png",
       "sha256": "e68d34702f7ad63ed5c0e942c7371b910b41bb70ee46c8b24617ae3b2f3ab6af",
       "sizeBytes": 1950593
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/idle/raw-sheet.png",
       "sha256": "be37b9da54c8cd82ab181d4746e40a0322a05d44669183577dc3c61c407a8130",
       "sizeBytes": 2094695
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/knockaway/raw-sheet.png",
       "sha256": "314be28bbffc3f76ed06a9dc6f601cdeb86ae70f4142d315bb50734bdde11ffc",
       "sizeBytes": 2044803
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/revive/raw-sheet.png",
       "sha256": "4f6e313e10f5546a904032a7435fc9c5ef829d24fce907699f6a341c45f83039",
       "sizeBytes": 2213049
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/skill/raw-sheet.png",
       "sha256": "f04d23483edba9a98c2a90084e92e20b4e0e2d3de8052eeb4cd49aad1eaff6a9",
       "sizeBytes": 2185598
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/stagger/raw-sheet.png",
       "sha256": "0746c7cf1c473cdcca885cef4ddfbf790bef5ead5bb3f98ce6893ae27faa0a1c",
       "sizeBytes": 1807459
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sourceId": "back_3quarter_ne/walk/raw-sheet.png",
       "sha256": "eb1dd05eea52937bbfa39e93d301b61cbce6a8f159f0cdb76560856fd8072991",
       "sizeBytes": 1839558
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/attack/raw-sheet.png",
       "sha256": "82cedb7ad594477afa53ed1930c7556d819227964a3c303a343eb556ff8370cf",
       "sizeBytes": 2271582
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/counter/raw-sheet.png",
       "sha256": "7a00cae472aa352463c073ced85abb609cd5f4e2f99b11775ff789ffd5d640a4",
       "sizeBytes": 2032799
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/defend/raw-sheet.png",
       "sha256": "1f0d6f5553ceb0f29b9b3af6e858ee92312dd4f53fd78c1b96417672e686e07a",
       "sizeBytes": 2223969
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/dodge/raw-sheet.png",
       "sha256": "b3590ad3cc7bd0ad1d5829cf4bb9c0661abdedb48a64687f276e03aca66e73bd",
       "sizeBytes": 2062504
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/down/raw-sheet.png",
       "sha256": "8bd13051e373191d8ebe7a3adef0d5889cee0554dfe73382082767629c4af113",
       "sizeBytes": 1776117
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/hurt/raw-sheet.png",
       "sha256": "06c397f6bb45080340f568785e68cfcaee333acd1642f966ac8d53940cf7c4f3",
       "sizeBytes": 2342897
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/idle/raw-sheet.png",
       "sha256": "b4b065a4feeaa1321302c9566fdfa1f6c7d255929fc66274b3843fe698539abd",
       "sizeBytes": 2200920
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/knockaway/raw-sheet.png",
       "sha256": "cb6e3d075957f1016a230b717b8a97545b4c2c1440313c665415183a6a6b6011",
       "sizeBytes": 2034944
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/revive/raw-sheet.png",
       "sha256": "b10c342984699d0733eaf5a446eceb81fdc17d05090165f9e23f83ca93550fc8",
       "sizeBytes": 2139838
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/skill/raw-sheet.png",
       "sha256": "a0568c6df24062907762639643f7a7d95fffbfaaf65e2875c1030328c2fa097e",
       "sizeBytes": 2295050
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/stagger/raw-sheet.png",
       "sha256": "9b5fed180a2054b2ef22a77126a5c7380334a9a9b55933d22ec8be92f42cec7d",
       "sizeBytes": 2011659
     },
     {
-      "pathInRun": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sourceId": "front_3quarter_sw/walk/raw-sheet.png",
       "sha256": "4d7e56cdb34507e3e7e43a9931a3351eae1abee220fd0a58255b7b7b2eb966e0",
       "sizeBytes": 1978421
     }
   ],
-  "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet",
+  "workingArchive": "source/formal-production",
   "runtimeEnabled": false,
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "repairManifests": [
+    "source/formal-production/mm2-semantic-repair-v1-manifest.json"
+  ],
+  "runtimeFrameLedger": "source/formal-production/mm2-semantic-repair-v1-frame-ledger.json",
+  "runtimeFrameLedgerSha256": "8e51f144d433502298bf125396f92f20d3458b1dc7fc222d5996fb3d559e78c4",
+  "replacementSourceLineage": [
+    {
+      "path": "views/back_3quarter_ne/counter/counter-2.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "75cf7b3c6c2eedc42210be846f4d1cefcee3d0360a0bbd7c3468c09680b80cce",
+      "authoritativeSourceDecodedRgbaSha256": "9973af42afc346eec02e91e2c62bc8cd0e809ce9a8c4c4ef029bf0270cccba81",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "37f820a7eb80471933b89eec78c29ddd2848ef88131f8d474b1482ff5a3d220b",
+      "authoritativeSourceDecodedRgbaSha256": "0ee4af9de39136cb4f201b1e087bd076d666cb1f161298a0016ea68577826119",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "7521875d8dab12f5a03fe4e400d8afd4e4de25d3fac3ca5e1735f3b2dab15c22",
+      "authoritativeSourceDecodedRgbaSha256": "a05e948c4baa084ff9f666008ae3d888e4b0474efb5fa90f01bad23cd04722f8",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "8a92533b2542187bb08e02bf696683d317463203370754aa1e536fa9460d84e7",
+      "authoritativeSourceDecodedRgbaSha256": "c91b2080bbe14a58f3acf7ca27c83abdc3a6cdeaaf1c9bce195b7d159b3c76b4",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "52e22de874375d4b9242ab92800173a3f151a56bd43a18899951527d5bfd04f1",
+      "authoritativeSourceDecodedRgbaSha256": "7fcb9ad32a185add0774745b57dcda0546c8ae90f8d2655b11c1e2c45b935679",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "d893e35fde1f9797c8ebd0da47440961087eb3af058ccddf3f99637eb063c7c7",
+      "authoritativeSourceDecodedRgbaSha256": "afa9d6573c4ac7a3ac4de9f22f67cd642f32577fcea9633f9016d113fccfe50d",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "cf090d7be46e0238343ef91bd03bcb0fc12ceaccf5d4c3e9de8586df9a8b4e0a",
+      "authoritativeSourceDecodedRgbaSha256": "8c6e99d10053f1b15458e0cbacc90a94dac5bd4899b13db3191b1651e3fabef6",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "004c033af4cc878c379f96f8640b200c4fd17674efbe542052d9d0c60e6f4a7b",
+      "authoritativeSourceDecodedRgbaSha256": "09c50e1b3e3b6b559ce4db88e2c7a18768b5cc7ae66b87682bc58f7e51595766",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "3bb4b72ff3090fb96eebd6bdb2ec438f608ebd4c7c8564386b06d937b2350ab1",
+      "authoritativeSourceDecodedRgbaSha256": "1941cc771f4f9e2e1c78771b4695ed28d5795777e3b4097f970c4b74a856aa48",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "cbfcebb614ce6e9ea43a9c6652daab173dfd14f4dd4ffcb6c78b227756fdf98e",
+      "authoritativeSourceDecodedRgbaSha256": "f010ccc5abdb403bbdc28a75c9e1a5ab1acc07ff2b315cb06f2a80adefb3e547",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-2.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "da6309965dad8f41cf2df140e508a99a5775ec193a4220955aecca4a51130019",
+      "authoritativeSourceDecodedRgbaSha256": "c3b53c55745eeaa498d14e6eddf501d01c6e5f5259eb9344e1c4425d87c2dcdb",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-4.png",
+      "repairTypes": [
+        "same-pet-same-view-authoritative-contact-pose-inheritance"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-pet-same-view-counter-4",
+      "authoritativeSourceEncodedSha256": "2e089144dd58a6b726974ee790604e1a0a15e8b55d7c9a8fa6207f9bf5bfa920",
+      "authoritativeSourceDecodedRgbaSha256": "1ad82d973a069ede8906befe357be833518290c6bce80ffd37731ad08ab58c66",
+      "derivation": "historical straight-RGBA Lanczos 512->256 plus recorded fringe/alpha-floor cleanup"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-5.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "6e263c33a23a1fa2e72a09901f13e1b1a6899d6b9ba881c75b7dc2328d8a8bf3",
+      "authoritativeSourceDecodedRgbaSha256": "c24a5a03bd5eabe6afd30eec182657b249beaf1cce76c8b577ed8c4fd40112b7",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-6.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "c49927f634f020759cbae81fac8e8fbcdda5b6821ab5884e928ac690f63e70f1",
+      "authoritativeSourceDecodedRgbaSha256": "7ba7a1a0681deaf1245d1cad15f7aba41c231d0a658d1d133ba733f01ee74af6",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-7.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "37fcc6df1bdb3d22ed5cbe8c94b0fab6ddcba6c5595e4784df552b76fc1cf970",
+      "authoritativeSourceDecodedRgbaSha256": "e8dfc7e70c7077900615c47b59591105ee6a234ef07bfcd3fee3b6295348bb3c",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "1d411ced0900d906f2ff3a72aa545eda85d119d14f381625d74522ab9358fa16",
+      "authoritativeSourceDecodedRgbaSha256": "142015b8814cf7cc383dc2b09e68292f3755a4724fac8beba2199a6bdbaa103f",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-1.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "0636375f8559f5dc0e916087df86bd00a6a3b265d9329cf12f12fef776ea23c1",
+      "authoritativeSourceDecodedRgbaSha256": "9caa17646c5e22d04c570a83b42356687a43d92256b941258bbbd58b1f7c8357",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-2.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "deafaa921714608ede5b0276da842fb5eb99bb6f74613a52fcb9631e3b3c7c92",
+      "authoritativeSourceDecodedRgbaSha256": "4e44771c9c6232466717f46d97aace65960f432a14d1063886545c3d1ec72207",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "095203361d98ffd0194e61e1d648804074739b81f1d03c6774a01f8da249e85d",
+      "authoritativeSourceDecodedRgbaSha256": "79699589967e250371adb4ba33bcc5e79b4296d9d679863b11e3ffe7a7332d6a",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-7.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "e3c33378cb752ba4208edace9781cdb482765ca1f5f5cd031096ddfe7ea9b247",
+      "authoritativeSourceDecodedRgbaSha256": "36a5aac43ca282f6d6981317aad3bf8962532595df0c592f3b061b387967a5a6",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-2.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "90ce1ea6e8701ed2bed6b9ea01abef56825f1f04f4d52c1954e892d7f2049ced",
+      "authoritativeSourceDecodedRgbaSha256": "c0ad42d31168168545d63315f69a238fdf81ab7993a333611139bad6b463aef2",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "8f65e43da0a0498454c72c159957f6adcc9f0984f568982fd1c450b9e355658d",
+      "authoritativeSourceDecodedRgbaSha256": "5d7b8b85f10acf6dfeb72ef750e84d3a9c2f0bbbd944e87e3475dd2982bafe66",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-7.png",
+      "repairTypes": [
+        "front-down-hold-group-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "current-repaired-runtime-expected-before",
+      "authoritativeSourceEncodedSha256": "c84440f9fc07f27bbf6badf66598b576543babd0128f6a95ffb9f4971e46ed10",
+      "authoritativeSourceDecodedRgbaSha256": "983e1a6b1cb337dd5aefaba291250dce2c9ffeb88928a7e2b2a811071148e8e6",
+      "derivation": "exact integer runtime translation of grouped current repaired pixels"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-8.png",
+      "repairTypes": [
+        "front-down-hold-group-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "current-repaired-runtime-expected-before",
+      "authoritativeSourceEncodedSha256": "c7a3b406548d13b4a819630a67f2b928b15fbe2c1ec153f664bc2dd58250bbb8",
+      "authoritativeSourceDecodedRgbaSha256": "f3f7c2f8ca2ea59f641aaec31d48c6d95c673c2f88641854a2cf96725ef7b645",
+      "derivation": "exact integer runtime translation of grouped current repaired pixels"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-1.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "375ceb819da0aa540f1adff073852c795dc2130c5f35f714bf92a05c5864cb0f",
+      "authoritativeSourceDecodedRgbaSha256": "0f0d5367a97e6e19c8758179487bc59ce8ae3515a32fe414f36c5ae5cf0306cf",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-2.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "52ccf1030fcd29328a20c37bd53663dc48bbe05502189721240558fc5d25bee0",
+      "authoritativeSourceDecodedRgbaSha256": "c695f2993155ad15729b3240122e6d94bd01d034d864542228c9b178a73b74d3",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-3.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "90334c6359e87776b7ea12616557ec5e9210eb7e1eefbac5e4027e78e2190118",
+      "authoritativeSourceDecodedRgbaSha256": "77caa6791bbb95ed580af670ec971dd4d0ff38688fd530ac3f7b9004518b5ff2",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-4.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "d0589b6a70e01d974ff98248472097c0bf522bd1d5a379f4bf99af2a8b494847",
+      "authoritativeSourceDecodedRgbaSha256": "89355ace4476a031ca0c67c6e8dd32788cabb72d563dd41e2f5958fb5d404564",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-5.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "e031c791cbe5e20497729e71ef37da1ee983fb4ca4deecc3c903852bff7ca698",
+      "authoritativeSourceDecodedRgbaSha256": "543d362982c8897604b1982dfe68d50e4c99a4bf1d1127de239646b2a624ac3a",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-6.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "569289d8df453c8e21f0f9af35027c5a84c48026a66254cc334bffa5febf0bc6",
+      "authoritativeSourceDecodedRgbaSha256": "2e2c1f44eb47e8e407a428f72c94c46f6ea9c20d5fffdf4727c0dc3b528e870f",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-7.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "edfe66251b551a3a912459244be20e90cd3ed17a3a3850285f5f3c99bd3c2803",
+      "authoritativeSourceDecodedRgbaSha256": "44ef32cdba88f27e351f094fc8101bb9eb77a6bccd1692527b45f049131bba12",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-8.png",
+      "repairTypes": [
+        "stable-horizontal-body-centre-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "31570fe6982b32df71d313320dfc005c1e5ef9afe60315fa456945c1331da302",
+      "authoritativeSourceDecodedRgbaSha256": "d047b552c04572ab75093fe2849f24ac8b9cae3687669248c867d2c4710c3c0c",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-1.png",
+      "repairTypes": [
+        "front-down-hold-group-reanchor"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "current-repaired-runtime-expected-before",
+      "authoritativeSourceEncodedSha256": "c7a3b406548d13b4a819630a67f2b928b15fbe2c1ec153f664bc2dd58250bbb8",
+      "authoritativeSourceDecodedRgbaSha256": "f3f7c2f8ca2ea59f641aaec31d48c6d95c673c2f88641854a2cf96725ef7b645",
+      "derivation": "exact integer runtime translation of grouped current repaired pixels"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "d537b28198afb5f0155391db795a236640b6258e15b9962f3be383f8e6ab2006",
+      "authoritativeSourceDecodedRgbaSha256": "e5eee1c30d18e751871a254c0c227e3a157a36b1a6bdd0157376877724525d49",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-7.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "52dafa7abf2fd42b9ba06dd23046a8bfe70ae3cabee2237a6b29e6d850f2297a",
+      "authoritativeSourceDecodedRgbaSha256": "78e9b7efb834d080794b2dac6a6993c4ad7fe3e4c6fb100b9b3f448901886296",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-2.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "6dc17a16d0ac8482a6f5c930ffad79801f2976769f99f8ef8ade013822ae0016",
+      "authoritativeSourceDecodedRgbaSha256": "fd3d838b7ed9349738032ccfd0998400f50e266188b725c8e6d99bd5548eca2d",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "9a595242b8013f0a0cf1734b41d52bc11cbdfdd8cfd3dd4868798cdaa96e4394",
+      "authoritativeSourceDecodedRgbaSha256": "c9ad952d1b5f7e6848e7e6b3c23d5f04a52a468fb7a171d09f676f4b39e8b302",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-7.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "fcece4302ef22160189da8258b79d72902d9efd05e5cc2d97ea075cbf21eb91c",
+      "authoritativeSourceDecodedRgbaSha256": "9e482db1fe1f49a3b39192303273d51e44637dee70d8d992e47eeab4157dcd2a",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-3.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "0a7bf1297277af89b65c905e785fc044fae56efd21111a9b7c01fb803adcf632",
+      "authoritativeSourceDecodedRgbaSha256": "4744d038601b51bf7f9770ebbc4b586bf631658b25ec9053518f496e1d192864",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-6.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "5fc04c82b6a38a6ceed078e1719e2941b2a25841ce91c9c035fb0872656d8aa9",
+      "authoritativeSourceDecodedRgbaSha256": "33b19555b2ab089f02ec80c531a958ed6d2c0fc1c9af9644d288a15bde1a0c62",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-7.png",
+      "repairTypes": [
+        "audited-detached-neighbor-cell-cleanup"
+      ],
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceClass": "existing-authoritative-512-same-frame",
+      "authoritativeSourceEncodedSha256": "26196997232f95c4acc34e858137a38e6a82a21851a92b19d333ce678de05e8b",
+      "authoritativeSourceDecodedRgbaSha256": "90efee262ea006bfff42325c7abdb8e6b624c01d0cef38dddcf380f77773ffb1",
+      "derivation": "deterministic source translation or audited detached-component removal followed by historical runtime derivation"
+    }
+  ],
+  "previousRepairsPreserved": [
+    "revivable-ko-eyes-v2",
+    "front-down-monotonic-v1"
+  ],
+  "installManifest": "source/battle/install-manifest.json",
+  "formalWrites": false,
+  "sharedInstallerUsed": false
 }

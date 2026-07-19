@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "id": "mm2-semantic-repair-v1",
+  "status": "staged_static_self_review_passed_owner_pending_not_installed",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "runtimeFrameCount": 180,
+  "replacementFrameCount": 41,
+  "preserveFrameCount": 139,
+  "runtimeBundleDigest": "4900f6988d756faff09af2d1814b2e00950ccc2015c938ae370320eb581cafe9",
+  "expectedBeforeSetDigest": "d152b7953aeaedce94292acaeaab646c707f0518f1793d350f9d402ade26f669",
+  "pathSetDigest": "e6d023de80aaaa8952b112ec53b0de1f9577aaa1616796221ef65d5863603e7c",
+  "creativeGeneration": false,
+  "mirroring": false,
+  "repairs": {
+    "attack4Direction": {
+      "frameCount": 1,
+      "method": "same-pet same-view authoritative counter-4 pose inheritance",
+      "canonicalEnemyFlipH": true,
+      "afterFinalImpactCentroidX": 196.2569
+    },
+    "componentCleanup": {
+      "frameCount": 21,
+      "method": "remove only audited detached neighbor-cell components; protected subject/central-skill region exact"
+    },
+    "knockawayBodyCentre": {
+      "frameCount": 16,
+      "method": "integer whole-source horizontal translation; no scale/generation/clipping",
+      "stability": {
+        "front_3quarter_sw": {
+          "sourcePrimaryBboxCenterXBefore": [
+            241.0,
+            284.0,
+            309.0,
+            246.5,
+            201.0,
+            225.0,
+            238.0,
+            215.5
+          ],
+          "sourcePrimaryBboxCenterXAfter": [
+            256.0,
+            256.0,
+            256.0,
+            256.5,
+            256.0,
+            256.0,
+            256.0,
+            255.5
+          ],
+          "sourceBeforePeakToPeak": 108.0,
+          "sourceAfterPeakToPeak": 1.0,
+          "runtimePrimaryBboxCenterXBefore": [
+            120.5,
+            142.0,
+            154.5,
+            123.5,
+            100.5,
+            112.5,
+            119.0,
+            107.5
+          ],
+          "runtimePrimaryBboxCenterXAfter": [
+            128.5,
+            128.0,
+            128.0,
+            128.5,
+            128.0,
+            128.0,
+            128.0,
+            127.5
+          ],
+          "runtimeBeforePeakToPeak": 54.0,
+          "runtimeAfterPeakToPeak": 1.0
+        },
+        "back_3quarter_ne": {
+          "sourcePrimaryBboxCenterXBefore": [
+            264.0,
+            339.5,
+            171.5,
+            163.0,
+            192.5,
+            218.5,
+            234.0,
+            242.5
+          ],
+          "sourcePrimaryBboxCenterXAfter": [
+            256.0,
+            255.5,
+            255.5,
+            256.0,
+            256.5,
+            256.5,
+            256.0,
+            256.5
+          ],
+          "sourceBeforePeakToPeak": 176.5,
+          "sourceAfterPeakToPeak": 1.0,
+          "runtimePrimaryBboxCenterXBefore": [
+            132.0,
+            170.0,
+            85.5,
+            81.5,
+            96.5,
+            109.0,
+            116.5,
+            121.0
+          ],
+          "runtimePrimaryBboxCenterXAfter": [
+            128.0,
+            128.0,
+            127.5,
+            128.0,
+            128.5,
+            128.0,
+            127.5,
+            128.0
+          ],
+          "runtimeBeforePeakToPeak": 88.5,
+          "runtimeAfterPeakToPeak": 1.0
+        }
+      },
+      "runtimeResampleQuantization": {
+        "reason": "integer 512px translation can change the half-scale Lanczos sampling phase; source alpha/geometry remains exact",
+        "maximumAbsoluteAlphaSumDeltaPercent": 0.00776699,
+        "maximumAbsoluteAlpha8PixelCountDelta": 10,
+        "maximumAbsoluteBboxWidthDelta": 1,
+        "maximumAbsoluteBboxHeightDelta": 0,
+        "frames": [
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-1.png",
+            "alphaSumDelta": 158,
+            "alphaSumDeltaPercent": 0.00383119,
+            "alpha8PixelCountDelta": 2,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-2.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-3.png",
+            "alphaSumDelta": 265,
+            "alphaSumDeltaPercent": 0.00776699,
+            "alpha8PixelCountDelta": 10,
+            "bboxWidthDelta": 1,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-4.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-5.png",
+            "alphaSumDelta": 63,
+            "alphaSumDeltaPercent": 0.00234657,
+            "alpha8PixelCountDelta": 7,
+            "bboxWidthDelta": 1,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-6.png",
+            "alphaSumDelta": 43,
+            "alphaSumDeltaPercent": 0.00173185,
+            "alpha8PixelCountDelta": 7,
+            "bboxWidthDelta": 1,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-7.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "front_3quarter_sw/knockaway/knockaway-8.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-1.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-2.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-3.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-4.png",
+            "alphaSumDelta": -50,
+            "alphaSumDeltaPercent": -0.00258046,
+            "alpha8PixelCountDelta": -7,
+            "bboxWidthDelta": -1,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-5.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-6.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-7.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          },
+          {
+            "path": "back_3quarter_ne/knockaway/knockaway-8.png",
+            "alphaSumDelta": 0,
+            "alphaSumDeltaPercent": 0.0,
+            "alpha8PixelCountDelta": 0,
+            "bboxWidthDelta": 0,
+            "bboxHeightDelta": 0
+          }
+        ]
+      }
+    },
+    "frontDownHoldGroup": {
+      "frameCount": 3,
+      "method": "-18px whole-runtime group translation preserving down-8/revive-1 exact equality",
+      "continuity": {
+        "down6ToDown7": {
+          "before": {
+            "first": "down-6",
+            "second": "down-7",
+            "alpha8CentroidDistance": 35.6979,
+            "alpha8CentroidDx": 35.6972,
+            "alpha8CentroidDy": -0.2179,
+            "bboxCenterDx": 40.5,
+            "bboxCenterDy": -8.5
+          },
+          "after": {
+            "first": "down-6",
+            "second": "down-7",
+            "alpha8CentroidDistance": 17.6985,
+            "alpha8CentroidDx": 17.6972,
+            "alpha8CentroidDy": -0.2179,
+            "bboxCenterDx": 22.5,
+            "bboxCenterDy": -8.5
+          }
+        },
+        "revive1ToRevive2": {
+          "before": {
+            "first": "revive-1",
+            "second": "revive-2",
+            "alpha8CentroidDistance": 23.1823,
+            "alpha8CentroidDx": -7.8367,
+            "alpha8CentroidDy": -21.8175,
+            "bboxCenterDx": -14.0,
+            "bboxCenterDy": -18.5
+          },
+          "after": {
+            "first": "revive-1",
+            "second": "revive-2",
+            "alpha8CentroidDistance": 24.0686,
+            "alpha8CentroidDx": 10.1633,
+            "alpha8CentroidDy": -21.8175,
+            "bboxCenterDx": 4.0,
+            "bboxCenterDy": -18.5
+          }
+        }
+      },
+      "continuitySummary": {
+        "beforeMaximumAbsoluteAlpha8CentroidDx": 35.6972,
+        "afterMaximumAbsoluteAlpha8CentroidDx": 17.6972,
+        "beforeSumAbsoluteAlpha8CentroidDx": 43.5339,
+        "afterSumAbsoluteAlpha8CentroidDx": 27.8605,
+        "beforeMaximumAbsoluteBboxCenterDx": 40.5,
+        "afterMaximumAbsoluteBboxCenterDx": 22.5,
+        "beforeSumAbsoluteBboxCenterDx": 54.5,
+        "afterSumAbsoluteBboxCenterDx": 26.5,
+        "note": "-18px is a group compromise across both horizontal boundaries; it minimizes aggregate and worst-case horizontal discontinuity, not each centroid independently"
+      }
+    }
+  },
+  "strictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
+  "strictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
+  "frameLedger": "source/formal-production/mm2-semantic-repair-v1-frame-ledger.json",
+  "frameLedgerSha256": "8e51f144d433502298bf125396f92f20d3458b1dc7fc222d5996fb3d559e78c4",
+  "contactSheet": "qa/battle/contact-sheet.png",
+  "contactSheetSha256": "70fe154416b96bc7179b54f0e2f809fc3d047ed18b7287d623d8df5541cc0f0e",
+  "facingContractPreview": "qa/battle/facing-contract-preview.png",
+  "facingContractPreviewSha256": "d0fc98089030321291b2b6e8962dcc39907f6ae92f85f51a582aee4e1039df1f",
+  "continuityEvidence": [
+    {
+      "view": "front_3quarter_sw",
+      "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+      "contactSheetSha256": "156433c48b59feac4db1aea608f95927fabcebe52789f63a7a3831e2adb9db71",
+      "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+      "gifSha256": "b7fb76f604e0ffc445bf8d82824e18c6afa681e32cfccad5a237ef2d7795b8c8",
+      "gifDecodedFrameCount": 16,
+      "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+      "sequenceManifestSha256": "20c4a54a979f4e35a579dd668122b5b71721f5033e71fe66359276ebdfaa0562",
+      "down8Revive1EncodedExact": true,
+      "down8Revive1DecodedRgbaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+      "contactSheetSha256": "2e8a650b20ad2c39c19a3b5c85080aedae655077b546a143fdfa462dbcae777a",
+      "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+      "gifSha256": "d599eeb6720dcc7dd1b92e9fb643f5e6037caff87582961d00285284d93bfb7a",
+      "gifDecodedFrameCount": 16,
+      "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+      "sequenceManifestSha256": "35815a6e07fc9c251d098fdf7df1b0cef118d4e6405da801e399b208363e5322",
+      "down8Revive1EncodedExact": true,
+      "down8Revive1DecodedRgbaExact": true
+    }
+  ],
+  "repairEvidence": [
+    {
+      "path": "qa/battle/repairs/semantic-attack4-direction-before-after.png",
+      "sha256": "95585d9d1b22a1a506d1d33d1705d849dbb74d9118c881a6e482a1048a811b7e"
+    },
+    {
+      "path": "qa/battle/repairs/semantic-knockaway-before-after.png",
+      "sha256": "e8287da53a75273fba8e753189e48f8f942b4cf828b76ba810644f736a7e9d30"
+    },
+    {
+      "path": "qa/battle/repairs/semantic-down-group-before-after.png",
+      "sha256": "2dde628008e722ac0c06f99bf992a448164d520f111853dc666e1803a2d5a9f1"
+    },
+    {
+      "path": "qa/battle/repairs/semantic-component-cleanup-before-after.png",
+      "sha256": "c43b637a864bb68dc45c4231708ed63359d11a99f9026f1c377a37c66902c1ca"
+    }
+  ],
+  "formalWrites": false,
+  "sharedInstallerUsed": false,
+  "installationStatus": "not-installed"
+}
