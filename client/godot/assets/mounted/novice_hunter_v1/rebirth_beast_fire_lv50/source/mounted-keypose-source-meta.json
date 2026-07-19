@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_rebirth_beast_fire_lv50_mounted_keyposes_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-8f5520e5-1752-4911-9666-8ab2c3bd4c4a.png",
+  "originalPngSize": [
+    1774,
+    887
+  ],
+  "originalPngSha256": "1eae4830a1d74dd39d10bbe691f9ee07444e181bcc258f6d646efe6b3db31ed8",
+  "decodedRgbPixelSha256": "4cbc23ca9ec4f66525cdcb4f6ad1b8aeef1e85fedbc65130e619d526be949514",
+  "references": {
+    "petIdentity": "../../../pets/rebirth_beast_fire_lv50/identity/identity-board-transparent.png",
+    "petIdentitySha256": "dedf547d55530338edb5c2030424bd905c1072f00c4889169f5ec5ed62a6152b",
+    "characterIdentity": "../../../characters/novice_hunter/identity/processed/sheet-transparent.png",
+    "characterIdentitySha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "ff994e5502eb1473d85c62125e59951661d7d5925842fadc21ca4558a5455def",
+    "decodedRgbPixelSha256": "4cbc23ca9ec4f66525cdcb4f6ad1b8aeef1e85fedbc65130e619d526be949514"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "14d880dd7fbb81931bb8078df471e2086a31c5343905d270b92904a3e805b084",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "176d73f74dd89115ab645b82bc715beed1af273f215b372064acbf39dda366f9",
+    "contactSheet": ".run/art_batch_phase320/rebirth_beast/fire/mounted-build-v1/contact-sheet.png",
+    "contactSheetSha256": "99f766232b56f2622fcda9a4501d84072afe1fe7f0f5e9c3ea6e735512b3679b"
+  }
+}

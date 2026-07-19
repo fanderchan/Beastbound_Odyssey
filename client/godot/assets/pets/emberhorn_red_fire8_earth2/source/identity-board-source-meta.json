@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_emberhorn_red_fire8_earth2_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-6165c659-9557-4de4-8b78-11fb16cf35ac.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "740f3a7041660c1458f525d7b0d18b83ee4f96327cfa4e74ab91369f3fec8e1d",
+  "decodedRgbPixelSha256": "83870dbfdccfa1f53cfba0467c4abf22d3d5f63295716319dc4640f64cbe9292",
+  "references": [
+    {
+      "role": "beastbound_style_only",
+      "path": "client/godot/assets/pets/novice_sprout_bui/identity/identity-board.png",
+      "sha256": "f8a8cb6cc9f5569130d7a0c8bed45cf47c7aa7252bf40b99bca1e33ed019eacf"
+    }
+  ],
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "d77241b994070fa5f9f0b4948403e95d236b77439ca34b008fb1e4386001aa0e",
+    "decodedRgbPixelSha256": "83870dbfdccfa1f53cfba0467c4abf22d3d5f63295716319dc4640f64cbe9292"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "repack": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.86 --bottom-padding-ratio 0.06",
+    "repackSha256": "b9a378412ea168ec15f780df35f4bfe9070704ae227b5b91d3375a08a844032f",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "6562e614bb25131c4000c5cf6bdc3d17ec9782e819bd73220c7a39e2dee2738d",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.84 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "fccc3d100508f8c5b06e9b399a55943d67fa6362a789623c6829935cb52ceaf4",
+    "contactSheet": ".run/art_batch_phase320/emberhorn/red-identity-build/contact-sheet.png",
+    "contactSheetSha256": "3a03cf4fb2e46bfb9a53a9ea26dcaa58121a53b97e7e33aec751397c8ae56fb7"
+  }
+}

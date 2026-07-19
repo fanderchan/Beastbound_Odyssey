@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_tiger_mount_identity_board_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-6f46d83a-8fc9-4ff1-af2e-0c6d9124464b.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "532993b9d31b924a9397b9d6866f29762cbedc9117e498110a8ec5262fcd1f85",
+  "decodedRgbPixelSha256": "05453daabe79457a9777402f60729d218d3c85a9ce6387352689721fe0f1067d",
+  "archive": {"path": "source/identity-board-raw.webp", "format": "webp", "lossless": true, "sha256": "293be7f07e68c755e3e63772c692f32f16a75bd750efd47cc263505ae55a32d3", "decodedRgbPixelSha256": "05453daabe79457a9777402f60729d218d3c85a9ce6387352689721fe0f1067d"},
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {"chromaKey": "#FF00FF", "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.86 --anchor feet --source-edge-margin 0 --contact-sheet", "sourceEdgeException": "Raw grid contained border-adjacent pixels; largest connected subject was isolated and final 512px outputs passed safe margins.", "pipelineMetadata": "source/identity-board-pipeline-meta.json"},
+  "outputs": {"transparentBoard": "identity/identity-board-transparent.png", "transparentBoardSha256": "4f02897c2c12a8337b11016f3e835e88dc2612aa2dc139aa98ccd2c7f0b60336", "contactSheet": ".run/art_batch_phase320/novice_tiger/identity-build/contact-sheet.png", "contactSheetSha256": "4e60691e758da2c817dd4508c83936542b640bb57b5eb8a729b4fd29d4029f11"}
+}

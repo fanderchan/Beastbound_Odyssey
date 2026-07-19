@@ -33,7 +33,7 @@ Approve a small key-pose gate before producing dozens of frames: standalone pet 
 
 ## World movement matrix: true eight means true eight
 
-The PC world path uses `south`, `south_west`, `west`, `north_west`, `north`, `north_east`, `east`, and `south_east` as eight independently authored visual directions. Different filenames or logical inputs backed by mirrored pixels are not true eight.
+The PC world path uses the existing Godot runtime names `south`, `southwest`, `west`, `northwest`, `north`, `northeast`, `east`, and `southeast` as eight independently authored visual directions. These names are the canonical asset-directory contract; do not introduce underscore aliases. Different filenames or logical inputs backed by mirrored pixels are not true eight.
 
 For a formally supported pet, prove all three visual subjects:
 

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_bui_normal_thick_earth10_v1",
+  "generator": "OpenAI built-in image generation",
+  "generationCallId": "exec-fba591ca-987f-49db-ae23-d2ee0eb0db65",
+  "originalGeneratedFilename": "exec-fba591ca-987f-49db-ae23-d2ee0eb0db65.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "6971d5a53bed472296a49f5ddbb2f04e6f11182ab8bbfa0c4d921700e105f1b3",
+  "decodedRgbPixelSha256": "6da38ec3767044bead46e602ee3d023cc32e72e410d2f55019d5d1c480050bad",
+  "references": [
+    {
+      "role": "mandatory_normal_bui_skeletal_parent",
+      "path": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-293d93f4-600d-4824-81e3-62a9c505301d.png",
+      "sha256": "3cfece541ec0a49bd7b21b0c53492ddde2517d19a49ba01b796af9f00f1b5b0b",
+      "trackedReplacementPath": "client/godot/assets/pets/bui_normal_red_fire10/identity/identity-board-transparent.png",
+      "trackedReplacementSha256": "db43bdb0fd1960e2714c76eef1ee4198b67965ecda0ea05c8798d210ab9da061"
+    }
+  ],
+  "prompt": {
+    "path": "prompts/identity-board-v1.txt",
+    "sha256": "85d6a041d8c851581d326141935db0862b13733a0cce5ef31d4a96ccff3a57a9"
+  },
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "81b21d0ee9840570c222271a399d8688bff5e6d434913384ca951f94418ba3f4",
+    "decodedRgbPixelSha256": "6da38ec3767044bead46e602ee3d023cc32e72e410d2f55019d5d1c480050bad"
+  },
+  "processing": {
+    "repack": "whole disconnected cutout reposition only; no subject rescale, mirror, paint, retouch, or synthesis",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.88 --anchor feet --contact-sheet",
+    "sharedScale": 0.6951222588,
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "9a0885ae87bb66200f5da29756f8575f754617cfd56ed6d2365f6b61a844307d",
+    "contactSheet": ".run/art_batch_phase320/bui_normal/thick/identity-build/contact-sheet.png",
+    "contactSheetSha256": "c678f0b67f102e4c8816d60d8ae4e26a494580e77625c6d133daeab0bb1d96cc"
+  }
+}

@@ -135,7 +135,7 @@
       "identityLockRequired": true,
       "rideable": true,
       "worldSubjectSets": ["character", "pet", "mounted_character_pet"],
-      "worldDirections": ["south", "south_west", "west", "north_west", "north", "north_east", "east", "south_east"],
+      "worldDirections": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
       "worldActions": ["idle", "walk"],
       "runtimeMirroring": false,
       "battleViews": ["front_3quarter_sw", "back_3quarter_ne"],

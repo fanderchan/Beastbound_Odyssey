@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-7f07daab-2d50-4f8a-83ec-3425fd2c50e3.png",
+  "output": ".run/art_batch_phase320/emberhorn/ash-identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.8796411092985318,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        115,
+        118,
+        604,
+        600
+      ],
+      "sourceArea": 134890,
+      "outputSize": [
+        435,
+        429
+      ],
+      "pastePosition": [
+        96,
+        160
+      ],
+      "cellMargins": [
+        96,
+        160,
+        96,
+        38
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        675,
+        98,
+        1115,
+        616
+      ],
+      "sourceArea": 111365,
+      "outputSize": [
+        392,
+        461
+      ],
+      "pastePosition": [
+        744,
+        128
+      ],
+      "cellMargins": [
+        117,
+        128,
+        118,
+        38
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        161,
+        676,
+        442,
+        1165
+      ],
+      "sourceArea": 93201,
+      "outputSize": [
+        252,
+        435
+      ],
+      "pastePosition": [
+        187,
+        781
+      ],
+      "cellMargins": [
+        187,
+        154,
+        188,
+        38
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        587,
+        732,
+        1194,
+        1163
+      ],
+      "sourceArea": 132653,
+      "outputSize": [
+        539,
+        384
+      ],
+      "pastePosition": [
+        671,
+        832
+      ],
+      "cellMargins": [
+        44,
+        205,
+        44,
+        38
+      ]
+    }
+  ]
+}

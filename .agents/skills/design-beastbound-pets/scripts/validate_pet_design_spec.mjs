@@ -207,10 +207,10 @@ if (artStatus !== "deferred") {
   for (const subject of ["character", "pet", "mounted_character_pet"]) {
     if (!subjectSets.includes(subject)) errors.push(`presentation.artProduction.worldSubjectSets 必须包含 ${subject}`);
   }
-  const expectedDirections = ["south", "south_west", "west", "north_west", "north", "north_east", "east", "south_east"];
+  const expectedDirections = ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"];
   const directions = requireStringArray(art.worldDirections, "presentation.artProduction.worldDirections", 8);
   if (directions.length !== expectedDirections.length || expectedDirections.some((value) => !directions.includes(value))) {
-    errors.push("presentation.artProduction.worldDirections 必须覆盖真八方向");
+    errors.push("presentation.artProduction.worldDirections 必须使用 Godot 运行时 canonical 名称覆盖真八方向：south/southwest/west/northwest/north/northeast/east/southeast");
   }
   const worldActions = requireStringArray(art.worldActions, "presentation.artProduction.worldActions", 2);
   for (const action of ["idle", "walk"]) {

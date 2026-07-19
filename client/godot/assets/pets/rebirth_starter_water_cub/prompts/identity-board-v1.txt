@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: elemental sibling identity board in the same original Rebirth Starter Cub line
+Primary request: Using the attached 地纹幼兽 as the mandatory juvenile family skeleton and rendering reference, create "潮纹幼兽". It must instantly read as the same starter-cub species—same round juvenile face, short muzzle, low ears, tiny forehead horn, thick three-claw paws, sturdy rideable torso, shoulder badge locations, and medium tail—but be a water-adapted sibling, not a blue recolor.
+
+Water changes: forehead horn becomes a short smooth pearl-blue waterdrop horn; dark face markings become two flowing pale-blue droplet curves around the eyes; each low ear has a small attached soft fin-like rim along its rear edge (not external gills); shoulder badges are layered opaque shell-fur scallops rather than earth plates; tail tuft becomes a compact three-lobed wave-shaped fur/fin tuft; shallow toe webbing appears while three rounded claws remain. Deep blue and soft white plush fur, pale seafoam muzzle/belly, muted cyan accents, restrained navy wave markings, bright indigo eyes. Friendly, curious and solid enough to carry a rider. No bubbles, water splash, glow, floating fins, saddle, rider, armor straps, text, shadow, scenery, or FX.
+
+Layout: strict 2x2 board on perfectly flat #FF00FF. TL front_3quarter_sw, TR back_3quarter_ne, BL straight front, BR clean left side. Same exact horn, eye markings, ear rims, three claws, shoulder scallops, tail tuft, proportions, palette, lighting, scale in every cell. Central 65%, padding, baseline, no crossing.
+
+Style: original HD hand-painted 2.5D pet sprite matching earth cub, plush fur and matte opaque fins, crisp 130-175 px silhouette, dark plum-blue outline, nostalgic Chinese pet-RPG with modern polish.
+Constraints: four views of one identical water cub; unmistakably same starter-cub family, mechanically coherent, rideable, original.
+Avoid: simple blue recolor, seal/fish/axolotl, giant gills, water orb, Pokémon/Digimon resemblance, StoneAge pet replica, tiny baby, armor, background texture/grid/labels/watermark.

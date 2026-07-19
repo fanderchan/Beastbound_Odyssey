@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: production identity board for a 2.5D turn-based pet MMORPG creature sprite
+Primary request: Create an original creature identity board for "普通乌力", a compact fire-aligned field pet. The attached 芽耳布伊 image is a rendering-quality and project-style reference only; do not copy its anatomy, leaf ears, root tail, face, or markings.
+
+Subject identity: one exact same creature in all four cells. A low, sturdy juvenile boar-armadillo body plan made for charging: oversized rounded forehead armor, short blunt pig-like muzzle with two tiny cream tusk nubs, small triangular ears, four short powerful legs with three dark claws each, a layered oval shoulder-and-back carapace, and a short curled tail ending in a charcoal ember tuft. Warm orange-red coat; dark basalt-brown carapace edges and paws; restrained glowing amber seams between a few armor plates; cream muzzle and belly. Cute, alert, confident rather than aggressive. No clothes, saddle, rider, weapon, text, icon, shadow, scenery, or FX.
+
+Layout: strict 2x2 identity board on one perfectly flat solid #FF00FF chroma-key background. Top-left front_3quarter_sw facing lower-left; top-right back_3quarter_ne facing upper-right; bottom-left straight front; bottom-right clean left side. Same body proportions, exact armor plate count, ear/tusk/tail design, palette, lighting, outline weight, and scale in all cells. Full body centered inside the central 65% of each cell with generous magenta padding; feet on one stable baseline; nothing crosses cell edges.
+
+Style/medium: original high-definition hand-painted 2.5D game sprite, clean readable silhouette, softly modeled fur and matte stone-like armor, warm saturated color, subtle dark plum-brown outline, charming late-1990s/early-2000s East Asian pet-RPG spirit reinterpreted as modern HD art. Orthographic/isometric sprite camera, no perspective exaggeration.
+Constraints: exactly four views of one identical pet; mechanically believable anatomy; readable at 120-160 px in game.
+Avoid: resemblance to 芽耳布伊 body plan, famous game mascots, realistic boar horror, humanoid posture, turtle shell, giant flame effects, gradients or texture in the background, grid lines, labels, watermark.

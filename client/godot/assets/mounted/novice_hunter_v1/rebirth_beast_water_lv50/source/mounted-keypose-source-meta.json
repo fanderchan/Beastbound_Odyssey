@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_rebirth_beast_water_lv50_mounted_keyposes_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-79181340-bd0a-4efd-972c-21afab6e165c.png",
+  "originalPngSize": [
+    1774,
+    887
+  ],
+  "originalPngSha256": "a0520950536af825c4dd14ed648b2b3d971fd6985b74adf17616e326f7b6da3c",
+  "decodedRgbPixelSha256": "ab905e310cae7e0dfda2b4b81125056a16788b069f6d2d54607fdf6d9e15e468",
+  "references": {
+    "petIdentity": "../../../pets/rebirth_beast_water_lv50/identity/identity-board-transparent.png",
+    "petIdentitySha256": "7218f1da4912138b20ac239950486a8fbb13a1b549a411d854ceebb3ff63da40",
+    "characterIdentity": "../../../characters/novice_hunter/identity/processed/sheet-transparent.png",
+    "characterIdentitySha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "0efcfafdf4b1f633bdb9030562e864a34d972884d04113acda603a178a584464",
+    "decodedRgbPixelSha256": "ab905e310cae7e0dfda2b4b81125056a16788b069f6d2d54607fdf6d9e15e468"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "417621116b030e963007d280c29669e04cec680d03a645f09d5f8ffa9e84eaa8",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "67cfb6f4c6acc54419a9a54c5ab79ffb9cbea414411023d46537299c76c0e6ff",
+    "contactSheet": ".run/art_batch_phase320/rebirth_beast/water/mounted-build-v1/contact-sheet.png",
+    "contactSheetSha256": "600859daa49a68349c5729c870aa2f4c061dd1ccfc9dc57fac810c79a850853b"
+  }
+}

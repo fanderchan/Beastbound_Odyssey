@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_wuli_normal_fast_wind10_keypose_v2",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-c672659e-d6de-4a59-85f9-6f4ea69d5d32.png",
+  "originalPngSize": [1672, 941],
+  "originalPngSha256": "d632a7649bcdd4e666a1fbde2e6d0d2f3cc4361ffb6c3b559c625ffadc731c2c",
+  "decodedRgbPixelSha256": "67056a131b3ad3e2f4677b2ec44617e00367d241c69694f89a38fbba9f8de1b6",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/identity/identity-board-transparent.png",
+      "sha256": "c596648fede8427661a332508e9e7c422ae374cdb17a43f86198dfcf800631b8"
+    },
+    {
+      "role": "exact_rider_identity_and_adult_scale",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "dbcfe6f336c9f981d2176026fe9a0df9447430836ae5aeb70acad0c5dfb94c13",
+    "decodedRgbPixelSha256": "67056a131b3ad3e2f4677b2ec44617e00367d241c69694f89a38fbba9f8de1b6"
+  },
+  "prompt": "prompts/generation-contract-v2-rider-scale-neutral-stance.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "sharedScale": 0.5218727491
+  },
+  "supersededCandidate": {
+    "rawArchive": "source/mounted-keypose-v1-rider-scale-too-small-raw.webp",
+    "rawArchiveSha256": "c0fff60d5c84c4c9ba94377dbb1a41bcc79124fe40b6a40da42a3256688058cc",
+    "pipelineMetadata": "source/mounted-keypose-v1-rider-scale-too-small-pipeline-meta.json",
+    "pipelineMetadataSha256": "279138a1abffad3919f7bbae197057d0f0accdc9e9c5bbe296e3db0d5fb9dc23",
+    "sharedScale": 0.3859950721,
+    "rejectionReason": "Horizontal sprint silhouette forced the normalized integrated subject too small, violating the adult rider scale gate."
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "027c839ff2942694283f7a2486a4d5868c33f94b50e7979a06996b2ae30667ad",
+    "contactSheet": ".run/art_batch_phase320/wuli_mounted/fast_v2/build/contact-sheet.png",
+    "contactSheetSha256": "afe76748691460d8870e9564b1cf15a3e8cbb0d46b5e7bfd6d753e804cc3e990"
+  },
+  "review": {
+    "status": "self_review_passed_owner_pending",
+    "scope": "front_3quarter_sw and back_3quarter_ne integrated mounted identity gate only"
+  }
+}

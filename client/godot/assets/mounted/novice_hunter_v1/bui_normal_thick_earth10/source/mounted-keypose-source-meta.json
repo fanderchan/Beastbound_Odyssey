@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_bui_normal_thick_earth10_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "generationCallId": "exec-18088444-ace4-48d9-b866-602f3d056fec",
+  "originalGeneratedFilename": "exec-18088444-ace4-48d9-b866-602f3d056fec.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "bbc3081d159fe1a2cd3b227f29d8142f7a083878a244f594b897798afafc53fa",
+  "decodedRgbPixelSha256": "828c57866dd33c0b6b4f82c48a7d5e9b3cf5314f1cc259fd77fb2b2ff9471aee",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/bui_normal_thick_earth10/identity/identity-board-transparent.png",
+      "sha256": "9a0885ae87bb66200f5da29756f8575f754617cfd56ed6d2365f6b61a844307d"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "prompt": {
+    "path": "prompts/generation-contract.md",
+    "sha256": "222e867577897571f228d1c6b783a7b552115969982e8a5f8e902741781c14c4"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "2e84586a874c26c563e932f32317b6bd2a19afc14ab18de8e9cda6ad6c5076e2",
+    "decodedRgbPixelSha256": "828c57866dd33c0b6b4f82c48a7d5e9b3cf5314f1cc259fd77fb2b2ff9471aee"
+  },
+  "processing": {
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "sharedScale": 0.4813449209,
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "a9b066c6f8f0eba37ffbaed5784fd0be815ea7408f2064b752f8fcfd85c89e5c",
+    "contactSheet": ".run/art_batch_phase320/bui_normal/thick/mounted-build/contact-sheet.png",
+    "contactSheetSha256": "b5edcdad1dbd1f04ac0c8589c87044f30151c40d43fdf83a69a8d72a151ee168"
+  }
+}

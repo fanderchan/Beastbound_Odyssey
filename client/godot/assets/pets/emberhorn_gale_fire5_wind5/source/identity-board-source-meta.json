@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_emberhorn_gale_fire5_wind5_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-0bde9c80-fdf8-4e9e-9999-d051a2458611.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "6cb0d812120182429eb22707c6d61ac35f6ef048d5d6ab1a2b4e0145b5458516",
+  "decodedRgbPixelSha256": "b70b18bdd35fafa70f7529f24f07a93249d9064381d7d4dd71e9b90921c428d3",
+  "references": [
+    {
+      "role": "same_line_anatomy_and_rendering",
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/identity/identity-board-transparent.png",
+      "sha256": "fccc3d100508f8c5b06e9b399a55943d67fa6362a789623c6829935cb52ceaf4"
+    },
+    {
+      "role": "same_line_subtype_separation",
+      "path": "client/godot/assets/pets/emberhorn_ash_fire6_wind4/identity/identity-board-transparent.png",
+      "sha256": "943d7ca9623d1ae4e54f13bfd6bba37918775d2b15b676f6f9a9a64bb05e3013"
+    }
+  ],
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "f1874956c4ebbb01eb0ef4531e0b380cf701d2e030b55002d1f019ce3849674e",
+    "decodedRgbPixelSha256": "b70b18bdd35fafa70f7529f24f07a93249d9064381d7d4dd71e9b90921c428d3"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "repack": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.86 --bottom-padding-ratio 0.06",
+    "repackSha256": "caced71030e0d368025544041c31a2b39cb9ae527611ced02e5051354e2c55bc",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "0e3ff2b28f2530a83eda4b4f3aac66b42f13a59646cb23ee5a1c3c36855cb04e",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.84 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "2bc5b796e1fcc5e676c829c9fa7f746425e63e8d959f33bc85134ae5017cc917",
+    "contactSheet": ".run/art_batch_phase320/emberhorn/gale-identity-build/contact-sheet.png",
+    "contactSheetSha256": "addc0c630f69c59223b37ce04615b9fee8f57c7d924e268af47dcfdc322d56cb"
+  }
+}

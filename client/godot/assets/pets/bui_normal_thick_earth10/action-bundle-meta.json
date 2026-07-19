@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "formId": "bui_normal_thick_earth10",
+  "displayName": "厚皮布伊",
+  "artStatus": "owner_review_pending",
+  "productionGroup": "G02",
+  "productionScope": "identity_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [256, 256],
+  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [512, 512],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
+  },
+  "actions": {
+    "idle": {"frameCount": 6, "status": "not_produced"},
+    "walk": {"frameCount": 8, "status": "not_produced"},
+    "attack": {"frameCount": 8, "status": "not_produced"},
+    "skill": {"frameCount": 8, "status": "not_produced"},
+    "hurt": {"frameCount": 6, "status": "not_produced"},
+    "defend": {"frameCount": 6, "status": "not_produced"},
+    "dodge": {"frameCount": 8, "status": "not_produced"},
+    "counter": {"frameCount": 8, "status": "not_produced"},
+    "stagger": {"frameCount": 8, "status": "not_produced"},
+    "knockaway": {"frameCount": 8, "status": "not_produced"},
+    "down": {"frameCount": 8, "status": "not_produced"},
+    "revive": {"frameCount": 8, "status": "not_produced"}
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "actions": {
+      "idle": {"frameCount": 1, "status": "not_produced"},
+      "walk": {"frameCount": 4, "status": "not_produced"}
+    }
+  },
+  "supportedMountedCharacterIds": ["novice_hunter_v1"],
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/identity-board-raw.webp",
+    "sourceMetadata": "source/identity-board-source-meta.json",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "prompt": "prompts/identity-board-v1.txt"
+  },
+  "evidence": {
+    "contactSheet": ".run/art_batch_phase320/bui_normal/thick/identity-build/contact-sheet.png",
+    "contactSheetSha256": "c678f0b67f102e4c8816d60d8ae4e26a494580e77625c6d133daeab0bb1d96cc",
+    "groupOriginalSheet": "../bui_normal_red_fire10/qa/bui-normal-three-form-pet-mounted-original.png",
+    "groupOriginalSheetSha256": "4a2fe5ac11cf38f8c5bdd5c7d16b2cf4639102df183d0580a494111aad2c73c8",
+    "group160pxSheet": "../bui_normal_red_fire10/qa/bui-normal-three-form-pet-mounted-160px.png",
+    "group160pxSheetSha256": "cfb9974064cabccf7ddbfc1f54025110866a25918b2a08db3b59018666ce1788"
+  },
+  "ownerReviewStatus": "pending",
+  "notes": "Identity and four key poses only. Fur-slab patterns are not shell or armor. World and battle matrices are not produced."
+}

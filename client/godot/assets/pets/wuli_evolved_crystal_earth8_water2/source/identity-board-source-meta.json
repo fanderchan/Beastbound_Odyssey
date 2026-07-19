@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asset": "wuli_evolved_crystal_earth8_water2_identity_board",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "13df5db7a15bdc7f4abe9efcb26354694f82df4e6c09cf88c63c7f5f1772334a",
+  "decodedRgbaPixelSha256": "0831e299050fb34675f95db73fb78a4e16fd44cdb3a1cc3f41eb91a5dccaed1e",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "1d9f84e10e25e64786656848df09e9c2e8b3605b14d4964af0f5062d7b97ba7d",
+    "decodedRgbaPixelSha256": "0831e299050fb34675f95db73fb78a4e16fd44cdb3a1cc3f41eb91a5dccaed1e"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb"
+  }
+}

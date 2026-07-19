@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_driftfox_evolved_moon_gale_wind7_water3_mounted_keyposes_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-cd416dd0-f946-4bea-a0da-2eab6029c256.png",
+  "originalPngSize": [
+    1774,
+    887
+  ],
+  "originalPngSha256": "762fc1ed4ebb6429c17ed261f728e5db6bfabe57d818b0fb6b7a2e54774cc3d6",
+  "decodedRgbPixelSha256": "097016c585b157bb32c4396d3a694e33074763264a01165c940d16cbcd6386b0",
+  "references": {
+    "petIdentity": "../../../pets/driftfox_evolved_moon_gale_wind7_water3/identity/identity-board-transparent.png",
+    "petIdentitySha256": "21a6b80b9ac2895e89cbd44936a8b3aab8bc7dbf29ee78940e58ba6967d6f871",
+    "characterIdentity": "../../../characters/novice_hunter/identity/processed/sheet-transparent.png",
+    "characterIdentitySha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "3f75b8d044a21cc9ed1673be4efed5b686708da55404f446e596e148d1988d5f",
+    "decodedRgbPixelSha256": "097016c585b157bb32c4396d3a694e33074763264a01165c940d16cbcd6386b0"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "rejectedCandidates": [],
+  "processing": {
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "e9d2a1382985cee0a11a2eef40ba8a30e74e5e773b9f7802163348a5332233e4",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "6596f82ff5bda5e5af8b50f85a75b42b060fd5b39f2ce70eeab004e17a6db5f5",
+    "contactSheet": ".run/art_batch_phase320/driftfox_mounted/evolved/mounted-build-v1/contact-sheet.png",
+    "contactSheetSha256": "8f5ba02ae12e93e2626d30b980bc57a09e39248c5f3369a8f871b7f683a69ff8"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "tidefin_mist_water8_wind2_identity_board_v2",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-a8a26073-9cbc-44ff-8353-049b4e7ab9a7.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "8a5f9f7ec8c7c7fd80bbdf90e69a9239d6d6142d96a1ddd00c394f9bdd85321d",
+  "decodedRgbPixelSha256": "17382b1e60d65e615c492a50dbf7f9316b8b05275d4cb05f3575f0fa1fd2914a",
+  "correctionHistory": {
+    "rejectedCandidateFilename": "exec-7d77816a-69fa-409c-8cb0-153dcaf33282.png",
+    "rejectedCandidateSha256": "af975cd3d4bf9a22498965c658f024fa53d007d5aaad43512753e0097069f414",
+    "rejectionReason": "All three Tidefin v1 candidates rendered four visible toes although the identity contract requires exactly three webbed toes.",
+    "acceptedCorrectionPrompt": "prompts/identity-board-toe-correction-v2.txt"
+  },
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "2a3c986d45bbc6586985f06f6a62dc38d5e4a92636bf322dc84850298877eca3",
+    "decodedRgbPixelSha256": "17382b1e60d65e615c492a50dbf7f9316b8b05275d4cb05f3575f0fa1fd2914a"
+  },
+  "prompts": {
+    "base": "prompts/identity-board-v1.txt",
+    "toeCorrection": "prompts/identity-board-toe-correction-v2.txt"
+  },
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "repackGrid": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.78 --allow-upscale",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "repackedChromaSha256": "7941cea2008bd272c2cc4533b4207a7b5e5d23cd0b57fe791132dc08aa9b1116",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "6d312359a653b7ffacc912bf2f6d2075fc64a95eadc66e1ac7fd2fd23f14480f",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.86 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "61810db6852529bf788bfae5a0a40012fc64f3af3c5e6656f248d2eb24799dc6",
+    "contactSheet": ".run/art_batch_phase320/tidefin/mist/identity-build/contact-sheet.png",
+    "contactSheetSha256": "f2cd1ab2aa9ec23236918c2ddd779e85eefeb79f3d7071667861baddba215bb1"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_starter_fire_cub",
+  "displayName": "焰纹幼兽",
+  "artStatus": "owner_review_pending",
+  "productionScope": "identity_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
+  },
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "status": "not_produced"
+    }
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "status": "not_produced"
+      },
+      "walk": {
+        "frameCount": 4,
+        "status": "not_produced"
+      }
+    }
+  },
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/identity-board-raw.webp",
+    "sourceMetadata": "source/identity-board-source-meta.json",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "prompt": "prompts/identity-board-v1.txt"
+  },
+  "evidence": {
+    "contactSheet": ".run/art_batch_phase320/rebirth_cubs/fire-identity-build/contact-sheet.png",
+    "contactSheetSha256": "80c02260bfe46ac602ce8bba8cb0bd0bdeb66188abbe239c4720e61775df55a4",
+    "groupContactSheet": ".run/art_batch_phase320/rebirth_cubs/contact-sheet.png",
+    "groupContactSheetSha256": "efff879d2dbe8db1824e9b8e65b3d766391d6987d5f7652bbf4b1381163ae266",
+    "comparison160": ".run/art_batch_phase320/rebirth_cubs/comparison-160px.png",
+    "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425"
+  },
+  "ownerReviewStatus": "pending",
+  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+}

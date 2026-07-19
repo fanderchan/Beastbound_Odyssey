@@ -1,0 +1,17 @@
+# Wetland Mossback integrated mounted key-pose generation contract
+
+Use case: stylized-concept
+Asset type: Beastbound Odyssey integrated rider-and-mount production key-pose board
+Input images: Image 1 is the exact approved Wetland Mossback identity; Image 2 is the exact approved novice hunter identity. Preserve both identities rather than inventing a sibling creature or a new rider.
+
+Primary request: Draw the novice hunter riding the Wetland Mossback as one newly generated, fully integrated whole subject per pose. This is not a collage and must not look like a separately pasted rider. Generate a strict landscape 1-row by 2-column board. Left cell is `front_3quarter_sw`: the Mossback's head is on screen-left, its tail trails screen-right, and both mount and rider face lower-left toward the viewer. Right cell is `back_3quarter_ne`: the Mossback's head is unmistakably on screen-right, its tail trails screen-left, and both mount and rider face upper-right away from the viewer. Merely showing the rider's back while the mount still travels left is wrong.
+
+Mount identity: the exact same gentle, low-center-of-gravity, broad-muzzled quadruped from Image 1. Preserve its dusky teal-gray body, pale sand muzzle and belly, amber eyes, low round ears, broad webbed paws, thick low tail, blue-green water spirals, overlapping dark slate organic back scutes, damp moss, and exact short rounded reed-spine logic. Scale the Mossback into a credible rideable marsh megafauna without turning it into a turtle, hippo, dinosaur, or different pet.
+
+Rider identity and scale: the exact adult novice hunter from Image 2: same adult head-to-body ratio, face, brown hair and bone ornament, ochre fur-trimmed outfit, diagonal strap and pouch, red belt, wrist wraps, and complete brown fur-trimmed boots. Keep believable adult human scale. Do not shrink him into a child, mascot, or doll.
+
+Seat and contact: solve the rider, mount, low saddle, hands, legs, harness, and near/far occlusion together inside the generated picture. Place a restrained dark-brown low padded saddle in the natural shallow gap between the front and middle back scutes, using a thin reed-fiber pad and broad under-belly girth so the seat bridges the damp plates without deleting or piercing them. The rider's pelvis must visibly rest in the saddle, torso follow the mount travel axis, thighs wrap naturally along the upper flanks, both boots remain complete, and both hands hold short reins or a low saddle grip. The rider must not float, straddle the neck, sit on a spike, or face opposite the mount.
+
+Layout and rendering: perfectly flat solid `#FF00FF` chroma-key background; no shadow, floor, scenery, gradient, text, labels, grid, watermark, particles, splash, or magic effects. Each complete mounted subject is centered inside its own cell with generous padding and a stable feet baseline; nothing crosses the cell boundary. Original high-definition hand-painted 2.5D game-sprite rendering, orthographic/isometric camera, crisp silhouette at game scale, coherent soft lighting and dark plum-slate outline.
+
+Hard constraints: exactly two views of the same rider-mount combination; one body image per cell; the two travel axes must be opposite and must follow the explicit head/tail screen positions above; no runtime/offline layer composition; no mirroring; no saddle patch, seam mask, missing hand, missing leg, missing boot, extra limb, changed scute topology, changed spine count, or Bui/StoneAge/Pokemon/Digimon resemblance.

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_thunder_dragon_mount_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-d1d819e6-c306-4a31-88b8-9d49c4204998.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "ab119df4fd5110ab14dac1876f2fe5b6dc3727b664cef94ed12b59ebbcab31f8",
+  "decodedRgbPixelSha256": "9bfe36866ae1a488337b64b354d71a2adf275c9be20441ab13cf61cea696de45",
+  "references": [{"path": "../../../pets/thunder_dragon_mount/identity/identity-board-transparent.png", "role": "mount identity"}, {"path": "../../../characters/novice_hunter/identity/processed/sheet-transparent.png", "role": "character identity", "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"}],
+  "archive": {"path": "source/mounted-keypose-raw.webp", "format": "webp", "lossless": true, "sha256": "e2bbba929d91e03ee322586f3ed8a11fb27aa53b4fd29c698eb33f18bd9b2bf8", "decodedRgbPixelSha256": "9bfe36866ae1a488337b64b354d71a2adf275c9be20441ab13cf61cea696de45"},
+  "prompt": "prompts/generation-contract.md",
+  "processing": {"chromaKey": "#FF00FF", "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.84 --anchor feet --contact-sheet", "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"},
+  "outputs": {"transparentBoard": "identity/identity-board-transparent.png", "transparentBoardSha256": "0c7b468149b26ac8fb4618040f47787780055f0126ca8ab0b1167c0266f5949e", "contactSheet": ".run/art_batch_phase320/thunder_dragon/mounted-build/contact-sheet.png", "contactSheetSha256": "9b219ba2224c263326e947521f9b7a70d556f54546d87fb38758c859922e0c4b"}
+}

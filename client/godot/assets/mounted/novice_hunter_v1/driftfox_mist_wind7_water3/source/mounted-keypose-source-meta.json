@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_driftfox_mist_wind7_water3_mounted_keyposes_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-5084b858-a263-4034-8f01-3130704bea7d.png",
+  "originalPngSize": [
+    1774,
+    887
+  ],
+  "originalPngSha256": "0b97f59a33a82f0fd7570959443c309e6c61344d10201bce697a594468aa85b1",
+  "decodedRgbPixelSha256": "fde39690d5e72bbd63f56b6b2e7e2f271bdf3a2caf180fa7a057746618d1a873",
+  "references": {
+    "petIdentity": "../../../pets/driftfox_mist_wind7_water3/identity/identity-board-transparent.png",
+    "petIdentitySha256": "eb22219573c923d948b79cf9217fcd357f30c1f62562912adbfec8555529903e",
+    "characterIdentity": "../../../characters/novice_hunter/identity/processed/sheet-transparent.png",
+    "characterIdentitySha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "7663b27d894e0f06ff21a6cc991cfb878a2c549f0400ed5ae8c868a6453deeb2",
+    "decodedRgbPixelSha256": "fde39690d5e72bbd63f56b6b2e7e2f271bdf3a2caf180fa7a057746618d1a873"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "rejectedCandidates": [],
+  "processing": {
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "add7652f31f8064282b3fe4780d407991ab06de4943f4e617f1837a4ebdf3208",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "0fe7ad11256e965e64015348a9c46d08cc429aa2f8e5613228ddd569317109a4",
+    "contactSheet": ".run/art_batch_phase320/driftfox_mounted/mist/mounted-build-v1/contact-sheet.png",
+    "contactSheetSha256": "caa3380f6abe1718ba85d014a92271c308bdc5d1e59d36fcbd266397ee4665a3"
+  }
+}

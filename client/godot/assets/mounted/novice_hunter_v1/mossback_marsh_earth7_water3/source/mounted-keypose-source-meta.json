@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_mossback_marsh_earth7_water3_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-2ed3db57-e211-49ea-97b3-7654fc5f8249.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "f54b6571a023e8757873931c4450e4a76f6a34c462d04d640978b985eb5a4029",
+  "decodedRgbPixelSha256": "d41a226b3baa545fe83e60f411ff1fe04cf54c7dfea293b49b1ab7caa3f746e8",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/identity/identity-board-transparent.png",
+      "sha256": "cb4bd3eda7ea43eb928b65605c6c74ec0467dfdb44c574953b50fab1ed915ed8"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "30a5d30854b16245a3c1e63124838195374318c3460b324f6f7a67b7108afdf8",
+    "decodedRgbPixelSha256": "d41a226b3baa545fe83e60f411ff1fe04cf54c7dfea293b49b1ab7caa3f746e8"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "c58f498e47982088ab8276c1c3108e92e067ad0e2e3b58941ab549269c5e225e",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "qa": {
+    "rejectedIteration": "exec-f81e8a2a-f93e-4dc5-af1a-7cc52c2dfac3.png",
+    "rejectionReason": "back pose showed the rider's back but rider and mount still travelled screen-left; regenerated until both faced upper-right"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "36ea9b929b7881003574893d14e6eb0849be341c0d86e25980d918cbf8cb5ab5",
+    "contactSheet": ".run/art_batch_phase320/mossback/wetland/mounted-keypose-build/contact-sheet.png",
+    "contactSheetSha256": "24615df8dc1b1b0019e26826ef080803aca3a44a0e62ae1300b84f046bce1f80"
+  }
+}

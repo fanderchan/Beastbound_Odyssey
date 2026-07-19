@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "formId": "pet_rebirth_mm_stage2",
+  "displayName": "2转小MM",
+  "artStatus": "owner_review_pending",
+  "productionScope": "identity_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [256, 256],
+  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [512, 512],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
+  },
+  "actions": {
+    "idle": {"frameCount": 6, "status": "not_produced"},
+    "walk": {"frameCount": 8, "status": "not_produced"},
+    "attack": {"frameCount": 8, "status": "not_produced"},
+    "skill": {"frameCount": 8, "status": "not_produced"},
+    "hurt": {"frameCount": 6, "status": "not_produced"},
+    "defend": {"frameCount": 6, "status": "not_produced"},
+    "dodge": {"frameCount": 8, "status": "not_produced"},
+    "counter": {"frameCount": 8, "status": "not_produced"},
+    "stagger": {"frameCount": 8, "status": "not_produced"},
+    "knockaway": {"frameCount": 8, "status": "not_produced"},
+    "down": {"frameCount": 8, "status": "not_produced"},
+    "revive": {"frameCount": 8, "status": "not_produced"}
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "actions": {
+      "idle": {"frameCount": 1, "status": "not_produced"},
+      "walk": {"frameCount": 4, "status": "not_produced"}
+    }
+  },
+  "supportedMountedCharacterIds": ["novice_hunter_v1"],
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/identity-board-raw.webp",
+    "sourceMetadata": "source/identity-board-source-meta.json",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "prompt": "prompts/identity-board-v1.txt"
+  },
+  "evidence": {
+    "contactSheet": ".run/art_batch_phase320/rebirth_mm/stage2-identity-build/contact-sheet.png",
+    "contactSheetSha256": "c798b8e760b56021ed204c77ec72735cf782eebb0b2f510d9f64f7199f6dfef8",
+    "groupContactSheet": ".run/art_batch_phase320/rebirth_mm/contact-sheet.png",
+    "groupContactSheetSha256": "7b4cda5572cfbc2314159269b631b184f6e01a79353de27296017b2f91f56c0d",
+    "comparison160px": ".run/art_batch_phase320/rebirth_mm/comparison-160px.png",
+    "comparison160pxSha256": "090650e47f5d5eebf04365214b56611fa48238ce6cdb3b33a33dc28ce4702f14"
+  },
+  "ownerReviewStatus": "pending",
+  "notes": "Identity and four key poses only. Intentional multipart double-ring geometry uses componentMode=all. World and battle matrices are not produced."
+}

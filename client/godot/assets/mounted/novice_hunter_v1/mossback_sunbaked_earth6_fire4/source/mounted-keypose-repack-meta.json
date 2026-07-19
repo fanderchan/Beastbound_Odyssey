@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f793a-68ef-7630-9098-1d4bff57db40/exec-07d898be-b5ca-495f-8fcd-307a1844c193.png",
+  "output": ".run/art_batch_phase320/mossback/sunbaked/mounted-keypose-repacked-chroma.png",
+  "rows": 2,
+  "cols": 1,
+  "key": "#FF00FF",
+  "sharedScale": 1.0,
+  "allowUpscale": false,
+  "discardedSmallComponents": [
+    {
+      "area": 19460,
+      "bbox": [
+        0,
+        0,
+        887,
+        1774
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        110,
+        64,
+        771,
+        764
+      ],
+      "sourceArea": 211551,
+      "outputSize": [
+        667,
+        706
+      ],
+      "pastePosition": [
+        110,
+        110
+      ],
+      "cellMargins": [
+        110,
+        110,
+        110,
+        71
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        83,
+        937,
+        743,
+        1648
+      ],
+      "sourceArea": 218558,
+      "outputSize": [
+        666,
+        717
+      ],
+      "pastePosition": [
+        110,
+        986
+      ],
+      "cellMargins": [
+        110,
+        99,
+        111,
+        71
+      ]
+    }
+  ]
+}

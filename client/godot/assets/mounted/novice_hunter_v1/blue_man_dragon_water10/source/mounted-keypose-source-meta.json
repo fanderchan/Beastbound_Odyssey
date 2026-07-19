@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_blue_man_dragon_water10_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-ff020844-a386-4339-a7fa-ef36231f3354.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "528543e08c94f4e100b4a8adee0265306f67711da42c6df065f4a747cd89457e",
+  "decodedRgbPixelSha256": "131abbc8814e86a8d9b6d02e523b55d402105e91048c18c3277a3cbad2043837",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/identity/identity-board-transparent.png",
+      "sha256": "183788de3af62df09db25d41e26bcaf9f6dd9d6145445364f6c4bbf082dd9d99"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "57a0e9749c2820b3d41b3bde28dade8d63b8057197577cf748399b6ebab2dea7",
+    "decodedRgbPixelSha256": "131abbc8814e86a8d9b6d02e523b55d402105e91048c18c3277a3cbad2043837"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "ea92119ba526b31aecc94f34bb8ef6aadcbd7bfadeb9ece702a600983e205b1d",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "3f1679164c4953c42d2c10df3014427d8e6c818a395f748296e59c047dfcee43",
+    "contactSheet": ".run/art_batch_phase320/blue_man_dragon/mounted-keypose-build/contact-sheet.png",
+    "contactSheetSha256": "0e83343e8d3a44bdfaf039d88b56e5ed1097609e83f0bdeeaf03ad3d02684b61"
+  }
+}

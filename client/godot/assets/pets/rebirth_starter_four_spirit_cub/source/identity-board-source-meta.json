@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_rebirth_starter_four_spirit_cub_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-ee906e71-37c7-4c5d-84c5-b8bfdcd1e021.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "865b34da10684f1ad528df00f670beb824f17f71d27f4a0a5a42fa7179af8be5",
+  "decodedRgbPixelSha256": "6cc1147ad5bb38d71c21ca88df18423d8b701cf3c63a120fea7e5259d0041c2d",
+  "references": [
+    {
+      "role": "mandatory_starter_cub_family_reference",
+      "path": "client/godot/assets/pets/rebirth_starter_earth_cub/identity/identity-board-transparent.png",
+      "sha256": "927a9ef51d7b0721eb478f6069ed90b0f9d115ff06565f3dfc21b17aeff4116b",
+      "originalReferencePngSha256": "a4832f64cbb123fdccbe57417ebcfced4be6c04d96948e8016907993931ea35e"
+    }
+  ],
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "ed36ee654d2ef4817790bfb0738f5426cab7d91f158be78bb1c305764354807a",
+    "decodedRgbPixelSha256": "6cc1147ad5bb38d71c21ca88df18423d8b701cf3c63a120fea7e5259d0041c2d"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "repack": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.86 --bottom-padding-ratio 0.06",
+    "repackSha256": "c5f16c77cb2f6f4e6872d4a97820f7076e10cd214d7eb79f83a34fbd540dd2aa",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "a649f2465ce397dde5f98a614a1a91f2180e9592e63e44f68ffeaec61d847a39",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.84 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "note": "四格先做统一同比例重排，未改变单格创意内容。"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "794af0889a3d1eea4b4c625765cc276394e6035f7686d38a1d043c743ce9e897",
+    "contactSheet": ".run/art_batch_phase320/rebirth_cubs/four_spirit-identity-build/contact-sheet.png",
+    "contactSheetSha256": "6dd4352f00da083369de8d4a97c353864d7dabb4e48b76e1af73a125ee998533"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_wuli_evolved_crystal_earth8_water2_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-6a8da056-85af-4f1b-afc5-f0af81bb31c1.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "e4698a20ca450cfa944d65c3a245de16dda79ef356acfd436fda4cd46a256021",
+  "decodedRgbPixelSha256": "cb4a30504917052f2e524639882e28d7f4800bd644d7f197307c0b8413a04879",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/identity/identity-board-transparent.png",
+      "sha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb"
+    },
+    {
+      "role": "exact_rider_identity_and_adult_scale",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "a545001ceb614e50bfdce4d902ec26adea4e9cada7b7fa9a44e85563b777b31a",
+    "decodedRgbPixelSha256": "cb4a30504917052f2e524639882e28d7f4800bd644d7f197307c0b8413a04879"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "sharedScale": 0.4579811115
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "cb0163a2458f1762d41b6df71fb56e7a5334c9d4934b2ab12d8730896ec6f4ba",
+    "contactSheet": ".run/art_batch_phase320/wuli_mounted/crystal/build/contact-sheet.png",
+    "contactSheetSha256": "ad9adcd6937555262138d4eac777faca635b6dd0812cc4998f081c4ac0d6b57a"
+  },
+  "review": {
+    "status": "self_review_passed_owner_pending",
+    "scope": "front_3quarter_sw and back_3quarter_ne integrated mounted identity gate only"
+  }
+}

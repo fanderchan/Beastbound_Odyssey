@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-b042d84b-b447-4af4-be76-c68c99bfefbe.png",
+  "output": ".run/art_batch_phase320/rebirth_beast/water/identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.7118777292576419,
+  "allowUpscale": true,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        56,
+        140,
+        636,
+        584
+      ],
+      "sourceArea": 153647,
+      "outputSize": [
+        417,
+        320
+      ],
+      "pastePosition": [
+        105,
+        257
+      ],
+      "cellMargins": [
+        105,
+        257,
+        105,
+        50
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        604,
+        144,
+        1169,
+        578
+      ],
+      "sourceArea": 128002,
+      "outputSize": [
+        406,
+        313
+      ],
+      "pastePosition": [
+        737,
+        264
+      ],
+      "cellMargins": [
+        110,
+        264,
+        111,
+        50
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        76,
+        732,
+        485,
+        1137
+      ],
+      "sourceArea": 115434,
+      "outputSize": [
+        295,
+        293
+      ],
+      "pastePosition": [
+        166,
+        911
+      ],
+      "cellMargins": [
+        166,
+        284,
+        166,
+        50
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        547,
+        778,
+        1228,
+        1122
+      ],
+      "sourceArea": 136199,
+      "outputSize": [
+        489,
+        249
+      ],
+      "pastePosition": [
+        696,
+        955
+      ],
+      "cellMargins": [
+        69,
+        328,
+        69,
+        50
+      ]
+    }
+  ]
+}

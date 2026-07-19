@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_bui_normal_red_fire10_keypose_v2",
+  "generator": "OpenAI built-in image generation",
+  "generationCallId": "exec-6647d3d7-839f-4dc9-a7d2-b25d42f6f528",
+  "originalGeneratedFilename": "exec-6647d3d7-839f-4dc9-a7d2-b25d42f6f528.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "43c9db3c6b0df4d31c8e7111963b4b188909a536c44b41b83fc4e8c8adfc74eb",
+  "decodedRgbPixelSha256": "e3b26120bfdf34c6be3e71fc98a8b0fd9a0b8f3ef66d5887b06424b6775e1308",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/bui_normal_red_fire10/identity/identity-board-transparent.png",
+      "sha256": "db43bdb0fd1960e2714c76eef1ee4198b67965ecda0ea05c8798d210ab9da061"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "prompt": {
+    "path": "prompts/generation-contract.md",
+    "sha256": "3d0915847908ac9cf192790c29a6d0fb9faedccfb740a5273f2b1b0516d5e727"
+  },
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "204c8a78fdf14c6bf8020dad678704b8fc6da99f582be86549f02e8b4af4585c",
+    "decodedRgbPixelSha256": "e3b26120bfdf34c6be3e71fc98a8b0fd9a0b8f3ef66d5887b06424b6775e1308"
+  },
+  "processing": {
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "sharedScale": 0.4090746803,
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "rejectedAttempt": {
+    "asset": "mounted_keypose_v1_wrong_back_direction",
+    "generationCallId": "exec-98804c3a-0896-4392-b5b3-588515711dc1",
+    "originalPngSha256": "138ee310e14560d9787352a9daa993bade76677cac9735114e62d51a757efa56",
+    "decodedRgbPixelSha256": "8f806c12fdc888ccf7e634b848a566265309f0becdafd354173e9ce6c07f19bb",
+    "archivePath": "source/mounted-keypose-v1-wrong-direction-raw.webp",
+    "archiveSha256": "19d572fc59156685a10b6c71dc38f4a89e5a0fb6d2c584383a96946e18d6db7b",
+    "promptSha256": "e5097bdfa1b6fa139d6ed7c1bc0615f7d47d1c62501954a0c57f4ed4e75e32e3",
+    "reason": "Back three-quarter pose faced screen-left instead of upper-right; rejected despite acceptable adult scale and seat anatomy.",
+    "evidence": ".run/art_batch_phase320/bui_normal/red/rejected_mounted_v1_direction/"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "faa4ab5b82c0d1efa9e772868489aad870f5cdd716e132b35c7f7ca4c0c88a60",
+    "contactSheet": ".run/art_batch_phase320/bui_normal/red/mounted-build/contact-sheet.png",
+    "contactSheetSha256": "ad4c8ebf24a4e01a490e032f0b2fc55e95cab742ae7b7da2045704d82bd539e8"
+  }
+}

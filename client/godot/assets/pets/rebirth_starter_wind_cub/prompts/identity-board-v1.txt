@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: elemental sibling identity board in the same original Rebirth Starter Cub line
+Primary request: Using the attached 地纹幼兽 as the mandatory juvenile family skeleton and rendering reference, create "岚纹幼兽". It must instantly read as the same starter-cub species—same round face, short muzzle, low ears, short forehead horn, thick three-claw paws, sturdy rideable torso, shoulder badge locations, and medium tail—but be a wind-adapted sibling, not a yellow recolor.
+
+Wind changes: torso slightly narrower with lifted abdomen and lower legs about 12% longer/finer while retaining broad three-claw paws; short horn becomes smooth muted jade and leans slightly backward; face markings form two pale teal swept curves; low ears retain shape but gain one small attached feather-fur tip each; shoulder badges become three layered jade-edged feather-fur scallops; tail is modestly longer and ends in a controlled two-part split fur tuft. Pale gold and cream plush fur, muted jade/teal accents, dark olive paws, restrained wind-spiral markings, warm green-amber eyes. Friendly, alert, still robust and rideable. No wings, flying, tornado, floating feathers/ribbons, glow, saddle, rider, armor straps, text, shadow, scenery, or FX.
+
+Layout: strict 2x2 flat #FF00FF board, TL front_3quarter_sw, TR back_3quarter_ne, BL front, BR left. Same exact horn, face markings, ear tips, three claws, shoulder scallops, tail split, proportions, palette, lighting, scale. Central 65%, padding, baseline, no crossing.
+
+Style: original HD hand-painted 2.5D pet sprite matching earth cub, plush fur and matte jade details, crisp 130-175 px, dark plum-olive outline, nostalgic Chinese pet-RPG with modern polish.
+Constraints: exactly four views of one identical wind cub; same family, structurally lighter, mechanically coherent, rideable, original.
+Avoid: simple yellow recolor, fox/deer/rabbit, giant ears, wings, floating FX, Pokémon/Digimon resemblance, StoneAge pet replica, tiny baby, background texture/grid/labels/watermark.

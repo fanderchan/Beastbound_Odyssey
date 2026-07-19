@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_wuli_normal_tough_earth10_keypose_v2",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-20b3ebbc-1267-46bc-b460-6b04f54bb89a.png",
+  "originalPngSize": [1717, 916],
+  "originalPngSha256": "33349fdd17d35ad42e3ee1ed673ae11e8ebeb6ba85d4a53ff6de7a2f45a5aa92",
+  "decodedRgbPixelSha256": "04d90e0d017dd572336f4d65e1165090b6e47d826d72a4dec4f1dd3ac0f71ba0",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/wuli_normal_tough_earth10/identity/identity-board-transparent.png",
+      "sha256": "ed70f62ed743c034851d4b0fe2d63f94b0270701754d9abaa4ec81804caa17d6"
+    },
+    {
+      "role": "exact_rider_identity_and_adult_scale",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "847d94db9e7b1b7ec188ed68b981c2581a4fe9e8a3667ad302242b78d232beda",
+    "decodedRgbPixelSha256": "04d90e0d017dd572336f4d65e1165090b6e47d826d72a4dec4f1dd3ac0f71ba0"
+  },
+  "prompt": "prompts/generation-contract-v2-containment-fix.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "sharedScale": 0.5377065849,
+    "repack": "The generated 1717x916 PNG was archived unchanged. The builder received a deterministic 1718x916 working copy made only by padding one #FF00FF pixel column at the right edge; no subject pixel was cropped, scaled, painted, or composited."
+  },
+  "supersededCandidate": {
+    "rawArchive": "source/mounted-keypose-v1-edge-touch-raw.webp",
+    "rawArchiveSha256": "ee81cb6fd367c86f582583fa7638e8f6d2140e2055af4ae090621f211b1a038c",
+    "rejectionReason": "The left source cell touched the split edge, so the generation failed the containment gate before art approval."
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "8574ef32c1492d9c9501919256648ff77ad8a872b8bb55aaf10fe8bc41f1afa4",
+    "contactSheet": ".run/art_batch_phase320/wuli_mounted/tough_v2/build/contact-sheet.png",
+    "contactSheetSha256": "6765e699ba24908320f6fb5d4d1002d22724f3c4be56f0683f78a7b5860cafd2"
+  },
+  "review": {
+    "status": "self_review_passed_owner_pending",
+    "scope": "front_3quarter_sw and back_3quarter_ne integrated mounted identity gate only"
+  }
+}

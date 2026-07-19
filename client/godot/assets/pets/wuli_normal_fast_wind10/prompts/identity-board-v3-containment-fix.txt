@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: corrected production identity board for a 2.5D turn-based pet MMORPG creature sprite
+Input image: use the provided 高速乌力 v2 board as the exact identity, structural-delta and rendering-quality reference.
+Primary request: Recreate the exact same 高速乌力 individual and same four views, correcting only uniform scale and per-cell placement. Do not redesign it and do not revert it toward 普通乌力.
+
+Identity invariants: preserve the exact narrow shallow torso, visibly longer lean four legs, narrow chest, lifted belly, single shallow wedge-shaped forehead plate, exactly four slim backward-swept dorsal armor bands, paired cheek plates, swept triangular ears, short pig muzzle, exactly two cream tusks, three claws per foot, elastic curled tail with one leaf-shaped blue-gray wind tuft, blue-teal coat, silver-cream underside, slate armor, cyan seams and cyan-green eyes. Preserve the same face, proportions, armor topology, materials, lighting and outline weight in every view.
+
+Layout: strict 2x2 identity board on a perfectly flat solid #FF00FF background. Top-left front_3quarter_sw; top-right back_3quarter_ne; bottom-left straight front; bottom-right clean left side. Reduce every complete pet view uniformly by about 14% compared with the reference and center it independently inside the central 48% to 52% of its own invisible equal cell. Preserve at least 16% clean magenta margin on all four sides. In the bottom-right side-view cell, shift the complete animal right so the snout and wedge brow have a wide clean magenta gap from the cell’s left boundary, while the leaf tail tuft keeps a wide clean gap from the right boundary. Nothing may touch or cross a cell edge. No grid, label, border, floor or shadow.
+
+Style/medium: exact same original HD hand-painted 2.5D sprite style and orthographic/isometric camera as the reference.
+Constraints: exactly four views of one identical 高速乌力; complete anatomy; no change beyond uniform scale and cell positioning; structural speed read must remain obvious at 120-160 px.
+Avoid: identity drift, shorter legs, rounder torso, rounded ordinary forehead plate, loss of backward shell flow, changed armor count, wings, FX, text, icon, watermark or textured background.

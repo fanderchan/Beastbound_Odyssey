@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": ".run/art_batch_phase320/rebirth_cubs/shadow-identity-chroma-clean.png",
+  "output": ".run/art_batch_phase320/rebirth_cubs/shadow-identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.8347058823529412,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        71,
+        162,
+        625,
+        579
+      ],
+      "sourceArea": 134834,
+      "outputSize": [
+        467,
+        353
+      ],
+      "pastePosition": [
+        80,
+        236
+      ],
+      "cellMargins": [
+        80,
+        236,
+        80,
+        38
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        638,
+        143,
+        1118,
+        576
+      ],
+      "sourceArea": 107743,
+      "outputSize": [
+        406,
+        366
+      ],
+      "pastePosition": [
+        737,
+        223
+      ],
+      "cellMargins": [
+        110,
+        223,
+        111,
+        38
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        126,
+        716,
+        474,
+        1136
+      ],
+      "sourceArea": 107147,
+      "outputSize": [
+        295,
+        356
+      ],
+      "pastePosition": [
+        166,
+        860
+      ],
+      "cellMargins": [
+        166,
+        233,
+        166,
+        38
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        569,
+        751,
+        1209,
+        1126
+      ],
+      "sourceArea": 131097,
+      "outputSize": [
+        539,
+        318
+      ],
+      "pastePosition": [
+        671,
+        898
+      ],
+      "cellMargins": [
+        44,
+        271,
+        44,
+        38
+      ]
+    }
+  ]
+}

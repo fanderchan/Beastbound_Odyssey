@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "displayName": "晶甲乌力",
+  "artStatus": "in_production",
+  "productionScope": "identity_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
+  },
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "not_produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "not_produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    }
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "not_produced"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "not_produced"
+      }
+    }
+  },
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/identity-board-raw.webp",
+    "sourceMetadata": "source/identity-board-source-meta.json",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "prompt": "prompts/identity-board-v1.txt"
+  },
+  "evidence": {
+    "identityBoard": "identity/identity-board-transparent.png",
+    "identityBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb"
+  },
+  "keyPoseReviewStatus": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate."
+}

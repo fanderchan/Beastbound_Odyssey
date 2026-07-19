@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-7cd07073-45c9-40be-b864-a9b776c60785.png",
+  "output": ".run/art_batch_phase320/rebirth_beast/wind/identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.6727097661623109,
+  "allowUpscale": true,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        48,
+        164,
+        614,
+        587
+      ],
+      "sourceArea": 129757,
+      "outputSize": [
+        385,
+        289
+      ],
+      "pastePosition": [
+        121,
+        288
+      ],
+      "cellMargins": [
+        121,
+        288,
+        121,
+        50
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        615,
+        151,
+        1155,
+        574
+      ],
+      "sourceArea": 108319,
+      "outputSize": [
+        367,
+        289
+      ],
+      "pastePosition": [
+        757,
+        288
+      ],
+      "cellMargins": [
+        130,
+        288,
+        130,
+        50
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        84,
+        685,
+        443,
+        1116
+      ],
+      "sourceArea": 109857,
+      "outputSize": [
+        246,
+        294
+      ],
+      "pastePosition": [
+        190,
+        910
+      ],
+      "cellMargins": [
+        190,
+        283,
+        191,
+        50
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        489,
+        741,
+        1210,
+        1099
+      ],
+      "sourceArea": 134388,
+      "outputSize": [
+        489,
+        245
+      ],
+      "pastePosition": [
+        696,
+        959
+      ],
+      "cellMargins": [
+        69,
+        332,
+        69,
+        50
+      ]
+    }
+  ]
+}

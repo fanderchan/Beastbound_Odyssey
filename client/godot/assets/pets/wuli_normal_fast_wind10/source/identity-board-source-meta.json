@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asset": "wuli_normal_fast_wind10_identity_board",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "5f45990322a9a895f9949a4394ad061df2852dd11013b043cc3a990211209b65",
+  "decodedRgbaPixelSha256": "45de2aa3e3e537a3155f9ae9f17799d68b624591d41172e017ec0c01e6217153",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "08629c06f662da2f63c3ad179b62aac1fa1964cd3e0916312dad0882eef625a3",
+    "decodedRgbaPixelSha256": "45de2aa3e3e537a3155f9ae9f17799d68b624591d41172e017ec0c01e6217153"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "c596648fede8427661a332508e9e7c422ae374cdb17a43f86198dfcf800631b8"
+  }
+}

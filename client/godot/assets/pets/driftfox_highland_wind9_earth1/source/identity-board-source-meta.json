@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asset": "driftfox_highland_wind9_earth1_identity_board",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "dcc17b38a56b7afa290f9b4da78106f94bad5094dbb64792f553a467c3391f34",
+  "decodedRgbaPixelSha256": "daedff6383f5f1f16d971bc1d081189d8b20069e0dcb066f671d651ac0e6178c",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "774ea92940e8d261af76c970084f250f5f64c51d9b7e5e286843d8f7d09b08a3",
+    "decodedRgbaPixelSha256": "daedff6383f5f1f16d971bc1d081189d8b20069e0dcb066f671d651ac0e6178c"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "73dd9cf69f8c56e718688a7f7ca990842ee258758346f42d07123c3dcb031a0f"
+  }
+}

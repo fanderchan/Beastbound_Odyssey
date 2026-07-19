@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: high-value sibling identity board in the same original Rebirth Starter Cub line
+Primary request: Using the attached 地纹幼兽 as the mandatory juvenile family skeleton and rendering reference, create "玄影幼兽". It must instantly read as the same starter-cub species—same round face, short muzzle, low ears, short forehead horn, thick three-claw paws, sturdy rideable torso, shoulder badge locations, and medium physical tail—but be a mysterious high-value shadow subtype, not a black recolor and never a smoke ghost.
+
+Shadow structure: short horn becomes a cool silver-violet faceted stone, blunt and physical; face fur forms a restrained silver crescent around one eye and a small violet eclipse dot centered below the horn, keeping both eyes readable; shoulder badges become layered matte silver-black scallops with thin violet edge accents; tail remains solid fur and ends in a compact double-layer tuft—one upper black-silver fan and one lower violet-black fan, both attached, no smoke. Dense charcoal-black plush fur with dark indigo undertones, silver muzzle/chest/paw tips, restrained violet crescent markings on shoulders/flanks, bright cool lavender eyes. Calm, mysterious, friendly, adult-rider-capable. No transparency, smoke, aura, floating shadow, wings, halo, skull, demon, saddle, rider, armor straps, text, shadow cast, scenery, or FX.
+
+Layout: strict 2x2 flat #FF00FF board: TL front_3quarter_sw, TR back_3quarter_ne, BL front, BR left. Same exact horn, eclipse face mark, three claws, shoulder scallops, attached double tail tuft, markings, proportions, palette, lighting, scale in all cells. Central 65%, generous padding, stable baseline, no crossing.
+
+Style: original high-definition hand-painted 2.5D pet sprite matching starter-cub family, plush physical fur and matte faceted stone, crisp 130-175 px, subtle dark plum-black outline with controlled silver highlights, nostalgic Chinese pet-RPG with modern HD polish.
+Constraints: exactly four views one identical shadow cub; same family, high-value silhouette, physical/coherent/rideable, original.
+Avoid: simple black recolor, ghost/smoke body, black hole, evil demon, skull, Pokémon/Digimon resemblance, StoneAge pet replica, floating tail, transparent parts, huge horn, tiny baby, background gradient/texture/grid/labels/watermark.

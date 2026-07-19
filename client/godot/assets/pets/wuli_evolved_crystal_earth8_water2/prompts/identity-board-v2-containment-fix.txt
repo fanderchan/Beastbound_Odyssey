@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: corrected production evolution identity board for a 2.5D turn-based pet MMORPG creature sprite
+Input image: use the provided 晶甲乌力 identity board as the exact evolved identity, crystal architecture and rendering-quality reference.
+Primary request: Recreate the exact same 晶甲乌力 individual and the same four views, correcting only per-cell scale, spacing and containment. Do not redesign, simplify or recolor it.
+
+Identity invariants: preserve exactly the same mature low four-legged boar-armadillo body, short pig muzzle, exactly two cream tusks, two triangular ears, four legs with three claws each, aqua eyes, warm umber coat, pale mineral-cream muzzle and belly, dark granite paws, curled tail and polished crystal tail bud. Preserve the same large faceted brow shield, paired shoulder bastions, dorsal smoky-quartz shell architecture, thick beveled edges, internal aqua veins and inclusions, face, proportions, materials, outline weight and lighting.
+
+Layout: strict 2x2 identity board on one perfectly flat solid #FF00FF chroma-key background. Top-left front_3quarter_sw facing lower-left; top-right back_3quarter_ne facing upper-right; bottom-left straight front; bottom-right clean left side. Reduce every pet view uniformly by about 12% compared with the reference. Center each complete body independently inside the central 50% to 54% of its own invisible equal cell. Preserve at least 15% clean magenta margin on all four sides of every cell. In the bottom-right side-view cell specifically, shift the complete creature to the right enough that its brow shield and shoulder crystal have a wide clean magenta gap from the cell’s left boundary, while its tail crystal also retains a wide clean magenta gap from the right boundary. No body part may touch or cross any cell edge. No visible grid, border or label.
+
+Style/medium: exact same original high-definition hand-painted 2.5D game sprite style as the reference, same semi-translucent quartz depth, restrained aqua glow, clean silhouette and orthographic/isometric camera.
+Constraints: exactly four views of one identical evolved pet; complete anatomy; no change beyond uniform scale and cell positioning; readable at 120-160 px.
+Avoid: identity drift, changed crystal plate architecture, changed face, changed palette, lost tusk or tail bud, added spikes or horns, simplified recolor, scenery, floor, cast shadow, FX, text, icon, label, watermark, gradient or texture in the background.

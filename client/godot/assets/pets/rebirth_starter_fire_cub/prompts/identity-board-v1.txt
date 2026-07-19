@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: elemental sibling identity board in the same original Rebirth Starter Cub line
+Primary request: Using the attached 地纹幼兽 as the mandatory juvenile family skeleton and rendering reference, create "焰纹幼兽". It must instantly read as the same starter-cub species—same round face, short muzzle, low ears, short forehead horn, thick three-claw paws, sturdy rideable torso, shoulder badge locations, and medium tail—but be a fire-adapted sibling, not a red recolor.
+
+Fire changes: short forehead horn becomes matte black obsidian with a muted amber tip, never glowing; dark face markings form two controlled flame-shaped fur curves around brow/cheeks without covering expression; shoulder badges are layered dark obsidian-shaped fur plates with soft edges; tail ends in a compact warm red-gold flame-shaped fur tuft that is not burning; neck/back fur slightly more angular. Rich red-gold and dark russet plush fur, cream muzzle/belly, black-brown paw tips, restrained amber foreleg/flank markings, warm amber eyes. Friendly, brave and solid enough to carry rider. No real flame, smoke, sparks, glow, lava cracks, demon traits, saddle, rider, armor straps, text, shadow, scenery, or FX.
+
+Layout: strict 2x2 board on flat #FF00FF. TL front_3quarter_sw, TR back_3quarter_ne, BL front, BR left side. Same exact horn, face marks, three claws, shoulder badges, tail tuft, proportions, palette, lighting, scale across cells. Central 65%, padding, baseline, no crossing.
+
+Style: original HD hand-painted 2.5D pet sprite matching earth cub, plush fur and matte obsidian-like badge texture, crisp 130-175 px, dark plum-russet outline, nostalgic Chinese pet-RPG with modern polish.
+Constraints: exactly four views one identical fire cub; same family, mechanically coherent, rideable, original.
+Avoid: simple red recolor, actual flames, demon/skull, Pokémon/Digimon resemblance, StoneAge pet replica, tiny baby, hard armor, background texture/grid/labels/watermark.

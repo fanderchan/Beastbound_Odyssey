@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-0bde9c80-fdf8-4e9e-9999-d051a2458611.png",
+  "output": ".run/art_batch_phase320/emberhorn/gale-identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.886875,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        93,
+        110,
+        616,
+        604
+      ],
+      "sourceArea": 146309,
+      "outputSize": [
+        469,
+        443
+      ],
+      "pastePosition": [
+        79,
+        146
+      ],
+      "cellMargins": [
+        79,
+        146,
+        79,
+        38
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        654,
+        65,
+        1122,
+        624
+      ],
+      "sourceArea": 112577,
+      "outputSize": [
+        420,
+        501
+      ],
+      "pastePosition": [
+        730,
+        88
+      ],
+      "cellMargins": [
+        103,
+        88,
+        104,
+        38
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        175,
+        684,
+        441,
+        1174
+      ],
+      "sourceArea": 84580,
+      "outputSize": [
+        241,
+        440
+      ],
+      "pastePosition": [
+        193,
+        776
+      ],
+      "cellMargins": [
+        193,
+        149,
+        193,
+        38
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        572,
+        703,
+        1174,
+        1173
+      ],
+      "sourceArea": 133725,
+      "outputSize": [
+        539,
+        422
+      ],
+      "pastePosition": [
+        671,
+        794
+      ],
+      "cellMargins": [
+        44,
+        167,
+        44,
+        38
+      ]
+    }
+  ]
+}

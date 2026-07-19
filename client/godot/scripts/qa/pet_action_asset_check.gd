@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const ASSET_MANIFEST_PATH := "res://assets/asset-manifest.json"
 const BUNDLE_META_PATH := "res://assets/pets/novice_sprout_bui/action-bundle-meta.json"
@@ -9,6 +10,7 @@ const OWNERSHIP_RECORD_PATH := "res://assets/pets/novice_sprout_bui/identity/sou
 
 static func run() -> Dictionary:
 	var errors := PetActionAssetCatalog.validation_errors()
+	errors.append_array(PetArtCatalog.validation_errors())
 	errors.append_array(BattleVisualPresentationModel.validation_errors())
 	_append_contract_errors(errors)
 	var warmed_world := PetActionAssetCatalog.warm_world_form(PetActionAssetCatalog.FORM_ID)
@@ -47,6 +49,8 @@ static func run() -> Dictionary:
 		errors.append("致死反击负伤退行帧未能加载")
 	return {
 		"ok": errors.is_empty(),
+		"artCatalogForms": PetArtCatalog.all_form_records().size(),
+		"artCatalogRuntimeForms": PetArtCatalog.runtime_form_records().size(),
 		"battleFrameCount": 100,
 		"battleViews": PetActionAssetCatalog.VIEWS.size(),
 		"battleActions": PetActionAssetCatalog.BATTLE_ACTIONS.size(),

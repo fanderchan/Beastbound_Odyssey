@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_pet_rebirth_mm_stage2_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-c1e984eb-67e0-44e7-9d23-1e6608517333.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "86d1e9c20fcd9dd14b2c7aa58d0b745e10571a1f29e685b6f3e44ba8960b4937",
+  "decodedRgbPixelSha256": "aaf610cc493a40f746b7c57588652a95a794731445ec8e90b84d3c270291fe07",
+  "references": [
+    {
+      "role": "exact_stage1_bloodline_and_rendering",
+      "path": "client/godot/assets/pets/pet_rebirth_mm_stage1/identity/identity-board-transparent.png",
+      "sha256": "8b2f1a75604e78ca717890c4b3582bb88cbef0b4e08aadfda40b88cba54ef1b9"
+    }
+  ],
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "a63d763523c4ec43ec1c48a48b9d12919abf4aed717325969a3752bfbe553441",
+    "decodedRgbPixelSha256": "aaf610cc493a40f746b7c57588652a95a794731445ec8e90b84d3c270291fe07"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "349ed5b335c01aa3cf00951382eba47b7451373303721e99bec109b734cb20ec",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --component-mode all --fit-scale 0.82 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "d3826592ed46573cd4c7e1b67c4ec1f61e5092aefe4c3a051aee1194114434d7",
+    "contactSheet": ".run/art_batch_phase320/rebirth_mm/stage2-identity-build/contact-sheet.png",
+    "contactSheetSha256": "c798b8e760b56021ed204c77ec72735cf782eebb0b2f510d9f64f7199f6dfef8"
+  }
+}

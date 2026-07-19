@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f793a-68ef-7630-9098-1d4bff57db40/exec-d30b2afe-d969-40b4-a42d-ad21611c26f1.png",
+  "output": ".run/art_batch_phase320/tidefin/sky/identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.7118777292576419,
+  "allowUpscale": true,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        64,
+        95,
+        593,
+        606
+      ],
+      "sourceArea": 126508,
+      "outputSize": [
+        381,
+        368
+      ],
+      "pastePosition": [
+        123,
+        209
+      ],
+      "cellMargins": [
+        123,
+        209,
+        123,
+        50
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        650,
+        117,
+        1172,
+        600
+      ],
+      "sourceArea": 126048,
+      "outputSize": [
+        376,
+        348
+      ],
+      "pastePosition": [
+        752,
+        229
+      ],
+      "cellMargins": [
+        125,
+        229,
+        126,
+        50
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        105,
+        699,
+        428,
+        1154
+      ],
+      "sourceArea": 82402,
+      "outputSize": [
+        234,
+        328
+      ],
+      "pastePosition": [
+        196,
+        876
+      ],
+      "cellMargins": [
+        196,
+        249,
+        197,
+        50
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        515,
+        743,
+        1196,
+        1146
+      ],
+      "sourceArea": 124215,
+      "outputSize": [
+        489,
+        291
+      ],
+      "pastePosition": [
+        696,
+        913
+      ],
+      "cellMargins": [
+        69,
+        286,
+        69,
+        50
+      ]
+    }
+  ]
+}

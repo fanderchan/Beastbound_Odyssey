@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_emberhorn_gale_fire5_wind5_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-b0499bb6-83ec-4deb-a7c1-8df83044157c.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "c901c9e7a41db179b52d10156383e9509b6b0e351e3909e9197370119f44f79c",
+  "decodedRgbPixelSha256": "3e58df6d38eba90ee8062d898dbbf68ef56566322ab3487cadf48205dcc7dd19",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/identity/identity-board-transparent.png",
+      "sha256": "2bc5b796e1fcc5e676c829c9fa7f746425e63e8d959f33bc85134ae5017cc917"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "1319761da7b56bb710f62174abde7a4dee2674849f8d8fad7f99167f73852514",
+    "decodedRgbPixelSha256": "3e58df6d38eba90ee8062d898dbbf68ef56566322ab3487cadf48205dcc7dd19"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "e3c49e2c41b86219b79b2267f27087df94f326c87301142ed81630125b18f43e",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "80548073c820ef20f362e000c76f77051d9953284bae9a5034372a984d8cdbf2",
+    "contactSheet": ".run/art_batch_phase320/emberhorn/gale-mounted-build/contact-sheet.png",
+    "contactSheetSha256": "38b1b7da32d41255c24cd7be581489e5b7bac3fd73fdfd4d708e17e50be959bd"
+  }
+}

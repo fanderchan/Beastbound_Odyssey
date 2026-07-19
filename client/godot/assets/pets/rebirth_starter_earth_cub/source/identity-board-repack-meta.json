@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-2b85b3c7-3ce1-4b5a-968d-55a5c9233f3e.png",
+  "output": ".run/art_batch_phase320/rebirth_cubs/earth-identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.8478301886792452,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        71,
+        160,
+        623,
+        576
+      ],
+      "sourceArea": 134179,
+      "outputSize": [
+        473,
+        358
+      ],
+      "pastePosition": [
+        77,
+        231
+      ],
+      "cellMargins": [
+        77,
+        231,
+        77,
+        38
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        639,
+        145,
+        1111,
+        573
+      ],
+      "sourceArea": 105721,
+      "outputSize": [
+        405,
+        368
+      ],
+      "pastePosition": [
+        738,
+        221
+      ],
+      "cellMargins": [
+        111,
+        221,
+        111,
+        38
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        126,
+        713,
+        472,
+        1133
+      ],
+      "sourceArea": 106832,
+      "outputSize": [
+        298,
+        361
+      ],
+      "pastePosition": [
+        164,
+        855
+      ],
+      "cellMargins": [
+        164,
+        228,
+        165,
+        38
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        573,
+        749,
+        1203,
+        1123
+      ],
+      "sourceArea": 129030,
+      "outputSize": [
+        539,
+        322
+      ],
+      "pastePosition": [
+        671,
+        894
+      ],
+      "cellMargins": [
+        44,
+        267,
+        44,
+        38
+      ]
+    }
+  ]
+}

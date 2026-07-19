@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "asset": "blue_man_dragon_water10_identity_board_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-6dd101ef-9550-4410-9c60-a376954623b8.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "f23b744eae7aef4481fb47f1302e22671ab3d66f725719140ab8fbe9f2a88750",
+  "decodedRgbPixelSha256": "096d0aa58f774708d14e421f8fb04abe00db79227f4cd20f8464ceed9e69b86c",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "b6af3cc10c74b872e68e503215973140aa4c6eeabade2db17f5bfc1cd46e7ea7",
+    "decodedRgbPixelSha256": "096d0aa58f774708d14e421f8fb04abe00db79227f4cd20f8464ceed9e69b86c"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "7d8ec166d0171f6116dce60ea13cfee5d7f04bf860686923f6dd2431e35f3e03",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.86 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "183788de3af62df09db25d41e26bcaf9f6dd9d6145445364f6c4bbf082dd9d99",
+    "contactSheet": ".run/art_batch_phase320/blue_man_dragon/identity-build-clean/contact-sheet.png",
+    "contactSheetSha256": "b4eb42a3b54863c2cfa3b1397d32eb2eae7dd92ca0d642a9b96186d84e526b2d"
+  }
+}

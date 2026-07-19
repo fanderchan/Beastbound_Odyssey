@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "mountFormId": "wuli_normal_tough_earth10",
+  "characterId": "novice_hunter_v1",
+  "artStatus": "owner_review_pending",
+  "productionScope": "mounted_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [256, 256],
+  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [512, 512],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png"
+    },
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeMirroring": false
+  },
+  "actions": {
+    "idle": {"frameCount": 6, "status": "not_produced"},
+    "walk": {"frameCount": 8, "status": "not_produced"},
+    "attack": {"frameCount": 8, "status": "not_produced"},
+    "skill": {"frameCount": 8, "status": "not_produced"},
+    "hurt": {"frameCount": 6, "status": "not_produced"},
+    "defend": {"frameCount": 6, "status": "not_produced"},
+    "dodge": {"frameCount": 8, "status": "not_produced"},
+    "counter": {"frameCount": 8, "status": "not_produced"},
+    "stagger": {"frameCount": 8, "status": "not_produced"},
+    "knockaway": {"frameCount": 8, "status": "not_produced"},
+    "down": {"frameCount": 8, "status": "not_produced"},
+    "revive": {"frameCount": 8, "status": "not_produced"}
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "ai_generated_integrated_independent_8",
+    "runtimeMirroring": false,
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 1,
+    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "actions": {
+      "idle": {"frameCount": 1, "status": "not_produced"},
+      "walk": {"frameCount": 4, "status": "not_produced"}
+    }
+  },
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/mounted-keypose-raw.webp",
+    "sourceMetadata": "source/mounted-keypose-source-meta.json",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "prompt": "prompts/generation-contract-v2-containment-fix.md"
+  },
+  "evidence": {
+    "contactSheet": ".run/art_batch_phase320/wuli_mounted/tough_v2/build/contact-sheet.png",
+    "contactSheetSha256": "6765e699ba24908320f6fb5d4d1002d22724f3c4be56f0683f78a7b5860cafd2",
+    "groupContactSheet": "client/godot/assets/pets/wuli_normal_orange_fire10/qa/wuli-four-form-pet-mounted-contact-sheet.png",
+    "groupContactSheetSha256": "76569f874c1d013a261232bb892ed017a788e16f4a390278b41633728977f9ed",
+    "mounted160ContactSheet": "client/godot/assets/pets/wuli_normal_orange_fire10/qa/wuli-four-form-mounted-160px-contact-sheet.png",
+    "mounted160ContactSheetSha256": "dd37a24037149112fe359985271266c6771a3df6b07a5cad3cc72950fbd1cea4"
+  },
+  "ownerReviewStatus": "pending",
+  "notes": "v1 failed source-cell containment. v2 is the accepted self-review key-pose gate; the odd-width original is archived unchanged and only the working copy received one right-edge chroma padding column."
+}

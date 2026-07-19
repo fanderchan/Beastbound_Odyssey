@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "asset": "mounted_novice_hunter_v1_rebirth_starter_shadow_cub_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "shadow-mounted-raw.png",
+  "originalPngSize": [
+    1717,
+    916
+  ],
+  "originalPngSha256": "efe0c86050b3efbe542ead2d8c77ca5121ce9b1373e125078a42d4776baaa94f",
+  "decodedRgbPixelSha256": "bccf0550cbf610e9292200399ff151de10372877c0026f0acc242fb7abf5e35a",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/rebirth_starter_shadow_cub/identity/identity-board-transparent.png",
+      "sha256": "a6fa9a76340a27e6b5ffe229efadb4215af95910d5eeb03108a5d3ce5bc8f9fc"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "df974eeb69a9d9673e74d0f9faab678d7f5205e36c9be5e4056f8ed9848885ac",
+    "decodedRgbPixelSha256": "bccf0550cbf610e9292200399ff151de10372877c0026f0acc242fb7abf5e35a"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "canvasNormalization": "生成画布宽度为奇数，仅补 1px #FF00FF 空白边至 1718px 后二等分；主体未缩放、未拉伸、未重绘。",
+    "canvasInputSha256": "8f68505ade350cdef7db394a8c657a66bff50e2ca0f4d5d420e1b52d6753cd58",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "c7124a1a6f7e2b68c76377526be2c5d578c07d34d691ed26c26f559e9bae670c",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.86 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "f6f38d3c0259dccf8b139818eac074aaa774ffcae8be6823f1f1a9cebf9d887e",
+    "contactSheet": ".run/art_batch_phase320/rebirth_cubs/shadow-mounted-build/contact-sheet.png",
+    "contactSheetSha256": "2d5c683c7efb17c70b0eddcc72fae734b3235d9db89fb96da02ee2d5b0aeda33"
+  }
+}

@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: elemental sibling identity board in the same original adult Rebirth Trial Beast line
+Primary request: Using the attached 地灵转生兽 as the mandatory family skeleton and rendering reference, create "水灵转生兽". It must instantly read as the same adult trial-beast species—same heavy quadruped body, short powerful neck, rounded wedge muzzle, small low ears, thick three-claw paws, long rideable back, central short forehead horn, paired cheek plates, paired shoulder plates, and heavy tail—but be a structurally water-adapted sibling, not a blue recolor.
+
+Water subtype changes: slightly more streamlined torso and neck; integrated brow/cheek mask plates have smooth shell-like layered edges and muted pearl striations while keeping the same locations and coverage; shoulder plates are lower overlapping shell-fur plates with wave-cut edges; spine ridge is lower and softer; tail tuft becomes a compact three-lobed opaque fin crown attached to the same heavy tail; paws retain three claws but gain shallow webbing. Deep blue-teal fur, pale seafoam muzzle/belly, muted shell-gray mask/plates, dark indigo paws, restrained pale cyan flowing shoulder/flank markings, bright sea-green eyes. Calm, alive, capturable. No water splash, bubbles, glow, fins floating, saddle, rider, armor straps, text, shadow, scenery, or FX.
+
+Layout: strict 2x2 identity board on perfectly flat solid #FF00FF. Top-left front_3quarter_sw; top-right back_3quarter_ne; bottom-left straight front; bottom-right clean left side. Same exact horn, cheek/shoulder plates, paw/webbing, tail crown, markings, proportions, palette, lighting, and scale across all views. Central 65%, generous padding, stable baseline, no crossing cells.
+
+Style/medium: original high-definition hand-painted 2.5D game sprite matching the earth sibling, dense fur and matte shell-like textures, crisp at 140-185 px, dark plum-teal outline, nostalgic Chinese pet-RPG with modern HD polish.
+Constraints: exactly four views of one identical creature; unmistakably same trial-beast family yet materially water-adapted; mechanically coherent and rideable; no copyrighted resemblance.
+Avoid: simple blue recolor, seal/fish/axolotl, turtle shell, Lapras-like shape, Pokémon/Digimon resemblance, literal shell armor straps, giant fins, water FX, undead/ghost, background texture/grid/labels/watermark.

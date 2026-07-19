@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "asset": "rebirth_beast_fire_lv50_identity_board_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-9f6ac620-28ad-4471-8e52-3e390ab6f456.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "230145f7c205de11f671f22ae314d95a6be2bee7e043229a5efee44019071b26",
+  "decodedRgbPixelSha256": "782e7c2c64f1df4858053f2abc9c9813a85cbb7f42b85079609c21ae7748da67",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "8233400a960141416efc01529390a594d570b6c2ade59b39ef3986d0ccc3253d",
+    "decodedRgbPixelSha256": "782e7c2c64f1df4858053f2abc9c9813a85cbb7f42b85079609c21ae7748da67"
+  },
+  "prompts": {
+    "base": "prompts/identity-board-v1.txt"
+  },
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "repackGrid": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.78 --allow-upscale",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "repackedChromaSha256": "d0cd136dfc65e920eba1b97d9fa1b78488933882ddd7c57a04594b0a9bbbd7b6",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "03884be02f8af8965eb45d5c710352951cf139bcff645c3f17328a5f1635eebf",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.86 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "dedf547d55530338edb5c2030424bd905c1072f00c4889169f5ec5ed62a6152b",
+    "contactSheet": ".run/art_batch_phase320/rebirth_beast/fire/identity-build/contact-sheet.png",
+    "contactSheetSha256": "0fe932efad0b4fea0e2581b38b476524b722476e68a074fe5de74d449e972daf"
+  }
+}

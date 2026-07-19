@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asset": "driftfox_mist_wind7_water3_identity_board",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "6d3cc830dcb75a0b047820095e0b73b1063e028e1c99ed892a27d77b0af579bd",
+  "decodedRgbaPixelSha256": "b6fa91097d473941fc28f01581956b7241a0be85db33720fab510f8a01bd5750",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "5cd97e44d2f356419b51b73e44b20b752ae6cb473fc93fb625ae94c358474170",
+    "decodedRgbaPixelSha256": "b6fa91097d473941fc28f01581956b7241a0be85db33720fab510f8a01bd5750"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "eb22219573c923d948b79cf9217fcd357f30c1f62562912adbfec8555529903e"
+  }
+}

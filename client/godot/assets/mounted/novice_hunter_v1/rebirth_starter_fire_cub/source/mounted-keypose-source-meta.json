@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "asset": "mounted_novice_hunter_v1_rebirth_starter_fire_cub_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "fire-mounted-raw.png",
+  "originalPngSize": [
+    1672,
+    941
+  ],
+  "originalPngSha256": "48b1e83f5e7d56a0904c48c18bf90bcdd5a37f9789e132b34af6d64549d12ab4",
+  "decodedRgbPixelSha256": "dab38f0edfcffb374f1661259f29d0732044f27a166fe5280e4478d316659c85",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/identity/identity-board-transparent.png",
+      "sha256": "dcc437011d86b303b613e338744c84dc8b8a9c30885e1e3c9e460d38a1532c1b"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "d765e1dd1f743d0e15d5ac604d104fc0b1564d067f2215f2d1fdad6dc4e1c27b",
+    "decodedRgbPixelSha256": "dab38f0edfcffb374f1661259f29d0732044f27a166fe5280e4478d316659c85"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "canvasNormalization": "原始画布可直接精确二等分，未做画布补边。",
+    "canvasInputSha256": "48b1e83f5e7d56a0904c48c18bf90bcdd5a37f9789e132b34af6d64549d12ab4",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "3449edf4d907ab7f060ad7df93f0136da8696256e4f38b40922bb07063d72bb4",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.86 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "1ca0cdc1071d3dda5a36d3dba4b2c528d0165d65849624be0022321616ed37fa",
+    "contactSheet": ".run/art_batch_phase320/rebirth_cubs/fire-mounted-build/contact-sheet.png",
+    "contactSheetSha256": "1c7eb46a300e23a217ec96e432e85e152c275def135f689d388aeef09b445fcf"
+  }
+}

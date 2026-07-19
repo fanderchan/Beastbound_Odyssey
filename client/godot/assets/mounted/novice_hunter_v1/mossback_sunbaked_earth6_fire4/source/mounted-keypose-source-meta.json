@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_mossback_sunbaked_earth6_fire4_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-07d898be-b5ca-495f-8fcd-307a1844c193.png",
+  "originalPngSize": [887, 1774],
+  "originalPngSha256": "e12274b5f854fcd0e420243ef095f9137fd039e4f5eacbf10761b7583b7014d3",
+  "decodedRgbPixelSha256": "3f7fc8f7ceecc20d327a56f4b012a32c441b5b5978e18f902dac9a2827c9b60b",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/mossback_sunbaked_earth6_fire4/identity/identity-board-transparent.png",
+      "sha256": "b707f11b1305222693568dd3b1c886026976f50472e80fd4a52207daf145d19a"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "6b5f37542a2a6ccb81e61b643c65cd0c4570cc4fdcf060306b77f1ce6edd9f9c",
+    "decodedRgbPixelSha256": "3f7fc8f7ceecc20d327a56f4b012a32c441b5b5978e18f902dac9a2827c9b60b"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "repackGrid": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 1 --fit-scale 0.82",
+    "repackMetadata": "source/mounted-keypose-repack-meta.json",
+    "repackedChromaSha256": "1a42ab8d0dd32d0104de585f94d0b7456a722c9ee798bedf56887475639fd990",
+    "chromaHelper": "imagegen/remove_chroma_key.py --key-color #FF00FF --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "b1ff9bc69719aa350db8509f188cf54f38002a4f41f43dc635402cd447f26856",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 1 --slots front_3quarter_sw back_3quarter_ne --fit-scale 0.88 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "701e18a7cb393718d9e726af9a44252fdfbe8d45c688fb8f3362c22a267b443e",
+    "contactSheet": ".run/art_batch_phase320/mossback/sunbaked/mounted-keypose-build/contact-sheet.png",
+    "contactSheetSha256": "fc6458448b2aea9e0962fae016907217036544ca35c8b403f6851bacd13323f6"
+  }
+}

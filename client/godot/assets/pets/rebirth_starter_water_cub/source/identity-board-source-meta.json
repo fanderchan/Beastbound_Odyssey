@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_rebirth_starter_water_cub_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-fceb21e3-5610-4189-accd-d05f7af280ac.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "e37f2854672aa922d0ba1d8d09ebb26bb7f4c291c4f793e57ebf4afd5290ec9e",
+  "decodedRgbPixelSha256": "25a277c602ff9b367f08b906b859b6c7cbb1ed7934d67569bfcf1d9a7abc3789",
+  "references": [
+    {
+      "role": "mandatory_starter_cub_family_reference",
+      "path": "client/godot/assets/pets/rebirth_starter_earth_cub/identity/identity-board-transparent.png",
+      "sha256": "927a9ef51d7b0721eb478f6069ed90b0f9d115ff06565f3dfc21b17aeff4116b",
+      "originalReferencePngSha256": "a4832f64cbb123fdccbe57417ebcfced4be6c04d96948e8016907993931ea35e"
+    }
+  ],
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "f8be3431d1ead162019de3d4c693791829502fc8327e55d3f02d8d28b4598377",
+    "decodedRgbPixelSha256": "25a277c602ff9b367f08b906b859b6c7cbb1ed7934d67569bfcf1d9a7abc3789"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "repack": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.86 --bottom-padding-ratio 0.06",
+    "repackSha256": "4f73ae4c4c7f6c14049a25f67d861ca4831dd98f5026697094e5789a8c29ae57",
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "6afed0a3da15f6701e7b9d207f82e7751a9bb5ed4eaa95b57c4ab9d0f5c326dc",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.84 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "note": "四格先做统一同比例重排，未改变单格创意内容。"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "9f93683749dc34a0b6234d73d30e1fcefb26c120f63dd2aa1ada46ab969a20ce",
+    "contactSheet": ".run/art_batch_phase320/rebirth_cubs/water-identity-build/contact-sheet.png",
+    "contactSheetSha256": "f1f2e8d059a467d9bda0827d960d3ac5bf6860695075a6801a269609f1e0c9db"
+  }
+}

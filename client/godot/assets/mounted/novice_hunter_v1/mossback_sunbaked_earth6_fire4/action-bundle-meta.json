@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "mountFormId": "mossback_sunbaked_earth6_fire4",
+  "characterId": "novice_hunter_v1",
+  "artStatus": "in_production",
+  "productionScope": "mounted_key_pose_gate",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [256, 256],
+  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [512, 512],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png"
+    },
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeMirroring": false
+  },
+  "actions": {
+    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
+    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
+    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
+    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
+    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
+    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
+    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
+    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
+    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
+    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
+    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
+    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "ai_generated_integrated_independent_8",
+    "runtimeMirroring": false,
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 1,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"},
+      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}
+    }
+  },
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/mounted-keypose-raw.webp",
+    "sourceMetadata": "source/mounted-keypose-source-meta.json",
+    "repackMetadata": "source/mounted-keypose-repack-meta.json",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "prompt": "prompts/generation-contract.md"
+  },
+  "evidence": {
+    "contactSheet": ".run/art_batch_phase320/mossback/sunbaked/mounted-keypose-build/contact-sheet.png",
+    "contactSheetSha256": "fc6458448b2aea9e0962fae016907217036544ca35c8b403f6851bacd13323f6"
+  },
+  "keyPoseReviewStatus": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "notes": "Integrated Sunbaked Mossback front/back mounted key poses only. World and battle mounted animation matrices are intentionally not produced in this owner-review gate."
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asset": "wuli_normal_tough_earth10_identity_board",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    1254,
+    1254
+  ],
+  "originalPngSha256": "ca408e751a67abcd7d64f08d9e2545100ec69cafed3c8c81887d8d595e666fe0",
+  "decodedRgbaPixelSha256": "abe50285e90f81beb655a73b1e8082c43dc361b4c330a97b59b8658fd692d31f",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "78ae11e9331210fa6262be54b31a64136e744b3e6a41e5312ea7c61cc85af919",
+    "decodedRgbaPixelSha256": "abe50285e90f81beb655a73b1e8082c43dc361b4c330a97b59b8658fd692d31f"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "ed70f62ed743c034851d4b0fe2d63f94b0270701754d9abaa4ec81804caa17d6"
+  }
+}

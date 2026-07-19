@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: corrected production identity board for a 2.5D turn-based pet MMORPG creature sprite
+Primary request: Recreate Image 1 as the same exact "高地风狐" identity board, changing only layout containment and subject scale. Preserve the exact creature identity in every view: same sand-gold coat, cream chest and muzzle, jade-green two ear vanes per ear, long legs, green lower-paw accents, single rear-swept plume tail, forehead gust mark, flank wind chevrons, face, proportions, lighting, painterly finish, outline, and four requested view directions. Do not redesign or add anything.
+
+Layout correction: strict 2x2 board on one perfectly flat solid #FF00FF chroma-key background. Top-left front_3quarter_sw facing lower-left; top-right back_3quarter_ne facing upper-right; bottom-left straight front; bottom-right clean left side. Scale each complete creature down by about 15% relative to Image 1 and recenter it in its own quadrant. Keep every ear tip, paw, tail tip, and fur strand at least 60 px away from the outer canvas and at least 45 px away from both invisible center divider axes. Nothing may touch or cross x=627 or y=627. No visible grid, border, label, shadow, floor, texture, gradient, or watermark.
+
+Constraints: change only scale, spacing, and centering; preserve the same highland fox identity and exact one-tail anatomy; four views remain the same direction and same relative scale; flat chroma background.
+Avoid: cropped tail, crossing quadrants, identity redesign, extra tails, changed markings, changed palette, changed anatomy, text, visible dividers.

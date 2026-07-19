@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "defaultCharacterId": "novice_hunter_v1",
+  "canonicalDirections": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "battleViews": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "requiredWorldActions": {
+    "idle": 1,
+    "walk": 4
+  },
+  "requiredBattleActions": [
+    "idle",
+    "walk",
+    "attack",
+    "skill",
+    "hurt",
+    "defend",
+    "dodge",
+    "counter",
+    "stagger",
+    "knockaway",
+    "down",
+    "revive"
+  ],
+  "sourceArchivePolicy": {
+    "runtimeFrames": "tracked_png",
+    "sourceEvidence": "tracked"
+  },
+  "forms": [
+    {
+      "formId": "fixture_pet",
+      "displayName": "审计夹具宠物",
+      "lineId": "fixture",
+      "subtypeId": "fixture_normal",
+      "productionGroup": "TEST",
+      "artSkeletonId": "fixture_quadruped_v1",
+      "status": "owner_review_pending",
+      "runtimeEnabled": true,
+      "rideableTarget": true,
+      "supportedCharacterIds": [
+        "novice_hunter_v1"
+      ],
+      "identityBrief": "只供隔离测试使用的非对称四足宠物与整体骑乘形态。",
+      "pet": {
+        "root": "fixture_assets/pets/fixture_pet",
+        "metadataPath": "fixture_assets/pets/fixture_pet/action-bundle-meta.json",
+        "identityPath": "fixture_assets/pets/fixture_pet/identity/identity-lock.md",
+        "ownershipPath": "fixture_assets/pets/fixture_pet/identity/source-and-ownership.md",
+        "promptPath": "fixture_assets/pets/fixture_pet/prompts/generation-contract.md"
+      },
+      "mounted": {
+        "root": "fixture_assets/mounted/novice_hunter_v1/fixture_pet",
+        "metadataPath": "fixture_assets/mounted/novice_hunter_v1/fixture_pet/action-bundle-meta.json",
+        "identityPath": "fixture_assets/mounted/novice_hunter_v1/fixture_pet/identity/identity-lock.md",
+        "ownershipPath": "fixture_assets/mounted/novice_hunter_v1/fixture_pet/identity/source-and-ownership.md",
+        "promptPath": "fixture_assets/mounted/novice_hunter_v1/fixture_pet/prompts/generation-contract.md"
+      }
+    }
+  ]
+}

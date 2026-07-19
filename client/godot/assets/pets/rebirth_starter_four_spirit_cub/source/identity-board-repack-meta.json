@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-ee906e71-37c7-4c5d-84c5-b8bfdcd1e021.png",
+  "output": ".run/art_batch_phase320/rebirth_cubs/four_spirit-identity-repacked.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.841216848673947,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        64,
+        160,
+        628,
+        626
+      ],
+      "sourceArea": 153470,
+      "outputSize": [
+        479,
+        397
+      ],
+      "pastePosition": [
+        74,
+        192
+      ],
+      "cellMargins": [
+        74,
+        192,
+        74,
+        38
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        631,
+        156,
+        1134,
+        601
+      ],
+      "sourceArea": 120868,
+      "outputSize": [
+        428,
+        379
+      ],
+      "pastePosition": [
+        726,
+        210
+      ],
+      "cellMargins": [
+        99,
+        210,
+        100,
+        38
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        125,
+        702,
+        475,
+        1133
+      ],
+      "sourceArea": 115453,
+      "outputSize": [
+        299,
+        368
+      ],
+      "pastePosition": [
+        164,
+        848
+      ],
+      "cellMargins": [
+        164,
+        221,
+        164,
+        38
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        550,
+        743,
+        1185,
+        1127
+      ],
+      "sourceArea": 136817,
+      "outputSize": [
+        539,
+        328
+      ],
+      "pastePosition": [
+        671,
+        888
+      ],
+      "cellMargins": [
+        44,
+        261,
+        44,
+        38
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: elemental sibling identity board in the same original adult Rebirth Trial Beast line
+Primary request: Using the attached 地灵转生兽 as the mandatory family skeleton and rendering reference, create "火灵转生兽". It must instantly read as the same adult trial-beast species—same heavy quadruped body, short powerful neck, rounded wedge muzzle, small low ears, thick three-claw paws, long rideable back, central short forehead horn, paired cheek plates, paired shoulder plates, and heavy tail—but be a structurally fire-adapted sibling, not a red recolor.
+
+Fire subtype changes: slightly broader charging shoulders and firmer foreleg stance; integrated brow/cheek mask plates are matte black obsidian with controlled dark-crimson seam inlays, not glowing lava; shoulder plates are angular layered obsidian-fur plates; spine ridge becomes a sequence of backward-pointing dark red flame-shaped fur tufts that are actual fur and never on fire, leaving a rider channel; heavy tail ends in a compact dark ember-bristle tuft. Deep dark-red and burnt umber fur, black-violet paws, cream-charcoal muzzle/belly, restrained crimson claw/foreleg markings, bright warm amber eyes. Powerful but alive and capturable. No flame, smoke, glow, sparks, lava, saddle, rider, armor straps, text, shadow, scenery, or FX.
+
+Layout: strict 2x2 identity board on perfectly flat solid #FF00FF. Top-left front_3quarter_sw; top-right back_3quarter_ne; bottom-left straight front; bottom-right clean left side. Same exact horn, cheek/shoulder plates, three claws, fur ridge, tail tuft, markings, proportions, palette, lighting, and scale in every view. Central 65%, generous padding, stable baseline, no crossing cells.
+
+Style/medium: original high-definition hand-painted 2.5D game sprite matching the earth sibling, dense fur and matte obsidian textures, crisp at 140-185 px, dark plum-black outline, nostalgic Chinese pet-RPG with modern HD polish.
+Constraints: exactly four views of one identical creature; unmistakably same trial-beast family yet materially fire-adapted; mechanically coherent and rideable; no copyrighted resemblance.
+Avoid: simple red recolor, actual flames or smoke, lava cracks glowing, demon/skull, Pokémon/Digimon resemblance, StoneAge pet replica, giant spikes, armor straps, undead, background texture/grid/labels/watermark.

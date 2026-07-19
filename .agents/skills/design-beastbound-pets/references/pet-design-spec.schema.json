@@ -213,7 +213,7 @@
               "minItems": 8,
               "maxItems": 8,
               "uniqueItems": true,
-              "items": {"enum": ["south", "south_west", "west", "north_west", "north", "north_east", "east", "south_east"]}
+              "items": {"enum": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"]}
             },
             "worldActions": {
               "type": "array",

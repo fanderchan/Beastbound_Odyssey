@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_pet_rebirth_mm_stage2_keypose_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-6a21e178-420c-41d2-9062-d6bafc8a4836.png",
+  "originalPngSize": [1774, 887],
+  "originalPngSha256": "9e3b111e3e49f62cde431ce751d90ac68f8b8cf485947733e743d7d68249ca70",
+  "decodedRgbPixelSha256": "9f30b33e864af8a346d3c2e0719bbbe801c5ddb7296a9e0881e82106d69132ea",
+  "references": [
+    {
+      "role": "exact_mount_identity",
+      "path": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/identity-board-transparent.png",
+      "sha256": "d3826592ed46573cd4c7e1b67c4ec1f61e5092aefe4c3a051aee1194114434d7"
+    },
+    {
+      "role": "exact_rider_identity",
+      "path": "client/godot/assets/characters/novice_hunter/identity/processed/sheet-transparent.png",
+      "sha256": "7223ed3f753929e35d1960766da589e49b22bc3188866ab5b3ca87493fdff0f2"
+    }
+  ],
+  "archive": {
+    "path": "source/mounted-keypose-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "5c305611ded8fe0fca64d96031abe8bbf80752d73905e6888d663ac6de5ebb02",
+    "decodedRgbPixelSha256": "9f30b33e864af8a346d3c2e0719bbbe801c5ddb7296a9e0881e82106d69132ea"
+  },
+  "prompt": "prompts/generation-contract.md",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "ddb4cd8925e56f004b9578d91b75d61b3ad5451ad08237e60194d4151526a276",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 1 --cols 2 --slots front_3quarter_sw back_3quarter_ne --component-mode all --fit-scale 0.84 --anchor feet --component-padding 2 --safe-margin 4 --source-edge-margin 4 --contact-sheet",
+    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "13d93fac57a3215c64027256fd64640098f54f84963b2c64191e2a7a3aee46f9",
+    "contactSheet": ".run/art_batch_phase320/rebirth_mm/stage2-mounted-build/contact-sheet.png",
+    "contactSheetSha256": "7d0836fc127fe3c812bacbfd4dba7db97c5d98b5ce5426ce8332b414f2763261"
+  }
+}

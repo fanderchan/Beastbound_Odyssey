@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "tool": "repack_identity_board.py",
+  "input": ".run/art_batch_phase320/bui_normal/red/identity-board-raw.png",
+  "inputSha256": "3cfece541ec0a49bd7b21b0c53492ddde2517d19a49ba01b796af9f00f1b5b0b",
+  "inputSize": [
+    1254,
+    1254
+  ],
+  "output": ".run/art_batch_phase320/bui_normal/red/identity-board-repacked.png",
+  "outputSha256": "e0aa8982b60c5b24d37d8594886d490234ae06d94432b4e3f8a4ee3f19616795",
+  "outputSize": [
+    1536,
+    1536
+  ],
+  "cellSize": 768,
+  "baselineWithinCell": 704,
+  "chroma": {
+    "inputBackgroundMode": "chroma_key",
+    "cornerChromaDistances": [
+      25.0,
+      23.896,
+      44.227,
+      35.525
+    ],
+    "borderConnectedPixels": 1169436,
+    "keyedCandidatePixels": 1169440,
+    "transparentPixels": 1164499,
+    "partialAlphaPixels": 4932,
+    "backgroundRatio": 0.743672
+  },
+  "operation": "whole disconnected cutout reposition only; no subject rescale, mirror, paint, layer repair, or creative generation",
+  "frames": [
+    {
+      "slot": "front_3quarter_sw",
+      "componentArea": 118290,
+      "sourceBbox": [
+        111,
+        175,
+        632,
+        599
+      ],
+      "sourceCenter": [
+        321.9325,
+        385.1982
+      ],
+      "sourceCutoutSize": [
+        521,
+        424
+      ],
+      "targetPosition": [
+        123,
+        280
+      ],
+      "rescaled": false,
+      "mirrored": false,
+      "retouched": false
+    },
+    {
+      "slot": "back_3quarter_ne",
+      "componentArea": 104451,
+      "sourceBbox": [
+        646,
+        135,
+        1143,
+        585
+      ],
+      "sourceCenter": [
+        948.2807,
+        379.1228
+      ],
+      "sourceCutoutSize": [
+        497,
+        450
+      ],
+      "targetPosition": [
+        903,
+        254
+      ],
+      "rescaled": false,
+      "mirrored": false,
+      "retouched": false
+    },
+    {
+      "slot": "south",
+      "componentArea": 79910,
+      "sourceBbox": [
+        162,
+        781,
+        434,
+        1161
+      ],
+      "sourceCenter": [
+        295.7391,
+        970.1395
+      ],
+      "sourceCutoutSize": [
+        272,
+        380
+      ],
+      "targetPosition": [
+        248,
+        1092
+      ],
+      "rescaled": false,
+      "mirrored": false,
+      "retouched": false
+    },
+    {
+      "slot": "west",
+      "componentArea": 105365,
+      "sourceBbox": [
+        623,
+        783,
+        1220,
+        1152
+      ],
+      "sourceCenter": [
+        880.3699,
+        987.6317
+      ],
+      "sourceCutoutSize": [
+        597,
+        369
+      ],
+      "targetPosition": [
+        853,
+        1103
+      ],
+      "rescaled": false,
+      "mirrored": false,
+      "retouched": false
+    }
+  ]
+}

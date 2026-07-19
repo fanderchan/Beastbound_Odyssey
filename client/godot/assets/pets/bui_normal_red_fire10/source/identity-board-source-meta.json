@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "asset": "pet_identity_bui_normal_red_fire10_v1",
+  "generator": "OpenAI built-in image generation",
+  "generationCallId": "exec-293d93f4-600d-4824-81e3-62a9c505301d",
+  "originalGeneratedFilename": "exec-293d93f4-600d-4824-81e3-62a9c505301d.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "3cfece541ec0a49bd7b21b0c53492ddde2517d19a49ba01b796af9f00f1b5b0b",
+  "decodedRgbPixelSha256": "73aee2a3c8392b9245ea41e874417f21686afb9f33ea2b1d125fecffb9c0d2fd",
+  "references": [
+    {
+      "role": "beastbound_bui_family_style_only",
+      "path": "client/godot/assets/pets/novice_sprout_bui/identity/identity-board.png",
+      "sha256": "f8a8cb6cc9f5569130d7a0c8bed45cf47c7aa7252bf40b99bca1e33ed019eacf"
+    }
+  ],
+  "prompt": {
+    "path": "prompts/identity-board-v1.txt",
+    "sha256": "31afe2a870c3e1c6191f0ab2331348161d419329daae6aa31092f6de09752b6e"
+  },
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "eb817fe144b45a05a1d7ec2a16893dfb362d9af3d408ec7acf851ff2fde7084a",
+    "decodedRgbPixelSha256": "73aee2a3c8392b9245ea41e874417f21686afb9f33ea2b1d125fecffb9c0d2fd"
+  },
+  "processing": {
+    "repack": "whole disconnected cutout reposition only; no subject rescale, mirror, paint, retouch, or synthesis",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.88 --anchor feet --contact-sheet",
+    "sharedScale": 0.6182058093,
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "db43bdb0fd1960e2714c76eef1ee4198b67965ecda0ea05c8798d210ab9da061",
+    "contactSheet": ".run/art_batch_phase320/bui_normal/red/identity-build/contact-sheet.png",
+    "contactSheetSha256": "aaffed436cdb793ead80db779a036d30578681c8ad9ab9f1977361d9549c38a1"
+  }
+}

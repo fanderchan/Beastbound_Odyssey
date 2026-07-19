@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "asset": "mossback_sunbaked_earth6_fire4_identity_board_v1",
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedFilename": "exec-f4a098ae-481f-4768-9f21-750d8b6dd61d.png",
+  "originalPngSize": [1254, 1254],
+  "originalPngSha256": "f1a76817cd061ce0e52e043b10b7b8d08cd40c0b9b74949034d9354d0bf657c0",
+  "decodedRgbPixelSha256": "607452a1382680343b08aa91eb47e0c55d7a8d25a9ecdecab818003fc7ef65fb",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "84b2d4347abe9e404461a48abf55acc8b0616dedd9293a1c0417b57e8e72b946",
+    "decodedRgbPixelSha256": "607452a1382680343b08aa91eb47e0c55d7a8d25a9ecdecab818003fc7ef65fb"
+  },
+  "prompt": "prompts/identity-board-v1.txt",
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "repackGrid": "tools/repack_chroma_sprite_grid.py --rows 2 --cols 2 --fit-scale 0.78 --allow-upscale",
+    "repackMetadata": "source/identity-board-repack-meta.json",
+    "repackedChromaSha256": "fd5089585d8756bd96a3aff2763b2905a5eb1f1f01ac536a579fa64ac67362ce",
+    "chromaHelper": "imagegen/remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill",
+    "chromaCleanSha256": "1aabecc0408e9bd533df9c757eadc014d96334b74a9f2099e0439cd65d02070e",
+    "bundleBuilder": "tools/build_pet_art_bundle.py --rows 2 --cols 2 --slots front_3quarter_sw back_3quarter_ne south west --fit-scale 0.86 --anchor feet --contact-sheet",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json"
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "b707f11b1305222693568dd3b1c886026976f50472e80fd4a52207daf145d19a",
+    "contactSheet": ".run/art_batch_phase320/mossback/sunbaked/identity-build/contact-sheet.png",
+    "contactSheetSha256": "0a6374a32d45856da8594fc82e52221029f408565cbca8faf3fb300ec3d070c3"
+  }
+}

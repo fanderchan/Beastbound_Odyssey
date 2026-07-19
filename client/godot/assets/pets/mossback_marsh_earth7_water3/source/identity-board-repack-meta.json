@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "input": "/Users/fander/.codex/generated_images/019f4cd7-30f2-7cb2-9edc-342ef123b565/exec-49bb139a-f9f6-4b84-ac42-90cb84cb48d1.png",
+  "output": ".run/art_batch_phase320/mossback/wetland/identity-board-repacked-chroma.png",
+  "rows": 2,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.742124430955994,
+  "allowUpscale": true,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        69,
+        134,
+        624,
+        571
+      ],
+      "sourceArea": 135170,
+      "outputSize": [
+        416,
+        329
+      ],
+      "pastePosition": [
+        105,
+        248
+      ],
+      "cellMargins": [
+        105,
+        248,
+        106,
+        50
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        659,
+        125,
+        1206,
+        561
+      ],
+      "sourceArea": 125779,
+      "outputSize": [
+        410,
+        328
+      ],
+      "pastePosition": [
+        735,
+        249
+      ],
+      "cellMargins": [
+        108,
+        249,
+        109,
+        50
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        97,
+        709,
+        447,
+        1128
+      ],
+      "sourceArea": 98298,
+      "outputSize": [
+        264,
+        315
+      ],
+      "pastePosition": [
+        181,
+        889
+      ],
+      "cellMargins": [
+        181,
+        262,
+        182,
+        50
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        564,
+        757,
+        1217,
+        1103
+      ],
+      "sourceArea": 117607,
+      "outputSize": [
+        489,
+        261
+      ],
+      "pastePosition": [
+        696,
+        943
+      ],
+      "cellMargins": [
+        69,
+        316,
+        69,
+        50
+      ]
+    }
+  ]
+}
