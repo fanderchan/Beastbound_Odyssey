@@ -8379,9 +8379,9 @@ static func _active_profile_pet(profile: Dictionary) -> Dictionary:
 	return {}
 
 
-static func _pet_instance_index(instances: Array[Dictionary], instance_id: String) -> int:
+static func _pet_instance_index(instances: Array, instance_id: String) -> int:
 	for index in range(instances.size()):
-		if str(instances[index].get("instanceId", "")) == instance_id:
+		if instances[index] is Dictionary and str((instances[index] as Dictionary).get("instanceId", "")) == instance_id:
 			return index
 	return -1
 

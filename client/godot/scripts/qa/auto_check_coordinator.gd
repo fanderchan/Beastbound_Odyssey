@@ -7549,7 +7549,9 @@ func _run_auto_pet_management_check() -> void:
 
 func _run_auto_pet_order_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = _qa_bui_pet_profile()
+	# 联网档案来自 JSON，内部列表是普通 Array；按真实解码类型覆盖队伍顺序操作。
+	var decoded_profile = JSON.parse_string(JSON.stringify(_qa_bui_pet_profile()))
+	host.player_profile = decoded_profile as Dictionary if decoded_profile is Dictionary else {}
 	host.pet_selected_instance_id = ""
 	host.pet_filter_mode = PET_FILTER_ALL
 	host.pet_sort_mode = PET_SORT_DEFAULT
@@ -21139,8 +21141,8 @@ func _run_auto_server_movement_live_check() -> void:
 
 func _run_auto_server_click_move_live_check() -> void:
 	host.profile_save_enabled = false
-	# 该检查验证 --local-world-move 回退路径：点击移动纯本地执行，结束后一次性上报位置。
-	host.server_step_world_move_enabled = false
+	# 从真实角色记录点开始，验证普通服务器会话逐格等待 movement/step ACK。
+	host.server_step_world_move_enabled = true
 	var username = host._live_check_username("cma")
 	var register_response = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
@@ -21155,11 +21157,14 @@ func _run_auto_server_click_move_live_check() -> void:
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host._close_auth_panel(false)
+	# Node 新档案的权威记录点合同是火芽村医旁；注册摘要本身不下发完整 profile。
+	var record_spawn_name = "doctor_record"
+	host._load_map(PlayerProgressModel.DEFAULT_RECORD_POINT_MAP_ID, record_spawn_name)
 	host.encounter_active = false
 	host.active_encounter_zone.clear()
 	host.encounter_zone_step_count = 0
 	host.encounter_grace_remaining = 999.0
-	var start_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(7, -1)
+	var start_cell = IsoMapModel.spawn_cell(host.map_data, record_spawn_name)
 	var goal_cell = IsoMapModel.nearest_walkable_cell(host.map_data, start_cell + Vector2i(3, 0))
 	var path_cells: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, goal_cell)
 	if path_cells.size() < 2:
@@ -21214,24 +21219,26 @@ func _run_auto_server_click_move_live_check() -> void:
 		and int(publish_position.get("cellX", -999)) == final_cell.x
 		and int(publish_position.get("cellY", -999)) == final_cell.y
 	)
-	var local_click_ok = (
+	var server_click_ok = (
 		expected_steps > 0
-		and host.server_step_move_request_count == 0
-		and host.server_step_move_ack_count == 0
+		and host.server_step_move_request_count == expected_steps
+		and host.server_step_move_ack_count == expected_steps
 		and host.server_step_move_last_error_code == ""
 		and final_cell == goal_cell
+		and host.server_step_move_authority_valid
+		and host.server_step_move_authority_cell == goal_cell
 		and not host.server_step_move_active
 		and not host.server_step_move_request_pending
 		and not host.server_step_move_waiting_for_visual
 		and host.world_log_message.find("位置已同步") < 0
 	)
-	var status = "ok" if bool(register_parsed.get("ok", false)) and seed_ok and local_click_ok and publish_ok else "failed"
+	var status = "ok" if bool(register_parsed.get("ok", false)) and seed_ok and server_click_ok and publish_ok else "failed"
 	var register_body = register_response.get("body", PackedByteArray()) as PackedByteArray
-	print("server click move live check ready: status=%s register=%s seed=%s local_click=%s publish=%s expected_steps=%d requests=%d acks=%d final=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
+	print("server click move live check ready: status=%s register=%s seed=%s server_click=%s publish=%s expected_steps=%d requests=%d acks=%d final=%s goal=%s error=%s user=%s register_http=%d register_result=%s register_body=%d" % [
 		status,
 		str(bool(register_parsed.get("ok", false))),
 		str(seed_ok),
-		str(local_click_ok),
+		str(server_click_ok),
 		str(publish_ok),
 		expected_steps,
 		host.server_step_move_request_count,

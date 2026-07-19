@@ -12381,16 +12381,22 @@ func _request_next_server_step_move(plan_id: int) -> void:
 		return
 	if not _is_server_account_session() or server_step_move_path_index >= server_step_move_path_cells.size() - 1:
 		return
+	# 位置种子请求本身也是移动状态机的一部分。必须在第一个 await 之前占住单飞门闩，
+	# 否则 deferred 启动与逐帧更新会同时进入这里，重复提交同一格移动。
+	server_step_move_request_pending = true
 	if not server_step_move_authority_valid:
 		var seeded = await _seed_server_step_move_position(plan_id)
 		if not seeded:
+			if plan_id == server_step_move_plan_id:
+				server_step_move_request_pending = false
 			return
+	if plan_id != server_step_move_plan_id or not server_step_move_active:
+		return
 	var from_cell = server_step_move_authority_cell
 	if server_step_move_path_cells[server_step_move_path_index] != from_cell:
 		if not _rebuild_server_step_move_path_from_authority():
 			return
 	var to_cell = server_step_move_path_cells[server_step_move_path_index + 1]
-	server_step_move_request_pending = true
 	server_step_move_request_count += 1
 	var response = await host._auto_http_request_spec(ServerAuthClientModel.movement_step_request(
 		_server_profile_base_url(),
