@@ -4,7 +4,7 @@
   "kind": "pet",
   "archiveMode": "lean",
   "runtimeFrameCount": 220,
-  "runtimeBundleDigest": "91db180cbf27aca772ff42f71a7ef513ed5a72082a238a537d4f9f95d17f6cad",
+  "runtimeBundleDigest": "f6e57569042cdcdf6cc7da22ab71c522d97750081fea33fbd2423b80d5126671",
   "sourceFramesTracked": false,
   "rawGenerationSheetsTracked": false,
   "rawGenerationSheetCount": 36,
@@ -203,6 +203,16 @@
     {
       "path": "source/formal-production/quality-repair-g16-manifest.json",
       "sha256": "6e9470469b39112a12217a32df56dcfcea2439596917953a6c5b47c0ad35f6be"
+    },
+    {
+      "path": "source/formal-production/quality-repair-g17-alpha-despill-manifest.json",
+      "sha256": "3c0decef2be87b06ea3be1e057a5aef90d35486ca4ab19b49141f131565ab52e"
     }
-  ]
+  ],
+  "alphaDespillRepair": {
+    "id": "g17-earth-battle180-alpha-despill",
+    "battleFrameCount": 180,
+    "alphaExactForEveryFrame": true,
+    "maximumStrongMagentaEdgeRatioAfter": 0.010056
+  }
 }
