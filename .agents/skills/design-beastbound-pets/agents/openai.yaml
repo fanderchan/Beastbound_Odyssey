@@ -1,4 +1,4 @@
 interface:
   display_name: "Beastbound 宠物设计"
-  short_description: "用自然语言完成宠物定位、成长、遇敌、捕捉、技能与验证"
-  default_prompt: "Use $design-beastbound-pets 根据这份自然语言需求设计并落地一只 Beastbound 宠物。"
+  short_description: "自然语言完成宠物玩法、成长、技能、真八向与骑乘美术合同"
+  default_prompt: "Use $design-beastbound-pets 根据自然语言需求设计并完整落地一只 Beastbound 宠物，包括需要时的正式美术与动画验收。"

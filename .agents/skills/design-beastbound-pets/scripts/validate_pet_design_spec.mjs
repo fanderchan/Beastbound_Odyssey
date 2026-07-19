@@ -195,7 +195,65 @@ if (text(promise.acquisitionTier) === "commercial" && text(progression.commercia
 
 const presentation = requireObject(spec.presentation, "presentation");
 for (const key of ["codexText", "captureText", "growthVisibility", "futureArtBrief"]) requireText(presentation[key], `presentation.${key}`);
-if (presentation.artStatus !== "deferred") errors.push("初版 Skill 的 presentation.artStatus 必须为 deferred");
+const artStatuses = new Set(["deferred", "planned", "in_production", "owner_review_pending", "approved"]);
+const artStatus = text(presentation.artStatus);
+if (!artStatuses.has(artStatus)) errors.push("presentation.artStatus 不受支持");
+if (artStatus !== "deferred") {
+  const art = requireObject(presentation.artProduction, "presentation.artProduction");
+  if (art.deliveryScope !== "full_release") errors.push("presentation.artProduction.deliveryScope 必须为 full_release");
+  if (art.identityLockRequired !== true) errors.push("presentation.artProduction.identityLockRequired 必须为 true");
+  if (art.rideable !== true) errors.push("presentation.artProduction.rideable 必须为 true");
+  const subjectSets = requireStringArray(art.worldSubjectSets, "presentation.artProduction.worldSubjectSets", 3);
+  for (const subject of ["character", "pet", "mounted_character_pet"]) {
+    if (!subjectSets.includes(subject)) errors.push(`presentation.artProduction.worldSubjectSets 必须包含 ${subject}`);
+  }
+  const expectedDirections = ["south", "south_west", "west", "north_west", "north", "north_east", "east", "south_east"];
+  const directions = requireStringArray(art.worldDirections, "presentation.artProduction.worldDirections", 8);
+  if (directions.length !== expectedDirections.length || expectedDirections.some((value) => !directions.includes(value))) {
+    errors.push("presentation.artProduction.worldDirections 必须覆盖真八方向");
+  }
+  const worldActions = requireStringArray(art.worldActions, "presentation.artProduction.worldActions", 2);
+  for (const action of ["idle", "walk"]) {
+    if (!worldActions.includes(action)) errors.push(`presentation.artProduction.worldActions 必须包含 ${action}`);
+  }
+  if (art.runtimeMirroring !== false) errors.push("presentation.artProduction.runtimeMirroring 必须为 false");
+  const battleViews = requireStringArray(art.battleViews, "presentation.artProduction.battleViews", 2);
+  for (const view of ["front_3quarter_sw", "back_3quarter_ne"]) {
+    if (!battleViews.includes(view)) errors.push(`presentation.artProduction.battleViews 必须包含 ${view}`);
+  }
+  const requiredBattleScenarios = ["idle", "walk", "attack", "skill", "defend", "defend_hit", "hurt", "dodge", "dodge_counter", "counter", "stagger_return", "knockaway", "down", "revive", "combo"];
+  const battleScenarios = requireStringArray(art.battleScenarios, "presentation.artProduction.battleScenarios", requiredBattleScenarios.length);
+  for (const scenario of requiredBattleScenarios) {
+    if (!battleScenarios.includes(scenario)) errors.push(`presentation.artProduction.battleScenarios 必须包含 ${scenario}`);
+  }
+  const mounted = requireObject(art.mounted, "presentation.artProduction.mounted");
+  if (mounted.composition !== "ai_integrated_whole_frame") errors.push("presentation.artProduction.mounted.composition 必须为 ai_integrated_whole_frame");
+  if (mounted.runtimeLayeredComposition !== false) errors.push("presentation.artProduction.mounted.runtimeLayeredComposition 必须为 false");
+  if (mounted.runtimeMirroring !== false) errors.push("presentation.artProduction.mounted.runtimeMirroring 必须为 false");
+  requireStringArray(mounted.supportedCharacterIds, "presentation.artProduction.mounted.supportedCharacterIds", 1);
+  const requiredReviewScenes = ["true8_world", "formation_10v10", "attack", "skill_attack", "defend_hit", "hurt_recovery", "dodge", "dodge_counter", "counter", "counter_ko_return_down", "counter_knockaway", "combo", "down_revive"];
+  const reviewScenes = requireStringArray(art.reviewScenes, "presentation.artProduction.reviewScenes", requiredReviewScenes.length);
+  for (const scene of requiredReviewScenes) {
+    if (!reviewScenes.includes(scene)) errors.push(`presentation.artProduction.reviewScenes 必须包含 ${scene}`);
+  }
+  if (art.ownerReviewRequired !== true) errors.push("presentation.artProduction.ownerReviewRequired 必须为 true");
+  const ownerReviewStatus = text(art.ownerReviewStatus);
+  if (!["not_started", "pending", "approved", "rejected"].includes(ownerReviewStatus)) {
+    errors.push("presentation.artProduction.ownerReviewStatus 不受支持");
+  }
+  const evidencePaths = requireStringArray(art.evidencePaths, "presentation.artProduction.evidencePaths", 0);
+  if (artStatus === "owner_review_pending" && ownerReviewStatus !== "pending") {
+    errors.push("artStatus=owner_review_pending 时 ownerReviewStatus 必须为 pending");
+  }
+  if (artStatus === "approved") {
+    if (ownerReviewStatus !== "approved") errors.push("artStatus=approved 时 ownerReviewStatus 必须为 approved");
+    if (!evidencePaths.length) errors.push("artStatus=approved 时必须记录截图或录像 evidencePaths");
+  } else if (ownerReviewStatus === "approved") {
+    errors.push("ownerReviewStatus=approved 时 presentation.artStatus 也必须为 approved");
+  }
+} else if (object(presentation.artProduction)) {
+  warnings.push("artStatus=deferred 时 artProduction 只作未来计划，不代表已进入美术生产");
+}
 
 const validation = requireObject(spec.validation, "validation");
 const sampleCount = Number(validation.growthSampleCount);

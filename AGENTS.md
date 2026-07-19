@@ -34,7 +34,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 
 - For any request to design, add, rebalance, audit, place, capture, grow, skill, evolve, fuse, or otherwise change a pet, use the repository skill at `.agents/skills/design-beastbound-pets/SKILL.md`.
 - Start natural-language pet work with its validated Pet Design Contract and catalog inspection. Do not scatter an idea directly across JSON files without resolving role/counterplay, taxonomy, growth/Lv1 proxy, acquisition probability, capture, active/passive skills, server authority, safety, and tests.
-- The initial project skill deliberately excludes art, sprites, animation, and audio. Record future asset requirements but use the dedicated art pipeline only when the user explicitly includes visual production in scope.
+- Keep concept/numeric-only pet requests separate from visual production. When the user asks for a formal, complete, runtime-ready, rideable, sprite, animation, or art delivery, the pet-design skill must hand off to the dedicated art pipeline and its Beastbound production contract; do not call the pet complete from data and code alone.
 
 ## Change Routing And Boundaries
 

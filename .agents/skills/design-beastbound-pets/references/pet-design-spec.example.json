@@ -128,8 +128,29 @@
     "codexText": "雾帽镜池中极少出现的潮鳍兽形态，速度优秀，擅长睡眠支援。",
     "captureText": "捕捉到示例月潮鳍兽；Lv1 四项可见，成长需要继续训练观察。",
     "growthVisibility": "显示 Lv1 当前四项、逐级观察评级和带误差范围的 Lv140 估计；隐藏种子与真实成长值仅 GM 可见。",
-    "artStatus": "deferred",
-    "futureArtBrief": "仅记录方向：月色水纹与轻盈鳍翼；第一版 Skill 不生成素材。"
+    "artStatus": "planned",
+    "futureArtBrief": "月色水纹与轻盈鳍翼；先锁定同一只宠物身份，再制作真八向世界包、正式双视角战斗包和见习猎人整图骑乘包。",
+    "artProduction": {
+      "deliveryScope": "full_release",
+      "identityLockRequired": true,
+      "rideable": true,
+      "worldSubjectSets": ["character", "pet", "mounted_character_pet"],
+      "worldDirections": ["south", "south_west", "west", "north_west", "north", "north_east", "east", "south_east"],
+      "worldActions": ["idle", "walk"],
+      "runtimeMirroring": false,
+      "battleViews": ["front_3quarter_sw", "back_3quarter_ne"],
+      "battleScenarios": ["idle", "walk", "attack", "skill", "defend", "defend_hit", "hurt", "dodge", "dodge_counter", "counter", "stagger_return", "knockaway", "down", "revive", "combo"],
+      "mounted": {
+        "composition": "ai_integrated_whole_frame",
+        "runtimeLayeredComposition": false,
+        "runtimeMirroring": false,
+        "supportedCharacterIds": ["novice_hunter"]
+      },
+      "reviewScenes": ["true8_world", "formation_10v10", "attack", "skill_attack", "defend_hit", "hurt_recovery", "dodge", "dodge_counter", "counter", "counter_ko_return_down", "counter_knockaway", "combo", "down_revive"],
+      "ownerReviewRequired": true,
+      "ownerReviewStatus": "not_started",
+      "evidencePaths": []
+    }
   },
   "validation": {
     "growthSampleCount": 10000,
