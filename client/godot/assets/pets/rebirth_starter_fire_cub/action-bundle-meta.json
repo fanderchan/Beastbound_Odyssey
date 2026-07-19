@@ -205,13 +205,34 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "5610c9252bda6e77e9e755134104d6fcad306d82ed93f322c610c09a412b4a49",
+    "bundleDigest": "f18696947300772148fd146e246157bfd989da669a05c8b2855e5433760969a0",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "temporalOrderReview": {
+      "repairId": "batch-d-rebirth-starter-fire-front-revive-temporal-order",
+      "status": "passed_static_contact_review",
+      "sourceFrameOrder": [
+        1,
+        8,
+        7,
+        6,
+        5,
+        2,
+        4,
+        3
+      ],
+      "creativePoseChange": false,
+      "wholeFramePayloadMultisetPreserved": true,
+      "down": "monotonic collapse without intermediate stand-up",
+      "revive": "exact held-down frame, then progressive brace and rise without sinking back",
+      "knockaway": "continuous launch, rotation, descent and landing",
+      "attackSkillCounter": "ordered anticipation, contact/release and recovery"
+    },
+    "runtimeAlphaDespill": "not_applied"
   }
 }

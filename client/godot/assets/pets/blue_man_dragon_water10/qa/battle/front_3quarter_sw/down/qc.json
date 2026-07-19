@@ -113,7 +113,7 @@
       ],
       "minimumMargin": 30,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "86a3c49e729d70ae7705184651ca0a3f563e85ee25da8504c2c0e60c3d62f14b"
+      "rgbaSha256": "7eeb1dad737eaa2cdff4365dd43cd082b8496da4b86c608d0e2701d0096be4e2"
     },
     {
       "file": "source/battle/front_3quarter_sw/frames-512/down/down-7.png",
@@ -129,7 +129,7 @@
       ],
       "minimumMargin": 30,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "f051cb72d39b5d7b8fd2ea07fad4c96f9b412564cf5cfa070f94be78c3248858"
+      "rgbaSha256": "f2ba9414614472a861452ea06a6054015f6aadf6fcd0880c23259a7d1df198ce"
     },
     {
       "file": "source/battle/front_3quarter_sw/frames-512/down/down-8.png",
@@ -145,7 +145,7 @@
       ],
       "minimumMargin": 32,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "033f264c15398b768456177fcaf10b0502f809cd639315833428faadf0ea4d98"
+      "rgbaSha256": "d6ed59d9989da41db06bfebfcb24d57b83791cff4c9ff1b0fe4073c99d6b26d6"
     }
   ],
   "runtimeFrames": [
@@ -243,7 +243,7 @@
       ],
       "minimumMargin": 15,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "3916de8126901078677d5b03bb575763e2b29bab6a75154cd11f2dc1cf1a39ca"
+      "rgbaSha256": "0edb27f1b6ec925d9d49addacdae98cda9a457db89193d98beb080b8d30e4c5d"
     },
     {
       "file": "views/front_3quarter_sw/down/down-7.png",
@@ -259,7 +259,7 @@
       ],
       "minimumMargin": 15,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "0cd6677e1889cbb659ae7926d4e8863dcbe08fc6b83f756e7cda9777ef9f28fa"
+      "rgbaSha256": "2bce50b44873a57cc031930a21a601931e2697a7ca33772ea29228cb2567d750"
     },
     {
       "file": "views/front_3quarter_sw/down/down-8.png",
@@ -275,7 +275,7 @@
       ],
       "minimumMargin": 16,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "31426a7da90251437324b407edddcb1645fa41dba2ac296805154b18d6a80068"
+      "rgbaSha256": "d1165810d0c2a947d20b315d9fb2ebb7f562422c7b5d8fc8602ce82d018b3e8c"
     }
   ]
 }

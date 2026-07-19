@@ -657,8 +657,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 65,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "e922363d945bcb4320c6a85a36b59c475d0a48ae7f50174828054ee939f14952",
-      "runtimeRgbaSha256": "822a4c71da8cda49601d48829db1f8658ed453fdded8cc4418b6646037429c6a"
+      "sourceRgbaSha256": "7eeb1dad737eaa2cdff4365dd43cd082b8496da4b86c608d0e2701d0096be4e2",
+      "runtimeRgbaSha256": "0edb27f1b6ec925d9d49addacdae98cda9a457db89193d98beb080b8d30e4c5d"
     },
     {
       "slot": "down-7",
@@ -758,8 +758,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 59,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "4725489c6eb081abf855196e82658b7a3ef708212058b9ef208df942d6104710",
-      "runtimeRgbaSha256": "3ab5a896dd629ee4d59c464986ec410a8beae53e230e0a5d66a31400ccc80598"
+      "sourceRgbaSha256": "f2ba9414614472a861452ea06a6054015f6aadf6fcd0880c23259a7d1df198ce",
+      "runtimeRgbaSha256": "2bce50b44873a57cc031930a21a601931e2697a7ca33772ea29228cb2567d750"
     },
     {
       "slot": "down-8",
@@ -859,8 +859,81 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 61,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "2ff88247b015dd3ea3269cf70c0149bf3a9f6adab84b91b05b6894bb01f32518",
-      "runtimeRgbaSha256": "3cb5f628216cfe3def92bb8cd0f70c68a2582cb8b4e72638475d536c60963b08"
+      "sourceRgbaSha256": "d6ed59d9989da41db06bfebfcb24d57b83791cff4c9ff1b0fe4073c99d6b26d6",
+      "runtimeRgbaSha256": "d1165810d0c2a947d20b315d9fb2ebb7f562422c7b5d8fc8602ce82d018b3e8c"
+    }
+  ],
+  "postInstallRepairs": [
+    {
+      "id": "front-faint-eye-semantics-v1",
+      "date": "2026-07-20",
+      "method": "deterministic face-local closed-eyelid-to-open-spiral replacement",
+      "scope": "front down-6..8 hold and exact revive-1 continuity frame",
+      "required": "clear reversible faint: open spiral or unfocused eye",
+      "forbidden": [
+        "X eye",
+        "cross eye",
+        "closed sleeping eye",
+        "smile",
+        "death symbol"
+      ],
+      "alphaPreserved": true,
+      "frames": [
+        {
+          "size": 512,
+          "frame": 6,
+          "inputRgbaSha256": "5eeb7f342d8cea5368e855fb3e3d2c8dc74a6f2a282f4b1ace662cf1485f7f6b",
+          "outputRgbaSha256": "08560f2282f81eb400a20e8be243a48335b52fdf539154a8f8da61e64b71e1dc",
+          "alphaSha256": "dc9916901f1ec378ff60fd720cd74e28dcfc5f2236c4cbd7a8f8b51ea46c0d09",
+          "alphaPreserved": true,
+          "changedPixelCount": 503
+        },
+        {
+          "size": 512,
+          "frame": 7,
+          "inputRgbaSha256": "6847f9fa0d49f68214824155a107b479c6a60e1df26bd8bd2f08091e941bd510",
+          "outputRgbaSha256": "c38bbf29c8315760530c5e2dc40af4a92fbd1545756d2197fe8a41b1039b5c16",
+          "alphaSha256": "dba8ef67e7e75794d0792d29cfdb4f4a7fb21e62056bb5ded7d7012e39e7cc36",
+          "alphaPreserved": true,
+          "changedPixelCount": 506
+        },
+        {
+          "size": 512,
+          "frame": 8,
+          "inputRgbaSha256": "765cad180c791e41a19bad353e91bd038a75f0ce6d1c2f2fc96dafd26d5d879a",
+          "outputRgbaSha256": "263d1e14fc66a9750b3f25abcafb5d6d5868fe245853dc454da39ee2c43fec70",
+          "alphaSha256": "6af35b93612a6973394aaef3deb3d938cc3af0cd6fae6b55796eea4553f37fdd",
+          "alphaPreserved": true,
+          "changedPixelCount": 505
+        },
+        {
+          "size": 256,
+          "frame": 6,
+          "inputRgbaSha256": "fb0c720c52f733664ef1faa6d7ef2917f5fd4ff268568fbc7fa55261b9621698",
+          "outputRgbaSha256": "ddadabf71bd1b3f76e7a81d1ef5eff629e1469462e5da4b6dd208aa9a108c7f1",
+          "alphaSha256": "05950444b27e28a5256d813b44970c72f4b193136b25a8488f8cf4ed0bcd10ba",
+          "alphaPreserved": true,
+          "changedPixelCount": 141
+        },
+        {
+          "size": 256,
+          "frame": 7,
+          "inputRgbaSha256": "13324c0523d6eb73472d07a045f3fae8895b16f3fb6adb90f71d410ceb4dd0fe",
+          "outputRgbaSha256": "2a54e54cca4a514542f65028358ff4db5ed15a93f82c43b8b7f13e4d89a9a47f",
+          "alphaSha256": "70e184e6a2078331fc7b2b5f65a45e980ef17f1a4da3e3a15ace222578a25690",
+          "alphaPreserved": true,
+          "changedPixelCount": 139
+        },
+        {
+          "size": 256,
+          "frame": 8,
+          "inputRgbaSha256": "57843ccb97c8e1a1cf137f0fb7489cbdfa5e03144262733ba1a2f7bd1b6eb2ca",
+          "outputRgbaSha256": "fcb7936400598239e29f7c3d1140db9424b231e0cbf607ce5c44a36a7dee92ac",
+          "alphaSha256": "fdf82f68350164a6ea5c39a4fe8c606832266354db32ed53b39f3bf0e48c5f22",
+          "alphaPreserved": true,
+          "changedPixelCount": 140
+        }
+      ]
     }
   ]
 }

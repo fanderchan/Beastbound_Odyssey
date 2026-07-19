@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_starter_four_spirit_cub",
+  "kind": "pet",
+  "archiveMode": "lean",
+  "runtimeFrameCount": 180,
+  "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
+  "temporalStaticReview": {
+    "status": "passed_static_contact_review",
+    "reviewDate": "2026-07-20",
+    "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
+    "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
+    "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
+    "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
+  },
+  "bundleDigest": "06f953aa20667c5894e3397a3cd166ed8a2065580d18c3a22649d23caa3fa50f",
+  "sourceLedger": "source/battle/source-ledger.json",
+  "contactSheet": "qa/battle/contact-sheet.png",
+  "qcSummary": "qa/battle/qc-summary.json",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

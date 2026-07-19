@@ -1,0 +1,29 @@
+Production contract reconstructed from the preserved identity lock, raw generated sheet and action matrix after the original generation request.
+Exact identity lock:
+# 地纹幼兽身份锁 v1
+
+状态：`self_review_passed_owner_pending`。当前只批准四格身份板和四个 512px 关键姿势，不代表世界真八向、战斗动作或实机比例完成。
+
+## 血统与结构
+
+- 与 G13 六只幼兽共享圆脸、短吻、低耳、单枚短角、厚掌三爪、结实四足、可骑背线和中等实体尾根；不得变成熊、猫、狼、马或其他物种。
+- 本形态固定身份：赭石厚毛、单枚短钝赭晶角、深土眉颊纹、岩层肩斑、三爪厚掌和实体叶形尾簇。
+- 角色定位：转生幼兽血统的基础地属性形态；亲和、稳重、可承载成年骑手。
+
+## 视角合同
+
+- 四格严格依次为 `front_3quarter_sw`、`back_3quarter_ne`、`south`、`west`。
+- 前三分之四朝左下，背三分之四朝右上；角、耳、肩斑、近远腿、尾根和标记必须随身体旋转，禁止用镜像伪造。
+- 后续世界生产仍需南、西南、西、西北、北、东北、东、东南八个独立方向。
+
+## 禁止项与风险
+
+- 不出现鞍具、骑手、武器、盔甲、地面、投影、文字、场景或元素特效。
+- 后续动作不能把短角误增为双角，也不能把岩层肩斑画成硬甲或把叶形毛尾画成植物叶片。
+- 四格必须保持同一个体、同一比例、同一材质和同一标记数量；不能把同一侧纹样机械贴到所有视角。
+
+View: back_3quarter_ne, authored facing northeast/up-right away from camera with back and rear flank visible.
+Action: anticipation, forepaw/body contact, recoil and recovery; no detached FX.
+Sheet: solid #FF00FF background; exactly 2 rows x 4 columns; exactly 8 row-major frames; one centered complete pet per cell.
+Style: high-definition hand-painted 2.5D Chinese pet MMORPG sprite art.
+Forbidden: identity drift, extra/missing anatomy, text, border, grid, scenery, floor, shadow, detached FX, crop or cell crossing.

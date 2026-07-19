@@ -100,8 +100,9 @@
     "runtime256": 14
   },
   "magentaResidualPixels": 0,
-  "duplicateRuntimeFrameCount": 1,
+  "duplicateRuntimeFrameCount": 2,
   "expectedIntentionalDuplicateRuntimeFrames": [
+    "front_3quarter_sw/down/down-8.png == front_3quarter_sw/revive/revive-1.png",
     "back_3quarter_ne/down/down-8.png == back_3quarter_ne/revive/revive-1.png"
   ],
   "directionReview": "pass_static",

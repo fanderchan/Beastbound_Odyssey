@@ -347,27 +347,27 @@
         "rawArchiveSha256": "fc8a3e9eac5f762f829f7378c5aed4d1df5505ee3c59d0dd00b9e57252a5a6ce",
         "rawDecodedRgbaSha256": "e562b897daf31816bfef09d640d724ac0332024dc4e865d114f976d9b965990d",
         "promptSha256": "b9396d8d9ee9f69731b9da4dce95bf21df0a66f8c021b0eaa2f3ed74af4adddb",
-        "pipelineSha256": "af1eb65d744e61ac569e0b9370996a10635992a5bc1ec9372104707e43d9d657",
-        "qcSha256": "6146b3d6fc22b0fe3c43ad9c1d78c45ee8b9ccbb77fd35603f022256de2aca4f",
+        "pipelineSha256": "fab31923f5a13e63c9332cb5e0b28c08eacf0295bc4e072376b2e08390f8b8f2",
+        "qcSha256": "48bbd90d084dd42bcb4713fdb64ada9588bb91e6ba36d5980b3df84930f19e42",
         "sourceFrameRgbaSha256": [
           "5bf5dacfba4ca77ac1668766c13108a5106f168ddfd1f164943dbc5f1b177e48",
-          "ad767535bcfb0a089927b5d5ea991743a298cfe05bb5ae65933e33db1de85d9e",
-          "ea22e1ed7895e9eca517bda68436182b5ed4da8ff786cb86ef2938b99fece2ed",
-          "9eedd7deac8fbd050a6d3f3370ea14da186e6ccc9d3c75288b7ec4492134ddd7",
-          "7f49830fa33fcb56c987ee0b857d58580a95dfb4be8255a0cc81772ecde71eac",
-          "0e5f8a9df61db049510aadf18cd3c5e91e2ae2df7d1faa6689de8969ce900edb",
+          "4cd3772bb755e438d21fdb50f53a4b2695febdcfe386f88dbbd67d13b3437ff9",
           "193c91746698f840f177d30a6257ffd1a10140bc0704cfb1fc5205f549a8fd91",
-          "4cd3772bb755e438d21fdb50f53a4b2695febdcfe386f88dbbd67d13b3437ff9"
+          "0e5f8a9df61db049510aadf18cd3c5e91e2ae2df7d1faa6689de8969ce900edb",
+          "7f49830fa33fcb56c987ee0b857d58580a95dfb4be8255a0cc81772ecde71eac",
+          "ad767535bcfb0a089927b5d5ea991743a298cfe05bb5ae65933e33db1de85d9e",
+          "9eedd7deac8fbd050a6d3f3370ea14da186e6ccc9d3c75288b7ec4492134ddd7",
+          "ea22e1ed7895e9eca517bda68436182b5ed4da8ff786cb86ef2938b99fece2ed"
         ],
         "runtimeFrameRgbaSha256": [
           "0f4550a515fae9cec66a18b5814d230e27fac1806604b38a74f5222f910cb6cc",
-          "c9de513b0346b0471fbf11a5e1391a80f1a99ccbaec4dfc73caa106918c11a98",
-          "7df283c0f6b325d9708ce1cee7ed7fe94a4659f8cca625bb0edbc28d1129dee2",
-          "408a7e8b0f6686fd42edc2a58aff397b0b8dd92ee6d7ecb16c400e9391fa84d0",
-          "a39dd93c1bdb1f9892de7d5da217eae2dc645b7aeea25f84a1757684ecf45cb5",
-          "5fd3139d97e2188bd4df0435a0c90a8d8b5d12c90f0babe4c28c23ccc8848121",
+          "16321a5019a50559149e36c1e39a0449ed3246eb9077d33b0e8593301a76fca4",
           "b36e4c4b1d69e8af1fb7bb5020d80e25ce2416e22351fd19f6c56b0eec2fe71f",
-          "16321a5019a50559149e36c1e39a0449ed3246eb9077d33b0e8593301a76fca4"
+          "5fd3139d97e2188bd4df0435a0c90a8d8b5d12c90f0babe4c28c23ccc8848121",
+          "a39dd93c1bdb1f9892de7d5da217eae2dc645b7aeea25f84a1757684ecf45cb5",
+          "c9de513b0346b0471fbf11a5e1391a80f1a99ccbaec4dfc73caa106918c11a98",
+          "408a7e8b0f6686fd42edc2a58aff397b0b8dd92ee6d7ecb16c400e9391fa84d0",
+          "7df283c0f6b325d9708ce1cee7ed7fe94a4659f8cca625bb0edbc28d1129dee2"
         ],
         "representativeRawTracked": false,
         "sourceFramesTracked": false
@@ -735,5 +735,28 @@
         "sourceFramesTracked": false
       }
     }
+  },
+  "postInstallRepairs": {
+    "temporalOrder": {
+      "repairId": "batch-d-rebirth-starter-fire-front-revive-temporal-order",
+      "status": "passed_static_contact_review",
+      "sourceFrameOrder": [
+        1,
+        8,
+        7,
+        6,
+        5,
+        2,
+        4,
+        3
+      ],
+      "creativePoseChange": false,
+      "wholeFramePayloadMultisetPreserved": true,
+      "down": "monotonic collapse without intermediate stand-up",
+      "revive": "exact held-down frame, then progressive brace and rise without sinking back",
+      "knockaway": "continuous launch, rotation, descent and landing",
+      "attackSkillCounter": "ordered anticipation, contact/release and recovery"
+    },
+    "runtimeAlphaDespill": "not_applied"
   }
 }

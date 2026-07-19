@@ -129,9 +129,9 @@
       "action": "revive",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
-      "contactSheetSha256": "6590791379d507ec318a85f65bfa03a4bd2f9191f10894c41d05661e75f03600",
+      "contactSheetSha256": "738f580b9bd09df190fab839b7cb2b70f80093e48756a1ed3ae19eb6fbd3d962",
       "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
-      "gifSha256": "c52a14cc7c8849b37446097f3c445a9dff3219d7c8a38e22d8da5f377126f548"
+      "gifSha256": "b1e15f1d19c07c49cce02a029472677a0e8831dc76adc8190795960ae123e543"
     },
     {
       "view": "back_3quarter_ne",
@@ -242,5 +242,28 @@
       "gifSha256": "57e0f9100aeaee190cfad7ee94d23b8c26549292ad1f13829542cdc014de412d"
     }
   ],
-  "productionMethod": "two generated 24-key-pose master sheets expanded deterministically into formal action strips"
+  "productionMethod": "two generated 24-key-pose master sheets expanded deterministically into formal action strips",
+  "downReviveContinuity": "exact_same_view_RGBA_hold",
+  "temporalOrderReview": {
+    "repairId": "batch-d-rebirth-starter-fire-front-revive-temporal-order",
+    "status": "passed_static_contact_review",
+    "sourceFrameOrder": [
+      1,
+      8,
+      7,
+      6,
+      5,
+      2,
+      4,
+      3
+    ],
+    "creativePoseChange": false,
+    "wholeFramePayloadMultisetPreserved": true,
+    "down": "monotonic collapse without intermediate stand-up",
+    "revive": "exact held-down frame, then progressive brace and rise without sinking back",
+    "knockaway": "continuous launch, rotation, descent and landing",
+    "attackSkillCounter": "ordered anticipation, contact/release and recovery"
+  },
+  "contactSheet": "qa/battle/contact-sheet.png",
+  "contactSheetSha256": "89a44859e232e2b6db6967c64559337d26218a2ab02f79eb760d90b8da28ee29"
 }

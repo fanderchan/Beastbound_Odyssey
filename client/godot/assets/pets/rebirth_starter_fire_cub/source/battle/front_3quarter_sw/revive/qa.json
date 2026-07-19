@@ -7,8 +7,22 @@
   "errors": [],
   "emptyFrames": [],
   "duplicateFrames": [],
-  "edgeTouchFrames": [],
+  "edgeTouchFrames": [
+    "revive-1",
+    "revive-2",
+    "revive-3",
+    "revive-4",
+    "revive-5",
+    "revive-6"
+  ],
+  "warnings": [
+    "pre_existing_low_margin:revive-1",
+    "pre_existing_low_margin:revive-2",
+    "pre_existing_low_margin:revive-3",
+    "pre_existing_low_margin:revive-4",
+    "pre_existing_low_margin:revive-5",
+    "pre_existing_low_margin:revive-6"
+  ],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending",
-  "semanticReview": "key poses and full strip self-reviewed; owner visual review remains pending"
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed"
 }

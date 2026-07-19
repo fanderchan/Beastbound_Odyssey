@@ -26,14 +26,14 @@
         512
       ],
       "alphaBbox": [
-        79,
-        331,
-        433,
-        482
+        72,
+        339,
+        439,
+        480
       ],
-      "minimumMargin": 30,
+      "minimumMargin": 32,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "493a4c7de8f7cdaebf9bea63ce620b9f041fdf68d7fc7700ed50e13bb09579b4"
+      "rgbaSha256": "d6ed59d9989da41db06bfebfcb24d57b83791cff4c9ff1b0fe4073c99d6b26d6"
     },
     {
       "file": "source/battle/front_3quarter_sw/frames-512/revive/revive-2.png",
@@ -156,14 +156,14 @@
         256
       ],
       "alphaBbox": [
-        39,
-        165,
-        216,
-        241
+        36,
+        169,
+        219,
+        240
       ],
-      "minimumMargin": 15,
+      "minimumMargin": 16,
       "magentaResidualPixels": 0,
-      "rgbaSha256": "72b3c89ed6797bf8fe7db2b5530fcf34c4d75664c04616541e38aba17b7bf19b"
+      "rgbaSha256": "d1165810d0c2a947d20b315d9fb2ebb7f562422c7b5d8fc8602ce82d018b3e8c"
     },
     {
       "file": "views/front_3quarter_sw/revive/revive-2.png",

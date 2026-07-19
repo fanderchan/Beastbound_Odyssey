@@ -28,18 +28,18 @@
     },
     {
       "slot": "revive-2",
-      "sourceRgbaSha256": "ad767535bcfb0a089927b5d5ea991743a298cfe05bb5ae65933e33db1de85d9e",
-      "runtimeRgbaSha256": "c9de513b0346b0471fbf11a5e1391a80f1a99ccbaec4dfc73caa106918c11a98"
+      "sourceRgbaSha256": "4cd3772bb755e438d21fdb50f53a4b2695febdcfe386f88dbbd67d13b3437ff9",
+      "runtimeRgbaSha256": "16321a5019a50559149e36c1e39a0449ed3246eb9077d33b0e8593301a76fca4"
     },
     {
       "slot": "revive-3",
-      "sourceRgbaSha256": "ea22e1ed7895e9eca517bda68436182b5ed4da8ff786cb86ef2938b99fece2ed",
-      "runtimeRgbaSha256": "7df283c0f6b325d9708ce1cee7ed7fe94a4659f8cca625bb0edbc28d1129dee2"
+      "sourceRgbaSha256": "193c91746698f840f177d30a6257ffd1a10140bc0704cfb1fc5205f549a8fd91",
+      "runtimeRgbaSha256": "b36e4c4b1d69e8af1fb7bb5020d80e25ce2416e22351fd19f6c56b0eec2fe71f"
     },
     {
       "slot": "revive-4",
-      "sourceRgbaSha256": "9eedd7deac8fbd050a6d3f3370ea14da186e6ccc9d3c75288b7ec4492134ddd7",
-      "runtimeRgbaSha256": "408a7e8b0f6686fd42edc2a58aff397b0b8dd92ee6d7ecb16c400e9391fa84d0"
+      "sourceRgbaSha256": "0e5f8a9df61db049510aadf18cd3c5e91e2ae2df7d1faa6689de8969ce900edb",
+      "runtimeRgbaSha256": "5fd3139d97e2188bd4df0435a0c90a8d8b5d12c90f0babe4c28c23ccc8848121"
     },
     {
       "slot": "revive-5",
@@ -48,18 +48,18 @@
     },
     {
       "slot": "revive-6",
-      "sourceRgbaSha256": "0e5f8a9df61db049510aadf18cd3c5e91e2ae2df7d1faa6689de8969ce900edb",
-      "runtimeRgbaSha256": "5fd3139d97e2188bd4df0435a0c90a8d8b5d12c90f0babe4c28c23ccc8848121"
+      "sourceRgbaSha256": "ad767535bcfb0a089927b5d5ea991743a298cfe05bb5ae65933e33db1de85d9e",
+      "runtimeRgbaSha256": "c9de513b0346b0471fbf11a5e1391a80f1a99ccbaec4dfc73caa106918c11a98"
     },
     {
       "slot": "revive-7",
-      "sourceRgbaSha256": "193c91746698f840f177d30a6257ffd1a10140bc0704cfb1fc5205f549a8fd91",
-      "runtimeRgbaSha256": "b36e4c4b1d69e8af1fb7bb5020d80e25ce2416e22351fd19f6c56b0eec2fe71f"
+      "sourceRgbaSha256": "9eedd7deac8fbd050a6d3f3370ea14da186e6ccc9d3c75288b7ec4492134ddd7",
+      "runtimeRgbaSha256": "408a7e8b0f6686fd42edc2a58aff397b0b8dd92ee6d7ecb16c400e9391fa84d0"
     },
     {
       "slot": "revive-8",
-      "sourceRgbaSha256": "4cd3772bb755e438d21fdb50f53a4b2695febdcfe386f88dbbd67d13b3437ff9",
-      "runtimeRgbaSha256": "16321a5019a50559149e36c1e39a0449ed3246eb9077d33b0e8593301a76fca4"
+      "sourceRgbaSha256": "ea22e1ed7895e9eca517bda68436182b5ed4da8ff786cb86ef2938b99fece2ed",
+      "runtimeRgbaSha256": "7df283c0f6b325d9708ce1cee7ed7fe94a4659f8cca625bb0edbc28d1129dee2"
     }
   ],
   "creativeSource": "generated/front_3quarter_sw-keyposes.png",
@@ -67,5 +67,23 @@
     "revive-a",
     "revive-b"
   ],
-  "deterministicExpansion": true
+  "deterministicExpansion": true,
+  "postProcessing": {
+    "temporalOrderRepair": {
+      "sourceFrameOrder": [
+        1,
+        8,
+        7,
+        6,
+        5,
+        2,
+        4,
+        3
+      ],
+      "creativePoseChange": false,
+      "reason": "existing authored poses reordered into monotonic action time"
+    },
+    "downReviveContinuity": "revive-1 replaced with exact same-view down-8 runtime and source identity",
+    "creativePoseChange": false
+  }
 }

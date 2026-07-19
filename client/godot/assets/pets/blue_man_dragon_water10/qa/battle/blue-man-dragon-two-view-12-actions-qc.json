@@ -25,8 +25,12 @@
   ],
   "expectedRuntimeFrameCount": 180,
   "actualRuntimeFrameCount": 180,
-  "uniqueRuntimeRgbaFrameCount": 179,
+  "uniqueRuntimeRgbaFrameCount": 178,
   "expectedDuplicateGroups": [
+    [
+      "front_3quarter_sw/down-8",
+      "front_3quarter_sw/revive-1"
+    ],
     [
       "back_3quarter_ne/down-8",
       "back_3quarter_ne/revive-1"
@@ -42,7 +46,9 @@
   "repairs": {
     "backAttackScale": "pass after deterministic fitScale 1.00 repair",
     "backDownReviveScale": "pass after deterministic fitScale 1.00 repair",
-    "backDownReviveContinuity": "exact RGBA match"
+    "backDownReviveContinuity": "exact RGBA match",
+    "frontDownReviveContinuity": "exact file and RGBA match",
+    "frontFaintEyeSemantics": "face-local open spiral/unfocused eye; alpha exact; no X, sleeping eyelid, smile or death symbol"
   },
   "semanticSelfReview": {
     "idle": "stable living idle loop",
@@ -55,8 +61,8 @@
     "counter": "compact reactive strike distinct from normal attack",
     "stagger": "wounded uneven return, not healthy walk",
     "knockaway": "launch body articulation; trajectory and rotation remain runtime-directed",
-    "down": "reversible unconscious collapse/hold; no smile, sleep, death, halo or stars",
-    "revive": "continuous recovery from held down pose to ready stance"
+    "down": "reversible unconscious collapse/hold with open spiral/unfocused eye; no X, sleep, smile, death, halo or stars",
+    "revive": "continuous recovery beginning from the exact spiral-eye held-down pose"
   },
   "formalViewSelfReview": {
     "front_3quarter_sw": "pass: toward lower-left",
@@ -68,5 +74,76 @@
     "combinedContact": "qa/battle/blue-man-dragon-two-view-12-actions-contact.png",
     "perActionRoot": "qa/battle/<view>/<action>/",
     "sourceMetadata": "source/battle/<view>/source-meta.json"
+  },
+  "faintSemanticRepair": {
+    "id": "front-faint-eye-semantics-v1",
+    "date": "2026-07-20",
+    "method": "deterministic face-local closed-eyelid-to-open-spiral replacement",
+    "scope": "front down-6..8 hold and exact revive-1 continuity frame",
+    "required": "clear reversible faint: open spiral or unfocused eye",
+    "forbidden": [
+      "X eye",
+      "cross eye",
+      "closed sleeping eye",
+      "smile",
+      "death symbol"
+    ],
+    "alphaPreserved": true,
+    "frames": [
+      {
+        "size": 512,
+        "frame": 6,
+        "inputRgbaSha256": "5eeb7f342d8cea5368e855fb3e3d2c8dc74a6f2a282f4b1ace662cf1485f7f6b",
+        "outputRgbaSha256": "08560f2282f81eb400a20e8be243a48335b52fdf539154a8f8da61e64b71e1dc",
+        "alphaSha256": "dc9916901f1ec378ff60fd720cd74e28dcfc5f2236c4cbd7a8f8b51ea46c0d09",
+        "alphaPreserved": true,
+        "changedPixelCount": 503
+      },
+      {
+        "size": 512,
+        "frame": 7,
+        "inputRgbaSha256": "6847f9fa0d49f68214824155a107b479c6a60e1df26bd8bd2f08091e941bd510",
+        "outputRgbaSha256": "c38bbf29c8315760530c5e2dc40af4a92fbd1545756d2197fe8a41b1039b5c16",
+        "alphaSha256": "dba8ef67e7e75794d0792d29cfdb4f4a7fb21e62056bb5ded7d7012e39e7cc36",
+        "alphaPreserved": true,
+        "changedPixelCount": 506
+      },
+      {
+        "size": 512,
+        "frame": 8,
+        "inputRgbaSha256": "765cad180c791e41a19bad353e91bd038a75f0ce6d1c2f2fc96dafd26d5d879a",
+        "outputRgbaSha256": "263d1e14fc66a9750b3f25abcafb5d6d5868fe245853dc454da39ee2c43fec70",
+        "alphaSha256": "6af35b93612a6973394aaef3deb3d938cc3af0cd6fae6b55796eea4553f37fdd",
+        "alphaPreserved": true,
+        "changedPixelCount": 505
+      },
+      {
+        "size": 256,
+        "frame": 6,
+        "inputRgbaSha256": "fb0c720c52f733664ef1faa6d7ef2917f5fd4ff268568fbc7fa55261b9621698",
+        "outputRgbaSha256": "ddadabf71bd1b3f76e7a81d1ef5eff629e1469462e5da4b6dd208aa9a108c7f1",
+        "alphaSha256": "05950444b27e28a5256d813b44970c72f4b193136b25a8488f8cf4ed0bcd10ba",
+        "alphaPreserved": true,
+        "changedPixelCount": 141
+      },
+      {
+        "size": 256,
+        "frame": 7,
+        "inputRgbaSha256": "13324c0523d6eb73472d07a045f3fae8895b16f3fb6adb90f71d410ceb4dd0fe",
+        "outputRgbaSha256": "2a54e54cca4a514542f65028358ff4db5ed15a93f82c43b8b7f13e4d89a9a47f",
+        "alphaSha256": "70e184e6a2078331fc7b2b5f65a45e980ef17f1a4da3e3a15ace222578a25690",
+        "alphaPreserved": true,
+        "changedPixelCount": 139
+      },
+      {
+        "size": 256,
+        "frame": 8,
+        "inputRgbaSha256": "57843ccb97c8e1a1cf137f0fb7489cbdfa5e03144262733ba1a2f7bd1b6eb2ca",
+        "outputRgbaSha256": "fcb7936400598239e29f7c3d1140db9424b231e0cbf607ce5c44a36a7dee92ac",
+        "alphaSha256": "fdf82f68350164a6ea5c39a4fe8c606832266354db32ed53b39f3bf0e48c5f22",
+        "alphaPreserved": true,
+        "changedPixelCount": 140
+      }
+    ]
   }
 }

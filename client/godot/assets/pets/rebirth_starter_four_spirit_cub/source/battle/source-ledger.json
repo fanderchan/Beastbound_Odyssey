@@ -1,0 +1,814 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "lean",
+  "formId": "rebirth_starter_four_spirit_cub",
+  "kind": "pet",
+  "generator": "OpenAI built-in image generation",
+  "sourceOrigin": "generated from the tracked Beastbound G13 starter-cub identity lock",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "replacementPath": "regenerate from archived contracts and .run/art_batch_full_g13_g15/four_spirit_cub/pet/battle",
+  "runtimeFrameCount": 180,
+  "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
+  "temporalStaticReview": {
+    "status": "passed_static_contact_review",
+    "reviewDate": "2026-07-20",
+    "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
+    "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
+    "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
+    "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
+  },
+  "runtimeBundleDigest": "06f953aa20667c5894e3397a3cd166ed8a2065580d18c3a22649d23caa3fa50f",
+  "sourceFramesTracked": false,
+  "representativeRawSheets": {
+    "front_3quarter_sw": {
+      "path": "source/battle/representative-raw/front_3quarter_sw.webp",
+      "sha256": "058067c2f60bcfb96439d1a4e0bdb266c485cb8c8f427b8aa1e2ca0cef359e7f"
+    },
+    "back_3quarter_ne": {
+      "path": "source/battle/representative-raw/back_3quarter_ne.webp",
+      "sha256": "100f80b51b60caf09ceb7f06273f9a45849bfed0c8535fadedcc960e419faf5c"
+    }
+  },
+  "actions": {
+    "front_3quarter_sw": {
+      "idle": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/idle/raw.png",
+        "rawArchiveSha256": "f45ed5424fbdd4468b5566b175b54739a37b81ec1644ee0a9c39312612336c6d",
+        "prompt": "prompts/production/battle/front_3quarter_sw/idle/generation-contract-v1.txt",
+        "promptSha256": "841585e0c97928e5f5ff890f121d582f6c3859d10da4d70ee287979d46371cf3",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/idle/build/pipeline-meta.json",
+        "pipelineSha256": "51de362905e470915ec307f06eff6d9c63fee11a225b6fd0e90a356d23a5f480",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "5c1b4242ebc18643639a732458fa013a8ef576a72b4bddd4cda7294951ec82c3",
+          "1ab715bbae78a0af15a70da5bee8ee4b97ac4b09f4635808dfb3dd6447246434",
+          "116d2261ae009156d6a35d93d190d0bca6b27d94a961193d2718f818fbadc1a9",
+          "d6b22f7ae9be1e1192ad93588461d09e9958d41a6874e307c9809f92838229b8",
+          "5fb2b14bb70cd04223090d70bd456f66360a039bac5a5cdb6e1db1d8daf7c82f",
+          "c602397ae51668bc48084a981640104383d7420a84037322b343f2720f422990"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "cee45a78f442a6397d0d3d780cb9a708f9d8a0d24979ba37b2925ac251f11f1d",
+          "b5a927cac079e8f308d7e5487fa955867a0ca9bfd161973a60b30ccd7567398a",
+          "e90689c48e5c8186d3a5c0d766de89f4d047857c4fa4f6160dbd0fa390e2db13",
+          "75f50bafb9973a74efc6950d1d1e5de931faaf2e553ae707b0b81c5eef85c0e7",
+          "53d182144681644aebe9232c4c50f155e74311f6485753ebcb7cdd66704acea8",
+          "bcfcc7b6c321b9b612507c0d785e7ac05a02b97d06f6fe0783a96ac615656c04"
+        ]
+      },
+      "walk": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/walk/raw.png",
+        "rawArchiveSha256": "20f4553d08763201da00e73c5e93a8ab15aefd62e392545a31976eedd674c0d2",
+        "prompt": "prompts/production/battle/front_3quarter_sw/walk/generation-contract-v1.txt",
+        "promptSha256": "2a3d624ef46d87928039ca250b97ac14f7d2c3165fe3af8c0fd7b20226cb4b49",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/walk/build/pipeline-meta.json",
+        "pipelineSha256": "10146caaec278ef6f22c176764cca31611619e1d3cb490dc7ccf47c238423539",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "ff4c2620c9f08ce3e50bd838d8968e8cc1287e8a85251613b8c7460f84fedbf3",
+          "3002cf383676499eb9d97f05dc9afe3acb65455dab2939f3eb38f4347399c8e8",
+          "f55376b261385ba3e322da425bda41fd34734aca7d76eff50fb185eac80a1560",
+          "30074e5f0f4e68b29791c3d4145908c1458e3ecd8e5b62e5acaf92e2a26915cf",
+          "eed619bf9b2f223869278e2afd0589009011f6ee98130da20c0103adab96ae8e",
+          "812fd7e85b1e1cef2336fec606c8c868ce57c73fba9fceb4dff9eb6c1d4ae061",
+          "ec6b52a5e6ade8f69c5b6ad08b4897d26b2de5948ef4fdfe84253128043d24a3",
+          "a0a43800ee05045bcb85186590ec076e9633dc7cdea92ecdee0120945202b773"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "da257d11aed6f264b40b2903237d91a532fa60ba56ad24955d0325a4222af575",
+          "4351acdad417832c0b541a762f7d614c74a5942d5210c3bb62b11006eb3ceb91",
+          "7b2d1d095fd5058bb24196c4d3b3cb7c04b6bb1013ad365602378f19c3b8dd29",
+          "e8379f445a2d9dab33e8900adae8317a4bf97c32168a1740da2c5dae3e30e5b7",
+          "bfc0b86e861372514325344997e03fae7286f7e1f5d79d584113eda05644ee1f",
+          "2cd299cff69ccdee296de0e6ae1acd4c32b0d4bbf4d3363b3eabe04884af4680",
+          "e705cabc25f85f8e642efb321bef0e72139bfd101cb3cf06fd2ca862955b2b08",
+          "3a5ec4cb494f0154f0c2ffe0266c81e42ca4839368bacc80697dd801ec8a120d"
+        ]
+      },
+      "attack": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/attack/raw.png",
+        "rawArchiveSha256": "88d79a7cf3f0474b889f63d7f3da49fb476c756b1872eff0856d0e5ae612c91e",
+        "prompt": "prompts/production/battle/front_3quarter_sw/attack/generation-contract-v1.txt",
+        "promptSha256": "9349e6df1b8b398ef615bb9d551c6ae7c7a3fa40077f903357859401e6c2cc69",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/attack/build/pipeline-meta.json",
+        "pipelineSha256": "46a64a378320a43edfe1aea0b84dac678a5ff40e3e2be65ef4645742c0665381",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "f58fb0fe557e44b5f8fbf286e755c1920540f1b4f9883ea03cbee1e8dd813607",
+          "7b4ade6f6ed99b90c217cc6d9fa680979ee363475491ad47ab33d6d215f99bb1",
+          "e933a76e954bcb9f27761ac80b6c4d92177da2e527dd0f0931f7073a7fe9d7da",
+          "ceb084684e6209fca74486668698f99080cad071046df3b2c472e3c5b3b53cbb",
+          "3a454350b8c29a3a3f3c92a1d78bd086aeb88fce5ae4a95ef8da3b40168bd670",
+          "a1e91fca0bb30e6d5f10e9d4a8431ad582270bf160d63e95849c70a46dcbeb91",
+          "49f41373ef314a42d96bb6dff7e53a5b6ca629575fc5fc981bc54300e25ad3e6",
+          "bc4e6e7a7dc5acef1bc6bb62aee45aba91c3a520a96fc1ca3c901267956a2d5b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "529aa9f9c66c4e03d633e0aaf7ba60b5d89156fb6ec005cbd2f53678615bf8fb",
+          "3f51063a2b09ef1bae8f33b615e49dc9d98c2f946803900fab69fd47c6e55917",
+          "16fcc021457445d540491cbef8399c98f5c8a7d707154db5ef3e5b3f0c340b40",
+          "0c3717f992b178884f9e75e098c748eb06db2b87160baa1686b46b44bee4e7a7",
+          "b46ed3ba6700b12431812191c6a9b1c7814a7ac8047845edc8259fb4144a034f",
+          "f331b5f1c570b2df5bc87fa316d404d69fa0f6b8770e70c3f96e298b395b5dd1",
+          "16b15ad2f04f839095ea58e7d9a13df458a22499f62f34747adafeefa99d905d",
+          "5af18b7291de1d50c3909ecab75039163963f5d363a53733cb41009338b7f760"
+        ]
+      },
+      "skill": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/skill/raw.png",
+        "rawArchiveSha256": "3bab606dd02bbcdcb2fb56d16f337348468127e8f8d30d26f0bdafbcbf621090",
+        "prompt": "prompts/production/battle/front_3quarter_sw/skill/generation-contract-v1.txt",
+        "promptSha256": "c7c1488e502870493a862a43c029a4a5f702f19011e859fd42d026372e15ae9d",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/skill/build/pipeline-meta.json",
+        "pipelineSha256": "bcd8e7d1bfe6452233193df32474dc0d9974c97a926a2a7af84f0273f848d342",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "54a76a93f88930a00180f0b0f88eea347346e91ce93a3768319ed9b9015df4c2",
+          "49b6f2865df68cbed538c9c4fbaeacc7650d345e672780eff9edbc18df11cc39",
+          "86817467e1d8e6ceb538b0c6eacef2b7c1dee3d5986bac9191fb1dc13e765c10",
+          "f5e593839b1ba3a626e6ad2caea28222205916fac900293222f4517625f5f7e7",
+          "2a8fe2a1479afa22b55cdf29d2550114b406c4d11cd4a6dfd7ad42357b240584",
+          "983f093016889d7de47692c6e0dd16771077ede83202a549fe064fb7ae1ede54",
+          "6fed9f26f380aa0532ecd81311917e93cb0f8462cc04d700f8ee7c8190d213c0",
+          "6ee0f545ad2b8c8c70eecf8c0bfb829cafade426e7bed95aa5526d5ddcb20074"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "b4a2dbd8cf224ba24c300da895a3e109ac6c8cdb94442717e908a96b99130362",
+          "4aec7a91ce2ca89d98a5ec76b8cab41544913bc0807a3d7c72ebb3133010bac5",
+          "545071e02d88e27626f899d4faad9ca25333e98228672641421306a79d0ac15f",
+          "5f19f532cc24ecb262be9bb4e62919344a6d3278fb4a4b33ca9489a99426da0b",
+          "31b1da7c6b1b57ab562cea80a01c30141a710ee31b8f5aba39a28ba8c4210262",
+          "6c02efe21d2563cf2df69d75e7904c737fc148b158e8d7e4638f61489089d34f",
+          "5dde2d01d0b84ef883e80e3de3cd53611ebc845068dc9cc2a2eb9cb7d0a154ca",
+          "e1d9d4cf75d551b81b4833afdc3424a748da4d16b3efb4fc14c97a788d9b3041"
+        ]
+      },
+      "hurt": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/hurt/raw.png",
+        "rawArchiveSha256": "27aa82f03123cabb5c94e2dc1c73678a118260d0b29d491f94bcea7fb28c69e1",
+        "prompt": "prompts/production/battle/front_3quarter_sw/hurt/generation-contract-v1.txt",
+        "promptSha256": "9f1db86c9dc1b19b086518da35e9ec0681c59bc3720ae192fee52ad713f38eaa",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/hurt/build/pipeline-meta.json",
+        "pipelineSha256": "18904102a41f964ee7dee524fa750ce2f451bbb481dc988aff07ec27fb55d162",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "e4f1be597eddf2d82777a7ce2b377488481745f52f83f40b2b2a614bd0728975",
+          "8d20538a1773c620270fe68382754dd4159b4c7d2cd13fb76350afc10f466fdc",
+          "4dc16eb84578371776bb8cfcdb3ff3aed1464c62fb1d3e02c2ad16ebbb6e2f0c",
+          "73df2fd839586e2489e55034c7332244fe88801e34488d3ca40f7630829eca4c",
+          "aca09d26830a7fd2c77a30be0a296c86b67c798dc8d6ee94d41867de4eb4d684",
+          "fce27431c88b68c3559b2a7f8d313da33707f8300bc4c4303941a9a8fb9e9aaf"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "4ab0797bb99e8f407f11239295a791878fe596250adbadecf936fc73df91ef88",
+          "d2e30e584ed89beecbc13e86fd0e50d027f7c13490523f83a59231cf7290b4e0",
+          "394ce4188f622b1c1f3f00edbd53828619801244d61396839ecb26e6e17997ac",
+          "9fed88a6e47f4995d65f650e789c951def6d2f88feef1be3b20694208c37411b",
+          "25b2c3b64357611d92533fee0886f7d8ca64bad1dda2a6286e9000a4248b442d",
+          "5b1dc6bbb0abac5a2e3ea4d0789a8cd2b58e25935a79d2e3dd07ffaf1aef5d76"
+        ]
+      },
+      "defend": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/defend/raw.png",
+        "rawArchiveSha256": "88f98cd0aaaa25a9dd5234a88a1cbfe3dd941186267e0a1e1c12e2ab8f9ae86c",
+        "prompt": "prompts/production/battle/front_3quarter_sw/defend/generation-contract-v1.txt",
+        "promptSha256": "6ff9c82336b3b8cfe83067b4363deb3c433c7f743916ac19b938889ce019e4d6",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/defend/build/pipeline-meta.json",
+        "pipelineSha256": "e8b2deb08be3dce5b780cdcd49b749ff2c6a3010fea6edd591d0d43b4b34aeae",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "ce9c3945a77f2d86fdc81f4ffb8b009f252f0aa5aa5834ca0a5a6eb25a30e544",
+          "1518e70d0f1d1957f3d7886a8795e8efc4d3121f7d48ad559ebd706bb27a54a4",
+          "1f4b33b9e27dff3c08d85dac1330e8006275277f9f9ffe674918e452fed5becb",
+          "9d79735e60b74e0e124b30c7b90bb3e1d9737e58f23c3f6981438d3006a49b75",
+          "1d840dba40a423f62ce1eb9f9b33367ca4bdf3f2c4fb4f10258315578bb942bf",
+          "6e3f60f9fe2374ea521253c272bcddf31b108b444736ba5319866d8b22ee3cd2"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "5ba4d2c46774b14d3f4dd33d5a388a1a35f97a58b088de471e4039629060c54a",
+          "3b96269f5f6682b8c3695313d7844517f8931d28bdf61181b810a7316906f06b",
+          "99d6168a5f6a7f6d6a4ba78568848895abdfe5b9fd0b1d4f8e00eb58bfb1804d",
+          "66e6ee16a41f58f693d79a8bc2c21cf88f472b465e331ba9186ffb8e21d94534",
+          "f0a1fb64e8b99b53f72013aaac8f36657a3f39065fc9705e5ef2a17371b9b68b",
+          "255e4b0d2c4554aaa7f2f7bb0d9485f6ca5e9dfd2744f0e5a9df9d283896190c"
+        ]
+      },
+      "dodge": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/dodge/raw.png",
+        "rawArchiveSha256": "bf7502287331d70589f85cabfdfd524292206afb30c867aeff228521f463a9e8",
+        "prompt": "prompts/production/battle/front_3quarter_sw/dodge/generation-contract-v1.txt",
+        "promptSha256": "fed83c1d6867808a7ff8731e910b6181d50e418dd6dad97e39147b6ab97d9711",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/dodge/build/pipeline-meta.json",
+        "pipelineSha256": "bca04e0c54b10067307183932850e8d53ac1b5672b2c0ca35967ff47d2aeaa9b",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "aded5a6454ef36cd224a5adb6e51905f6736f8adb1211f59415c3d8b486ce2d2",
+          "3441b0ee26bd45e9b6d85d6eef71cdc65b982c5be006e8fe06b0cb9fdd9182f5",
+          "f167a5ea8d7c56c9fb28cbef635339e68b4f8d4921e0ae68a6dc84cf67adc16b",
+          "9ad4ffbcf7594060b338ccf47fc039c3b1e7888baf4dd94451fd201ad70c5da0",
+          "e5fcb30302275ba1bc3b342713c4f410561ce35d3bc98a872af516ea00bdf04f",
+          "77b0821d957d0107981ab77001acde3048cf20a337a76a46ccc728862992981d",
+          "5145fe9ed48d0ec28b251a8dd5732caa14fe1209c559b3ad34b2d6793be3df39",
+          "c1071704458c9617224d8215e58ce5f4a22dc659533cb45e3c6df2e0cf12ca33"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0790a82088ea5babdf35083f259c0289c0530d967a8e17f5214606dbd5fdc363",
+          "5d53276ecbdcbba0dcdb166a1e0c28bda0f6b98e306481ea8a2b6f1df0eb7528",
+          "77609268e06c304d196d3ae7654357f0f4f5234f0c0cc9c1175b545b4a30769d",
+          "83b3761f4466f4b5a62125a18c03143517872d778f03dfb179fceb2e112c44bc",
+          "cbea4b2ce82c33ac23a583f5287a1572e37e6231ed7d6e974089bc854cc89a21",
+          "927b7f9dded47ea14f8de42d95e94dd0d0d90512fc5cb815d6961dd254616092",
+          "4cf0f470e905c838acd52d1ffa34f86041e88f1e9acbe4de62adbfbf2e3d4074",
+          "06c57c8a83096e0a6e487cf19412de70cf2a1b27da30305429bb91ed7e082966"
+        ]
+      },
+      "counter": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/counter/raw.png",
+        "rawArchiveSha256": "5382bf658839b1ba47d7fa66dd74e69bfb6020c799b09a721a24382e44a7e297",
+        "prompt": "prompts/production/battle/front_3quarter_sw/counter/generation-contract-v1.txt",
+        "promptSha256": "a6716a23394060db47acbfd5a4d81c84595c5bed354bdd7894757e75433e22af",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/counter/build/pipeline-meta.json",
+        "pipelineSha256": "3f03a4974606fd887b23c48785cda2963a7566fa7bde4ca835f64c323dee277c",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "11f4b3602c47ba3cae752bb7b975c9938980020e39329a99048b2936e2f30e4d",
+          "9335835e7b3acf23350b36afba0ef233590d14096d25f73c1f5fa8e0e93a653e",
+          "ba53be3c9027cedfb748e60c06b3f553b1afbe83932d9156d2dfbe7abec4f738",
+          "e42cd9ac31a3b05d3050db3bc64f7aabccd7c0c5ef11e82159889c9202defa74",
+          "d5d3ae31d69f55996e0dee329749d055782b3da1ff3885ba87e2e15ed3541bcc",
+          "a9d9537fe1483e793e3bcae9cc85efa734d33f4d7160a161930d4a38a5bcc3fc",
+          "f72f9f735d70cd37c7ea28e5d5cc1229b8f2d39a99212c81d9cfce6cdb40d0ae",
+          "dd582b601df20ecec7cea7f5c31f221f40e767490880fdf41cc9586bcf1f48f0"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "c380ba196a746fb6523336eb297e927d68f68a22e6b15e0bdfd2659d98c84d8f",
+          "1ac0c2df7e6ebde76680ab1dab668992a907be93a3aaf7d518219a6aaaf0983b",
+          "9609c0b56bc0f887aaa35078cf3ddff534b4d9a1cc81fbd4e78b1ea182d89a9d",
+          "c33298e8f4b2f531a2f4cf60ec37c4e4f60c3500070b07551e6c25b0cbc1da04",
+          "7d4369665e6692988af4b0dd2230ba4ce8d58a9ea00c5071811ef7a19f097c32",
+          "a8fb235f7cf9a7283f6b7481ae0f9609810904c70ecf7db82fd9ddf13aedc251",
+          "6491bfe06d22f051fa68dc24a3857c1ef0e3e59530c61bf132ad7a9ac234b837",
+          "9d45fb96204c0ad6b24394b94fe15a1388b342ad829d246c228e7cf437cd8b0b"
+        ]
+      },
+      "stagger": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/stagger/raw.png",
+        "rawArchiveSha256": "ec2acd3c0e85f47c2701fafc4ceab355334829e7d480cf446d102d128a5c6c0a",
+        "prompt": "prompts/production/battle/front_3quarter_sw/stagger/generation-contract-v1.txt",
+        "promptSha256": "ebd06866db78dae7006b984119d87053792a675131618bba7e2860bac6fcbce8",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/stagger/build/pipeline-meta.json",
+        "pipelineSha256": "c2a382c6f79062c71a90d1739e9634631ba39c2ead1924eecad6ff9ae371613a",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "32f8c98097e544e4017f87909c3476edb1a7654380f58fcbe3782cb103261bf9",
+          "e2ebff6bb2edd3c1366e2bef364c884fc87da074709c2f70b33506ec77843785",
+          "1132ec8830e3d8c738fb1f2c633a9c2a435ff3f6be2315f27f1f5c701fc02c1e",
+          "67fc37602165c0da35c13bd250a27ea0d084b691ea49bd71439eabd4bb6709a3",
+          "23b5a19659faa6d0f3eae779d9d510805191f89ac44238ced12178f77653353f",
+          "dede2705a48345a98d41ab289eef9fdba2924bcd59c722bd38c2f6fff75d4157",
+          "1ffadf5805dce17b813ee4cd96a9724836e11384af61cdc60140f7c794d48427",
+          "1c6b9c7e5d65c0edf59ac7587618e30f2b665ea36a49507fc9074e785826507a"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "d4f429e77b48c69026d033c816b816e5beec45c0b9ba5b2a7b40781c35ce7f46",
+          "87baa31cc00ec4f3af7fe3b7664195782692e4935f9d81c703597a7a6471a0a0",
+          "77e46c29555dd4a3269fa77518f4013ef2cadf3105f76d304ab20039efca7ebc",
+          "3ec24d8d3dfeaba8bb4bc542c4765137eab728930089025b932f13b4468a4681",
+          "30964733d334efe89bb316d847dff2dbd0291739c845ec44fb1dbb55506d88c7",
+          "2f2b753bf5bcec6c17225313769e5230d009124abe6e7eb64d74ef6116e6f954",
+          "4bd8f649f7bf47441c0348c5231ce32b1a3150be3c56819bd104eb6d3415ea3c",
+          "164aa384e4521cb52cc70175b5843de25608ce2d61f7322d671956036404043d"
+        ]
+      },
+      "knockaway": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/knockaway/raw.png",
+        "rawArchiveSha256": "881ab4555372b77459d0d5dfd0a83a5b074f7d5217d90a953b3021eadcdc6925",
+        "prompt": "prompts/production/battle/front_3quarter_sw/knockaway/generation-contract-v1.txt",
+        "promptSha256": "ea6c8ed4753c8eb42e949cd18d6b540bf33652437b53cfc0c411332c16c06342",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/knockaway/build/pipeline-meta.json",
+        "pipelineSha256": "9d500e8a262a0c24ca9a40099f6d26fa4dfbed60dc7f27ec659b394a6079daf5",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "ba792c617325f333e25a8c64da8d2ba000512c696273b1f16115f2712fc66151",
+          "6622d6aae67b94ddb6ee286a4e35d2b220845ab44565c046765fe9e0761eb0b9",
+          "e794e92bbed1c1e2b380117f18ef7d6ae7fbc76477ceb7ab90378028da7c15c0",
+          "c5cc9bee7af36805bd83f9ed7ae5aed1e528c3c426b1b939f4311fa0dd5d415e",
+          "78b18e10d62538eb230e4e2fc8b7525e215df1c5d6323d883cef6c005ce29dfd",
+          "a14bdbeb590d7aa3a05062219d2e031d9ab9151e3c4b41d4d236530bb2b9f4a9",
+          "88678716a0b92c63504a4abd43672d3b9cfe1ffc0c4b0af8dec23120c7ab6b4d",
+          "fc07509eb7bee95e3104fe73615ffc3127ef25970cd10a1f86a3a7da36d44511"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "78f27b03fddbb3b9d96254649f26209812e9b027df0e0ada616788ce78df657e",
+          "ba77ecf6b329b86c04cfe85432433c5f79a6a0b50280986f3904c39734fc60a2",
+          "cd8043454e94ffa0c16d1a905b4a40b93554e1756e066fc4226ccc4c75c18d27",
+          "46d2208076242f69a441e72b919525913f9044b68189552b2bdb8b7019315369",
+          "682250af8ed980527b2a15e10da78f700c05be062d05a87c50c7a05bbef82ed8",
+          "f9c2dfa78882b118c7b4e2806704337839b03c13af925ba689d223a454636b17",
+          "4f66b79f91a9bd754e238f652aab5cc82ba1babc65d8b822a5e55f2cc57a6b98",
+          "9849ac108c2772ff1a03f264781580738fb2b962586b8324fab0afb71ca2f379"
+        ]
+      },
+      "down": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/down/raw.png",
+        "rawArchiveSha256": "660debac254c388b305312bce1227bd16dd10239bf56428ec93883a9f8312f13",
+        "prompt": "prompts/production/battle/front_3quarter_sw/down/generation-contract-v1.txt",
+        "promptSha256": "b049b6b3a8ab55209f1f6024f1f6e448016e407f6c47f671e1d363a508f9a762",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/down/build/pipeline-meta.json",
+        "pipelineSha256": "22253d95c391044832d05397d846bea1b9b44eb02086be766d744b0c8462c391",
+        "postProcessRepairs": [
+          {
+            "id": "faint-eye-semantics-v1",
+            "date": "2026-07-20",
+            "view": "front_3quarter_sw",
+            "method": "AI-guided deterministic face-local X-to-spiral replacement",
+            "expressionReference": "/Users/fander/.codex/generated_images/019f7b96-823b-7e20-a832-4d9534bc0dbd/exec-9762fdbf-201c-422a-9548-aebb42f55f8c.png",
+            "expressionReferenceRuntimeRejected": true,
+            "reasonRejected": "whole-body shape and registration drift",
+            "alreadyCompliant": false,
+            "forbidden": [
+              "X eye",
+              "cross eye",
+              "closed sleeping eye",
+              "smile",
+              "death symbol"
+            ],
+            "required": "open spiral/unfocused eye and reversible unconscious pose",
+            "source512": {
+              "inputRgbaSha256": "f4a52dcc68da7ca2e6ce2c11f8c899bb31f85625a4c8362b0216f68c19778eb3",
+              "outputRgbaSha256": "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591",
+              "alphaSha256": "0bf5428cc8492bdfb2232071674a63799bda736e71eec4517fd6a9a134abfff2",
+              "alphaPreserved": true,
+              "changedPixelCount": 598
+            },
+            "runtime256": {
+              "inputRgbaSha256": "623e7ad987d553151f2ce28a85f84907f4b726069355165b21e102a7cfc9e50f",
+              "outputRgbaSha256": "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd",
+              "alphaSha256": "c23dabf3099d280e72845deec55ebf60841ed4920db5f1d4c987ed1af219e474",
+              "alphaPreserved": true,
+              "changedPixelCount": 197
+            }
+          }
+        ],
+        "sourceFrameRgbaSha256": [
+          "dbe063f407cc3ad6fc4cb153649f4cf58dc65df58b241d8621b39ca6d3bac1f1",
+          "ee941d3c63e71253407cd4e54d32cbf5ef9b63ab3e32fbef8b3c8c6906ab17d0",
+          "2620ec6ecd993f462c277b0aeb72ab3685c1aa843963796444e431e6e9bd5267",
+          "eac55ffbcc54fb29f3b39e59da96c4cf022deaf8de1d58e7bad86eaf86848a21",
+          "0c0cb9c7e1230fe4826df0f6310b2ee92f0988a11a27eb1658ce2289b7d7350c",
+          "947449661a9e38cb71e696e6220549b099bf5e2928d9336c6cada8cdc8709e42",
+          "e981a32149bedbeeaaaa463e10712de861f8c248537745b3f13f3f32f71ed67f",
+          "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "d091a8d0ec0d13565caec1a4a763ec5de2b3c4ad0570fc506a6ba1181c8fed6f",
+          "b76a7d36fa244f248080df5d2efe05963f74ea14a84d50490ded6993460f9d4f",
+          "1269732ac14476e4992f3b08e8f4a38805226ff5c1736e2edc5c0c0f3dc09d2b",
+          "4556c50a8bca7a2fb2830f61a8fa55744426cbcfdd3766ab20c62da7ca80aaec",
+          "739707f73ab6fe7e4d08c48f6435e35f68a31233c9f46773983f071e590a6226",
+          "dba5ee8624a2b30ef4e59769d4e565f034f24f3dc5b3d2794edba3c2c2eef810",
+          "99b9c443ed003c42efc77c7176e7bf4b83da1fa50731bfc8005ba41ad18362ba",
+          "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd"
+        ]
+      },
+      "revive": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/revive/raw.png",
+        "rawArchiveSha256": "2fd1ef9ccfb87e0425a498ae4e4979852c26a833630e23f2417068530b1653dd",
+        "prompt": "prompts/production/battle/front_3quarter_sw/revive/generation-contract-v1.txt",
+        "promptSha256": "057c50bb10a763cc148a372284bca07d59e1b367e783ee200d1c5cac6df85129",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/front_3quarter_sw/revive/build/pipeline-meta.json",
+        "pipelineSha256": "b91690225715d4d9e0dfaf1648b690b2ce12db47c6e36725fa5dd13dcea51124",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "1973499dd7048fcaff4170a1ffcd2e9e162d644f878be40c34f497530a400591",
+          "34cc430e2a66d0e30ae638642ec939be1f4966ca10590d90786bc09a35e0db7c",
+          "420a8f57f3644fd0c3fbca8c7a6c3260ecdb363846fb2436946f10372f0b1cfd",
+          "3a89b6ad66aeaa5324a1c5e53f11009a814fb39f604941e89e403e9eac645ea3",
+          "1d70dc2ac90656009c7021b3ddfef74dbf71638b4c1dcc57bdcbcfa4903160fc",
+          "b51ab85ffae951a1837b1c933870e0c4118e2e1734ec123e1fb96af228a3234e",
+          "0b4bfaf31a43ca170e1dcbf22fe5ce9a119f9fd86865c2d82165e9cb92883023",
+          "abfd94d7aeb46f6fcd7633397023884e78ef801a230f05eb66c992f0e3fb2469"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "eb4bcb4f2f6e7c890356fdee8779fe496e4b770e20138253175b3ec8f7fb6ccd",
+          "29bda1e5d87d59373437b8168b8b2eedc27cd54b973026ba197abed5614a3d37",
+          "8b818f8d2996debffe0fe82b1db3a07d619c243ff0652b8d168b23d3c1de820c",
+          "cd1e8ef6e1c0a32b349eeeeb350b9123ac56e57d61c9b144b2407d75d5b6b308",
+          "e821ce89f3365a2d71694768cad472a6cc970ed217a3547ef2ad7a89567b6312",
+          "f8d8726d85d3f27444c3e61522d7a95cbdc55ecc454b652d1b50920a72d7b34f",
+          "15d7ba2ed0a05950c8bf12346d6251cf0fda8c32221d345da2b5b33556b6c352",
+          "f1d083f641aaf82c73cdda2d7a471ba871ec16ff2fa9c7fc6c25345e436fd74b"
+        ],
+        "continuityOverride": {
+          "method": "exact down-8 copy after pipeline",
+          "source512Exact": true,
+          "runtime256Exact": true,
+          "reason": "revive begins from the exact reversible-KO hold without a pose pop"
+        }
+      }
+    },
+    "back_3quarter_ne": {
+      "idle": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/idle/raw.png",
+        "rawArchiveSha256": "eeaa51c0dcb5d4bf617ad642bc9e40226e318218d2de6d298f069b044ec5ffd2",
+        "prompt": "prompts/production/battle/back_3quarter_ne/idle/generation-contract-v1.txt",
+        "promptSha256": "72f479d659105440154d670d2bf14b10be129a22ea86a581268b663faefac037",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/idle/build/pipeline-meta.json",
+        "pipelineSha256": "10b7cf4c2166b3821d50b42eda8cd99fc40a800582268329958fc47746a84c25",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "e023f03259e0c25a029bbfae644f4e17b5dc9134543e1f1c9534adb685b58897",
+          "b5e83f7580a6dd56c4ebd7f213750cf73290f30e366b9f5444b19c25e0233da8",
+          "664f3cb425874848bbf82bf6c1bd150e56bfeb244ea10c7a7bb0d6b676aae063",
+          "71088de81026164ebb4fb5233d90363b58be8c5d170bbbfb7fc93210519a929c",
+          "81bffc73a84f524ac9967035f31c4f3f8e44f88efa32571ee25f603cfcd8c49f",
+          "665d47295355d4438e06308fdef3dba4927ceb1f2a9418bc31ba743915520fd0"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "ed2a45848e9349c3c67d2527edd66b8237848fd320fd029489f94f84c516a731",
+          "2807baa5c3cc30622aff8e8f055654dceb017669776d53423e94666d2d35243d",
+          "1fa4de897fc94be63dc69e66dfaa9a05cd5f0290cff22b8ce7c89d9f7a2578c3",
+          "82c229669b3cd47b08bd25b5327a88b898f6f52fb0b14d3bd8ceffcdf70e6ecd",
+          "c0e63f6804e634e8d7572ca99c4a0a0f2cfdc2c0449fc17729cc89b5debad208",
+          "d481fc1dd43a4d56d27926a429dab433e1c043ab6a0758da7f3098f75cfccb4e"
+        ]
+      },
+      "walk": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/walk/raw.png",
+        "rawArchiveSha256": "1e782084e04d11112a41adffa4808c8479e189a7641b3784616957fc10dd4ffc",
+        "prompt": "prompts/production/battle/back_3quarter_ne/walk/generation-contract-v1.txt",
+        "promptSha256": "9e1b1afa5a07ebcecbdd37aa960b70896924c18b45f6a4371a875d2d51525373",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/walk/build/pipeline-meta.json",
+        "pipelineSha256": "974235f39b8fa9fefc5ea1d95fa82c8e75d8f5d2e9a9fb60f802f75ec2cbb5ec",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "a91e25e02a3ad6568b840ab4acc774242e47a6d161fdb9b847ec46e6ba546cd1",
+          "89a0dfe787af2059ede643a226df68d82ad1c6103e84e9fab19a8dcd36e19d46",
+          "8504682d468c36836b7ce250ff6bb95254a00e57733e4176f3ab535eae09fd4f",
+          "da3e3709a1976a87102d7b5bf05b03ad3b0ae576b9715caf951faee917bb7fd0",
+          "1b6a2ae26cb05e6c6bf6facbf5f0af10150e8d5c9f4f18b50aa28f0a1dace0be",
+          "f4b2d5fed7c66679743a4b8c0ed8143c31d4c7c81dd9f5ff796533edce942dd3",
+          "3cf7bb946e3d331431afa8c0a5cbcb38dd3f8b73fae98d49a7bc8401cc48c35a",
+          "b1bc27c77df51924a02356d5c2737670fc8ada7a26f872a5281b9905b8b79b22"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "39a252cb195947ba4ed4079e07ab4c37b17f89e0aa5a27b4be20ee067244e581",
+          "20a8d2ac144f3ee10f3b6e57f0890c5ac19cac517aa61611e531e206902cbe54",
+          "fd25d28467552f9842ad58467ee372bdb189d343fb1eec0a874e3cd4f849773f",
+          "49a897b931992284772ac1deb90c0dc3fe858c7c7203f63da536deabe4d92ac4",
+          "078e582782376507c7c96b2fe46b63e59b0385f9909362af77351562e8f177a0",
+          "5fdb5179af71fa46af0c93bb1ff5a2a4e9109660c83193d9f4c8fa1fd69b7246",
+          "0ffd96ba6fb40d138cd62265add769b296a43a64bdd73c307a9f278db2720263",
+          "707d9d5907742e2849d0c3e912e2188a189c513b820550e0d8213ffba1ba7fca"
+        ]
+      },
+      "attack": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/attack/raw.png",
+        "rawArchiveSha256": "b62e464aaf3c0e8956e5a931522454014d37b227372a9e8d958c19f2ab765264",
+        "prompt": "prompts/production/battle/back_3quarter_ne/attack/generation-contract-v1.txt",
+        "promptSha256": "307aa04daf93fd24a662a1d5b52ac1cc6b42830d910ad725633494dcf4d62879",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/attack/build/pipeline-meta.json",
+        "pipelineSha256": "3875c9338f3b3c176d0aedb04fe5ca4f044867b92d294c43e5b93ccda86628b7",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "16342fdaba2c30fe0e5bbca01ec5b0bad85a9772433c230649e545959d3a60ac",
+          "b17213757612ee2ede9199383fabf8c01c7acaf1356424110417cf3474f62309",
+          "ee5efacdca083271632c0527b884bc4ae61225b0fbfe1f574000a6a0cf054cce",
+          "144c9f0232ba8393789e1d171b176746983b4f58ea5c81f86b4df4185bd42865",
+          "f5c5c5b1bd33395d001c7ef7d88665260cedb532b04ef99db4dd60ea98c1974c",
+          "37144ecd0da262816d7041b04376041036c2e1411ce7e457cb66f079b6e9bf98",
+          "9c163962b075d1b8b509b050362ee6d81aa7f93263d2458431d1345be36acd43",
+          "818ccc98bad98f0a9251441b330f4c2bd1c7c7e9321c8749b033fa900bee2648"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "7f5795b94498f2c58a8a03d182fe2094c4f37f5a440ffda9b6cc3b7dbe10b3ed",
+          "99d2c7cdfb88e965086cc5ddc372244a19d6047a74646feccc10e4db23329ccd",
+          "c9ae5b7167d55ee9e7323be7fd908e08a4492ba55a406c72eabe000cc7af0574",
+          "4d49775bfb4c1490186b310b4a6deeee98c7129c3ff8a5292793eb7c47cd3137",
+          "3f361542bb0f55e70fe76edc2a31b2c61599d8974a5fef854f46c15b9d60bc0e",
+          "229a5995818ff96b921a148e57e5b04d279ffd31e61d555c2dbfddfb8d4b4851",
+          "859c6d7349370a826da5a777d44e1ca9b60ee543a620cbb8c2c230b7bd5dd175",
+          "34a709de695879266b719f58ea9518edd932ad26b74d0cb164fe1acc9e770233"
+        ]
+      },
+      "skill": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/skill/raw.png",
+        "rawArchiveSha256": "d7899fb8d1b837ff4d5b120bff86a44401d1bbed4624135af8421dd91a78c665",
+        "prompt": "prompts/production/battle/back_3quarter_ne/skill/generation-contract-v1.txt",
+        "promptSha256": "ae82a2137a7a0420eb1ad9df1439f0755405c84b093c27195f4ec2209a7a9319",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/skill/build/pipeline-meta.json",
+        "pipelineSha256": "5c9cc1f34edf9b16c6bc38470565d0609453d0231c36acf895b78cd7989a1f51",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "a7f0d6b5c445c14e6018db405599557359b079fa54b78aa6945c4c52714a88f1",
+          "25e3774c23479258b57afea437477caabf105f35a90ec0f39293293915ce3a1f",
+          "eceb08216eed4fd93b26282daa8ae16a42435a93873d895cd6557df0e020f075",
+          "a9b4a1c5f28413b3652c23788369085c451903916a704aace21a0b8d692477e3",
+          "969f9e98e730e3c64d8e53b4911f9fbcf02977926a5c36488d6a7ecc40234460",
+          "acd1b47038fddffa8366ce4937f407a6b4ec71171ba7d1db85da68c765e4af0c",
+          "ae8d73dbbf6e581b5a8da4212b8e1f450dee3f37896605c012bb9c62a47fd120",
+          "a9b9a89aa5416560bc615434b842a4a65da83cd3464c695d5f6225bd360df640"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "b74ac0d74a408ad8b1c98c828cd65e249a77d7fcba432d212f66c580e6ae367a",
+          "366eb52b81e3fc22b0a9bd9cd5639006eee166581f2e53bb1288a00ee03e1903",
+          "77abe48a2becc6fd4f55b2be90d0e28ccd86e38617ef8975cb2d23c62e7a8fc8",
+          "1d27762e2487c6395666cff02c4a4bb1fe065869152aba4525cbeb7e77371e6a",
+          "5f1ba526cc85825f34bb47fa13eec42cfd6be083d1a88bb853d085e1cbe2518d",
+          "2d3d648759bf03a8fa7a755031ba28a562cbfac1bce78418a058d7ad42d7a0f2",
+          "657120aca820e03478297028577ea2c6fba7552a2bbe5c08410e5944963983b0",
+          "8d86052ab9d5d72eae7e4a4eef88507f40058085782187ee522690fcb5fdddac"
+        ]
+      },
+      "hurt": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/hurt/raw.png",
+        "rawArchiveSha256": "b28edfde069297c986e0a9197c25a7a1c90dffc1d09f06993ac89f05fc2d9f29",
+        "prompt": "prompts/production/battle/back_3quarter_ne/hurt/generation-contract-v1.txt",
+        "promptSha256": "5bda7338241bc229799deceb240a54a90cb0c862a3d0b40947cf136176f028b1",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/hurt/build/pipeline-meta.json",
+        "pipelineSha256": "ed3e0a681d5247d7fb06439da472aace100b56adf3c9a910ad88c03b53d450ae",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "5c4f8e45e4b369beb6ebfad3e4b0402602161a944ed907c81477f59160ec6e01",
+          "22dff8428dfc3f54d23eddf439ac0356999fdced2fa1b29ccb9ecefe6109ceea",
+          "028ee10c7e55802d023b538e249b6c58740fcf6e2c52be42f4831d91bde6814a",
+          "1acaee88aab611271106a7989788a927e9173e8b7428d021fcc10fcd48288e88",
+          "11b1ff11bd9ae7086acb9c9c5bb9b9bfef4c729f5b2c30692238002e63876dec",
+          "7a587b3747c3f199b2418a8129f7f53df28343e39c6cb9932d06d6bfbad39042"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "99023ff8e62510b7baea264ab169135a27f52e096c9fbe31ef2e8eaad7dbc0b9",
+          "7c55d927eeabfab083aa6e8a94f5eac747cbde82b7434eccffb9584f3ba6c788",
+          "310de9d354be829d333342f16c5bbd9e3eefaed60ea315e674792863fbfbd4eb",
+          "96a089a62cd61e7b05aa1d40329b38f353f41341602afe9c1cc1e28e38a7bfb2",
+          "f3c3188c695514518c99103358c94d3003960fb29f2ba001df79a97a00857bbb",
+          "541c5ac9b30c8720e015496588ba2c2645cbe5a45626e54fb9e3c221037ee85f"
+        ]
+      },
+      "defend": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/defend/raw.png",
+        "rawArchiveSha256": "c83a2d72ac88ba4a2c8661c985b27a597e2f99967b61a1289c231ab07cf27ced",
+        "prompt": "prompts/production/battle/back_3quarter_ne/defend/generation-contract-v1.txt",
+        "promptSha256": "212980fbeed98ffce2e8eac23bd0814b7185e3d34eefb309381819276d3e8767",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/defend/build/pipeline-meta.json",
+        "pipelineSha256": "6f0cf3ea4ae6d64b61b29ac6d669ad9786daba648544a29aa0aae70d31a14950",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "d1a4ab3843f1ae2f8ba15999dd2cd754f0bdc730844985208fc5eeaa92b7ad03",
+          "e62b53fb0ffdfea1cd64544fe244d7a21f65e6b423d77f91c38881c11f6834b0",
+          "14604543235276ceed8c1c4b5e034c3192280c68b2269ba2f3731f3742e23ee3",
+          "f92711f24c763ddb6a076c59cfae9183917c531c8cc704b4b669c94071ee40c5",
+          "a92d8d9cbfe5d22c82ac603b6658e59aadca0d6502e4a3c8a22714c852fb537c",
+          "72837fc88a32424b26d4d39c7177dabff474621818dd91f0886163358c5b396b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "f467247418ad18c756eff54d18433ace3d57dc42da7e99df1fafc6065b8fb822",
+          "6b9da4c32b607dce836ea2c213e721c32883e185e5823e68265bcc0608be7d89",
+          "aff6fab770e105aa9aa09e2fc8209edb016d1e8f9936b062fce2eee91ff6fb38",
+          "c144d74626c4d086d43bdc0f90285d2090704e5ca7974e315e41e32858f2877d",
+          "947c09c13fa4f2b69b1ba8c00efeef77bc581533572fc4e24be496be362a2d91",
+          "af4a8fddf79c5cf88c6ade0901dcbba170f761b4e6d82546259e61c302ac6733"
+        ]
+      },
+      "dodge": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/dodge/raw.png",
+        "rawArchiveSha256": "709a4640301b5cf0c95ca2bee4a0cc0f6fbf717d9da52d4f0d252433445cc800",
+        "prompt": "prompts/production/battle/back_3quarter_ne/dodge/generation-contract-v1.txt",
+        "promptSha256": "8bc42f51ac2bd76e3ecb0e903712c92810a9192771c2656a343062c6d9cf8be6",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/dodge/build/pipeline-meta.json",
+        "pipelineSha256": "3baa910aee1302f96800fdd83be13dd2c18f100f6f0c4db554c04090faeed209",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "61365aeb3ae9d3bde55edfca5f215fc89b57475791f0e9c7c96601665111a0fd",
+          "d8a0a924ed99b9faeaec09152040652c1ee1512d9a21337973417a1f6835158e",
+          "28360b7bea64cfbf4d5b833db299a75b81b19cfa4bdc4475d5d300e2f90ab52d",
+          "820f4bac2de1d1d37cdacc6f6137af012565359d5fa5990bfaa4f14194c24b01",
+          "39455a6f3aca28819662fcfe3b9a1d0cf4d74d339fadfdbc8d5ec1c8727c8ded",
+          "f2abd46e7ea8865f6cef2308a255e0cadfe7ed418f0c5a81371a05dae69000a7",
+          "6b0c155a151481593a37f8048b8cfba65456635ef3b00f89f131f41a645a85f6",
+          "46c5a642b53eddacff9c759c17d15eed778fc685352ef8244290b7454fb4c13e"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "e293cd7ddfd2124359154cc6e231087735a1111a9ef5761ddc86ba62fed384cd",
+          "fb698e6b96c81bc759c28a30125a4a614b2c8c7c4ad8608717cc5e76347d67f1",
+          "a4bf478a9580b6e7e2c7c9159a3c80d271ce817891e29f7a7326cf9edb90ad53",
+          "b32dcfa10c8d64e88fce42816c741985ba77f8f542c61db6786d232ad5d0c220",
+          "9baa5e607de21496d2b479daff42669d58093f8c932ceb0ab6e86ee002cd522d",
+          "231aadd94359eea80d5ed464fbbd0f96736526d7a84f42c92fb274cfc0da472b",
+          "a84131873cbbfac9acec8977169ca7a79b27f67659e43f40d257a5d74dcfcd4e",
+          "0d0f70df982ab9bdd7c9d520415d9b2737c0a1deff4e7d7f625c2b5fce74dbab"
+        ]
+      },
+      "counter": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/counter/raw.png",
+        "rawArchiveSha256": "49c63ad82385f37c515940781eebceb2b332f0ac8667bd625f521e16debd3ab3",
+        "prompt": "prompts/production/battle/back_3quarter_ne/counter/generation-contract-v1.txt",
+        "promptSha256": "9dbb591e0aec7329d57a66a6157feae7200163ed78cba40ed16787ff2d18055c",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/counter/build/pipeline-meta.json",
+        "pipelineSha256": "9fd4351fe23d23e61a582d322071e2533230f11d19315a9a9672438fde49565c",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "154cd09252ad2d5efd562ee71aec80faf2c1dbfad3f16fe6611849c992d46966",
+          "797bcbe0c0e22237560c06704bceb094c8b9e563767b4d73670fe6656476bc36",
+          "fb3e5329ca927c695a5710100bbeecbc38d527d114a14c6a1b3f7d90df062756",
+          "00c4a41a3a087d9394d829922ca56594191055103c9b0c8276ac50fbecf1c6de",
+          "48486ae49cc14b01fcce8c9c070ae556b3c2143b1780270383822dbcd3bd061d",
+          "95f53912821cb9d79358fedb078d570a1955616a37d960a6c468594ec364ce04",
+          "e8e2194b82ad8b84f05fb9dd2775df53c0a3274669f37e8a90467601c6c78087",
+          "4065ec51335b754561bb7da533adda5773247d27fcca37e773c2186de51d29c2"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "512183299d60b59c39538a121d7357db58a56ea480391c1bdd08ee069781303a",
+          "ca570d1a5dbf47d2a82ea4a5ee37fa9ad20c4cf1366b910f78ca32fc70e900fb",
+          "b43b0477feb4750b0aba6d0bb23c814302e4c6c0f2742f30bcd8dcd9a4b522f4",
+          "d1e2db8b84c4c9c19bc72b8231b7c99f22283b0f69a05da94aec44ed2faa1fb6",
+          "8e81f02118bd345d402e6024100cf1947881e36c5f355e014a27c202c899ea38",
+          "90b94334c2a09fa20cbcf46b824d191723751863f72f6280a949ff1fda53f2b2",
+          "00caba62a6e902252fca64d06eacd78f876374c7abd96fc12707879438002535",
+          "23db925457a1f1958b234a468389241acdeb38a80e2691e50101a22ae6aaebb3"
+        ]
+      },
+      "stagger": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/stagger/raw.png",
+        "rawArchiveSha256": "85a96e6440659728ad7d8bbd0bb0163b974c4c28ffebfb9dc14fbc56774b69c8",
+        "prompt": "prompts/production/battle/back_3quarter_ne/stagger/generation-contract-v1.txt",
+        "promptSha256": "30839dc8ce64c6bbba2cfa51507ee59ad149dc2ff82d40aa4eda2007ef157efc",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/stagger/build/pipeline-meta.json",
+        "pipelineSha256": "65c5630f9899e8ff20751e285871e957a4f2ae9e43a26c5b1ca24adff2e6ffd9",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "e9e3b6624ced4e1de582cb67f71f5d2b1a6bdfde2692675721bd1576c49514cf",
+          "39fcb287fd041776c552076c38b385307138080512341a2858cb95100227cb71",
+          "2e95eb28d404d42929065e897eaeee11fed3a82d40056992bd399a3221253eae",
+          "57bb37beddd74471c72122ce9dc4575c139665ed86c1f7b0808d10c7a8710aad",
+          "b030958f8640d6042751ae8bd90ecfba0cdd6c14b7d2b7f4372f36484f8638a1",
+          "f0435f94f6859b3218dfe691aa6d12c50bc9f004b470806a16d11c0473b38921",
+          "1f7a04dd719118fd6f3d97948f804f19ef9ebfb9d77d1198b26e709e3273a458",
+          "8f4c9fbdc7fc4f382c6b39824136e767d61a178533dad406dc76dae46650d56c"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "35fe3171d5a8cce1e16610310172fae6555ffc4667796c0ace368b7dd2787db8",
+          "80d84610907d06598d0955fdf4932a3e337297878dc681e23b4a59c5c7a2571d",
+          "32d2311b0bf40ef0e1f99f7bd510fd9a60dcc2411e7445c2cd4cbba8d0947dea",
+          "9cda7c65ff2cac4219eca65d65bcdf2c06fca6b17eab22508180c9219f83a5ca",
+          "294bbb72b2cddd292484e047b7d3b1fab0230d65e97b44bfb8b69b88b059bf13",
+          "3f5f82ec7e96a9ea75ef9fc69235ceee3a037169c8c61b34513d2fe185e0ed20",
+          "179426c5e57c90b6b8d6d9164f5590c6aa9789e593d538bd384a8392b6b388c7",
+          "50d92faa60fa0aed20fa0fff7a20ceca1677f4f1b901d2c154021d4d33039567"
+        ]
+      },
+      "knockaway": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/knockaway/raw.png",
+        "rawArchiveSha256": "dd0082a9993673124e43c9a58e7bf1149b0a0c15f3466175b78cf005e735b169",
+        "prompt": "prompts/production/battle/back_3quarter_ne/knockaway/generation-contract-v1.txt",
+        "promptSha256": "719c487976c7192c2d2bee7a7b8528a7e60649e7cdb066458676dd3ef874090e",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/knockaway/build/pipeline-meta.json",
+        "pipelineSha256": "68c2eba550c6b472cdda503ab7fb28f62ff3f7c4f1b9666f1f62dd0b73e04f1a",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "34badcc0563f938d6b62593478879b9902197979fd0d045301e10a95807e4992",
+          "803f38a9f87d3cce8974e5a2e9998bc565094503b7f7bff4642180c6956ded43",
+          "d609ed041a8f5b8339f7c0cca758bbca487fc4a96cafea2b76416e4be79f1518",
+          "ae6307cbb98d61e7d59e4ce7440125ab4bef144e8b1a1516ac24b217e80651d5",
+          "e9eb3f23420336ae808b66be5f1a224f22b1960f002c2fcd6c6855391d474dfb",
+          "351c39fa7f833ae914d4ecfaaa7a5bffc31779e8959c9b1a34d0aec66d919459",
+          "9900949ba1437b31b5ce1ec05e30d598be1fe6031216b379b8148f70f5e70b6a",
+          "f0a8128fe8fa2555e880b41894ab7b0933b0f7fdcd385ca567b7be2d654e100a"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "ddb24fd7b074dcf0ed2cfdaa218ae128d098637bd2347046b7a959bd581df702",
+          "89bea5f2fb7d9891f8b58d214c4c6e65c361988531b24e269e4c373faddd0837",
+          "3463dde37162dd8e63f8b8dd12eefa96dc7548ab5aa38de91d6eb0a9003d99b4",
+          "d2f26e5c9fe8303db7aa9a53fd1600e4ab09d8af707af5903323597a443e934f",
+          "e5dc1e1e103c500eee802c0023f121f62f6e8eeee3c7c69a597bc01fbc08d877",
+          "2d4d087202ab433c80302187706a5a5859564046684ebd89b41d8e9cf6f7695e",
+          "e6e42878c1302f304282729933798d8cd2d61c7b61ba9a5d45a171d1815c2359",
+          "72fa5975eeefdf04d5d992a8f79bb3fe7499030caa88036641bbd20e6bca9ea7"
+        ]
+      },
+      "down": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/down/raw.png",
+        "rawArchiveSha256": "9e03355eed94baa6720494dac6a2529e75fcdf229e017f12ad38c64861d3d900",
+        "prompt": "prompts/production/battle/back_3quarter_ne/down/generation-contract-v1.txt",
+        "promptSha256": "cafcd531f2626686ddee3ec9a37371622f5fe0eda6868301d43b53cb4b07481a",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/down/build/pipeline-meta.json",
+        "pipelineSha256": "ff90b512e9df32058649ed7deb7959e282b5fa278d6f6513475052383720b003",
+        "postProcessRepairs": [
+          {
+            "id": "faint-eye-semantics-v1",
+            "date": "2026-07-20",
+            "view": "back_3quarter_ne",
+            "method": "AI-guided deterministic face-local X-to-spiral replacement",
+            "expressionReference": "/Users/fander/.codex/generated_images/019f7b96-823b-7e20-a832-4d9534bc0dbd/exec-2ea2f5c7-7917-4c0d-9ef3-a7415e5b10d3.png",
+            "expressionReferenceRuntimeRejected": true,
+            "reasonRejected": "whole-body shape and registration drift",
+            "alreadyCompliant": false,
+            "forbidden": [
+              "X eye",
+              "cross eye",
+              "closed sleeping eye",
+              "smile",
+              "death symbol"
+            ],
+            "required": "open spiral/unfocused eye and reversible unconscious pose",
+            "source512": {
+              "inputRgbaSha256": "0ff60dc69e152e9127b9ededd2d9c1961e2e0808a3273152af33877468f85f68",
+              "outputRgbaSha256": "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58",
+              "alphaSha256": "6c3b23a6ac2b9e007a4662df8764c2b3e6a752fe17fb154254a8adda8dfc919a",
+              "alphaPreserved": true,
+              "changedPixelCount": 259
+            },
+            "runtime256": {
+              "inputRgbaSha256": "32ad538efff261be7befea4559122db8e84bcda1cf5014854499aeb48da3f0d3",
+              "outputRgbaSha256": "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969",
+              "alphaSha256": "940429a872591c64771b2e2c282440b84249f489e8b5cc2e4660bab5d92c1b96",
+              "alphaPreserved": true,
+              "changedPixelCount": 91
+            }
+          }
+        ],
+        "sourceFrameRgbaSha256": [
+          "6c7fff1af208f2399d0aaeb9881136fb745fa497b30e7831f9155363e1bbd8f7",
+          "b4d133984953b42c93aa3dc6f7afe857aaf2be70a70d3b5bfb315f57b79ba426",
+          "26f91b9b28b9d26018ecde81a31db2891572b3643977767e2dd4fca4b09cb01f",
+          "f103645da7539e35e67fc37e6f623aedefa5363444d141a412879084a713348d",
+          "749c7741def612584aef953d0efb0d9946ca3dbdcb76f71e90ccf96773c5f96a",
+          "6c8a6bda0fee2f618d1f58760c69779b65b659548ad48e1301cb0ac5eed6a546",
+          "a49986d97c81def5d1d97bb6f038df8da32a24ba4bbbe1d05523483854d552a5",
+          "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "8217408093059577f4b7204e0e1348f5a3604c81fb5ac4ed33cc0b8cc47a76ff",
+          "64b0cead401f3a098eef7fe7139983755b67b1339e3f172ef7611bff6ed7a59b",
+          "f20eae7cfe523245327076e878db654cca6b6173de6c2c393bb0aaf8f1b71cc7",
+          "cb13d2c370bc9406c2885f3f1bda76862ca7f8ad9b8001a9c45925031fd5be62",
+          "0ad7f55f45840a5c665c798d79b1950a0fb64037264a0b0d8587f3799459f163",
+          "c0425b75d1ff8eb043453b1e0a3df2034bdb9714a58fa05992620edaed6350c0",
+          "e8dd5a9df85f1a6ecab505885908118630ac85228c606619c9ca71322403527e",
+          "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969"
+        ]
+      },
+      "revive": {
+        "rawArchivePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/revive/raw.png",
+        "rawArchiveSha256": "27c073d813a2b137b5a2b27371854fdf491ff8606682656c4a0f0d639ac0c60e",
+        "prompt": "prompts/production/battle/back_3quarter_ne/revive/generation-contract-v1.txt",
+        "promptSha256": "b496bbb17dd84a285ca48d812579541ece9179dfabf7633ed5b53728bc6b2a74",
+        "promptRecordType": "exact_saved_generation_prompt",
+        "pipelinePathInRun": ".run/art_batch_full_g13_g15/four_spirit_cub/pet/battle/back_3quarter_ne/revive/build/pipeline-meta.json",
+        "pipelineSha256": "ff1cc50d2137ac80232213b19624516946d4886a3b03a8fac45a83473c3813f3",
+        "postProcessRepairs": [],
+        "sourceFrameRgbaSha256": [
+          "4f10838ac3ba661546938bbfd9d628b67f8243b398cf20a5bdeb67b926c62c58",
+          "296b06b44993014b22a837f6ba5e59ce2f284fc2488e894c1236386fc171b63c",
+          "2d9d6173af2958a388778674e2d2d78c726f7ab287fcc5394b9765c1e3f1150d",
+          "dc5535c476e8806d069d74446e5b7d703788e6fe469ba303287192b7edc7a6e1",
+          "e1c61bdb23cebc6b99efffe3d6de82945a90dee543cfa1e60ad1875e41474dea",
+          "788c220d9d86882b35df228a881c023ef8a1b440de3e7db5eb1ec5115bef0156",
+          "be00ed54a35e4196151f6c0b5edcdc12757801f41bd4e0e845fa840ad678cee4",
+          "de519fb0c1ea53dec76b5a1069ff5e0a6f75ac287fa69ec1a2fa4b329896cf16"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "08dc235ec3bbe9d70749fdbd1f183f2ca1c99f135b82cc5892bc1ac020652969",
+          "526263e1999dd677bbfaa8dd3bd9de1248570f55de3cc13ee02d4d7ecb50748d",
+          "cebc3cea67b460b0fa640a0efdaa380464d67dee3e6906e074d906e2581cd160",
+          "4b9f1fa5991837e985ee95dd68baf82e051fd1876a1f0392655227172a82b67e",
+          "c49d87f538f239de617698aad5252f10fa368e45aa016065fa7baada6d49cae7",
+          "aa120fcd450d882fc1ec8befe06fc7070406895f1ee76fe865fb708cecf93685",
+          "3f031ca793e281665b7163dae2b8f051fd14995bdb9e3d5ee61fc3f7c8a6a209",
+          "02c702a908f675745d450593ee3f11d82f25242686c49e0a779b11198f45b22d"
+        ],
+        "continuityOverride": {
+          "method": "exact down-8 copy after pipeline",
+          "source512Exact": true,
+          "runtime256Exact": true,
+          "reason": "revive begins from the exact reversible-KO hold without a pose pop"
+        }
+      }
+    }
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}
