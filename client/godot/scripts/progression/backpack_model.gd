@@ -14,6 +14,7 @@ const CONTEXT_WORLD_PLAYER_EXP := "world_player_exp"
 const CONTEXT_WORLD_PET_EXP := "world_pet_exp"
 const CONTEXT_WORLD_MM_STONE := "world_mm_stone"
 const CONTEXT_WORLD_PET_EGG := "world_pet_egg"
+const CONTEXT_WORLD_PET_RIDE_PERMIT := "world_pet_ride_permit"
 const CONTEXT_EQUIPMENT := "equipment"
 const BINDING_UNBOUND := "unbound"
 const BINDING_BOUND := "bound"
@@ -55,6 +56,10 @@ static func menu_label_for(item_id: String, fallback: String = "物品") -> Stri
 		return fallback
 	var label := str(item.get("menuLabel", ""))
 	return label if label != "" else label_for(item_id, fallback)
+
+
+static func description_for(item_id: String) -> String:
+	return str(item_for_id(item_id).get("description", "")).strip_edges()
 
 
 static func stack_limit_for(item_id: String) -> int:
@@ -228,6 +233,27 @@ static func world_pet_egg_pet_name_for(item_id: String) -> String:
 	if str(world_use_for(item_id).get("type", "")) != "pet_form_egg":
 		return ""
 	return str(world_use_for(item_id).get("petName", "")).strip_edges()
+
+
+static func item_can_world_pet_ride_permit(item_id: String) -> bool:
+	return (
+		item_has_context(item_id, CONTEXT_WORLD_PET_RIDE_PERMIT)
+		and str(world_use_for(item_id).get("type", "")) == "pet_ride_permit"
+		and world_pet_ride_permit_form_id_for(item_id) != ""
+		and world_pet_ride_permit_id_for(item_id) != ""
+	)
+
+
+static func world_pet_ride_permit_form_id_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_ride_permit":
+		return ""
+	return str(world_use_for(item_id).get("formId", "")).strip_edges()
+
+
+static func world_pet_ride_permit_id_for(item_id: String) -> String:
+	if str(world_use_for(item_id).get("type", "")) != "pet_ride_permit":
+		return ""
+	return str(world_use_for(item_id).get("permitId", "")).strip_edges()
 
 
 static func starting_slots() -> Array[Dictionary]:
@@ -589,7 +615,7 @@ static func detail_lines_for_slot(slot: Dictionary) -> Array[String]:
 				lines.append("效果: 使用后获得 Lv1 %s。" % egg_pet_name)
 			else:
 				lines.append("效果: 使用后获得 Lv1 %d转小MM。" % world_pet_egg_stage_for(item_id))
-	var description := str(item_for_id(item_id).get("description", "")).strip_edges()
+	var description := description_for(item_id)
 	if description != "":
 		lines.append("说明: %s" % description)
 	return lines

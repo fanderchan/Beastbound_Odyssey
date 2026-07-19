@@ -113,11 +113,10 @@ func _build_grid() -> void:
 		_add_label("人", rect.position + Vector2(49, 43), 13, Color("b9cbc1"))
 		_add_label("宠", rect.position + Vector2(139, 43), 13, Color("b9cbc1"))
 		_add_label("骑", rect.position + Vector2(229, 43), 13, Color("b9cbc1"))
-		# 正式世界比例是人物/跟宠 0.36、骑乘组合 0.58。验收格整体缩小，
-		# 但保持 0.58 / 0.36 的真实比例，避免把骑手误展示成比步行人物更小。
+		# 地图中徒步人物和整体骑乘图使用同一展示比例；战斗比例由战斗配置独立决定。
 		grid_characters.append(_character_sprite(rect.position + Vector2(52, 223), 0.29))
 		grid_pets.append(_pet_sprite(rect.position + Vector2(137, 220), 0.29))
-		grid_mounts.append(_mounted_character(rect.position + Vector2(233, 226), direction, 0.467))
+		grid_mounts.append(_mounted_character(rect.position + Vector2(233, 226), direction, 0.29))
 
 
 func _build_cycle() -> void:
@@ -130,7 +129,7 @@ func _build_cycle() -> void:
 	active_mapping = _add_label("", Vector2(519, 158), 15, Color("b9cbc1"))
 	active_character = _character_sprite(Vector2(214, 475), 0.72)
 	active_pet = _pet_sprite(Vector2(624, 477), 0.72)
-	active_mount = _mounted_character(Vector2(1031, 489), DIRECTIONS[0], 1.16)
+	active_mount = _mounted_character(Vector2(1031, 489), DIRECTIONS[0], 0.72)
 	for index in range(DIRECTIONS.size()):
 		var x := 34.0 + float(index) * 153.0
 		_add_label("%d %s" % [index + 1, DIRECTION_NAMES[DIRECTIONS[index]]], Vector2(x + 37, 655), 15, Color("cfdcd4"))

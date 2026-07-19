@@ -21,6 +21,7 @@ const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_g
 const PetIndividualGrowthModel := preload("res://scripts/progression/pet_individual_growth_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
+const PetRidePermitModel := preload("res://scripts/progression/pet_ride_permit_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerGrowthModel := preload("res://scripts/progression/player_growth_model.gd")
@@ -303,6 +304,7 @@ static func default_profile() -> Dictionary:
 		"petInstances": [],
 		"groundPetDrops": [],
 		"ridePetInstanceId": "",
+		"petRidePermits": PetRidePermitModel.default_state(),
 		"backpackSlots": BackpackModel.starting_slots(),
 		"backpackExtraSlots": 0,
 		"quickSlots": ["", "", ""],
@@ -506,6 +508,12 @@ static func can_ride_pet(profile: Dictionary, instance_id: String) -> Dictionary
 	var ride_config := _ride_config_for_instance(instance)
 	if ride_config.is_empty():
 		return {"ok": false, "message": "%s 不能骑乘。" % str(instance.get("name", "宠物"))}
+	if not PetRidePermitModel.has_required_permit(normalized, ride_config):
+		var permit_item_id := PetRidePermitModel.permit_item_id_for_riding(ride_config)
+		return {
+			"ok": false,
+			"message": "需要先使用%s。" % BackpackModel.label_for(permit_item_id, "对应驯宠证"),
+		}
 	var state := str(instance.get("state", PET_STATE_STANDBY))
 	if state == PET_STATE_STORAGE:
 		return {"ok": false, "message": "%s 在兽栏里，不能骑乘。" % str(instance.get("name", "宠物"))}
@@ -6707,6 +6715,45 @@ static func use_world_pet_rebirth_mm_egg(profile: Dictionary, item_id: String) -
 	return use_world_pet_egg_item(profile, item_id)
 
 
+static func use_world_pet_ride_permit_item(profile: Dictionary, item_id: String) -> Dictionary:
+	var normalized := normalize_profile(profile)
+	var item_label := BackpackModel.label_for(item_id, "驯宠证")
+	if not BackpackModel.item_can_world_pet_ride_permit(item_id):
+		return {"ok": false, "profile": normalized, "message": "%s 不能使用。" % item_label}
+	if backpack_item_count(normalized, item_id) <= 0:
+		return {"ok": false, "profile": normalized, "message": "%s 不够了。" % item_label}
+	var form_id := BackpackModel.world_pet_ride_permit_form_id_for(item_id)
+	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
+	if template.is_empty():
+		return {"ok": false, "profile": normalized, "message": "%s 对应宠物不存在。" % item_label}
+	var raw_riding = template.get("riding", {})
+	var riding := raw_riding as Dictionary if raw_riding is Dictionary else {}
+	if (
+		PetRidePermitModel.permit_id_for_riding(riding) != BackpackModel.world_pet_ride_permit_id_for(item_id)
+		or PetRidePermitModel.permit_item_id_for_riding(riding) != item_id
+	):
+		return {"ok": false, "profile": normalized, "message": "%s 与宠物骑乘资料不匹配。" % item_label}
+	var plan := PetRidePermitModel.plan_unlock(normalized, riding, item_id)
+	if not bool(plan.get("ok", false)):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": str(plan.get("message", "无法使用%s。" % item_label)),
+			"code": str(plan.get("code", "ride_permit_failed")),
+		}
+	normalized[PetRidePermitModel.PROFILE_KEY] = (plan.get("state", {}) as Dictionary).duplicate(true)
+	normalized[BACKPACK_SLOTS_KEY] = BackpackModel.consume(backpack_slots(normalized), item_id, 1)
+	normalized = normalize_profile(normalized)
+	return {
+		"ok": true,
+		"profile": normalized,
+		"message": "使用%s，永久获得芽耳布伊骑乘资格。" % item_label,
+		"itemId": item_id,
+		"permitId": str(plan.get("permitId", "")),
+		"formId": form_id,
+	}
+
+
 static func _grant_pet_from_form_egg(profile: Dictionary, item_id: String) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var form_id := BackpackModel.world_pet_egg_form_id_for(item_id)
@@ -8397,7 +8444,10 @@ static func _normalized_ride_pet_instance_id(profile: Dictionary, instances: Arr
 		var instance := instances[index]
 		if str(instance.get("instanceId", "")) != ride_id:
 			continue
-		if _ride_config_for_instance(instance).is_empty():
+		var ride_config := _ride_config_for_instance(instance)
+		if ride_config.is_empty():
+			return ""
+		if not PetRidePermitModel.has_required_permit(profile, ride_config):
 			return ""
 		var state := str(instance.get("state", PET_STATE_STANDBY))
 		if state == PET_STATE_STORAGE or state == PET_STATE_REST:

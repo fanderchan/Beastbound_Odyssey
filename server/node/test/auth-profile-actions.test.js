@@ -80,6 +80,7 @@ test("profiles sync with revision conflict protection", () => {
   assert.deepEqual(emptyProfile.profile.equipmentDurability, {});
   assert.deepEqual(emptyProfile.profile.equipmentEnhancement, {});
   assert.deepEqual(emptyProfile.profile.equipmentWearCounters, {});
+  assert.deepEqual(emptyProfile.profile.petRidePermits, {schemaVersion: 1, permitIds: []});
   assert.equal(emptyProfile.profileSummary.profileRevision, 0);
   assert.equal(emptyProfile.profileSummary.storageMode, "server_document");
 
@@ -1361,6 +1362,93 @@ test("sprout Bui uses the shared rideable pet contract", () => {
   assert.equal(riding.result.state, "riding");
   assert.equal(riding.profile.ridePetInstanceId, "pet_bui_mount");
   assert.equal(riding.profile.petInstances.find((pet) => pet.instanceId === "pet_bui_mount").state, "riding");
+});
+
+test("new players buy and consume the Bui certificate before riding while duplicate use preserves it", () => {
+  const service = createAuthService({store: createMemoryAuthStore()});
+  const registered = service.register({username: "buipermit", password: "test1234", displayName: "新布伊骑手"});
+  const token = registered.session.token;
+  const profile = battleProfile("新布伊骑手", {level: 1, hp: 120, maxHp: 120}, null);
+  profile.diamonds = 1200;
+  profile.unlockedAbilities = ["riding"];
+  profile.petRidePermits = {schemaVersion: 1, permitIds: []};
+  profile.petInstances.push({
+    instanceId: "pet_bui_permit",
+    petId: "pet_bui_permit",
+    formId: "bui_novice_sprout_earth5_wind5",
+    templateId: "bui_novice_sprout_earth5_wind5",
+    speciesId: "bui_novice_sprout_earth5_wind5",
+    lineId: "bui",
+    name: "芽耳布伊",
+    state: "standby",
+    level: 1,
+    hp: 80,
+    maxHp: 80,
+    attack: 11,
+    defense: 9,
+    quick: 46,
+  });
+  assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
+
+  const purchased = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_diamond_shop",
+    itemId: "bui_novice_sprout_taming_certificate",
+    amount: 1,
+  });
+  assert.equal(purchased.ok, true);
+  assert.equal(purchased.transaction.price, 600);
+  assert.equal(purchased.profile.diamonds, 600);
+  assert.equal(profileItemCount(purchased.profile, "bui_novice_sprout_taming_certificate"), 1);
+
+  const blockedCycle = service.profileAction(token, {
+    action: "pet_state_cycle",
+    payload: {instanceId: "pet_bui_permit"},
+  });
+  assert.equal(blockedCycle.ok, true);
+  assert.equal(blockedCycle.result.state, "battle");
+  for (const expectedState of ["rest", "standby"]) {
+    const cycled = service.profileAction(token, {
+      action: "pet_state_cycle",
+      payload: {instanceId: "pet_bui_permit"},
+    });
+    assert.equal(cycled.ok, true);
+    assert.equal(cycled.result.state, expectedState);
+  }
+
+  const unlocked = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {itemId: "bui_novice_sprout_taming_certificate"},
+  });
+  assert.equal(unlocked.ok, true);
+  assert.deepEqual(unlocked.profile.petRidePermits, {
+    schemaVersion: 1,
+    permitIds: ["ride_bui_novice_sprout"],
+  });
+  assert.equal(profileItemCount(unlocked.profile, "bui_novice_sprout_taming_certificate"), 0);
+
+  const riding = service.profileAction(token, {
+    action: "pet_state_cycle",
+    payload: {instanceId: "pet_bui_permit"},
+  });
+  assert.equal(riding.ok, true);
+  assert.equal(riding.result.state, "riding");
+
+  const purchasedAgain = service.shopTransaction(token, {
+    mode: "buy",
+    shopId: "firebud_diamond_shop",
+    itemId: "bui_novice_sprout_taming_certificate",
+    amount: 1,
+  });
+  assert.equal(purchasedAgain.ok, true);
+  assert.equal(purchasedAgain.profile.diamonds, 0);
+  const duplicate = service.profileAction(token, {
+    action: "world_item_use",
+    payload: {itemId: "bui_novice_sprout_taming_certificate"},
+  });
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "ride_permit_owned");
+  assert.equal(profileItemCount(service.getProfile(token).profile, "bui_novice_sprout_taming_certificate"), 1);
 });
 
 test("riding tutorial reconciles an already active non-mount battle pet", () => {

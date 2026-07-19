@@ -306,7 +306,10 @@
         "mountRole": "universal_companion",
         "levelCapRequired": 40,
         "attackStyle": "melee",
-        "formulaId": "stoneage_like_ride_v1"
+        "formulaId": "stoneage_like_ride_v1",
+        "permitId": "ride_bui_novice_sprout",
+        "permitItemId": "bui_novice_sprout_taming_certificate",
+        "legacyProfilesGranted": true
       },
       "visual": {
         "placeholderPalette": "bui_yellow",

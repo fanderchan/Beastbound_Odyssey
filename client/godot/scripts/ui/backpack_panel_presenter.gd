@@ -51,6 +51,7 @@ static func slot_matches_filter(slot: Dictionary, filter_id: String) -> bool:
 				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_EXP)
 				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_MM_STONE)
 				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_EGG)
+				or BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_WORLD_PET_RIDE_PERMIT)
 			)
 		FILTER_BATTLE:
 			return BackpackModel.item_has_context(item_id, BackpackModel.CONTEXT_BATTLE_ITEM)
@@ -93,7 +94,12 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		and item_count > 0
 		and BackpackModel.item_can_world_pet_egg(item_id)
 	)
-	var can_world_use := can_world_pet_use or can_world_player_use or can_world_pet_egg
+	var can_world_pet_ride_permit := (
+		item_id != ""
+		and item_count > 0
+		and BackpackModel.item_can_world_pet_ride_permit(item_id)
+	)
+	var can_world_use := can_world_pet_use or can_world_player_use or can_world_pet_egg or can_world_pet_ride_permit
 	var can_world_encounter_stone := (
 		item_id != ""
 		and item_count > 0
@@ -113,6 +119,7 @@ static func selected_item_actions(slot: Dictionary, slots: Array[Dictionary], eq
 		"canWorldPetUse": can_world_pet_use,
 		"canWorldPlayerUse": can_world_player_use,
 		"canWorldPetEgg": can_world_pet_egg,
+		"canWorldPetRidePermit": can_world_pet_ride_permit,
 		"canWorldUse": can_world_use,
 		"canWorldEncounterStone": can_world_encounter_stone,
 		"canEquip": can_equip,

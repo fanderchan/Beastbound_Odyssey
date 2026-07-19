@@ -65,6 +65,14 @@ const {
   createAutoCaptureSettingsRules,
 } = require("./auth/auto-capture-settings");
 const {createPetAutoCaptureFilter} = require("./auth/pet-auto-capture-filter");
+const {
+  PROFILE_KEY: PET_RIDE_PERMIT_PROFILE_KEY,
+  defaultState: defaultPetRidePermitState,
+  hasRequiredPermit: hasRequiredPetRidePermit,
+  permitIdForRiding: petRidePermitIdForRiding,
+  permitItemIdForRiding: petRidePermitItemIdForRiding,
+  planUnlock: planPetRidePermitUnlock,
+} = require("./auth/pet-ride-permit");
 const {loadPetObservedGrowthScreening} = require("./auth/pet-observed-growth-screening");
 const {createPetObservedGrowthRulePreview} = require("./auth/pet-observed-growth-rule-preview");
 const {
@@ -18525,6 +18533,9 @@ function canRideProfilePet(profile, pet) {
   if (!Boolean(riding.rideable)) {
     return false;
   }
+  if (!hasRequiredPetRidePermit(profile, riding)) {
+    return false;
+  }
   if (profilePetState(pet) === BATTLE_PET_STATE_STORAGE || Math.trunc(Number(pet.hp || 0)) <= 0) {
     return false;
   }
@@ -18972,6 +18983,9 @@ function applyWorldItemUseAction(profile, params, options = {}) {
   if (useType === "pet_form_egg" || useType === "pet_rebirth_mm_egg") {
     return applyWorldPetEggItemAction(profile, itemId, options.newPetFactory);
   }
+  if (useType === "pet_ride_permit") {
+    return applyWorldPetRidePermitItemAction(profile, itemId);
+  }
   if (useType === "encounter_stone") {
     return {ok: false, code: "item_use_hang_endpoint", message: "遇敌石请通过挂机入口使用。"};
   }
@@ -18981,6 +18995,38 @@ function applyWorldItemUseAction(profile, params, options = {}) {
 function worldUseForItem(itemId) {
   const item = bagItemById(itemId);
   return objectOrEmpty(item && item.worldUse);
+}
+
+function applyWorldPetRidePermitItemAction(profile, itemId) {
+  const itemLabel = bagItemLabel(itemId);
+  const worldUse = worldUseForItem(itemId);
+  const formId = String(worldUse.formId || "").trim();
+  const permitId = String(worldUse.permitId || "").trim();
+  const template = petTemplateForFormId(formId);
+  const riding = objectOrEmpty(template.riding);
+  if (
+    !formId || !Boolean(riding.rideable) ||
+    petRidePermitIdForRiding(riding) !== permitId ||
+    petRidePermitItemIdForRiding(riding) !== itemId
+  ) {
+    return {ok: false, code: "ride_permit_catalog_mismatch", message: `${itemLabel} 与宠物骑乘资料不匹配。`};
+  }
+  const plan = planPetRidePermitUnlock(profile, riding, itemId);
+  if (!plan.ok) {
+    return plan;
+  }
+  const consumeResult = consumeProfileBackpackItem(profile, itemId, 1);
+  if (!consumeResult.ok) {
+    return consumeResult;
+  }
+  profile[PET_RIDE_PERMIT_PROFILE_KEY] = plan.state;
+  return {
+    ok: true,
+    message: `使用${itemLabel}，永久获得芽耳布伊骑乘资格。`,
+    itemId,
+    formId,
+    permitId: plan.permitId,
+  };
 }
 
 function encounterStoneConfigForItem(itemId) {
@@ -23353,6 +23399,7 @@ function createDefaultServerProfile(account) {
     petInstances: [],
     groundPetDrops: [],
     ridePetInstanceId: "",
+    petRidePermits: defaultPetRidePermitState(),
     backpackSlots: defaultStartingBackpackSlots(),
     backpackExtraSlots: 0,
     quickSlots: ["", "", ""],

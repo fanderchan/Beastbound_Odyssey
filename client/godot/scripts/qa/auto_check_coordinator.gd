@@ -10151,8 +10151,72 @@ func _run_auto_riding_system_check() -> void:
 		and str(clear_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")) == ""
 		and str(PlayerProgressModel.pet_instance_by_id(clear_profile, "pet_ride_tiger_check").get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 	)
-	var status = "ok" if no_ability_ok and mount_state_ok and standby_to_riding_ready and riding_to_battle_ready and cycle_to_battle_ok and party_excludes_mount and protection_ok and summary_formula_ok and battle_formula_ok and ride_damage_ok and odd_damage_ok and overflow_damage_ok and ride_sync_ok and ride_knock_ok and clear_ok else "failed"
-	print("riding system check ready: status=%s no_ability=%s mount=%s standby_to_riding=%s riding_to_battle=%s cycle_battle=%s party=%s protect=%s formula=%s battle=%s ride_damage=%s odd_split=%s overflow=%s ride_sync=%s ride_knock=%s clear=%s atk=%d def=%d quick=%d ride_hp=%d ride_damage_value=%d actor_damage=%d" % [
+
+	var permit_item_id := "bui_novice_sprout_taming_certificate"
+	var bui = PlayerProgressModel.create_pet_instance_from_form(
+		"pet_bui_permit_check",
+		"芽耳布伊",
+		"bui_novice_sprout_earth5_wind5",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		1
+	)
+	var bui_profile = PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.default_profile(), PlayerProgressModel.ABILITY_RIDING)
+	bui_profile["petInstances"] = [bui]
+	bui_profile = PlayerProgressModel.normalize_profile(bui_profile)
+	var permit_blocked_check := PlayerProgressModel.can_ride_pet(bui_profile, "pet_bui_permit_check")
+	var permit_blocked_ok = (
+		not bool(permit_blocked_check.get("ok", true))
+		and str(permit_blocked_check.get("message", "")).find("芽耳布伊 驯宠证") >= 0
+		and PlayerProgressModel.cycled_pet_state_for_profile(bui_profile, "pet_bui_permit_check") == PlayerProgressModel.PET_STATE_BATTLE
+	)
+	bui_profile = PlayerProgressModel.with_backpack_slots(
+		bui_profile,
+		BackpackModel.set_item_count(PlayerProgressModel.backpack_slots(bui_profile), permit_item_id, 1)
+	)
+	var permit_use_result := PlayerProgressModel.use_world_pet_ride_permit_item(bui_profile, permit_item_id)
+	var permit_profile := permit_use_result.get("profile", bui_profile) as Dictionary
+	var permit_unlock_ok = (
+		bool(permit_use_result.get("ok", false))
+		and PlayerProgressModel.backpack_item_count(permit_profile, permit_item_id) == 0
+		and bool(PlayerProgressModel.can_ride_pet(permit_profile, "pet_bui_permit_check").get("ok", false))
+		and PlayerProgressModel.cycled_pet_state_for_profile(permit_profile, "pet_bui_permit_check") == PlayerProgressModel.PET_STATE_RIDING
+	)
+	var legacy_profile := bui_profile.duplicate(true)
+	legacy_profile.erase("petRidePermits")
+	legacy_profile = PlayerProgressModel.normalize_profile(legacy_profile)
+	var legacy_grandfather_ok = bool(PlayerProgressModel.can_ride_pet(legacy_profile, "pet_bui_permit_check").get("ok", false))
+	var permit_catalog_ok = (
+		BackpackModel.item_can_world_pet_ride_permit(permit_item_id)
+		and BackpackModel.item_is_bound(permit_item_id)
+		and ShopCatalogModel.currency_for("firebud_diamond_shop") == ShopCatalogModel.CURRENCY_DIAMONDS
+		and ShopCatalogModel.buy_price_for("firebud_diamond_shop", permit_item_id) == 600
+		and not ShopCatalogModel.is_sellable("firebud_diamond_shop", permit_item_id)
+	)
+	var on_foot_screenshot_ok := true
+	var on_foot_screenshot_path := OS.get_environment("BEASTBOUND_ON_FOOT_WORLD_SCREENSHOT_PATH").strip_edges()
+	if on_foot_screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(on_foot_screenshot_path.get_base_dir())
+		host.player_profile = permit_profile
+		host._load_map("firebud_village_gate", "from_training_yard")
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var on_foot_image: Image = host.get_viewport().get_texture().get_image()
+		on_foot_screenshot_ok = on_foot_image != null and on_foot_image.save_png(on_foot_screenshot_path) == OK
+		print("riding world on-foot screenshot: status=%s path=%s" % ["ok" if on_foot_screenshot_ok else "failed", on_foot_screenshot_path])
+	var mounted_screenshot_ok := true
+	var mounted_screenshot_path := OS.get_environment("BEASTBOUND_MOUNTED_WORLD_SCREENSHOT_PATH").strip_edges()
+	if mounted_screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(mounted_screenshot_path.get_base_dir())
+		var mounted_profile_result := PlayerProgressModel.set_ride_pet(permit_profile, "pet_bui_permit_check")
+		host.player_profile = mounted_profile_result.get("profile", permit_profile) as Dictionary
+		host._load_map("firebud_village_gate", "from_training_yard")
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var mounted_image: Image = host.get_viewport().get_texture().get_image()
+		mounted_screenshot_ok = mounted_image != null and mounted_image.save_png(mounted_screenshot_path) == OK
+		print("riding world mounted screenshot: status=%s path=%s" % ["ok" if mounted_screenshot_ok else "failed", mounted_screenshot_path])
+	var status = "ok" if no_ability_ok and mount_state_ok and standby_to_riding_ready and riding_to_battle_ready and cycle_to_battle_ok and party_excludes_mount and protection_ok and summary_formula_ok and battle_formula_ok and ride_damage_ok and odd_damage_ok and overflow_damage_ok and ride_sync_ok and ride_knock_ok and clear_ok and permit_blocked_ok and permit_unlock_ok and legacy_grandfather_ok and permit_catalog_ok and on_foot_screenshot_ok and mounted_screenshot_ok else "failed"
+	print("riding system check ready: status=%s no_ability=%s mount=%s standby_to_riding=%s riding_to_battle=%s cycle_battle=%s party=%s protect=%s formula=%s battle=%s ride_damage=%s odd_split=%s overflow=%s ride_sync=%s ride_knock=%s clear=%s permit_blocked=%s permit_unlock=%s permit_legacy=%s permit_catalog=%s on_foot_shot=%s mounted_shot=%s atk=%d def=%d quick=%d ride_hp=%d ride_damage_value=%d actor_damage=%d" % [
 		status,
 		str(no_ability_ok),
 		str(mount_state_ok),
@@ -10169,6 +10233,12 @@ func _run_auto_riding_system_check() -> void:
 		str(ride_sync_ok),
 		str(ride_knock_ok),
 		str(clear_ok),
+		str(permit_blocked_ok),
+		str(permit_unlock_ok),
+		str(legacy_grandfather_ok),
+		str(permit_catalog_ok),
+		str(on_foot_screenshot_ok),
+		str(mounted_screenshot_ok),
 		expected_attack,
 		expected_defense,
 		expected_quick,
@@ -10257,6 +10327,8 @@ func _run_auto_shop_check() -> void:
 		and ShopCatalogModel.sell_price_for(shop_id, BattleModel.ITEM_MEAT_SMALL) == 4
 		and ShopCatalogModel.is_sellable(shop_id, BattleModel.ITEM_POISON_ALL)
 		and ShopCatalogModel.buy_price_for(shop_id, "encounter_stone_low") == 24
+		and ShopCatalogModel.buy_price_for("firebud_diamond_shop", "bui_novice_sprout_taming_certificate") == 600
+		and not ShopCatalogModel.is_sellable("firebud_diamond_shop", "bui_novice_sprout_taming_certificate")
 	)
 	var default_coin_ok = PlayerProgressModel.stone_coins(base_profile) == PlayerProgressModel.DEFAULT_STONE_COINS
 
@@ -10494,9 +10566,41 @@ func _run_auto_shop_check() -> void:
 		and PlayerProgressModel.stone_coins(reward_profile) == PlayerProgressModel.stone_coins(base_profile) + stone_reward
 		and reward_log.find("石币") >= 0
 	)
+	var permit_shop_screenshot_ok := true
+	var permit_shop_screenshot_path := OS.get_environment("BEASTBOUND_SHOP_SCREENSHOT_PATH").strip_edges()
+	if permit_shop_screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(permit_shop_screenshot_path.get_base_dir())
+		host.player_profile = PlayerProgressModel.with_diamonds(PlayerProgressModel.default_profile(), 1200)
+		host._open_shop_panel("firebud_diamond_shop")
+		await host.get_tree().process_frame
+		host._select_shop_item("bui_novice_sprout_taming_certificate")
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var permit_button = host.shop_item_buttons.get("bui_novice_sprout_taming_certificate", null)
+		if permit_button is Control and permit_button.get_parent() != null and permit_button.get_parent().get_parent() is ScrollContainer:
+			(permit_button.get_parent().get_parent() as ScrollContainer).ensure_control_visible(permit_button as Control)
+			await host.get_tree().process_frame
+		var permit_button_text: String = (permit_button as Button).text if permit_button is Button else ""
+		var permit_detail_text: String = host.shop_detail_label.text if host.shop_detail_label != null else ""
+		var permit_shop_ui_ok = (
+			permit_button_text.find("芽耳布伊") >= 0
+			and permit_button_text.find("600钻石") >= 0
+			and permit_detail_text.find("永久获得芽耳布伊骑乘资格") >= 0
+		)
+		var permit_shop_image: Image = host.get_viewport().get_texture().get_image()
+		var permit_shop_save_ok := permit_shop_image != null and permit_shop_image.save_png(permit_shop_screenshot_path) == OK
+		permit_shop_screenshot_ok = permit_shop_ui_ok and permit_shop_save_ok
+		print("Bui permit shop screenshot: status=%s ui=%s save=%s path=%s button=%s detail=%s" % [
+			"ok" if permit_shop_screenshot_ok else "failed",
+			str(permit_shop_ui_ok),
+			str(permit_shop_save_ok),
+			permit_shop_screenshot_path,
+			permit_button_text.replace("\n", " | "),
+			permit_detail_text.replace("\n", " | "),
+		])
 
-	var status = "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and shared_shop_slot_ok and shop_drag_split_ok and shop_quick_buy_ok and quantity_ui_ok and sell_tab_ok and missing_profile_recovery_ok and reward_coin_ok else "failed"
-	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s shared_slot=%s drag_split=%s quick_buy=%s quantity_ui=%s sell_tab=%s profile_recovery=%s pending_ui=%s pending_action=%s pending_quantity=%s pending_plus=%s pending_item=%s recovery_count=%s recovery_coin=%s recovery_detail=%s recovery_coin_label=%s recovery_action=%s reward_coin=%s coins=%d reward=%d" % [
+	var status = "ok" if catalog_ok and default_coin_ok and buy_ok and bulk_buy_ok and no_money_ok and full_ok and sell_ok and bulk_sell_ok and empty_sell_ok and shop_panel_ok and shared_shop_slot_ok and shop_drag_split_ok and shop_quick_buy_ok and quantity_ui_ok and sell_tab_ok and missing_profile_recovery_ok and reward_coin_ok and permit_shop_screenshot_ok else "failed"
+	print("shop check ready: status=%s catalog=%s default_coin=%s buy=%s bulk_buy=%s no_money=%s full=%s sell=%s bulk_sell=%s empty_sell=%s panel=%s shared_slot=%s drag_split=%s quick_buy=%s quantity_ui=%s sell_tab=%s profile_recovery=%s permit_shop_shot=%s pending_ui=%s pending_action=%s pending_quantity=%s pending_plus=%s pending_item=%s recovery_count=%s recovery_coin=%s recovery_detail=%s recovery_coin_label=%s recovery_action=%s reward_coin=%s coins=%d reward=%d" % [
 		status,
 		str(catalog_ok),
 		str(default_coin_ok),
@@ -10514,6 +10618,7 @@ func _run_auto_shop_check() -> void:
 		str(quantity_ui_ok),
 		str(sell_tab_ok),
 		str(missing_profile_recovery_ok),
+		str(permit_shop_screenshot_ok),
 		str(pending_ui_ok),
 		str(pending_action_ok),
 		str(pending_quantity_ok),

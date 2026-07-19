@@ -110,8 +110,8 @@ func _mounted_character(position_value: Vector2, facing: String) -> Node2D:
 	mounted.position = position_value
 	add_child(mounted)
 	mounted.call("set_mount_form", FORM_ID)
-	# Keep the real world ratio: mounted 0.58 / on-foot 0.36.
-	mounted.call("set_presentation_scale", 1.224)
+	# The world map gives the integrated riding body the same presentation scale as the on-foot body.
+	mounted.call("set_presentation_scale", 0.76)
 	mounted.call("set_visual_state", facing, "walk", 0.0)
 	return mounted
 

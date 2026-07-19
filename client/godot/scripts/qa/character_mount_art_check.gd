@@ -17,6 +17,8 @@ const MOUNTED_BUNDLE_META_PATH := "res://assets/mounted/novice_hunter_v1/bui_nov
 const MOUNTED_OWNERSHIP_PATH := "res://assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/source-and-ownership.md"
 const MAIN_SCRIPT_PATH := "res://scripts/main.gd"
 const FRAME_EDGE_MARGIN := 4
+const EXPECTED_WORLD_PRESENTATION_SCALE := 0.36
+const EXPECTED_BATTLE_PRESENTATION_SCALE := 0.88
 const WORLD_DIRECTIONS: Array[String] = WorldVisualDirectionContract.DIRECTIONS
 const RIDEABLE_FORMS_AWAITING_INTEGRATED_ART: Array[String] = [
 	"novice_tiger_mount",
@@ -58,6 +60,12 @@ static func run() -> Dictionary:
 		errors.append("整体骑乘禁止运行时人物/宠物分层拼接")
 	if MountedCharacterAssetCatalog.USES_RUNTIME_MIRRORING:
 		errors.append("整体骑乘真八方向禁止运行时镜像")
+	var world_scale := MountVisualProfileCatalog.world_presentation_scale_for_form(FORM_ID)
+	var battle_scale := MountVisualProfileCatalog.battle_presentation_scale_for_form(FORM_ID)
+	if not is_equal_approx(world_scale, EXPECTED_WORLD_PRESENTATION_SCALE):
+		errors.append("地图整体骑乘比例必须与徒步人物一致：%.2f" % world_scale)
+	if not is_equal_approx(battle_scale, EXPECTED_BATTLE_PRESENTATION_SCALE):
+		errors.append("战斗骑乘比例被地图比例误改：%.2f" % battle_scale)
 	return {
 		"ok": errors.is_empty(),
 		"characterBattleCompatibilityFrames": 56,
@@ -75,6 +83,8 @@ static func run() -> Dictionary:
 		"runtimeMirroring": MountedCharacterAssetCatalog.USES_RUNTIME_MIRRORING,
 		"safeOnFootFallbackRideableForms": RIDEABLE_FORMS_AWAITING_INTEGRATED_ART.size(),
 		"worldVisualStrategy": MountedCharacterAssetCatalog.WORLD_VISUAL_STRATEGY,
+		"worldPresentationScale": world_scale,
+		"battlePresentationScale": battle_scale,
 		"errors": errors,
 	}
 

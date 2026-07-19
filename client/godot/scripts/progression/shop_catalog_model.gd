@@ -116,12 +116,8 @@ static func sell_price_for(shop_id: String, item_id: String) -> int:
 
 static func price_line_for(shop_id: String, item_id: String) -> String:
 	var label := currency_label_for(shop_id)
-	return "购买单价: %d%s    出售单价: %d%s" % [
-		buy_price_for(shop_id, item_id),
-		label,
-		sell_price_for(shop_id, item_id),
-		label,
-	]
+	var sell_text := "%d%s" % [sell_price_for(shop_id, item_id), label] if is_sellable(shop_id, item_id) else "不可出售"
+	return "购买单价: %d%s    出售: %s" % [buy_price_for(shop_id, item_id), label, sell_text]
 
 
 static func _data() -> Dictionary:

@@ -172,6 +172,7 @@
         {"itemId": "item_exp_pill_lv1", "buyPrice": 120, "sellable": false},
         {"itemId": "item_exp_pill_lv131", "buyPrice": 600, "sellable": false},
         {"itemId": "item_exp_pill_lv140", "buyPrice": 900, "sellable": false},
+        {"itemId": "bui_novice_sprout_taming_certificate", "buyPrice": 600, "sellable": false},
         {"itemId": "thunder_dragon_egg", "buyPrice": 3600, "sellable": false},
         {"itemId": "pet_rebirth_mm1_egg", "buyPrice": 1800, "sellable": false},
         {"itemId": "pet_rebirth_mm2_egg", "buyPrice": 2800, "sellable": false}

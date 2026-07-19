@@ -6,7 +6,7 @@
       "characterId": "novice_hunter_v1",
       "mountedBundleId": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1",
       "worldVisualStrategy": "ai_generated_integrated_independent_8",
-      "worldPresentationScale": 0.58,
+      "worldPresentationScale": 0.36,
       "battlePresentationScale": 0.88,
       "battleDirections": {
         "ally": "northwest",

@@ -476,6 +476,21 @@
       "description": "使用后获得一只绑定的 Lv1 芽耳布伊，用于学习战斗宠物。"
     },
     {
+      "id": "bui_novice_sprout_taming_certificate",
+      "label": "芽耳布伊 驯宠证",
+      "menuLabel": "芽耳布伊驯宠证",
+      "binding": "bound",
+      "stackLimit": 1,
+      "startingCount": 0,
+      "useContexts": ["world_pet_ride_permit"],
+      "worldUse": {
+        "type": "pet_ride_permit",
+        "formId": "bui_novice_sprout_earth5_wind5",
+        "permitId": "ride_bui_novice_sprout"
+      },
+      "description": "使用后永久获得芽耳布伊骑乘资格；仍需先学会骑宠术。不会改变宠物属性。"
+    },
+    {
       "id": "novice_tiger_egg",
       "label": "新手老虎蛋",
       "menuLabel": "新手虎蛋",

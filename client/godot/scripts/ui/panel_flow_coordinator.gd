@@ -15719,6 +15719,9 @@ func _on_backpack_use_pressed() -> void:
 	if BackpackModel.item_can_world_pet_egg(item_id):
 		_use_backpack_pet_egg_item(item_id)
 		return
+	if BackpackModel.item_can_world_pet_ride_permit(item_id):
+		_use_backpack_pet_ride_permit_item(item_id)
+		return
 	if EquipmentModel.is_equipment(item_id):
 		_equip_selected_backpack_item(item_id)
 		return
@@ -16140,6 +16143,32 @@ func _use_backpack_pet_egg_item(item_id: String) -> void:
 	if status_label != null:
 		host._update_hud_text()
 
+
+func _use_backpack_pet_ride_permit_item(item_id: String) -> void:
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action("world_item_use", {"itemId": item_id}, "使用驯宠证失败。")
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		backpack_pending_use_item_id = ""
+		_refresh_backpack_panel()
+		_refresh_pet_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			host._update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("使用驯宠证"):
+		return
+	var result = PlayerProgressModel.use_world_pet_ride_permit_item(player_profile, item_id)
+	player_profile = result.get("profile", player_profile)
+	if bool(result.get("ok", false)) and profile_save_enabled:
+		host._save_player_profile_now()
+	_set_world_log_message(str(result.get("message", "")))
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+	_refresh_pet_panel()
+	_refresh_quick_bar()
+	if status_label != null:
+		host._update_hud_text()
+
 func _show_backpack_pet_heal_popup(instance_id: String, healed_amount: int) -> void:
 	var target_button = _backpack_target_button_for_pet(instance_id)
 	if target_button == null:
@@ -16500,6 +16529,9 @@ func _shop_detail_text(item_id: String, count: int = -1) -> String:
 	var lines: Array[String] = []
 	lines.append("%s x%d" % [BackpackModel.label_for(item_id), effective_count])
 	lines.append(ShopCatalogModel.price_line_for(shop_active_id, item_id))
+	var description := BackpackModel.description_for(item_id)
+	if description != "":
+		lines.append(description)
 	if EquipmentModel.is_equipment(item_id):
 		lines.append_array(_equipment_compare_detail_lines(item_id))
 		lines.append_array(_equipment_detail_lines_with_requirement_status(item_id, true))
