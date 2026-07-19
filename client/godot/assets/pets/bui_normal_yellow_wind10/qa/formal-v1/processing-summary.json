@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "totalRuntimeFrames": 180,
+  "actions": {
+    "idle": {
+      "frameCountPerView": 6,
+      "runtimeFrames": 12,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/idle.png",
+      "repackedInputSha256": "1c86e65099caddb3fd11cebc7fe5c999905d7c62aaaea6cd8661227276baf88c",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4936170213
+      }
+    },
+    "walk": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/walk.png",
+      "repackedInputSha256": "2f478e75449282c7292eb3ace86521a8940e980f9dd6732523bcc55cbf40c84e",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4830985915
+      }
+    },
+    "attack": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/attack.png",
+      "repackedInputSha256": "d909c2429f521adf223617147e49830d281d97e3a8b74647c6d6fc19ac53aacd",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.354340836
+      }
+    },
+    "skill": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/skill.png",
+      "repackedInputSha256": "6ca5ad8187b403f9293add8ab975afb21c3487e22c048f1fb087c186b9feb36b",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.6389105058
+      }
+    },
+    "hurt": {
+      "frameCountPerView": 6,
+      "runtimeFrames": 12,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/hurt.png",
+      "repackedInputSha256": "f95ecfd278535fde8714b3a15e966d358b7eb721d386145df6cf5c7c2ffd05b2",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.422972973
+      }
+    },
+    "defend": {
+      "frameCountPerView": 6,
+      "runtimeFrames": 12,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/defend.png",
+      "repackedInputSha256": "f7ae53c97c105d87734fb3b5441aeeb50463e223849f7b86a58ac76d20ba8fcb",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4424657534
+      }
+    },
+    "dodge": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/dodge.png",
+      "repackedInputSha256": "1e32e1c387f532fae8eac7012e247c9eb91f048955cd02f950230affe9af5d60",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4936170213
+      }
+    },
+    "counter": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/counter.png",
+      "repackedInputSha256": "d19e645615792ee75e26288d0509af93cc863c60d8b5530a7629e81427278a28",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.4574394464
+      }
+    },
+    "stagger": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/stagger.png",
+      "repackedInputSha256": "3cc50680560926ac1b785624fb3a892d03ab54f202d12af758445b3d09ec2e43",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.3287066246
+      }
+    },
+    "knockaway": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/knockaway.png",
+      "repackedInputSha256": "7e27f7c44af9ef65816bef17ba70a131cfc6a67eb00165474e0adb725168b269",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.5042857143
+      }
+    },
+    "down": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/down.png",
+      "repackedInputSha256": "1d989e01ba179980bacbf5b5bc4edc96eee1635cc509c79fb29afeb30fcc0798",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.35
+      }
+    },
+    "revive": {
+      "frameCountPerView": 8,
+      "runtimeFrames": 16,
+      "rawSheet": ".run/bui_family_art/bui_normal_yellow_wind10/pet/canonical/revive.png",
+      "repackedInputSha256": "58023fcdc816af5d5797eea8a460ed827bd3be09498c06a51ba7bc7077bb0d1c",
+      "processing": {
+        "tool": "build_pet_art_bundle.py",
+        "key": "#FF00FF",
+        "transparentDistance": 80.0,
+        "opaqueDistance": 210.0,
+        "residualMagentaDistance": 110.0,
+        "fringeCleanupAlpha": 127,
+        "anchor": "bottom-center",
+        "fitScale": 0.9,
+        "sharedScale": 1.5542435424
+      }
+    }
+  }
+}

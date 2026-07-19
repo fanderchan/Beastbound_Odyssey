@@ -1,65 +1,225 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
+  "bundleId": "pet_action_bui_normal_yellow_wind10_v1",
   "formId": "bui_normal_yellow_wind10",
-  "displayName": "黄色普通布伊",
-  "artStatus": "owner_review_pending",
+  "displayName": "黄风布伊",
+  "artStatus": "in_production",
   "productionGroup": "G02",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "identityLock": "identity/identity-lock.md",
     "board": "identity/identity-board-transparent.png",
     "poses": {
       "front_3quarter_sw": "identity/front_3quarter_sw.png",
       "back_3quarter_ne": "identity/back_3quarter_ne.png",
       "south": "identity/south.png",
       "west": "identity/west.png"
-    }
+    },
+    "sourceViewsIndependentlyDrawn": true
   },
   "actions": {
-    "idle": {"frameCount": 6, "status": "not_produced"},
-    "walk": {"frameCount": 8, "status": "not_produced"},
-    "attack": {"frameCount": 8, "status": "not_produced"},
-    "skill": {"frameCount": 8, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "status": "not_produced"},
-    "defend": {"frameCount": 6, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "status": "not_produced"},
-    "counter": {"frameCount": 8, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "status": "not_produced"},
-    "down": {"frameCount": 8, "status": "not_produced"},
-    "revive": {"frameCount": 8, "status": "not_produced"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "6b5fcd23ad6bb5bb3895f5cc21725da3dcaf4215972994bd5faa1c9e2a2f4e6b",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
   },
   "worldVisual": {
     "status": "not_produced",
     "strategy": "independent_8",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
     "runtimeMirroring": false,
-    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
     "actions": {
-      "idle": {"frameCount": 1, "status": "not_produced"},
-      "walk": {"frameCount": 4, "status": "not_produced"}
-    }
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "not_produced"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "not_produced"
+      }
+    },
+    "totalFrameCount": 40,
+    "runtimeMountedComposition": false
   },
-  "supportedMountedCharacterIds": ["novice_hunter_v1"],
-  "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
-    "raw": "source/identity-board-raw.webp",
-    "sourceMetadata": "source/identity-board-source-meta.json",
-    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "repackMetadata": "source/identity-board-repack-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "createdForRepository": true,
+    "ownershipRecord": "identity/source-and-ownership.md",
+    "generationContract": "prompts/full-production-generation-contract-v1.md",
+    "battleProcessingSummary": "qa/formal-v1/processing-summary.json",
+    "consolidatedRawArchiveStatus": "pending_parent_dedup_archive"
   },
   "evidence": {
-    "contactSheet": ".run/art_batch_phase320/bui_normal/yellow/identity-build/contact-sheet.png",
-    "contactSheetSha256": "78d8ddb874dab6cec46f325d4004d63c0bd8e0a8315ff3b8dfa32bbb794cf8bf",
-    "groupOriginalSheet": "../bui_normal_red_fire10/qa/bui-normal-three-form-pet-mounted-original.png",
-    "groupOriginalSheetSha256": "4a2fe5ac11cf38f8c5bdd5c7d16b2cf4639102df183d0580a494111aad2c73c8",
-    "group160pxSheet": "../bui_normal_red_fire10/qa/bui-normal-three-form-pet-mounted-160px.png",
-    "group160pxSheetSha256": "cfb9974064cabccf7ddbfc1f54025110866a25918b2a08db3b59018666ce1788"
+    "battleContactSheet": "qa/formal-v1/two-view-12-actions-contact-sheet.png",
+    "finalFacingInContactSheet": "qa/formal-v1/final-facing-in-two-side-contact.png"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Accepted v2 identity restores Bui bloodline after rejected fox-like v1. World and battle matrices are not produced."
+  "notes": "All 180 standalone battle runtime frames are installed for review. The independent eight-direction world set is still pending. Runtime remains disabled until real Godot battle review and owner acceptance."
 }

@@ -1,0 +1,3 @@
+OpenAI built-in image generation prompt record.
+
+Create one production HD painterly 2.5D battle sequence for the exact Beastbound pet 黄风布伊 (bui_normal_yellow_wind10), using the tracked identity board as the immutable subject lock. Formal view: front three-quarter southwest authored view; independently authored, not mirrored. Action: clear impact recoil and regain-balance beat without collapse. Preserve anatomy, face, markings, palette, materials, body scale and full-body containment in every chronological frame. Use a flat exact #FF00FF chroma background with no grid, text, UI, scenery, shadow, loose effect, extra character, weapon, duplicated limb or crop. Down is reversible unconsciousness; revive begins from that held pose. Runtime and owner approval remain pending.
