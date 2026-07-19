@@ -1,65 +1,87 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
+  "bundleId": "pet_action_bui_normal_red_fire10_v1",
   "formId": "bui_normal_red_fire10",
-  "displayName": "红色普通布伊",
+  "displayName": "赤焰布伊",
   "artStatus": "owner_review_pending",
   "productionGroup": "G02",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "world_true8_and_formal_battle_matrix",
   "runtimeEnabled": false,
+  "sourceFrameSize": [512, 512],
   "runtimeFrameSize": [256, 256],
   "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "battleViewMapping": {
+    "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"},
+    "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"}
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "identityLock": "identity/identity-lock.md",
     "board": "identity/identity-board-transparent.png",
     "poses": {
       "front_3quarter_sw": "identity/front_3quarter_sw.png",
       "back_3quarter_ne": "identity/back_3quarter_ne.png",
       "south": "identity/south.png",
       "west": "identity/west.png"
-    }
+    },
+    "sourceViewsIndependentlyDrawn": true
   },
   "actions": {
-    "idle": {"frameCount": 6, "status": "not_produced"},
-    "walk": {"frameCount": 8, "status": "not_produced"},
-    "attack": {"frameCount": 8, "status": "not_produced"},
-    "skill": {"frameCount": 8, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "status": "not_produced"},
-    "defend": {"frameCount": 6, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "status": "not_produced"},
-    "counter": {"frameCount": 8, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "status": "not_produced"},
-    "down": {"frameCount": 8, "status": "not_produced"},
-    "revive": {"frameCount": 8, "status": "not_produced"}
+    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "owner_review_pending"},
+    "walk": {"frameCount": 8, "fps": 11, "loop": true, "status": "owner_review_pending"},
+    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "owner_review_pending"},
+    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"},
+    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "owner_review_pending"},
+    "down": {"frameCount": 8, "fps": 10, "loop": false, "holdLastFrame": true, "status": "owner_review_pending"},
+    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "owner_review_pending"}
   },
-  "worldVisual": {
-    "status": "not_produced",
-    "strategy": "independent_8",
-    "runtimeMirroring": false,
-    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
-    "actions": {
-      "idle": {"frameCount": 1, "status": "not_produced"},
-      "walk": {"frameCount": 4, "status": "not_produced"}
+  "battleVisual": {
+    "status": "self_review_passed_owner_pending",
+    "actionCountPerView": 12,
+    "frameCountPerView": 90,
+    "totalFrameCount": 180,
+    "runtimeFinalOrientationUsesHorizontalFlip": true,
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 1,
+    "battleViewMapping": {
+      "enemy": {"view": "front_3quarter_sw", "flipH": true, "facing": "southeast"},
+      "ally": {"view": "back_3quarter_ne", "flipH": true, "facing": "northwest"}
     }
   },
+  "worldVisual": {
+    "status": "self_review_passed_owner_pending",
+    "strategy": "independent_8",
+    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "runtimeMirroring": false,
+    "actions": {
+      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "owner_review_pending"},
+      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "owner_review_pending"}
+    },
+    "totalFrameCount": 40,
+    "runtimeMountedComposition": false
+  },
   "supportedMountedCharacterIds": ["novice_hunter_v1"],
-  "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
-    "raw": "source/identity-board-raw.webp",
-    "sourceMetadata": "source/identity-board-source-meta.json",
-    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "repackMetadata": "source/identity-board-repack-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+  "source": {
+    "kind": "project_original_ai_assisted",
+    "generator": "OpenAI built-in image generation",
+    "externalSourceAssetsUsed": false,
+    "createdForRepository": true,
+    "ownershipRecord": "identity/source-and-ownership.md",
+    "generationContract": "prompts/full-production-generation-contract-v1.md",
+    "battleProcessingSummary": "qa/formal-v1/processing-summary.json",
+    "worldProcessingSummary": "qa/world-v1/processing-summary.json",
+    "consolidatedRawArchiveStatus": "pending_parent_dedup_archive"
   },
   "evidence": {
-    "contactSheet": ".run/art_batch_phase320/bui_normal/red/identity-build/contact-sheet.png",
-    "contactSheetSha256": "aaffed436cdb793ead80db779a036d30578681c8ad9ab9f1977361d9549c38a1",
-    "groupOriginalSheet": "qa/bui-normal-three-form-pet-mounted-original.png",
-    "groupOriginalSheetSha256": "4a2fe5ac11cf38f8c5bdd5c7d16b2cf4639102df183d0580a494111aad2c73c8",
-    "group160pxSheet": "qa/bui-normal-three-form-pet-mounted-160px.png",
-    "group160pxSheetSha256": "cfb9974064cabccf7ddbfc1f54025110866a25918b2a08db3b59018666ce1788"
+    "battleContactSheet": "qa/formal-v1/two-view-12-actions-contact-sheet.png",
+    "finalFacingInContactSheet": "qa/formal-v1/final-facing-in-two-side-contact.png",
+    "worldContactSheet": "qa/world-v1/true8-world-contact-8x5.png"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+  "notes": "All 220 runtime frames are installed for review. Runtime remains disabled until real Godot battle review and owner acceptance."
 }
