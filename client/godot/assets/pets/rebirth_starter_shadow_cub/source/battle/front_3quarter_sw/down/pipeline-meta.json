@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "108ed3fd5195d20e886c252a6bfc4407d145b717e57e1e2bf0f9850edc1cd1a5",
+  "slots": [
+    "down-1",
+    "down-2",
+    "down-3",
+    "down-4",
+    "down-5",
+    "down-6",
+    "down-7",
+    "down-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "down-1",
+      "sourceRgbaSha256": "93908962fc9dc7331fcc1b8938f5aa45c3660b0a8510fd51d41c68b2a383b563",
+      "runtimeRgbaSha256": "b8ea695c922d65c114a4bcf6fd5a51399f72c1caaa0625bcabe60382cba02142"
+    },
+    {
+      "slot": "down-2",
+      "sourceRgbaSha256": "787632afd1134a3bfa1b9e6dbe422904e4236bc5fc07c5cde7fade07ec4daf2b",
+      "runtimeRgbaSha256": "14a4a676518ae927e553b55e241fdbcb4321488f3d5995f7dd066887e52e6c03"
+    },
+    {
+      "slot": "down-3",
+      "sourceRgbaSha256": "cff4f0c64be7b6599e6cd3aa2225a461c70dadd4d7f59eb4481e35a92af180f1",
+      "runtimeRgbaSha256": "c5dc08a2a558dba1a02efecd44803075a80728657af2498e1d4adc743f3c42d7"
+    },
+    {
+      "slot": "down-4",
+      "sourceRgbaSha256": "4315013b2ab93ccd1db30da8a48d72095d9a66713252db02b19c85b3d702490c",
+      "runtimeRgbaSha256": "2a028db42ce25873bc902c984a2da4cc761c55440030ecadfcf920c1c898c83f"
+    },
+    {
+      "slot": "down-5",
+      "sourceRgbaSha256": "4bcb4b9677e0518e270961146830650b88d753121760ad8fdcd62524c7b1c81f",
+      "runtimeRgbaSha256": "43bf0f7567001da4aea043d950a93786e475c2c9935d386abb45d8ed10f7b311"
+    },
+    {
+      "slot": "down-6",
+      "sourceRgbaSha256": "3ff220c7f4e44b1417ec3ef7e6884c2cb4a6a36aa56cb40bdd3877da218e563c",
+      "runtimeRgbaSha256": "48235449ad9d574e5230601d6a150d09f630933bf8d1d94cbd18b251e270958f"
+    },
+    {
+      "slot": "down-7",
+      "sourceRgbaSha256": "83d74d2bd1ae8b954e8e25c833dd449dc6757ffa723551f0f3b8253e4905a97e",
+      "runtimeRgbaSha256": "3d0ca885db574e088d2a369b87a0133708f4b7d49de21c7678639d5612485ea0"
+    },
+    {
+      "slot": "down-8",
+      "sourceRgbaSha256": "e4df3f3ce71b682cabcc7d3f050d1f948816efc92ea66337e4eb6e28b16b52af",
+      "runtimeRgbaSha256": "74199304b9064e26ee72ff1a94a9848afa257b29f85b1d75a9eaa5228ee31255"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "stagger-b",
+    "down-b"
+  ],
+  "detachedComponentCleanupApplied": false,
+  "deterministicExpansion": true
+}

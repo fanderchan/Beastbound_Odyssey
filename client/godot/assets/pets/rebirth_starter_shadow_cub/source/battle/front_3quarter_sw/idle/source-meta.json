@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedSha256": "108ed3fd5195d20e886c252a6bfc4407d145b717e57e1e2bf0f9850edc1cd1a5",
+  "originalGeneratedDecodedRgbaSha256": "c7746c020120e597034d048d38d88ee09884a62edfdfe072c49bd79f743f8a0e",
+  "rawArchive": "raw-sheet-lossless.webp",
+  "rawArchiveSha256": "e839084afc933ab27004f723944f246e163d878078417b78970b236aa42be8a0",
+  "rawDecodedRgbaSha256": "c7746c020120e597034d048d38d88ee09884a62edfdfe072c49bd79f743f8a0e",
+  "prompt": "prompt-used.txt",
+  "promptSha256": "d208ac191268fb6408406afd7f254fde267773184e96a63d92e3decc36789536",
+  "pipelineMetadata": "pipeline-meta.json",
+  "pipelineSha256": "d4c8cb5369263ca56b815b544cc1c964c40798ab040bb761d1aee41efe778117",
+  "qc": "qa.json",
+  "qcSha256": "dc4ea0f7b6b8928a9ce04f401f45b86c0d9d94607ead4e236df9aaec59e5d4cd"
+}

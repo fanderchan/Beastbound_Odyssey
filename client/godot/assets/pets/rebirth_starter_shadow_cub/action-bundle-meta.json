@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "formId": "rebirth_starter_shadow_cub",
   "displayName": "玄影幼兽",
-  "artStatus": "owner_review_pending",
-  "productionScope": "identity_key_pose_gate",
+  "artStatus": "in_production",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -30,51 +30,75 @@
   "actions": {
     "idle": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -122,5 +146,72 @@
     "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate.",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "afd5f741ef9512112a1466c0e1dcd3ea120f1a39c7a1fc5690ef7e11e0322970",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
+  }
 }

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "108ed3fd5195d20e886c252a6bfc4407d145b717e57e1e2bf0f9850edc1cd1a5",
+  "slots": [
+    "hurt-1",
+    "hurt-2",
+    "hurt-3",
+    "hurt-4",
+    "hurt-5",
+    "hurt-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "hurt-1",
+      "sourceRgbaSha256": "000141a51230444b6ae57c056b72ebec710c89ca6016b52398618f517cb5dfff",
+      "runtimeRgbaSha256": "4b6affdee02e0fd28788134c7c8eb287697f233291cd40983699a9c454e6f793"
+    },
+    {
+      "slot": "hurt-2",
+      "sourceRgbaSha256": "268126a414cba9f6a673dc50b4ae1e1c18e0233bca925832b8e06186a74ca049",
+      "runtimeRgbaSha256": "eb19340e7ce069869f88779ca7ba947c589d7a7a32d373af7bcf9edf0d365cae"
+    },
+    {
+      "slot": "hurt-3",
+      "sourceRgbaSha256": "35625a36bbe6734bf6ef8f0176edd633b79bb7c62a287d586a4b80a20f41ebe8",
+      "runtimeRgbaSha256": "f822959652729a9766a55cbeddbc0391201a95e37b5d8423d0fba5e075f1be59"
+    },
+    {
+      "slot": "hurt-4",
+      "sourceRgbaSha256": "d36100982a5ebf5d42fdd5caa14712459d29be8c9e0028fa31e95a8e50bc7100",
+      "runtimeRgbaSha256": "6c92d5260ee8d2e2814f0bb4d441cc9bb2500bfac74ea5a92e1b9bf50e6255c0"
+    },
+    {
+      "slot": "hurt-5",
+      "sourceRgbaSha256": "91a911bbc00c4716ed6c19d6c8cbc2d74f7e9b5336965cdd8f659f3beb0b013e",
+      "runtimeRgbaSha256": "1079b78dd0b7275070e70bb3773c92deae6fa4f6c8f4775b03a51ea79aa446e2"
+    },
+    {
+      "slot": "hurt-6",
+      "sourceRgbaSha256": "21b8c286d977647bbe755e9e4ad8635cb563179f53ac429cea39651a58f10729",
+      "runtimeRgbaSha256": "9f47f8d11777fba3afbce0715bf7f9a3dc10201abb46c4d528095bca10b319ef"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "hurt-a",
+    "hurt-b"
+  ],
+  "detachedComponentCleanupApplied": false,
+  "deterministicExpansion": true
+}

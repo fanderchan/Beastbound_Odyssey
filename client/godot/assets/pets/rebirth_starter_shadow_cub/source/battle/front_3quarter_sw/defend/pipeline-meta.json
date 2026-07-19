@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "108ed3fd5195d20e886c252a6bfc4407d145b717e57e1e2bf0f9850edc1cd1a5",
+  "slots": [
+    "defend-1",
+    "defend-2",
+    "defend-3",
+    "defend-4",
+    "defend-5",
+    "defend-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "defend-1",
+      "sourceRgbaSha256": "a7c3ec19c9889577a1a197077b977dd1bce3af704916695430de098a0410278b",
+      "runtimeRgbaSha256": "b02b6e947df769c55c041e404819e1d86b1c8cdc8539c26c2092b63df01829d1"
+    },
+    {
+      "slot": "defend-2",
+      "sourceRgbaSha256": "30d3a8eca1ece89964504b0517ef2a086f31a4ea3d9d64f925b6b5462f435f18",
+      "runtimeRgbaSha256": "f9aa251a3451c364f35bc7168fde85b638bcb215f97c8f4ec23d604cda670b61"
+    },
+    {
+      "slot": "defend-3",
+      "sourceRgbaSha256": "dd176bfb78e4d937019b2f657bca0a12f3bc2de8d0ed0093cabd03da182b5802",
+      "runtimeRgbaSha256": "cd1cd84173e941e28ee1b5798f58df1f8517eedd7ebb433c90613eaebbde4fb8"
+    },
+    {
+      "slot": "defend-4",
+      "sourceRgbaSha256": "0c921650b438928a241d1ff96ea5b866a0153bd166c54ebc9567dc555cc8cf19",
+      "runtimeRgbaSha256": "6490a2f109f8dd2e0f0b59b621f043914e66ae33e99eb33eec2b618ddba09d00"
+    },
+    {
+      "slot": "defend-5",
+      "sourceRgbaSha256": "79b6aa604b6b26c7cdaf5d9265b03d1a750601591fb0b64f8d825aec509f9c76",
+      "runtimeRgbaSha256": "46cd7d05efefc94b846dd32130670bb774875dace063bcec2eb11924c37b9192"
+    },
+    {
+      "slot": "defend-6",
+      "sourceRgbaSha256": "772dcaaceb169f04de940df3990fde5c2a782c368e15b68e3d1fa838129b341d",
+      "runtimeRgbaSha256": "45f43ee4ee63004c4fccb519adec505e9db95e0295c792a87e7cdfd4d005d7b2"
+    }
+  ],
+  "creativeSource": "generated/front_3quarter_sw-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "defend-a",
+    "defend-b"
+  ],
+  "detachedComponentCleanupApplied": false,
+  "deterministicExpansion": true
+}
