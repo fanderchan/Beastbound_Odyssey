@@ -17,9 +17,9 @@
     {
       "slot": "knockaway-1",
       "bbox": [
-        48,
-        114,
-        209,
+        45,
+        116,
+        212,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -29,9 +29,9 @@
     {
       "slot": "knockaway-2",
       "bbox": [
-        47,
-        113,
-        210,
+        40,
+        104,
+        215,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -41,9 +41,9 @@
     {
       "slot": "knockaway-3",
       "bbox": [
-        48,
-        125,
-        208,
+        43,
+        122,
+        214,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -53,9 +53,9 @@
     {
       "slot": "knockaway-4",
       "bbox": [
-        48,
-        143,
-        208,
+        65,
+        99,
+        192,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -65,9 +65,9 @@
     {
       "slot": "knockaway-5",
       "bbox": [
-        41,
-        146,
-        216,
+        48,
+        130,
+        208,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -77,8 +77,8 @@
     {
       "slot": "knockaway-6",
       "bbox": [
-        45,
-        116,
+        47,
+        134,
         210,
         241
       ],
@@ -90,8 +90,8 @@
       "slot": "knockaway-7",
       "bbox": [
         49,
-        114,
-        208,
+        108,
+        207,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -101,9 +101,9 @@
     {
       "slot": "knockaway-8",
       "bbox": [
-        47,
-        113,
-        209,
+        50,
+        110,
+        207,
         241
       ],
       "minimumEdgeMargin": 15,

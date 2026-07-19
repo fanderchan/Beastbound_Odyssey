@@ -17,9 +17,9 @@
     {
       "slot": "stagger-1",
       "bbox": [
-        40,
-        98,
-        215,
+        45,
+        102,
+        212,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -29,9 +29,9 @@
     {
       "slot": "stagger-2",
       "bbox": [
-        45,
-        105,
-        211,
+        43,
+        107,
+        213,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -41,9 +41,9 @@
     {
       "slot": "stagger-3",
       "bbox": [
-        45,
-        97,
-        211,
+        44,
+        111,
+        214,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -53,9 +53,9 @@
     {
       "slot": "stagger-4",
       "bbox": [
-        47,
-        103,
-        210,
+        41,
+        113,
+        216,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -65,9 +65,9 @@
     {
       "slot": "stagger-5",
       "bbox": [
-        43,
-        109,
-        213,
+        41,
+        114,
+        215,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -77,9 +77,9 @@
     {
       "slot": "stagger-6",
       "bbox": [
-        52,
-        107,
-        205,
+        41,
+        110,
+        215,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -90,7 +90,7 @@
       "slot": "stagger-7",
       "bbox": [
         42,
-        99,
+        112,
         214,
         241
       ],
@@ -101,9 +101,9 @@
     {
       "slot": "stagger-8",
       "bbox": [
-        42,
-        99,
-        215,
+        43,
+        112,
+        213,
         241
       ],
       "minimumEdgeMargin": 15,

@@ -172,8 +172,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 73,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "56571d1be7e5df2defac9debcb9b96dfa1ef2aeee1f2c8e0c88740b2f3d6e215",
-      "runtimeRgbaSha256": "df3c3104cf6b83949066feffb377700a8edf3ef3b7bb58f1e6005d6777fae356"
+      "sourceRgbaSha256": "f8c5811f7b4bd0d75de115c26830eaff69dc423b9c73d6eee5b601f222be1afc",
+      "runtimeRgbaSha256": "67d82275f6f529c70a56161e2dbe5c24fc613f139236ecbf1edd733843fbc359"
     },
     {
       "slot": "revive-2",
@@ -883,6 +883,14 @@
       "runtimeRgbaSha256": "2ceca8edf6077f40ba59a61e37f70d0ca7e963607940a1e1b5e4147b37689039"
     }
   ],
+  "continuityPostprocess": {
+    "tool": "repair_down_revive_continuity.py",
+    "creativeChanges": false,
+    "contract": "revive-1 reuses the exact final faint pose from down-8 in the same authored view",
+    "sourceFrame": "front_3quarter_sw/down/source-frames/down-8.png",
+    "sourceRgbaSha256": "f8c5811f7b4bd0d75de115c26830eaff69dc423b9c73d6eee5b601f222be1afc",
+    "runtimeRgbaSha256": "67d82275f6f529c70a56161e2dbe5c24fc613f139236ecbf1edd733843fbc359"
+  },
   "originalGeneratedSize": [
     1774,
     887

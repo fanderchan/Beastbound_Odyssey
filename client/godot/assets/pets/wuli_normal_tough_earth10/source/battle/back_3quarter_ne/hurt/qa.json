@@ -17,9 +17,9 @@
     {
       "slot": "hurt-1",
       "bbox": [
-        40,
-        101,
-        216,
+        45,
+        103,
+        211,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -29,9 +29,9 @@
     {
       "slot": "hurt-2",
       "bbox": [
-        43,
-        105,
-        213,
+        41,
+        107,
+        215,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -41,9 +41,9 @@
     {
       "slot": "hurt-3",
       "bbox": [
-        45,
-        104,
-        211,
+        40,
+        108,
+        216,
         242
       ],
       "minimumEdgeMargin": 14,
@@ -53,8 +53,8 @@
     {
       "slot": "hurt-4",
       "bbox": [
-        45,
-        120,
+        44,
+        111,
         212,
         241
       ],
@@ -65,9 +65,9 @@
     {
       "slot": "hurt-5",
       "bbox": [
-        45,
-        105,
-        211,
+        44,
+        114,
+        213,
         241
       ],
       "minimumEdgeMargin": 15,
@@ -77,12 +77,12 @@
     {
       "slot": "hurt-6",
       "bbox": [
-        41,
-        103,
-        215,
-        242
+        52,
+        114,
+        204,
+        241
       ],
-      "minimumEdgeMargin": 14,
+      "minimumEdgeMargin": 15,
       "residualMagentaPixels": 0,
       "transparentRgbLeakPixels": 0
     }

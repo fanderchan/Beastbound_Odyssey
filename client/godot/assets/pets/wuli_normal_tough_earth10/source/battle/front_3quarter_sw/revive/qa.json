@@ -17,9 +17,9 @@
     {
       "slot": "revive-1",
       "bbox": [
-        43,
-        158,
-        214,
+        42,
+        166,
+        215,
         241
       ],
       "minimumEdgeMargin": 15,
