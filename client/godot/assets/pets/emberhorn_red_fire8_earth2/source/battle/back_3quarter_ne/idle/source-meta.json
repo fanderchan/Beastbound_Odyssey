@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "rawArchive": "raw-sheet-lossless.webp",
+  "prompt": "prompt-used.txt",
+  "pipelineMetadata": "pipeline-meta.json",
+  "qc": "qa.json",
+  "originalGeneratedSha256": "c7fa08fc8ee68639bcdf017866697c3aa1638e52ce722d013653b370b52f1156",
+  "originalGeneratedDecodedRgbaSha256": "b2855588a323b404afe361c7c1afce357b03187849562ae5a2b6955d4bccdb5a",
+  "rawArchiveSha256": "7a4f2f7251f37bfcbf57ed1bdf3d77521c1ed6825d91e0f58ab462202b41358a",
+  "rawDecodedRgbaSha256": "b2855588a323b404afe361c7c1afce357b03187849562ae5a2b6955d4bccdb5a",
+  "promptSha256": "e9d17a924ecbc1b1141008f36440203275a68ab4ea11be6acccd20f1271b8805",
+  "pipelineSha256": "340160e18a6d5243c9ab520f7abe1c8cc2e41eac67755d8aa1a473ec030c0029",
+  "qcSha256": "da354e9c3e3f8b3fe6670720a962a548b9babb3a7bf07423690855a58bedc5b8",
+  "unalteredGeneratorOutputSha256": "d5b5ce717bdb8d0536d6cb30b5e54b623431bc5cd495d2faa974370f788a616f",
+  "pipelineInputPreparation": "deterministic component isolation and cell recentering only; no pose creation"
+}

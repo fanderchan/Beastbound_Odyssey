@@ -1,0 +1,4 @@
+Exact locked identity: stocky red-orange baby volcanic horn beast; black lava-cracked forehead horn, dark layered rocky mane, cream muzzle and belly, orange flank diamonds, amber eyes, dark cloven hooves
+The pet is the only subject.
+OpenAI built-in image generation production request. Use a uniform solid #FF00FF chroma background. Exactly 2 rows by 4 columns, exactly 8 sequential frames, ordered row-major. No text, labels, borders, grid lines, shadows, particles, props or scenery. One complete subject per cell, centered and fully visible with consistent scale and generous margin. High-definition hand-painted 2.5D Chinese pet MMORPG sprite art. Fixed front_3quarter_sw enemy-side view, facing diagonally down-left/southwest in every frame.
+SIGNATURE SKILL: brace, charge through the species signature body feature, strongest release body pose, recoil and recovery. No detached particles; the body action reads alone.
