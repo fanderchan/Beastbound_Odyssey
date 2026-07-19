@@ -3,29 +3,205 @@
   "formId": "thunder_dragon_mount",
   "displayName": "雷龙",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_and_formal_two_view_12_action_owner_review_pending_world_deferred",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
-  "identity": {"status": "self_review_passed_owner_pending", "sourceFrameSize": [512, 512], "board": "identity/identity-board-transparent.png", "poses": {"front_3quarter_sw": "identity/front_3quarter_sw.png", "back_3quarter_ne": "identity/back_3quarter_ne.png", "south": "identity/south.png", "west": "identity/west.png"}},
-  "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
-    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
   },
-  "worldVisual": {"status": "not_produced", "strategy": "independent_8", "runtimeMirroring": false, "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"], "actions": {"idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"}, "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}}},
-  "supportedMountedCharacterIds": ["novice_hunter_v1"],
-  "sourceArchive": {"policy": "tracked_lossless_webp_with_original_sha256", "raw": "source/identity-board-raw.webp", "sourceMetadata": "source/identity-board-source-meta.json", "pipelineMetadata": "source/identity-board-pipeline-meta.json", "prompt": "prompts/identity-board-v1.txt"},
-  "evidence": {"contactSheet": ".run/art_batch_phase320/thunder_dragon/identity-build/contact-sheet.png", "contactSheetSha256": "db65a57cbad3a4f048990eb442d6d8d30637013552eb6a9c69d60bdf9427531c"},
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
+  },
+  "worldVisual": {
+    "status": "not_produced",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "not_produced"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "not_produced"
+      }
+    }
+  },
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
+  "sourceArchive": {
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
+    "formalProductionLedger": "source/formal-production/source-ledger.json",
+    "promptDirectory": "prompts/production",
+    "workingArchive": ".run/art_batch_phase320/thunder_dragon/formal-production"
+  },
+  "evidence": {
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "f565e7c94dfd9e417b5802f7835e415f96b9804dd088fb6074a7dd96c653eacb",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "af37d0cd900e5dbe46988b91f5f54238e535b7d1fc7750282f499e7b1c28d08f",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "99290bf5accd35ed441ed0c52af9c151de8ac8fd6137247f110056b921a91931"
+  },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate."
+  "notes": "雷龙身份与独立战宠双视角十二动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。世界与骑乘动作按当前优先级后置；项目所有者审美验收前 runtimeEnabled 保持 false。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "kind": "pet",
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "generatedSourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "authoredSourceMirroring": false,
+    "battlePresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "downReviveContinuity": {
+      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
+      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+    },
+    "bundleDigest": "35c35482f7773d6a20c49320902dcbfe95760d988286565cee3b87f758774807",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+  }
 }
