@@ -134,9 +134,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "36ee0921b9ed0e5eb59aa36b870c3c862d50897d76d2a35fef62eef629e59322",
+      "contactSheetSha256": "c7223ca8b7ece4749dfa15ca62133f2e8a13841ced3b1bc6ac0f7f817a5c97f6",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "4577a568450e0c32a1367f298a8912b73f7346892e619a573c8c05b53b4b735d",
+      "gifSha256": "53e946054a550026766e779b434463388a535a35896c212cd33a8beed697a4a4",
       "minimumRuntimeEdgeMargin": 13
     },
     {
@@ -144,9 +144,9 @@
       "action": "revive",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
-      "contactSheetSha256": "68218a13439e01005a0b1bda1936180ac4545db7009aedc37869d109e9c79c84",
+      "contactSheetSha256": "7cca1ff8b7b677f239ef2d01a6cf112b707f40b23cf05c0681f62d146f773357",
       "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
-      "gifSha256": "103342b371cfa63c837dfebab943bb3f1b8cefead529af808ba80ef68e632e53",
+      "gifSha256": "e0e987808c100a86a256802e7d5e4ae24ebc4c831f79d42410998e8cc227f91e",
       "minimumRuntimeEdgeMargin": 13
     },
     {
@@ -282,15 +282,15 @@
     "back_3quarter_ne": true
   },
   "minimumBattleRuntimeEdgeMargin": 13,
-  "runtimeBundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
-  "bundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+  "runtimeBundleDigest": "101900a75570336ba31763be16af78c867b259db84184d86fdb3956a45ae4ab6",
+  "bundleDigest": "101900a75570336ba31763be16af78c867b259db84184d86fdb3956a45ae4ab6",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "d6585af6d9b156d2da8b06511464fcae65b137ccd6d9451ee422044e5460732b",
+  "contactSheetSha256": "b14d3ac3f0c943f1333c1d0faf3aa42ebdaf388923b359e3d88543113c93cc77",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
   "facingContractPreviewSha256": "3c306f317469c20f0cb08660cf1a08f1d4d922cea89780f5134ed91871d039a8",
   "qualityRepairs": [
     {
-      "id": "ko-expression-local-rgb-v1",
+      "id": "down-revive-ko-semantics-v2",
       "actions": [
         "down",
         "revive"
@@ -298,19 +298,21 @@
       "views": [
         "front_3quarter_sw"
       ],
-      "frameCount": 2,
+      "frameCount": 7,
       "alphaPixelsChanged": 0,
-      "outsideApprovedEyeMaskRgbExact": true,
-      "manifest": "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json",
-      "manifestSha256": "26dc292d1534b3497509a50b6c82e61233dd4a3dfee30438f74e3274478f7794",
-      "beforeAfterContact": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
-      "beforeAfterContactSha256": "4591270f04bf8606956ca4c296002660e98c43fa55b121e4e9d84e3bd97cf735"
+      "outsideApprovedFaceMasksRgbExact": true,
+      "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "manifestSha256": "b529eeafffff5e2e7fd0cbc80bf25e6757db6bf222095ed6da3c0df270dcd080",
+      "beforeAfterContact": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+      "beforeAfterContactSha256": "54f4a7f0a2fb53d655bf5ea91292e7be5fb8c4c73d8d16ba2ec0b479c4e4abcd",
+      "faceZoomContact": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+      "faceZoomContactSha256": "e939ea27b1a3e1aa8a7b9099705dc828dbda8d94c9c46f555ccb730185480fe8"
     }
   ],
   "koExpression": {
     "status": "self_review_passed_owner_pending",
-    "rule": "spiral/unfocused, non-lethal, no X, no smile",
+    "rule": "unfocused begins during collapse, prone hold is spiral, revive sheds the effect before returning alert; no X/death eyes",
     "alphaExact": true,
-    "bodyLightingOutlineExactOutsideEyeMasks": true
+    "bodyLightingOutlineExactOutsideFaceMasks": true
   }
 }

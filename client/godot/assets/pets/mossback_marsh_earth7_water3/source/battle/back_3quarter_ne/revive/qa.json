@@ -9,5 +9,21 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "visualSelfReview": "passed",
+  "semanticReview": {
+    "status": "passed",
+    "rule": "down is monotonic alert-to-imbalance-to-prone with unfocused/spiral KO eyes; revive starts byte-identical to down-8 and recovers without posture or expression regression",
+    "repairManifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+    "evidence": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "faceZoomEvidence": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png"
+  },
+  "qualityRepairs": [
+    {
+      "id": "down-revive-ko-semantics-v2",
+      "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "visualSelfReview": "passed",
+      "ownerReviewStatus": "pending"
+    }
+  ]
 }

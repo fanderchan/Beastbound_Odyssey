@@ -130,9 +130,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "9d0b692e13e4f5b52f043b0621366e1713288d241ca2fee8bc39bc7ed05a6d69",
+      "contactSheetSha256": "c17a41b70068e9b730f51b0bc4d1aa45de8f04fa5e2a6c0256ce749d1eafecee",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "1e9899b15b9d817972fa442a21fcf67af9ad49f04091be6d86381157bd482aa2",
+      "gifSha256": "ccb823d171bc34a460a04eff0424792bd5c8c7072f5e11a0dcabdeaf322f0b3f",
       "minimumRuntimeEdgeMargin": 11
     },
     {
@@ -140,9 +140,9 @@
       "action": "revive",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
-      "contactSheetSha256": "899844b66d950d7a76e0cec143eed55b4f6e8056123cb8851a0faa922bb7c1a3",
+      "contactSheetSha256": "4726920c132ab7d849897be4fb09bcc78dd5b0eb9804639e0d5441959c3323c3",
       "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
-      "gifSha256": "8ebbff39422d4c5f0ca927cd5d0023e0db2e2ab9426a35bc05334f6383d27d04",
+      "gifSha256": "be15e8b0d4b77f49121374a76e59b5cf33e675f0c483b4f919df2833b203cf83",
       "minimumRuntimeEdgeMargin": 11
     },
     {
@@ -250,9 +250,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
-      "contactSheetSha256": "b8f8e264fc0619ab14b42b983999ad7450f63973311a32ca713a182d6e056cd0",
+      "contactSheetSha256": "88412987683aaf54871e35d1556e6b02a381976beb530788576adaa4135f0f44",
       "gif": "qa/battle/actions/back_3quarter_ne/down.gif",
-      "gifSha256": "75cf313d46dcd6887b9e2f70de681d79fb5ba53be6dbe235d5852e1a2db8a4ca",
+      "gifSha256": "5f852f4657321ac212090968d3123568330c9e356cadbaac5d1922ceddc3bf82",
       "minimumRuntimeEdgeMargin": 11
     },
     {
@@ -278,10 +278,10 @@
     "back_3quarter_ne": true
   },
   "minimumBattleRuntimeEdgeMargin": 11,
-  "runtimeBundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
-  "bundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+  "runtimeBundleDigest": "1c229f8e85d3503814b37e8576335fc1703c5d236b4579899a112f6391f629fc",
+  "bundleDigest": "1c229f8e85d3503814b37e8576335fc1703c5d236b4579899a112f6391f629fc",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "b241128a35f7065a72516b2b704c13369b2cd273aed1a2b26ddd1bbd97a46be7",
+  "contactSheetSha256": "f48121c2827df8760ef87496cfcbc6eaa3fd1139ed17f2e70f0adae9bb02b911",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
   "facingContractPreviewSha256": "3b89ee3b817ee8cc67fbf37c63420dfe4c64549506d64c5af43c8ca1fb416104",
   "qualityRepairs": [
@@ -302,7 +302,7 @@
       "beforeAfterContactSha256": "64d4f4c2f64160b9778c80f6e1722c3a021ba9a2c632519803a33410584e68c4"
     },
     {
-      "id": "ko-expression-local-rgb-v1",
+      "id": "down-revive-ko-semantics-v2",
       "actions": [
         "down",
         "revive"
@@ -311,19 +311,21 @@
         "front_3quarter_sw",
         "back_3quarter_ne"
       ],
-      "frameCount": 4,
+      "frameCount": 11,
       "alphaPixelsChanged": 0,
-      "outsideApprovedEyeMaskRgbExact": true,
-      "manifest": "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json",
-      "manifestSha256": "4da8f34981825b94631c093e51c75af48dd90a75f4239676574b416395228b6c",
-      "beforeAfterContact": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
-      "beforeAfterContactSha256": "cc71915cc7f62c523823253a414706b6d2ade80bf82d7e1da56109c45a8acb19"
+      "outsideApprovedFaceMasksRgbExact": true,
+      "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "manifestSha256": "7ae99c4be5afc1cdfef321d35433ed05f0e1b47b37e45d87d85cf6d4a960531d",
+      "beforeAfterContact": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+      "beforeAfterContactSha256": "bbf481ef24c8eff22d22d2f30e00b0f7217c42d9a97f50532b7cbaadb77b2843",
+      "faceZoomContact": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+      "faceZoomContactSha256": "fd1f1e3b958b644d499766bf4d3cc91f637705077a51e5c6dff25cbe9af49b2f"
     }
   ],
   "koExpression": {
     "status": "self_review_passed_owner_pending",
-    "rule": "spiral/unfocused, non-lethal, no X, no smile",
+    "rule": "unfocused begins during collapse, prone hold is spiral, revive sheds the effect before returning alert; no X/death eyes",
     "alphaExact": true,
-    "bodyLightingOutlineExactOutsideEyeMasks": true
+    "bodyLightingOutlineExactOutsideFaceMasks": true
   }
 }

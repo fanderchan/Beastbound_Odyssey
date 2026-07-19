@@ -142,26 +142,28 @@
     "prompt": "prompts/identity-board-v1.txt",
     "qualityRepairManifests": [
       "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
-      "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json"
+      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
     ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/mossback/wetland/identity-build/contact-sheet.png",
     "contactSheetSha256": "d8389d6f679ddc813ff0467eb44d90f76184f11db9e0aae5692e4bf9c8d44b68",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "b241128a35f7065a72516b2b704c13369b2cd273aed1a2b26ddd1bbd97a46be7",
+    "battleContactSheetSha256": "f48121c2827df8760ef87496cfcbc6eaa3fd1139ed17f2e70f0adae9bb02b911",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "517ccb3dd49954087eb116a233678b86b49f37b4009f4dbdfa142fa2bf99ad35",
+    "battleQcSha256": "6c4e1779165aa4e664b4367f2317beb7caeac2000d16c0b56867d5e463f8adc1",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "3b89ee3b817ee8cc67fbf37c63420dfe4c64549506d64c5af43c8ca1fb416104",
     "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
     "battleDownReviveSequenceBeforeAfterSha256": "64d4f4c2f64160b9778c80f6e1722c3a021ba9a2c632519803a33410584e68c4",
-    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
-    "battleKoExpressionBeforeAfterSha256": "cc71915cc7f62c523823253a414706b6d2ade80bf82d7e1da56109c45a8acb19"
+    "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "battleDownReviveKoSemanticsBeforeAfterSha256": "bbf481ef24c8eff22d22d2f30e00b0f7217c42d9a97f50532b7cbaadb77b2843",
+    "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+    "battleDownReviveKoSemanticsFaceZoomSha256": "fd1f1e3b958b644d499766bf4d3cc91f637705077a51e5c6dff25cbe9af49b2f"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Wetland Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate. Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。 KO 终态已仅在眼部局部 RGB 改为清楚螺旋失焦眼；身体、光影、轮廓与 alpha 不变，禁止 X 眼、死亡符号和笑脸。",
+  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -220,7 +222,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+    "bundleDigest": "1c229f8e85d3503814b37e8576335fc1703c5d236b4579899a112f6391f629fc",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -229,7 +231,7 @@
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "runtimeFrameCount": 180,
-    "runtimeBundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+    "runtimeBundleDigest": "1c229f8e85d3503814b37e8576335fc1703c5d236b4579899a112f6391f629fc",
     "minimumBattleRuntimeEdgeMargin": 11,
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
@@ -246,14 +248,14 @@
         "ownerVisualGate": "self_review_passed_owner_pending"
       },
       {
-        "id": "ko-expression-local-rgb-v1",
+        "id": "down-revive-ko-semantics-v2",
         "actions": [
           "down",
           "revive"
         ],
-        "runtimeFrameCount": 4,
+        "runtimeFrameCount": 11,
         "alphaExact": true,
-        "bodyLightingOutlineExactOutsideEyeMasks": true,
+        "bodyLightingOutlineExactOutsideFaceMasks": true,
         "ownerVisualGate": "self_review_passed_owner_pending"
       }
     ]

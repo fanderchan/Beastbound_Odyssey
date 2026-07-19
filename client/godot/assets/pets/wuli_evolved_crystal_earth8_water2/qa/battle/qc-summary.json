@@ -134,9 +134,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "31d272427263a20d8c24e0a255205c64a7354f04560d61a857c3306a48cf53a6",
+      "contactSheetSha256": "77172f1afcf69e5f627d2c93c62ad2c42004b815be2f5803fb1aeeeb523ec8e8",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "7cef8fbbf14cc7d8514819b1176f7626ad6f27fb3af8c73aead51ddc55212d2a",
+      "gifSha256": "59215d74084e23c586bddbb9dab768d3cbb26665262e256d75a1018387bd9281",
       "minimumRuntimeEdgeMargin": 13
     },
     {
@@ -144,9 +144,9 @@
       "action": "revive",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
-      "contactSheetSha256": "fcd2704ba484068af3224fd55a3dde21a9902cff8bff38e794eb88617e5068ea",
+      "contactSheetSha256": "16fe510e94c22d033b0df4667bbe05addc64647a89f498445bce430134468360",
       "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
-      "gifSha256": "bcc3358b3fe3b7436a0dcfb82f3e2565181ce8a865046e498035f90f798c99f4",
+      "gifSha256": "8948ff63aadc6d2778788fd4742c808f0a755a86407c6b795bea8c4865814b06",
       "minimumRuntimeEdgeMargin": 13
     },
     {
@@ -254,9 +254,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
-      "contactSheetSha256": "5294b2a1a5ca02baf06b679f571d63ba99912e69f8cf034b44ac58d40625e103",
+      "contactSheetSha256": "7286b73e71176a98e2f5308681e0b94300f27dffaab6b4d98f0c61210ac68b14",
       "gif": "qa/battle/actions/back_3quarter_ne/down.gif",
-      "gifSha256": "607a895879887927fc3826e38dbeea352bc4d4a6277c223a2e3296fd9248c791",
+      "gifSha256": "e73c7b0a7f25781502acdd3650698f19d6e9411ed420b2dbbb828b5a8f60226f",
       "minimumRuntimeEdgeMargin": 13
     },
     {
@@ -264,9 +264,9 @@
       "action": "revive",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
-      "contactSheetSha256": "0d0d7b9ca1e1f770d2ead0462bd6c912cf4d613b25904f23844a0d3dd62e76fc",
+      "contactSheetSha256": "6337e3af9d8941c885ca60933c75e5014cd6a163678c8983cabc50fc9239d383",
       "gif": "qa/battle/actions/back_3quarter_ne/revive.gif",
-      "gifSha256": "3260e9bd5ca8222500a633dea02d07bbda4da363ea874ff5946e7ed20de5937b",
+      "gifSha256": "5058ed1927b23afc7ec23d79a1c2e83b3cc657f07cb726c50d196ba6dee57b76",
       "minimumRuntimeEdgeMargin": 13
     }
   ],
@@ -282,10 +282,10 @@
     "back_3quarter_ne": true
   },
   "minimumBattleRuntimeEdgeMargin": 13,
-  "runtimeBundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
-  "bundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+  "runtimeBundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
+  "bundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "b801d4153175dd5f5d6eb9456ad1a25d97ad33db959736be18ef6c18695f8d26",
+  "contactSheetSha256": "5a75e2797930fe8699a690eedd30ada0af0813706e3341066339d8d0f041ea08",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
   "facingContractPreviewSha256": "bd8e1514b5204a77cf0746b23a7fd67f38219c800b207a0f946daa188552dbcd",
   "qualityRepairs": [
@@ -304,6 +304,32 @@
       "manifestSha256": "e4b7b3d0746c6abdb3ff389f1a004d8fb5db448174778fb3501b3cdf79be8056",
       "beforeAfterContact": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
       "beforeAfterContactSha256": "6dc4d4b75ea34a5307ed48cd253d191b13a5dd22a654cb72ead4c3c300c19c81"
+    },
+    {
+      "id": "down-revive-ko-semantics-v2",
+      "actions": [
+        "down",
+        "revive"
+      ],
+      "views": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "frameCount": 12,
+      "alphaPixelsChanged": 0,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "manifestSha256": "0bb85fc6b1359adc319a2c0c06496f4ba3bfc3a6cbf4678f06913d255010de9d",
+      "beforeAfterContact": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+      "beforeAfterContactSha256": "8e3f789621849f7c71aefbbcf782e9aeb3762df8641c4f5e038ca338be8cb6fb",
+      "faceZoomContact": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+      "faceZoomContactSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32"
     }
-  ]
+  ],
+  "koExpression": {
+    "status": "self_review_passed_owner_pending",
+    "rule": "unfocused begins during collapse, prone hold is spiral, revive sheds the effect before returning alert; no X/death eyes",
+    "alphaExact": true,
+    "bodyLightingOutlineExactOutsideFaceMasks": true
+  }
 }

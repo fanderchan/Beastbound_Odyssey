@@ -140,24 +140,29 @@
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "prompt": "prompts/identity-board-v1.txt",
     "qualityRepairManifests": [
-      "source/battle/quality-repair-down-revive-sequence-v1-manifest.json"
+      "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
+      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
     ]
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
     "identityBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "b801d4153175dd5f5d6eb9456ad1a25d97ad33db959736be18ef6c18695f8d26",
+    "battleContactSheetSha256": "5a75e2797930fe8699a690eedd30ada0af0813706e3341066339d8d0f041ea08",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "5ab3bede1987a2a59c4a4805e2524363d664f6b95a4e121217f8381b33ba21b7",
+    "battleQcSha256": "4059c83e2b1b6b5d07aeec0e0fcfb5cfaa2920adb7d257c89b8b517d8c900135",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "bd8e1514b5204a77cf0746b23a7fd67f38219c800b207a0f946daa188552dbcd",
     "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
-    "battleDownReviveSequenceBeforeAfterSha256": "6dc4d4b75ea34a5307ed48cd253d191b13a5dd22a654cb72ead4c3c300c19c81"
+    "battleDownReviveSequenceBeforeAfterSha256": "6dc4d4b75ea34a5307ed48cd253d191b13a5dd22a654cb72ead4c3c300c19c81",
+    "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "battleDownReviveKoSemanticsBeforeAfterSha256": "8e3f789621849f7c71aefbbcf782e9aeb3762df8641c4f5e038ca338be8cb6fb",
+    "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+    "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。",
+  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -216,7 +221,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+    "bundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -225,7 +230,7 @@
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "runtimeFrameCount": 180,
-    "runtimeBundleDigest": "5c70a0d5cc1670b9639998cf217d92b0cd461de7c847992104be17c6a972021e",
+    "runtimeBundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
     "minimumBattleRuntimeEdgeMargin": 13,
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
@@ -239,6 +244,17 @@
           "revive"
         ],
         "runtimeFrameCount": 32,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "down-revive-ko-semantics-v2",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCount": 12,
+        "alphaExact": true,
+        "bodyLightingOutlineExactOutsideFaceMasks": true,
         "ownerVisualGate": "self_review_passed_owner_pending"
       }
     ]

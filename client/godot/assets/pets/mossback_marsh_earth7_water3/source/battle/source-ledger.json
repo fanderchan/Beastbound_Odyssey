@@ -738,15 +738,15 @@
   },
   "runtimeFrameCount": 180,
   "worldFrameCountObserved": 40,
-  "runtimeBundleDigest": "7b8afdfb1717289f4dc679482fbf78156b56f89b14af60502b266d8ee27adca9",
+  "runtimeBundleDigest": "1c229f8e85d3503814b37e8576335fc1703c5d236b4579899a112f6391f629fc",
   "repairManifests": [
     {
       "path": "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
       "sha256": "35bc69ac540f00e47350b7f4c51821dc03fb9801bcc38727df882889d97c8637"
     },
     {
-      "path": "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json",
-      "sha256": "4da8f34981825b94631c093e51c75af48dd90a75f4239676574b416395228b6c"
+      "path": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "sha256": "7ae99c4be5afc1cdfef321d35433ed05f0e1b47b37e45d87d85cf6d4a960531d"
     }
   ]
 }

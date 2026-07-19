@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "repairId": "down-revive-ko-semantics-v2",
+  "purpose": "remove relaxed sleeping reads from every affected down/revive phase while preserving the authored body sequence",
+  "visualRule": "down progresses alert -> imbalance/unfocused -> prone/spiral hold; revive starts exact to down-8, then progresses spiral -> unfocused -> alert without falling back; no X/death eyes",
+  "scope": {
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "views": [
+      "back_3quarter_ne",
+      "front_3quarter_sw"
+    ],
+    "runtimeFramesChanged": 12,
+    "changedRegion": "approved local facial RGB masks only",
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0
+  },
+  "method": "deterministic local RGB repair with exact alpha preservation; body pose, lighting, silhouette, world and mounted assets untouched",
+  "frameRecords": [
+    {
+      "path": "views/front_3quarter_sw/down/down-2.png",
+      "beforeSha256": "ed8a2cd2e945c52b8a4a48adc64a25cd697fec1e65a0b6eb3c82a455bc109767",
+      "afterSha256": "dfb172fc4f0fe2d8253606a236585838d5bd73a8cabd1f1ee7b526e1340330d2",
+      "alphaSha256Before": "11d7c1f5c320952c54a19e544d11f000004bd1b5ac6da3f769f066b8381111e9",
+      "alphaSha256After": "11d7c1f5c320952c54a19e544d11f000004bd1b5ac6da3f769f066b8381111e9",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        65,
+        194,
+        104,
+        206
+      ],
+      "approvedEyeBoxes": [
+        [
+          65,
+          197,
+          73,
+          205
+        ],
+        [
+          95,
+          194,
+          103,
+          202
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-3.png",
+      "beforeSha256": "3359faad12e97529835ae9aac9cb9eba2046441fccad961f1184ac43b07f43c4",
+      "afterSha256": "79b868cae55f6ca527887f7327d8e1f733e55589e061205a76995f3f986518e6",
+      "alphaSha256Before": "19bfb22a4ab792815f3d53a797ec249fee04f4dba4279301951546f88e04a84e",
+      "alphaSha256After": "19bfb22a4ab792815f3d53a797ec249fee04f4dba4279301951546f88e04a84e",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        66,
+        203,
+        105,
+        213
+      ],
+      "approvedEyeBoxes": [
+        [
+          66,
+          204,
+          74,
+          212
+        ],
+        [
+          96,
+          203,
+          104,
+          211
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-4.png",
+      "beforeSha256": "cc4d84f4784a949c781094230193d58fbe120b8c998a9697e9191698121f9b72",
+      "afterSha256": "c493b745d14344993b4de71234397bcfff7e1381f89b4cdb75263643a5207a52",
+      "alphaSha256Before": "64ded6b12ae56e784bb0dfe461847dcad4cddfaec75263f6d092b768bc25b19c",
+      "alphaSha256After": "64ded6b12ae56e784bb0dfe461847dcad4cddfaec75263f6d092b768bc25b19c",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        68,
+        209,
+        105,
+        219
+      ],
+      "approvedEyeBoxes": [
+        [
+          68,
+          210,
+          76,
+          218
+        ],
+        [
+          96,
+          209,
+          104,
+          217
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-5.png",
+      "beforeSha256": "73d70c7201439e4472848280cd3c97115d4afb20ccb0836aaa7873428c8a9804",
+      "afterSha256": "39261354c0d826609d4a40f1674499c300984b5143fe7431da748c7baa6be0ed",
+      "alphaSha256Before": "7250eeaa772880898ee6fa3f6e359a9d27b15e484e55deba62a8f1d8c6ad642e",
+      "alphaSha256After": "7250eeaa772880898ee6fa3f6e359a9d27b15e484e55deba62a8f1d8c6ad642e",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        69,
+        210,
+        104,
+        221
+      ],
+      "approvedEyeBoxes": [
+        [
+          69,
+          212,
+          77,
+          220
+        ],
+        [
+          95,
+          210,
+          103,
+          218
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-6.png",
+      "beforeSha256": "d2f364aef32f2f61e3cca19dd766e3aa618e4d77664add6d695631ac6888a17d",
+      "afterSha256": "1889265413c5d842f233178ae3aa051e54094f2ac1242e035748346b880fb186",
+      "alphaSha256Before": "fca78cce96e553c1af54e6fd8d226cce8a627a14449d6e2d293ab99950792d6a",
+      "alphaSha256After": "fca78cce96e553c1af54e6fd8d226cce8a627a14449d6e2d293ab99950792d6a",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        70,
+        212,
+        104,
+        224
+      ],
+      "approvedEyeBoxes": [
+        [
+          70,
+          215,
+          78,
+          223
+        ],
+        [
+          95,
+          212,
+          103,
+          220
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-7.png",
+      "beforeSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "afterSha256": "34989a6088cb56efdb100b8cb16e0819cd68d2789fe428eb9fc62d1c02369f73",
+      "alphaSha256Before": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaSha256After": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        71,
+        212,
+        104,
+        224
+      ],
+      "approvedEyeBoxes": [
+        [
+          71,
+          215,
+          79,
+          223
+        ],
+        [
+          95,
+          212,
+          103,
+          220
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-8.png",
+      "beforeSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "afterSha256": "34989a6088cb56efdb100b8cb16e0819cd68d2789fe428eb9fc62d1c02369f73",
+      "alphaSha256Before": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaSha256After": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        71,
+        212,
+        104,
+        224
+      ],
+      "approvedEyeBoxes": [
+        [
+          71,
+          215,
+          79,
+          223
+        ],
+        [
+          95,
+          212,
+          103,
+          220
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-7.png",
+      "beforeSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "afterSha256": "a690a71b8eecb20cbce336d7158346d3b51ade69df97dca2f30a1436a497fa3a",
+      "alphaSha256Before": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaSha256After": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 57,
+      "changedRgbBounds": [
+        203,
+        201,
+        212,
+        210
+      ],
+      "approvedEyeBoxes": [
+        [
+          203,
+          201,
+          211,
+          209
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-8.png",
+      "beforeSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "afterSha256": "a690a71b8eecb20cbce336d7158346d3b51ade69df97dca2f30a1436a497fa3a",
+      "alphaSha256Before": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaSha256After": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 57,
+      "changedRgbBounds": [
+        203,
+        201,
+        212,
+        210
+      ],
+      "approvedEyeBoxes": [
+        [
+          203,
+          201,
+          211,
+          209
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-1.png",
+      "beforeSha256": "5ce9ee5f07c8c0943fe77217ccceffb663f6e7c67ac77af8d1a9b9e29f2e9a26",
+      "afterSha256": "34989a6088cb56efdb100b8cb16e0819cd68d2789fe428eb9fc62d1c02369f73",
+      "alphaSha256Before": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaSha256After": "ef6a0d1ef2d3676cecc7a7b1d4d46b3a28d23863699737b7139186fa86aaefc9",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        71,
+        212,
+        104,
+        224
+      ],
+      "approvedEyeBoxes": [],
+      "approvedAdditionalMasks": [],
+      "copiedFrom": "front_3quarter_sw/down/8",
+      "reason": "replace relaxed/sleeping KO expression with unfocused or spiral eye"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-2.png",
+      "beforeSha256": "bfd4b221cb8413cd575f5cb8b515f1c03b1011f9a42608f63c695f2776dec2b7",
+      "afterSha256": "0d402adc28851afeea3c6ae4f7a0bbd90f13c0b62e9183fbcadd11406c052165",
+      "alphaSha256Before": "dfe88c1b8f077da64d70513d6766938ee6304fbf9467fa92725dca0709dc4233",
+      "alphaSha256After": "dfe88c1b8f077da64d70513d6766938ee6304fbf9467fa92725dca0709dc4233",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 122,
+      "changedRgbBounds": [
+        68,
+        208,
+        103,
+        217
+      ],
+      "approvedEyeBoxes": [
+        [
+          68,
+          208,
+          76,
+          216
+        ],
+        [
+          94,
+          208,
+          102,
+          216
+        ]
+      ],
+      "approvedAdditionalMasks": [],
+      "reason": "replace sleeping/closed eye with unfocused or spiral KO eye"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-1.png",
+      "beforeSha256": "91a883c5154ac9bcf264e4ed71fd8462c93b96679a6fe78a290664a075221067",
+      "afterSha256": "a690a71b8eecb20cbce336d7158346d3b51ade69df97dca2f30a1436a497fa3a",
+      "alphaSha256Before": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaSha256After": "22b37b0c34f4770d0cca15487b8c0af7f7684245d9c95a75a10a8401fb47f030",
+      "alphaExact": true,
+      "outsideApprovedFaceMasksRgbExact": true,
+      "changedRgbPixels": 57,
+      "changedRgbBounds": [
+        203,
+        201,
+        212,
+        210
+      ],
+      "approvedEyeBoxes": [],
+      "approvedAdditionalMasks": [],
+      "copiedFrom": "back_3quarter_ne/down/8",
+      "reason": "replace relaxed/sleeping KO expression with unfocused or spiral eye"
+    }
+  ],
+  "alphaExactForEveryChangedFrame": true,
+  "outsideApprovedFaceMasksRgbExactForEveryChangedFrame": true,
+  "bodyLightingOutlineExactOutsideFaceMasks": true,
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "worldFrameCountObserved": 0,
+  "runtimeBundleDigestAfterRepair": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "sha256": "8e3f789621849f7c71aefbbcf782e9aeb3762df8641c4f5e038ca338be8cb6fb"
+  },
+  "faceZoomEvidence": {
+    "path": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+    "sha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32"
+  },
+  "supersedesRepairIds": [
+    "ko-expression-local-rgb-v1"
+  ],
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

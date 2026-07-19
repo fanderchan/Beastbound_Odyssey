@@ -140,24 +140,26 @@
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "prompt": "prompts/identity-board-v1.txt",
     "qualityRepairManifests": [
-      "source/battle/quality-repair-ko-expression-local-rgb-v1-manifest.json"
+      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
     ]
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
     "identityBoardSha256": "ed70f62ed743c034851d4b0fe2d63f94b0270701754d9abaa4ec81804caa17d6",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "d6585af6d9b156d2da8b06511464fcae65b137ccd6d9451ee422044e5460732b",
+    "battleContactSheetSha256": "b14d3ac3f0c943f1333c1d0faf3aa42ebdaf388923b359e3d88543113c93cc77",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "795609e09db5e05b4712e6406fa42f076bdd135b2e0f8b850e298e56c081d398",
+    "battleQcSha256": "2c53e5de1892efb02774a92bbd7dde1c41bd0c4aec535099f84277b3e91f928e",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "3c306f317469c20f0cb08660cf1a08f1d4d922cea89780f5134ed91871d039a8",
-    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-local-rgb-v1-before-after.png",
-    "battleKoExpressionBeforeAfterSha256": "4591270f04bf8606956ca4c296002660e98c43fa55b121e4e9d84e3bd97cf735"
+    "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "battleDownReviveKoSemanticsBeforeAfterSha256": "54f4a7f0a2fb53d655bf5ea91292e7be5fb8c4c73d8d16ba2ec0b479c4e4abcd",
+    "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
+    "battleDownReviveKoSemanticsFaceZoomSha256": "e939ea27b1a3e1aa8a7b9099705dc828dbda8d94c9c46f555ccb730185480fe8"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. KO 终态已仅在眼部局部 RGB 改为清楚螺旋失焦眼；身体、光影、轮廓与 alpha 不变，禁止 X 眼、死亡符号和笑脸。",
+  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；世界与骑乘制作状态单独追踪。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -216,7 +218,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+    "bundleDigest": "101900a75570336ba31763be16af78c867b259db84184d86fdb3956a45ae4ab6",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -225,7 +227,7 @@
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "runtimeFrameCount": 180,
-    "runtimeBundleDigest": "208253e850853fb831131fd33fd6cc026a8f3fb3754188a76d7bcd9d069f5385",
+    "runtimeBundleDigest": "101900a75570336ba31763be16af78c867b259db84184d86fdb3956a45ae4ab6",
     "minimumBattleRuntimeEdgeMargin": 13,
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
@@ -233,14 +235,14 @@
     },
     "qualityRepairs": [
       {
-        "id": "ko-expression-local-rgb-v1",
+        "id": "down-revive-ko-semantics-v2",
         "actions": [
           "down",
           "revive"
         ],
-        "runtimeFrameCount": 2,
+        "runtimeFrameCount": 7,
         "alphaExact": true,
-        "bodyLightingOutlineExactOutsideEyeMasks": true,
+        "bodyLightingOutlineExactOutsideFaceMasks": true,
         "ownerVisualGate": "self_review_passed_owner_pending"
       }
     ]
