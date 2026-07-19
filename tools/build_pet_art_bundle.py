@@ -61,6 +61,9 @@ class BuildOptions:
     slots: tuple[str, ...]
     row_start: int = 0
     row_count: int | None = None
+    grid_mode: str = "uniform"
+    grid_search_ratio: float = 0.25
+    grid_min_gutter: int = 8
     key: tuple[int, int, int] = DEFAULT_KEY
     transparent_distance: float = 40.0
     opaque_distance: float = 150.0
@@ -168,6 +171,12 @@ def validate_options(options: BuildOptions) -> None:
         )
     if len(set(options.slots)) != len(options.slots):
         raise BundleBuildError("slot names must be unique")
+    if options.grid_mode not in {"uniform", "adaptive-gutters"}:
+        raise BundleBuildError("grid-mode must be uniform or adaptive-gutters")
+    if not 0.05 <= options.grid_search_ratio <= 0.45:
+        raise BundleBuildError("grid-search-ratio must be between 0.05 and 0.45")
+    if options.grid_min_gutter < 1:
+        raise BundleBuildError("grid-min-gutter must be positive")
     invalid_slots = [slot for slot in options.slots if not SLOT_PATTERN.fullmatch(slot)]
     if invalid_slots:
         raise BundleBuildError(
@@ -550,8 +559,7 @@ def prepare_frame(
 
 
 def prepare_frames(sheet: Image.Image, options: BuildOptions) -> list[PreparedFrame]:
-    x_boundaries = grid_boundaries(sheet.width, options.cols)
-    y_boundaries = grid_boundaries(sheet.height, options.rows)
+    x_boundaries, y_boundaries = input_grid_boundaries(sheet, options)
     frames: list[PreparedFrame] = []
     for index, slot in enumerate(options.slots):
         selected_row, col = divmod(index, options.cols)
@@ -585,6 +593,105 @@ def prepare_frames(sheet: Image.Image, options: BuildOptions) -> list[PreparedFr
     for frame, deviation in zip(frames, deviations, strict=True):
         frame.metadata["dimensionDriftFromMedian"] = round(deviation, 6)
     return frames
+
+
+def input_foreground_mask(sheet: Image.Image, options: BuildOptions) -> np.ndarray:
+    rgba = np.asarray(sheet.convert("RGBA"), dtype=np.uint8)
+    alpha = rgba[:, :, 3]
+    if all(
+        int(alpha[y, x]) < options.alpha_threshold
+        for y, x in ((0, 0), (0, -1), (-1, 0), (-1, -1))
+    ):
+        return alpha >= options.alpha_threshold
+    rgb = rgba[:, :, :3].astype(np.float32)
+    key_rgb = np.asarray(options.key, dtype=np.float32)
+    distance = np.sqrt(np.sum(np.square(rgb - key_rgb), axis=2))
+    return (alpha >= options.alpha_threshold) & (distance >= options.opaque_distance)
+
+
+def adaptive_axis_boundaries(
+    foreground_projection: np.ndarray,
+    length: int,
+    count: int,
+    search_ratio: float,
+    minimum_gutter: int,
+) -> tuple[int, ...]:
+    nominal_boundaries = grid_boundaries(length, count)
+    average_cell = float(length) / float(count)
+    search_radius = max(minimum_gutter, int(round(average_cell * search_ratio)))
+    result = [0]
+    for index in range(1, count):
+        nominal = nominal_boundaries[index]
+        remaining_cells = count - index
+        search_start = max(result[-1] + minimum_gutter, nominal - search_radius)
+        search_end = min(
+            length - remaining_cells * minimum_gutter,
+            nominal + search_radius + 1,
+        )
+        if search_start >= search_end:
+            raise BundleBuildError(
+                f"adaptive grid has no search room around boundary {index}/{count}"
+            )
+        empty_lines = np.asarray(
+            foreground_projection[search_start:search_end] == 0,
+            dtype=np.uint8,
+        )
+        runs: list[tuple[int, int]] = []
+        run_start: int | None = None
+        for offset, is_empty in enumerate(empty_lines.tolist() + [0]):
+            if is_empty and run_start is None:
+                run_start = offset
+            elif not is_empty and run_start is not None:
+                absolute_start = search_start + run_start
+                absolute_end = search_start + offset
+                if absolute_end - absolute_start >= minimum_gutter:
+                    runs.append((absolute_start, absolute_end))
+                run_start = None
+        if not runs:
+            raise BundleBuildError(
+                f"adaptive grid found no {minimum_gutter}px empty gutter around "
+                f"boundary {index}/{count} near {nominal}"
+            )
+        gutter_start, gutter_end = max(
+            runs,
+            key=lambda run: (
+                run[1] - run[0],
+                -abs(((run[0] + run[1]) // 2) - nominal),
+            ),
+        )
+        result.append((gutter_start + gutter_end) // 2)
+    result.append(length)
+    return tuple(result)
+
+
+def input_grid_boundaries(
+    sheet: Image.Image,
+    options: BuildOptions,
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    if options.grid_mode == "uniform":
+        return (
+            grid_boundaries(sheet.width, options.cols),
+            grid_boundaries(sheet.height, options.rows),
+        )
+    foreground = input_foreground_mask(sheet, options)
+    x_projection = np.count_nonzero(foreground, axis=0)
+    y_projection = np.count_nonzero(foreground, axis=1)
+    return (
+        adaptive_axis_boundaries(
+            x_projection,
+            sheet.width,
+            options.cols,
+            options.grid_search_ratio,
+            options.grid_min_gutter,
+        ),
+        adaptive_axis_boundaries(
+            y_projection,
+            sheet.height,
+            options.rows,
+            options.grid_search_ratio,
+            options.grid_min_gutter,
+        ),
+    )
 
 
 def normalize_canvas(
@@ -911,6 +1018,7 @@ def write_bundle(
             contact.save(staging / "contact-sheet.png", format="PNG", optimize=True)
             optional_outputs["contactSheet"] = "contact-sheet.png"
 
+        input_x_boundaries, input_y_boundaries = input_grid_boundaries(input_sheet, options)
         metadata: dict[str, object] = {
             "schemaVersion": SCHEMA_VERSION,
             "tool": TOOL_NAME,
@@ -926,15 +1034,22 @@ def write_bundle(
                 input_sheet.height // options.rows,
             ],
             "inputCellSizeMode": (
-                "uniform"
-                if input_sheet.width % options.cols == 0
-                and input_sheet.height % options.rows == 0
-                else "distributed_integer_boundaries"
+                "adaptive_chroma_gutters"
+                if options.grid_mode == "adaptive-gutters"
+                else (
+                    "uniform"
+                    if input_sheet.width % options.cols == 0
+                    and input_sheet.height % options.rows == 0
+                    else "distributed_integer_boundaries"
+                )
             ),
             "inputGridBoundaries": {
-                "x": list(grid_boundaries(input_sheet.width, options.cols)),
-                "y": list(grid_boundaries(input_sheet.height, options.rows)),
+                "x": list(input_x_boundaries),
+                "y": list(input_y_boundaries),
             },
+            "gridMode": options.grid_mode,
+            "gridSearchRatio": options.grid_search_ratio,
+            "gridMinimumGutter": options.grid_min_gutter,
             "slots": list(options.slots),
             "key": color_text(options.key),
             "transparentDistance": options.transparent_distance,
@@ -1029,6 +1144,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Contiguous input-grid rows to process; defaults to all rows from row-start.",
     )
     parser.add_argument(
+        "--grid-mode",
+        choices=("uniform", "adaptive-gutters"),
+        default="uniform",
+        help=(
+            "Use deterministic equal partitions or discover real empty chroma gutters "
+            "near each nominal grid boundary."
+        ),
+    )
+    parser.add_argument(
+        "--grid-search-ratio",
+        type=float,
+        default=0.25,
+        help="Adaptive boundary search radius as a fraction of nominal cell size.",
+    )
+    parser.add_argument(
+        "--grid-min-gutter",
+        type=int,
+        default=8,
+        help="Minimum completely empty chroma gutter width for adaptive mode.",
+    )
+    parser.add_argument(
         "--slots",
         required=True,
         nargs="+",
@@ -1072,6 +1208,9 @@ def options_from_args(args: argparse.Namespace) -> BuildOptions:
         slots=tuple(args.slots),
         row_start=args.row_start,
         row_count=args.row_count,
+        grid_mode=args.grid_mode,
+        grid_search_ratio=args.grid_search_ratio,
+        grid_min_gutter=args.grid_min_gutter,
         key=args.key,
         transparent_distance=args.transparent_distance,
         opaque_distance=args.opaque_distance,

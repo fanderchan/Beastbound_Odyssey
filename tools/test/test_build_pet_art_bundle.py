@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw
 
 
@@ -305,6 +306,60 @@ class PetArtBundleBuilderTests(unittest.TestCase):
                     for index in range(cols)
                 ),
                 size,
+            )
+
+    def test_adaptive_grid_uses_real_chroma_gutters_without_resizing_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_path = root / "irregular-grid.png"
+            width, height = 812, 798
+            x_cells = (0, 180, 410, 585, width)
+            y_cells = (0, 230, 390, 620, height)
+            sheet = Image.new("RGB", (width, height), builder.DEFAULT_KEY)
+            draw = ImageDraw.Draw(sheet)
+            for row in range(4):
+                for col in range(4):
+                    center_x = (x_cells[col] + x_cells[col + 1]) // 2
+                    center_y = (y_cells[row] + y_cells[row + 1]) // 2
+                    draw.rounded_rectangle(
+                        (center_x - 52, center_y - 48, center_x + 52, center_y + 48),
+                        radius=18,
+                        fill=(50 + row * 24, 110 + col * 20, 180),
+                    )
+            sheet.save(input_path, format="PNG")
+
+            metadata = builder.build_bundle(
+                builder.BuildOptions(
+                    input_path=input_path,
+                    output_dir=root / "adaptive-bottom",
+                    rows=4,
+                    cols=4,
+                    row_start=2,
+                    row_count=2,
+                    grid_mode="adaptive-gutters",
+                    slots=tuple(f"back-{index}" for index in range(1, 9)),
+                )
+            )
+
+            self.assertEqual(metadata["inputSize"], [width, height])
+            self.assertEqual(metadata["gridMode"], "adaptive-gutters")
+            self.assertEqual(metadata["inputCellSizeMode"], "adaptive_chroma_gutters")
+            self.assertNotEqual(metadata["inputGridBoundaries"]["y"][1], height // 4)
+            self.assertEqual(metadata["inputGridBoundaries"]["x"][0], 0)
+            self.assertEqual(metadata["inputGridBoundaries"]["x"][-1], width)
+            self.assertEqual(metadata["inputGridBoundaries"]["y"][0], 0)
+            self.assertEqual(metadata["inputGridBoundaries"]["y"][-1], height)
+            self.assertEqual(metadata["frames"][0]["grid"], [2, 0])
+            self.assertEqual(metadata["frames"][-1]["grid"], [3, 3])
+
+    def test_adaptive_grid_fails_when_no_empty_gutter_exists(self) -> None:
+        with self.assertRaisesRegex(builder.BundleBuildError, "empty gutter"):
+            builder.adaptive_axis_boundaries(
+                np.ones(400, dtype=np.int32),
+                length=400,
+                count=2,
+                search_ratio=0.25,
+                minimum_gutter=8,
             )
 
     def test_explicit_slot_count_is_required(self) -> None:
