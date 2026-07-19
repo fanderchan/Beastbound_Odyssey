@@ -10,4 +10,4 @@
 - 原始四主体先由 `tools/repack_chroma_sprite_grid.py` 做整主体重排，再使用批准色键去除和 `tools/build_pet_art_bundle.py` 统一比例、feet 基线、透明边与 512px 关键姿势；未重绘主体。
 - 透明身份板 SHA-256：`61810db6852529bf788bfae5a0a40012fc64f3af3c5e6656f248d2eb24799dc6`。可复建参数与逐帧 QC 位于 `../source/identity-board-source-meta.json`、`../source/identity-board-repack-meta.json` 和 `../source/identity-board-pipeline-meta.json`。
 - 石器时代 8.0 只作为成熟 2.5D 宠物可读性参考，不复制其贴图、数字、动作或角色身份。
-- 当前关键姿势工程自评通过，项目所有者视觉验收为 `pending`；不得据此宣称正式批准或完整动作包。
+- 当前身份关键姿势与双朝向 battle180 均已通过工程自评，项目所有者视觉验收仍为 `pending`；世界真八向与骑乘整图尚未生产，不得据此宣称完整可运行宠物资产已经正式批准。

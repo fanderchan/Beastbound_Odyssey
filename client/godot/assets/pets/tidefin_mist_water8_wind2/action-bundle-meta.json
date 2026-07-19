@@ -3,7 +3,7 @@
   "formId": "tidefin_mist_water8_wind2",
   "displayName": "雾潮鳍兽",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -32,73 +32,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -144,9 +144,80 @@
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/tidefin/mist/identity-build/contact-sheet.png",
-    "contactSheetSha256": "f2cd1ab2aa9ec23236918c2ddd779e85eefeb79f3d7071667861baddba215bb1"
+    "contactSheetSha256": "f2cd1ab2aa9ec23236918c2ddd779e85eefeb79f3d7071667861baddba215bb1",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "833fcdb4c748c67293afbe8ef74422cf8574a1dfa2509c9d829f3b0f9bd543aa",
+    "battleQcSummary": "qa/battle/qc-summary.json",
+    "battleQcSummarySha256": "7adc412982cedbcfc98dfc86b6be44d328d2bdedc1b802848b53b9113a2373e7"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "雾潮鳍兽 identity and four key poses only. The first four-toe candidate was rejected and the accepted board was regenerated with exactly three webbed toes. World and battle matrices are intentionally not produced in this owner-review gate."
+  "notes": "雾潮鳍兽身份板沿用已通过工程自评的三蹼趾版本；正式双朝向 battle180 已完成工程自评并等待所有者视觉验收。技能与反击帧只保留身体动作，不烘焙命中、轨迹或技能特效；down-8 与 revive-1 在两个朝向逐字节连续。世界真八向与骑乘整图仍未生产，runtimeEnabled 保持 false。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "9439de35c5c72053fc484342b93ed196797d4374528f47fd8c6adab802c01752",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
+  }
 }
