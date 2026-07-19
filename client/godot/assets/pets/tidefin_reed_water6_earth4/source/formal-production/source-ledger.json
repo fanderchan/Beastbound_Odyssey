@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_reed_water6_earth4",
+  "kind": "pet",
+  "scope": "standalone_pet_battle180",
+  "archiveMode": "lean",
+  "componentMode": "all",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "bdc69d42b17706292094527a4ae48e67e84b8d49f2a3dcdea5092855b645dd1e",
+  "sourceFramesTracked": false,
+  "rawGenerationSheetsTracked": false,
+  "rawGenerationSheetCount": 24,
+  "rawGenerationSheets": [
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sha256": "c376832b57b3f9a498236fdfb368280601fdbfc1aebbe2f4c51e82caa5a72f3f",
+      "sizeBytes": 1872736
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sha256": "0d4f5668ce2a49605527864b6a6f718d95ac77184d51deabcae88b1b0766e37a",
+      "sizeBytes": 1975913
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sha256": "61db175ba484924fd4f11ce196ca89358265999955f5004098017b2875375bdf",
+      "sizeBytes": 1903075
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sha256": "d1f4b9a15caf42acfd876da6e5d46046d6ffbf25786e52d7abecd33ea2ffc744",
+      "sizeBytes": 1922904
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sha256": "4ab8705e7cb249860b53b784cd2f82934c35a1cba84482bf46416afc04d00899",
+      "sizeBytes": 1660748
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sha256": "0db378e93439d53b232626a77047aae48e281f9bd6608c3025b7a7986a552136",
+      "sizeBytes": 1903266
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sha256": "ac09222894b2ade086cee1dbac0def93e1870325d7c14d3c5317312a827202fb",
+      "sizeBytes": 1950779
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sha256": "10267d7bda7996fe9d1f2f07eb3246cb575df8d52d4301026a16fb72a1f3bce2",
+      "sizeBytes": 1834155
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sha256": "294a88c9ea865ed134736d589a6b7a7196259f461c9ae565315bd655c70b4e78",
+      "sizeBytes": 1801884
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sha256": "e433b760077b789162d56bee27aa19f9797db8f15326c548630426b0126dd2d2",
+      "sizeBytes": 1924022
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sha256": "8ed5b5e03c82625c6b07b6c7dd2fcd1065e3ea849513261ed9b1383b53f80aba",
+      "sizeBytes": 1815581
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sha256": "ad3bba8d12e57e9c7d4d44be791be9b744c68676d4cf73574fc8b36daf22541b",
+      "sizeBytes": 1943947
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sha256": "855b16f212b47631b0d173fddb28c61e736abfc379af575ad2e3b7fbb01bfae0",
+      "sizeBytes": 1716283
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sha256": "0b145a109e59b826eba8299606e17ac1af896784730b721272e6e95c4f1db3da",
+      "sizeBytes": 1738987
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sha256": "6948188c200d5eba30d2664f06a7c7610311868b40d09e1acc7cc9a7461748f4",
+      "sizeBytes": 2043317
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sha256": "95d7ac4f2dd988df67da3333123dbc3b9cc89060226f14f30849633415cf8ef5",
+      "sizeBytes": 1800493
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sha256": "ea96bb0f347256e917478c1447d5c71b27668c5b807232b31f4aa4c73e8e0f74",
+      "sizeBytes": 1699226
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sha256": "fb753c6b756ebf3a946e4ce8f92b4eec9677d483c4917a5f0126d9afd60b7d75",
+      "sizeBytes": 2024371
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sha256": "5ae149a189408c57b9d04251cd64afa89c2e94543fa5397476c4c533be9c4dda",
+      "sizeBytes": 1951555
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sha256": "720e08b3b97336ee4f3ce12d2644cee781b67e8bf3075494b23fa3df7a0cde3d",
+      "sizeBytes": 1783484
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sha256": "bb0ea7171aa152b08d14bacf368833e9b9d6abe9ee4e9b37fbe82337000832b7",
+      "sizeBytes": 1853891
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sha256": "9ec6adfa537ee0146549226ea4eeb5d06610fe06e9a8d77a57ba184ac2194b44",
+      "sizeBytes": 1950247
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sha256": "590e8738095441215bcbe0796051241057fc5717899e9907493117896fffc1c7",
+      "sizeBytes": 1795325
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sha256": "befb812caafba47bebd9fbe414640637125b1277cc027a75af3b9bc0e61c30bb",
+      "sizeBytes": 1806146
+    }
+  ],
+  "workingArchive": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}
