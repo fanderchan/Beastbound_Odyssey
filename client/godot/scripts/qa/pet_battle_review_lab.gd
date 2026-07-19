@@ -34,6 +34,7 @@ var completed_director_loops: int = 0
 var director_step_id: String = ""
 var coverage: Dictionary = {}
 var quit_after_director_loop: bool = false
+var director_step_filter: Array[String] = []
 
 var _generation: int = 0
 var _observed_event_sequence: int = 0
@@ -53,7 +54,8 @@ func open(
 	requested_seed: int = DEFAULT_SEED,
 	start_collapsed: bool = false,
 	requested_mount_form_id: String = "",
-	quit_after_one_director_loop: bool = false
+	quit_after_one_director_loop: bool = false,
+	requested_director_step_ids: Array[String] = []
 ) -> void:
 	if active:
 		close(false)
@@ -71,6 +73,11 @@ func open(
 	completed_director_loops = 0
 	director_step_id = ""
 	quit_after_director_loop = quit_after_one_director_loop
+	director_step_filter = PetBattleReviewModel.normalized_director_step_ids(
+		requested_director_step_ids,
+		focus_form_id,
+		mount_form_id
+	)
 	coverage.clear()
 	for coverage_id in PetBattleReviewModel.REQUIRED_COVERAGE:
 		coverage[coverage_id] = 0
@@ -128,6 +135,10 @@ func current_mode() -> String:
 
 func current_mount_form_id() -> String:
 	return mount_form_id
+
+
+func current_director_step_ids() -> Array[String]:
+	return director_step_filter.duplicate()
 
 
 func coverage_counts() -> Dictionary:
@@ -306,7 +317,7 @@ func return_to_real_grass() -> void:
 
 func _run_director(token: int) -> void:
 	while _director_is_current(token):
-		for step in PetBattleReviewModel.director_steps(focus_form_id, mount_form_id):
+		for step in PetBattleReviewModel.director_steps_for_ids(focus_form_id, mount_form_id, director_step_filter):
 			if not _director_is_current(token):
 				return
 			director_step_id = str(step.get("id", ""))

@@ -986,6 +986,7 @@ var pet_battle_review_preview_mount_form_id: String = ""
 var pet_battle_review_preview_seed: int = 309001
 var pet_battle_review_preview_collapsed: bool = false
 var pet_battle_review_preview_single_loop: bool = false
+var pet_battle_review_preview_step_ids: Array[String] = []
 var auto_battle_settings_preview: bool = false
 var battle_spirit_source_preview: bool = false
 var auto_capture_settings_preview: bool = false
@@ -1799,7 +1800,8 @@ func _ready() -> void:
 			pet_battle_review_preview_seed,
 			pet_battle_review_preview_collapsed,
 			pet_battle_review_preview_mount_form_id,
-			pet_battle_review_preview_single_loop
+			pet_battle_review_preview_single_loop,
+			pet_battle_review_preview_step_ids
 		)
 	elif auto_battle_settings_preview:
 		call_deferred("_run_auto_battle_settings_preview")
@@ -2510,6 +2512,12 @@ func _apply_preview_window_args() -> void:
 			pet_battle_review_preview_mount_form_id = arg.trim_prefix("--pet-battle-review-mount-form=").strip_edges()
 		elif arg.begins_with("--pet-battle-review-seed="):
 			pet_battle_review_preview_seed = maxi(1, int(arg.trim_prefix("--pet-battle-review-seed=").strip_edges()))
+		elif arg.begins_with("--pet-battle-review-steps="):
+			pet_battle_review_preview_step_ids.clear()
+			for step_value in arg.trim_prefix("--pet-battle-review-steps=").split(",", false):
+				var step_id := str(step_value).strip_edges().to_lower()
+				if step_id != "" and not pet_battle_review_preview_step_ids.has(step_id):
+					pet_battle_review_preview_step_ids.append(step_id)
 		elif arg == "--pet-battle-review-collapsed":
 			pet_battle_review_preview_collapsed = true
 		elif arg == "--pet-battle-review-single-loop":
@@ -6096,9 +6104,10 @@ func _open_pet_battle_review_lab(
 	seed_value: int = 309001,
 	collapsed: bool = false,
 	mount_form_id: String = "",
-	single_loop: bool = false
+	single_loop: bool = false,
+	director_step_ids: Array[String] = []
 ) -> void:
-	_pet_battle_review().open(form_id, mode, seed_value, collapsed, mount_form_id, single_loop)
+	_pet_battle_review().open(form_id, mode, seed_value, collapsed, mount_form_id, single_loop, director_step_ids)
 
 
 func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:

@@ -24,6 +24,12 @@ const REVIEW_MOUNT_FORM_ID := "bui_novice_sprout_earth5_wind5"
 const ALLY_MOUNT_FOCUS_ID := BattleModel.PLAYER_ACTOR_ID
 const ENEMY_MOUNT_FOCUS_ID := "enemy_back_3"
 const ALLY_MOUNT_COMBO_IDS: Array[String] = ["ally_back_2", BattleModel.PLAYER_ACTOR_ID, "ally_back_4"]
+const DODGE_REVIEW_STEP_IDS: Array[String] = [
+	"dodge",
+	"mounted_dodge",
+	"dodge_counter",
+	"mounted_dodge_counter",
+]
 
 const REQUIRED_COVERAGE: Array[String] = [
 	"attack",
@@ -251,6 +257,10 @@ static func build_director_state(
 		state = _with_actor_fields(state, ENEMY_FOCUS_ID, {"counterRateOverride": 1.0, "attack": 64, "defense": 10})
 	elif step_id == "mounted_counter":
 		state = _with_actor_fields(state, ENEMY_MOUNT_FOCUS_ID, {"counterRateOverride": 1.0, "attack": 54, "defense": 10})
+	elif step_id == "dodge_counter":
+		state = _with_actor_fields(state, ALLY_FOCUS_ID, {"counterRateOverride": 1.0})
+	elif step_id == "mounted_dodge_counter":
+		state = _with_actor_fields(state, ALLY_MOUNT_FOCUS_ID, {"counterRateOverride": 1.0})
 	if step_id == "counter_ko":
 		state = _with_counter_outcome(state, false)
 	elif step_id == "counter_launch":
@@ -277,7 +287,8 @@ static func director_steps(focus_form_id: String, mount_form_id: String = "") ->
 		{"id": "combo", "label": "三宠合击", "settle": 1.05, "events": [_combo_event()]},
 		{"id": "knockaway_straight", "label": "直线击飞", "settle": 0.90, "events": [_knockaway_event("straight")]},
 		{"id": "knockaway_bounce", "label": "场边弹飞", "settle": 1.00, "events": [_knockaway_event("bounce")]},
-		{"id": "dodge", "label": "近身闪避", "settle": 0.70, "events": [_dodge_event()]},
+		{"id": "dodge", "label": "战宠回避", "settle": 0.75, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_FOCUS_ID, BattleModel.SIDE_ALLY, false, 6)]},
+		{"id": "dodge_counter", "label": "战宠回避后反击", "settle": 0.90, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_FOCUS_ID, BattleModel.SIDE_ALLY, true, 7)]},
 		{"id": "down", "label": "可复活昏厥", "settle": 1.20, "events": [_down_event()]},
 	]
 	if normalized_mount_form_id(mount_form_id) == "":
@@ -298,8 +309,47 @@ static func director_steps(focus_form_id: String, mount_form_id: String = "") ->
 		standard_steps[8],
 		standard_steps[9],
 		standard_steps[10],
+		{"id": "mounted_dodge", "label": "骑宠人物回避", "settle": 0.80, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, false, 9)]},
 		standard_steps[11],
+		{"id": "mounted_dodge_counter", "label": "骑宠人物回避后反击", "settle": 0.95, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, true, 10)]},
+		standard_steps[12],
 	]
+
+
+static func normalized_director_step_ids(
+	requested_step_ids: Array[String],
+	focus_form_id: String,
+	mount_form_id: String = ""
+) -> Array[String]:
+	if requested_step_ids.is_empty():
+		return []
+	var valid_ids: Array[String] = []
+	for step in director_steps(focus_form_id, mount_form_id):
+		valid_ids.append(str(step.get("id", "")))
+	var result: Array[String] = []
+	for value in requested_step_ids:
+		var step_id := value.strip_edges().to_lower()
+		if step_id != "" and valid_ids.has(step_id) and not result.has(step_id):
+			result.append(step_id)
+	return result
+
+
+static func director_steps_for_ids(
+	focus_form_id: String,
+	mount_form_id: String,
+	requested_step_ids: Array[String]
+) -> Array[Dictionary]:
+	var all_steps := director_steps(focus_form_id, mount_form_id)
+	var normalized_ids := normalized_director_step_ids(requested_step_ids, focus_form_id, mount_form_id)
+	if normalized_ids.is_empty():
+		return all_steps
+	var result: Array[Dictionary] = []
+	for step_id in normalized_ids:
+		for step in all_steps:
+			if str(step.get("id", "")) == step_id:
+				result.append(step)
+				break
+	return result
 
 
 static func director_step_label(step_id: String) -> String:
@@ -457,18 +507,24 @@ static func validation_errors() -> Array[String]:
 		seen_steps.append(step_id)
 		if not (step.get("events", []) is Array) or (step.get("events", []) as Array).is_empty():
 			errors.append("动作必现步骤没有真实事件：%s" % step_id)
-	for required_id in ["attack", "defend_hit", "hurt", "counter", "counter_ko", "counter_launch", "skill", "combo", "knockaway_straight", "knockaway_bounce", "dodge", "down"]:
+	for required_id in ["attack", "defend_hit", "hurt", "counter", "counter_ko", "counter_launch", "skill", "combo", "knockaway_straight", "knockaway_bounce", "dodge", "dodge_counter", "down"]:
 		if not seen_steps.has(required_id):
 			errors.append("缺少动作必现步骤：%s" % required_id)
 	var mounted_steps := director_steps(form_id, REVIEW_MOUNT_FORM_ID)
-	if mounted_steps.size() != 16:
-		errors.append("骑乘动作必现清单必须包含16个场景")
+	if mounted_steps.size() != 19:
+		errors.append("骑乘动作必现清单必须包含19个场景")
 	var mounted_step_ids: Array[String] = []
 	for step in mounted_steps:
 		mounted_step_ids.append(str(step.get("id", "")))
-	for required_id in ["mounted_attack", "mounted_defend_hit", "mounted_counter", "mounted_combo"]:
+	for required_id in ["mounted_attack", "mounted_defend_hit", "mounted_counter", "mounted_combo", "mounted_dodge", "mounted_dodge_counter"]:
 		if not mounted_step_ids.has(required_id):
 			errors.append("骑乘动作必现缺少场景：%s" % required_id)
+	var dodge_review_steps := director_steps_for_ids(form_id, REVIEW_MOUNT_FORM_ID, DODGE_REVIEW_STEP_IDS)
+	var dodge_review_ids: Array[String] = []
+	for step in dodge_review_steps:
+		dodge_review_ids.append(str(step.get("id", "")))
+	if dodge_review_ids != DODGE_REVIEW_STEP_IDS:
+		errors.append("回避短片清单必须依次覆盖战宠、骑宠人物及各自回避反击：%s" % str(dodge_review_ids))
 	var mounted_director_state := build_director_state(form_id, 309001, "mounted_combo", REVIEW_MOUNT_FORM_ID)
 	if (
 		(mounted_director_state.get("actors", []) as Array).size() != 20
@@ -491,6 +547,24 @@ static func validation_errors() -> Array[String]:
 		or not bool(counter_launch_result.get("lastLaunch", false))
 	):
 		errors.append("高伤反击没有按现行公式形成击飞")
+	var pet_dodge_counter_state := build_director_state(form_id, 309001, "dodge_counter")
+	var pet_dodge_counter_result := _apply_dodge_counter_probe(
+		pet_dodge_counter_state,
+		_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_FOCUS_ID, BattleModel.SIDE_ALLY, true, 7),
+		ALLY_FOCUS_ID,
+		ENEMY_FOCUS_ID
+	)
+	if not bool(pet_dodge_counter_result.get("valid", false)):
+		errors.append("战宠回避后反击链没有形成：%s" % str(pet_dodge_counter_result))
+	var mounted_dodge_counter_state := build_director_state(form_id, 309001, "mounted_dodge_counter", REVIEW_MOUNT_FORM_ID)
+	var mounted_dodge_counter_result := _apply_dodge_counter_probe(
+		mounted_dodge_counter_state,
+		_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, true, 10),
+		ALLY_MOUNT_FOCUS_ID,
+		ENEMY_FOCUS_ID
+	)
+	if not bool(mounted_dodge_counter_result.get("valid", false)):
+		errors.append("骑宠人物回避后反击链没有形成：%s" % str(mounted_dodge_counter_result))
 	return _unique_strings(errors)
 
 
@@ -633,6 +707,40 @@ static func _apply_counter_probe(state: Dictionary) -> Dictionary:
 	return BattleModel.apply_battle_event(after_attack, (counter_event as Dictionary).duplicate(true))
 
 
+static func _apply_dodge_counter_probe(
+	state: Dictionary,
+	dodge_event: Dictionary,
+	expected_counter_actor_id: String,
+	expected_counter_target_id: String
+) -> Dictionary:
+	var after_dodge := BattleModel.apply_battle_event(state.duplicate(true), dodge_event)
+	var counter_event = after_dodge.get("lastCounterEvent", {})
+	var valid_counter_event := (
+		counter_event is Dictionary
+		and not (counter_event as Dictionary).is_empty()
+		and str((counter_event as Dictionary).get("type", "")) == "counter_attack"
+		and str((counter_event as Dictionary).get("attackerId", "")) == expected_counter_actor_id
+		and str((counter_event as Dictionary).get("targetId", "")) == expected_counter_target_id
+	)
+	if not bool(after_dodge.get("lastDodged", false)) or not valid_counter_event:
+		return {
+			"valid": false,
+			"dodged": bool(after_dodge.get("lastDodged", false)),
+			"counterEvent": counter_event,
+		}
+	var after_counter := BattleModel.apply_battle_event(after_dodge, (counter_event as Dictionary).duplicate(true))
+	return {
+		"valid": (
+			str(after_counter.get("lastEventType", "")) == "counter_attack"
+			and str(after_counter.get("lastAttackerId", "")) == expected_counter_actor_id
+			and str(after_counter.get("lastTargetId", "")) == expected_counter_target_id
+		),
+		"dodged": true,
+		"counterEvent": counter_event,
+		"counterApplied": str(after_counter.get("lastEventType", "")),
+	}
+
+
 static func _director_skill_id(form_id: String) -> String:
 	var skill_ids := PetTemplateCatalog.active_skill_ids_for_form(normalized_form_id(form_id))
 	if not skill_ids.is_empty():
@@ -729,9 +837,15 @@ static func _knockaway_event(mode: String) -> Dictionary:
 	}
 
 
-static func _dodge_event() -> Dictionary:
-	var event := _attack_event(ENEMY_FOCUS_ID, ALLY_FOCUS_ID, BattleModel.SIDE_ALLY, 18, false)
-	event["sequence"] = 6
+static func _forced_dodge_event(
+	attacker_id: String,
+	target_id: String,
+	target_side: String,
+	can_counter: bool,
+	sequence: int
+) -> Dictionary:
+	var event := _attack_event(attacker_id, target_id, target_side, 18, can_counter)
+	event["sequence"] = sequence
 	event["forceDodge"] = true
 	return event
 
