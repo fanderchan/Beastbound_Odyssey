@@ -1,0 +1,3 @@
+OpenAI built-in image generation production prompt record.
+Form: mossback_marsh_earth7_water3; view: front_3quarter_sw; action: attack.
+Preserve the tracked identity board exactly; render an independently authored, non-mirrored HD painterly 2.5D StoneAge-inspired sprite sequence on solid #FF00FF. Keep the canonical front-SW or back-NE direction stable in every chronological frame, with wide empty gutters, no UI, no text, no attacker, no scenery, and no detached effects.

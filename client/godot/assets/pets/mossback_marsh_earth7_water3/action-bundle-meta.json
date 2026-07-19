@@ -3,13 +3,22 @@
   "formId": "mossback_marsh_earth7_water3",
   "displayName": "湿地苔背兽",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
     "board": "identity/identity-board-transparent.png",
     "poses": {
       "front_3quarter_sw": "identity/front_3quarter_sw.png",
@@ -19,18 +28,78 @@
     }
   },
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
-    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
   },
   "worldVisual": {
     "status": "not_produced",
@@ -47,11 +116,23 @@
       "southeast"
     ],
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "not_produced"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "not_produced"}
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "not_produced"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "not_produced"
+      }
     }
   },
-  "supportedMountedCharacterIds": ["novice_hunter_v1"],
+  "supportedMountedCharacterIds": [
+    "novice_hunter_v1"
+  ],
   "sourceArchive": {
     "policy": "tracked_lossless_webp_with_original_sha256",
     "raw": "source/identity-board-raw.webp",
@@ -66,5 +147,72 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Wetland Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate."
+  "notes": "Wetland Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate.",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "42d8a331a1916a5d577519a5491233af56a8ab12a49339bb89616cf4771e6522",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
+  }
 }
