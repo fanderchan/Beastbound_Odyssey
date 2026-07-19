@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "starter-cub-keypose-sequence-v1",
+  "inputSha256": "0266019df662ea7dfd5860f6ab5b0a1b85d0a14dfee5fcb7e16c3fd137bc6426",
+  "slots": [
+    "dodge-1",
+    "dodge-2",
+    "dodge-3",
+    "dodge-4",
+    "dodge-5",
+    "dodge-6",
+    "dodge-7",
+    "dodge-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 4,
+  "effectiveSourceMargin": 8,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 30.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "dodge-1",
+      "sourceRgbaSha256": "20cb5d9d865b12f370ae1f2913456b9a98d5f4976043230ca0bf6c2cd40b63a9",
+      "runtimeRgbaSha256": "f6037a346f624b1e77f49770171c31595f81d8404dbde33fd5532f137eaeb55f"
+    },
+    {
+      "slot": "dodge-2",
+      "sourceRgbaSha256": "a1df9cfe3a57c5c8db4151f06bacabffc76107ac77583f05a6480dea61a1e04b",
+      "runtimeRgbaSha256": "7b64de673551a6aa56977f74db30c704f1a50743b0d85ab472d9864017dae9f0"
+    },
+    {
+      "slot": "dodge-3",
+      "sourceRgbaSha256": "0df1c4101168080d1222789019715793d1f537a7b4b817ea6b72828b6580310c",
+      "runtimeRgbaSha256": "3591bb70d200a2e6e3f4b524cd5622d460ed4ce00455fbffffdac511898cee0f"
+    },
+    {
+      "slot": "dodge-4",
+      "sourceRgbaSha256": "6b86e799b122681f56aa4a174160e29ba25b8c61dae0d29760f9911756aef4f1",
+      "runtimeRgbaSha256": "8ed0ef824fa621647f3d0a531fb21121cf172d93c0118026f1253d42dd5ae641"
+    },
+    {
+      "slot": "dodge-5",
+      "sourceRgbaSha256": "8b7165c4435d264822e226f4829f30832d4a5a41c564ef27c9e135b5517e6432",
+      "runtimeRgbaSha256": "d7e6023b29e1afc34e92555d7c0262f6a184f2d09039b0c54da7825b6fd7dcd2"
+    },
+    {
+      "slot": "dodge-6",
+      "sourceRgbaSha256": "2908bc3d86b21fb4e32dbb29e17819a78da0e58ad1d26188389069b2bc0064a7",
+      "runtimeRgbaSha256": "f80857aa85c47622007973856ce641b6b34a7cdf94aa90e746070326e907c0af"
+    },
+    {
+      "slot": "dodge-7",
+      "sourceRgbaSha256": "410d07dd6162c6eb8990c1b8584c38ae6a8233fadffaacad75c3ecfa1f0baeef",
+      "runtimeRgbaSha256": "5e547dd1c83325f9da934af06c0d56b6941eb463594e8c02aadfb68d9b574312"
+    },
+    {
+      "slot": "dodge-8",
+      "sourceRgbaSha256": "6c80135e445e80cfdd4ef6603d0b2e2c1514eefb8948106d52b728ebd1cc527b",
+      "runtimeRgbaSha256": "044f036f0eca5becd5b2d30127e479eab975f861955ce7da63a4a802d69d23ec"
+    }
+  ],
+  "creativeSource": "generated/back_3quarter_ne-keyposes.png",
+  "creativeKeyPoseSlots": [
+    "dodge-a",
+    "dodge-b"
+  ],
+  "deterministicExpansion": true
+}
