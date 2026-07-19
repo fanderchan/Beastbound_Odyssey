@@ -1,0 +1,4 @@
+Exact locked identity: 岚角兽：额角末端分叉、鬃毛后掠成弧形风纹，青橙对色、修长四足与固定尾簇；同一只风火荒原角兽，任何动作不得改变角叉、鬃弧、四肢和纹样。
+The pet is the only subject.
+OpenAI built-in image generation production request. Use a uniform solid #FF00FF chroma background. Exactly 2 rows by 4 columns, exactly 8 sequential frames, ordered row-major. No text, labels, borders, grid lines, shadows, particles, props or scenery. One complete subject per cell, centered and fully visible with consistent scale and generous margin. High-definition hand-painted 2.5D Chinese pet MMORPG sprite art. Fixed back_3quarter_ne ally-side view, facing diagonally up-right/northeast away from camera; back and rear flank stay visible in every frame.
+KNOCKAWAY body poses: shocked contact, feet lift, launch, midair curl, rotation, descent, landing compression and sprawled recovery. Runtime supplies screen trajectory; no motion lines.
