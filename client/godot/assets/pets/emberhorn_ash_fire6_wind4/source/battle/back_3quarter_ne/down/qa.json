@@ -9,5 +9,19 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "strict_temporal_self_review_passed_owner_pending",
+  "strictTemporalReview": {
+    "repairId": "emberhorn-strict-ko-temporal-v1",
+    "status": "passed",
+    "rule": "one-way support loss into stable revivable unconscious hold",
+    "forbiddenExpressions": [
+      "sleep_smile",
+      "peaceful_sleep",
+      "x_eye",
+      "death_gore"
+    ],
+    "sourceAlphaPreserved": true,
+    "canonicalRuntimeDerivation": true,
+    "broadDespillApplied": false
+  }
 }

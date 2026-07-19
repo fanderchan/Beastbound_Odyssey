@@ -172,8 +172,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 44,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "f583864e9532c0428668ed6c0a8ef8cbbc39b057f2e69387caf2b28286741c93",
-      "runtimeRgbaSha256": "360e47d55d9f6d8add10e6ca78f21091712895460611b2d45754b37aa2e2289d"
+      "sourceRgbaSha256": "f148ebad76e1c50822675e966656f2e38770bf42414284ebde0e597391233dc2",
+      "runtimeRgbaSha256": "b006846c613c332f7c04059d9e9c5ce558d469b449385b4e0b5f666d2a5013a3"
     },
     {
       "slot": "revive-2",
@@ -310,7 +310,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 46,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "cf2dd56b8b09efff261d6b748fa05b62ccbb8d3dc9c3c0ba7df11c35d7aa2394",
-      "runtimeRgbaSha256": "a10e61e3c69fcc6508cbb5335eaff409f8b560a40f0e505d69049e5102172488"
+      "runtimeRgbaSha256": "f02ab138466224f2c4c31a9caf4a90ff33317086d0c8c2c5005eb1ffa0f91982"
     },
     {
       "slot": "revive-3",
@@ -411,7 +411,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 43,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "0a5ec45311a4ec364604905cbeb8a5e95a766e7102e995cb8c6b748cc59e6c83",
-      "runtimeRgbaSha256": "fff391054f6841dd82f1d1031adb27375b27a8b33bc3a3db01b166a0864cca5e"
+      "runtimeRgbaSha256": "7e271aeb9a46347708059fa676f582a89f23a919425b29ab1f602be83b447af7"
     },
     {
       "slot": "revive-4",
@@ -512,7 +512,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 46,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "06fbfc18c4b5c849e189c8381077348780456d8a9aafcb086d119dadbde0f87f",
-      "runtimeRgbaSha256": "e19b1fdfafe69442fe108f5e0ac6c00fc3d080b83604353b5cdee879ee447852"
+      "runtimeRgbaSha256": "6f78972cc508a299963ee477134306bd6ef5d46ba230427deaca6ce4068ba81e"
     },
     {
       "slot": "revive-5",
@@ -613,7 +613,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 73,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b697997d669bc213fcc0462c3923d79b7b3cdec27d5510f93890c273b72ca4ad",
-      "runtimeRgbaSha256": "0499fcce6957c730a0442bc80fb3dd73538130eadced563600a018d41032a278"
+      "runtimeRgbaSha256": "98ca0e859c59d479c8c0e342dd1f463326576438103569a2f5372d3d6bfc5286"
     },
     {
       "slot": "revive-6",
@@ -750,7 +750,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 65,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "2a4b2472a3d0e9caa4d1300f77389da90d077c8c73e1c365451698a6ca1e994a",
-      "runtimeRgbaSha256": "b18bde98f69175abbe8cef75b73eeea5230a400cbd724a5c3cf307916a216aa3"
+      "runtimeRgbaSha256": "723f02bc600f503bb21b24b7e5c6bb45dd2d711863037740c01238f0a3066bda"
     },
     {
       "slot": "revive-7",
@@ -851,7 +851,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 50,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "8b689779dcaeaff9d44cc5a846b3948ccc6ea8cf26bc90c7addf8dd28964a69b",
-      "runtimeRgbaSha256": "5c36a4e472c2026a7b04d3b89ef9484f4a970dd7ff1e4d889d6deddd7a9acc63"
+      "runtimeRgbaSha256": "6a5716944f94bf2630066f41168ed76c5c0caaf226bd3962ca0d2d59552634b9"
     },
     {
       "slot": "revive-8",
@@ -952,11 +952,80 @@
       "runtimeLowAlphaMagentaPixelsCleared": 58,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "9eb78be38d95f4b48e6a4b020749d52fb183c65602e13deaf01bb7a73d219d2a",
-      "runtimeRgbaSha256": "90ea2d8343df8116f2e7183dd95585c36aa8a8f708a1da2e379142165ae6db70"
+      "runtimeRgbaSha256": "54c02bcd209d5e6548a850b32b765b2f2e5010978ca90bb11ef0ac3ccdcc1a87"
     }
   ],
   "postProcessing": {
-    "downReviveContinuity": "revive-1 replaced with the exact same-view down-8 RGBA frame",
-    "creativePoseChange": false
+    "downReviveContinuity": "revive-1 copied byte-for-byte from same-view down-8 in source and runtime",
+    "creativePoseChange": false,
+    "strictKoTemporalRepair": {
+      "repairId": "emberhorn-strict-ko-temporal-v1",
+      "status": "passed",
+      "creativePoseChange": false,
+      "poseOperation": "authored source frame resequencing only",
+      "sourceAlphaPreservedAgainstMappedDonor": true,
+      "identityPalettePreserved": true,
+      "eyeOperation": "tiny opaque face-interior RGB semantic repair only",
+      "broadDespillApplied": false,
+      "canonicalRuntimeDerivation": true,
+      "mapping": [
+        {
+          "slot": "revive-1",
+          "donor": "new_down-8",
+          "donorSourceAlphaSha256": "afd1957f5452cf3bd458f24ffb8a25306da46bdaab62c669ccd20c3c08787c6e",
+          "resultSourceAlphaSha256": "afd1957f5452cf3bd458f24ffb8a25306da46bdaab62c669ccd20c3c08787c6e",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-2",
+          "donor": "revive-2",
+          "donorSourceAlphaSha256": "1db2c050c5a4ffaa88be76ce28e088ad5c3a0805062607c01732b38f4ef9c9f6",
+          "resultSourceAlphaSha256": "1db2c050c5a4ffaa88be76ce28e088ad5c3a0805062607c01732b38f4ef9c9f6",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-3",
+          "donor": "revive-3",
+          "donorSourceAlphaSha256": "905c43adf3b128dccfed358db30a3daea98efbde563f7fbc9d85e5bc5e1d74f5",
+          "resultSourceAlphaSha256": "905c43adf3b128dccfed358db30a3daea98efbde563f7fbc9d85e5bc5e1d74f5",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-4",
+          "donor": "revive-4",
+          "donorSourceAlphaSha256": "591f4bf4d15921c49214d0d3bee38b04570bf6f1bf6fb885f3c5c73861a2e700",
+          "resultSourceAlphaSha256": "591f4bf4d15921c49214d0d3bee38b04570bf6f1bf6fb885f3c5c73861a2e700",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-5",
+          "donor": "revive-5",
+          "donorSourceAlphaSha256": "00a42613848c67946457927c42a49ff28cf95ddfef490eff1b7aa7641e8c671d",
+          "resultSourceAlphaSha256": "00a42613848c67946457927c42a49ff28cf95ddfef490eff1b7aa7641e8c671d",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-6",
+          "donor": "revive-6",
+          "donorSourceAlphaSha256": "bdada46ba013c35a6239c6cbb212c6eb8ac3e31a0f571f830d15d21542c49c18",
+          "resultSourceAlphaSha256": "bdada46ba013c35a6239c6cbb212c6eb8ac3e31a0f571f830d15d21542c49c18",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-7",
+          "donor": "revive-7",
+          "donorSourceAlphaSha256": "8d107d8941356dc4888639001c50338f56489cc4184f460c3b55a2c71c664195",
+          "resultSourceAlphaSha256": "8d107d8941356dc4888639001c50338f56489cc4184f460c3b55a2c71c664195",
+          "sourceAlphaExact": true
+        },
+        {
+          "slot": "revive-8",
+          "donor": "revive-8",
+          "donorSourceAlphaSha256": "811229cb811e46e6aa424e29ffcd732a865196bc4b09bba4982cba14bf48ce35",
+          "resultSourceAlphaSha256": "811229cb811e46e6aa424e29ffcd732a865196bc4b09bba4982cba14bf48ce35",
+          "sourceAlphaExact": true
+        }
+      ]
+    }
   }
 }

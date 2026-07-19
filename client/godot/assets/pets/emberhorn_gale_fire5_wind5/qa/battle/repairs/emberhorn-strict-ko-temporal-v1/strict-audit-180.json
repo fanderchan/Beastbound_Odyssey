@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "repairId": "emberhorn-strict-ko-temporal-v1",
+  "formId": "emberhorn_gale_fire5_wind5",
+  "status": "passed",
+  "sourceFrames": 180,
+  "runtimeFrames": 180,
+  "canonicalRuntimeDerivationErrors": [],
+  "canonicalRuntimeDerivationScope": "32/32 repaired down+revive frames",
+  "duplicateFrameErrors": [],
+  "downReviveContinuity": {
+    "front_3quarter_sw": {
+      "sourceFileExact": true,
+      "sourceRgbaExact": true,
+      "runtimeFileExact": true,
+      "runtimeRgbaExact": true
+    },
+    "back_3quarter_ne": {
+      "sourceFileExact": true,
+      "sourceRgbaExact": true,
+      "runtimeFileExact": true,
+      "runtimeRgbaExact": true
+    }
+  },
+  "temporalMetrics": {
+    "front_3quarter_sw/down": {
+      "centroidY": [
+        190.63,
+        193.836,
+        202.639,
+        205.614,
+        211.03,
+        211.894,
+        217.287,
+        217.287
+      ],
+      "monotonicWithinPoseTolerance": true,
+      "poseTolerancePx": 0.75,
+      "finalTwoAlphaStable": true,
+      "frames": [
+        {
+          "bbox": [
+            70,
+            131,
+            196,
+            245
+          ],
+          "centroid": [
+            124.841,
+            190.63
+          ],
+          "visiblePixels": 8379,
+          "alphaSha256": "d98d142272cae30b3dc524bc92a96ee7bfc4ba4a067b0b7f7a7cddec6870e87c"
+        },
+        {
+          "bbox": [
+            54,
+            138,
+            191,
+            245
+          ],
+          "centroid": [
+            121.608,
+            193.836
+          ],
+          "visiblePixels": 7688,
+          "alphaSha256": "530f05241b397be0cfaa3b71dbe65a11a7cd3ffb93485b6f913b16eaa2efeb3d"
+        },
+        {
+          "bbox": [
+            44,
+            151,
+            192,
+            245
+          ],
+          "centroid": [
+            119.568,
+            202.639
+          ],
+          "visiblePixels": 6471,
+          "alphaSha256": "1c7da5b9ad253ea894213d0816960811d4ea1ebcdd2794f88ef51f9f675be9de"
+        },
+        {
+          "bbox": [
+            48,
+            166,
+            197,
+            245
+          ],
+          "centroid": [
+            123.791,
+            205.614
+          ],
+          "visiblePixels": 6782,
+          "alphaSha256": "a2aded118ea248c768d4c22024426d55b79ee738ad1c8ae1b86b5d4b7b5609f3"
+        },
+        {
+          "bbox": [
+            73,
+            169,
+            210,
+            245
+          ],
+          "centroid": [
+            132.543,
+            211.03
+          ],
+          "visiblePixels": 6620,
+          "alphaSha256": "4ba21e814c197fe3c54974e8411fb10fcad5272d6414d01849b0641b05c4e604"
+        },
+        {
+          "bbox": [
+            51,
+            176,
+            191,
+            245
+          ],
+          "centroid": [
+            118.078,
+            211.894
+          ],
+          "visiblePixels": 6145,
+          "alphaSha256": "1039c0f690583eda2c15acca4809f0f6a868bf1b9e29a44d1b7c222a95408c92"
+        },
+        {
+          "bbox": [
+            72,
+            187,
+            216,
+            245
+          ],
+          "centroid": [
+            137.02,
+            217.287
+          ],
+          "visiblePixels": 5699,
+          "alphaSha256": "1615a3a85be1596d67fc0b5e29a18a94f64241a10548f2b882f875598790d639"
+        },
+        {
+          "bbox": [
+            72,
+            187,
+            216,
+            245
+          ],
+          "centroid": [
+            137.02,
+            217.287
+          ],
+          "visiblePixels": 5699,
+          "alphaSha256": "1615a3a85be1596d67fc0b5e29a18a94f64241a10548f2b882f875598790d639"
+        }
+      ]
+    },
+    "front_3quarter_sw/revive": {
+      "centroidY": [
+        217.287,
+        205.037,
+        189.387,
+        186.465,
+        186.189,
+        183.103,
+        182.077,
+        182.052
+      ],
+      "monotonicWithinPoseTolerance": true,
+      "poseTolerancePx": 1.25,
+      "finalTwoAlphaStable": null,
+      "frames": [
+        {
+          "bbox": [
+            72,
+            187,
+            216,
+            245
+          ],
+          "centroid": [
+            137.02,
+            217.287
+          ],
+          "visiblePixels": 5699,
+          "alphaSha256": "1615a3a85be1596d67fc0b5e29a18a94f64241a10548f2b882f875598790d639"
+        },
+        {
+          "bbox": [
+            75,
+            163,
+            208,
+            245
+          ],
+          "centroid": [
+            137.1,
+            205.037
+          ],
+          "visiblePixels": 6561,
+          "alphaSha256": "d3c6ca09900ec63283cc41bb7a5a531469d8f36fe067a2aae9eddb56e2cc5a8c"
+        },
+        {
+          "bbox": [
+            70,
+            135,
+            204,
+            245
+          ],
+          "centroid": [
+            128.547,
+            189.387
+          ],
+          "visiblePixels": 7998,
+          "alphaSha256": "cb63dbbb912d0089410d2d8a2a4f23bad7832089241ac1e88d7facbf54304bff"
+        },
+        {
+          "bbox": [
+            81,
+            123,
+            214,
+            245
+          ],
+          "centroid": [
+            138.016,
+            186.465
+          ],
+          "visiblePixels": 8065,
+          "alphaSha256": "0d94adbec484173c4be47bd57ea09d69ccdcea27d40faaa60f424497178e7899"
+        },
+        {
+          "bbox": [
+            72,
+            118,
+            206,
+            245
+          ],
+          "centroid": [
+            133.964,
+            186.189
+          ],
+          "visiblePixels": 7828,
+          "alphaSha256": "a495b359f98c5d95955b28eb683a71eb894aec79467fd6bab7afff7294cbd4ba"
+        },
+        {
+          "bbox": [
+            75,
+            112,
+            202,
+            245
+          ],
+          "centroid": [
+            128.569,
+            183.103
+          ],
+          "visiblePixels": 8596,
+          "alphaSha256": "2e95cd8d4969e9adc9eef2e57f600ebdd9f6992033597d615ee89603816eca7d"
+        },
+        {
+          "bbox": [
+            82,
+            116,
+            215,
+            245
+          ],
+          "centroid": [
+            139.962,
+            182.077
+          ],
+          "visiblePixels": 9844,
+          "alphaSha256": "7ebbcc1300ac6b6019ca3e76af63d09b6d3a93861d4cbdb81d7d5b7df02c1aa9"
+        },
+        {
+          "bbox": [
+            72,
+            112,
+            198,
+            245
+          ],
+          "centroid": [
+            126.278,
+            182.052
+          ],
+          "visiblePixels": 8722,
+          "alphaSha256": "165034c085ed7511f36b8ed67b2a85359b7cbfbd9b676ce39b94c0ac656be3eb"
+        }
+      ]
+    },
+    "back_3quarter_ne/down": {
+      "centroidY": [
+        192.025,
+        198.843,
+        206.997,
+        215.1,
+        215.444,
+        216.601,
+        220.347,
+        220.347
+      ],
+      "monotonicWithinPoseTolerance": true,
+      "poseTolerancePx": 0.75,
+      "finalTwoAlphaStable": true,
+      "frames": [
+        {
+          "bbox": [
+            84,
+            125,
+            190,
+            245
+          ],
+          "centroid": [
+            141.969,
+            192.025
+          ],
+          "visiblePixels": 5783,
+          "alphaSha256": "5344fc246f0ea79308d5b7af77a792af667a9d0336efd62e35d4360d0d9c54df"
+        },
+        {
+          "bbox": [
+            78,
+            140,
+            172,
+            245
+          ],
+          "centroid": [
+            127.433,
+            198.843
+          ],
+          "visiblePixels": 4966,
+          "alphaSha256": "a35eddb0c72c842a70c3f86d321e7dd9e31309227d96719c113c5c87acd2f66d"
+        },
+        {
+          "bbox": [
+            84,
+            163,
+            204,
+            245
+          ],
+          "centroid": [
+            144.942,
+            206.997
+          ],
+          "visiblePixels": 4777,
+          "alphaSha256": "3467d14b1719fccbf282ecad497fa741d8058c1eed31e45a57f7d74f089a62fc"
+        },
+        {
+          "bbox": [
+            76,
+            183,
+            201,
+            245
+          ],
+          "centroid": [
+            140.429,
+            215.1
+          ],
+          "visiblePixels": 4748,
+          "alphaSha256": "c0a532de86838f7dee1a46efb28d7339f69da81f528c796fedfcc18bda6d2c5a"
+        },
+        {
+          "bbox": [
+            76,
+            183,
+            201,
+            245
+          ],
+          "centroid": [
+            140.361,
+            215.444
+          ],
+          "visiblePixels": 4726,
+          "alphaSha256": "2a88f68c9bbfa912d1615b23914204574bf1eceb64257723228c97811337820b"
+        },
+        {
+          "bbox": [
+            78,
+            186,
+            201,
+            245
+          ],
+          "centroid": [
+            141.158,
+            216.601
+          ],
+          "visiblePixels": 4368,
+          "alphaSha256": "c560af64dc7239578e1ea1bee0f6138a97906c068f6c2e277a5ba464743f1297"
+        },
+        {
+          "bbox": [
+            45,
+            195,
+            173,
+            245
+          ],
+          "centroid": [
+            112.374,
+            220.347
+          ],
+          "visiblePixels": 3933,
+          "alphaSha256": "0950ae92ca4b54f94993183ddacef288ccbbade813f552c94c16d51d91178f6a"
+        },
+        {
+          "bbox": [
+            45,
+            195,
+            173,
+            245
+          ],
+          "centroid": [
+            112.374,
+            220.347
+          ],
+          "visiblePixels": 3933,
+          "alphaSha256": "0950ae92ca4b54f94993183ddacef288ccbbade813f552c94c16d51d91178f6a"
+        }
+      ]
+    },
+    "back_3quarter_ne/revive": {
+      "centroidY": [
+        220.347,
+        207.449,
+        198.958,
+        196.797,
+        197.056,
+        196.981,
+        197.482,
+        197.264
+      ],
+      "monotonicWithinPoseTolerance": true,
+      "poseTolerancePx": 1.25,
+      "finalTwoAlphaStable": null,
+      "frames": [
+        {
+          "bbox": [
+            45,
+            195,
+            173,
+            245
+          ],
+          "centroid": [
+            112.374,
+            220.347
+          ],
+          "visiblePixels": 3933,
+          "alphaSha256": "0950ae92ca4b54f94993183ddacef288ccbbade813f552c94c16d51d91178f6a"
+        },
+        {
+          "bbox": [
+            102,
+            162,
+            214,
+            245
+          ],
+          "centroid": [
+            162.862,
+            207.449
+          ],
+          "visiblePixels": 4022,
+          "alphaSha256": "873e7d7a7cfaf007d31c1fedfcab28eab816404e1fc77c0f6146ebf2123bc4a9"
+        },
+        {
+          "bbox": [
+            85,
+            134,
+            196,
+            245
+          ],
+          "centroid": [
+            150.961,
+            198.958
+          ],
+          "visiblePixels": 5855,
+          "alphaSha256": "ba46a948387101ccf5a1019b1919f9d491d92b62769b936f09f8d9f86d68c596"
+        },
+        {
+          "bbox": [
+            103,
+            133,
+            200,
+            245
+          ],
+          "centroid": [
+            158.27,
+            196.797
+          ],
+          "visiblePixels": 5052,
+          "alphaSha256": "885adcbbfc9ce5605949deb07a97debf1ed9182cc7b8e045ee7199913b465b1c"
+        },
+        {
+          "bbox": [
+            77,
+            135,
+            189,
+            245
+          ],
+          "centroid": [
+            138.805,
+            197.056
+          ],
+          "visiblePixels": 5859,
+          "alphaSha256": "14688a8b88176faff55bf5e1fdbe0088e541eb16d12698300ef98803828d74d7"
+        },
+        {
+          "bbox": [
+            89,
+            133,
+            195,
+            245
+          ],
+          "centroid": [
+            146.958,
+            196.981
+          ],
+          "visiblePixels": 5645,
+          "alphaSha256": "87b4800e9fc6d72139c3a8994adacd4229dd3bf77ea67f9bd9f7b7f6780563e4"
+        },
+        {
+          "bbox": [
+            87,
+            133,
+            187,
+            245
+          ],
+          "centroid": [
+            144.166,
+            197.482
+          ],
+          "visiblePixels": 5170,
+          "alphaSha256": "dbdde71e6cdce546709a8183bb5d0f80e497f5974f3d6a75f5fbec105ab5f415"
+        },
+        {
+          "bbox": [
+            87,
+            134,
+            184,
+            245
+          ],
+          "centroid": [
+            141.656,
+            197.264
+          ],
+          "visiblePixels": 5213,
+          "alphaSha256": "93a3d730115f5abfa3c6ca36a98e27ddc4db211966b0c3d0e4f3ee9c3e3f2a9e"
+        }
+      ]
+    }
+  },
+  "semanticReview": {
+    "status": "passed",
+    "manualFrameByFrameReview": true,
+    "down": "one-way support loss and stable side-sprawled revivable KO hold",
+    "revive": "rises continuously with no return to a lower recovery stage",
+    "expression": "unfocused/spiral KO eyes; no sleep, smile, X eye, death, or gore",
+    "sourceAlphaPreserved": true,
+    "broadDespillApplied": false
+  }
+}
