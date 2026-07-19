@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D pet battle body animation sheet
+Primary request: Create exactly 8 sequential frames of the exact 地灵转生兽 performing down, arranged in an exact 4 columns x 2 rows grid, read left-to-right across the top row then the bottom row.
+View contract: enemy-side front three-quarter southwest view, facing and moving toward lower-left; head points screen-left/down and tail trails screen-right/up. Preserve this same battle facing through every frame; no mirroring, turn-around or camera drift.
+Reference role: The supplied exact front_3quarter_sw identity frame and full identity board are binding. Preserve the same adult heavy brown quadruped, rounded wedge muzzle, exactly one short central ochre horn, exactly two cheek plates, one layered shoulder plate per side, low earth ridge, flat-layered heavy tail tuft, four legs and exactly three broad claws per paw.
+Action sequence: reversible unconscious collapse: startled loss of focus, forelegs buckle, shoulder drops, body rolls only enough to settle, limbs splay naturally, eyes unfocused or spiraled when visible, mouth slack, final frame is a stable unconscious hold; never smiling, sleeping, dead, bloody or fading; no halo/stars
+Continuity: one coherent animation with genuine pose progression, stable creature scale, stable rendering, stable palette and consistent anatomy; exact same creature in every cell.
+Containment: one complete beast per equal cell, body inside central 58 to 66 percent, generous #FF00FF margin on all sides, no horn, paw, plate or tail crossing a cell edge.
+Style: original high-definition 2.5D hand-painted fantasy game sprite, warm Stone-Age-inspired production style without copying copyrighted art, crisp readable silhouette at 160 px.
+Background: perfectly flat solid #FF00FF only. No ground, shadow, scenery, detached effects, particles, text, labels, borders, UI, logo or watermark.
+Avoid: extra or missing anatomy, species drift, action duplicates, flipped facing, sleep smile, death/gore, cropping.

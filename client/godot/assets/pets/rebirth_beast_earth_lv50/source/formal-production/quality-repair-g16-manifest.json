@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "pet",
+  "purpose": "repair weak counter, stagger and knockaway silhouettes in both canonical battle views",
+  "approvedScope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "counter",
+      "stagger",
+      "knockaway"
+    ],
+    "runtimeFrameCount": 48
+  },
+  "identityContract": "preserve the approved massive adult brown earth quadruped with one central ochre horn, ivory cheek plates, shoulder rock-fur, earth ridge, leaf-layered tail and three broad claws per paw",
+  "canonicalFacing": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "normalization": {
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "fitScale": 0.815,
+    "scaleReductionFromCandidate": "2.98% from fitScale 0.84",
+    "subVisibleAlphaFringeFloor": 5,
+    "minimumAnyAlphaEdgeMargin": 4
+  },
+  "runtimeBundleDigestAfterRepair": "91db180cbf27aca772ff42f71a7ef513ed5a72082a238a537d4f9f95d17f6cad",
+  "beforeAfterEvidence": {
+    "path": "qa/battle/repairs/g16-earth-three-action-before-after.png",
+    "sha256": "dbad86d3f2b4af520058d45947eaca797ec353e28b761dd4a8a33bc2e00ca4fe"
+  },
+  "entries": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/counter.png",
+        "sha256": "a866757509b5d62b078e72c9bceafa2443ca54c150196113e20ee40432e2330f",
+        "sizeBytes": 1694006
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/counter.png",
+        "sha256": "8a5daf458c96692908e08d2b5adc0dfcf4be917a6cd539c5eb103cc3f22bd1be"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/counter-repack-meta.json",
+        "sha256": "e16aa8efeb502ecddc4574a1d8448d4c25b48a4a488ff7446ba0e92a022d26d9"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/front_3quarter_sw/counter/pipeline-meta.json",
+        "sha256": "850d726625a8190d773b8cc17fa62db3b658057c7e16592328484d91a5dfd75a"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-1.png",
+          "sha256": "4e3e8423cc14c2beba42befbaedb7090061e201e502921fd2e0dd25f37f47c3d"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-2.png",
+          "sha256": "e40f9e9f25f259f06cca96c22dd820aa8403452103b07a727f1cd1b65e4c3f02"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-3.png",
+          "sha256": "2bcf9e7dc7e701ad692660f54690014ef8dd60a0d85ebbdef4d45bd3ab8ff750"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-4.png",
+          "sha256": "8895ffbf1ac1f5734c6e5765c7186b76098e915b000f0268bf46639926311438"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-5.png",
+          "sha256": "ed8478c6b3f03e3cf491fd602d1c0d8be498fcaab8926aefff17a2cc3a54a317"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-6.png",
+          "sha256": "f349074698f8b2ee2300f615751b9dbe6a22aa966da90d0326fdae52dd95f33d"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-7.png",
+          "sha256": "f1e2bf2f017419cc4a3a9cd6861c3aaf0373b85e456764ae6fa296a6f3bf55f8"
+        },
+        {
+          "path": "build/front_3quarter_sw/counter/runtime-frames/counter-8.png",
+          "sha256": "d965e139000735f7db6c495963d2714be5943e178fa82259592a83f625dc88d3"
+        }
+      ]
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/stagger.png",
+        "sha256": "0308a8f263e87c058b85b813cd9558fe59d65b53c6d4cee643a4123dc101fca8",
+        "sizeBytes": 1861919
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/stagger.png",
+        "sha256": "4595d761a75b8718eed48475726cdc520b35355b1078c90c7216808cefac0d77"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/stagger-repack-meta.json",
+        "sha256": "006e45f40e3d0e583766c09def185f8d1081edc9cb1405ed9c996da346dc03b8"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/front_3quarter_sw/stagger/pipeline-meta.json",
+        "sha256": "858e37e4fac5710ebc936711738e195e471aac2a1f677e1b02d44fdc71511c88"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-1.png",
+          "sha256": "47881357ed6ae8659e57a32588c13d69db782c2fc145a6fd1b0987037dc7bfbf"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-2.png",
+          "sha256": "6dce2d2a2788d9c71339c04d433fcbfdaedcd143ca117ba113181ab1dba4f6d6"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-3.png",
+          "sha256": "6cb5a8f83094ef2fc8a8b76051e61a4319da892e3257ffdb89c5633b3af45ff2"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-4.png",
+          "sha256": "41222767b246f9bec7090299734dc4bffca5a118ccbd7f22bbe7b8e4d4aa5065"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-5.png",
+          "sha256": "6dbe6713296ba3fa0792a4d644a85eeb7605df9a6a0eca38a2cd3cd14125231c"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-6.png",
+          "sha256": "fc9fed2067c5fbaba84408df352aa6abaab298e06f43d08d51ed73fa8af3404d"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-7.png",
+          "sha256": "d5db985c1f52fa80d487b2f691730c01e024caa104bd9cde2f061676a4631687"
+        },
+        {
+          "path": "build/front_3quarter_sw/stagger/runtime-frames/stagger-8.png",
+          "sha256": "33d63dbce5413d334d5751f024aeacaf32e6b1374c969fcb330e73aa609298f1"
+        }
+      ]
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/knockaway.png",
+        "sha256": "bd1a7861038274425753671aae8b94510d2a5fa9aca2b5174bf7ae2a66338368",
+        "sizeBytes": 1624513
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/knockaway.png",
+        "sha256": "95d65145bc5a8741a73f5351171d3dcde8f80136970f4177d46a1d29c8b52394"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/front_3quarter_sw/knockaway-repack-meta.json",
+        "sha256": "c43a7c71b681fb6140e4aeebf1a3e064ae291ad386d48a4c5068aeb6b7b03436"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/front_3quarter_sw/knockaway/pipeline-meta.json",
+        "sha256": "12c00fd0fa71ef1ec97c609aadf40246ca914ef802baf6153c2b79fd03627fff"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-1.png",
+          "sha256": "eb9033407615efb132de3a5fe420257ec8a14e0bffd6c5d24418b18e9a9b6a12"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-2.png",
+          "sha256": "f146c0f235edf94e03f01332fcaecb47e49e7f005bcae69ae26d40b6fcf318ba"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-3.png",
+          "sha256": "6db8516b9866f4d1d1b1a6cc206bd1b254205fea4206c2b2ce26c3d2cb3fa1b1"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-4.png",
+          "sha256": "7c8b51910684bbb15acd4d5823ff5191439aff3c7c519c868e62b7c201c0739c"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-5.png",
+          "sha256": "1a3708000a81c1de4f597ad98c79975a5c1e2b7f63b44d00aad504e59a81e7ef"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-6.png",
+          "sha256": "bc4bd6b974ef06e2e039e7c6dd9bb2b7c9d9de284b0c595bdb90f2c4c651f1ef"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-7.png",
+          "sha256": "2df0d3d8e1d794b1d5c2d55b9127e5142fef55182d893c6ddc1303d697e42d7f"
+        },
+        {
+          "path": "build/front_3quarter_sw/knockaway/runtime-frames/knockaway-8.png",
+          "sha256": "1eaff5b1c56b4fd9d1b631d37842de230604af32f4a308322cccf9fb19fce73d"
+        }
+      ]
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/counter.png",
+        "sha256": "72ada059e82c5b12176264926a4d907123c63f95f25e645e7bb04b2d78ede53f",
+        "sizeBytes": 1740962
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/counter.png",
+        "sha256": "c9cb625e90f6466a9668ea453c7f95759c2872f88782bddba0f10f42693b0999"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/counter-repack-meta.json",
+        "sha256": "5c11cb1576796dbe3e77222466584ed1b69cea544022caa2961392776a8b466b"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/back_3quarter_ne/counter/pipeline-meta.json",
+        "sha256": "ba7660a75fe799979c721e31248cc760777345e4e010349499ac83022df80d7d"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-1.png",
+          "sha256": "27afa98164d6c5094bc2e35aae48aa421af82d433123f73085248ce4730eea39"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-2.png",
+          "sha256": "bae93c8bb3ff83e95e4d9861f1731186e2543c07b2e0adf7e2661012bde2f4c7"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-3.png",
+          "sha256": "0630b48155a04bb240b6a28d463ec69fbcd384f15af7f058f11202192b9491bc"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-4.png",
+          "sha256": "1bfe1ee6287516f7cef3850b1a017cf7f81e8cf9cbd020e8bebf8aa64dcbd973"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-5.png",
+          "sha256": "9d8b2216cd79cbbe6c0235f1e752b9989773732946d16b55567a9e044487e82e"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-6.png",
+          "sha256": "3b40c596f2f5f8e1354e6bb8c6ea3b8a77666db9752f52baa7772750073e6cc4"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-7.png",
+          "sha256": "a904b7865002fb6c7961c8c8daff754ff4e5b3ca91bb8b216a49eebebf04c6e1"
+        },
+        {
+          "path": "build/back_3quarter_ne/counter/runtime-frames/counter-8.png",
+          "sha256": "040354dcb7a2a9bbb3c27e296b59908cab5eafbc9c9036116df5c781f5a747d3"
+        }
+      ]
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/stagger.png",
+        "sha256": "6ce5d9a086671b1073ed5a48a286a2bb899e31440117becea6d582fd42cdd1cb",
+        "sizeBytes": 1700156
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/stagger.png",
+        "sha256": "0029c3097a6d264a040760c8922ab73a24c47a4b2c92b77dd50218cda17738b6"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/stagger-repack-meta.json",
+        "sha256": "70729baac86fdeecabffa700f2564822b21a3b83734d036e3e274b084b5675d2"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/back_3quarter_ne/stagger/pipeline-meta.json",
+        "sha256": "da798470cca5e861190851f41ba857b3c0f89412199b6462a0b6365201aacb57"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-1.png",
+          "sha256": "078ad727966707ac38c5d4119cefdb590a268deadeda75b6429fb65c0aad4cb1"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-2.png",
+          "sha256": "36089134c31fbe0f1ffbbbc5cb9c073520156f7eb5d83b54db6ac75a059af773"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-3.png",
+          "sha256": "e5b13221ac6e64890a07888ea7e9c994241dc5c97749a0e3a30342881e7153df"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-4.png",
+          "sha256": "bba85f3da115151f744a6d02ca359bd14ff2057ecdf126eb2ee0ec15dc3dbf2f"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-5.png",
+          "sha256": "381f83a1cdde70be4f1b22c34318d5199da5e06c703dc526acc743298d9ea60f"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-6.png",
+          "sha256": "b31c04459a553a3078535227e662677992fe74e3c4ca35210578b758296cfae6"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-7.png",
+          "sha256": "779ccf905e1072ea8b6bb262bc907442cf5357df8838652b1518ddc0f44e2452"
+        },
+        {
+          "path": "build/back_3quarter_ne/stagger/runtime-frames/stagger-8.png",
+          "sha256": "d351e22bb7a3bcb6bc21406920aca9596fc989e550fcedf724346adb09f76ccd"
+        }
+      ]
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "rawGenerationSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/knockaway.png",
+        "sha256": "6a2e769ac5d1bb7d66973d8d38862ecfabd1b010f88c30b15ada76bd1ad0540e",
+        "sizeBytes": 1694810
+      },
+      "preparedSheet": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/knockaway.png",
+        "sha256": "8bb78cdcc58cbeff2ad7a52a88ffc27088fd642a3b17ca5749932bb80b3a2bb9"
+      },
+      "repackMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/prepared/back_3quarter_ne/knockaway-repack-meta.json",
+        "sha256": "295dbb25d7bdd08fbb77bb4d8e582d86dc535fe39b25d3a578a8acdaf058e645"
+      },
+      "pipelineMetadata": {
+        "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/build/back_3quarter_ne/knockaway/pipeline-meta.json",
+        "sha256": "b9e8391038daac062da897b79433884ea4f696ca8ac76cdec410b0aa53f41bcf"
+      },
+      "runtimeFrames": [
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-1.png",
+          "sha256": "e2b7256b8fc0ee6a7266c658055b545130ea15f96df2bad3bbb7d97f0dfdbda6"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-2.png",
+          "sha256": "ff821ae8b0137dbd59a947507c4676dd442dab844d6b2c7876a8b9198893429c"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-3.png",
+          "sha256": "aafb017db38ec6f67c9c26903b33bfc192f0cba67adeafd4590653bd704f5506"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-4.png",
+          "sha256": "3628c1887a8c8f44d676dbb983e8d41981457ea52bcf617c2e5841e064974350"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-5.png",
+          "sha256": "1ebe3fa1cdd5b141346ece94299376f10a98313480915672a7b616ae4dce3111"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-6.png",
+          "sha256": "b96c7aae1f5ffb286cf1f3c5a0ffa63647ae10d0751e6ce1ec48d4dc4cabcb31"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-7.png",
+          "sha256": "afdd199b8faac2cf0475d708edb36f719c8b2b04d2ba54818cf5708b68b849d9"
+        },
+        {
+          "path": "build/back_3quarter_ne/knockaway/runtime-frames/knockaway-8.png",
+          "sha256": "04b17ab03abad21232bd6aa452041750db079fcc0cddec1e3f7b2786c2fdcdff"
+        }
+      ]
+    }
+  ],
+  "ownerReviewStatus": "approved_for_install"
+}

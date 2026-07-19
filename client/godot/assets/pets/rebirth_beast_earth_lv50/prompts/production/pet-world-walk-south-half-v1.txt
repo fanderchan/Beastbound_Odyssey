@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey HD 2.5D creature canonical directional locomotion sheet
+Primary request: Create a 4 columns x 4 rows walking animation sheet for the exact 地灵转生兽 from the reference images. This is one coherent walk action family.
+Grid: each row is one independently authored world direction, and columns 1 to 4 are the four gait phases in time. Row 1 south, row 2 southwest, row 3 west, row 4 northwest. Preserve each row's facing axis in every phase; do not mirror or reuse another row.
+Motion: phase 1 left/near forepaw leads with opposite hind paw; phase 2 grounded passing pose; phase 3 opposite forepaw leads with opposite hind paw; phase 4 grounded passing pose returning smoothly to phase 1. Use real weight transfer, shoulder compression, tail counterbalance and paw lift. No mere vertical bobbing, sliding or duplicated poses. Stable body scale and ground baseline within each row.
+Identity: preserve the exact adult heavy brown quadruped, short neck, rounded wedge muzzle, low ears, exactly one short central ochre horn, two curved cheek plates, one layered rock-fur shoulder plate per side, low earth ridge, heavy flat-layered tail tuft, four legs and exactly three broad claws per paw.
+Style: original high-definition 2.5D hand-painted fantasy game sprite, warm Stone-Age-inspired production style without copying copyrighted art, crisp silhouette and restrained shading readable at 160 px.
+Containment: exact equal cells, one complete beast per cell, central 58 to 65 percent safe area, same scale in all 16 frames, at least 28 px solid magenta between every body part and cell edge.
+Background: perfectly flat #FF00FF only. No shadow, floor, scenery, particles, glow, text, label, border, UI, logo or watermark.
+Avoid: anatomy drift, extra horn or limb, missing paw or tail, changed plates, mirrored directions, cropped tail, cross-cell pixels, sleep or smile.

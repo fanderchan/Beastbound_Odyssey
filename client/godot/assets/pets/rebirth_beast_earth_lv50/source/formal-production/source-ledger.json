@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "pet",
+  "archiveMode": "lean",
+  "runtimeFrameCount": 220,
+  "runtimeBundleDigest": "91db180cbf27aca772ff42f71a7ef513ed5a72082a238a537d4f9f95d17f6cad",
+  "sourceFramesTracked": false,
+  "rawGenerationSheetsTracked": false,
+  "rawGenerationSheetCount": 36,
+  "rawGenerationSheets": [
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sha256": "d8e38f41be45a37e81d15d0330a91d1a46d566e8f68045c83dd28ccabe473af7",
+      "sizeBytes": 1776019
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sha256": "dc9ef1fd091740ad77e9b8d4e9a0d616979436984cdb0b5a74a04943f259a53e",
+      "sizeBytes": 1607905
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sha256": "bf2eb3c1ea70ff0e061ea6e227e3f6497e9360a0576b75339e65e273c9f9936a",
+      "sizeBytes": 1754533
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sha256": "b453e36baa7021b0b32750dbc9ab9cb5e0e57433b4238a616c3fed92669b10f7",
+      "sizeBytes": 1739943
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sha256": "19899680330bfc9d2bf6de92de2b95860c51bd85935a49456847011b8db2bbe0",
+      "sizeBytes": 1511850
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sha256": "261f39a827ae4747485e3f6242a534e8fbc2d1c4651daa79adfb4ca0d10c4549",
+      "sizeBytes": 1763995
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sha256": "848355697d6f5b2ec7ec297dc1ecfd19775656af222de5131066f67951760da7",
+      "sizeBytes": 1798565
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sha256": "63ba63ce7ee26aae50a4a0c9e94fcdbe06745463bbb0a8d6f4264175655f3845",
+      "sizeBytes": 1728563
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sha256": "418c9975b402dd8812e1d9628f340bb7d75417ecb0f523170140b68fe89878b9",
+      "sizeBytes": 1814408
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sha256": "03091291b48f8f8dc531db54ca8b7e9444a34682304c1eeabc0698d62880265a",
+      "sizeBytes": 1788382
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sha256": "4c8337026aff4ef892a7950035c95984d160a3e6c10c8939032cfb35cd78c57b",
+      "sizeBytes": 1584783
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sha256": "8773e397abb7e2d77e5d85cf21ffc939d60d3d8087bbbb7b029cbdcd1856e328",
+      "sizeBytes": 1580496
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sha256": "700017259132a74226b002c888fcecc9d1afccaefb948a0ae6f5791fd6419fef",
+      "sizeBytes": 1810119
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sha256": "8b5a910930a70d46e811e61d7a4146d942a77c30bc4e7024b1087267d67fa66b",
+      "sizeBytes": 1628845
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sha256": "808a9d9b9c3c5bab8b168de75250e0afa44d07ab1641816d3b0bcb4895ee8fbe",
+      "sizeBytes": 1837248
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sha256": "dc491f70c836d87afef7a22e2801a63e2bb8677ec896dd37decb04b4eb5c1b75",
+      "sizeBytes": 1792569
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sha256": "b37a67f33a6eeba1d6e22f87ed6eccf00a2ac1e8129bfeaffa41d33781f11d9b",
+      "sizeBytes": 1549033
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sha256": "d845d43815c450283a81e7827c6623ccbdb2499fef2c9a62438480f687ac6561",
+      "sizeBytes": 1848419
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sha256": "40e2a88d3847e2824fbf6e2e34dbfc15d21369aee8caa4c3064da7cb5e414e1a",
+      "sizeBytes": 1865085
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sha256": "ab2c1bcf3b6604fc0ecb2afd5f8f12898b55597d95470404ea9c4de663c108ed",
+      "sizeBytes": 1714820
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sha256": "d4b654751c8364d67c755d9ce4c5653656ddb79534c713e1643d88f5fd451149",
+      "sizeBytes": 1845207
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sha256": "c93fb6731fd3c4bc965ed562c1bdc673d5a7946db5d221b793976ab592f4de79",
+      "sizeBytes": 1820227
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sha256": "2b5f2ce4892104e94d810c9dd2c18ddc58141a32b672ded743109b23fb03a1f6",
+      "sizeBytes": 1591535
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sha256": "eb1235ac64c261742aa1bf76fa5937b1ee40ce7e2b2b669b4e6c317961a72df0",
+      "sizeBytes": 1592262
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-idle/raw-sheet.png",
+      "sha256": "1cf0e65f8e01ec423686458f3118901228bbd51b5c00c547ae111ed2bddd2726",
+      "sizeBytes": 1770954
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-walk/east/raw-sheet.png",
+      "sha256": "359367d5c23da89a97015f7caa1fe2bfdb6ec8708b6741ab305d22d5f2f5a5b1",
+      "sizeBytes": 1490949
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/raw-sheet.png",
+      "sha256": "4ab9571a17882f0fe7512ed4d1a0b5dd626f744399ebf66464c2a4ad4a8bdd9e",
+      "sizeBytes": 1353116
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-walk/northeast/raw-sheet.png",
+      "sha256": "eb20933447bb3a3046d7cf6563aef57451a05eb3682577b496564723d7b154e7",
+      "sizeBytes": 1471676
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/raw-sheet.png",
+      "sha256": "0d0a6b40a47950c82172879a8c04a48e291d563ea074ee4432ed5687d5d1a3bb",
+      "sizeBytes": 1561677
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/raw-sheet.png",
+      "sha256": "0666c0aaa0ad745e57eda12280ea6ee3d0715940b0ebea6be51bb895af3e30dc",
+      "sizeBytes": 1857617
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/counter.png",
+      "sha256": "a866757509b5d62b078e72c9bceafa2443ca54c150196113e20ee40432e2330f",
+      "sizeBytes": 1694006,
+      "purpose": "g16 quality repair for front_3quarter_sw/counter"
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/stagger.png",
+      "sha256": "0308a8f263e87c058b85b813cd9558fe59d65b53c6d4cee643a4123dc101fca8",
+      "sizeBytes": 1861919,
+      "purpose": "g16 quality repair for front_3quarter_sw/stagger"
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/front_3quarter_sw/knockaway.png",
+      "sha256": "bd1a7861038274425753671aae8b94510d2a5fa9aca2b5174bf7ae2a66338368",
+      "sizeBytes": 1624513,
+      "purpose": "g16 quality repair for front_3quarter_sw/knockaway"
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/counter.png",
+      "sha256": "72ada059e82c5b12176264926a4d907123c63f95f25e645e7bb04b2d78ede53f",
+      "sizeBytes": 1740962,
+      "purpose": "g16 quality repair for back_3quarter_ne/counter"
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/stagger.png",
+      "sha256": "6ce5d9a086671b1073ed5a48a286a2bb899e31440117becea6d582fd42cdd1cb",
+      "sizeBytes": 1700156,
+      "purpose": "g16 quality repair for back_3quarter_ne/stagger"
+    },
+    {
+      "pathInRun": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair/raw/back_3quarter_ne/knockaway.png",
+      "sha256": "6a2e769ac5d1bb7d66973d8d38862ecfabd1b010f88c30b15ada76bd1ad0540e",
+      "sizeBytes": 1694810,
+      "purpose": "g16 quality repair for back_3quarter_ne/knockaway"
+    }
+  ],
+  "workingArchive": ".run/art_full_g11_g12/earth_sample/pet",
+  "ownerReviewStatus": "pending",
+  "repairWorkingArchive": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair",
+  "repairManifests": [
+    {
+      "path": "source/formal-production/quality-repair-g16-manifest.json",
+      "sha256": "6e9470469b39112a12217a32df56dcfcea2439596917953a6c5b47c0ad35f6be"
+    }
+  ]
+}
