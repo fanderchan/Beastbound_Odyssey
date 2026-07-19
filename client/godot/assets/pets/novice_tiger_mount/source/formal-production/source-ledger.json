@@ -5,7 +5,7 @@
   "archivePolicy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
   "generatedBy": "OpenAI built-in image generation",
   "runtimeFrameCount": 220,
-  "bundleDigest": "9611a72869379d8c015a6379eb53fa742eb0e1db11f1504c3307c1be7917e470",
+  "bundleDigest": "8088ad7ebc895064641b14b2fa9d3a3ae5f9bfacb85ea8a051590a707b36611e",
   "rawBattleSheets": [
     {
       "view": "front_3quarter_sw",
@@ -159,5 +159,41 @@
     "shared scale",
     "feet anchor",
     "4px runtime alpha safety edge"
-  ]
+  ],
+  "battleRuntimeFrameCount": 180,
+  "worldFrameCountObserved": 40,
+  "battleRuntimeBundleDigest": "8088ad7ebc895064641b14b2fa9d3a3ae5f9bfacb85ea8a051590a707b36611e",
+  "repairManifests": [
+    {
+      "path": "source/formal-production/quality-repair-pre-despill-restore-v1-manifest.json",
+      "sha256": "cdcb17d0d715d62221a1ce295256f5e29430aa51d42bff1b8bee461068e2e6ac"
+    },
+    {
+      "path": "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "sha256": "29c482e3a98361d14bb36dbb86c35680e81975605c9868a09c7bf7a0e5e531f8"
+    }
+  ],
+  "preDespillRestore": {
+    "id": "battle180-pre-despill-restore-v1",
+    "battleFrameCount": 180,
+    "despillApplied": false,
+    "alphaExactFrameCount": 180,
+    "unexpectedChangedPixels": 0,
+    "manifest": "source/formal-production/quality-repair-pre-despill-restore-v1-manifest.json",
+    "manifestSha256": "cdcb17d0d715d62221a1ce295256f5e29430aa51d42bff1b8bee461068e2e6ac"
+  },
+  "koExpressionRepair": {
+    "id": "ko-expression-local-rgb-v1",
+    "views": [
+      "front_3quarter_sw"
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true
+  },
+  "downReviveSemanticRepair": {
+    "id": "down-revive-ko-semantics-v2",
+    "manifest": "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+    "runtimeBundleDigest": "8088ad7ebc895064641b14b2fa9d3a3ae5f9bfacb85ea8a051590a707b36611e",
+    "despillApplied": false
+  }
 }

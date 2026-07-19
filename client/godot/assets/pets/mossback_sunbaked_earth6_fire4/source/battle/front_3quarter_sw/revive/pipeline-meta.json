@@ -882,5 +882,21 @@
       "sourceRgbaSha256": "df41c889cb6ba90e72739ebbdffac64aba6949330c4fb80e453c63f2ca2f33ac",
       "runtimeRgbaSha256": "33bfa95b6bfbc1c59b0bd94585166166230fb91eab976e72a3a691ccd5763796"
     }
-  ]
+  ],
+  "installedSemanticRepair": {
+    "id": "down-revive-ko-semantics-v2",
+    "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+    "mapping": [
+      1,
+      2,
+      5,
+      3,
+      4,
+      6,
+      7,
+      8
+    ],
+    "alphaPolicy": "mapped authored alpha exact; local RGB face edits only",
+    "despillApplied": false
+  }
 }

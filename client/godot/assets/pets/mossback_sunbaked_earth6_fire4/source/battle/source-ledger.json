@@ -735,5 +735,42 @@
         "sourceFramesTracked": false
       }
     }
+  },
+  "runtimeFrameCount": 180,
+  "worldFrameCountObserved": 0,
+  "runtimeBundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+      "sha256": "c886cecad30674c40a8ada5011dbe6127e8cc7c606dc23c5add0dfbb190f3386"
+    },
+    {
+      "path": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "sha256": "d9a00b3e7a9ec63b8979a79c77756e2c4692990a29f919d3bd45a40e24154324"
+    }
+  ],
+  "preDespillRestore": {
+    "id": "battle180-pre-despill-restore-v1",
+    "battleFrameCount": 180,
+    "despillApplied": false,
+    "alphaExactFrameCount": 180,
+    "unexpectedChangedPixels": 0,
+    "manifest": "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+    "manifestSha256": "c886cecad30674c40a8ada5011dbe6127e8cc7c606dc23c5add0dfbb190f3386"
+  },
+  "koExpressionRepair": {
+    "id": "ko-expression-local-rgb-v1",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true
+  },
+  "downReviveSemanticRepair": {
+    "id": "down-revive-ko-semantics-v2",
+    "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+    "runtimeBundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+    "despillApplied": false
   }
 }

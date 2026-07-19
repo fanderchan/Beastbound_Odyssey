@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "formId": "novice_tiger_mount",
+  "repairId": "battle180-pre-despill-restore-v1",
+  "purpose": "fully restore the complete battle180 pre-despill archive after the heuristic edge tool was suspended",
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "scope": {
+    "battleRuntimeFramesRestored": 180,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "restore": {
+    "archiveFrameCount": 180,
+    "framesDifferentBeforeRestore": 2,
+    "framesByteExactImmediatelyAfterRestore": 180,
+    "archiveRoot": ".run/art_batch_phase320/battle-alpha-despill-batch-g/novice_tiger_mount/backup-before"
+  },
+  "continuity": {
+    "method": "same-view revive-1 is a byte copy of down-8",
+    "down8Revive1ByteExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "koLocalRgbRepair": {
+    "repairId": "ko-expression-local-rgb-v1",
+    "records": [
+      {
+        "view": "front_3quarter_sw",
+        "center": [
+          101,
+          224
+        ],
+        "radius": [
+          5,
+          4
+        ],
+        "rgbPixelsChanged": 75,
+        "changedRgbBounds": [
+          96,
+          220,
+          107,
+          229
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/novice_tiger_mount/ko-baseline/front_3quarter_sw/down-8.png"
+      }
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true,
+    "newSilhouettePixels": 0,
+    "runtimeOverlay": false
+  },
+  "thunderReviveSequence": null,
+  "validation": {
+    "battleFrameCount": 180,
+    "alphaExactAgainstExpectedSourceFrameCount": 180,
+    "byteExactUneditedFrameCount": 178,
+    "byteExactExpectedSourceFrameCount": 178,
+    "intendedKoRgbPixelsChanged": 150,
+    "intendedSequencePixelsChangedFromArchivedOriginal": 0,
+    "unexpectedChangedPixels": 0,
+    "changedRuntimeFrames": [
+      "views/front_3quarter_sw/down/down-8.png",
+      "views/front_3quarter_sw/revive/revive-1.png"
+    ],
+    "intendedSequenceFrames": []
+  },
+  "runtimeBundleDigestAfterRepair": "87d140ac473587a9b6b701331cb66054438c163a92d4c2c95aa398f8b80aba40",
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "koEnlargedEvidence": {
+    "path": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "sha256": "84abaef292dbd79a3efc3c45899882ad3c55d7603a424ac764ba4fd98eee6a8c"
+  },
+  "supersededRuntimeRepair": {
+    "repairId": "battle180-continuity-alpha-despill-v1",
+    "activeRuntimeArtifactRemoved": true,
+    "historicalWorkingEvidence": ".run/art_batch_phase320/battle-alpha-despill-batch-g/novice_tiger_mount"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

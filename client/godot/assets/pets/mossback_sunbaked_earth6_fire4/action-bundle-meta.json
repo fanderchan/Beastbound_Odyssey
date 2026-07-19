@@ -139,15 +139,31 @@
     "sourceMetadata": "source/identity-board-source-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/mossback/sunbaked/identity-build/contact-sheet.png",
-    "contactSheetSha256": "0a6374a32d45856da8594fc82e52221029f408565cbca8faf3fb300ec3d070c3"
+    "contactSheetSha256": "0a6374a32d45856da8594fc82e52221029f408565cbca8faf3fb300ec3d070c3",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "b3b2765babb987822f5054d44a67dc2b27b934cbf70057fe262c4f9e8f5ede6c",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "7bf0dbf784abef39cec78e09f9b9951346d4efad0bd89fb629cfe091f0aeb916",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "a4d62e475d3663fddde58cc81b6c9fefc0b48c567275dd1e0f2bf68833a02b18",
+    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "battleKoExpressionBeforeAfterSha256": "dec63849fdb732b74495d5e33d4330c432fbeef1c1ccd747514467fc26a260bb",
+    "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "battleDownReviveKoSemanticsBeforeAfterSha256": "89b5cf82462c92b186f853b5444917513d45da7c21879f04ec40db699e9d396f",
+    "battleDownReviveKoSemanticsSequence": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
+    "battleDownReviveKoSemanticsSequenceSha256": "6b2563237b12aad8943be82e6e28ea322c468a735e49ebc7e89881acac0a60a1"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Sunbaked Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate.",
+  "notes": "Sunbaked Mossback identity and four key poses only. World and battle matrices are intentionally not produced in this owner-review gate. Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -161,7 +177,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "battle180_restored_safe_local_repairs_self_review_passed_owner_pending",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -206,13 +222,64 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "dfb18ec16713bf9318843fd8a8c7a49dfbad8457523bdbcae678720b7224ab0b",
+    "bundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+    "minimumBattleRuntimeEdgeMargin": 11,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "battle180-pre-despill-restore-v1",
+        "runtimeFrameCount": 180,
+        "despillApplied": false,
+        "alphaExactFrameCount": 180,
+        "unexpectedChangedPixels": 0,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "ko-expression-local-rgb-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "runtimeFrameCount": 4,
+        "alphaExact": true,
+        "outsideApprovedEyeMaskRgbExact": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "down-revive-ko-semantics-v2",
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCountReviewed": 32,
+        "alphaPolicy": "mapped authored alpha exact; local RGB face edits only",
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ],
+    "despillApplied": false,
+    "restorationValidation": {
+      "alphaExactFrameCount": 180,
+      "unexpectedChangedPixels": 0
+    }
   }
 }

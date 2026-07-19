@@ -137,18 +137,28 @@
     "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
     "formalProductionLedger": "source/formal-production/source-ledger.json",
     "promptDirectory": "prompts/production",
-    "workingArchive": ".run/art_batch_phase320/thunder_dragon/formal-production"
+    "workingArchive": ".run/art_batch_phase320/thunder_dragon/formal-production",
+    "qualityRepairManifests": [
+      "source/formal-production/quality-repair-pre-despill-restore-v1-manifest.json",
+      "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json"
+    ]
   },
   "evidence": {
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "f565e7c94dfd9e417b5802f7835e415f96b9804dd088fb6074a7dd96c653eacb",
+    "battleContactSheetSha256": "184d68b1d0661ef9196a3236ce5765236d7cfae07b730a02f360c7be5ad288a1",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "af37d0cd900e5dbe46988b91f5f54238e535b7d1fc7750282f499e7b1c28d08f",
+    "battleQcSha256": "5e414616b18f4e9bcaa33a6a57bb6a939021a54150d7877dec5379fbbfafc6fd",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "99290bf5accd35ed441ed0c52af9c151de8ac8fd6137247f110056b921a91931"
+    "battleFacingContractPreviewSha256": "f1d3162eb824a7487f804df6bec2fd4dc1f129de726dd2886dc775aacc77ca1b",
+    "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "battleKoExpressionBeforeAfterSha256": "e157e2a916cbaa3002b975ca536456096f3641ee0fdd9290e15fb66386694d27",
+    "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+    "battleDownReviveKoSemanticsBeforeAfterSha256": "2a760877e404582f41bc1f4174d92cd6d7d4c1d066850990ed87d921e3697090",
+    "battleDownReviveKoSemanticsSequence": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
+    "battleDownReviveKoSemanticsSequenceSha256": "6b4f62784766fe1ab50c8841d7da427592a2f71bd3764444da90b1f4fa3fd154"
   },
   "ownerReviewStatus": "pending",
-  "notes": "雷龙身份与独立战宠双视角十二动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。世界与骑乘动作按当前优先级后置；项目所有者审美验收前 runtimeEnabled 保持 false。",
+  "notes": "雷龙身份与独立战宠双视角十二动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。世界与骑乘动作按当前优先级后置；项目所有者审美验收前 runtimeEnabled 保持 false。 Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -162,7 +172,7 @@
     }
   },
   "battleVisual": {
-    "status": "static_self_review_passed_owner_pending",
+    "status": "battle180_restored_safe_local_repairs_self_review_passed_owner_pending",
     "kind": "pet",
     "viewCount": 2,
     "actionCountPerView": 12,
@@ -195,13 +205,78 @@
       "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
       "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
     },
-    "bundleDigest": "35c35482f7773d6a20c49320902dcbfe95760d988286565cee3b87f758774807",
+    "bundleDigest": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "facingContractPreview": "qa/battle/facing-contract-preview.png",
-    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+    "totalFrameCount": 180,
+    "runtimeBundleDigest": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
+    "minimumBattleRuntimeEdgeMargin": 4,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "battle180-pre-despill-restore-v1",
+        "runtimeFrameCount": 180,
+        "despillApplied": false,
+        "alphaExactFrameCount": 180,
+        "unexpectedChangedPixels": 0,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "ko-expression-local-rgb-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "runtimeFrameCount": 4,
+        "alphaExact": true,
+        "outsideApprovedEyeMaskRgbExact": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "thunder-revive-reverse-collapse-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "newArtGenerated": false,
+        "warpingOrScalingApplied": false,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "down-revive-ko-semantics-v2",
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "runtimeFrameCountReviewed": 32,
+        "alphaPolicy": "mapped authored alpha exact; local RGB face edits only",
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ],
+    "despillApplied": false,
+    "restorationValidation": {
+      "alphaExactFrameCount": 180,
+      "unexpectedChangedPixels": 0
+    }
   }
 }

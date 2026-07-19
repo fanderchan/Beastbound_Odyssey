@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "formId": "mossback_sunbaked_earth6_fire4",
+  "repairId": "battle180-pre-despill-restore-v1",
+  "purpose": "fully restore the complete battle180 pre-despill archive after the heuristic edge tool was suspended",
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "scope": {
+    "battleRuntimeFramesRestored": 180,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "restore": {
+    "archiveFrameCount": 180,
+    "framesDifferentBeforeRestore": 4,
+    "framesByteExactImmediatelyAfterRestore": 180,
+    "archiveRoot": ".run/art_batch_phase320/battle-alpha-despill-batch-g/mossback_sunbaked_earth6_fire4/backup-before"
+  },
+  "continuity": {
+    "method": "same-view revive-1 is a byte copy of down-8",
+    "down8Revive1ByteExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "koLocalRgbRepair": {
+    "repairId": "ko-expression-local-rgb-v1",
+    "records": [
+      {
+        "view": "front_3quarter_sw",
+        "center": [
+          107,
+          225
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 51,
+        "changedRgbBounds": [
+          103,
+          222,
+          112,
+          229
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/mossback_sunbaked_earth6_fire4/ko-baseline/front_3quarter_sw/down-8.png"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "center": [
+          198,
+          214
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 51,
+        "changedRgbBounds": [
+          194,
+          211,
+          203,
+          218
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/mossback_sunbaked_earth6_fire4/ko-baseline/back_3quarter_ne/down-8.png"
+      }
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true,
+    "newSilhouettePixels": 0,
+    "runtimeOverlay": false
+  },
+  "thunderReviveSequence": null,
+  "validation": {
+    "battleFrameCount": 180,
+    "alphaExactAgainstExpectedSourceFrameCount": 180,
+    "byteExactUneditedFrameCount": 176,
+    "byteExactExpectedSourceFrameCount": 176,
+    "intendedKoRgbPixelsChanged": 204,
+    "intendedSequencePixelsChangedFromArchivedOriginal": 0,
+    "unexpectedChangedPixels": 0,
+    "changedRuntimeFrames": [
+      "views/front_3quarter_sw/down/down-8.png",
+      "views/front_3quarter_sw/revive/revive-1.png",
+      "views/back_3quarter_ne/down/down-8.png",
+      "views/back_3quarter_ne/revive/revive-1.png"
+    ],
+    "intendedSequenceFrames": []
+  },
+  "runtimeBundleDigestAfterRepair": "a5a7f34edc0a8f3fe689243d56aeea425e0de17c2ac612e1e0d045cb7fda0f43",
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "koEnlargedEvidence": {
+    "path": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "sha256": "dec63849fdb732b74495d5e33d4330c432fbeef1c1ccd747514467fc26a260bb"
+  },
+  "supersededRuntimeRepair": {
+    "repairId": "battle180-continuity-alpha-despill-v1",
+    "activeRuntimeArtifactRemoved": true,
+    "historicalWorkingEvidence": ".run/art_batch_phase320/battle-alpha-despill-batch-g/mossback_sunbaked_earth6_fire4"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

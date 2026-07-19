@@ -1,0 +1,573 @@
+{
+  "schemaVersion": 1,
+  "formId": "thunder_dragon_mount",
+  "repairId": "down-revive-ko-semantics-v2",
+  "purpose": "replace sleeping/happy collapse reads with early daze, stable limp hold, and monotonic independent recovery",
+  "scope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "down",
+      "revive"
+    ],
+    "runtimeFramesReviewed": 32
+  },
+  "sourceFramePolicy": "existing authored standalone poses only; local-RGB face corrections remain inside existing opaque alpha",
+  "sequenceMappings": {
+    "front_3quarter_sw": {
+      "down": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "revive": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    "back_3quarter_ne": {
+      "down": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "revive": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  "frameRecords": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "5f2d19c019901367d1e55736fb3f346157984442d6d776b9d7fa1256e229eef2",
+      "stagedSha256": "ce384c7e86c447f69744bb05d2d05635b74a8b91f63d86437fec024e5dbfabc4",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 115,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "9ff03d558cea147383fa61df271e6768af1ac8775917cde86b8f4e61f9279d71",
+      "stagedSha256": "f82b5accb7d9f94168f0afa303a32a62051d218e77ec826dc7d6631c34e67e6e",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 111,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "ef15c6cacaf17ae907163dcf7b2eea3ac0cb41ce270063594aa4d8d6a532d529",
+      "stagedSha256": "39031841e55ad10068f4e794edd6353f326dcc0817cc9a6bae53305aa5bcbc9e",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 114,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 4,
+      "sourceSha256": "f890191259b3ea8621dfbf333a2063eb7a463e227d42d0493cb263c8985ea69b",
+      "stagedSha256": "454d8a4365bdf668e1f6a8b3801a2f0891bafb381f7f9665dcd7fd794a325a2b",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 111,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "fd0951d48f571e07f354ffb656792139abddb478461fc25c5f3f5b1163ff8f9d",
+      "stagedSha256": "8265eb832e6aaa6c7ee1678561a15d0afdd72575810f0429601bd6d0c473f01d",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 111,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "d31e990711e7c930cb14c1a9fca785e2983cfd531875b000a44b517fbbb1c9dc",
+      "stagedSha256": "2fbf95af4b117835b617d208116d4035fcf7952be637d85763f49999053adf65",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 113,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "127e62e326a565cdd415c0fa6aed683a7e04900260af821be314db5cd755463a",
+      "stagedSha256": "2ba1056fecb985abe214a69fa1abaa369b6335ff233a2259535d840e3b96506f",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 115,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "a69bb2e60f0305273c3a7863d1d5b7e25b6b5f31f8e86a257fbf5a58c55f4ebd",
+      "stagedSha256": "a69bb2e60f0305273c3a7863d1d5b7e25b6b5f31f8e86a257fbf5a58c55f4ebd",
+      "eyeModes": [],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 0,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "a69bb2e60f0305273c3a7863d1d5b7e25b6b5f31f8e86a257fbf5a58c55f4ebd",
+      "stagedSha256": "a69bb2e60f0305273c3a7863d1d5b7e25b6b5f31f8e86a257fbf5a58c55f4ebd",
+      "eyeModes": [],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 0,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "127e62e326a565cdd415c0fa6aed683a7e04900260af821be314db5cd755463a",
+      "stagedSha256": "2ba1056fecb985abe214a69fa1abaa369b6335ff233a2259535d840e3b96506f",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 115,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "d31e990711e7c930cb14c1a9fca785e2983cfd531875b000a44b517fbbb1c9dc",
+      "stagedSha256": "2fbf95af4b117835b617d208116d4035fcf7952be637d85763f49999053adf65",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 113,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 4,
+      "sourceSha256": "fd0951d48f571e07f354ffb656792139abddb478461fc25c5f3f5b1163ff8f9d",
+      "stagedSha256": "42af5d75ca1343879babd6a0fdc051ecf163023a19d28622d59da9ca94967586",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 139,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "f890191259b3ea8621dfbf333a2063eb7a463e227d42d0493cb263c8985ea69b",
+      "stagedSha256": "a88bcfddd3344e29f39d1e47a1e99a4664b8d321b8b7b05e3d5f7a5cbefa24a0",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 140,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "ef15c6cacaf17ae907163dcf7b2eea3ac0cb41ce270063594aa4d8d6a532d529",
+      "stagedSha256": "088a2ecc25654658ea3ef063fee2ba8075d9cc5ed72cb526b5e25c3ab2cf3ca5",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 143,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "9ff03d558cea147383fa61df271e6768af1ac8775917cde86b8f4e61f9279d71",
+      "stagedSha256": "56668eb31005bc5ea2512e17794bbf39f56add9e35d890c5e465133e051d1050",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 140,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "5f2d19c019901367d1e55736fb3f346157984442d6d776b9d7fa1256e229eef2",
+      "stagedSha256": "1c1c14350b5b39ea978ea4a156b7dc04d321ecd3b7797936a9b98d52ebde5760",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 142,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "988f25255dafa50e6f581b2950e23df2f6c0b626f9b451a37921f086242ff222",
+      "stagedSha256": "b18ab2c6bef4d14c987af7fc4d0520500df77829d09c9aaf5ce74a214a7c67e4",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 111,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "81fd2934f476a37bcba01f6af3264523401d92b85ab5c03387d5c2c6c2c117b1",
+      "stagedSha256": "30f5215c398ef4bc5ab1d5b12a67bf7627eaeb04854701956fed21d1b27aba20",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 113,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "2deda6475b8a11046042a6baa06c7dd364bb69f36ef0c1d783440260a114cde1",
+      "stagedSha256": "b0aa773900a702bf9d4b29026c05a4ff628693b40ec3775f639f7f24d0aaa075",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 115,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 4,
+      "sourceFrame": 4,
+      "sourceSha256": "638eedcbfd697746e119fb2c8dec16d17892e78e13c8b7c803698a5256e43df2",
+      "stagedSha256": "2c665476ee449ead74d5eaa8a5aa642978f6bf8e851d67847c2c0e536abaa939",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 116,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "415f153b53d78b1912c14111a5c6bdb114cdb9bd5794963aea585804598f078f",
+      "stagedSha256": "aa0561418efb35208ee464ef82d4c5de5d668bbf6af7578c6e7783af8e8f8c50",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 102,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "9522e84cba81db4011908273ca38de083e6463a56892c7359fceee45c0256985",
+      "stagedSha256": "13ba1e369cc0fda45c360c4262d941a982c7895bfaa691417a509127fc04edfa",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 113,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "451bc98a6528fe4d23df9e03676a90c646933a11f072f5ab12a7cdebc0082719",
+      "stagedSha256": "391861e8a51ab60b7ecd83862ea7896ea36d99b20935f1a4f8490247a02ae34b",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 117,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "d8c0c3290c5f5efeb0d8c616dd9562fc7fcd9680994a77c6e62e44b6b3c5c396",
+      "stagedSha256": "d8c0c3290c5f5efeb0d8c616dd9562fc7fcd9680994a77c6e62e44b6b3c5c396",
+      "eyeModes": [],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 0,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 1,
+      "sourceFrame": 1,
+      "sourceSha256": "d8c0c3290c5f5efeb0d8c616dd9562fc7fcd9680994a77c6e62e44b6b3c5c396",
+      "stagedSha256": "d8c0c3290c5f5efeb0d8c616dd9562fc7fcd9680994a77c6e62e44b6b3c5c396",
+      "eyeModes": [],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 0,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 2,
+      "sourceFrame": 2,
+      "sourceSha256": "451bc98a6528fe4d23df9e03676a90c646933a11f072f5ab12a7cdebc0082719",
+      "stagedSha256": "391861e8a51ab60b7ecd83862ea7896ea36d99b20935f1a4f8490247a02ae34b",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 117,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 3,
+      "sourceFrame": 3,
+      "sourceSha256": "9522e84cba81db4011908273ca38de083e6463a56892c7359fceee45c0256985",
+      "stagedSha256": "13ba1e369cc0fda45c360c4262d941a982c7895bfaa691417a509127fc04edfa",
+      "eyeModes": [
+        "spiral"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 113,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 4,
+      "sourceFrame": 4,
+      "sourceSha256": "415f153b53d78b1912c14111a5c6bdb114cdb9bd5794963aea585804598f078f",
+      "stagedSha256": "06612c52f51d9e9ceda956323fbf6e06de9e6851ccfd5df46d8001a200602241",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 105,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 5,
+      "sourceFrame": 5,
+      "sourceSha256": "638eedcbfd697746e119fb2c8dec16d17892e78e13c8b7c803698a5256e43df2",
+      "stagedSha256": "500f1cd59729992a72b52821fef2d03d6d5fb2bcce356984a1c575005aee4f5b",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 120,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 6,
+      "sourceFrame": 6,
+      "sourceSha256": "2deda6475b8a11046042a6baa06c7dd364bb69f36ef0c1d783440260a114cde1",
+      "stagedSha256": "6d27925151a2f812468b41cf676e23f08ccdb96bc631ce5aefabe54446de55b9",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 121,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 7,
+      "sourceFrame": 7,
+      "sourceSha256": "81fd2934f476a37bcba01f6af3264523401d92b85ab5c03387d5c2c6c2c117b1",
+      "stagedSha256": "9af25c52c04daff8deab55cca0e6d886623790f923832af6849d6dc578b72bfe",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 120,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "destinationFrame": 8,
+      "sourceFrame": 8,
+      "sourceSha256": "988f25255dafa50e6f581b2950e23df2f6c0b626f9b451a37921f086242ff222",
+      "stagedSha256": "cc68c775a0fd0953d85aa1d0f074cebc02945b29d1c70e3fed8c02136cdfc96d",
+      "eyeModes": [
+        "native"
+      ],
+      "mouthNeutralized": false,
+      "rgbPixelsChanged": 122,
+      "rgbPixelsChangedOutsideSemanticMask": 0,
+      "alphaExact": true
+    }
+  ],
+  "downReviveExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "semanticRules": {
+    "down": "alert or hit reaction to early loss of focus to stable limp hold; no smile, sleeping eyes, X eyes, or late pose reversal",
+    "revive": "same terminal hold to monotonic rise; daze clears into open alert eyes without dipping back"
+  },
+  "alphaExactForAllMappedFrames": true,
+  "rgbPixelsChangedOutsideSemanticMasks": 0,
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "runtimeBundleDigestAfterRepair": "4c5a1eed98a6f120b2dc896ec5a6e21c44d271223e4c907fef02f115d58ded04",
+  "evidence": {
+    "beforeAfter": {
+      "path": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+      "sha256": "2a760877e404582f41bc1f4174d92cd6d7d4c1d066850990ed87d921e3697090"
+    },
+    "finalSequence": {
+      "path": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
+      "sha256": "6b4f62784766fe1ab50c8841d7da427592a2f71bd3764444da90b1f4fa3fd154"
+    },
+    "gifs": {
+      "front_3quarter_sw": {
+        "path": "qa/battle/repairs/front_3quarter_sw-down-revive-v2.gif",
+        "sha256": "c3df46f03de32583448c8c0ae14fa23e09c1e8cdd68dc913d5b907725002c428"
+      },
+      "back_3quarter_ne": {
+        "path": "qa/battle/repairs/back_3quarter_ne-down-revive-v2.gif",
+        "sha256": "cc1350a348d4fc01d5e2569ede047738faf7ed7f0235f9f9ef5dbd00498220e0"
+      }
+    }
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

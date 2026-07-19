@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "formId": "thunder_dragon_mount",
+  "repairId": "battle180-pre-despill-restore-v1",
+  "purpose": "fully restore the complete battle180 pre-despill archive after the heuristic edge tool was suspended",
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "scope": {
+    "battleRuntimeFramesRestored": 180,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "restore": {
+    "archiveFrameCount": 180,
+    "framesDifferentBeforeRestore": 18,
+    "framesByteExactImmediatelyAfterRestore": 180,
+    "archiveRoot": ".run/art_batch_phase320/battle-alpha-despill-batch-g/thunder_dragon_mount/backup-before"
+  },
+  "continuity": {
+    "method": "revive-1..8 are byte copies of authored down-8..1",
+    "down8Revive1ByteExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "koLocalRgbRepair": {
+    "repairId": "ko-expression-local-rgb-v1",
+    "records": [
+      {
+        "view": "front_3quarter_sw",
+        "center": [
+          108,
+          226
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 51,
+        "changedRgbBounds": [
+          104,
+          223,
+          113,
+          230
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/thunder_dragon_mount/ko-baseline/front_3quarter_sw/down-8.png"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "center": [
+          99,
+          231
+        ],
+        "radius": [
+          4,
+          3
+        ],
+        "rgbPixelsChanged": 51,
+        "changedRgbBounds": [
+          95,
+          228,
+          104,
+          235
+        ],
+        "alphaExact": true,
+        "down8Revive1ByteExact": true,
+        "beforePath": ".run/art_batch_phase320/battle-pre-despill-restore-batch-g/thunder_dragon_mount/ko-baseline/back_3quarter_ne/down-8.png"
+      }
+    ],
+    "alphaExact": true,
+    "outsideApprovedEyeMaskRgbExact": true,
+    "newSilhouettePixels": 0,
+    "runtimeOverlay": false
+  },
+  "thunderReviveSequence": {
+    "repairId": "thunder-revive-reverse-collapse-v1",
+    "method": "revive-1..8 are same-view authored down-8..1 in reverse order",
+    "newArtGenerated": false,
+    "warpingOrScalingApplied": false
+  },
+  "validation": {
+    "battleFrameCount": 180,
+    "alphaExactAgainstExpectedSourceFrameCount": 180,
+    "byteExactUneditedFrameCount": 162,
+    "byteExactExpectedSourceFrameCount": 176,
+    "intendedKoRgbPixelsChanged": 204,
+    "intendedSequencePixelsChangedFromArchivedOriginal": 141549,
+    "unexpectedChangedPixels": 0,
+    "changedRuntimeFrames": [
+      "views/front_3quarter_sw/down/down-8.png",
+      "views/front_3quarter_sw/revive/revive-1.png",
+      "views/front_3quarter_sw/revive/revive-2.png",
+      "views/front_3quarter_sw/revive/revive-3.png",
+      "views/front_3quarter_sw/revive/revive-4.png",
+      "views/front_3quarter_sw/revive/revive-5.png",
+      "views/front_3quarter_sw/revive/revive-6.png",
+      "views/front_3quarter_sw/revive/revive-7.png",
+      "views/front_3quarter_sw/revive/revive-8.png",
+      "views/back_3quarter_ne/down/down-8.png",
+      "views/back_3quarter_ne/revive/revive-1.png",
+      "views/back_3quarter_ne/revive/revive-2.png",
+      "views/back_3quarter_ne/revive/revive-3.png",
+      "views/back_3quarter_ne/revive/revive-4.png",
+      "views/back_3quarter_ne/revive/revive-5.png",
+      "views/back_3quarter_ne/revive/revive-6.png",
+      "views/back_3quarter_ne/revive/revive-7.png",
+      "views/back_3quarter_ne/revive/revive-8.png"
+    ],
+    "intendedSequenceFrames": [
+      "views/front_3quarter_sw/revive/revive-2.png",
+      "views/front_3quarter_sw/revive/revive-3.png",
+      "views/front_3quarter_sw/revive/revive-4.png",
+      "views/front_3quarter_sw/revive/revive-5.png",
+      "views/front_3quarter_sw/revive/revive-6.png",
+      "views/front_3quarter_sw/revive/revive-7.png",
+      "views/front_3quarter_sw/revive/revive-8.png",
+      "views/back_3quarter_ne/revive/revive-2.png",
+      "views/back_3quarter_ne/revive/revive-3.png",
+      "views/back_3quarter_ne/revive/revive-4.png",
+      "views/back_3quarter_ne/revive/revive-5.png",
+      "views/back_3quarter_ne/revive/revive-6.png",
+      "views/back_3quarter_ne/revive/revive-7.png",
+      "views/back_3quarter_ne/revive/revive-8.png"
+    ]
+  },
+  "runtimeBundleDigestAfterRepair": "6f3d26b6cd15d4c382dda6fa57128ec8df949639daf9c6be6d87a07d3f1c5635",
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "koEnlargedEvidence": {
+    "path": "qa/battle/repairs/ko-expression-v1-before-after.png",
+    "sha256": "e157e2a916cbaa3002b975ca536456096f3641ee0fdd9290e15fb66386694d27"
+  },
+  "supersededRuntimeRepair": {
+    "repairId": "battle180-continuity-alpha-despill-v1",
+    "activeRuntimeArtifactRemoved": true,
+    "historicalWorkingEvidence": ".run/art_batch_phase320/battle-alpha-despill-batch-g/thunder_dragon_mount"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}
