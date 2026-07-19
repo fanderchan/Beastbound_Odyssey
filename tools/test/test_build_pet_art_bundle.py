@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -27,6 +28,7 @@ FIXTURE_PATH = (
 sys.path.insert(0, str(TOOLS_DIR))
 
 import build_pet_art_bundle as builder  # noqa: E402
+import sprite_alpha_despill as alpha_despill  # noqa: E402
 
 
 class PetArtBundleBuilderTests(unittest.TestCase):
@@ -193,6 +195,146 @@ class PetArtBundleBuilderTests(unittest.TestCase):
         )
         self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
         self.assertEqual(metadata["transparentAlphaDespill"]["despilledPixels"], 0)
+
+    def test_low_matte_inverse_does_not_create_fluorescent_green(self) -> None:
+        image = Image.new("RGBA", (96, 96), (*builder.DEFAULT_KEY, 255))
+        draw = ImageDraw.Draw(image)
+        body_color = (112, 67, 31, 255)
+        draw.rectangle((18, 18, 77, 77), fill=body_color)
+        # This real failure-shape color is mathematically in gamut under the
+        # old inverse, but becomes an implausible green RGB triplet at low alpha.
+        image.putpixel((17, 48), (221, 28, 210, 255))
+
+        cleaned, metadata = builder.chroma_to_alpha(
+            image,
+            builder.DEFAULT_KEY,
+            40.0,
+            150.0,
+            8,
+        )
+        pixel = cleaned.getpixel((17, 48))
+        self.assertGreater(pixel[3], 0)
+        self.assertLessEqual(pixel[3], 127)
+        self.assertLess(pixel[1] - max(pixel[0], pixel[2]), 18)
+        anomaly = metadata["partialChromaAnomalyDespill"]
+        self.assertGreater(anomaly["strongGreenPixelsBefore"], 0)
+        self.assertEqual(anomaly["strongGreenPixelsAfter"], 0)
+        self.assertEqual(anomaly["alphaPixelsChanged"], 0)
+
+        second, _ = builder.chroma_to_alpha(
+            cleaned,
+            builder.DEFAULT_KEY,
+            40.0,
+            150.0,
+            8,
+        )
+        self.assertTrue(np.array_equal(np.asarray(cleaned), np.asarray(second)))
+
+    def test_natural_green_body_and_detached_vfx_are_preserved(self) -> None:
+        image = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((12, 12, 32, 32), fill=(42, 171, 54, 255))
+        image.putpixel((11, 22), (46, 166, 57, 72))
+        draw.rectangle((40, 5, 42, 7), fill=(34, 225, 62, 80))
+        partial = np.zeros((48, 48), dtype=np.bool_)
+        partial[22, 11] = True
+        partial[5:8, 40:43] = True
+        inverse_valid = np.ones((48, 48), dtype=np.bool_)
+        before = np.asarray(image, dtype=np.uint8).copy()
+
+        cleaned, metadata = alpha_despill.despill_chroma_partial_anomalies(
+            image,
+            partial,
+            inverse_valid,
+            8,
+        )
+        self.assertTrue(np.array_equal(before, np.asarray(cleaned, dtype=np.uint8)))
+        self.assertGreaterEqual(metadata["preservedNaturalGreenPixels"], 1)
+        self.assertGreaterEqual(metadata["unresolvedStrongGreenPixels"], 1)
+        self.assertEqual(metadata["repairedPixels"], 0)
+        self.assertEqual(metadata["alphaPixelsChanged"], 0)
+
+    def test_sparse_green_reference_search_stays_bounded_for_512_frame(self) -> None:
+        image = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+        ImageDraw.Draw(image).rectangle((128, 96, 416, 448), fill=(118, 54, 32, 255))
+        partial = np.zeros((512, 512), dtype=np.bool_)
+        for y in range(100, 445):
+            image.putpixel((127, y), (24, 205, 18, 64))
+            partial[y, 127] = True
+        inverse_valid = np.ones((512, 512), dtype=np.bool_)
+
+        started = time.perf_counter()
+        _, metadata = alpha_despill.despill_chroma_partial_anomalies(
+            image,
+            partial,
+            inverse_valid,
+            8,
+        )
+        elapsed = time.perf_counter() - started
+        self.assertEqual(metadata["repairedPixels"], 345)
+        self.assertEqual(metadata["unresolvedStrongGreenPixels"], 0)
+        self.assertLess(elapsed, 2.0, f"sparse 512px cleanup took {elapsed:.3f}s")
+
+    def test_bundle_source_and_runtime_resize_keep_green_fix_and_alpha_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            input_path = root / "green-regression.png"
+            output_dir = root / "bundle"
+            image = Image.new("RGBA", (128, 128), (*builder.DEFAULT_KEY, 255))
+            draw = ImageDraw.Draw(image)
+            draw.rounded_rectangle((28, 20, 99, 111), radius=18, fill=(112, 67, 31, 255))
+            image.putpixel((27, 64), (221, 28, 210, 255))
+            image.save(input_path, format="PNG")
+            metadata = builder.build_bundle(
+                builder.BuildOptions(
+                    input_path=input_path,
+                    output_dir=output_dir,
+                    rows=1,
+                    cols=1,
+                    slots=("frame-1",),
+                    make_gif=False,
+                    make_contact_sheet=False,
+                )
+            )
+            self.assertEqual(
+                metadata["frames"][0]["chroma"]["partialChromaAnomalyDespill"][
+                    "alphaPixelsChanged"
+                ],
+                0,
+            )
+            self.assertEqual(
+                metadata["frames"][0]["sourceResampleGreenCleanup"]["alphaPixelsChanged"],
+                0,
+            )
+            self.assertEqual(
+                metadata["frames"][0]["runtimeResampleGreenCleanup"]["alphaPixelsChanged"],
+                0,
+            )
+            for path in (
+                output_dir / "source-frames/frame-1.png",
+                output_dir / "runtime-frames/frame-1.png",
+            ):
+                with Image.open(path) as opened:
+                    rgba = np.asarray(opened.convert("RGBA"), dtype=np.uint8)
+                visible = rgba[:, :, 3] >= 8
+                dominance = rgba[:, :, 1].astype(np.int16) - np.maximum(
+                    rgba[:, :, 0], rgba[:, :, 2]
+                ).astype(np.int16)
+                strong_green = visible & (rgba[:, :, 1] >= 80) & (dominance >= 30)
+                self.assertEqual(int(np.count_nonzero(strong_green)), 0, path)
+
+    def test_premultiplied_resize_keeps_the_established_alpha_bytes(self) -> None:
+        image = Image.new("RGBA", (83, 71), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.ellipse((9, 7, 68, 64), fill=(186, 54, 36, 231))
+        draw.rectangle((42, 13, 78, 26), fill=(38, 178, 65, 91))
+        expected_alpha = np.asarray(
+            image.getchannel("A").resize((137, 119), Image.Resampling.LANCZOS),
+            dtype=np.uint8,
+        )
+        resized = builder.resize_rgba_premultiplied(image, (137, 119))
+        actual_alpha = np.asarray(resized.getchannel("A"), dtype=np.uint8)
+        self.assertTrue(np.array_equal(expected_alpha, actual_alpha))
 
     def assert_case_fails(self, case_name: str, message: str) -> None:
         with tempfile.TemporaryDirectory() as temporary:

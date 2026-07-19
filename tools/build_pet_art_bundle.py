@@ -37,7 +37,11 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from cleanup_sprite_alpha_components import alpha_components
-from sprite_alpha_despill import despill_transparent_alpha
+from sprite_alpha_despill import (
+    despill_chroma_partial_anomalies,
+    despill_resampled_green_edges,
+    despill_transparent_alpha,
+)
 
 
 TOOL_NAME = "build_pet_art_bundle.py"
@@ -343,19 +347,66 @@ def chroma_to_alpha(
     output_alpha[output_alpha < alpha_threshold] = 0
 
     partial = candidate & (matte > 0.0) & (matte < 1.0) & (output_alpha > 0)
+    partial_inverse_out_of_gamut = 0
+    partial_inverse_adjusted = 0
+    partial_inverse_valid = np.ones(partial.shape, dtype=np.bool_)
     if np.any(partial):
         partial_matte = np.maximum(matte[partial, None], 1.0 / 255.0)
-        decontaminated = (
+        inverse = (
             rgb[partial] - (1.0 - partial_matte) * key_rgb[None, :]
         ) / partial_matte
-        rgba[:, :, :3][partial] = np.rint(np.clip(decontaminated, 0.0, 255.0)).astype(
-            np.uint8
+        # A generated antialias pixel is not guaranteed to be a physically
+        # linear composite over the chroma key.  Blindly clipping a negative
+        # red/blue inverse to zero turns magenta spill into fluorescent green.
+        # Raise only the RGB unmixing matte to the minimum physically feasible
+        # value; the authored output alpha continues to use the original matte.
+        valid_inverse = np.all((inverse >= 0.0) & (inverse <= 255.0), axis=1)
+        partial_inverse_out_of_gamut = int(np.count_nonzero(~valid_inverse))
+        partial_inverse_valid[partial] = valid_inverse
+        observed = rgb[partial]
+        color_matte = partial_matte[:, 0].copy()
+        for channel in range(3):
+            key_channel = float(key_rgb[channel])
+            observed_channel = observed[:, channel]
+            if key_channel > 0.0:
+                color_matte = np.maximum(
+                    color_matte,
+                    np.where(
+                        observed_channel < key_channel,
+                        (key_channel - observed_channel) / key_channel,
+                        0.0,
+                    ),
+                )
+            if key_channel < 255.0:
+                color_matte = np.maximum(
+                    color_matte,
+                    np.where(
+                        observed_channel > key_channel,
+                        (observed_channel - key_channel) / (255.0 - key_channel),
+                        0.0,
+                    ),
+                )
+        color_matte = np.clip(color_matte, 1.0 / 255.0, 1.0)
+        partial_inverse_adjusted = int(
+            np.count_nonzero(color_matte > partial_matte[:, 0] + 1e-7)
         )
+        adjusted_inverse = (
+            observed - (1.0 - color_matte[:, None]) * key_rgb[None, :]
+        ) / color_matte[:, None]
+        rgba[:, :, :3][partial] = np.rint(
+            np.clip(adjusted_inverse, 0.0, 255.0)
+        ).astype(np.uint8)
 
     rgba[:, :, 3] = output_alpha
     rgba[output_alpha == 0, :3] = 0
-    cleaned, despill_meta = despill_transparent_alpha(
+    edge_cleaned, despill_meta = despill_transparent_alpha(
         Image.fromarray(rgba, mode="RGBA"),
+        alpha_threshold,
+    )
+    cleaned, anomaly_meta = despill_chroma_partial_anomalies(
+        edge_cleaned,
+        partial,
+        partial_inverse_valid,
         alpha_threshold,
     )
     return cleaned, {
@@ -365,7 +416,10 @@ def chroma_to_alpha(
         "keyedCandidatePixels": int(np.count_nonzero(candidate)),
         "transparentPixels": int(np.count_nonzero(output_alpha == 0)),
         "partialAlphaPixels": int(np.count_nonzero((output_alpha > 0) & (output_alpha < 255))),
+        "partialInverseOutOfGamutPixels": partial_inverse_out_of_gamut,
+        "partialInverseAdjustedPixels": partial_inverse_adjusted,
         "backgroundRatio": round(float(np.count_nonzero(connected)) / connected.size, 6),
+        "partialChromaAnomalyDespill": anomaly_meta,
         "postChromaEdgeDespill": despill_meta,
     }
 
@@ -713,7 +767,7 @@ def normalize_canvas(
     crop = prepared.cutout
     width = max(1, round(crop.width * common_scale))
     height = max(1, round(crop.height * common_scale))
-    resized = crop.resize((width, height), Image.Resampling.LANCZOS)
+    resized = resize_rgba_premultiplied(crop, (width, height))
     actual_scale_x = width / crop.width
     actual_scale_y = height / crop.height
     baseline_exclusive = SOURCE_FRAME_SIZE - effective_source_margin - RESAMPLE_GUARD
@@ -735,6 +789,7 @@ def normalize_canvas(
         "RGBA", (SOURCE_FRAME_SIZE, SOURCE_FRAME_SIZE), (0, 0, 0, 0)
     )
     canvas.alpha_composite(resized, (x, y))
+    canvas, resized_green_cleanup = despill_resampled_green_edges(canvas)
     canvas, cleaned_fringe = clean_resample_alpha(
         canvas,
         options.key,
@@ -770,6 +825,7 @@ def normalize_canvas(
         "sourceVisibleBbox": list(bbox),
         "sourceBaselineExclusive": baseline_exclusive,
         "actualScale": [round(actual_scale_x, 8), round(actual_scale_y, 8)],
+        "sourceResampleGreenCleanup": resized_green_cleanup,
         "sourceLowAlphaMagentaPixelsCleared": cleaned_fringe,
         "residualMagentaPixelsSource": residual,
     }
@@ -797,6 +853,58 @@ def clean_resample_alpha(
     rgba[rgba[:, :, 3] < alpha_threshold] = 0
     rgba[rgba[:, :, 3] == 0, :3] = 0
     return Image.fromarray(rgba, mode="RGBA"), cleaned_fringe
+
+
+def resize_rgba_premultiplied(
+    image: Image.Image,
+    size: tuple[int, int],
+) -> Image.Image:
+    """Lanczos-resize RGBA without inventing fringe colors.
+
+    Straight RGB resampling lets hidden/low-alpha channel values ring
+    independently, which can turn a repaired brown edge into pure green after
+    512/256 normalization.  Resample premultiplied color instead, while taking
+    the output alpha bytes from Pillow's ordinary alpha-channel resize so the
+    established silhouette contract remains unchanged.
+    """
+
+    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
+    alpha = rgba[:, :, 3].astype(np.float32)
+    output_alpha = np.asarray(
+        image.convert("RGBA").getchannel("A").resize(size, Image.Resampling.LANCZOS),
+        dtype=np.uint8,
+    )
+    premultiplied = rgba[:, :, :3].astype(np.float32) * (alpha[:, :, None] / 255.0)
+    resized_channels: list[np.ndarray] = []
+    for channel in range(3):
+        resized_channels.append(
+            np.asarray(
+                Image.fromarray(premultiplied[:, :, channel], mode="F").resize(
+                    size,
+                    Image.Resampling.LANCZOS,
+                ),
+                dtype=np.float32,
+            )
+        )
+    resized_premultiplied = np.stack(resized_channels, axis=2)
+    output_alpha_float = output_alpha.astype(np.float32)
+    resized_premultiplied = np.clip(
+        resized_premultiplied,
+        0.0,
+        output_alpha_float[:, :, None],
+    )
+    output_rgb = np.zeros_like(resized_premultiplied)
+    np.divide(
+        resized_premultiplied * 255.0,
+        output_alpha_float[:, :, None],
+        out=output_rgb,
+        where=output_alpha_float[:, :, None] > 0.0,
+    )
+    output = np.zeros((size[1], size[0], 4), dtype=np.uint8)
+    output[:, :, :3] = np.rint(np.clip(output_rgb, 0.0, 255.0)).astype(np.uint8)
+    output[:, :, 3] = output_alpha
+    output[output_alpha == 0, :3] = 0
+    return Image.fromarray(output, mode="RGBA")
 
 
 def render_frames(
@@ -843,9 +951,11 @@ def render_frames(
             options,
             effective_source_margin,
         )
-        runtime = source.resize(
-            (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE), Image.Resampling.LANCZOS
+        runtime = resize_rgba_premultiplied(
+            source,
+            (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE),
         )
+        runtime, runtime_green_cleanup = despill_resampled_green_edges(runtime)
         runtime, runtime_cleaned_fringe = clean_resample_alpha(
             runtime,
             options.key,
@@ -882,6 +992,7 @@ def render_frames(
                     **prepared.metadata,
                     **render_meta,
                     "runtimeVisibleBbox": list(runtime_bbox),
+                    "runtimeResampleGreenCleanup": runtime_green_cleanup,
                     "runtimeLowAlphaMagentaPixelsCleared": runtime_cleaned_fringe,
                     "residualMagentaPixelsRuntime": runtime_residual,
                     "sourceRgbaSha256": rgba_hash(source),
