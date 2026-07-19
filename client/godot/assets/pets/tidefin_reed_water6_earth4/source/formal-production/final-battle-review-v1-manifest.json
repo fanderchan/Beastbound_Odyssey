@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "formId": "tidefin_reed_water6_earth4",
   "runtimeFrameCount": 180,
-  "runtimeBundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
+  "runtimeBundleDigest": "11fa26e80eb5b26b0af9665f74b8fba5e525a549861e812eace2799990229d15",
   "runtimeEnabled": false,
   "sequenceReview": {
     "id": "battle180-sequence-review-v1",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "contactSheetSha256": "4cbbd88e58adf64035d3917e4f1ca845de52046ed8bf8e740f14bf6e60d3efed",
+    "contactSheetSha256": "5f2b46066212110438f77c8e4062625f0bb8829e921b18d45cfb51441cf9de09",
     "reviewedViews": [
       "front_3quarter_sw",
       "back_3quarter_ne"
@@ -34,9 +34,25 @@
       "enemy": true,
       "ally": true
     },
-    "checkScript": ".run/batch_e_battle_load_check.gd"
+    "checkScript": ".run/batch_e_battle_load_check.gd",
+    "verifiedAfterRepair": "back-source-handoff-v4"
   },
   "catalogAudit": "passed 180/180",
   "battleActionCatalogCheck": "passed",
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "sourceContinuityReview": {
+    "sourceDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "canonicalBackRuntimeDerivedFromSource": true,
+    "despillApplied": false,
+    "manifest": "source/formal-production/back-source-handoff-v4-manifest.json",
+    "manifestSha256": "be96aee862eda040fce4fc55610d3f42e0984956be30d47589bd1e0eeb7c8d80",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
+  }
 }

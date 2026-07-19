@@ -933,9 +933,9 @@
       ],
       "sourceVisibleBbox": [
         217,
-        391,
-        411,
-        482
+        390,
+        412,
+        483
       ],
       "sourceBaselineExclusive": 482,
       "actualScale": [
@@ -945,15 +945,26 @@
       "sourceLowAlphaMagentaPixelsCleared": 8,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        108,
-        195,
-        206,
-        241
+        106,
+        193,
+        208,
+        243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b427296403a56130b940220b014b4c04d7036fe6fb2930b32fc428dd257b1fbf",
-      "runtimeRgbaSha256": "009a1fe0e9e119ca9031993e612a1df5240274ef0289255c76ebeb623558b696"
+      "runtimeRgbaSha256": "8cfc56c0232553d91a193bb1b43fdc0d8b81626e0167259a5874e9353ef7ffce"
     }
-  ]
+  ],
+  "postProcessing": {
+    "sourceContinuityRepairV4": {
+      "id": "back-source-handoff-v4",
+      "view": "back_3quarter_ne",
+      "sourceDown8Revive1ExactRgba": true,
+      "runtimeDown8Revive1ExactRgba": true,
+      "runtimeDerivedByCanonicalFunction": true,
+      "despillApplied": false,
+      "creativePoseChange": false
+    }
+  }
 }

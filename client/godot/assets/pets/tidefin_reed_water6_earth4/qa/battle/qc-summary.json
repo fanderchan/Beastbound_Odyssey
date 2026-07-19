@@ -38,9 +38,9 @@
     "back_3quarter_ne": true
   },
   "minimumRuntimeEdgeMargin": 13,
-  "bundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
+  "bundleDigest": "11fa26e80eb5b26b0af9665f74b8fba5e525a549861e812eace2799990229d15",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "4cbbd88e58adf64035d3917e4f1ca845de52046ed8bf8e740f14bf6e60d3efed",
+  "contactSheetSha256": "5f2b46066212110438f77c8e4062625f0bb8829e921b18d45cfb51441cf9de09",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
   "facingContractPreviewSha256": "2630cc3405baca9bd05fe3bca43e8a09ecae724913d6cd51485387ce3d772e6e",
   "actionEvidence": [
@@ -270,9 +270,9 @@
       "frameCount": 8,
       "minimumRuntimeEdgeMargin": 13,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
-      "contactSheetSha256": "a66f260dc98ff4fdf73bce6c48c85a154990f6d0f3247b2c320ee69434125206",
+      "contactSheetSha256": "4be3bfce8eff7033e082ec83652dca77909b0d21a54ec8e819494c2ec9658d03",
       "gif": "qa/battle/actions/back_3quarter_ne/down.gif",
-      "gifSha256": "578dfe8b0d2838bbaa2441f33cb3b87d1624a91f2a3bb93c4c343389083e2bc6"
+      "gifSha256": "bc1deee1c0bbb3084232bce7560b7f35bb1532dc1dd2b8ce025b734fb6d3a8cd"
     },
     {
       "view": "back_3quarter_ne",
@@ -280,9 +280,9 @@
       "frameCount": 8,
       "minimumRuntimeEdgeMargin": 13,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
-      "contactSheetSha256": "802ae8fca8b0398d0ac8d8f7fdd2244fe7b80a28891bfdf9cf8a85d611bd7b45",
+      "contactSheetSha256": "8b74de423a088a4dd112eb84263095a52a30207eb521f13c05e4d96f0871d313",
       "gif": "qa/battle/actions/back_3quarter_ne/revive.gif",
-      "gifSha256": "4cd0eb40b7c544c39d3e7c7074972b3e7bfa0e9c0455dca1d725eab807aca63b"
+      "gifSha256": "64a0e0577e41fc7669131f930153e71ff2f2797ff02c43668281dc87ace29dcf"
     }
   ],
   "errors": [],
@@ -290,7 +290,7 @@
   "worldFrameCount": 0,
   "totalRuntimeFrameCount": 180,
   "minimumBattleRuntimeEdgeMargin": 13,
-  "runtimeBundleDigest": "4acf27c7e89bdd5fb0dac7c2a163a697224b5e7609070be58bdf2eaabb98de64",
+  "runtimeBundleDigest": "11fa26e80eb5b26b0af9665f74b8fba5e525a549861e812eace2799990229d15",
   "qualityRepairs": [
     {
       "id": "revivable-ko-sequence-v3",
@@ -308,9 +308,21 @@
       "backDownReviveByteExact": true,
       "despillApplied": false,
       "manifest": "source/formal-production/ko-sequence-semantic-repair-v3-manifest.json",
-      "manifestSha256": "38a22304c59a2bd6681e01b17a956620bca20e5f4a31028ac645569430a28cf8",
+      "manifestSha256": "47bc52566e31e0ad6b14535faa3f0cda023a71bc24ad7c090a4da0543801daea",
       "beforeAfterContact": "qa/battle/repairs/revivable-ko-sequence-v3-before-after.png",
       "beforeAfterContactSha256": "ce7eeea6ab035be2bfd14c5cecf6072dab4d8a2487ba000c2bc6451d092d6edb"
+    },
+    {
+      "id": "back-source-handoff-v4",
+      "view": "back_3quarter_ne",
+      "sourceDown8Revive1ExactRgba": true,
+      "runtimeDown8Revive1ExactRgba": true,
+      "runtimeDerivedByCanonicalFunction": true,
+      "despillApplied": false,
+      "manifest": "source/formal-production/back-source-handoff-v4-manifest.json",
+      "manifestSha256": "be96aee862eda040fce4fc55610d3f42e0984956be30d47589bd1e0eeb7c8d80",
+      "beforeAfterContact": "qa/battle/repairs/back-source-handoff-v4-before-after.png",
+      "beforeAfterContactSha256": "d255a17598f7ff7a60461d4882668dd850be465ab12254a67e26f6dae071b7ea"
     }
   ],
   "semanticCorrection": {
@@ -350,7 +362,7 @@
   "sequenceReview": {
     "id": "battle180-sequence-review-v1",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "contactSheetSha256": "8faa0425b2e4a8a669cc9b0a49ac82ab42b44d645ecf87d8641897f09635eab5",
+    "contactSheetSha256": "5f2b46066212110438f77c8e4062625f0bb8829e921b18d45cfb51441cf9de09",
     "reviewedViews": [
       "front_3quarter_sw",
       "back_3quarter_ne"
@@ -377,7 +389,8 @@
       "enemy": true,
       "ally": true
     },
-    "checkScript": ".run/batch_e_battle_load_check.gd"
+    "checkScript": ".run/batch_e_battle_load_check.gd",
+    "verifiedAfterRepair": "back-source-handoff-v4"
   },
   "koExpression": {
     "status": "self_review_passed_owner_pending",
@@ -391,5 +404,20 @@
       7
     ],
     "backDownReviveByteExact": true
+  },
+  "sourceContinuityReview": {
+    "sourceDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "canonicalBackRuntimeDerivedFromSource": true,
+    "despillApplied": false,
+    "manifest": "source/formal-production/back-source-handoff-v4-manifest.json",
+    "manifestSha256": "be96aee862eda040fce4fc55610d3f42e0984956be30d47589bd1e0eeb7c8d80",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
   }
 }

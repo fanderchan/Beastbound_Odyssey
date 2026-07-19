@@ -160,10 +160,10 @@
         151
       ],
       "sourceVisibleBbox": [
-        159,
-        332,
-        408,
-        482
+        217,
+        390,
+        412,
+        483
       ],
       "sourceBaselineExclusive": 482,
       "actualScale": [
@@ -173,15 +173,15 @@
       "sourceLowAlphaMagentaPixelsCleared": 9,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        79,
-        166,
-        204,
-        241
+        106,
+        193,
+        208,
+        243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b427296403a56130b940220b014b4c04d7036fe6fb2930b32fc428dd257b1fbf",
-      "runtimeRgbaSha256": "009a1fe0e9e119ca9031993e612a1df5240274ef0289255c76ebeb623558b696"
+      "runtimeRgbaSha256": "8cfc56c0232553d91a193bb1b43fdc0d8b81626e0167259a5874e9353ef7ffce"
     },
     {
       "slot": "revive-2",
@@ -289,8 +289,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "4bfc5e0e352e50ad6c1c159fedcdf4a0fa064c3a00db388c214cfd789d431bf9",
-      "runtimeRgbaSha256": "f5eca64010d4ccf5edcb2042525d3382e570afd4a0d4097fdaba7366af7155fa"
+      "sourceRgbaSha256": "eb47ce6638b8c27d67e46920f8d40d4ad27a51a6306666da8d9c743c225999eb",
+      "runtimeRgbaSha256": "465af95ce7f342aeb47d1e1c5624fac2c4ac3731b05aaf783e2c7118d167b08e"
     },
     {
       "slot": "revive-3",
@@ -993,19 +993,14 @@
     }
   ],
   "postProcessing": {
-    "transparentEdgeDespill": "shape-preserving RGB cleanup; alpha silhouette retained",
-    "downReviveContinuity": "revive-1 replaced with exact same-view down-8 source/runtime RGBA",
-    "creativePoseChange": false,
-    "wholeSpriteScaleNormalization": {
-      "creativePoseChange": false,
-      "anchor": "existing_bottom_center",
-      "frames": [
-        {
-          "frame": 2,
-          "requestedFactor": 1.106474,
-          "appliedFactor": 1.106474
-        }
-      ]
+    "sourceContinuityRepairV4": {
+      "id": "back-source-handoff-v4",
+      "view": "back_3quarter_ne",
+      "sourceDown8Revive1ExactRgba": true,
+      "runtimeDown8Revive1ExactRgba": true,
+      "runtimeDerivedByCanonicalFunction": true,
+      "despillApplied": false,
+      "creativePoseChange": false
     }
   }
 }

@@ -678,7 +678,7 @@
         "rawArchiveSha256": "b816bc983755c199d23e1c97d8c0cfc36bfcebdf1d5706c3ace32ddd7d142deb",
         "rawDecodedRgbaSha256": "0b41cffca07658704f1343fe497a64cfa3b4ccdc568b90e20b62964ffb3f4161",
         "promptSha256": "4e54aa3bc1824c5a61bd30ff82305f0922cd726e470f74944bc6c1d05ba29103",
-        "pipelineSha256": "a906eb25b51c5a193041d16d4f4aa2fa0ae4c972e23be23b66e8ff5585a79f50",
+        "pipelineSha256": "46c886988eea7aab2cbe7640311d6595cc5df775cbd9845d0d73c3937fa385ac",
         "qcSha256": "137a340158ff327a2646593c6f314a67bdf385ff767b91324a631aaad19e8537",
         "sourceFrameRgbaSha256": [
           "3653fb3ebacc490407092b65e1314465f9155b2fe99ebe8b3e0f02a81bf2ae39",
@@ -698,7 +698,7 @@
           "82998f9833421c5a2aa8b4186bfb72d3a0e7065bccaaf05f05d6e660270b67d5",
           "04234d9454e1f4f469d21d66630f7616d0fc95beef8c22f49e700397feb9a331",
           "ff90568f74bf8ae540c28edecb360643a831f8d065b639b26da2ec60e37d626b",
-          "009a1fe0e9e119ca9031993e612a1df5240274ef0289255c76ebeb623558b696"
+          "8cfc56c0232553d91a193bb1b43fdc0d8b81626e0167259a5874e9353ef7ffce"
         ],
         "representativeRawTracked": false,
         "sourceFramesTracked": false
@@ -709,7 +709,7 @@
         "rawArchiveSha256": "cdfc37561eb5fa03e3554c324a6b8664ccebf661a2bc0550c7a07d7626253991",
         "rawDecodedRgbaSha256": "2f209764114950ef4b19c08deffe89fd94951425789b0402b3af864a1ea35df1",
         "promptSha256": "24ebf7ee0c5fc66e4aa4d98c5e3223e5a645b266517b5a5b47815e8a6faf290d",
-        "pipelineSha256": "37385c152cbfc5336b92a9bde2e53b1e9a042b60ec5089e4bcd9043442cd7041",
+        "pipelineSha256": "5b97fbc309a98412e185ed350b3bcc48ba5d7b40c4cc9568ec2fa93872b370bc",
         "qcSha256": "034ad8a6d0252096a79727f16dca080622839a6e8068a8c5ba2beac8bd85013c",
         "sourceFrameRgbaSha256": [
           "b427296403a56130b940220b014b4c04d7036fe6fb2930b32fc428dd257b1fbf",
@@ -722,7 +722,7 @@
           "3e900765cf617c36b36f304cbb4c64ff2669eb51f49568d06121326755534634"
         ],
         "runtimeFrameRgbaSha256": [
-          "009a1fe0e9e119ca9031993e612a1df5240274ef0289255c76ebeb623558b696",
+          "8cfc56c0232553d91a193bb1b43fdc0d8b81626e0167259a5874e9353ef7ffce",
           "f5eca64010d4ccf5edcb2042525d3382e570afd4a0d4097fdaba7366af7155fa",
           "e6ece267a2de9c31ed8ab5813dd54656d3ed099b69b067bffa4e82ac8ac9efff",
           "2b7d4219142e5430b46e9998b5ba82254ea3b9bea6e66395e87ffe729a9ab875",
@@ -738,11 +738,15 @@
   },
   "runtimeFrameCount": 180,
   "worldFrameCountObserved": 0,
-  "runtimeBundleDigest": "97d9a70bbe5c234de04c2f1385c2c737a74b959df097afc12a480d22d1d38083",
+  "runtimeBundleDigest": "4487c1ee08479647c54082bbf199d5a66f24bee0c5b2f377b2dffb8bf4cc0330",
   "repairManifests": [
     {
       "path": "source/battle/ko-sequence-semantic-repair-v3-manifest.json",
-      "sha256": "17fbdc6fb21f354e70494bb34dc335e92a523239d443b5494800f29feffd7c25"
+      "sha256": "f3ef3b067ee2236292c336104d11f1ab93ae82f4db5943723e1ab06b65ef6ba7"
+    },
+    {
+      "path": "source/battle/back-source-handoff-v4-manifest.json",
+      "sha256": "cdef1e50599392f66d4f83fe111ba3de77cedd1c0de419cb3387f56e59717fd9"
     }
   ],
   "koSemanticRepair": {
@@ -768,7 +772,7 @@
   "sequenceReview": {
     "id": "battle180-sequence-review-v1",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "contactSheetSha256": "ee0e1297ea838002e577526666b9ffca3fa842ac911132668e4cbcaab1d5f17b",
+    "contactSheetSha256": "b9daef36b3960c040ae3d1df956312a859f863c59c3ef3c2cccf46f993b7376d",
     "reviewedViews": [
       "front_3quarter_sw",
       "back_3quarter_ne"
@@ -795,7 +799,8 @@
       "enemy": true,
       "ally": true
     },
-    "checkScript": ".run/batch_e_battle_load_check.gd"
+    "checkScript": ".run/batch_e_battle_load_check.gd",
+    "verifiedAfterRepair": "back-source-handoff-v4"
   },
   "koSequenceSemanticRepair": {
     "id": "revivable-ko-sequence-v3",
@@ -813,7 +818,24 @@
     "alphaExact": true,
     "backUnchanged": true,
     "manifest": "source/battle/ko-sequence-semantic-repair-v3-manifest.json",
-    "manifestSha256": "17fbdc6fb21f354e70494bb34dc335e92a523239d443b5494800f29feffd7c25",
+    "manifestSha256": "f3ef3b067ee2236292c336104d11f1ab93ae82f4db5943723e1ab06b65ef6ba7",
     "ownerReviewStatus": "self_review_passed_owner_pending"
-  }
+  },
+  "sourceContinuityReview": {
+    "sourceDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeDown8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "canonicalBackRuntimeDerivedFromSource": true,
+    "despillApplied": false,
+    "manifest": "source/battle/back-source-handoff-v4-manifest.json",
+    "manifestSha256": "cdef1e50599392f66d4f83fe111ba3de77cedd1c0de419cb3387f56e59717fd9",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
 }

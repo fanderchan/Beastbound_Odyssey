@@ -155,7 +155,10 @@
       "alphaExact": true
     }
   ],
-  "sourceDown8Revive1ExactBytes": true,
+  "sourceDown8Revive1ExactBytes": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
   "runtimeDown8Revive1ExactBytes": {
     "front_3quarter_sw": true,
     "back_3quarter_ne": true
@@ -165,11 +168,12 @@
   "outsideSemanticMaskRgbExactForEveryChangedRuntimeFrame": true,
   "despillApplied": false,
   "runtimeFrameCount": 180,
-  "runtimeBundleDigest": "97d9a70bbe5c234de04c2f1385c2c737a74b959df097afc12a480d22d1d38083",
+  "runtimeBundleDigest": "4487c1ee08479647c54082bbf199d5a66f24bee0c5b2f377b2dffb8bf4cc0330",
   "evidence": {
     "path": "qa/battle/repairs/revivable-ko-sequence-v3-before-after.png",
     "sha256": "18491dad288b2c330b96ff65f581334f63d52226492f347884893efa7177c082"
   },
   "runtimeEnabled": false,
-  "ownerReviewStatus": "self_review_passed_owner_pending"
+  "ownerReviewStatus": "self_review_passed_owner_pending",
+  "sourceDown8Revive1ExactBytesScope": "current formal archive after back-source-handoff-v4; the v3 records remain the historical front-view edit records"
 }

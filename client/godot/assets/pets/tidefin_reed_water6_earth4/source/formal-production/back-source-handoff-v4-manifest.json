@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "formId": "tidefin_reed_water6_earth4",
+  "id": "back-source-handoff-v4",
+  "purpose": "make the formal 512px back-view down-8/revive-1 handoff truthful and make its installed 256px hold a canonical source derivation",
+  "scope": {
+    "view": "back_3quarter_ne",
+    "sourceFramesChanged": [
+      "down-8",
+      "revive-1"
+    ],
+    "runtimeFramesChanged": [
+      "down-8",
+      "revive-1"
+    ],
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0
+  },
+  "method": "recover the approved large centered hold from its existing 512px source using deterministic premultiplied resize and bottom-center placement; never upscale the 256px runtime",
+  "sourceArchive": ".run/art_full_g11_g12/tidefin_reed_water6_earth4/pet",
+  "records": {
+    "source": {
+      "beforeDown8Sha256": "0eb65f5ba8c2c19068b49df2c7d801c40b504a0749345e33d099d0a478b3929f",
+      "beforeRevive1Sha256": "a3e2f762bd674543c6e628cdd3379e99f3542a077c83c2455f5815f2eee9e10e",
+      "afterDown8Sha256": "be30b1ac9705f6ded216d74f8b5cb4748b603d966570b4458305a460d32f0f14",
+      "afterRevive1Sha256": "be30b1ac9705f6ded216d74f8b5cb4748b603d966570b4458305a460d32f0f14",
+      "afterRgbaSha256": "123c1d979676f35c0efcb683c5530dbddf3e7348d8b14d83514d4c258bf12b9b",
+      "afterBbox": [
+        96,
+        327,
+        417,
+        485
+      ]
+    },
+    "runtime": {
+      "beforeDown8Sha256": "23798225ef3af9f83db4a0ce2f95ef843a0cff4b3942d4ca626ec09d2dc3b745",
+      "beforeRevive1Sha256": "23798225ef3af9f83db4a0ce2f95ef843a0cff4b3942d4ca626ec09d2dc3b745",
+      "afterDown8Sha256": "f0055d12e031c4580e8959ddd8aca3f64685437ad39396cb23a590c3eb5b074f",
+      "afterRevive1Sha256": "f0055d12e031c4580e8959ddd8aca3f64685437ad39396cb23a590c3eb5b074f",
+      "afterRgbaSha256": "5dc8facb050ca01c0445a93cd89d3519764e083fdce8fa8cb5a55ea9b28537b7",
+      "canonicalDerivedRgbaSha256": "5dc8facb050ca01c0445a93cd89d3519764e083fdce8fa8cb5a55ea9b28537b7",
+      "afterBbox": [
+        47,
+        163,
+        209,
+        243
+      ]
+    }
+  },
+  "sourceDown8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "runtimeDown8Revive1ExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "canonicalRuntimeDerivedFromSource": {
+    "front_3quarter_sw": "legacy front repair not re-derived in this narrow repair",
+    "back_3quarter_ne": true
+  },
+  "despillApplied": false,
+  "runtimeVisualComparison": {
+    "beforeRuntimeBbox": [
+      47,
+      162,
+      209,
+      243
+    ],
+    "afterRuntimeBbox": [
+      47,
+      163,
+      209,
+      243
+    ],
+    "meanAbsoluteAlphaDeltaCanvas": 0.917358,
+    "meanAbsoluteRgbaDeltaOnUnion": 13.609573,
+    "sameAuthoredPoseAndIdentity": true,
+    "selfReviewStatus": "passed_no_visual_regression"
+  },
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "11fa26e80eb5b26b0af9665f74b8fba5e525a549861e812eace2799990229d15",
+  "evidence": {
+    "path": "qa/battle/repairs/back-source-handoff-v4-before-after.png",
+    "sha256": "d255a17598f7ff7a60461d4882668dd850be465ab12254a67e26f6dae071b7ea"
+  },
+  "validation": {
+    "catalogAudit": "passed 180/180",
+    "godotHeadlessParse": "passed with Godot 4.7.stable",
+    "godotBattleLoadCheck": "passed 180 frames, 12 actions, 2 views via .run/batch_e_battle_load_check.gd"
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}
