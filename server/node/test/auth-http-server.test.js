@@ -1469,6 +1469,23 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(scopedOnline.players.some((player) => player.username === "httppartyb"), true);
   assert.equal(scopedOnline.players.some((player) => player.username === "httppartyc"), false);
 
+  const memberMapOnly = await fetchJson(`${base}/players/position`, {
+    "method": "POST",
+    "headers": {"authorization": `Bearer ${member.session.token}`},
+    "body": JSON.stringify({
+      "mapId": "firebud_training_yard",
+      "scope": "map",
+      "cellX": 10,
+      "cellY": 11,
+      "facing": "east",
+      "moving": false,
+    }),
+  });
+  assert.equal(memberMapOnly.ok, true);
+  assert.equal(memberMapOnly.position.hasCell, true);
+  assert.equal(memberMapOnly.position.precision, "cell");
+  assert.deepEqual([memberMapOnly.position.cellX, memberMapOnly.position.cellY], [10, 11]);
+
   const sameMapOnline = await fetchJson(`${base}/players/online?scope=map&mapId=firebud_training_yard`, {
     "headers": {"authorization": `Bearer ${leader.session.token}`},
   });
@@ -1476,6 +1493,9 @@ test("HTTP server exposes online roster and party endpoints", async (t) => {
   assert.equal(sameMapOnline.aoi.scope, "map");
   assert.equal(sameMapOnline.players.some((player) => player.username === "httppartyb"), true);
   assert.equal(sameMapOnline.players.some((player) => player.username === "httppartyc"), true);
+  const sameMapMember = sameMapOnline.players.find((player) => player.username === "httppartyb");
+  assert.equal(sameMapMember.position.hasCell, false);
+  assert.equal(sameMapMember.position.precision, "map");
 
   const invite = await fetchJson(`${base}/party/invite`, {
     "method": "POST",

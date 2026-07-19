@@ -2204,7 +2204,7 @@ test("players can publish map positions into the online roster", () => {
   assert.equal(scoutRow.position.cellY, 8);
 });
 
-test("map-only presence keeps internal cells private but preserves movement anchor", () => {
+test("map-only presence keeps other-player cells private while the owner retains exact movement authority", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const scout = service.register({"username": "mapa", "password": "test1234", "displayName": "地图甲"});
   const watcher = service.register({"username": "mapb", "password": "test1234", "displayName": "地图乙"});
@@ -2231,9 +2231,10 @@ test("map-only presence keeps internal cells private but preserves movement anch
   });
   assert.equal(mapOnly.ok, true);
   assert.equal(mapOnly.position.mapId, "firebud_training_yard");
-  assert.equal(mapOnly.position.hasCell, false);
-  assert.equal(mapOnly.position.precision, "map");
-  assert.equal(mapOnly.position.cellX, 0);
+  assert.equal(mapOnly.position.hasCell, true);
+  assert.equal(mapOnly.position.precision, "cell");
+  assert.equal(mapOnly.position.cellX, 12);
+  assert.equal(mapOnly.position.cellY, 8);
 
   const stored = service.snapshot().playerPositions[scout.account.accountId];
   assert.equal(stored.mapId, "firebud_training_yard");
@@ -2250,6 +2251,23 @@ test("map-only presence keeps internal cells private but preserves movement anch
   assert.equal(sameMapScout.position.mapId, "firebud_training_yard");
   assert.equal(sameMapScout.position.hasCell, false);
   assert.equal(sameMapScout.position.precision, "map");
+
+  const relogged = service.login({"username": "mapa", "password": "test1234"});
+  assert.equal(relogged.ok, true);
+  assert.equal(relogged.runtimePosition.hasCell, true);
+  assert.equal(relogged.runtimePosition.precision, "cell");
+  assert.deepEqual([relogged.runtimePosition.cellX, relogged.runtimePosition.cellY], [12, 8]);
+  const desynced = service.updatePlayerPosition(relogged.session.token, {
+    "mapId": "firebud_training_yard",
+    "scope": "map",
+    "cellX": 13,
+    "cellY": 8,
+  });
+  assert.equal(desynced.ok, false);
+  assert.equal(desynced.code, "position_desync");
+  assert.equal(desynced.position.hasCell, true);
+  assert.equal(desynced.position.precision, "cell");
+  assert.deepEqual([desynced.position.cellX, desynced.position.cellY], [12, 8]);
 
   const aoi = service.listOnlinePlayers(watcher.session.token, {
     "scope": "aoi",

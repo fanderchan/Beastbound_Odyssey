@@ -2612,7 +2612,8 @@ function createAuthService(options = {}) {
     delete payload.movement;
     return fail(code, message, {
       ...payload,
-      position: currentPosition ? publicPlayerPosition(currentPosition) : null,
+      // 这是只返回给当前账号的权威纠偏坐标，不能套用对其他玩家的地图级隐私投影。
+      position: currentPosition ? publicOwnedPlayerPosition(currentPosition) : null,
       movement: {
         authority: "server_step",
         stepAccepted: false,
@@ -2652,7 +2653,8 @@ function createAuthService(options = {}) {
       });
     }
     const response = {
-      position: publicPlayerPosition(position),
+      // 请求者必须始终拿到自己的精确权威格；地图/AOI 隐私只约束其他玩家看到的投影。
+      position: publicOwnedPlayerPosition(position),
       party: publicPartyForAccount(data, account.accountId, {now, runtimeActiveSessionIds}),
       aoi: publicOnlineAoi(aoi),
       presenceRevision,
@@ -7286,7 +7288,7 @@ function sessionRecoveryPayload(data, account, recovered) {
 
 function publicRuntimePositionForAccount(data, accountId) {
   const position = data && data.playerPositions ? data.playerPositions[String(accountId || "")] || null : null;
-  return position ? publicPlayerPosition(position) : null;
+  return position ? publicOwnedPlayerPosition(position) : null;
 }
 
 function publicPlayerSearchResult(account, data) {
@@ -7328,6 +7330,25 @@ function publicPlayerPosition(position) {
     precision: hasPublicCell ? "cell" : "map",
     updatedAt: position.updatedAt,
     schemaVersion: 1,
+  };
+}
+
+function publicOwnedPlayerPosition(position) {
+  const projected = publicPlayerPosition(position);
+  const hasOwnedCell = Object.prototype.hasOwnProperty.call(position, "hasCell")
+    ? position.hasCell === true
+    : playerPositionHasCell(position);
+  if (!hasOwnedCell) {
+    return projected;
+  }
+  return {
+    ...projected,
+    cellX: Number(position.cellX || 0),
+    cellY: Number(position.cellY || 0),
+    facing: position.facing,
+    moving: Boolean(position.moving),
+    hasCell: true,
+    precision: "cell",
   };
 }
 
