@@ -203,7 +203,14 @@ def _materialize_staging(root: Path, *, mounted: bool = False) -> tuple[Path, di
     return staging, manifest
 
 
-def _options(staging: Path, destination: Path, *, mounted: bool = False, dry_run: bool = False):
+def _options(
+    staging: Path,
+    destination: Path,
+    *,
+    mounted: bool = False,
+    dry_run: bool = False,
+    archive_mode: str = "full",
+):
     return MODULE.InstallOptions(
         staging=staging,
         destination=destination,
@@ -211,6 +218,7 @@ def _options(staging: Path, destination: Path, *, mounted: bool = False, dry_run
         kind="mounted" if mounted else "pet",
         character_id="novice_hunter_v1" if mounted else None,
         dry_run=dry_run,
+        archive_mode=archive_mode,
     )
 
 
@@ -233,6 +241,53 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             self.assertFalse(metadata["runtimeEnabled"])
             self.assertEqual(metadata["ownerReviewStatus"], "pending")
             self.assertEqual(metadata["battleVisual"]["status"], "owner_review_pending")
+
+    def test_lean_archive_validates_full_source_but_tracks_runtime_and_compact_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            destination = root / "asset-root"
+
+            summary = MODULE.install_bundle(
+                _options(staging, destination, archive_mode="lean")
+            )
+
+            self.assertEqual(summary["archiveMode"], "lean")
+            self.assertFalse(summary["trackedSourceFrames"])
+            self.assertEqual(len(list((destination / "views").glob("*/*/*.png"))), 180)
+            self.assertEqual(
+                len(list((destination / "source/battle").glob("*/*/source-frames/*.png"))),
+                0,
+            )
+            self.assertEqual(
+                len(list((destination / "source/battle").glob("*/idle/raw-sheet-lossless.*"))),
+                2,
+            )
+            self.assertEqual(
+                len(list((destination / "source/battle").glob("*/*/prompt-used.txt"))),
+                24,
+            )
+            ledger = json.loads(
+                (destination / "source/battle/source-ledger.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(ledger["archiveMode"], "lean")
+            self.assertTrue(ledger["fullSourceValidationRequiredBeforeInstall"])
+            self.assertFalse(
+                ledger["actions"]["front_3quarter_sw"]["attack"]["sourceFramesTracked"]
+            )
+            self.assertTrue(
+                ledger["actions"]["back_3quarter_ne"]["idle"]["representativeRawTracked"]
+            )
+            metadata = json.loads(
+                (destination / "action-bundle-meta.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(metadata["battleVisual"]["archiveMode"], "lean")
+            self.assertFalse(metadata["battleVisual"]["sourceFramesTracked"])
+
+            repeated = MODULE.install_bundle(
+                _options(staging, destination, archive_mode="lean")
+            )
+            self.assertFalse(repeated["changed"])
 
     def test_dry_run_validates_without_creating_destination(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

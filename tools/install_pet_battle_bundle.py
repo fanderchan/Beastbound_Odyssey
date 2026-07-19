@@ -2,9 +2,11 @@
 """Validate and atomically install a formal Beastbound battle-art bundle.
 
 The tool consumes an already generated staging bundle.  It never creates art,
-enables runtime use, or grants owner approval.  Every action must retain its
-prompt, raw lossless archive, pipeline metadata, per-action QC, 512px source
-frames, and deterministically derived 256px runtime frames.
+enables runtime use, or grants owner approval.  Validation always requires the
+complete prompt, raw lossless archive, pipeline metadata, per-action QC, 512px
+source frames, and deterministically derived 256px runtime frames.  Installation
+can keep that full archive or write a repository-lean provenance ledger while
+retaining every runtime frame and the evidence needed to audit the derivation.
 
 Staging layout (all paths below are relative to ``--staging``)::
 
@@ -51,6 +53,7 @@ RUNTIME_FRAME_SIZE = 256
 ALPHA_THRESHOLD = 8
 FORM_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_]*$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+ARCHIVE_MODES = ("full", "lean")
 
 FORMAL_VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
 ACTION_SPECS: dict[str, tuple[int, int, bool]] = {
@@ -81,6 +84,7 @@ class InstallOptions:
     kind: str
     character_id: str | None = None
     dry_run: bool = False
+    archive_mode: str = "full"
 
 
 @dataclass(frozen=True)
@@ -105,6 +109,10 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
 
 
 def rgba_hash(image: Image.Image) -> str:
@@ -134,6 +142,10 @@ def _json_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode(
         "utf-8"
     )
+
+
+def _pretty_json_bytes(value: Any) -> bytes:
+    return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -269,6 +281,8 @@ def _validate_manifest(options: InstallOptions) -> dict[str, Any]:
     _require_safe_id(options.form_id, "form id")
     if options.kind not in {"pet", "mounted"}:
         raise BattleBundleError("kind must be pet or mounted")
+    if options.archive_mode not in ARCHIVE_MODES:
+        raise BattleBundleError(f"archive mode must be one of {ARCHIVE_MODES}")
     if options.kind == "mounted":
         if not options.character_id:
             raise BattleBundleError("mounted bundles require --character")
@@ -583,6 +597,82 @@ def validate_bundle(options: InstallOptions) -> ValidatedBundle:
     return ValidatedBundle(manifest, copies, all_hashes, digest, action_metadata)
 
 
+def _copies_for_archive_mode(validated: ValidatedBundle, archive_mode: str) -> list[CopyEntry]:
+    if archive_mode == "full":
+        return list(validated.copies)
+    selected: list[CopyEntry] = []
+    for entry in validated.copies:
+        relative = entry.destination_relative
+        parts = relative.parts
+        if parts and parts[0] == "views":
+            selected.append(entry)
+            continue
+        if len(parts) >= 2 and parts[:2] == ("qa", "battle"):
+            selected.append(entry)
+            continue
+        if len(parts) < 5 or parts[:2] != ("source", "battle"):
+            continue
+        action = parts[3]
+        name = parts[-1]
+        if name in {"prompt-used.txt", "pipeline-meta.json", "qa.json"}:
+            selected.append(entry)
+        elif action == "idle" and (
+            name == "source-meta.json" or name.startswith("raw-sheet-lossless.")
+        ):
+            # One lossless authored source sheet per independently generated view
+            # remains in Git as a visual/provenance canary.  All other complete
+            # source intermediates stay in the validated local production archive
+            # and are represented by immutable hashes in source-ledger.json.
+            selected.append(entry)
+    return selected
+
+
+def _lean_source_ledger(staging: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    actions: dict[str, dict[str, Any]] = {}
+    for view in FORMAL_VIEWS:
+        view_actions: dict[str, Any] = {}
+        for action in ACTION_SPECS:
+            action_root = staging / "views" / view / action
+            source_meta = _read_json(action_root / "source-meta.json", f"{view}/{action} source metadata")
+            pipeline = _read_json(action_root / "pipeline-meta.json", f"{view}/{action} pipeline metadata")
+            frame_meta = pipeline.get("frames")
+            if not isinstance(frame_meta, list):
+                raise BattleBundleError(f"{view}/{action} pipeline frame metadata is missing")
+            view_actions[action] = {
+                "originalGeneratedSha256": source_meta["originalGeneratedSha256"],
+                "originalGeneratedDecodedRgbaSha256": source_meta[
+                    "originalGeneratedDecodedRgbaSha256"
+                ],
+                "rawArchiveSha256": source_meta["rawArchiveSha256"],
+                "rawDecodedRgbaSha256": source_meta["rawDecodedRgbaSha256"],
+                "promptSha256": source_meta["promptSha256"],
+                "pipelineSha256": source_meta["pipelineSha256"],
+                "qcSha256": source_meta["qcSha256"],
+                "sourceFrameRgbaSha256": [frame["sourceRgbaSha256"] for frame in frame_meta],
+                "runtimeFrameRgbaSha256": [frame["runtimeRgbaSha256"] for frame in frame_meta],
+                "representativeRawTracked": action == "idle",
+                "sourceFramesTracked": False,
+            }
+        actions[view] = view_actions
+    return {
+        "schemaVersion": 1,
+        "archiveMode": "lean",
+        "formId": manifest["formId"],
+        "kind": manifest["kind"],
+        "characterId": manifest.get("characterId"),
+        "generator": manifest["provenance"]["generator"],
+        "sourceOrigin": manifest["provenance"]["sourceOrigin"],
+        "ownership": manifest["provenance"]["ownership"],
+        "replacementPath": manifest["provenance"]["replacementPath"],
+        "fullSourceValidationRequiredBeforeInstall": True,
+        "repositoryPolicy": (
+            "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and "
+            "duplicate clean/raw intermediates remain in the local production archive."
+        ),
+        "actions": actions,
+    }
+
+
 def _build_target_metadata(
     existing: dict[str, Any],
     options: InstallOptions,
@@ -622,7 +712,10 @@ def _build_target_metadata(
         "runtimeLayeredComposition": False,
         "runtimeEnabled": False,
         "bundleDigest": validated.bundle_digest,
+        "archiveMode": options.archive_mode,
+        "sourceFramesTracked": options.archive_mode == "full",
         "sourceRoot": "source/battle",
+        "sourceLedger": "source/battle/source-ledger.json" if options.archive_mode == "lean" else "",
         "runtimeRoot": "views",
         "contactSheet": "qa/battle/contact-sheet.png",
         "qcSummary": "qa/battle/qc-summary.json",
@@ -650,6 +743,8 @@ def _is_already_installed(
     destination: Path,
     validated: ValidatedBundle,
     expected_metadata: dict[str, Any],
+    installed_hashes: dict[str, str],
+    archive_mode: str,
 ) -> bool:
     install_manifest_path = destination / "source/battle/install-manifest.json"
     metadata_path = destination / "action-bundle-meta.json"
@@ -658,12 +753,18 @@ def _is_already_installed(
     install_manifest = _read_json(install_manifest_path, "installed battle manifest")
     if install_manifest.get("bundleDigest") != validated.bundle_digest:
         return False
+    if install_manifest.get("archiveMode") != archive_mode:
+        return False
+    if install_manifest.get("validatedSourceFileHashes") != dict(
+        sorted(validated.frame_hashes.items())
+    ):
+        return False
     if _read_json(metadata_path, "destination action bundle metadata") != expected_metadata:
         return False
-    installed_hashes = install_manifest.get("installedFileHashes")
-    if installed_hashes != dict(sorted(validated.frame_hashes.items())):
+    recorded_hashes = install_manifest.get("installedFileHashes")
+    if recorded_hashes != dict(sorted(installed_hashes.items())):
         return False
-    for relative, expected in installed_hashes.items():
+    for relative, expected in recorded_hashes.items():
         path = destination / relative
         if not path.is_file() or path.is_symlink() or sha256_file(path) != expected:
             return False
@@ -700,6 +801,19 @@ def install_bundle(
     after_backup: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     validated = validate_bundle(options)
+    selected_copies = _copies_for_archive_mode(validated, options.archive_mode)
+    source_ledger = (
+        _lean_source_ledger(options.staging.resolve(), validated.manifest)
+        if options.archive_mode == "lean"
+        else None
+    )
+    installed_hashes = {
+        str(entry.destination_relative): entry.sha256 for entry in selected_copies
+    }
+    if source_ledger is not None:
+        installed_hashes["source/battle/source-ledger.json"] = sha256_bytes(
+            _pretty_json_bytes(source_ledger)
+        )
     destination = options.destination.resolve()
     staging = options.staging.resolve()
     if destination == staging or destination in staging.parents or staging in destination.parents:
@@ -710,7 +824,11 @@ def install_bundle(
     existing = _read_existing_metadata(destination) if destination.exists() else {}
     expected_metadata = _build_target_metadata(existing, options, validated)
     already_installed = destination.exists() and _is_already_installed(
-        destination, validated, expected_metadata
+        destination,
+        validated,
+        expected_metadata,
+        installed_hashes,
+        options.archive_mode,
     )
     summary = {
         "status": "ok",
@@ -723,6 +841,9 @@ def install_bundle(
         "actions": list(ACTION_SPECS),
         "frameCount": sum(value[0] for value in ACTION_SPECS.values()) * len(FORMAL_VIEWS),
         "bundleDigest": validated.bundle_digest,
+        "archiveMode": options.archive_mode,
+        "trackedSourceFrames": options.archive_mode == "full",
+        "installedFileCount": len(installed_hashes),
         "destination": str(destination),
         "dryRun": options.dry_run,
         "changed": not already_installed,
@@ -747,12 +868,17 @@ def install_bundle(
                         if target.is_symlink():
                             raise BattleBundleError(f"refusing to replace symlink: {target}")
                         shutil.rmtree(target)
-        for entry in validated.copies:
+        for entry in selected_copies:
             target = replacement / entry.destination_relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(entry.source, target)
             if sha256_file(target) != entry.sha256:
                 raise BattleBundleError(f"copy verification failed: {entry.destination_relative}")
+        if source_ledger is not None:
+            ledger_path = replacement / "source/battle/source-ledger.json"
+            _write_json(ledger_path, source_ledger)
+            if sha256_file(ledger_path) != installed_hashes[str(ledger_path.relative_to(replacement))]:
+                raise BattleBundleError("copy verification failed: source/battle/source-ledger.json")
         _write_json(replacement / "action-bundle-meta.json", expected_metadata)
         install_manifest = {
             "schemaVersion": 1,
@@ -761,7 +887,9 @@ def install_bundle(
             "kind": options.kind,
             "characterId": options.character_id,
             "bundleDigest": validated.bundle_digest,
-            "installedFileHashes": dict(sorted(validated.frame_hashes.items())),
+            "archiveMode": options.archive_mode,
+            "installedFileHashes": dict(sorted(installed_hashes.items())),
+            "validatedSourceFileHashes": dict(sorted(validated.frame_hashes.items())),
             "runtimeEnabled": False,
             "ownerReviewStatus": "pending",
         }
@@ -780,6 +908,15 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--form", required=True, dest="form_id")
     parser.add_argument("--kind", required=True, choices=("pet", "mounted"))
     parser.add_argument("--character", dest="character_id")
+    parser.add_argument(
+        "--archive-mode",
+        choices=ARCHIVE_MODES,
+        default="lean",
+        help=(
+            "lean validates the complete source bundle but tracks only runtime art and compact provenance; "
+            "full also installs every 512px frame and raw sheet"
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--json", action="store_true", dest="json_stdout")
     parser.add_argument("--json-out", type=Path)
@@ -797,6 +934,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 kind=args.kind,
                 character_id=args.character_id,
                 dry_run=args.dry_run,
+                archive_mode=args.archive_mode,
             )
         )
     except (BattleBundleError, OSError, UnicodeError, UnidentifiedImageError) as exc:
@@ -814,7 +952,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         print(
             f"battle bundle {summary['status']}: {summary['formId']} {summary['kind']} "
             f"frames={summary['frameCount']} changed={str(summary['changed']).lower()} "
-            f"dry_run={str(summary['dryRun']).lower()} owner=pending runtime=false"
+            f"archive={summary['archiveMode']} dry_run={str(summary['dryRun']).lower()} "
+            "owner=pending runtime=false"
         )
     if args.json_out:
         _write_json(args.json_out, summary)
