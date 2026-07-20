@@ -37,7 +37,34 @@
           "34b44f99fb2c66bc072d19c24f172294fc1feba3927e7364ac25024d0c75a608"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "98fa863b97f33054ec7d20f011546d6852740bb6edc8358faba3ebcb95ba4b53",
+          "e9c6812735334dde7b870203b51af64429d17c119bd617440fc41f5e4a464ee1",
+          "5d9fad6f1997f9e293d67af0aed838b1d587cda6a6a37a07c4e0fe8508a7a8bf",
+          "af00ae7beb63dd7a40246b9dc9747183a8974496b3bbbc2ecd9689adbccfa34d",
+          "4fae32178dca55a78669684286087235c6c7f9e1be53ea3d6e551de445546acd",
+          "34b44f99fb2c66bc072d19c24f172294fc1feba3927e7364ac25024d0c75a608"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "98fa863b97f33054ec7d20f011546d6852740bb6edc8358faba3ebcb95ba4b53",
+          "e9c6812735334dde7b870203b51af64429d17c119bd617440fc41f5e4a464ee1",
+          "5d9fad6f1997f9e293d67af0aed838b1d587cda6a6a37a07c4e0fe8508a7a8bf",
+          "af00ae7beb63dd7a40246b9dc9747183a8974496b3bbbc2ecd9689adbccfa34d",
+          "4fae32178dca55a78669684286087235c6c7f9e1be53ea3d6e551de445546acd",
+          "34b44f99fb2c66bc072d19c24f172294fc1feba3927e7364ac25024d0c75a608"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "2bdb9942667af0ce85283ba378cc6173143b37b7fb50cb843818ad07c15cc3af",
+        "pipelineSha256BeforeProportionFormalization": "2bdb9942667af0ce85283ba378cc6173143b37b7fb50cb843818ad07c15cc3af",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "c30389bf80be9e7a7990298d21f9c76d26fbdeacbfc595d7a3e0ba09aeffe5a9",
+        "qcSha256BeforeProportionFormalization": "c30389bf80be9e7a7990298d21f9c76d26fbdeacbfc595d7a3e0ba09aeffe5a9",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "walk": {
         "originalGeneratedSha256": "16640db91dc27ea9af82c182d0870d9dc4066558b593eedb070d8aeb6a97e5b7",
@@ -68,7 +95,38 @@
           "f9601cdd9707817b03fb1f9f40469d9e12770ab25e1d020ad009ef5da445fb5b"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "ba82cc6064cc276a31b25c813e3a7c2d8e88d9285b7c3fac6b5ab04516499dff",
+          "4ca243b5c92a58006f8bab0c0d9953ce14c47cbf2eb3db8acbb9de5fa046a2bd",
+          "4b5ed45bd0ae76f0cf7b96938fa54c05d2f7715d1d0597d1469918ce6762e49e",
+          "9b87242b92b2ea4b43570a49f2e3b26b48819ccd89b55ef79ef16dd9a2b94b97",
+          "b2e70f3bda51d18cdf696cfa0d231ee084ceb3a3682323ed5d56f2a6f0f8925a",
+          "3edfce6ab7d49ea8fce3d722bac3b461c08c6692b59f4bfdc29cdc8d574aaf58",
+          "6d5b6deb61e2a9ec06233b8dd74893d7bd1e6b30572fb95fc2e2d6b23a1fe83e",
+          "f9601cdd9707817b03fb1f9f40469d9e12770ab25e1d020ad009ef5da445fb5b"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "ba82cc6064cc276a31b25c813e3a7c2d8e88d9285b7c3fac6b5ab04516499dff",
+          "4ca243b5c92a58006f8bab0c0d9953ce14c47cbf2eb3db8acbb9de5fa046a2bd",
+          "4b5ed45bd0ae76f0cf7b96938fa54c05d2f7715d1d0597d1469918ce6762e49e",
+          "9b87242b92b2ea4b43570a49f2e3b26b48819ccd89b55ef79ef16dd9a2b94b97",
+          "b2e70f3bda51d18cdf696cfa0d231ee084ceb3a3682323ed5d56f2a6f0f8925a",
+          "3edfce6ab7d49ea8fce3d722bac3b461c08c6692b59f4bfdc29cdc8d574aaf58",
+          "6d5b6deb61e2a9ec06233b8dd74893d7bd1e6b30572fb95fc2e2d6b23a1fe83e",
+          "f9601cdd9707817b03fb1f9f40469d9e12770ab25e1d020ad009ef5da445fb5b"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "1fc69db1ed0ade34cb5c500326891b95793e746dc157bc9266cf61e42506a996",
+        "pipelineSha256BeforeProportionFormalization": "1fc69db1ed0ade34cb5c500326891b95793e746dc157bc9266cf61e42506a996",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "f78683189266405f15fe32aafd3b1cf25d1f8b9ea36584d2a0a2bd433ab25caa",
+        "qcSha256BeforeProportionFormalization": "f78683189266405f15fe32aafd3b1cf25d1f8b9ea36584d2a0a2bd433ab25caa",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "attack": {
         "originalGeneratedSha256": "086f7a131502b578af9a59863718805c02283c163e20471797cda0bdeaf4e40c",
@@ -76,8 +134,8 @@
         "rawArchiveSha256": "086f7a131502b578af9a59863718805c02283c163e20471797cda0bdeaf4e40c",
         "rawDecodedRgbaSha256": "8326e2e7c814bb641767e41811fedc99c411e10e404b99dcead69d17fa13c39f",
         "promptSha256": "f09f05face1c992f2f952215231d05cc55bd09167ac21719928dad60658be4ce",
-        "pipelineSha256": "22353b6af6d19658c8e606c46e2c66ced1c7a1b87478d47ba9e707aaa8086e64",
-        "qcSha256": "0ff30d450700c83dc5c479957bacfc1e18499d9410d504638982a1615d815c1b",
+        "pipelineSha256": "46be58753e54293b452a8532a8fe5f0c4b3c05ba9d075a275e5f03d34d75dc66",
+        "qcSha256": "8911a6a0d2f91d4ed4c1116635e8f7aeed4a6972b1f06671cc910b4c58ce2ae4",
         "sourceFrameRgbaSha256": [
           "b95f9dae723f39fe6c94e839c8dd30451362818c691dba1a551944331eb19a52",
           "7ace0157edecb0b04207466b12ef3a0e78fdd5b3ed11e800aa113ac46ee28646",
@@ -89,6 +147,18 @@
           "52242fd54596e1ea0780cffd04dcb3515c0822d8366ef4b7b084b62c9bf134b1"
         ],
         "runtimeFrameRgbaSha256": [
+          "0a94897523517a2e3d4e013737de634d07a674759dbaf463506803629b64d955",
+          "84af772c7c9d43a51554c023bf3f244ff57a4f13e0114d63d585a00a4fee05cc",
+          "f0d4c703a0dc78341b8cb6656ea38712fecdbe3a5c2188dc8e4e6a866b25b528",
+          "c39294ab50aa68bff4dbdf5cd0dac0e488b998bcb34ed8341ba04351a7fcbde9",
+          "c53f0f246b8511dade365d949849ee8428f7cf55b9f4a4f3efabdd6f339c6339",
+          "03cc3c14e970d24bda414324ec71d9f62de025a997378d1a13aa0109f6c7aff9",
+          "c66b3c7b6fcfdb9b530e03190a23a6ad621cdfe1000352881ceddb200d1b7e83",
+          "672a1546321d288347ffaa72fcbccb6bd008009b49ffbbf5fccedd476f5dd248"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "008e2bd63443d230c33a0beb7ee3c9acb0a2065fdbb1fc584f6cbc8a86fbeb0f",
           "00fc357d1cb9f596bc3e5351c025992aa0f43cff90accb4220ddc74c982240cf",
           "e56bb9320bc13939b8b646a6d44b8b1e7310caad7c2abd755a98842b20f85c1a",
@@ -98,8 +168,34 @@
           "6ffd437e5eccc6e90d0e4e9151cc3674af9f5fdf70705ae1da765e2e2ce11521",
           "4b1d46d7fdc08024f5a542811ab1e4f6805f068696b4f2bbc5fe2955fddea4cd"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "008e2bd63443d230c33a0beb7ee3c9acb0a2065fdbb1fc584f6cbc8a86fbeb0f",
+          "00fc357d1cb9f596bc3e5351c025992aa0f43cff90accb4220ddc74c982240cf",
+          "e56bb9320bc13939b8b646a6d44b8b1e7310caad7c2abd755a98842b20f85c1a",
+          "3aeca4bc4b99b5c0ddbdcc173e3edf68129bde81a4a764f5d72407be2ed53aa3",
+          "12a4e8d55f11fbefbd99faa4d278e2095242cf8cc5cc962556781a21d2a59947",
+          "117448ee667e3e56895893f72143f9fd775364542f9af9e467ddf66443ed7d84",
+          "6ffd437e5eccc6e90d0e4e9151cc3674af9f5fdf70705ae1da765e2e2ce11521",
+          "4b1d46d7fdc08024f5a542811ab1e4f6805f068696b4f2bbc5fe2955fddea4cd"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "22353b6af6d19658c8e606c46e2c66ced1c7a1b87478d47ba9e707aaa8086e64",
+        "pipelineSha256BeforeProportionFormalization": "22353b6af6d19658c8e606c46e2c66ced1c7a1b87478d47ba9e707aaa8086e64",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "0ff30d450700c83dc5c479957bacfc1e18499d9410d504638982a1615d815c1b",
+        "qcSha256BeforeProportionFormalization": "0ff30d450700c83dc5c479957bacfc1e18499d9410d504638982a1615d815c1b",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.219178,
+          "scaleY": 1.219178,
+          "translationX": -57.099303500000005,
+          "translationY": -53.69861000000003,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "skill": {
         "originalGeneratedSha256": "ea02a0e3711717f9b4dca4f19d67bf805a0ab1910f77134ba8f9c7e8050f9047",
@@ -107,8 +203,8 @@
         "rawArchiveSha256": "ea02a0e3711717f9b4dca4f19d67bf805a0ab1910f77134ba8f9c7e8050f9047",
         "rawDecodedRgbaSha256": "7521a249d38cdaf89ff9fe290a85ccb9e0b0503925eb1f94e93bee150248b975",
         "promptSha256": "ca33e6145551864f3258f1de29c768b8491de256b9b172dfd40c681f70d35ec4",
-        "pipelineSha256": "1abde6d358c66a1214714ad2c79f9a81f08fe2cb9f0e7293a402a285f994b419",
-        "qcSha256": "decb40e295da1c43f237af51614feb9c393b8aac4cb4d57b54a8775d24e69d22",
+        "pipelineSha256": "df7f93410f837648e9033d49581538e18dd5313d82a485c49aa62ceb623deb39",
+        "qcSha256": "3b179ca5453120445ef688b91dd4914b3143883a364d12e4deaf70e5e82fc791",
         "sourceFrameRgbaSha256": [
           "85fa04605d05bce239d0230b262fdf4cea0f780012422cbb903786c5189c7d92",
           "9a33f6a429e11c931b3bc92575b53e146ecbbb96102fe83d8496e4873f04f23a",
@@ -120,6 +216,18 @@
           "172052c72da772802e20d4602075003a7c3c4c0dcb7590a7736ab392ff1932cf"
         ],
         "runtimeFrameRgbaSha256": [
+          "99d1f63b95ebab78590af153b70a76e5ebefac59b58216fb270d2925c661c1a4",
+          "5f45dc4b4aef235b8d76664bc11902c2fc8710f764218d0b18816dda68b2afae",
+          "4c1e69f6e82224812c2b591aef24d9a6b21e03f2bbfb430b02a1ffade9752899",
+          "632634306cb11ce93151210a1905d4e8b2bd9fc156d3bae8f754afd4a6e8b578",
+          "5835ab937078db6a752a1bc98aef0991a3e6b16e8bde862b90987d09735a980b",
+          "1b8b6ac5c29d4a5f0dd93959a60a28f174bfa57b1311cb336f7af9d7f6684478",
+          "68755845f330a006fdeae568e18932e2538caadf62898e1e22c3d2deaf784103",
+          "2a4aa67644e47448de9580bc47a0f0a683af7c62ab76ee3570e96e02a9258db2"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "509ac16c7825d46c05f489cd6a5970f85e9462fb7c8d8b0aa40a8ead0c5c6e3e",
           "0c1581dea66b9d47531052831c8ced47620bbb756e38781f4f426a6feaa42cf6",
           "7a229e387c824d167a75acca07530ee8b9405da4e56a37ef56201a158adf5b56",
@@ -129,8 +237,34 @@
           "ff5411314a950e8ebc9c9031409e1cf00205ae589354dd53d49790000f269983",
           "f57db843bf4ddf602ada417655fe4735dec5f887964280f96c316d033b1cda39"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "509ac16c7825d46c05f489cd6a5970f85e9462fb7c8d8b0aa40a8ead0c5c6e3e",
+          "0c1581dea66b9d47531052831c8ced47620bbb756e38781f4f426a6feaa42cf6",
+          "7a229e387c824d167a75acca07530ee8b9405da4e56a37ef56201a158adf5b56",
+          "57f683b5001e243d81aeba09ca661be978240337521acdeda89c718bb6006f33",
+          "33bec0e5840e9c5f99aa2db654444b5285fd3857d4293b967807302a199bf443",
+          "4ea3cb95e5c1735a6a0498e59d542628f49a46291434aadf82cf2c16e80554ae",
+          "ff5411314a950e8ebc9c9031409e1cf00205ae589354dd53d49790000f269983",
+          "f57db843bf4ddf602ada417655fe4735dec5f887964280f96c316d033b1cda39"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "1abde6d358c66a1214714ad2c79f9a81f08fe2cb9f0e7293a402a285f994b419",
+        "pipelineSha256BeforeProportionFormalization": "1abde6d358c66a1214714ad2c79f9a81f08fe2cb9f0e7293a402a285f994b419",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "decb40e295da1c43f237af51614feb9c393b8aac4cb4d57b54a8775d24e69d22",
+        "qcSha256BeforeProportionFormalization": "decb40e295da1c43f237af51614feb9c393b8aac4cb4d57b54a8775d24e69d22",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.213636,
+          "scaleY": 1.213636,
+          "translationX": -43.923810999999986,
+          "translationY": -52.34082000000001,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "hurt": {
         "originalGeneratedSha256": "f02e4a6dd7d1e132059b4b8dc477842fb6e616ba6367e7ec38cda104af8fe624",
@@ -157,7 +291,34 @@
           "a9572c5cd26bfcf00c502fe1283ca8f2adbabf0256074d563fc44014291d0333"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "d98398c6595d19e3d7a8908c92a06d2c88941ffd4b2c78a06a904142bb726d16",
+          "6551fba2542f4dd656c9ecbe4f2e0dcccb9ec181763cb7bdb1b47b20a1e69a87",
+          "6e6097e19e041500dbaf1f1f0195728972c73c6f983f5200cc10d32275b285a6",
+          "1a04553b4d9e5d524787e22e80f065d21efdd5ab4672be6e29672585b4e03bda",
+          "46781df31598d01d211bbdfd53df5569e837db495f4808792c22486226242956",
+          "a9572c5cd26bfcf00c502fe1283ca8f2adbabf0256074d563fc44014291d0333"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "d98398c6595d19e3d7a8908c92a06d2c88941ffd4b2c78a06a904142bb726d16",
+          "6551fba2542f4dd656c9ecbe4f2e0dcccb9ec181763cb7bdb1b47b20a1e69a87",
+          "6e6097e19e041500dbaf1f1f0195728972c73c6f983f5200cc10d32275b285a6",
+          "1a04553b4d9e5d524787e22e80f065d21efdd5ab4672be6e29672585b4e03bda",
+          "46781df31598d01d211bbdfd53df5569e837db495f4808792c22486226242956",
+          "a9572c5cd26bfcf00c502fe1283ca8f2adbabf0256074d563fc44014291d0333"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "bdd8aeb9f0becb71043d40161ca46c52dd9c67124e68c4bfc4c926fcdf85a66c",
+        "pipelineSha256BeforeProportionFormalization": "bdd8aeb9f0becb71043d40161ca46c52dd9c67124e68c4bfc4c926fcdf85a66c",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "679458b1112a5f11694d0881019002d92429d6ecf88d05b6efe422a50e493b48",
+        "qcSha256BeforeProportionFormalization": "679458b1112a5f11694d0881019002d92429d6ecf88d05b6efe422a50e493b48",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "defend": {
         "originalGeneratedSha256": "5338b032f1a4a586f8604c19e30d5a02160e91d81cc19162833f6ef869640ef2",
@@ -184,7 +345,34 @@
           "e5b97b8f1bf4bc0c491124579d19b4e7b14f655658cf8e16c113890394c2cf97"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "e38e11159b15fef64678a93d23e8f5970fe86c974ea48f0c18d20c1c0d060565",
+          "e94b29cdbd2e0cb653a9e33c3511e6b5de6154296d59c4ef571d886d13d031dc",
+          "ad4f968545a3bdaabdb0d0f8ec2d2e18cae712d7f377002f36b8c9ec613a1260",
+          "6441e769af0e7ac8495a76ef7d6f50c57ddbe6038884016083bea47943ba19f7",
+          "1f452c669c4a8c0dd0d460d56dcdc4007be0212fc8c68f313927a7af56435f48",
+          "e5b97b8f1bf4bc0c491124579d19b4e7b14f655658cf8e16c113890394c2cf97"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "e38e11159b15fef64678a93d23e8f5970fe86c974ea48f0c18d20c1c0d060565",
+          "e94b29cdbd2e0cb653a9e33c3511e6b5de6154296d59c4ef571d886d13d031dc",
+          "ad4f968545a3bdaabdb0d0f8ec2d2e18cae712d7f377002f36b8c9ec613a1260",
+          "6441e769af0e7ac8495a76ef7d6f50c57ddbe6038884016083bea47943ba19f7",
+          "1f452c669c4a8c0dd0d460d56dcdc4007be0212fc8c68f313927a7af56435f48",
+          "e5b97b8f1bf4bc0c491124579d19b4e7b14f655658cf8e16c113890394c2cf97"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "31144133ed2ac3f6aa39b57e89cad04c98fcbed008d759aa6a6453637c21c9c6",
+        "pipelineSha256BeforeProportionFormalization": "31144133ed2ac3f6aa39b57e89cad04c98fcbed008d759aa6a6453637c21c9c6",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "513f56e03db387658a985250aef24d5e158a6d0c96e06bfb8ab0b41967add2c7",
+        "qcSha256BeforeProportionFormalization": "513f56e03db387658a985250aef24d5e158a6d0c96e06bfb8ab0b41967add2c7",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "dodge": {
         "originalGeneratedSha256": "7a8c97477be421f5167e015fdfc59bfcdfa0cb18044ee53eaa44fde28a66a3a4",
@@ -192,8 +380,8 @@
         "rawArchiveSha256": "7a8c97477be421f5167e015fdfc59bfcdfa0cb18044ee53eaa44fde28a66a3a4",
         "rawDecodedRgbaSha256": "b5bf5a96ea6f153ed91a7baec60b83b709089c87e2766013f3aead25c07f80c6",
         "promptSha256": "9a9652d6eca86ed9ffd1ef13d13870c240b51e65721d64713402c7b1511a37c5",
-        "pipelineSha256": "34b743b3f63f1a776a6b05cf03f465aae7ca00332bf801a93d430e35d4089669",
-        "qcSha256": "9be597f3ceed2d3cec0b13f7f70d3a07fd3ad477298fa508007f71c0ea7b850e",
+        "pipelineSha256": "60a9ea3811ebd82933eefb30bfd077ebe92c59b117cf36846822c856bdf01695",
+        "qcSha256": "c50ddcb266e1d2ebbe3023e303e222691346ffc4ffa98f64e2b3ea31d4a8250d",
         "sourceFrameRgbaSha256": [
           "2076e771432c19d5c7737ff1005f72c2f0e1cf4bdb020ac025ecc5b74306b9ac",
           "fe82cef6966b7a7467daf23473d12539bf359c964be1ce9c7fe3436f5781c5a5",
@@ -205,6 +393,18 @@
           "c8c088f2658ea183c86ce205345e4ae589f35bbeaca846ec2d15b627b73f686e"
         ],
         "runtimeFrameRgbaSha256": [
+          "0800c24ce5926fe83904dfc6ccfca2634f9247420efd44aef7d02fd49d65c5cb",
+          "a2d0b56b42a15d0f18d235f977144b6872260e1c5ad71b8c635d4b2b5c15ec6a",
+          "d562537f3e3f6c15c48b60bc3cf25e8af641a31978b9b24226feb3bf3088bfc6",
+          "17d60fd084c90e6407b38899fd4f8ace67c548faa38b31b588c9056964a4ed8b",
+          "1cf49c868c9e445cd56bee0d705fe6caa4a6b475d2d026e7bda11ce27a35a7d6",
+          "c33cbb7f04ff6a74162d6715265c457aba4275a12226bacbf4ad0c6c519925be",
+          "1aedc4e165b4011b3dddaffda710c382e0a9d8eeb1f8da1b6561f5ca5c5b10fd",
+          "dc9c0690b326fd47c2d22cfe4b293e14e0f8d4caf6b9eb9a1c2e8ada11c04a06"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "f8b8b69b2467d4c788ff9c715140fc35fc786ca656d5dbe91c2bfca32d8fc66a",
           "d6b59a009872b12f289f4a03dcd3b13d51f21093de036eabb6419d5911809f50",
           "ab3435b75ed6cc835a2b79de5d5c5016d5e926b5d17a7123eeeeb3b11b6910d5",
@@ -214,8 +414,34 @@
           "a58ecdae227b7353fc655565e7746c160fe98cd1eb01f672e6d25ce6fb83c774",
           "ca0947faab88eed52f6171af547e6432a8b53c00fe0917a47c32cd7645ca8413"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "f8b8b69b2467d4c788ff9c715140fc35fc786ca656d5dbe91c2bfca32d8fc66a",
+          "d6b59a009872b12f289f4a03dcd3b13d51f21093de036eabb6419d5911809f50",
+          "ab3435b75ed6cc835a2b79de5d5c5016d5e926b5d17a7123eeeeb3b11b6910d5",
+          "36404ffdc3b3b8e0f061a58426066ec15b400f01fafbf4985ed3039408e3cc83",
+          "ae5f114fdb8d52aadd8708913c7e331f2459c492ebee65592ab95829f5475e27",
+          "0ecd93225aef2a1cefa1574e950a305dd0746acac86d2387bcd07c9011cac611",
+          "a58ecdae227b7353fc655565e7746c160fe98cd1eb01f672e6d25ce6fb83c774",
+          "ca0947faab88eed52f6171af547e6432a8b53c00fe0917a47c32cd7645ca8413"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "34b743b3f63f1a776a6b05cf03f465aae7ca00332bf801a93d430e35d4089669",
+        "pipelineSha256BeforeProportionFormalization": "34b743b3f63f1a776a6b05cf03f465aae7ca00332bf801a93d430e35d4089669",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "9be597f3ceed2d3cec0b13f7f70d3a07fd3ad477298fa508007f71c0ea7b850e",
+        "qcSha256BeforeProportionFormalization": "9be597f3ceed2d3cec0b13f7f70d3a07fd3ad477298fa508007f71c0ea7b850e",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.200275,
+          "scaleY": 1.200275,
+          "translationX": -54.14241874999999,
+          "translationY": -49.06737499999997,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "counter": {
         "originalGeneratedSha256": "73bc7a66691f08ab09825cb9d2ce7e6821c24ea3ffe827ffba658985648a38fd",
@@ -223,8 +449,8 @@
         "rawArchiveSha256": "73bc7a66691f08ab09825cb9d2ce7e6821c24ea3ffe827ffba658985648a38fd",
         "rawDecodedRgbaSha256": "a52e92a46faf39e5fa0a4c4d4a2133439510867e8579256df582098d9689ecf4",
         "promptSha256": "75204173688ba6c3bc6f7b181447620b97a4375b27676f649263d563ca7aa528",
-        "pipelineSha256": "d3a74e8293ef30ba1e36052c3a1fd4ecba6473995f150077161adcd7f4067dc9",
-        "qcSha256": "861a8da255e4769c83a5e7ec4f0cffb38ed0e8cc17bfbe11c91396036fb960c9",
+        "pipelineSha256": "7d201122ac80c4f5f6873f916e15919067868a143253f36f7ca8c84c1e8676b5",
+        "qcSha256": "c9dfe4c48509e2303a3a3febfbe90ac1020fb21c338afb5e93de93836f50184e",
         "sourceFrameRgbaSha256": [
           "0021f3277230ddafbeb8c02a9d9ad2229ee03601b5a1692404dee5576bb4e08d",
           "14aadb8199c5e73b4a26081f81f4f0f759ddf4ed024f6e264924938b66f36f33",
@@ -236,6 +462,18 @@
           "328f5efce2024f8c7439251946409ee53518885e89bc32146606f18c42db5354"
         ],
         "runtimeFrameRgbaSha256": [
+          "73b4bcb3a9ac222254c48ec9e57ee07062fa381fa5aa3d5dd3cfc74b498f4bf8",
+          "ffe6304b1cabc9f5e2280a406d4ba568a9e782e7da2758956bdbeb0f9c8027c1",
+          "022f220f48a3df30aea4611532e68edfb4624491b4398fbd091de379e2a8619d",
+          "b314317891361085a6a229a9d53df8968e3a2ce050ffb4235971cc9a40539925",
+          "2fd28467dfc686d439d4e33686dd37a1a71803174bd084b19bc7479caa5bc174",
+          "d9fc5df060e492f31927570775009344cd02c36d2873daec3482e8bfbb777787",
+          "6797b83935cdeeb2ae234db238f970f41fa8c072815649071811be070e119b66",
+          "66d6d6d40f0f4cfd8c3cc78119804407a887c93c14af5699071ac97e72640b2b"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "23dcc7d9d10a26284fa04ba4ca818bdebebcbc28c505e419a9303faf418030b9",
           "b342fb768f1240c26db0e9b8b1d51452a2025250a68724477c25355288f3774a",
           "9cb07e831c446bd19bbfdd296ddab14e37b80dce03a98c72924d49803209b561",
@@ -245,8 +483,34 @@
           "1dd37ddb5bc045d2d69515607e31680a51b7915ea0c4f29c286d53b600ec090f",
           "77114c06e0ebd8bd1d103d72378d25fffccb491e6ed5810b5776a6a9437aa448"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "23dcc7d9d10a26284fa04ba4ca818bdebebcbc28c505e419a9303faf418030b9",
+          "b342fb768f1240c26db0e9b8b1d51452a2025250a68724477c25355288f3774a",
+          "9cb07e831c446bd19bbfdd296ddab14e37b80dce03a98c72924d49803209b561",
+          "d9c920ced5aa84a88c2b2fd9bd28ae0d576be487a4e07e18fb4756ef844f0959",
+          "0becd9216a39170bd611d60712e83cddf42a2b1681f6eae314b9c7ca29ba829f",
+          "aa594f8ac5cd35eded7726976c3fc7ca15d9f048c9b8d9ee23fc5e0f9236c2b4",
+          "1dd37ddb5bc045d2d69515607e31680a51b7915ea0c4f29c286d53b600ec090f",
+          "77114c06e0ebd8bd1d103d72378d25fffccb491e6ed5810b5776a6a9437aa448"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "d3a74e8293ef30ba1e36052c3a1fd4ecba6473995f150077161adcd7f4067dc9",
+        "pipelineSha256BeforeProportionFormalization": "d3a74e8293ef30ba1e36052c3a1fd4ecba6473995f150077161adcd7f4067dc9",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "861a8da255e4769c83a5e7ec4f0cffb38ed0e8cc17bfbe11c91396036fb960c9",
+        "qcSha256BeforeProportionFormalization": "861a8da255e4769c83a5e7ec4f0cffb38ed0e8cc17bfbe11c91396036fb960c9",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.213636,
+          "scaleY": 1.213636,
+          "translationX": -48.63744699999998,
+          "translationY": -52.34082000000001,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "stagger": {
         "originalGeneratedSha256": "0ac59ff03bf421929e9ae915b2d838110e6bed932a5575ec97794891ef4c340e",
@@ -277,7 +541,38 @@
           "15fad8381748da78625313cb9367ca701c8c0edda9c07ae880806407de55d139"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "f6e17fce79852140afb7a24f4ba71e054c61cfd7e1fe058f47f6b5250225d759",
+          "667d4d6f8fc2a7d885eaca27940b92a3fbb4d1ce9da2b17103acb4752664ce62",
+          "e09e79fa1f9790602447cdc2a629aa913a0b47f2dfd07319cc483bded6cdb1c1",
+          "aa659f2a2424548a19b1ab6dab75f2cccea5684ce765c458946a65e6e60fd4c8",
+          "573e853b2239c0ec135b8c39eb277967d3bf437ca700e5aa91eb4b8c5ce9db20",
+          "2a4ede4efb2218460c577b8d421ad99f595863961cd3c5c975beb648d187d6ce",
+          "eda9969bc29e29546ea9603f91ecc6ed8823991e40692409359b81b0dc4bdfc9",
+          "15fad8381748da78625313cb9367ca701c8c0edda9c07ae880806407de55d139"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "f6e17fce79852140afb7a24f4ba71e054c61cfd7e1fe058f47f6b5250225d759",
+          "667d4d6f8fc2a7d885eaca27940b92a3fbb4d1ce9da2b17103acb4752664ce62",
+          "e09e79fa1f9790602447cdc2a629aa913a0b47f2dfd07319cc483bded6cdb1c1",
+          "aa659f2a2424548a19b1ab6dab75f2cccea5684ce765c458946a65e6e60fd4c8",
+          "573e853b2239c0ec135b8c39eb277967d3bf437ca700e5aa91eb4b8c5ce9db20",
+          "2a4ede4efb2218460c577b8d421ad99f595863961cd3c5c975beb648d187d6ce",
+          "eda9969bc29e29546ea9603f91ecc6ed8823991e40692409359b81b0dc4bdfc9",
+          "15fad8381748da78625313cb9367ca701c8c0edda9c07ae880806407de55d139"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "2cd7a14a4224671ab5ae0632f9520852b0b0b1bba71c3ffcb087102f85385d2b",
+        "pipelineSha256BeforeProportionFormalization": "2cd7a14a4224671ab5ae0632f9520852b0b0b1bba71c3ffcb087102f85385d2b",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "380ce0ec76b1e02878267ab4167993b7c1373eeabc5efb758c14c676de61d4a1",
+        "qcSha256BeforeProportionFormalization": "380ce0ec76b1e02878267ab4167993b7c1373eeabc5efb758c14c676de61d4a1",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "knockaway": {
         "originalGeneratedSha256": "27bfd7c99996cee4c04aabc010e9f5fcef4a2b3f562ddbdcde8549f7c6c375e2",
@@ -308,7 +603,38 @@
           "c5e714e8b987e94b5834807694c6c4fa2b87f45b5dd883012841aca3ae52f6d6"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "e56e325056fa5334ed588b91d3d2872e3a575132681f0af5f80b205c3478702a",
+          "42b224612ecb47403678065018ebfe45b84af3a01c01b6cddbd5839643b392cc",
+          "904fda72b9dc9f719cbd4d53a115754d3287802307f8073e12a7e3d1aab813bb",
+          "b743a5c6ef6f1a082604740dd1fb6917ab914ea77c93c59d671e9b6982a7803c",
+          "ade265998462278bd75ddce3773e96651632fcd7ea4097795576b8e252bad81b",
+          "5035f58e253f9c06e528b27eccbd59137549a2e7c1d4a927eb522aa12fd57120",
+          "7d984a9ce6ea73b5e3bf91c4c231fd76dc30f440bc8a859ece00fd6b9cf7caf9",
+          "c5e714e8b987e94b5834807694c6c4fa2b87f45b5dd883012841aca3ae52f6d6"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "e56e325056fa5334ed588b91d3d2872e3a575132681f0af5f80b205c3478702a",
+          "42b224612ecb47403678065018ebfe45b84af3a01c01b6cddbd5839643b392cc",
+          "904fda72b9dc9f719cbd4d53a115754d3287802307f8073e12a7e3d1aab813bb",
+          "b743a5c6ef6f1a082604740dd1fb6917ab914ea77c93c59d671e9b6982a7803c",
+          "ade265998462278bd75ddce3773e96651632fcd7ea4097795576b8e252bad81b",
+          "5035f58e253f9c06e528b27eccbd59137549a2e7c1d4a927eb522aa12fd57120",
+          "7d984a9ce6ea73b5e3bf91c4c231fd76dc30f440bc8a859ece00fd6b9cf7caf9",
+          "c5e714e8b987e94b5834807694c6c4fa2b87f45b5dd883012841aca3ae52f6d6"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "4f1afc29d104a04b7836322910c24a53c5abbb23ecc698c86fe2ddd28ebc7dcb",
+        "pipelineSha256BeforeProportionFormalization": "4f1afc29d104a04b7836322910c24a53c5abbb23ecc698c86fe2ddd28ebc7dcb",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "ce346dddc0e5acdc8a03b62affb304097dcad471d7486df8084d948414d377d4",
+        "qcSha256BeforeProportionFormalization": "ce346dddc0e5acdc8a03b62affb304097dcad471d7486df8084d948414d377d4",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "down": {
         "originalGeneratedSha256": "04c05fd92ed5c6403e57a403dc83adc7711e7ce7e7cda19cb738cfa652bdfa09",
@@ -316,8 +642,8 @@
         "rawArchiveSha256": "04c05fd92ed5c6403e57a403dc83adc7711e7ce7e7cda19cb738cfa652bdfa09",
         "rawDecodedRgbaSha256": "cf7993c3f2095b9632239f10adbe513c0b8cf3d1c39fab224d567aad390b518f",
         "promptSha256": "ea8fd697388427e933fad38fd6fd00d6bb8330344758c421474b210a233cc971",
-        "pipelineSha256": "196df2f7cf6545bd9d8ac1ab9eca58411913eb7cf0f2eb40b0c8307236b884e8",
-        "qcSha256": "5fced28f159c8dda21bb781049781eff2f308e1d640171642ada5db3924d2182",
+        "pipelineSha256": "f8600c426db2999a11bac682c8f6f8bea79ad2611f14973b9000c7a4dac86213",
+        "qcSha256": "dded4a4809f6b0296d1bc22adce0c0082dbed725b1f98c87de52f50d5c63dd5f",
         "sourceFrameRgbaSha256": [
           "e9a7a32ab3636e664d6542ffe61dd5abbf1bf26cb047405d6be662dc72f236d5",
           "34527b3d4dd325752f9587a5ca8b3b1f76f9b813ca0e3c4caecafabedc1a6541",
@@ -329,6 +655,18 @@
           "713e603f3194c46d1917b272bc49c8ee079a1bfeb6062ea57f39e08b0599ef12"
         ],
         "runtimeFrameRgbaSha256": [
+          "fe4ab42b19f70d48fa3de4614e3a0272f893c02346064a57a4f4d788a5b7c8c7",
+          "b1003e3200612be9eedf69389ff192a4f04761e157af96d6d4b377b916683940",
+          "daabe91b70521999ed1a4b3ad70216e122da6fe449882d3eb72dc29c94c0b332",
+          "4824825232fa4ef2daa11131625afc589437f79960f5babfe906660e48005c70",
+          "2e02a43fc1f5b45a7bc21301666cab74ec07f67ce58d9d57ce21db79df651306",
+          "840acfd73dc1e61f7c73bf5254013aa6ccd6ab011fb71fcd62dea89098469464",
+          "a2f2e7aa0664146f5d9b893dd34bdc92294a095ff4d97be8abc0801b0aa672a5",
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "62904f4ab47d150aaf7c30e46d3dc58525f08a9cfa8864ba6ff6cd8193bb5a0b",
           "adb3f72b395838c1a1a06b624e3f115b3f4ee96e8f55638cd209d30617f9ea1d",
           "437490057936e7baaf6f8bb2cd3203429061150e5745a31514a489942f9e35fd",
@@ -338,8 +676,27 @@
           "3d302e8ea2f1288ce88cbc55c4ef788bb6e0334fbfe22f702219730290a51dfc",
           "1d63922334ef7d86a032c0598224c08b4cb8b4cf9c98bba3ce21dd19c654bb5d"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "fe4ab42b19f70d48fa3de4614e3a0272f893c02346064a57a4f4d788a5b7c8c7",
+          "b1003e3200612be9eedf69389ff192a4f04761e157af96d6d4b377b916683940",
+          "daabe91b70521999ed1a4b3ad70216e122da6fe449882d3eb72dc29c94c0b332",
+          "4824825232fa4ef2daa11131625afc589437f79960f5babfe906660e48005c70",
+          "2e02a43fc1f5b45a7bc21301666cab74ec07f67ce58d9d57ce21db79df651306",
+          "840acfd73dc1e61f7c73bf5254013aa6ccd6ab011fb71fcd62dea89098469464",
+          "a2f2e7aa0664146f5d9b893dd34bdc92294a095ff4d97be8abc0801b0aa672a5",
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "196df2f7cf6545bd9d8ac1ab9eca58411913eb7cf0f2eb40b0c8307236b884e8",
+        "pipelineSha256BeforeProportionFormalization": "f8600c426db2999a11bac682c8f6f8bea79ad2611f14973b9000c7a4dac86213",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "5fced28f159c8dda21bb781049781eff2f308e1d640171642ada5db3924d2182",
+        "qcSha256BeforeProportionFormalization": "dded4a4809f6b0296d1bc22adce0c0082dbed725b1f98c87de52f50d5c63dd5f",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "revive": {
         "originalGeneratedSha256": "69739380d426e12912f1c8dc9cdde8500c6825411fcff223e733aa4b43485917",
@@ -347,8 +704,8 @@
         "rawArchiveSha256": "69739380d426e12912f1c8dc9cdde8500c6825411fcff223e733aa4b43485917",
         "rawDecodedRgbaSha256": "5574fec3608577ff0bc1a0f5ef7de6d43d085c8d62b3409fcaccafeb1fe1cd00",
         "promptSha256": "82c149f4633effee4470c4472b4d342af179ddfa5f8c2c29cbada29c360411cc",
-        "pipelineSha256": "b38ae3fc8cd97cd62a2f5238da6efe741385bc7ab3bfbb9a9a0afaf7609635b1",
-        "qcSha256": "4842637fad1416eaec5e130260f6cf1f54ed54c57b2fbf22e5bb7163d787a26b",
+        "pipelineSha256": "cf9018020a7ef7f66e40e1d493e9ad33324e19f16ec71f388004f6302d7ee0fe",
+        "qcSha256": "cec132241be097b8f2e11edace6a8717eb153f41672349a310ac73c8d0a77dca",
         "sourceFrameRgbaSha256": [
           "42d19c9eddf41443f9dd9e86c908363b73e4eafdf5c9fc1bda38be9f8170af89",
           "9564fb74a8a9f7d0957283161e27515d389c9933cf6e15e6e26a8bc87fd1561c",
@@ -360,6 +717,18 @@
           "df41c889cb6ba90e72739ebbdffac64aba6949330c4fb80e453c63f2ca2f33ac"
         ],
         "runtimeFrameRgbaSha256": [
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b",
+          "f1b0a5736b54ebad66219a0e522c5f8d9446b6dc2ed9a0003f1a3bc7d0f53799",
+          "89690879aecc75874a96bd620abb39747f0f4abb0ba8bb1ff87d1fe361b2f6da",
+          "9f4adc4e0afaa57266c0b4beee81ea50f0b3338aaff5fdad9c1bca3d4605123b",
+          "a7c3a3e642154459a9b627f7b51ba11448a18e4b819a30885d81ba4fa0c16165",
+          "61cc428974442aeafc4d5b13a34f63180acd24b77457b73934acc6785adf0b43",
+          "07702906056bd566fff24b2ae308f485f70c03e9ca4080bc357fd7a768215984",
+          "47148611f68a614dca57f77bc070c70d43e977e1a003383ca306d868b30bab50"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "41ddf950d7dcddbbc1719c5eb8dd2be3ef19750781b22e4c4a824012d3d7634d",
           "c07a9b8058278c9cdcdffd13a61909571e6330449d2a00969064fea7b631ab79",
           "c08479b0f7063f5582327a25dcaa20eebc542d4249d8d6598aefb3d848c40f4e",
@@ -369,8 +738,27 @@
           "6c9abbaa936dfb7e652a9d2e3efd053c183bcde2c1dcb912852e160d73fef6b7",
           "33bfa95b6bfbc1c59b0bd94585166166230fb91eab976e72a3a691ccd5763796"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b",
+          "f1b0a5736b54ebad66219a0e522c5f8d9446b6dc2ed9a0003f1a3bc7d0f53799",
+          "89690879aecc75874a96bd620abb39747f0f4abb0ba8bb1ff87d1fe361b2f6da",
+          "9f4adc4e0afaa57266c0b4beee81ea50f0b3338aaff5fdad9c1bca3d4605123b",
+          "a7c3a3e642154459a9b627f7b51ba11448a18e4b819a30885d81ba4fa0c16165",
+          "61cc428974442aeafc4d5b13a34f63180acd24b77457b73934acc6785adf0b43",
+          "07702906056bd566fff24b2ae308f485f70c03e9ca4080bc357fd7a768215984",
+          "47148611f68a614dca57f77bc070c70d43e977e1a003383ca306d868b30bab50"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "b38ae3fc8cd97cd62a2f5238da6efe741385bc7ab3bfbb9a9a0afaf7609635b1",
+        "pipelineSha256BeforeProportionFormalization": "cf9018020a7ef7f66e40e1d493e9ad33324e19f16ec71f388004f6302d7ee0fe",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "4842637fad1416eaec5e130260f6cf1f54ed54c57b2fbf22e5bb7163d787a26b",
+        "qcSha256BeforeProportionFormalization": "cec132241be097b8f2e11edace6a8717eb153f41672349a310ac73c8d0a77dca",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       }
     },
     "back_3quarter_ne": {
@@ -399,7 +787,34 @@
           "d38966eed328c17c731be526efc5a6a888734332823723b6013e7cd04337ca81"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "5e7891e00ece48eec581a072509ce1198fd36f977287686e848ed1cb41ba523c",
+          "29359ad1d9ef2ee050b685dda0cfcda7ce61bb91a08e19f9c69c1b3ffb12871c",
+          "ede1f9d8dce14450394f34534aaa40a1b4c457061fe17af99704b618e83e8c2b",
+          "595736dbbdf19d64f7cc3fafbbbbe25cd900bb164e9462afafd759dd61b36b22",
+          "90966b8b3a7d3089d449afca40f763f550480351961229444fac695a4239892e",
+          "d38966eed328c17c731be526efc5a6a888734332823723b6013e7cd04337ca81"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "5e7891e00ece48eec581a072509ce1198fd36f977287686e848ed1cb41ba523c",
+          "29359ad1d9ef2ee050b685dda0cfcda7ce61bb91a08e19f9c69c1b3ffb12871c",
+          "ede1f9d8dce14450394f34534aaa40a1b4c457061fe17af99704b618e83e8c2b",
+          "595736dbbdf19d64f7cc3fafbbbbe25cd900bb164e9462afafd759dd61b36b22",
+          "90966b8b3a7d3089d449afca40f763f550480351961229444fac695a4239892e",
+          "d38966eed328c17c731be526efc5a6a888734332823723b6013e7cd04337ca81"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "13182ca26dd81b9a0c533930f0f4c8c33d69c10b18da99ca8f653654f511e479",
+        "pipelineSha256BeforeProportionFormalization": "13182ca26dd81b9a0c533930f0f4c8c33d69c10b18da99ca8f653654f511e479",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "a86e83c85414e224ec55a26f602ed0cbd899ffa1c1d2463600b1543ab9bd9a97",
+        "qcSha256BeforeProportionFormalization": "a86e83c85414e224ec55a26f602ed0cbd899ffa1c1d2463600b1543ab9bd9a97",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "walk": {
         "originalGeneratedSha256": "8fca75dcca72967b5744f3fd8b9a309375e16888cfe4f6a9e1e7baacd2bdfc29",
@@ -430,7 +845,38 @@
           "a1c2279ac7ade64948878e5d79d41d3a467e010d1870e4e414d7adf6c22ea253"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "8ae306739133417ec7986c0469b53e4f0fb66de7c8e7e6f74b87d7e60a0cb94c",
+          "c971eef99295770d8d8ba4837b35c177f27eebf8303c36a41add78fd6598111a",
+          "6bd1802492d0f96d2fc96aef481fee376c47785470e649209db5d77fc99693c4",
+          "9c1381900f2e4e3f634deca8f447e7e328e2898be7e78e7a4e05bd2c67c2c958",
+          "5d96dc387cc716c36b013ed9112c41911a45266f1717fa69529119363d3d3c46",
+          "5f14257c4d55d692aacfdda65ef97fe8407e91ae2eb109735c41c5f18e0ce967",
+          "f6ae6d6dd78469db3ebcebeac8356252ec7fa29670d218e6f16a005b82af5e82",
+          "a1c2279ac7ade64948878e5d79d41d3a467e010d1870e4e414d7adf6c22ea253"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "8ae306739133417ec7986c0469b53e4f0fb66de7c8e7e6f74b87d7e60a0cb94c",
+          "c971eef99295770d8d8ba4837b35c177f27eebf8303c36a41add78fd6598111a",
+          "6bd1802492d0f96d2fc96aef481fee376c47785470e649209db5d77fc99693c4",
+          "9c1381900f2e4e3f634deca8f447e7e328e2898be7e78e7a4e05bd2c67c2c958",
+          "5d96dc387cc716c36b013ed9112c41911a45266f1717fa69529119363d3d3c46",
+          "5f14257c4d55d692aacfdda65ef97fe8407e91ae2eb109735c41c5f18e0ce967",
+          "f6ae6d6dd78469db3ebcebeac8356252ec7fa29670d218e6f16a005b82af5e82",
+          "a1c2279ac7ade64948878e5d79d41d3a467e010d1870e4e414d7adf6c22ea253"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "ca65c6d10117e3010349928d5824d29828e42e369ee6e71993f3c87cf4b69c1a",
+        "pipelineSha256BeforeProportionFormalization": "ca65c6d10117e3010349928d5824d29828e42e369ee6e71993f3c87cf4b69c1a",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "fe2518bf658c5f4bee864ab997e1b1bfc957ec1eca3450c35ed7ba820086cac7",
+        "qcSha256BeforeProportionFormalization": "fe2518bf658c5f4bee864ab997e1b1bfc957ec1eca3450c35ed7ba820086cac7",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "attack": {
         "originalGeneratedSha256": "493aa6c4588e6dc45609bcd516fe29085b9690dbb28761c4a32a2e65b35c3121",
@@ -438,8 +884,8 @@
         "rawArchiveSha256": "493aa6c4588e6dc45609bcd516fe29085b9690dbb28761c4a32a2e65b35c3121",
         "rawDecodedRgbaSha256": "bd8252cdc42ec0d1a052e6bb76227f15516bbfaef944f73b2631be83b3889d95",
         "promptSha256": "92a196caea3e15308353eb1dc05ad4af4fa43a946641ff0c96e37b8a077408a5",
-        "pipelineSha256": "e0420c5e6fcd1cbae400030f572202751d26c4061a480aff052788e09d81471e",
-        "qcSha256": "b7050ca6e98063823baf64771cc7a9dd78e0550f834b360ec5a9d6a43778fdb2",
+        "pipelineSha256": "6fd3e831b3f478f9c6a4bdc280e697666fdae9e2dd1e7fd42c786607d748662a",
+        "qcSha256": "b8d88b8d1af02a152e7fb2a8c7fb9818d01679d8e8b80424108c95e2cf38928c",
         "sourceFrameRgbaSha256": [
           "8a801bb22b525f856f1c8e16b2b497184210f397560074648a3d45ac7ef85fc2",
           "e1fc4a99441b882300bf91e31c5670cb13bd5ed3b6939bf4bc8325d763c76b4b",
@@ -451,6 +897,18 @@
           "8e80cd425a87c841ba103ef548a00dae90a4f581903ee77a8db723d03ff1fd39"
         ],
         "runtimeFrameRgbaSha256": [
+          "38f68a1ebc64ae3454b49b284d672426fbece52c394ee6bcc00cd431105faa8a",
+          "3f77144906ee317aa7427b1d0c94ad07160f44e9dc942e3643670b94fb4c6133",
+          "400de4145fbafe4e7091a9eaa72cda0aa84c31600789ba655c88a850333e4407",
+          "7c6a26995506988df32958c1e7035015274f34ec9368b70691194cdbd05ed3e6",
+          "42f9ce7c30651dbfca8db2d6fa55f4dfc950e2b0d085537b0edd6f12ee04a943",
+          "51c997a3585abd50334cdf3b1e761bff66afba7c8bf02fe399b4c0c809794eca",
+          "be5a2d20c5672d65afa18f3dd2e6f68048766dfe7e39d2f9679d2217e5452d80",
+          "3a226ea2a0265829365dfd4002021b7a098580f5ae3dc216593846d17a8c5f30"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "42438993e79e343e7477b29c627870797cda19edbdb2c25c60590a6f0c77510b",
           "1e9828d8ae687bd70001ce94e72daf93e04b02ad146acb4ea083876fed731b39",
           "6323f9d785c0c0947ab4bf2619a8ff551f9ca337bdf9a078b2182dde9f0d8f23",
@@ -460,8 +918,34 @@
           "81a6416ca3086db6c2b45d3938b0d711c1666136d0221edb49d77e7a997bdd3d",
           "b6496a9de6f377ad21ac5dbcb362e1773ac89362b6660d5ad8636ba2fd56112e"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "42438993e79e343e7477b29c627870797cda19edbdb2c25c60590a6f0c77510b",
+          "1e9828d8ae687bd70001ce94e72daf93e04b02ad146acb4ea083876fed731b39",
+          "6323f9d785c0c0947ab4bf2619a8ff551f9ca337bdf9a078b2182dde9f0d8f23",
+          "4ad06bbece87048c0f6217db137cc70c820ee886118f3801a8f3e4d5c44b9641",
+          "8d05b46435d2923643a8b8e727310389e9a926a84ac7c0955e12eead9a5ca117",
+          "622bbec9bc193816f914441381afffec7622df602c1eeaee130a9316abd7a9db",
+          "81a6416ca3086db6c2b45d3938b0d711c1666136d0221edb49d77e7a997bdd3d",
+          "b6496a9de6f377ad21ac5dbcb362e1773ac89362b6660d5ad8636ba2fd56112e"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "e0420c5e6fcd1cbae400030f572202751d26c4061a480aff052788e09d81471e",
+        "pipelineSha256BeforeProportionFormalization": "e0420c5e6fcd1cbae400030f572202751d26c4061a480aff052788e09d81471e",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "b7050ca6e98063823baf64771cc7a9dd78e0550f834b360ec5a9d6a43778fdb2",
+        "qcSha256BeforeProportionFormalization": "b7050ca6e98063823baf64771cc7a9dd78e0550f834b360ec5a9d6a43778fdb2",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.408377,
+          "scaleY": 1.408377,
+          "translationX": -84.83770175,
+          "translationY": -100.05236500000001,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "skill": {
         "originalGeneratedSha256": "45273244a21447c794160471701273d8bf50f1ab02775fd96aa619eccab576e5",
@@ -469,8 +953,8 @@
         "rawArchiveSha256": "45273244a21447c794160471701273d8bf50f1ab02775fd96aa619eccab576e5",
         "rawDecodedRgbaSha256": "b94063a0b0f2dc0286503c534ed3252c8085c66ea4c38d809d8db207ed7cd128",
         "promptSha256": "6e0d1a04c5ed98af4b2561c4b6e616c04bac2a5d91ed8fe60c1bf6227de5851a",
-        "pipelineSha256": "9a97c9ff66d604ad3e18c8b3d1872ec2317cbe202b803b77aa021c126e8fb40d",
-        "qcSha256": "058890df5ff391f33e402dda71b498d5f5eb0daa8f38a077ab5cc39cf2490471",
+        "pipelineSha256": "c52603723e5a6feb04a1e62b0835c57a9cb70bee5a9d049c88f0d6c709d72541",
+        "qcSha256": "e1f8623c21d13af7394897754ce88ebcc911cfd2d374414b00b6fd46fb11eb54",
         "sourceFrameRgbaSha256": [
           "857e21d003215d737205d7a9effa80de2062caf44efb5c73c1270c73d2407bf2",
           "6a13278461029a91c13321c27cd2852e2268145d4cd15c9b013e558a551c30ee",
@@ -482,6 +966,18 @@
           "f1ef78333679d4abbcee2be81e0066b48b4911ee464a1cb719d7163ab6e79465"
         ],
         "runtimeFrameRgbaSha256": [
+          "f99c48740f1841b37c5b73aa39e70cc08af0523c80abb511c49b7594ab81a562",
+          "8d251b023a17f8691314ee01e8c1bcd9f57bab58abf9c7cbb8f325c883f19e6a",
+          "bef2461abdee83f40587a40675396f8eb67c256db0aa5c252fccfc29d0d01d7f",
+          "0538591badbb0453c31a8ff3b3340a8a067c3d4d75dd0f3659e2ee39ce11d85e",
+          "e6bd08055454fb04abcf3049a95a39f5eb7c79be1272a5d3af99a825c2e8c9e8",
+          "e2f1dd8beac18d174d90ba2b511429634c16a6a0e8ceff9af0db545344ff8574",
+          "a28230680993a60ba831fbed63ad4321e0ff764d263f790558223f9038c9d113",
+          "a8799f5f7c5ded83422e546e41f2229db242d15189305ee1bd095352b02c07f5"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "34a7c373afb4766aa55d795608cacf35bbed90aa55d7617471d07927bb100b35",
           "c72852574cb8294bcb42cd144d7bfb285a44ee2609925370c344a712e1287001",
           "63c2da707c1034c5462dc8c044e1c71940330d748d23602490240815775cf77b",
@@ -491,8 +987,34 @@
           "273609a291e09b44e92f9bc4fc05f272edd8b4e125257e2a4adf48b7d83301e6",
           "b809e5a1de77adaf8454e4e08ca8efd447aedbfe08d77712d6955c69dabc8228"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "34a7c373afb4766aa55d795608cacf35bbed90aa55d7617471d07927bb100b35",
+          "c72852574cb8294bcb42cd144d7bfb285a44ee2609925370c344a712e1287001",
+          "63c2da707c1034c5462dc8c044e1c71940330d748d23602490240815775cf77b",
+          "619e5992896775ec6331ce886ad1e85789d7b13a9bf5d41a493dcbdc31c05d01",
+          "6a5fbba10637fdfa025eed0d5fb7b911823f7dc69c2e098f72779539bf7fee01",
+          "8bacdad340cd97082835969155ee09c25f3cd415d687bbcc84ca261b5587e294",
+          "273609a291e09b44e92f9bc4fc05f272edd8b4e125257e2a4adf48b7d83301e6",
+          "b809e5a1de77adaf8454e4e08ca8efd447aedbfe08d77712d6955c69dabc8228"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "9a97c9ff66d604ad3e18c8b3d1872ec2317cbe202b803b77aa021c126e8fb40d",
+        "pipelineSha256BeforeProportionFormalization": "9a97c9ff66d604ad3e18c8b3d1872ec2317cbe202b803b77aa021c126e8fb40d",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "058890df5ff391f33e402dda71b498d5f5eb0daa8f38a077ab5cc39cf2490471",
+        "qcSha256BeforeProportionFormalization": "058890df5ff391f33e402dda71b498d5f5eb0daa8f38a077ab5cc39cf2490471",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.381818,
+          "scaleY": 1.381818,
+          "translationX": -64.918159,
+          "translationY": -93.54541,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "hurt": {
         "originalGeneratedSha256": "83c8ad32cfbe68c7413eca451db4189e9f4cd88e408ff30d4f7227337bb1a5e0",
@@ -519,7 +1041,34 @@
           "a62bb0e1cc95eaf4b06efb515054c49f62bf1304adc561152db8f5ec023f19ed"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "77be4993a9da5b98eea43f2d014342264048c76af4ff3ca402b787fb74c3db40",
+          "ad08b2bc95b2d72a56a6d6d4f41b5170200b561fdde7a64c786dc0b9fa226714",
+          "d4755c36eef6765d61fc6721efd0ea147bd64164e86e2eb053dcbe34d35155de",
+          "807b766725debb45fec0742283f174d27d3c0a2727cae4950830b57dc61bea69",
+          "7e37dac3075e288c04eef2427633332c23b8401acccadbbea7b96dc89f0ff21b",
+          "a62bb0e1cc95eaf4b06efb515054c49f62bf1304adc561152db8f5ec023f19ed"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "77be4993a9da5b98eea43f2d014342264048c76af4ff3ca402b787fb74c3db40",
+          "ad08b2bc95b2d72a56a6d6d4f41b5170200b561fdde7a64c786dc0b9fa226714",
+          "d4755c36eef6765d61fc6721efd0ea147bd64164e86e2eb053dcbe34d35155de",
+          "807b766725debb45fec0742283f174d27d3c0a2727cae4950830b57dc61bea69",
+          "7e37dac3075e288c04eef2427633332c23b8401acccadbbea7b96dc89f0ff21b",
+          "a62bb0e1cc95eaf4b06efb515054c49f62bf1304adc561152db8f5ec023f19ed"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "54510348086db5252ce5f254ae6ae43fd68d75a96b3a39b1c2c4b01c0666b677",
+        "pipelineSha256BeforeProportionFormalization": "54510348086db5252ce5f254ae6ae43fd68d75a96b3a39b1c2c4b01c0666b677",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "16b4fcd25774e096e6dcc9615304d652d4075682e3b6f365e4b8e9ad6dbd50e1",
+        "qcSha256BeforeProportionFormalization": "16b4fcd25774e096e6dcc9615304d652d4075682e3b6f365e4b8e9ad6dbd50e1",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "defend": {
         "originalGeneratedSha256": "65091ea782933d9b9c68356b36d2e58b76f6743294574ba6c3b1a539f6107773",
@@ -546,7 +1095,34 @@
           "6ab2ab5600a901e7ebde3a00552f821c3d542eaa89a01be6cebc7fe179bec846"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "63767c789f142e292d6d59f88e3b957bb87237f8e0548748bc652ca97d2f994b",
+          "d57ec69238c56804d88b538f8e69f3ee922ceb13d1e5753411522355f1c27f0d",
+          "90eb9ff30b02a772df2145cda7c3eaed3db7afe9b52850b86b09ffefc58de12d",
+          "c6f9ac65bc1b9730f10384c1c08d8a322db72650d9f5d20adccf9e4694d0e674",
+          "ae0a16061b6654fa2a937c43d68ffcc1564952acb8c1974740e9398491aefd41",
+          "6ab2ab5600a901e7ebde3a00552f821c3d542eaa89a01be6cebc7fe179bec846"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "63767c789f142e292d6d59f88e3b957bb87237f8e0548748bc652ca97d2f994b",
+          "d57ec69238c56804d88b538f8e69f3ee922ceb13d1e5753411522355f1c27f0d",
+          "90eb9ff30b02a772df2145cda7c3eaed3db7afe9b52850b86b09ffefc58de12d",
+          "c6f9ac65bc1b9730f10384c1c08d8a322db72650d9f5d20adccf9e4694d0e674",
+          "ae0a16061b6654fa2a937c43d68ffcc1564952acb8c1974740e9398491aefd41",
+          "6ab2ab5600a901e7ebde3a00552f821c3d542eaa89a01be6cebc7fe179bec846"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "18b00cac71bd7c484a1602bacab2aa5072db712ab4725f594ddc479e1b4713dc",
+        "pipelineSha256BeforeProportionFormalization": "18b00cac71bd7c484a1602bacab2aa5072db712ab4725f594ddc479e1b4713dc",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "04ab1214aa41d2000470d0258b542c7578f8f830629beb179713b67b26201cf9",
+        "qcSha256BeforeProportionFormalization": "04ab1214aa41d2000470d0258b542c7578f8f830629beb179713b67b26201cf9",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "dodge": {
         "originalGeneratedSha256": "e0696c8e230dba3f0371dd5206b66716ac2899b538263f0f07c262ea32937d90",
@@ -577,7 +1153,38 @@
           "ce6a674be90664f8073488d10600d752a99b180fc74028a2d71c4380c579565d"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "32056eabd83f71a629091af7f9ae82b201178b4d74d7d25cee553b081735ac22",
+          "ff2911f9714293664646e1a9c20c877ab16c2bb00698d01c9ea74df40094b104",
+          "da9ef2d7b3980e7ee0840facea4d34ebae51bf78aae73a410295c771be5c8db8",
+          "47d269d6e0431dfe02703c6dd6991dacbc1e496d49b2348ea20984798d1c2536",
+          "65dc15d2e90133acdf7c4d878131aac6e6b4592bd830ad073032fef132393376",
+          "39c3f77daa605efb065e5516f5db89047b3db1f5280fa11eee8c26e02db607b6",
+          "4e392547c516c79e9b800a25eaa87e535a244e4d718f8e3b5d321714bc12f7d5",
+          "ce6a674be90664f8073488d10600d752a99b180fc74028a2d71c4380c579565d"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "32056eabd83f71a629091af7f9ae82b201178b4d74d7d25cee553b081735ac22",
+          "ff2911f9714293664646e1a9c20c877ab16c2bb00698d01c9ea74df40094b104",
+          "da9ef2d7b3980e7ee0840facea4d34ebae51bf78aae73a410295c771be5c8db8",
+          "47d269d6e0431dfe02703c6dd6991dacbc1e496d49b2348ea20984798d1c2536",
+          "65dc15d2e90133acdf7c4d878131aac6e6b4592bd830ad073032fef132393376",
+          "39c3f77daa605efb065e5516f5db89047b3db1f5280fa11eee8c26e02db607b6",
+          "4e392547c516c79e9b800a25eaa87e535a244e4d718f8e3b5d321714bc12f7d5",
+          "ce6a674be90664f8073488d10600d752a99b180fc74028a2d71c4380c579565d"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "94a10da1f9f01ea48d86c7b3fd07b9551150f97fdf5f7fb1399bef48f3911530",
+        "pipelineSha256BeforeProportionFormalization": "94a10da1f9f01ea48d86c7b3fd07b9551150f97fdf5f7fb1399bef48f3911530",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "d87e1ad2d96684794187250fdd02fc407388473320867d802dd6105beda7c86e",
+        "qcSha256BeforeProportionFormalization": "d87e1ad2d96684794187250fdd02fc407388473320867d802dd6105beda7c86e",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "counter": {
         "originalGeneratedSha256": "f5aac0251a42e9133c9e4221b51cf13e877db72491323497bb3e986c50f3756a",
@@ -585,8 +1192,8 @@
         "rawArchiveSha256": "f5aac0251a42e9133c9e4221b51cf13e877db72491323497bb3e986c50f3756a",
         "rawDecodedRgbaSha256": "8b4b0f62331609a6fac3cd8a5857db70837e4b05aa4cc977c05244c05fad5990",
         "promptSha256": "adea48baaf7f23ce13ba309ffa9c0202ec43d31889769d5c5f466463d92c611a",
-        "pipelineSha256": "40e0ceb5561e116eab1e6c5f674b8c9878fb3a439b3de6bee307b934fd0816e8",
-        "qcSha256": "00ff916f4c63c50b08ba389f376d0444f29a587779044f285cab4582d4b08e7a",
+        "pipelineSha256": "5285c417998a1ad2e0cc3a222e38dc0fac7cda8ea43ad98bd37faec5cfeac1f9",
+        "qcSha256": "bf28003019f4be21cc13da308128a7313e42f6a93aa876fbb00d548bbe245d53",
         "sourceFrameRgbaSha256": [
           "27680d29987e67bdc3180e9938e113f8949a2db71a3422f2342f997e6199caaa",
           "ccbd3324a9ea95416cfff695e2ee36b21b4821fd7a8cefb2f07ba05e30456aec",
@@ -598,6 +1205,18 @@
           "8d8cdb68ea14845373981b295e3e09ed3bb005a8e6fea40fbbf323ce650d8659"
         ],
         "runtimeFrameRgbaSha256": [
+          "379c468e52dbecd920b0ffe18ca21dfbcd55e373aa7eb3c50168dc01729dbfc3",
+          "542da85b549e43972db7038e8638eae2dbf18196971d431a787449d4678435df",
+          "00546d01d29cb0a853a6d3c31ededafc16039aab9ba780a40b450d0b41626cac",
+          "93ff646370080088848533d87ae0467e334dd0c68b0f887b79b79754ad9fc483",
+          "431b2b368f8a3000a4ae7a3de2e9cfd52a58765a75cddd109caa0ac2fe1f42d5",
+          "981788df4d9a592f9beb8b871b21f7710648cac4f1f5fa298e593c5f790159ac",
+          "f471b662b7324073a7cc692a1aef58e4adefb7044f499b4b5146f8d94b2001d5",
+          "e6c01807f5f7f1651880d29a847887b8de43db8dea6b051b567ce67aa1ba7f47"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "e14fd791b64a81d58aba7d533d8ca039d79a4188989be925c3fcf6600f7695c3",
           "13012c197798c7be88effa69940f348f48d1fb52fcb4781334566790bf1adacb",
           "a64af9d3acb85b6bcf68e9d475b0f0f3de754615dd733d6a60930c017761f1da",
@@ -607,8 +1226,34 @@
           "a7e5b99821d19413e4aac40698e5d50e25497eff3322e0cc6add8d6c353cea35",
           "7c8a64dda355bfa540b1ef4a8a0c9467d9b978a63c071ef0da00abaa84dad955"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "e14fd791b64a81d58aba7d533d8ca039d79a4188989be925c3fcf6600f7695c3",
+          "13012c197798c7be88effa69940f348f48d1fb52fcb4781334566790bf1adacb",
+          "a64af9d3acb85b6bcf68e9d475b0f0f3de754615dd733d6a60930c017761f1da",
+          "8f27ce1abef4c884253c0e98daf6f5979b3d26da23f493ec4f5e55c89df9d963",
+          "2070226e8b0b0d0c6d1ff8833324adb93455d84ba55cf0d7ca114b972b3b0d50",
+          "c08637210da80178acac6ce3d1b1ff70d36c89040268014c781fc89cbd76583f",
+          "a7e5b99821d19413e4aac40698e5d50e25497eff3322e0cc6add8d6c353cea35",
+          "7c8a64dda355bfa540b1ef4a8a0c9467d9b978a63c071ef0da00abaa84dad955"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "40e0ceb5561e116eab1e6c5f674b8c9878fb3a439b3de6bee307b934fd0816e8",
+        "pipelineSha256BeforeProportionFormalization": "40e0ceb5561e116eab1e6c5f674b8c9878fb3a439b3de6bee307b934fd0816e8",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "00ff916f4c63c50b08ba389f376d0444f29a587779044f285cab4582d4b08e7a",
+        "qcSha256BeforeProportionFormalization": "00ff916f4c63c50b08ba389f376d0444f29a587779044f285cab4582d4b08e7a",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.338308,
+          "scaleY": 1.338308,
+          "translationX": -74.837003,
+          "translationY": -82.88546000000002,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "stagger": {
         "originalGeneratedSha256": "cdf7e646910499040823817174a659d393e27da6b5a83be1a59a25fc96a104ba",
@@ -639,7 +1284,38 @@
           "ba73542160a59d890fada51964eb9edbb2f56b33de427446cc608e1267f40a09"
         ],
         "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "15a7d48977e1405dddb912985e229c5c9e81913e44558b2fc003d86ebbd128bf",
+          "b07bb67bec65f385cb1ab8fc820face002d1b0007e7936b988d036e1b69dbc40",
+          "17be9117b47fe5170126a1d5e557a6537d671f74a94aa6e268af2ba8b86e5a36",
+          "2c324b3f933ddc7538c8eb12f6818e4473f4af25b1e49e54ed664d9f41f4aa27",
+          "76bb7b1f0d01bb856267485a02a44d1f3304a9de4be28e2ffb586b76b3c5c771",
+          "d3251fcfa0e72a5963ad0deb25b8ea76288db6a6515fdeef241ade465a296653",
+          "55a170ac930bbd02940c236d7976bdc5fbd45c44bc66e8b1959d00bc9a27cba2",
+          "ba73542160a59d890fada51964eb9edbb2f56b33de427446cc608e1267f40a09"
+        ],
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "15a7d48977e1405dddb912985e229c5c9e81913e44558b2fc003d86ebbd128bf",
+          "b07bb67bec65f385cb1ab8fc820face002d1b0007e7936b988d036e1b69dbc40",
+          "17be9117b47fe5170126a1d5e557a6537d671f74a94aa6e268af2ba8b86e5a36",
+          "2c324b3f933ddc7538c8eb12f6818e4473f4af25b1e49e54ed664d9f41f4aa27",
+          "76bb7b1f0d01bb856267485a02a44d1f3304a9de4be28e2ffb586b76b3c5c771",
+          "d3251fcfa0e72a5963ad0deb25b8ea76288db6a6515fdeef241ade465a296653",
+          "55a170ac930bbd02940c236d7976bdc5fbd45c44bc66e8b1959d00bc9a27cba2",
+          "ba73542160a59d890fada51964eb9edbb2f56b33de427446cc608e1267f40a09"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "608c1e3af90bc05a442de8dbe2e43bde3bc3cec5791575863e3284df17a78aa4",
+        "pipelineSha256BeforeProportionFormalization": "608c1e3af90bc05a442de8dbe2e43bde3bc3cec5791575863e3284df17a78aa4",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "9ee46204939f589b647a76352a12d3d515e6ad6d25841b979ddd52f0e2f4b449",
+        "qcSha256BeforeProportionFormalization": "9ee46204939f589b647a76352a12d3d515e6ad6d25841b979ddd52f0e2f4b449",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "knockaway": {
         "originalGeneratedSha256": "b71c2506c17923ee0d7d19ea2472d08a4cdfd7e02d63e43a0c04ec56526a8f5c",
@@ -647,8 +1323,8 @@
         "rawArchiveSha256": "b71c2506c17923ee0d7d19ea2472d08a4cdfd7e02d63e43a0c04ec56526a8f5c",
         "rawDecodedRgbaSha256": "f342e5e624ac3ca3667e0085dec9673f1d1a36133b461699bc506af101ebf6e7",
         "promptSha256": "e5fcd82d758043e0dc21cd495cdf22c70946306ae518867083bf69bbe4ddf747",
-        "pipelineSha256": "d70226ba451fc8dba77331e2b83f8ee960df476f502eab5fa0d075f3fa2f48ab",
-        "qcSha256": "5cf282813639d334b61a296ded45d455a2b3fb6ad69dc7c28268a204824cd698",
+        "pipelineSha256": "343b0f1ed00918b549e47c6c6664ecdc1f85f550cd095e55876b5478a7cbe15e",
+        "qcSha256": "0eab2cc8f384fb8968b2550fde3c02e520274b157785a7eb1262d9802b5e9ecb",
         "sourceFrameRgbaSha256": [
           "d3a7fcfbc970c8cfa71b374e50cfe5a699cbeffc17b90cb6a97a7a157858a006",
           "521abc16d7cdf2296120bc0567c65266ff80b4549f3add6673521d7e01229d41",
@@ -660,6 +1336,18 @@
           "7a2df2ec36a1f814f73c76eb6f7079f0f9cc8fdd90015a0c7e9fa0c734da9ae1"
         ],
         "runtimeFrameRgbaSha256": [
+          "f8038021a641557e3a25f5269988642c3a391e7261291e5a8a447f84484ed7b4",
+          "ff4d7d875b48eb661ed063992fc1e2cf608c98e587f2a00b4cadda9247c0aff3",
+          "e20ca466416ff0b731f605a2195a73a422491669b252e65d50f90b3512112bad",
+          "bb943b1301b3041c577b5e9167a17584a50138ff2b7377911729bf7812fb97b5",
+          "dd761f22342d2e39d580c8ce22b2901b71e07cb93369fb08f864eada64ffdb02",
+          "7a371182e4170fc4728a3bef6c7109886644998d895dcb0944c9a079c28aa126",
+          "579e171681dfd136141690e9061c6e66bb395aeb1ad2b97fb2297410d94c2541",
+          "8b8f4b8c586f3f5177dc5120b63383759e612308c5514ef6128f763b3936e633"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "0da3e46c100997f73e4ecb9c445d5d1afe4006e217ba71966aa8b3fd3f44eb19",
           "32fdc64f5a7e93b18fc3f25c04d71bd77199af80e5fbd513fece24eee82f5bbd",
           "b8a2b3c19cb72ee8957c481145103a2aec9d8569ec16f55d628b58e602983fc5",
@@ -669,8 +1357,34 @@
           "a189da4de90b9d211d55b12cf9e7324e3e6bc63cc9cad01e640e8a879447846e",
           "e187c1a7230252277e969f7cae1cf360d3d4651bd27af55b3d32c8e1bdae1499"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "0da3e46c100997f73e4ecb9c445d5d1afe4006e217ba71966aa8b3fd3f44eb19",
+          "32fdc64f5a7e93b18fc3f25c04d71bd77199af80e5fbd513fece24eee82f5bbd",
+          "b8a2b3c19cb72ee8957c481145103a2aec9d8569ec16f55d628b58e602983fc5",
+          "deb29cbb036779f83c2f48c0c5d593dfc096816329c807490f4c53cf3272b3b5",
+          "68e976331de7dbe00e5dc541ebf5dd536598c1550d48f3f7af86612498de83eb",
+          "c892afa480aa258648339ff15b3150570b6b3ae6440af0fd8d3bd9e75db3e85b",
+          "a189da4de90b9d211d55b12cf9e7324e3e6bc63cc9cad01e640e8a879447846e",
+          "e187c1a7230252277e969f7cae1cf360d3d4651bd27af55b3d32c8e1bdae1499"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "d70226ba451fc8dba77331e2b83f8ee960df476f502eab5fa0d075f3fa2f48ab",
+        "pipelineSha256BeforeProportionFormalization": "d70226ba451fc8dba77331e2b83f8ee960df476f502eab5fa0d075f3fa2f48ab",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "5cf282813639d334b61a296ded45d455a2b3fb6ad69dc7c28268a204824cd698",
+        "qcSha256BeforeProportionFormalization": "5cf282813639d334b61a296ded45d455a2b3fb6ad69dc7c28268a204824cd698",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "scaleX": 1.107647,
+          "scaleY": 1.107647,
+          "translationX": -34.62366725000001,
+          "translationY": -26.373514999999998,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "down": {
         "originalGeneratedSha256": "326f742559e4e8c0a1f757d95c8b43def039575da5f17d522f7a8843fbe43fb3",
@@ -678,8 +1392,8 @@
         "rawArchiveSha256": "326f742559e4e8c0a1f757d95c8b43def039575da5f17d522f7a8843fbe43fb3",
         "rawDecodedRgbaSha256": "0f905d2a011bfeb62d7f420308f4dd6eb86277b6e0fcdf08e5d62d3a729b3be1",
         "promptSha256": "bdd4f2499cc3d19b207dbafc26c3f9ee0b25405c9f6a4b86abc5d408d27a3d69",
-        "pipelineSha256": "1708b3c23d9ee9e6be48806201b91c627e7d01919e6e5726af6d9134bf98ca32",
-        "qcSha256": "fd7b9e1edb00e1b60977b412d3fce77c0db4d6ea7012ed56608888a446357197",
+        "pipelineSha256": "67625900b76e248238771b5cdfd0ad2a21600ead22f602bec79379b6721b5199",
+        "qcSha256": "6ebe25ac258bd56f94a49ed411ed2ab4fe204b967395a979e628917b785e3d4c",
         "sourceFrameRgbaSha256": [
           "9182f5627e121267ccfc05dd0a63c2497b85ec17df6b7402996379ae7ffaaf51",
           "5ee5fdaa4576b4219f1be93de5ec9e372345f400365122cec30516d6c9e3e3ab",
@@ -694,14 +1408,45 @@
           "e076af71208f09cc48dabecf9d83293eb46c8883f464f3af5ecf14bd88275e73",
           "88c2d4f29b41bba8ed29db0c34dfb4f972e3850fea03a0d7dcac9d183069836f",
           "29c9e40b50f6daed4b0c33f48ad259225df21cc535dad07c1eb10fb746c61744",
+          "e02a51b7bb448d4619ae974e8ac8f2d24492c550244f9502951d47d37fa258ac",
+          "9910469b5f9b15caadb838c6bdbc45cc270a0ff5bb4aa18d63df8d4da088f1a6",
+          "04559cc40ed9dacaddc87926c5e3a79f3297470477b493bed63dd519a9ffde61",
+          "644c340a461f2ecf226a887b4cd704eae3abdd359c0d5b076681920cf2ad1c79",
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
+          "e076af71208f09cc48dabecf9d83293eb46c8883f464f3af5ecf14bd88275e73",
+          "88c2d4f29b41bba8ed29db0c34dfb4f972e3850fea03a0d7dcac9d183069836f",
+          "29c9e40b50f6daed4b0c33f48ad259225df21cc535dad07c1eb10fb746c61744",
           "04559cc40ed9dacaddc87926c5e3a79f3297470477b493bed63dd519a9ffde61",
           "e02a51b7bb448d4619ae974e8ac8f2d24492c550244f9502951d47d37fa258ac",
           "9910469b5f9b15caadb838c6bdbc45cc270a0ff5bb4aa18d63df8d4da088f1a6",
           "644c340a461f2ecf226a887b4cd704eae3abdd359c0d5b076681920cf2ad1c79",
           "24bd7ee4e703898307344ebef536941751e1c604f653a89741fba261dc99d5fd"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "e076af71208f09cc48dabecf9d83293eb46c8883f464f3af5ecf14bd88275e73",
+          "88c2d4f29b41bba8ed29db0c34dfb4f972e3850fea03a0d7dcac9d183069836f",
+          "29c9e40b50f6daed4b0c33f48ad259225df21cc535dad07c1eb10fb746c61744",
+          "e02a51b7bb448d4619ae974e8ac8f2d24492c550244f9502951d47d37fa258ac",
+          "9910469b5f9b15caadb838c6bdbc45cc270a0ff5bb4aa18d63df8d4da088f1a6",
+          "04559cc40ed9dacaddc87926c5e3a79f3297470477b493bed63dd519a9ffde61",
+          "644c340a461f2ecf226a887b4cd704eae3abdd359c0d5b076681920cf2ad1c79",
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "1708b3c23d9ee9e6be48806201b91c627e7d01919e6e5726af6d9134bf98ca32",
+        "pipelineSha256BeforeProportionFormalization": "67625900b76e248238771b5cdfd0ad2a21600ead22f602bec79379b6721b5199",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "fd7b9e1edb00e1b60977b412d3fce77c0db4d6ea7012ed56608888a446357197",
+        "qcSha256BeforeProportionFormalization": "6ebe25ac258bd56f94a49ed411ed2ab4fe204b967395a979e628917b785e3d4c",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       },
       "revive": {
         "originalGeneratedSha256": "644d68d21b7e0daf72a1aa884d6f1c01f420e56b90594fdc08dd182df002414c",
@@ -709,8 +1454,8 @@
         "rawArchiveSha256": "644d68d21b7e0daf72a1aa884d6f1c01f420e56b90594fdc08dd182df002414c",
         "rawDecodedRgbaSha256": "96ce13c77cb4267399c04b12ff502765bf131a0f4ad35839212525cca608eb8c",
         "promptSha256": "47fbc444ba5e7b1a552d2afc8fcf54927bc88559d9534cd543d85d4ddcaa6ece",
-        "pipelineSha256": "5e2722194ab91784385b729f30cfefc0968c757c1185ff2739b7c4148c15cfb2",
-        "qcSha256": "c99b8d86552bd33de4f87a3f8e17deaffc5f4a2bacecc32f6e20498a9eccf085",
+        "pipelineSha256": "1dfc5cf0c390d0e8c1231eef40ea783db17b3a15d79d0e7f68c94b3b21613d6d",
+        "qcSha256": "415b4dd9623d4a905d9508a650c5cb6682f1bbd48df70e8a415c28e54862f32c",
         "sourceFrameRgbaSha256": [
           "e86893b5cf93d39edeca9b25b66def695de3bb36e6f64c42babcd473e643a517",
           "6f6eb213b9c23379dbec75cc5bbd6013729a90bc89b498c8212d0c4f5c22f86b",
@@ -722,6 +1467,18 @@
           "f16aa10b09525077998f61541b825b8dbd23dd1cce461d88dc1dd96bf987adb0"
         ],
         "runtimeFrameRgbaSha256": [
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6",
+          "d26ac438d46a499af155dc5876e0bf9289215edddfabc42cc9633f07226a070b",
+          "9f050c0d7f95ca829b46b8837f1161437a543c0675ae6bb92509fa43f1a09676",
+          "20d80de8386c12fe2b74881b7d14e241d468bb921662d758bac51ef5f681ef24",
+          "be69c0b4138a92b9a7b575838c59fd340b5e0b4f95b6a8c0b1ed1c3e14d56d69",
+          "a5922213f832ba11758cbc65d0a9bedbe090d61c2446a14b728f19c0f2b7312d",
+          "e9964560b4088a8ca1087ddb800d6c51f59f5b42a71060134fa84b03aa4e2044",
+          "cc787b086f38033de421377afb5cae3b31ae8b03bb3de23ec39c31e459cd5533"
+        ],
+        "representativeRawTracked": false,
+        "sourceFramesTracked": false,
+        "runtimeFrameRgbaSha256BeforeProportionFormalizationLedgerValue": [
           "0eb240d18262e0707e4c0a381e1f1ce2b2b88809a303e4c6f572c35c5db05606",
           "d26ac438d46a499af155dc5876e0bf9289215edddfabc42cc9633f07226a070b",
           "20d80de8386c12fe2b74881b7d14e241d468bb921662d758bac51ef5f681ef24",
@@ -731,14 +1488,33 @@
           "e9964560b4088a8ca1087ddb800d6c51f59f5b42a71060134fa84b03aa4e2044",
           "cc787b086f38033de421377afb5cae3b31ae8b03bb3de23ec39c31e459cd5533"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "runtimeFrameRgbaSha256BeforeProportionFormalization": [
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6",
+          "d26ac438d46a499af155dc5876e0bf9289215edddfabc42cc9633f07226a070b",
+          "9f050c0d7f95ca829b46b8837f1161437a543c0675ae6bb92509fa43f1a09676",
+          "20d80de8386c12fe2b74881b7d14e241d468bb921662d758bac51ef5f681ef24",
+          "be69c0b4138a92b9a7b575838c59fd340b5e0b4f95b6a8c0b1ed1c3e14d56d69",
+          "a5922213f832ba11758cbc65d0a9bedbe090d61c2446a14b728f19c0f2b7312d",
+          "e9964560b4088a8ca1087ddb800d6c51f59f5b42a71060134fa84b03aa4e2044",
+          "cc787b086f38033de421377afb5cae3b31ae8b03bb3de23ec39c31e459cd5533"
+        ],
+        "pipelineSha256BeforeProportionFormalizationLedgerValue": "5e2722194ab91784385b729f30cfefc0968c757c1185ff2739b7c4148c15cfb2",
+        "pipelineSha256BeforeProportionFormalization": "1dfc5cf0c390d0e8c1231eef40ea783db17b3a15d79d0e7f68c94b3b21613d6d",
+        "qcSha256BeforeProportionFormalizationLedgerValue": "c99b8d86552bd33de4f87a3f8e17deaffc5f4a2bacecc32f6e20498a9eccf085",
+        "qcSha256BeforeProportionFormalization": "415b4dd9623d4a905d9508a650c5cb6682f1bbd48df70e8a415c28e54862f32c",
+        "runtimeProportionFormalization": {
+          "id": "runtime-proportion-formalization-current-v1",
+          "operation": "preserve-current-live-formal-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512SourceDerivation": false,
+          "mirrored": false
+        }
       }
     }
   },
   "runtimeFrameCount": 180,
   "worldFrameCountObserved": 0,
-  "runtimeBundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+  "runtimeBundleDigest": "94b2214e697782a961217dabbfe9201fd66c2fe6e8ba77ea9a5f1b0687f8fb26",
   "repairManifests": [
     {
       "path": "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
@@ -772,5 +1548,164 @@
     "manifest": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
     "runtimeBundleDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
     "despillApplied": false
+  },
+  "runtimeBundleDigestBeforeProportionFormalization": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+  "runtimeProportionFormalization": {
+    "id": "runtime-proportion-formalization-current-v1",
+    "status": "staged-not-installed-owner-review-pending",
+    "sourcePixelClass": "current-live-formal-256px-runtime",
+    "claimsFresh512SourceDerivation": false,
+    "creativeGeneration": false,
+    "mirroring": false,
+    "replacementFrameCount": 64,
+    "preserveFrameCount": 116,
+    "protectedKoDownReviveFrameCount": 32,
+    "runtimeDigestBefore": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+    "runtimeDigestAfter": "94b2214e697782a961217dabbfe9201fd66c2fe6e8ba77ea9a5f1b0687f8fb26",
+    "frameLedger": "source/battle/proportion-formalization-v1-frame-ledger.json",
+    "frameLedgerSha256": "ce12c1f9a517e024df3899d88af7f345d2fd913b56f517e6e363fedccac9fd31",
+    "provenance": "source/battle/proportion-formalization-v1-provenance.json",
+    "provenanceSha256": "3a53cd37616643868453ae66191e4a5736148b7bf3f55b83a3c8ca2668543c30",
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending",
+    "historicalRuntimeLedgerOverlayCount": 8,
+    "historicalRuntimeLedgerOverlays": [
+      {
+        "view": "front_3quarter_sw",
+        "action": "down",
+        "reason": "live formal repair overlay made final runtime differ from the original per-action ledger array",
+        "priorLedgerRuntimeFrameRgbaSha256": [
+          "62904f4ab47d150aaf7c30e46d3dc58525f08a9cfa8864ba6ff6cd8193bb5a0b",
+          "adb3f72b395838c1a1a06b624e3f115b3f4ee96e8f55638cd209d30617f9ea1d",
+          "437490057936e7baaf6f8bb2cd3203429061150e5745a31514a489942f9e35fd",
+          "e3293703cecc3eb527e5080d40491d8b32de25de7f860a7abff7e1b9179b00ca",
+          "bc0fe8e1db01861c83967e11b6ee802ef57d9954353a91ea5d0a407160b95404",
+          "b60ca1405ba7f69dd90b33833986a1e0fe066527fdb9527e3a8f3a601044f74e",
+          "3d302e8ea2f1288ce88cbc55c4ef788bb6e0334fbfe22f702219730290a51dfc",
+          "1d63922334ef7d86a032c0598224c08b4cb8b4cf9c98bba3ce21dd19c654bb5d"
+        ],
+        "currentFormalRuntimeFrameRgbaSha256": [
+          "fe4ab42b19f70d48fa3de4614e3a0272f893c02346064a57a4f4d788a5b7c8c7",
+          "b1003e3200612be9eedf69389ff192a4f04761e157af96d6d4b377b916683940",
+          "daabe91b70521999ed1a4b3ad70216e122da6fe449882d3eb72dc29c94c0b332",
+          "4824825232fa4ef2daa11131625afc589437f79960f5babfe906660e48005c70",
+          "2e02a43fc1f5b45a7bc21301666cab74ec07f67ce58d9d57ce21db79df651306",
+          "840acfd73dc1e61f7c73bf5254013aa6ccd6ab011fb71fcd62dea89098469464",
+          "a2f2e7aa0664146f5d9b893dd34bdc92294a095ff4d97be8abc0801b0aa672a5",
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b"
+        ]
+      },
+      {
+        "view": "front_3quarter_sw",
+        "action": "down",
+        "reason": "live formal repair overlay updated action provenance files after the prior lean-ledger snapshot",
+        "priorLedgerPipelineSha256": "196df2f7cf6545bd9d8ac1ab9eca58411913eb7cf0f2eb40b0c8307236b884e8",
+        "currentFormalPipelineSha256": "f8600c426db2999a11bac682c8f6f8bea79ad2611f14973b9000c7a4dac86213",
+        "priorLedgerQcSha256": "5fced28f159c8dda21bb781049781eff2f308e1d640171642ada5db3924d2182",
+        "currentFormalQcSha256": "dded4a4809f6b0296d1bc22adce0c0082dbed725b1f98c87de52f50d5c63dd5f"
+      },
+      {
+        "view": "front_3quarter_sw",
+        "action": "revive",
+        "reason": "live formal repair overlay made final runtime differ from the original per-action ledger array",
+        "priorLedgerRuntimeFrameRgbaSha256": [
+          "41ddf950d7dcddbbc1719c5eb8dd2be3ef19750781b22e4c4a824012d3d7634d",
+          "c07a9b8058278c9cdcdffd13a61909571e6330449d2a00969064fea7b631ab79",
+          "c08479b0f7063f5582327a25dcaa20eebc542d4249d8d6598aefb3d848c40f4e",
+          "61789e569cccf579a842b0f9a4e786a5259b01c22d050c17f66cf06549618912",
+          "26a9ba44cf8f6f11302e2e1d4cc8d4b21fed89f407c9e7176745c698111843da",
+          "0cbac4da078e50442080c3268b9f2b48b570041364afc9864e607b3f9b129c13",
+          "6c9abbaa936dfb7e652a9d2e3efd053c183bcde2c1dcb912852e160d73fef6b7",
+          "33bfa95b6bfbc1c59b0bd94585166166230fb91eab976e72a3a691ccd5763796"
+        ],
+        "currentFormalRuntimeFrameRgbaSha256": [
+          "bee8d046b7f9938154d7550b066570e4e95c7b52508b67f22cc247e3fe038d5b",
+          "f1b0a5736b54ebad66219a0e522c5f8d9446b6dc2ed9a0003f1a3bc7d0f53799",
+          "89690879aecc75874a96bd620abb39747f0f4abb0ba8bb1ff87d1fe361b2f6da",
+          "9f4adc4e0afaa57266c0b4beee81ea50f0b3338aaff5fdad9c1bca3d4605123b",
+          "a7c3a3e642154459a9b627f7b51ba11448a18e4b819a30885d81ba4fa0c16165",
+          "61cc428974442aeafc4d5b13a34f63180acd24b77457b73934acc6785adf0b43",
+          "07702906056bd566fff24b2ae308f485f70c03e9ca4080bc357fd7a768215984",
+          "47148611f68a614dca57f77bc070c70d43e977e1a003383ca306d868b30bab50"
+        ]
+      },
+      {
+        "view": "front_3quarter_sw",
+        "action": "revive",
+        "reason": "live formal repair overlay updated action provenance files after the prior lean-ledger snapshot",
+        "priorLedgerPipelineSha256": "b38ae3fc8cd97cd62a2f5238da6efe741385bc7ab3bfbb9a9a0afaf7609635b1",
+        "currentFormalPipelineSha256": "cf9018020a7ef7f66e40e1d493e9ad33324e19f16ec71f388004f6302d7ee0fe",
+        "priorLedgerQcSha256": "4842637fad1416eaec5e130260f6cf1f54ed54c57b2fbf22e5bb7163d787a26b",
+        "currentFormalQcSha256": "cec132241be097b8f2e11edace6a8717eb153f41672349a310ac73c8d0a77dca"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "action": "down",
+        "reason": "live formal repair overlay made final runtime differ from the original per-action ledger array",
+        "priorLedgerRuntimeFrameRgbaSha256": [
+          "e076af71208f09cc48dabecf9d83293eb46c8883f464f3af5ecf14bd88275e73",
+          "88c2d4f29b41bba8ed29db0c34dfb4f972e3850fea03a0d7dcac9d183069836f",
+          "29c9e40b50f6daed4b0c33f48ad259225df21cc535dad07c1eb10fb746c61744",
+          "04559cc40ed9dacaddc87926c5e3a79f3297470477b493bed63dd519a9ffde61",
+          "e02a51b7bb448d4619ae974e8ac8f2d24492c550244f9502951d47d37fa258ac",
+          "9910469b5f9b15caadb838c6bdbc45cc270a0ff5bb4aa18d63df8d4da088f1a6",
+          "644c340a461f2ecf226a887b4cd704eae3abdd359c0d5b076681920cf2ad1c79",
+          "24bd7ee4e703898307344ebef536941751e1c604f653a89741fba261dc99d5fd"
+        ],
+        "currentFormalRuntimeFrameRgbaSha256": [
+          "e076af71208f09cc48dabecf9d83293eb46c8883f464f3af5ecf14bd88275e73",
+          "88c2d4f29b41bba8ed29db0c34dfb4f972e3850fea03a0d7dcac9d183069836f",
+          "29c9e40b50f6daed4b0c33f48ad259225df21cc535dad07c1eb10fb746c61744",
+          "e02a51b7bb448d4619ae974e8ac8f2d24492c550244f9502951d47d37fa258ac",
+          "9910469b5f9b15caadb838c6bdbc45cc270a0ff5bb4aa18d63df8d4da088f1a6",
+          "04559cc40ed9dacaddc87926c5e3a79f3297470477b493bed63dd519a9ffde61",
+          "644c340a461f2ecf226a887b4cd704eae3abdd359c0d5b076681920cf2ad1c79",
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6"
+        ]
+      },
+      {
+        "view": "back_3quarter_ne",
+        "action": "down",
+        "reason": "live formal repair overlay updated action provenance files after the prior lean-ledger snapshot",
+        "priorLedgerPipelineSha256": "1708b3c23d9ee9e6be48806201b91c627e7d01919e6e5726af6d9134bf98ca32",
+        "currentFormalPipelineSha256": "67625900b76e248238771b5cdfd0ad2a21600ead22f602bec79379b6721b5199",
+        "priorLedgerQcSha256": "fd7b9e1edb00e1b60977b412d3fce77c0db4d6ea7012ed56608888a446357197",
+        "currentFormalQcSha256": "6ebe25ac258bd56f94a49ed411ed2ab4fe204b967395a979e628917b785e3d4c"
+      },
+      {
+        "view": "back_3quarter_ne",
+        "action": "revive",
+        "reason": "live formal repair overlay made final runtime differ from the original per-action ledger array",
+        "priorLedgerRuntimeFrameRgbaSha256": [
+          "0eb240d18262e0707e4c0a381e1f1ce2b2b88809a303e4c6f572c35c5db05606",
+          "d26ac438d46a499af155dc5876e0bf9289215edddfabc42cc9633f07226a070b",
+          "20d80de8386c12fe2b74881b7d14e241d468bb921662d758bac51ef5f681ef24",
+          "a5922213f832ba11758cbc65d0a9bedbe090d61c2446a14b728f19c0f2b7312d",
+          "9f050c0d7f95ca829b46b8837f1161437a543c0675ae6bb92509fa43f1a09676",
+          "be69c0b4138a92b9a7b575838c59fd340b5e0b4f95b6a8c0b1ed1c3e14d56d69",
+          "e9964560b4088a8ca1087ddb800d6c51f59f5b42a71060134fa84b03aa4e2044",
+          "cc787b086f38033de421377afb5cae3b31ae8b03bb3de23ec39c31e459cd5533"
+        ],
+        "currentFormalRuntimeFrameRgbaSha256": [
+          "09a5e267d02f892cf01edebc7e543043487df014b219f552b0d88b743ed656f6",
+          "d26ac438d46a499af155dc5876e0bf9289215edddfabc42cc9633f07226a070b",
+          "9f050c0d7f95ca829b46b8837f1161437a543c0675ae6bb92509fa43f1a09676",
+          "20d80de8386c12fe2b74881b7d14e241d468bb921662d758bac51ef5f681ef24",
+          "be69c0b4138a92b9a7b575838c59fd340b5e0b4f95b6a8c0b1ed1c3e14d56d69",
+          "a5922213f832ba11758cbc65d0a9bedbe090d61c2446a14b728f19c0f2b7312d",
+          "e9964560b4088a8ca1087ddb800d6c51f59f5b42a71060134fa84b03aa4e2044",
+          "cc787b086f38033de421377afb5cae3b31ae8b03bb3de23ec39c31e459cd5533"
+        ]
+      },
+      {
+        "view": "back_3quarter_ne",
+        "action": "revive",
+        "reason": "live formal repair overlay updated action provenance files after the prior lean-ledger snapshot",
+        "priorLedgerPipelineSha256": "5e2722194ab91784385b729f30cfefc0968c757c1185ff2739b7c4148c15cfb2",
+        "currentFormalPipelineSha256": "1dfc5cf0c390d0e8c1231eef40ea783db17b3a15d79d0e7f68c94b3b21613d6d",
+        "priorLedgerQcSha256": "c99b8d86552bd33de4f87a3f8e17deaffc5f4a2bacecc32f6e20498a9eccf085",
+        "currentFormalQcSha256": "415b4dd9623d4a905d9508a650c5cb6682f1bbd48df70e8a415c28e54862f32c"
+      }
+    ]
   }
 }

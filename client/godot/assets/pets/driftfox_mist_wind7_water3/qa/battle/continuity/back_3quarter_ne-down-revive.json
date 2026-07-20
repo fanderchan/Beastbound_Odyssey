@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "formId": "driftfox_mist_wind7_water3",
+  "view": "back_3quarter_ne",
+  "sequence": "down-1..8 then revive-1..8",
+  "frameCount": 16,
+  "preservationClass": "shared isotropic premultiplied transform; down-8/revive-1 remain byte exact",
+  "down8Revive1EncodedExact": true,
+  "down8Revive1DecodedRgbaExact": true,
+  "slots": [
+    {
+      "slot": "down-1",
+      "path": "views/back_3quarter_ne/down/down-1.png",
+      "encodedSha256": "78ca5c264f3bf60baa1af47804fe8b97987afdf8242ad689dcff37152024d424",
+      "decodedRgbaSha256": "e5de90af39d7b95575d82a944e705ad51c9d978937e98e696f2bbe0c71e52b96"
+    },
+    {
+      "slot": "down-2",
+      "path": "views/back_3quarter_ne/down/down-2.png",
+      "encodedSha256": "20beb9565d18b0fa8c71365ee25ac550d39af06f9b3cee45892705fdc1edb0b1",
+      "decodedRgbaSha256": "4151f1c65514f1546decf53590563ad5b00533522176f363a99f1852aca3b41a"
+    },
+    {
+      "slot": "down-3",
+      "path": "views/back_3quarter_ne/down/down-3.png",
+      "encodedSha256": "ee953b5dee605acce57522c6752acb7abefe2c9342c995a08969d58c96b80c81",
+      "decodedRgbaSha256": "e77197d11d29ad39a6ae45241019bd4cd5b6b9a6f3389e49c5b13ba9d1f148de"
+    },
+    {
+      "slot": "down-4",
+      "path": "views/back_3quarter_ne/down/down-4.png",
+      "encodedSha256": "811224034d2140cc5d747fecf0928d5207b0caddf864bce85c027b555755183a",
+      "decodedRgbaSha256": "10f77956f3902163d3b885cb55622bc95c0651f19c42ced6a026a7378b6f3305"
+    },
+    {
+      "slot": "down-5",
+      "path": "views/back_3quarter_ne/down/down-5.png",
+      "encodedSha256": "b4e787a131ab0fa1166c925684540d62d2d4cd0dc06cee941c67acb4a505eaa1",
+      "decodedRgbaSha256": "dd96b0fa69ab5aa66a52db85948f13d52feac6b197306e160b9898d2c154e6de"
+    },
+    {
+      "slot": "down-6",
+      "path": "views/back_3quarter_ne/down/down-6.png",
+      "encodedSha256": "cf0d459770f913ebdae09853b93c42b81adb3534c5b7da04ef7d29ca796c732b",
+      "decodedRgbaSha256": "a52d7c7ce2ba18d5ef5f22d220b9b538493df0b02aec3f10e67200c404b4b624"
+    },
+    {
+      "slot": "down-7",
+      "path": "views/back_3quarter_ne/down/down-7.png",
+      "encodedSha256": "d1c5f54385b13536a9a5081a7172413bee2e658da9d8635f7eb8b3d8bc397c26",
+      "decodedRgbaSha256": "7016fd578235f620b1373b9932d00a6c0f5f5342f0ded0140f54d57ed3be348e"
+    },
+    {
+      "slot": "down-8",
+      "path": "views/back_3quarter_ne/down/down-8.png",
+      "encodedSha256": "726295ea22976653b21518fc7ecb68c05e2a22cec44405876e03afb59e08c8c4",
+      "decodedRgbaSha256": "83f8507809750810ebae2756a8073bb5599e2877da9b353ba0f87c36e83dd9e7"
+    },
+    {
+      "slot": "revive-1",
+      "path": "views/back_3quarter_ne/revive/revive-1.png",
+      "encodedSha256": "726295ea22976653b21518fc7ecb68c05e2a22cec44405876e03afb59e08c8c4",
+      "decodedRgbaSha256": "83f8507809750810ebae2756a8073bb5599e2877da9b353ba0f87c36e83dd9e7"
+    },
+    {
+      "slot": "revive-2",
+      "path": "views/back_3quarter_ne/revive/revive-2.png",
+      "encodedSha256": "810a21a6aa5bb773333e498e29387c45a29656f1f215666fe2159d3b88ff1b85",
+      "decodedRgbaSha256": "4bc58824e2094e257aadc5326e096d7ab428d7741c3c1a4e70a496faa356f4b9"
+    },
+    {
+      "slot": "revive-3",
+      "path": "views/back_3quarter_ne/revive/revive-3.png",
+      "encodedSha256": "19f6cca223660c76a165cfcb82a570adfb0ad1cc4fee470246b7161c6ba2c927",
+      "decodedRgbaSha256": "2144b092f9cc71e9169dac01cc42e377e2b5eec806181fc794d17022c5690510"
+    },
+    {
+      "slot": "revive-4",
+      "path": "views/back_3quarter_ne/revive/revive-4.png",
+      "encodedSha256": "0a8758c52c21206204d7f6a4e22a96af2259f683d2007499e3e174c9cd827456",
+      "decodedRgbaSha256": "bb38ff9df285086602df4a24a3baf232d5e1a9f59cd466d44ce2d718815e2883"
+    },
+    {
+      "slot": "revive-5",
+      "path": "views/back_3quarter_ne/revive/revive-5.png",
+      "encodedSha256": "c349fbeaa8bad55ff78b8f0198c6d7a07ef5c2215f2f5543e93280fe567b8ed5",
+      "decodedRgbaSha256": "6aed56330afced65ea75cc8f9920139e4f9a68180357cf0dbb9b5a7e90a04d69"
+    },
+    {
+      "slot": "revive-6",
+      "path": "views/back_3quarter_ne/revive/revive-6.png",
+      "encodedSha256": "c0d155d31cb74f7c6ee6e169168a98e13c6d950634ce0e58114cb25c7e172b8e",
+      "decodedRgbaSha256": "876d7cbc3ef1f1edf0559713c59ae0b1ea985b0ad1e8d32c67f93f2937ef1774"
+    },
+    {
+      "slot": "revive-7",
+      "path": "views/back_3quarter_ne/revive/revive-7.png",
+      "encodedSha256": "73ef069b71afdf6bf040794e2c34b5fb741f9d5cfcc9e60bd362703ae1ae9278",
+      "decodedRgbaSha256": "2073c4ed63a7baa87c7ca6b8df494277d352ac7e78c7ea21087a12799ca1e8e0"
+    },
+    {
+      "slot": "revive-8",
+      "path": "views/back_3quarter_ne/revive/revive-8.png",
+      "encodedSha256": "9d4a553dad71d431e1f437bffa3896e0c7a2f58fbef50bc5959c324c30765df5",
+      "decodedRgbaSha256": "7359cc8917a78ff0b3529d388337b801fc52492340ac67e72957eed288889f79"
+    }
+  ],
+  "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+  "contactSheetSha256": "a68fd04c66477e1fb4b99bba91c35b9f2829063814ea2eb92b9d7d8cfc35a393",
+  "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+  "gifSha256": "c80a097d14c945cf248bcbdf28c0d9e42467182d8914b8f173faa993c5051a07",
+  "gifDecodedFrameCount": 16,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "repairId": "driftfox-ko-proportion-normalization-v1"
+}

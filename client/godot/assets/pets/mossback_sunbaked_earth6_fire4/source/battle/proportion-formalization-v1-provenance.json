@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-formalization-current-v1",
+  "formId": "mossback_sunbaked_earth6_fire4",
+  "status": "staged-not-installed-owner-review-pending",
+  "assignedBaselineHead": "fb547f22",
+  "packagingObservedHead": "ea7873be",
+  "v4SnapshotHead": "39074550",
+  "lineage": [
+    {
+      "stage": "original-formal-production",
+      "description": "Existing formal 512px source-frame hashes and lean source archive remain authoritative for authored identity/action provenance.",
+      "sourceLedgerSha256": "207cb1e2776b5b5b8f2e25a828be65f2944066e9e6a2841d12b70959ff99d7ad",
+      "fullSourceFramesTrackedInGit": false,
+      "representativeIdleRawSheetsTracked": true
+    },
+    {
+      "stage": "current-live-formal-repairs",
+      "description": "The assigned live formal pixels already include the retained pre-despill restoration and all form-specific KO/down/revive repairs.",
+      "runtimeDigest": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+      "qualityRepairArtifacts": [
+        {
+          "path": "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+          "liveFormalSha256": "d9a00b3e7a9ec63b8979a79c77756e2c4692990a29f919d3bd45a40e24154324",
+          "stagedSha256": "d9a00b3e7a9ec63b8979a79c77756e2c4692990a29f919d3bd45a40e24154324",
+          "byteExact": true
+        },
+        {
+          "path": "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+          "liveFormalSha256": "c886cecad30674c40a8ada5011dbe6127e8cc7c606dc23c5add0dfbb190f3386",
+          "stagedSha256": "c886cecad30674c40a8ada5011dbe6127e8cc7c606dc23c5add0dfbb190f3386",
+          "byteExact": true
+        },
+        {
+          "path": "qa/battle/repairs/back_3quarter_ne-down-revive-v2.gif",
+          "liveFormalSha256": "265420022647b35917e2eba6ca709d844e54bedd439b4a5b06d0c8b76ce465c9",
+          "stagedSha256": "265420022647b35917e2eba6ca709d844e54bedd439b4a5b06d0c8b76ce465c9",
+          "byteExact": true
+        },
+        {
+          "path": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
+          "liveFormalSha256": "89b5cf82462c92b186f853b5444917513d45da7c21879f04ec40db699e9d396f",
+          "stagedSha256": "89b5cf82462c92b186f853b5444917513d45da7c21879f04ec40db699e9d396f",
+          "byteExact": true
+        },
+        {
+          "path": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
+          "liveFormalSha256": "6b2563237b12aad8943be82e6e28ea322c468a735e49ebc7e89881acac0a60a1",
+          "stagedSha256": "6b2563237b12aad8943be82e6e28ea322c468a735e49ebc7e89881acac0a60a1",
+          "byteExact": true
+        },
+        {
+          "path": "qa/battle/repairs/front_3quarter_sw-down-revive-v2.gif",
+          "liveFormalSha256": "189682f6d8a5e316c703278c430f9528254db23e252c26effc351df3855381a7",
+          "stagedSha256": "189682f6d8a5e316c703278c430f9528254db23e252c26effc351df3855381a7",
+          "byteExact": true
+        },
+        {
+          "path": "qa/battle/repairs/ko-expression-v1-before-after.png",
+          "liveFormalSha256": "dec63849fdb732b74495d5e33d4330c432fbeef1c1ccd747514467fc26a260bb",
+          "stagedSha256": "dec63849fdb732b74495d5e33d4330c432fbeef1c1ccd747514467fc26a260bb",
+          "byteExact": true
+        }
+      ]
+    },
+    {
+      "stage": "scale-normalized-v2-intent",
+      "description": "Geometry intent was measured from copied current 256px runtime frames; it is not a new generation.",
+      "artifact": ".run/blue_pet_battle_pack/scale_normalized_v2/scale-normalization-qc.json",
+      "artifactSha256": "1fc69ebfb64537f1b9bff11f4ffb3a1347931a0266a808e19cf8149e6fcdd8cd"
+    },
+    {
+      "stage": "b54152fe-reviewed-replay",
+      "description": "The reviewed merge replayed one positive isotropic scale plus one translation per complete view/action group and rejected the Blue single-frame proposal.",
+      "artifact": ".run/blue_pet_battle_pack/scale_normalized_v2/merge_b54152fe_v1/three-way-merge-report.json",
+      "artifactSha256": "1a446b4f87f08c712aeb3c9a7ccaf0d768617f1c174acfe9919692f1d370631a"
+    },
+    {
+      "stage": "formal-rebase-v4",
+      "description": "V4 replayed only the 194 conflict-free reviewed scale deltas; current formal won every down/revive and metadata path.",
+      "artifact": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/three-way-rebase-report.json",
+      "artifactSha256": "988362ed087b457927543ea8e313877739b94af8d19892965f8bea43f61e12f2"
+    },
+    {
+      "stage": "current-formalization-overlay",
+      "description": "All 64 replacement inputs matched live formal expected-before hashes at packaging time; all other runtime frames were preserved byte-for-byte.",
+      "runtimeDigestBefore": "87a5feba2fd27343aec73219c7deae0c80c6216d00b6969970c1fdfa1c79595d",
+      "runtimeDigestAfter": "94b2214e697782a961217dabbfe9201fd66c2fe6e8ba77ea9a5f1b0687f8fb26",
+      "frameLedger": "source/battle/proportion-formalization-v1-frame-ledger.json",
+      "frameLedgerSha256": "ce12c1f9a517e024df3899d88af7f345d2fd913b56f517e6e363fedccac9fd31"
+    }
+  ],
+  "sourceArtifacts": {
+    "v4Readme": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/README.md",
+      "sha256": "a37aa4e9b39f4bd3f9bb996a83e7aa6598c5801e0b566bbd0f0944c1a4d6ce90"
+    },
+    "v4BuildScript": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/build_rebase.py",
+      "sha256": "c921106970d8fd8d427718c2edc06f025c03caf8c9c60f1b889d220ec6d236a3"
+    },
+    "v4InstallationDiff": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/installation-diff.json",
+      "sha256": "a633a5ad67d7b8c5b1fe9ea6d311230fe602e5ebb6085f9ce8797beb72c7f2d1"
+    },
+    "v4StrictCheck": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/strict-check.json",
+      "sha256": "bae2aad0cee7915a4fd54ac88cc3f79bb4a7617bb3d8e33711fa9a8d82c4e0a1"
+    },
+    "priorReviewedBuildScript": {
+      "path": ".run/blue_pet_battle_pack/scale_normalized_v2/merge_b54152fe_v1/build_merge.py",
+      "sha256": "84d8b9899d2aabe1f5c036c9e940cfe7348d50c861c827bd49132eb2609a04f5"
+    },
+    "liveFormalActionMetadata": {
+      "path": "client/godot/assets/pets/mossback_sunbaked_earth6_fire4/action-bundle-meta.json",
+      "sha256": "84c3d9c5568c6447bfde1949a5a09bda63235500da4e051cea4ee7f9aa6c2b3c"
+    },
+    "liveFormalSourceLedger": {
+      "path": "client/godot/assets/pets/mossback_sunbaked_earth6_fire4/source/battle/source-ledger.json",
+      "sha256": "207cb1e2776b5b5b8f2e25a828be65f2944066e9e6a2841d12b70959ff99d7ad"
+    }
+  },
+  "actionWideTransforms": [
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frameCount": 8,
+      "scaleX": 1.408377,
+      "scaleY": 1.408377,
+      "translationX": -84.83770175,
+      "translationY": -100.05236500000001,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.408377,
+        "plannedFactor": 1.408377,
+        "xCorrection": -33.097,
+        "beforeMedianMaxDimRatio": 0.710037,
+        "afterMedianMaxDimRatio": 1.003717,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frameCount": 8,
+      "scaleX": 1.338308,
+      "scaleY": 1.338308,
+      "translationX": -74.837003,
+      "translationY": -82.88546000000002,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.338308,
+        "plannedFactor": 1.338308,
+        "xCorrection": -32.119,
+        "beforeMedianMaxDimRatio": 0.747212,
+        "afterMedianMaxDimRatio": 1.011152,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frameCount": 8,
+      "scaleX": 1.107647,
+      "scaleY": 1.107647,
+      "translationX": -34.62366725000001,
+      "translationY": -26.373514999999998,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.107647,
+        "plannedFactor": 1.107647,
+        "xCorrection": -21.045,
+        "beforeMedianMaxDimRatio": 0.884758,
+        "afterMedianMaxDimRatio": 0.988848,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frameCount": 8,
+      "scaleX": 1.381818,
+      "scaleY": 1.381818,
+      "translationX": -64.918159,
+      "translationY": -93.54541,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.381818,
+        "plannedFactor": 1.42328,
+        "xCorrection": -15.891,
+        "beforeMedianMaxDimRatio": 0.702602,
+        "afterMedianMaxDimRatio": 0.977695,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frameCount": 8,
+      "scaleX": 1.219178,
+      "scaleY": 1.219178,
+      "translationX": -57.099303500000005,
+      "translationY": -53.69861000000003,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.219178,
+        "plannedFactor": 1.219178,
+        "xCorrection": -28.651,
+        "beforeMedianMaxDimRatio": 0.820225,
+        "afterMedianMaxDimRatio": 1.007491,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frameCount": 8,
+      "scaleX": 1.213636,
+      "scaleY": 1.213636,
+      "translationX": -48.63744699999998,
+      "translationY": -52.34082000000001,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.213636,
+        "plannedFactor": 1.213636,
+        "xCorrection": -21.239,
+        "beforeMedianMaxDimRatio": 0.82397,
+        "afterMedianMaxDimRatio": 1.003745,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frameCount": 8,
+      "scaleX": 1.200275,
+      "scaleY": 1.200275,
+      "translationX": -54.14241874999999,
+      "translationY": -49.06737499999997,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.200275,
+        "plannedFactor": 1.200275,
+        "xCorrection": -28.807,
+        "beforeMedianMaxDimRatio": 0.816479,
+        "afterMedianMaxDimRatio": 0.981273,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frameCount": 8,
+      "scaleX": 1.213636,
+      "scaleY": 1.213636,
+      "translationX": -43.923810999999986,
+      "translationY": -52.34082000000001,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.213636,
+        "plannedFactor": 1.213636,
+        "xCorrection": -16.384,
+        "beforeMedianMaxDimRatio": 0.82397,
+        "afterMedianMaxDimRatio": 1.003745,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    }
+  ],
+  "honestyAssertions": {
+    "creativeGenerationPerformed": false,
+    "new512SourceFramesClaimed": false,
+    "runtimeToRuntimeResampleDeclared": true,
+    "anisotropicScalingUsed": false,
+    "runtimeMirroringUsed": false,
+    "blueManDragonChanged": false,
+    "downReviveFramesChanged": false,
+    "existingQualityRepairsPreserved": true,
+    "formalWritesDuringStaging": false,
+    "sharedInstallerOrToolModified": false
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

@@ -3,7 +3,7 @@
   "formId": "driftfox_mist_wind7_water3",
   "displayName": "雾风狐",
   "artStatus": "in_production",
-  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "productionScope": "formal_battle_two_view_v4_proportion_and_ko_scale_normalized_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -138,15 +138,67 @@
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+      "source/battle/ko-proportion-normalization-v1-manifest.json"
+    ],
+    "battleSourceLedger": "source/battle/source-ledger.json",
+    "battleSourceLedgerSha256": "8a5188d6b889f0c0926692942b9146e217bc14485aa233402eb44d469da6b4be",
+    "runtimeProportionFormalizationManifests": [
+      "source/battle/proportion-formalization-v1-provenance.json",
+      "source/battle/proportion-formalization-v1-frame-ledger.json"
+    ]
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
-    "identityBoardSha256": "eb22219573c923d948b79cf9217fcd357f30c1f62562912adbfec8555529903e"
+    "identityBoardSha256": "eb22219573c923d948b79cf9217fcd357f30c1f62562912adbfec8555529903e",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "8dc75f46af73033e7a29119d91f13c4557cc789c892164a08e96da79d26694d3",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "f2853e0b5a0e760409201eb66aca1cd73251d7ef538d70740d7bff59a5a41d48",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "41a2816df62fef3bf893ee147ce9a773b09742ebc4e12c0a76b5381ba9193642",
+    "battleProportionFormalizationBeforeAfter": "qa/battle/proportion-formalization-v1-before-after.png",
+    "battleProportionFormalizationBeforeAfterSha256": "252cbd1fc4af8af60569d434584e8840a2bd7cb930b62b18678b1c8dfd446443",
+    "battleProportionFormalizationProvenance": "source/battle/proportion-formalization-v1-provenance.json",
+    "battleProportionFormalizationProvenanceSha256": "a7fde878f53b87a523f83bc961a29cbf734bd8f838c15958415f53c2a8c2a319",
+    "battleProportionFormalizationFrameLedger": "source/battle/proportion-formalization-v1-frame-ledger.json",
+    "battleProportionFormalizationFrameLedgerSha256": "535509d361f98b0914cd15543f7a398c75ef67aca952c1219f89d16e53fb9c01",
+    "battleDownReviveContinuity": [
+      {
+        "view": "front_3quarter_sw",
+        "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+        "contactSheetSha256": "bb05c03e0994b3255d3e44505f280240462caf55ab2b911bc6b53829d2ab8c86",
+        "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+        "gifSha256": "2205a7ba0d86fd215659d5d07a3db65905b54fc38e950e928ec5c1f772edfbe0",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+        "sequenceManifestSha256": "7c15d407e53884933ff00a523879c1b19d203d20e82c867f82e373bb129887db",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+        "contactSheetSha256": "a68fd04c66477e1fb4b99bba91c35b9f2829063814ea2eb92b9d7d8cfc35a393",
+        "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+        "gifSha256": "c80a097d14c945cf248bcbdf28c0d9e42467182d8914b8f173faa993c5051a07",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+        "sequenceManifestSha256": "a4c30c178263998e4004ab716c27437bf181837703dd39ba62058df2787e4cbf",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      }
+    ],
+    "battleKoProportionNormalizationBeforeAfter": "qa/battle/repairs/ko-proportion-normalization-v1-before-after.png",
+    "battleKoProportionNormalizationBeforeAfterSha256": "70dfbaf9885f5c003c9676f137625ebcbd4484bca4c33d91c5c4801b71a52cee",
+    "battleKoProportionNormalizationManifest": "source/battle/ko-proportion-normalization-v1-manifest.json",
+    "battleKoProportionNormalizationManifestSha256": "9eb2331264cb46fe899660173c374fc4d0b30a52fff53e8aeb491f0a4168bb9f"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate.",
+  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。 V4 比例候选已在独立 staging 中按逐 SHA 前置正式化；未重生成 512 源帧，未改变 KO/down/revive 或既有颜色修复；runtime 关闭，owner review 待定。 雾风狐 down/revive 两视角共 32 帧使用同一 1.22x 等比预乘 alpha 重采样，修复复活结束缩小；未重生成动作，down-8/revive-1 仍逐字节一致，runtime 关闭，owner review 待定。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -160,7 +212,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "battle180_v4_proportion_and_ko_scale_normalized_static_self_review_passed_owner_pending",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -205,13 +257,504 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "73d7d9d501fef483cd669f707b6f5b6fc15ea923c4289dff3e1e2b68965b987f",
+    "bundleDigest": "932d6e3c12f6ca45dc8944520e83720691950de5c640f5ddbfb86d81b229f1c4",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "932d6e3c12f6ca45dc8944520e83720691950de5c640f5ddbfb86d81b229f1c4",
+    "minimumBattleRuntimeEdgeMargin": 11,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "battle180-pre-despill-restore-v1",
+        "runtimeFrameCount": 180,
+        "despillApplied": false,
+        "alphaExactFrameCount": 180,
+        "unexpectedChangedPixels": 0,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "runtime-proportion-formalization-current-v1",
+        "runtimeFrameCount": 180,
+        "replacementFrameCount": 130,
+        "preserveFrameCount": 50,
+        "protectedKoDownReviveFrameCount": 32,
+        "creativeGeneration": false,
+        "claimsFresh512SourceDerivation": false,
+        "existingColorAndKoRepairsPreserved": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "driftfox-ko-proportion-normalization-v1",
+        "runtimeFrameCount": 180,
+        "replacementFrameCount": 32,
+        "scaleX": 1.22,
+        "scaleY": 1.22,
+        "sourceClass": "reviewed-current-formal-256px-runtime",
+        "creativeGeneration": false,
+        "claimsFresh512SourceDerivation": false,
+        "down8Revive1ExactBothViews": true,
+        "runtimeDigestBefore": "f0e44d7aaa48361c5d49763034ea79d514b03d138e3a7f46bd613f8b060b2fd2",
+        "runtimeDigestAfter": "932d6e3c12f6ca45dc8944520e83720691950de5c640f5ddbfb86d81b229f1c4",
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ],
+    "despillApplied": false,
+    "restorationValidation": {
+      "alphaExactFrameCount": 180,
+      "unexpectedChangedPixels": 0
+    },
+    "minimumBattleRuntimeEdgeMarginAtAlpha8": 11,
+    "runtimeProportionFormalization": {
+      "id": "runtime-proportion-formalization-current-v1",
+      "runtimeDigestBefore": "b8886345cda8ec3a9aed352f20034ad4c80d2725af68bec93ddee8f59c4e9e3b",
+      "runtimeDigestAfter": "f0e44d7aaa48361c5d49763034ea79d514b03d138e3a7f46bd613f8b060b2fd2",
+      "replacementFrameCount": 130,
+      "preserveFrameCount": 50,
+      "protectedKoDownReviveFrameCount": 32,
+      "changedActionGroups": [
+        {
+          "view": "back_3quarter_ne",
+          "action": "attack",
+          "frameCount": 8,
+          "scaleX": 1.310345,
+          "scaleY": 1.310345,
+          "translationX": -32.18968000000001,
+          "translationY": -76.03452500000003,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.310345,
+            "plannedFactor": 1.384259,
+            "xCorrection": 7.862,
+            "beforeMedianMaxDimRatio": 0.722408,
+            "afterMedianMaxDimRatio": 0.946488,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "counter",
+          "frameCount": 8,
+          "scaleX": 1.480519,
+          "scaleY": 1.480519,
+          "translationX": -86.87980549999999,
+          "translationY": -117.72715499999998,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.480519,
+            "plannedFactor": 1.59893,
+            "xCorrection": -25.169,
+            "beforeMedianMaxDimRatio": 0.625418,
+            "afterMedianMaxDimRatio": 0.926421,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "defend",
+          "frameCount": 6,
+          "scaleX": 1.095238,
+          "scaleY": 1.095238,
+          "translationX": -37.392842999999985,
+          "translationY": -23.333309999999983,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.095238,
+            "plannedFactor": 1.095238,
+            "xCorrection": -24.643,
+            "beforeMedianMaxDimRatio": 0.913043,
+            "afterMedianMaxDimRatio": 1.006689,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "dodge",
+          "frameCount": 8,
+          "scaleX": 1.200902,
+          "scaleY": 1.200902,
+          "translationX": -29.13078999999999,
+          "translationY": -49.22098999999997,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.200902,
+            "plannedFactor": 1.200902,
+            "xCorrection": -3.603,
+            "beforeMedianMaxDimRatio": 0.816054,
+            "afterMedianMaxDimRatio": 0.986622,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "hurt",
+          "frameCount": 6,
+          "scaleX": 1.239099,
+          "scaleY": 1.239099,
+          "translationX": -21.39228324999999,
+          "translationY": -58.57925499999999,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.239099,
+            "plannedFactor": 1.239099,
+            "xCorrection": 9.913,
+            "beforeMedianMaxDimRatio": 0.742475,
+            "afterMedianMaxDimRatio": 0.916388,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "knockaway",
+          "frameCount": 8,
+          "scaleX": 1.280899,
+          "scaleY": 1.280899,
+          "translationX": -29.87080449999999,
+          "translationY": -68.82025499999997,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.280899,
+            "plannedFactor": 1.4651,
+            "xCorrection": 6.404,
+            "beforeMedianMaxDimRatio": 0.668896,
+            "afterMedianMaxDimRatio": 0.862876,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "skill",
+          "frameCount": 8,
+          "scaleX": 1.23913,
+          "scaleY": 1.23913,
+          "translationX": -33.15755750000001,
+          "translationY": -58.58685000000003,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.23913,
+            "plannedFactor": 1.334821,
+            "xCorrection": -2.478,
+            "beforeMedianMaxDimRatio": 0.749164,
+            "afterMedianMaxDimRatio": 0.929766,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "stagger",
+          "frameCount": 8,
+          "scaleX": 1.26765,
+          "scaleY": 1.26765,
+          "translationX": -51.597449999999995,
+          "translationY": -65.57425,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.26765,
+            "plannedFactor": 1.26765,
+            "xCorrection": -17.747,
+            "beforeMedianMaxDimRatio": 0.725753,
+            "afterMedianMaxDimRatio": 0.923077,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "walk",
+          "frameCount": 8,
+          "scaleX": 1.127,
+          "scaleY": 1.127,
+          "translationX": 11.3555,
+          "translationY": -31.11500000000001,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.127,
+            "plannedFactor": 1.127,
+            "xCorrection": 27.612,
+            "beforeMedianMaxDimRatio": 0.869565,
+            "afterMedianMaxDimRatio": 0.983278,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "attack",
+          "frameCount": 8,
+          "scaleX": 1.212766,
+          "scaleY": 1.212766,
+          "translationX": -27.154261500000004,
+          "translationY": -52.12767000000002,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.212766,
+            "plannedFactor": 1.409692,
+            "xCorrection": 0.0,
+            "beforeMedianMaxDimRatio": 0.709375,
+            "afterMedianMaxDimRatio": 0.8625,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "counter",
+          "frameCount": 8,
+          "scaleX": 1.317919,
+          "scaleY": 1.317919,
+          "translationX": -51.34103075,
+          "translationY": -77.890155,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.317919,
+            "plannedFactor": 1.46789,
+            "xCorrection": -9.884,
+            "beforeMedianMaxDimRatio": 0.68125,
+            "afterMedianMaxDimRatio": 0.903125,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "dodge",
+          "frameCount": 8,
+          "scaleX": 1.583333,
+          "scaleY": 1.583333,
+          "translationX": -109.24995500000001,
+          "translationY": -142.916585,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.583333,
+            "plannedFactor": 1.742222,
+            "xCorrection": -34.833,
+            "beforeMedianMaxDimRatio": 0.5625,
+            "afterMedianMaxDimRatio": 0.890625,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "hurt",
+          "frameCount": 6,
+          "scaleX": 1.450246,
+          "scaleY": 1.450246,
+          "translationX": -92.08419399999998,
+          "translationY": -110.31027,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.450246,
+            "plannedFactor": 1.450246,
+            "xCorrection": -34.806,
+            "beforeMedianMaxDimRatio": 0.634375,
+            "afterMedianMaxDimRatio": 0.925,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "knockaway",
+          "frameCount": 8,
+          "scaleX": 1.245902,
+          "scaleY": 1.245902,
+          "translationX": -34.90579000000001,
+          "translationY": -60.245990000000006,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.245902,
+            "plannedFactor": 1.431963,
+            "xCorrection": -3.115,
+            "beforeMedianMaxDimRatio": 0.684375,
+            "afterMedianMaxDimRatio": 0.85625,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "skill",
+          "frameCount": 8,
+          "scaleX": 1.640288,
+          "scaleY": 1.640288,
+          "translationX": -121.76262399999999,
+          "translationY": -156.87056,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.640288,
+            "plannedFactor": 1.748634,
+            "xCorrection": -40.187,
+            "beforeMedianMaxDimRatio": 0.571875,
+            "afterMedianMaxDimRatio": 0.94375,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "stagger",
+          "frameCount": 8,
+          "scaleX": 1.457426,
+          "scaleY": 1.457426,
+          "translationX": -106.97529000000003,
+          "translationY": -112.06937000000005,
+          "safeEdgeTranslationCorrection": [
+            0,
+            -1
+          ],
+          "scaleIntent": {
+            "factor": 1.457426,
+            "plannedFactor": 1.457426,
+            "xCorrection": -48.824,
+            "beforeMedianMaxDimRatio": 0.63125,
+            "afterMedianMaxDimRatio": 0.91875,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "walk",
+          "frameCount": 8,
+          "scaleX": 1.196947,
+          "scaleY": 1.196947,
+          "translationX": -53.238997,
+          "translationY": -48.25201499999997,
+          "safeEdgeTranslationCorrection": [
+            0,
+            0
+          ],
+          "scaleIntent": {
+            "factor": 1.196947,
+            "plannedFactor": 1.196947,
+            "xCorrection": -28.128,
+            "beforeMedianMaxDimRatio": 0.81875,
+            "afterMedianMaxDimRatio": 0.98125,
+            "changed": true
+          },
+          "sourceClass": "current-formal-256px-runtime-frames",
+          "creativeGeneration": false,
+          "mirroring": false
+        }
+      ],
+      "beforeAfterContact": "qa/battle/proportion-formalization-v1-before-after.png",
+      "beforeAfterContactSha256": "252cbd1fc4af8af60569d434584e8840a2bd7cb930b62b18678b1c8dfd446443",
+      "sourceLedger": "source/battle/source-ledger.json",
+      "sourceLedgerSha256": "1d38adf38e8773dc267ff6d8f365da0217b06c8102573dcdd198a2b09267ac7d",
+      "provenance": "source/battle/proportion-formalization-v1-provenance.json",
+      "provenanceSha256": "a7fde878f53b87a523f83bc961a29cbf734bd8f838c15958415f53c2a8c2a319",
+      "creativeGeneration": false,
+      "claimsFresh512SourceDerivation": false,
+      "formalWrites": false,
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending"
+    },
+    "runtimeKoProportionNormalization": {
+      "id": "driftfox-ko-proportion-normalization-v1",
+      "runtimeFrameCount": 180,
+      "replacementFrameCount": 32,
+      "scaleX": 1.22,
+      "scaleY": 1.22,
+      "sourceClass": "reviewed-current-formal-256px-runtime",
+      "creativeGeneration": false,
+      "claimsFresh512SourceDerivation": false,
+      "down8Revive1ExactBothViews": true,
+      "runtimeDigestBefore": "f0e44d7aaa48361c5d49763034ea79d514b03d138e3a7f46bd613f8b060b2fd2",
+      "runtimeDigestAfter": "932d6e3c12f6ca45dc8944520e83720691950de5c640f5ddbfb86d81b229f1c4",
+      "ownerVisualGate": "self_review_passed_owner_pending"
+    }
   }
 }

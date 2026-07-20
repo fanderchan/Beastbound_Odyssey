@@ -9,5 +9,16 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "runtimeProportionFormalization": {
+    "id": "runtime-proportion-formalization-current-v1",
+    "status": "static-geometry-and-frame-integrity-passed-owner-review-pending",
+    "frameCount": 8,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 11,
+    "creativeGeneration": false,
+    "claimsFresh512SourceDerivation": false,
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
 }

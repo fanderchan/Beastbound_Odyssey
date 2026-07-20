@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-formalization-current-v1",
+  "formId": "driftfox_mist_wind7_water3",
+  "status": "staged-not-installed-owner-review-pending",
+  "assignedBaselineHead": "fb547f22",
+  "packagingObservedHead": "ea7873be",
+  "v4SnapshotHead": "39074550",
+  "lineage": [
+    {
+      "stage": "original-formal-production",
+      "description": "Existing formal 512px source-frame hashes and lean source archive remain authoritative for authored identity/action provenance.",
+      "sourceLedgerSha256": "0e35e42bcf593aa0e72940ab2015cd1307a8456aa9919773336e3f3a8fab5e07",
+      "fullSourceFramesTrackedInGit": false,
+      "representativeIdleRawSheetsTracked": true
+    },
+    {
+      "stage": "current-live-formal-repairs",
+      "description": "The assigned live formal pixels already include the retained pre-despill restoration and all form-specific KO/down/revive repairs.",
+      "runtimeDigest": "b8886345cda8ec3a9aed352f20034ad4c80d2725af68bec93ddee8f59c4e9e3b",
+      "qualityRepairArtifacts": [
+        {
+          "path": "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
+          "liveFormalSha256": "9ca4cbad662b6b88b77180293e9cc807cf3027261d720834f34f34cfc94464a8",
+          "stagedSha256": "9ca4cbad662b6b88b77180293e9cc807cf3027261d720834f34f34cfc94464a8",
+          "byteExact": true
+        }
+      ]
+    },
+    {
+      "stage": "scale-normalized-v2-intent",
+      "description": "Geometry intent was measured from copied current 256px runtime frames; it is not a new generation.",
+      "artifact": ".run/blue_pet_battle_pack/scale_normalized_v2/scale-normalization-qc.json",
+      "artifactSha256": "1fc69ebfb64537f1b9bff11f4ffb3a1347931a0266a808e19cf8149e6fcdd8cd"
+    },
+    {
+      "stage": "b54152fe-reviewed-replay",
+      "description": "The reviewed merge replayed one positive isotropic scale plus one translation per complete view/action group and rejected the Blue single-frame proposal.",
+      "artifact": ".run/blue_pet_battle_pack/scale_normalized_v2/merge_b54152fe_v1/three-way-merge-report.json",
+      "artifactSha256": "1a446b4f87f08c712aeb3c9a7ccaf0d768617f1c174acfe9919692f1d370631a"
+    },
+    {
+      "stage": "formal-rebase-v4",
+      "description": "V4 replayed only the 194 conflict-free reviewed scale deltas; current formal won every down/revive and metadata path.",
+      "artifact": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/three-way-rebase-report.json",
+      "artifactSha256": "988362ed087b457927543ea8e313877739b94af8d19892965f8bea43f61e12f2"
+    },
+    {
+      "stage": "current-formalization-overlay",
+      "description": "All 130 replacement inputs matched live formal expected-before hashes at packaging time; all other runtime frames were preserved byte-for-byte.",
+      "runtimeDigestBefore": "b8886345cda8ec3a9aed352f20034ad4c80d2725af68bec93ddee8f59c4e9e3b",
+      "runtimeDigestAfter": "f0e44d7aaa48361c5d49763034ea79d514b03d138e3a7f46bd613f8b060b2fd2",
+      "frameLedger": "source/battle/proportion-formalization-v1-frame-ledger.json",
+      "frameLedgerSha256": "535509d361f98b0914cd15543f7a398c75ef67aca952c1219f89d16e53fb9c01"
+    }
+  ],
+  "sourceArtifacts": {
+    "v4Readme": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/README.md",
+      "sha256": "a37aa4e9b39f4bd3f9bb996a83e7aa6598c5801e0b566bbd0f0944c1a4d6ce90"
+    },
+    "v4BuildScript": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/build_rebase.py",
+      "sha256": "c921106970d8fd8d427718c2edc06f025c03caf8c9c60f1b889d220ec6d236a3"
+    },
+    "v4InstallationDiff": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/installation-diff.json",
+      "sha256": "a633a5ad67d7b8c5b1fe9ea6d311230fe602e5ebb6085f9ce8797beb72c7f2d1"
+    },
+    "v4StrictCheck": {
+      "path": ".run/blue_pet_battle_pack/formal_rebase_39074550_current_v4/strict-check.json",
+      "sha256": "bae2aad0cee7915a4fd54ac88cc3f79bb4a7617bb3d8e33711fa9a8d82c4e0a1"
+    },
+    "priorReviewedBuildScript": {
+      "path": ".run/blue_pet_battle_pack/scale_normalized_v2/merge_b54152fe_v1/build_merge.py",
+      "sha256": "84d8b9899d2aabe1f5c036c9e940cfe7348d50c861c827bd49132eb2609a04f5"
+    },
+    "liveFormalActionMetadata": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/action-bundle-meta.json",
+      "sha256": "37b1c493be39bc8c579ad465549aafbee74b8383fb61ba123448f27ade41a71a"
+    },
+    "liveFormalSourceLedger": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/battle/source-ledger.json",
+      "sha256": "0e35e42bcf593aa0e72940ab2015cd1307a8456aa9919773336e3f3a8fab5e07"
+    }
+  },
+  "actionWideTransforms": [
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frameCount": 8,
+      "scaleX": 1.310345,
+      "scaleY": 1.310345,
+      "translationX": -32.18968000000001,
+      "translationY": -76.03452500000003,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.310345,
+        "plannedFactor": 1.384259,
+        "xCorrection": 7.862,
+        "beforeMedianMaxDimRatio": 0.722408,
+        "afterMedianMaxDimRatio": 0.946488,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frameCount": 8,
+      "scaleX": 1.480519,
+      "scaleY": 1.480519,
+      "translationX": -86.87980549999999,
+      "translationY": -117.72715499999998,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.480519,
+        "plannedFactor": 1.59893,
+        "xCorrection": -25.169,
+        "beforeMedianMaxDimRatio": 0.625418,
+        "afterMedianMaxDimRatio": 0.926421,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frameCount": 6,
+      "scaleX": 1.095238,
+      "scaleY": 1.095238,
+      "translationX": -37.392842999999985,
+      "translationY": -23.333309999999983,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.095238,
+        "plannedFactor": 1.095238,
+        "xCorrection": -24.643,
+        "beforeMedianMaxDimRatio": 0.913043,
+        "afterMedianMaxDimRatio": 1.006689,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frameCount": 8,
+      "scaleX": 1.200902,
+      "scaleY": 1.200902,
+      "translationX": -29.13078999999999,
+      "translationY": -49.22098999999997,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.200902,
+        "plannedFactor": 1.200902,
+        "xCorrection": -3.603,
+        "beforeMedianMaxDimRatio": 0.816054,
+        "afterMedianMaxDimRatio": 0.986622,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frameCount": 6,
+      "scaleX": 1.239099,
+      "scaleY": 1.239099,
+      "translationX": -21.39228324999999,
+      "translationY": -58.57925499999999,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.239099,
+        "plannedFactor": 1.239099,
+        "xCorrection": 9.913,
+        "beforeMedianMaxDimRatio": 0.742475,
+        "afterMedianMaxDimRatio": 0.916388,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frameCount": 8,
+      "scaleX": 1.280899,
+      "scaleY": 1.280899,
+      "translationX": -29.87080449999999,
+      "translationY": -68.82025499999997,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.280899,
+        "plannedFactor": 1.4651,
+        "xCorrection": 6.404,
+        "beforeMedianMaxDimRatio": 0.668896,
+        "afterMedianMaxDimRatio": 0.862876,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frameCount": 8,
+      "scaleX": 1.23913,
+      "scaleY": 1.23913,
+      "translationX": -33.15755750000001,
+      "translationY": -58.58685000000003,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.23913,
+        "plannedFactor": 1.334821,
+        "xCorrection": -2.478,
+        "beforeMedianMaxDimRatio": 0.749164,
+        "afterMedianMaxDimRatio": 0.929766,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frameCount": 8,
+      "scaleX": 1.26765,
+      "scaleY": 1.26765,
+      "translationX": -51.597449999999995,
+      "translationY": -65.57425,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.26765,
+        "plannedFactor": 1.26765,
+        "xCorrection": -17.747,
+        "beforeMedianMaxDimRatio": 0.725753,
+        "afterMedianMaxDimRatio": 0.923077,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frameCount": 8,
+      "scaleX": 1.127,
+      "scaleY": 1.127,
+      "translationX": 11.3555,
+      "translationY": -31.11500000000001,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.127,
+        "plannedFactor": 1.127,
+        "xCorrection": 27.612,
+        "beforeMedianMaxDimRatio": 0.869565,
+        "afterMedianMaxDimRatio": 0.983278,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frameCount": 8,
+      "scaleX": 1.212766,
+      "scaleY": 1.212766,
+      "translationX": -27.154261500000004,
+      "translationY": -52.12767000000002,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.212766,
+        "plannedFactor": 1.409692,
+        "xCorrection": 0.0,
+        "beforeMedianMaxDimRatio": 0.709375,
+        "afterMedianMaxDimRatio": 0.8625,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frameCount": 8,
+      "scaleX": 1.317919,
+      "scaleY": 1.317919,
+      "translationX": -51.34103075,
+      "translationY": -77.890155,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.317919,
+        "plannedFactor": 1.46789,
+        "xCorrection": -9.884,
+        "beforeMedianMaxDimRatio": 0.68125,
+        "afterMedianMaxDimRatio": 0.903125,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frameCount": 8,
+      "scaleX": 1.583333,
+      "scaleY": 1.583333,
+      "translationX": -109.24995500000001,
+      "translationY": -142.916585,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.583333,
+        "plannedFactor": 1.742222,
+        "xCorrection": -34.833,
+        "beforeMedianMaxDimRatio": 0.5625,
+        "afterMedianMaxDimRatio": 0.890625,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frameCount": 6,
+      "scaleX": 1.450246,
+      "scaleY": 1.450246,
+      "translationX": -92.08419399999998,
+      "translationY": -110.31027,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.450246,
+        "plannedFactor": 1.450246,
+        "xCorrection": -34.806,
+        "beforeMedianMaxDimRatio": 0.634375,
+        "afterMedianMaxDimRatio": 0.925,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frameCount": 8,
+      "scaleX": 1.245902,
+      "scaleY": 1.245902,
+      "translationX": -34.90579000000001,
+      "translationY": -60.245990000000006,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.245902,
+        "plannedFactor": 1.431963,
+        "xCorrection": -3.115,
+        "beforeMedianMaxDimRatio": 0.684375,
+        "afterMedianMaxDimRatio": 0.85625,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frameCount": 8,
+      "scaleX": 1.640288,
+      "scaleY": 1.640288,
+      "translationX": -121.76262399999999,
+      "translationY": -156.87056,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.640288,
+        "plannedFactor": 1.748634,
+        "xCorrection": -40.187,
+        "beforeMedianMaxDimRatio": 0.571875,
+        "afterMedianMaxDimRatio": 0.94375,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frameCount": 8,
+      "scaleX": 1.457426,
+      "scaleY": 1.457426,
+      "translationX": -106.97529000000003,
+      "translationY": -112.06937000000005,
+      "safeEdgeTranslationCorrection": [
+        0,
+        -1
+      ],
+      "scaleIntent": {
+        "factor": 1.457426,
+        "plannedFactor": 1.457426,
+        "xCorrection": -48.824,
+        "beforeMedianMaxDimRatio": 0.63125,
+        "afterMedianMaxDimRatio": 0.91875,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frameCount": 8,
+      "scaleX": 1.196947,
+      "scaleY": 1.196947,
+      "translationX": -53.238997,
+      "translationY": -48.25201499999997,
+      "safeEdgeTranslationCorrection": [
+        0,
+        0
+      ],
+      "scaleIntent": {
+        "factor": 1.196947,
+        "plannedFactor": 1.196947,
+        "xCorrection": -28.128,
+        "beforeMedianMaxDimRatio": 0.81875,
+        "afterMedianMaxDimRatio": 0.98125,
+        "changed": true
+      },
+      "sourceClass": "current-formal-256px-runtime-frames",
+      "creativeGeneration": false,
+      "mirroring": false
+    }
+  ],
+  "honestyAssertions": {
+    "creativeGenerationPerformed": false,
+    "new512SourceFramesClaimed": false,
+    "runtimeToRuntimeResampleDeclared": true,
+    "anisotropicScalingUsed": false,
+    "runtimeMirroringUsed": false,
+    "blueManDragonChanged": false,
+    "downReviveFramesChanged": false,
+    "existingQualityRepairsPreserved": true,
+    "formalWritesDuringStaging": false,
+    "sharedInstallerOrToolModified": false
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

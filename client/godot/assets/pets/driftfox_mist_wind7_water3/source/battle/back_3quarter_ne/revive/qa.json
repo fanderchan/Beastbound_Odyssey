@@ -9,5 +9,14 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "runtimeKoProportionNormalization": {
+    "id": "driftfox-ko-proportion-normalization-v1",
+    "scale": 1.22,
+    "sharedAcrossDownAndRevive": true,
+    "minimumEdgeMargin": 11,
+    "minimumEdgeMarginAtAlpha8": 12,
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
 }

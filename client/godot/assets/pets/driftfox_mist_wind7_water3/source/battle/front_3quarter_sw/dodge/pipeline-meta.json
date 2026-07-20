@@ -173,7 +173,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "bc9e03c92d37b418f5dfd61738617d0580f98d708e72db8397ca92d464357be2",
-      "runtimeRgbaSha256": "bd0b7c31a7fc597724a682a181c2dbd15b49e98b996a4234b74e58b0dab4d806"
+      "runtimeRgbaSha256": "671d34a4dbaa98550b7c2b9520aa83e078fbccb0f0053ff4b1c696fd38f5c213",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "bd0b7c31a7fc597724a682a181c2dbd15b49e98b996a4234b74e58b0dab4d806",
+      "runtimeRgbaSha256BeforeProportionFormalization": "bd0b7c31a7fc597724a682a181c2dbd15b49e98b996a4234b74e58b0dab4d806"
     },
     {
       "slot": "dodge-2",
@@ -274,7 +276,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 7,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "0d0c0d8887a9c8b772acf1210c5858427c04a7c97b257a1feb9db38133f4328a",
-      "runtimeRgbaSha256": "dc6a28d1836c4b99455dc5251a37cfa5421e9cefa10233b0cc1b0860c83e56b2"
+      "runtimeRgbaSha256": "46137059f033121713155fcd61e5f6ecf9366aa93752baf43183970ca53f73c2",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "dc6a28d1836c4b99455dc5251a37cfa5421e9cefa10233b0cc1b0860c83e56b2",
+      "runtimeRgbaSha256BeforeProportionFormalization": "dc6a28d1836c4b99455dc5251a37cfa5421e9cefa10233b0cc1b0860c83e56b2"
     },
     {
       "slot": "dodge-3",
@@ -375,7 +379,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "681f6576d9a0d3acb1d088f4654b917fb45aca69bcdea1e3a11e9cb54adb8250",
-      "runtimeRgbaSha256": "bcc34aab6a255cfb7c14e969d847f14b54304a210112d4ae0aa3521fc5f1d623"
+      "runtimeRgbaSha256": "f4095d4a45f7f34e20f543954ae6ae2a02bfeaf0b5367e158805c3b965304439",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "bcc34aab6a255cfb7c14e969d847f14b54304a210112d4ae0aa3521fc5f1d623",
+      "runtimeRgbaSha256BeforeProportionFormalization": "bcc34aab6a255cfb7c14e969d847f14b54304a210112d4ae0aa3521fc5f1d623"
     },
     {
       "slot": "dodge-4",
@@ -476,7 +482,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 3,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "1e7f06f93004250f8f65774ef39a8c5da99001385786bdcf21a6e93def8ca6ee",
-      "runtimeRgbaSha256": "9d8f4572c8532b9380b0eadc5fc76185cc7e141053cc0243c14a86b2a52ddd71"
+      "runtimeRgbaSha256": "e203193b80ec470e848875fcb690b876956fcf5e569cd136ef57d600af01de28",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "9d8f4572c8532b9380b0eadc5fc76185cc7e141053cc0243c14a86b2a52ddd71",
+      "runtimeRgbaSha256BeforeProportionFormalization": "9d8f4572c8532b9380b0eadc5fc76185cc7e141053cc0243c14a86b2a52ddd71"
     },
     {
       "slot": "dodge-5",
@@ -577,7 +585,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 3,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "eadc88b4d527c35b4c207fbc6945365a2aac98e2b1dd60f230267d866f29e297",
-      "runtimeRgbaSha256": "e69e3a92e76cbed28eb9e4779fe7429c65ef56ebc10d9ce768524683d7515dab"
+      "runtimeRgbaSha256": "872199d29de0aa4499028cd7c00a60c2995302fa3c57177eba34ee8902c06eac",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "e69e3a92e76cbed28eb9e4779fe7429c65ef56ebc10d9ce768524683d7515dab",
+      "runtimeRgbaSha256BeforeProportionFormalization": "e69e3a92e76cbed28eb9e4779fe7429c65ef56ebc10d9ce768524683d7515dab"
     },
     {
       "slot": "dodge-6",
@@ -678,7 +688,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 3,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "5fc84a7258c8d5dd02b087091b036dd80b2a72c5468b2ebba3322f40d734f70a",
-      "runtimeRgbaSha256": "7e73f9c7e32a79a049c470fc6c03e8c67f0f1b652d74304bfe98d9d2234494bd"
+      "runtimeRgbaSha256": "8f37e97a9f4a380b17c30c999881b5f4a0353cd9164f481af4b6570208eb7460",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "7e73f9c7e32a79a049c470fc6c03e8c67f0f1b652d74304bfe98d9d2234494bd",
+      "runtimeRgbaSha256BeforeProportionFormalization": "7e73f9c7e32a79a049c470fc6c03e8c67f0f1b652d74304bfe98d9d2234494bd"
     },
     {
       "slot": "dodge-7",
@@ -779,7 +791,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 8,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "9a1910c119135016b8fd68b0f79091a145a8186daef3b565a34cb27275218410",
-      "runtimeRgbaSha256": "b285f3e8b21fb5467704310a90a26d84783d713d5b5f73728f67063489f9b839"
+      "runtimeRgbaSha256": "e9a87598fcea7c15f73ecada2c9924cb1f8451c5614c35967936357bcbc2668e",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "b285f3e8b21fb5467704310a90a26d84783d713d5b5f73728f67063489f9b839",
+      "runtimeRgbaSha256BeforeProportionFormalization": "b285f3e8b21fb5467704310a90a26d84783d713d5b5f73728f67063489f9b839"
     },
     {
       "slot": "dodge-8",
@@ -880,7 +894,34 @@
       "runtimeLowAlphaMagentaPixelsCleared": 5,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "40510a96e4338f8fbabef07b96b4019efd2b7e8983445e718dc5880c1376678c",
-      "runtimeRgbaSha256": "e91da1ed54aa15bd331de8f27be74b4fdf9759c10bdfedac9b6ec33cf58451c5"
+      "runtimeRgbaSha256": "6fbe43385697be11dd4f790dd29c2998a557abe08b84f3119c4a8732b7935f82",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "e91da1ed54aa15bd331de8f27be74b4fdf9759c10bdfedac9b6ec33cf58451c5",
+      "runtimeRgbaSha256BeforeProportionFormalization": "e91da1ed54aa15bd331de8f27be74b4fdf9759c10bdfedac9b6ec33cf58451c5"
     }
-  ]
+  ],
+  "runtimeProportionFormalization": {
+    "id": "runtime-proportion-formalization-current-v1",
+    "mode": "reviewed-action-wide-isotropic-runtime-resample",
+    "inputFrameSize": [
+      256,
+      256
+    ],
+    "outputFrameSize": [
+      256,
+      256
+    ],
+    "claimsFresh512SourceDerivation": false,
+    "creativeGeneration": false,
+    "mirrored": false,
+    "scaleX": 1.583333,
+    "scaleY": 1.583333,
+    "translationX": -109.24995500000001,
+    "translationY": -142.916585,
+    "safeEdgeTranslationCorrection": [
+      0,
+      0
+    ],
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
 }

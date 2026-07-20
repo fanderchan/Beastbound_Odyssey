@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "formId": "driftfox_mist_wind7_water3",
+  "repairId": "battle180-pre-despill-restore-v1",
+  "purpose": "fully restore the complete battle180 pre-despill archive after the heuristic edge tool was suspended",
+  "despillApplied": false,
+  "despillToolLoaded": false,
+  "despillToolInvoked": false,
+  "scope": {
+    "battleRuntimeFramesRestored": 180,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "restore": {
+    "archiveFrameCount": 180,
+    "framesDifferentBeforeRestore": 0,
+    "framesByteExactImmediatelyAfterRestore": 180,
+    "archiveRoot": ".run/art_batch_phase320/battle-alpha-despill-batch-g/driftfox_mist_wind7_water3/backup-before"
+  },
+  "continuity": {
+    "method": "same-view revive-1 is a byte copy of down-8",
+    "down8Revive1ByteExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "koLocalRgbRepair": null,
+  "thunderReviveSequence": null,
+  "validation": {
+    "battleFrameCount": 180,
+    "alphaExactAgainstExpectedSourceFrameCount": 180,
+    "byteExactUneditedFrameCount": 180,
+    "byteExactExpectedSourceFrameCount": 180,
+    "intendedKoRgbPixelsChanged": 0,
+    "intendedSequencePixelsChangedFromArchivedOriginal": 0,
+    "unexpectedChangedPixels": 0,
+    "changedRuntimeFrames": [],
+    "intendedSequenceFrames": []
+  },
+  "runtimeBundleDigestAfterRepair": "b8886345cda8ec3a9aed352f20034ad4c80d2725af68bec93ddee8f59c4e9e3b",
+  "downReviveExactRgbaAfterRepair": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "worldHashesBeforeAndAfterExact": true,
+  "koEnlargedEvidence": null,
+  "supersededRuntimeRepair": {
+    "repairId": "battle180-continuity-alpha-despill-v1",
+    "activeRuntimeArtifactRemoved": true,
+    "historicalWorkingEvidence": ".run/art_batch_phase320/battle-alpha-despill-batch-g/driftfox_mist_wind7_water3"
+  },
+  "ownerReviewStatus": "self_review_passed_owner_pending"
+}

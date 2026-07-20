@@ -165,15 +165,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 58,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        78,
-        118,
-        211,
+        65,
+        90,
+        229,
         243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 25,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "e77b8f528f2f0cea5b89c9d737fdbae7846c31ff1e19b3ee6e0f36dc5232ac7d",
-      "runtimeRgbaSha256": "fa58ae7211b2e7b9a8f1da7586b780e730f1159257f9c5a36737077896340fae"
+      "runtimeRgbaSha256": "e5de90af39d7b95575d82a944e705ad51c9d978937e98e696f2bbe0c71e52b96",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "fa58ae7211b2e7b9a8f1da7586b780e730f1159257f9c5a36737077896340fae",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
+        78,
+        118,
+        211,
+        243
+      ],
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "78ca5c264f3bf60baa1af47804fe8b97987afdf8242ad689dcff37152024d424",
+        "decodedRgbaSha256": "e5de90af39d7b95575d82a944e705ad51c9d978937e98e696f2bbe0c71e52b96",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-2",
@@ -266,15 +278,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 42,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        79,
-        131,
-        214,
+        68,
+        105,
+        232,
         243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 24,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "f79b9b140e8f792ebff11ac66206e5bacec9ff8f73a779b84f113c2a6937f75a",
-      "runtimeRgbaSha256": "60d640f4a3859f15c1fde36a162db10434504aa71cba8f5c39bb0c97389fb4e8"
+      "runtimeRgbaSha256": "4151f1c65514f1546decf53590563ad5b00533522176f363a99f1852aca3b41a",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "60d640f4a3859f15c1fde36a162db10434504aa71cba8f5c39bb0c97389fb4e8",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
+        79,
+        131,
+        214,
+        243
+      ],
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "20beb9565d18b0fa8c71365ee25ac550d39af06f9b3cee45892705fdc1edb0b1",
+        "decodedRgbaSha256": "4151f1c65514f1546decf53590563ad5b00533522176f363a99f1852aca3b41a",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-3",
@@ -367,15 +391,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 46,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        87,
-        147,
-        221,
+        76,
+        125,
+        240,
         243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 16,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b2fb06288783f65a37e394f001a88e735d3bb3ce5ccd4d41c3fc5c9aff6fea5f",
-      "runtimeRgbaSha256": "423118e194bbecee67f48411f0b0ad18d700a09827a37ab49a579ec5c32f3750"
+      "runtimeRgbaSha256": "e77197d11d29ad39a6ae45241019bd4cd5b6b9a6f3389e49c5b13ba9d1f148de",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "423118e194bbecee67f48411f0b0ad18d700a09827a37ab49a579ec5c32f3750",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
+        87,
+        147,
+        221,
+        243
+      ],
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "ee953b5dee605acce57522c6752acb7abefe2c9342c995a08969d58c96b80c81",
+        "decodedRgbaSha256": "e77197d11d29ad39a6ae45241019bd4cd5b6b9a6f3389e49c5b13ba9d1f148de",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-4",
@@ -468,15 +504,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 27,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
+        73,
+        142,
+        240,
+        245
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 7,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "ab4ae3d2b94c230ffb02926c679f548778860ae18f0f2b22940e8f411d690bc2",
+      "runtimeRgbaSha256": "10f77956f3902163d3b885cb55622bc95c0651f19c42ced6a026a7378b6f3305",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "dacef6a0c498fe2a5171e5b460dc317a9a4ad811cba41f0b0f7d63b2462a0518",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
         84,
         161,
         220,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 7,
-      "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "ab4ae3d2b94c230ffb02926c679f548778860ae18f0f2b22940e8f411d690bc2",
-      "runtimeRgbaSha256": "dacef6a0c498fe2a5171e5b460dc317a9a4ad811cba41f0b0f7d63b2462a0518"
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "811224034d2140cc5d747fecf0928d5207b0caddf864bce85c027b555755183a",
+        "decodedRgbaSha256": "10f77956f3902163d3b885cb55622bc95c0651f19c42ced6a026a7378b6f3305",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-5",
@@ -569,15 +617,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 27,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
+        50,
+        152,
+        223,
+        244
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 4,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "e9e8eb249011999a0debdf9957f283e92e62df4f8601983593d56abd2572a61c",
+      "runtimeRgbaSha256": "dd96b0fa69ab5aa66a52db85948f13d52feac6b197306e160b9898d2c154e6de",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "a3796ff9484e155c744dc9aa9b109bc9acfb833c99843a185ed1f1372f4de1de",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
         64,
         169,
         205,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 4,
-      "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "e9e8eb249011999a0debdf9957f283e92e62df4f8601983593d56abd2572a61c",
-      "runtimeRgbaSha256": "a3796ff9484e155c744dc9aa9b109bc9acfb833c99843a185ed1f1372f4de1de"
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "b4e787a131ab0fa1166c925684540d62d2d4cd0dc06cee941c67acb4a505eaa1",
+        "decodedRgbaSha256": "dd96b0fa69ab5aa66a52db85948f13d52feac6b197306e160b9898d2c154e6de",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-6",
@@ -670,15 +730,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 4,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
+        15,
+        178,
+        199,
+        244
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 11,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "5946cc90915380a9cb6e54d724f76eac0b791c9554d279aafe64c2f0b5bb2f2c",
+      "runtimeRgbaSha256": "a52d7c7ce2ba18d5ef5f22d220b9b538493df0b02aec3f10e67200c404b4b624",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "2c8f54fb0e68a3a0c2e069469731d81e07d3840c6e0f3e0bedba748f886e1203",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
         36,
         191,
         188,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 11,
-      "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "5946cc90915380a9cb6e54d724f76eac0b791c9554d279aafe64c2f0b5bb2f2c",
-      "runtimeRgbaSha256": "2c8f54fb0e68a3a0c2e069469731d81e07d3840c6e0f3e0bedba748f886e1203"
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "cf0d459770f913ebdae09853b93c42b81adb3534c5b7da04ef7d29ca796c732b",
+        "decodedRgbaSha256": "a52d7c7ce2ba18d5ef5f22d220b9b538493df0b02aec3f10e67200c404b4b624",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-7",
@@ -771,15 +843,27 @@
       "sourceLowAlphaMagentaPixelsCleared": 8,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
+        20,
+        190,
+        209,
+        243
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 8,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "e49821f8e4f8729088504c5c730b8430bae72663280355e4601b3ed4a91c3712",
+      "runtimeRgbaSha256": "7016fd578235f620b1373b9932d00a6c0f5f5342f0ded0140f54d57ed3be348e",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "4eda5fb33fc9d8547f70b0d3c639dc106727930051d58f23beda7a1d55a75d2c",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
         40,
         200,
         196,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 8,
-      "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "e49821f8e4f8729088504c5c730b8430bae72663280355e4601b3ed4a91c3712",
-      "runtimeRgbaSha256": "4eda5fb33fc9d8547f70b0d3c639dc106727930051d58f23beda7a1d55a75d2c"
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "d1c5f54385b13536a9a5081a7172413bee2e658da9d8635f7eb8b3d8bc397c26",
+        "decodedRgbaSha256": "7016fd578235f620b1373b9932d00a6c0f5f5342f0ded0140f54d57ed3be348e",
+        "scale": 1.22
+      }
     },
     {
       "slot": "down-8",
@@ -872,15 +956,50 @@
       "sourceLowAlphaMagentaPixelsCleared": 16,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
+        32,
+        165,
+        219,
+        244
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 15,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "ee525df9770dd4aeba7d2a516f2d607ec8672d8954809e554139aad2405d0b67",
+      "runtimeRgbaSha256": "83f8507809750810ebae2756a8073bb5599e2877da9b353ba0f87c36e83dd9e7",
+      "runtimeRgbaSha256BeforeKoProportionNormalization": "ea8b1a350b210cd02ff4a9cd7de70d1154435c93ec6fcc85837ee19532145967",
+      "runtimeVisibleBboxBeforeKoProportionNormalization": [
         51,
         180,
         201,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 15,
-      "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "ee525df9770dd4aeba7d2a516f2d607ec8672d8954809e554139aad2405d0b67",
-      "runtimeRgbaSha256": "ea8b1a350b210cd02ff4a9cd7de70d1154435c93ec6fcc85837ee19532145967"
+      "runtimeKoProportionNormalization": {
+        "encodedSha256": "726295ea22976653b21518fc7ecb68c05e2a22cec44405876e03afb59e08c8c4",
+        "decodedRgbaSha256": "83f8507809750810ebae2756a8073bb5599e2877da9b353ba0f87c36e83dd9e7",
+        "scale": 1.22
+      }
     }
-  ]
+  ],
+  "runtimeKoProportionNormalization": {
+    "id": "driftfox-ko-proportion-normalization-v1",
+    "mode": "action-family-wide-isotropic-premultiplied-runtime-resample",
+    "sourcePixelClass": "reviewed-current-formal-256px-runtime",
+    "inputFrameSize": [
+      256,
+      256
+    ],
+    "outputFrameSize": [
+      256,
+      256
+    ],
+    "scaleX": 1.22,
+    "scaleY": 1.22,
+    "translationX": -29.259999999999998,
+    "translationY": -53.89999999999999,
+    "sharedAcrossDownAndRevive": true,
+    "claimsFresh512SourceDerivation": false,
+    "creativeGeneration": false,
+    "mirrored": false,
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
 }

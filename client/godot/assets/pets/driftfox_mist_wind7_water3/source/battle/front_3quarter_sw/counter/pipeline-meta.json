@@ -173,7 +173,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 11,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b4ac7ae56866984af6e3424fd89ce38c334364ce994eeeb470eaba938033c35f",
-      "runtimeRgbaSha256": "789dece7435278b6361536d57be3eed167fe346ddc15b61b16c2bd475e2da046"
+      "runtimeRgbaSha256": "700a693d8d1521e8cde84dd2f368991c2115b6f821d6232c6466979cc07ad3bb",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "789dece7435278b6361536d57be3eed167fe346ddc15b61b16c2bd475e2da046",
+      "runtimeRgbaSha256BeforeProportionFormalization": "789dece7435278b6361536d57be3eed167fe346ddc15b61b16c2bd475e2da046"
     },
     {
       "slot": "counter-2",
@@ -274,7 +276,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 7,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "cfd843565a9fd0945fffad335222287f6741267eaf8de493b47296d602af5dfc",
-      "runtimeRgbaSha256": "595a146c5f576111aaa9b34678c25a43cd94a9b59f92dc872cf7916d374a271e"
+      "runtimeRgbaSha256": "7c79cf3a06b0ff188abdeebc9feff2f68d695a1bfeebe1f0bc232b08c5b69aa2",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "595a146c5f576111aaa9b34678c25a43cd94a9b59f92dc872cf7916d374a271e",
+      "runtimeRgbaSha256BeforeProportionFormalization": "595a146c5f576111aaa9b34678c25a43cd94a9b59f92dc872cf7916d374a271e"
     },
     {
       "slot": "counter-3",
@@ -375,7 +379,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "a1de9b60c04a4f8870d3af59ac867339a02ec202290e61c3ec15fe0b986354d5",
-      "runtimeRgbaSha256": "8bd97ec28de38aa27607a8a3ac399709b69ab7750ba743fc73b1750e8782cb15"
+      "runtimeRgbaSha256": "6d1f2d3a257480a5586489f88d183fea6c3a33e91e8380c9690b4761dd132d32",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "8bd97ec28de38aa27607a8a3ac399709b69ab7750ba743fc73b1750e8782cb15",
+      "runtimeRgbaSha256BeforeProportionFormalization": "8bd97ec28de38aa27607a8a3ac399709b69ab7750ba743fc73b1750e8782cb15"
     },
     {
       "slot": "counter-4",
@@ -476,7 +482,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 7,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "aa31754d2a62282991d4336b57ac093741885e349af6e481606bd84dd54a641f",
-      "runtimeRgbaSha256": "0f3b06ccd749ddca222c75dea74ba8fa83acd5a3ebdba032ffabe684469ed608"
+      "runtimeRgbaSha256": "cc06045328260a446863297d6dc9b1e533e96283cf1bc5bf4d29b356e3a676fb",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "0f3b06ccd749ddca222c75dea74ba8fa83acd5a3ebdba032ffabe684469ed608",
+      "runtimeRgbaSha256BeforeProportionFormalization": "0f3b06ccd749ddca222c75dea74ba8fa83acd5a3ebdba032ffabe684469ed608"
     },
     {
       "slot": "counter-5",
@@ -577,7 +585,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 7,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "be35dd20fae40917bcfe9a2961fd980c5c84275212912e94659b48b51a2b8d24",
-      "runtimeRgbaSha256": "a613890f2392507d627832e2f6cdeda5b7dfd6ef32f54941484b645ef7dc5965"
+      "runtimeRgbaSha256": "fb0b1f84681b9aa75ceb1e56a21c82b74e097410b4c1ee6f937c533c02c3fbdc",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "a613890f2392507d627832e2f6cdeda5b7dfd6ef32f54941484b645ef7dc5965",
+      "runtimeRgbaSha256BeforeProportionFormalization": "a613890f2392507d627832e2f6cdeda5b7dfd6ef32f54941484b645ef7dc5965"
     },
     {
       "slot": "counter-6",
@@ -678,7 +688,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 7,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "3dfff079c461991200db872056b953717e1014e56e36d594c6c9790fd59a741a",
-      "runtimeRgbaSha256": "1f0f24574dbb60ef1fa1d7f57e116da38802d159627dd66e3e26f0a2d9551b5e"
+      "runtimeRgbaSha256": "11a31d5c605e293ce259c950c2333a428f5a70bf39df47a0c7921983abe8d555",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "1f0f24574dbb60ef1fa1d7f57e116da38802d159627dd66e3e26f0a2d9551b5e",
+      "runtimeRgbaSha256BeforeProportionFormalization": "1f0f24574dbb60ef1fa1d7f57e116da38802d159627dd66e3e26f0a2d9551b5e"
     },
     {
       "slot": "counter-7",
@@ -779,7 +791,9 @@
       "runtimeLowAlphaMagentaPixelsCleared": 8,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "7df8a9ccc28fb7f3c308b52069cb673e938b78aa815291215c51aa1115ff6f5f",
-      "runtimeRgbaSha256": "2cf553db5c09f44dee0b99cf79d81d22b5be8263adc6cc5930da5c3f9f48a758"
+      "runtimeRgbaSha256": "11ac4fcb88121608336a6733ee13d17bdeaae294d7d76fa1a61ce7d911d40b2a",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "2cf553db5c09f44dee0b99cf79d81d22b5be8263adc6cc5930da5c3f9f48a758",
+      "runtimeRgbaSha256BeforeProportionFormalization": "2cf553db5c09f44dee0b99cf79d81d22b5be8263adc6cc5930da5c3f9f48a758"
     },
     {
       "slot": "counter-8",
@@ -880,7 +894,34 @@
       "runtimeLowAlphaMagentaPixelsCleared": 18,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "4ca10871092c7766974bd17efb5968d3a1021a98e0b2e7bcfbd6f1f65cea063b",
-      "runtimeRgbaSha256": "37f87da319e0eb416c1397c5f57509b8a1c60b60c29b3f8dc820f7bae4b2132b"
+      "runtimeRgbaSha256": "ee340f2d0ae0b881668f5001710a47f94698615d6df09f281f85c5935da1852a",
+      "runtimeRgbaSha256BeforeProportionFormalizationPipelineValue": "37f87da319e0eb416c1397c5f57509b8a1c60b60c29b3f8dc820f7bae4b2132b",
+      "runtimeRgbaSha256BeforeProportionFormalization": "37f87da319e0eb416c1397c5f57509b8a1c60b60c29b3f8dc820f7bae4b2132b"
     }
-  ]
+  ],
+  "runtimeProportionFormalization": {
+    "id": "runtime-proportion-formalization-current-v1",
+    "mode": "reviewed-action-wide-isotropic-runtime-resample",
+    "inputFrameSize": [
+      256,
+      256
+    ],
+    "outputFrameSize": [
+      256,
+      256
+    ],
+    "claimsFresh512SourceDerivation": false,
+    "creativeGeneration": false,
+    "mirrored": false,
+    "scaleX": 1.317919,
+    "scaleY": 1.317919,
+    "translationX": -51.34103075,
+    "translationY": -77.890155,
+    "safeEdgeTranslationCorrection": [
+      0,
+      0
+    ],
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
 }
