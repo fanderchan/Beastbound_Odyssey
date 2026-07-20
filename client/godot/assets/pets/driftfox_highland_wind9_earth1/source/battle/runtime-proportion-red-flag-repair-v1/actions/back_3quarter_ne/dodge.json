@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-red-flag-repair-v1",
+  "formalizationClass": "runtime-to-runtime-guarded-overlay",
+  "formId": "driftfox_highland_wind9_earth1",
+  "view": "back_3quarter_ne",
+  "action": "dodge",
+  "status": "static-geometry-and-frame-integrity-passed-owner-review-pending",
+  "runtimeInputFrameSize": [
+    256,
+    256
+  ],
+  "runtimeOutputFrameSize": [
+    256,
+    256
+  ],
+  "transform": {
+    "view": "back_3quarter_ne",
+    "action": "dodge",
+    "frameCount": 8,
+    "replacementFrames": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "repairScheme": "uniform_action_view_group",
+    "plannedFactors": [
+      1.4372,
+      1.4372,
+      1.4372,
+      1.4372,
+      1.4372,
+      1.4372,
+      1.4372,
+      1.4372
+    ],
+    "sharedTranslations": [
+      [
+        1,
+        0
+      ]
+    ],
+    "maximumRasterAnisotropy": 0.00697939,
+    "sourceClass": "reviewed-current-formal-256px-runtime",
+    "creativeGeneration": false,
+    "claimsFresh512CanonicalDerivation": false,
+    "mirroring": false,
+    "colorOperation": "none"
+  },
+  "frames": [
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "235c8a6ec94fa69e60db641080e2fe307ef3db46df88753f352a76cf9998843e",
+        "decodedRgbaSha256": "08f43a421d277854547576b04da1e4264c8e2a8b21bc4d6c20ad173702ba355a",
+        "decodedRawRgbaSha256": "279cea73a4b6c444f39920c2609aca098528496883a10e3d6e6630a1878ffcb1",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "c3d122543765f946c198e42cb03990352a41e94f72256bf4f6cc513a76dfe2e9",
+        "decodedRgbaSha256": "c10fb2b4454ea8e06e7d559913a110c7c3db40124542545890b4598c8d9479a6",
+        "decodedRawRgbaSha256": "8c88fe3e08ecd9956e95c086c2555d29cbc0859618e4c3e3c37b6472e8f4613f",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-1.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "ca9a29b43ed37db5013bc669bf9ef60b82c1b34e85f1e939834777488a9d0bb0",
+        "decodedRgbaSha256": "e94dfa014873126e2add687f433c5e5352fc9bd0fea78075dca9736586ee03bb",
+        "decodedRawRgbaSha256": "1fa668638cc7ed861467938c495b73277d6a46a501c59a1b00ed80070ac97a31",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "ad8ac011c20abfe32962b1aeac6649e27f63f689af0a7cbd5dfbd0799fdc3dd9",
+        "decodedRgbaSha256": "144a7bf3cf5947511cc877b40a8e80e979510cb2d80606a533337b389631ae37",
+        "decodedRawRgbaSha256": "236ee14a2a53b1526af8dc7f57d26392f0be87e0569b356be65faa0a8fee673d",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-2.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "33e999c74280d4f59f6da11b40c05bb7688e6d568b1ab45ee86b8ade1035bf62",
+        "decodedRgbaSha256": "291f5bd1a90b87865f20c69e3075e1ce3099bdaea2aea26021589b7b8711855d",
+        "decodedRawRgbaSha256": "c3435fd120eb886a17f09d835a15dcdefa03fbd4cbf99585a3ef5eb916754148",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "bc5a697ce8a0453ff2982e4e4e65e7aedb7df99f75832cef82985d28f16f5ab0",
+        "decodedRgbaSha256": "912576541633acb08c1742e6a6f5f60d00ca6a76d80fc049c0ad02dbf36fb7fd",
+        "decodedRawRgbaSha256": "b68c75bbf076706191637b4e2cccfbbae3978cd48f65a2f28ce213c42468c6e4",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-3.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "6c4df493537e6431260a95465f3b2d6de383f66e09f9c633c8b6f2395cc40eba",
+        "decodedRgbaSha256": "d448c0c51f91e8fbb11f0782f2aa1dc689ca502c07847b983aa493355d29d8a3",
+        "decodedRawRgbaSha256": "a0d25e0ff77f14d8f748f0365db46b1b1f9ccc60df3203766f146b896396b8a5",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "dee1bdcf4e03a57a270ba5fb11bd231478f1ecfe964d057e428b0c2d81773f0b",
+        "decodedRgbaSha256": "1956835f0704c78804ff0705a7e0885546470e003d46fed482124532716824a4",
+        "decodedRawRgbaSha256": "bb7ef85ca624c22c71f0126c8ba4a633f9ee2d4b34e91da7436eb27ee29f92cf",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-4.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "d132c73911afff6043428ee01cd071c53ea640c8de773f5453ec29c91f0bbe17",
+        "decodedRgbaSha256": "a16a2bf1cc0ccabe37f82960011c80f16c92952d1b08ec0c690725d72f9e0181",
+        "decodedRawRgbaSha256": "4407c4a34b0a656a268f1b0ac838e518b75c6b441591804ff5669cf33edc3f02",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "fad0d25d49a7aafb6f5b8734afe0574b2576089feacc8ec85ccae1d3afb4485c",
+        "decodedRgbaSha256": "58fdd93945a72d91a8d5b31e79e3219692757fc8248cc5f4fc8f78ba2b412136",
+        "decodedRawRgbaSha256": "119f8fd85483b3c01b209398cfb21aafd7c28080e2d8ebeb0809c91216d7d693",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-5.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "e98c3616002a40e4b09430389799b05ef6d9ae7917999eff5e9764ff7277363f",
+        "decodedRgbaSha256": "bd893f59867d83a23f8d30ab3350ac8eef8ffbca09fd0390aecdfccb357ec31a",
+        "decodedRawRgbaSha256": "6d647a47d2bc044a2efdb0e4ec6eda3c6877711418e0717c50f6535340b6b4f9",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "92fd966cf0886c4bd7abc429ca808bd1185147eea627fae55edc6ee48f1bb8ef",
+        "decodedRgbaSha256": "d8859f8c5450c96d07368c75bad7d7a3191200a4a991d42a89458f1032c63780",
+        "decodedRawRgbaSha256": "18f371d163f0c57c4e91a68eede04f26abfcc4440b052fdd2934755f7b913868",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-6.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "458f122416c27944177942d5f6ff0bec5fd7ecda553eeb74a99c2b7a4efeee6e",
+        "decodedRgbaSha256": "39131d03e83178e6b618e83f23ec10921a8bb286c1228d2b35ddc34a967f3e18",
+        "decodedRawRgbaSha256": "4f24fbc49f96a7ad5249cc967708b3823e6cd2041d27e93759319e15b2cc31a0",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "cfa69d8b8be7fe388fc12b82ce3690afa70408265fd4127aca727f8a6c78b91e",
+        "decodedRgbaSha256": "3b949f5f404753bda5560d1046718d50357f49b71d86a8c3278988938d70b603",
+        "decodedRawRgbaSha256": "4d8f174ddfaffc2b77293c915a0e0d9e0824511667a2a12ef2cd2679d73147ad",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-7.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "5738fdd9f1a9ab7b99649de28ac94b471c1ebbc90f0f09117c9155822f041347",
+        "decodedRgbaSha256": "332f2e32e42d57e19dc0176a25e7ca6e08bc73930bd596f5d12416c98891dffd",
+        "decodedRawRgbaSha256": "cd082b699f3d60696a835898466f4dd8fc73faef4b39da7034538d0a213d17e2",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "7617d7f71a5b4a40f4a8275135ca0f9df30b70a7f1c271ef7a0818297771d609",
+        "decodedRgbaSha256": "f72850d222f5f6a3241937b4025bdcee88b5e569da20f0a820a35e2618819d12",
+        "decodedRawRgbaSha256": "d58fe9030f210e95ccf79feaf9adeb6f924ea62658aecd0a699858b3ca715227",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_highland_wind9_earth1/views/back_3quarter_ne/dodge/dodge-8.png"
+      }
+    }
+  ],
+  "evidence": {
+    "view": "back_3quarter_ne",
+    "action": "dodge",
+    "affectedByRepair": true,
+    "frameCount": 8,
+    "fps": 12,
+    "loop": false,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 11,
+    "contactSheet": "qa/battle/actions/back_3quarter_ne/dodge-contact.png",
+    "contactSheetSha256": "6f4b7c03561f189411947c8eedda91ab3ae432621d52bd2be7317c72dcf04295",
+    "gif": "qa/battle/actions/back_3quarter_ne/dodge.gif",
+    "gifSha256": "ac63da8efb9f4104910a199926c18479dc6e4d4d2f4e6016bb21f7f817a42626",
+    "gifDecodedFrameCount": 8
+  },
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 24,
+    "mismatchCount": 24,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "creativeGeneration": false,
+  "claimsFresh512CanonicalDerivation": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

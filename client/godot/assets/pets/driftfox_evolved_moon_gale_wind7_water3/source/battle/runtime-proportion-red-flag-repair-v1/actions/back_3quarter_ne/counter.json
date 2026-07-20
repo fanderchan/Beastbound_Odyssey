@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-red-flag-repair-v1",
+  "formalizationClass": "runtime-to-runtime-guarded-overlay",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "view": "back_3quarter_ne",
+  "action": "counter",
+  "status": "static-geometry-and-frame-integrity-passed-owner-review-pending",
+  "runtimeInputFrameSize": [
+    256,
+    256
+  ],
+  "runtimeOutputFrameSize": [
+    256,
+    256
+  ],
+  "transform": {
+    "view": "back_3quarter_ne",
+    "action": "counter",
+    "frameCount": 8,
+    "replacementFrames": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "repairScheme": "uniform_action_view_group",
+    "plannedFactors": [
+      1.6477,
+      1.6477,
+      1.6477,
+      1.6477,
+      1.6477,
+      1.6477,
+      1.6477,
+      1.6477
+    ],
+    "sharedTranslations": [
+      [
+        -19,
+        0
+      ]
+    ],
+    "maximumRasterAnisotropy": 0.00861546,
+    "sourceClass": "reviewed-current-formal-256px-runtime",
+    "creativeGeneration": false,
+    "claimsFresh512CanonicalDerivation": false,
+    "mirroring": false,
+    "colorOperation": "none"
+  },
+  "frames": [
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-1.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "9878aa60b9d78739ad080efb12b5f65454da88a514f3fed3d643fb8df2199df0",
+        "decodedRgbaSha256": "3423741117cf002870e1fd05a66268de43c168e6eb514d1f6bd052f3b677dcc3",
+        "decodedRawRgbaSha256": "44f7d54570f815bf0f337049618f0cf13effacc36769386b39bd231996696a40",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "95485f9085c745f236c1ff7c30d2f8ea6f20035971ff7ccad130dabe4e867a9e",
+        "decodedRgbaSha256": "39479d750c44c96fc1864f878320a6e1e62c6adc17e41397cf129c570f54a78a",
+        "decodedRawRgbaSha256": "487433ff31757e40c18a6b231769a0a2c83719c85055b06ab904ce0f8a486b74",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-1.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-2.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "d124cd08c091099ad21824ab31fb5b23e66a2c6aabf1e5d51a8a33569f6199e3",
+        "decodedRgbaSha256": "30cfbc722f3158d690ca4120a846bfaa746ea2b1a89c4be76d24d7f8acb3488e",
+        "decodedRawRgbaSha256": "36e8fca2eec2b4ac13b25c4d05cfe017aadf9ffca41ad6a7eb91adb557b18c96",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "fbbd5637276a84af76794f6373b3fdebcf78982934cb30450dfbe50c5e1f3c21",
+        "decodedRgbaSha256": "efa82c13907d6a6c4520ff5ee4c5512cf29831b00f176b3c0dac2c891cb9cc05",
+        "decodedRawRgbaSha256": "15f790999cd28bb5725411c376c97046df24f932f50d018d312ee306ecd0c46c",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-2.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-3.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "eb1a3403deb5ad52eb1e7cd17eb795f02c195c03539f8cfc474379ddc90ffaf3",
+        "decodedRgbaSha256": "e3878ed0a5c4172da686493927160fae39f7661ec4fc6aab8e75e438af8380fa",
+        "decodedRawRgbaSha256": "856198e88976e15d855c07a26d5dc9628debf8cbcdc1018ecfd53fcf08c90fa1",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "6529fd9aff9494be25a027c4bfc70ee46bcf035e75d67bfe60be91b3362b098b",
+        "decodedRgbaSha256": "f37e850b1ea205fca192f99a437eda3fa3dc1d3ac5f144f6bdea2d6736aca1de",
+        "decodedRawRgbaSha256": "9e7e7ce8491e901bcd66644945dccb5189e13feb08365008aaada166021760d8",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-3.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-4.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "d10bd72c294c7cdcb60372259023ad92e819cf68df281fdec1cd835c7b30bcd4",
+        "decodedRgbaSha256": "1b68c92eafceb8f8f1b599696950b0581518483a97b09d1249c6f46a03eb2856",
+        "decodedRawRgbaSha256": "d5a4dd05cb7c47f1826387b95d4102a8838898a7a9939a9b011ee47ac54d2c6d",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "cd371ca3f1a3005f90c729dc3b9bac1e34c5a5481b33e40cb1dbdd991df9c4bb",
+        "decodedRgbaSha256": "9cb902f74121a515c951a9b0e5559d1dfeddad98c518e62acd73bf7fe3e95f56",
+        "decodedRawRgbaSha256": "98818042ffdd1296804b30035aea72fce53a8ea4fb83490d2e7eb7d7d4ea18e2",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-4.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-5.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "acd684ddd46840dce84607c90ab1b3ed5b07fa883b49271712613b5a9a6aa814",
+        "decodedRgbaSha256": "225a8e705f84fdf2b56200a1b7b885fe5d2a794ea94f64428f0252e297522ae2",
+        "decodedRawRgbaSha256": "0a72ae5375ee1906a04c166ca2b00e8ceee096648799be2055e9bea430dfde2b",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "a81a1c935055a83d7078ef0194e64113509aa3cb4bc9ea13077d9b8628a30cd8",
+        "decodedRgbaSha256": "570b2303f81326a28ac747228dbc8de43ce5de455aab8a497e757b66fba8ced2",
+        "decodedRawRgbaSha256": "f8a5038c24d6ff29466326db087cb6a6cbe1543b1904b31ee9d866a36e20923b",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-5.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-6.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "93532cd046ec49fea0ced8d81518e0558e90a136bbee4a3c8ab2c6fe4e2a7f5c",
+        "decodedRgbaSha256": "34cb1ad0b0fe45a83ba5994ef8ca918912bd2fc6bf2ce4f241fd464e1ee0bd94",
+        "decodedRawRgbaSha256": "ff31d5483b2c664fcc7e57e734f28818ef4b998f69ec4d480b0a12fe3af305c5",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "20afb42d4adb697e0bef23c820a952ac6ea11e89174e81983a5fe8a03d61b913",
+        "decodedRgbaSha256": "1c58b42272b9498b43abd3980b9bc1cc6302cdae8688fa8063bf5785ff684986",
+        "decodedRawRgbaSha256": "9ff784a47bd0c3e305cb019facebbd3429f052ccb44a3a88835692dd7ed8dfbd",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-6.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-7.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "8edfae5f1444b5dbf829819230e6c135adfbff2d0571aad111b2d4927fd846bc",
+        "decodedRgbaSha256": "694eef7ccb10a57d5a78f043b8dda717fc7014839c3a800e05a5c788bd585714",
+        "decodedRawRgbaSha256": "20c55d4c67c68130035bb7b6a47c7b2e6d2bd12499ca115650f285fe55556fd8",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "803fd62e1d0b79ec410bbeb760b5800343a76c7f07d4955c33be98fc7c9afdef",
+        "decodedRgbaSha256": "4ed65874d3ee94d385beb5b18916bc539a0219be6ea7d3e5608ef689fe0dcd20",
+        "decodedRawRgbaSha256": "d5a9e149073cdf7bff784d7a295ce0c3bb347d4b6f89ddf1de335754d1b5d68b",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-7.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/counter/counter-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/counter/counter-8.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "4e8f062fa696d7a77411bdd03675ab23d99ee9fff6191d418404fdecee028da0",
+        "decodedRgbaSha256": "20976a9f4ba7416e4821b5f2834f95acc3256916e5ebcf5571e9dcdb1c76b2bb",
+        "decodedRawRgbaSha256": "cf493d35f8c87201a638a9ffeffae76848e42e179b498dcf9d5b1a238d2be412",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "5d2ae1ad5526173c07aa9aa4eb3705a7e2d5ff0322520b27fa9148cf38d86c3c",
+        "decodedRgbaSha256": "8ee1ed978732f744a8b616daf4a34c8456fa941bbc21d1143baf1cc84d543ba6",
+        "decodedRawRgbaSha256": "d7d17e0bd9cc0a8c662b8a0c1aa4e142b17568beeb0364751491b2cd2b4dbc4e",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/counter/counter-8.png"
+      }
+    }
+  ],
+  "evidence": {
+    "view": "back_3quarter_ne",
+    "action": "counter",
+    "affectedByRepair": true,
+    "frameCount": 8,
+    "fps": 12,
+    "loop": false,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 11,
+    "contactSheet": "qa/battle/actions/back_3quarter_ne/counter-contact.png",
+    "contactSheetSha256": "49580027b32747c059641e030450248eec807d85b35a113205a1efac57d3f600",
+    "gif": "qa/battle/actions/back_3quarter_ne/counter.gif",
+    "gifSha256": "6223c4feb887ae17841e0cd3887e35d2a0c2ec461e97ea55933b06621260cdf8",
+    "gifDecodedFrameCount": 8
+  },
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 48,
+    "mismatchCount": 48,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "creativeGeneration": false,
+  "claimsFresh512CanonicalDerivation": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

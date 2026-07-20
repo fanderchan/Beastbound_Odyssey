@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-red-flag-repair-v1",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "status": "validated-runtime-overlay-owner-review-pending",
+  "runtimeDigestBefore": "584f8863beba9c221aaed73f1e1b80cb603efb27a9cfdd843dedd17374957258",
+  "runtimeDigestAfter": "1fbd3506a1b56b1482aae6f2b5d0455859341406f37a0828648249124e58393f",
+  "runtimeFrameCount": 180,
+  "replacementFrameCount": 48,
+  "preserveFrameCount": 132,
+  "protectedKoDownReviveFrameCount": 32,
+  "frameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+  "frameLedgerSha256": "ce4441ff1d60be42e188b90433ea1d8b8da05a51b66691da76d5fb71c2a8d81a",
+  "provenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+  "provenanceSha256": "e410ef0a7dc59632911576732bee8001281e13df89790f280b79a6c9d005d182",
+  "actionMetadata": [
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/back_3quarter_ne/attack.json",
+      "sha256": "e235d06dbe1e8607abae96068776092f5b831c6655d7ca403069b91dcbaf3ccd"
+    },
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/back_3quarter_ne/counter.json",
+      "sha256": "a2fba75dd19cce722c92096ef5f2df9f386732cf1725af343bc8304773c7a5d2"
+    },
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/back_3quarter_ne/knockaway.json",
+      "sha256": "8f3d8805561d7b3a2af397a39688faa2d64f82a7b8c3c239595d5adfb2b216cf"
+    },
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/front_3quarter_sw/attack.json",
+      "sha256": "5594213c373213e3e97b2cd9c8abe102d1f79ab00d661e1b9d710327c0412017"
+    },
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/front_3quarter_sw/counter.json",
+      "sha256": "62188930cbcc5d2f176e0d68025eeac7f34af2a39dde89f5cf93a47006cf4bc9"
+    },
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/front_3quarter_sw/knockaway.json",
+      "sha256": "b735775dcc88f8a2b245705ce484bfbac4ee46c262616451151b94285e3ed118"
+    }
+  ],
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 48,
+    "mismatchCount": 48,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "installationPolicy": {
+    "reviewedRuntimeRepairMayBeInstalled": true,
+    "historicalSourceDebtBlocksFreshCanonicalClaim": true,
+    "historicalSourceDebtDoesNotBlockThisRuntimeOverlay": true,
+    "future512ReconciliationRequired": true
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

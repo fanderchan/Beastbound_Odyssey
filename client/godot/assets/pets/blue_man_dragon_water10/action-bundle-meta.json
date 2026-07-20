@@ -3,7 +3,7 @@
   "formId": "blue_man_dragon_water10",
   "displayName": "蓝人龙",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_and_formal_two_view_pet_battle",
+  "productionScope": "formal_battle_two_view_runtime_proportion_repair_v1_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -114,7 +114,7 @@
     }
   },
   "battleVisual": {
-    "status": "static_self_review_passed_owner_pending",
+    "status": "runtime_proportion_repair_v1_static_self_review_passed_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -220,6 +220,101 @@
           "changedPixelCount": 140
         }
       ]
+    },
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeBundleDigest": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+    "bundleDigest": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+    "minimumBattleRuntimeEdgeMargin": 14,
+    "minimumBattleRuntimeEdgeMarginAtAlpha8": 14,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "runtime-proportion-red-flag-repair-v1",
+        "runtimeFrameCount": 180,
+        "replacementFrameCount": 3,
+        "preserveFrameCount": 177,
+        "protectedKoDownReviveFrameCount": 32,
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "existingColorAndKoSemanticsPreserved": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ],
+    "runtimeProportionRepair": {
+      "id": "runtime-proportion-red-flag-repair-v1",
+      "runtimeDigestBefore": "4757f69cd2c63b7264e8b4e49a5fe87d22a1efde66e6c0e86bb64738f8a31cdd",
+      "runtimeDigestAfter": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+      "replacementFrameCount": 3,
+      "preserveFrameCount": 177,
+      "protectedKoDownReviveFrameCount": 32,
+      "changedActionGroups": [
+        {
+          "view": "back_3quarter_ne",
+          "action": "knockaway",
+          "frameCount": 8,
+          "replacementFrames": [
+            6,
+            7,
+            8
+          ],
+          "repairScheme": "contiguous_tail_common_visual_mass_frames_6_to_8",
+          "plannedFactors": [
+            1.0081,
+            1.017,
+            1.4153
+          ],
+          "sharedTranslations": [
+            [
+              0,
+              0
+            ]
+          ],
+          "maximumRasterAnisotropy": 0.00263701,
+          "sourceClass": "reviewed-current-formal-256px-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512CanonicalDerivation": false,
+          "mirroring": false,
+          "colorOperation": "none"
+        }
+      ],
+      "sourceProvenanceDebt": {
+        "status": "unresolved",
+        "debtClass": "historical-512-source-to-current-runtime-parity-mismatch",
+        "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/qa/blue_tail_options/blue-source-runtime-parity-failure.json",
+        "auditSha256": "40a8c53bc92c36894783ac7f69accf6f7a12006c05e5fea81240875e359bfbde",
+        "framesChecked": 8,
+        "mismatchCount": 8,
+        "blocksFresh512CanonicalClaim": true,
+        "blocksReviewedRuntimeToRuntimeOverlay": false
+      },
+      "claimsFresh512CanonicalDerivation": false,
+      "formalWrites": false
     }
   },
   "worldVisual": {
@@ -285,6 +380,18 @@
       "sourceMetadata": "source/battle/<view>/source-meta.json",
       "pipelineMetadata": "source/battle/<view>/pipeline",
       "promptDirectory": "prompts/battle/<view>/<action>"
+    },
+    "battleSourceLedger": "source/battle/source-ledger.json",
+    "battleSourceLedgerSha256": "baad7fa3b7862c42b754dea3b59c4ca9e37bec546f7517f6209c6a38ead275de",
+    "historical512SourceDebt": {
+      "status": "unresolved",
+      "debtClass": "historical-512-source-to-current-runtime-parity-mismatch",
+      "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/qa/blue_tail_options/blue-source-runtime-parity-failure.json",
+      "auditSha256": "40a8c53bc92c36894783ac7f69accf6f7a12006c05e5fea81240875e359bfbde",
+      "framesChecked": 8,
+      "mismatchCount": 8,
+      "blocksFresh512CanonicalClaim": true,
+      "blocksReviewedRuntimeToRuntimeOverlay": false
     }
   },
   "evidence": {
@@ -303,8 +410,46 @@
     "battleTwoViewQc": "qa/battle/combined/two-view-12-actions-qc.json",
     "battleTwoViewQcSha256": "6938976a921d3f35b2c9f64d27fbd279e3c3acb5960d235a6608ebb1d59d9852",
     "battleFrontSourceMetaSha256": "0edb9446d64fb4c3da3fb1c9b7f16dbec9e08ecb9591b062f512d38af5fa96d8",
-    "battleBackSourceMetaSha256": "6f8d6fc54b84c8ca25135fe9a0e6259a63ddf7f84ecccba4941cc17795a234c3"
+    "battleBackSourceMetaSha256": "6f8d6fc54b84c8ca25135fe9a0e6259a63ddf7f84ecccba4941cc17795a234c3",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "18f34d6bd91488b001800af6ff93926a4cde22c8bc0e4968c82157ed1854c0c7",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "f2d6c693128bc57123208eebac798a1cf5da4cfb228e219e0e976f1c6cbc7cce",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "43df7f7bfcd25ac629a540b3ae84aabe7371328f1c570eaa21171b5acd1d2e28",
+    "runtimeProportionRepairBeforeAfter": "qa/battle/runtime-proportion-red-flag-repair-v1-before-after.png",
+    "runtimeProportionRepairBeforeAfterSha256": "bd3ce304440619e6bf79eb51ad0f943878f46b8d2191099517d0b38a1aa1e924",
+    "runtimeProportionRepairProvenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+    "runtimeProportionRepairProvenanceSha256": "edf42a8543664b4edb46580c907eaaf625599874f84020ff6974f4b47f0f2807",
+    "runtimeProportionRepairFrameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+    "runtimeProportionRepairFrameLedgerSha256": "d75935b0348151c65656cc12a7a7da7cebff70ae2797d808cf81524a1077d45d",
+    "battleDownReviveContinuity": [
+      {
+        "view": "front_3quarter_sw",
+        "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+        "contactSheetSha256": "66d6db8600613ecfb47e2b42732330d3f3cc048d1b5da8b7d25492bb38b9bcf2",
+        "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+        "gifSha256": "e6abf39d4807514315ff4ac0bc970a25fac9aa54d7d9a51182e903ce48363e0f",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+        "sequenceManifestSha256": "1ff203cb9e1603b37c6d4b7ec74e26dab318a4b2cd12db4d9fe3823af88c6e44",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+        "contactSheetSha256": "bc8d26e82a0ff33976c69d6dd4c744db228b277512ba39d15a9d96f7709250c4",
+        "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+        "gifSha256": "17a737c5206b06cf2f1d4acc0bc7d8cfa70ed4c938aa9c346f7de9967b257352",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+        "sequenceManifestSha256": "c52fd1ebcfe9d21e2c6a9311121af05799968eb2ded24f98bca9ccd37a2da95c",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      }
+    ]
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity, pet-body world true-8 idle/walk, and formal two-view 12-action battle frames are produced and statically self-reviewed. Owner review plus real Godot battle playback remain pending, so runtime stays disabled and artStatus stays in_production."
+  "notes": "Identity, pet-body world true-8 idle/walk, and formal two-view 12-action battle frames are produced and statically self-reviewed. Owner review plus real Godot battle playback remain pending, so runtime stays disabled and artStatus stays in_production. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。"
 }

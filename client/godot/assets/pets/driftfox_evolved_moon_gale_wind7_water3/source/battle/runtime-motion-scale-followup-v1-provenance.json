@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "repairId": "runtime-motion-scale-followup-v1",
+  "repairClass": "current-runtime-to-current-runtime-isotropic-motion-scale-overlay",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "status": "installed-runtime-overlay-owner-review-pending",
+  "lineage": [
+    {
+      "stage": "current-formal-runtime-authority",
+      "runtimeDigest": "2a64d6489cd725d67b0ebbdf8ea19bb2f032c324f5f6ced2d43a698223bb38c4"
+    },
+    {
+      "stage": "remaining-motion-scale-followup",
+      "description": "Positive isotropic scale only. Skill, dodge, stagger use one factor and one X translation per view/action; revive keeps frame 1 byte-exact and applies a monotonic frame 2-8 recovery scale.",
+      "runtimeDigest": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f",
+      "frameLedger": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
+      "frameLedgerSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90"
+    }
+  ],
+  "historical512SourceDebtRetained": true,
+  "freshCanonical512Claim": false,
+  "actionMetadata": [
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/skill.json",
+      "sha256": "6bff91f83468b0c4acccebf40451417efe45721d4a7752ee2163dd4b63b07738"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/dodge.json",
+      "sha256": "6c4f34b7c9dbb0e160d07fa6e3528194b587b96d60f4493c055f7564be74d8d7"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/stagger.json",
+      "sha256": "f59ecf237f82482e0fb43885572728737dfa9720238121ae4f4936b8710ec4fb"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/skill.json",
+      "sha256": "b3df7af83648e55406b8b662e627b2624aaad3fade99451a0e4d2097761a2b9d"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/dodge.json",
+      "sha256": "e44293ef89f5f7bea8c0399d01b38ae501801ac73f254e999c13c7501e69be8c"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/stagger.json",
+      "sha256": "1dd6186fbef83d056d0983d54556d8a33a1514eedb2092c06dce783f59528985"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/revive.json",
+      "sha256": "cf5ca0856847c52bd26e900294f30d9f0d6c2dcf4197e573666be16d4f10b77b"
+    },
+    {
+      "path": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/revive.json",
+      "sha256": "ca55216894899fa72178cb3a53674772907e8ba52aecbe651d17a458c503ce98"
+    }
+  ],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

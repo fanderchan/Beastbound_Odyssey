@@ -735,5 +735,79 @@
         "sourceFramesTracked": false
       }
     }
+  },
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigestBeforeRuntimeRepair": "584f8863beba9c221aaed73f1e1b80cb603efb27a9cfdd843dedd17374957258",
+  "runtimeBundleDigest": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f",
+  "runtimeRepairOverlays": [
+    {
+      "id": "runtime-proportion-red-flag-repair-v1",
+      "status": "installed-runtime-overlay-owner-review-pending",
+      "sourcePixelClass": "current-formal-256px-runtime",
+      "claimsFresh512CanonicalDerivation": false,
+      "creativeGeneration": false,
+      "mirroring": false,
+      "colorOperation": "none",
+      "replacementFrameCount": 48,
+      "preserveFrameCount": 132,
+      "protectedKoDownReviveFrameCount": 32,
+      "runtimeDigestBefore": "584f8863beba9c221aaed73f1e1b80cb603efb27a9cfdd843dedd17374957258",
+      "runtimeDigestAfter": "1fbd3506a1b56b1482aae6f2b5d0455859341406f37a0828648249124e58393f",
+      "repairManifest": "source/battle/runtime-proportion-red-flag-repair-v1-manifest.json",
+      "repairManifestSha256": "75a6e04e7734f80ced6500e9ca8f9f81d949882029244d78fbce109db50ceea0",
+      "frameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+      "frameLedgerSha256": "ce4441ff1d60be42e188b90433ea1d8b8da05a51b66691da76d5fb71c2a8d81a",
+      "provenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+      "provenanceSha256": "e410ef0a7dc59632911576732bee8001281e13df89790f280b79a6c9d005d182",
+      "sourceProvenanceDebt": {
+        "status": "unresolved",
+        "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+        "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+        "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+        "framesChecked": 48,
+        "mismatchCount": 48,
+        "blocksFresh512CanonicalClaim": true,
+        "blocksReviewedRuntimeToRuntimeOverlay": false
+      },
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending"
+    },
+    {
+      "id": "runtime-motion-scale-followup-v1",
+      "status": "installed-runtime-overlay-owner-review-pending",
+      "sourcePixelClass": "current-formal-256px-runtime",
+      "claimsFresh512CanonicalDerivation": false,
+      "creativeGeneration": false,
+      "mirroring": false,
+      "colorOperation": "none",
+      "replacementFrameCount": 62,
+      "preserveFrameCount": 118,
+      "protectedDownAndReviveFirstFrameCount": 18,
+      "runtimeDigestBefore": "2a64d6489cd725d67b0ebbdf8ea19bb2f032c324f5f6ced2d43a698223bb38c4",
+      "runtimeDigestAfter": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f",
+      "repairManifest": "source/battle/runtime-motion-scale-followup-v1-manifest.json",
+      "repairManifestSha256": "ee91f97af69e4834756f0a4c03c4d66281d0f73a5b19aaeeabcc3ca1a7f3ecc3",
+      "frameLedger": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
+      "frameLedgerSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90",
+      "provenance": "source/battle/runtime-motion-scale-followup-v1-provenance.json",
+      "provenanceSha256": "70100b0a268a97e32f2204c9368c6cebce6ff8081660a818f5d2ccf3175f31ed",
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending"
+    }
+  ],
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 48,
+    "mismatchCount": 48,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "runtimeToRuntimeOverlayPolicy": {
+    "allowedDespiteHistoricalSourceMismatch": true,
+    "doesNotSatisfyFull512SourceValidation": true,
+    "freshCanonical512ClaimForbiddenUntilDebtResolved": true
   }
 }

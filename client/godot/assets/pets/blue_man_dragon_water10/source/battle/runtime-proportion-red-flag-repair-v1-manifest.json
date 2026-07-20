@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-red-flag-repair-v1",
+  "formId": "blue_man_dragon_water10",
+  "status": "validated-runtime-overlay-owner-review-pending",
+  "runtimeDigestBefore": "4757f69cd2c63b7264e8b4e49a5fe87d22a1efde66e6c0e86bb64738f8a31cdd",
+  "runtimeDigestAfter": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+  "runtimeFrameCount": 180,
+  "replacementFrameCount": 3,
+  "preserveFrameCount": 177,
+  "protectedKoDownReviveFrameCount": 32,
+  "frameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+  "frameLedgerSha256": "d75935b0348151c65656cc12a7a7da7cebff70ae2797d808cf81524a1077d45d",
+  "provenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+  "provenanceSha256": "edf42a8543664b4edb46580c907eaaf625599874f84020ff6974f4b47f0f2807",
+  "actionMetadata": [
+    {
+      "path": "source/battle/runtime-proportion-red-flag-repair-v1/actions/back_3quarter_ne/knockaway.json",
+      "sha256": "816bfe1375e4f140bd3588582a157c3f78c5807c03b680b858af6e68f882d0f5"
+    }
+  ],
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-runtime-parity-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/qa/blue_tail_options/blue-source-runtime-parity-failure.json",
+    "auditSha256": "40a8c53bc92c36894783ac7f69accf6f7a12006c05e5fea81240875e359bfbde",
+    "framesChecked": 8,
+    "mismatchCount": 8,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "installationPolicy": {
+    "reviewedRuntimeRepairMayBeInstalled": true,
+    "historicalSourceDebtBlocksFreshCanonicalClaim": true,
+    "historicalSourceDebtDoesNotBlockThisRuntimeOverlay": true,
+    "future512ReconciliationRequired": true
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

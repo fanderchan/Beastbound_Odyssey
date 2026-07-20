@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "formalizationId": "runtime-proportion-red-flag-repair-v1",
+  "formalizationClass": "runtime-to-runtime-guarded-overlay",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "view": "back_3quarter_ne",
+  "action": "knockaway",
+  "status": "static-geometry-and-frame-integrity-passed-owner-review-pending",
+  "runtimeInputFrameSize": [
+    256,
+    256
+  ],
+  "runtimeOutputFrameSize": [
+    256,
+    256
+  ],
+  "transform": {
+    "view": "back_3quarter_ne",
+    "action": "knockaway",
+    "frameCount": 8,
+    "replacementFrames": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "repairScheme": "uniform_action_view_group",
+    "plannedFactors": [
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532,
+      1.4813084102149532
+    ],
+    "sharedTranslations": [
+      [
+        -7,
+        0
+      ]
+    ],
+    "maximumRasterAnisotropy": 0.00962389,
+    "sourceClass": "reviewed-current-formal-256px-runtime",
+    "creativeGeneration": false,
+    "claimsFresh512CanonicalDerivation": false,
+    "mirroring": false,
+    "colorOperation": "none"
+  },
+  "frames": [
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "04b46717f2aeb5a216bdbc86a9d7ef59fe2b03dd25cea2a07aaf4d101f24aadd",
+        "decodedRgbaSha256": "fa35be777d9e9cd23e4b7257609e9775e75d41643746b01e5214d686c61c1d5f",
+        "decodedRawRgbaSha256": "e9b37dcbe69e63513cbcb8345552093962743cc6954b02d59f27a34b9eddbd75",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "4a8c60ff10fc154caf4898420caf54584f22d5c3736e0b3268b89bced7c8da10",
+        "decodedRgbaSha256": "c6839111b51c28f3c94aef584ae303f3e362a87723a0135e712c96577e34df90",
+        "decodedRawRgbaSha256": "75aef1a16a7121ce00bd84d0148469538e97d776b8560d11e39ca99db817644e",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-1.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "abbaea5e35da1678f199da07b6b4bf8de9f1503b081b85bf92de56a8c2175344",
+        "decodedRgbaSha256": "5d22a8871033af09ff44788827a30e7f0ec86528f164291d0383edb6c6565b79",
+        "decodedRawRgbaSha256": "2ba1ddb6e5c4b63a29c2ac47cb9291e105a1b1bebc4c283eee6092dbc1124649",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "59d4d383bd32c4c68bee4c6c14fec246fc48a9dbf68bbfe6f6c0dd955c8104cd",
+        "decodedRgbaSha256": "9434c826375259d8b8cc2a9be4aa56d2691e564208df89bc79fffd1d49476597",
+        "decodedRawRgbaSha256": "a60459e6de9fadbf2c88ff10ad11e582c6039be6ace57c7c1e87c8dac002be88",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-2.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "6966f8a219059230ca7eb434b01ca93e9aa24855e0139c08c89d32a68ec9b097",
+        "decodedRgbaSha256": "cae9a622409772e6156dbc67a32c7e4a3ce266451b3c13e0ce43f570ab9e1393",
+        "decodedRawRgbaSha256": "0dffcf8e4ed78ea9c927e630ee355173c6932f1f0db078149d386eb83077685a",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "752bf9941fec96ce305021806e1fdc025de69ad79ae6be2f9be9c16b44ce612d",
+        "decodedRgbaSha256": "e86a669af6b7be065f648ae62d5c75b1c3c568a92f0236f5f6b00b3e8228b005",
+        "decodedRawRgbaSha256": "616a3df43201d0ed1a60043dfa93130ab6ae1e26f861e1d3d2eb01d98e259f4d",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-3.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "aac139185b6b8f52ddfa2ef2a9cff1b101829874e189ca1d09290c9ec50e0873",
+        "decodedRgbaSha256": "ee2cc1a900f8c641afa511c1a26ad6239d9c9b5f8a54778883d576589b2ede5e",
+        "decodedRawRgbaSha256": "7067e231236e25b3fbf57423e92a4dd93595503f6d4c318448321ca2c8a12435",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "85643a72d3c80db6dfb781b93579f829393a549c15781628ed544e1b9226f22b",
+        "decodedRgbaSha256": "41e2b999edd6e97ab2688e6ca2aa77d9e50f03650a168409751883061d405500",
+        "decodedRawRgbaSha256": "37c0c6d569361f6e23a4abc72f448a38d85bcf48e751b0692cb3b81f16ddc3b4",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-4.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "d8a24d605e8b199cdd6e212c9f288e65c783b4eef847b29274ff6dbccbf8a49f",
+        "decodedRgbaSha256": "f92faea133492c3e26151845f807b77f989fc5e1533e4941faed7d04cfb74ccb",
+        "decodedRawRgbaSha256": "d461ae06291ca3be11ff26589903a2195356d85757f2ff7903241aa7ed750b27",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "5039011afd4e61ae0531daa5078beb90017e1ad966599c7d949f1079442376f1",
+        "decodedRgbaSha256": "7341ed58b52984cafc44d9181fd0af4dc75ff53c919eb11160688bc918a41c64",
+        "decodedRawRgbaSha256": "0ed60281235023124e3c0e74d9233e9d9c4ccbf7ee0824933b5fd9bd545ca8a2",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-5.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "13ef75a2d51797ae4d0286b35dd75021588fd653714a484133503a7506d506c9",
+        "decodedRgbaSha256": "2de438dd09d3f3fe3eea3aa59c8cf8d379e10e27777e00d66b09be07f1962d17",
+        "decodedRawRgbaSha256": "f047ec6d9a71a04c6f2f513ea58649c3894ab12965d4557ca918c206e81c828e",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "d299e382b163f8e9046dd2d5be255b50942cee7276fbfa43a4c48d6a3e43ff5d",
+        "decodedRgbaSha256": "19fe9b4ff3519ae18a4f78ed146fa19dbfbd518ed0e1cff9fd4636a45451e580",
+        "decodedRawRgbaSha256": "3191a7688b75cefa3ce8b817b30f3e3d49c5e54c570debffa0545e0912d287c3",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-6.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "78080b3cc124b8d8a64cc31901955d31b49e606db1e9880d9d8bd3a6fb2a97fb",
+        "decodedRgbaSha256": "eb691bfc7a7197900e019f432a225f0f9f76d55ff91ccbf413e7c6411b042dcc",
+        "decodedRawRgbaSha256": "5b593cecc041ca5e3059e651f7bb410faf4af4c558582c7d09813c7379cb603e",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "1e5e3afcb2fe8293ac79d88d7041dad964ec3d1e009453d145caf083cd34ae8e",
+        "decodedRgbaSha256": "af355aa8c9d8982e513127c8faae3142edc08984a7cafdd101aab455bd8a75a0",
+        "decodedRawRgbaSha256": "b32743d8f06685ec1f91125597f5ffa93f1ed5aad42337a0332f210a7f773183",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-7.png"
+      }
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "operation": "replace",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "expectedBeforeGuard": {
+        "required": true,
+        "encodedSha256": "c46ec5b89eeac7ff98e690e3144e6fa5bc7081f17eecb1c6a2540aa1160fba4b",
+        "decodedRgbaSha256": "dac16cd4f32bfb3de5ccf2710b43062ca2cfa36f7eb10cee3900befc4a2218ed",
+        "decodedRawRgbaSha256": "7482cef218efb1167d033f69763f90a9b6fa3484f16ed6fd799acc81cf37291d",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "candidateAfter": {
+        "encodedSha256": "4e6fb63615b9cb91ccb9028897fa6eee6debd189b599d2a74308c17713102c1a",
+        "decodedRgbaSha256": "846b3b2db644efc2278ede09048d8e36a7b8ab950e671ab1da7af089ce1f740c",
+        "decodedRawRgbaSha256": "cc2bd9f29bacc63cf9364e325e0bc52ef79ba0b9f6fc50b3a51a410523ac2d8e",
+        "width": 256,
+        "height": 256,
+        "mode": "RGBA"
+      },
+      "sourceLineage": {
+        "sourceClass": "reviewed-current-formal-256px-runtime-repair",
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "mirrored": false,
+        "colorOperation": "none",
+        "reviewedCandidatePath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/candidate/driftfox_evolved_moon_gale_wind7_water3/views/back_3quarter_ne/knockaway/knockaway-8.png"
+      }
+    }
+  ],
+  "evidence": {
+    "view": "back_3quarter_ne",
+    "action": "knockaway",
+    "affectedByRepair": true,
+    "frameCount": 8,
+    "fps": 12,
+    "loop": false,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 11,
+    "contactSheet": "qa/battle/actions/back_3quarter_ne/knockaway-contact.png",
+    "contactSheetSha256": "aa310da67c3f6a01f03c0c60ea094219fb8f7108de7b1ff05342379b79f7026e",
+    "gif": "qa/battle/actions/back_3quarter_ne/knockaway.gif",
+    "gifSha256": "4ec43eb14a786e20fa70e44b60ffb269c76d3bac7af9420c7f11d40f9a734982",
+    "gifDecodedFrameCount": 8
+  },
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 48,
+    "mismatchCount": 48,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "creativeGeneration": false,
+  "claimsFresh512CanonicalDerivation": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

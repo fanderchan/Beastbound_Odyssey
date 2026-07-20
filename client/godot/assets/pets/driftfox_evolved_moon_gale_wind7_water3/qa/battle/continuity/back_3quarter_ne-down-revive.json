@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "repairId": "runtime-motion-scale-followup-v1",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "view": "back_3quarter_ne",
+  "sequence": "down-1..8 then revive-1..8",
+  "frameCount": 16,
+  "down8Revive1EncodedExact": true,
+  "down8Revive1DecodedRgbaExact": true,
+  "slots": [
+    {
+      "slot": "down-1",
+      "path": "views/back_3quarter_ne/down/down-1.png",
+      "encodedSha256": "5b88e21d0074947ec0793a2f3fd180944aa6cb36b9b418fd78b567f4699c27fd",
+      "decodedRgbaSha256": "ebb753d069dfbf0cb0f0b42164d47a282410311ac7b60839744df4a74a1c58e8"
+    },
+    {
+      "slot": "down-2",
+      "path": "views/back_3quarter_ne/down/down-2.png",
+      "encodedSha256": "39a542efc2e4ef53e3906092f84190c821beb9608d7ca889d280e7a3771d92ad",
+      "decodedRgbaSha256": "7d4d65146d7240bce18ae445f18e4b08b06a6140d17dbf18637d6c49f63f2525"
+    },
+    {
+      "slot": "down-3",
+      "path": "views/back_3quarter_ne/down/down-3.png",
+      "encodedSha256": "7bf94b9ccd4a9883f8eb5368d4d6e7479c0980c3d65f39dcf5c1b961258e7787",
+      "decodedRgbaSha256": "e5f0b7a09a8547c4048ace516beefe16d384820e3030556e8be89ea2419d38bb"
+    },
+    {
+      "slot": "down-4",
+      "path": "views/back_3quarter_ne/down/down-4.png",
+      "encodedSha256": "bbe31413e4dfe0bcb955c8ac6e1ff70a7b20524343881c77586d0915d9ceb8aa",
+      "decodedRgbaSha256": "cbbf384738e5603fc7eb459433ebc4c970434d350e0f63569b35e950a929a2b5"
+    },
+    {
+      "slot": "down-5",
+      "path": "views/back_3quarter_ne/down/down-5.png",
+      "encodedSha256": "f447d7fc75c9d5ddf67659e35f8dab887f7e25d852987d1debf377e5c4ecaaf0",
+      "decodedRgbaSha256": "ab3e4ae7c18854dca4200acdf83e712d1095905d22fd7de86ed94f484c54dc83"
+    },
+    {
+      "slot": "down-6",
+      "path": "views/back_3quarter_ne/down/down-6.png",
+      "encodedSha256": "9b86fce2f837d65e630d2d08ef8f9bc79490032f007eb57d57ede0aebf104e27",
+      "decodedRgbaSha256": "1af05f14dc7512b11573be7304d6849df401651ededc00b43ede278672126457"
+    },
+    {
+      "slot": "down-7",
+      "path": "views/back_3quarter_ne/down/down-7.png",
+      "encodedSha256": "a7ad6f065bd61a03cd6e21ce24de40b1b34786ed4a668a1730e3cbe16f77a04e",
+      "decodedRgbaSha256": "413ea26199f6a9f472783e04bf8152035cea9a2467bd4e60fc4a296d51a3fa5c"
+    },
+    {
+      "slot": "down-8",
+      "path": "views/back_3quarter_ne/down/down-8.png",
+      "encodedSha256": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
+      "decodedRgbaSha256": "8e3c2a03fe36126b6e02c8a1a3cdb24718723e90f61dc60bc7b5f7adaf6cd9c1"
+    },
+    {
+      "slot": "revive-1",
+      "path": "views/back_3quarter_ne/revive/revive-1.png",
+      "encodedSha256": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
+      "decodedRgbaSha256": "8e3c2a03fe36126b6e02c8a1a3cdb24718723e90f61dc60bc7b5f7adaf6cd9c1"
+    },
+    {
+      "slot": "revive-2",
+      "path": "views/back_3quarter_ne/revive/revive-2.png",
+      "encodedSha256": "27bdd84bf70c9cbad079e807e487c7bd84a932a3fe5fa2fa7827a296d3bd33c3",
+      "decodedRgbaSha256": "d92cf6a9049539850a610413858ca163c012618fa844190c0d38c14472ac0b0a"
+    },
+    {
+      "slot": "revive-3",
+      "path": "views/back_3quarter_ne/revive/revive-3.png",
+      "encodedSha256": "6b1b7468a9deee784f9e8f807f683faafa53d1f9b3487a8c42748ce5ea8782ec",
+      "decodedRgbaSha256": "b228cb34d380e364c9ccdd3b04852880c0ce51ca021e3a652474d97704c7704c"
+    },
+    {
+      "slot": "revive-4",
+      "path": "views/back_3quarter_ne/revive/revive-4.png",
+      "encodedSha256": "4fe2f372481d712e100ff121bd15c5e0a0cc974078eafec5be9c7590bdf672c4",
+      "decodedRgbaSha256": "98ed69aadda8adf5cc14e1a990c5733ccaf6c20644c1cb300a78caa93e3c1af2"
+    },
+    {
+      "slot": "revive-5",
+      "path": "views/back_3quarter_ne/revive/revive-5.png",
+      "encodedSha256": "97868b77ff8178a9e4699e2d1f86756b1dc6f8bdfd5004482e24b4f84ed16208",
+      "decodedRgbaSha256": "288cb00197ed20e9f83874603a7623cd3e3661ceba80c239d1b6abf5e40c701e"
+    },
+    {
+      "slot": "revive-6",
+      "path": "views/back_3quarter_ne/revive/revive-6.png",
+      "encodedSha256": "4675cae3af5878a6da1d625a5cdf36328be87e19e1a581034a153d423c88d796",
+      "decodedRgbaSha256": "4937eb09806e4d335a73f458488a28b5dda4765a9d96f197418a84aecfaf9260"
+    },
+    {
+      "slot": "revive-7",
+      "path": "views/back_3quarter_ne/revive/revive-7.png",
+      "encodedSha256": "1c369669000b5398cf13d3cee629b7ddf0b436ad3387805494f9a127571a4d05",
+      "decodedRgbaSha256": "9966d1ca92bd2f4dd18528552285915071682e774175d3fae6f4e52a7e206337"
+    },
+    {
+      "slot": "revive-8",
+      "path": "views/back_3quarter_ne/revive/revive-8.png",
+      "encodedSha256": "2217378a2b633c1366d436e3fedb1b0a8e63679274b0130e7514f0ef4bf6f518",
+      "decodedRgbaSha256": "6e4823bfd0b798512e9e3163b1005aa66b23d7e3bd341b9c6c10a88c0f9e8e3b"
+    }
+  ],
+  "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+  "contactSheetSha256": "3d976bf1a2d630ac5e9663164430b5d20e53ab19ffebcc5719cef962cce57d8b",
+  "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+  "gifSha256": "fade43fcf94aa6548f41aa7adfa736140089a7bcb86ed927d9451216c302ebc5",
+  "gifDecodedFrameCount": 16,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

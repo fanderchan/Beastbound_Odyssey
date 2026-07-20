@@ -1,852 +1,1024 @@
 {
   "schemaVersion": 1,
-  "tool": "install_pet_battle_bundle.py",
+  "repairId": "runtime-motion-scale-followup-v1",
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
-  "kind": "pet",
-  "characterId": null,
-  "bundleDigest": "fa64f1a5df48a7aec90a8227088025f4dd1d62f9929ab07cf600a0fea3bf1f6f",
-  "archiveMode": "lean",
-  "installedFileHashes": {
-    "qa/battle/actions/back_3quarter_ne/attack-contact.png": "4459dbdb858eb9991bb60331abacf90ea722bfe9361a92a668b2fd4b9345a0f4",
-    "qa/battle/actions/back_3quarter_ne/attack.gif": "c565888b3532608e574c2e3bd4a38388d57fa515d331bd495026ab043ca3e2cc",
-    "qa/battle/actions/back_3quarter_ne/counter-contact.png": "2d51f1f9baf370a31bb0a9c506ff597c659c6c1c06f44e9bb9d0800d6aa929f9",
-    "qa/battle/actions/back_3quarter_ne/counter.gif": "414a7be54e4fa7ef7c6bca2ea7644e62b021660f5084c1e151b6c00c6fefad5c",
-    "qa/battle/actions/back_3quarter_ne/defend-contact.png": "dd4e7f3b983c7841c06c87538acd852c84d82face12ad80947e54b92855f32d2",
-    "qa/battle/actions/back_3quarter_ne/defend.gif": "8aca34b647eb2cf797011d2f78ba81b7d7238bd9ddeb5ccafad1b3131fe3e46f",
-    "qa/battle/actions/back_3quarter_ne/dodge-contact.png": "46f37683c10953622f75d43f89e32390fa6c53e2478629c79b24622984047f3f",
-    "qa/battle/actions/back_3quarter_ne/dodge.gif": "e3bcb307adcb72aca523e363534890fa1f0fb92f5a5610c9089e5e74e16789b2",
-    "qa/battle/actions/back_3quarter_ne/down-contact.png": "1fae06f6a51212fc5fd1d08c3b54aecfe745d866b5b685bb935a861b92e24f01",
-    "qa/battle/actions/back_3quarter_ne/down.gif": "770f2e02d5463059d9346db40b5994130ed4fe28efb21c11517f973d747de28e",
-    "qa/battle/actions/back_3quarter_ne/hurt-contact.png": "f13787e99b4ea2d681d5e356af96b13207a54eae5b01fce62d8becb9c3579f5f",
-    "qa/battle/actions/back_3quarter_ne/hurt.gif": "d692c5d9870a5940ff3e0d3732db1726a39f64b952dc2c2588ce9d37d9fd12ec",
-    "qa/battle/actions/back_3quarter_ne/idle-contact.png": "0695c5316f0b8c24c65eb9513ab511088f511c9a3c5a868fcd9a7c9f559c899a",
-    "qa/battle/actions/back_3quarter_ne/idle.gif": "b615184522f160c1fda44c6eeab2516abda113ae120332d3a77c4aeda96de9a6",
-    "qa/battle/actions/back_3quarter_ne/knockaway-contact.png": "6b0e7c5c04d66f265a04d0ba13443d763a42efa4a49d7dbc291af94018b18861",
-    "qa/battle/actions/back_3quarter_ne/knockaway.gif": "c5961b62306dd05749ef945fa2794e61e8e46d0965f6ac07a013ed76339a85f2",
-    "qa/battle/actions/back_3quarter_ne/revive-contact.png": "e4d8e4c0ac843ceb5ae8b07373af5217cd8993e253e4aa04b12b3cc00eb6db34",
-    "qa/battle/actions/back_3quarter_ne/revive.gif": "0ca2c4905b08456084f8e05cba36d163bca4158c5a2040a0347e1ee982e42390",
-    "qa/battle/actions/back_3quarter_ne/skill-contact.png": "d96bf1b006472b79bd05b24b7754005b720e16e5b45a688a0125fa93792c7b24",
-    "qa/battle/actions/back_3quarter_ne/skill.gif": "e60e9fca4538967b5493eecf8bae210549f7e282190c1d811a6c055b96c69541",
-    "qa/battle/actions/back_3quarter_ne/stagger-contact.png": "aba3fbb440f4ddf042c9a12253f9757d9636e5f5ae184184930381336965a8fa",
-    "qa/battle/actions/back_3quarter_ne/stagger.gif": "a0523e289dc9058d8ae74a7e92a13cf8268bb57a2127be726f4519f7b81a6d66",
-    "qa/battle/actions/back_3quarter_ne/walk-contact.png": "b294456db4fa639c5803c6df764bcfcade364021b94b461ed303f6d5e38dfd61",
-    "qa/battle/actions/back_3quarter_ne/walk.gif": "8b49354998cad8f459ee92952b0146b4086dce936209ec0ddb63a168e5b7f5c9",
-    "qa/battle/actions/front_3quarter_sw/attack-contact.png": "ccc407101cb5cb4bf7fdcbef16255c176f82d68c75949e349dd436312ee5d978",
-    "qa/battle/actions/front_3quarter_sw/attack.gif": "99a97615206d893c048622929f2aba517e2da689aab8fb854c22ec9411345e9b",
-    "qa/battle/actions/front_3quarter_sw/counter-contact.png": "b34615ad63eb938859ce7daa9884456e01cc0751891dc4a0b65472c03bc8551f",
-    "qa/battle/actions/front_3quarter_sw/counter.gif": "6faf4b1277d0590c6a978678900b86422bd2c88518b1ff40f6e5391e3e2eb52c",
-    "qa/battle/actions/front_3quarter_sw/defend-contact.png": "2220479b27f649b96e2ef193abd298200f3e282c100def61b48243e4129e5e30",
-    "qa/battle/actions/front_3quarter_sw/defend.gif": "dafdfe8d40609ed40d5a1a3c41fa185603e1cb3cafbbe3a9d0abc48404d46481",
-    "qa/battle/actions/front_3quarter_sw/dodge-contact.png": "a266110285ee0fd2d2a1b4e8a62744f26e578820e22f18e05d0dcee83d9f8e25",
-    "qa/battle/actions/front_3quarter_sw/dodge.gif": "d97944458f5dae93f8c25c467fc6cf3cae6ed57bf0916ac39e867b4e0c332867",
-    "qa/battle/actions/front_3quarter_sw/down-contact.png": "0851aac7ee4eeb7c38dc3b7d8e7174bc8c071c4808c1c1527b4ec920a68ff077",
-    "qa/battle/actions/front_3quarter_sw/down.gif": "6cfc1968a56e2f9414d97103acbd2fab1c4829c622f35aea993637c9eb8bccfe",
-    "qa/battle/actions/front_3quarter_sw/hurt-contact.png": "58063df698d3913019c4c51aec16abdb4f2be799e96af9e91ea5b48f67658afb",
-    "qa/battle/actions/front_3quarter_sw/hurt.gif": "b3544ba1fd9188bfcbfd160cc806a007e6ae4b57a3e427e60553edfe057f29ae",
-    "qa/battle/actions/front_3quarter_sw/idle-contact.png": "0b858e70f19c3e1de43eca9e45688d95e6d5fe056448a4fa67d1ea26f4aedce2",
-    "qa/battle/actions/front_3quarter_sw/idle.gif": "120207f921e019793c635b72ab9b4b82a13658f66e7fc87e4a9224e452b12030",
-    "qa/battle/actions/front_3quarter_sw/knockaway-contact.png": "4cbbb0202918fd99216884b4ef52c0682c14f9ff494a3b1762695dd1118f9f6b",
-    "qa/battle/actions/front_3quarter_sw/knockaway.gif": "6291e5b2082e16cac4fb06bbdcb21fc14951eea07114ebda3ad7ad8c78d16652",
-    "qa/battle/actions/front_3quarter_sw/revive-contact.png": "7e29bd8bf66f116120b24c7d8256395c7763c16274cbc66366378e9847a20681",
-    "qa/battle/actions/front_3quarter_sw/revive.gif": "4eede8019aa850c65b4008467676f25838eddbdf3d4c22c3f9e966d4517a6669",
-    "qa/battle/actions/front_3quarter_sw/skill-contact.png": "7bed68191111208550324071d4cd5f14e1e640fd269e4b8f9971a489e5963981",
-    "qa/battle/actions/front_3quarter_sw/skill.gif": "e0dae869ef610f7ec0b0a9748a5df3db86f7ecada9a4da54e834fd31fb8db3ba",
-    "qa/battle/actions/front_3quarter_sw/stagger-contact.png": "70fc822f8add4f5e4bf3e58bc6d3ecfb159861f04592d7465f026b6a5e8f8a61",
-    "qa/battle/actions/front_3quarter_sw/stagger.gif": "3d9aa79347ed14c8855fc6f6a06489c217c8b723f6539667bfc07c7491c8a645",
-    "qa/battle/actions/front_3quarter_sw/walk-contact.png": "563727dd05bc4cd6c2c8fce82aa9ea3897ca42ea821127b7136487bcf7d6eb6d",
-    "qa/battle/actions/front_3quarter_sw/walk.gif": "925337274a8d2f7d4c222d7dee17dca33607f003fd45faeb832029c0140902f0",
-    "qa/battle/contact-sheet.png": "b2991e2464097b67c05c43f8b9cbb50575a3a369b0626a46ab4792763482057d",
-    "qa/battle/qc-summary.json": "a1e8e8478a72d2acfa15c6c361761bff1f4547d9c315f6ba8f24f43cb10fdac1",
-    "source/battle/back_3quarter_ne/attack/pipeline-meta.json": "35d3057f67758adbb2d8b4b8596561c0c71601869c09be8343bf4dc934a1a91a",
-    "source/battle/back_3quarter_ne/attack/prompt-used.txt": "fd627c17eee9a5fd66e90da99639bcdf77be718f6fe8c5239b58569e4e376aff",
-    "source/battle/back_3quarter_ne/attack/qa.json": "b7050ca6e98063823baf64771cc7a9dd78e0550f834b360ec5a9d6a43778fdb2",
-    "source/battle/back_3quarter_ne/counter/pipeline-meta.json": "2b66766ae60d671c8d54e3c7bda0448e7d4eda306c680b7005460b04c768b4d9",
-    "source/battle/back_3quarter_ne/counter/prompt-used.txt": "6e1fb3949222b361eda1861c92f46967adcc38b7028cf93e4d4412b3af9518be",
-    "source/battle/back_3quarter_ne/counter/qa.json": "00ff916f4c63c50b08ba389f376d0444f29a587779044f285cab4582d4b08e7a",
-    "source/battle/back_3quarter_ne/defend/pipeline-meta.json": "1a4901b4e61fcc4bedcab5f30fc5c5aa1fd263d80bc701016ce4010fdb202146",
-    "source/battle/back_3quarter_ne/defend/prompt-used.txt": "c794e4b85cda30044e5218de1f397a85add0c58954341f921c082dccfbd37cb5",
-    "source/battle/back_3quarter_ne/defend/qa.json": "04ab1214aa41d2000470d0258b542c7578f8f830629beb179713b67b26201cf9",
-    "source/battle/back_3quarter_ne/dodge/pipeline-meta.json": "7bc141210cf83577f5d2980caa5557b60484e407932d9d8a450c21522c66c582",
-    "source/battle/back_3quarter_ne/dodge/prompt-used.txt": "1aacc9e7dd9eefc293a012b58c0610455d49d4398e03aa081c3013e5d2cb8558",
-    "source/battle/back_3quarter_ne/dodge/qa.json": "d87e1ad2d96684794187250fdd02fc407388473320867d802dd6105beda7c86e",
-    "source/battle/back_3quarter_ne/down/pipeline-meta.json": "ec6ec222c51a52a1a4e4242a25a7a80067060327fb7e9c4b02ae26669d8a1cec",
-    "source/battle/back_3quarter_ne/down/prompt-used.txt": "230b7f957e63786553961cbe01ede4c712e59842d0374ada843f37c19592e5d5",
-    "source/battle/back_3quarter_ne/down/qa.json": "fd7b9e1edb00e1b60977b412d3fce77c0db4d6ea7012ed56608888a446357197",
-    "source/battle/back_3quarter_ne/hurt/pipeline-meta.json": "a5f483c486584efa99118b75fc354b397822c44e82c50a56c26eb51ce332af71",
-    "source/battle/back_3quarter_ne/hurt/prompt-used.txt": "50965055d2e2398265e528655a911c26717bf2ec066ad1d409538a1279b0cdcb",
-    "source/battle/back_3quarter_ne/hurt/qa.json": "16b4fcd25774e096e6dcc9615304d652d4075682e3b6f365e4b8e9ad6dbd50e1",
-    "source/battle/back_3quarter_ne/idle/pipeline-meta.json": "527eba60bfc6cb0258151f70ef179b227d2f68cf3d28ffacf421aef44a496729",
-    "source/battle/back_3quarter_ne/idle/prompt-used.txt": "28b0fa50d78a86186fb72cebb89fb87a45f52f842effcb90904f1cea85f6f8f3",
-    "source/battle/back_3quarter_ne/idle/qa.json": "a86e83c85414e224ec55a26f602ed0cbd899ffa1c1d2463600b1543ab9bd9a97",
-    "source/battle/back_3quarter_ne/idle/raw-sheet-lossless.png": "f9d87877664d12acca96171ecffb977c50e00beb4e2d77ef2f57419fcb1f67d0",
-    "source/battle/back_3quarter_ne/idle/source-meta.json": "4786ec5ebb922f148e93f310c55b9cb6137c70e06660636af1c300c818b37cdb",
-    "source/battle/back_3quarter_ne/knockaway/pipeline-meta.json": "6da88b1918e83daffedcd5e7b438d1bdf25601f2be9eae6b0f555a0855562246",
-    "source/battle/back_3quarter_ne/knockaway/prompt-used.txt": "f4cb40355630c84587030869bd53813cd1bbd62b478e44c781cec644bbea1476",
-    "source/battle/back_3quarter_ne/knockaway/qa.json": "5cf282813639d334b61a296ded45d455a2b3fb6ad69dc7c28268a204824cd698",
-    "source/battle/back_3quarter_ne/revive/pipeline-meta.json": "931910a13fbb53e02af38cb6b09f81891534e0840c429d2cd128d35a30e7a43e",
-    "source/battle/back_3quarter_ne/revive/prompt-used.txt": "cb7c7932c2ea191972212d423b08bcdf8f6e0f1b80e791652ef778e7c86e2a22",
-    "source/battle/back_3quarter_ne/revive/qa.json": "c99b8d86552bd33de4f87a3f8e17deaffc5f4a2bacecc32f6e20498a9eccf085",
-    "source/battle/back_3quarter_ne/skill/pipeline-meta.json": "b68d747c7886819bf234a22b6458c9acc00c08492acc2364b0fc7628ec618281",
-    "source/battle/back_3quarter_ne/skill/prompt-used.txt": "806671b124b37313a1ad2a73609cecec5dde280682dcb6016bf18e6b588b0fe4",
-    "source/battle/back_3quarter_ne/skill/qa.json": "058890df5ff391f33e402dda71b498d5f5eb0daa8f38a077ab5cc39cf2490471",
-    "source/battle/back_3quarter_ne/stagger/pipeline-meta.json": "29cbd8bbc8578f10e3b1748122b9956cb58d67f17f564e9b8cd75f884ce3645a",
-    "source/battle/back_3quarter_ne/stagger/prompt-used.txt": "da982b13098409ebd811b36999ac5c5bd51a98ca586fc7f7891b20fc45988a0e",
-    "source/battle/back_3quarter_ne/stagger/qa.json": "9ee46204939f589b647a76352a12d3d515e6ad6d25841b979ddd52f0e2f4b449",
-    "source/battle/back_3quarter_ne/walk/pipeline-meta.json": "2bc6df549da963b6d901eafafd1af4212802c060dab77bd0b3b0e292f948a24c",
-    "source/battle/back_3quarter_ne/walk/prompt-used.txt": "9a1900c39664297c149ddf747f9702c116eb072a9e401edcd2fa5f12127d6a85",
-    "source/battle/back_3quarter_ne/walk/qa.json": "fe2518bf658c5f4bee864ab997e1b1bfc957ec1eca3450c35ed7ba820086cac7",
-    "source/battle/front_3quarter_sw/attack/pipeline-meta.json": "66dd1a97dc565cdb4835b2f058ca9cbbb7098024fbb621daf5f093c5990824b9",
-    "source/battle/front_3quarter_sw/attack/prompt-used.txt": "d66ef0f4768228df38403ed44e35cbb2bf58c0c01057c2ea9db11781beab0584",
-    "source/battle/front_3quarter_sw/attack/qa.json": "0ff30d450700c83dc5c479957bacfc1e18499d9410d504638982a1615d815c1b",
-    "source/battle/front_3quarter_sw/counter/pipeline-meta.json": "2b6de55f8bf596ddc1829e5df2582078f2f7ebaeb83d407ef107f063001e7164",
-    "source/battle/front_3quarter_sw/counter/prompt-used.txt": "219e626d4b63324c047bf38eeeaa67e9959db1cad633fbf81c2748dc8ec1e8be",
-    "source/battle/front_3quarter_sw/counter/qa.json": "861a8da255e4769c83a5e7ec4f0cffb38ed0e8cc17bfbe11c91396036fb960c9",
-    "source/battle/front_3quarter_sw/defend/pipeline-meta.json": "72ec7595eb88e3d1e31dec1f1029ebc799ff4e0ac73dbb1f1484892d87f3433f",
-    "source/battle/front_3quarter_sw/defend/prompt-used.txt": "2267a7d173d420c47dcc87d93d8c823ecde70fd81ff816aff7a7ccc78ec18bb9",
-    "source/battle/front_3quarter_sw/defend/qa.json": "513f56e03db387658a985250aef24d5e158a6d0c96e06bfb8ab0b41967add2c7",
-    "source/battle/front_3quarter_sw/dodge/pipeline-meta.json": "59ca96b5dad5894a62b8b81c674646b3a32e8c88d5f233e0111847c9a1f4967b",
-    "source/battle/front_3quarter_sw/dodge/prompt-used.txt": "0c091e462d8c8a552222dcb5e7a1098f33cb48a271dcbbe049e488bcbe3d8511",
-    "source/battle/front_3quarter_sw/dodge/qa.json": "9be597f3ceed2d3cec0b13f7f70d3a07fd3ad477298fa508007f71c0ea7b850e",
-    "source/battle/front_3quarter_sw/down/pipeline-meta.json": "ff93e20e1ecee5c4f16d945af4f1a578bd59bf5c9a872b9fe0a47850c0afe71a",
-    "source/battle/front_3quarter_sw/down/prompt-used.txt": "56c0105ef2d50b6b87bd47ae1e0571b109b88cbaebbfde845c92c15dfa90ae89",
-    "source/battle/front_3quarter_sw/down/qa.json": "5fced28f159c8dda21bb781049781eff2f308e1d640171642ada5db3924d2182",
-    "source/battle/front_3quarter_sw/hurt/pipeline-meta.json": "61be52da061c6659ca293ddf6e254a744db03a0ba413010e01b2fee22397e3ae",
-    "source/battle/front_3quarter_sw/hurt/prompt-used.txt": "91fed6b80f7cf371be1e9fa4d447d19b64b86ca9b06480b346edb6a470814ab9",
-    "source/battle/front_3quarter_sw/hurt/qa.json": "679458b1112a5f11694d0881019002d92429d6ecf88d05b6efe422a50e493b48",
-    "source/battle/front_3quarter_sw/idle/pipeline-meta.json": "9ca3d3334d5d22e684743323f41f14a12d642d1db7676cbd04a20ef56b286de9",
-    "source/battle/front_3quarter_sw/idle/prompt-used.txt": "f65dc5e9a1541f23a607c704558b18720e70f3c4336f843ce3543908ec31eebf",
-    "source/battle/front_3quarter_sw/idle/qa.json": "c30389bf80be9e7a7990298d21f9c76d26fbdeacbfc595d7a3e0ba09aeffe5a9",
-    "source/battle/front_3quarter_sw/idle/raw-sheet-lossless.png": "f9d87877664d12acca96171ecffb977c50e00beb4e2d77ef2f57419fcb1f67d0",
-    "source/battle/front_3quarter_sw/idle/source-meta.json": "4a709b43653bd370ad5c35005551c846d638dcba6621a2b740a50034125a8fa3",
-    "source/battle/front_3quarter_sw/knockaway/pipeline-meta.json": "fa9cfff2b748d93a614251903af9496aca0305dd0ac28c552db2c614d404f216",
-    "source/battle/front_3quarter_sw/knockaway/prompt-used.txt": "04028800a76c7e2a07364547c77f7ceda832bc7f1fb05f9ed8c7f262f9e0fddb",
-    "source/battle/front_3quarter_sw/knockaway/qa.json": "ce346dddc0e5acdc8a03b62affb304097dcad471d7486df8084d948414d377d4",
-    "source/battle/front_3quarter_sw/revive/pipeline-meta.json": "c2fbeda932ba6bc1207ebaa1d072f5f8f405a29969c951dfa6c9042bba236443",
-    "source/battle/front_3quarter_sw/revive/prompt-used.txt": "6038f66294bbe016c37907a5f220c2c3530666505e143121adf99a1e65d3973d",
-    "source/battle/front_3quarter_sw/revive/qa.json": "4842637fad1416eaec5e130260f6cf1f54ed54c57b2fbf22e5bb7163d787a26b",
-    "source/battle/front_3quarter_sw/skill/pipeline-meta.json": "5e1a9a35b42ebe3d6ef9d84a2126b7a6a0635ba6c266fa75f61455afa952c0b8",
-    "source/battle/front_3quarter_sw/skill/prompt-used.txt": "d8f30cb8541c83f6eedf2d66f1c7d3c4b1889ffcdf338a366a7b10e6eeaa76e1",
-    "source/battle/front_3quarter_sw/skill/qa.json": "decb40e295da1c43f237af51614feb9c393b8aac4cb4d57b54a8775d24e69d22",
-    "source/battle/front_3quarter_sw/stagger/pipeline-meta.json": "53f93c36d3996f61348eddeda01b333c3c5f9d8c099635700fa33b369606dd1a",
-    "source/battle/front_3quarter_sw/stagger/prompt-used.txt": "3467b1223928a925eecb6d280693fc0c2e519cb1ca37cccc315350db27f9ca6d",
-    "source/battle/front_3quarter_sw/stagger/qa.json": "380ce0ec76b1e02878267ab4167993b7c1373eeabc5efb758c14c676de61d4a1",
-    "source/battle/front_3quarter_sw/walk/pipeline-meta.json": "f748ce2ea392b2cb70cc0c11e3f1951f7be857c3a4a670d8109133a06bb84ee2",
-    "source/battle/front_3quarter_sw/walk/prompt-used.txt": "4d278269f40da6dbdcfa4d9e3427dbdeb09afed8205ab239791e3e9cda019bbb",
-    "source/battle/front_3quarter_sw/walk/qa.json": "f78683189266405f15fe32aafd3b1cf25d1f8b9ea36584d2a0a2bd433ab25caa",
-    "source/battle/source-ledger.json": "9369b2d32962c120b92a9d5f0992b37589cbd945c62a67f2e496f4957e3a2c26",
-    "views/back_3quarter_ne/attack/attack-1.png": "f36450df8d41e3bc3edc80022f509fa0428b106c3c92fe199c77c7e728f16898",
-    "views/back_3quarter_ne/attack/attack-2.png": "864b501112304679190822246f09fc47b8fb01f21f6e17c6ab4fbecfe701b46f",
-    "views/back_3quarter_ne/attack/attack-3.png": "1496cf675b1d2290d94ca40e8ef010d921e276df324916c57adf392397ffbd5e",
-    "views/back_3quarter_ne/attack/attack-4.png": "5c207c6b8d9f0f838a7784304930e6261056ce8b6f018996a7c2052da7269fe5",
-    "views/back_3quarter_ne/attack/attack-5.png": "10ac200b3c4ab6d467229afc8e2275c387cf7d2e4ebe47547ce50fc1c05ef06c",
-    "views/back_3quarter_ne/attack/attack-6.png": "4ecb8c0fa234bbdaf295157bb5e9aa37f2027887591a0aae55bc8dc2c932de94",
-    "views/back_3quarter_ne/attack/attack-7.png": "7cde25b979135dc80cc14f007e2cb9277aa9deb0f767be45a938c6b4d20da2b2",
-    "views/back_3quarter_ne/attack/attack-8.png": "a4ffec25c78e31b7ad983a9bf57e6d79a837a77416ffb1bbb6dd7fa46c1f69f8",
-    "views/back_3quarter_ne/counter/counter-1.png": "9878aa60b9d78739ad080efb12b5f65454da88a514f3fed3d643fb8df2199df0",
-    "views/back_3quarter_ne/counter/counter-2.png": "d124cd08c091099ad21824ab31fb5b23e66a2c6aabf1e5d51a8a33569f6199e3",
-    "views/back_3quarter_ne/counter/counter-3.png": "eb1a3403deb5ad52eb1e7cd17eb795f02c195c03539f8cfc474379ddc90ffaf3",
-    "views/back_3quarter_ne/counter/counter-4.png": "d10bd72c294c7cdcb60372259023ad92e819cf68df281fdec1cd835c7b30bcd4",
-    "views/back_3quarter_ne/counter/counter-5.png": "acd684ddd46840dce84607c90ab1b3ed5b07fa883b49271712613b5a9a6aa814",
-    "views/back_3quarter_ne/counter/counter-6.png": "93532cd046ec49fea0ced8d81518e0558e90a136bbee4a3c8ab2c6fe4e2a7f5c",
-    "views/back_3quarter_ne/counter/counter-7.png": "8edfae5f1444b5dbf829819230e6c135adfbff2d0571aad111b2d4927fd846bc",
-    "views/back_3quarter_ne/counter/counter-8.png": "4e8f062fa696d7a77411bdd03675ab23d99ee9fff6191d418404fdecee028da0",
-    "views/back_3quarter_ne/defend/defend-1.png": "062f87ba8daa62f7c377a74c1047014f53b8d07ce0cdbdf73f0389038bc12e92",
-    "views/back_3quarter_ne/defend/defend-2.png": "7ab123ba7ae9d68afd19333d4eb442e06aafb034dac02459f8cbe8b10dd337f6",
-    "views/back_3quarter_ne/defend/defend-3.png": "63543bf1f2dd78a0402d39bac450a8bb407161e3677c03bc065f17f023e4149f",
-    "views/back_3quarter_ne/defend/defend-4.png": "0b33d97f965da54d38e26f83df4d60bc9f086513eaab36f55084ee1424eebcb0",
-    "views/back_3quarter_ne/defend/defend-5.png": "1dd01dd3e5c3621ed7dd3ae695253f0aabb7eeb18a156dad4fe07078e241b556",
-    "views/back_3quarter_ne/defend/defend-6.png": "10c5e2765e8a550b6d6d33968fe6a29e34034e04e966c659474d3c6ccdb00f0f",
-    "views/back_3quarter_ne/dodge/dodge-1.png": "26283d5d213c4baf4ec5243b25eabf662078905068189030db7b8507fac80164",
-    "views/back_3quarter_ne/dodge/dodge-2.png": "1afdd12681cd3b0f39f429a3b208767d8eb66b16fd9d457ccf55d9b1bb66f1ab",
-    "views/back_3quarter_ne/dodge/dodge-3.png": "23cd657cec531abe612aad0f140b88681dbb229ccf014f6e65cf68ee2ac82c1d",
-    "views/back_3quarter_ne/dodge/dodge-4.png": "894074e3decfa735750e497b49e726b6e729e1dd39f32752dbd10f56dd2ad319",
-    "views/back_3quarter_ne/dodge/dodge-5.png": "8fde30f60a65fd0cca2e91355fee004c55154b7e17f85b84e51e67ad91380c96",
-    "views/back_3quarter_ne/dodge/dodge-6.png": "4a4f7ce7c6d7d0e9dc6a8e0f04888e474adc2e494e36660298958c2a16262d63",
-    "views/back_3quarter_ne/dodge/dodge-7.png": "5c66962f74bde58f3f018e4619eee0236459542427f75bcd478a44aed385843b",
-    "views/back_3quarter_ne/dodge/dodge-8.png": "79242e580adba5a2006e3b3aa47fa6f9c8af4370bcbe05ed02bc8c2359fcbf30",
-    "views/back_3quarter_ne/down/down-1.png": "5b88e21d0074947ec0793a2f3fd180944aa6cb36b9b418fd78b567f4699c27fd",
-    "views/back_3quarter_ne/down/down-2.png": "39a542efc2e4ef53e3906092f84190c821beb9608d7ca889d280e7a3771d92ad",
-    "views/back_3quarter_ne/down/down-3.png": "7bf94b9ccd4a9883f8eb5368d4d6e7479c0980c3d65f39dcf5c1b961258e7787",
-    "views/back_3quarter_ne/down/down-4.png": "bbe31413e4dfe0bcb955c8ac6e1ff70a7b20524343881c77586d0915d9ceb8aa",
-    "views/back_3quarter_ne/down/down-5.png": "f447d7fc75c9d5ddf67659e35f8dab887f7e25d852987d1debf377e5c4ecaaf0",
-    "views/back_3quarter_ne/down/down-6.png": "9b86fce2f837d65e630d2d08ef8f9bc79490032f007eb57d57ede0aebf104e27",
-    "views/back_3quarter_ne/down/down-7.png": "a7ad6f065bd61a03cd6e21ce24de40b1b34786ed4a668a1730e3cbe16f77a04e",
-    "views/back_3quarter_ne/down/down-8.png": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
-    "views/back_3quarter_ne/hurt/hurt-1.png": "990f7e90795bd6bcfe45f99607c71b17a0eb5dd986e1ff708fde3356119f9955",
-    "views/back_3quarter_ne/hurt/hurt-2.png": "2e0b3449c465bf34135b7ec4d97217d2f65b66ac4b3adefce3b19ccb1ea647b6",
-    "views/back_3quarter_ne/hurt/hurt-3.png": "29fd8c3546a41e008a4772861ded25832c5d93a13de7e77dc048279e2f881417",
-    "views/back_3quarter_ne/hurt/hurt-4.png": "f0e2aff85a56435d2e214019cefc34b2ddcfff48a82df42356c1140dd94e5f7f",
-    "views/back_3quarter_ne/hurt/hurt-5.png": "d9ae9f898353cffb9aad68fe180f7e15b09b2f7278c08a2f0846c1db3bb7ff07",
-    "views/back_3quarter_ne/hurt/hurt-6.png": "bcc12038c02972e91a014261117d462ba7fa6b632be39859053f41b244cdd4ec",
-    "views/back_3quarter_ne/idle/idle-1.png": "c25c40b68ffc2b8b60ac73c0f37fe602ed84001e0b16f47f1d9587bcaf1d2e4d",
-    "views/back_3quarter_ne/idle/idle-2.png": "e611e23d02407b2bf5984ba02ffd47650aaee2a4d7fe49a7df25a063d00ddb75",
-    "views/back_3quarter_ne/idle/idle-3.png": "d69b7f30b309860d569fbf0d012490a5bde55636dc51c547301e5d23be4dd93e",
-    "views/back_3quarter_ne/idle/idle-4.png": "a5783644e4196c8cd45b6bea0f9dcfa9ab145dd9710290a067b58900eb66dab5",
-    "views/back_3quarter_ne/idle/idle-5.png": "ce45ce9ead6d4a4b06f3f1001a93cc8d8b78acd4a4e7b89e43d36e812181b0c3",
-    "views/back_3quarter_ne/idle/idle-6.png": "5c6c556415ba74ddeff822b0f5dc0742500fb62574931fce41eed15ee2cde0bb",
-    "views/back_3quarter_ne/knockaway/knockaway-1.png": "04b46717f2aeb5a216bdbc86a9d7ef59fe2b03dd25cea2a07aaf4d101f24aadd",
-    "views/back_3quarter_ne/knockaway/knockaway-2.png": "abbaea5e35da1678f199da07b6b4bf8de9f1503b081b85bf92de56a8c2175344",
-    "views/back_3quarter_ne/knockaway/knockaway-3.png": "6966f8a219059230ca7eb434b01ca93e9aa24855e0139c08c89d32a68ec9b097",
-    "views/back_3quarter_ne/knockaway/knockaway-4.png": "aac139185b6b8f52ddfa2ef2a9cff1b101829874e189ca1d09290c9ec50e0873",
-    "views/back_3quarter_ne/knockaway/knockaway-5.png": "d8a24d605e8b199cdd6e212c9f288e65c783b4eef847b29274ff6dbccbf8a49f",
-    "views/back_3quarter_ne/knockaway/knockaway-6.png": "13ef75a2d51797ae4d0286b35dd75021588fd653714a484133503a7506d506c9",
-    "views/back_3quarter_ne/knockaway/knockaway-7.png": "78080b3cc124b8d8a64cc31901955d31b49e606db1e9880d9d8bd3a6fb2a97fb",
-    "views/back_3quarter_ne/knockaway/knockaway-8.png": "c46ec5b89eeac7ff98e690e3144e6fa5bc7081f17eecb1c6a2540aa1160fba4b",
-    "views/back_3quarter_ne/revive/revive-1.png": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
-    "views/back_3quarter_ne/revive/revive-2.png": "a4d85f4bdb234cd25ce68d2cd31d41bd79e32b71805ec561a9b9ed630b79ba9f",
-    "views/back_3quarter_ne/revive/revive-3.png": "56a0ac9c386f8657ee42a3d2d9479db60c1baaa1d368c208c9d3d5a84ed36956",
-    "views/back_3quarter_ne/revive/revive-4.png": "b1ed809c82f775b63639dd8147593ddef87d08bd918e9ddbf1c2aca6dab1f679",
-    "views/back_3quarter_ne/revive/revive-5.png": "9a079a949bc1553910bfcd6f14026dc0f5478d8f50f0929283fbf8f1b02fac48",
-    "views/back_3quarter_ne/revive/revive-6.png": "ace2f5e7382af5f918737e1c49aae4ad1db93f4b83d951fb0882b2cf65cad11e",
-    "views/back_3quarter_ne/revive/revive-7.png": "47f441e1c2ee5db509b441140029c776bc779522beeefc11c9e04e32a86ee5c9",
-    "views/back_3quarter_ne/revive/revive-8.png": "ea433d3c0b59d58348a3333d295880c76cd5b229a62bfeb1fb0ecfdc4106ffef",
-    "views/back_3quarter_ne/skill/skill-1.png": "64d50995adf63deb75ee315621d241ed7c9bffb6a55017ef2d541652412257bf",
-    "views/back_3quarter_ne/skill/skill-2.png": "6cd5def551520c24db22a7bc9c8ccb380c444cffa0965973f630398d7b92d66f",
-    "views/back_3quarter_ne/skill/skill-3.png": "2df81f33eb816215cb48c352a80f9e22141c2959199af5d3e1104889b3555653",
-    "views/back_3quarter_ne/skill/skill-4.png": "397c8fc5f9d5a1ae825c785b69b03e5d3b8a0d5a585c02eaf89179383e7e137c",
-    "views/back_3quarter_ne/skill/skill-5.png": "d61f65c697937e9d65e2b4fc931903ca5b334b757644e967f79d7296742604e0",
-    "views/back_3quarter_ne/skill/skill-6.png": "f013614d2464e01fe8b6d703eba790118446ddbb0cab9fd595d626a91ad5bed7",
-    "views/back_3quarter_ne/skill/skill-7.png": "0601b9553ab25131e685771986546d03d1810f171d47cae7ba0cd4eb2a26328a",
-    "views/back_3quarter_ne/skill/skill-8.png": "864753393fa50f7b49e2d0b63a3262d11736c1cd5ee8fa04d5fa861fdbeda82d",
-    "views/back_3quarter_ne/stagger/stagger-1.png": "7184d9fa586f5a01ae99a29572a7f14248cd4ba2f824d0095b5ac329b2238869",
-    "views/back_3quarter_ne/stagger/stagger-2.png": "ae1dec03084e4abffc6e5a3086c6f3c5721bd2df6c61ee1098c59d7af7762819",
-    "views/back_3quarter_ne/stagger/stagger-3.png": "a84b3430265d082982328f797282ccd82fde4ff2b4524403b3f67c5cd26c9962",
-    "views/back_3quarter_ne/stagger/stagger-4.png": "181e70363f8fc9277b68a72b42445c2b3496c5a5db66d0f099dfce9476412e6b",
-    "views/back_3quarter_ne/stagger/stagger-5.png": "a0aff7763a8502a5e2bcec4394929606de0df5a47ecf8db97665d63d435a9d58",
-    "views/back_3quarter_ne/stagger/stagger-6.png": "42a7d8ab556706614b2190db9ac9a0dd17fa6b6cc82659762bf085e5985f742d",
-    "views/back_3quarter_ne/stagger/stagger-7.png": "720819b91b130b67c3b8be088447e0244a1713f41d59172b24824b03eae6a61d",
-    "views/back_3quarter_ne/stagger/stagger-8.png": "d55debc258ff865f1d73bcd030e7c6938c95c3befd421bfd653b19498ac2e8d0",
-    "views/back_3quarter_ne/walk/walk-1.png": "b4337425a3fadd173662797133705ab66bfe89e9c177dad9ed4c0d6226fb62a2",
-    "views/back_3quarter_ne/walk/walk-2.png": "ab8ecfc3025fe27396e1b66ab5d5f0110ec7bf4350999c17348f94c9bd047b2b",
-    "views/back_3quarter_ne/walk/walk-3.png": "1c07be3462542bc25baeeee419243a1fa78bf118d7dc05fc99b7b2ecf47e545e",
-    "views/back_3quarter_ne/walk/walk-4.png": "1d4acd99b1bc0861c78d86ca227f919b71acfa35e79352ab7c2ec1bacf88b7b2",
-    "views/back_3quarter_ne/walk/walk-5.png": "a5d606c48f6efebeda3f03dfa9b3956dfa6e20416ae55c91122fa4eded40d21a",
-    "views/back_3quarter_ne/walk/walk-6.png": "ca6b2cf18e12035807cab0b52230075d40bff933a4b048c3a628633a26789eb4",
-    "views/back_3quarter_ne/walk/walk-7.png": "e01a0e8174c8106e4f1c30f87a777a056695ab918e1f89e2c3f5526e3558a51e",
-    "views/back_3quarter_ne/walk/walk-8.png": "ff1cf013745fbec53842e3f8df8a85c73be7ec3d58e7e29fe8b9c9e4e11d6623",
-    "views/front_3quarter_sw/attack/attack-1.png": "646d17b207297c794505bc36799d1d876572919085bc19c21342dd8c846b7f5b",
-    "views/front_3quarter_sw/attack/attack-2.png": "4aded2e0616ba54e21d0f2508b0fcadd87dbe210cc769a6f5ac2bd12fc0b9769",
-    "views/front_3quarter_sw/attack/attack-3.png": "6af95fcc8b74307249e5711c96d5ff87e881a6c60eb6542643e777a90c4d9a4c",
-    "views/front_3quarter_sw/attack/attack-4.png": "fc72e169a9931919ea42560813f6c7aae7b4d2edca393f5f0947ea262d613c82",
-    "views/front_3quarter_sw/attack/attack-5.png": "ea2dd027fac84e0bf45587256ae671e2c57bfef0bf354ab1b404a1fca798add7",
-    "views/front_3quarter_sw/attack/attack-6.png": "74c81844e2b594808a2d68e042fcecc85020ee3498e639d175c9d04d072b84b6",
-    "views/front_3quarter_sw/attack/attack-7.png": "fffdccab853a62d4bbd4ddc78db2257a5bba8ac2de089fdcf4dc9bcc8d0087de",
-    "views/front_3quarter_sw/attack/attack-8.png": "b4ab2fa4e86b667ff66a2588d5c4bac487cb4e7a2be2f436d13e022189412ad3",
-    "views/front_3quarter_sw/counter/counter-1.png": "93e35b34ef8d1caae4ce8bacb76dfbaec4aae5930f9cffa7bbb9fb477dafcb80",
-    "views/front_3quarter_sw/counter/counter-2.png": "4a52e9ec994d91f8a154f181b2aeadf38f89a85744457d1485e350ea70958ca6",
-    "views/front_3quarter_sw/counter/counter-3.png": "77810d730bde4487d6c14c450cb924cb60dd2b159d6f577bad4a0d09d379a8d8",
-    "views/front_3quarter_sw/counter/counter-4.png": "31d08aec673759affc984cc79b10f8507a28df631c769e7637eae47f3ee4b208",
-    "views/front_3quarter_sw/counter/counter-5.png": "207782efa94970ad86e0536584e92e7bfcb55be6f3b00f0907b32afcb0416f88",
-    "views/front_3quarter_sw/counter/counter-6.png": "2d865e0550113e025ff4bca03f0b80a8a4b1e4b7b4b85181c174aae9b934c2d5",
-    "views/front_3quarter_sw/counter/counter-7.png": "f03a476ccb43259c1eeafb1ae4a98df4b14bf9a9f345b32b95fdc37f337f61e5",
-    "views/front_3quarter_sw/counter/counter-8.png": "b7df49d3a075661fa98438465eae909624b508b12c13de9dc61670dfaed42a8c",
-    "views/front_3quarter_sw/defend/defend-1.png": "9efd22d770bc253cddf6372fe868f09aea2a60e332f7546a1c38094a7d150540",
-    "views/front_3quarter_sw/defend/defend-2.png": "0a1d1ad03ff642f1408ef050b144ce3f9e73f03806014871aeed3f994fd89a1b",
-    "views/front_3quarter_sw/defend/defend-3.png": "a150d92c948fc3f379c303268c0d805c5e81751a2d5783a016c7841203551bba",
-    "views/front_3quarter_sw/defend/defend-4.png": "8f9aa0c130db49577083a52c79db5f749b775930833bfd99062ee7c0bdb1a828",
-    "views/front_3quarter_sw/defend/defend-5.png": "061e2d5a44f947de7d4c722c8ab5571b987cee6417303a3c8f6a7837e4f3610b",
-    "views/front_3quarter_sw/defend/defend-6.png": "d6c647671794f9e330ec8697beb7a842219313c234c05c51c94da02bc382d2b3",
-    "views/front_3quarter_sw/dodge/dodge-1.png": "5d008abe08e0cd53a4ec7de057543558d2152fb0dc4b54ada24a5bad2eb35e70",
-    "views/front_3quarter_sw/dodge/dodge-2.png": "9fac339003a368bd5727273e6e2b2db401b785f73f1bfda5e8ebfa23b10da2b4",
-    "views/front_3quarter_sw/dodge/dodge-3.png": "74fa181f11c35ed46be8863da8d4a5a35d952c0c36f5ac9901748d40c73ab7b6",
-    "views/front_3quarter_sw/dodge/dodge-4.png": "047da7e60ba4d274e5fb2a5ca69ae1dfd0d7bb1c69034694f8ef3aa993c5ab34",
-    "views/front_3quarter_sw/dodge/dodge-5.png": "7f982cd5f01703d45e5fd1481edf455a48b8e82da081e04e13dd8f28766e51a2",
-    "views/front_3quarter_sw/dodge/dodge-6.png": "20250321c9c1a1b9a1394afa09ba3d091eaacdd7ad94491ed9e30ba90c4258c2",
-    "views/front_3quarter_sw/dodge/dodge-7.png": "26c1d7c08c6b17711c54ed360d7e5d7fc3d7b6c15e990e25da5b512e61f6ec93",
-    "views/front_3quarter_sw/dodge/dodge-8.png": "30b28cf7d830c6bbed1e5618509e4d1745773db3771bbb864e1bb843603aeaee",
-    "views/front_3quarter_sw/down/down-1.png": "8b254e5d0b980d622351915a0fe5f070a112d0580078ff485d467328c742796f",
-    "views/front_3quarter_sw/down/down-2.png": "983f30369a802c3d7a2ad94c4450bd0899d87be0c4925200ae4453b4b09e5023",
-    "views/front_3quarter_sw/down/down-3.png": "9c7271ad344cfd57e9756771f97600147a95c02e6fd7ba77fe819d0cf90d44e9",
-    "views/front_3quarter_sw/down/down-4.png": "2484ae421d716eecd64fb158cf4ee3e0a64ad6512650ba6f90879eb25945f4d1",
-    "views/front_3quarter_sw/down/down-5.png": "c7fb24c7aa04df401759f0509e76ef74096961e7f0880f5ade4aac1ae3cd7acb",
-    "views/front_3quarter_sw/down/down-6.png": "b723c01ff11c26343bb6e99c6e2adda788aea76aba5fa639a15037f2d3f54975",
-    "views/front_3quarter_sw/down/down-7.png": "58c2f2996967bb1d3d65c35ffd7c4d6f280c1ba7aca63eb6f992028fd2b43d65",
-    "views/front_3quarter_sw/down/down-8.png": "9add0be7a6016e73f3c00428a3165754b0553101987a25de0ec8ba74d31ff8e7",
-    "views/front_3quarter_sw/hurt/hurt-1.png": "f36280637dd318d6c4d298629d08046a504d310cf3edd8b214472f2f19f7629b",
-    "views/front_3quarter_sw/hurt/hurt-2.png": "807fff45b64f5b2ff0553e886560c84854f8ebd574ed0312c2ced8ceddc6ecae",
-    "views/front_3quarter_sw/hurt/hurt-3.png": "612618cd0bb441c6a0a242c9f2462dc3e8a9f4a97c5de2b5fd30efd65e4dfb96",
-    "views/front_3quarter_sw/hurt/hurt-4.png": "7b8eb0e04865a9d0a67a0dff149631528fda395cab56cd3012e46cbf0685a150",
-    "views/front_3quarter_sw/hurt/hurt-5.png": "6510bdfa9ae8474fb74822aae186c6c7979bfcdfc05bd37c55434580b0fa5cc7",
-    "views/front_3quarter_sw/hurt/hurt-6.png": "9c8e0eb6c525bbaa3392bf22f2188a655428646a615c362fdab540e433464ba9",
-    "views/front_3quarter_sw/idle/idle-1.png": "19b25acec42c2ab4fc596cebe6af8c10702ef2e9a7511d0c4bcd5d220cb34e55",
-    "views/front_3quarter_sw/idle/idle-2.png": "a487eb781e8bc5013aa651192397f2bdd915e832c0f4cb7d838704c644dec15b",
-    "views/front_3quarter_sw/idle/idle-3.png": "79801bd9160b1c3de72f766af1412f014c5c96addfdcf536c2fbacc862946f89",
-    "views/front_3quarter_sw/idle/idle-4.png": "2b7216d1871c5760a27246a37c225df1b3b8420bf632323d25273a1a9ed1d67f",
-    "views/front_3quarter_sw/idle/idle-5.png": "25ded26f3b0da41483fbd068196298b2038d094a0c7ba0e1f2f6ee30b23ab997",
-    "views/front_3quarter_sw/idle/idle-6.png": "189e138d9871c17091558e91226593d1fcead8847d8ce40304fe97d878c244af",
-    "views/front_3quarter_sw/knockaway/knockaway-1.png": "350aca0e0a90df7a399e4b2d0a5f4aa06c2aa40b6d4b913ef1d6d80b2f9bc2f9",
-    "views/front_3quarter_sw/knockaway/knockaway-2.png": "f10c0b90f2a2d7efa12017c637f8062075289585e5152d4438cf48daab50edb7",
-    "views/front_3quarter_sw/knockaway/knockaway-3.png": "4f7a68a696d4541c29e10cac2a2f0896e2c34a965ed6597ea51eb9285d9737f6",
-    "views/front_3quarter_sw/knockaway/knockaway-4.png": "7898ccf4b1fb8fc4f7cab24f8009df40660c47fe619cdfaf76625c4cc3d99b8f",
-    "views/front_3quarter_sw/knockaway/knockaway-5.png": "fa8ac465b2930fbbd05c33d16cad83018c2613fd411febe3e90132d28da27d50",
-    "views/front_3quarter_sw/knockaway/knockaway-6.png": "be45a234e7d5e558b227562ff58df43f3484ae9ca2ec7b8606eaa538719cc4c1",
-    "views/front_3quarter_sw/knockaway/knockaway-7.png": "1042a194126c83331078a0bc139fd38df3c2f9e139b4f578c0f8b21c875a4804",
-    "views/front_3quarter_sw/knockaway/knockaway-8.png": "16fcc60b9527aca109e0693cd54c99166db0356549977bc01a5b493fe1923d31",
-    "views/front_3quarter_sw/revive/revive-1.png": "9add0be7a6016e73f3c00428a3165754b0553101987a25de0ec8ba74d31ff8e7",
-    "views/front_3quarter_sw/revive/revive-2.png": "3085bc47ca0b1a30838a387ef0d20f2092bbd86ee71a80d3f5efa84ca0b2986f",
-    "views/front_3quarter_sw/revive/revive-3.png": "5ec1465622a86f421a2578c09afe099630031651fa89238dd633957d128c3a06",
-    "views/front_3quarter_sw/revive/revive-4.png": "c1dab900484722dac173d5a0233257aa00c02dd7737f616ad854c62d8532ee38",
-    "views/front_3quarter_sw/revive/revive-5.png": "e5d8785ae6e22dedcdd93a969df1450ef0c7e1a6c98cefff4e8d5604b6446c8f",
-    "views/front_3quarter_sw/revive/revive-6.png": "98baca58fb360854dfc946adf1c2b8ae4e31029b87335ec5172eedf10789cef3",
-    "views/front_3quarter_sw/revive/revive-7.png": "f55f3c89c01127fff550b3a4ae479f5a24dca67a2f1aecb325243ec87ea9c9e9",
-    "views/front_3quarter_sw/revive/revive-8.png": "487ba4d5b583fbaf71d082be3bfcb385c97084e45171974a11e565a3482d27c1",
-    "views/front_3quarter_sw/skill/skill-1.png": "d347fed05b400a0abb75a7aa30dc4dbcf869996ff855f4f5711f00f8ee026580",
-    "views/front_3quarter_sw/skill/skill-2.png": "aca324d3ab7d7fb9b17a8cd55134062cce20d8052b8c345c9d1d605a211248f4",
-    "views/front_3quarter_sw/skill/skill-3.png": "e707674575df092e9839b4441827ee789e96e0448d26264ed6100e06591ff06b",
-    "views/front_3quarter_sw/skill/skill-4.png": "075575c2d71706348c0fe4e3e50faed986b64251d954a93dc970187987ec860d",
-    "views/front_3quarter_sw/skill/skill-5.png": "3398f5317f4b0315ac2cc04b15fd937e48c7a3740092378cfe19b079726cd99e",
-    "views/front_3quarter_sw/skill/skill-6.png": "42809566d8c7c89cfffe925081ec8534db32f001f3e514a03c1a6bb49ad9e97e",
-    "views/front_3quarter_sw/skill/skill-7.png": "d14d3bafa76620b226c2591549a895bad40b1693cc9205982ba0e66dc222dadf",
-    "views/front_3quarter_sw/skill/skill-8.png": "e1f788886baea1fab39f8a5ca67ba33150ecef8bfafc75a1d0eee9594b56504d",
-    "views/front_3quarter_sw/stagger/stagger-1.png": "34ca475c628bd420e9ddb1fccc6a28b09e59a424a3dee13dee9e6c6a35f72555",
-    "views/front_3quarter_sw/stagger/stagger-2.png": "ba5a171dfc027069157b7de81bf780b58cba82997ded5b0f1b99922419764f71",
-    "views/front_3quarter_sw/stagger/stagger-3.png": "3076e8e4ac46a71bbec8f2ff1f79b4be9c858197c5c8aad24552bd635f36787a",
-    "views/front_3quarter_sw/stagger/stagger-4.png": "262fbeff801e0969484a8ed4b5857a830848b288d62d507a527db8a68b964090",
-    "views/front_3quarter_sw/stagger/stagger-5.png": "e5e7eb98051b11397035a368f2574af920bda8358a00cb39c102370cb189dd64",
-    "views/front_3quarter_sw/stagger/stagger-6.png": "ee236e318f5ebdac3e1668475955fc6f60af9bc1ef97013d6085a8e608f7136b",
-    "views/front_3quarter_sw/stagger/stagger-7.png": "a6620a5373081e8c1dde9f7e380b98c9516ad6448f30d4ebbad191f15f543b97",
-    "views/front_3quarter_sw/stagger/stagger-8.png": "211c9286113d04023666e129313ba9fbe40a2c7ff0aca9ee9ee18a1787cc3584",
-    "views/front_3quarter_sw/walk/walk-1.png": "20f89859a98115c67aff55e10c06e60cd2c177784fa6c80203fd239cdc28990d",
-    "views/front_3quarter_sw/walk/walk-2.png": "6192d06790ace539479610d4d3dc671c9642dfd0225e419d87bd23f44a63fc20",
-    "views/front_3quarter_sw/walk/walk-3.png": "da983a914d840414fb73224507da1b861a6f6d68c588262bdffea78ffa4dabac",
-    "views/front_3quarter_sw/walk/walk-4.png": "6d08864f48dadd2b43be1bccc0969885b22ed318a4b03e43ed59b55d2a4a97a6",
-    "views/front_3quarter_sw/walk/walk-5.png": "a3d186c8c27eed0071b1048d2b98815c6043863b8879650c28458b3c71a9f9ef",
-    "views/front_3quarter_sw/walk/walk-6.png": "a3933bc8b99deb2eaa1abfb2a40356fd60ead3ef00887b6d466cc8b3a486106f",
-    "views/front_3quarter_sw/walk/walk-7.png": "8520160521b02d9e203df3bd362c6d98ed27e65feeb77edf72c05fb023ba5f6c",
-    "views/front_3quarter_sw/walk/walk-8.png": "8bb680851fa6b75a00bcfaf3aae9cb0f6d69c1ed45c0e1f44d745960edddbe8a"
+  "status": "install-ready-owner-review-pending",
+  "runtimeReplacementCount": 62,
+  "destinationWriteCountExcludingManifestPair": 101,
+  "entries": [
+    {
+      "destinationPath": "action-bundle-meta.json",
+      "candidateSourcePath": "action-bundle-meta.json",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "81408f4d2f3451c5a89c524fe8dad262785f636ba6282f0b2c0baafadc79d95b"
+      },
+      "candidateAfterEncodedSha256": "14d68f29c51c2fca094840f64a5009d3b5424db0769f2eae77ae3831ec530458"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/dodge-contact.png",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/dodge-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "428af97230f875dc77164be278812a6c328ca19f9b553767afab134493ee4c43"
+      },
+      "candidateAfterEncodedSha256": "95b996655c41353d1896c9b05d15dc64e9b457ade9a751e2a67c3f0326bd1183"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/dodge.gif",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/dodge.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "f7c1fe65e8a5525399c31dbad28570b97b5efb766ae70ed60cb43b7c9a8dc89c"
+      },
+      "candidateAfterEncodedSha256": "53c49c1c7a6913f5a46c75f963bf86d31154c6bc086da0d3fa1f64978267ef84"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a50e08f8fcb18251aea854ffa82528c9f85dba8c777ac6ee3a12e79dee4f1fac"
+      },
+      "candidateAfterEncodedSha256": "e1d43ca3f92555beb710d7711029e93445def5742badc18289470bd8473e2d8e"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/revive.gif",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/revive.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "717861fe6907adea0a369734843d0be293b2bc0128ca453ed46daa46fda71edb"
+      },
+      "candidateAfterEncodedSha256": "775c8b7468f6137865df6fd953978a50edf90403c9716616ef1f98c3029385fc"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/skill-contact.png",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/skill-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ed3b94854bfdc27d1fc6996be185d4cbad75c2d33516597445d0d4e5bc76461c"
+      },
+      "candidateAfterEncodedSha256": "580b456b6d3985eb2b4105cbb8b056caf4ff7247bff2cb90f0298d59e6833d86"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/skill.gif",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/skill.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "148c4855b4d3d210292617de9c75a677334c72c2c49d2695ab6a2b6df54655be"
+      },
+      "candidateAfterEncodedSha256": "f4b75214dea929e6bb296b69cf5fe01a31fbc2d46f9f57d8a7396c4b902493ba"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/stagger-contact.png",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/stagger-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "aca60c46f2c03bbfc461d1dfbef58ac8cd5696ff921d177aec1ff15c28b2b166"
+      },
+      "candidateAfterEncodedSha256": "f8976427c312b357a5dd2a804e1765657c8104c870cb1e16be24c9dd957fa021"
+    },
+    {
+      "destinationPath": "qa/battle/actions/back_3quarter_ne/stagger.gif",
+      "candidateSourcePath": "qa/battle/actions/back_3quarter_ne/stagger.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "8acf6a6ed837cd6a1efc2cb5ae30a9e1d728b31764eb52527d4d8be9f89d9a6e"
+      },
+      "candidateAfterEncodedSha256": "fac2d794b264775ff5cb3c49214bc31264a4243692aef3b8e4db8de769d48eb9"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/dodge-contact.png",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/dodge-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "f9c724a9133811e1aa00ec86c17f7d973abb2291f305f15501f078e757dc5287"
+      },
+      "candidateAfterEncodedSha256": "b7e9d2395eafea9e6a91ea3cdef260da672b73a3f5cf3f63bead46a9a0596882"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/dodge.gif",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/dodge.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "7003b3e3fbeba4a2e8809dbea6811b545a2812eafe07333aeaa243e208a35133"
+      },
+      "candidateAfterEncodedSha256": "b8467e6a6a13da8ce9eaf408e75f210d05d1e5cf3ebe1312718c6c028f7d734a"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "f215b13126c1e493f37ead1b5cf51fbfcfc37d000eaa5ec17f6e4a57195fc215"
+      },
+      "candidateAfterEncodedSha256": "7cb15f82757bfd2c37241bc830dd2d60344becee1a4781db08e091170874acc2"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/revive.gif",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/revive.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a5089f38a39a6e35ea2d5d548bb52a8aac73d3d8ec3f1c97f2490520cdb65d11"
+      },
+      "candidateAfterEncodedSha256": "bfd7a03cab01e694fd0a125ed2eebf741bcb399d0309f30948155e53955a5ea3"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/skill-contact.png",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/skill-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "143aa540539fcd09e2f679fe5122f8f534cf1af0f3747f73d2c67918eae6e583"
+      },
+      "candidateAfterEncodedSha256": "2e32ad47de42e19b51113870c058165451b439df96c1d146bb9e592103c59dbf"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/skill.gif",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/skill.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "931775d2d808e2af02df1aa064764364ea7ba70e6ead54da99f1c76b10c529e7"
+      },
+      "candidateAfterEncodedSha256": "e068080936b03347eaf1d74b967eec66191a4477371f7296832777ab3265f8bb"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/stagger-contact.png",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/stagger-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a529e8939834b6d728440268fdca53d6bddbc207789ddfa94ed97a4739a253a2"
+      },
+      "candidateAfterEncodedSha256": "73f264a25edab70cf7eab6ecd72594968f0b5da2682bc3281444d73e795d3154"
+    },
+    {
+      "destinationPath": "qa/battle/actions/front_3quarter_sw/stagger.gif",
+      "candidateSourcePath": "qa/battle/actions/front_3quarter_sw/stagger.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "d0c3d004f0eef5ef00520b4f29b2f38e6f762c3047c9097431ba98ab94a80d0a"
+      },
+      "candidateAfterEncodedSha256": "ce2852ecd0a91314157b77860a8143b153c3f08170975b50602f9d18c01a40c0"
+    },
+    {
+      "destinationPath": "qa/battle/contact-sheet.png",
+      "candidateSourcePath": "qa/battle/contact-sheet.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "16c1a0106ae2ed4af691b330410d2b17e563e92aa636f47d7734383b3bbf6685"
+      },
+      "candidateAfterEncodedSha256": "0a7a6cd3c194cbeab7f82ee29706d02fcbd653d79a231c84ed8276a0fee41a01"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+      "candidateSourcePath": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "16b2076becc6723b68d04774ca5fad206877e7dc54e5c866c9355c81ac724805"
+      },
+      "candidateAfterEncodedSha256": "3d976bf1a2d630ac5e9663164430b5d20e53ab19ffebcc5719cef962cce57d8b"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+      "candidateSourcePath": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "c8099788b22298a77de9ec0e653db863fb23c0f695d9d6a5224f7b766d362411"
+      },
+      "candidateAfterEncodedSha256": "fade43fcf94aa6548f41aa7adfa736140089a7bcb86ed927d9451216c302ebc5"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+      "candidateSourcePath": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "01d98f070fc2e8e032fbc1c44557561496585db11536660b6b6ee2ce8c7db6bf"
+      },
+      "candidateAfterEncodedSha256": "0fac94c137cf4a1482f5915895e44b5f69d375f25098641dfe901426d9d53c7e"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+      "candidateSourcePath": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "26c1ffb86117fc85b1eff357e3c53878b23642b72976559e317d9cc255e8582b"
+      },
+      "candidateAfterEncodedSha256": "a1b2f6ffd448b3d02d53ecedec6b03fd71f721e07f83b876bb126d888ceb9640"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+      "candidateSourcePath": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "23429678df743dad17f1a09091159de012aef789ac615d486efee080ce373dca"
+      },
+      "candidateAfterEncodedSha256": "f949e85929db966a358ce30684803f8317150b8bbb9c89833aa6390c649c0f17"
+    },
+    {
+      "destinationPath": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+      "candidateSourcePath": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "fe483b05031cae5c3d31fdd929bb43247992d799d20fbf5549bf43cfdcd8afcc"
+      },
+      "candidateAfterEncodedSha256": "6d904b62ead24bd84c1dfe26110d21ba232e631064e6bb1d15a9b36e9dfed71b"
+    },
+    {
+      "destinationPath": "qa/battle/facing-contract-preview.png",
+      "candidateSourcePath": "qa/battle/facing-contract-preview.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "9cb17684232aa7494509a0f3f9cb61454dee8b0df83fb220e632111e7c2790fb"
+      },
+      "candidateAfterEncodedSha256": "179a8e52d1c3d9afff4a08b82b63be1e61da46aa2a000493f44470e37208e57c"
+    },
+    {
+      "destinationPath": "qa/battle/qc-summary.json",
+      "candidateSourcePath": "qa/battle/qc-summary.json",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "54874bde1ae0bf71548179cecc181de3ca355243d46737843ff41f890fbce1f8"
+      },
+      "candidateAfterEncodedSha256": "4d5879efcc107be677450e0f7fdfa0f9d8706d7ab69ccf58118881761f0f1d7d"
+    },
+    {
+      "destinationPath": "qa/battle/runtime-motion-scale-followup-v1-before-after.png",
+      "candidateSourcePath": "qa/battle/runtime-motion-scale-followup-v1-before-after.png",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "c1fa07f006ca1488dc44f8f536f71e3e09ed724ee95ce6f451502a0949a0feb3"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1-manifest.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1-manifest.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "ee91f97af69e4834756f0a4c03c4d66281d0f73a5b19aaeeabcc3ca1a7f3ecc3"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1-provenance.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1-provenance.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "70100b0a268a97e32f2204c9368c6cebce6ff8081660a818f5d2ccf3175f31ed"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/dodge.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/dodge.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "e44293ef89f5f7bea8c0399d01b38ae501801ac73f254e999c13c7501e69be8c"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/revive.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/revive.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "ca55216894899fa72178cb3a53674772907e8ba52aecbe651d17a458c503ce98"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/skill.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/skill.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "b3df7af83648e55406b8b662e627b2624aaad3fade99451a0e4d2097761a2b9d"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/stagger.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/back_3quarter_ne/stagger.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "1dd6186fbef83d056d0983d54556d8a33a1514eedb2092c06dce783f59528985"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/dodge.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/dodge.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "6c4f34b7c9dbb0e160d07fa6e3528194b587b96d60f4493c055f7564be74d8d7"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/revive.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/revive.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "cf5ca0856847c52bd26e900294f30d9f0d6c2dcf4197e573666be16d4f10b77b"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/skill.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/skill.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "6bff91f83468b0c4acccebf40451417efe45721d4a7752ee2163dd4b63b07738"
+    },
+    {
+      "destinationPath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/stagger.json",
+      "candidateSourcePath": "source/battle/runtime-motion-scale-followup-v1/actions/front_3quarter_sw/stagger.json",
+      "operation": "create",
+      "expectedBeforeGuard": {
+        "expectedAbsent": true
+      },
+      "candidateAfterEncodedSha256": "f59ecf237f82482e0fb43885572728737dfa9720238121ae4f4936b8710ec4fb"
+    },
+    {
+      "destinationPath": "source/battle/source-ledger.json",
+      "candidateSourcePath": "source/battle/source-ledger.json",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a8b7dcc888e026e2c542017de048ba52dabac4a66edff65e693f3fe2888301dc"
+      },
+      "candidateAfterEncodedSha256": "7a636c389b2a544920bd673123cc53182d44b0f2b8a204886fc6782932c4a428"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "26283d5d213c4baf4ec5243b25eabf662078905068189030db7b8507fac80164"
+      },
+      "candidateAfterEncodedSha256": "3e060b6642c3e415b02520b5b74e1d0f992bdd38c897a3c13c62d6ea14e24667"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "1afdd12681cd3b0f39f429a3b208767d8eb66b16fd9d457ccf55d9b1bb66f1ab"
+      },
+      "candidateAfterEncodedSha256": "d384edb24646faf7f42fa49ea323c5394bba53c5e3cf69567c35f0b1d9710e39"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "23cd657cec531abe612aad0f140b88681dbb229ccf014f6e65cf68ee2ac82c1d"
+      },
+      "candidateAfterEncodedSha256": "324c9db61613ecf858288fe457b72e8c3c246a7e825dcf66b12e695c992d31d5"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "894074e3decfa735750e497b49e726b6e729e1dd39f32752dbd10f56dd2ad319"
+      },
+      "candidateAfterEncodedSha256": "d54e23c4f12f3cdec4d035548b1c0c429c3de438da87e972a0458ae1e3e7b3b8"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "8fde30f60a65fd0cca2e91355fee004c55154b7e17f85b84e51e67ad91380c96"
+      },
+      "candidateAfterEncodedSha256": "38f1d47ca7ae2c39e1b7fe8897c1f10a968ceb066fe5c701e9f898c99ab33130"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "4a4f7ce7c6d7d0e9dc6a8e0f04888e474adc2e494e36660298958c2a16262d63"
+      },
+      "candidateAfterEncodedSha256": "03aae5fc349caf55f77127313837bb2d48ec20cc0b0789135e663a7d7107cf1d"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "5c66962f74bde58f3f018e4619eee0236459542427f75bcd478a44aed385843b"
+      },
+      "candidateAfterEncodedSha256": "4cd93aaf2e2542a3d023a713214a12c0f210f4ddc8d7db543cb6ecf46fe691f5"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "79242e580adba5a2006e3b3aa47fa6f9c8af4370bcbe05ed02bc8c2359fcbf30"
+      },
+      "candidateAfterEncodedSha256": "3c5d907140016ade50818b68cbbece4170bd6000653b5ae1ab6b8defe11c399b"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a4d85f4bdb234cd25ce68d2cd31d41bd79e32b71805ec561a9b9ed630b79ba9f"
+      },
+      "candidateAfterEncodedSha256": "27bdd84bf70c9cbad079e807e487c7bd84a932a3fe5fa2fa7827a296d3bd33c3"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "56a0ac9c386f8657ee42a3d2d9479db60c1baaa1d368c208c9d3d5a84ed36956"
+      },
+      "candidateAfterEncodedSha256": "6b1b7468a9deee784f9e8f807f683faafa53d1f9b3487a8c42748ce5ea8782ec"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "b1ed809c82f775b63639dd8147593ddef87d08bd918e9ddbf1c2aca6dab1f679"
+      },
+      "candidateAfterEncodedSha256": "4fe2f372481d712e100ff121bd15c5e0a0cc974078eafec5be9c7590bdf672c4"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "9a079a949bc1553910bfcd6f14026dc0f5478d8f50f0929283fbf8f1b02fac48"
+      },
+      "candidateAfterEncodedSha256": "97868b77ff8178a9e4699e2d1f86756b1dc6f8bdfd5004482e24b4f84ed16208"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ace2f5e7382af5f918737e1c49aae4ad1db93f4b83d951fb0882b2cf65cad11e"
+      },
+      "candidateAfterEncodedSha256": "4675cae3af5878a6da1d625a5cdf36328be87e19e1a581034a153d423c88d796"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "47f441e1c2ee5db509b441140029c776bc779522beeefc11c9e04e32a86ee5c9"
+      },
+      "candidateAfterEncodedSha256": "1c369669000b5398cf13d3cee629b7ddf0b436ad3387805494f9a127571a4d05"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/revive/revive-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/revive/revive-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ea433d3c0b59d58348a3333d295880c76cd5b229a62bfeb1fb0ecfdc4106ffef"
+      },
+      "candidateAfterEncodedSha256": "2217378a2b633c1366d436e3fedb1b0a8e63679274b0130e7514f0ef4bf6f518"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "64d50995adf63deb75ee315621d241ed7c9bffb6a55017ef2d541652412257bf"
+      },
+      "candidateAfterEncodedSha256": "6fa5cdedbbf495b32a321301be43b2fd8a5dc2d83ac2ba91745b79a7d0033d6e"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "6cd5def551520c24db22a7bc9c8ccb380c444cffa0965973f630398d7b92d66f"
+      },
+      "candidateAfterEncodedSha256": "a4c77a7e51c345315b7995b4327d8ed47be2e8105fe76cf7505bb65d720a48b0"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "2df81f33eb816215cb48c352a80f9e22141c2959199af5d3e1104889b3555653"
+      },
+      "candidateAfterEncodedSha256": "cd94e9035e540091ebae9c602407ef768d0632833b7c9f2bbeb92b5c21e43cf5"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "397c8fc5f9d5a1ae825c785b69b03e5d3b8a0d5a585c02eaf89179383e7e137c"
+      },
+      "candidateAfterEncodedSha256": "cc2d2add7daf32dddd2ad3037b29a8693d958a67814520fa5fb7e82bde10a932"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "d61f65c697937e9d65e2b4fc931903ca5b334b757644e967f79d7296742604e0"
+      },
+      "candidateAfterEncodedSha256": "f9ddfebcd4d69af90e72ab984f48781fbeb2965cf1c99fab43e410ef7f61d586"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "f013614d2464e01fe8b6d703eba790118446ddbb0cab9fd595d626a91ad5bed7"
+      },
+      "candidateAfterEncodedSha256": "0ec900f53a0e63f431ac3677694ca928ec569fb53e82774de9c39b5eef13076f"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "0601b9553ab25131e685771986546d03d1810f171d47cae7ba0cd4eb2a26328a"
+      },
+      "candidateAfterEncodedSha256": "6647a7feb5d451a3dbeacce4d5a5e956129d601b40a15aee17bc8c9aadafb4b4"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/skill/skill-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/skill/skill-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "864753393fa50f7b49e2d0b63a3262d11736c1cd5ee8fa04d5fa861fdbeda82d"
+      },
+      "candidateAfterEncodedSha256": "833bd9717bfb31b32d88837e6a6ffffa4aa89252e783b487f42238a10b03ff46"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-1.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "7184d9fa586f5a01ae99a29572a7f14248cd4ba2f824d0095b5ac329b2238869"
+      },
+      "candidateAfterEncodedSha256": "30ee405c0e64290c4ad95b6079722a75fb51584f569cd9ad8525e184779b39da"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-2.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ae1dec03084e4abffc6e5a3086c6f3c5721bd2df6c61ee1098c59d7af7762819"
+      },
+      "candidateAfterEncodedSha256": "c82edaf6c14fcc505d94ac9ec638606ea35801a3073fb059048bd9effcfe6060"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-3.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a84b3430265d082982328f797282ccd82fde4ff2b4524403b3f67c5cd26c9962"
+      },
+      "candidateAfterEncodedSha256": "6971118d823e087067c1de55fd82e180628706021b8f8e47b96307949bde295c"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-4.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "181e70363f8fc9277b68a72b42445c2b3496c5a5db66d0f099dfce9476412e6b"
+      },
+      "candidateAfterEncodedSha256": "6e40ccbb1674c1b4a6d03c87abcf59aaab1b46b7065f1a34a21e585f578f93c4"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-5.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a0aff7763a8502a5e2bcec4394929606de0df5a47ecf8db97665d63d435a9d58"
+      },
+      "candidateAfterEncodedSha256": "975f1870122957cab0bdfa21bb94169dbff42960e74cc67f4d9fd0acef390ac8"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-6.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "42a7d8ab556706614b2190db9ac9a0dd17fa6b6cc82659762bf085e5985f742d"
+      },
+      "candidateAfterEncodedSha256": "32c3f68794b1b37f1d812ee0495490d65b750c9207cc3accf1676cf8ec1c5354"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-7.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "720819b91b130b67c3b8be088447e0244a1713f41d59172b24824b03eae6a61d"
+      },
+      "candidateAfterEncodedSha256": "2637d8f32cf4b1d9aaa948e6a66ea8bef7f8c9cef142555d5059fddbd4841d92"
+    },
+    {
+      "destinationPath": "views/back_3quarter_ne/stagger/stagger-8.png",
+      "candidateSourcePath": "views/back_3quarter_ne/stagger/stagger-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "d55debc258ff865f1d73bcd030e7c6938c95c3befd421bfd653b19498ac2e8d0"
+      },
+      "candidateAfterEncodedSha256": "44bca67b0f4872b670f792a07ef6a8153bd9a2e9d9c76fba9f3567b3c9d8e75e"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-1.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "5d008abe08e0cd53a4ec7de057543558d2152fb0dc4b54ada24a5bad2eb35e70"
+      },
+      "candidateAfterEncodedSha256": "5c1e2573065c53251d488549e69f55b1d646982a7ef03ba49dc4b56c70a83715"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-2.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "9fac339003a368bd5727273e6e2b2db401b785f73f1bfda5e8ebfa23b10da2b4"
+      },
+      "candidateAfterEncodedSha256": "86156b5af2271ac4b05ba6866346dcd1cf0c76fca1750db2370489b2de6bcc95"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-3.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "74fa181f11c35ed46be8863da8d4a5a35d952c0c36f5ac9901748d40c73ab7b6"
+      },
+      "candidateAfterEncodedSha256": "58ad5c8de2e0238b234ce5f806f70635593442b7d4492c43468e50e1f89a660e"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-4.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "047da7e60ba4d274e5fb2a5ca69ae1dfd0d7bb1c69034694f8ef3aa993c5ab34"
+      },
+      "candidateAfterEncodedSha256": "771457a8694751c43c53a106e0abfb5399e65f10a5ddda73adf1aa142d2754ae"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-5.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "7f982cd5f01703d45e5fd1481edf455a48b8e82da081e04e13dd8f28766e51a2"
+      },
+      "candidateAfterEncodedSha256": "435eda34cdb167cc20a907f11de29bf0e8078eaecef22bebfd9ede3f0e720d63"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-6.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "20250321c9c1a1b9a1394afa09ba3d091eaacdd7ad94491ed9e30ba90c4258c2"
+      },
+      "candidateAfterEncodedSha256": "e427b292939452c3673b505a084640523d6b2a45bc01dc4795942dc5a5bc3d11"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-7.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "26c1d7c08c6b17711c54ed360d7e5d7fc3d7b6c15e990e25da5b512e61f6ec93"
+      },
+      "candidateAfterEncodedSha256": "fd0b298afe0911dc2c6ab8533a12d98922705d9e9091af91aae37d2ea720e7a9"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/dodge/dodge-8.png",
+      "candidateSourcePath": "views/front_3quarter_sw/dodge/dodge-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "30b28cf7d830c6bbed1e5618509e4d1745773db3771bbb864e1bb843603aeaee"
+      },
+      "candidateAfterEncodedSha256": "b6f6f58c46b64d94d5a94b29305f50270ee726bf7adf34188b45736644ef20e1"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-2.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "3085bc47ca0b1a30838a387ef0d20f2092bbd86ee71a80d3f5efa84ca0b2986f"
+      },
+      "candidateAfterEncodedSha256": "276bb80b0c3345e47e9506778dd35a05681499a37c9a581379dd81d75928df15"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-3.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "5ec1465622a86f421a2578c09afe099630031651fa89238dd633957d128c3a06"
+      },
+      "candidateAfterEncodedSha256": "166d109de44f7215c85947f1785425f344b8f8c87e80163972e391d6685e6bac"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-4.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "c1dab900484722dac173d5a0233257aa00c02dd7737f616ad854c62d8532ee38"
+      },
+      "candidateAfterEncodedSha256": "6f88cb7922abe86c64019978e42c1025c403cbbd42e759a68fc2b0dfc64d97cb"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-5.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "e5d8785ae6e22dedcdd93a969df1450ef0c7e1a6c98cefff4e8d5604b6446c8f"
+      },
+      "candidateAfterEncodedSha256": "b96d48a9aa1c08c19807d094f78b79eedda94049d9662cb69003b83e0298f017"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-6.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "98baca58fb360854dfc946adf1c2b8ae4e31029b87335ec5172eedf10789cef3"
+      },
+      "candidateAfterEncodedSha256": "ebab87afba3c58a84b38b69f616fcd8e602d4d7c11644fb50602adb78b100cd7"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-7.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "f55f3c89c01127fff550b3a4ae479f5a24dca67a2f1aecb325243ec87ea9c9e9"
+      },
+      "candidateAfterEncodedSha256": "080588388c8c2ae1e705f960df8ad100f2b7d5284b1d6c1db052395dae49401b"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/revive/revive-8.png",
+      "candidateSourcePath": "views/front_3quarter_sw/revive/revive-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "487ba4d5b583fbaf71d082be3bfcb385c97084e45171974a11e565a3482d27c1"
+      },
+      "candidateAfterEncodedSha256": "a185c650fba03fb7306686b1805c5d18f0d2abeedad03434ca6c3845a8ae11a6"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-1.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "d347fed05b400a0abb75a7aa30dc4dbcf869996ff855f4f5711f00f8ee026580"
+      },
+      "candidateAfterEncodedSha256": "a625e5e5ba05f0c92554bc27c20175b65305a59dcf358b4154d7847a9028979c"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-2.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "aca324d3ab7d7fb9b17a8cd55134062cce20d8052b8c345c9d1d605a211248f4"
+      },
+      "candidateAfterEncodedSha256": "62f2d21599cbd35745838d2c8e4182c15dab0e9d70c11405b1d0890d63e79a65"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-3.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "e707674575df092e9839b4441827ee789e96e0448d26264ed6100e06591ff06b"
+      },
+      "candidateAfterEncodedSha256": "087a6f7e1657dc8b28cd3e5e3033c4c0f4d32c7c3be900163998a7e7d8c967a3"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-4.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "075575c2d71706348c0fe4e3e50faed986b64251d954a93dc970187987ec860d"
+      },
+      "candidateAfterEncodedSha256": "7eca49f38509da5d0d213fdda9a11c81903b8f1b629a6fd7b4076479183efc7b"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-5.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "3398f5317f4b0315ac2cc04b15fd937e48c7a3740092378cfe19b079726cd99e"
+      },
+      "candidateAfterEncodedSha256": "762b124f1fd53496a700760ee7794f41554779d2b154379f799164d6c00bc819"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-6.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "42809566d8c7c89cfffe925081ec8534db32f001f3e514a03c1a6bb49ad9e97e"
+      },
+      "candidateAfterEncodedSha256": "67b6f1a5fbd5656206ee6ff2afb6b2a2ef255d8c976b4cf835b868a895be4010"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-7.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "d14d3bafa76620b226c2591549a895bad40b1693cc9205982ba0e66dc222dadf"
+      },
+      "candidateAfterEncodedSha256": "101fc87c81e458059c0cd5377cbb3e3f9d8b8be7bb884e9b6cf50a1dbc1086c2"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/skill/skill-8.png",
+      "candidateSourcePath": "views/front_3quarter_sw/skill/skill-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "e1f788886baea1fab39f8a5ca67ba33150ecef8bfafc75a1d0eee9594b56504d"
+      },
+      "candidateAfterEncodedSha256": "3bc2bcaa1c24ced39c7c2502b3c4b9be0d4b58e42a7f111b1f6bca0ac919296e"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-1.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-1.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "34ca475c628bd420e9ddb1fccc6a28b09e59a424a3dee13dee9e6c6a35f72555"
+      },
+      "candidateAfterEncodedSha256": "6045f30efa0001d100781c291fcf19eff09eb43c7a83a921030394f0278747c4"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-2.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-2.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ba5a171dfc027069157b7de81bf780b58cba82997ded5b0f1b99922419764f71"
+      },
+      "candidateAfterEncodedSha256": "8230b1bb92a7dcbd37b54be5bb34ff6074644891c88a38716e714460163563be"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-3.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-3.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "3076e8e4ac46a71bbec8f2ff1f79b4be9c858197c5c8aad24552bd635f36787a"
+      },
+      "candidateAfterEncodedSha256": "6bbf5274129b27738dd45508b668f6e7016c27869912d8da3b4190d9e08cd1f2"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-4.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-4.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "262fbeff801e0969484a8ed4b5857a830848b288d62d507a527db8a68b964090"
+      },
+      "candidateAfterEncodedSha256": "85814b398f11843f9ba9ff6974b0e2f14729757a5beadfa5c5b10fefcdb8d895"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-5.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-5.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "e5e7eb98051b11397035a368f2574af920bda8358a00cb39c102370cb189dd64"
+      },
+      "candidateAfterEncodedSha256": "85a98b33185f15db816026f5447d89d038fccf4dc9293f71fdd8d7b44da77387"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-6.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-6.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "ee236e318f5ebdac3e1668475955fc6f60af9bc1ef97013d6085a8e608f7136b"
+      },
+      "candidateAfterEncodedSha256": "1c8a34a3dd4c71be803fb89c1f7c87b365df38eb97a241351f2ac43b264a1075"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-7.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-7.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "a6620a5373081e8c1dde9f7e380b98c9516ad6448f30d4ebbad191f15f543b97"
+      },
+      "candidateAfterEncodedSha256": "2ff2841249691ee392fc5fd51a6bb098a226c68f5ded160e8be392687b6ed159"
+    },
+    {
+      "destinationPath": "views/front_3quarter_sw/stagger/stagger-8.png",
+      "candidateSourcePath": "views/front_3quarter_sw/stagger/stagger-8.png",
+      "operation": "replace",
+      "expectedBeforeGuard": {
+        "expectedAbsent": false,
+        "encodedSha256": "211c9286113d04023666e129313ba9fbe40a2c7ff0aca9ee9ee18a1787cc3584"
+      },
+      "candidateAfterEncodedSha256": "ca3f2a167a4d82c6ea22e9f5f1715fba79290207a55b2161cfa56f64e4e26106"
+    }
+  ],
+  "manifestSelfGuards": {
+    "source/battle/install-manifest.json": {
+      "expectedAbsent": false,
+      "encodedSha256": "7821c0c25b4fcf49d9a4a3ea9a0b94df70ffdae7c326d0dfef1b4d049d613893"
+    },
+    "source/battle/install-manifest.sha256": {
+      "expectedAbsent": false,
+      "encodedSha256": "a8f57cbba7f234aea2ee302b07060d9d872bf647d9dcd5133e87c5281225db4a"
+    }
   },
-  "validatedSourceFileHashes": {
-    "qa/battle/actions/back_3quarter_ne/attack-contact.png": "4459dbdb858eb9991bb60331abacf90ea722bfe9361a92a668b2fd4b9345a0f4",
-    "qa/battle/actions/back_3quarter_ne/attack.gif": "c565888b3532608e574c2e3bd4a38388d57fa515d331bd495026ab043ca3e2cc",
-    "qa/battle/actions/back_3quarter_ne/counter-contact.png": "2d51f1f9baf370a31bb0a9c506ff597c659c6c1c06f44e9bb9d0800d6aa929f9",
-    "qa/battle/actions/back_3quarter_ne/counter.gif": "414a7be54e4fa7ef7c6bca2ea7644e62b021660f5084c1e151b6c00c6fefad5c",
-    "qa/battle/actions/back_3quarter_ne/defend-contact.png": "dd4e7f3b983c7841c06c87538acd852c84d82face12ad80947e54b92855f32d2",
-    "qa/battle/actions/back_3quarter_ne/defend.gif": "8aca34b647eb2cf797011d2f78ba81b7d7238bd9ddeb5ccafad1b3131fe3e46f",
-    "qa/battle/actions/back_3quarter_ne/dodge-contact.png": "46f37683c10953622f75d43f89e32390fa6c53e2478629c79b24622984047f3f",
-    "qa/battle/actions/back_3quarter_ne/dodge.gif": "e3bcb307adcb72aca523e363534890fa1f0fb92f5a5610c9089e5e74e16789b2",
-    "qa/battle/actions/back_3quarter_ne/down-contact.png": "1fae06f6a51212fc5fd1d08c3b54aecfe745d866b5b685bb935a861b92e24f01",
-    "qa/battle/actions/back_3quarter_ne/down.gif": "770f2e02d5463059d9346db40b5994130ed4fe28efb21c11517f973d747de28e",
-    "qa/battle/actions/back_3quarter_ne/hurt-contact.png": "f13787e99b4ea2d681d5e356af96b13207a54eae5b01fce62d8becb9c3579f5f",
-    "qa/battle/actions/back_3quarter_ne/hurt.gif": "d692c5d9870a5940ff3e0d3732db1726a39f64b952dc2c2588ce9d37d9fd12ec",
-    "qa/battle/actions/back_3quarter_ne/idle-contact.png": "0695c5316f0b8c24c65eb9513ab511088f511c9a3c5a868fcd9a7c9f559c899a",
-    "qa/battle/actions/back_3quarter_ne/idle.gif": "b615184522f160c1fda44c6eeab2516abda113ae120332d3a77c4aeda96de9a6",
-    "qa/battle/actions/back_3quarter_ne/knockaway-contact.png": "6b0e7c5c04d66f265a04d0ba13443d763a42efa4a49d7dbc291af94018b18861",
-    "qa/battle/actions/back_3quarter_ne/knockaway.gif": "c5961b62306dd05749ef945fa2794e61e8e46d0965f6ac07a013ed76339a85f2",
-    "qa/battle/actions/back_3quarter_ne/revive-contact.png": "e4d8e4c0ac843ceb5ae8b07373af5217cd8993e253e4aa04b12b3cc00eb6db34",
-    "qa/battle/actions/back_3quarter_ne/revive.gif": "0ca2c4905b08456084f8e05cba36d163bca4158c5a2040a0347e1ee982e42390",
-    "qa/battle/actions/back_3quarter_ne/skill-contact.png": "d96bf1b006472b79bd05b24b7754005b720e16e5b45a688a0125fa93792c7b24",
-    "qa/battle/actions/back_3quarter_ne/skill.gif": "e60e9fca4538967b5493eecf8bae210549f7e282190c1d811a6c055b96c69541",
-    "qa/battle/actions/back_3quarter_ne/stagger-contact.png": "aba3fbb440f4ddf042c9a12253f9757d9636e5f5ae184184930381336965a8fa",
-    "qa/battle/actions/back_3quarter_ne/stagger.gif": "a0523e289dc9058d8ae74a7e92a13cf8268bb57a2127be726f4519f7b81a6d66",
-    "qa/battle/actions/back_3quarter_ne/walk-contact.png": "b294456db4fa639c5803c6df764bcfcade364021b94b461ed303f6d5e38dfd61",
-    "qa/battle/actions/back_3quarter_ne/walk.gif": "8b49354998cad8f459ee92952b0146b4086dce936209ec0ddb63a168e5b7f5c9",
-    "qa/battle/actions/front_3quarter_sw/attack-contact.png": "ccc407101cb5cb4bf7fdcbef16255c176f82d68c75949e349dd436312ee5d978",
-    "qa/battle/actions/front_3quarter_sw/attack.gif": "99a97615206d893c048622929f2aba517e2da689aab8fb854c22ec9411345e9b",
-    "qa/battle/actions/front_3quarter_sw/counter-contact.png": "b34615ad63eb938859ce7daa9884456e01cc0751891dc4a0b65472c03bc8551f",
-    "qa/battle/actions/front_3quarter_sw/counter.gif": "6faf4b1277d0590c6a978678900b86422bd2c88518b1ff40f6e5391e3e2eb52c",
-    "qa/battle/actions/front_3quarter_sw/defend-contact.png": "2220479b27f649b96e2ef193abd298200f3e282c100def61b48243e4129e5e30",
-    "qa/battle/actions/front_3quarter_sw/defend.gif": "dafdfe8d40609ed40d5a1a3c41fa185603e1cb3cafbbe3a9d0abc48404d46481",
-    "qa/battle/actions/front_3quarter_sw/dodge-contact.png": "a266110285ee0fd2d2a1b4e8a62744f26e578820e22f18e05d0dcee83d9f8e25",
-    "qa/battle/actions/front_3quarter_sw/dodge.gif": "d97944458f5dae93f8c25c467fc6cf3cae6ed57bf0916ac39e867b4e0c332867",
-    "qa/battle/actions/front_3quarter_sw/down-contact.png": "0851aac7ee4eeb7c38dc3b7d8e7174bc8c071c4808c1c1527b4ec920a68ff077",
-    "qa/battle/actions/front_3quarter_sw/down.gif": "6cfc1968a56e2f9414d97103acbd2fab1c4829c622f35aea993637c9eb8bccfe",
-    "qa/battle/actions/front_3quarter_sw/hurt-contact.png": "58063df698d3913019c4c51aec16abdb4f2be799e96af9e91ea5b48f67658afb",
-    "qa/battle/actions/front_3quarter_sw/hurt.gif": "b3544ba1fd9188bfcbfd160cc806a007e6ae4b57a3e427e60553edfe057f29ae",
-    "qa/battle/actions/front_3quarter_sw/idle-contact.png": "0b858e70f19c3e1de43eca9e45688d95e6d5fe056448a4fa67d1ea26f4aedce2",
-    "qa/battle/actions/front_3quarter_sw/idle.gif": "120207f921e019793c635b72ab9b4b82a13658f66e7fc87e4a9224e452b12030",
-    "qa/battle/actions/front_3quarter_sw/knockaway-contact.png": "4cbbb0202918fd99216884b4ef52c0682c14f9ff494a3b1762695dd1118f9f6b",
-    "qa/battle/actions/front_3quarter_sw/knockaway.gif": "6291e5b2082e16cac4fb06bbdcb21fc14951eea07114ebda3ad7ad8c78d16652",
-    "qa/battle/actions/front_3quarter_sw/revive-contact.png": "7e29bd8bf66f116120b24c7d8256395c7763c16274cbc66366378e9847a20681",
-    "qa/battle/actions/front_3quarter_sw/revive.gif": "4eede8019aa850c65b4008467676f25838eddbdf3d4c22c3f9e966d4517a6669",
-    "qa/battle/actions/front_3quarter_sw/skill-contact.png": "7bed68191111208550324071d4cd5f14e1e640fd269e4b8f9971a489e5963981",
-    "qa/battle/actions/front_3quarter_sw/skill.gif": "e0dae869ef610f7ec0b0a9748a5df3db86f7ecada9a4da54e834fd31fb8db3ba",
-    "qa/battle/actions/front_3quarter_sw/stagger-contact.png": "70fc822f8add4f5e4bf3e58bc6d3ecfb159861f04592d7465f026b6a5e8f8a61",
-    "qa/battle/actions/front_3quarter_sw/stagger.gif": "3d9aa79347ed14c8855fc6f6a06489c217c8b723f6539667bfc07c7491c8a645",
-    "qa/battle/actions/front_3quarter_sw/walk-contact.png": "563727dd05bc4cd6c2c8fce82aa9ea3897ca42ea821127b7136487bcf7d6eb6d",
-    "qa/battle/actions/front_3quarter_sw/walk.gif": "925337274a8d2f7d4c222d7dee17dca33607f003fd45faeb832029c0140902f0",
-    "qa/battle/contact-sheet.png": "b2991e2464097b67c05c43f8b9cbb50575a3a369b0626a46ab4792763482057d",
-    "qa/battle/qc-summary.json": "a1e8e8478a72d2acfa15c6c361761bff1f4547d9c315f6ba8f24f43cb10fdac1",
-    "source/battle/back_3quarter_ne/attack/pipeline-meta.json": "35d3057f67758adbb2d8b4b8596561c0c71601869c09be8343bf4dc934a1a91a",
-    "source/battle/back_3quarter_ne/attack/prompt-used.txt": "fd627c17eee9a5fd66e90da99639bcdf77be718f6fe8c5239b58569e4e376aff",
-    "source/battle/back_3quarter_ne/attack/qa.json": "b7050ca6e98063823baf64771cc7a9dd78e0550f834b360ec5a9d6a43778fdb2",
-    "source/battle/back_3quarter_ne/attack/raw-sheet-lossless.png": "6414ac34a1dae6dadfca74b95460fb89d736df9352029694c387123386dbc6a7",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-1.png": "7d67cc9845220018b85109b9325cc53da4edf5a755b062ee997e6b8257c74f0d",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-2.png": "3fac5dbbd5069bd3dea84413edbf33daeae649d901dd16f2d34ce6b3079d6194",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-3.png": "9116750c8b1dc33df36bf582056c4dc2bf3b9db70df81d94a09290ec8ebc1f00",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-4.png": "1fa1bc60a20951b49a24fdd200004e0abe23222ddf4259f860e7f570476449fa",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-5.png": "f2d22c1d3f7710e2e309691194ecef82c08a8505a92bc57cc1d795ee77dc1360",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-6.png": "9e8d55891f4e026f2c89c3993508f97d3266222d60fd0b614d1ec6de7e0cedb0",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-7.png": "8680f7a0753136d0da7f9b004bbc8af31fb0f6c80d1d180787fb285f91d2c234",
-    "source/battle/back_3quarter_ne/attack/source-frames/attack-8.png": "102f479defc5fb019209030826c8a9f2309ae6825ace703b7952783d25e89199",
-    "source/battle/back_3quarter_ne/attack/source-meta.json": "ee1be591399d3984eed0ae2d7074edd2159a91118b411342905ef6518305c31d",
-    "source/battle/back_3quarter_ne/counter/pipeline-meta.json": "2b66766ae60d671c8d54e3c7bda0448e7d4eda306c680b7005460b04c768b4d9",
-    "source/battle/back_3quarter_ne/counter/prompt-used.txt": "6e1fb3949222b361eda1861c92f46967adcc38b7028cf93e4d4412b3af9518be",
-    "source/battle/back_3quarter_ne/counter/qa.json": "00ff916f4c63c50b08ba389f376d0444f29a587779044f285cab4582d4b08e7a",
-    "source/battle/back_3quarter_ne/counter/raw-sheet-lossless.png": "2e106db5877614f860f828897d520d88ef5bf90396ad3034bf86bd3d71c8507a",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-1.png": "63febc8fee1e0e60b6d59e40c0c64e7f2129d75c0e70e0dc22865b1540274595",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-2.png": "77c43c3c42ae4a3c8ac701e10b057e5217544dfd4b7713350ce916da0f8b3ddb",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-3.png": "096fbff2cc31282959999979370e48b15fad7b36329440df9975920d6be7e2a2",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-4.png": "c59f77779570a0cc0af261b3740b7a95c92c91616eba1b1113d68c668ddea05a",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-5.png": "196aea241cfd43050b7ccb0346db385e699b2dd4ba7170428eac9979e22e905f",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-6.png": "86d0e1c1a2b0a3cbac13e4d8b9c0082c8f34e53a034c42009eae3ce2c1813ca8",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-7.png": "c7ed2ba11463e609a638f9cf9072c82569aeff1ee50f4a2a4c638ecca1c5f1d7",
-    "source/battle/back_3quarter_ne/counter/source-frames/counter-8.png": "70e2111379233beeb46c7c8e4d19b017738794a978ed907b4e5d9f5ce17ad059",
-    "source/battle/back_3quarter_ne/counter/source-meta.json": "c9763077fe16323c99a5a9f6e4ec2f7b96bccdb4807accc99e07ca2825896d7f",
-    "source/battle/back_3quarter_ne/defend/pipeline-meta.json": "1a4901b4e61fcc4bedcab5f30fc5c5aa1fd263d80bc701016ce4010fdb202146",
-    "source/battle/back_3quarter_ne/defend/prompt-used.txt": "c794e4b85cda30044e5218de1f397a85add0c58954341f921c082dccfbd37cb5",
-    "source/battle/back_3quarter_ne/defend/qa.json": "04ab1214aa41d2000470d0258b542c7578f8f830629beb179713b67b26201cf9",
-    "source/battle/back_3quarter_ne/defend/raw-sheet-lossless.png": "68f28025584b15c8da982f16bdc49c948b36e45eff888c61d970b283117a984b",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-1.png": "7bead96621eee2afd085979c44b8bee4396f197aa436b47d037aba55189f92f0",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-2.png": "00b1745cc7576a40a9661d747320c77198db763e42b95c019e6154064f6f62a2",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-3.png": "b295f82f123e1e32661b8e7210f449ce1d352d3a2dc95df6fc65e69be25bb658",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-4.png": "1cd407c97e887f8b3f2f99c41caf58a911ddd5a72babc8cd834eb3ae16bd2e55",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-5.png": "621b1fea096e03c801c9217f05b8943ccfa72f90abfe6fc45fc94e4f585d1e9a",
-    "source/battle/back_3quarter_ne/defend/source-frames/defend-6.png": "120ee230f8785e35fe8af564e2f2246858579b57ea8eaa8e0ba232c2eab7da50",
-    "source/battle/back_3quarter_ne/defend/source-meta.json": "42dfc969abca9226acea386204a3c573161da0ec9b4d24e33c8d112404eacaaa",
-    "source/battle/back_3quarter_ne/dodge/pipeline-meta.json": "7bc141210cf83577f5d2980caa5557b60484e407932d9d8a450c21522c66c582",
-    "source/battle/back_3quarter_ne/dodge/prompt-used.txt": "1aacc9e7dd9eefc293a012b58c0610455d49d4398e03aa081c3013e5d2cb8558",
-    "source/battle/back_3quarter_ne/dodge/qa.json": "d87e1ad2d96684794187250fdd02fc407388473320867d802dd6105beda7c86e",
-    "source/battle/back_3quarter_ne/dodge/raw-sheet-lossless.png": "df19d11f460bf94589cf38d08068374c14a521546ae93b0686d44e303a423583",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-1.png": "0823a337a3f977698b96d51fefe66398dd4e7bbd8e0a6afd12e5ce8ee74d9880",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-2.png": "f5e3eed048b9a4dfaa01ee5230ef484ac32e29a62f74448eb0224885b4919d55",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-3.png": "f42af6cf53fdf160b945bcc9a03827da16f69a084058c8acc47f37ab26630b9d",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-4.png": "d410a8f5f96f0b5907734e86de6b7ef6351f20200333609eb4a3c9764cf1f8b2",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-5.png": "513ee0ff26114961ab24ddd26e0f90489e090688138262d032d01f4d71faca24",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-6.png": "1a7244be2f610adf3ad7922ac6fbea37bf676512dc29efd75f15832732ab5614",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-7.png": "d071b5a2f22d9b14180699ed14640c1d3da215bf668cdf6285b0318fff3f2efd",
-    "source/battle/back_3quarter_ne/dodge/source-frames/dodge-8.png": "b6947495b6ec91680a09a45e4720996c3b1eea6a5b0f83dd6f0b1850d29ff44e",
-    "source/battle/back_3quarter_ne/dodge/source-meta.json": "16dfb8f880139d0faf1ba5659b34bee36d690d9b1cab21263f83084145fa37f0",
-    "source/battle/back_3quarter_ne/down/pipeline-meta.json": "ec6ec222c51a52a1a4e4242a25a7a80067060327fb7e9c4b02ae26669d8a1cec",
-    "source/battle/back_3quarter_ne/down/prompt-used.txt": "230b7f957e63786553961cbe01ede4c712e59842d0374ada843f37c19592e5d5",
-    "source/battle/back_3quarter_ne/down/qa.json": "fd7b9e1edb00e1b60977b412d3fce77c0db4d6ea7012ed56608888a446357197",
-    "source/battle/back_3quarter_ne/down/raw-sheet-lossless.png": "9815a910ad665cb1c81988b61b77961104b47a886f63d9d5784a7c7121153d55",
-    "source/battle/back_3quarter_ne/down/source-frames/down-1.png": "9531018f89c1ffd5c4fbc8d64cfce9425d0709dee3583bed20e260eff7106cd5",
-    "source/battle/back_3quarter_ne/down/source-frames/down-2.png": "c9c3749e1949fe368873a7938995f64c6cb4772ded2e64b092d43850d737511c",
-    "source/battle/back_3quarter_ne/down/source-frames/down-3.png": "5549b98cf9d1f749e2e80fa143e016cffd2210eb8af94c717452bfbe8ddb9c33",
-    "source/battle/back_3quarter_ne/down/source-frames/down-4.png": "f13a9ff1f04345928323fd2dd39a698ffc36033d1add3840a7aae1afce31aabb",
-    "source/battle/back_3quarter_ne/down/source-frames/down-5.png": "4493b5470f3f566907f3edf9d7b1406914307323ea33ce6479a4abf5e282224a",
-    "source/battle/back_3quarter_ne/down/source-frames/down-6.png": "4bb71211dcaaf129f2756306794c750532baa4bc222d72b35f33ee2b32c5e744",
-    "source/battle/back_3quarter_ne/down/source-frames/down-7.png": "b138d14d891c10350875254d7c46aef13be016dc4a670042a627d80fd36b928c",
-    "source/battle/back_3quarter_ne/down/source-frames/down-8.png": "59bd7e2b6713a5ea78c3816c5bf79fc856759100c2e29bc62cffa40c2f933ce5",
-    "source/battle/back_3quarter_ne/down/source-meta.json": "247cf2c7a9733f394bb9517cb564a9c14260d33aaff8019796def466cd80fa90",
-    "source/battle/back_3quarter_ne/hurt/pipeline-meta.json": "a5f483c486584efa99118b75fc354b397822c44e82c50a56c26eb51ce332af71",
-    "source/battle/back_3quarter_ne/hurt/prompt-used.txt": "50965055d2e2398265e528655a911c26717bf2ec066ad1d409538a1279b0cdcb",
-    "source/battle/back_3quarter_ne/hurt/qa.json": "16b4fcd25774e096e6dcc9615304d652d4075682e3b6f365e4b8e9ad6dbd50e1",
-    "source/battle/back_3quarter_ne/hurt/raw-sheet-lossless.png": "6efdb6444afe4206732976e2cb2f96eb61a7ccb0365b785a4e1619bd912ca913",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-1.png": "6bbb7da3842f5f2f253b04790a134ff228bb5d1132549dcea385e8d8f2aaabcc",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-2.png": "124074d28f6ca2e640d7f8f6f9e742fba660a2540c4fb09d70031654c4ed79d3",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-3.png": "1107d9255dc713a9f312a7cd69eaaafe548a62e98528172bfb80d725db40b1da",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-4.png": "9581045262736103268fdf0706b337a6a7192c77d95deca8246fa2ee76e2e626",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-5.png": "16fa83ffc2ec1e9a647899bfdf5571885b9d4c81ca55a5261093d2551a183886",
-    "source/battle/back_3quarter_ne/hurt/source-frames/hurt-6.png": "092a3803aaf46d9d2d138dd00e098572a13ec3f788560f227815fc754b620961",
-    "source/battle/back_3quarter_ne/hurt/source-meta.json": "afb94c8c78f15486319523425d230b467499f2642f5cbb8b55ae89f8d3668f31",
-    "source/battle/back_3quarter_ne/idle/pipeline-meta.json": "527eba60bfc6cb0258151f70ef179b227d2f68cf3d28ffacf421aef44a496729",
-    "source/battle/back_3quarter_ne/idle/prompt-used.txt": "28b0fa50d78a86186fb72cebb89fb87a45f52f842effcb90904f1cea85f6f8f3",
-    "source/battle/back_3quarter_ne/idle/qa.json": "a86e83c85414e224ec55a26f602ed0cbd899ffa1c1d2463600b1543ab9bd9a97",
-    "source/battle/back_3quarter_ne/idle/raw-sheet-lossless.png": "f9d87877664d12acca96171ecffb977c50e00beb4e2d77ef2f57419fcb1f67d0",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-1.png": "74a0475bf0d5a4d0635f1e973406a6622d7bc9509fa9380b5cd59aeda039606e",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-2.png": "e62c13c3f22a444a6043b442cd21ce3a11cc5f9e87c32568de07870a1daa8b04",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-3.png": "c19041ca8ea0138c30b55767ea4ee1e12f59f5e1b53fd913a56caa65f1f5472c",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-4.png": "2587171febe8b7809a981489a085793b3334d2a878e1414c19bdab50787d3e18",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-5.png": "87b4f6fe8ab62ded45c7b01105e08307b7d6d78a6030bf97e59515600a09e411",
-    "source/battle/back_3quarter_ne/idle/source-frames/idle-6.png": "60ca76fd7cdbfc8f49bf67a5f50e6a3bb461d95f2860bb6d2519f24452e1de1c",
-    "source/battle/back_3quarter_ne/idle/source-meta.json": "4786ec5ebb922f148e93f310c55b9cb6137c70e06660636af1c300c818b37cdb",
-    "source/battle/back_3quarter_ne/knockaway/pipeline-meta.json": "6da88b1918e83daffedcd5e7b438d1bdf25601f2be9eae6b0f555a0855562246",
-    "source/battle/back_3quarter_ne/knockaway/prompt-used.txt": "f4cb40355630c84587030869bd53813cd1bbd62b478e44c781cec644bbea1476",
-    "source/battle/back_3quarter_ne/knockaway/qa.json": "5cf282813639d334b61a296ded45d455a2b3fb6ad69dc7c28268a204824cd698",
-    "source/battle/back_3quarter_ne/knockaway/raw-sheet-lossless.png": "314bf0bdb5f31dd6cc92d8d7870606bfb2d0194e0bd601b30dbbfeebb5c131c2",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-1.png": "4665d28be904a0299694cd3afbbc381e64f5b8879c969a2c77a0613ac62fd060",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-2.png": "aa742d68e70213d87190313782061b8cca79e608056bb35429cb5651531079fa",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-3.png": "78d3861445a53dc9e3b1e0b7f7989beb138d1c05c91de9d3ab5a458ffdf4d1d1",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-4.png": "5d599a3d4ef1a5117daee3b34c1caac86e16f850af6da9f673c636c2e7780425",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-5.png": "de16d3532f183747dae38c20094ecce571bed3343375f2a876ee0a4ab8244093",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-6.png": "e469c7766450846f91a715ab0d8e6ba11ccfb8047bb51198cba51194a7a604f3",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-7.png": "7d377a810b20778836c20c7eab980e5e4fa07018306fa0783a43a4f79d644d11",
-    "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-8.png": "856337e5217836d3d81bebef24d6c51fb74acbcac0e5257a3fccf9f7eb1d7356",
-    "source/battle/back_3quarter_ne/knockaway/source-meta.json": "ffb589d5e40729388dcd0ba58b16b6ceedaac0de5f7de0b6b7f3075083b3d062",
-    "source/battle/back_3quarter_ne/revive/pipeline-meta.json": "931910a13fbb53e02af38cb6b09f81891534e0840c429d2cd128d35a30e7a43e",
-    "source/battle/back_3quarter_ne/revive/prompt-used.txt": "cb7c7932c2ea191972212d423b08bcdf8f6e0f1b80e791652ef778e7c86e2a22",
-    "source/battle/back_3quarter_ne/revive/qa.json": "c99b8d86552bd33de4f87a3f8e17deaffc5f4a2bacecc32f6e20498a9eccf085",
-    "source/battle/back_3quarter_ne/revive/raw-sheet-lossless.png": "8840ff8175ee9577536354979eeb767fd5b3e07bfb91c3dae23309c985766cbf",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-1.png": "59bd7e2b6713a5ea78c3816c5bf79fc856759100c2e29bc62cffa40c2f933ce5",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-2.png": "0209a1cd26a68d310e8c6c21c7a9c0528ef63393106ebbbb3b8b17e6de073e8f",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-3.png": "131336c8a9197cf299b87f154a3f53ab5173d660b22d64b62c41ba66c3449e7d",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-4.png": "8f27375120b3a884acc923648c992ab8d25c8770e214e79876b18af4b9151a4d",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-5.png": "96c1d90ff846799a635dd73ab99bead2dba74e4c5bdcf06d76cde85989936f75",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-6.png": "efaff3265d714afa58e2417af8046a0b7985ee2de8000736bd9959a4a0e13dcf",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-7.png": "b2d36fcc2d4e417c7272ea2f381cffad8d38897880a7afe534823fe08d3f0481",
-    "source/battle/back_3quarter_ne/revive/source-frames/revive-8.png": "6dca6cb7d7239568a4015420e14824170bb47a02805d866e1de9ea0bc799e977",
-    "source/battle/back_3quarter_ne/revive/source-meta.json": "85ce3e27e4cb237e6295ada34551d1474141dc5b967f257befb36837dd9d5beb",
-    "source/battle/back_3quarter_ne/skill/pipeline-meta.json": "b68d747c7886819bf234a22b6458c9acc00c08492acc2364b0fc7628ec618281",
-    "source/battle/back_3quarter_ne/skill/prompt-used.txt": "806671b124b37313a1ad2a73609cecec5dde280682dcb6016bf18e6b588b0fe4",
-    "source/battle/back_3quarter_ne/skill/qa.json": "058890df5ff391f33e402dda71b498d5f5eb0daa8f38a077ab5cc39cf2490471",
-    "source/battle/back_3quarter_ne/skill/raw-sheet-lossless.png": "5d774f465e9a1df26d62a17042156e8249a1cced559122c651879e97dea51713",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-1.png": "5b06f8a6341287f4ec2aa2e5ef987ac7133cc4e649d718a9840677e41ccfb796",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-2.png": "0791643d9c782941d96bbcb853d41e8026153be387658c36378d7fbf8c0d028e",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-3.png": "afaf8ae9dd324221ce4831c6198b106936a6a10164110cabc16a94c1a4571f6e",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-4.png": "8cb83d195f50b4942b66cb273deaafac17fee1d23343e342df2f6dd0a0cca6a3",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-5.png": "253489f30141b1c079ab7388f7bd6831b1394b3bb32e2c3544bfc1a414022954",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-6.png": "b5de708568d82dd6f5e02d2e32c15bfc0787ba0e1aaf6c83fb5173a9e88453a4",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-7.png": "18f5e325b0c1dbe796f796437fef7d2d148d6d8259e61648f4e17e8c8dfe401f",
-    "source/battle/back_3quarter_ne/skill/source-frames/skill-8.png": "051992acfe3d2c7cde671dd27de3ab9f7c3f4aede93e0b0c908714142e2f5362",
-    "source/battle/back_3quarter_ne/skill/source-meta.json": "9c1aba077d85bacb65d05b667b0e36b072f4efcc53e782475d803248be014070",
-    "source/battle/back_3quarter_ne/stagger/pipeline-meta.json": "29cbd8bbc8578f10e3b1748122b9956cb58d67f17f564e9b8cd75f884ce3645a",
-    "source/battle/back_3quarter_ne/stagger/prompt-used.txt": "da982b13098409ebd811b36999ac5c5bd51a98ca586fc7f7891b20fc45988a0e",
-    "source/battle/back_3quarter_ne/stagger/qa.json": "9ee46204939f589b647a76352a12d3d515e6ad6d25841b979ddd52f0e2f4b449",
-    "source/battle/back_3quarter_ne/stagger/raw-sheet-lossless.png": "88276f9a8358b7e8ec2d704cd598c7cb085c39c5972f4791472810048864eb33",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-1.png": "4d3b0b3ef0ebc47aac552b22f93da668c3537279fdf67e3122d90225fa1c4800",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-2.png": "3f3801efd1ea7a7432157d683ceceb8698ca3e7058070dc0ffba5d92da4c3958",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-3.png": "08d5b51473bde860910deb19912b69d3b3e37052d9db646a5e38e535bab3f3cc",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-4.png": "fb8e4fc771f28c6ea02e38cda29c0a7e0344ee71a5315dc5c9407140deaef011",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-5.png": "504bdb3829b3bef1c25140632d01a0a12ce81d5e3f8ecd4197b4cc1789074559",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-6.png": "fde71f34da68393becfd2305892dfbae6650239557f66ccc1f12e9e16a09b282",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-7.png": "498e101fd92d4e4baf3231cc0d98e060fc01bb0951e967cece6b7967954cc7a5",
-    "source/battle/back_3quarter_ne/stagger/source-frames/stagger-8.png": "3cbeec89ea27166b522642c565d657705dd3fea68997e0838e9354fc04c7e98b",
-    "source/battle/back_3quarter_ne/stagger/source-meta.json": "2438f6fde515a95a05e50feb427a59ca803a9075ceda928f506504eb0a467a36",
-    "source/battle/back_3quarter_ne/walk/pipeline-meta.json": "2bc6df549da963b6d901eafafd1af4212802c060dab77bd0b3b0e292f948a24c",
-    "source/battle/back_3quarter_ne/walk/prompt-used.txt": "9a1900c39664297c149ddf747f9702c116eb072a9e401edcd2fa5f12127d6a85",
-    "source/battle/back_3quarter_ne/walk/qa.json": "fe2518bf658c5f4bee864ab997e1b1bfc957ec1eca3450c35ed7ba820086cac7",
-    "source/battle/back_3quarter_ne/walk/raw-sheet-lossless.png": "202373635cd0e2a4a2a2dff1f4c79c1081d03d5f950b6ec61fef0e735876ce41",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-1.png": "eed0179ff4f7d37cec451f4e280db7307825d6484488d481c6e4c72aaf228dea",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-2.png": "ef826ae03d93666c106b297a8a5a3072c8604d87e15d562c99aa509e5950711b",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-3.png": "de589f1b423563806d3e953ec5882351808032f53ac41d0dc71413fe76ef686a",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-4.png": "4cbc1f08fb8f856c77c733ebfb88b78250651671809272d1e829480d6b56dde7",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-5.png": "5121d38d0498f1bc0f373526e1ae5b669e66ee2a4b69fc355276a3a3254a491e",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-6.png": "82272d18e8f3a5dfb056f7754b91b65ebdf63aceff6901e5cea322bc20579c91",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-7.png": "02eaef0fd80bf00e1b4675e86c8f8bf3b82e519a76236f9c3e38ac0e72831112",
-    "source/battle/back_3quarter_ne/walk/source-frames/walk-8.png": "a3021e65ced862c458a2a15751594b89473af41557b03ff5b75f78d7d25f0159",
-    "source/battle/back_3quarter_ne/walk/source-meta.json": "e277fbf573e9ae40c07498520d8429c0586114ce7402a3e1b01a1924ec0c3887",
-    "source/battle/front_3quarter_sw/attack/pipeline-meta.json": "66dd1a97dc565cdb4835b2f058ca9cbbb7098024fbb621daf5f093c5990824b9",
-    "source/battle/front_3quarter_sw/attack/prompt-used.txt": "d66ef0f4768228df38403ed44e35cbb2bf58c0c01057c2ea9db11781beab0584",
-    "source/battle/front_3quarter_sw/attack/qa.json": "0ff30d450700c83dc5c479957bacfc1e18499d9410d504638982a1615d815c1b",
-    "source/battle/front_3quarter_sw/attack/raw-sheet-lossless.png": "6414ac34a1dae6dadfca74b95460fb89d736df9352029694c387123386dbc6a7",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-1.png": "a0b7d6b1ed71d1b4b0e2bfec2a169c880ec0d45ec1755a69b2a75b108bddff38",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-2.png": "33e2a7ad21b9c5ac68fcac2ba01c289a0dd91211edfb7d22ddc173db9fceba82",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-3.png": "15667aff2df9f600eceba7bec6d63f3ca7cdfdb0612e65c83760ee55e9c4f650",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-4.png": "08b38f5e1ec0015465466c8715082e8e357936136158772d9959be70b1ad6b81",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-5.png": "fe2731c9ac63e39b3ff2aff42579f92a70e0ae0a7099811a2f8e396ddad4f319",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-6.png": "0613f72df2878e7ad693184f30fc4f0e6aad34c05bf9cef5805d6e009d27d196",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-7.png": "4d30e1f70dcb19e15781830dbb6ed1a94cfe00353d2f9745c1b652873e700e1b",
-    "source/battle/front_3quarter_sw/attack/source-frames/attack-8.png": "9646a9b92ef9205a4d4cce5715f7926943469b348dc6005d4892ff917a379e67",
-    "source/battle/front_3quarter_sw/attack/source-meta.json": "e57e8382e50236ef1ef0e0fb669baef57f2e2b22c16c6c2390a717d2240b0868",
-    "source/battle/front_3quarter_sw/counter/pipeline-meta.json": "2b6de55f8bf596ddc1829e5df2582078f2f7ebaeb83d407ef107f063001e7164",
-    "source/battle/front_3quarter_sw/counter/prompt-used.txt": "219e626d4b63324c047bf38eeeaa67e9959db1cad633fbf81c2748dc8ec1e8be",
-    "source/battle/front_3quarter_sw/counter/qa.json": "861a8da255e4769c83a5e7ec4f0cffb38ed0e8cc17bfbe11c91396036fb960c9",
-    "source/battle/front_3quarter_sw/counter/raw-sheet-lossless.png": "2e106db5877614f860f828897d520d88ef5bf90396ad3034bf86bd3d71c8507a",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-1.png": "d0169027bf08850d3379aef775eaa8708acd65f35329bb4fe1d8e261b7b50762",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-2.png": "0b335d31d67ce342936e3d2063756943fb9c9fb3f159e468aecfef55d9bd077e",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-3.png": "28e51fb6f3e0ea67a98b29cd8fb40131b9709bf856546b380854563041aa5b3c",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-4.png": "52f0d57459378c0dfe8f22a71a81f5f65e4b3e67f8f5478e2248ae748d1d774e",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-5.png": "2bdaa0cbf326eb9d7cba38a812f5ff4c78b0ea31a537e14161417eb175ca0a41",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-6.png": "1a2af3008fbea8d49a520a0499349796719737c89362026486319bee9da8fb42",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-7.png": "0a26c999498b55b56259adb030f55d29610e2e7c24a8a0390f12105e1f84e3cb",
-    "source/battle/front_3quarter_sw/counter/source-frames/counter-8.png": "acbf4f56f337c9b54766e7504b6c45a88efedb5bf2d8a8f1d0cc5962df7c862b",
-    "source/battle/front_3quarter_sw/counter/source-meta.json": "8f64f33f4f8e6939cebd12d12d91d42cac956219f81e5522a56765941856f1d6",
-    "source/battle/front_3quarter_sw/defend/pipeline-meta.json": "72ec7595eb88e3d1e31dec1f1029ebc799ff4e0ac73dbb1f1484892d87f3433f",
-    "source/battle/front_3quarter_sw/defend/prompt-used.txt": "2267a7d173d420c47dcc87d93d8c823ecde70fd81ff816aff7a7ccc78ec18bb9",
-    "source/battle/front_3quarter_sw/defend/qa.json": "513f56e03db387658a985250aef24d5e158a6d0c96e06bfb8ab0b41967add2c7",
-    "source/battle/front_3quarter_sw/defend/raw-sheet-lossless.png": "68f28025584b15c8da982f16bdc49c948b36e45eff888c61d970b283117a984b",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-1.png": "646278eab5c1a2b37a36b26a49062e9742a36b17595a43e08dd9991647bb754c",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-2.png": "2e3e752259c5e25229bb1b0d027e235a2d28085e49941865ce47d4582dea24bd",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-3.png": "a64407fe5ef328705b8409325ff2153f6f7831e6cbd8253adc3358f67b82183a",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-4.png": "cdff0f9e02b1b58df6a3562b6fa826fb28e2bc8941f928f9880ae95b134ddd9d",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-5.png": "4c801276c4399249b21c7dd7fe1fa3c3471aa7733848bf7a25527dd9e251bf81",
-    "source/battle/front_3quarter_sw/defend/source-frames/defend-6.png": "39e0d4bb88ab0346101adab788f40ab085a97cea9ffcf02b8087db2da88940bd",
-    "source/battle/front_3quarter_sw/defend/source-meta.json": "7234e6256223ff9dadcdd8fd7bd04efdc10409e40b436875e71945d7a1e76b31",
-    "source/battle/front_3quarter_sw/dodge/pipeline-meta.json": "59ca96b5dad5894a62b8b81c674646b3a32e8c88d5f233e0111847c9a1f4967b",
-    "source/battle/front_3quarter_sw/dodge/prompt-used.txt": "0c091e462d8c8a552222dcb5e7a1098f33cb48a271dcbbe049e488bcbe3d8511",
-    "source/battle/front_3quarter_sw/dodge/qa.json": "9be597f3ceed2d3cec0b13f7f70d3a07fd3ad477298fa508007f71c0ea7b850e",
-    "source/battle/front_3quarter_sw/dodge/raw-sheet-lossless.png": "df19d11f460bf94589cf38d08068374c14a521546ae93b0686d44e303a423583",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-1.png": "b26a53efc6b56457b6c1286c16a398a3397ea5a2fb06d1ce30004c36d8f52bdc",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-2.png": "f9c35cb2b6e3a962e5745621ae45b3b04a0b3d2f83180463e4a35be17bb8a17d",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-3.png": "a90f7eb36a10500cad2405b0ff939c5caf58fdade4559b996dcd7d37e9c981ff",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-4.png": "7ccec31b647d60811e556e7aed12b5a005ea51e38c7bed041244b350f6d404b2",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-5.png": "7ff0f8aa862842e7ae4af4202a83a499d12f026caeba8e44745b87c36d2ac7f3",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-6.png": "a812ba517e2ff2656a9f43302e755ce130d2b86a10e611da7de88580dde16545",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-7.png": "76d22e1c1d7663b6a96000b9c19252b4a8688ba2445f7213eaa0b2750ddf8d10",
-    "source/battle/front_3quarter_sw/dodge/source-frames/dodge-8.png": "9dcc34122e61a04d6eb4923d6c0324493dd37e70b85ff3d671ca9848a1fcd7a1",
-    "source/battle/front_3quarter_sw/dodge/source-meta.json": "11de2cdc1da2fc46c7bd5cfede878c4a2c70bf753175e0210088c9a0f4d92a6d",
-    "source/battle/front_3quarter_sw/down/pipeline-meta.json": "ff93e20e1ecee5c4f16d945af4f1a578bd59bf5c9a872b9fe0a47850c0afe71a",
-    "source/battle/front_3quarter_sw/down/prompt-used.txt": "56c0105ef2d50b6b87bd47ae1e0571b109b88cbaebbfde845c92c15dfa90ae89",
-    "source/battle/front_3quarter_sw/down/qa.json": "5fced28f159c8dda21bb781049781eff2f308e1d640171642ada5db3924d2182",
-    "source/battle/front_3quarter_sw/down/raw-sheet-lossless.png": "3b6e15ed30730badf50da1ebe720c511d3e26048303086901c8691ceabb54601",
-    "source/battle/front_3quarter_sw/down/source-frames/down-1.png": "5df5f1cf263a2f5e5de9f9be8d9d243bb296a142d7ac0e94f76f4d5bbd29185f",
-    "source/battle/front_3quarter_sw/down/source-frames/down-2.png": "2fe32a5ae8420954997c6d3804dea087be2052cccee0efd339454e06ff12af1f",
-    "source/battle/front_3quarter_sw/down/source-frames/down-3.png": "432fff9a567674f932924e65de059653125da0cebaf365de84334087af718449",
-    "source/battle/front_3quarter_sw/down/source-frames/down-4.png": "4b3131eb60d67db942100936a7f5e026a8abe5efa9c3d46b85613ebb25a29e9d",
-    "source/battle/front_3quarter_sw/down/source-frames/down-5.png": "ac5a8410caf03ca7103d293576e1f2edc01d48189b3e3c6754899e07a6dcdf31",
-    "source/battle/front_3quarter_sw/down/source-frames/down-6.png": "f2148dab51468217c626c212855dcce08d8c3cef42ac33cd0dee31482bf079bc",
-    "source/battle/front_3quarter_sw/down/source-frames/down-7.png": "c223e5cc8e7325212c93c593a4c071590de34a28a300fa2b7311eec23bcb0acf",
-    "source/battle/front_3quarter_sw/down/source-frames/down-8.png": "2982fd1a23e4bff37afaec2fc3d5d5599e2a6343ce83ff2029b3cfc50e83f2f4",
-    "source/battle/front_3quarter_sw/down/source-meta.json": "9dbe51111080d82aab31a2787508ec9fabab85e374b6fbeeadf4983167968259",
-    "source/battle/front_3quarter_sw/hurt/pipeline-meta.json": "61be52da061c6659ca293ddf6e254a744db03a0ba413010e01b2fee22397e3ae",
-    "source/battle/front_3quarter_sw/hurt/prompt-used.txt": "91fed6b80f7cf371be1e9fa4d447d19b64b86ca9b06480b346edb6a470814ab9",
-    "source/battle/front_3quarter_sw/hurt/qa.json": "679458b1112a5f11694d0881019002d92429d6ecf88d05b6efe422a50e493b48",
-    "source/battle/front_3quarter_sw/hurt/raw-sheet-lossless.png": "6efdb6444afe4206732976e2cb2f96eb61a7ccb0365b785a4e1619bd912ca913",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-1.png": "4e20f280560c330a4460ff350a8bb9bf5a37adf5e7f293a58a9ae818c260b7a7",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-2.png": "c176240f842a1eb9bd20848d84a4c1d1296f66beead63b8439bcd35941f132b0",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-3.png": "dd42377a21bdacf2e142394993c31a27da06fbddd9f7bedc2b8cd185286bf368",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-4.png": "19fcfa1093cadfd19500d7690bb8ecbb978796f57554f887fefcdc51c4158345",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-5.png": "9b7c7701887cb65a53bb0186f1b17a129fec7875dc6a57c09728fc17a2f118ce",
-    "source/battle/front_3quarter_sw/hurt/source-frames/hurt-6.png": "b74368228990ffc9fe5ee5b2895ec43a434c9bf66fbfbb95cfb14558a964d808",
-    "source/battle/front_3quarter_sw/hurt/source-meta.json": "c2bb1e49054df382cc2c72c0fd51e6711a1054ad4c9cba0c95987ad9c016fe10",
-    "source/battle/front_3quarter_sw/idle/pipeline-meta.json": "9ca3d3334d5d22e684743323f41f14a12d642d1db7676cbd04a20ef56b286de9",
-    "source/battle/front_3quarter_sw/idle/prompt-used.txt": "f65dc5e9a1541f23a607c704558b18720e70f3c4336f843ce3543908ec31eebf",
-    "source/battle/front_3quarter_sw/idle/qa.json": "c30389bf80be9e7a7990298d21f9c76d26fbdeacbfc595d7a3e0ba09aeffe5a9",
-    "source/battle/front_3quarter_sw/idle/raw-sheet-lossless.png": "f9d87877664d12acca96171ecffb977c50e00beb4e2d77ef2f57419fcb1f67d0",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-1.png": "08c7058fee5568c520ad252fdfee21c89e25808efc9deeb334b2076b91b5efd2",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-2.png": "4bc78cad5ae274b5ad1a9e46a614d977f6d682b131399cb8c69cfb4bbc71575a",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-3.png": "30c151f52f812ba88f06b36bb31b51b5e52a5cf23eded017f631c93ca6c90063",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-4.png": "5806fcd849afd6a14b8fed484e28ae76569bf9867ec42eff9bb44be928468223",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-5.png": "62afddbffca0e8444498d753ba805134dd7261b77e9393933537a32848a4ec31",
-    "source/battle/front_3quarter_sw/idle/source-frames/idle-6.png": "1a7bbd80e9b42306a50a86ade260cbda02728467a0dcb25f612bbde7eb8f3193",
-    "source/battle/front_3quarter_sw/idle/source-meta.json": "4a709b43653bd370ad5c35005551c846d638dcba6621a2b740a50034125a8fa3",
-    "source/battle/front_3quarter_sw/knockaway/pipeline-meta.json": "fa9cfff2b748d93a614251903af9496aca0305dd0ac28c552db2c614d404f216",
-    "source/battle/front_3quarter_sw/knockaway/prompt-used.txt": "04028800a76c7e2a07364547c77f7ceda832bc7f1fb05f9ed8c7f262f9e0fddb",
-    "source/battle/front_3quarter_sw/knockaway/qa.json": "ce346dddc0e5acdc8a03b62affb304097dcad471d7486df8084d948414d377d4",
-    "source/battle/front_3quarter_sw/knockaway/raw-sheet-lossless.png": "314bf0bdb5f31dd6cc92d8d7870606bfb2d0194e0bd601b30dbbfeebb5c131c2",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-1.png": "a2ca374f04713470893c8a7c4f2b0acf37bfc2a2777276855fb0a1e72c815d9c",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-2.png": "6217dd4768501bfc635459db6c4bf21db27193f773117210a8aef2866d69ba47",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-3.png": "b4fc822556d25ce6e8948252c8b0a9bc378ea767c086a806d8d7fb0b63640c06",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-4.png": "63f646555ce41b43b782efa5b2a264a9056c2510c77749307886d12ffd9faf0e",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-5.png": "46c93ebc609ece0067f17d1eadeee3292ffef9ac2fe14a9e2b5d1c298350db35",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-6.png": "2354fc037a6580d7dc4f3a8d36de3763e7eb59c34eb80d7c6ef50a8ddaea4de0",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-7.png": "52b06a6ac9353892e7f60a2f5b00dbd1bbae65dd199a3a609be790d7d3b224f7",
-    "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-8.png": "8fc70700aa7ea5e2e3903ab2c6dd2974fadfaf5cbc033e97db891c4664fd31a5",
-    "source/battle/front_3quarter_sw/knockaway/source-meta.json": "aa5ace68a9b561b70a3291d8cadc521ac75d81a83d152e9de4cd5f496664c3f8",
-    "source/battle/front_3quarter_sw/revive/pipeline-meta.json": "c2fbeda932ba6bc1207ebaa1d072f5f8f405a29969c951dfa6c9042bba236443",
-    "source/battle/front_3quarter_sw/revive/prompt-used.txt": "6038f66294bbe016c37907a5f220c2c3530666505e143121adf99a1e65d3973d",
-    "source/battle/front_3quarter_sw/revive/qa.json": "4842637fad1416eaec5e130260f6cf1f54ed54c57b2fbf22e5bb7163d787a26b",
-    "source/battle/front_3quarter_sw/revive/raw-sheet-lossless.png": "05af7b1c1b0bcbaa4c89d1abc45b28dc207536ebdbc4fb89cb2602aa954fcd5d",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-1.png": "2982fd1a23e4bff37afaec2fc3d5d5599e2a6343ce83ff2029b3cfc50e83f2f4",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-2.png": "55a82708ad500d21032d88c8c58eb74b00cff4ba40cfad8f601160e8205df381",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-3.png": "2307e6fc04d64b4d69fc79b115f73f1846e127651c42b2ddbe111e679c7b0c61",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-4.png": "52304b33c72a2b051f7bbb6dae393be4e754fa7632c2ea11d71f897ac8ed1c8c",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-5.png": "ef5b21f853b4ae80f27007d06cdd32b6b6fc30e0c91a161f11f8536416422eb1",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-6.png": "577f68fdd2934b26e1768023a74dcd94d887dd0e42a78b2e6f711d6add800e5b",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-7.png": "56ac90fbe5dc328511b7edf382717990d8959bb7b278d330e201a1a4fb48814a",
-    "source/battle/front_3quarter_sw/revive/source-frames/revive-8.png": "481103dcb7f1b5f5531ea5661b58ea5fa9f53be0c49f661ee22c02185c3ac71d",
-    "source/battle/front_3quarter_sw/revive/source-meta.json": "6a3acaa14e95391f70dd0417efcb98abfa725327267607502b21ae206f2371c6",
-    "source/battle/front_3quarter_sw/skill/pipeline-meta.json": "5e1a9a35b42ebe3d6ef9d84a2126b7a6a0635ba6c266fa75f61455afa952c0b8",
-    "source/battle/front_3quarter_sw/skill/prompt-used.txt": "d8f30cb8541c83f6eedf2d66f1c7d3c4b1889ffcdf338a366a7b10e6eeaa76e1",
-    "source/battle/front_3quarter_sw/skill/qa.json": "decb40e295da1c43f237af51614feb9c393b8aac4cb4d57b54a8775d24e69d22",
-    "source/battle/front_3quarter_sw/skill/raw-sheet-lossless.png": "5d774f465e9a1df26d62a17042156e8249a1cced559122c651879e97dea51713",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-1.png": "bcdfd585305525d4c4a134feb3822fc6664a229ad5c8e3c0ab68a58d97f110f7",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-2.png": "34966505168980918228ab1247450630260457d9f73efc2a096071c77e123257",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-3.png": "d3222b810685f5261f602bc6c136fc6969c81aa45935ed7e42410c2a07423620",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-4.png": "cb601a55d0f8d729a2ff31eb332c440c21559e7a36421d3488579366c00f680e",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-5.png": "bd4fad1700dc271a7293d4e81044fc1c6209efcbc7ae68d7ec08c14121cb3b16",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-6.png": "9a260445439746e47d75ac3bc6ff07ef6332630ef05c32667936539ca3eae174",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-7.png": "1c7f8c91375a97268844cb44db7d65d7ec3b3c4818d3fa4db093d3f5a506662d",
-    "source/battle/front_3quarter_sw/skill/source-frames/skill-8.png": "04e054ff76012fb8f079d558bb882f7e062d418725e19497b11eef31b670986c",
-    "source/battle/front_3quarter_sw/skill/source-meta.json": "c94fcd20ad28242691353a60f04c9d43952737d42e1afeda17bad24dea49bb00",
-    "source/battle/front_3quarter_sw/stagger/pipeline-meta.json": "53f93c36d3996f61348eddeda01b333c3c5f9d8c099635700fa33b369606dd1a",
-    "source/battle/front_3quarter_sw/stagger/prompt-used.txt": "3467b1223928a925eecb6d280693fc0c2e519cb1ca37cccc315350db27f9ca6d",
-    "source/battle/front_3quarter_sw/stagger/qa.json": "380ce0ec76b1e02878267ab4167993b7c1373eeabc5efb758c14c676de61d4a1",
-    "source/battle/front_3quarter_sw/stagger/raw-sheet-lossless.png": "88276f9a8358b7e8ec2d704cd598c7cb085c39c5972f4791472810048864eb33",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-1.png": "c9aeab67a9bcefd36bc6cfc5c578636cf9b01ced912a395e694cb92572314d2f",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-2.png": "c80dba9842560fefd06da1d4b9546f981bacd0f1bdd83fc4feab9ca4cb8ce69a",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-3.png": "04b197c759a665dbc3819f4ed5118bb6309bf6651e214086d34749ca3f516314",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-4.png": "3c3e2b7195f3a5247cc6375620bbc0eb7a60036702205acbbb79ae6928c67b33",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-5.png": "5b79dddb6fe34c2bdcec5a32d5d837c9c2ad9114745581dee2244807945f2c2f",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-6.png": "ceb6c3bc4f8ef8aeb1700431848ed69888df8fe39484e768625f4f3b66d1e79f",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-7.png": "1833735c8d3cff16482da76455c7fd1493076f816c6370ed44e2410bba0a9c1c",
-    "source/battle/front_3quarter_sw/stagger/source-frames/stagger-8.png": "ae8fa99a1530c08c54c44ca17569d2ea34e44afe40ebc9a264e5cc8f56c50ef5",
-    "source/battle/front_3quarter_sw/stagger/source-meta.json": "97b93076e4ed3db60509d7267ad85df8bebe065dbca0a9cf54715658af9f8c99",
-    "source/battle/front_3quarter_sw/walk/pipeline-meta.json": "f748ce2ea392b2cb70cc0c11e3f1951f7be857c3a4a670d8109133a06bb84ee2",
-    "source/battle/front_3quarter_sw/walk/prompt-used.txt": "4d278269f40da6dbdcfa4d9e3427dbdeb09afed8205ab239791e3e9cda019bbb",
-    "source/battle/front_3quarter_sw/walk/qa.json": "f78683189266405f15fe32aafd3b1cf25d1f8b9ea36584d2a0a2bd433ab25caa",
-    "source/battle/front_3quarter_sw/walk/raw-sheet-lossless.png": "202373635cd0e2a4a2a2dff1f4c79c1081d03d5f950b6ec61fef0e735876ce41",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-1.png": "8c06c3e225a26359510a9a239aa39bf247fe1f86d77f4f7301a5fb0fcad6719d",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-2.png": "0fd4aae251bff7d8e2f3e72f7c94a8c12f8f49b418c28209f58fd10cb2b759f6",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-3.png": "4d1ee25f6d647453766349c63a0d3d751d222ebc7ed5eab8c70e5cc76f306f5d",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-4.png": "c28de5840ccfa533291c69747de532182307a112f4db01aa24ff1608a0b38918",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-5.png": "a788f389d43a85851f2c0a10faa913d24376a15c9797b00cb1e176309b0e8cad",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-6.png": "5043439df763a42d03adb53d2adf049d28fefcf8161e7c06a186511c458cfd2b",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-7.png": "c0dd54b8f7c03a816d2e0247da965a1bcdf967465ba546f0da854cada4a6747b",
-    "source/battle/front_3quarter_sw/walk/source-frames/walk-8.png": "48b281d0beb08e055a2e490576dd484144cc0c3d14a698d0d7cebc8b457958e1",
-    "source/battle/front_3quarter_sw/walk/source-meta.json": "7f24a1284600c839001c5db479b70833e3b5c704744508cd6a51393286d755ad",
-    "views/back_3quarter_ne/attack/attack-1.png": "f36450df8d41e3bc3edc80022f509fa0428b106c3c92fe199c77c7e728f16898",
-    "views/back_3quarter_ne/attack/attack-2.png": "864b501112304679190822246f09fc47b8fb01f21f6e17c6ab4fbecfe701b46f",
-    "views/back_3quarter_ne/attack/attack-3.png": "1496cf675b1d2290d94ca40e8ef010d921e276df324916c57adf392397ffbd5e",
-    "views/back_3quarter_ne/attack/attack-4.png": "5c207c6b8d9f0f838a7784304930e6261056ce8b6f018996a7c2052da7269fe5",
-    "views/back_3quarter_ne/attack/attack-5.png": "10ac200b3c4ab6d467229afc8e2275c387cf7d2e4ebe47547ce50fc1c05ef06c",
-    "views/back_3quarter_ne/attack/attack-6.png": "4ecb8c0fa234bbdaf295157bb5e9aa37f2027887591a0aae55bc8dc2c932de94",
-    "views/back_3quarter_ne/attack/attack-7.png": "7cde25b979135dc80cc14f007e2cb9277aa9deb0f767be45a938c6b4d20da2b2",
-    "views/back_3quarter_ne/attack/attack-8.png": "a4ffec25c78e31b7ad983a9bf57e6d79a837a77416ffb1bbb6dd7fa46c1f69f8",
-    "views/back_3quarter_ne/counter/counter-1.png": "9878aa60b9d78739ad080efb12b5f65454da88a514f3fed3d643fb8df2199df0",
-    "views/back_3quarter_ne/counter/counter-2.png": "d124cd08c091099ad21824ab31fb5b23e66a2c6aabf1e5d51a8a33569f6199e3",
-    "views/back_3quarter_ne/counter/counter-3.png": "eb1a3403deb5ad52eb1e7cd17eb795f02c195c03539f8cfc474379ddc90ffaf3",
-    "views/back_3quarter_ne/counter/counter-4.png": "d10bd72c294c7cdcb60372259023ad92e819cf68df281fdec1cd835c7b30bcd4",
-    "views/back_3quarter_ne/counter/counter-5.png": "acd684ddd46840dce84607c90ab1b3ed5b07fa883b49271712613b5a9a6aa814",
-    "views/back_3quarter_ne/counter/counter-6.png": "93532cd046ec49fea0ced8d81518e0558e90a136bbee4a3c8ab2c6fe4e2a7f5c",
-    "views/back_3quarter_ne/counter/counter-7.png": "8edfae5f1444b5dbf829819230e6c135adfbff2d0571aad111b2d4927fd846bc",
-    "views/back_3quarter_ne/counter/counter-8.png": "4e8f062fa696d7a77411bdd03675ab23d99ee9fff6191d418404fdecee028da0",
-    "views/back_3quarter_ne/defend/defend-1.png": "062f87ba8daa62f7c377a74c1047014f53b8d07ce0cdbdf73f0389038bc12e92",
-    "views/back_3quarter_ne/defend/defend-2.png": "7ab123ba7ae9d68afd19333d4eb442e06aafb034dac02459f8cbe8b10dd337f6",
-    "views/back_3quarter_ne/defend/defend-3.png": "63543bf1f2dd78a0402d39bac450a8bb407161e3677c03bc065f17f023e4149f",
-    "views/back_3quarter_ne/defend/defend-4.png": "0b33d97f965da54d38e26f83df4d60bc9f086513eaab36f55084ee1424eebcb0",
-    "views/back_3quarter_ne/defend/defend-5.png": "1dd01dd3e5c3621ed7dd3ae695253f0aabb7eeb18a156dad4fe07078e241b556",
-    "views/back_3quarter_ne/defend/defend-6.png": "10c5e2765e8a550b6d6d33968fe6a29e34034e04e966c659474d3c6ccdb00f0f",
-    "views/back_3quarter_ne/dodge/dodge-1.png": "26283d5d213c4baf4ec5243b25eabf662078905068189030db7b8507fac80164",
-    "views/back_3quarter_ne/dodge/dodge-2.png": "1afdd12681cd3b0f39f429a3b208767d8eb66b16fd9d457ccf55d9b1bb66f1ab",
-    "views/back_3quarter_ne/dodge/dodge-3.png": "23cd657cec531abe612aad0f140b88681dbb229ccf014f6e65cf68ee2ac82c1d",
-    "views/back_3quarter_ne/dodge/dodge-4.png": "894074e3decfa735750e497b49e726b6e729e1dd39f32752dbd10f56dd2ad319",
-    "views/back_3quarter_ne/dodge/dodge-5.png": "8fde30f60a65fd0cca2e91355fee004c55154b7e17f85b84e51e67ad91380c96",
-    "views/back_3quarter_ne/dodge/dodge-6.png": "4a4f7ce7c6d7d0e9dc6a8e0f04888e474adc2e494e36660298958c2a16262d63",
-    "views/back_3quarter_ne/dodge/dodge-7.png": "5c66962f74bde58f3f018e4619eee0236459542427f75bcd478a44aed385843b",
-    "views/back_3quarter_ne/dodge/dodge-8.png": "79242e580adba5a2006e3b3aa47fa6f9c8af4370bcbe05ed02bc8c2359fcbf30",
-    "views/back_3quarter_ne/down/down-1.png": "5b88e21d0074947ec0793a2f3fd180944aa6cb36b9b418fd78b567f4699c27fd",
-    "views/back_3quarter_ne/down/down-2.png": "39a542efc2e4ef53e3906092f84190c821beb9608d7ca889d280e7a3771d92ad",
-    "views/back_3quarter_ne/down/down-3.png": "7bf94b9ccd4a9883f8eb5368d4d6e7479c0980c3d65f39dcf5c1b961258e7787",
-    "views/back_3quarter_ne/down/down-4.png": "bbe31413e4dfe0bcb955c8ac6e1ff70a7b20524343881c77586d0915d9ceb8aa",
-    "views/back_3quarter_ne/down/down-5.png": "f447d7fc75c9d5ddf67659e35f8dab887f7e25d852987d1debf377e5c4ecaaf0",
-    "views/back_3quarter_ne/down/down-6.png": "9b86fce2f837d65e630d2d08ef8f9bc79490032f007eb57d57ede0aebf104e27",
-    "views/back_3quarter_ne/down/down-7.png": "a7ad6f065bd61a03cd6e21ce24de40b1b34786ed4a668a1730e3cbe16f77a04e",
-    "views/back_3quarter_ne/down/down-8.png": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
-    "views/back_3quarter_ne/hurt/hurt-1.png": "990f7e90795bd6bcfe45f99607c71b17a0eb5dd986e1ff708fde3356119f9955",
-    "views/back_3quarter_ne/hurt/hurt-2.png": "2e0b3449c465bf34135b7ec4d97217d2f65b66ac4b3adefce3b19ccb1ea647b6",
-    "views/back_3quarter_ne/hurt/hurt-3.png": "29fd8c3546a41e008a4772861ded25832c5d93a13de7e77dc048279e2f881417",
-    "views/back_3quarter_ne/hurt/hurt-4.png": "f0e2aff85a56435d2e214019cefc34b2ddcfff48a82df42356c1140dd94e5f7f",
-    "views/back_3quarter_ne/hurt/hurt-5.png": "d9ae9f898353cffb9aad68fe180f7e15b09b2f7278c08a2f0846c1db3bb7ff07",
-    "views/back_3quarter_ne/hurt/hurt-6.png": "bcc12038c02972e91a014261117d462ba7fa6b632be39859053f41b244cdd4ec",
-    "views/back_3quarter_ne/idle/idle-1.png": "c25c40b68ffc2b8b60ac73c0f37fe602ed84001e0b16f47f1d9587bcaf1d2e4d",
-    "views/back_3quarter_ne/idle/idle-2.png": "e611e23d02407b2bf5984ba02ffd47650aaee2a4d7fe49a7df25a063d00ddb75",
-    "views/back_3quarter_ne/idle/idle-3.png": "d69b7f30b309860d569fbf0d012490a5bde55636dc51c547301e5d23be4dd93e",
-    "views/back_3quarter_ne/idle/idle-4.png": "a5783644e4196c8cd45b6bea0f9dcfa9ab145dd9710290a067b58900eb66dab5",
-    "views/back_3quarter_ne/idle/idle-5.png": "ce45ce9ead6d4a4b06f3f1001a93cc8d8b78acd4a4e7b89e43d36e812181b0c3",
-    "views/back_3quarter_ne/idle/idle-6.png": "5c6c556415ba74ddeff822b0f5dc0742500fb62574931fce41eed15ee2cde0bb",
-    "views/back_3quarter_ne/knockaway/knockaway-1.png": "04b46717f2aeb5a216bdbc86a9d7ef59fe2b03dd25cea2a07aaf4d101f24aadd",
-    "views/back_3quarter_ne/knockaway/knockaway-2.png": "abbaea5e35da1678f199da07b6b4bf8de9f1503b081b85bf92de56a8c2175344",
-    "views/back_3quarter_ne/knockaway/knockaway-3.png": "6966f8a219059230ca7eb434b01ca93e9aa24855e0139c08c89d32a68ec9b097",
-    "views/back_3quarter_ne/knockaway/knockaway-4.png": "aac139185b6b8f52ddfa2ef2a9cff1b101829874e189ca1d09290c9ec50e0873",
-    "views/back_3quarter_ne/knockaway/knockaway-5.png": "d8a24d605e8b199cdd6e212c9f288e65c783b4eef847b29274ff6dbccbf8a49f",
-    "views/back_3quarter_ne/knockaway/knockaway-6.png": "13ef75a2d51797ae4d0286b35dd75021588fd653714a484133503a7506d506c9",
-    "views/back_3quarter_ne/knockaway/knockaway-7.png": "78080b3cc124b8d8a64cc31901955d31b49e606db1e9880d9d8bd3a6fb2a97fb",
-    "views/back_3quarter_ne/knockaway/knockaway-8.png": "c46ec5b89eeac7ff98e690e3144e6fa5bc7081f17eecb1c6a2540aa1160fba4b",
-    "views/back_3quarter_ne/revive/revive-1.png": "3b042459764fcba0cda2982308ca354493681ebc88ea5e8ebd94a81ddeddc532",
-    "views/back_3quarter_ne/revive/revive-2.png": "a4d85f4bdb234cd25ce68d2cd31d41bd79e32b71805ec561a9b9ed630b79ba9f",
-    "views/back_3quarter_ne/revive/revive-3.png": "56a0ac9c386f8657ee42a3d2d9479db60c1baaa1d368c208c9d3d5a84ed36956",
-    "views/back_3quarter_ne/revive/revive-4.png": "b1ed809c82f775b63639dd8147593ddef87d08bd918e9ddbf1c2aca6dab1f679",
-    "views/back_3quarter_ne/revive/revive-5.png": "9a079a949bc1553910bfcd6f14026dc0f5478d8f50f0929283fbf8f1b02fac48",
-    "views/back_3quarter_ne/revive/revive-6.png": "ace2f5e7382af5f918737e1c49aae4ad1db93f4b83d951fb0882b2cf65cad11e",
-    "views/back_3quarter_ne/revive/revive-7.png": "47f441e1c2ee5db509b441140029c776bc779522beeefc11c9e04e32a86ee5c9",
-    "views/back_3quarter_ne/revive/revive-8.png": "ea433d3c0b59d58348a3333d295880c76cd5b229a62bfeb1fb0ecfdc4106ffef",
-    "views/back_3quarter_ne/skill/skill-1.png": "64d50995adf63deb75ee315621d241ed7c9bffb6a55017ef2d541652412257bf",
-    "views/back_3quarter_ne/skill/skill-2.png": "6cd5def551520c24db22a7bc9c8ccb380c444cffa0965973f630398d7b92d66f",
-    "views/back_3quarter_ne/skill/skill-3.png": "2df81f33eb816215cb48c352a80f9e22141c2959199af5d3e1104889b3555653",
-    "views/back_3quarter_ne/skill/skill-4.png": "397c8fc5f9d5a1ae825c785b69b03e5d3b8a0d5a585c02eaf89179383e7e137c",
-    "views/back_3quarter_ne/skill/skill-5.png": "d61f65c697937e9d65e2b4fc931903ca5b334b757644e967f79d7296742604e0",
-    "views/back_3quarter_ne/skill/skill-6.png": "f013614d2464e01fe8b6d703eba790118446ddbb0cab9fd595d626a91ad5bed7",
-    "views/back_3quarter_ne/skill/skill-7.png": "0601b9553ab25131e685771986546d03d1810f171d47cae7ba0cd4eb2a26328a",
-    "views/back_3quarter_ne/skill/skill-8.png": "864753393fa50f7b49e2d0b63a3262d11736c1cd5ee8fa04d5fa861fdbeda82d",
-    "views/back_3quarter_ne/stagger/stagger-1.png": "7184d9fa586f5a01ae99a29572a7f14248cd4ba2f824d0095b5ac329b2238869",
-    "views/back_3quarter_ne/stagger/stagger-2.png": "ae1dec03084e4abffc6e5a3086c6f3c5721bd2df6c61ee1098c59d7af7762819",
-    "views/back_3quarter_ne/stagger/stagger-3.png": "a84b3430265d082982328f797282ccd82fde4ff2b4524403b3f67c5cd26c9962",
-    "views/back_3quarter_ne/stagger/stagger-4.png": "181e70363f8fc9277b68a72b42445c2b3496c5a5db66d0f099dfce9476412e6b",
-    "views/back_3quarter_ne/stagger/stagger-5.png": "a0aff7763a8502a5e2bcec4394929606de0df5a47ecf8db97665d63d435a9d58",
-    "views/back_3quarter_ne/stagger/stagger-6.png": "42a7d8ab556706614b2190db9ac9a0dd17fa6b6cc82659762bf085e5985f742d",
-    "views/back_3quarter_ne/stagger/stagger-7.png": "720819b91b130b67c3b8be088447e0244a1713f41d59172b24824b03eae6a61d",
-    "views/back_3quarter_ne/stagger/stagger-8.png": "d55debc258ff865f1d73bcd030e7c6938c95c3befd421bfd653b19498ac2e8d0",
-    "views/back_3quarter_ne/walk/walk-1.png": "b4337425a3fadd173662797133705ab66bfe89e9c177dad9ed4c0d6226fb62a2",
-    "views/back_3quarter_ne/walk/walk-2.png": "ab8ecfc3025fe27396e1b66ab5d5f0110ec7bf4350999c17348f94c9bd047b2b",
-    "views/back_3quarter_ne/walk/walk-3.png": "1c07be3462542bc25baeeee419243a1fa78bf118d7dc05fc99b7b2ecf47e545e",
-    "views/back_3quarter_ne/walk/walk-4.png": "1d4acd99b1bc0861c78d86ca227f919b71acfa35e79352ab7c2ec1bacf88b7b2",
-    "views/back_3quarter_ne/walk/walk-5.png": "a5d606c48f6efebeda3f03dfa9b3956dfa6e20416ae55c91122fa4eded40d21a",
-    "views/back_3quarter_ne/walk/walk-6.png": "ca6b2cf18e12035807cab0b52230075d40bff933a4b048c3a628633a26789eb4",
-    "views/back_3quarter_ne/walk/walk-7.png": "e01a0e8174c8106e4f1c30f87a777a056695ab918e1f89e2c3f5526e3558a51e",
-    "views/back_3quarter_ne/walk/walk-8.png": "ff1cf013745fbec53842e3f8df8a85c73be7ec3d58e7e29fe8b9c9e4e11d6623",
-    "views/front_3quarter_sw/attack/attack-1.png": "646d17b207297c794505bc36799d1d876572919085bc19c21342dd8c846b7f5b",
-    "views/front_3quarter_sw/attack/attack-2.png": "4aded2e0616ba54e21d0f2508b0fcadd87dbe210cc769a6f5ac2bd12fc0b9769",
-    "views/front_3quarter_sw/attack/attack-3.png": "6af95fcc8b74307249e5711c96d5ff87e881a6c60eb6542643e777a90c4d9a4c",
-    "views/front_3quarter_sw/attack/attack-4.png": "fc72e169a9931919ea42560813f6c7aae7b4d2edca393f5f0947ea262d613c82",
-    "views/front_3quarter_sw/attack/attack-5.png": "ea2dd027fac84e0bf45587256ae671e2c57bfef0bf354ab1b404a1fca798add7",
-    "views/front_3quarter_sw/attack/attack-6.png": "74c81844e2b594808a2d68e042fcecc85020ee3498e639d175c9d04d072b84b6",
-    "views/front_3quarter_sw/attack/attack-7.png": "fffdccab853a62d4bbd4ddc78db2257a5bba8ac2de089fdcf4dc9bcc8d0087de",
-    "views/front_3quarter_sw/attack/attack-8.png": "b4ab2fa4e86b667ff66a2588d5c4bac487cb4e7a2be2f436d13e022189412ad3",
-    "views/front_3quarter_sw/counter/counter-1.png": "93e35b34ef8d1caae4ce8bacb76dfbaec4aae5930f9cffa7bbb9fb477dafcb80",
-    "views/front_3quarter_sw/counter/counter-2.png": "4a52e9ec994d91f8a154f181b2aeadf38f89a85744457d1485e350ea70958ca6",
-    "views/front_3quarter_sw/counter/counter-3.png": "77810d730bde4487d6c14c450cb924cb60dd2b159d6f577bad4a0d09d379a8d8",
-    "views/front_3quarter_sw/counter/counter-4.png": "31d08aec673759affc984cc79b10f8507a28df631c769e7637eae47f3ee4b208",
-    "views/front_3quarter_sw/counter/counter-5.png": "207782efa94970ad86e0536584e92e7bfcb55be6f3b00f0907b32afcb0416f88",
-    "views/front_3quarter_sw/counter/counter-6.png": "2d865e0550113e025ff4bca03f0b80a8a4b1e4b7b4b85181c174aae9b934c2d5",
-    "views/front_3quarter_sw/counter/counter-7.png": "f03a476ccb43259c1eeafb1ae4a98df4b14bf9a9f345b32b95fdc37f337f61e5",
-    "views/front_3quarter_sw/counter/counter-8.png": "b7df49d3a075661fa98438465eae909624b508b12c13de9dc61670dfaed42a8c",
-    "views/front_3quarter_sw/defend/defend-1.png": "9efd22d770bc253cddf6372fe868f09aea2a60e332f7546a1c38094a7d150540",
-    "views/front_3quarter_sw/defend/defend-2.png": "0a1d1ad03ff642f1408ef050b144ce3f9e73f03806014871aeed3f994fd89a1b",
-    "views/front_3quarter_sw/defend/defend-3.png": "a150d92c948fc3f379c303268c0d805c5e81751a2d5783a016c7841203551bba",
-    "views/front_3quarter_sw/defend/defend-4.png": "8f9aa0c130db49577083a52c79db5f749b775930833bfd99062ee7c0bdb1a828",
-    "views/front_3quarter_sw/defend/defend-5.png": "061e2d5a44f947de7d4c722c8ab5571b987cee6417303a3c8f6a7837e4f3610b",
-    "views/front_3quarter_sw/defend/defend-6.png": "d6c647671794f9e330ec8697beb7a842219313c234c05c51c94da02bc382d2b3",
-    "views/front_3quarter_sw/dodge/dodge-1.png": "5d008abe08e0cd53a4ec7de057543558d2152fb0dc4b54ada24a5bad2eb35e70",
-    "views/front_3quarter_sw/dodge/dodge-2.png": "9fac339003a368bd5727273e6e2b2db401b785f73f1bfda5e8ebfa23b10da2b4",
-    "views/front_3quarter_sw/dodge/dodge-3.png": "74fa181f11c35ed46be8863da8d4a5a35d952c0c36f5ac9901748d40c73ab7b6",
-    "views/front_3quarter_sw/dodge/dodge-4.png": "047da7e60ba4d274e5fb2a5ca69ae1dfd0d7bb1c69034694f8ef3aa993c5ab34",
-    "views/front_3quarter_sw/dodge/dodge-5.png": "7f982cd5f01703d45e5fd1481edf455a48b8e82da081e04e13dd8f28766e51a2",
-    "views/front_3quarter_sw/dodge/dodge-6.png": "20250321c9c1a1b9a1394afa09ba3d091eaacdd7ad94491ed9e30ba90c4258c2",
-    "views/front_3quarter_sw/dodge/dodge-7.png": "26c1d7c08c6b17711c54ed360d7e5d7fc3d7b6c15e990e25da5b512e61f6ec93",
-    "views/front_3quarter_sw/dodge/dodge-8.png": "30b28cf7d830c6bbed1e5618509e4d1745773db3771bbb864e1bb843603aeaee",
-    "views/front_3quarter_sw/down/down-1.png": "8b254e5d0b980d622351915a0fe5f070a112d0580078ff485d467328c742796f",
-    "views/front_3quarter_sw/down/down-2.png": "983f30369a802c3d7a2ad94c4450bd0899d87be0c4925200ae4453b4b09e5023",
-    "views/front_3quarter_sw/down/down-3.png": "9c7271ad344cfd57e9756771f97600147a95c02e6fd7ba77fe819d0cf90d44e9",
-    "views/front_3quarter_sw/down/down-4.png": "2484ae421d716eecd64fb158cf4ee3e0a64ad6512650ba6f90879eb25945f4d1",
-    "views/front_3quarter_sw/down/down-5.png": "c7fb24c7aa04df401759f0509e76ef74096961e7f0880f5ade4aac1ae3cd7acb",
-    "views/front_3quarter_sw/down/down-6.png": "b723c01ff11c26343bb6e99c6e2adda788aea76aba5fa639a15037f2d3f54975",
-    "views/front_3quarter_sw/down/down-7.png": "58c2f2996967bb1d3d65c35ffd7c4d6f280c1ba7aca63eb6f992028fd2b43d65",
-    "views/front_3quarter_sw/down/down-8.png": "9add0be7a6016e73f3c00428a3165754b0553101987a25de0ec8ba74d31ff8e7",
-    "views/front_3quarter_sw/hurt/hurt-1.png": "f36280637dd318d6c4d298629d08046a504d310cf3edd8b214472f2f19f7629b",
-    "views/front_3quarter_sw/hurt/hurt-2.png": "807fff45b64f5b2ff0553e886560c84854f8ebd574ed0312c2ced8ceddc6ecae",
-    "views/front_3quarter_sw/hurt/hurt-3.png": "612618cd0bb441c6a0a242c9f2462dc3e8a9f4a97c5de2b5fd30efd65e4dfb96",
-    "views/front_3quarter_sw/hurt/hurt-4.png": "7b8eb0e04865a9d0a67a0dff149631528fda395cab56cd3012e46cbf0685a150",
-    "views/front_3quarter_sw/hurt/hurt-5.png": "6510bdfa9ae8474fb74822aae186c6c7979bfcdfc05bd37c55434580b0fa5cc7",
-    "views/front_3quarter_sw/hurt/hurt-6.png": "9c8e0eb6c525bbaa3392bf22f2188a655428646a615c362fdab540e433464ba9",
-    "views/front_3quarter_sw/idle/idle-1.png": "19b25acec42c2ab4fc596cebe6af8c10702ef2e9a7511d0c4bcd5d220cb34e55",
-    "views/front_3quarter_sw/idle/idle-2.png": "a487eb781e8bc5013aa651192397f2bdd915e832c0f4cb7d838704c644dec15b",
-    "views/front_3quarter_sw/idle/idle-3.png": "79801bd9160b1c3de72f766af1412f014c5c96addfdcf536c2fbacc862946f89",
-    "views/front_3quarter_sw/idle/idle-4.png": "2b7216d1871c5760a27246a37c225df1b3b8420bf632323d25273a1a9ed1d67f",
-    "views/front_3quarter_sw/idle/idle-5.png": "25ded26f3b0da41483fbd068196298b2038d094a0c7ba0e1f2f6ee30b23ab997",
-    "views/front_3quarter_sw/idle/idle-6.png": "189e138d9871c17091558e91226593d1fcead8847d8ce40304fe97d878c244af",
-    "views/front_3quarter_sw/knockaway/knockaway-1.png": "350aca0e0a90df7a399e4b2d0a5f4aa06c2aa40b6d4b913ef1d6d80b2f9bc2f9",
-    "views/front_3quarter_sw/knockaway/knockaway-2.png": "f10c0b90f2a2d7efa12017c637f8062075289585e5152d4438cf48daab50edb7",
-    "views/front_3quarter_sw/knockaway/knockaway-3.png": "4f7a68a696d4541c29e10cac2a2f0896e2c34a965ed6597ea51eb9285d9737f6",
-    "views/front_3quarter_sw/knockaway/knockaway-4.png": "7898ccf4b1fb8fc4f7cab24f8009df40660c47fe619cdfaf76625c4cc3d99b8f",
-    "views/front_3quarter_sw/knockaway/knockaway-5.png": "fa8ac465b2930fbbd05c33d16cad83018c2613fd411febe3e90132d28da27d50",
-    "views/front_3quarter_sw/knockaway/knockaway-6.png": "be45a234e7d5e558b227562ff58df43f3484ae9ca2ec7b8606eaa538719cc4c1",
-    "views/front_3quarter_sw/knockaway/knockaway-7.png": "1042a194126c83331078a0bc139fd38df3c2f9e139b4f578c0f8b21c875a4804",
-    "views/front_3quarter_sw/knockaway/knockaway-8.png": "16fcc60b9527aca109e0693cd54c99166db0356549977bc01a5b493fe1923d31",
-    "views/front_3quarter_sw/revive/revive-1.png": "9add0be7a6016e73f3c00428a3165754b0553101987a25de0ec8ba74d31ff8e7",
-    "views/front_3quarter_sw/revive/revive-2.png": "3085bc47ca0b1a30838a387ef0d20f2092bbd86ee71a80d3f5efa84ca0b2986f",
-    "views/front_3quarter_sw/revive/revive-3.png": "5ec1465622a86f421a2578c09afe099630031651fa89238dd633957d128c3a06",
-    "views/front_3quarter_sw/revive/revive-4.png": "c1dab900484722dac173d5a0233257aa00c02dd7737f616ad854c62d8532ee38",
-    "views/front_3quarter_sw/revive/revive-5.png": "e5d8785ae6e22dedcdd93a969df1450ef0c7e1a6c98cefff4e8d5604b6446c8f",
-    "views/front_3quarter_sw/revive/revive-6.png": "98baca58fb360854dfc946adf1c2b8ae4e31029b87335ec5172eedf10789cef3",
-    "views/front_3quarter_sw/revive/revive-7.png": "f55f3c89c01127fff550b3a4ae479f5a24dca67a2f1aecb325243ec87ea9c9e9",
-    "views/front_3quarter_sw/revive/revive-8.png": "487ba4d5b583fbaf71d082be3bfcb385c97084e45171974a11e565a3482d27c1",
-    "views/front_3quarter_sw/skill/skill-1.png": "d347fed05b400a0abb75a7aa30dc4dbcf869996ff855f4f5711f00f8ee026580",
-    "views/front_3quarter_sw/skill/skill-2.png": "aca324d3ab7d7fb9b17a8cd55134062cce20d8052b8c345c9d1d605a211248f4",
-    "views/front_3quarter_sw/skill/skill-3.png": "e707674575df092e9839b4441827ee789e96e0448d26264ed6100e06591ff06b",
-    "views/front_3quarter_sw/skill/skill-4.png": "075575c2d71706348c0fe4e3e50faed986b64251d954a93dc970187987ec860d",
-    "views/front_3quarter_sw/skill/skill-5.png": "3398f5317f4b0315ac2cc04b15fd937e48c7a3740092378cfe19b079726cd99e",
-    "views/front_3quarter_sw/skill/skill-6.png": "42809566d8c7c89cfffe925081ec8534db32f001f3e514a03c1a6bb49ad9e97e",
-    "views/front_3quarter_sw/skill/skill-7.png": "d14d3bafa76620b226c2591549a895bad40b1693cc9205982ba0e66dc222dadf",
-    "views/front_3quarter_sw/skill/skill-8.png": "e1f788886baea1fab39f8a5ca67ba33150ecef8bfafc75a1d0eee9594b56504d",
-    "views/front_3quarter_sw/stagger/stagger-1.png": "34ca475c628bd420e9ddb1fccc6a28b09e59a424a3dee13dee9e6c6a35f72555",
-    "views/front_3quarter_sw/stagger/stagger-2.png": "ba5a171dfc027069157b7de81bf780b58cba82997ded5b0f1b99922419764f71",
-    "views/front_3quarter_sw/stagger/stagger-3.png": "3076e8e4ac46a71bbec8f2ff1f79b4be9c858197c5c8aad24552bd635f36787a",
-    "views/front_3quarter_sw/stagger/stagger-4.png": "262fbeff801e0969484a8ed4b5857a830848b288d62d507a527db8a68b964090",
-    "views/front_3quarter_sw/stagger/stagger-5.png": "e5e7eb98051b11397035a368f2574af920bda8358a00cb39c102370cb189dd64",
-    "views/front_3quarter_sw/stagger/stagger-6.png": "ee236e318f5ebdac3e1668475955fc6f60af9bc1ef97013d6085a8e608f7136b",
-    "views/front_3quarter_sw/stagger/stagger-7.png": "a6620a5373081e8c1dde9f7e380b98c9516ad6448f30d4ebbad191f15f543b97",
-    "views/front_3quarter_sw/stagger/stagger-8.png": "211c9286113d04023666e129313ba9fbe40a2c7ff0aca9ee9ee18a1787cc3584",
-    "views/front_3quarter_sw/walk/walk-1.png": "20f89859a98115c67aff55e10c06e60cd2c177784fa6c80203fd239cdc28990d",
-    "views/front_3quarter_sw/walk/walk-2.png": "6192d06790ace539479610d4d3dc671c9642dfd0225e419d87bd23f44a63fc20",
-    "views/front_3quarter_sw/walk/walk-3.png": "da983a914d840414fb73224507da1b861a6f6d68c588262bdffea78ffa4dabac",
-    "views/front_3quarter_sw/walk/walk-4.png": "6d08864f48dadd2b43be1bccc0969885b22ed318a4b03e43ed59b55d2a4a97a6",
-    "views/front_3quarter_sw/walk/walk-5.png": "a3d186c8c27eed0071b1048d2b98815c6043863b8879650c28458b3c71a9f9ef",
-    "views/front_3quarter_sw/walk/walk-6.png": "a3933bc8b99deb2eaa1abfb2a40356fd60ead3ef00887b6d466cc8b3a486106f",
-    "views/front_3quarter_sw/walk/walk-7.png": "8520160521b02d9e203df3bd362c6d98ed27e65feeb77edf72c05fb023ba5f6c",
-    "views/front_3quarter_sw/walk/walk-8.png": "8bb680851fa6b75a00bcfaf3aae9cb0f6d69c1ed45c0e1f44d745960edddbe8a"
-  },
+  "forbiddenSuffixes": [
+    ".import",
+    ".uid"
+  ],
   "runtimeEnabled": false,
   "ownerReviewStatus": "pending"
 }

@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 1,
+  "repairId": "runtime-motion-scale-followup-v1",
+  "repairClass": "current-runtime-to-current-runtime-isotropic-motion-scale-overlay",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "view": "back_3quarter_ne",
+  "action": "stagger",
+  "status": "static-geometry-and-continuity-self-review-passed-owner-review-pending",
+  "transform": {
+    "view": "back_3quarter_ne",
+    "action": "stagger",
+    "scheme": "uniform-action-view-isotropic-scale",
+    "desiredFactor": 1.18,
+    "appliedFactor": 1.18,
+    "factorCappedForRuntimeMargin": false,
+    "sharedTranslation": [
+      0,
+      0
+    ],
+    "frameCount": 8,
+    "frames": [
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          88,
+          115,
+          217,
+          244
+        ],
+        "sourceCropSize": [
+          129,
+          129
+        ],
+        "outputCropSize": [
+          152,
+          152
+        ],
+        "actualScaleX": 1.17829457,
+        "actualScaleY": 1.17829457,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          76,
+          92
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 1,
+        "beforeMetrics": {
+          "bbox": [
+            88,
+            115,
+            217,
+            244
+          ],
+          "bboxWidth": 129,
+          "bboxHeight": 129,
+          "alphaPixels": 8959,
+          "visualScale": 94.652,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        },
+        "afterMetrics": {
+          "bbox": [
+            76,
+            92,
+            228,
+            244
+          ],
+          "bboxWidth": 152,
+          "bboxHeight": 152,
+          "alphaPixels": 13298,
+          "visualScale": 115.317,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          84,
+          117,
+          219,
+          245
+        ],
+        "sourceCropSize": [
+          135,
+          128
+        ],
+        "outputCropSize": [
+          159,
+          151
+        ],
+        "actualScaleX": 1.17777778,
+        "actualScaleY": 1.1796875,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          72,
+          94
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 2,
+        "beforeMetrics": {
+          "bbox": [
+            84,
+            117,
+            219,
+            245
+          ],
+          "bboxWidth": 135,
+          "bboxHeight": 128,
+          "alphaPixels": 8912,
+          "visualScale": 94.4034,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        },
+        "afterMetrics": {
+          "bbox": [
+            72,
+            94,
+            231,
+            245
+          ],
+          "bboxWidth": 159,
+          "bboxHeight": 151,
+          "alphaPixels": 13186,
+          "visualScale": 114.8303,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          91,
+          112,
+          223,
+          245
+        ],
+        "sourceCropSize": [
+          132,
+          133
+        ],
+        "outputCropSize": [
+          156,
+          157
+        ],
+        "actualScaleX": 1.18181818,
+        "actualScaleY": 1.18045113,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          79,
+          88
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 3,
+        "beforeMetrics": {
+          "bbox": [
+            91,
+            112,
+            223,
+            245
+          ],
+          "bboxWidth": 132,
+          "bboxHeight": 133,
+          "alphaPixels": 8810,
+          "visualScale": 93.8616,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        },
+        "afterMetrics": {
+          "bbox": [
+            79,
+            88,
+            235,
+            245
+          ],
+          "bboxWidth": 156,
+          "bboxHeight": 157,
+          "alphaPixels": 13115,
+          "visualScale": 114.5207,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          91,
+          112,
+          224,
+          244
+        ],
+        "sourceCropSize": [
+          133,
+          132
+        ],
+        "outputCropSize": [
+          157,
+          156
+        ],
+        "actualScaleX": 1.18045113,
+        "actualScaleY": 1.18181818,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          79,
+          88
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 4,
+        "beforeMetrics": {
+          "bbox": [
+            91,
+            112,
+            224,
+            244
+          ],
+          "bboxWidth": 133,
+          "bboxHeight": 132,
+          "alphaPixels": 8878,
+          "visualScale": 94.2231,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        },
+        "afterMetrics": {
+          "bbox": [
+            79,
+            88,
+            236,
+            244
+          ],
+          "bboxWidth": 157,
+          "bboxHeight": 156,
+          "alphaPixels": 13165,
+          "visualScale": 114.7388,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          90,
+          114,
+          222,
+          244
+        ],
+        "sourceCropSize": [
+          132,
+          130
+        ],
+        "outputCropSize": [
+          156,
+          153
+        ],
+        "actualScaleX": 1.18181818,
+        "actualScaleY": 1.17692308,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          78,
+          91
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 5,
+        "beforeMetrics": {
+          "bbox": [
+            90,
+            114,
+            222,
+            244
+          ],
+          "bboxWidth": 132,
+          "bboxHeight": 130,
+          "alphaPixels": 8950,
+          "visualScale": 94.6044,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        },
+        "afterMetrics": {
+          "bbox": [
+            78,
+            91,
+            234,
+            244
+          ],
+          "bboxWidth": 156,
+          "bboxHeight": 153,
+          "alphaPixels": 13236,
+          "visualScale": 115.0478,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          91,
+          112,
+          219,
+          245
+        ],
+        "sourceCropSize": [
+          128,
+          133
+        ],
+        "outputCropSize": [
+          151,
+          157
+        ],
+        "actualScaleX": 1.1796875,
+        "actualScaleY": 1.18045113,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          80,
+          88
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 6,
+        "beforeMetrics": {
+          "bbox": [
+            91,
+            112,
+            219,
+            245
+          ],
+          "bboxWidth": 128,
+          "bboxHeight": 133,
+          "alphaPixels": 8849,
+          "visualScale": 94.0691,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        },
+        "afterMetrics": {
+          "bbox": [
+            80,
+            88,
+            231,
+            245
+          ],
+          "bboxWidth": 151,
+          "bboxHeight": 157,
+          "alphaPixels": 13177,
+          "visualScale": 114.7911,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          92,
+          114,
+          223,
+          245
+        ],
+        "sourceCropSize": [
+          131,
+          131
+        ],
+        "outputCropSize": [
+          155,
+          155
+        ],
+        "actualScaleX": 1.18320611,
+        "actualScaleY": 1.18320611,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          80,
+          90
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 7,
+        "beforeMetrics": {
+          "bbox": [
+            92,
+            114,
+            223,
+            245
+          ],
+          "bboxWidth": 131,
+          "bboxHeight": 131,
+          "alphaPixels": 8795,
+          "visualScale": 93.7817,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        },
+        "afterMetrics": {
+          "bbox": [
+            80,
+            90,
+            235,
+            245
+          ],
+          "bboxWidth": 155,
+          "bboxHeight": 155,
+          "alphaPixels": 13105,
+          "visualScale": 114.4771,
+          "minimumEdgeMargin": 11,
+          "bottom": 245
+        }
+      },
+      {
+        "plannedFactor": 1.18,
+        "sourceBbox": [
+          91,
+          117,
+          220,
+          244
+        ],
+        "sourceCropSize": [
+          129,
+          127
+        ],
+        "outputCropSize": [
+          152,
+          150
+        ],
+        "actualScaleX": 1.17829457,
+        "actualScaleY": 1.18110236,
+        "anchorRule": "preserve authored frame bottom-center plus declared group translation",
+        "sharedActionTranslation": [
+          0,
+          0
+        ],
+        "pastePosition": [
+          80,
+          94
+        ],
+        "mirror": false,
+        "rotationDegrees": 0,
+        "colorOperation": "none",
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied",
+        "view": "back_3quarter_ne",
+        "action": "stagger",
+        "frame": 8,
+        "beforeMetrics": {
+          "bbox": [
+            91,
+            117,
+            220,
+            244
+          ],
+          "bboxWidth": 129,
+          "bboxHeight": 127,
+          "alphaPixels": 8859,
+          "visualScale": 94.1223,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        },
+        "afterMetrics": {
+          "bbox": [
+            80,
+            94,
+            232,
+            244
+          ],
+          "bboxWidth": 152,
+          "bboxHeight": 150,
+          "alphaPixels": 13132,
+          "visualScale": 114.5949,
+          "minimumEdgeMargin": 12,
+          "bottom": 244
+        }
+      }
+    ]
+  },
+  "evidence": {
+    "view": "back_3quarter_ne",
+    "action": "stagger",
+    "frameCount": 8,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 13,
+    "contactSheet": "qa/battle/actions/back_3quarter_ne/stagger-contact.png",
+    "contactSheetSha256": "f8976427c312b357a5dd2a804e1765657c8104c870cb1e16be24c9dd957fa021",
+    "gif": "qa/battle/actions/back_3quarter_ne/stagger.gif",
+    "gifSha256": "fac2d794b264775ff5cb3c49214bc31264a4243692aef3b8e4db8de769d48eb9",
+    "gifDecodedFrameCount": 8
+  },
+  "creativeGeneration": false,
+  "claimsFresh512CanonicalDerivation": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

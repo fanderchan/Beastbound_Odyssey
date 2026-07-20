@@ -3,7 +3,7 @@
   "formId": "driftfox_highland_wind9_earth1",
   "displayName": "高地风狐",
   "artStatus": "in_production",
-  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "productionScope": "formal_battle_two_view_runtime_proportion_repair_v1_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -138,15 +138,65 @@
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "battleSourceLedger": "source/battle/source-ledger.json",
+    "battleSourceLedgerSha256": "0d1d20118ccdf58137805b69a263e809804542c96f9784ad7901e45c234a9b60",
+    "historical512SourceDebt": {
+      "status": "unresolved",
+      "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+      "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+      "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+      "framesChecked": 24,
+      "mismatchCount": 24,
+      "blocksFresh512CanonicalClaim": true,
+      "blocksReviewedRuntimeToRuntimeOverlay": false
+    }
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
-    "identityBoardSha256": "73dd9cf69f8c56e718688a7f7ca990842ee258758346f42d07123c3dcb031a0f"
+    "identityBoardSha256": "73dd9cf69f8c56e718688a7f7ca990842ee258758346f42d07123c3dcb031a0f",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "356d013f0554cd108155eb2cd009e80e4751832018d848f96907037cea39b02d",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "6b0f26ee499ff21215bee821834b9828201d2b8ce4b8a4bee62f75a8aa806364",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "3c671f5406222bd498fdce55abaf0f06c581966565ddde2981f48dfee78bd5b4",
+    "runtimeProportionRepairBeforeAfter": "qa/battle/runtime-proportion-red-flag-repair-v1-before-after.png",
+    "runtimeProportionRepairBeforeAfterSha256": "a94d41a02e34cf95800a5dbedb203508c313843f45bf6d76069f2f8cad6e5479",
+    "runtimeProportionRepairProvenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+    "runtimeProportionRepairProvenanceSha256": "c6423cf91d5ed8e23d6507e3b77ae99566db81c110f5b9515f94012d31e7a2ac",
+    "runtimeProportionRepairFrameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+    "runtimeProportionRepairFrameLedgerSha256": "5b2f21b735b0ea2361845696eb8d09a04acd3d40bcc401716f6014ca4c3adcbe",
+    "battleDownReviveContinuity": [
+      {
+        "view": "front_3quarter_sw",
+        "contactSheet": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+        "contactSheetSha256": "a0992a86eb7fee80771f33106202f4a38924ff047ce52e606d0ff503d9a4eabd",
+        "gif": "qa/battle/continuity/front_3quarter_sw-down-revive.gif",
+        "gifSha256": "da1972a9942cdb895d2ed1803973d3002765a5255c7941b3355477990942f949",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/front_3quarter_sw-down-revive.json",
+        "sequenceManifestSha256": "0695789621480d707474f085a4bdbba6f55b750cf19a80826901f6a2860744eb",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "contactSheet": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+        "contactSheetSha256": "8cb737777b135380a757a743082731d3520d27e53ca6660a8f3e4bfa85aff495",
+        "gif": "qa/battle/continuity/back_3quarter_ne-down-revive.gif",
+        "gifSha256": "76cf1b3f64b132d22a1bac8641920240f50e889e23569b29af387102ef0d23ee",
+        "gifDecodedFrameCount": 16,
+        "sequenceManifest": "qa/battle/continuity/back_3quarter_ne-down-revive.json",
+        "sequenceManifestSha256": "bd78890a0ec2be3d1b9377b208f5fe0e961ea960fdf03e3d63c9d15c4d22e940",
+        "down8Revive1EncodedExact": true,
+        "down8Revive1DecodedRgbaExact": true
+      }
+    ]
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate.",
+  "notes": "Identity and four key poses only. World and battle animation matrices are intentionally not produced in this gate. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -160,7 +210,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "runtime_proportion_repair_v1_static_self_review_passed_owner_pending",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -205,13 +255,170 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "2967d85799722cc7646d36664a50655bcb6a60629a4c3260ad44d8b662be50f6",
+    "bundleDigest": "e3d110e31eed1c7366ee6f4bdcd5b6b421daf4adf4d82f7f02a9a342a8c4a6c2",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "runtimeFrameCount": 180,
+    "runtimeBundleDigest": "e3d110e31eed1c7366ee6f4bdcd5b6b421daf4adf4d82f7f02a9a342a8c4a6c2",
+    "minimumBattleRuntimeEdgeMargin": 11,
+    "minimumBattleRuntimeEdgeMarginAtAlpha8": 11,
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "runtime-proportion-red-flag-repair-v1",
+        "runtimeFrameCount": 180,
+        "replacementFrameCount": 24,
+        "preserveFrameCount": 156,
+        "protectedKoDownReviveFrameCount": 32,
+        "creativeGeneration": false,
+        "claimsFresh512CanonicalDerivation": false,
+        "existingColorAndKoSemanticsPreserved": true,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      }
+    ],
+    "runtimeProportionRepair": {
+      "id": "runtime-proportion-red-flag-repair-v1",
+      "runtimeDigestBefore": "3004eb4512471d29ff6db33267357720c82d4c1177f7adc33e1da728b8869da0",
+      "runtimeDigestAfter": "e3d110e31eed1c7366ee6f4bdcd5b6b421daf4adf4d82f7f02a9a342a8c4a6c2",
+      "replacementFrameCount": 24,
+      "preserveFrameCount": 156,
+      "protectedKoDownReviveFrameCount": 32,
+      "changedActionGroups": [
+        {
+          "view": "back_3quarter_ne",
+          "action": "attack",
+          "frameCount": 8,
+          "replacementFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "repairScheme": "uniform_action_view_group",
+          "plannedFactors": [
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292
+          ],
+          "sharedTranslations": [
+            [
+              0,
+              0
+            ]
+          ],
+          "maximumRasterAnisotropy": 0.00738916,
+          "sourceClass": "reviewed-current-formal-256px-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512CanonicalDerivation": false,
+          "mirroring": false,
+          "colorOperation": "none"
+        },
+        {
+          "view": "back_3quarter_ne",
+          "action": "dodge",
+          "frameCount": 8,
+          "replacementFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "repairScheme": "uniform_action_view_group",
+          "plannedFactors": [
+            1.4372,
+            1.4372,
+            1.4372,
+            1.4372,
+            1.4372,
+            1.4372,
+            1.4372,
+            1.4372
+          ],
+          "sharedTranslations": [
+            [
+              1,
+              0
+            ]
+          ],
+          "maximumRasterAnisotropy": 0.00697939,
+          "sourceClass": "reviewed-current-formal-256px-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512CanonicalDerivation": false,
+          "mirroring": false,
+          "colorOperation": "none"
+        },
+        {
+          "view": "front_3quarter_sw",
+          "action": "attack",
+          "frameCount": 8,
+          "replacementFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "repairScheme": "uniform_action_view_group",
+          "plannedFactors": [
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292,
+            1.292
+          ],
+          "sharedTranslations": [
+            [
+              0,
+              0
+            ]
+          ],
+          "maximumRasterAnisotropy": 0.00698113,
+          "sourceClass": "reviewed-current-formal-256px-runtime",
+          "creativeGeneration": false,
+          "claimsFresh512CanonicalDerivation": false,
+          "mirroring": false,
+          "colorOperation": "none"
+        }
+      ],
+      "sourceProvenanceDebt": {
+        "status": "unresolved",
+        "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
+        "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+        "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+        "framesChecked": 24,
+        "mismatchCount": 24,
+        "blocksFresh512CanonicalClaim": true,
+        "blocksReviewedRuntimeToRuntimeOverlay": false
+      },
+      "claimsFresh512CanonicalDerivation": false,
+      "formalWrites": false
+    }
   }
 }

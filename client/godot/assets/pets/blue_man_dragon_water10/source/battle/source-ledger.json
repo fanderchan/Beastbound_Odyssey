@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "formId": "blue_man_dragon_water10",
+  "kind": "pet",
+  "archiveMode": "lean",
+  "fullSourceValidationRequiredBeforeInstall": true,
+  "repositoryPolicy": "Historical source evidence is retained; runtime repair overlays do not claim fresh 512px canonical derivation.",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigestBeforeRuntimeRepair": "4757f69cd2c63b7264e8b4e49a5fe87d22a1efde66e6c0e86bb64738f8a31cdd",
+  "runtimeBundleDigest": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+  "runtimeRepairOverlays": [
+    {
+      "id": "runtime-proportion-red-flag-repair-v1",
+      "status": "installed-runtime-overlay-owner-review-pending",
+      "sourcePixelClass": "current-formal-256px-runtime",
+      "claimsFresh512CanonicalDerivation": false,
+      "creativeGeneration": false,
+      "mirroring": false,
+      "colorOperation": "none",
+      "replacementFrameCount": 3,
+      "preserveFrameCount": 177,
+      "protectedKoDownReviveFrameCount": 32,
+      "runtimeDigestBefore": "4757f69cd2c63b7264e8b4e49a5fe87d22a1efde66e6c0e86bb64738f8a31cdd",
+      "runtimeDigestAfter": "e63c156f09b877101777757f70940f072ab11e691b33d1f8f3b2c16c13f0fef7",
+      "repairManifest": "source/battle/runtime-proportion-red-flag-repair-v1-manifest.json",
+      "repairManifestSha256": "632cef119676b4b6c2b6f113729be874e15d7346b6df021e3f19a263aa0a59ee",
+      "frameLedger": "source/battle/runtime-proportion-red-flag-repair-v1-frame-ledger.json",
+      "frameLedgerSha256": "d75935b0348151c65656cc12a7a7da7cebff70ae2797d808cf81524a1077d45d",
+      "provenance": "source/battle/runtime-proportion-red-flag-repair-v1-provenance.json",
+      "provenanceSha256": "edf42a8543664b4edb46580c907eaaf625599874f84020ff6974f4b47f0f2807",
+      "sourceProvenanceDebt": {
+        "status": "unresolved",
+        "debtClass": "historical-512-source-to-current-runtime-parity-mismatch",
+        "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/qa/blue_tail_options/blue-source-runtime-parity-failure.json",
+        "auditSha256": "40a8c53bc92c36894783ac7f69accf6f7a12006c05e5fea81240875e359bfbde",
+        "framesChecked": 8,
+        "mismatchCount": 8,
+        "blocksFresh512CanonicalClaim": true,
+        "blocksReviewedRuntimeToRuntimeOverlay": false
+      },
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending"
+    }
+  ],
+  "sourceProvenanceDebt": {
+    "status": "unresolved",
+    "debtClass": "historical-512-source-to-current-runtime-parity-mismatch",
+    "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/qa/blue_tail_options/blue-source-runtime-parity-failure.json",
+    "auditSha256": "40a8c53bc92c36894783ac7f69accf6f7a12006c05e5fea81240875e359bfbde",
+    "framesChecked": 8,
+    "mismatchCount": 8,
+    "blocksFresh512CanonicalClaim": true,
+    "blocksReviewedRuntimeToRuntimeOverlay": false
+  },
+  "runtimeToRuntimeOverlayPolicy": {
+    "allowedDespiteHistoricalSourceMismatch": true,
+    "doesNotSatisfyFull512SourceValidation": true,
+    "freshCanonical512ClaimForbiddenUntilDebtResolved": true
+  }
+}
