@@ -471,6 +471,7 @@
     - 骑宠战斗最终朝向门槛补强（2026-07-19，不代表 P2.2b 完成）：蓝人龙完整骑乘战斗包首次 10V10 实机暴露双方骑手朝外，而同队战宠朝内；根因为骑乘目录默认 `flipH=false`，且旧检查只数 12 动作/180 帧。现把整体骑乘 view/flip 统一委托给战宠权威合同，固定 enemy=`front_3quarter_sw+flipH=true`、ally=`back_3quarter_ne+flipH=true`，自动门槛同时要求两侧与同队战宠一致。修正后 Godot parse、12动作/180帧和两侧 facing 检查通过；真实 1280×720、60FPS、2.85秒 Metal 短片全片解码零错误。项目与全局美术 skill 同步改为必须用双方同屏最终几何验收；owner review 和完整 10V10 性能仍未通过，详见 `docs/phase_322_mounted_battle_final_facing_gate.md`。
     - 地图比例纠正（2026-07-19，仍不代表 P2.2b 完成）：项目所有者实机指出整体骑乘在地图被额外放大。运行配置已从 `0.58` 改为与徒步人物相同的 `0.36`，战斗比例继续独立保持 `0.88`；真八方向验收场和自动门禁同步锁定这条分层规则。真实 `Main.tscn` 同出生点徒步/骑乘 1280×720 Metal 截图、移动 60 FPS 和 `process_total=0.03..0.04ms` 通过；没有重做素材、恢复分层拼接或改战斗排布。证据见 `docs/phase_314_bui_world_scale_and_ride_permit.md`。
 - [ ] **P2.3 正式动画与音频**
+  - 全 34 宠独立战斗动画候选全量化（2026-07-20，不代表 P2.2/P2.3 完成）：目录内 34 个形态现均具备双斜向、12 动作、每只 180 帧的 standalone pet battle 候选包，合计 `6120/6120` 帧；Python 完整性/倒地复活接缝门禁为 `34/34`，单进程 Godot 实际资源加载为 `checkedForms=34 / checkedFrames=6120 / errors=[]`。已按机器信号和逐帧审片修复方向、缺身、比例跳变、击飞收缩、昏厥语义与透明底等确定性问题；火灵成年兽 14 帧灰绿矩形按来源精确遮罩清除，遮罩外 RGBA 不变。四页全宠关键动作总览与 14.57 秒真实 `Main.tscn` 火兽导演已生成。34 包继续保持 `runtimeEnabled=false`、`ownerReviewStatus=pending`；世界真八向、人物骑宠整图、骑宠专属战斗动作、音频、部分历史 canonical 来源重建及用户审美验收仍未完成，详见 `docs/phase_323_all_pet_battle_animation_candidates.md`。
 - [ ] **P2.4 家族庄园、社交、PvP 与世界事件**
 - [ ] **P2.5 强制教学节奏、底栏重组与自定义快捷键**
 
