@@ -34,5 +34,13 @@
   ],
   "fullLocalProductionArchive": "/Users/fander/projects/Beastbound_Odyssey/.run/art_batch_phase322/wuli/orange/world",
   "runtimeFrames": 40,
-  "sourceFramesTracked": false
+  "sourceFramesTracked": false,
+  "semanticDirectionRepairV2": {
+    "id": "phase325-owner-rejection-direction-repair-v2",
+    "manifest": "source/world/semantic-direction-repair-v2/manifest.json",
+    "manifestSha256": "060f788aa87698e1780e2b90b5ce23382ecd81907029675d8121a9a72ddd2af4",
+    "sourceFramesTracked": 10,
+    "runtimeFramesChanged": 10,
+    "productionArchive": ".run/art_batch_phase325"
+  }
 }

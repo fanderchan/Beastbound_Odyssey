@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "repairId": "phase325-owner-rejection-direction-repair-v2",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "runtimeMirroring": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "productionArchive": ".run/art_batch_phase325",
+  "evidenceRoot": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs",
+  "formId": "wuli_normal_orange_fire10",
+  "kind": "pet",
+  "reason": "east and southeast source rows were visually west and southwest",
+  "scope": [
+    "east idle+walk",
+    "southeast idle+walk"
+  ],
+  "runtimeFrameCountChanged": 10,
+  "after": [
+    {
+      "slot": "east-idle-1",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/east/idle/idle-1.png",
+      "beforeFileSha256": "55072be55d8899ec16c25755b3484d8dce25faf82a1c11368a40675a65514ca8",
+      "beforeRgbaSha256": "fb7d6eedf55cf59bf63c32ebba690564bcfa43896731e45000679a33e87b87d1",
+      "source": "source/world/semantic-direction-repair-v2/east/source-frames/east-idle.png",
+      "sourceFileSha256": "0696d62a344c3a86569b6fb9435e339e8e41e433d5154535119da5b5cb0a84d3",
+      "sourceRgbaSha256": "145b33a45402e4ac8ab826c0bb2b9251b4c2292d602e7e33882bc055341e6575",
+      "runtime": "world/directions/east/idle/idle-1.png",
+      "runtimeFileSha256": "3b18ff2ee98b3837d5c29dcb8f6dd91a035de0508055e293dde550cb0fe6d52d",
+      "runtimeRgbaSha256": "8188c6376688fac38ff205259459127a02ca697929fccd8d4d358ef752ca21ab",
+      "runtimeVisibleBbox": [
+        24,
+        130,
+        235,
+        247
+      ]
+    },
+    {
+      "slot": "east-walk-1",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/east/walk/walk-1.png",
+      "beforeFileSha256": "939a779d8972937c97d7842db8b8c69d7ba3cf1c5f0dfaa67f279841b3e0f8e2",
+      "beforeRgbaSha256": "6f0f2e144e35cfd5cd7158c8bae496dd7f7d0173a7eb0934510161c81752a5cc",
+      "source": "source/world/semantic-direction-repair-v2/east/source-frames/east-walk-1.png",
+      "sourceFileSha256": "9a52f8212560ea6835b8d72caa63fa8020db5b5b542ee5d7fcdcde99b886d372",
+      "sourceRgbaSha256": "0f8e8270411595d6f0ffa73abd2e05fb17d3990b5354fe599dab5fafb57a5507",
+      "runtime": "world/directions/east/walk/walk-1.png",
+      "runtimeFileSha256": "868118ceabcaf2be5b4a77b48dd1c9d89bec48ce89cf8a47f7c2d72fa2d18178",
+      "runtimeRgbaSha256": "385f88e8ed2e603f3c1d8e7edbafbcabe6a2d34dd78ff57e4283483a70b92dce",
+      "runtimeVisibleBbox": [
+        32,
+        131,
+        243,
+        247
+      ]
+    },
+    {
+      "slot": "east-walk-2",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/east/walk/walk-2.png",
+      "beforeFileSha256": "2103dc93174acd46541cc6e8738d6b38a7c63fb48980f8e33ac0ba782d1ba644",
+      "beforeRgbaSha256": "e76302753d2cc2e4deb75d347565cc8aeeee1f6ecf99ee15a5bcd5de73191b41",
+      "source": "source/world/semantic-direction-repair-v2/east/source-frames/east-walk-2.png",
+      "sourceFileSha256": "2ca3f06c681ccfa26b86e4692d19ce9bebaedd45d6bdbb3f7adf83663e7c0b1f",
+      "sourceRgbaSha256": "7bd84317606fd6031e9acc6fb84d886359eb009c8269132f6b6d7e6b03d199dc",
+      "runtime": "world/directions/east/walk/walk-2.png",
+      "runtimeFileSha256": "2d01d909189d8e5934e129cf6668aba4e3e312d49c9d4ab495382305ec918ef7",
+      "runtimeRgbaSha256": "10f9c1a6ea5d2e58ab23e2bea711aa794531b4413f440f400dd7b0263bc90307",
+      "runtimeVisibleBbox": [
+        33,
+        133,
+        245,
+        247
+      ]
+    },
+    {
+      "slot": "east-walk-3",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/east/walk/walk-3.png",
+      "beforeFileSha256": "110cdf9d5e4639ac0e4b64c699464a3ee7cc0cdc7cef2d027c51fc37da819327",
+      "beforeRgbaSha256": "6aa6080461a5e9464da749298c985bb9de23c6898614247c9c77021f61a2b797",
+      "source": "source/world/semantic-direction-repair-v2/east/source-frames/east-walk-3.png",
+      "sourceFileSha256": "8425be21d34a1f47d87fdb217f6aa5ec141d7a443f78ba14790f3e02c86ab3ca",
+      "sourceRgbaSha256": "999855529efe563c129d599e39d2b622ac20cbf7560449b72b729056b9026337",
+      "runtime": "world/directions/east/walk/walk-3.png",
+      "runtimeFileSha256": "6fb283aa1838c4f541b9b0c0f026e6e15d7d775ec5823639ff1bf6739c8b4e4d",
+      "runtimeRgbaSha256": "6668f2716911133f2ae2c4ac46b48b2d43c08bf787bf4e5b8ce4b0289193bb30",
+      "runtimeVisibleBbox": [
+        18,
+        135,
+        236,
+        247
+      ]
+    },
+    {
+      "slot": "east-walk-4",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/east/walk/walk-4.png",
+      "beforeFileSha256": "9c5a848e9093b854381a0fb9144795ea58df1592d235fbb14c863876acd12229",
+      "beforeRgbaSha256": "0510569084540e5f24f2dc5086d07515b1513a3d224bd47b2baa9c17d5451bda",
+      "source": "source/world/semantic-direction-repair-v2/east/source-frames/east-walk-4.png",
+      "sourceFileSha256": "05ce9065615b7b351f94e38e2f01eb196b0e5be424ce55fa717792d3ecbe78e9",
+      "sourceRgbaSha256": "b5e40bcc0a3ef571b318293d870694270d78bb1d5ef5ee44e97fb2bdf1648594",
+      "runtime": "world/directions/east/walk/walk-4.png",
+      "runtimeFileSha256": "095443365a4610af5926025033c900b6307c2ddf948999b3080dc0785872a6bc",
+      "runtimeRgbaSha256": "739a79d582def9ba42c14e69b4ef78f302f1c3e9543990b634afb4652552d2af",
+      "runtimeVisibleBbox": [
+        34,
+        134,
+        242,
+        247
+      ]
+    },
+    {
+      "slot": "southeast-idle-1",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/southeast/idle/idle-1.png",
+      "beforeFileSha256": "1a5345e5b1ebd0be13fa0b1ad49ae164de56a69a135826c436d3f58a2a0970c7",
+      "beforeRgbaSha256": "cb6e685664c905fc0b482ea7c685103bea9539c3e413689301c14fc8f4c5398c",
+      "source": "source/world/semantic-direction-repair-v2/southeast/source-frames/southeast-idle.png",
+      "sourceFileSha256": "55c2698deafe9ee56f8ef03c1edf69acbd3287e70297e2f17fe3b03a5a3dc7ec",
+      "sourceRgbaSha256": "bd6b3dee665436f1b437a60e158d6a38070aca8a58f1a6409c760c5f1ad4f490",
+      "runtime": "world/directions/southeast/idle/idle-1.png",
+      "runtimeFileSha256": "315b8210a788455fa0008f061fc3d3380784dad5a88fd2b0540c00af2183dbef",
+      "runtimeRgbaSha256": "075ee59a60a627832155bd94172874d44493bb5d5c6cad06118166becfa82d10",
+      "runtimeVisibleBbox": [
+        44,
+        106,
+        183,
+        248
+      ]
+    },
+    {
+      "slot": "southeast-walk-1",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/southeast/walk/walk-1.png",
+      "beforeFileSha256": "bc97e106c5fcaaeb183faade1b464f7dc8b4da50a33720b2469df3157483db32",
+      "beforeRgbaSha256": "a926fbb0668c3624cb5518f6c0b0a68254090d04d28e3c324ea7fd5aaf842195",
+      "source": "source/world/semantic-direction-repair-v2/southeast/source-frames/southeast-walk-1.png",
+      "sourceFileSha256": "88d70283de11e1d1b5e816ece8902f5de5a763fe48abfe99b9209d9e02bd91be",
+      "sourceRgbaSha256": "11e0d3f3359658e5c0b413d12a99783af57416c0380a9d840ab1761e9a005295",
+      "runtime": "world/directions/southeast/walk/walk-1.png",
+      "runtimeFileSha256": "e8351deb4e96fbf122de9cc65a322e321e0882b4a4fc7256dac896889aa5ebc8",
+      "runtimeRgbaSha256": "ba76e2cc87ebc8c9e09fa33ab3ea7f39d01421e067021a4f4e4d02aa6c4e774b",
+      "runtimeVisibleBbox": [
+        41,
+        112,
+        186,
+        247
+      ]
+    },
+    {
+      "slot": "southeast-walk-2",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/southeast/walk/walk-2.png",
+      "beforeFileSha256": "19a5e4644e7844460bc35a9136403ae5c13e59a72a6001f1aa6129a9a64c6205",
+      "beforeRgbaSha256": "d6940df06765df9a44321ed9ca7740811de3537235797f2defdfd0ea85b6a83c",
+      "source": "source/world/semantic-direction-repair-v2/southeast/source-frames/southeast-walk-2.png",
+      "sourceFileSha256": "070b8057a2d0447a2400d12160dd38070d8b6ad2aaa2465f99ffbd6814cbbf78",
+      "sourceRgbaSha256": "344b533866efe445a8c41e7eaf06c4b0620cd462e0b762699bbf630b7f4b2e7d",
+      "runtime": "world/directions/southeast/walk/walk-2.png",
+      "runtimeFileSha256": "c909b06892c8be943351e77d1a310351e9ae9f8b30833d20b2c2bb1184adb4c7",
+      "runtimeRgbaSha256": "06d78109695a55bc8baf9849aea0a5c6e1c825c7850484002277eb0554ee22fb",
+      "runtimeVisibleBbox": [
+        31,
+        108,
+        177,
+        247
+      ]
+    },
+    {
+      "slot": "southeast-walk-3",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/southeast/walk/walk-3.png",
+      "beforeFileSha256": "b41f8c2c0f243ede30b22b30fef5b90926243396b8332b1d05244e2a9320eccb",
+      "beforeRgbaSha256": "adec7831036b27ba5e246680782bfde44480ac3b646bb3189a1fdd3195836363",
+      "source": "source/world/semantic-direction-repair-v2/southeast/source-frames/southeast-walk-3.png",
+      "sourceFileSha256": "8f85963af237665133ba39a62c9806596539fc4a092fb8fdf54859eaff2e7bde",
+      "sourceRgbaSha256": "b6127b7a658e398c53ce788d37f08eab892ff48860424ce25b985410048247c4",
+      "runtime": "world/directions/southeast/walk/walk-3.png",
+      "runtimeFileSha256": "7745ed08f940146aac2ebac3989be60da7238e67e43c956c327f25565f7aa989",
+      "runtimeRgbaSha256": "0df8a162f7cbb7b5405c3977b59e1e558a89382acc3b940c8e011b41062ffff2",
+      "runtimeVisibleBbox": [
+        33,
+        110,
+        186,
+        248
+      ]
+    },
+    {
+      "slot": "southeast-walk-4",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/wuli_normal_orange_fire10/pet/before/southeast/walk/walk-4.png",
+      "beforeFileSha256": "48e47b99993f1473ee9ac8b11d8aaf6f63fba5375c4aaf6c28f93b68fbfb4249",
+      "beforeRgbaSha256": "6b3ad4fb99a6e9253e729c095058fd65f75d5ada8a8bc1e24978c4fc13288038",
+      "source": "source/world/semantic-direction-repair-v2/southeast/source-frames/southeast-walk-4.png",
+      "sourceFileSha256": "6aba77d1bae707d87c434832afd7a6cae41a14198784ac8bffd739dda8a55481",
+      "sourceRgbaSha256": "3889674a85223948fd739c5522d564c15325e1fb1f0c55eb876786facd2dcb8c",
+      "runtime": "world/directions/southeast/walk/walk-4.png",
+      "runtimeFileSha256": "66e9c53c99c4b048212fdc6990c99fe3e9e306f9474ec4f24bfb20eb8bd48be6",
+      "runtimeRgbaSha256": "bf58cb5b42938c391b0fbb0a9f05cb604e51034cd65a44a08d5a038b6ff469b1",
+      "runtimeVisibleBbox": [
+        33,
+        113,
+        187,
+        247
+      ]
+    }
+  ]
+}

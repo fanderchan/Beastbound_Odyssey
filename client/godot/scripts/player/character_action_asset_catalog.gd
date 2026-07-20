@@ -119,9 +119,17 @@ static func world_texture_for_frame(direction: String, action: String, frame_ind
 	var normalized_action := _normalized_world_action(action)
 	var count := int(WORLD_FRAME_COUNTS[normalized_action])
 	var safe_index := clampi(frame_index, 1, count)
-	var path := _world_frame_path(normalized_direction, normalized_action, safe_index)
+	var path := world_frame_path(normalized_direction, normalized_action, safe_index)
 	var texture = _texture_cache.get(path)
 	return texture as Texture2D if texture is Texture2D else null
+
+
+static func world_frame_path(direction: String, action: String, frame_index: int) -> String:
+	var normalized_direction := WorldVisualDirectionContract.normalize_direction(direction)
+	var normalized_action := _normalized_world_action(action)
+	var count := int(WORLD_FRAME_COUNTS[normalized_action])
+	var safe_index := clampi(frame_index, 1, count)
+	return _world_frame_path(normalized_direction, normalized_action, safe_index)
 
 
 static func validation_errors() -> Array[String]:

@@ -6,6 +6,7 @@ const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_char
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const WorldReviewFrameParity := preload("res://scripts/qa/world_review_frame_parity.gd")
 
 const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const DIRECTIONS: Array[String] = [
@@ -51,6 +52,9 @@ var form_id: String = FORM_ID
 var grid_mode: bool = true
 var recording_mode: bool = false
 var timing_check_mode: bool = false
+var parity_only_mode: bool = false
+var parity_report_path: String = ""
+var parity_run_id: String = ""
 var capture_path: String = ""
 var capture_complete: bool = false
 var active_direction_index: int = -1
@@ -69,6 +73,7 @@ var grid_idle_mounts: Array[Node2D] = []
 var grid_walk_characters: Array[Sprite2D] = []
 var grid_walk_pets: Array[Sprite2D] = []
 var grid_walk_mounts: Array[Node2D] = []
+var parity_records: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -90,6 +95,12 @@ func _ready() -> void:
 			grid_mode = true
 		elif arg == "--mount-review-timing-check":
 			timing_check_mode = true
+		elif arg == "--mount-review-parity-only":
+			parity_only_mode = true
+		elif arg.begins_with("--mount-review-parity-report="):
+			parity_report_path = arg.trim_prefix("--mount-review-parity-report=").strip_edges()
+		elif arg.begins_with("--mount-review-run-id="):
+			parity_run_id = arg.trim_prefix("--mount-review-run-id=").strip_edges()
 	if timing_check_mode:
 		set_process(false)
 		_run_timing_check()
@@ -98,8 +109,17 @@ func _ready() -> void:
 		_fail_startup(startup_errors)
 		return
 	startup_errors = _prepare_review_assets()
+	var report_error := _write_parity_report(startup_errors)
+	if report_error != "":
+		startup_errors.append(report_error)
 	if not startup_errors.is_empty():
 		_fail_startup(startup_errors)
+		return
+	if parity_only_mode:
+		set_process(false)
+		_cleanup_owned_qa_preview()
+		print("mount direction review parity passed: form=%s frames=%d" % [form_id, parity_records.size()])
+		get_tree().quit(0)
 		return
 	if grid_mode:
 		_build_grid()
@@ -408,21 +428,43 @@ func _validate_review_frames(character_id: String, errors: Array[String]) -> voi
 		for action in ["idle", "walk"]:
 			var frame_count := 1 if action == "idle" else 4
 			for frame_index in range(1, frame_count + 1):
+				var character_path := CharacterActionAssetCatalog.world_frame_path(
+					direction,
+					action,
+					frame_index
+				)
 				_validate_review_texture(
 					CharacterActionAssetCatalog.world_texture_for_frame(direction, action, frame_index),
+					character_path,
 					"人物",
+					"character",
 					direction,
 					action,
 					frame_index,
 					frame_errors
 				)
+				var pet_path := PetActionAssetCatalog.world_frame_path_for_form(
+					form_id,
+					direction,
+					action,
+					frame_index
+				)
 				_validate_review_texture(
 					PetActionAssetCatalog.world_texture_for_frame(form_id, direction, action, frame_index),
+					pet_path,
 					"宠物",
+					"pet",
 					direction,
 					action,
 					frame_index,
 					frame_errors
+				)
+				var mounted_path := MountedCharacterAssetCatalog.world_frame_path(
+					character_id,
+					form_id,
+					direction,
+					action,
+					frame_index
 				)
 				_validate_review_texture(
 					MountedCharacterAssetCatalog.world_texture_for_frame(
@@ -432,7 +474,9 @@ func _validate_review_frames(character_id: String, errors: Array[String]) -> voi
 						action,
 						frame_index
 					),
+					mounted_path,
 					"人骑宠",
+					"mounted",
 					direction,
 					action,
 					frame_index,
@@ -458,15 +502,27 @@ func _validate_review_frames(character_id: String, errors: Array[String]) -> voi
 
 func _validate_review_texture(
 	texture,
+	source_path: String,
 	column_name: String,
+	kind: String,
 	direction: String,
 	action: String,
 	frame_index: int,
 	frame_errors: Dictionary
 ) -> void:
 	var frame_label := "%s/%s/%d" % [direction, action, frame_index]
+	var record := {
+		"kind": kind,
+		"path": source_path,
+		"direction": direction,
+		"action": action,
+		"index": frame_index,
+		"status": "failed",
+	}
 	if not (texture is Texture2D):
 		_append_frame_error(frame_errors, column_name, "%s 不可读" % frame_label)
+		record["errors"] = ["ResourceLoader 纹理不可读"]
+		parity_records.append(record)
 		return
 	var typed_texture := texture as Texture2D
 	if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
@@ -479,6 +535,59 @@ func _validate_review_texture(
 				typed_texture.get_height(),
 			]
 		)
+	var parity := WorldReviewFrameParity.compare_source_and_loaded(source_path, typed_texture)
+	for key_value in parity.keys():
+		record[key_value] = parity[key_value]
+	parity_records.append(record)
+	if str(parity.get("status", "failed")) != "passed":
+		var parity_errors: Array[String] = []
+		for value in parity.get("errors", []):
+			parity_errors.append(str(value))
+		_append_frame_error(
+			frame_errors,
+			column_name,
+			"%s 像素/导入不一致：%s" % [frame_label, "；".join(parity_errors)]
+		)
+
+
+func _write_parity_report(startup_errors: Array[String]) -> String:
+	if parity_report_path == "":
+		return ""
+	var report_directory := parity_report_path.get_base_dir()
+	if report_directory != "":
+		var directory_error := DirAccess.make_dir_recursive_absolute(report_directory)
+		if directory_error != OK:
+			return "无法创建像素一致性报告目录：%s error=%d" % [report_directory, directory_error]
+	var passed_frames := 0
+	for record in parity_records:
+		if str(record.get("status", "")) == "passed":
+			passed_frames += 1
+	var report := {
+		"schemaVersion": 1,
+		"runId": parity_run_id,
+		"formId": form_id,
+		"status": "passed" if startup_errors.is_empty() and parity_records.size() == 120 else "failed",
+		"checkedFrames": parity_records.size(),
+		"passedFrames": passed_frames,
+		"canonicalPartialRgb": "rgb_zeroed_where_alpha_below_255_before_rgba_hash",
+		"sourceSetSha256": WorldReviewFrameParity.source_set_sha256(parity_records),
+		"errors": startup_errors,
+		"frames": parity_records,
+	}
+	var file := FileAccess.open(parity_report_path, FileAccess.WRITE)
+	if file == null:
+		return "无法写入像素一致性报告：%s error=%d" % [parity_report_path, FileAccess.get_open_error()]
+	file.store_string(JSON.stringify(report, "\t") + "\n")
+	file.close()
+	print(
+		"mount direction review parity report: form=%s status=%s frames=%d path=%s" % [
+			form_id,
+			report["status"],
+			parity_records.size(),
+			parity_report_path,
+		]
+	)
+	return ""
 
 
 func _append_frame_error(frame_errors: Dictionary, column_name: String, detail: String) -> void:

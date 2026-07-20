@@ -102,7 +102,7 @@
     }
   },
   "worldVisual": {
-    "status": "owner_review_pending",
+    "status": "self_review_passed_owner_pending",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
@@ -144,7 +144,20 @@
     "sourceLedger": "source/world/source-ledger.json",
     "contactSheet": "qa/world/true8-world-contact-8x5.png",
     "cycleGif": "qa/world/true8-world-cycle.gif",
-    "qcSummary": "qa/world/world-qc.json"
+    "qcSummary": "qa/world/world-qc.json",
+    "semanticDirectionRepairV2": {
+      "id": "phase325-owner-rejection-direction-repair-v2",
+      "directions": [
+        "east",
+        "southeast"
+      ],
+      "runtimeFramesChanged": 10,
+      "manifest": "source/world/semantic-direction-repair-v2/manifest.json",
+      "ownerReviewStatus": "pending"
+    },
+    "contactSheetSha256": "df54cd7910101608aa98db02707d41e27eb27d96230f0f6d1d8b61d33ccd540c",
+    "cycleGifSha256": "4d12c99462437554c31094a23e242c6049c7bf928f540895f7eab6b209e8cdf2",
+    "qcSummarySha256": "7f46ce73a35a6fe138254d48d25f2774bb5ce106c06050a40f80ae92358fe7b5"
   },
   "supportedMountedCharacterIds": [
     "novice_hunter_v1"

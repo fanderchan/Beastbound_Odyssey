@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "repairId": "phase325-owner-rejection-direction-repair-v2",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "runtimeMirroring": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "productionArchive": ".run/art_batch_phase325",
+  "evidenceRoot": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs",
+  "formId": "novice_tiger_mount",
+  "characterId": "novice_hunter_v1",
+  "kind": "mounted",
+  "reason": "north walk source row was visually northeast while north idle was true north",
+  "scope": [
+    "north walk"
+  ],
+  "trueDirectionRule": "integrated rider and tiger stay on one exact rear-facing north axis",
+  "runtimeFrameCountChanged": 4,
+  "after": [
+    {
+      "slot": "north-walk-1",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/novice_tiger_mount/mounted/before/north/walk/walk-1.png",
+      "beforeFileSha256": "5d0128e0597a5b44f9c8af458cd138180eb5bd7ebf74be28c930a6b0a73adaff",
+      "beforeRgbaSha256": "69a0986fb0eaf95b3c7b91be54c6311d8b412d23e8d81ad5e0ea66adb9cc1085",
+      "source": "source/world/semantic-direction-repair-v2/north-walk/source-frames/north-walk-1.png",
+      "sourceFileSha256": "0b1da6d3d9a97ef946527bc919b0114796a3cbed3ba79e79fea2167669eb3595",
+      "sourceRgbaSha256": "ef87a792cbe46054197309d25a941b5167e3f7a44e10a6d9d997ea6b6cbb34e1",
+      "runtime": "world/directions/north/walk/walk-1.png",
+      "runtimeFileSha256": "73fbe3105c6fad4e2a2b55f2031bfff73fcadcf390dfe74bc57c2ed107a71338",
+      "runtimeRgbaSha256": "3406da344c7e0774576d6c622995d4166bc312f8566da0704040e790c2e553f9",
+      "runtimeVisibleBbox": [
+        92,
+        104,
+        160,
+        251
+      ]
+    },
+    {
+      "slot": "north-walk-2",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/novice_tiger_mount/mounted/before/north/walk/walk-2.png",
+      "beforeFileSha256": "ef293fc63821ae7ffbb512148e3bdcdc290e410059b1d4e8620da04e4615e7ec",
+      "beforeRgbaSha256": "f2f9cc4f023a2433dccd02cc592c3ce163be9de5564cbd07fc0a560c7b632df6",
+      "source": "source/world/semantic-direction-repair-v2/north-walk/source-frames/north-walk-2.png",
+      "sourceFileSha256": "0f4928381183b7543d91fd20615b78d1c4346995640c08c4475221d71f09ce6e",
+      "sourceRgbaSha256": "b5beb96cd93ae5922112c098b5507126f1b9e8c15d8d88db6ac97e16f71975db",
+      "runtime": "world/directions/north/walk/walk-2.png",
+      "runtimeFileSha256": "e3e14314c0e33d10df18027803ae689e09549786e5d43134b8490ded14c50f09",
+      "runtimeRgbaSha256": "0d46e8a8c0e2698f1c19d7079ac9aef8d4b1f3d67eb59b69d733d9ab811489b5",
+      "runtimeVisibleBbox": [
+        93,
+        104,
+        161,
+        251
+      ]
+    },
+    {
+      "slot": "north-walk-3",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/novice_tiger_mount/mounted/before/north/walk/walk-3.png",
+      "beforeFileSha256": "62b1587f22bd51c6d4d31cecade6ed537059c807d7e84e9d6a4f79df9880b339",
+      "beforeRgbaSha256": "86463530138a8da71bbca5dfd371df293fcb6cc39323127056562911ac4f9bca",
+      "source": "source/world/semantic-direction-repair-v2/north-walk/source-frames/north-walk-3.png",
+      "sourceFileSha256": "95c6e55fb8d9b7e769891519dafb35ce1201691e41ebb6af34dbe392115629f1",
+      "sourceRgbaSha256": "8d764fa08e2065d7044d10c25e572ce20b83540ae64dba8d8f90a34c35e3a6d4",
+      "runtime": "world/directions/north/walk/walk-3.png",
+      "runtimeFileSha256": "60a3d923f803eec7562b3dc185c4ea2f486a328fbc87455895ceb15dc0accf71",
+      "runtimeRgbaSha256": "3466883c33289ad58b127bbbf983b52b6cb3971ba318e3e3924a962eac5afa86",
+      "runtimeVisibleBbox": [
+        90,
+        102,
+        158,
+        251
+      ]
+    },
+    {
+      "slot": "north-walk-4",
+      "before": ".run/evidence/phase325_world_direction_runtime_parity/semantic-repairs/novice_tiger_mount/mounted/before/north/walk/walk-4.png",
+      "beforeFileSha256": "77cd8db64eb40b06389f24cbe00f992884b0ac7412f4ce81b39515733d3a184c",
+      "beforeRgbaSha256": "02837227c65de45ddd693f373e046f5d7ef394ec6da11f871d74de4c3329e71b",
+      "source": "source/world/semantic-direction-repair-v2/north-walk/source-frames/north-walk-4.png",
+      "sourceFileSha256": "3006561f9590becb102797268f286a2c7216e05f8c29cca8c098edf3066febbd",
+      "sourceRgbaSha256": "1e4446b796aae274ca445997c26776c5719970145c356f604405e6948baaaa49",
+      "runtime": "world/directions/north/walk/walk-4.png",
+      "runtimeFileSha256": "b2524b1cac39ad6411490ec1085e5705933c5cd6bb11fde8d380ff4b77e20a8c",
+      "runtimeRgbaSha256": "06a4db3fc89b73d03eae5cbc5bfe045d90f9a798c56f1dfd5f73d4cd040f7480",
+      "runtimeVisibleBbox": [
+        93,
+        102,
+        161,
+        251
+      ]
+    }
+  ]
+}
