@@ -18,37 +18,43 @@
       "slot": "skill-1",
       "bbox": [
         26,
-        61,
-        230,
+        60,
+        231,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-2",
       "bbox": [
-        28,
-        89,
-        228,
-        245
+        27,
+        88,
+        227,
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-3",
       "bbox": [
         25,
-        96,
+        95,
         232,
-        245
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-4",
@@ -60,19 +66,23 @@
       ],
       "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-5",
       "bbox": [
-        29,
+        28,
         58,
         227,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-6",
@@ -84,7 +94,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-7",
@@ -96,19 +108,23 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-8",
       "bbox": [
         28,
         79,
-        228,
+        229,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

@@ -24,19 +24,23 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-2",
       "bbox": [
-        36,
+        35,
         97,
-        220,
+        219,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-3",
@@ -48,7 +52,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-4",
@@ -60,7 +66,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-5",
@@ -72,43 +80,51 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-6",
       "bbox": [
-        48,
+        49,
         62,
         208,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 4,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-7",
       "bbox": [
         56,
-        73,
+        72,
         200,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "stagger-8",
       "bbox": [
-        39,
+        40,
         114,
-        217,
+        218,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

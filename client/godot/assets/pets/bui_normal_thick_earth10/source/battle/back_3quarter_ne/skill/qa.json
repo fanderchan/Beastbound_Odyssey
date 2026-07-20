@@ -18,25 +18,29 @@
       "slot": "skill-1",
       "bbox": [
         36,
-        77,
-        221,
-        245
+        76,
+        220,
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-2",
       "bbox": [
         29,
-        108,
+        107,
         227,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-3",
@@ -48,19 +52,23 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-4",
       "bbox": [
-        29,
-        114,
+        28,
+        113,
         227,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 4,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-5",
@@ -72,19 +80,23 @@
       ],
       "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-6",
       "bbox": [
         37,
-        67,
+        66,
         219,
-        245
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-7",
@@ -96,7 +108,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "skill-8",
@@ -108,7 +122,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 4,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

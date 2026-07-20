@@ -24,19 +24,23 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-2",
       "bbox": [
         75,
         108,
-        181,
+        182,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-3",
@@ -48,7 +52,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 4,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-4",
@@ -60,19 +66,23 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-5",
       "bbox": [
         70,
         95,
-        185,
+        186,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-6",
@@ -84,7 +94,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-7",
@@ -96,7 +108,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "knockaway-8",
@@ -108,7 +122,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

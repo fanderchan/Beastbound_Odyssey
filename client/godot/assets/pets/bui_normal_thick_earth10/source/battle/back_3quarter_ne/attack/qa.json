@@ -18,73 +18,85 @@
       "slot": "attack-1",
       "bbox": [
         31,
-        88,
+        86,
         225,
-        245
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-2",
       "bbox": [
-        34,
-        122,
-        221,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "attack-3",
-      "bbox": [
         35,
-        125,
+        121,
         222,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
+    },
+    {
+      "slot": "attack-3",
+      "bbox": [
+        35,
+        123,
+        222,
+        244
+      ],
+      "minimumEdgeMargin": 12,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-4",
       "bbox": [
-        33,
+        32,
         135,
         223,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-5",
       "bbox": [
-        33,
+        32,
         87,
-        224,
+        223,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-6",
       "bbox": [
         38,
-        133,
+        132,
         218,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-7",
@@ -96,7 +108,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "attack-8",
@@ -108,7 +122,9 @@
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

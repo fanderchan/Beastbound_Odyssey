@@ -18,97 +18,113 @@
       "slot": "dodge-1",
       "bbox": [
         41,
-        73,
+        72,
         215,
-        245
+        244
       ],
-      "minimumEdgeMargin": 11,
+      "minimumEdgeMargin": 12,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 3,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "dodge-2",
       "bbox": [
         34,
+        116,
+        222,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
+    },
+    {
+      "slot": "dodge-3",
+      "bbox": [
+        28,
+        86,
+        229,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
+    },
+    {
+      "slot": "dodge-4",
+      "bbox": [
+        32,
+        74,
+        223,
+        244
+      ],
+      "minimumEdgeMargin": 12,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
+    },
+    {
+      "slot": "dodge-5",
+      "bbox": [
+        35,
+        96,
+        221,
+        245
+      ],
+      "minimumEdgeMargin": 11,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 1,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
+    },
+    {
+      "slot": "dodge-6",
+      "bbox": [
+        33,
         117,
         222,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "dodge-3",
-      "bbox": [
-        28,
-        87,
-        228,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "dodge-4",
-      "bbox": [
-        32,
-        75,
-        223,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "dodge-5",
-      "bbox": [
-        35,
-        97,
-        221,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "dodge-6",
-      "bbox": [
-        33,
-        118,
-        222,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "dodge-7",
       "bbox": [
-        38,
+        39,
         57,
-        218,
+        219,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 0,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     },
     {
       "slot": "dodge-8",
       "bbox": [
         39,
-        73,
-        216,
+        72,
+        217,
         245
       ],
       "minimumEdgeMargin": 11,
       "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
+      "transparentRgbLeakPixels": 0,
+      "legitimatePurplePixelsNearKey": 2,
+      "backgroundEligibility": "canonical_raw_exact_mask_only"
     }
   ]
 }

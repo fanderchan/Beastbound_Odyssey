@@ -8,114 +8,26 @@
   "emptyFrames": [],
   "duplicateFrames": [],
   "edgeTouchFrames": [],
+  "warnings": [],
   "identityDriftFrames": [],
-  "residualMagentaFrames": [],
-  "transparentRgbLeakFrames": [],
-  "visualSelfReview": "passed",
-  "ownerReviewStatus": "pending",
-  "frames": [
-    {
-      "slot": "revive-1",
-      "bbox": [
-        24,
-        148,
-        232,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-2",
-      "bbox": [
-        39,
-        121,
-        217,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-3",
-      "bbox": [
-        45,
-        88,
-        211,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-4",
-      "bbox": [
-        53,
-        76,
-        204,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-5",
-      "bbox": [
-        46,
-        102,
-        211,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-6",
-      "bbox": [
-        52,
-        80,
-        204,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-7",
-      "bbox": [
-        48,
-        118,
-        209,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    },
-    {
-      "slot": "revive-8",
-      "bbox": [
-        56,
-        72,
-        199,
-        245
-      ],
-      "minimumEdgeMargin": 11,
-      "residualMagentaPixels": 0,
-      "transparentRgbLeakPixels": 0
-    }
-  ],
-  "continuity": {
-    "rule": "revive-1 == down-8 byte-for-byte",
-    "sourceFrameEqual": true,
-    "runtimeFrameEqual": true,
-    "sourceByteSha256": "e13a24c96fde52cb552d823f679761754b5b401d591c982480fca4d591de1d12",
-    "runtimeByteSha256": "42fa245fccfea152b943120eb87d97fe68a13f9c0fa7585532ff57211d8f04d2"
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
+  "strictTemporalReview": {
+    "status": "passed",
+    "view": "back_3quarter_ne",
+    "action": "revive",
+    "manualFrameByFrameReview": true,
+    "broadRuntimeDespillApplied": false,
+    "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
+    "startContinuity": "revive-1 exact RGBA equals same-view down-8",
+    "authoredSourceFrameOrder": [
+      1,
+      2,
+      7,
+      5,
+      3,
+      6,
+      4,
+      8
+    ]
   }
 }

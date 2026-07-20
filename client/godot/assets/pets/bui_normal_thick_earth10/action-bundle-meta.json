@@ -163,14 +163,20 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "f497dece4af1259c60483a477a68ed0fd4b81bbb978d7755a8b04c1e46bb1daa",
+    "bundleDigest": "17aa56ecd3a6a5a2efdf3b64775a272fc673a59a84a9f5b6891caf6df158ae8b",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "qcSummary": "qa/battle/qc-summary.json"
+    "qcSummary": "qa/battle/qc-summary.json",
+    "strictDownReviveRepair": {
+      "repairId": "bui_normal_thick_earth10-safe-color-strict-replay-v3",
+      "status": "passed",
+      "down8Revive1ExactRgbaBothViews": true,
+      "broadRuntimeDespillApplied": false
+    }
   },
   "worldVisual": {
     "status": "not_produced",
