@@ -135,7 +135,10 @@
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_cubs/four_spirit-identity-build/contact-sheet.png",
@@ -147,10 +150,18 @@
     "battleCandidateContactSheet": ".run/starter_earth_four_repair_stage/install_delta_aa5575f6/proposed_formal/client/godot/assets/pets/rebirth_starter_four_spirit_cub/qa/battle/contact-sheet.png",
     "battleCandidateContactSheetSha256": "bea568f339d0ab33efbc4e4e5e32968b961575f31ef51610ee56fce6d215880e",
     "battleCandidateComparison": ".run/starter_earth_four_repair_stage/comparison/four_spirit_cub/formal-vs-staged-two-view-12-actions.png",
-    "battleCandidateComparisonSha256": "0ab59fd79b57a72a1e612539b69caf227aef0f7f33a4e729966233087781276b"
+    "battleCandidateComparisonSha256": "0ab59fd79b57a72a1e612539b69caf227aef0f7f33a4e729966233087781276b",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "1a9033f4022a66a7bc61e7731f3477e094be11226af0106b3679a852dc653f42",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "feab2fad56a936e5aa4bd6859193ca5ea3b54ec94edbecd8be52ac76288d3ba5",
+    "battleStrictKoBeforeAfter": "qa/battle/repairs/strict-ko-sequence-v1-before-after.png",
+    "battleStrictKoBeforeAfterSha256": "1f50389ccae8c64a6d83a5d9ede62491543e3c3ca0da33697faa261f2235d600",
+    "battleStrictKoFaceZoom": "qa/battle/repairs/strict-ko-sequence-v1-face-zoom.png",
+    "battleStrictKoFaceZoomSha256": "5b9c39cd63b95aedeead3be241bcfc35cb7144c0fcdf247cc82793e0c1f76849"
   },
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二动作候选已完成比例与动作语义修复；可复活昏厥保留螺旋、失焦或趴伏闭眼，不要求 literal X。眩晕圈由运行时战斗状态层叠加，不烘焙进宠物帧。正式安装和真实客户端回放仍待执行，runtimeEnabled 保持 false。",
+  "notes": "独立宠物双视角十二动作候选已完成比例与动作语义修复；可复活昏厥保留螺旋、失焦或趴伏闭眼，不要求 literal X。眩晕圈由运行时战斗状态层叠加，不烘焙进宠物帧。正式安装和真实客户端回放仍待执行，runtimeEnabled 保持 false。 严格 KO 时序仅复用现有候选帧完成：无 X 眼，复活不再站起后回落，未进行调色、despill 或 alpha 修改。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -184,10 +195,10 @@
     },
     "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
     "temporalStaticReview": {
-      "status": "candidate_static_review_passed_runtime_replay_pending",
+      "status": "strict_ko_static_review_passed_runtime_replay_pending",
       "reviewDate": "2026-07-20",
-      "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-      "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+      "down": "both views descend to a reversible prone hold; no installed frame uses a literal X/cross death cue",
+      "revive": "both views begin at exact down-8 and rise without returning to a lower pose after standing",
       "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
       "backSkill": "coil, 16px airborne release, landing, and anchor recovery are readable",
       "backDefend": "active brace sequence excludes archive frame 4 because it reads as sleeping/down"
@@ -219,7 +230,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "df295cb0f3c433e2e23cd836132254c2fcb06fe307b0458f54663b4a5ac4e193",
+    "bundleDigest": "de062432c2951ced75253fcf1f6d6754529d1be53287c6ec5aa089a122492806",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -271,7 +282,35 @@
         "method": "largest common per-view idle reference reachable by every edge-safe action"
       }
     },
-    "candidateRepairManifest": ".run/starter_earth_four_repair_stage/four_spirit_cub/repair-manifest.json"
+    "candidateRepairManifest": ".run/starter_earth_four_repair_stage/four_spirit_cub/repair-manifest.json",
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "strict-ko-existing-frame-resequence-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "byteExactExistingFrameCopies": true,
+        "alphaTransformationApplied": false,
+        "colourTransformationApplied": false,
+        "ownerReviewStatus": "self_review_passed_owner_pending"
+      }
+    ],
+    "strictKoSequenceRepair": {
+      "id": "strict-ko-existing-frame-resequence-v1",
+      "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+      "manifestSha256": "265dddc6648558a048f7f2f32e72eba930f252026838058a77603f5b1d7269cc",
+      "changedRuntimeDestinationCount": 11,
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    }
   },
   "candidateReviewStatus": "approved_as_install_candidate"
 }

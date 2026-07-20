@@ -51,10 +51,10 @@
     "validationStatus": "pending_real_client_battle_replay"
   },
   "temporalStaticReview": {
-    "status": "candidate_static_review_passed_runtime_replay_pending",
+    "status": "strict_ko_static_review_passed_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "down": "both views descend to a reversible prone hold; no installed frame uses a literal X/cross death cue",
+    "revive": "both views begin at exact down-8 and rise without returning to a lower pose after standing",
     "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
     "backSkill": "coil, 16px airborne release, landing, and anchor recovery are readable",
     "backDefend": "active brace sequence excludes archive frame 4 because it reads as sleeping/down"
@@ -64,10 +64,10 @@
     "back_3quarter_ne": true
   },
   "minimumRuntimeAlphaMargin": 9,
-  "bundleDigest": "df295cb0f3c433e2e23cd836132254c2fcb06fe307b0458f54663b4a5ac4e193",
+  "bundleDigest": "de062432c2951ced75253fcf1f6d6754529d1be53287c6ec5aa089a122492806",
   "bundleDigestAlgorithm": "sha256(canonical-json(baseCommit,formId,runtime file and decoded RGBA hashes))",
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "bea568f339d0ab33efbc4e4e5e32968b961575f31ef51610ee56fce6d215880e",
+  "contactSheetSha256": "1a9033f4022a66a7bc61e7731f3477e094be11226af0106b3679a852dc653f42",
   "actionEvidence": [
     {
       "view": "front_3quarter_sw",
@@ -175,9 +175,9 @@
       "frameCount": 8,
       "minimumAlphaMargin": 12,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "bc25299cd746e7e12554707ef0674a1ffc21fe6d0f2dde48075c830ef9fb0728",
+      "contactSheetSha256": "c6ba9222ff01b635235a036579e1aa229f3787a7a3226edb337f74f8f0c52475",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "ef9071537795a220768a2032adb558371f9604babb6977f287e31ad3b6a70cd3"
+      "gifSha256": "0b97f093574f4347d71f26229d39f05ef9ea84e01123f3c56768134d5812a7ef"
     },
     {
       "view": "front_3quarter_sw",
@@ -185,9 +185,9 @@
       "frameCount": 8,
       "minimumAlphaMargin": 12,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
-      "contactSheetSha256": "00a90f4281d4a2b551dae749388f5b864e190c7226d3e77b40f4870397221f39",
+      "contactSheetSha256": "706d666249e78dc979cadfb5b68070f37572b0e4b1f226c618b0f85a2c00917e",
       "gif": "qa/battle/actions/front_3quarter_sw/revive.gif",
-      "gifSha256": "2e1886ea9b2ac330d9cd1c479f925f1587eea49f7d178f2e4039be6c942cd033"
+      "gifSha256": "a61448e5ebed9a5c63bffb15b472c57b4264d0ef45492bdf36396088d0c041e8"
     },
     {
       "view": "back_3quarter_ne",
@@ -305,9 +305,9 @@
       "frameCount": 8,
       "minimumAlphaMargin": 12,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
-      "contactSheetSha256": "7e4758b39efe7c75549c2f73db2f455cd12ce8e48a1b24af1385616afacad0cb",
+      "contactSheetSha256": "54db0de04a391e55291b935d4d27da3d9ffc35d0dffa6621eaa5205169c48aae",
       "gif": "qa/battle/actions/back_3quarter_ne/revive.gif",
-      "gifSha256": "02fdb14ed7a1ecef4e0bc61bf0b238fb1eccd3a9b20fd22da0cb583ef34de5fa"
+      "gifSha256": "d99f0e8914214af50247a6a1ac049872c63f112d40fb0478e53c3e3f0633f967"
     }
   ],
   "knownAuditExceptions": [
@@ -319,5 +319,33 @@
       "literalResidualMagentaPixels": 0
     }
   ],
-  "errors": []
+  "errors": [],
+  "qualityRepairs": [
+    {
+      "id": "strict-ko-existing-frame-resequence-v1",
+      "actions": [
+        "down",
+        "revive"
+      ],
+      "views": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "changedRuntimeDestinationCount": 11,
+      "byteExactExistingFrameCopies": true,
+      "alphaTransformationApplied": false,
+      "colourTransformationApplied": false,
+      "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+      "manifestSha256": "265dddc6648558a048f7f2f32e72eba930f252026838058a77603f5b1d7269cc",
+      "beforeAfterContact": "qa/battle/repairs/strict-ko-sequence-v1-before-after.png",
+      "beforeAfterContactSha256": "1f50389ccae8c64a6d83a5d9ede62491543e3c3ca0da33697faa261f2235d600",
+      "frontFaceZoom": "qa/battle/repairs/strict-ko-sequence-v1-face-zoom.png",
+      "frontFaceZoomSha256": "5b9c39cd63b95aedeead3be241bcfc35cb7144c0fcdf247cc82793e0c1f76849"
+    }
+  ],
+  "koExpression": {
+    "status": "self_review_passed_owner_pending",
+    "rule": "reversible unconscious; no X/cross/death cue; revive rises without pose fallback",
+    "runtimeStatusOverlay": "stun_halo_remains_separate"
+  }
 }

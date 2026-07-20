@@ -6,15 +6,15 @@
   "runtimeFrameCount": 180,
   "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
   "temporalStaticReview": {
-    "status": "candidate_static_review_passed_runtime_replay_pending",
+    "status": "strict_ko_static_review_passed_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "down": "both views descend to a reversible prone hold; no installed frame uses a literal X/cross death cue",
+    "revive": "both views begin at exact down-8 and rise without returning to a lower pose after standing",
     "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
     "backSkill": "coil, 16px airborne release, landing, and anchor recovery are readable",
     "backDefend": "active brace sequence excludes archive frame 4 because it reads as sleeping/down"
   },
-  "bundleDigest": "df295cb0f3c433e2e23cd836132254c2fcb06fe307b0458f54663b4a5ac4e193",
+  "bundleDigest": "de062432c2951ced75253fcf1f6d6754529d1be53287c6ec5aa089a122492806",
   "sourceLedger": "source/battle/source-ledger.json",
   "contactSheet": "qa/battle/contact-sheet.png",
   "qcSummary": "qa/battle/qc-summary.json",
@@ -29,5 +29,11 @@
     "bakedIntoPetFrames": false,
     "delivery": "runtime_battle_status_layer_required",
     "validationStatus": "pending_real_client_battle_replay"
+  },
+  "strictKoSequenceRepair": {
+    "id": "strict-ko-existing-frame-resequence-v1",
+    "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+    "manifestSha256": "265dddc6648558a048f7f2f32e72eba930f252026838058a77603f5b1d7269cc",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
   }
 }
