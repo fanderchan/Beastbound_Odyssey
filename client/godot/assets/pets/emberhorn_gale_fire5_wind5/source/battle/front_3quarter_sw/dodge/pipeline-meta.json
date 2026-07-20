@@ -172,8 +172,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 82,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "1be86c00ff4616367641434d1e1bb17b9bc399c51f395f027f3c27960ef7ce54",
-      "runtimeRgbaSha256": "d23e81426d5b464270861d9e3abcd775596c5626ed66fc37d8be97eabd54f110"
+      "sourceRgbaSha256": "8520a93a4234bb5ebf64348b0e94a03b50e2eddfd6dd0d88cf421a44b77460b7",
+      "runtimeRgbaSha256": "e3b426238fe2a182c1e00a0ed9341462ff5a7669c9a9cd1c3b6c7ce2633ee356"
     },
     {
       "slot": "dodge-2",
@@ -273,8 +273,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 65,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "7617261f6cf60a99ba4a410ba50e7b67a7fbe102331f36d8730300ffe0aa1513",
-      "runtimeRgbaSha256": "f0ecfd3ef6d4d743076acae42f337ce6a818a8b86b544bb1c4d969e7cbc953e6"
+      "sourceRgbaSha256": "5b5665454f9d772ad163baeac1f1392bb02c20d6aa496f1def76465f7184b103",
+      "runtimeRgbaSha256": "0e8e72ec0d2258629887dc524b6e223acc793421a6fbfd70c7b6fa7abe0ca082"
     },
     {
       "slot": "dodge-3",
@@ -374,8 +374,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 62,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "a5b8817585d0a2d785239a2ebe372570fee5ccd19490ad491d2e098e605d7f81",
-      "runtimeRgbaSha256": "99179ea55fd2030dc13cc263a11c7da97255e47456d257019ca91c09e5cf7f3b"
+      "sourceRgbaSha256": "2178e102c3ac774cc4c7445287abd602c274b9f785c270166f45525342b84403",
+      "runtimeRgbaSha256": "51847d0df720e67d97d88661e80aaca6513715eeaf95612b15cd3da11085cc31"
     },
     {
       "slot": "dodge-4",
@@ -475,8 +475,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 67,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "70584cec52bd0b79de4f93c7770a5553fdd9beafc5f96304193224cf318525d3",
-      "runtimeRgbaSha256": "214db5e75e2882134023450cdd186a0c2045747ffbde1c531cd52f1d6c441b0e"
+      "sourceRgbaSha256": "5dddc806475c9fb6dfe531c34f02634b72fc764c7e5ab3ff4b1607c5d09da125",
+      "runtimeRgbaSha256": "73624833e880168f88a545376c0adbdaef523e7f17e8f136316349caa32f9dc7"
     },
     {
       "slot": "dodge-5",
@@ -576,8 +576,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 85,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "b8f9b332e656a374de15b3d66fe2587fc9715249e87c30299904d7df6a9823cc",
-      "runtimeRgbaSha256": "0ad392ee5eee74bf2bdf809f5d27a9c3b980850c3a7b72e659c8173bd4724fcf"
+      "sourceRgbaSha256": "18b9d161cfb00308f6504ba7b4209d48ca6b055ed75e866a0965633073ed8dce",
+      "runtimeRgbaSha256": "5522ae25c2eb627903e6207101f877f74a4da3890e184edee3a5e89819dd030e"
     },
     {
       "slot": "dodge-6",
@@ -677,8 +677,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 50,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "07ecf6a15f8bc7fe2603434464da93a39173eef1bf36507a986daa8a3fe2db53",
-      "runtimeRgbaSha256": "ae581380bb1aec20a2a41beada7f78d543757368c835d513534ee42ced14d163"
+      "sourceRgbaSha256": "bd079864191be120e2debfd0f79b8b2bc49d394b38c48f42c34e88954d9f0327",
+      "runtimeRgbaSha256": "d272ef4158fd967124b5903490be055011e4f3328f5e5e62fd58da222524ba04"
     },
     {
       "slot": "dodge-7",
@@ -778,8 +778,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 69,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "b9a2231db41d7c2be8b2f026b69e819e37ad01123ec8cff6bf59e8ed5c4703ba",
-      "runtimeRgbaSha256": "bc7951e8492a362e57c6f68e3e409f3aac9839143a717666aa0b7420bba0a81a"
+      "sourceRgbaSha256": "ffb111529752a2329f98b57c364abd71c3d251ceabd4561637a9b6023c53b051",
+      "runtimeRgbaSha256": "be6e2520853573fde68d98c62304b8868adc24b446ef5b62cf81db9fb734fba0"
     },
     {
       "slot": "dodge-8",
@@ -879,8 +879,116 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 91,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "9c47cfc2829902497868a45d908abd20042e55273f89af353489958d8bfe9a63",
-      "runtimeRgbaSha256": "2b8302f08106f6be2840aaf1842a3109c81743ff3b92bc2d3358d2e1b073a95a"
+      "sourceRgbaSha256": "e99fc758ee9f645f46c40c453a9d0a7dd8cd178faff8c3d11d2dbcca608c0fe4",
+      "runtimeRgbaSha256": "c78abb795abda36954d726ad188d4d75d4e85323eafc106f0bdec075289bd28b"
     }
-  ]
+  ],
+  "postProcessing": {
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "dodge-1",
+          "donor": "dodge-1",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "652aa500557e65eb5172d5edd8db28a61b69adb67633b1d6d2f41f2d0003c609",
+          "sourceDecodedRgbaSha256": "8520a93a4234bb5ebf64348b0e94a03b50e2eddfd6dd0d88cf421a44b77460b7",
+          "runtimeDecodedRgbaSha256": "e3b426238fe2a182c1e00a0ed9341462ff5a7669c9a9cd1c3b6c7ce2633ee356"
+        },
+        {
+          "slot": "dodge-2",
+          "donor": "dodge-2",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "a6d9a8aad9b73bd9ed210833cb587bb575f36c9450f5377c1ba1314249120e85",
+          "sourceDecodedRgbaSha256": "5b5665454f9d772ad163baeac1f1392bb02c20d6aa496f1def76465f7184b103",
+          "runtimeDecodedRgbaSha256": "0e8e72ec0d2258629887dc524b6e223acc793421a6fbfd70c7b6fa7abe0ca082"
+        },
+        {
+          "slot": "dodge-3",
+          "donor": "dodge-3",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "339f2221c2e315dc0789bb6e94472c3c9358ea277872055c64ed83a5794960d4",
+          "sourceDecodedRgbaSha256": "2178e102c3ac774cc4c7445287abd602c274b9f785c270166f45525342b84403",
+          "runtimeDecodedRgbaSha256": "51847d0df720e67d97d88661e80aaca6513715eeaf95612b15cd3da11085cc31"
+        },
+        {
+          "slot": "dodge-4",
+          "donor": "dodge-4",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "dcbf8b0db5a425c81cf745facce799126ddbaf76e5db4371b42af10559140f40",
+          "sourceDecodedRgbaSha256": "5dddc806475c9fb6dfe531c34f02634b72fc764c7e5ab3ff4b1607c5d09da125",
+          "runtimeDecodedRgbaSha256": "73624833e880168f88a545376c0adbdaef523e7f17e8f136316349caa32f9dc7"
+        },
+        {
+          "slot": "dodge-5",
+          "donor": "dodge-5",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "757af904b07946d70539d657a616a3727b9429ac19161f9f77763e9065ff911b",
+          "sourceDecodedRgbaSha256": "18b9d161cfb00308f6504ba7b4209d48ca6b055ed75e866a0965633073ed8dce",
+          "runtimeDecodedRgbaSha256": "5522ae25c2eb627903e6207101f877f74a4da3890e184edee3a5e89819dd030e"
+        },
+        {
+          "slot": "dodge-6",
+          "donor": "dodge-6",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "f1967df889eafd07a211c5f244f36923f06f5ec3c594ddd716224614a736f77b",
+          "sourceDecodedRgbaSha256": "bd079864191be120e2debfd0f79b8b2bc49d394b38c48f42c34e88954d9f0327",
+          "runtimeDecodedRgbaSha256": "d272ef4158fd967124b5903490be055011e4f3328f5e5e62fd58da222524ba04"
+        },
+        {
+          "slot": "dodge-7",
+          "donor": "dodge-7",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "58a406e53f7b058f62f77fd826d4a7733d41edb5daa92f277eeb39788ee989f3",
+          "sourceDecodedRgbaSha256": "ffb111529752a2329f98b57c364abd71c3d251ceabd4561637a9b6023c53b051",
+          "runtimeDecodedRgbaSha256": "be6e2520853573fde68d98c62304b8868adc24b446ef5b62cf81db9fb734fba0"
+        },
+        {
+          "slot": "dodge-8",
+          "donor": "dodge-8",
+          "uniformScale": 1.38,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "25be3e07a6dbdb5f3617dbfe5dbaa19e404d33b652bf86c0b39dd78c8fd3cd16",
+          "sourceDecodedRgbaSha256": "e99fc758ee9f645f46c40c453a9d0a7dd8cd178faff8c3d11d2dbcca608c0fe4",
+          "runtimeDecodedRgbaSha256": "c78abb795abda36954d726ad188d4d75d4e85323eafc106f0bdec075289bd28b"
+        }
+      ]
+    }
+  }
 }

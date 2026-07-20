@@ -9,5 +9,13 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending"
+  "manualSemanticReview": "motion_integrity_self_review_passed_owner_pending",
+  "motionIntegrityRepair": {
+    "repairId": "standalone-motion-integrity-v1",
+    "status": "passed",
+    "sourceDriven": true,
+    "canonicalRuntimeDerivation": true,
+    "broadDespillApplied": false,
+    "ownerReviewStatus": "pending"
+  }
 }

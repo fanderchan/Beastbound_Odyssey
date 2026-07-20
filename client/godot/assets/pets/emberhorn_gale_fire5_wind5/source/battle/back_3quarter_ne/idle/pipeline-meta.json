@@ -170,7 +170,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 117,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "5ee77cc005be4c8bb799888778e28c6c932aac127903e599b1c3596f70b843ba",
-      "runtimeRgbaSha256": "6adf6a1f973709c2a3d6d494e712fa840c7937d30b68e7eaec2abc94051dc29f"
+      "runtimeRgbaSha256": "efc3facc3c0761a692a832e286ce9a15541dd0b6d9c1bda61a5c862ef3111511"
     },
     {
       "slot": "idle-2",
@@ -271,7 +271,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 120,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "23f575a3f6b4c5229b1c7f056e3cd0bd31dfe2b2fccfc4e3b7d20e4fa082882a",
-      "runtimeRgbaSha256": "898cdad262f3a6041196b915c3ce3ae107d0ca0a86408c48bb645579e3f16322"
+      "runtimeRgbaSha256": "afde5ada65b532aeae35dd9d9ab75457939bdc2e0e46f6c548d30bca2b069755"
     },
     {
       "slot": "idle-3",
@@ -372,7 +372,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 123,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "ba5b2f20ab063f3364b84ce5415aeff81178a4b8a7218f514f48ef19e97e26cc",
-      "runtimeRgbaSha256": "4a97baf76587d3a0aa2f4afa1f31528476cfab9bef45eb4b6e48920ab4d2bad2"
+      "runtimeRgbaSha256": "19b68682d84614bee1424b4b223c131f6bc34390c363349381db057868f0278d"
     },
     {
       "slot": "idle-4",
@@ -472,8 +472,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 64,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "48b8fbd303da8d2a8948be3fc89916c3b5e65c51d70e57ef8e918972da11ba6e",
-      "runtimeRgbaSha256": "50b37154be7ba83b937eee66788829ff6d4a58c047c2e69fece7f360f734f84c"
+      "sourceRgbaSha256": "c36bd2d76b37a89e68068605bdd4d0220757af7c237a9897e4bd3f36359beb8f",
+      "runtimeRgbaSha256": "089f05a70b24fcc90cf4f2401264a1d5a86aeafa97f770266c9a890c2c7a7ffa"
     },
     {
       "slot": "idle-5",
@@ -573,8 +573,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 77,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "b2dc8afc6591f30dfc0e3e210e8efc9cf7878ab0bef69f9ea0b96141b2842ec2",
-      "runtimeRgbaSha256": "073e33fe3f89fc679f45ffebe4ca7f9340ef8f149a6526fcdd19d94827c4ff42"
+      "sourceRgbaSha256": "db26604be6aacb31eb1e9e31060b59e30b0323ed615070c24e3cfadb42e7f9d3",
+      "runtimeRgbaSha256": "5d73eded978b30c6347badc69bdff5e39419e469e353202c0d1fc8598a72d47c"
     },
     {
       "slot": "idle-6",
@@ -674,8 +674,92 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 77,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "3a4295ed7db374f1f97bb33bd84c3c79579649af4240271c0d0bd70c5abddd34",
-      "runtimeRgbaSha256": "89f9e920ce8e0a849685e0a91d8ea01d48102e691bbd07ca4e391486dd8aa6dc"
+      "sourceRgbaSha256": "78e47578f80bafec7a8525f71e25982a72623e3d0e2975225a627656b19919ac",
+      "runtimeRgbaSha256": "f4c5ea10224e48d477a578b020868945b0414e6d8ff858788eee0eee475c3627"
     }
-  ]
+  ],
+  "postProcessing": {
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "idle-1",
+          "donor": "idle-1",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "97e5355bac2285b294597b7a4aaff7d0bfa72af00c290eb8f1052af706d43337",
+          "sourceDecodedRgbaSha256": "5ee77cc005be4c8bb799888778e28c6c932aac127903e599b1c3596f70b843ba",
+          "runtimeDecodedRgbaSha256": "efc3facc3c0761a692a832e286ce9a15541dd0b6d9c1bda61a5c862ef3111511"
+        },
+        {
+          "slot": "idle-2",
+          "donor": "idle-2",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "5e1ea648695a2d84e05dd156d7ffbde0e89cfb71a71c0de74bd077414a64e52a",
+          "sourceDecodedRgbaSha256": "23f575a3f6b4c5229b1c7f056e3cd0bd31dfe2b2fccfc4e3b7d20e4fa082882a",
+          "runtimeDecodedRgbaSha256": "afde5ada65b532aeae35dd9d9ab75457939bdc2e0e46f6c548d30bca2b069755"
+        },
+        {
+          "slot": "idle-3",
+          "donor": "idle-3",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "11d36f015305f875eb206d60fee78371171a517cb55ec2f9ee5b8cf22d3e0585",
+          "sourceDecodedRgbaSha256": "ba5b2f20ab063f3364b84ce5415aeff81178a4b8a7218f514f48ef19e97e26cc",
+          "runtimeDecodedRgbaSha256": "19b68682d84614bee1424b4b223c131f6bc34390c363349381db057868f0278d"
+        },
+        {
+          "slot": "idle-4",
+          "donor": "idle-2",
+          "uniformScale": 1.0,
+          "translation512": [
+            2,
+            -2
+          ],
+          "sourceFileSha256": "c441711f6c8c8a5222e959a0fc551ad1f475e1e63b5de5a14586e45b26fa8ac7",
+          "sourceDecodedRgbaSha256": "c36bd2d76b37a89e68068605bdd4d0220757af7c237a9897e4bd3f36359beb8f",
+          "runtimeDecodedRgbaSha256": "089f05a70b24fcc90cf4f2401264a1d5a86aeafa97f770266c9a890c2c7a7ffa"
+        },
+        {
+          "slot": "idle-5",
+          "donor": "idle-1",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            2
+          ],
+          "sourceFileSha256": "dd0c991f81878f7f34bce587102abb8a21acf9242721dfaed2092f6674ffd6fd",
+          "sourceDecodedRgbaSha256": "db26604be6aacb31eb1e9e31060b59e30b0323ed615070c24e3cfadb42e7f9d3",
+          "runtimeDecodedRgbaSha256": "5d73eded978b30c6347badc69bdff5e39419e469e353202c0d1fc8598a72d47c"
+        },
+        {
+          "slot": "idle-6",
+          "donor": "idle-2",
+          "uniformScale": 1.0,
+          "translation512": [
+            -2,
+            0
+          ],
+          "sourceFileSha256": "496406e24251da0d540d666b13a00b751e67989b9a0a54bf700da367ceae3106",
+          "sourceDecodedRgbaSha256": "78e47578f80bafec7a8525f71e25982a72623e3d0e2975225a627656b19919ac",
+          "runtimeDecodedRgbaSha256": "f4c5ea10224e48d477a578b020868945b0414e6d8ff858788eee0eee475c3627"
+        }
+      ]
+    }
+  }
 }

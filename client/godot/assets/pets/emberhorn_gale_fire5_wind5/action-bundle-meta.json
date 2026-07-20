@@ -145,7 +145,15 @@
     "strictKoBeforeAfter": "qa/battle/repairs/emberhorn-strict-ko-temporal-v1/strict-ko-before-after.png",
     "strictKoBeforeAfterSha256": "ad1a88769036013cf02ba83d46eb6366c2898e5af4e81a20bd71bb90eccf35c0",
     "strictKoAudit": "qa/battle/repairs/emberhorn-strict-ko-temporal-v1/strict-audit-180.json",
-    "strictKoAuditSha256": "3ba94d469c01e2ad880d43a7394c939eca1385dbad809473f6c842f1edfb1967"
+    "strictKoAuditSha256": "3ba94d469c01e2ad880d43a7394c939eca1385dbad809473f6c842f1edfb1967",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "afc03bfe474dfd6ce018546d913cc250fd6f748322d355fc493462ce8a5d05fb",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "5dffaf91878d909c5f7f5b3be0af18f3850ae056c307762c37dab7d5c9db3521",
+    "motionIntegrityBeforeAfter": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+    "motionIntegrityBeforeAfterSha256": "73687ed2b9dcc5dcd9c189324e4ef5e7fc5e0e0bb8828e02de30ff05a39b13a2",
+    "motionIntegrityAudit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json",
+    "motionIntegrityAuditSha256": "f06c60283095efb0756e14993d0954bcfa44da574738cdbc211420a05ebc4051"
   },
   "ownerReviewStatus": "pending",
   "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate.",
@@ -207,7 +215,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "ec8ea36d346a4aa4f04169a1fa6191d6f1931e1a37f935779ee68c3f4556c579",
+    "bundleDigest": "068726f1f491a2da0052bc477f40c5aebee8db18b3733afe3d729405f620a295",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -259,6 +267,23 @@
       "sourceAlphaPreserved": true,
       "canonicalRuntimeDerivation": true,
       "broadDespillApplied": false
-    }
+    },
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "back_3quarter_ne/idle",
+        "back_3quarter_ne/attack",
+        "back_3quarter_ne/counter",
+        "front_3quarter_sw/dodge"
+      ],
+      "sourceDriven": true,
+      "canonicalRuntimeDerivation": true,
+      "broadDespillApplied": false,
+      "down8Revive1ExactRgbaBothViews": true,
+      "evidence": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+      "audit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json"
+    },
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1"
   }
 }

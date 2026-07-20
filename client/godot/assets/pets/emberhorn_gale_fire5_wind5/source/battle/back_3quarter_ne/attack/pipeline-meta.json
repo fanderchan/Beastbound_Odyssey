@@ -172,8 +172,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 61,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "0076e2b4c2b2aea49c8b4c058be72a79d4bfe38602f456cb29bf791a3249afc0",
-      "runtimeRgbaSha256": "2eb85209619d7a1e05d82132f66587240a508c64b4862dfee2ccb29d0de2de21"
+      "sourceRgbaSha256": "523d0bbe9fd17dbcdb6fc7b7cb422d187af428bea4bb02730eec6d344a41eb97",
+      "runtimeRgbaSha256": "823f092082781ea0553318211e5de01829512f48f5478baae4edd1eaf0a9f810"
     },
     {
       "slot": "attack-2",
@@ -273,8 +273,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 54,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "683130f821517527a24ebe4c6c4dacc1d2655217a3f01eba734ebc0564637fbc",
-      "runtimeRgbaSha256": "4a5c8df075465628156850a7fa73de0735aa73476923946943c493871bbf0efd"
+      "sourceRgbaSha256": "b11815ae731aa0f1cba5e1b5cc50d9303eb6a0ace058c90744e5028854abdd45",
+      "runtimeRgbaSha256": "dc54a3099137ba567d85fabda6cb17a895785f86cc84a92ed0004f16a843b31a"
     },
     {
       "slot": "attack-3",
@@ -374,8 +374,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 52,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "ee03afaf5b47ced51ebd45116e65b645ebf69b46daea9d563ccf3ed26445503f",
-      "runtimeRgbaSha256": "030721aa315ecf68097d47d6b21aff3b0b849cdfaccdc2c1627f9664f2e8974e"
+      "sourceRgbaSha256": "2b6a45ea109537230e574e2231c309cd443fa7cb07927fce28b099adb34ae311",
+      "runtimeRgbaSha256": "29cf6d04d9d0d365190302f91ceb64ef7bc23a01ebfbc9b894bdbfeb46adbf63"
     },
     {
       "slot": "attack-4",
@@ -475,8 +475,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 58,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "f1d0ffee99fb23c4a1ca94ec181b1defffa67e90f060e04a01550322298a8aa9",
-      "runtimeRgbaSha256": "b80051ffb6c5bdebf1068d612dcdebbfcfafc989b9fffb5a994ac66977f08ddd"
+      "sourceRgbaSha256": "c358b6d799104365b588549c6c238907689119998278a2cadfc64ba240865815",
+      "runtimeRgbaSha256": "9578efd5af0a15d41ee098b82d00094a54153222c829208f4b8e477968323d2c"
     },
     {
       "slot": "attack-5",
@@ -576,8 +576,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 80,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "bb99cac88ac13802d6a9269fb5a21c274558ae2beee210f90909cca159e8b90a",
-      "runtimeRgbaSha256": "a66fad25b31686a47edda9b630173eba0bbb354a800ea1dd47ab6a6f768899cc"
+      "sourceRgbaSha256": "bc958838786a4a3e27d0b98042a26d8cd28ad4114a7efe52f01c8f57b7e83a2d",
+      "runtimeRgbaSha256": "bc026095e10cc05aef5fd2e0be492c93775f5aadabccfb32827fc0cdd3eaa823"
     },
     {
       "slot": "attack-6",
@@ -677,8 +677,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 85,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "9db6039c2fd9ee2a637d4058c5a2e33d985066e16b66afd384363b1e6e5f0b72",
-      "runtimeRgbaSha256": "ea86eb94f6fbe0cc3f467ba218ced331b3738576082cd19a7d36120573579a46"
+      "sourceRgbaSha256": "9c2b01959f9c6db1992cde24170babaf446a292a8a4fdba965eb81440096d58c",
+      "runtimeRgbaSha256": "bb7508aa86e0b4dc98448880045bb545cec3c96e30661c7976464676c5c5962f"
     },
     {
       "slot": "attack-7",
@@ -778,8 +778,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 76,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "153797b13a04dccb8006066d961d28369db25c5bbb7ef0810d88bcfd616ba411",
-      "runtimeRgbaSha256": "4d427bd2dd4ef18098c6f59d85e6379d9d44c69b4fddd971866b9ec07ba2fd22"
+      "sourceRgbaSha256": "5be9f358b4b35093c08532957971d137f28fb109b4ecde1bb6bb7dfb85679b99",
+      "runtimeRgbaSha256": "e5bb16cbfee9d6bcfe0700d571e5fd1514295f02dc674805ee057babeb23438c"
     },
     {
       "slot": "attack-8",
@@ -879,8 +879,116 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 66,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "7afe7ca0712c4ce3f60a0c65307d28bd3e9df1c88460019ee043467ff9a16eb0",
-      "runtimeRgbaSha256": "ec1833aaadf5c4141feb9ff1f8f652590ffb78aa80a47b1e8b9b9b0a48dea36e"
+      "sourceRgbaSha256": "afbd5b3c403cd2b5d7db8ede96464d9482b1c651855331ced00f047d4d7f3818",
+      "runtimeRgbaSha256": "4b93ac2bcd24cc3d4f103893d9de9a5dc21d6e1729dcd4fe5c268a7f502b8d6e"
     }
-  ]
+  ],
+  "postProcessing": {
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "attack-1",
+          "donor": "attack-1",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "bc4a2fd6b68a968941002efa9318acef590a0c3e3b5d8b631ca2cddc1736c90e",
+          "sourceDecodedRgbaSha256": "523d0bbe9fd17dbcdb6fc7b7cb422d187af428bea4bb02730eec6d344a41eb97",
+          "runtimeDecodedRgbaSha256": "823f092082781ea0553318211e5de01829512f48f5478baae4edd1eaf0a9f810"
+        },
+        {
+          "slot": "attack-2",
+          "donor": "attack-2",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "1c151a9f4863ad322b0621c6a319199cb54657597fa5970e97dddc943a15877a",
+          "sourceDecodedRgbaSha256": "b11815ae731aa0f1cba5e1b5cc50d9303eb6a0ace058c90744e5028854abdd45",
+          "runtimeDecodedRgbaSha256": "dc54a3099137ba567d85fabda6cb17a895785f86cc84a92ed0004f16a843b31a"
+        },
+        {
+          "slot": "attack-3",
+          "donor": "attack-3",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "44930cbc7248ebbe6c82e5496b03b4ca80a554f16655e7204335313326c93390",
+          "sourceDecodedRgbaSha256": "2b6a45ea109537230e574e2231c309cd443fa7cb07927fce28b099adb34ae311",
+          "runtimeDecodedRgbaSha256": "29cf6d04d9d0d365190302f91ceb64ef7bc23a01ebfbc9b894bdbfeb46adbf63"
+        },
+        {
+          "slot": "attack-4",
+          "donor": "attack-4",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "26f58db56f08ea6adcf9baeb6cfe1b1020b7caeea223694fc5817a3201961777",
+          "sourceDecodedRgbaSha256": "c358b6d799104365b588549c6c238907689119998278a2cadfc64ba240865815",
+          "runtimeDecodedRgbaSha256": "9578efd5af0a15d41ee098b82d00094a54153222c829208f4b8e477968323d2c"
+        },
+        {
+          "slot": "attack-5",
+          "donor": "attack-5",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "b4de2a25c1eb3b490a93fb7b197c7f2fe1230c643049daa096180e931754487e",
+          "sourceDecodedRgbaSha256": "bc958838786a4a3e27d0b98042a26d8cd28ad4114a7efe52f01c8f57b7e83a2d",
+          "runtimeDecodedRgbaSha256": "bc026095e10cc05aef5fd2e0be492c93775f5aadabccfb32827fc0cdd3eaa823"
+        },
+        {
+          "slot": "attack-6",
+          "donor": "attack-6",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "b294e81ee052054754cbcab563468eaf4938f036cf1c55a6a231b1169fdefe08",
+          "sourceDecodedRgbaSha256": "9c2b01959f9c6db1992cde24170babaf446a292a8a4fdba965eb81440096d58c",
+          "runtimeDecodedRgbaSha256": "bb7508aa86e0b4dc98448880045bb545cec3c96e30661c7976464676c5c5962f"
+        },
+        {
+          "slot": "attack-7",
+          "donor": "attack-7",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "8901f35715181c29d7d0db42ce60028182bca7615d2a51b9e6ba264c8e353ef9",
+          "sourceDecodedRgbaSha256": "5be9f358b4b35093c08532957971d137f28fb109b4ecde1bb6bb7dfb85679b99",
+          "runtimeDecodedRgbaSha256": "e5bb16cbfee9d6bcfe0700d571e5fd1514295f02dc674805ee057babeb23438c"
+        },
+        {
+          "slot": "attack-8",
+          "donor": "attack-8",
+          "uniformScale": 1.4,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "2e2ff4b05bb6a6d972704483316738a2f83ce0a933e368c98d979fffde59ace8",
+          "sourceDecodedRgbaSha256": "afbd5b3c403cd2b5d7db8ede96464d9482b1c651855331ced00f047d4d7f3818",
+          "runtimeDecodedRgbaSha256": "4b93ac2bcd24cc3d4f103893d9de9a5dc21d6e1729dcd4fe5c268a7f502b8d6e"
+        }
+      ]
+    }
+  }
 }
