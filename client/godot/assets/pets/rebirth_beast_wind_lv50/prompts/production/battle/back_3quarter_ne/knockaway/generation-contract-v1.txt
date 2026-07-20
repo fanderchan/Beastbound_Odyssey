@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D pet battle animation sheet
+Primary request: Render exactly 8 sequential frames of the exact 风灵转生兽 performing knockaway, arranged in an exact 4 columns x 2 rows grid, read left-to-right across the top row then the bottom row.
+References: IMAGE 1 is the binding exact 风灵转生兽 identity for this view. IMAGE 2 is motion timing and equal-cell layout reference only; replace its brown earth-beast identity completely. Preserve IMAGE 1 species and palette in every frame.
+Identity lock: an adult rideable lightly built yellow-cream quadruped of the four-spirit rebirth-beast bloodline: short neck, rounded wedge muzzle, low ears with swept feather crown, long load-bearing back, legs about fifteen percent longer yet sturdy, exactly one short central pale-jade horn, paired swept jade cheek plates, one slim layered jade shoulder plate per side, low swept feather ridge, four paws with exactly three broad olive claws each, muted green wind-scroll markings and one longer bundled feather tail; absolutely no wings, floating feathers or wind effects.
+View contract: back three-quarter northeast source view, head and travel axis toward upper-right away from camera, rear/tail toward lower-left, rider back visible when mounted; this is the ally source before the required runtime flipH=true. Keep this same source facing through every frame; no camera drift, turn-around or source mirroring.
+Physical tumble/collapse may reveal side anatomy, but the sequence must begin and finish in the binding back-northeast orientation and may never substitute a front-facing idle/attack pose.
+Action sequence: a powerful impact launches the complete beast clearly off the ground through one continuous backward airborne arc; middle frames show unmistakable vertical clearance and body rotation/tumble before a hard descending landing; anatomy remains intact, no detached effects.
+Continuity: one coherent animation with genuine pose progression, stable scale, stable palette and consistent anatomy; exact same individual in every cell.
+Containment: one complete subject per equal cell, inside the central 58 to 66 percent, generous #FF00FF margin around every limb, plate, horn, ring or tail; nothing crosses a cell edge.
+Style: original high-definition warm hand-painted 2.5D fantasy game sprite, Stone-Age-inspired readability without copying copyrighted art, crisp at 160 px.
+Background: perfectly flat solid #FF00FF only. No ground, shadow, scenery, detached effects, particles, text, labels, borders, UI, logo or watermark.
+Avoid: extra/missing anatomy, species drift, duplicated frames, flipped facing, cropping, sleep smile, death/gore.

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_beast_wind_lv50",
+  "kind": "pet",
+  "scope": "standalone_pet_battle180",
+  "archiveMode": "lean",
+  "componentMode": "largest",
+  "runtimeFrameCount": 180,
+  "runtimeBundleDigest": "e9a1bc5b4b6f55688947af11de09fd0781df8c2ddb70bf36f554f719519ed22a",
+  "sourceFramesTracked": false,
+  "rawGenerationSheetsTracked": false,
+  "rawGenerationSheetCount": 24,
+  "rawGenerationSheets": [
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/attack/raw-sheet.png",
+      "sha256": "3f1cdf1926aec92848503a08dd74bad6a171c587ae5200ca99ae520b04a78b67",
+      "sizeBytes": 1857087
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/counter/raw-sheet.png",
+      "sha256": "66d0ea8c7acc8acc16f8168fecc20ba3ac5ecc7cdc962bcb6784a5706dd7fe52",
+      "sizeBytes": 1686785
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet.png",
+      "sha256": "dc6a81a4d51283da045102195a4503d8390349b3a1cd5430c493c61c0d6e3043",
+      "sizeBytes": 1792217
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/dodge/raw-sheet.png",
+      "sha256": "bb4806dc6da9374ad8b2c639ed7f666b594901608a53e3b8abe7cc0d674aa88d",
+      "sizeBytes": 1711659
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/down/raw-sheet.png",
+      "sha256": "36baa2ba3225cf65a680d88c2d7b00ccd05cac00a0b4adb816fef402d1338c69",
+      "sizeBytes": 1548883
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/hurt/raw-sheet.png",
+      "sha256": "a57b355ea07cea5f97c08c75eb8d25f0f18d937d0d23a34476fba80f0e1811ba",
+      "sizeBytes": 1867488
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/idle/raw-sheet.png",
+      "sha256": "f7e3e693062e3cfe38e9e6903dfc953d183394e9a9fbf92def05f948af3f5ab6",
+      "sizeBytes": 1853626
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/knockaway/raw-sheet.png",
+      "sha256": "5917fdd5b21d18ae44758978adaed696d3e06a4e3fc498e5c426c741f34ce1b5",
+      "sizeBytes": 1774599
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/revive/raw-sheet.png",
+      "sha256": "68a5fe1d3420dccc4f0ff19c9fd2e4d0c28ecd44218082a4070c2c09d7a0c388",
+      "sizeBytes": 1739825
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/skill/raw-sheet.png",
+      "sha256": "b083133a724252f0f791390927b3a812df92d20e2dbb88c48dd37d9fb31b905c",
+      "sizeBytes": 1836985
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/stagger/raw-sheet.png",
+      "sha256": "29eec044d88e915ce52aa4f6b78a5396150da422a1f3624e05972d0533757f1b",
+      "sizeBytes": 1611706
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/back_3quarter_ne/walk/raw-sheet.png",
+      "sha256": "7e1305f5592acbf38bb2df9aa393804ce3e064cf308a11c3155d71cca6fb4061",
+      "sizeBytes": 1499165
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/attack/raw-sheet.png",
+      "sha256": "ca4eb54c99f6e43b5b666c673efcb2b7807224a15c44ec11237caa12072cf1db",
+      "sizeBytes": 1915002
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/counter/raw-sheet.png",
+      "sha256": "91c38112b63fd7ee8b57a50f2650b07931204c4381f6a57d357b99ef538312c3",
+      "sizeBytes": 1701984
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/defend/raw-sheet.png",
+      "sha256": "d63f9eac8515e551d677cff650fbbefb89c44af8463c16e0cf8cb1438503ba08",
+      "sizeBytes": 2005498
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/dodge/raw-sheet.png",
+      "sha256": "f8af435d7b1781991dca57476e7808bcae51c61d832f4cc08a01d4ab40af3d0a",
+      "sizeBytes": 1864553
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/down/raw-sheet.png",
+      "sha256": "df3b734554a6d5afed5e79e5439c33ee693268a3e6c7645a2e6d4d8e057f7823",
+      "sizeBytes": 1627646
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/hurt/raw-sheet.png",
+      "sha256": "8abf87196e662fa97227e8c062f54da6b6fb401c7b9482686c5a23d5c4b81771",
+      "sizeBytes": 1944553
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/idle/raw-sheet.png",
+      "sha256": "b2909f1f079d194ee8573ad18a138a65d8b7a8338b1ced7f3de2ba9be158dcf3",
+      "sizeBytes": 1830185
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/knockaway/raw-sheet.png",
+      "sha256": "976fb144d4ede4c70b37955bb5bca47c30e33e8dda67383c3929e52c1284d5b2",
+      "sizeBytes": 1767747
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/revive/raw-sheet.png",
+      "sha256": "58c37d96d624f35b620d2751c6fb17b6d6e86a9d2376589398dd35926fc32b14",
+      "sizeBytes": 1838236
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet.png",
+      "sha256": "be8f166d8e9681ada448529a6a6ee24c17f82563a11bd9ab83c7e19bad4c9410",
+      "sizeBytes": 1915183
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/stagger/raw-sheet.png",
+      "sha256": "0e290d2cefcf6c0a977c576bd0f834f11ccc5454189e624b0ab7c1b5200ef4ea",
+      "sizeBytes": 1580984
+    },
+    {
+      "pathInRun": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet/battle/front_3quarter_sw/walk/raw-sheet.png",
+      "sha256": "116c47d29cdb9b5b1a437f4af723a11ab17b9dfe0d84585cb5fea9af3a258b8e",
+      "sizeBytes": 1707385
+    }
+  ],
+  "workingArchive": ".run/art_full_g11_g12/rebirth_beast_wind_lv50/pet",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}
