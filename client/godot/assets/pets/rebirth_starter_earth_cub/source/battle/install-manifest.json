@@ -4,18 +4,18 @@
   "kind": "pet",
   "archiveMode": "lean",
   "runtimeFrameCount": 180,
-  "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
+  "faintSemanticRule": "reversible faint only; spiral, unfocused, or pose-appropriate closed eyes allowed; literal X/cross/death eyes forbidden",
   "temporalStaticReview": {
-    "status": "candidate_static_review_passed_runtime_replay_pending",
+    "status": "strict_ko_static_review_passed_after_cross_eye_correction_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "down": "front down-6 cross-eye defect corrected with same-form adjacent authored spiral eyes; both views end in reversible prone holds",
+    "revive": "both views begin at exact down-8 and rise without pose fallback",
     "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
     "dodge": "front and back views use explicit evade arcs and return to the authored anchor",
     "backSkill": "coil/charge, airborne forward release, and anchor recovery are readable",
     "backKnockaway": "impact produces a 26px airborne lift with authored tumble/roll poses"
   },
-  "bundleDigest": "f63fda0cb91ce9a35699ca1ca3a883b15d0ae52abbf427aa77e231707746bd75",
+  "bundleDigest": "c2789680e36cbaeec4d924211b80229193875e986fe7346f9997ec37f1386533",
   "sourceLedger": "source/battle/source-ledger.json",
   "contactSheet": "qa/battle/contact-sheet.png",
   "qcSummary": "qa/battle/qc-summary.json",
@@ -30,5 +30,20 @@
     "bakedIntoPetFrames": false,
     "delivery": "runtime_battle_status_layer_required",
     "validationStatus": "pending_real_client_battle_replay"
+  },
+  "strictKoSequenceRepair": {
+    "id": "strict-ko-existing-frame-resequence-v1",
+    "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+    "manifestSha256": "465d98f200367a9badc61408d12e2cc2d56299af1d4209fe4dce07da7ac88b49",
+    "ownerReviewStatus": "self_review_passed_owner_pending"
+  },
+  "strictKoEyeCueRepair": {
+    "id": "strict-ko-authored-eye-local-patch-v2",
+    "manifest": "source/battle/quality-repair-strict-ko-eye-cue-v2-manifest.json",
+    "manifestSha256": "91730effbc931209437d63806c572396a93e9132af90811c62bd30c034fbf47c",
+    "previousRuntimeBundleDigest": "c11405646e5035c1d24a5ede5cde0012ccaf20eadeef49e94d9ed5da435bda70",
+    "targetAlphaPreservedExact": true,
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "self_review_passed_owner_pending"
   }
 }

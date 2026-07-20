@@ -8,18 +8,18 @@
   "ownership": "project-owned original generated Beastbound artwork",
   "replacementPath": "regenerate from archived contracts and .run/art_batch_full_g13_g15/earth_cub/pet/battle",
   "runtimeFrameCount": 180,
-  "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
+  "faintSemanticRule": "reversible faint only; spiral, unfocused, or pose-appropriate closed eyes allowed; literal X/cross/death eyes forbidden",
   "temporalStaticReview": {
-    "status": "candidate_static_review_passed_runtime_replay_pending",
+    "status": "strict_ko_static_review_passed_after_cross_eye_correction_runtime_replay_pending",
     "reviewDate": "2026-07-20",
-    "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-    "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+    "down": "both views descend to a reversible prone hold; audited front down-6 cross eyes were replaced with authored adjacent-frame spiral cues",
+    "revive": "both views begin at exact down-8 and rise without returning to a lower pose after standing",
     "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
     "dodge": "front and back views use explicit evade arcs and return to the authored anchor",
     "backSkill": "coil/charge, airborne forward release, and anchor recovery are readable",
     "backKnockaway": "impact produces a 26px airborne lift with authored tumble/roll poses"
   },
-  "runtimeBundleDigest": "f63fda0cb91ce9a35699ca1ca3a883b15d0ae52abbf427aa77e231707746bd75",
+  "runtimeBundleDigest": "c2789680e36cbaeec4d924211b80229193875e986fe7346f9997ec37f1386533",
   "sourceFramesTracked": false,
   "representativeRawSheets": {
     "front_3quarter_sw": {
@@ -859,6 +859,71 @@
               ]
             ],
             "note": "shared scale with down/revive partner; exact continuity preserved"
+          },
+          {
+            "type": "deterministic_existing_runtime_frame_resequence",
+            "id": "strict-ko-existing-frame-resequence-v1",
+            "frameOrderFromInstalledCandidate": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "byteExactExistingFrameCopy": true,
+            "alphaTransformationApplied": false,
+            "colourTransformationApplied": false,
+            "note": "strict reversible-KO order; no standing-then-falling revive fallback"
+          },
+          {
+            "type": "alpha_preserving_authored_eye_local_patch",
+            "id": "strict-ko-authored-eye-local-patch-v2",
+            "targetFrame": 6,
+            "donorFrame": 5,
+            "donorPath": "views/front_3quarter_sw/down/down-5.png",
+            "patches": [
+              {
+                "cue": "near_visible_eye_spiral",
+                "sourceCenter": [
+                  109,
+                  207
+                ],
+                "destinationCenter": [
+                  104,
+                  211
+                ],
+                "radius": [
+                  13.0,
+                  12.0
+                ],
+                "featherPixels": 3.0
+              },
+              {
+                "cue": "far_visible_eye_spiral",
+                "sourceCenter": [
+                  92,
+                  219
+                ],
+                "destinationCenter": [
+                  97,
+                  230
+                ],
+                "radius": [
+                  9.0,
+                  8.0
+                ],
+                "featherPixels": 3.0
+              }
+            ],
+            "changedRgbaPixelCount": 687,
+            "alphaTransformationApplied": false,
+            "globalColourTransformationApplied": false,
+            "generationApplied": false,
+            "resamplingApplied": false,
+            "note": "corrects the audited literal cross-eye defect with adjacent authored spiral eye cues"
           }
         ],
         "sourceFrameRgbaSha256": [
@@ -877,7 +942,7 @@
           "0d427bbb79c98e3bc52cb600ed07353939f51a0634cbb3514aa28fc8f26878f2",
           "6d21ce4348aed451693867475492112868ea4ad818528a0b753e132435ed82c0",
           "216c558b46d7ed95c6c39a0825f7030c13184962721e857e78689e7e29e0627b",
-          "dd5d6d525afdff5536ce26cdae4f3209f3fb42a3e1f54c59d758ca5b99ac798e",
+          "f7b6e0923a69ec84f96feea2bda1f8ba760a40881f2127cf99a0a33af586d133",
           "4bbb2190c501db36a57691ef720fdeb3fbd1e8dda37e27b587674e8ab5e83a2a",
           "3729f869f2cfb1fee52163698cf9ebc05918a30b818d27cef63fb0416e43077f"
         ]
@@ -940,6 +1005,24 @@
               ]
             ],
             "note": "shared scale with down/revive partner; exact continuity preserved"
+          },
+          {
+            "type": "deterministic_existing_runtime_frame_resequence",
+            "id": "strict-ko-existing-frame-resequence-v1",
+            "frameOrderFromInstalledCandidate": [
+              1,
+              2,
+              5,
+              3,
+              4,
+              6,
+              7,
+              8
+            ],
+            "byteExactExistingFrameCopy": true,
+            "alphaTransformationApplied": false,
+            "colourTransformationApplied": false,
+            "note": "strict reversible-KO order; no standing-then-falling revive fallback"
           }
         ],
         "sourceFrameRgbaSha256": [
@@ -955,9 +1038,9 @@
         "runtimeFrameRgbaSha256": [
           "3729f869f2cfb1fee52163698cf9ebc05918a30b818d27cef63fb0416e43077f",
           "a1d4daa32aa817d79f1be2d7b2bc7e311d1237d5b3426bd609b8449b59b39f58",
+          "3bbe217a5489a59298fe1b69022cccdd93098deb29698f390997ba620b4849be",
           "8763252ac42197a1844537bc1904238e7bd61889d7bf092d06bd9e85bd20c996",
           "918831941aef763b8885a0996c27c426df3d4278caf4eccefed3a218185d5e19",
-          "3bbe217a5489a59298fe1b69022cccdd93098deb29698f390997ba620b4849be",
           "5cb58e970cc4354c70c9de3337992dc98bd175d804db505e263fd542091bbdc6",
           "90f3c3b6a09cdeb782deb288f071cbf106e609242935b20e5b148837947cd582",
           "9f7ee15b9b8de8e16b8269a09d9e0a94cd667af62c5888e0547e9cb821db20f5"
@@ -1797,6 +1880,24 @@
               ]
             ],
             "note": "shared scale with down/revive partner; exact continuity preserved"
+          },
+          {
+            "type": "deterministic_existing_runtime_frame_resequence",
+            "id": "strict-ko-existing-frame-resequence-v1",
+            "frameOrderFromInstalledCandidate": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "byteExactExistingFrameCopy": true,
+            "alphaTransformationApplied": false,
+            "colourTransformationApplied": false,
+            "note": "strict reversible-KO order; no standing-then-falling revive fallback"
           }
         ],
         "sourceFrameRgbaSha256": [
@@ -1878,6 +1979,24 @@
               ]
             ],
             "note": "shared scale with down/revive partner; exact continuity preserved"
+          },
+          {
+            "type": "deterministic_existing_runtime_frame_resequence",
+            "id": "strict-ko-existing-frame-resequence-v1",
+            "frameOrderFromInstalledCandidate": [
+              1,
+              2,
+              3,
+              6,
+              5,
+              4,
+              7,
+              8
+            ],
+            "byteExactExistingFrameCopy": true,
+            "alphaTransformationApplied": false,
+            "colourTransformationApplied": false,
+            "note": "strict reversible-KO order; no standing-then-falling revive fallback"
           }
         ],
         "sourceFrameRgbaSha256": [
@@ -1894,9 +2013,9 @@
           "94c0be9d311043ba7df1aad268d639039c7ceec027e004158b9492a0a622883f",
           "375806206fbbe3d4c3b9736bfe4152c6d8f19a6645285187cae72d44b6bee3cc",
           "6ff243b7df9230110275909aad489f2c4998119c83c11084619a1dc2e5d2dfd5",
-          "73b7a82f5a3de75bfee9eeafcbd5556befbc2e836abe6a85e8b1766b836cedb9",
-          "5657e4a5ff757d5fdb15d33e36dab18add2b8d51fcd669d48f07489f82424665",
           "6cf7d4d79b6dbbc4ec900b7a8113db3b65d76eafd159f19de57f8ce090969f71",
+          "5657e4a5ff757d5fdb15d33e36dab18add2b8d51fcd669d48f07489f82424665",
+          "73b7a82f5a3de75bfee9eeafcbd5556befbc2e836abe6a85e8b1766b836cedb9",
           "495b54a49e5f4015425733b2252674eecb4bd8d47272b9fefd8f263a37f1d936",
           "29a50f87d87a6e142d159c48d3e1d912ba67291200c1d5ebeec335fd4ecfab68"
         ],
@@ -1925,5 +2044,35 @@
     "repairManifest": ".run/starter_earth_four_repair_stage/earth_cub/repair-manifest.json",
     "repairManifestSha256": "7088f4301b1a4f74a5bc14270292f995fc0da343df09a3bcd632ec97633c8e2c",
     "formalMutationPerformed": false
+  },
+  "repairManifests": [
+    {
+      "path": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+      "sha256": "465d98f200367a9badc61408d12e2cc2d56299af1d4209fe4dce07da7ac88b49"
+    },
+    {
+      "path": "source/battle/quality-repair-strict-ko-eye-cue-v2-manifest.json",
+      "sha256": "91730effbc931209437d63806c572396a93e9132af90811c62bd30c034fbf47c"
+    }
+  ],
+  "strictKoSequenceRepair": {
+    "id": "strict-ko-existing-frame-resequence-v1",
+    "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+    "manifestSha256": "465d98f200367a9badc61408d12e2cc2d56299af1d4209fe4dce07da7ac88b49",
+    "byteExactExistingFrameCopies": true,
+    "down8Revive1ExactBytes": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "ownerReviewStatus": "self_review_passed_owner_pending"
+  },
+  "bundleDigestAlgorithm": "sha256(canonical-json(baseCommit,formId,runtime file and decoded RGBA hashes))",
+  "strictKoEyeCueRepair": {
+    "id": "strict-ko-authored-eye-local-patch-v2",
+    "manifest": "source/battle/quality-repair-strict-ko-eye-cue-v2-manifest.json",
+    "manifestSha256": "91730effbc931209437d63806c572396a93e9132af90811c62bd30c034fbf47c",
+    "target": "views/front_3quarter_sw/down/down-6.png",
+    "targetAlphaPreservedExact": true,
+    "ownerReviewStatus": "self_review_passed_owner_pending"
   }
 }

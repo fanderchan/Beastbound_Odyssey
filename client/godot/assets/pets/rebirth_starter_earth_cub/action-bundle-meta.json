@@ -135,7 +135,11 @@
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+      "source/battle/quality-repair-strict-ko-eye-cue-v2-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_cubs/earth-identity-build/contact-sheet.png",
@@ -147,10 +151,22 @@
     "battleCandidateContactSheet": ".run/starter_earth_four_repair_stage/install_delta_aa5575f6/proposed_formal/client/godot/assets/pets/rebirth_starter_earth_cub/qa/battle/contact-sheet.png",
     "battleCandidateContactSheetSha256": "71e2277f100374e03ecde7d7323c54fe13f5eb93ce5d888eba0275b1c466013b",
     "battleCandidateComparison": ".run/starter_earth_four_repair_stage/comparison/earth_cub/formal-vs-staged-two-view-12-actions.png",
-    "battleCandidateComparisonSha256": "97567b66c41751aad3c018f6a650585741faa86b53d9de296517523126dd9da8"
+    "battleCandidateComparisonSha256": "97567b66c41751aad3c018f6a650585741faa86b53d9de296517523126dd9da8",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "28c47e5b0375e6e845433c74cec0a61efe6c6b2ac25d19e5b0475453e09a62cb",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "09b5cfa3fba6e5eae0817df54d157b664960e70a4a171b02327cac86f5f2a2d9",
+    "battleStrictKoBeforeAfter": "qa/battle/repairs/strict-ko-sequence-v1-before-after.png",
+    "battleStrictKoBeforeAfterSha256": "47a6c192bac8af886be18dda9d167e2241d3dca094f6049e6f4458d145f3e5af",
+    "battleStrictKoFaceZoom": "qa/battle/repairs/strict-ko-sequence-v1-face-zoom.png",
+    "battleStrictKoFaceZoomSha256": "c5742a9c0431e8c6b40ac2dce38a5e4b2d0181ff6f2a596d48e3b794dbf9ea5c",
+    "battleStrictKoEyeCueBeforeAfter": "qa/battle/repairs/strict-ko-eye-cue-v2-before-after.png",
+    "battleStrictKoEyeCueBeforeAfterSha256": "ee840ef9690981d7c62f01bd70f00d56bce197e2dd7a5f59889e967a340b0a37",
+    "battleStrictKoEyeCueFaceZoom": "qa/battle/repairs/strict-ko-eye-cue-v2-face-zoom.png",
+    "battleStrictKoEyeCueFaceZoomSha256": "dd92e2f4a5dd5d055b572098f597283b344fdee0201a471491d626afdf0ff10a"
   },
   "ownerReviewStatus": "pending",
-  "notes": "独立宠物双视角十二动作候选已完成比例与动作语义修复；可复活昏厥保留螺旋、失焦或趴伏闭眼，不要求 literal X。眩晕圈由运行时战斗状态层叠加，不烘焙进宠物帧。正式安装和真实客户端回放仍待执行，runtimeEnabled 保持 false。",
+  "notes": "独立宠物双视角十二动作候选已完成比例与动作语义修复；可复活昏厥保留螺旋、失焦或趴伏闭眼，不要求 literal X。眩晕圈由运行时战斗状态层叠加，不烘焙进宠物帧。正式安装和真实客户端回放仍待执行，runtimeEnabled 保持 false。 严格 KO 时序仅复用现有候选帧完成：无 X 眼，复活不再站起后回落，未进行调色、despill 或 alpha 修改。 二次视觉复核纠正了原先误判：front down-6 的十字眼已用同宠物同视角相邻 down-5 原生螺旋眼做局部 RGB 修复，Alpha 与轮廓逐字节保持。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -182,12 +198,12 @@
         "facing": "northwest"
       }
     },
-    "faintSemanticRule": "authored reversible-faint cues use open spiral, unfocused, or pose-appropriate closed eyes in a prone KO context; no literal X/cross or death symbol. The battle status renderer must layer the stun halo at runtime instead of baking it into pet frames",
+    "faintSemanticRule": "reversible faint only; spiral, unfocused, or pose-appropriate closed eyes allowed; literal X/cross/death eyes forbidden",
     "temporalStaticReview": {
-      "status": "candidate_static_review_passed_runtime_replay_pending",
+      "status": "strict_ko_static_review_passed_after_cross_eye_correction_runtime_replay_pending",
       "reviewDate": "2026-07-20",
-      "down": "both views preserve the authored reversible-faint descent and hold; spiral, unfocused, or prone closed-eye cues remain in the pet art",
-      "revive": "both views begin from exact down-8 RGBA and recover without a pose pop",
+      "down": "front down-6 cross-eye defect corrected with same-form adjacent authored spiral eyes; both views end in reversible prone holds",
+      "revive": "both views begin at exact down-8 and rise without pose fallback",
       "runtimeStatusOverlay": "stun halo is a separate runtime battle-status layer and is intentionally absent from these frames",
       "dodge": "front and back views use explicit evade arcs and return to the authored anchor",
       "backSkill": "coil/charge, airborne forward release, and anchor recovery are readable",
@@ -220,7 +236,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "f63fda0cb91ce9a35699ca1ca3a883b15d0ae52abbf427aa77e231707746bd75",
+    "bundleDigest": "c2789680e36cbaeec4d924211b80229193875e986fe7346f9997ec37f1386533",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -272,7 +288,58 @@
         "method": "largest common per-view idle reference reachable by every edge-safe action"
       }
     },
-    "candidateRepairManifest": ".run/starter_earth_four_repair_stage/earth_cub/repair-manifest.json"
+    "candidateRepairManifest": ".run/starter_earth_four_repair_stage/earth_cub/repair-manifest.json",
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "qualityRepairs": [
+      {
+        "id": "strict-ko-existing-frame-resequence-v1",
+        "actions": [
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "byteExactExistingFrameCopies": true,
+        "alphaTransformationApplied": false,
+        "colourTransformationApplied": false,
+        "ownerReviewStatus": "self_review_passed_owner_pending",
+        "auditCorrection": "front down-6 false visual pass corrected by strict-ko-authored-eye-local-patch-v2"
+      },
+      {
+        "id": "strict-ko-authored-eye-local-patch-v2",
+        "actions": [
+          "down"
+        ],
+        "views": [
+          "front_3quarter_sw"
+        ],
+        "authoredAdjacentFrameLocalPatch": true,
+        "alphaTransformationApplied": false,
+        "globalColourTransformationApplied": false,
+        "ownerReviewStatus": "self_review_passed_owner_pending"
+      }
+    ],
+    "strictKoSequenceRepair": {
+      "id": "strict-ko-existing-frame-resequence-v1",
+      "manifest": "source/battle/quality-repair-strict-ko-sequence-v1-manifest.json",
+      "manifestSha256": "465d98f200367a9badc61408d12e2cc2d56299af1d4209fe4dce07da7ac88b49",
+      "changedRuntimeDestinationCount": 5,
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    },
+    "runtimeBundleDigest": "c2789680e36cbaeec4d924211b80229193875e986fe7346f9997ec37f1386533",
+    "strictKoEyeCueRepair": {
+      "id": "strict-ko-authored-eye-local-patch-v2",
+      "manifest": "source/battle/quality-repair-strict-ko-eye-cue-v2-manifest.json",
+      "manifestSha256": "91730effbc931209437d63806c572396a93e9132af90811c62bd30c034fbf47c",
+      "changedRuntimeDestinationCount": 1,
+      "targetAlphaPreservedExact": true,
+      "ownerReviewStatus": "self_review_passed_owner_pending"
+    }
   },
   "candidateReviewStatus": "approved_as_install_candidate"
 }
