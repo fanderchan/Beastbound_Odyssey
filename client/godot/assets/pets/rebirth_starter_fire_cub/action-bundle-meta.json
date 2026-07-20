@@ -135,7 +135,10 @@
     "sourceMetadata": "source/identity-board-source-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "qualityRepairManifests": [
+      "source/battle/quality-repair-strict-ko-complete-fall-v1-manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_cubs/fire-identity-build/contact-sheet.png",
@@ -143,10 +146,16 @@
     "groupContactSheet": ".run/art_batch_phase320/rebirth_cubs/contact-sheet.png",
     "groupContactSheetSha256": "efff879d2dbe8db1824e9b8e65b3d766391d6987d5f7652bbf4b1381163ae266",
     "comparison160": ".run/art_batch_phase320/rebirth_cubs/comparison-160px.png",
-    "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425"
+    "comparison160Sha256": "8a27be06780a4db3111dd2b157e0bb7e5ff234570f0154e6eb9422dda3a73425",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "5690809eb0102dcc796dfe860ea8cef135450f300bb119e67d3810237d106d0c",
+    "battleStrictKoBeforeAfter": "qa/battle/repairs/strict-ko-complete-fall-v1-before-after.png",
+    "battleStrictKoBeforeAfterSha256": "f491a9296fe00186153694c3d0b23e4f35567bf32c20da465f2f5ae8bc8c848b",
+    "battleStrictKoFaceZoom": "qa/battle/repairs/strict-ko-complete-fall-v1-face-zoom.png",
+    "battleStrictKoFaceZoomSha256": "bb52dca364bd8463d65ecdf02600e5a1a66bed577367eabfd9f67d9be5237aec"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate.",
+  "notes": "Identity and four key poses only. World and battle matrices are intentionally not produced in this gate. 严格 KO 修复仅复用本形态同视角现有原生帧，补齐失衡至倒地过程；未调色、未 despill、未修改 alpha。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -205,7 +214,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "f18696947300772148fd146e246157bfd989da669a05c8b2855e5433760969a0",
+    "bundleDigest": "268ef589742bf9f64b3eb67f2f5a6f0661b51d9366000ea4bcaa6bffa8a02727",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -233,6 +242,25 @@
       "knockaway": "continuous launch, rotation, descent and landing",
       "attackSkillCounter": "ordered anticipation, contact/release and recovery"
     },
-    "runtimeAlphaDespill": "not_applied"
+    "runtimeAlphaDespill": "not_applied",
+    "runtimeBundleDigest": "268ef589742bf9f64b3eb67f2f5a6f0661b51d9366000ea4bcaa6bffa8a02727",
+    "bundleDigestAlgorithm": "sha256(canonical-json(formId,runtime file and decoded RGBA hashes))",
+    "faintSemanticRule": "reversible faint only; no sleeping, smiling, death mark, or X/cross eye",
+    "downReviveExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "temporalStaticReview": {
+      "status": "strict_ko_static_review_passed_runtime_replay_pending",
+      "down": "both views show a complete loss-of-balance through stable reversible-faint fall",
+      "revive": "unchanged and starts from exact down-8 bytes"
+    },
+    "strictKoCompleteFall": {
+      "id": "strict-ko-complete-fall-existing-frames-v1",
+      "manifest": "source/battle/quality-repair-strict-ko-complete-fall-v1-manifest.json",
+      "changedRuntimeDestinationCount": 14,
+      "runtimeFrameReuseOnly": true,
+      "ownerReviewStatus": "pending"
+    }
   }
 }

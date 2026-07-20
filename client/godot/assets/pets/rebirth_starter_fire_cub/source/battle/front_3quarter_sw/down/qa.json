@@ -7,8 +7,33 @@
   "errors": [],
   "emptyFrames": [],
   "duplicateFrames": [],
-  "edgeTouchFrames": [],
+  "edgeTouchFrames": [
+    "down-3",
+    "down-4",
+    "down-5",
+    "down-6",
+    "down-7",
+    "down-8"
+  ],
+  "warnings": [
+    "pre_existing_low_margin:down-3",
+    "pre_existing_low_margin:down-4",
+    "pre_existing_low_margin:down-5",
+    "pre_existing_low_margin:down-6",
+    "pre_existing_low_margin:down-7",
+    "pre_existing_low_margin:down-8"
+  ],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending",
-  "semanticReview": "key poses and full strip self-reviewed; owner visual review remains pending"
+  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
+  "strictKoCompleteFall": {
+    "id": "strict-ko-complete-fall-existing-frames-v1",
+    "status": "self_review_passed_owner_pending",
+    "phases": [
+      "loss_of_balance",
+      "buckle",
+      "forebody_contact",
+      "roll_to_side",
+      "stable_revivable_hold"
+    ]
+  }
 }

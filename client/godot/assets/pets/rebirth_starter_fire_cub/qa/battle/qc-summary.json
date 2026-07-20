@@ -120,9 +120,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
-      "contactSheetSha256": "fe2025b7876c6d962a3eae95533ade0c25c558afac63f37ebc9c49dcf94b8ff5",
+      "contactSheetSha256": "e321d31b33aea036867fcc9428b5893c5d5f221f5829b21abbf2763894a8eb52",
       "gif": "qa/battle/actions/front_3quarter_sw/down.gif",
-      "gifSha256": "6bc0d16ad0f10bb06f3115ec59cfeadd3ca442fb404dac93063fc1e53cec407c"
+      "gifSha256": "2d598a202b8124a31f1eba7b4aa55aed1076064f34879d06052694e25420dcf9"
     },
     {
       "view": "front_3quarter_sw",
@@ -228,9 +228,9 @@
       "action": "down",
       "frameCount": 8,
       "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
-      "contactSheetSha256": "1f267f1676d3f4acc1d717996c4257ba1890e7c7135a10c40f388052e4c07882",
+      "contactSheetSha256": "428bbe473df3b8ecf09dcbe8a9dcec600a7a107b1fa65ac4aebe24c257130370",
       "gif": "qa/battle/actions/back_3quarter_ne/down.gif",
-      "gifSha256": "49839977b73a548c0c887aaa1815e0f0eb4cc13891f89348d204e3e43fb341fb"
+      "gifSha256": "08c2cc5da27803306c2de414788366a99963fccb69e869b5e8fc25886187b2bd"
     },
     {
       "view": "back_3quarter_ne",
@@ -265,5 +265,42 @@
     "attackSkillCounter": "ordered anticipation, contact/release and recovery"
   },
   "contactSheet": "qa/battle/contact-sheet.png",
-  "contactSheetSha256": "89a44859e232e2b6db6967c64559337d26218a2ab02f79eb760d90b8da28ee29"
+  "contactSheetSha256": "5690809eb0102dcc796dfe860ea8cef135450f300bb119e67d3810237d106d0c",
+  "runtimeEnabled": false,
+  "bundleDigest": "268ef589742bf9f64b3eb67f2f5a6f0661b51d9366000ea4bcaa6bffa8a02727",
+  "runtimeBundleDigest": "268ef589742bf9f64b3eb67f2f5a6f0661b51d9366000ea4bcaa6bffa8a02727",
+  "bundleDigestAlgorithm": "sha256(canonical-json(formId,runtime file and decoded RGBA hashes))",
+  "downReviveExactRgba": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "faintSemanticRule": "reversible faint only; no sleeping, smiling, death mark, or X/cross eye",
+  "koExpression": {
+    "status": "self_review_passed_owner_pending",
+    "runtimeStatusOverlay": "stun_halo_remains_separate"
+  },
+  "temporalStaticReview": {
+    "status": "strict_ko_static_review_passed_runtime_replay_pending",
+    "down": "loss of balance -> buckle -> forebody contact -> side collapse -> stable reversible-faint hold",
+    "revive": "unchanged exact-hold recovery strip; no down/revive boundary pop"
+  },
+  "qualityRepairs": [
+    {
+      "id": "strict-ko-complete-fall-existing-frames-v1",
+      "actions": [
+        "down"
+      ],
+      "views": [
+        "front_3quarter_sw",
+        "back_3quarter_ne"
+      ],
+      "changedRuntimeDestinationCount": 14,
+      "byteExactExistingFrameCopies": true,
+      "alphaTransformationApplied": false,
+      "colourTransformationApplied": false,
+      "manifest": "source/battle/quality-repair-strict-ko-complete-fall-v1-manifest.json",
+      "beforeAfterContact": "qa/battle/repairs/strict-ko-complete-fall-v1-before-after.png",
+      "faceZoom": "qa/battle/repairs/strict-ko-complete-fall-v1-face-zoom.png"
+    }
+  ]
 }

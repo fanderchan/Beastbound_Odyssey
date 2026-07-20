@@ -23,38 +23,38 @@
   "frames": [
     {
       "slot": "down-1",
+      "sourceRgbaSha256": "ea22e1ed7895e9eca517bda68436182b5ed4da8ff786cb86ef2938b99fece2ed",
+      "runtimeRgbaSha256": "7df283c0f6b325d9708ce1cee7ed7fe94a4659f8cca625bb0edbc28d1129dee2"
+    },
+    {
+      "slot": "down-2",
+      "sourceRgbaSha256": "9eedd7deac8fbd050a6d3f3370ea14da186e6ccc9d3c75288b7ec4492134ddd7",
+      "runtimeRgbaSha256": "408a7e8b0f6686fd42edc2a58aff397b0b8dd92ee6d7ecb16c400e9391fa84d0"
+    },
+    {
+      "slot": "down-3",
+      "sourceRgbaSha256": "ad767535bcfb0a089927b5d5ea991743a298cfe05bb5ae65933e33db1de85d9e",
+      "runtimeRgbaSha256": "c9de513b0346b0471fbf11a5e1391a80f1a99ccbaec4dfc73caa106918c11a98"
+    },
+    {
+      "slot": "down-4",
+      "sourceRgbaSha256": "7f49830fa33fcb56c987ee0b857d58580a95dfb4be8255a0cc81772ecde71eac",
+      "runtimeRgbaSha256": "a39dd93c1bdb1f9892de7d5da217eae2dc645b7aeea25f84a1757684ecf45cb5"
+    },
+    {
+      "slot": "down-5",
+      "sourceRgbaSha256": "8cf0533dbc3b58a3bdfedd09170d39789f6e3750050d672a62bfaed50ac38a98",
+      "runtimeRgbaSha256": "3ba46c50ce67c9ecc39def9b7e1c9ec21fa283a2e45cdf7cd5618a4421802185"
+    },
+    {
+      "slot": "down-6",
       "sourceRgbaSha256": "13e0a99c25abc30503e24e9bd77b58596d2d40c4c9ea5a36e442e7e7319019f2",
       "runtimeRgbaSha256": "5594c4dfe7bb9391a2799a1e6a88f93126b10387a9abcea67411a878d77f4865"
     },
     {
-      "slot": "down-2",
-      "sourceRgbaSha256": "cc5e08a67c2ae7e4094d11d49e977f324cd58b0d40426ffa8d68489242f218ea",
-      "runtimeRgbaSha256": "7ada3ca2a001e808159d6f8baab0a275b098a042ef7f22100104564ed10971b6"
-    },
-    {
-      "slot": "down-3",
-      "sourceRgbaSha256": "424a2465ee2c804537192e51e58a404d3c08702fa95734abb2aef8011c61dae6",
-      "runtimeRgbaSha256": "ffae09301a428afc80eb1b197da4cabc9a4de800a0b16cf0f85cbb43f06a1492"
-    },
-    {
-      "slot": "down-4",
+      "slot": "down-7",
       "sourceRgbaSha256": "33d27d0cef8e9060fadcf5514cdc3f27270ea80ab92d95bc816156befbe48838",
       "runtimeRgbaSha256": "70ff9fe0b5f53b539c9a670438f9a0443c7ccb50fd51af064e8f56e5658d4839"
-    },
-    {
-      "slot": "down-5",
-      "sourceRgbaSha256": "dcf7ad37313b6938ba6f32a2d613f706fbac3758558f0874c55adad3c1655739",
-      "runtimeRgbaSha256": "f0bf0118b342c70b600bb76952422455733b10bc0bb4911db364e8434ceac9ea"
-    },
-    {
-      "slot": "down-6",
-      "sourceRgbaSha256": "9273c511575f31d42eaa24e640c4bc420a09476ae3401fd7b8ebacf11f0ec884",
-      "runtimeRgbaSha256": "77a8bd697185b984caef50cf9a579b3c7ac84d8e8e64caa1c5dc3f1d1797f4f2"
-    },
-    {
-      "slot": "down-7",
-      "sourceRgbaSha256": "18ac0ee2fcc1a929d4e6d84490801c6a9d50a9da5cdfc840a50b975e8ed3e33e",
-      "runtimeRgbaSha256": "81d8722bc3ca5c15ed548c0023772468da7b5ce64c9915938fa953557dbc56cb"
     },
     {
       "slot": "down-8",
@@ -67,5 +67,58 @@
     "down-a",
     "down-b"
   ],
-  "deterministicExpansion": true
+  "deterministicExpansion": true,
+  "postProcessing": {
+    "strictKoCompleteFall": {
+      "id": "strict-ko-complete-fall-existing-frames-v1",
+      "method": "byte-exact authored frame reuse from same form and same view",
+      "mapping": [
+        {
+          "destinationFrame": 1,
+          "sourceAction": "revive",
+          "sourceFrame": 8
+        },
+        {
+          "destinationFrame": 2,
+          "sourceAction": "revive",
+          "sourceFrame": 7
+        },
+        {
+          "destinationFrame": 3,
+          "sourceAction": "revive",
+          "sourceFrame": 6
+        },
+        {
+          "destinationFrame": 4,
+          "sourceAction": "revive",
+          "sourceFrame": 5
+        },
+        {
+          "destinationFrame": 5,
+          "sourceAction": "stagger",
+          "sourceFrame": 1
+        },
+        {
+          "destinationFrame": 6,
+          "sourceAction": "down",
+          "sourceFrame": 1
+        },
+        {
+          "destinationFrame": 7,
+          "sourceAction": "down",
+          "sourceFrame": 4
+        },
+        {
+          "destinationFrame": 8,
+          "sourceAction": "down",
+          "sourceFrame": 8
+        }
+      ],
+      "creativePoseChange": false,
+      "interpolationApplied": false,
+      "despillApplied": false,
+      "colourTransformationApplied": false,
+      "alphaTransformationApplied": false
+    }
+  }
 }
