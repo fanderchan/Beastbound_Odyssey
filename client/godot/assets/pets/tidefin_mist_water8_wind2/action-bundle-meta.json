@@ -146,9 +146,15 @@
     "contactSheet": ".run/art_batch_phase320/tidefin/mist/identity-build/contact-sheet.png",
     "contactSheetSha256": "f2cd1ab2aa9ec23236918c2ddd779e85eefeb79f3d7071667861baddba215bb1",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "833fcdb4c748c67293afbe8ef74422cf8574a1dfa2509c9d829f3b0f9bd543aa",
+    "battleContactSheetSha256": "cb4948dd19d57bc3f2c7c9214faf8c762beb8678e44fe7142fa8548984e482d4",
     "battleQcSummary": "qa/battle/qc-summary.json",
-    "battleQcSummarySha256": "7adc412982cedbcfc98dfc86b6be44d328d2bdedc1b802848b53b9113a2373e7"
+    "battleQcSummarySha256": "7adc412982cedbcfc98dfc86b6be44d328d2bdedc1b802848b53b9113a2373e7",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "2d7902cf3ec8783d68a085c52b1f3cbbb182514fa1e617ef7c5580cc3f0ebcc3",
+    "motionIntegrityBeforeAfter": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+    "motionIntegrityBeforeAfterSha256": "386ae976be8202f9c930b6a60f2e21b127d8d6ab8c657c67dd71f879e71d76be",
+    "motionIntegrityAudit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json",
+    "motionIntegrityAuditSha256": "60073fa5e48e59bdbe34f6ad8452f53f134a3d047d6d7e7b74d122f1ac5c06de"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
@@ -211,7 +217,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "8cf30dcf1713aa03ea151017a81ad64d5e1a11ff8a89f617c2b7d48494d96636",
+    "bundleDigest": "929617ffd3b3b66140cfa177b567d6b8190eddae9c1a31f2f679bc2eb5d8c9f8",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -231,6 +237,23 @@
       "status": "passed",
       "down8Revive1ExactRgbaBothViews": true,
       "broadRuntimeDespillApplied": false
-    }
+    },
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "front_3quarter_sw/knockaway",
+        "back_3quarter_ne/knockaway",
+        "back_3quarter_ne/down",
+        "back_3quarter_ne/revive"
+      ],
+      "sourceDriven": true,
+      "canonicalRuntimeDerivation": true,
+      "broadDespillApplied": false,
+      "down8Revive1ExactRgbaBothViews": true,
+      "evidence": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+      "audit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json"
+    },
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1"
   }
 }

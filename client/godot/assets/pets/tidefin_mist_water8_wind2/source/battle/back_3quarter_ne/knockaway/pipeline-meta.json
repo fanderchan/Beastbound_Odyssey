@@ -181,7 +181,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "c80ce7fd972699e191f00c57b6a241e7e9cbf808068ba7fb0fb8a8a740c07a18",
-      "runtimeRgbaSha256": "ac437fc7e4d4d17e241a18873b87ba7b9d45e88280947a6645278a9bcc28eac0"
+      "runtimeRgbaSha256": "276d4891ec18ba4dca8dce551e121094b777249c42e742e8fe788225882b8457"
     },
     {
       "slot": "knockaway-2",
@@ -290,7 +290,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 5,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "3c9564f987d08256c73fed1525599041a5d5b592211749e9be6b4eee28146ccb",
-      "runtimeRgbaSha256": "927387466382a335c3ad17dd0445321d96cbb1c97be5891af40c1d5340756e91"
+      "runtimeRgbaSha256": "73d6081f8ad34a4815b41ede6dd465a393083a5f768c97f6c88bbe23dbe9036e"
     },
     {
       "slot": "knockaway-3",
@@ -399,7 +399,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "522da1069a04a3cc0bd7876043dcf9e919352c78ee81a1b832ab3d3016da7344",
-      "runtimeRgbaSha256": "7918b940b519c77127560591d1c570b67bf90176eab279ed2e35b57b290c6efb"
+      "runtimeRgbaSha256": "5d153d8452cd4ddcaa983968a1617515bebf1467eaed2036dd37bbc71b9ba714"
     },
     {
       "slot": "knockaway-4",
@@ -508,7 +508,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 3,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "4f308cc270e6feba58c21161bbb0d5c0f55b65377fc97317de4a5491dab4b988",
-      "runtimeRgbaSha256": "9b32029e6c2faa534158065bb208dcfbb9bf7b4503530a0d0a536aec70ff9e91"
+      "runtimeRgbaSha256": "2845a58c675e63075f9b977139e299a82fabe489d51c67483ff90c0421d94734"
     },
     {
       "slot": "knockaway-5",
@@ -617,7 +617,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "d443a7e62783a9f1cb3c8e8286c5774079230b2011d8dd0720852841207a678e",
-      "runtimeRgbaSha256": "da2f6fa0dcbaf7b42c60066de0642b0172d49ac14829e49884ad9b1fd482e517"
+      "runtimeRgbaSha256": "bd329ecdd9491337dba87215ef05b6385e5b5bb726b30e438514c4e15106ff9d"
     },
     {
       "slot": "knockaway-6",
@@ -725,8 +725,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "fe341f9f9bbf8b77ee8e2d9315678335ed0f9f3cd079501f41536ada12545afd",
-      "runtimeRgbaSha256": "bf51716f926a9967668c18f1562269576a350eada90d38318c086cd7e91512c4"
+      "sourceRgbaSha256": "f65622abd2c376796f78e171f4cb0fafdf120a972239af736a96b7cd51830184",
+      "runtimeRgbaSha256": "a59e20b61872557bc29dbe9bda657b5694c66c48d1ceebb9e1533975cd6093fb"
     },
     {
       "slot": "knockaway-7",
@@ -835,7 +835,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "0fdd232521ee5e747adba16f0bcc3b9a24a50650971a5d923d0fbcbbec5f7e24",
-      "runtimeRgbaSha256": "1066e8828493fd053f561bc544a3766a5bf690ac903d6b1690e018096fa53fee"
+      "runtimeRgbaSha256": "f723ace6a164a3c10e52f8df9de65acb111bc3333abaf3e34a4b3fe36c71ec06"
     },
     {
       "slot": "knockaway-8",
@@ -943,8 +943,116 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "dc7569f3947ad91743a38697d7687dd84f1c6876fef0b55852bf49f3c6d62fb1",
-      "runtimeRgbaSha256": "4792ae4f1c7fddf4687808359054e3a9a3221ae68dda7c4f9b39a7ef71a1a789"
+      "sourceRgbaSha256": "e97b6f137a20e10cd016e28ba86ad0835d84cb1f8f78efc7581236fc85126048",
+      "runtimeRgbaSha256": "7c66cfb0c1936e57c27d44289ef2b2ec9cd86347ab0a155af838d3fa453dba7b"
     }
-  ]
+  ],
+  "postProcessing": {
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "knockaway-1",
+          "donor": "knockaway-1",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "c2146ca31a2c8edb3e24d1bd2b43281875a9b53dbc7ea3076525f15d52d829c7",
+          "sourceDecodedRgbaSha256": "c80ce7fd972699e191f00c57b6a241e7e9cbf808068ba7fb0fb8a8a740c07a18",
+          "runtimeDecodedRgbaSha256": "276d4891ec18ba4dca8dce551e121094b777249c42e742e8fe788225882b8457"
+        },
+        {
+          "slot": "knockaway-2",
+          "donor": "knockaway-2",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "edf29b75e4ee270ae066a935672c080e0e91237981d3d03b1647d35d383549e4",
+          "sourceDecodedRgbaSha256": "3c9564f987d08256c73fed1525599041a5d5b592211749e9be6b4eee28146ccb",
+          "runtimeDecodedRgbaSha256": "73d6081f8ad34a4815b41ede6dd465a393083a5f768c97f6c88bbe23dbe9036e"
+        },
+        {
+          "slot": "knockaway-3",
+          "donor": "knockaway-3",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "a81d4b031eb1897e62ac4fe1b6631c635e51b3d1f45d52d11a5899054dbe750f",
+          "sourceDecodedRgbaSha256": "522da1069a04a3cc0bd7876043dcf9e919352c78ee81a1b832ab3d3016da7344",
+          "runtimeDecodedRgbaSha256": "5d153d8452cd4ddcaa983968a1617515bebf1467eaed2036dd37bbc71b9ba714"
+        },
+        {
+          "slot": "knockaway-4",
+          "donor": "knockaway-4",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "bc9f8bc1a00296297f2fea01fca8df8ea3440bb8c1c461c15bbfb18c93629437",
+          "sourceDecodedRgbaSha256": "4f308cc270e6feba58c21161bbb0d5c0f55b65377fc97317de4a5491dab4b988",
+          "runtimeDecodedRgbaSha256": "2845a58c675e63075f9b977139e299a82fabe489d51c67483ff90c0421d94734"
+        },
+        {
+          "slot": "knockaway-5",
+          "donor": "knockaway-5",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "e0aa7d3740f91775715662332ff88d0f94c2cf7b4bba21d2420be6ec513a0ade",
+          "sourceDecodedRgbaSha256": "d443a7e62783a9f1cb3c8e8286c5774079230b2011d8dd0720852841207a678e",
+          "runtimeDecodedRgbaSha256": "bd329ecdd9491337dba87215ef05b6385e5b5bb726b30e438514c4e15106ff9d"
+        },
+        {
+          "slot": "knockaway-6",
+          "donor": "knockaway-5",
+          "uniformScale": 0.96,
+          "translation512": [
+            -8,
+            2
+          ],
+          "sourceFileSha256": "b2c4754355f31deb28f8e19b15e741ed1611912dea48e9321e18971de0421ebb",
+          "sourceDecodedRgbaSha256": "f65622abd2c376796f78e171f4cb0fafdf120a972239af736a96b7cd51830184",
+          "runtimeDecodedRgbaSha256": "a59e20b61872557bc29dbe9bda657b5694c66c48d1ceebb9e1533975cd6093fb"
+        },
+        {
+          "slot": "knockaway-7",
+          "donor": "knockaway-7",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "a802caacef0c4a68539b744e1894337a0c18420c1e8a6d13f4972e2e864af196",
+          "sourceDecodedRgbaSha256": "0fdd232521ee5e747adba16f0bcc3b9a24a50650971a5d923d0fbcbbec5f7e24",
+          "runtimeDecodedRgbaSha256": "f723ace6a164a3c10e52f8df9de65acb111bc3333abaf3e34a4b3fe36c71ec06"
+        },
+        {
+          "slot": "knockaway-8",
+          "donor": "knockaway-7",
+          "uniformScale": 1.0,
+          "translation512": [
+            -12,
+            0
+          ],
+          "sourceFileSha256": "5d1723db7c79d6f955b04dc0f550c3404152ebf41441d4a04f82fd6eedc9b405",
+          "sourceDecodedRgbaSha256": "e97b6f137a20e10cd016e28ba86ad0835d84cb1f8f78efc7581236fc85126048",
+          "runtimeDecodedRgbaSha256": "7c66cfb0c1936e57c27d44289ef2b2ec9cd86347ab0a155af838d3fa453dba7b"
+        }
+      ]
+    }
+  }
 }

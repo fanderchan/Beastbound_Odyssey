@@ -180,8 +180,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "32e8385a017c07c919c3605ebb74d8034bdc8f477605b44857bf0fdfd36a2a79",
-      "runtimeRgbaSha256": "a30d49d253b21fd899dd4fcf7bceb03be4faf3bbf1cbcb90f65097a21863a134"
+      "sourceRgbaSha256": "b8f8e2e583de8ee4d16234024679d71690fbacd2476b73efc9f1f31fc12857b3",
+      "runtimeRgbaSha256": "302dd2e663b49b0ae5b0b2df43b19032874aaf3d05327ad487a400d7cf5f59e9"
     },
     {
       "slot": "revive-2",
@@ -289,8 +289,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "4d454b9336c24065ade8b92de663490048f208e233df50198df7750a545279d8",
-      "runtimeRgbaSha256": "4c6f345ef5f43d890fd629893c9a14ce0ab8bcf0fbb2b78a9ae580355803a6e7"
+      "sourceRgbaSha256": "408c1cf7eacdc3658687bd0a60a5a74813c8534e9142db09cec5faadd47767d9",
+      "runtimeRgbaSha256": "ce546862bf964c36e6ba3f0997e14157189974059b90a23992973a906dafa6a2"
     },
     {
       "slot": "revive-3",
@@ -398,8 +398,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "15e4e625c958441b7b2f05e1aa59fd1f62b4404ffa6f2e3063cccaa93b704672",
-      "runtimeRgbaSha256": "f82fd183e0176db5e31073c6f3be82dbd5c52ce78fd40fa5cffc7fb65d852b02"
+      "sourceRgbaSha256": "ba424eb241e56eb744761acfaa0f5c5cf4a374fd010e771e60e37fc9c9d13398",
+      "runtimeRgbaSha256": "769d85cb9949b3960e1424b9bd7e45a010122d419967b26f742fd16f1605c38d"
     },
     {
       "slot": "revive-4",
@@ -507,8 +507,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "cf752721caa2c2c0cdc739cef8d1d5ce3d46c0fbf1ba8d6e319258d946904436",
-      "runtimeRgbaSha256": "6391f4a522a28d257e137f199123eacabbb9845c9616c68bd66e918a54476df7"
+      "sourceRgbaSha256": "247bbea767c0810a990a6b382040f1a2bc081c35087592c0ccc6111dd5df1137",
+      "runtimeRgbaSha256": "bf7eba29b434aa21ba76916314221b11ac8323397644d517e12cd6b1bfba4f85"
     },
     {
       "slot": "revive-5",
@@ -652,8 +652,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "a2761a1f745ff64e7aa6bec6b612373cf1656640a5546d038a61d948ee739ce1",
-      "runtimeRgbaSha256": "4b0708451e6fab56306fcee1a0423a3ca797edc972192ab89e49886b9afe2a9d"
+      "sourceRgbaSha256": "58cf71e7e8e911b90f2a8088309367f78ae7718b7c122eee585d4517c8892864",
+      "runtimeRgbaSha256": "e2ef9878b43656623955c15d908518ee8d6733467f3c4330be6ab3c6f6321625"
     },
     {
       "slot": "revive-6",
@@ -788,8 +788,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "290190d6216104e5555818d7489e97b833006b707219cbed1c7f6da77822664b",
-      "runtimeRgbaSha256": "fa1bec58c77006aecd93418740faa41af6b727d3a1a5b6ab5a203fabd5b99ba3"
+      "sourceRgbaSha256": "5ddada542f844514ae761f6a1df4e672b99b0e36a431809c04cb6446be47392f",
+      "runtimeRgbaSha256": "cccfd6c1613abe3f6f98d901545e1ee7b17c3560661c11ab0e2f1e256db2b16a"
     },
     {
       "slot": "revive-7",
@@ -897,8 +897,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 1,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "c0b113385c685c683eb1983e008a171459da35473164934530320b1960b5d25f",
-      "runtimeRgbaSha256": "3caff3a58b5420e55a31abfdd7884fef2cf85c8615638462d24b3e6c0a124ae5"
+      "sourceRgbaSha256": "db5186fe7dcfb08d413db1d1078a6cb37efc507762855483a244a8cb7d8239a3",
+      "runtimeRgbaSha256": "036f01cd736a077d813d496a2275ae561cb6f1c8ebbb3be89e6da7305e9df403"
     },
     {
       "slot": "revive-8",
@@ -1007,7 +1007,7 @@
       "runtimeLowAlphaMagentaPixelsCleared": 2,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "cd675438700c340d21f390b5ca69db78c8e513eaed2561d0509745d1cd1d50fd",
-      "runtimeRgbaSha256": "6b265f6dda92263d27fc970edbe6aa300dd2bfa7d3f8536c2900954694fb9bee"
+      "runtimeRgbaSha256": "26e01595b2321ffbe905586c5d8fd08b987fe0defb0e6b6458dd0afb88dde200"
     }
   ],
   "postProcessing": {
@@ -1047,7 +1047,8 @@
           "requestedFactor": 1.088742,
           "appliedFactor": 1.088742
         }
-      ]
+      ],
+      "status": "superseded_by_standalone-motion-integrity-v1"
     },
     "temporalOrderRepair": {
       "sourceFrameOrder": [
@@ -1062,6 +1063,112 @@
       ],
       "creativePoseChange": false,
       "reason": "existing authored poses reordered into monotonic action time"
+    },
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "revive-1",
+          "donor": "new_down-8",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "9777d61d93f04e60a4e6b1a1c3e4e8b2daccf8324da6fa9153672020bd436260",
+          "sourceDecodedRgbaSha256": "b8f8e2e583de8ee4d16234024679d71690fbacd2476b73efc9f1f31fc12857b3",
+          "runtimeDecodedRgbaSha256": "302dd2e663b49b0ae5b0b2df43b19032874aaf3d05327ad487a400d7cf5f59e9"
+        },
+        {
+          "slot": "revive-2",
+          "donor": "down-6",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "85f4aa1e1643f51ddc0b8b92b06415469c868e8d15dce4e56e00123a3f9e941d",
+          "sourceDecodedRgbaSha256": "408c1cf7eacdc3658687bd0a60a5a74813c8534e9142db09cec5faadd47767d9",
+          "runtimeDecodedRgbaSha256": "ce546862bf964c36e6ba3f0997e14157189974059b90a23992973a906dafa6a2"
+        },
+        {
+          "slot": "revive-3",
+          "donor": "down-5",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "25d16e25038279b5a05be816759dd57e540d2157f631109c9f75c17ada80ca11",
+          "sourceDecodedRgbaSha256": "ba424eb241e56eb744761acfaa0f5c5cf4a374fd010e771e60e37fc9c9d13398",
+          "runtimeDecodedRgbaSha256": "769d85cb9949b3960e1424b9bd7e45a010122d419967b26f742fd16f1605c38d"
+        },
+        {
+          "slot": "revive-4",
+          "donor": "down-4",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "00ff3323c1ee79ad4d4ba2d03892ed33704f9d71926986b3a1062b7ef8b1de9c",
+          "sourceDecodedRgbaSha256": "247bbea767c0810a990a6b382040f1a2bc081c35087592c0ccc6111dd5df1137",
+          "runtimeDecodedRgbaSha256": "bf7eba29b434aa21ba76916314221b11ac8323397644d517e12cd6b1bfba4f85"
+        },
+        {
+          "slot": "revive-5",
+          "donor": "down-3",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "e438a30cd3d65eeee367d9b73fe28afe3fa24d3a56cd1e90baa66f4794161729",
+          "sourceDecodedRgbaSha256": "58cf71e7e8e911b90f2a8088309367f78ae7718b7c122eee585d4517c8892864",
+          "runtimeDecodedRgbaSha256": "e2ef9878b43656623955c15d908518ee8d6733467f3c4330be6ab3c6f6321625"
+        },
+        {
+          "slot": "revive-6",
+          "donor": "down-2",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "64e8b97b61ac531b991af82482b08072d321d4423265f6cd043b0cc0ec9c0d80",
+          "sourceDecodedRgbaSha256": "5ddada542f844514ae761f6a1df4e672b99b0e36a431809c04cb6446be47392f",
+          "runtimeDecodedRgbaSha256": "cccfd6c1613abe3f6f98d901545e1ee7b17c3560661c11ab0e2f1e256db2b16a"
+        },
+        {
+          "slot": "revive-7",
+          "donor": "down-1",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "0f6623b194e2317d25a95eb04cdf27b62a3e3ff94d2c0b1a34cec1f3006f186a",
+          "sourceDecodedRgbaSha256": "db5186fe7dcfb08d413db1d1078a6cb37efc507762855483a244a8cb7d8239a3",
+          "runtimeDecodedRgbaSha256": "036f01cd736a077d813d496a2275ae561cb6f1c8ebbb3be89e6da7305e9df403"
+        },
+        {
+          "slot": "revive-8",
+          "donor": "revive-4",
+          "uniformScale": 1.0,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "34de3fccd5656bb680c442ecc6fbe19d1ab4a14f153366b0760fdb0f1428d02e",
+          "sourceDecodedRgbaSha256": "cd675438700c340d21f390b5ca69db78c8e513eaed2561d0509745d1cd1d50fd",
+          "runtimeDecodedRgbaSha256": "26e01595b2321ffbe905586c5d8fd08b987fe0defb0e6b6458dd0afb88dde200"
+        }
+      ]
     }
   }
 }

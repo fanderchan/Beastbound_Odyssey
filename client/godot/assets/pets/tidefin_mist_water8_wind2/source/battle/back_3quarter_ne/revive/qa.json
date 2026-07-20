@@ -8,26 +8,14 @@
   "emptyFrames": [],
   "duplicateFrames": [],
   "edgeTouchFrames": [],
-  "warnings": [],
   "identityDriftFrames": [],
-  "manualSemanticReview": "self_review_passed_owner_pending; temporal_order_reviewed",
-  "strictTemporalReview": {
+  "manualSemanticReview": "motion_integrity_self_review_passed_owner_pending",
+  "motionIntegrityRepair": {
+    "repairId": "standalone-motion-integrity-v1",
     "status": "passed",
-    "view": "back_3quarter_ne",
-    "action": "revive",
-    "manualFrameByFrameReview": true,
-    "broadRuntimeDespillApplied": false,
-    "temporalRule": "exact KO hold then monotonic recovery without standing-sinking-standing regression",
-    "startContinuity": "revive-1 exact RGBA equals same-view down-8",
-    "authoredSourceFrameOrder": [
-      1,
-      2,
-      8,
-      7,
-      3,
-      5,
-      6,
-      4
-    ]
+    "sourceDriven": true,
+    "canonicalRuntimeDerivation": true,
+    "broadDespillApplied": false,
+    "ownerReviewStatus": "pending"
   }
 }
