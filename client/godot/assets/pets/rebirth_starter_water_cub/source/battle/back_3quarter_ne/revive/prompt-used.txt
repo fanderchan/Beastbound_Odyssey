@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: Beastbound formal standalone pet battle sprite sheet
+Reference role: preserve the exact 潮纹幼兽 identity shown in the tracked identity board.
+Subject: compact four-legged blue-and-white thick-furred cub; one short water-drop crystal horn; water-drop face markings; fin-edged low ears; shell-layer shoulder fur; three thick webbed claws per paw; three-lobed wave tail.
+View: fixed authored back_3quarter_ne in every cell, facing diagonally northeast/up-right away from camera; back and rear flank remain visible.
+Action: REVIVE — begin side-sprawled unconscious, twitch, lift head, brace forelegs, push torso up, gather hindlegs, shake off dizziness, regain a stable ready stance; no teleporting, happy celebration or status effects.
+Sheet: landscape 3:2, exactly 2 rows x 4 columns, exactly 8 sequential frames ordered row-major; one complete pet per cell, centered, consistent scale, generous separation and padding.
+Style: high-definition hand-painted 2.5D Chinese pet MMORPG sprite art.
+Background: perfectly uniform solid #FF00FF chroma key.
+Constraints: preserve exact identity, markings, anatomy, proportions, palette, material and scale; pet only; no shadow, floor, scenery, text, labels, borders, grid lines, particles, glow, water effects, halo, stars, detached FX, cropping or cell crossing.

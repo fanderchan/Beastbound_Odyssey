@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "revive",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_ko_expression_and_monotonic_revive_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "revive-1",
+    "revive-2",
+    "revive-3",
+    "revive-4",
+    "revive-5",
+    "revive-6",
+    "revive-7",
+    "revive-8"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "revive-1",
+      "sourceBbox": [
+        95,
+        333,
+        418,
+        491
+      ],
+      "runtimeBbox": [
+        47,
+        166,
+        209,
+        246
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 10,
+      "sourceVisibleNearKeyPixelsReported": 14,
+      "runtimeVisibleNearKeyPixelsReported": 3,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-2",
+      "sourceBbox": [
+        46,
+        321,
+        469,
+        489
+      ],
+      "runtimeBbox": [
+        23,
+        161,
+        233,
+        244
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 12,
+      "sourceVisibleNearKeyPixelsReported": 5,
+      "runtimeVisibleNearKeyPixelsReported": 9,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-3",
+      "sourceBbox": [
+        44,
+        317,
+        469,
+        492
+      ],
+      "runtimeBbox": [
+        23,
+        160,
+        235,
+        245
+      ],
+      "minimumSourceEdgeMargin": 20,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 5,
+      "runtimeVisibleNearKeyPixelsReported": 12,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-4",
+      "sourceBbox": [
+        69,
+        265,
+        442,
+        489
+      ],
+      "runtimeBbox": [
+        35,
+        134,
+        221,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 7,
+      "runtimeVisibleNearKeyPixelsReported": 4,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-5",
+      "sourceBbox": [
+        65,
+        248,
+        444,
+        489
+      ],
+      "runtimeBbox": [
+        34,
+        125,
+        222,
+        244
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 12,
+      "sourceVisibleNearKeyPixelsReported": 7,
+      "runtimeVisibleNearKeyPixelsReported": 2,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-6",
+      "sourceBbox": [
+        73,
+        224,
+        442,
+        492
+      ],
+      "runtimeBbox": [
+        37,
+        113,
+        220,
+        245
+      ],
+      "minimumSourceEdgeMargin": 20,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 6,
+      "runtimeVisibleNearKeyPixelsReported": 4,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-7",
+      "sourceBbox": [
+        71,
+        210,
+        440,
+        492
+      ],
+      "runtimeBbox": [
+        35,
+        106,
+        220,
+        245
+      ],
+      "minimumSourceEdgeMargin": 20,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 2,
+      "runtimeVisibleNearKeyPixelsReported": 6,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "revive-8",
+      "sourceBbox": [
+        66,
+        203,
+        445,
+        492
+      ],
+      "runtimeBbox": [
+        34,
+        102,
+        221,
+        245
+      ],
+      "minimumSourceEdgeMargin": 20,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 2,
+      "runtimeVisibleNearKeyPixelsReported": 6,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ],
+  "semanticRepair": {
+    "mode": "same_form_source_temporal_reorder",
+    "sourceOrder": [
+      1,
+      2,
+      4,
+      3,
+      5,
+      7,
+      6,
+      8
+    ],
+    "semanticArc": [
+      "fainted",
+      "breath",
+      "head_lift",
+      "foreleg_brace",
+      "rise",
+      "stand"
+    ],
+    "creativePixelGeneration": false
+  }
+}

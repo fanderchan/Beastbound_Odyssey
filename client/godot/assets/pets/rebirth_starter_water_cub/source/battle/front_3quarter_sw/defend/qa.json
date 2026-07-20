@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "defend",
+  "frameCount": 6,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "defend-1",
+    "defend-2",
+    "defend-3",
+    "defend-4",
+    "defend-5",
+    "defend-6"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "defend-1",
+      "sourceBbox": [
+        113,
+        234,
+        440,
+        490
+      ],
+      "runtimeBbox": [
+        56,
+        117,
+        220,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 216,
+      "runtimeVisibleNearKeyPixelsReported": 43,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-2",
+      "sourceBbox": [
+        98,
+        260,
+        452,
+        490
+      ],
+      "runtimeBbox": [
+        49,
+        130,
+        226,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 188,
+      "runtimeVisibleNearKeyPixelsReported": 44,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-3",
+      "sourceBbox": [
+        79,
+        215,
+        429,
+        490
+      ],
+      "runtimeBbox": [
+        39,
+        107,
+        215,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 208,
+      "runtimeVisibleNearKeyPixelsReported": 44,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-4",
+      "sourceBbox": [
+        120,
+        267,
+        447,
+        490
+      ],
+      "runtimeBbox": [
+        60,
+        133,
+        223,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 177,
+      "runtimeVisibleNearKeyPixelsReported": 40,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-5",
+      "sourceBbox": [
+        150,
+        233,
+        482,
+        490
+      ],
+      "runtimeBbox": [
+        75,
+        117,
+        241,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 199,
+      "runtimeVisibleNearKeyPixelsReported": 45,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-6",
+      "sourceBbox": [
+        110,
+        237,
+        438,
+        490
+      ],
+      "runtimeBbox": [
+        55,
+        118,
+        218,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 197,
+      "runtimeVisibleNearKeyPixelsReported": 49,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}

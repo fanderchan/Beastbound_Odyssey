@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "knockaway",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "knockaway-1",
+    "knockaway-2",
+    "knockaway-3",
+    "knockaway-4",
+    "knockaway-5",
+    "knockaway-6",
+    "knockaway-7",
+    "knockaway-8"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "knockaway-1",
+      "sourceBbox": [
+        98,
+        195,
+        417,
+        489
+      ],
+      "runtimeBbox": [
+        49,
+        97,
+        209,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 169,
+      "runtimeVisibleNearKeyPixelsReported": 55,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-2",
+      "sourceBbox": [
+        97,
+        204,
+        418,
+        490
+      ],
+      "runtimeBbox": [
+        48,
+        101,
+        210,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 143,
+      "runtimeVisibleNearKeyPixelsReported": 40,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-3",
+      "sourceBbox": [
+        99,
+        196,
+        415,
+        489
+      ],
+      "runtimeBbox": [
+        49,
+        97,
+        208,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 156,
+      "runtimeVisibleNearKeyPixelsReported": 44,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-4",
+      "sourceBbox": [
+        92,
+        204,
+        422,
+        490
+      ],
+      "runtimeBbox": [
+        46,
+        102,
+        212,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 147,
+      "runtimeVisibleNearKeyPixelsReported": 40,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-5",
+      "sourceBbox": [
+        85,
+        211,
+        429,
+        490
+      ],
+      "runtimeBbox": [
+        42,
+        105,
+        215,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 138,
+      "runtimeVisibleNearKeyPixelsReported": 50,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-6",
+      "sourceBbox": [
+        87,
+        217,
+        428,
+        489
+      ],
+      "runtimeBbox": [
+        43,
+        108,
+        214,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 120,
+      "runtimeVisibleNearKeyPixelsReported": 38,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-7",
+      "sourceBbox": [
+        99,
+        223,
+        414,
+        489
+      ],
+      "runtimeBbox": [
+        49,
+        111,
+        207,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 90,
+      "runtimeVisibleNearKeyPixelsReported": 35,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-8",
+      "sourceBbox": [
+        101,
+        226,
+        414,
+        489
+      ],
+      "runtimeBbox": [
+        50,
+        112,
+        207,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 115,
+      "runtimeVisibleNearKeyPixelsReported": 43,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}

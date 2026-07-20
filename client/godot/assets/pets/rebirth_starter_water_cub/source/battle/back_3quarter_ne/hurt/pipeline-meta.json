@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "water-cub-512-source-scale-formalization-v1",
+  "input": "raw-sheet-lossless.png",
+  "inputSha256": "fd46f3a12b05bea8b357860de1a640c0aae7d11a296bdd2f39d3d2499dabe728",
+  "inputSize": [
+    1536,
+    1024
+  ],
+  "slots": [
+    "hurt-1",
+    "hurt-2",
+    "hurt-3",
+    "hurt-4",
+    "hurt-5",
+    "hurt-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 8,
+  "effectiveSourceMargin": 16,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 12.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "hurt-1",
+      "sourceVisibleBbox": [
+        95,
+        178,
+        433,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        47,
+        89,
+        217,
+        245
+      ],
+      "sourceRgbaSha256": "b46f5e0402706d035aaad1a419e43a437caa689ed7adf1008564f68c6752fd99",
+      "runtimeRgbaSha256": "aac0434a1ea0ac60f3ec19553dba5ba8954f14f209ce5cedd8b92ac4c25e36b0"
+    },
+    {
+      "slot": "hurt-2",
+      "sourceVisibleBbox": [
+        125,
+        223,
+        467,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        62,
+        111,
+        234,
+        245
+      ],
+      "sourceRgbaSha256": "7e6a1bcc4fce80098663dfa4ec5f2d910d4cb3ecdd6d088840db4d8c9e3613dc",
+      "runtimeRgbaSha256": "399e26c834562d271a86d32c6b46d918a2df24e43a9f36aea317fe5508fca082"
+    },
+    {
+      "slot": "hurt-3",
+      "sourceVisibleBbox": [
+        97,
+        253,
+        450,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        48,
+        126,
+        225,
+        245
+      ],
+      "sourceRgbaSha256": "2a6717537c424c9340a66b58eefc6a5c9305028cbd7c1746eeecfc65e0d787e0",
+      "runtimeRgbaSha256": "811d01236514109b304acb29b78381a381ea047da763f67a1a56b20f9942fe21"
+    },
+    {
+      "slot": "hurt-4",
+      "sourceVisibleBbox": [
+        105,
+        249,
+        447,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        52,
+        124,
+        224,
+        245
+      ],
+      "sourceRgbaSha256": "d0e5eadd1fceecf8b3653a25bab34a39dfa8c0437a49acd8e780cb60b3467c87",
+      "runtimeRgbaSha256": "1d5fede2b08d3bf7d0534dad6c7b76a4a6a8a2ac4d49877996e04a2f83e26730"
+    },
+    {
+      "slot": "hurt-5",
+      "sourceVisibleBbox": [
+        111,
+        175,
+        454,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        55,
+        87,
+        227,
+        245
+      ],
+      "sourceRgbaSha256": "ab450512dc5e12e19c58f827460f2e253f2b4f835b51d76641be28ad7fe0d026",
+      "runtimeRgbaSha256": "72d11aeb1316cb090148f0a21e65c2de83053da46c57b0be8a438095694b36a2"
+    },
+    {
+      "slot": "hurt-6",
+      "sourceVisibleBbox": [
+        95,
+        178,
+        434,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        47,
+        89,
+        217,
+        245
+      ],
+      "sourceRgbaSha256": "052f1955a05c06fe56522cd662f0aa20115ba00512085f08ce48c42bdb2bcdc3",
+      "runtimeRgbaSha256": "05e0abb952ca0370923c87475921aa05a4fcc686ea995449209809ee6eacba34"
+    }
+  ],
+  "formalization": {
+    "schemaVersion": 1,
+    "committedToolCommit": "a8f94a5e6261a6c473ab96cfdca16bd2288375d4",
+    "committedBuildToolSha256": "23b16900f0069dcc288dc69ba8ede422ba475162b0ad68e9f4b6da918e36c3bd",
+    "sourceTransform": {
+      "sourceAuthority": true,
+      "creativePoseChange": false,
+      "mode": "view_scale_once_around_each_frame_subject_anchor",
+      "uniformScaleFactor": 0.951812,
+      "sourceCalibration": {
+        "uniformFactor": 1.0,
+        "anchorOffsetSourcePixels": [
+          0.0,
+          0.0
+        ],
+        "scope": "one constant for the complete view/action; never fitted per frame"
+      },
+      "semanticRootMotion": null,
+      "runtimeDerivation": "committed build_pet_art_bundle.derive_runtime_frame only"
+    },
+    "acceptedRuntimeUsedOnlyForUniformTransformCalibrationAndComparison": true,
+    "acceptedRuntimeNeverUpscaledOrUsedAsSourcePixels": true
+  }
+}

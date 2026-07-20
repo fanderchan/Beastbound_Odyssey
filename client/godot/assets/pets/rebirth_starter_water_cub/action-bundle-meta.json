@@ -178,15 +178,6 @@
         "facing": "northwest"
       }
     },
-    "faintSemanticRule": "open spiral or unfocused eyes only; no X/cross, sleeping closed eye, smile or death symbol",
-    "temporalStaticReview": {
-      "status": "passed_static_contact_review",
-      "reviewDate": "2026-07-20",
-      "down": "both views descend monotonically from hit/buckle through collapse to a stable reversible-KO hold; no intermediate stand-up",
-      "revive": "both views begin at the exact down hold and recover progressively to ready stance without a pose pop",
-      "knockaway": "both views retain ordered impact, lift/rotation, descent and landing trajectory",
-      "attackSkillCounter": "attack, skill and counter contacts are in authored chronological order with anticipation, contact/release and recovery"
-    },
     "actions": [
       "idle",
       "walk",
@@ -214,7 +205,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "948f1dca4025e0864ff797a739480ffc31037698e1d1ddeaf9395c8a03c26bf0",
+    "bundleDigest": "66d6afedccaf306bac792eab7a08dfebbae7a8f7636602e400cc4f0e539b422e",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",

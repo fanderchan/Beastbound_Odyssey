@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "water-cub-512-source-scale-formalization-v1",
+  "input": "raw-sheet-lossless.png",
+  "inputSha256": "b38b1060dc4e45a2d02bcfb1167f8ac303fb2c31f86e7416794f254277bb9662",
+  "inputSize": [
+    1536,
+    1024
+  ],
+  "slots": [
+    "hurt-1",
+    "hurt-2",
+    "hurt-3",
+    "hurt-4",
+    "hurt-5",
+    "hurt-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 8,
+  "effectiveSourceMargin": 16,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 12.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "hurt-1",
+      "sourceVisibleBbox": [
+        85,
+        191,
+        472,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        42,
+        95,
+        236,
+        245
+      ],
+      "sourceRgbaSha256": "2c98b06773654350234edb142d100e4f30ec1851299aa636268fc3bad35ae036",
+      "runtimeRgbaSha256": "904187169f3f6ea0551cb68fbbc3d0312e4afe2bad5d6513766b6bf94b63da68"
+    },
+    {
+      "slot": "hurt-2",
+      "sourceVisibleBbox": [
+        86,
+        207,
+        466,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        43,
+        104,
+        233,
+        245
+      ],
+      "sourceRgbaSha256": "8df3c238504ecc6746ebc779ad66d64b97806b81df589f4195e0d48754b44cba",
+      "runtimeRgbaSha256": "b4a5dcb0d8a14f3e84c15f9178dc024ddc24ff878fe6f74f86e2bb7ddd7b07cc"
+    },
+    {
+      "slot": "hurt-3",
+      "sourceVisibleBbox": [
+        101,
+        221,
+        483,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        50,
+        110,
+        241,
+        245
+      ],
+      "sourceRgbaSha256": "f8cf2deffb8d8029ee28e7d724f54e4e28d31b75d92637abddb339d933f378e9",
+      "runtimeRgbaSha256": "1c8e4ee7a65d6e88452faea2fa12e59a39f94d21e346439ebce64ce2588eabc3"
+    },
+    {
+      "slot": "hurt-4",
+      "sourceVisibleBbox": [
+        106,
+        203,
+        473,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        53,
+        101,
+        237,
+        245
+      ],
+      "sourceRgbaSha256": "67f0692d1e368e9dcb0b0d754a917d6401439d8c8e6d04c0090b5e14ba945056",
+      "runtimeRgbaSha256": "11011c408c76d7bffc1718659329c2c60c43816b2327d89bce1be47995710c8f"
+    },
+    {
+      "slot": "hurt-5",
+      "sourceVisibleBbox": [
+        87,
+        191,
+        469,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        43,
+        95,
+        235,
+        245
+      ],
+      "sourceRgbaSha256": "f7357bcd78f80adf7ad0e2507eb2635161b7b6bc6a2ec921076aeb30f5aca998",
+      "runtimeRgbaSha256": "69149f4bd58a228116b095d00c3bac2b9b9fb9e4f944b6f329581da147bd0a54"
+    },
+    {
+      "slot": "hurt-6",
+      "sourceVisibleBbox": [
+        87,
+        198,
+        467,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        43,
+        99,
+        234,
+        245
+      ],
+      "sourceRgbaSha256": "da09ebf524da5ad8481a20a6c43294f0589d31fad37c7b9539478ba01988f835",
+      "runtimeRgbaSha256": "3ccb222f904efb7d6f3214af2bbb73533709be56dffa3c437d8e62730a4bdb53"
+    }
+  ],
+  "formalization": {
+    "schemaVersion": 1,
+    "committedToolCommit": "a8f94a5e6261a6c473ab96cfdca16bd2288375d4",
+    "committedBuildToolSha256": "23b16900f0069dcc288dc69ba8ede422ba475162b0ad68e9f4b6da918e36c3bd",
+    "sourceTransform": {
+      "sourceAuthority": true,
+      "creativePoseChange": false,
+      "mode": "view_scale_once_around_each_frame_subject_anchor",
+      "uniformScaleFactor": 1.051041,
+      "sourceCalibration": {
+        "uniformFactor": 1.0,
+        "anchorOffsetSourcePixels": [
+          0.0,
+          0.0
+        ],
+        "scope": "one constant for the complete view/action; never fitted per frame"
+      },
+      "semanticRootMotion": null,
+      "runtimeDerivation": "committed build_pet_art_bundle.derive_runtime_frame only"
+    },
+    "acceptedRuntimeUsedOnlyForUniformTransformCalibrationAndComparison": true,
+    "acceptedRuntimeNeverUpscaledOrUsedAsSourcePixels": true
+  }
+}

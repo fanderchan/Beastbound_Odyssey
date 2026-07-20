@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "water-cub-512-source-scale-formalization-v1",
+  "input": "raw-sheet-lossless.png",
+  "inputSha256": "bd4b79d5cbf1cc012db3b4190a88e99a30cfd6d33a116cf20e30241560709dc6",
+  "inputSize": [
+    1536,
+    1024
+  ],
+  "slots": [
+    "defend-1",
+    "defend-2",
+    "defend-3",
+    "defend-4",
+    "defend-5",
+    "defend-6"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 8,
+  "effectiveSourceMargin": 16,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 12.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "defend-1",
+      "sourceVisibleBbox": [
+        113,
+        234,
+        440,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        56,
+        117,
+        220,
+        245
+      ],
+      "sourceRgbaSha256": "d0962f3c39dee34f8501a6491e391d1dce37532ceaa8eb3fef01dff86ee7986c",
+      "runtimeRgbaSha256": "0d26e55da9c3a704f62b3273a869c909340e8d02cb080baebb69532faae9ea46"
+    },
+    {
+      "slot": "defend-2",
+      "sourceVisibleBbox": [
+        98,
+        260,
+        452,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        49,
+        130,
+        226,
+        245
+      ],
+      "sourceRgbaSha256": "498785126ce4025221173e53965d8f077bce730eeedf8d979c2c8c46887c834c",
+      "runtimeRgbaSha256": "254e8ebe79399d61f7d77ed193dd2d0d8f4f4e3019df0271f2825e9987ddc693"
+    },
+    {
+      "slot": "defend-3",
+      "sourceVisibleBbox": [
+        79,
+        215,
+        429,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        39,
+        107,
+        215,
+        245
+      ],
+      "sourceRgbaSha256": "939b34bff8c8a1fd8e171f4e725fefcca3f184fbc7c19be5e3264de5abbda03b",
+      "runtimeRgbaSha256": "defb4672d1047350619952f393831f5d26875bdb51d7ee789b9f99e66e5f1ee7"
+    },
+    {
+      "slot": "defend-4",
+      "sourceVisibleBbox": [
+        120,
+        267,
+        447,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        60,
+        133,
+        223,
+        245
+      ],
+      "sourceRgbaSha256": "c6ad83b344b971055dd2c9a6bb76fd468dc1183aca8f56720aad3b6024ac81d8",
+      "runtimeRgbaSha256": "6eb1dd62f6493420bfe899c3a01d9637bbcb07cf44715f4433e260b0d87b25ea"
+    },
+    {
+      "slot": "defend-5",
+      "sourceVisibleBbox": [
+        150,
+        233,
+        482,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        75,
+        117,
+        241,
+        245
+      ],
+      "sourceRgbaSha256": "d0c626745757a3fbfdf46427e964e37b5d79dec0ffc7531b49184ff6eb275381",
+      "runtimeRgbaSha256": "e9217e1c3dabfe6ab908a7a5e68b029c500272c9ced5ecdd6eb70a5d3ba5f58e"
+    },
+    {
+      "slot": "defend-6",
+      "sourceVisibleBbox": [
+        110,
+        237,
+        438,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        55,
+        118,
+        218,
+        245
+      ],
+      "sourceRgbaSha256": "2f3b2537d248a05c382901a1caba441f13e34d14473c1fbb25839e7a455e6af2",
+      "runtimeRgbaSha256": "be522653705fb760b936b398b668502f80e9ed9f69715dc952a6351b44519106"
+    }
+  ],
+  "formalization": {
+    "schemaVersion": 1,
+    "committedToolCommit": "a8f94a5e6261a6c473ab96cfdca16bd2288375d4",
+    "committedBuildToolSha256": "23b16900f0069dcc288dc69ba8ede422ba475162b0ad68e9f4b6da918e36c3bd",
+    "sourceTransform": {
+      "sourceAuthority": true,
+      "creativePoseChange": false,
+      "mode": "view_scale_once_around_each_frame_subject_anchor",
+      "uniformScaleFactor": 1.051041,
+      "sourceCalibration": {
+        "uniformFactor": 1.0,
+        "anchorOffsetSourcePixels": [
+          0.0,
+          0.0
+        ],
+        "scope": "one constant for the complete view/action; never fitted per frame"
+      },
+      "semanticRootMotion": null,
+      "runtimeDerivation": "committed build_pet_art_bundle.derive_runtime_frame only"
+    },
+    "acceptedRuntimeUsedOnlyForUniformTransformCalibrationAndComparison": true,
+    "acceptedRuntimeNeverUpscaledOrUsedAsSourcePixels": true
+  }
+}

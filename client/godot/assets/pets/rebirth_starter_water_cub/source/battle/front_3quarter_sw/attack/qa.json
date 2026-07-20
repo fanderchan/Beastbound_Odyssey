@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "attack",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "attack-1",
+    "attack-2",
+    "attack-3",
+    "attack-4",
+    "attack-5",
+    "attack-6",
+    "attack-7",
+    "attack-8"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "attack-1",
+      "sourceBbox": [
+        108,
+        229,
+        443,
+        491
+      ],
+      "runtimeBbox": [
+        54,
+        115,
+        221,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 156,
+      "runtimeVisibleNearKeyPixelsReported": 52,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-2",
+      "sourceBbox": [
+        127,
+        220,
+        434,
+        491
+      ],
+      "runtimeBbox": [
+        64,
+        110,
+        217,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 127,
+      "runtimeVisibleNearKeyPixelsReported": 55,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-3",
+      "sourceBbox": [
+        103,
+        198,
+        435,
+        490
+      ],
+      "runtimeBbox": [
+        52,
+        99,
+        217,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 141,
+      "runtimeVisibleNearKeyPixelsReported": 48,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-4",
+      "sourceBbox": [
+        113,
+        200,
+        483,
+        491
+      ],
+      "runtimeBbox": [
+        57,
+        100,
+        241,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 168,
+      "runtimeVisibleNearKeyPixelsReported": 61,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-5",
+      "sourceBbox": [
+        124,
+        191,
+        454,
+        491
+      ],
+      "runtimeBbox": [
+        62,
+        96,
+        227,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 157,
+      "runtimeVisibleNearKeyPixelsReported": 60,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-6",
+      "sourceBbox": [
+        118,
+        228,
+        450,
+        491
+      ],
+      "runtimeBbox": [
+        59,
+        114,
+        225,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 145,
+      "runtimeVisibleNearKeyPixelsReported": 65,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-7",
+      "sourceBbox": [
+        108,
+        255,
+        432,
+        491
+      ],
+      "runtimeBbox": [
+        54,
+        128,
+        216,
+        245
+      ],
+      "minimumSourceEdgeMargin": 21,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 115,
+      "runtimeVisibleNearKeyPixelsReported": 43,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "attack-8",
+      "sourceBbox": [
+        117,
+        244,
+        432,
+        490
+      ],
+      "runtimeBbox": [
+        59,
+        122,
+        216,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 158,
+      "runtimeVisibleNearKeyPixelsReported": 55,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}

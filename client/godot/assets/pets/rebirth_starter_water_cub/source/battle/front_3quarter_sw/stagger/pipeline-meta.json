@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "water-cub-512-source-scale-formalization-v1",
+  "input": "raw-sheet-lossless.png",
+  "inputSha256": "dc8cf532551eea1062a8244b00f8d8b1bd0742de500faeac4f066b0af986e4b9",
+  "inputSize": [
+    1536,
+    1024
+  ],
+  "slots": [
+    "stagger-1",
+    "stagger-2",
+    "stagger-3",
+    "stagger-4",
+    "stagger-5",
+    "stagger-6",
+    "stagger-7",
+    "stagger-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 8,
+  "effectiveSourceMargin": 16,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 12.0,
+  "fringeCleanupAlpha": 96,
+  "frames": [
+    {
+      "slot": "stagger-1",
+      "sourceVisibleBbox": [
+        82,
+        190,
+        473,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        42,
+        95,
+        236,
+        245
+      ],
+      "sourceRgbaSha256": "b274d9a812be63215791228202c52b3448cc2f2c59085de8de08c6295d3997b9",
+      "runtimeRgbaSha256": "377faf579e3c5540d7f87502457b454e755d5672c42029bf48e41c1116d08871"
+    },
+    {
+      "slot": "stagger-2",
+      "sourceVisibleBbox": [
+        91,
+        187,
+        482,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        46,
+        94,
+        241,
+        245
+      ],
+      "sourceRgbaSha256": "2fdda5ebb715ae4b3a35510415dba31ca54edf097b27dda4d1c4fc87533da3c4",
+      "runtimeRgbaSha256": "0c849ea86bdc5e18932a862158903b85ad1256a3ca0be8ad9c473a47deedeaea"
+    },
+    {
+      "slot": "stagger-3",
+      "sourceVisibleBbox": [
+        31,
+        145,
+        409,
+        491
+      ],
+      "runtimeVisibleBbox": [
+        16,
+        73,
+        204,
+        245
+      ],
+      "sourceRgbaSha256": "e9efa867a780c8241e4f5438654b8cada059bba79712b9d8edb836f6776f865c",
+      "runtimeRgbaSha256": "5b2a29fdbd1a849c5ad1bb305788eeed11244a856a069b4fd2a46f1ab5eb5932"
+    },
+    {
+      "slot": "stagger-4",
+      "sourceVisibleBbox": [
+        31,
+        126,
+        383,
+        491
+      ],
+      "runtimeVisibleBbox": [
+        16,
+        63,
+        192,
+        245
+      ],
+      "sourceRgbaSha256": "c6349bc6cbd684604d5277ccf0460b6b826f679ae1c32fe78dd0f6b011976ac0",
+      "runtimeRgbaSha256": "d33bb165afecb02a93d630564f50440f25569a57a5ec65fd23c4059b2dfd80c3"
+    },
+    {
+      "slot": "stagger-5",
+      "sourceVisibleBbox": [
+        99,
+        176,
+        471,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        50,
+        88,
+        235,
+        245
+      ],
+      "sourceRgbaSha256": "ff22021e4999dec3b488b3cb7fd67d60c4a0f7a33a095c8d3034c55f47067167",
+      "runtimeRgbaSha256": "64720a4fdd6c103d19c205dc168e6f372a59d4b3ea699e317b8a63b02e5bb429"
+    },
+    {
+      "slot": "stagger-6",
+      "sourceVisibleBbox": [
+        71,
+        191,
+        458,
+        491
+      ],
+      "runtimeVisibleBbox": [
+        36,
+        96,
+        229,
+        245
+      ],
+      "sourceRgbaSha256": "39b6112687526ad88b8f767afd9af75f482ee5096a9116851b50a7f6e6aecd18",
+      "runtimeRgbaSha256": "ded1952240ac2d22ae60083bc816b3866dfcc753d0eb9afa317e0a47da09fc90"
+    },
+    {
+      "slot": "stagger-7",
+      "sourceVisibleBbox": [
+        87,
+        164,
+        451,
+        491
+      ],
+      "runtimeVisibleBbox": [
+        44,
+        83,
+        225,
+        245
+      ],
+      "sourceRgbaSha256": "7081ebbef8d48338a919f10575c4774ed1d06ebf5da7d99fa5dc8b5e89612149",
+      "runtimeRgbaSha256": "4f1ad4580a4a7f47b35f9602f8720e08d915e2bdc8209e28ba0f18efe08e8320"
+    },
+    {
+      "slot": "stagger-8",
+      "sourceVisibleBbox": [
+        83,
+        193,
+        472,
+        490
+      ],
+      "runtimeVisibleBbox": [
+        42,
+        97,
+        236,
+        245
+      ],
+      "sourceRgbaSha256": "cdf8f744dd64a02d6b296b719bd12f070a7523a68461f1e3cdee565fc923f036",
+      "runtimeRgbaSha256": "b3e13a0d60d76e7049a0133e6d1a7cbc4daf4640badf2157c200b672417dc9d1"
+    }
+  ],
+  "formalization": {
+    "schemaVersion": 1,
+    "committedToolCommit": "a8f94a5e6261a6c473ab96cfdca16bd2288375d4",
+    "committedBuildToolSha256": "23b16900f0069dcc288dc69ba8ede422ba475162b0ad68e9f4b6da918e36c3bd",
+    "sourceTransform": {
+      "sourceAuthority": true,
+      "creativePoseChange": false,
+      "mode": "view_scale_once_around_each_frame_subject_anchor",
+      "uniformScaleFactor": 1.051041,
+      "sourceCalibration": {
+        "uniformFactor": 1.0,
+        "anchorOffsetSourcePixels": [
+          0.0,
+          0.0
+        ],
+        "scope": "one constant for the complete view/action; never fitted per frame"
+      },
+      "semanticRootMotion": null,
+      "runtimeDerivation": "committed build_pet_art_bundle.derive_runtime_frame only"
+    },
+    "acceptedRuntimeUsedOnlyForUniformTransformCalibrationAndComparison": true,
+    "acceptedRuntimeNeverUpscaledOrUsedAsSourcePixels": true
+  }
+}

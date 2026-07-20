@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "stagger",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "stagger-1",
+    "stagger-2",
+    "stagger-3",
+    "stagger-4",
+    "stagger-5",
+    "stagger-6",
+    "stagger-7",
+    "stagger-8"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "stagger-1",
+      "sourceBbox": [
+        100,
+        134,
+        443,
+        487
+      ],
+      "runtimeBbox": [
+        50,
+        67,
+        221,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 197,
+      "runtimeVisibleNearKeyPixelsReported": 51,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-2",
+      "sourceBbox": [
+        97,
+        183,
+        446,
+        487
+      ],
+      "runtimeBbox": [
+        49,
+        91,
+        223,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 181,
+      "runtimeVisibleNearKeyPixelsReported": 43,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-3",
+      "sourceBbox": [
+        106,
+        127,
+        437,
+        487
+      ],
+      "runtimeBbox": [
+        53,
+        63,
+        219,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 170,
+      "runtimeVisibleNearKeyPixelsReported": 63,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-4",
+      "sourceBbox": [
+        114,
+        164,
+        431,
+        487
+      ],
+      "runtimeBbox": [
+        57,
+        82,
+        215,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 164,
+      "runtimeVisibleNearKeyPixelsReported": 35,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-5",
+      "sourceBbox": [
+        103,
+        155,
+        441,
+        487
+      ],
+      "runtimeBbox": [
+        52,
+        78,
+        220,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 164,
+      "runtimeVisibleNearKeyPixelsReported": 41,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-6",
+      "sourceBbox": [
+        104,
+        178,
+        440,
+        487
+      ],
+      "runtimeBbox": [
+        52,
+        89,
+        220,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 147,
+      "runtimeVisibleNearKeyPixelsReported": 53,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-7",
+      "sourceBbox": [
+        105,
+        162,
+        440,
+        487
+      ],
+      "runtimeBbox": [
+        53,
+        81,
+        219,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 160,
+      "runtimeVisibleNearKeyPixelsReported": 28,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "stagger-8",
+      "sourceBbox": [
+        101,
+        146,
+        444,
+        487
+      ],
+      "runtimeBbox": [
+        51,
+        73,
+        222,
+        243
+      ],
+      "minimumSourceEdgeMargin": 25,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 236,
+      "runtimeVisibleNearKeyPixelsReported": 57,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}

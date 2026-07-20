@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "pipelineExtension": "water-cub-512-source-scale-formalization-v1",
+  "input": "raw-sheet-lossless.png",
+  "inputSha256": "3e2e03fd6d1a6c3937ff81e3fc4677b1e0810f0144de839d55ecd3a97532981c",
+  "inputSize": [
+    2048,
+    1024
+  ],
+  "slots": [
+    "dodge-1",
+    "dodge-2",
+    "dodge-3",
+    "dodge-4",
+    "dodge-5",
+    "dodge-6",
+    "dodge-7",
+    "dodge-8"
+  ],
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 8,
+  "effectiveSourceMargin": 16,
+  "key": "#FF00FF",
+  "residualMagentaDistance": 70.0,
+  "fringeCleanupAlpha": 112,
+  "frames": [
+    {
+      "slot": "dodge-1",
+      "sourceVisibleBbox": [
+        82,
+        229,
+        467,
+        491
+      ],
+      "runtimeVisibleBbox": [
+        41,
+        115,
+        234,
+        246
+      ],
+      "sourceRgbaSha256": "3d7605e71faaa58368f7b5ced8c3f37c514d61bfaf0540c75abdc888fc176b84",
+      "runtimeRgbaSha256": "fdb12641b7d10729caf7143ca9b3317e9af31f5c3008254ba467b63ff67b14d1"
+    },
+    {
+      "slot": "dodge-2",
+      "sourceVisibleBbox": [
+        75,
+        191,
+        460,
+        487
+      ],
+      "runtimeVisibleBbox": [
+        38,
+        96,
+        230,
+        243
+      ],
+      "sourceRgbaSha256": "b61519efa2f6219ba735b504bf800e698180d67613cc45ac739d1ae8699210b8",
+      "runtimeRgbaSha256": "3ee6315cff1bfc5b19b4bab6178c23d6b0d031dbc009d3c92df590e963481679"
+    },
+    {
+      "slot": "dodge-3",
+      "sourceVisibleBbox": [
+        62,
+        243,
+        448,
+        477
+      ],
+      "runtimeVisibleBbox": [
+        31,
+        122,
+        224,
+        239
+      ],
+      "sourceRgbaSha256": "50cf1913568cfe1a0d5bb560e78ddfad93b2e415fa8d06683ab736a17bda037f",
+      "runtimeRgbaSha256": "9d8ab0c4d1f41c005766aa0ba98b782a60c60d6a6ad5bfb3584f151776d92988"
+    },
+    {
+      "slot": "dodge-4",
+      "sourceVisibleBbox": [
+        53,
+        179,
+        436,
+        466
+      ],
+      "runtimeVisibleBbox": [
+        26,
+        90,
+        217,
+        232
+      ],
+      "sourceRgbaSha256": "c28857dcc81a0bd26cb08624284b2b3f4f617584ea0c15e3d1fd4920427da621",
+      "runtimeRgbaSha256": "ac091b894f1f4cefda5d4533a7c700807992544e4e24365fc45bcd4f04042bc0"
+    },
+    {
+      "slot": "dodge-5",
+      "sourceVisibleBbox": [
+        44,
+        102,
+        426,
+        458
+      ],
+      "runtimeVisibleBbox": [
+        23,
+        52,
+        212,
+        229
+      ],
+      "sourceRgbaSha256": "74688e34f029cf88224ab0663930d5b47102126ff7bac7dccd1c72391f1f7377",
+      "runtimeRgbaSha256": "e874c8bff640d023e7999e6461b85246ed6669ccf34c03e76ea574d034669dea"
+    },
+    {
+      "slot": "dodge-6",
+      "sourceVisibleBbox": [
+        55,
+        201,
+        439,
+        470
+      ],
+      "runtimeVisibleBbox": [
+        28,
+        101,
+        219,
+        235
+      ],
+      "sourceRgbaSha256": "72670d846aa9a0d4238287cdd16cc687f7e7404e08815b11fc4c5ac964632248",
+      "runtimeRgbaSha256": "554a90a41a34ad9a8d9c91b70aef8665d238dadd6a2f04a5fa0be4dcfbc0856c"
+    },
+    {
+      "slot": "dodge-7",
+      "sourceVisibleBbox": [
+        73,
+        188,
+        456,
+        484
+      ],
+      "runtimeVisibleBbox": [
+        36,
+        95,
+        228,
+        242
+      ],
+      "sourceRgbaSha256": "3fade0e11d7e042c61c598a01df94d33a5766bec14ee331a419d2a435d0ecb81",
+      "runtimeRgbaSha256": "12e9ba8090281d8d07ffca909f4055966f4a76c76d3a08f46a10d6086748692f"
+    },
+    {
+      "slot": "dodge-8",
+      "sourceVisibleBbox": [
+        84,
+        262,
+        468,
+        492
+      ],
+      "runtimeVisibleBbox": [
+        42,
+        132,
+        234,
+        246
+      ],
+      "sourceRgbaSha256": "441a07ea38b13ad23316b8189185f9930b15b8063c511664db4d92ed4138700f",
+      "runtimeRgbaSha256": "1b8fa3fe64cad87ea886188c2fb6ab428b712c5a4ea9d10a8631b6431534848e"
+    }
+  ],
+  "formalization": {
+    "schemaVersion": 1,
+    "committedToolCommit": "a8f94a5e6261a6c473ab96cfdca16bd2288375d4",
+    "committedBuildToolSha256": "23b16900f0069dcc288dc69ba8ede422ba475162b0ad68e9f4b6da918e36c3bd",
+    "sourceTransform": {
+      "sourceAuthority": true,
+      "creativePoseChange": false,
+      "mode": "action_normalization_then_view_scale_composed_once_in_512_source_space",
+      "uniformScaleFactor": 1.688860319,
+      "sourceCalibration": {
+        "uniformFactor": 1.003193,
+        "anchorOffsetSourcePixels": [
+          -1.0,
+          -2.0
+        ],
+        "scope": "one constant for the complete view/action; never fitted per frame"
+      },
+      "semanticRootMotion": {
+        "xRuntimePixels": [
+          0,
+          -4,
+          -10,
+          -16,
+          -20,
+          -14,
+          -6,
+          0
+        ],
+        "yRuntimePixels": [
+          0,
+          -2,
+          -7,
+          -13,
+          -17,
+          -11,
+          -4,
+          0
+        ]
+      },
+      "runtimeDerivation": "committed build_pet_art_bundle.derive_runtime_frame only"
+    },
+    "acceptedRuntimeUsedOnlyForUniformTransformCalibrationAndComparison": true,
+    "acceptedRuntimeNeverUpscaledOrUsedAsSourcePixels": true
+  }
+}

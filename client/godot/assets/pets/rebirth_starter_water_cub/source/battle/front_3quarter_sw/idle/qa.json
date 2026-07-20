@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "idle",
+  "frameCount": 6,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4",
+    "idle-5",
+    "idle-6"
+  ],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "idle-1",
+      "sourceBbox": [
+        72,
+        175,
+        479,
+        489
+      ],
+      "runtimeBbox": [
+        35,
+        87,
+        240,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 274,
+      "runtimeVisibleNearKeyPixelsReported": 93,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-2",
+      "sourceBbox": [
+        75,
+        178,
+        484,
+        490
+      ],
+      "runtimeBbox": [
+        37,
+        89,
+        243,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 207,
+      "runtimeVisibleNearKeyPixelsReported": 73,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-3",
+      "sourceBbox": [
+        75,
+        179,
+        479,
+        489
+      ],
+      "runtimeBbox": [
+        37,
+        89,
+        240,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 270,
+      "runtimeVisibleNearKeyPixelsReported": 85,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-4",
+      "sourceBbox": [
+        71,
+        180,
+        484,
+        490
+      ],
+      "runtimeBbox": [
+        35,
+        89,
+        243,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 260,
+      "runtimeVisibleNearKeyPixelsReported": 82,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-5",
+      "sourceBbox": [
+        74,
+        174,
+        469,
+        490
+      ],
+      "runtimeBbox": [
+        37,
+        87,
+        235,
+        245
+      ],
+      "minimumSourceEdgeMargin": 22,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 242,
+      "runtimeVisibleNearKeyPixelsReported": 85,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-6",
+      "sourceBbox": [
+        72,
+        174,
+        475,
+        489
+      ],
+      "runtimeBbox": [
+        35,
+        87,
+        238,
+        245
+      ],
+      "minimumSourceEdgeMargin": 23,
+      "minimumRuntimeEdgeMargin": 11,
+      "sourceVisibleNearKeyPixelsReported": 228,
+      "runtimeVisibleNearKeyPixelsReported": 88,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}

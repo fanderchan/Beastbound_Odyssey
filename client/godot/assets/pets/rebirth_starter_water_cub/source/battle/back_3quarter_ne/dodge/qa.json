@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "dodge",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "visualSelfReview": "passed_source_first_scale_and_continuity_review",
+  "ownerReviewStatus": "pending",
+  "residualNearKeyFramesReportedOnly": [],
+  "residualPolicy": "preserved from archived authored source; no unproven global purple recoloring in this scale-only formalization",
+  "frames": [
+    {
+      "slot": "dodge-1",
+      "sourceBbox": [
+        85,
+        144,
+        461,
+        485
+      ],
+      "runtimeBbox": [
+        43,
+        73,
+        230,
+        243
+      ],
+      "minimumSourceEdgeMargin": 27,
+      "minimumRuntimeEdgeMargin": 13,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-2",
+      "sourceBbox": [
+        76,
+        182,
+        455,
+        482
+      ],
+      "runtimeBbox": [
+        38,
+        92,
+        227,
+        240
+      ],
+      "minimumSourceEdgeMargin": 30,
+      "minimumRuntimeEdgeMargin": 16,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-3",
+      "sourceBbox": [
+        64,
+        187,
+        443,
+        470
+      ],
+      "runtimeBbox": [
+        33,
+        94,
+        221,
+        235
+      ],
+      "minimumSourceEdgeMargin": 42,
+      "minimumRuntimeEdgeMargin": 21,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-4",
+      "sourceBbox": [
+        52,
+        222,
+        431,
+        460
+      ],
+      "runtimeBbox": [
+        26,
+        111,
+        215,
+        230
+      ],
+      "minimumSourceEdgeMargin": 52,
+      "minimumRuntimeEdgeMargin": 26,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-5",
+      "sourceBbox": [
+        44,
+        179,
+        422,
+        451
+      ],
+      "runtimeBbox": [
+        22,
+        90,
+        211,
+        226
+      ],
+      "minimumSourceEdgeMargin": 44,
+      "minimumRuntimeEdgeMargin": 22,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-6",
+      "sourceBbox": [
+        57,
+        229,
+        432,
+        464
+      ],
+      "runtimeBbox": [
+        29,
+        115,
+        216,
+        231
+      ],
+      "minimumSourceEdgeMargin": 48,
+      "minimumRuntimeEdgeMargin": 25,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-7",
+      "sourceBbox": [
+        73,
+        209,
+        451,
+        478
+      ],
+      "runtimeBbox": [
+        37,
+        105,
+        225,
+        239
+      ],
+      "minimumSourceEdgeMargin": 34,
+      "minimumRuntimeEdgeMargin": 17,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-8",
+      "sourceBbox": [
+        85,
+        146,
+        461,
+        484
+      ],
+      "runtimeBbox": [
+        43,
+        74,
+        230,
+        242
+      ],
+      "minimumSourceEdgeMargin": 28,
+      "minimumRuntimeEdgeMargin": 14,
+      "sourceVisibleNearKeyPixelsReported": 0,
+      "runtimeVisibleNearKeyPixelsReported": 0,
+      "sourceTransparentRgbLeakPixels": 0,
+      "runtimeTransparentRgbLeakPixels": 0
+    }
+  ]
+}
