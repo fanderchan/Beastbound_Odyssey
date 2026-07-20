@@ -1,0 +1,3522 @@
+{
+  "schemaVersion": 1,
+  "repairId": "g19-earth-battle-scale-motion-ko-readability",
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "pet",
+  "scope": "standalone battle only; no world, mounted, identity, shared tools or code",
+  "purpose": "remove cross-action identity scale jumps, make dodge read as a side evade, and make revive continuous from the exact unconscious hold",
+  "method": {
+    "source": "approved 512px per-action source frames; g16 512px sources retained for counter/stagger/knockaway",
+    "scale": "one deterministic isotropic scale per view/action matched to approved idle using visible height, bbox area and alpha mass",
+    "anchor": "one coherent bottom-center action anchor; dodge uses a deterministic lateral return translation arc",
+    "revive": "exact byte reverse of the repaired/scaled down strip",
+    "koEye": "no RGB repaint: native open concentric faint eye in front down6-8 became readable after scale normalization",
+    "resampling": "canonical premultiplied-alpha Lanczos",
+    "mirroring": false,
+    "nonUniformScale": false,
+    "despillApplied": false
+  },
+  "skillFringeKnownFailure": {
+    "status": "FAIL_RETAINED_NO_PROVENANCE_MASK",
+    "reason": "low-alpha bright-green pixels exist only in front skill; no exact same-operation per-pixel eligibility mask is persisted, so speculative despill is forbidden",
+    "metrics": {
+      "decision": "retained unresolved; no exact per-pixel same-operation eligibility mask is persisted for the low-alpha green pixels",
+      "despillApplied": false,
+      "before": {
+        "front_3quarter_sw": [
+          {
+            "frame": 1,
+            "pixelCount": 19,
+            "alphaRange": [
+              17,
+              23
+            ]
+          },
+          {
+            "frame": 2,
+            "pixelCount": 15,
+            "alphaRange": [
+              17,
+              24
+            ]
+          },
+          {
+            "frame": 3,
+            "pixelCount": 11,
+            "alphaRange": [
+              17,
+              23
+            ]
+          },
+          {
+            "frame": 4,
+            "pixelCount": 24,
+            "alphaRange": [
+              17,
+              29
+            ]
+          },
+          {
+            "frame": 5,
+            "pixelCount": 6,
+            "alphaRange": [
+              17,
+              23
+            ]
+          },
+          {
+            "frame": 6,
+            "pixelCount": 18,
+            "alphaRange": [
+              17,
+              23
+            ]
+          },
+          {
+            "frame": 7,
+            "pixelCount": 20,
+            "alphaRange": [
+              17,
+              25
+            ]
+          },
+          {
+            "frame": 8,
+            "pixelCount": 9,
+            "alphaRange": [
+              17,
+              24
+            ]
+          }
+        ],
+        "back_3quarter_ne": [
+          {
+            "frame": 1,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 2,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 3,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 4,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 5,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 6,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 7,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 8,
+            "pixelCount": 0,
+            "alphaRange": null
+          }
+        ]
+      },
+      "afterSpatialResampleOnly": {
+        "front_3quarter_sw": [
+          {
+            "frame": 1,
+            "pixelCount": 20,
+            "alphaRange": [
+              17,
+              25
+            ]
+          },
+          {
+            "frame": 2,
+            "pixelCount": 18,
+            "alphaRange": [
+              17,
+              23
+            ]
+          },
+          {
+            "frame": 3,
+            "pixelCount": 9,
+            "alphaRange": [
+              17,
+              22
+            ]
+          },
+          {
+            "frame": 4,
+            "pixelCount": 19,
+            "alphaRange": [
+              17,
+              22
+            ]
+          },
+          {
+            "frame": 5,
+            "pixelCount": 7,
+            "alphaRange": [
+              17,
+              24
+            ]
+          },
+          {
+            "frame": 6,
+            "pixelCount": 22,
+            "alphaRange": [
+              17,
+              24
+            ]
+          },
+          {
+            "frame": 7,
+            "pixelCount": 28,
+            "alphaRange": [
+              17,
+              25
+            ]
+          },
+          {
+            "frame": 8,
+            "pixelCount": 13,
+            "alphaRange": [
+              17,
+              23
+            ]
+          }
+        ],
+        "back_3quarter_ne": [
+          {
+            "frame": 1,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 2,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 3,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 4,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 5,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 6,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 7,
+            "pixelCount": 0,
+            "alphaRange": null
+          },
+          {
+            "frame": 8,
+            "pixelCount": 0,
+            "alphaRange": null
+          }
+        ]
+      }
+    }
+  },
+  "battleFrameCount": 180,
+  "changedBattleFrameCount": 168,
+  "minimumAnyAlphaEdgeMargin": 4,
+  "down8Revive1ByteExact": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "runtimeBundleDigestAfterRepair": "a061bf9c1b4928b687737a896793fa4ebf94bbdf7e66a0eed89966e67f5b7372",
+  "formalFrameDigestBefore": "b0976b1e02a7b77fd766e617625ec3e91a936daf0607a465cacdf1f998f808e1",
+  "formalFrameDigestAfter": "fdd3fb6e6539c3236e4d93100e7fa3ad47bf95c8b40e152b60f54ce52c4ceff9",
+  "evidence": {
+    "g19-earth-battle180-before-after.png": {
+      "path": "qa/battle/repairs/g19-earth-battle180-before-after.png",
+      "sha256": "5f949a711330cbfa7fd1fe27ef9104982f0315f1e59a5e05a57a18319aa57c04"
+    },
+    "g19-earth-battle180-after.png": {
+      "path": "qa/battle/repairs/g19-earth-battle180-after.png",
+      "sha256": "c7d9f788cf2a7527321e96a336346faa0198dcfada6585754485f1f4032d10e6"
+    },
+    "g19-earth-ko-native-eye-zoom.png": {
+      "path": "qa/battle/repairs/g19-earth-ko-native-eye-zoom.png",
+      "sha256": "1ffd7b38686fe52298e72c596f459fdb1260922a1f74f75b825fa8bf2325a5a1"
+    },
+    "strictReport": {
+      "path": "qa/battle/repairs/g19-earth-strict-report.json",
+      "sha256": "3b996fc6ff7a49cf62748b8410ccbab93747027f7f0d33a2904ff51ceb8b013a"
+    },
+    "metrics": {
+      "path": "source/formal-production/quality-repair-g19-scale-motion-metrics.json",
+      "sha256": "3b44b66bfe743bc1225d68391d4b03b4f811d87384eb780c0dbc86818089c64c"
+    }
+  },
+  "frames": [
+    {
+      "path": "views/back_3quarter_ne/attack/attack-1.png",
+      "beforeSha256": "abbc547fc2306335b8e44e1c9328802475f4166e126ba18b670dc377f8efa6b6",
+      "afterSha256": "25ccad893bc408c06f83f8e82781a9c37fdc83cc1e5577c9171b3b9335c687d7",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        132,
+        199,
+        243
+      ],
+      "afterBbox": [
+        37,
+        105,
+        203,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-2.png",
+      "beforeSha256": "45afb0f0af1f15ae8be49ea9eb6223ecfa932d5c9d9b2162733afac098bec411",
+      "afterSha256": "1b4bb2446adbb7cd4eb04bbe5b81d6fb9f6e36b42b04a1f0cfd7d9bedf0dd3a9",
+      "changed": true,
+      "beforeBbox": [
+        75,
+        131,
+        212,
+        243
+      ],
+      "afterBbox": [
+        49,
+        105,
+        219,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-3.png",
+      "beforeSha256": "df398054a29a936b58a54d30a3cedf88f739073ed905d8ad407b2ec4f01c97ac",
+      "afterSha256": "49e4dea3a6e38229acc3857d713711fb0299822e1cab9aac716f0e7d55ae2b7e",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        142,
+        220,
+        243
+      ],
+      "afterBbox": [
+        46,
+        119,
+        230,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-4.png",
+      "beforeSha256": "eec7e4e7ac34d72fb1cfc600ee259474133a38a4f80bad0607ad13e58f5c6555",
+      "afterSha256": "5e7c61b26ee022b52670b3c2d433a0a0135fa9a051f7f20ff8ded3777010d3b1",
+      "changed": true,
+      "beforeBbox": [
+        86,
+        170,
+        222,
+        243
+      ],
+      "afterBbox": [
+        64,
+        154,
+        232,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-5.png",
+      "beforeSha256": "a6c3c30a3fd0a72c7586c28393b168f6263d8670c5df729615759fd20b234b62",
+      "afterSha256": "690e017f865229a158bc5af0a73a02be8161911693fe4006ee85b16626bd6e7c",
+      "changed": true,
+      "beforeBbox": [
+        85,
+        119,
+        211,
+        243
+      ],
+      "afterBbox": [
+        61,
+        89,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-6.png",
+      "beforeSha256": "f88c97d5ceb4085658ab999d572d9ed8a5a044fa24bbed2d8675708a709c4258",
+      "afterSha256": "37815a16aef08b6fa240498652affe73e544487b3afad835e43d231a39cca28a",
+      "changed": true,
+      "beforeBbox": [
+        69,
+        135,
+        208,
+        243
+      ],
+      "afterBbox": [
+        42,
+        110,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-7.png",
+      "beforeSha256": "ae9d7b4ab2bce44629ab353e265b55a2af06e255ef719b8cc8a904b83ed6edea",
+      "afterSha256": "f2e51c22237d733dc8a60fec8a7d3135a02c38372e5a36305bab015a251dde2f",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        133,
+        201,
+        243
+      ],
+      "afterBbox": [
+        38,
+        107,
+        205,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-8.png",
+      "beforeSha256": "1eb6654d2610849fdb5fba28965deecf6f6c08d2bc73db0f32f25720bce7e614",
+      "afterSha256": "b3318f5fb70ff89eeda55d893c7db349c9894f6f25bf440f49259b438cf21cf1",
+      "changed": true,
+      "beforeBbox": [
+        67,
+        130,
+        201,
+        243
+      ],
+      "afterBbox": [
+        39,
+        103,
+        206,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-1.png",
+      "beforeSha256": "27afa98164d6c5094bc2e35aae48aa421af82d433123f73085248ce4730eea39",
+      "afterSha256": "159c8807b7d0fd63c07080920c3448ea31d16fdf8eccf1bf8275360532aa5810",
+      "changed": true,
+      "beforeBbox": [
+        35,
+        156,
+        179,
+        251
+      ],
+      "afterBbox": [
+        16,
+        125,
+        193,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-2.png",
+      "beforeSha256": "bae93c8bb3ff83e95e4d9861f1731186e2543c07b2e0adf7e2661012bde2f4c7",
+      "afterSha256": "9acd4e8cf0ec5ad6866a395546a30361308db5f3a2eb77df6723e1c6cf644120",
+      "changed": true,
+      "beforeBbox": [
+        50,
+        154,
+        184,
+        251
+      ],
+      "afterBbox": [
+        35,
+        123,
+        200,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-3.png",
+      "beforeSha256": "0630b48155a04bb240b6a28d463ec69fbcd384f15af7f058f11202192b9491bc",
+      "afterSha256": "da05204a741818a0fbb57f3782ca19c296fd9d828c402a37c7c4d12d2ae7b32a",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        144,
+        201,
+        251
+      ],
+      "afterBbox": [
+        50,
+        111,
+        220,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-4.png",
+      "beforeSha256": "1bfe1ee6287516f7cef3850b1a017cf7f81e8cf9cbd020e8bebf8aa64dcbd973",
+      "afterSha256": "bb8b8d9b486c186a11594b8cad797d961aa2faff8e8cb9341e4ee62717328dd3",
+      "changed": true,
+      "beforeBbox": [
+        55,
+        142,
+        210,
+        251
+      ],
+      "afterBbox": [
+        41,
+        109,
+        232,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-5.png",
+      "beforeSha256": "9d8b2216cd79cbbe6c0235f1e752b9989773732946d16b55567a9e044487e82e",
+      "afterSha256": "eeb6721e4273966c62544aea6d46923f661162c15eb73f057095aa72fe64c52a",
+      "changed": true,
+      "beforeBbox": [
+        28,
+        127,
+        180,
+        251
+      ],
+      "afterBbox": [
+        8,
+        90,
+        196,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-6.png",
+      "beforeSha256": "3b40c596f2f5f8e1354e6bb8c6ea3b8a77666db9752f52baa7772750073e6cc4",
+      "afterSha256": "6a07cabac0688d4a6d0db427b765fdb5013a2844eb3118c97b52df50d3ee7e01",
+      "changed": true,
+      "beforeBbox": [
+        55,
+        134,
+        226,
+        251
+      ],
+      "afterBbox": [
+        41,
+        98,
+        252,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-7.png",
+      "beforeSha256": "a904b7865002fb6c7961c8c8daff754ff4e5b3ca91bb8b216a49eebebf04c6e1",
+      "afterSha256": "ee881efe63dc15765c083f4e296077ccc639dbdb73beee8da41d66af761b7775",
+      "changed": true,
+      "beforeBbox": [
+        51,
+        149,
+        186,
+        251
+      ],
+      "afterBbox": [
+        37,
+        117,
+        202,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-8.png",
+      "beforeSha256": "040354dcb7a2a9bbb3c27e296b59908cab5eafbc9c9036116df5c781f5a747d3",
+      "afterSha256": "3a85c0d768802752ef51445c2196b846e1f35d2b7ea829082cd548c93a2459fa",
+      "changed": true,
+      "beforeBbox": [
+        35,
+        156,
+        179,
+        251
+      ],
+      "afterBbox": [
+        16,
+        125,
+        193,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-1.png",
+      "beforeSha256": "e2d664930800ae7ca4b828a37d7fac019a0afc94666b0ed1be9f1297835e3d04",
+      "afterSha256": "405e867bf769a7c0d6f08973e96847dded0134bfb3ee46b568e516b591e49235",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        132,
+        222,
+        243
+      ],
+      "afterBbox": [
+        40,
+        108,
+        233,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-2.png",
+      "beforeSha256": "120a6b975dcb21121128214ddcf75dc5fc54c5af227b891c43d87a4df095d4ef",
+      "afterSha256": "e7b0498bf52db13fc43269971ebc9b49849001682d670779de37f96ab7fdf923",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        141,
+        218,
+        243
+      ],
+      "afterBbox": [
+        40,
+        119,
+        228,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-3.png",
+      "beforeSha256": "40391cc248d551e05254ef96b8470f3e80e49674bd459886e4bec9fd81d7c767",
+      "afterSha256": "d0b1325f2dd28ff3dd18a31e8ba60a6e47e84f5e7729650f23d19cf96c5ebcc9",
+      "changed": true,
+      "beforeBbox": [
+        67,
+        142,
+        219,
+        243
+      ],
+      "afterBbox": [
+        41,
+        120,
+        228,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-4.png",
+      "beforeSha256": "4d843494af043143483e77b341431cc86f6ed0c3586801994c68f1ccae1423d4",
+      "afterSha256": "574c89e41c7cc0ed71e0c373818e094ab250fa50e3b1da6d53c272f9341ec5bf",
+      "changed": true,
+      "beforeBbox": [
+        61,
+        140,
+        214,
+        243
+      ],
+      "afterBbox": [
+        34,
+        117,
+        224,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-5.png",
+      "beforeSha256": "281ed21e0d7972a0b922ffe6637c32cf111fedc8a3a7f9e22181cb7d86d20683",
+      "afterSha256": "8dee4745c095efb36d47d5219406425bb1883325cb0455c71ac255741b92750b",
+      "changed": true,
+      "beforeBbox": [
+        43,
+        150,
+        204,
+        243
+      ],
+      "afterBbox": [
+        10,
+        129,
+        210,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-6.png",
+      "beforeSha256": "8fef94c10bb13587acf5d6738d0e1f6d95f56c3be8b80ada3f03aa450a0b529c",
+      "afterSha256": "66ec8da19a268a81c3cfb2a3b214995491b04e2c9eacacf1553de855d43fcfcf",
+      "changed": true,
+      "beforeBbox": [
+        46,
+        151,
+        206,
+        242
+      ],
+      "afterBbox": [
+        15,
+        131,
+        213,
+        242
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "beforeSha256": "1247d1fe91dca017cd3612a54950dd7f18971ce935b5228d76524455e661bc29",
+      "afterSha256": "b613cd47ff8523c2d9d9a52beea37e9687c0726d768b3f675babcc6bef65c7ef",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        124,
+        210,
+        243
+      ],
+      "afterBbox": [
+        51,
+        106,
+        211,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "beforeSha256": "31325b361678244b58ccd3a1c7d092b55da2104abb222af940ce3ceb52c510a6",
+      "afterSha256": "d8ff62111960683a834c08b7c697a59c2fe64d332d8a0cb531a6b1803a211842",
+      "changed": true,
+      "beforeBbox": [
+        68,
+        125,
+        206,
+        243
+      ],
+      "afterBbox": [
+        44,
+        105,
+        203,
+        241
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "beforeSha256": "ab3e6ba78f53a0917ac87ba852d0eac72c6306ecc5e2912264decfae199cb7bb",
+      "afterSha256": "a9e1d9a6b8912615743a4c6908ff57401f29291c12eb92b998eacfd60fcf554b",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        115,
+        222,
+        243
+      ],
+      "afterBbox": [
+        24,
+        89,
+        198,
+        236
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "beforeSha256": "71b7decd052728c0276221f58ad82307528fe766e53aec6c57f971e424c68151",
+      "afterSha256": "b9fdb8dca5a7a164a8979f8b3838280bae00a9fcb7ac21c872d1af97b0c6c7de",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        120,
+        217,
+        243
+      ],
+      "afterBbox": [
+        14,
+        89,
+        193,
+        231
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "beforeSha256": "e53cdbb1daa2a8094998f4554206c0e54368f4100142e8ff5d30fd05f0905701",
+      "afterSha256": "0621943aa53b582148a2fdd932207f1b7905bc0a9e8f1cd207b217ea6d829b5c",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        123,
+        204,
+        243
+      ],
+      "afterBbox": [
+        29,
+        98,
+        192,
+        235
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "beforeSha256": "0c45146e5a7a15935323ee8c4f16cff97d4616326f341c431ce89beb8d408ff5",
+      "afterSha256": "e89486b26c33b08912c372c9f4c5e0861c7630a51aa6298fb9b01528eab64373",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        122,
+        204,
+        243
+      ],
+      "afterBbox": [
+        40,
+        101,
+        200,
+        239
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "beforeSha256": "b86c71f05c44b13fe428aaa76d9a3900142e890828781526434bee2602c7d791",
+      "afterSha256": "d852b5a5866e13dc5aefbf933cb1b5fa527697088afa5edaac8c3a4b101db425",
+      "changed": true,
+      "beforeBbox": [
+        64,
+        123,
+        205,
+        243
+      ],
+      "afterBbox": [
+        46,
+        103,
+        208,
+        242
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "beforeSha256": "a853f89fe7bcff393c882d42ce70a3a8cf77fb33d68b22e9e5abad03e5f0dbbf",
+      "afterSha256": "b132126c740278de32b7b0aeb07238b03098ecde0f4ca3c1765cabe66927e535",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        122,
+        205,
+        243
+      ],
+      "afterBbox": [
+        50,
+        104,
+        212,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-1.png",
+      "beforeSha256": "8fa7ee2f7181a81b3264a9da62d86b849284d43520637d3f1576a7aeec91fc3f",
+      "afterSha256": "43da93eef2572c89e57da307232e0004f71e4dfadf8fea2b57a40b16830848e4",
+      "changed": true,
+      "beforeBbox": [
+        75,
+        137,
+        195,
+        243
+      ],
+      "afterBbox": [
+        25,
+        89,
+        198,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-2.png",
+      "beforeSha256": "fcdb42faa934278f31c1e9b479942c85f9546cd80dc7672ab2ee2c20615c85bc",
+      "afterSha256": "defbfe32c4b85b484a268d74e8c41c535251458bf34c7aff148b2652b2ecfa3d",
+      "changed": true,
+      "beforeBbox": [
+        86,
+        142,
+        204,
+        243
+      ],
+      "afterBbox": [
+        40,
+        97,
+        213,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-3.png",
+      "beforeSha256": "bb2d6f2d72728ace1c2d1a79d59b051bc8c6b59b886841fccc18436cb5606757",
+      "afterSha256": "41972eef0e91000c1c21a13af20e3ee99c1ef1fa04364f13960fdd8246380b51",
+      "changed": true,
+      "beforeBbox": [
+        87,
+        146,
+        215,
+        243
+      ],
+      "afterBbox": [
+        43,
+        102,
+        229,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-4.png",
+      "beforeSha256": "3cca1c2c923363d97b9c6b9a3d50151c4ccaaad68025b3a1998e77c9c5e57e3a",
+      "afterSha256": "1c1c8509169ceb572124f75fd76be041987c733c3052e6b371c20e2b713a36dd",
+      "changed": true,
+      "beforeBbox": [
+        90,
+        160,
+        222,
+        243
+      ],
+      "afterBbox": [
+        48,
+        124,
+        240,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-5.png",
+      "beforeSha256": "9ffa897f99f776e4f2b2719fd20659ac953da068d1de5b26d70c4aec9b98fdbe",
+      "afterSha256": "d53846f126b55bde867d9fc9897d5d618f57d40b4982ab9eb0629d48321a4dd8",
+      "changed": true,
+      "beforeBbox": [
+        85,
+        161,
+        221,
+        243
+      ],
+      "afterBbox": [
+        39,
+        125,
+        238,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-6.png",
+      "beforeSha256": "4c66310f7701dcd8a1f5d2745d8a32b833620b46c09a2068753a5f98d3fa2085",
+      "afterSha256": "bd9b202b9e49625f6d871d63750ba07889c9049f007528ea438eb381ffa2d495",
+      "changed": true,
+      "beforeBbox": [
+        79,
+        169,
+        216,
+        243
+      ],
+      "afterBbox": [
+        29,
+        136,
+        230,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-7.png",
+      "beforeSha256": "507f9785d58856fd67b55a3557ab25da30157d006be65f0be643a7f0cd63c6d0",
+      "afterSha256": "79c7de0e7e09f909efaae5940d6c2862e1dde6fe8b798d7cbe17ba4ab8f1b243",
+      "changed": true,
+      "beforeBbox": [
+        81,
+        175,
+        218,
+        243
+      ],
+      "afterBbox": [
+        33,
+        145,
+        233,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-8.png",
+      "beforeSha256": "93d6a3587afaa8b8fba37b8abb3393dc24ed46b9cfdda84662ac2ab942828936",
+      "afterSha256": "868a820951c4946a09810b3f847c1a154cd817faa52822adb14287576b82161e",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        181,
+        214,
+        243
+      ],
+      "afterBbox": [
+        26,
+        155,
+        226,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-1.png",
+      "beforeSha256": "bad86f5995a52db34868bbf915345f72d0648f7711a83e341b0100607aa8f76a",
+      "afterSha256": "be2b99cc56cf5c9af9e0001b570d4251b023c45041209fa3f9ac0a77ae55b96c",
+      "changed": true,
+      "beforeBbox": [
+        59,
+        131,
+        196,
+        243
+      ],
+      "afterBbox": [
+        33,
+        107,
+        200,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-2.png",
+      "beforeSha256": "e9e2b8384aca5101b7a2b2e6bbccdcf4cf73cd0f913cfba1ccb4a5472fa7d3bd",
+      "afterSha256": "0c10f30a66eb049098a742bcd2d2be0c0fdc12cc968889b17c5667a40b2ef89f",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        135,
+        206,
+        243
+      ],
+      "afterBbox": [
+        49,
+        111,
+        212,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-3.png",
+      "beforeSha256": "4a6d07bd74bf250b4350e801e04690be80ff920aa25c185dd8eb80c914b159dc",
+      "afterSha256": "78da1d6ba0c926c8659be85b949fa93d5ce873fdd045aac7010461aa8e33a9fc",
+      "changed": true,
+      "beforeBbox": [
+        64,
+        130,
+        222,
+        243
+      ],
+      "afterBbox": [
+        39,
+        106,
+        232,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-4.png",
+      "beforeSha256": "0334dcfd2bc7fa0394d85c163addf05bd0268d0a2cb15105183cbfd0cb97f82d",
+      "afterSha256": "fb3d625b1fb60ea0601cfceed915cfe951a2ed06503cd49b3a78ec0782aedcb7",
+      "changed": true,
+      "beforeBbox": [
+        75,
+        128,
+        206,
+        243
+      ],
+      "afterBbox": [
+        52,
+        103,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-5.png",
+      "beforeSha256": "37ef07e7e9e886016b6f8b5aa330b361f0b2c7d3d6c71abc2ae7404bc971e0dd",
+      "afterSha256": "2cda965131db220a253965c65fabc23ed35cfb258eaac22b26eb0cc1951f9577",
+      "changed": true,
+      "beforeBbox": [
+        87,
+        133,
+        204,
+        243
+      ],
+      "afterBbox": [
+        68,
+        109,
+        211,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-6.png",
+      "beforeSha256": "4fd3af185eb4a88351fbebdefdc4f1635951e7797dd9951161e1f2209fb1189e",
+      "afterSha256": "d8073f629e7d1f86d64386b63c5eba2a8530fdc77886412efb6ca1400ef76332",
+      "changed": true,
+      "beforeBbox": [
+        68,
+        126,
+        198,
+        243
+      ],
+      "afterBbox": [
+        43,
+        100,
+        203,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-1.png",
+      "beforeSha256": "797bd6eae4161295c2249fa129f4efb7dfc8c6272fd27d7284c9688189554f64",
+      "afterSha256": "797bd6eae4161295c2249fa129f4efb7dfc8c6272fd27d7284c9688189554f64",
+      "changed": false,
+      "beforeBbox": [
+        48,
+        108,
+        217,
+        243
+      ],
+      "afterBbox": [
+        48,
+        108,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-2.png",
+      "beforeSha256": "9bec5f84d47daa662f8a75d8a43ec6f419cbf6089381933c7ab5e7c369a0a046",
+      "afterSha256": "9bec5f84d47daa662f8a75d8a43ec6f419cbf6089381933c7ab5e7c369a0a046",
+      "changed": false,
+      "beforeBbox": [
+        49,
+        111,
+        217,
+        243
+      ],
+      "afterBbox": [
+        49,
+        111,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-3.png",
+      "beforeSha256": "753d2aac3e6519921ff0e0ef63302f2a6dc79cca99a72d1bb9bcf05f45ee90d6",
+      "afterSha256": "753d2aac3e6519921ff0e0ef63302f2a6dc79cca99a72d1bb9bcf05f45ee90d6",
+      "changed": false,
+      "beforeBbox": [
+        48,
+        108,
+        217,
+        243
+      ],
+      "afterBbox": [
+        48,
+        108,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-4.png",
+      "beforeSha256": "f8519ad3cf75ee35c306ad98dd0833959e616d30e6a2a3be8cd23a9b9b456341",
+      "afterSha256": "f8519ad3cf75ee35c306ad98dd0833959e616d30e6a2a3be8cd23a9b9b456341",
+      "changed": false,
+      "beforeBbox": [
+        37,
+        105,
+        219,
+        243
+      ],
+      "afterBbox": [
+        37,
+        105,
+        219,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-5.png",
+      "beforeSha256": "2cfffc219460a6307235c77dddbce4a6665780339ffc727839dc540e38de41c7",
+      "afterSha256": "2cfffc219460a6307235c77dddbce4a6665780339ffc727839dc540e38de41c7",
+      "changed": false,
+      "beforeBbox": [
+        38,
+        111,
+        222,
+        243
+      ],
+      "afterBbox": [
+        38,
+        111,
+        222,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-6.png",
+      "beforeSha256": "93f4b246cfbfb6ef98ed35d77dca95318bd7b085fde953c1a77cc5f394beae8b",
+      "afterSha256": "93f4b246cfbfb6ef98ed35d77dca95318bd7b085fde953c1a77cc5f394beae8b",
+      "changed": false,
+      "beforeBbox": [
+        39,
+        108,
+        220,
+        243
+      ],
+      "afterBbox": [
+        39,
+        108,
+        220,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "beforeSha256": "e2b7256b8fc0ee6a7266c658055b545130ea15f96df2bad3bbb7d97f0dfdbda6",
+      "afterSha256": "9f929b3148f4be3c9a0a436ddcafdc814fa0c004fb3eb69115fdcb863e959050",
+      "changed": true,
+      "beforeBbox": [
+        78,
+        164,
+        186,
+        252
+      ],
+      "afterBbox": [
+        4,
+        104,
+        173,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "beforeSha256": "ff821ae8b0137dbd59a947507c4676dd442dab844d6b2c7876a8b9198893429c",
+      "afterSha256": "f1bc394484131035f177bc1242e681737fea440a3ff566a1258558a21fab9d0e",
+      "changed": true,
+      "beforeBbox": [
+        93,
+        164,
+        201,
+        252
+      ],
+      "afterBbox": [
+        28,
+        106,
+        198,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "beforeSha256": "aafb017db38ec6f67c9c26903b33bfc192f0cba67adeafd4590653bd704f5506",
+      "afterSha256": "7e5e5fb1f05296a81996a15b503ed1a45272bc9b148aef836dd0c4c215d5c8cd",
+      "changed": true,
+      "beforeBbox": [
+        94,
+        165,
+        202,
+        252
+      ],
+      "afterBbox": [
+        29,
+        106,
+        199,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "beforeSha256": "3628c1887a8c8f44d676dbb983e8d41981457ea52bcf617c2e5841e064974350",
+      "afterSha256": "fa82a2713ca25618a57ecd0def6f71a0f8f31a441243fcbafcea93ba6c70f5c7",
+      "changed": true,
+      "beforeBbox": [
+        106,
+        163,
+        216,
+        252
+      ],
+      "afterBbox": [
+        48,
+        103,
+        221,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "beforeSha256": "1ebe3fa1cdd5b141346ece94299376f10a98313480915672a7b616ae4dce3111",
+      "afterSha256": "4da9ade81f02794a7f5b20b60bb4f3b7d81baf8766a7e6d75b2c9d5cb319d299",
+      "changed": true,
+      "beforeBbox": [
+        116,
+        169,
+        228,
+        251
+      ],
+      "afterBbox": [
+        64,
+        112,
+        241,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "beforeSha256": "b96c7aae1f5ffb286cf1f3c5a0ffa63647ae10d0751e6ce1ec48d4dc4cabcb31",
+      "afterSha256": "87a0712386925182fd155de2c9d7e5cdbd71f3da41bafbdd3d60b6a387428447",
+      "changed": true,
+      "beforeBbox": [
+        117,
+        174,
+        226,
+        251
+      ],
+      "afterBbox": [
+        65,
+        120,
+        238,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "beforeSha256": "afdd199b8faac2cf0475d708edb36f719c8b2b04d2ba54818cf5708b68b849d9",
+      "afterSha256": "55a772aee679ed96bc1cf11f09a4cfb62c976dc22d457183c43a7d8482a40873",
+      "changed": true,
+      "beforeBbox": [
+        118,
+        166,
+        224,
+        252
+      ],
+      "afterBbox": [
+        66,
+        108,
+        234,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "beforeSha256": "04b17ab03abad21232bd6aa452041750db079fcc0cddec1e3f7b2786c2fdcdff",
+      "afterSha256": "ef250a246bd4c2d872bc1aa0bdf7f6b1e13d50a7e66f34854a2d4b5118211edb",
+      "changed": true,
+      "beforeBbox": [
+        116,
+        182,
+        225,
+        251
+      ],
+      "afterBbox": [
+        64,
+        133,
+        235,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-1.png",
+      "beforeSha256": "93d6a3587afaa8b8fba37b8abb3393dc24ed46b9cfdda84662ac2ab942828936",
+      "afterSha256": "868a820951c4946a09810b3f847c1a154cd817faa52822adb14287576b82161e",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        181,
+        214,
+        243
+      ],
+      "afterBbox": [
+        26,
+        155,
+        226,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-2.png",
+      "beforeSha256": "4e69b0e92592c6ddbd87e6a3479dde914b9165763dad848b0e4b4b175b72aaae",
+      "afterSha256": "79c7de0e7e09f909efaae5940d6c2862e1dde6fe8b798d7cbe17ba4ab8f1b243",
+      "changed": true,
+      "beforeBbox": [
+        73,
+        136,
+        221,
+        243
+      ],
+      "afterBbox": [
+        33,
+        145,
+        233,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-3.png",
+      "beforeSha256": "fa3bac5fb3f9a587f441e03b49d22945c193e1d74a3e29d4ecf2d34170b4049b",
+      "afterSha256": "bd9b202b9e49625f6d871d63750ba07889c9049f007528ea438eb381ffa2d495",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        125,
+        204,
+        243
+      ],
+      "afterBbox": [
+        29,
+        136,
+        230,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-4.png",
+      "beforeSha256": "aa0985463dea374acc98be348ed305341a6a89157e268837103db70a9f01f4e0",
+      "afterSha256": "d53846f126b55bde867d9fc9897d5d618f57d40b4982ab9eb0629d48321a4dd8",
+      "changed": true,
+      "beforeBbox": [
+        80,
+        121,
+        208,
+        243
+      ],
+      "afterBbox": [
+        39,
+        125,
+        238,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-5.png",
+      "beforeSha256": "dbb1cb5d70963b4a5dd4f6b436a02794dc017f80ce9874adbf2885ac4a70d2a2",
+      "afterSha256": "1c1c8509169ceb572124f75fd76be041987c733c3052e6b371c20e2b713a36dd",
+      "changed": true,
+      "beforeBbox": [
+        79,
+        122,
+        207,
+        243
+      ],
+      "afterBbox": [
+        48,
+        124,
+        240,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-6.png",
+      "beforeSha256": "00ee2bd23d19af1cb10ad1e47487f96d2cd227a8554fe1e1fde0b695d2a95211",
+      "afterSha256": "41972eef0e91000c1c21a13af20e3ee99c1ef1fa04364f13960fdd8246380b51",
+      "changed": true,
+      "beforeBbox": [
+        73,
+        127,
+        206,
+        243
+      ],
+      "afterBbox": [
+        43,
+        102,
+        229,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-7.png",
+      "beforeSha256": "8a6839a71f111ee380eaaea583f71e7fa361775b9167502c38627622559a8ee7",
+      "afterSha256": "defbfe32c4b85b484a268d74e8c41c535251458bf34c7aff148b2652b2ecfa3d",
+      "changed": true,
+      "beforeBbox": [
+        67,
+        126,
+        199,
+        243
+      ],
+      "afterBbox": [
+        40,
+        97,
+        213,
+        244
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-8.png",
+      "beforeSha256": "b0cd39a897656cc283dceed31de59a4c05bda6b8a00130af05471af331f72aca",
+      "afterSha256": "43da93eef2572c89e57da307232e0004f71e4dfadf8fea2b57a40b16830848e4",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        126,
+        198,
+        243
+      ],
+      "afterBbox": [
+        25,
+        89,
+        198,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-1.png",
+      "beforeSha256": "4509e515e6c7570a7cec463f7feb786996a47ec4e474d86fa90d58b71f41a4c4",
+      "afterSha256": "3801187637eca1d13b1294c6cf26f186ac31f2e66123eba57fa3580e66027a25",
+      "changed": true,
+      "beforeBbox": [
+        58,
+        126,
+        205,
+        243
+      ],
+      "afterBbox": [
+        40,
+        111,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-2.png",
+      "beforeSha256": "5bf617b1e61e4570781f869596d97f5328be8fc1dba0568fcc21c70c0288b924",
+      "afterSha256": "bb5f6ce3e621f9e8854aff45eeb9fe23e25c39df097ec682485f9f49cbac6fc9",
+      "changed": true,
+      "beforeBbox": [
+        62,
+        125,
+        211,
+        243
+      ],
+      "afterBbox": [
+        45,
+        109,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-3.png",
+      "beforeSha256": "b112ea188e04a2afb4643f7489ab063f8768fa6819997025a40aebe9b9244321",
+      "afterSha256": "1126b10bdad70d47f0eae92301ba4d3d4c0f26238722b9269b8a54688b52b50a",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        121,
+        222,
+        243
+      ],
+      "afterBbox": [
+        46,
+        105,
+        227,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-4.png",
+      "beforeSha256": "043290d181812338585aa474a891b9149d5df398367fc50825614aa9edb6a60b",
+      "afterSha256": "81969d362346d6d347b3d79d4e1c53c59950c7b68944e703348d7dbe17e3e839",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        123,
+        209,
+        243
+      ],
+      "afterBbox": [
+        48,
+        106,
+        212,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-5.png",
+      "beforeSha256": "b7206ea7c151ef020c3e3d585ae7239cb7b79c8fee29ee39ef33322dd4549ee1",
+      "afterSha256": "88f1df7a19c2048377d3c9d74292bd1983b96f765f66e3051f575d2984de1dd4",
+      "changed": true,
+      "beforeBbox": [
+        59,
+        118,
+        200,
+        243
+      ],
+      "afterBbox": [
+        42,
+        102,
+        202,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-6.png",
+      "beforeSha256": "cf2f779a7052010eefd46540ea140f51ccc24f602f248770d079295dfca6dd7b",
+      "afterSha256": "6fd2f698a96c4ec972f2f29c836b71a6979114ea6770cadeefd55e2daf5b4fcc",
+      "changed": true,
+      "beforeBbox": [
+        69,
+        116,
+        209,
+        243
+      ],
+      "afterBbox": [
+        53,
+        99,
+        212,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-7.png",
+      "beforeSha256": "d07e5b36e2bca1e2029a1b424a4c8fd386030ba06ecce37917d0cd60c4bbe619",
+      "afterSha256": "df1f3bff2ac20d1b803dbe50769b031ea5dafab72a0bea365623976898163507",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        114,
+        214,
+        243
+      ],
+      "afterBbox": [
+        61,
+        96,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-8.png",
+      "beforeSha256": "af2e89b0fedccbb3d11c2bb828ff9c695eb2e02f09c9404b8925f46c968f4185",
+      "afterSha256": "dec5c2c3902ae4cbdb81b5d92701330c29f486fd83d8e0843dddcd67e0920643",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        122,
+        214,
+        243
+      ],
+      "afterBbox": [
+        57,
+        106,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-1.png",
+      "beforeSha256": "078ad727966707ac38c5d4119cefdb590a268deadeda75b6429fb65c0aad4cb1",
+      "afterSha256": "9afafa7c7472125d66e3eb308a6b25be099fcc512ceb2323aa0e6aa75a6bb052",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        167,
+        188,
+        252
+      ],
+      "afterBbox": [
+        60,
+        116,
+        244,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-2.png",
+      "beforeSha256": "36089134c31fbe0f1ffbbbc5cb9c073520156f7eb5d83b54db6ac75a059af773",
+      "afterSha256": "a440d59e42965c5bc69a52096cfb6e11c2ad9cca4d25ea6b3ab8270a8fc33e96",
+      "changed": true,
+      "beforeBbox": [
+        62,
+        171,
+        189,
+        252
+      ],
+      "afterBbox": [
+        53,
+        121,
+        245,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-3.png",
+      "beforeSha256": "e5b13221ac6e64890a07888ea7e9c994241dc5c97749a0e3a30342881e7153df",
+      "afterSha256": "5d2ca1da3d36e0652f237af00aeab0e06973b45e6273b265374811851b44db8b",
+      "changed": true,
+      "beforeBbox": [
+        29,
+        169,
+        154,
+        252
+      ],
+      "afterBbox": [
+        4,
+        119,
+        192,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-4.png",
+      "beforeSha256": "bba85f3da115151f744a6d02ca359bd14ff2057ecdf126eb2ee0ec15dc3dbf2f",
+      "afterSha256": "7be9efcb46213d8713ae690469de9e36c4f918a37c8aa34639f77188d845cd27",
+      "changed": true,
+      "beforeBbox": [
+        59,
+        183,
+        179,
+        251
+      ],
+      "afterBbox": [
+        49,
+        140,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-5.png",
+      "beforeSha256": "381f83a1cdde70be4f1b22c34318d5199da5e06c703dc526acc743298d9ea60f",
+      "afterSha256": "1b828841b01a239936ff0ebeade987862ec6343efe29651b89c61c0b933250fa",
+      "changed": true,
+      "beforeBbox": [
+        42,
+        182,
+        168,
+        251
+      ],
+      "afterBbox": [
+        24,
+        138,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-6.png",
+      "beforeSha256": "b31c04459a553a3078535227e662677992fe74e3c4ca35210578b758296cfae6",
+      "afterSha256": "86d45ac1d8e11f143e8b6a91e35bd5039a0de9928c86f41822c6a6b8d7b13345",
+      "changed": true,
+      "beforeBbox": [
+        45,
+        184,
+        164,
+        251
+      ],
+      "afterBbox": [
+        28,
+        141,
+        208,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-7.png",
+      "beforeSha256": "779ccf905e1072ea8b6bb262bc907442cf5357df8838652b1518ddc0f44e2452",
+      "afterSha256": "c3dce06a5faea2220664e4eee0d23cf48f30ef48de22c2f8f7c0eb32c2a26031",
+      "changed": true,
+      "beforeBbox": [
+        54,
+        171,
+        174,
+        251
+      ],
+      "afterBbox": [
+        42,
+        121,
+        224,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger/stagger-8.png",
+      "beforeSha256": "d351e22bb7a3bcb6bc21406920aca9596fc989e550fcedf724346adb09f76ccd",
+      "afterSha256": "ba06ad553dc390c7da0ed801412efa179b32cc024d8715a7dd4347bf5cae189f",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        167,
+        189,
+        252
+      ],
+      "afterBbox": [
+        58,
+        116,
+        243,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-1.png",
+      "beforeSha256": "38597e452d0780f0afe7f374939007810d9b279acfde9cd4abc5959178917f30",
+      "afterSha256": "8437f05a78e02b01a7adbdad787914973f69de8b264896ee6e539a1e6e530d24",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        128,
+        202,
+        243
+      ],
+      "afterBbox": [
+        34,
+        105,
+        201,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-2.png",
+      "beforeSha256": "9cd68c5254fc2042657ae15669625765b91baa4028eac34b9d7d551d9b04192c",
+      "afterSha256": "29de0b846453212cba21e5b5fc0bf17a2633bd0c1ecbc42039fc122c829c66d1",
+      "changed": true,
+      "beforeBbox": [
+        62,
+        131,
+        196,
+        243
+      ],
+      "afterBbox": [
+        32,
+        108,
+        192,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-3.png",
+      "beforeSha256": "62f1cc4521dd4835061cef0f46d6581ab4afd76c79819359636bfb59dba85df6",
+      "afterSha256": "d6b383cca1facdcd080e4e5b0320d73ceede0742cb6a4a153db41497050eb070",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        126,
+        214,
+        243
+      ],
+      "afterBbox": [
+        49,
+        103,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-4.png",
+      "beforeSha256": "3fc29905c64bb692ceb037b0497814977a3f268b46f35bd88679fc8838ed7ec1",
+      "afterSha256": "692db8b9901fef6c80ac0853352b8d32a826af2d2936bb69ad0546f2ac0f2338",
+      "changed": true,
+      "beforeBbox": [
+        79,
+        132,
+        218,
+        243
+      ],
+      "afterBbox": [
+        52,
+        109,
+        220,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-5.png",
+      "beforeSha256": "8a0960f041f74d125402cf9b6ae54efee653f43c460f70f2f3372a5e240dc661",
+      "afterSha256": "ce94aa86b58b7122e6d57c7db20f14b3189bf289a53fc78a43fe3337999dc9e0",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        130,
+        217,
+        243
+      ],
+      "afterBbox": [
+        50,
+        107,
+        220,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-6.png",
+      "beforeSha256": "da438b8afd548f3040faea52f0caabfcbc7bb50701f0b41093a8390b01b50a7f",
+      "afterSha256": "75e81144c6e99b0b992106ce20c6fac00cd7db4e1da60499fc4928e5d5833511",
+      "changed": true,
+      "beforeBbox": [
+        80,
+        131,
+        222,
+        243
+      ],
+      "afterBbox": [
+        54,
+        109,
+        225,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-7.png",
+      "beforeSha256": "6bc5bb55c1fdb010523f1967ec4780732a55e6b30b51ae932bd412cc53800dbc",
+      "afterSha256": "a25a108dd62e7a6672de4c571593b5f731e6ae8365c434657ae40882fb052fe5",
+      "changed": true,
+      "beforeBbox": [
+        58,
+        128,
+        192,
+        243
+      ],
+      "afterBbox": [
+        27,
+        105,
+        188,
+        243
+      ]
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-8.png",
+      "beforeSha256": "9836c2e522a7aa8875bb5d90ed75c957d9ee76be6e18945492ccaaeb8e125822",
+      "afterSha256": "3853fb5b857fb9e73d6db827200484c9ff16398ead2258daca2207e3e0c2f06b",
+      "changed": true,
+      "beforeBbox": [
+        80,
+        128,
+        206,
+        243
+      ],
+      "afterBbox": [
+        54,
+        105,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-1.png",
+      "beforeSha256": "7a88c565f9c899710a156fcbcd8d59c5056cbbbb92c7904bfd2a7f96968dabae",
+      "afterSha256": "283982874d3712b9cb196071988b32ae6659b11b5ac9c3d6d03c7b5c59e09eac",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        147,
+        197,
+        243
+      ],
+      "afterBbox": [
+        58,
+        123,
+        216,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-2.png",
+      "beforeSha256": "9fc132f3cbb9124b1c48b608346e5b7fb2b967df5487fd6c3ab6d7b01faec0f0",
+      "afterSha256": "495a05d75700d3b5c6ae2c3eccc3e108a6c477e6c6f724068edcdf19354bf107",
+      "changed": true,
+      "beforeBbox": [
+        73,
+        144,
+        200,
+        243
+      ],
+      "afterBbox": [
+        59,
+        119,
+        219,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-3.png",
+      "beforeSha256": "5a5a4c9249116fbcd1943a43c3fbbadecc3c1088ed52fd100db3139cff59745c",
+      "afterSha256": "bd641a05d54e143f1bab30e346f44f211585add1ff85734773b0db50787ecf63",
+      "changed": true,
+      "beforeBbox": [
+        82,
+        137,
+        220,
+        243
+      ],
+      "afterBbox": [
+        72,
+        111,
+        246,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-4.png",
+      "beforeSha256": "51aa7d0bd09e691cf41516a3da8ec4a81bf02073b329e00aed9662dc197465b6",
+      "afterSha256": "4052042fd78767cdbfea29ee0fd20d4f85155a4a1c4e9f2befcf347b9decafe3",
+      "changed": true,
+      "beforeBbox": [
+        86,
+        149,
+        210,
+        243
+      ],
+      "afterBbox": [
+        76,
+        126,
+        233,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-5.png",
+      "beforeSha256": "c4a59e40ae2bb35088ed5482d2262cdd9209499148b8b8585c59f2757f209713",
+      "afterSha256": "66219a7273b3f091efa304184d6f7361a47beb3d37a983edc7d594ee8a1b72a3",
+      "changed": true,
+      "beforeBbox": [
+        91,
+        142,
+        223,
+        243
+      ],
+      "afterBbox": [
+        83,
+        116,
+        249,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-6.png",
+      "beforeSha256": "f230ec3c96e9449ad6d588c353eb0e177de4f9965485374b8d50849581c311f5",
+      "afterSha256": "b5fa87dd3d068a8e51901edf1cf2f099e9dae792961dc45b474a72f8f30d58c7",
+      "changed": true,
+      "beforeBbox": [
+        67,
+        150,
+        192,
+        243
+      ],
+      "afterBbox": [
+        52,
+        127,
+        210,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-7.png",
+      "beforeSha256": "67af01eae47d680a1c69c1f8105e742222bf2c211653dfd25ac2c3f67b5262ad",
+      "afterSha256": "66e4c7fe99e2e69d478e90070e4cedfec12c8a18404a7c2a1a8cc339d1bfc750",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        147,
+        193,
+        243
+      ],
+      "afterBbox": [
+        58,
+        123,
+        211,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-8.png",
+      "beforeSha256": "8bba9fdedb7d964b6ed90cfaf4c89ecfe0087122ec9167d0e97cdfabab467467",
+      "afterSha256": "758d2f8f3579e623f8efb0ecf28e69099796b14326b4f13e85a8dfaee956019f",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        149,
+        184,
+        243
+      ],
+      "afterBbox": [
+        58,
+        126,
+        199,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-1.png",
+      "beforeSha256": "4e3e8423cc14c2beba42befbaedb7090061e201e502921fd2e0dd25f37f47c3d",
+      "afterSha256": "a050adaa545ffd9e158fa9903bcccfdda756d551e6ba31dc963de19cfacf8bee",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        162,
+        197,
+        251
+      ],
+      "afterBbox": [
+        45,
+        123,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-2.png",
+      "beforeSha256": "e40f9e9f25f259f06cca96c22dd820aa8403452103b07a727f1cd1b65e4c3f02",
+      "afterSha256": "0b3a9ca05243e41b3e3610c63b03d1de80531fabc6fe4d315ff807c5f628caa9",
+      "changed": true,
+      "beforeBbox": [
+        109,
+        164,
+        213,
+        251
+      ],
+      "afterBbox": [
+        89,
+        126,
+        227,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-3.png",
+      "beforeSha256": "2bcf9e7dc7e701ad692660f54690014ef8dd60a0d85ebbdef4d45bd3ab8ff750",
+      "afterSha256": "e0c3f8a3ad34f14ca33a95526f3a2aed586121ff785743139633a0d84f38b1ef",
+      "changed": true,
+      "beforeBbox": [
+        95,
+        165,
+        216,
+        251
+      ],
+      "afterBbox": [
+        70,
+        127,
+        233,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-4.png",
+      "beforeSha256": "8895ffbf1ac1f5734c6e5765c7186b76098e915b000f0268bf46639926311438",
+      "afterSha256": "6af9c55b107000587b1b07d71c9f5905861381f54e24e8d889fa803d2fea14f6",
+      "changed": true,
+      "beforeBbox": [
+        105,
+        174,
+        230,
+        251
+      ],
+      "afterBbox": [
+        84,
+        139,
+        252,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-5.png",
+      "beforeSha256": "ed8478c6b3f03e3cf491fd602d1c0d8be498fcaab8926aefff17a2cc3a54a317",
+      "afterSha256": "da05133ef7526a6077c431d2fd0a5bca8d7b4d8ac0d42a95f5c8846000fe5651",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        167,
+        210,
+        251
+      ],
+      "afterBbox": [
+        47,
+        129,
+        225,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-6.png",
+      "beforeSha256": "f349074698f8b2ee2300f615751b9dbe6a22aa966da90d0326fdae52dd95f33d",
+      "afterSha256": "43996d84cc63f64ad71d59a21308b2371a22c2784cdd2bee19900d175fc8b1ea",
+      "changed": true,
+      "beforeBbox": [
+        79,
+        168,
+        215,
+        251
+      ],
+      "afterBbox": [
+        49,
+        131,
+        232,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-7.png",
+      "beforeSha256": "f1e2bf2f017419cc4a3a9cd6861c3aaf0373b85e456764ae6fa296a6f3bf55f8",
+      "afterSha256": "6432f7167e857dd4d2de89a2f84de5826a61bf532ec48f809baca61bc16d170b",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        163,
+        197,
+        251
+      ],
+      "afterBbox": [
+        46,
+        124,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-8.png",
+      "beforeSha256": "d965e139000735f7db6c495963d2714be5943e178fa82259592a83f625dc88d3",
+      "afterSha256": "0fc0208effbdade5b66aaab95ccbd936e4e505c69fe022598800dd674b439c26",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        163,
+        197,
+        251
+      ],
+      "afterBbox": [
+        46,
+        124,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-1.png",
+      "beforeSha256": "5cebff927311109d18edbd068b8aa06f56f662aba7769f4876a54ebab0fb68aa",
+      "afterSha256": "d129f9a8e654f991491e262dbc2cf6d5286a0d547b1cfd0749f129f65e9fdad2",
+      "changed": true,
+      "beforeBbox": [
+        57,
+        128,
+        215,
+        243
+      ],
+      "afterBbox": [
+        60,
+        125,
+        224,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-2.png",
+      "beforeSha256": "6233952f1e83600c6ce8107348cd1ad1e1f38cb49f903075254a9a95978eb3ec",
+      "afterSha256": "b455225659b607cfad6578885d0a5931f9f1e06b32e9fda1a787dd8aa88bc588",
+      "changed": true,
+      "beforeBbox": [
+        41,
+        133,
+        217,
+        243
+      ],
+      "afterBbox": [
+        43,
+        130,
+        226,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-3.png",
+      "beforeSha256": "225fe8935f3bf793f41076e35b1cc77570f9a5df258b0601d4c5889b4d79a494",
+      "afterSha256": "7a9056cc35885a38c35d9d610d4783efe384a02fc41d27f57af8162450682bb9",
+      "changed": true,
+      "beforeBbox": [
+        42,
+        130,
+        208,
+        243
+      ],
+      "afterBbox": [
+        44,
+        127,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-4.png",
+      "beforeSha256": "50440e763b7b6cd1b98d6abd91295729d132a55485bdc1eef2dc9fb2ebeb8422",
+      "afterSha256": "d96d950e3939ae4515298509de80b9a2251a9f1abe03a7a1048abac19a6f5f6d",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        129,
+        221,
+        243
+      ],
+      "afterBbox": [
+        67,
+        125,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-5.png",
+      "beforeSha256": "3620eaf1cf181c2fc8b3654bc7d9487986301d2697d4e43476dd07306dceff74",
+      "afterSha256": "2692cfed0b3df6b0fa7bbf9a35c66dd27a6c7f53fae5fb7cbde583a9eb6e38dc",
+      "changed": true,
+      "beforeBbox": [
+        64,
+        127,
+        221,
+        243
+      ],
+      "afterBbox": [
+        68,
+        123,
+        230,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-6.png",
+      "beforeSha256": "7e8de3f285ee14e87a1e6bd18f22543c5ee23d5e31862c36213fb570b8cec8fd",
+      "afterSha256": "f2b41b3343c36a6051e898eba12fff05fe96448f4886dc5111d53a95206f9533",
+      "changed": true,
+      "beforeBbox": [
+        44,
+        133,
+        206,
+        243
+      ],
+      "afterBbox": [
+        47,
+        130,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-1.png",
+      "beforeSha256": "1167764692b6542a1fb66aa803aea2a3ef7050d53ec524684ce8703914e1f359",
+      "afterSha256": "8dccc359f0b89c8687fd9971a21f682d12e94cd01174c327e228bd46af4625ce",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        146,
+        202,
+        243
+      ],
+      "afterBbox": [
+        52,
+        117,
+        224,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-2.png",
+      "beforeSha256": "c62835b39a16b0f4d3c8dbffbe862aea3af637a588e4dffc369299d99df8d742",
+      "afterSha256": "abeaf0ce1cffcad2eb7e0bb9d77eb36099b4b54176ae1fe4c79a33f6380a149c",
+      "changed": true,
+      "beforeBbox": [
+        89,
+        142,
+        213,
+        243
+      ],
+      "afterBbox": [
+        49,
+        108,
+        211,
+        241
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-3.png",
+      "beforeSha256": "ad543f582fa8345d9db5efe18407086e19ffbe45b88a18be6d5090a2322a479c",
+      "afterSha256": "960468e067f28a680703e0333015cd7be606dd0ebf0ed9c48012ba1cd9b74c69",
+      "changed": true,
+      "beforeBbox": [
+        67,
+        160,
+        197,
+        243
+      ],
+      "afterBbox": [
+        32,
+        129,
+        204,
+        236
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-4.png",
+      "beforeSha256": "c210f344d9e6f68040587223976173290002b336b2f4660d25117b03e7842a5d",
+      "afterSha256": "73e29b1615c2666fbd305604bc4029c0211dd81bdadf09f1effffb4d79053bd5",
+      "changed": true,
+      "beforeBbox": [
+        93,
+        156,
+        222,
+        243
+      ],
+      "afterBbox": [
+        25,
+        118,
+        195,
+        231
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-5.png",
+      "beforeSha256": "5ab38f4924d85feb856ced2ccb17806db1b75f20f39c82124a6470fc430655ed",
+      "afterSha256": "bf8464b5d49a8fb31ae64858634efa1baadb1d6057d4e7e3c4eb0899c2d72a04",
+      "changed": true,
+      "beforeBbox": [
+        78,
+        158,
+        205,
+        243
+      ],
+      "afterBbox": [
+        33,
+        125,
+        201,
+        235
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-6.png",
+      "beforeSha256": "88098c44b145cb1c1ad0051a5846fbec789a689f35615e95174ffef21c831f2c",
+      "afterSha256": "207a2a2cb5ad4a63986c02e275cf23e7f4271c1e5324c7f0260d806d2aa8f619",
+      "changed": true,
+      "beforeBbox": [
+        62,
+        166,
+        189,
+        243
+      ],
+      "afterBbox": [
+        44,
+        140,
+        211,
+        239
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-7.png",
+      "beforeSha256": "7dc06add349946734e696766f9fa142bd7f0c3d013081d5f8403bbf6e6f9500a",
+      "afterSha256": "b8cc6645f0d653dd79a82349fd00689f1860d717a54a0702355811fecaccfa42",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        154,
+        204,
+        243
+      ],
+      "afterBbox": [
+        50,
+        126,
+        219,
+        242
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-8.png",
+      "beforeSha256": "4250213c91a5925c2fadceb1b91b65fc6e6bac4f173f88c2515df17e09d51957",
+      "afterSha256": "36e7ca2970604e165bdb20d345fbbc275709de76410e18714c062b75ff1f08e5",
+      "changed": true,
+      "beforeBbox": [
+        68,
+        157,
+        195,
+        243
+      ],
+      "afterBbox": [
+        55,
+        132,
+        221,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-1.png",
+      "beforeSha256": "7e3ea26459fd60f82692414f1bbff458987b1d209717bd6e27cadeb0cd7fcb43",
+      "afterSha256": "8ad14c61a262e3f786acb0dca844fb348da290b0562d79b7cf21b6111489098c",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        137,
+        207,
+        243
+      ],
+      "afterBbox": [
+        57,
+        124,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-2.png",
+      "beforeSha256": "4cae804c1db7d6967b8ed1d01da86b532a612a1a176a1bc4157bbef382394c94",
+      "afterSha256": "ef8dd1afef0bcebcfdcbdf0957632cb0baf5f33a9951b96b721ac9e00307ce00",
+      "changed": true,
+      "beforeBbox": [
+        58,
+        133,
+        207,
+        243
+      ],
+      "afterBbox": [
+        47,
+        120,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-3.png",
+      "beforeSha256": "3d703f5510ccd5940f67991c1495d78ec45b863844f1c61bc404464068ffa4de",
+      "afterSha256": "3dd51f7299759a28c12481496efc556934936049fa7b81c4a815cd05262a26eb",
+      "changed": true,
+      "beforeBbox": [
+        61,
+        141,
+        221,
+        243
+      ],
+      "afterBbox": [
+        51,
+        129,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-4.png",
+      "beforeSha256": "1e35aec2c68a7204b1bc55e14bb35c3a1a6b0d521b823738eced782f5b737486",
+      "afterSha256": "87194159d4b4eac7e305bf2334e55ea88eeadc632cc02c0390d709602cf486a8",
+      "changed": true,
+      "beforeBbox": [
+        58,
+        146,
+        216,
+        243
+      ],
+      "afterBbox": [
+        47,
+        136,
+        224,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-5.png",
+      "beforeSha256": "e8b4a1643cecefcc3cce8f28aef20f72b18a531071e0d04f313e32fa204e9f3b",
+      "afterSha256": "b13dfad6b63a8b4779594458886a4aa60d458450df6b3d485da77b9992a07b70",
+      "changed": true,
+      "beforeBbox": [
+        55,
+        147,
+        218,
+        243
+      ],
+      "afterBbox": [
+        44,
+        137,
+        228,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-6.png",
+      "beforeSha256": "984942400d9a520205cb885379f20589e03c37e278577195d40491d3fa46b918",
+      "afterSha256": "31fe559a8d28c9642bd1fce6ac53752047dcbecefc3e0fe7e3c7ee24401fbd7b",
+      "changed": true,
+      "beforeBbox": [
+        63,
+        156,
+        220,
+        243
+      ],
+      "afterBbox": [
+        53,
+        147,
+        229,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-7.png",
+      "beforeSha256": "ea339123a484212c20af657df40da77b3c754f26ded41ca02ab90f293e4b1f84",
+      "afterSha256": "f887940066c99736d6f7917aa19479b1b1866daa4601c063e36669a85c925f08",
+      "changed": true,
+      "beforeBbox": [
+        64,
+        161,
+        221,
+        243
+      ],
+      "afterBbox": [
+        55,
+        152,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-8.png",
+      "beforeSha256": "f276b57dd202eeda6f387bf09e67ed6e0b5c56f2b43032b899f7d1f2b084943b",
+      "afterSha256": "4d66dc3f326161cbf6a4c16af4cddc37b04df304b5986c115e730b47ce4450e5",
+      "changed": true,
+      "beforeBbox": [
+        69,
+        162,
+        221,
+        243
+      ],
+      "afterBbox": [
+        60,
+        153,
+        232,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-1.png",
+      "beforeSha256": "13544b88c7398206476af960143b36aac2a3ab66cd95039aca8b8946155d2104",
+      "afterSha256": "86b257e787ae2a051b8826a28c86b1c0a79eae7d0451a4e716cf401eb9ca8c3f",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        146,
+        205,
+        243
+      ],
+      "afterBbox": [
+        53,
+        125,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-2.png",
+      "beforeSha256": "12c71d7a2c0da06f1ffc2b8e051cb6922f62f14671a006fcdbb3c1b5035513a8",
+      "afterSha256": "bbefcdbb99dc7eab2edd480b87cf1179d446c5c4776a5b2214eef80f4d1ee037",
+      "changed": true,
+      "beforeBbox": [
+        86,
+        148,
+        214,
+        243
+      ],
+      "afterBbox": [
+        70,
+        126,
+        229,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-3.png",
+      "beforeSha256": "4a1093ca66d0388a1671cd8de2c817570feaa37c6e355495f663e537f682201e",
+      "afterSha256": "1b6431262974dc96b41c3ea1ab4e083347755c8f09b384339c7bc62877611540",
+      "changed": true,
+      "beforeBbox": [
+        85,
+        151,
+        222,
+        243
+      ],
+      "afterBbox": [
+        69,
+        131,
+        238,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-4.png",
+      "beforeSha256": "5f9e3c955ecdc8bf3236957c088cc153fafe89ae30866ad7f597f6ecb57d8bb5",
+      "afterSha256": "4a55c0643b0abff666d870e4bf424f14d7debbdb97f7faa0ceeec7ce418ba338",
+      "changed": true,
+      "beforeBbox": [
+        80,
+        148,
+        207,
+        243
+      ],
+      "afterBbox": [
+        63,
+        127,
+        219,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-5.png",
+      "beforeSha256": "f6dad355d3408870ac10a1fcc0a0fc755cc185c59acf22af1e9960607829062b",
+      "afterSha256": "25fbadc0ee31bc9d29479b15e0dbf47a7f1d4bc23946f17737331c314bed915b",
+      "changed": true,
+      "beforeBbox": [
+        72,
+        150,
+        202,
+        243
+      ],
+      "afterBbox": [
+        53,
+        129,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-6.png",
+      "beforeSha256": "d4b575bb35a580ca4eee3a6f0481cf6bfe89a616c0d7b1c488f41b223fba2891",
+      "afterSha256": "7b10abddb4e952c10e11124b7571e239e58dc456c3aefab2688a4aae0384d085",
+      "changed": true,
+      "beforeBbox": [
+        73,
+        149,
+        202,
+        243
+      ],
+      "afterBbox": [
+        54,
+        129,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-1.png",
+      "beforeSha256": "3ac8604b376ac6a42624e1ac88ab82bb5d491ecda979a9aa233aa1989d4c8aa6",
+      "afterSha256": "3ac8604b376ac6a42624e1ac88ab82bb5d491ecda979a9aa233aa1989d4c8aa6",
+      "changed": false,
+      "beforeBbox": [
+        58,
+        124,
+        222,
+        243
+      ],
+      "afterBbox": [
+        58,
+        124,
+        222,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-2.png",
+      "beforeSha256": "e5933ad0bda22602e6cb8f7c4d9448ca0bc5a1f1aeecdefa64a4ec0f18a32abf",
+      "afterSha256": "e5933ad0bda22602e6cb8f7c4d9448ca0bc5a1f1aeecdefa64a4ec0f18a32abf",
+      "changed": false,
+      "beforeBbox": [
+        54,
+        124,
+        220,
+        243
+      ],
+      "afterBbox": [
+        54,
+        124,
+        220,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-3.png",
+      "beforeSha256": "71ff4b3f40c91abca9a087e152c2bde14d1492f72c69b5ae4685e5ab4fbf52c5",
+      "afterSha256": "71ff4b3f40c91abca9a087e152c2bde14d1492f72c69b5ae4685e5ab4fbf52c5",
+      "changed": false,
+      "beforeBbox": [
+        58,
+        124,
+        218,
+        243
+      ],
+      "afterBbox": [
+        58,
+        124,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-4.png",
+      "beforeSha256": "1fcafc256cb6c727731ac8ed262a4db98add7f4cf2dab662289afad58e6d210e",
+      "afterSha256": "1fcafc256cb6c727731ac8ed262a4db98add7f4cf2dab662289afad58e6d210e",
+      "changed": false,
+      "beforeBbox": [
+        59,
+        124,
+        217,
+        243
+      ],
+      "afterBbox": [
+        59,
+        124,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-5.png",
+      "beforeSha256": "1fd622ca298c8fe10d15beb050e2722e82d2a3d013eaef9094f912a048be9fca",
+      "afterSha256": "1fd622ca298c8fe10d15beb050e2722e82d2a3d013eaef9094f912a048be9fca",
+      "changed": false,
+      "beforeBbox": [
+        59,
+        125,
+        218,
+        243
+      ],
+      "afterBbox": [
+        59,
+        125,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-6.png",
+      "beforeSha256": "3c4249834eaa4c46416944a258ed516544959eeee942b538b8a8c2923a04f5d7",
+      "afterSha256": "3c4249834eaa4c46416944a258ed516544959eeee942b538b8a8c2923a04f5d7",
+      "changed": false,
+      "beforeBbox": [
+        59,
+        125,
+        218,
+        243
+      ],
+      "afterBbox": [
+        59,
+        125,
+        218,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-1.png",
+      "beforeSha256": "eb9033407615efb132de3a5fe420257ec8a14e0bffd6c5d24418b18e9a9b6a12",
+      "afterSha256": "8910879edd56dea1be12be00d4de5a6d01738db1598eb97e45eaba7457545535",
+      "changed": true,
+      "beforeBbox": [
+        82,
+        173,
+        191,
+        251
+      ],
+      "afterBbox": [
+        86,
+        123,
+        252,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-2.png",
+      "beforeSha256": "f146c0f235edf94e03f01332fcaecb47e49e7f005bcae69ae26d40b6fcf318ba",
+      "afterSha256": "1a2607c9e8fa33249c7f4d01944e6515461ba63636afb211e9a198addec24bab",
+      "changed": true,
+      "beforeBbox": [
+        57,
+        181,
+        177,
+        251
+      ],
+      "afterBbox": [
+        48,
+        135,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-3.png",
+      "beforeSha256": "6db8516b9866f4d1d1b1a6cc206bd1b254205fea4206c2b2ce26c3d2cb3fa1b1",
+      "afterSha256": "da9a7ce34cf6d0adb086770ee8d434fd56be9d9f52d4c6d3948dfd2d2fc0b075",
+      "changed": true,
+      "beforeBbox": [
+        46,
+        185,
+        164,
+        252
+      ],
+      "afterBbox": [
+        31,
+        141,
+        212,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-4.png",
+      "beforeSha256": "7c8b51910684bbb15acd4d5823ff5191439aff3c7c519c868e62b7c201c0739c",
+      "afterSha256": "2aaf5c948bfc69e501cc55169df48cc16e00e7f7bb066676e4cebf8127a06dfe",
+      "changed": true,
+      "beforeBbox": [
+        45,
+        164,
+        154,
+        251
+      ],
+      "afterBbox": [
+        30,
+        110,
+        196,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-5.png",
+      "beforeSha256": "1a3708000a81c1de4f597ad98c79975a5c1e2b7f63b44d00aad504e59a81e7ef",
+      "afterSha256": "169e841a399472dbb03d7c05b094bcef93bab53f09506051ab0f323013b8841f",
+      "changed": true,
+      "beforeBbox": [
+        54,
+        172,
+        167,
+        252
+      ],
+      "afterBbox": [
+        43,
+        122,
+        216,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-6.png",
+      "beforeSha256": "bc4bd6b974ef06e2e039e7c6dd9bb2b7c9d9de284b0c595bdb90f2c4c651f1ef",
+      "afterSha256": "070afab7ca5d91d60dccb2b898a16bec06362ec3b131719d6f17b0c10a24abdf",
+      "changed": true,
+      "beforeBbox": [
+        50,
+        172,
+        165,
+        251
+      ],
+      "afterBbox": [
+        36,
+        122,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-7.png",
+      "beforeSha256": "2df0d3d8e1d794b1d5c2d55b9127e5142fef55182d893c6ddc1303d697e42d7f",
+      "afterSha256": "32888ce6c4d564aedf76bef630e4816e2fe7d7ad7e636d722af31b4c40627755",
+      "changed": true,
+      "beforeBbox": [
+        36,
+        180,
+        150,
+        251
+      ],
+      "afterBbox": [
+        15,
+        134,
+        190,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-8.png",
+      "beforeSha256": "1eaff5b1c56b4fd9d1b631d37842de230604af32f4a308322cccf9fb19fce73d",
+      "afterSha256": "a93e8ae785066fdeb9cbf7acf2cc5caedbb108085ee0331f426672b593ed7708",
+      "changed": true,
+      "beforeBbox": [
+        28,
+        189,
+        153,
+        251
+      ],
+      "afterBbox": [
+        4,
+        147,
+        195,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-1.png",
+      "beforeSha256": "f276b57dd202eeda6f387bf09e67ed6e0b5c56f2b43032b899f7d1f2b084943b",
+      "afterSha256": "4d66dc3f326161cbf6a4c16af4cddc37b04df304b5986c115e730b47ce4450e5",
+      "changed": true,
+      "beforeBbox": [
+        69,
+        162,
+        221,
+        243
+      ],
+      "afterBbox": [
+        60,
+        153,
+        232,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-2.png",
+      "beforeSha256": "7c2a663d03dde121db383100362024e74e29f3143c350516c37ca2311610a5b5",
+      "afterSha256": "f887940066c99736d6f7917aa19479b1b1866daa4601c063e36669a85c925f08",
+      "changed": true,
+      "beforeBbox": [
+        66,
+        156,
+        222,
+        243
+      ],
+      "afterBbox": [
+        55,
+        152,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-3.png",
+      "beforeSha256": "ddec18ca6b2ebf32f22910cef936d7777f236472becf414eb668c9bb236ad47b",
+      "afterSha256": "31fe559a8d28c9642bd1fce6ac53752047dcbecefc3e0fe7e3c7ee24401fbd7b",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        143,
+        214,
+        243
+      ],
+      "afterBbox": [
+        53,
+        147,
+        229,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-4.png",
+      "beforeSha256": "75c267dc7fd17a49f7a733d58f8d25c1a47dc80f5f7c5cc002410ddc8563fb0c",
+      "afterSha256": "b13dfad6b63a8b4779594458886a4aa60d458450df6b3d485da77b9992a07b70",
+      "changed": true,
+      "beforeBbox": [
+        74,
+        130,
+        219,
+        243
+      ],
+      "afterBbox": [
+        44,
+        137,
+        228,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-5.png",
+      "beforeSha256": "a9bbd3591237fe46b2afba6dde07d4c70c4dace18d78e7574789b4c58007dab2",
+      "afterSha256": "87194159d4b4eac7e305bf2334e55ea88eeadc632cc02c0390d709602cf486a8",
+      "changed": true,
+      "beforeBbox": [
+        55,
+        138,
+        202,
+        243
+      ],
+      "afterBbox": [
+        47,
+        136,
+        224,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-6.png",
+      "beforeSha256": "01db4df9e1e4d84d716dd61af3d7836c24b1be445540a24932266d349a7e582d",
+      "afterSha256": "3dd51f7299759a28c12481496efc556934936049fa7b81c4a815cd05262a26eb",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        139,
+        209,
+        243
+      ],
+      "afterBbox": [
+        51,
+        129,
+        231,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-7.png",
+      "beforeSha256": "1ebda5dc053a4aead4cc55f371de07da4eaef93acc60f68243f14fe1e0252076",
+      "afterSha256": "ef8dd1afef0bcebcfdcbdf0957632cb0baf5f33a9951b96b721ac9e00307ce00",
+      "changed": true,
+      "beforeBbox": [
+        77,
+        132,
+        218,
+        243
+      ],
+      "afterBbox": [
+        47,
+        120,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-8.png",
+      "beforeSha256": "94a263fd94e32bb72c541128b1c04009fe59acc942f13aac07bae91ab5f0a083",
+      "afterSha256": "8ad14c61a262e3f786acb0dca844fb348da290b0562d79b7cf21b6111489098c",
+      "changed": true,
+      "beforeBbox": [
+        79,
+        132,
+        215,
+        243
+      ],
+      "afterBbox": [
+        57,
+        124,
+        215,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-1.png",
+      "beforeSha256": "eef78da3c63170610913525c5db5c195b60ec23d2bc726114b4ba2c2b582fa4a",
+      "afterSha256": "6898a9b22aa8902603464a8ffd631c3dcf85314667b0e2694510c785e5e7446a",
+      "changed": true,
+      "beforeBbox": [
+        60,
+        120,
+        212,
+        243
+      ],
+      "afterBbox": [
+        64,
+        120,
+        217,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-2.png",
+      "beforeSha256": "3253a07e3c8f39d7e2511be7c0e63a119f16a656fe23ad940c1be2604571ac57",
+      "afterSha256": "b193cfd7d6d8d64077951881e3d60e60bdf7cd112e5a7873a512c54ec4a5d74c",
+      "changed": true,
+      "beforeBbox": [
+        43,
+        133,
+        207,
+        243
+      ],
+      "afterBbox": [
+        45,
+        132,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-3.png",
+      "beforeSha256": "abd38f7b0972bfab47738d39c95a0ac30da1675cfaa17ebca99c5321b0bf9539",
+      "afterSha256": "decbdfd38db348fb45f354b05cc39875d30b7880215cf0c0e3a433721cb187b3",
+      "changed": true,
+      "beforeBbox": [
+        65,
+        113,
+        220,
+        241
+      ],
+      "afterBbox": [
+        69,
+        112,
+        225,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-4.png",
+      "beforeSha256": "05f76ccb988c110ecd4492ab4648ebc25d2265ca3da039ac32a8505b752ce062",
+      "afterSha256": "61e35946c625100b91074d480ad72abc13b2ae184c01f3c61101ce6fead18ab5",
+      "changed": true,
+      "beforeBbox": [
+        34,
+        125,
+        188,
+        242
+      ],
+      "afterBbox": [
+        38,
+        125,
+        193,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-5.png",
+      "beforeSha256": "67b74d863758eea4c272a7e3b3c3205206a4174f11f60368d26b84ab44f6c2a5",
+      "afterSha256": "f23383c1e66b88d2108704aa99f8ae3ca5be861353c1a75499063a0a7d755cda",
+      "changed": true,
+      "beforeBbox": [
+        55,
+        101,
+        209,
+        241
+      ],
+      "afterBbox": [
+        59,
+        100,
+        214,
+        242
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-6.png",
+      "beforeSha256": "1bde098961d993d5132d5244fbd8413184e71a7d61763ac47af469c265c7da6e",
+      "afterSha256": "99ae7d5d79e4b2b18a801f38fbe8fd88bfab871910a5879064d540f9e5c8023b",
+      "changed": true,
+      "beforeBbox": [
+        56,
+        122,
+        219,
+        243
+      ],
+      "afterBbox": [
+        59,
+        121,
+        226,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-7.png",
+      "beforeSha256": "55dffa1f4ebb6da68723ac0c9c41785e75cb091be52ab54facac55327bb456c1",
+      "afterSha256": "cef378d9333410506b1c3b45689f2dac7f97de6acc7b93dbe9868d8e2845ee11",
+      "changed": true,
+      "beforeBbox": [
+        59,
+        128,
+        208,
+        242
+      ],
+      "afterBbox": [
+        63,
+        128,
+        214,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-8.png",
+      "beforeSha256": "e613803115c7eebd85748f937520b4166c1346a79b51098e8c64c3b4701e9e02",
+      "afterSha256": "135fe9c826c8b01c5f40afdcfdb0feb036c37008c3e95d0119c43974997324fd",
+      "changed": true,
+      "beforeBbox": [
+        61,
+        124,
+        206,
+        243
+      ],
+      "afterBbox": [
+        64,
+        125,
+        211,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-1.png",
+      "beforeSha256": "47881357ed6ae8659e57a32588c13d69db782c2fc145a6fd1b0987037dc7bfbf",
+      "afterSha256": "dbec274258b32998e3796527c94f9f4ab0e96055fae70e4c215429f06f7b4196",
+      "changed": true,
+      "beforeBbox": [
+        74,
+        161,
+        195,
+        251
+      ],
+      "afterBbox": [
+        42,
+        120,
+        207,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-2.png",
+      "beforeSha256": "6dce2d2a2788d9c71339c04d433fcbfdaedcd143ca117ba113181ab1dba4f6d6",
+      "afterSha256": "53c37c0347fa8f0923bacef0d41550400524df847422862cffc61b081575a8a0",
+      "changed": true,
+      "beforeBbox": [
+        62,
+        167,
+        194,
+        251
+      ],
+      "afterBbox": [
+        26,
+        128,
+        206,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-3.png",
+      "beforeSha256": "6cb5a8f83094ef2fc8a8b76051e61a4319da892e3257ffdb89c5633b3af45ff2",
+      "afterSha256": "32a50e2b6347dd75c3a61fcf5236d5af7b568865d547ff194686dad0e792000b",
+      "changed": true,
+      "beforeBbox": [
+        91,
+        175,
+        215,
+        251
+      ],
+      "afterBbox": [
+        65,
+        138,
+        235,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-4.png",
+      "beforeSha256": "41222767b246f9bec7090299734dc4bffca5a118ccbd7f22bbe7b8e4d4aa5065",
+      "afterSha256": "dd3cd32a38968acfaf3d77f380cd1b7b71f8a27512a30be65816ed55437bef80",
+      "changed": true,
+      "beforeBbox": [
+        71,
+        166,
+        196,
+        251
+      ],
+      "afterBbox": [
+        37,
+        127,
+        208,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-5.png",
+      "beforeSha256": "6dbe6713296ba3fa0792a4d644a85eeb7605df9a6a0eca38a2cd3cd14125231c",
+      "afterSha256": "5c2ad05edaa668ab6540146fa40daddfc36d137ad5cf86d25aa28f4ea43edd2c",
+      "changed": true,
+      "beforeBbox": [
+        106,
+        185,
+        220,
+        251
+      ],
+      "afterBbox": [
+        86,
+        153,
+        242,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-6.png",
+      "beforeSha256": "fc9fed2067c5fbaba84408df352aa6abaab298e06f43d08d51ed73fa8af3404d",
+      "afterSha256": "69f4faf25cf69c23e76e231a96fafff3cd6984d5836f9b59ee5bbcdc5be56a2b",
+      "changed": true,
+      "beforeBbox": [
+        109,
+        178,
+        228,
+        251
+      ],
+      "afterBbox": [
+        90,
+        142,
+        252,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-7.png",
+      "beforeSha256": "d5db985c1f52fa80d487b2f691730c01e024caa104bd9cde2f061676a4631687",
+      "afterSha256": "05d1109cd4efc2d12161897183c975b140614d2d0a1dbd7b993d9035a630fb88",
+      "changed": true,
+      "beforeBbox": [
+        84,
+        167,
+        199,
+        251
+      ],
+      "afterBbox": [
+        56,
+        127,
+        213,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger/stagger-8.png",
+      "beforeSha256": "33d63dbce5413d334d5751f024aeacaf32e6b1374c969fcb330e73aa609298f1",
+      "afterSha256": "05f89f9943351e93a6a5005b11913356a2a1a0b6714c82987e5f1b26c6506828",
+      "changed": true,
+      "beforeBbox": [
+        76,
+        164,
+        196,
+        251
+      ],
+      "afterBbox": [
+        44,
+        124,
+        208,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-1.png",
+      "beforeSha256": "885e9abe63892389f098514bcfd3b7582d4d1c9757dd1ed7aa121b138a5e83c7",
+      "afterSha256": "698160f3760f1531b66959ab76225542bc47d7d2bf13d148f4f06c9d69e8c17d",
+      "changed": true,
+      "beforeBbox": [
+        93,
+        166,
+        200,
+        243
+      ],
+      "afterBbox": [
+        56,
+        128,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-2.png",
+      "beforeSha256": "06c52f630b6b54018e817f0b33cab5e4125cff268f29844973863e1f99dad7e3",
+      "afterSha256": "65c2360f4e1beaf44142d3dac374c8a7118c9546b141283cc60476343fc28015",
+      "changed": true,
+      "beforeBbox": [
+        91,
+        166,
+        200,
+        243
+      ],
+      "afterBbox": [
+        51,
+        128,
+        217,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-3.png",
+      "beforeSha256": "e4301dcf8ec883d4407f58c135b5a280401e36e583b666797793379cfc76c4de",
+      "afterSha256": "4b198c7358f2c673768f0f2b2edbd6e9aab1c12195de58d2b38582fda08b156d",
+      "changed": true,
+      "beforeBbox": [
+        88,
+        169,
+        205,
+        243
+      ],
+      "afterBbox": [
+        48,
+        132,
+        225,
+        244
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-4.png",
+      "beforeSha256": "620a781fe74e11670bd7bc78d1b7f6a2be3a13b5700bdd49eeb205405b06fc01",
+      "afterSha256": "ea01b6e5d11fc32d3ea2069962546dd4669a90ad469bdfdc6b49f8dca33433fb",
+      "changed": true,
+      "beforeBbox": [
+        97,
+        171,
+        213,
+        243
+      ],
+      "afterBbox": [
+        61,
+        135,
+        237,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-5.png",
+      "beforeSha256": "d375adff6bfa24bb7024288d430d0c1ac3c899ed2c4929bab73e92464f6a1bac",
+      "afterSha256": "4a8dfb579d2226f5f085bc6333062af8618510c7a2a181da25fbf254e08af241",
+      "changed": true,
+      "beforeBbox": [
+        82,
+        170,
+        198,
+        243
+      ],
+      "afterBbox": [
+        38,
+        134,
+        214,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-6.png",
+      "beforeSha256": "fa93c58d9c7b87fd2988331d192c1cb7073f31c1480636c853022cdf0a421961",
+      "afterSha256": "3b91825cac3ff5481471dbc254b1996d322c2342be9639d09257685c61a5a895",
+      "changed": true,
+      "beforeBbox": [
+        86,
+        168,
+        203,
+        243
+      ],
+      "afterBbox": [
+        44,
+        131,
+        221,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-7.png",
+      "beforeSha256": "1bb758f07d137d9b7e832892f419ad3ad655aa3ca0e3ce199b90c7cf78267d7c",
+      "afterSha256": "9f0c2c334ec1d25063d7b14f4deb2a297c090ca177cc125a94779146dbf8aec4",
+      "changed": true,
+      "beforeBbox": [
+        107,
+        168,
+        223,
+        243
+      ],
+      "afterBbox": [
+        76,
+        131,
+        252,
+        243
+      ]
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-8.png",
+      "beforeSha256": "af3a47af4b671ad1ffe01a2d56c9e081f421c7e4f94f869f23b58358ec8f2085",
+      "afterSha256": "3dc8f2920d6e877397596c605161af129bd2f34425f7a0fa07143d52eaa791fb",
+      "changed": true,
+      "beforeBbox": [
+        92,
+        167,
+        198,
+        243
+      ],
+      "afterBbox": [
+        53,
+        130,
+        214,
+        244
+      ]
+    }
+  ],
+  "ownerReviewStatus": "pending"
+}

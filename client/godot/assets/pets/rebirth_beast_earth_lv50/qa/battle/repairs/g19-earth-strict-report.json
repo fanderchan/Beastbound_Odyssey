@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "rebirth_beast_earth_lv50",
+  "scope": "standalone adult Earth Rebirth Beast battle only",
+  "battleFrameCount": 180,
+  "expectedBattleFrameCount": 180,
+  "minimumAnyAlphaEdgeMargin": 4,
+  "minimumRequiredEdgeMargin": 4,
+  "formalFrameDigestBefore": "b0976b1e02a7b77fd766e617625ec3e91a936daf0607a465cacdf1f998f808e1",
+  "formalFrameDigestAfter": "b0976b1e02a7b77fd766e617625ec3e91a936daf0607a465cacdf1f998f808e1",
+  "formalUnchangedDuringStaging": true,
+  "downRevive": {
+    "front_3quarter_sw": {
+      "policy": "exact byte reverse of repaired down sequence",
+      "down8Revive1ByteExact": true,
+      "records": [
+        {
+          "reviveFrame": 1,
+          "sourceDownFrame": 8,
+          "sha256": "4d66dc3f326161cbf6a4c16af4cddc37b04df304b5986c115e730b47ce4450e5"
+        },
+        {
+          "reviveFrame": 2,
+          "sourceDownFrame": 7,
+          "sha256": "f887940066c99736d6f7917aa19479b1b1866daa4601c063e36669a85c925f08"
+        },
+        {
+          "reviveFrame": 3,
+          "sourceDownFrame": 6,
+          "sha256": "31fe559a8d28c9642bd1fce6ac53752047dcbecefc3e0fe7e3c7ee24401fbd7b"
+        },
+        {
+          "reviveFrame": 4,
+          "sourceDownFrame": 5,
+          "sha256": "b13dfad6b63a8b4779594458886a4aa60d458450df6b3d485da77b9992a07b70"
+        },
+        {
+          "reviveFrame": 5,
+          "sourceDownFrame": 4,
+          "sha256": "87194159d4b4eac7e305bf2334e55ea88eeadc632cc02c0390d709602cf486a8"
+        },
+        {
+          "reviveFrame": 6,
+          "sourceDownFrame": 3,
+          "sha256": "3dd51f7299759a28c12481496efc556934936049fa7b81c4a815cd05262a26eb"
+        },
+        {
+          "reviveFrame": 7,
+          "sourceDownFrame": 2,
+          "sha256": "ef8dd1afef0bcebcfdcbdf0957632cb0baf5f33a9951b96b721ac9e00307ce00"
+        },
+        {
+          "reviveFrame": 8,
+          "sourceDownFrame": 1,
+          "sha256": "8ad14c61a262e3f786acb0dca844fb348da290b0562d79b7cf21b6111489098c"
+        }
+      ]
+    },
+    "back_3quarter_ne": {
+      "policy": "exact byte reverse of repaired down sequence",
+      "down8Revive1ByteExact": true,
+      "records": [
+        {
+          "reviveFrame": 1,
+          "sourceDownFrame": 8,
+          "sha256": "868a820951c4946a09810b3f847c1a154cd817faa52822adb14287576b82161e"
+        },
+        {
+          "reviveFrame": 2,
+          "sourceDownFrame": 7,
+          "sha256": "79c7de0e7e09f909efaae5940d6c2862e1dde6fe8b798d7cbe17ba4ab8f1b243"
+        },
+        {
+          "reviveFrame": 3,
+          "sourceDownFrame": 6,
+          "sha256": "bd9b202b9e49625f6d871d63750ba07889c9049f007528ea438eb381ffa2d495"
+        },
+        {
+          "reviveFrame": 4,
+          "sourceDownFrame": 5,
+          "sha256": "d53846f126b55bde867d9fc9897d5d618f57d40b4982ab9eb0629d48321a4dd8"
+        },
+        {
+          "reviveFrame": 5,
+          "sourceDownFrame": 4,
+          "sha256": "1c1c8509169ceb572124f75fd76be041987c733c3052e6b371c20e2b713a36dd"
+        },
+        {
+          "reviveFrame": 6,
+          "sourceDownFrame": 3,
+          "sha256": "41972eef0e91000c1c21a13af20e3ee99c1ef1fa04364f13960fdd8246380b51"
+        },
+        {
+          "reviveFrame": 7,
+          "sourceDownFrame": 2,
+          "sha256": "defbfe32c4b85b484a268d74e8c41c535251458bf34c7aff148b2652b2ecfa3d"
+        },
+        {
+          "reviveFrame": 8,
+          "sourceDownFrame": 1,
+          "sha256": "43da93eef2572c89e57da307232e0004f71e4dfadf8fea2b57a40b16830848e4"
+        }
+      ]
+    }
+  },
+  "transformCount": 20,
+  "transformActions": [
+    "front_3quarter_sw/walk",
+    "front_3quarter_sw/attack",
+    "front_3quarter_sw/skill",
+    "front_3quarter_sw/hurt",
+    "front_3quarter_sw/defend",
+    "front_3quarter_sw/dodge",
+    "front_3quarter_sw/counter",
+    "front_3quarter_sw/stagger",
+    "front_3quarter_sw/knockaway",
+    "front_3quarter_sw/down",
+    "back_3quarter_ne/walk",
+    "back_3quarter_ne/attack",
+    "back_3quarter_ne/skill",
+    "back_3quarter_ne/hurt",
+    "back_3quarter_ne/defend",
+    "back_3quarter_ne/dodge",
+    "back_3quarter_ne/counter",
+    "back_3quarter_ne/stagger",
+    "back_3quarter_ne/knockaway",
+    "back_3quarter_ne/down"
+  ],
+  "idleFramesByteUnchanged": true,
+  "spatialPolicy": "one isotropic scale per view/action; coherent bottom-center anchor; dodge adds one explicit lateral return arc",
+  "colorPolicy": "no hue shift, recolor or despill; skill fringe retained because no exact same-operation eligibility mask exists",
+  "transparentRgbViolations": 0,
+  "errors": [],
+  "visualEvidence": {
+    "beforeAfter": "qa/battle180-before-after-contact.png",
+    "fullStagedContact": "qa/staged-battle180-contact.png",
+    "koNativeEyeZoom": "qa/ko-semantics-native-eye-zoom.png",
+    "gifs": [
+      "qa/front_3quarter_sw-dodge-before.gif",
+      "qa/front_3quarter_sw-dodge-after.gif",
+      "qa/front_3quarter_sw-down-before.gif",
+      "qa/front_3quarter_sw-down-after.gif",
+      "qa/front_3quarter_sw-revive-before.gif",
+      "qa/front_3quarter_sw-revive-after.gif",
+      "qa/back_3quarter_ne-dodge-before.gif",
+      "qa/back_3quarter_ne-dodge-after.gif",
+      "qa/back_3quarter_ne-down-before.gif",
+      "qa/back_3quarter_ne-down-after.gif",
+      "qa/back_3quarter_ne-revive-before.gif",
+      "qa/back_3quarter_ne-revive-after.gif"
+    ]
+  },
+  "metrics": "bbox-alpha-motion-metrics.json"
+}

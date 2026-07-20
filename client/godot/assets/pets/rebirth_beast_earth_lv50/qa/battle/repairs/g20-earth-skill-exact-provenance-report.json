@@ -1,0 +1,765 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "rebirth_beast_earth_lv50",
+  "repairId": "g20-earth-front-skill-exact-provenance-fringe",
+  "scope": "front_3quarter_sw/skill runtime frames only plus dedicated QA and provenance records",
+  "baselineBuilderCommit": "30104920",
+  "rawSheet": {
+    "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+    "sha256": "4f47f8b62ae05da60435a6e661fc998d931421df90f0d56c3a959da976e763ed"
+  },
+  "originalPipelineMeta": {
+    "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/skill/build/pipeline-meta.json",
+    "sha256": "a0543a0ca4931178621366129031e362dc85aa9d1861d761d58d941fc9303cd5"
+  },
+  "historicalBuilderSourceSha256": "a91d58deae9c0e04425e1592e8a73c107a3ee6246c12d7819bc5bf8d63c15fed",
+  "baseline512ByteExactFrameCount": 8,
+  "baseline256ByteExactFrameCount": 8,
+  "g19RuntimeReproductionByteExactFrameCount": 8,
+  "eligibilityRule": "derive a causal runtime impact mask from the same raw #FF00FF key operation: partial candidate, historical inverse outside [0,255], historical clipped output green>=35 and green dominance>=18; historical 512/256 and G19 runtime are first reproduced byte-exact",
+  "targetRule": "current runtime alpha 17..25, G>=151, G>1.35*R, G>1.20*B, and inside the exact causal impact mask",
+  "totalRawAnomalyPixels": 15577,
+  "totalCausalRuntimeImpactPixels": 8999,
+  "totalChangedRuntimePixels": 136,
+  "allTargetsInsideCausalImpactMask": true,
+  "alphaExactEveryFrame": true,
+  "redExactEveryFrame": true,
+  "blueExactEveryFrame": true,
+  "outsideTargetExactEveryFrame": true,
+  "remainingFailurePixels": 0,
+  "changedBattlePaths": [
+    "views/front_3quarter_sw/skill/skill-1.png",
+    "views/front_3quarter_sw/skill/skill-2.png",
+    "views/front_3quarter_sw/skill/skill-3.png",
+    "views/front_3quarter_sw/skill/skill-4.png",
+    "views/front_3quarter_sw/skill/skill-5.png",
+    "views/front_3quarter_sw/skill/skill-6.png",
+    "views/front_3quarter_sw/skill/skill-7.png",
+    "views/front_3quarter_sw/skill/skill-8.png"
+  ],
+  "worldTreeUnchanged": true,
+  "mountedTreeUnchanged": true,
+  "records": [
+    {
+      "frame": 1,
+      "beforeSha256": "6898a9b22aa8902603464a8ffd631c3dcf85314667b0e2694510c785e5e7446a",
+      "afterSha256": "4b4083131be85c7ac098763b93bc397cd0ca39b4156aa018f175cef374fb9c75",
+      "beforeRgbaSha256": "0d9ade0c1e3926bc5e7f750e74f8d602d36e19c695848c68fd9999edf3cdb90e",
+      "afterRgbaSha256": "11c93dcb85ec3c91f302d9dec9b52759d50a44dd952e12300f21f27bfa093603",
+      "rawAnomalyPixels": 1807,
+      "rawAnomalyMaskSha256": "e99d61f8f03b240852ba8c4d5743cd44ae44c516e50e6011f934b85b039da86b",
+      "causalRuntimeImpactPixels": 1155,
+      "causalImpactMaskSha256": "b54c9cad634739fd804e118b536a68c80cb68c34965dc1227d83af016ba67d07",
+      "badPixelsBefore": 20,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "b12925d437e68575d6d4ebc2dcaa8b9483fa736cfa73c5c22824210c4460b7a6",
+      "targetCoordinates": [
+        [
+          172,
+          133
+        ],
+        [
+          173,
+          133
+        ],
+        [
+          140,
+          134
+        ],
+        [
+          141,
+          134
+        ],
+        [
+          142,
+          134
+        ],
+        [
+          143,
+          134
+        ],
+        [
+          144,
+          134
+        ],
+        [
+          170,
+          134
+        ],
+        [
+          143,
+          136
+        ],
+        [
+          144,
+          136
+        ],
+        [
+          181,
+          137
+        ],
+        [
+          207,
+          185
+        ],
+        [
+          71,
+          188
+        ],
+        [
+          208,
+          200
+        ],
+        [
+          175,
+          213
+        ],
+        [
+          180,
+          214
+        ],
+        [
+          181,
+          215
+        ],
+        [
+          182,
+          215
+        ],
+        [
+          111,
+          226
+        ],
+        [
+          80,
+          228
+        ]
+      ],
+      "changedPixels": 20,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 2,
+      "beforeSha256": "b193cfd7d6d8d64077951881e3d60e60bdf7cd112e5a7873a512c54ec4a5d74c",
+      "afterSha256": "4adc28ad3eddb2a8a2f76d2c21f4e470a2f80f16a945098468585493e30d4dc7",
+      "beforeRgbaSha256": "f1ebcfdd2b793e5000fc499bd81c280d2791e283cb649d125ab4baf283ae1549",
+      "afterRgbaSha256": "e73c65a6b6b221bfe7cbcd7f2adb533f3de2a4e9d84ef065b094ceb24ced9b7b",
+      "rawAnomalyPixels": 2279,
+      "rawAnomalyMaskSha256": "3344c12f9117fd2e6320815006e7376e6cc3617d0d9ff6462ef7b687a9ed2afd",
+      "causalRuntimeImpactPixels": 1238,
+      "causalImpactMaskSha256": "af615d4c4dc21fc31aec09cacbc13d6403c280df4295b482e068c75c6deb4240",
+      "badPixelsBefore": 18,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "b6c133649d5a666ab7790bb8ddabbe08a4e0518debc7f4426f8d6b12a654246f",
+      "targetCoordinates": [
+        [
+          192,
+          165
+        ],
+        [
+          63,
+          191
+        ],
+        [
+          63,
+          192
+        ],
+        [
+          63,
+          193
+        ],
+        [
+          63,
+          194
+        ],
+        [
+          63,
+          195
+        ],
+        [
+          59,
+          206
+        ],
+        [
+          206,
+          210
+        ],
+        [
+          167,
+          211
+        ],
+        [
+          206,
+          212
+        ],
+        [
+          188,
+          217
+        ],
+        [
+          188,
+          218
+        ],
+        [
+          47,
+          223
+        ],
+        [
+          47,
+          224
+        ],
+        [
+          47,
+          225
+        ],
+        [
+          54,
+          229
+        ],
+        [
+          57,
+          230
+        ],
+        [
+          58,
+          230
+        ]
+      ],
+      "changedPixels": 18,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 3,
+      "beforeSha256": "decbdfd38db348fb45f354b05cc39875d30b7880215cf0c0e3a433721cb187b3",
+      "afterSha256": "d5fa6dda15da14072889c8285a15b8b96f985d22bc10ea772cd990b54f29a485",
+      "beforeRgbaSha256": "275cad00e749583e8332fbdd8cdfb1f8434e17a31b5a539a5e66542f69f8ba4e",
+      "afterRgbaSha256": "798ab3ea1fe5c58ba41aa66102fa7fe7f0b9a4ab057f2d66c3c2d2142d2928ca",
+      "rawAnomalyPixels": 2074,
+      "rawAnomalyMaskSha256": "75d44fd096e4f2b7a138722168cdd1c3e36da2f54bcfeba68a39aef150b445c9",
+      "causalRuntimeImpactPixels": 1009,
+      "causalImpactMaskSha256": "af9439afb86511b57af4f4e869cf48a0bd3c4f72e399a300cbd5d14f3ccde1be",
+      "badPixelsBefore": 9,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "eb74e22b916a0a90f8c1477bd3dac4c5b5a81d10121a092ea811842263f69019",
+      "targetCoordinates": [
+        [
+          106,
+          126
+        ],
+        [
+          165,
+          126
+        ],
+        [
+          165,
+          127
+        ],
+        [
+          93,
+          142
+        ],
+        [
+          210,
+          164
+        ],
+        [
+          125,
+          201
+        ],
+        [
+          125,
+          202
+        ],
+        [
+          115,
+          216
+        ],
+        [
+          114,
+          217
+        ]
+      ],
+      "changedPixels": 9,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 4,
+      "beforeSha256": "61e35946c625100b91074d480ad72abc13b2ae184c01f3c61101ce6fead18ab5",
+      "afterSha256": "83104db49003a441281a3a033310696a2d00afe4957a1a4f7be034fe070a8fb9",
+      "beforeRgbaSha256": "c4849184fc569c985d00e5816a3755b12ca73f3e7d763b2b0784e3e3ba4430a5",
+      "afterRgbaSha256": "ba0d37ac053f617449466c72cfc61e8ad9b93ee80e2ad3fcf6b234896cafe081",
+      "rawAnomalyPixels": 1308,
+      "rawAnomalyMaskSha256": "a5fdec9d421f29d24ad5296ff623c86651b8121ec5896ecc8da70c35a925ec68",
+      "causalRuntimeImpactPixels": 1092,
+      "causalImpactMaskSha256": "c8b3e9293a69c26e72036c35de06c900688d5622b1c101827bb665683c3313b3",
+      "badPixelsBefore": 19,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "15588677598418a62fe8256c026bc7579dd8759f90ce12e364af00885b50d000",
+      "targetCoordinates": [
+        [
+          60,
+          144
+        ],
+        [
+          60,
+          145
+        ],
+        [
+          49,
+          154
+        ],
+        [
+          180,
+          169
+        ],
+        [
+          42,
+          182
+        ],
+        [
+          78,
+          207
+        ],
+        [
+          76,
+          208
+        ],
+        [
+          77,
+          208
+        ],
+        [
+          175,
+          211
+        ],
+        [
+          69,
+          214
+        ],
+        [
+          113,
+          228
+        ],
+        [
+          113,
+          229
+        ],
+        [
+          114,
+          229
+        ],
+        [
+          113,
+          230
+        ],
+        [
+          114,
+          230
+        ],
+        [
+          113,
+          231
+        ],
+        [
+          143,
+          239
+        ],
+        [
+          120,
+          240
+        ],
+        [
+          121,
+          240
+        ]
+      ],
+      "changedPixels": 19,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 5,
+      "beforeSha256": "f23383c1e66b88d2108704aa99f8ae3ca5be861353c1a75499063a0a7d755cda",
+      "afterSha256": "610d6bced3e20575f626ae4fb273f3b3f6fe5191f463123dc666c836e986e214",
+      "beforeRgbaSha256": "808b5ea8f16e4ae948420458a52096cedc6f2ab5ae2c7b98a0ec9c7305881ef8",
+      "afterRgbaSha256": "73ae70a5f0fcf3855c19e60b66a4dde25be9b60fc262bd5969b51ceb419493e2",
+      "rawAnomalyPixels": 2140,
+      "rawAnomalyMaskSha256": "187dfa9072dad6d76902ed65e3e889f881aa037dd169e14dfea0c44c41151ce2",
+      "causalRuntimeImpactPixels": 1204,
+      "causalImpactMaskSha256": "43c5643e0da0b484e382bb9bfe6f0c857f3b55a00bdf4f7dd5c313b44e34a1da",
+      "badPixelsBefore": 7,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "c16ed0359e1faaab92ea2686cda920f8ce3a70f2981839dd6a68bba51469a0d8",
+      "targetCoordinates": [
+        [
+          124,
+          106
+        ],
+        [
+          122,
+          107
+        ],
+        [
+          124,
+          108
+        ],
+        [
+          132,
+          112
+        ],
+        [
+          195,
+          163
+        ],
+        [
+          114,
+          224
+        ],
+        [
+          113,
+          226
+        ]
+      ],
+      "changedPixels": 7,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 6,
+      "beforeSha256": "99ae7d5d79e4b2b18a801f38fbe8fd88bfab871910a5879064d540f9e5c8023b",
+      "afterSha256": "15f382d7a624d56cdcec2b2ecb3ce56de0a26207ed46fda337061f70f38290e1",
+      "beforeRgbaSha256": "9eabd46a8d4e45e8d76e13e8771f70a2043e235377a8564cce8485ea8a2652dc",
+      "afterRgbaSha256": "88ac15e4993fc11a4603955dae3a2560daf716cda9366243cacc8d0b3f35cba9",
+      "rawAnomalyPixels": 2266,
+      "rawAnomalyMaskSha256": "3096b82d0d0a07e446ad708212b4dfc6d810c867ff3bb0b17850c4e75039dbf2",
+      "causalRuntimeImpactPixels": 1187,
+      "causalImpactMaskSha256": "4fcd9221ae5fee1a86d97105bf2af0c3fc33bb7ae8a31f767346bc0ad9ac42f8",
+      "badPixelsBefore": 22,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "fc5429813adc02476dc48bc1e4700d303a3ab40cc1c6a1d9015519906f324f06",
+      "targetCoordinates": [
+        [
+          213,
+          122
+        ],
+        [
+          214,
+          123
+        ],
+        [
+          215,
+          123
+        ],
+        [
+          191,
+          134
+        ],
+        [
+          219,
+          135
+        ],
+        [
+          218,
+          136
+        ],
+        [
+          219,
+          136
+        ],
+        [
+          183,
+          137
+        ],
+        [
+          184,
+          138
+        ],
+        [
+          185,
+          139
+        ],
+        [
+          100,
+          140
+        ],
+        [
+          184,
+          140
+        ],
+        [
+          185,
+          140
+        ],
+        [
+          100,
+          141
+        ],
+        [
+          208,
+          148
+        ],
+        [
+          201,
+          167
+        ],
+        [
+          201,
+          168
+        ],
+        [
+          69,
+          179
+        ],
+        [
+          208,
+          184
+        ],
+        [
+          208,
+          185
+        ],
+        [
+          72,
+          189
+        ],
+        [
+          209,
+          192
+        ]
+      ],
+      "changedPixels": 22,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 7,
+      "beforeSha256": "cef378d9333410506b1c3b45689f2dac7f97de6acc7b93dbe9868d8e2845ee11",
+      "afterSha256": "65af587a12cafe5d9c6c64f6fe4c8b8bde38de9f40ffa56a67d65d7b864de063",
+      "beforeRgbaSha256": "ff68533114b147975ea8a9855a4bb48f0743f475da527b1250b223d3ec65f0d9",
+      "afterRgbaSha256": "6877a9163236c88af322acf6df1f622ab0f98d1b7df816468d910783542cb1cb",
+      "rawAnomalyPixels": 2038,
+      "rawAnomalyMaskSha256": "60bcb3d83da79907d286ff3baa7bc574862d20a525289278db97989a449803ad",
+      "causalRuntimeImpactPixels": 1163,
+      "causalImpactMaskSha256": "240ff66d1b82f2a00271b55d1d3285c353630a223939848b2406f79f69be0596",
+      "badPixelsBefore": 28,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "1c6414f511da8c10778b66b92a47e3d95d7f242cf73bcf519bdd17a0f138a7a8",
+      "targetCoordinates": [
+        [
+          106,
+          132
+        ],
+        [
+          107,
+          132
+        ],
+        [
+          108,
+          132
+        ],
+        [
+          190,
+          132
+        ],
+        [
+          191,
+          132
+        ],
+        [
+          104,
+          133
+        ],
+        [
+          108,
+          133
+        ],
+        [
+          189,
+          133
+        ],
+        [
+          190,
+          133
+        ],
+        [
+          212,
+          133
+        ],
+        [
+          82,
+          148
+        ],
+        [
+          83,
+          148
+        ],
+        [
+          82,
+          149
+        ],
+        [
+          81,
+          150
+        ],
+        [
+          82,
+          151
+        ],
+        [
+          72,
+          161
+        ],
+        [
+          71,
+          162
+        ],
+        [
+          72,
+          162
+        ],
+        [
+          72,
+          196
+        ],
+        [
+          104,
+          210
+        ],
+        [
+          172,
+          211
+        ],
+        [
+          173,
+          212
+        ],
+        [
+          118,
+          215
+        ],
+        [
+          113,
+          228
+        ],
+        [
+          112,
+          229
+        ],
+        [
+          112,
+          230
+        ],
+        [
+          127,
+          240
+        ],
+        [
+          128,
+          240
+        ]
+      ],
+      "changedPixels": 28,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    },
+    {
+      "frame": 8,
+      "beforeSha256": "135fe9c826c8b01c5f40afdcfdb0feb036c37008c3e95d0119c43974997324fd",
+      "afterSha256": "1d166aaa0f1c9f85ea308d94ec6ed14fc06173bfd86070156bce001c7740dd5e",
+      "beforeRgbaSha256": "887dfd456cdf4805cd043dec616a86ba341f0ac06f9816b8f52711b16b855771",
+      "afterRgbaSha256": "17cfe60cb8e790c3900a995bed246fdc2f7b484c43b271521bc8edf593ea7f9f",
+      "rawAnomalyPixels": 1665,
+      "rawAnomalyMaskSha256": "3c7640510034674947eb434d6a514892f647c053fa196e1f585aafd160a059ac",
+      "causalRuntimeImpactPixels": 951,
+      "causalImpactMaskSha256": "1549c469fa8576a3664b9842bc8504aaf8d020478b7835e334eeb28d00de3922",
+      "badPixelsBefore": 13,
+      "targetOutsideCausalMask": 0,
+      "targetMaskSha256": "e51927e5fcfd345fabe2dca0fdc30846782dd30f41a155813bfcf6470f91558e",
+      "targetCoordinates": [
+        [
+          108,
+          134
+        ],
+        [
+          109,
+          134
+        ],
+        [
+          162,
+          134
+        ],
+        [
+          163,
+          134
+        ],
+        [
+          161,
+          135
+        ],
+        [
+          175,
+          138
+        ],
+        [
+          176,
+          138
+        ],
+        [
+          177,
+          138
+        ],
+        [
+          178,
+          139
+        ],
+        [
+          98,
+          141
+        ],
+        [
+          75,
+          159
+        ],
+        [
+          194,
+          160
+        ],
+        [
+          66,
+          214
+        ]
+      ],
+      "changedPixels": 13,
+      "badPixelsAfter": 0,
+      "redPixelsChanged": 0,
+      "bluePixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "outsideTargetPixelsChanged": 0
+    }
+  ]
+}

@@ -4,7 +4,7 @@
   "kind": "pet",
   "archiveMode": "lean",
   "runtimeFrameCount": 220,
-  "runtimeBundleDigest": "f6e57569042cdcdf6cc7da22ab71c522d97750081fea33fbd2423b80d5126671",
+  "runtimeBundleDigest": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
   "sourceFramesTracked": false,
   "rawGenerationSheetsTracked": false,
   "rawGenerationSheetCount": 36,
@@ -198,21 +198,52 @@
   ],
   "workingArchive": ".run/art_full_g11_g12/earth_sample/pet",
   "ownerReviewStatus": "pending",
-  "repairWorkingArchive": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair",
+  "repairWorkingArchive": ".run/art_batch_phase320/rebirth_beast_earth_lv50/full-battle-repair-v2",
   "repairManifests": [
     {
       "path": "source/formal-production/quality-repair-g16-manifest.json",
       "sha256": "6e9470469b39112a12217a32df56dcfcea2439596917953a6c5b47c0ad35f6be"
     },
     {
-      "path": "source/formal-production/quality-repair-g17-alpha-despill-manifest.json",
-      "sha256": "3c0decef2be87b06ea3be1e057a5aef90d35486ca4ab19b49141f131565ab52e"
+      "path": "source/formal-production/quality-repair-g18-provenance-color-recovery-manifest.json",
+      "sha256": "f5683ec34e60c8dc5bacff14c2e5da14f86fa04012acd596c12bc0c4cbf84cc1"
+    },
+    {
+      "path": "source/formal-production/quality-repair-g19-scale-motion-ko-manifest.json",
+      "sha256": "deac2c2310351362ce0260d46ed72f23c585151f25f3e56b33282a677ece5593"
+    },
+    {
+      "path": "source/formal-production/quality-repair-g20-skill-exact-provenance-fringe-manifest.json",
+      "sha256": "c3af588edbb63dffae9dbf347c1425bc0ac1ffd471149631588c33d7a2c291f4"
     }
   ],
-  "alphaDespillRepair": {
-    "id": "g17-earth-battle180-alpha-despill",
+  "provenanceColorRecovery": {
+    "id": "g18-earth-selective-color-recovery",
     "battleFrameCount": 180,
-    "alphaExactForEveryFrame": true,
-    "maximumStrongMagentaEdgeRatioAfter": 0.010056
+    "rgbPixelsRestored": 88300,
+    "visibleAlphaGt0PixelsRestored": 88300,
+    "alphaGe24PixelsRestored": 81156,
+    "alphaGe128PixelsRestored": 42364,
+    "skippedDamagedMappingPixels": 0,
+    "unexpectedPixelsChanged": 0,
+    "alphaPixelsChanged": 0,
+    "alphaExactFrameCount": 180,
+    "geometryExactFrameCount": 180,
+    "despillApplied": false,
+    "manifest": "source/formal-production/quality-repair-g18-provenance-color-recovery-manifest.json",
+    "manifestSha256": "f5683ec34e60c8dc5bacff14c2e5da14f86fa04012acd596c12bc0c4cbf84cc1"
+  },
+  "battleScaleMotionRepair": {
+    "id": "g19-earth-battle-scale-motion-ko-readability",
+    "manifest": "source/formal-production/quality-repair-g19-scale-motion-ko-manifest.json",
+    "manifestSha256": "deac2c2310351362ce0260d46ed72f23c585151f25f3e56b33282a677ece5593",
+    "skillFringeStatus": "RESOLVED_BY_G20_EXACT_RAW_KEY_PROVENANCE_MASK"
+  },
+  "battleSkillFringeRepair": {
+    "id": "g20-earth-front-skill-exact-provenance-fringe",
+    "manifest": "source/formal-production/quality-repair-g20-skill-exact-provenance-fringe-manifest.json",
+    "manifestSha256": "c3af588edbb63dffae9dbf347c1425bc0ac1ffd471149631588c33d7a2c291f4",
+    "runtimePixelsChanged": 136,
+    "remainingFailurePixels": 0
   }
 }

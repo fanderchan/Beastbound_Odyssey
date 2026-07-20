@@ -114,7 +114,7 @@
     }
   },
   "battleVisual": {
-    "status": "alpha_despill_self_review_passed_owner_pending",
+    "status": "scale_motion_ko_and_exact_provenance_fringe_self_review_passed_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -145,10 +145,10 @@
       "ally": true
     },
     "downReviveContinuity": {
-      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
-      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+      "front_3quarter_sw": "down-8 and revive-1 are exact byte/RGBA matches; revive is the exact reverse of down",
+      "back_3quarter_ne": "down-8 and revive-1 are exact byte/RGBA matches; revive is the exact reverse of down"
     },
-    "bundleDigest": "f6e57569042cdcdf6cc7da22ab71c522d97750081fea33fbd2423b80d5126671",
+    "bundleDigest": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "runtimeRoot": "views",
@@ -173,7 +173,7 @@
         "ownerVisualGate": "approved_for_install"
       },
       {
-        "id": "g17-earth-battle180-alpha-despill",
+        "id": "g18-earth-selective-color-recovery",
         "actions": [
           "idle",
           "walk",
@@ -193,11 +193,128 @@
           "back_3quarter_ne"
         ],
         "runtimeFrameCount": 180,
-        "alphaExactForEveryFrame": true,
-        "maximumStrongMagentaEdgeRatioAfter": 0.010056,
+        "rgbPixelsRestored": 88300,
+        "visibleAlphaGt0PixelsRestored": 88300,
+        "alphaGe24PixelsRestored": 81156,
+        "alphaGe128PixelsRestored": 42364,
+        "skippedDamagedMappingPixels": 0,
+        "unexpectedPixelsChanged": 0,
+        "alphaPixelsChanged": 0,
+        "alphaExactFrameCount": 180,
+        "geometryExactFrameCount": 180,
+        "despillApplied": false,
+        "ownerVisualGate": "self_review_passed_owner_pending"
+      },
+      {
+        "id": "g19-earth-battle-scale-motion-ko-readability",
+        "actions": [
+          "idle",
+          "walk",
+          "attack",
+          "skill",
+          "hurt",
+          "defend",
+          "dodge",
+          "counter",
+          "stagger",
+          "knockaway",
+          "down",
+          "revive"
+        ],
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ],
+        "runtimeFrameCount": 180,
+        "changedRuntimeFrameCount": 168,
+        "ownerVisualGate": "self_review_passed_except_provenance-blocked-skill-fringe"
+      },
+      {
+        "id": "g20-earth-front-skill-exact-provenance-fringe",
+        "actions": [
+          "skill"
+        ],
+        "views": [
+          "front_3quarter_sw"
+        ],
+        "runtimeFrameCount": 8,
+        "runtimePixelCount": 136,
+        "alphaPixelsChanged": 0,
         "ownerVisualGate": "self_review_passed_owner_pending"
       }
-    ]
+    ],
+    "runtimeBundleDigest": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
+    "despillApplied": false,
+    "colorRecoveryValidation": {
+      "id": "g18-earth-selective-color-recovery",
+      "rgbPixelsRestored": 88300,
+      "visibleAlphaGt0PixelsRestored": 88300,
+      "alphaGe24PixelsRestored": 81156,
+      "alphaGe128PixelsRestored": 42364,
+      "skippedDamagedMappingPixels": 0,
+      "unexpectedPixelsChanged": 0,
+      "alphaPixelsChanged": 0,
+      "alphaExactFrameCount": 180,
+      "geometryExactFrameCount": 180
+    },
+    "scaleNormalization": {
+      "policy": "one isotropic scale per view/action matched to same-view idle; no per-frame squash",
+      "sourceResolution": [
+        512,
+        512
+      ],
+      "resampling": "canonical premultiplied-alpha Lanczos",
+      "metrics": "source/formal-production/quality-repair-g19-scale-motion-metrics.json"
+    },
+    "dodgeMotion": {
+      "policy": "clear lateral evade and return to original battle anchor",
+      "textureSpaceArc": [
+        [
+          0,
+          0
+        ],
+        [
+          -8,
+          -2
+        ],
+        [
+          -20,
+          -7
+        ],
+        [
+          -28,
+          -12
+        ],
+        [
+          -21,
+          -8
+        ],
+        [
+          -11,
+          -4
+        ],
+        [
+          -4,
+          -1
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    },
+    "faintSemantics": {
+      "front": "native open concentric faint eye is readable in down6-8; no X, sleep smile or death symbol",
+      "back": "face remains naturally occluded; collapse and exact reverse recovery carry the state",
+      "rgbEyeRepaintApplied": false
+    },
+    "skillFringeKnownFailure": {
+      "status": "RESOLVED_BY_G20_EXACT_RAW_KEY_PROVENANCE_MASK",
+      "broadDespillApplied": false,
+      "runtimePixelsChanged": 136,
+      "alphaPixelsChanged": 0,
+      "remainingFailurePixels": 0
+    }
   },
   "worldVisual": {
     "status": "self_review_passed_owner_pending",
@@ -250,29 +367,37 @@
     "promptDirectory": "prompts/production",
     "workingArchive": ".run/art_full_g11_g12/earth_sample/pet",
     "representativeRebuildHandoff": ".run/art_full_g11_g12/earth_sample/archive-handoff",
-    "repairWorkingArchive": ".run/art_batch_phase320/rebirth_beast_earth_lv50/quality-repair",
-    "qualityRepairManifest": "source/formal-production/quality-repair-g16-manifest.json",
+    "repairWorkingArchive": ".run/art_batch_phase320/rebirth_beast_earth_lv50/g20-skill-provenance-rederive",
+    "qualityRepairManifest": "source/formal-production/quality-repair-g20-skill-exact-provenance-fringe-manifest.json",
     "qualityRepairManifests": [
       "source/formal-production/quality-repair-g16-manifest.json",
-      "source/formal-production/quality-repair-g17-alpha-despill-manifest.json"
-    ]
+      "source/formal-production/quality-repair-g18-provenance-color-recovery-manifest.json",
+      "source/formal-production/quality-repair-g19-scale-motion-ko-manifest.json"
+    ],
+    "qualityRepairManifestSha256": "c3af588edbb63dffae9dbf347c1425bc0ac1ffd471149631588c33d7a2c291f4"
   },
   "evidence": {
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "c7d8bd7529495558a215b785940242593e29c9e69b80f9a900ca5cb2c92609de",
+    "battleContactSheetSha256": "4dbc0880180f186f06476772b849a6cff5dc7f16747e79341d474bbbe19acc49",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "826000241db6ecd7669a593c7901aa62b501951167db1a264902672b2158d5df",
+    "battleQcSha256": "3b4cb52dc1b3f6a61fbed81151ac7a2a6c132a568d0e574f665277436ee0488b",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
-    "battleFacingContractPreviewSha256": "68e0424f98657cc8047eed6e5e7263707e75201c18ebf3b782a6558ce7aea0c4",
+    "battleFacingContractPreviewSha256": "eb065ebf62966aa8b3a567b9d6117c29d002018fb20b19340137101281caf1b3",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
     "worldContactSheetSha256": "38d545336586b11dbbda0bc6a84def927892715fb867bfaee9b3cc27ca0d2334",
     "worldQc": "qa/world/world-qc.json",
     "worldQcSha256": "137c07f6b191d19c2dacf89ce862938cb6976e05cda308d22dc7031ff1b3b6e6",
     "battleQualityRepairBeforeAfter": "qa/battle/repairs/g16-earth-three-action-before-after.png",
     "battleQualityRepairBeforeAfterSha256": "dbad86d3f2b4af520058d45947eaca797ec353e28b761dd4a8a33bc2e00ca4fe",
-    "battleAlphaDespillBeforeAfter": "qa/battle/repairs/g17-earth-alpha-despill-before-after.png",
-    "battleAlphaDespillBeforeAfterSha256": "cdb3c6a3a7894b47265f38550bbcc26f6e387eda319a875a625a8a275583031e"
+    "battleColorRecoveryBeforeAfter": "qa/battle/repairs/g18-earth-selective-color-recovery-before-after.png",
+    "battleColorRecoveryBeforeAfterSha256": "53e108b4b64555781632539d78a4a49ed1a910deecfb8f5564e1cee2890234fd",
+    "battleScaleMotionBeforeAfter": "qa/battle/repairs/g19-earth-battle180-before-after.png",
+    "battleScaleMotionBeforeAfterSha256": "5f949a711330cbfa7fd1fe27ef9104982f0315f1e59a5e05a57a18319aa57c04",
+    "battleKoNativeEyeZoom": "qa/battle/repairs/g19-earth-ko-native-eye-zoom.png",
+    "battleKoNativeEyeZoomSha256": "1ffd7b38686fe52298e72c596f459fdb1260922a1f74f75b825fa8bf2325a5a1",
+    "battleSkillFringeExactProvenanceBeforeAfter": "qa/battle/repairs/g20-earth-skill-exact-provenance-before-after.png",
+    "battleSkillFringeExactProvenanceBeforeAfterSha256": "2e6fa5dd867432393e3df3b9f76458a15610185abce42c91769181802ba51874"
   },
   "ownerReviewStatus": "pending",
-  "notes": "地灵转生兽保持批准的成年岩甲兽身份、双视角十二战斗动作与真八向世界动作。G16 强化 counter/stagger/knockaway 剪影；G17 对 standalone battle180 全量执行 alpha 不变的边缘去紫边，未改轮廓、world40、骑乘或身份资产。正式战斗方向仍为 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true；down-8/revive-1 双视角严格连续。真实 Godot 10v10 总体验收仍由父任务统一完成，因此 runtimeEnabled 保持 false。"
+  "notes": "地灵转生兽 G19 双视角十二动作尺度、侧闪与倒地/复活连续性保持不变。G20 使用原始洋红网格、历史 builder 的 8/8 byte-exact 重现和同一次 key 的 inverse 越界因果 mask，仅修正 front skill 的 136 个 alpha17-25 绿色边缘像素；R/B/Alpha、其余像素、后视角、world 与 mounted 全部保持不变。真实 Godot 10v10 与所有者视觉验收仍待总流程完成，runtimeEnabled 保持 false。"
 }

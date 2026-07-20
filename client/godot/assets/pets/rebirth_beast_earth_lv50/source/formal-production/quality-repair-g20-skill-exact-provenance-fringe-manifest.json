@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "pet",
+  "repairId": "g20-earth-front-skill-exact-provenance-fringe",
+  "scope": "standalone battle front_3quarter_sw/skill only; no back skill, world, mounted, identity, shared tools or code",
+  "purpose": "resolve the retained G19 alpha17-25 bright-green fringe without guessed color-threshold despill",
+  "provenance": {
+    "rawSheet": {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sha256": "4f47f8b62ae05da60435a6e661fc998d931421df90f0d56c3a959da976e763ed"
+    },
+    "originalPipelineMeta": {
+      "pathInRun": ".run/art_full_g11_g12/earth_sample/pet/battle/front_3quarter_sw/skill/build/pipeline-meta.json",
+      "sha256": "a0543a0ca4931178621366129031e362dc85aa9d1861d761d58d941fc9303cd5"
+    },
+    "baselineBuilderCommit": "30104920",
+    "historicalBuilderSourceSha256": "a91d58deae9c0e04425e1592e8a73c107a3ee6246c12d7819bc5bf8d63c15fed",
+    "baseline512ByteExactFrameCount": 8,
+    "baseline256ByteExactFrameCount": 8,
+    "g19RuntimeReproductionByteExactFrameCount": 8,
+    "eligibilityRule": "derive a causal runtime impact mask from the same raw #FF00FF key operation: partial candidate, historical inverse outside [0,255], historical clipped output green>=35 and green dominance>=18; historical 512/256 and G19 runtime are first reproduced byte-exact"
+  },
+  "method": {
+    "targetRule": "current runtime alpha 17..25, G>=151, G>1.35*R, G>1.20*B, and inside the exact causal impact mask",
+    "correction": "inside the proven causal mask only, lower G to max(R,B); preserve R, B and alpha byte-for-byte",
+    "broadDespillApplied": false,
+    "newArtGenerated": false,
+    "rescaleOrRepositionApplied": false,
+    "alphaChanged": false
+  },
+  "validation": {
+    "runtimeFramesChanged": 8,
+    "runtimePixelsChanged": 136,
+    "allTargetsInsideCausalImpactMask": true,
+    "alphaExactEveryFrame": true,
+    "redExactEveryFrame": true,
+    "blueExactEveryFrame": true,
+    "outsideTargetExactEveryFrame": true,
+    "remainingFailurePixels": 0,
+    "worldFramesChanged": 0,
+    "mountedFramesChanged": 0,
+    "identityFilesChanged": 0
+  },
+  "runtimeBundleDigestAfterRepair": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
+  "evidence": {
+    "beforeAfter": {
+      "path": "qa/battle/repairs/g20-earth-skill-exact-provenance-before-after.png",
+      "sha256": "2e6fa5dd867432393e3df3b9f76458a15610185abce42c91769181802ba51874"
+    },
+    "strictReport": {
+      "path": "qa/battle/repairs/g20-earth-skill-exact-provenance-report.json",
+      "sha256": "a09ef881cae21355efe1d78b00787bfe1229dccaeca8ac5d6cdd93558ca9d503"
+    }
+  },
+  "frames": [
+    {
+      "path": "views/front_3quarter_sw/skill/skill-1.png",
+      "beforeSha256": "6898a9b22aa8902603464a8ffd631c3dcf85314667b0e2694510c785e5e7446a",
+      "afterSha256": "4b4083131be85c7ac098763b93bc397cd0ca39b4156aa018f175cef374fb9c75",
+      "changedPixels": 20,
+      "targetMaskSha256": "b12925d437e68575d6d4ebc2dcaa8b9483fa736cfa73c5c22824210c4460b7a6",
+      "causalImpactMaskSha256": "b54c9cad634739fd804e118b536a68c80cb68c34965dc1227d83af016ba67d07",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-2.png",
+      "beforeSha256": "b193cfd7d6d8d64077951881e3d60e60bdf7cd112e5a7873a512c54ec4a5d74c",
+      "afterSha256": "4adc28ad3eddb2a8a2f76d2c21f4e470a2f80f16a945098468585493e30d4dc7",
+      "changedPixels": 18,
+      "targetMaskSha256": "b6c133649d5a666ab7790bb8ddabbe08a4e0518debc7f4426f8d6b12a654246f",
+      "causalImpactMaskSha256": "af615d4c4dc21fc31aec09cacbc13d6403c280df4295b482e068c75c6deb4240",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-3.png",
+      "beforeSha256": "decbdfd38db348fb45f354b05cc39875d30b7880215cf0c0e3a433721cb187b3",
+      "afterSha256": "d5fa6dda15da14072889c8285a15b8b96f985d22bc10ea772cd990b54f29a485",
+      "changedPixels": 9,
+      "targetMaskSha256": "eb74e22b916a0a90f8c1477bd3dac4c5b5a81d10121a092ea811842263f69019",
+      "causalImpactMaskSha256": "af9439afb86511b57af4f4e869cf48a0bd3c4f72e399a300cbd5d14f3ccde1be",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-4.png",
+      "beforeSha256": "61e35946c625100b91074d480ad72abc13b2ae184c01f3c61101ce6fead18ab5",
+      "afterSha256": "83104db49003a441281a3a033310696a2d00afe4957a1a4f7be034fe070a8fb9",
+      "changedPixels": 19,
+      "targetMaskSha256": "15588677598418a62fe8256c026bc7579dd8759f90ce12e364af00885b50d000",
+      "causalImpactMaskSha256": "c8b3e9293a69c26e72036c35de06c900688d5622b1c101827bb665683c3313b3",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-5.png",
+      "beforeSha256": "f23383c1e66b88d2108704aa99f8ae3ca5be861353c1a75499063a0a7d755cda",
+      "afterSha256": "610d6bced3e20575f626ae4fb273f3b3f6fe5191f463123dc666c836e986e214",
+      "changedPixels": 7,
+      "targetMaskSha256": "c16ed0359e1faaab92ea2686cda920f8ce3a70f2981839dd6a68bba51469a0d8",
+      "causalImpactMaskSha256": "43c5643e0da0b484e382bb9bfe6f0c857f3b55a00bdf4f7dd5c313b44e34a1da",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-6.png",
+      "beforeSha256": "99ae7d5d79e4b2b18a801f38fbe8fd88bfab871910a5879064d540f9e5c8023b",
+      "afterSha256": "15f382d7a624d56cdcec2b2ecb3ce56de0a26207ed46fda337061f70f38290e1",
+      "changedPixels": 22,
+      "targetMaskSha256": "fc5429813adc02476dc48bc1e4700d303a3ab40cc1c6a1d9015519906f324f06",
+      "causalImpactMaskSha256": "4fcd9221ae5fee1a86d97105bf2af0c3fc33bb7ae8a31f767346bc0ad9ac42f8",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-7.png",
+      "beforeSha256": "cef378d9333410506b1c3b45689f2dac7f97de6acc7b93dbe9868d8e2845ee11",
+      "afterSha256": "65af587a12cafe5d9c6c64f6fe4c8b8bde38de9f40ffa56a67d65d7b864de063",
+      "changedPixels": 28,
+      "targetMaskSha256": "1c6414f511da8c10778b66b92a47e3d95d7f242cf73bcf519bdd17a0f138a7a8",
+      "causalImpactMaskSha256": "240ff66d1b82f2a00271b55d1d3285c353630a223939848b2406f79f69be0596",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-8.png",
+      "beforeSha256": "135fe9c826c8b01c5f40afdcfdb0feb036c37008c3e95d0119c43974997324fd",
+      "afterSha256": "1d166aaa0f1c9f85ea308d94ec6ed14fc06173bfd86070156bce001c7740dd5e",
+      "changedPixels": 13,
+      "targetMaskSha256": "e51927e5fcfd345fabe2dca0fdc30846782dd30f41a155813bfcf6470f91558e",
+      "causalImpactMaskSha256": "1549c469fa8576a3664b9842bc8504aaf8d020478b7835e334eeb28d00de3922",
+      "alphaExact": true,
+      "outsideTargetExact": true
+    }
+  ],
+  "resolves": {
+    "repairId": "g19-earth-battle-scale-motion-ko-readability",
+    "status": "RESOLVED_BY_EXACT_RAW_KEY_PROVENANCE_MASK"
+  },
+  "ownerReviewStatus": "pending"
+}
