@@ -1,0 +1,806 @@
+{
+  "schemaVersion": 1,
+  "repairId": "exact-chroma-mask-alpha-clear-v2",
+  "formId": "rebirth_beast_fire_lv50",
+  "status": "passed_owner_review_pending",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "scope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actionsPerView": 12,
+    "runtimeFrameCount": 180,
+    "repairedActions": [
+      "front_3quarter_sw/skill",
+      "back_3quarter_ne/defend"
+    ],
+    "repairedRuntimeFrameCount": 14
+  },
+  "provenance": {
+    "v1RawMaskDerivationHistory": {
+      "coordinateSpace": "raw_chroma_cell_before_component_selection_or_resampling",
+      "operation": "original magenta-key inverse compositing from builder revision 8872ab05",
+      "allConditions": [
+        "distance(rawRgb,#FF00FF) < opaqueDistance",
+        "0 < matte < 1 and rounded output alpha >= alphaThreshold",
+        "rawR >= 180 and rawB >= 180",
+        "min(rawR,rawB) - rawG >= 80",
+        "unclipped inverse R < 0 and unclipped inverse B < 0",
+        "clipped inverse G >= 35",
+        "clipped inverse G - max(clipped inverse R,clipped inverse B) >= 18"
+      ],
+      "repair": "on eligible pixels only, G := min(G, max(R,B)); R/B/A unchanged",
+      "nonGoals": [
+        "no global hue selection",
+        "no connected-component selection",
+        "no output-frame color scan used as repair eligibility",
+        "no alpha modification"
+      ]
+    },
+    "v1HistoryScope": "the embedded G-only repair/no-alpha wording describes only how the exact raw eligibility mask was derived; it is not the v2 mutation rule",
+    "v2Authorization": "parent task explicitly approved clearing RGBA only inside the exact propagated formal artifact mask",
+    "historicalBuilderRevision": "8872ab05",
+    "formalPropagation": "v1 G-only delta after exact historical builder and original normalize_view_area",
+    "v1Report": ".run/rebirth_beast_fire_chroma_mask_repair_v1/report.json",
+    "maskOutsideRule": "outside formal artifact mask, all RGBA bytes equal original formal frame",
+    "repairInsideRule": "inside formal artifact mask, set RGBA to 0"
+  },
+  "changeGate": {
+    "rawEligibilityPixelTotal": 1393484,
+    "formalArtifactPixelTotal": 337460,
+    "alphaChangedPixelTotal": 337460,
+    "outsideMaskRgbaChangedPixels": 0,
+    "outsideMaskRbChangedPixels": 0,
+    "transparentRgbNonzeroAfter": 0
+  },
+  "bundle": {
+    "originalProblemDigest": "023995574e280a3817747eb42d26b471099db8a0cd06816a601bae78311def45",
+    "v1AlphaLockIntermediateDigest": "eb12971b0cec1dad90ba7431b8550b45e81bea92e7240892422e5fb81426b812",
+    "v2Digest": "23c9111373ad38c5eafb3e31dbecc2c9a3c9be36e6bda24c66aeb2432faf2fa5",
+    "qcStatus": "passed",
+    "minimumRuntimeEdgeMargin": 13
+  },
+  "motionAudit": {
+    "frameCount": 180,
+    "stableDuringAudit": true,
+    "severityCounts": {
+      "warning": 2
+    },
+    "affectedActionIssues": [],
+    "affectedInternalCropIssues": [],
+    "allIssues": [
+      {
+        "severity": "warning",
+        "code": "internal_vertical_crop_review",
+        "message": "long straight opaque alpha-bbox side in frames [8]",
+        "view": "front_3quarter_sw",
+        "action": "down",
+        "frames": [
+          8
+        ],
+        "disposition": "may be cropped body or authored straight VFX edge"
+      },
+      {
+        "severity": "warning",
+        "code": "internal_vertical_crop_review",
+        "message": "long straight opaque alpha-bbox side in frames [1]",
+        "view": "front_3quarter_sw",
+        "action": "revive",
+        "frames": [
+          1
+        ],
+        "disposition": "may be cropped body or authored straight VFX edge"
+      }
+    ]
+  },
+  "downRevive": {
+    "front_3quarter_sw": {
+      "down8EqualsRevive1DecodedRgba": true,
+      "down8DecodedRgbaSha256": "af9ec374aaa954f76c96513041dddea32ae3a7b2f3e1dc9312e0dce03353b83f",
+      "reviveSevereRecollapseViolations": [],
+      "reviveSteps": [
+        {
+          "from": 1,
+          "to": 2,
+          "areaRatio": 1.4032,
+          "heightRatio": 1.3158
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "areaRatio": 1.0086,
+          "heightRatio": 1.21
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "areaRatio": 0.998,
+          "heightRatio": 1.0
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "areaRatio": 0.9957,
+          "heightRatio": 0.9504
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "areaRatio": 1.0029,
+          "heightRatio": 1.0348
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "areaRatio": 1.0017,
+          "heightRatio": 1.0168
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "areaRatio": 0.9991,
+          "heightRatio": 1.0083
+        }
+      ]
+    },
+    "back_3quarter_ne": {
+      "down8EqualsRevive1DecodedRgba": true,
+      "down8DecodedRgbaSha256": "5d04cb2d45ec2a3f86a08d91fac65ece5a2c070508be21a4cced52f491e1c258",
+      "reviveSevereRecollapseViolations": [],
+      "reviveSteps": [
+        {
+          "from": 1,
+          "to": 2,
+          "areaRatio": 1.1831,
+          "heightRatio": 1.1548
+        },
+        {
+          "from": 2,
+          "to": 3,
+          "areaRatio": 0.9971,
+          "heightRatio": 1.2268
+        },
+        {
+          "from": 3,
+          "to": 4,
+          "areaRatio": 1.0038,
+          "heightRatio": 1.0336
+        },
+        {
+          "from": 4,
+          "to": 5,
+          "areaRatio": 0.9944,
+          "heightRatio": 0.9187
+        },
+        {
+          "from": 5,
+          "to": 6,
+          "areaRatio": 1.0018,
+          "heightRatio": 1.0
+        },
+        {
+          "from": 6,
+          "to": 7,
+          "areaRatio": 1.0051,
+          "heightRatio": 1.0
+        },
+        {
+          "from": 7,
+          "to": 8,
+          "areaRatio": 0.9938,
+          "heightRatio": 0.9735
+        }
+      ]
+    }
+  },
+  "sourceFrameGate": {
+    "sourceFramesTracked": false,
+    "trackedPerFrameSourceContinuityApplicable": false,
+    "reason": "formal package is lean and tracks no per-frame 512px source files",
+    "workingArchivePerFrameSourcesModified": false,
+    "formalRuntimeContinuityRequiredAndPassed": true
+  },
+  "battleBackgroundEvidenceSource": {
+    "file": "client/godot/scripts/main.gd",
+    "line": 13609,
+    "value": "Color(0.32, 0.36, 0.32)",
+    "rgb8": [
+      82,
+      92,
+      82
+    ]
+  },
+  "evidence": {
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "e4d23e788829fe68d3cb0956077e969b25c84beafe778909755f3d7f021caf74",
+    "battleBackgroundBeforeAfter": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-battle-background-before-after.png",
+    "battleBackgroundBeforeAfterSha256": "b51c512712128a82a372d8a8d3b527754cd1a32e7b4d568ba2126037de91208f",
+    "lightBackgroundBeforeAfter": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-light-background-before-after.png",
+    "lightBackgroundBeforeAfterSha256": "e7f10f8b5ba9517e45bac0047e0ae034b9bf9dbcaac96244d3ec204eab4325a4",
+    "formalMaskContact": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-formal-mask-contact.png",
+    "formalMaskContactSha256": "736ac5fa12903a8aae4d32a926221f8a2891db033d8d47468de7f0d7714427e7",
+    "downReviveContact": "qa/battle/repairs/down-revive-continuity-v2.png",
+    "downReviveContactSha256": "03cb07be12717c24c8998c1b17141c2586eb00bdaf2ce63b1e9e026db8e66570",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "qcSummarySha256": "f2172a564c8a7dfe4d0fd431006d1e340c619debf91a65beaaf5818f545ed180",
+    "report": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-report.json"
+  },
+  "frames": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-1",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        0,
+        0,
+        384,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-1-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "8ca4711ba3b214fbda394677451014e5de4245eca2f0795276e302af713e3bba",
+      "rawEligibilityPixelCount": 67780,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-1-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "b60aba10dcdc959564fa99cf96e230676fd04d2fa4effff9dd7f1bbef0ee7450",
+      "formalArtifactMaskDecodedSha256": "3de2d6935ace9fb57d7ce03b700fa4cd51bea4f5bc723369d23bf53fc5ad90d5",
+      "formalArtifactPixelCount": 24424,
+      "formalArtifactBbox": [
+        42,
+        16,
+        214,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "ab4587a84b5d2e579fae01fc28dd262841be7f4532cb2b0b1e9b5097ee2b7a29",
+      "formalAfterDecodedRgbaSha256": "f155851b6b79716ae7a4bfbddd7d4a7c3d87c2bb58d3106b5eca494f92df2f44",
+      "formalBeforeAlphaSha256": "b2b4071c7805280acabb030540fbaea665e187d63df952cdd58d6ed6ef44aa06",
+      "formalAfterAlphaSha256": "bab734e0b0619deb2b004c0edaf6295ed34ccccfe00995e8b4b84c2051970977",
+      "alphaChangedPixelCount": 24424,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-2",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        384,
+        0,
+        768,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-2-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "01fe75b2bb2f3a4b0205c439f39dd4b071bbb59b6a201c5e305c4438a0d2e123",
+      "rawEligibilityPixelCount": 85552,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-2-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "af4c7ae1364303800b46370f123b186d8fd9b2f4e303eba03e33857beb14facb",
+      "formalArtifactMaskDecodedSha256": "9b48fe4458ff08f23f5f269dc43cd9950d6cef9ea65846a23b737ab42a1444b3",
+      "formalArtifactPixelCount": 26143,
+      "formalArtifactBbox": [
+        42,
+        21,
+        213,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "717906782e6a4e78f2765b384bf9d63ba9cac3f34307e544de1d9d04755ea59b",
+      "formalAfterDecodedRgbaSha256": "c3f7672ead5e37b14c6fdd0cefbfc6c08499908b248373ad7c8941a4988ad173",
+      "formalBeforeAlphaSha256": "e126dcba1c9d68d2b903407f8d57edac37b02314aca2d6f0ea80cda852578970",
+      "formalAfterAlphaSha256": "bdee9d483906bd186a9e7a6f362f732152d6322e14ca86c40050fb7192b1c6de",
+      "alphaChangedPixelCount": 26143,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-3",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        768,
+        0,
+        1152,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-3-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "0949ce9446e39b0f4c4c4783042885a78487a56640e6d1d93ef8d857790dd8ca",
+      "rawEligibilityPixelCount": 79054,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-3-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "2c2589a75d907274feaa98cdb75a1e74b7a4243a62a85a8cb5753949a587718c",
+      "formalArtifactMaskDecodedSha256": "afa7f151cb986c902bc7118ebc6d23dbcfc04d032f7f6318fc16f9c608684cbf",
+      "formalArtifactPixelCount": 26510,
+      "formalArtifactBbox": [
+        39,
+        16,
+        214,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "4fd25f887654ff771635df5b3781a9461d0745668c066a574aacc15956ed9073",
+      "formalAfterDecodedRgbaSha256": "b11b3ae610147ff7f89ed33d19789f86fa4fff46e5ce36f86146ea53793ec05a",
+      "formalBeforeAlphaSha256": "dcf6d28567beec9049e23fd5e2fe99606971380f5007e7412488f71bf816af34",
+      "formalAfterAlphaSha256": "dae8601146275a7630c01cf90366d30ad6ceae271dc19452f6ef8ab54503b170",
+      "alphaChangedPixelCount": 26510,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-4",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        1152,
+        0,
+        1536,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-4-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "c453099c4baca066b15a5407f0589bacd27c81c2a09fa972bfecdaa6d3e05fca",
+      "rawEligibilityPixelCount": 76970,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-4-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "c8e7b1e79513236caf8b6f4d6455ca4a54801ebc6671b38255210188b8327330",
+      "formalArtifactMaskDecodedSha256": "69d8699a12b20a2a90bc4feeb383b553d2bb8e84edcbb58e4c178fb07e5976c1",
+      "formalArtifactPixelCount": 23782,
+      "formalArtifactBbox": [
+        46,
+        23,
+        211,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "21865b05021b8098b0b81e8e497da6ea039e8ff4791ba7f41aec17bedcc272e1",
+      "formalAfterDecodedRgbaSha256": "c07cdbbafa80ef4b1f128e3754ed9b8e2bd49acab90a2a8797c43d4a54551b26",
+      "formalBeforeAlphaSha256": "a99fc39c1f66a766d82ee745ba50f6d61e3444facd2c4acfbeb86c07a9a4b1bb",
+      "formalAfterAlphaSha256": "08e820489c0438d455f4c9dbf1b7f7b4e0c6612e7a2f7b15c3220284fce1c4dd",
+      "alphaChangedPixelCount": 23782,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-5",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        0,
+        512,
+        384,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-5-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "f2b17ac47ac0b725c05d773b32a4a2047c8c6b94c33097f8c60c730e06cabb7b",
+      "rawEligibilityPixelCount": 77528,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-5-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "830d7820d3121cb87704a14d8b0905ef2023e41e9cd4f2777d8df8f7d47e74e4",
+      "formalArtifactMaskDecodedSha256": "1f27e94447741743f92a5ccb26627b0ff6e509e23b57ffc5fbccc97e9236a895",
+      "formalArtifactPixelCount": 25499,
+      "formalArtifactBbox": [
+        43,
+        14,
+        213,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "a2316f348de373b20fe6153972799056acc7f967096757fdc33092af2c9eaf32",
+      "formalAfterDecodedRgbaSha256": "9610d2905385dfd66ffee1bbb6fcd2ac3fcd4e14f17419136e73c39624849597",
+      "formalBeforeAlphaSha256": "56acab9d8c2f8f32aa7e31e5d3de6fb237e10d6d3b14b24c5b1870d6416e95c7",
+      "formalAfterAlphaSha256": "d840fb5d8dfde921dbb22292dc8681845d29e4b15999dca35f86310fbbd0f675",
+      "alphaChangedPixelCount": 25499,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-6",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        384,
+        512,
+        768,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-6-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "12b8f53c9a912404c3ffa6b3aeaa49c57c20c3d82080562afbc37f15a5cd3774",
+      "rawEligibilityPixelCount": 84245,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-6-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "28125deb55a6c86128e7d766e0ee9c2bab2a8d4857055d3170c904458b5b276b",
+      "formalArtifactMaskDecodedSha256": "d8317ce3f0f186924ce8eeb70a6246a118ddff5ae4285832785e1a348cb2569f",
+      "formalArtifactPixelCount": 26369,
+      "formalArtifactBbox": [
+        41,
+        19,
+        212,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "b7a9f9537e28b6c06a47cf97dc5d131546c606c55e86249add582c62bd1383d6",
+      "formalAfterDecodedRgbaSha256": "38e1e888d601d6846ec2aacf9c39443fde4eb3af72cffa81f76ecb5b61dc2ae4",
+      "formalBeforeAlphaSha256": "a5501810116d709623d05e4b40ac64288d750c4ca7af658ecacf7d060fe280a5",
+      "formalAfterAlphaSha256": "54c8eaf7770016ac35bba10b8707ad74f306dff6eb4cd17d2f2c98a9b40ca717",
+      "alphaChangedPixelCount": 26369,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-7",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        768,
+        512,
+        1152,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-7-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "a78a5fe5ae3d7f13b114011150642da62b05a40fb890b99728df9e499d605b19",
+      "rawEligibilityPixelCount": 88510,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-7-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "d67adeaaf5fd78aa1852a333a8dbacc0211087d2d57c78a3c2f100b9867e5a1a",
+      "formalArtifactMaskDecodedSha256": "3cf98228bed60bd1b4e6de85e5a08e7fce0884f058d8f83d9b7733c06e3ce71d",
+      "formalArtifactPixelCount": 28397,
+      "formalArtifactBbox": [
+        40,
+        15,
+        216,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "288d7d08a99c817fd3a171ba3aedcca615bda130fbf7a53825ee0a5ae01d26fc",
+      "formalAfterDecodedRgbaSha256": "5b01ebe284771a9fe393660552e323e5678f26f03515045b5e4388c99f3bc395",
+      "formalBeforeAlphaSha256": "554c5d018516702d7241d12c2a04edba28a7f3c9b5129f4a62e6baeed1338595",
+      "formalAfterAlphaSha256": "92f23f1e26c888189a6b082bd36958eb6809e6a791374bc666ccbd16c4ebb920",
+      "alphaChangedPixelCount": 28397,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "slot": "skill-8",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/front_3quarter_sw/skill/raw-sheet-padded.png",
+      "sourceInputSha256": "661f7cf2a30428ac202165b3b75b7eef96e60ac09d124f20876db87888718fad",
+      "sourceCellBox": [
+        1152,
+        512,
+        1536,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/front_3quarter_sw/skill/skill-8-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "d6afe36dbc62bd4edd3e558d0a0c6fb12eb80fdd4a4471f136dce87dbb07a7cd",
+      "rawEligibilityPixelCount": 76889,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/front_3quarter_sw/skill/skill-8-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "1c4426ac1070e41b46d71b430555b5a6ec913cecf4c2c90f828657972e67c3df",
+      "formalArtifactMaskDecodedSha256": "621d155c6e3c81682d77c48c2acb467739c0ec83dbb65eb3e6cdee9d14b9b671",
+      "formalArtifactPixelCount": 25874,
+      "formalArtifactBbox": [
+        42,
+        13,
+        215,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "665f143c59f4ce75195b8bff052e17f9d8e347acbfef447e3e87586a362b354f",
+      "formalAfterDecodedRgbaSha256": "acb33dfa81189ec11968422d82e84efca829ead4538e41f2f120c5e59fc0788e",
+      "formalBeforeAlphaSha256": "67bb691832194efebf8cbbc4ba31e30b8bd67b9cff4d404fb4ff03dc960a620b",
+      "formalAfterAlphaSha256": "82b11f1e01e4f3a60a6544c82351997e7e2ed91e124d9f941ac746455b2a1682",
+      "alphaChangedPixelCount": 25874,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-1",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-1-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "676cf4c6155df8dbb47ac6913402ea797236cd1ca870bfa607b6f122875dfb01",
+      "rawEligibilityPixelCount": 121886,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-1-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "2f32deffb7fdc651e39b9c981bb7dd9496a5b97f63acbae1859f319dd1d9b6b6",
+      "formalArtifactMaskDecodedSha256": "34f3072a5453a3f509f258dba2564b7eeefaa361504f5c97d172ed023b525265",
+      "formalArtifactPixelCount": 19956,
+      "formalArtifactBbox": [
+        45,
+        73,
+        211,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "222ff59048dbccccb0fac97b8a5e931fcf45b68107a1a0027aeb7180d45ac148",
+      "formalAfterDecodedRgbaSha256": "531e4b901ef63ed7adbc35f609f90edace7bb728f2ff80fff5ce10e352e696c6",
+      "formalBeforeAlphaSha256": "838bcf4bc58637300ad6f3a9837a944c11e457321d6dab796317d58e77b971cd",
+      "formalAfterAlphaSha256": "9fcc255648b330589bfb2b68b03d2d61b84f965dcee457ded539f6934a68a8d1",
+      "alphaChangedPixelCount": 19956,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-2",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        512,
+        0,
+        1024,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-2-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "b0f3dff9c14b9d86c057f95367460ecaab3f4e245ba9ddeba918c1b58731b5b8",
+      "rawEligibilityPixelCount": 127831,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-2-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "9b307681c4d255c9e5d339f2e8cfe3ecf04c2e64eb18e070b9581d24e237e641",
+      "formalArtifactMaskDecodedSha256": "2f3c78c2b60bfb4cd40a8eb37e05ba73a0cfd2ec1a39c3e0b9302a4ba0119fef",
+      "formalArtifactPixelCount": 22072,
+      "formalArtifactBbox": [
+        40,
+        69,
+        214,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "62ee10d4c4e49b243454192945fcbc3c9f531ff82808a0fd23ffa5c4e1248203",
+      "formalAfterDecodedRgbaSha256": "a35165bc4958c4c4a3b71f3253187bd4e998a6b547680e01a27159d8fc86339c",
+      "formalBeforeAlphaSha256": "b659060ca3880e39e8c03ee9e02436f55351f4924840aeaff18f35f1a07ee8b1",
+      "formalAfterAlphaSha256": "6e0559566afc018df9845416bb261421e3c28760fd2531fad8d06df798918628",
+      "alphaChangedPixelCount": 22072,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-3",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        1024,
+        0,
+        1536,
+        512
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-3-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "c98fd36893a86fcdd2467b3b5f7e81d4dad1fd0a9a65c22e71261e26191c1d97",
+      "rawEligibilityPixelCount": 129912,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-3-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "96afdfb2308c42ecc7f3443672e3454bfd0609aba6564e4bdb3576f7697df105",
+      "formalArtifactMaskDecodedSha256": "e02e1ad12bf12657ead85ec39aaee9115ba935b26d8449c1c4f458ff7d770637",
+      "formalArtifactPixelCount": 23356,
+      "formalArtifactBbox": [
+        39,
+        66,
+        217,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "c416a555c0062cc98c6b5832f98bc23686d3abe3804aefaa0bbfd048048f72ef",
+      "formalAfterDecodedRgbaSha256": "8f6e0c17b9436f2efcdfee5eba8dde3de12f5105013b7da6ce3904d760cdbe6c",
+      "formalBeforeAlphaSha256": "91878f5ff11174de187e58670cae6b154775a849c9577f2b52b374aa34baf4a2",
+      "formalAfterAlphaSha256": "45ce03313ff1ab8bf27617f4bd7dec25759c7ac9f1699cacd5d7ee4b8ffc21f4",
+      "alphaChangedPixelCount": 23356,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-4",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        0,
+        512,
+        512,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-4-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "a876ba4babee672b95869ec6c423db1b66d785f64c12eccf39a1f70e4756c466",
+      "rawEligibilityPixelCount": 127640,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-4-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "b9328e7114262ba4d66f83ecbbf71316ffb4bdb224a2fed7898949ff12e6e866",
+      "formalArtifactMaskDecodedSha256": "ac639816080ecea7e86fdc52645f005b1d53fc07ce530b48cd0a3deb5866111b",
+      "formalArtifactPixelCount": 22603,
+      "formalArtifactBbox": [
+        40,
+        66,
+        216,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "a25fac34e155207adaf832844b60242c084cadcb64b2b4e3dc6340362710bd5a",
+      "formalAfterDecodedRgbaSha256": "69a7378088934d83574f7571000b58a3f3db17e72aa2e4c5dfb872920538c02e",
+      "formalBeforeAlphaSha256": "f5503c2c53bade0d0a941f55cad801c84fad2d862a9251224c4d3b6c647d9b33",
+      "formalAfterAlphaSha256": "2e3009625092da2c52ecb447383d9a874f3a40b30393744abd67b83aae66a4e2",
+      "alphaChangedPixelCount": 22603,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-5",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        512,
+        512,
+        1024,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-5-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "019d80d33e4bc75194f8d0aa6062bf16254f9eee4274a04f0bc6b9752e07e78c",
+      "rawEligibilityPixelCount": 125907,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-5-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "d0fc76564d82a345c5a0a0e79a1af5bad6bcb215b56778ff641b014e638ab24b",
+      "formalArtifactMaskDecodedSha256": "4ecece88bed7e4bde6f92d89ed3ec6076489d30dbfe04079add78c62a306f2ba",
+      "formalArtifactPixelCount": 21409,
+      "formalArtifactBbox": [
+        42,
+        71,
+        213,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "8bc92da8d86b1a8b4df3c98ad22eb1dc7d5a4a3dc052b92ac5267355f69af5a1",
+      "formalAfterDecodedRgbaSha256": "4c5effb2f2e88a6c680c63db94ec0ba31d83aa887fa034112a6e44bab5e42670",
+      "formalBeforeAlphaSha256": "afa6c0aec89ccee9ae09a352aa1bc2c26579f745271abcd70c89aa716a39dc12",
+      "formalAfterAlphaSha256": "043177697ad916eeda40a79fef8df058f32a6b9317694049837a8406c4a524eb",
+      "alphaChangedPixelCount": 21409,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "slot": "defend-6",
+      "sourceInput": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet/battle/back_3quarter_ne/defend/raw-sheet-padded.png",
+      "sourceInputSha256": "d4eeda477fb8d193a257e5ab0ce1ef3b1eef3b9850d1681321b029237505ba3a",
+      "sourceCellBox": [
+        1024,
+        512,
+        1536,
+        1024
+      ],
+      "rawEligibilityMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/masks/back_3quarter_ne/defend/defend-6-raw-mask.png",
+      "rawEligibilityMaskDecodedSha256": "ff4aa4bdc900977fb8f610e6e06328e299d56eedbe7cee7dee5df7540e34e9be",
+      "rawEligibilityPixelCount": 123780,
+      "formalPropagationDerivation": "decoded RGBA difference between exact historical normalized legacy and the v1 G-only raw-mask propagation",
+      "formalArtifactMaskPath": ".run/rebirth_beast_fire_chroma_mask_repair_v1/v2/formal-masks/back_3quarter_ne/defend/defend-6-formal-artifact-mask.png",
+      "formalArtifactMaskFileSha256": "6bcea09bfb4b86f013261774183a731a39c3f97c008f1725f74d83bee839fce4",
+      "formalArtifactMaskDecodedSha256": "d701c3ade276fa4f8e4814a70aa964463427afb389b8dabeb5d9d031f303f02e",
+      "formalArtifactPixelCount": 21066,
+      "formalArtifactBbox": [
+        44,
+        72,
+        214,
+        243
+      ],
+      "formalBeforeDecodedRgbaSha256": "2ad8c76a346f91b60ad5f056b2864ff8e3d7b46ef91d6c65afc9b8fe7fa63917",
+      "formalAfterDecodedRgbaSha256": "187b38b89c74c164f1893f7895154b86ddc3c7963afaac985ea3a719a0b99aba",
+      "formalBeforeAlphaSha256": "4353b3f57b930f522744c4680a778150a1d25ce11599eb823314b77251e4130e",
+      "formalAfterAlphaSha256": "41ef42181baf065655d293b3f5112d45980b7422957db90a7c9ae96672015de4",
+      "alphaChangedPixelCount": 21066,
+      "changedChannels": [
+        "R",
+        "G",
+        "B",
+        "A"
+      ],
+      "outsideMaskRgbaExact": true,
+      "outsideMaskRbExact": true,
+      "transparentRgbNonzeroAfter": 0
+    }
+  ]
+}

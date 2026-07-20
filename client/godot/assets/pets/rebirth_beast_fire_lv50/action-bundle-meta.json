@@ -3,7 +3,7 @@
   "formId": "rebirth_beast_fire_lv50",
   "displayName": "火灵转生兽",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_and_formal_two_view_12_action_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -32,73 +32,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -134,18 +134,108 @@
     "novice_hunter_v1"
   ],
   "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "formalProductionLedger": "source/formal-production/source-ledger.json",
+    "promptDirectory": "prompts/production",
+    "workingArchive": ".run/art_full_g11_g12/rebirth_beast_fire_lv50/pet"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_beast/fire/identity-build/contact-sheet.png",
-    "contactSheetSha256": "0fe932efad0b4fea0e2581b38b476524b722476e68a074fe5de74d449e972daf"
+    "contactSheetSha256": "0fe932efad0b4fea0e2581b38b476524b722476e68a074fe5de74d449e972daf",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "e4d23e788829fe68d3cb0956077e969b25c84beafe778909755f3d7f021caf74",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "f2172a564c8a7dfe4d0fd431006d1e340c619debf91a65beaaf5818f545ed180",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "1f1bb5c99388bcb5975aab6cd7180f08af670c0f972dd1e32c768611ae4dea5e",
+    "downReviveContinuityContact": "qa/battle/repairs/down-revive-continuity-v2.png",
+    "downReviveContinuityContactSha256": "03cb07be12717c24c8998c1b17141c2586eb00bdaf2ce63b1e9e026db8e66570",
+    "exactChromaAlphaClearManifest": "source/formal-production/exact-chroma-mask-alpha-clear-v2-manifest.json",
+    "exactChromaAlphaClearManifestSha256": "5f4341774d9bee8fe5f82ac91720b9a28b685a4a965613049160633233d7f863",
+    "exactChromaAlphaClearBattleBackground": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-battle-background-before-after.png",
+    "exactChromaAlphaClearBattleBackgroundSha256": "b51c512712128a82a372d8a8d3b527754cd1a32e7b4d568ba2126037de91208f",
+    "exactChromaAlphaClearLightBackground": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-light-background-before-after.png",
+    "exactChromaAlphaClearLightBackgroundSha256": "e7f10f8b5ba9517e45bac0047e0ae034b9bf9dbcaac96244d3ec204eab4325a4",
+    "exactChromaAlphaClearFormalMaskContact": "qa/battle/repairs/exact-chroma-mask-alpha-clear-v2-formal-mask-contact.png",
+    "exactChromaAlphaClearFormalMaskContactSha256": "736ac5fa12903a8aae4d32a926221f8a2891db033d8d47468de7f0d7714427e7"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "火灵转生兽 identity and four key poses only. Four feet, three claws per paw, one central horn, paired cheek plates and paired shoulder plates were self-reviewed. World and battle matrices are intentionally not produced in this owner-review gate."
+  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "generatedSourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "authoredSourceMirroring": false,
+    "battlePresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "downReviveContinuity": {
+      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
+      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+    },
+    "bundleDigest": "23c9111373ad38c5eafb3e31dbecc2c9a3c9be36e6bda24c66aeb2432faf2fa5",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review",
+    "qualityRepairs": [
+      {
+        "repairId": "exact-chroma-mask-alpha-clear-v2",
+        "status": "engineering_self_review_passed_owner_pending",
+        "actions": [
+          "front_3quarter_sw/skill",
+          "back_3quarter_ne/defend"
+        ],
+        "runtimeFrameCount": 14,
+        "formalArtifactPixelCount": 337460,
+        "alphaChangedPixelCount": 337460,
+        "outsideMaskRgbaChangedPixels": 0,
+        "manifest": "source/formal-production/exact-chroma-mask-alpha-clear-v2-manifest.json"
+      }
+    ]
+  }
 }
