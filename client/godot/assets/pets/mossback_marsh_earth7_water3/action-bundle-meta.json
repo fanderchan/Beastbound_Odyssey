@@ -3,7 +3,7 @@
   "formId": "mossback_marsh_earth7_water3",
   "displayName": "湿地苔背兽",
   "artStatus": "in_production",
-  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "productionScope": "formal_battle_and_true8_world_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -102,7 +102,7 @@
     }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -120,15 +120,20 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       }
-    }
+    },
+    "runtimeFrameSize": [256, 256],
+    "totalFrameCount": 40,
+    "contactSheet": "qa/world/true8-pet-world-contact.png",
+    "cycleGif": "qa/world/true8-pet-world-cycle.gif",
+    "qcSummary": "qa/world/world-qc.json"
   },
   "supportedMountedCharacterIds": [
     "novice_hunter_v1"

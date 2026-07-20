@@ -12,3 +12,11 @@
 - 透明关键姿势板 SHA-256：`9be899a7576648630f9b686f8cf2d087c722a3520883565ffb7a2f757a6230ac`。生成合同、原图 SHA、无损归档、处理参数和联系表证据均在本目录或 `.run/art_batch_phase320/rebirth_beast/earth/` 留痕。
 - 石器时代 8.0 只作为成熟骑乘构图质量参考，不复制其人物、宠物、鞍具、贴图或动画。
 - 当前关键姿势工程自评通过，项目所有者视觉验收为 `pending`；不得宣称正式批准或完整骑乘包。
+
+## 西北待机方向语义修复（2026-07-21）
+
+- 原 `world/directions/northwest/idle/idle-1.png` 实际为宠物头朝屏幕右的东北向；同目录四张 `walk` 均为正确背面左上轴，因此没有重命名或镜像旧图，而是以正确西北行走帧和整图身份板为约束，使用 OpenAI 内置图像生成重绘一张独立西北待机整图。
+- 新帧中骑手背部可见，人物与地灵转生兽共同朝左上；宠物头在屏幕左、尾在屏幕右。人物、坐骑、鞍位、缰绳和遮挡为一次生成的单一主体，不含离线或运行时分层拼接。
+- 原始 PNG 以像素无损 WebP 保存为 `source/formal-production/world-idle-northwest-repair-v1-raw.webp`；逐字提示为 `prompts/production/mounted-world-idle-northwest-repair-v1.txt`，完整哈希、处理参数、旧新源帧/运行帧和证据路径见 `source/formal-production/world-direction-semantic-repair-v1-manifest.json`。
+- 透明处理使用同次色键资格判定与 `edge-contract 1`，随后通过项目统一 builder 生成 512px 源帧和 256px 运行帧。运行帧脚底线为 `241`、高度 `124px`、任意 alpha 最小安全边 `13px`、70 色距洋红残边 `0`，没有另一方向的精确重复或镜像匹配。
+- 只替换这一张世界待机帧并重建世界联系表/GIF/QC；战斗 PNG 未改。当前仍为 `ownerReviewStatus=pending`、`runtimeEnabled=false`。

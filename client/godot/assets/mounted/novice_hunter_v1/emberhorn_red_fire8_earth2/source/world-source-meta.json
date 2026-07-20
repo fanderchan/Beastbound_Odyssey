@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "asset": "novice_hunter_v1_mounted_emberhorn_red_fire8_earth2_world_true8_v1",
+  "generator": "OpenAI built-in image generation",
+  "integratedWholeFrame": true,
+  "runtimeLayeredComposition": false,
+  "runtimeMirroring": false,
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "boardLayout": {
+    "rows": 2,
+    "cols": 3,
+    "publishedSlots": [
+      "idle-1",
+      "walk-1",
+      "walk-2",
+      "walk-3",
+      "walk-4"
+    ],
+    "localOnlySlot": "idle-loop-check"
+  },
+  "rawArchives": [
+    {
+      "direction": "south",
+      "path": "world-raw/south.webp",
+      "sha256": "fe602de1170da986933c715166fa7d8ca47de1001ac287dadcaf6200555c981a",
+      "decodedRgbaSha256": "a39e8ef9e9c21d046d983a09bb50d947a2730ac6e6a380731f600a45b6695391",
+      "originalPngSha256": "6e4bbfcae1db1e073d4330084b02a07d3e88c770c0c6f6df3d01c1273caeaa18",
+      "prompt": "../prompts/world-south-v1.txt",
+      "promptSha256": "9f04afe64b8bd8cb5c8bac6a212f42568c9a3ac7361262f42da49d7f9981f28f",
+      "pipeline": "world-pipeline/south.json",
+      "pipelineSha256": "a2a87f95aa6f27ecddd6cd7b34f3aaa390f772ec83502d70d7e120fd3c13cbd9"
+    },
+    {
+      "direction": "southwest",
+      "path": "world-raw/southwest.webp",
+      "sha256": "b479ba7ae80edf78278930cc7ee859660e518720e56ee5ff1ad793a8f21a6f51",
+      "decodedRgbaSha256": "584009f4b2e8f479a78f9cc14f35912038cbb5d729a105d8b14c65459c0f2eb8",
+      "originalPngSha256": "305e11bbe5a68ccffa26f16dfadc8de524a9cb786de58cf781f47abfa6fd4078",
+      "prompt": "../prompts/world-southwest-v1.txt",
+      "promptSha256": "0abee2f067fc8662dad262407f24f38557da2eae13c237310cbc1fbf59a5ec8d",
+      "pipeline": "world-pipeline/southwest.json",
+      "pipelineSha256": "64d3332b9a0928741832620f15f58a44066e421ce07bf2c504f60bf842539d5f"
+    },
+    {
+      "direction": "west",
+      "path": "world-raw/west.webp",
+      "sha256": "5df527bb22ffb854f997e8b41cd6d7c121a1d9f94cd59ab3b327aeb71e9d56c5",
+      "decodedRgbaSha256": "a26a3e0697adbbf26003c4a872919a9816e482cd88b310d7b3244874ad6aeed2",
+      "originalPngSha256": "e8983da22cf78b71789bd8d0fdc115ff9c70112436f124b487ba79a8bd1331e0",
+      "prompt": "../prompts/world-west-v1.txt",
+      "promptSha256": "1560994b953f50d3b5c4f56d3e2b0137a17751eb8df94501e330bcc61d9e02ef",
+      "pipeline": "world-pipeline/west.json",
+      "pipelineSha256": "6f9d78ee099d40623ce7812f451af136660312cfb78d527452797d2a91f457f3"
+    },
+    {
+      "direction": "northwest",
+      "path": "world-raw/northwest.webp",
+      "sha256": "d92cc6b02431e662f926932d4ad51a07c8e65bfdade4a02972b1717b7ac52409",
+      "decodedRgbaSha256": "8865cbbe5ddd8d986cb2a8de3d0f00c0732013734769b4429d2e56ea29ad9296",
+      "originalPngSha256": "a215d43895d3941681464029a8391af545a021293dff1a5df91db261e63fe4a5",
+      "prompt": "../prompts/world-northwest-v1.txt",
+      "promptSha256": "a57eedec372051544962158d080cf78ce0970ccd969374075b9f0f03c02d2cba",
+      "pipeline": "world-pipeline/northwest.json",
+      "pipelineSha256": "67e9682c6e76287f8c1f6677c82b487e434cddab55fe0522cdbc3006ca836f07"
+    },
+    {
+      "direction": "north",
+      "path": "world-raw/north.webp",
+      "sha256": "0f3b9532ab8f7e2f270162d1d81a1b29e0763302bb11b00968d97bb5d0337a4f",
+      "decodedRgbaSha256": "9f0cdb58504e0927ae41113518229a9339fbc56ee0fac20ccddae191ddc5247d",
+      "originalPngSha256": "eaf54d5abd306743ba0318d6b3c33aa589fb4a805309bf581f610301fd10a05e",
+      "prompt": "../prompts/world-north-v1.txt",
+      "promptSha256": "78125ae339f2eb526c07ae7689272b3e7645ff4b36b2524c7620474401208651",
+      "pipeline": "world-pipeline/north.json",
+      "pipelineSha256": "61c7b6e8ed49ba5377771fd9c756f6e501ad6eea6d7261b25bb2ce31c0b560e9"
+    },
+    {
+      "direction": "northeast",
+      "path": "world-raw/northeast.webp",
+      "sha256": "74f02515f262c20b2be91498228126acfd082d0da036c2ecfcd7d69cd76032c7",
+      "decodedRgbaSha256": "35e8adc7037f848a45690d704dfed34a233d208df0028f09749bace3cdadd910",
+      "originalPngSha256": "3425bb142f5baa1145d236b2e8fe43839b006d31df908e1f50d0f31d2934935d",
+      "prompt": "../prompts/world-northeast-v1.txt",
+      "promptSha256": "1f859c60dabc4f4ff3be4fd11c760a47fc87199845fffe997bf6be655e4f30e3",
+      "pipeline": "world-pipeline/northeast.json",
+      "pipelineSha256": "b42398ab6105979f7e3c50bb458029153e3321f27b1386b6ec51a13ceebc17fa"
+    },
+    {
+      "direction": "east",
+      "path": "world-raw/east.webp",
+      "sha256": "c396c86cdba2ce735b28a765a09099a22c932f22c9f082aa4a9defc5ab7fd9b0",
+      "decodedRgbaSha256": "43555b82fbfa7dfb07cd1acf992c0caafc68a9fabb1cec5843a72e8c3dc923a9",
+      "originalPngSha256": "d4ff79c812f2f37fff8d100b92ed87b3614d658779c6cdd6a71f90fb518ea644",
+      "prompt": "../prompts/world-east-v1.txt",
+      "promptSha256": "7781c18b34a0a100beb416e8f675e26117c4856f156eb07107cf84361d27e73c",
+      "pipeline": "world-pipeline/east.json",
+      "pipelineSha256": "d24f3bb4e2d405be4bbef8d8c6022a38a52614a9720900c993eb0166a652a0d2"
+    },
+    {
+      "direction": "southeast",
+      "path": "world-raw/southeast.webp",
+      "sha256": "fcf1821b16a17b50dff7031024fada46178d9d2ef220d7a2719633b9f0d279f1",
+      "decodedRgbaSha256": "00ed5f43071457f4e81de71f349f9e1c63b153fc1bc1d7e201c5666802d5c20a",
+      "originalPngSha256": "46af54e504845e350bf2cdf0e0b8ca4e6faf695ad7ff93a16237079e1ace4bc2",
+      "prompt": "../prompts/world-southeast-v1.txt",
+      "promptSha256": "f273a9f29dee7056a5062cabc25fa2670b48062e73fcef2b83d1adae72dde6af",
+      "pipeline": "world-pipeline/southeast.json",
+      "pipelineSha256": "53c9198b0cda22a8bf1a9896f985211bd93f6baf0798a5afa0f77b00ce5b84a5"
+    }
+  ],
+  "outputs": {
+    "sourceFrames": "world-frames/directions",
+    "runtimeFrames": "../world/directions",
+    "sourceFrameCount": 40,
+    "runtimeFrameCount": 40
+  },
+  "qa": {
+    "status": "self_review_passed_owner_pending",
+    "contactSheet": "../qa/world/true8-world-contact-8x5.png",
+    "cycleGif": "../qa/world/true8-mounted-world-cycle.gif",
+    "qc": "../qa/world/world-qc.json"
+  },
+  "semanticDirectionRepairs": [
+    {
+      "id": "mounted-emberhorn-southeast-idle-semantic-repair-v2",
+      "direction": "southeast",
+      "action": "idle",
+      "manifest": "world-direction-repair-v2/manifest.json"
+    }
+  ]
+}

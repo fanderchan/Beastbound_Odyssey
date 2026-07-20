@@ -1,0 +1,814 @@
+{
+  "schemaVersion": 1,
+  "rule": "review canvases arrange immutable whole AI-baked rider + mount frames; no rider/pet layer composition",
+  "directionOrder": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "walkFrameCountPerDirection": 4,
+  "expectedFrameSize": [
+    256,
+    256
+  ],
+  "outputs": {
+    "contactSheet": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-v1/mounted-walk-8x4-contact.png",
+    "simultaneousCycleGif": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-v1/mounted-walk-8-direction-cycle.gif"
+  },
+  "warnings": [],
+  "heuristicObservations": [
+    "south: 7 broad color-only magenta candidates",
+    "southwest: 49 broad color-only magenta candidates",
+    "west: 17 broad color-only magenta candidates",
+    "northwest: 17 broad color-only magenta candidates",
+    "north: 22 broad color-only magenta candidates",
+    "northeast: 41 broad color-only magenta candidates",
+    "east: 19 broad color-only magenta candidates",
+    "southeast: 12 broad color-only magenta candidates"
+  ],
+  "chromaProvenanceAudit": {
+    "status": "passed_fail_closed_no_pixel_change",
+    "decision": "no_despill",
+    "reason": "The legacy broad color-only heuristic cannot distinguish authored plum-purple edge colors from chroma spill. The eight preserved raw walk sheets match their build metadata input SHA-256 values; all 32 same-operation chroma-key records report inputBackgroundMode=chroma_key and zero residualMagentaPixelsSource/runtime after eligible cleanup. The 512px normalized source frames contain zero strict near-key candidates. Four 256px pixels cross the strict color threshold only after scale normalization, while the maximum strong-magenta edge ratio is 0.004, below the strict 0.02 gate. No exact same-operation eligibility mask survives at those final-runtime coordinates, so the assets are byte-preserved rather than recolored by guess.",
+    "rawWalkSheetCount": 8,
+    "walkFrameCount": 32,
+    "sameOperationChromaRecordCount": 32,
+    "pipelineResidualMagentaPixelsSource": 0,
+    "pipelineResidualMagentaPixelsRuntime": 0,
+    "strictSourceMagentaPixels": 0,
+    "strictRuntimeMagentaPixels": 4,
+    "maximumStrongMagentaEdgeRatio": 0.004,
+    "strictStrongMagentaEdgeRatioLimit": 0.02,
+    "runtimeFramesChanged": 0,
+    "sourceFramesChanged": 0,
+    "residualVisualRisk": "four scale-normalized color-threshold candidates remain unchanged and require owner visual review",
+    "ownerReviewStatus": "pending"
+  },
+  "directions": {
+    "south": {
+      "label": "S",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-1.png",
+        "sha256": "c71590400a92a81f164ea6e4835037f5dafb725af8607348e77d65ea9d9c5249",
+        "alphaBbox": [
+          80,
+          68,
+          175,
+          248
+        ],
+        "visiblePixels": 10806,
+        "magentaFringePixels": 0,
+        "width": 95,
+        "height": 180,
+        "centerX": 127.5,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/south/normalized/ride_walk-1.png",
+          "sha256": "41dba7f6f1750335960662a899235b2496502f08b27e41863cdf767ee06a5a56",
+          "alphaBbox": [
+            81,
+            68,
+            174,
+            248
+          ],
+          "visiblePixels": 10636,
+          "magentaFringePixels": 2,
+          "width": 93,
+          "height": 180,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/south/normalized/ride_walk-2.png",
+          "sha256": "ef1692a0a6c8f6380ff54fc15707144cdc6ec065c5c3061ce1cd0ac7f0fd95b1",
+          "alphaBbox": [
+            81,
+            70,
+            174,
+            248
+          ],
+          "visiblePixels": 10491,
+          "magentaFringePixels": 2,
+          "width": 93,
+          "height": 178,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/south/normalized/ride_walk-3.png",
+          "sha256": "7ef7f96e8f852593a0f9b40388f5fc918375fc56935d4917f1b3b4efe9ca6c34",
+          "alphaBbox": [
+            82,
+            73,
+            173,
+            248
+          ],
+          "visiblePixels": 10033,
+          "magentaFringePixels": 1,
+          "width": 91,
+          "height": 175,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/south/normalized/ride_walk-4.png",
+          "sha256": "1c95dda4af515d25e411d021bec26e96e2432ee55bd23192e75daffc369bedb9",
+          "alphaBbox": [
+            83,
+            76,
+            172,
+            248
+          ],
+          "visiblePixels": 9783,
+          "magentaFringePixels": 2,
+          "width": 89,
+          "height": 172,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          172,
+          180
+        ],
+        "centerDriftPx": 0.0,
+        "possibleMagentaFringePixels": 7
+      }
+    },
+    "southwest": {
+      "label": "SW",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-2.png",
+        "sha256": "dda1abcab53c97714acfd6b52f9de5bf77e30385366745eedcbe1322bc6b9159",
+        "alphaBbox": [
+          38,
+          68,
+          219,
+          248
+        ],
+        "visiblePixels": 13899,
+        "magentaFringePixels": 0,
+        "width": 181,
+        "height": 180,
+        "centerX": 128.5,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southwest/normalized/ride_walk-1.png",
+          "sha256": "b17bbef99580ae423a8e892382f08cfb1ba8da02945c04df66eeacf3571b0e4f",
+          "alphaBbox": [
+            29,
+            68,
+            228,
+            248
+          ],
+          "visiblePixels": 15910,
+          "magentaFringePixels": 10,
+          "width": 199,
+          "height": 180,
+          "centerX": 128.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southwest/normalized/ride_walk-2.png",
+          "sha256": "dd61f53819ce85ff5eb66c09263ccfc23cd14c785bcdaec81439ee302799d9ac",
+          "alphaBbox": [
+            33,
+            68,
+            224,
+            248
+          ],
+          "visiblePixels": 15230,
+          "magentaFringePixels": 16,
+          "width": 191,
+          "height": 180,
+          "centerX": 128.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southwest/normalized/ride_walk-3.png",
+          "sha256": "b92c20b7182a92e221912f181361ea10ddd78f569e85b380d69b69dc7a1494c6",
+          "alphaBbox": [
+            30,
+            66,
+            228,
+            248
+          ],
+          "visiblePixels": 15413,
+          "magentaFringePixels": 11,
+          "width": 198,
+          "height": 182,
+          "centerX": 129.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southwest/normalized/ride_walk-4.png",
+          "sha256": "c40edcf981dc4ed937ead0587cbdf2ac4dd8caa0cc71271c97e63124fcba53ef",
+          "alphaBbox": [
+            20,
+            70,
+            236,
+            248
+          ],
+          "visiblePixels": 16392,
+          "magentaFringePixels": 12,
+          "width": 216,
+          "height": 178,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          178,
+          182
+        ],
+        "centerDriftPx": 1.0,
+        "possibleMagentaFringePixels": 49
+      }
+    },
+    "west": {
+      "label": "W",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-3.png",
+        "sha256": "cca72c78e5e3f7e8e55d964367a84f548413aeab9e901aea56c7ff155cdc5eb1",
+        "alphaBbox": [
+          10,
+          98,
+          246,
+          248
+        ],
+        "visiblePixels": 15658,
+        "magentaFringePixels": 0,
+        "width": 236,
+        "height": 150,
+        "centerX": 128.0,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/west/normalized/ride_walk-1.png",
+          "sha256": "97828779d3461d21c49a30dc004daad77577d3d70f0a3e1c0225d2507f522bae",
+          "alphaBbox": [
+            17,
+            98,
+            239,
+            248
+          ],
+          "visiblePixels": 15284,
+          "magentaFringePixels": 2,
+          "width": 222,
+          "height": 150,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/west/normalized/ride_walk-2.png",
+          "sha256": "7268206b758319df10994b4d27db63fdbe96efe528fd7495e065221459090629",
+          "alphaBbox": [
+            14,
+            98,
+            242,
+            248
+          ],
+          "visiblePixels": 15401,
+          "magentaFringePixels": 7,
+          "width": 228,
+          "height": 150,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/west/normalized/ride_walk-3.png",
+          "sha256": "f076828d9e101cb391b9b4ef90000b7d4b4b4d309337a73ae1666b84bdac0052",
+          "alphaBbox": [
+            18,
+            97,
+            238,
+            248
+          ],
+          "visiblePixels": 14854,
+          "magentaFringePixels": 3,
+          "width": 220,
+          "height": 151,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/west/normalized/ride_walk-4.png",
+          "sha256": "b7c49753492339b923389d5896d48dd071be840277197bfef8c031591b10e423",
+          "alphaBbox": [
+            14,
+            94,
+            242,
+            248
+          ],
+          "visiblePixels": 15954,
+          "magentaFringePixels": 5,
+          "width": 228,
+          "height": 154,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          150,
+          154
+        ],
+        "centerDriftPx": 0.0,
+        "possibleMagentaFringePixels": 17
+      }
+    },
+    "northwest": {
+      "label": "NW",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-4.png",
+        "sha256": "79eeffb2ae6be189274e1ac96d288830dcd999bad68d681bd34d1fce8622c87a",
+        "alphaBbox": [
+          32,
+          73,
+          224,
+          248
+        ],
+        "visiblePixels": 14956,
+        "magentaFringePixels": 0,
+        "width": 192,
+        "height": 175,
+        "centerX": 128.0,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northwest/normalized/ride_walk-1.png",
+          "sha256": "c4733a6206cbe82d01115c899717c8b77767c37a5d83f0222b1bcd5a600778fa",
+          "alphaBbox": [
+            32,
+            73,
+            223,
+            248
+          ],
+          "visiblePixels": 15540,
+          "magentaFringePixels": 5,
+          "width": 191,
+          "height": 175,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northwest/normalized/ride_walk-2.png",
+          "sha256": "1413b223ba08007d190927e0aab0ed98e154f36acc48144a50681671b1f4698d",
+          "alphaBbox": [
+            30,
+            74,
+            226,
+            248
+          ],
+          "visiblePixels": 15471,
+          "magentaFringePixels": 5,
+          "width": 196,
+          "height": 174,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northwest/normalized/ride_walk-3.png",
+          "sha256": "0ad834d80246bfa5fe9d34ad3a40ac8cb12d859ef25f066ee8395d48d32a5845",
+          "alphaBbox": [
+            30,
+            76,
+            225,
+            248
+          ],
+          "visiblePixels": 14847,
+          "magentaFringePixels": 4,
+          "width": 195,
+          "height": 172,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northwest/normalized/ride_walk-4.png",
+          "sha256": "323b7eaa1d173592cf7da4d73ff5483d756cbc0540ea13103022b8c3ed4c0112",
+          "alphaBbox": [
+            31,
+            71,
+            225,
+            248
+          ],
+          "visiblePixels": 15376,
+          "magentaFringePixels": 3,
+          "width": 194,
+          "height": 177,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          172,
+          177
+        ],
+        "centerDriftPx": 0.5,
+        "possibleMagentaFringePixels": 17
+      }
+    },
+    "north": {
+      "label": "N",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-5.png",
+        "sha256": "a898c4f81a9f4d520c46d34aace8694614c89621d9964e4d266268a864785291",
+        "alphaBbox": [
+          72,
+          68,
+          183,
+          248
+        ],
+        "visiblePixels": 10788,
+        "magentaFringePixels": 0,
+        "width": 111,
+        "height": 180,
+        "centerX": 127.5,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/north/normalized/ride_walk-1.png",
+          "sha256": "22fc4cd722372bd38871408881f56ffb0b8ff42970f08f60d04998b46bfaea0b",
+          "alphaBbox": [
+            74,
+            68,
+            180,
+            248
+          ],
+          "visiblePixels": 11626,
+          "magentaFringePixels": 9,
+          "width": 106,
+          "height": 180,
+          "centerX": 127.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/north/normalized/ride_walk-2.png",
+          "sha256": "0a66382f039b17ec90811caf16e07cad4064894f8c0c64ef3d9324d02f2380dc",
+          "alphaBbox": [
+            73,
+            61,
+            182,
+            248
+          ],
+          "visiblePixels": 11914,
+          "magentaFringePixels": 6,
+          "width": 109,
+          "height": 187,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/north/normalized/ride_walk-3.png",
+          "sha256": "ceb929c336f2bd735e8becd2ca3db5a9b4cfc45dbf01db6adefc613192f054d5",
+          "alphaBbox": [
+            76,
+            63,
+            180,
+            248
+          ],
+          "visiblePixels": 11897,
+          "magentaFringePixels": 1,
+          "width": 104,
+          "height": 185,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/north/normalized/ride_walk-4.png",
+          "sha256": "87329a26e3ff943c28368ff71a5c7617e4d605ebf6af8bf4f483148e6ccc1196",
+          "alphaBbox": [
+            73,
+            61,
+            182,
+            248
+          ],
+          "visiblePixels": 11947,
+          "magentaFringePixels": 6,
+          "width": 109,
+          "height": 187,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          180,
+          187
+        ],
+        "centerDriftPx": 1.0,
+        "possibleMagentaFringePixels": 22
+      }
+    },
+    "northeast": {
+      "label": "NE",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-6.png",
+        "sha256": "eb2bec409f5db496af873d814750844b3195111aafe630270f47f550df3aadeb",
+        "alphaBbox": [
+          28,
+          68,
+          228,
+          248
+        ],
+        "visiblePixels": 15502,
+        "magentaFringePixels": 0,
+        "width": 200,
+        "height": 180,
+        "centerX": 128.0,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northeast/normalized/ride_walk-1.png",
+          "sha256": "27d1cf582a911d42fc735eb82e4ad3fce6532dd6c0a270270744f2a0c897e3c8",
+          "alphaBbox": [
+            32,
+            68,
+            224,
+            248
+          ],
+          "visiblePixels": 14606,
+          "magentaFringePixels": 8,
+          "width": 192,
+          "height": 180,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northeast/normalized/ride_walk-2.png",
+          "sha256": "bf18c67b3d9609689f5b83ca04eb6297991cbd27d2b97b07814c7d6186981eda",
+          "alphaBbox": [
+            28,
+            68,
+            228,
+            248
+          ],
+          "visiblePixels": 14911,
+          "magentaFringePixels": 5,
+          "width": 200,
+          "height": 180,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northeast/normalized/ride_walk-3.png",
+          "sha256": "a1dfd3662310b4c91faeba7ffb0fbac9ac69d36d4f0c418739246fc854782639",
+          "alphaBbox": [
+            32,
+            70,
+            224,
+            248
+          ],
+          "visiblePixels": 15134,
+          "magentaFringePixels": 14,
+          "width": 192,
+          "height": 178,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/northeast/normalized/ride_walk-4.png",
+          "sha256": "b1d16c6b4c10caa99fd0af553a0d680a420d820f9b87e177dba75ca31b4d7dfe",
+          "alphaBbox": [
+            32,
+            75,
+            223,
+            248
+          ],
+          "visiblePixels": 14781,
+          "magentaFringePixels": 14,
+          "width": 191,
+          "height": 173,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          173,
+          180
+        ],
+        "centerDriftPx": 0.5,
+        "possibleMagentaFringePixels": 41
+      }
+    },
+    "east": {
+      "label": "E",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-7.png",
+        "sha256": "69f3e8ed210c545f42385f573bf53edb752996612012118ac459e56a03a2f29f",
+        "alphaBbox": [
+          10,
+          94,
+          246,
+          248
+        ],
+        "visiblePixels": 15717,
+        "magentaFringePixels": 0,
+        "width": 236,
+        "height": 154,
+        "centerX": 128.0,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/east/normalized/ride_walk-1.png",
+          "sha256": "4130dd147fcf9dd5e95992c68a4584e5ea95300e2e2d5c3009b5eb1688d0fa24",
+          "alphaBbox": [
+            12,
+            94,
+            245,
+            248
+          ],
+          "visiblePixels": 15659,
+          "magentaFringePixels": 4,
+          "width": 233,
+          "height": 154,
+          "centerX": 128.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/east/normalized/ride_walk-2.png",
+          "sha256": "3783f391be1d5f3a0c76d9136e5af648333c771595ba9f3af8663ae4404e87c3",
+          "alphaBbox": [
+            10,
+            94,
+            246,
+            248
+          ],
+          "visiblePixels": 16472,
+          "magentaFringePixels": 7,
+          "width": 236,
+          "height": 154,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/east/normalized/ride_walk-3.png",
+          "sha256": "599d735a4c20ca625ed1b1251b0d9e35e5ec458b21b68fdcc6a42a2aa4d6c68b",
+          "alphaBbox": [
+            10,
+            92,
+            245,
+            248
+          ],
+          "visiblePixels": 15958,
+          "magentaFringePixels": 6,
+          "width": 235,
+          "height": 156,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/east/normalized/ride_walk-4.png",
+          "sha256": "ded91ec5fa3eb6541285c86dcd909c9150982caffee579ee112c0df908f5a21f",
+          "alphaBbox": [
+            12,
+            92,
+            245,
+            248
+          ],
+          "visiblePixels": 15948,
+          "magentaFringePixels": 2,
+          "width": 233,
+          "height": 156,
+          "centerX": 128.5,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          154,
+          156
+        ],
+        "centerDriftPx": 1.0,
+        "possibleMagentaFringePixels": 19
+      }
+    },
+    "southeast": {
+      "label": "SE",
+      "idle": {
+        "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/idle/ride_idle-8.png",
+        "sha256": "717108f77631f99d909ae166c6724bbb3363a71218888d1b94b5cdb0f5c4c49b",
+        "alphaBbox": [
+          34,
+          73,
+          222,
+          248
+        ],
+        "visiblePixels": 15319,
+        "magentaFringePixels": 0,
+        "width": 188,
+        "height": 175,
+        "centerX": 128.0,
+        "bottomExclusive": 248
+      },
+      "walk": [
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southeast/normalized/ride_walk-1.png",
+          "sha256": "7c42aad521952042d35c68dd606129f863629e77169d203d3d65ed8150ef93be",
+          "alphaBbox": [
+            26,
+            73,
+            229,
+            248
+          ],
+          "visiblePixels": 16018,
+          "magentaFringePixels": 3,
+          "width": 203,
+          "height": 175,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southeast/normalized/ride_walk-2.png",
+          "sha256": "35916f8b31e55de53fff481c2b74977736d3a91a5c12240b421c97ebeee0823d",
+          "alphaBbox": [
+            26,
+            72,
+            231,
+            248
+          ],
+          "visiblePixels": 16628,
+          "magentaFringePixels": 4,
+          "width": 205,
+          "height": 176,
+          "centerX": 128.5,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southeast/normalized/ride_walk-3.png",
+          "sha256": "d25d5fc584114e62445961ea873e5d9aa4b0d85b797e075ac954b0022567600f",
+          "alphaBbox": [
+            27,
+            70,
+            229,
+            248
+          ],
+          "visiblePixels": 16494,
+          "magentaFringePixels": 2,
+          "width": 202,
+          "height": 178,
+          "centerX": 128.0,
+          "bottomExclusive": 248
+        },
+        {
+          "path": ".run/art_batch_phase322/moss_fox_family/mossback_marsh_earth7_water3/mounted/world/qa-input/walk/southeast/normalized/ride_walk-4.png",
+          "sha256": "19fa30a2d4a5e5b83585055d7817c46184c909c6790ba97a55c2e33e6b0733f5",
+          "alphaBbox": [
+            26,
+            75,
+            229,
+            248
+          ],
+          "visiblePixels": 16426,
+          "magentaFringePixels": 3,
+          "width": 203,
+          "height": 173,
+          "centerX": 127.5,
+          "bottomExclusive": 248
+        }
+      ],
+      "summary": {
+        "uniqueWalkFrames": 4,
+        "bottomDriftPx": 0,
+        "heightRangePx": [
+          173,
+          178
+        ],
+        "centerDriftPx": 1.0,
+        "possibleMagentaFringePixels": 12
+      }
+    }
+  }
+}

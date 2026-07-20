@@ -258,7 +258,26 @@
       }
     },
     "totalFrameCount": 40,
-    "generationPolicy": "each direction independently authored; no world runtime mirror"
+    "generationPolicy": "each direction independently authored; no world runtime mirror",
+    "semanticDirectionRepair": {
+      "id": "pet-world-rear-diagonal-walk-semantic-regeneration-v1",
+      "directions": [
+        "northwest",
+        "northeast"
+      ],
+      "runtimeFramesChanged": 8,
+      "manifest": "source/formal-production/world-semantic-direction-repair-v1-manifest.json",
+      "ownerReviewStatus": "pending"
+    },
+    "eastDirectionRepair": {
+      "id": "pet-world-east-walk-semantic-regeneration-v2",
+      "direction": "east",
+      "action": "walk",
+      "runtimeFramesChanged": 4,
+      "runtimeMirroring": false,
+      "manifest": "source/formal-production/world-semantic-direction-repair-v2-manifest.json",
+      "ownerReviewStatus": "pending"
+    }
   },
   "sourceArchive": {
     "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",

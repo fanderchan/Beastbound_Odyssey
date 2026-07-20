@@ -355,7 +355,20 @@
     },
     "totalFrameCount": 40,
     "runtimeMountedComposition": false,
-    "generationPolicy": "one independently generated source per direction; no runtime mirror; four explicit alternating gait phases"
+    "generationPolicy": "one independently generated source per direction; no runtime mirror; four explicit alternating gait phases",
+    "semanticDirectionRepairs": [
+      {
+        "id": "true8-idle-nw-ne-slot-swap-v1",
+        "date": "2026-07-20",
+        "scope": "standalone pet world idle only",
+        "reason": "northwest and northeast idle artwork was installed under the opposite semantic direction",
+        "method": "byte-preserving NW/NE frame swap plus exact 2x4 raw-sheet cell swap; no mirroring or redraw",
+        "affectedFrames": [
+          "northwest/idle/idle-1.png",
+          "northeast/idle/idle-1.png"
+        ]
+      }
+    ]
   },
   "supportedMountedCharacterIds": [
     "novice_hunter_v1"

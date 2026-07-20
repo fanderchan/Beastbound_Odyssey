@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "repairId": "mounted-emberhorn-southeast-idle-semantic-repair-v2",
+  "asset": "novice_hunter_v1_mounted_emberhorn_red_fire8_earth2",
+  "generator": "OpenAI built-in image generation",
+  "reason": "prior southeast mounted idle faced southwest while southeast walk frames were correct",
+  "direction": {
+    "screenVector": [
+      1,
+      1
+    ],
+    "view": "front_three_quarter",
+    "description": "lower-right travel",
+    "selfReview": "passed"
+  },
+  "integratedWholeFrame": true,
+  "runtimeLayeredComposition": false,
+  "runtimeMirroring": false,
+  "raw": {
+    "path": "source/world-direction-repair-v2/raw/southeast-idle.png",
+    "sha256": "d5db1c7aa13ea25e65c92b3cd0f65dba544f0a0d96eeb777fc4a1aa5c4537f87",
+    "originalGenerated": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-6190764f-f745-4d4a-827b-9e8a4d63a0f7.png"
+  },
+  "prompt": {
+    "path": "prompts/world-southeast-direction-repair-v2-idle.txt",
+    "sha256": "5d1de31c6657a59b1c912e72a3e4ce5f3a67ba85e8241e373e9f2ca3df3dee01"
+  },
+  "pipeline": {
+    "preparation": {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-idle-preparation.json",
+      "sha256": "1c347e8891787bd4154e59d64dde3a459cc5ff024fa26515b0469fb1af48f95a"
+    },
+    "build": {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-idle-build.json",
+      "sha256": "87637e73d2e0ed7f5d0ed577526e249b01bd98f43d9023efc658f568d3799b27"
+    }
+  },
+  "sourceFrame": {
+    "path": "source/world-frames/directions/southeast/idle/idle-1.png",
+    "sha256": "7d25a05166488fd0be85f9f21335880d1d4ab62b62b41ab103a80d55c2e9aecf",
+    "rgbaSha256": "24d9e84adedcb8cd53cd5d5207ccc8fb246ae36c8a634ff8755336698ac16283"
+  },
+  "runtimeFrame": {
+    "path": "world/directions/southeast/idle/idle-1.png",
+    "sha256": "18d3f18f7f70f620c348976dd41029f30dc0ff9de500b9f57170ba2a0b2a26f8",
+    "rgbaSha256": "8a240a710d057c06553585fba86bfcfae646a60456f937a69b3648172e80062a",
+    "runtimeVisibleBbox": [
+      28,
+      66,
+      184,
+      245
+    ]
+  },
+  "qa": {
+    "beforeAfter": "qa/world/direction-repair-v2-before-after.png",
+    "mountedContact": "qa/world/true8-world-contact-8x5.png"
+  },
+  "status": "self_review_passed_owner_pending"
+}

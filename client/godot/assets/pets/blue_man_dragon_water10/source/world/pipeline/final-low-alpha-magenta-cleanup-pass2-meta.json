@@ -68,9 +68,9 @@
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/world/directions/northeast/idle/idle-1.png",
-      "clearedPixels": 1,
-      "rgbaSha256Before": "c478068006755bee5d21f2ed0e966649333b8ee0cde5ad1a6652926cd0518383",
-      "rgbaSha256After": "66f0b53c3dc820da739dc55b7fa5a15b4821d737278ba42899abe1391a0796fa"
+      "clearedPixels": 0,
+      "rgbaSha256Before": "3bf51d685ca322429e458ce0954ab9ac222e02c092adee690ed1a79eaef58d51",
+      "rgbaSha256After": "3bf51d685ca322429e458ce0954ab9ac222e02c092adee690ed1a79eaef58d51"
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/world/directions/northeast/walk/walk-1.png",
@@ -98,9 +98,9 @@
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/world/directions/northwest/idle/idle-1.png",
-      "clearedPixels": 0,
-      "rgbaSha256Before": "3bf51d685ca322429e458ce0954ab9ac222e02c092adee690ed1a79eaef58d51",
-      "rgbaSha256After": "3bf51d685ca322429e458ce0954ab9ac222e02c092adee690ed1a79eaef58d51"
+      "clearedPixels": 1,
+      "rgbaSha256Before": "c478068006755bee5d21f2ed0e966649333b8ee0cde5ad1a6652926cd0518383",
+      "rgbaSha256After": "66f0b53c3dc820da739dc55b7fa5a15b4821d737278ba42899abe1391a0796fa"
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/world/directions/northwest/walk/walk-1.png",
@@ -309,8 +309,8 @@
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/source/world/frames-512/northeast/idle/idle-1.png",
       "clearedPixels": 1,
-      "rgbaSha256Before": "ac2924f4f73398ce357f11b5ac703922062b032e04f54eb2eb39aefd42a7cf92",
-      "rgbaSha256After": "c0b3601b8f3a72a53b4a5442eafbfb071e010354138d726a68e6974450ae4a1f"
+      "rgbaSha256Before": "98a28ad2b42839bf523814a92b3cae9c65224674a6da1f7496fa0adaed4a65bb",
+      "rgbaSha256After": "93f1cd2cb0b5f65d88477c9d2dc1814917d93b4a733b65e3a22403118dd9cd7a"
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/source/world/frames-512/northeast/walk/walk-1.png",
@@ -339,8 +339,8 @@
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/source/world/frames-512/northwest/idle/idle-1.png",
       "clearedPixels": 1,
-      "rgbaSha256Before": "98a28ad2b42839bf523814a92b3cae9c65224674a6da1f7496fa0adaed4a65bb",
-      "rgbaSha256After": "93f1cd2cb0b5f65d88477c9d2dc1814917d93b4a733b65e3a22403118dd9cd7a"
+      "rgbaSha256Before": "ac2924f4f73398ce357f11b5ac703922062b032e04f54eb2eb39aefd42a7cf92",
+      "rgbaSha256After": "c0b3601b8f3a72a53b4a5442eafbfb071e010354138d726a68e6974450ae4a1f"
     },
     {
       "path": "client/godot/assets/pets/blue_man_dragon_water10/source/world/frames-512/northwest/walk/walk-1.png",

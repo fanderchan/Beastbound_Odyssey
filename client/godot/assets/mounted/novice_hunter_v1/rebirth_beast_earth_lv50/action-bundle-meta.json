@@ -103,11 +103,19 @@
     }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "ai_generated_integrated_independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
     "runtimeBodyLayerCount": 1,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
     "directions": [
       "south",
       "southwest",
@@ -123,14 +131,27 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       }
+    },
+    "totalFrameCount": 40,
+    "generationPolicy": "each direction is an independently authored whole rider-and-mount subject; no world runtime mirror or layered composition",
+    "directionSemanticRepair": {
+      "status": "self_review_passed_owner_review_pending",
+      "direction": "northwest",
+      "action": "idle",
+      "frameCount": 1,
+      "result": "strict_rear_left_northwest",
+      "integratedWholeFrame": true,
+      "runtimeMirroring": false,
+      "runtimeLayeredComposition": false,
+      "manifest": "source/formal-production/world-direction-semantic-repair-v1-manifest.json"
     }
   },
   "sourceArchive": {

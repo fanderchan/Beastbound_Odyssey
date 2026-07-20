@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "lean",
+  "formId": "wuli_normal_orange_fire10",
+  "kind": "mounted",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "representativeRaw": "source/world/representative-directions-a-raw.png",
+  "representativeRawSha256": "0cde3d34995a95722a1299d69d7e37646142a50f8fc99724ae4e815115be76b7",
+  "representativeRawDecodedRgbaSha256": "e1cbb147c2833369c8a64bc8ec213df420dd6b00873459c9b1d4c7fae57525d5",
+  "prompt": "source/world/prompt-used.md",
+  "promptSha256": "1b173f26b172235653191390f0368c7ca4e28dac483a286940f4625a1e0cc0a7",
+  "sourceSheets": [
+    {
+      "name": "directions-a",
+      "rawSha256": "0cde3d34995a95722a1299d69d7e37646142a50f8fc99724ae4e815115be76b7",
+      "rawDecodedRgbaSha256": "e1cbb147c2833369c8a64bc8ec213df420dd6b00873459c9b1d4c7fae57525d5",
+      "pipelineMetadata": "source/world/directions-a-pipeline-meta.json",
+      "pipelineSha256": "d6695076d9fd57e7b34943250f50add8c9201cd3154ef80426a4f1fba2b935b4",
+      "repackMetadata": "source/world/directions-a-repack-meta.json",
+      "repackSha256": "58754f58979e5ba8bf2ea4663d7aeb40dfc5fd4fd8193d23d21356e827b40e94",
+      "rawTracked": true
+    },
+    {
+      "name": "directions-b",
+      "rawSha256": "81e2428d5f8ef1791921d743ba136a79ae25c1b714e733496fb094c9c482d46c",
+      "rawDecodedRgbaSha256": "953d319694cf09bdac8763b217ba7048b79ddce13083e5f59b67338009548670",
+      "pipelineMetadata": "source/world/directions-b-pipeline-meta.json",
+      "pipelineSha256": "003348a56f4aa22fc4e6f41359706140753eb350557fc611ee4b9a7759c09e65",
+      "repackMetadata": "source/world/directions-b-repack-meta.json",
+      "repackSha256": "396d73a6dee0ff33466d4e54f03a65511b6ec76aff244a838eee01fd69e5766d",
+      "rawTracked": false
+    }
+  ],
+  "fullLocalProductionArchive": "/Users/fander/projects/Beastbound_Odyssey/.run/art_batch_phase322/wuli/orange/world",
+  "runtimeFrames": 40,
+  "sourceFramesTracked": false,
+  "semanticDirectionRepair": {
+    "id": "mounted-world-north-northwest-semantic-regeneration-v1",
+    "manifest": "source/world/semantic-direction-repair-v1/manifest.json",
+    "manifestSha256": "06b2d504fd5080aac34250c0c9d7c26c3299d9d923f409d5543029c7e59d827d",
+    "sourceFramesTracked": 10,
+    "runtimeFramesChanged": 10,
+    "productionArchive": ".run/art_batch_phase324/semantic-direction-repair-v1"
+  }
+}

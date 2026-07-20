@@ -1,0 +1,1953 @@
+{
+  "schemaVersion": 1,
+  "id": "world-scale-normalization-v1",
+  "formId": "novice_tiger_mount",
+  "kind": "mounted",
+  "status": "runtime_repaired_owner_review_pending",
+  "method": "uniform scale of complete transparent subject around bottom-center alpha anchor; 512x512 source repaired first; 256x256 runtime re-derived with premultiplied-alpha Lanczos",
+  "forbiddenOperations": [
+    "non_uniform_stretch",
+    "mirror",
+    "direction_relabel",
+    "redraw",
+    "layered_composition"
+  ],
+  "alphaThreshold": 16,
+  "workingArchive": ".run/art_batch_phase320/novice_tiger/formal-production",
+  "runtimeRoot": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount",
+  "frameCount": 28,
+  "frames": [
+    {
+      "direction": "south",
+      "frame": 1,
+      "slot": "south-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/source-frames/south-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/runtime-frames/south-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/south/walk/walk-1.png",
+      "scale": 0.655555556,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          140,
+          52,
+          369,
+          502
+        ],
+        "width": 229,
+        "height": 450,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          179,
+          206,
+          330,
+          502
+        ],
+        "width": 151,
+        "height": 296,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          70,
+          26,
+          184,
+          250
+        ],
+        "width": 114,
+        "height": 224,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          91,
+          103,
+          166,
+          250
+        ],
+        "width": 75,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "089b578198c034969d797cb39dba97d817e6f574ec66d7c338f419b1c6164e07",
+        "sourceRgbaSha256": "a2ae223d8300816cb229322517115d94ba3742c5b4dbb46eec41481ddaf8e947",
+        "archiveRuntimeFileSha256": "9628eb1f48c1ccf1440b60480e6e3219fa5f583337b6b1b1f34322c5159a7ea1",
+        "clientRuntimeFileSha256": "052e9c86c68576ca8ac88be44f627c8efd60c0c4c6d3b2c800d55b22c63b4203"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "132c0cae79abb09cc6dfbfd6b9169a6da00a9d9490c19ed276fa81d3b95dd039",
+        "sourceRgbaSha256": "fa40cc0b940f620fd24ae2b99d3cabc8c258c3d6c290edeec24344afb45632a4",
+        "archiveRuntimeFileSha256": "cc1c534ecbd91274a4ff2fbdd53c08bc1acabee2e515c2f98d34140ef40c94ce",
+        "clientRuntimeFileSha256": "4dc5ab1fbe1ddd79f8148ef286eea9ee4c7bff0fc34d2426b78dec9e6569aae2"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 2,
+      "slot": "south-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/source-frames/south-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/runtime-frames/south-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/south/walk/walk-2.png",
+      "scale": 0.646929825,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          138,
+          46,
+          362,
+          502
+        ],
+        "width": 224,
+        "height": 456,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          177,
+          207,
+          323,
+          502
+        ],
+        "width": 146,
+        "height": 295,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          72,
+          23,
+          184,
+          250
+        ],
+        "width": 112,
+        "height": 227,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          92,
+          103,
+          164,
+          250
+        ],
+        "width": 72,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "662a1b1efd9b77076902bdc80c10f040cdeff02f8b4d5d3cf2c0b5d2f3f93897",
+        "sourceRgbaSha256": "740e297fadcc2c3be03deb9fb16e519574efc42b8e6f0ea19a7f2f145c2a1627",
+        "archiveRuntimeFileSha256": "83658f8e86950e632bb8f1f5531069ef2b4dab8d268225de4ac91f534dd88aed",
+        "clientRuntimeFileSha256": "a3fb0ce37dbcfceca138823807f0b20b67a11929b19eb9d04faade7f3286ae9d"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "83c8e5537e37da3a127db723c61d7cbbf1d5bc4268fb4265fc281e9c4a2cfc6e",
+        "sourceRgbaSha256": "37c43bfbc25feea2e15bbd161065859f58813581c604505b0a94458092192a03",
+        "archiveRuntimeFileSha256": "e100b2e2c1226a573fc999699359ac770c4ad0703ba9540094ccf2779f0a5174",
+        "clientRuntimeFileSha256": "8b11a133c6eeabf766e7b8b6d184a91e316457372c3acaeaf21c36d05bff789a"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 3,
+      "slot": "south-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/source-frames/south-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/runtime-frames/south-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/south/walk/walk-3.png",
+      "scale": 0.653421634,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          153,
+          49,
+          381,
+          502
+        ],
+        "width": 228,
+        "height": 453,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          192,
+          206,
+          342,
+          502
+        ],
+        "width": 150,
+        "height": 296,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          71,
+          25,
+          184,
+          250
+        ],
+        "width": 113,
+        "height": 225,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          90,
+          103,
+          165,
+          250
+        ],
+        "width": 75,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "40119fa75447fad74e6b23a237bfca8409640fdf96bbb95929fad18b56734309",
+        "sourceRgbaSha256": "4dfc2ef563e39a3f281572b4711626656909dd31a26b9ecf613072ac4a9411af",
+        "archiveRuntimeFileSha256": "5ea050817ca7cde70da6733ee8fc03bf8d756696190b8001f69b1576c42ab53d",
+        "clientRuntimeFileSha256": "86f8dabe622f60e6454fc76e60b54cb81002595da0a695d2276cd9037268e509"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "fa31467c2e7e6d8c73e3bac0a7bd1bb4ee1dfd2b63472df543c950ab643a0fd8",
+        "sourceRgbaSha256": "92dd34f1e15ec600b4081fad01e9759c23894af263ce2cfdbd2b5f0a62174ff5",
+        "archiveRuntimeFileSha256": "4e8d76aac26c140e125a1cdde3681b4edb918da67ba4978db94260eef191df9c",
+        "clientRuntimeFileSha256": "af23adf511836842c39211f36067221fddecd3b2c5aa8c020622fd9267e41f4e"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 4,
+      "slot": "south-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/source-frames/south-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-south/runtime-frames/south-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/south/walk/walk-4.png",
+      "scale": 0.651982379,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          138,
+          48,
+          366,
+          502
+        ],
+        "width": 228,
+        "height": 454,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          177,
+          206,
+          327,
+          502
+        ],
+        "width": 150,
+        "height": 296,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          71,
+          25,
+          185,
+          250
+        ],
+        "width": 114,
+        "height": 225,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          91,
+          103,
+          165,
+          250
+        ],
+        "width": 74,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "9d545c870df04f2115cea88301c4028695f92f1ecd7571cd40f1d8f774c32c76",
+        "sourceRgbaSha256": "8faa0d6ddf34b5109d4fdceb2eed4d2e942aeec5a384121a247342847b02b48f",
+        "archiveRuntimeFileSha256": "9fb7cd1ae02888108c5b2a1871cad0a3a5b3b98468f985896186dd5129ba8787",
+        "clientRuntimeFileSha256": "5af934db9a836f940326b3176de616529d92d95f647e7167c28256487e110386"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "7494887ded774e9d3a98074866f37ad4d559d9be9470edec56485629ce3ca6be",
+        "sourceRgbaSha256": "83d59422630755c7282d5a1c8774b2d9fef8c14b93e8f6c41c0f5de9f6e2a54e",
+        "archiveRuntimeFileSha256": "e632c5f825d823bcc7afbd613e249d7182218ca727632335e5d09cb25a4be425",
+        "clientRuntimeFileSha256": "c92d08495c72084ff4e7b7b0a12e8c624da6f123fc8d355db73e37ac536b2afa"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 1,
+      "slot": "west-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/source-frames/west-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/runtime-frames/west-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/west/walk/walk-1.png",
+      "scale": 0.824404762,
+      "sourceBaselineExclusive": 501,
+      "beforeSource": {
+        "bbox": [
+          79,
+          165,
+          477,
+          501
+        ],
+        "width": 398,
+        "height": 336,
+        "baselineExclusive": 501
+      },
+      "afterSource": {
+        "bbox": [
+          113,
+          224,
+          442,
+          501
+        ],
+        "width": 329,
+        "height": 277,
+        "baselineExclusive": 501
+      },
+      "beforeRuntime": {
+        "bbox": [
+          30,
+          83,
+          228,
+          250
+        ],
+        "width": 198,
+        "height": 167,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          47,
+          112,
+          211,
+          250
+        ],
+        "width": 164,
+        "height": 138,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 138,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "cab68b0f7a2614e71a33216690aa93b3d1c7e3a10becef315d64d600b165aa59",
+        "sourceRgbaSha256": "7c0f63cf6b8869a941ba68c1e20bfcab1f0c681cd9058acc48dd0c337d787ab9",
+        "archiveRuntimeFileSha256": "931c5d774821f4998c727d8519eba990f4bf9e4abc7cf18f65d5bd5e050a9b4d",
+        "clientRuntimeFileSha256": "dae1d86a5796c0409ce800b77e02e00b501b161b2f7f109af8b90deb4b774ee3"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "0c90cc03e8f4fdc90874a2e4e6cc860496cf468661677bb6a85616896d729983",
+        "sourceRgbaSha256": "9b991e1b97cae6e0cd0a820344b0b477717263550f6d8944648bfd1c975be3ef",
+        "archiveRuntimeFileSha256": "d02d2853ad475fa65906f908e3d4becf7e3efb2033f92307570b4fd4bfe32e73",
+        "clientRuntimeFileSha256": "bee36e47e0d0d4207e1e6969b77851ae419f99ed8bf6d7d7b7a1a44a2de680f8"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 2,
+      "slot": "west-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/source-frames/west-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/runtime-frames/west-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/west/walk/walk-2.png",
+      "scale": 0.857142857,
+      "sourceBaselineExclusive": 501,
+      "beforeSource": {
+        "bbox": [
+          87,
+          179,
+          480,
+          501
+        ],
+        "width": 393,
+        "height": 322,
+        "baselineExclusive": 501
+      },
+      "afterSource": {
+        "bbox": [
+          115,
+          224,
+          452,
+          501
+        ],
+        "width": 337,
+        "height": 277,
+        "baselineExclusive": 501
+      },
+      "beforeRuntime": {
+        "bbox": [
+          30,
+          89,
+          226,
+          250
+        ],
+        "width": 196,
+        "height": 161,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          44,
+          112,
+          212,
+          250
+        ],
+        "width": 168,
+        "height": 138,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 138,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "85f7d306cb1374fb9a7910288c01a05e2a8064c980958c21e362de78643556ce",
+        "sourceRgbaSha256": "46918e84e26a8d8cee84d9227b2e441baf0b37af5899ebb50bce2c889db01b89",
+        "archiveRuntimeFileSha256": "34fa238d0c706ae017aaa0d09e0ea78694caea030e89094005386ea16df5eb65",
+        "clientRuntimeFileSha256": "4720ac9858ca06efe417012e0e82233868ab179283995953755bdc13c237c372"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "7caa635788b59bd408c56bd22abf5690edbdee0efece981dd1e04fb32e780464",
+        "sourceRgbaSha256": "3f61d16b184424fdf8679e25bc8dbc734d195848c360eb7c2559ea7580eb0128",
+        "archiveRuntimeFileSha256": "dc978d809cc1e9ce8045b28505a9a92f5eef5d77a26a3b1571b83065b3b971c9",
+        "clientRuntimeFileSha256": "79afb72273cdeb5ee193925b89b64c7afe13da3d050a663e7ef79bc4376a2d15"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 3,
+      "slot": "west-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/source-frames/west-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/runtime-frames/west-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/west/walk/walk-3.png",
+      "scale": 0.844984802,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          90,
+          173,
+          482,
+          502
+        ],
+        "width": 392,
+        "height": 329,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          121,
+          224,
+          452,
+          502
+        ],
+        "width": 331,
+        "height": 278,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          30,
+          87,
+          225,
+          250
+        ],
+        "width": 195,
+        "height": 163,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          46,
+          112,
+          211,
+          250
+        ],
+        "width": 165,
+        "height": 138,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 138,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "421b0590fa3b8a751ef0b5eacf30a72813f474912a49a8e0668426b100c7244f",
+        "sourceRgbaSha256": "b7b6e196e1deb785d7b3b31bf1770d8d60452f85b8c02fa2534399ead1e321f6",
+        "archiveRuntimeFileSha256": "4b0aa6952a87b2a0f904a5b684038c9f5c77234785e00e0cced5b514e03d4d70",
+        "clientRuntimeFileSha256": "a1ff79c3b5b35736528ad87670e2db0301bd503ba6048e6d96546bb8a114003a"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "f7859e05a893c46c5a9bb02533219615a523b1d198271701c84439d1f0e4f384",
+        "sourceRgbaSha256": "83a0ac3cdad148ecabc5d24bf2728e339fdeedd7fc901b0380e6cb6740ad742a",
+        "archiveRuntimeFileSha256": "4ef0b0d1ee68aff23742e45bb789e8ddef816ff96d7ed012e284c1ac52afe706",
+        "clientRuntimeFileSha256": "c4bef3b8a2778a32e18b2113c047408ad82793bf7526a1f9119049e902f6ed89"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 4,
+      "slot": "west-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/source-frames/west-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-west/runtime-frames/west-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/west/walk/walk-4.png",
+      "scale": 0.847560976,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          63,
+          174,
+          475,
+          502
+        ],
+        "width": 412,
+        "height": 328,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          94,
+          224,
+          444,
+          502
+        ],
+        "width": 350,
+        "height": 278,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          26,
+          87,
+          231,
+          250
+        ],
+        "width": 205,
+        "height": 163,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          41,
+          112,
+          216,
+          250
+        ],
+        "width": 175,
+        "height": 138,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 138,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "f627a12f3a811e0691c2a2896df313d75b617187a21dab08d8226339e1345ee6",
+        "sourceRgbaSha256": "58515c9e8119ce4e76bf5b1a576fa10cc6a3731acba0bc60d5bb780e49cabffd",
+        "archiveRuntimeFileSha256": "929653dc75abceb2b4f37fba9c1983b3eaa0c8d3daea690b1660f1314b4a393b",
+        "clientRuntimeFileSha256": "369d792ff4fe0155048d1c88093ca7ee6a06cf1935fa3cca1210f74e5b7e62da"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "9a094806102859776bd2deb0292b8dd03d134214eca4697b7f0d70c91da9b837",
+        "sourceRgbaSha256": "61a19954002e1c5be32c390a2508fe853a07fdf67387e3d30b96f9a002a0ff4e",
+        "archiveRuntimeFileSha256": "4392c4dbe5c8d68f194aba5204ecc4760a5b2e9bb498c868e233fe7d2ddb1d70",
+        "clientRuntimeFileSha256": "2d462f5da90da802e5571c2652fedbef0258590dba777240ceb5acd722e14ef5"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 1,
+      "slot": "northwest-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/source-frames/northwest-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/runtime-frames/northwest-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northwest/walk/walk-1.png",
+      "scale": 0.777777778,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          31,
+          124,
+          370,
+          502
+        ],
+        "width": 339,
+        "height": 378,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          69,
+          208,
+          332,
+          502
+        ],
+        "width": 263,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          44,
+          62,
+          213,
+          250
+        ],
+        "width": 169,
+        "height": 188,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          63,
+          103,
+          194,
+          249
+        ],
+        "width": 131,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "30044424405281be5d244a2a5166a152406186359e329484518a89b37d341816",
+        "sourceRgbaSha256": "58e563b2e7ab95071223a46aa2433bf227f776a2433f66c676a3886b88b9788a",
+        "archiveRuntimeFileSha256": "54cb662d8158d33f403770681a1f8c01214af96ad131ba355e57c76df53900cc",
+        "clientRuntimeFileSha256": "4eaf61937adfc2fba1486377a260e652cba74d2767660160dda003718670929d"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "03447239cafcf16a25cd803b491a1de170eae9b5ce7623a863e9bf2d8bfd8bed",
+        "sourceRgbaSha256": "02c27a765b6a593eaa3d2b2764e8470f3026f4dbf03ebf1cc46f26ca7257a796",
+        "archiveRuntimeFileSha256": "c103713de4ab84d61284201f76c60b948d6aa3de3b20070f914ca63a361496ba",
+        "clientRuntimeFileSha256": "5995dbc456e3bdb6f2c2670a0cb06171fc3b1254acfa0d6e50cba3661ee2f830"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 2,
+      "slot": "northwest-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/source-frames/northwest-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/runtime-frames/northwest-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northwest/walk/walk-2.png",
+      "scale": 0.744303797,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          34,
+          107,
+          394,
+          502
+        ],
+        "width": 360,
+        "height": 395,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          81,
+          209,
+          348,
+          502
+        ],
+        "width": 267,
+        "height": 293,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          39,
+          54,
+          218,
+          250
+        ],
+        "width": 179,
+        "height": 196,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          61,
+          103,
+          194,
+          249
+        ],
+        "width": 133,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "01b2a37f4027b67f6821e67e0867e5a1a5e65f3ef6dc84ecd069349b979a88b4",
+        "sourceRgbaSha256": "af611339f30fb87febbdbb4c65caad229398ad9ecafe3bf491cba8575f759337",
+        "archiveRuntimeFileSha256": "5d68ac25ccbee79954185f14d1fe0d99cec4920a1aea7628277949ef0cdf15a7",
+        "clientRuntimeFileSha256": "6e768da54b9ada74c5a669d7e1532e82218be0461cb35f1dccb4b4ae11c942e2"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "74ba6e0459bfb1e506a8512aef0d5c6d1c507de1c9ef46344a9cb07555b902a4",
+        "sourceRgbaSha256": "083ae4c20d35e453154fad2cc02b796c120fd55036344512bc6f89070da44c1b",
+        "archiveRuntimeFileSha256": "d0d3a42bf98a2b6749efffc50e1d3c814d63b7e71a6d302bc5a13b52255929fa",
+        "clientRuntimeFileSha256": "2ef00ea8dcaf0ca17b5a342d122750f5165fc0b3c03b2af56729627c5f726748"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 3,
+      "slot": "northwest-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/source-frames/northwest-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/runtime-frames/northwest-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northwest/walk/walk-3.png",
+      "scale": 0.746192893,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          49,
+          108,
+          387,
+          502
+        ],
+        "width": 338,
+        "height": 394,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          92,
+          208,
+          344,
+          502
+        ],
+        "width": 252,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          43,
+          54,
+          211,
+          250
+        ],
+        "width": 168,
+        "height": 196,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          64,
+          103,
+          190,
+          249
+        ],
+        "width": 126,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "dd9ae9234bba837fe23f1f7f28f1e53da162edbfcf30a37998b74e00ff90c6da",
+        "sourceRgbaSha256": "26ce851f43c96050dc7c561ddf9dfa2a2846facc78faf7d19812fb7a5262c0f6",
+        "archiveRuntimeFileSha256": "4d6677b28bf27ec162b2237c3a29a74de3d6412bdb65b58c0f77651045c96770",
+        "clientRuntimeFileSha256": "cb20876db2beaf1729cdee86766b38f3f85036412d6a7c0ebc3cd7336d88c5e2"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "4b3dc2f8321c0738c7d85cbc4ce70c27344d893b00f8c8bc0703affaa230de85",
+        "sourceRgbaSha256": "f1699423f647695ac0d2ec809bdb3c869bf0105a029eb103be4bfec68c2350ed",
+        "archiveRuntimeFileSha256": "4b621bf67b9aee938cc220ec9061dfda95b56e5fc357b8cd8a36f57a75a37207",
+        "clientRuntimeFileSha256": "693299c0533d804964d80045a4a2f1fd1716309a79aacf67c316e4e0aac44b73"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 4,
+      "slot": "northwest-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/source-frames/northwest-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northwest/runtime-frames/northwest-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northwest/walk/walk-4.png",
+      "scale": 0.73989899,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          33,
+          106,
+          400,
+          502
+        ],
+        "width": 367,
+        "height": 396,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          81,
+          209,
+          352,
+          502
+        ],
+        "width": 271,
+        "height": 293,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          37,
+          53,
+          220,
+          250
+        ],
+        "width": 183,
+        "height": 197,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          61,
+          104,
+          196,
+          250
+        ],
+        "width": 135,
+        "height": 146,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "9fbf75b07df8ffdb15168c7eb2b9d11ebfc103f9411e527c406d576576e31ea1",
+        "sourceRgbaSha256": "e4d29df7158be45bf5ea524c47e42c1699be69f4f92c6689b8e749e34daa4d94",
+        "archiveRuntimeFileSha256": "d9ecf1d80aadc501aa73838d0f1ae8dc89bf48a91d630c23355e84f41ff71c3e",
+        "clientRuntimeFileSha256": "9b5764d039a9c7b8251c14c058638447b792916acf07ff3846afa4976e6192e5"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "6b1845b741e115f116a48e53e19b6a4d50d7a297ca2d9e542094e97380b58891",
+        "sourceRgbaSha256": "b59ea3625ab1358cd916eca3a8317efe972e6e0860f6d5568ae8fdde6287364f",
+        "archiveRuntimeFileSha256": "a1759949a87d1166d3287aa89db03dc75ddbe85bada397c7e3669fbf4cb650b2",
+        "clientRuntimeFileSha256": "e141febe8a624f8814b1213cbb54e401a0cb6a6f3a0e721f823d16c2f5c00976"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 1,
+      "slot": "north-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/source-frames/north-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/runtime-frames/north-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/north/walk/walk-1.png",
+      "scale": 0.646153846,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          123,
+          47,
+          474,
+          502
+        ],
+        "width": 351,
+        "height": 455,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          185,
+          209,
+          411,
+          502
+        ],
+        "width": 226,
+        "height": 293,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          41,
+          24,
+          215,
+          250
+        ],
+        "width": 174,
+        "height": 226,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          71,
+          103,
+          184,
+          249
+        ],
+        "width": 113,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "ae0eafd1f234f7ed1fa7abbfd56ee8bb63f2908ab02c2d7600b5332089854b6e",
+        "sourceRgbaSha256": "ed19b5b55ab04d10678041c25a41fdff1456cc2d7bc9038edd1085d6fc395e8f",
+        "archiveRuntimeFileSha256": "458cfda8eef46407845af26cccb67e89ee689043ec9419fd05de1e170c731221",
+        "clientRuntimeFileSha256": "428f58b31af0d7b29347e37ce095a1201b4627967a516e4ee8bc29bca3e14742"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "c11f4d351597cea08a678705495b46af60e916efe72ad58dc2cdd7972f3182f8",
+        "sourceRgbaSha256": "3333f15a7a87ccebd7df7a5cedb9272ec19f7b901aee2b27677bded77d1352b6",
+        "archiveRuntimeFileSha256": "582239ce4f2e4557e5f52ee6682804e63b66ab4b63ba5533c885e566909d03a4",
+        "clientRuntimeFileSha256": "5d0128e0597a5b44f9c8af458cd138180eb5bd7ebf74be28c930a6b0a73adaff"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 2,
+      "slot": "north-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/source-frames/north-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/runtime-frames/north-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/north/walk/walk-2.png",
+      "scale": 0.650442478,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          129,
+          50,
+          412,
+          502
+        ],
+        "width": 283,
+        "height": 452,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          179,
+          209,
+          363,
+          502
+        ],
+        "width": 184,
+        "height": 293,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          58,
+          25,
+          199,
+          250
+        ],
+        "width": 141,
+        "height": 225,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          82,
+          103,
+          174,
+          249
+        ],
+        "width": 92,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "79c03cdf6ae8d991f4f17aeec2d5e185b6329db4d86cd5095c4a2cc75af5b104",
+        "sourceRgbaSha256": "335ff5c9f2ab321cf68c22248efaa3553b2f3c25a44e7f80cb934e848aa9801e",
+        "archiveRuntimeFileSha256": "cc9b5efeaaf3dcba03d4d349a17e5ae945174fc30a90cdd8e67ad1a901c84139",
+        "clientRuntimeFileSha256": "3f4b6901046ccfdbe4c47868991aeacfc2c3a7491dcdf3607168f4596fdc95b5"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "2b7f800b0d863c705b839502c7c4300d2ce73c203b36813f09768945746eba36",
+        "sourceRgbaSha256": "16af6b35d82ab6c48c6e0ae9b46cd58c70fbf12fc076e704d87527dcf91ee333",
+        "archiveRuntimeFileSha256": "209c05454f1d0658db754677a224836d899e3fa45fec72a9bdb8bbef0a5dd1fb",
+        "clientRuntimeFileSha256": "ef293fc63821ae7ffbb512148e3bdcdc290e410059b1d4e8620da04e4615e7ec"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 3,
+      "slot": "north-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/source-frames/north-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/runtime-frames/north-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/north/walk/walk-3.png",
+      "scale": 0.645374449,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          119,
+          48,
+          450,
+          502
+        ],
+        "width": 331,
+        "height": 454,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          178,
+          208,
+          391,
+          502
+        ],
+        "width": 213,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          46,
+          24,
+          211,
+          250
+        ],
+        "width": 165,
+        "height": 226,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          75,
+          104,
+          181,
+          250
+        ],
+        "width": 106,
+        "height": 146,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "83e6b9ec19078ccec558ef93b11e72c87ef47dfa74d0682285f920d1db421570",
+        "sourceRgbaSha256": "a8b99fd18c5b16ad52c8b293939e12daa27036e53aa2adf1374ea0883e0be32b",
+        "archiveRuntimeFileSha256": "af8625a582eb92613f7a15f06de66a6e09e54f8799200c9f5671f8eeb9525c81",
+        "clientRuntimeFileSha256": "6e5b00f650382ed74afb78c4652213484dc6754178fae7ed89a7ed0f5f65bc13"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "70e9c1fadb5b2d3ae89e109c0728e913bae27e4921c82e47daac3a5a67b0f2c5",
+        "sourceRgbaSha256": "99f25788221a10158d7650b95b088d98a404bd1cb91f73351e716b564e473568",
+        "archiveRuntimeFileSha256": "e6281eebb791ca338a8626df64db588301d0242955ee9d6ca0987d9da578ed9f",
+        "clientRuntimeFileSha256": "62b1587f22bd51c6d4d31cecade6ed537059c807d7e84e9d6a4f79df9880b339"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 4,
+      "slot": "north-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/source-frames/north-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-north/runtime-frames/north-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/north/walk/walk-4.png",
+      "scale": 0.649779736,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          134,
+          48,
+          416,
+          502
+        ],
+        "width": 282,
+        "height": 454,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          183,
+          208,
+          366,
+          502
+        ],
+        "width": 183,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          57,
+          25,
+          198,
+          250
+        ],
+        "width": 141,
+        "height": 225,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          81,
+          103,
+          173,
+          249
+        ],
+        "width": 92,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "71853c9fe802b8040d03608ce4b636759a25d89717f0c8487c12b08fce84a94a",
+        "sourceRgbaSha256": "3cfe58e29829bf5b2f25dbb081149f2e59796237781fa891632089872dda9378",
+        "archiveRuntimeFileSha256": "3da4431ab7af1374270bbc494bcd20bf817fe3d1eefa3c38ebdfa8ea86e02c4b",
+        "clientRuntimeFileSha256": "6baf03e1df2b613846a63379f831d163a1d625778876a0c297e20f2fe1eca86a"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "b01707c3fd6bb97f79795b3199d822e57787347a8f6e0e8d6cf43be1cf6d62e2",
+        "sourceRgbaSha256": "80be60f804633e5a4298eb813db3ff6c489cd42a81f9b816f13bb85f0c24d56b",
+        "archiveRuntimeFileSha256": "0dc49fa0584820359277521a242dd9fbc5266d6951e6aba1b3135f3ca482f562",
+        "clientRuntimeFileSha256": "77cd8db64eb40b06389f24cbe00f992884b0ac7412f4ce81b39515733d3a184c"
+      }
+    },
+    {
+      "direction": "northeast",
+      "frame": 1,
+      "slot": "northeast-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/source-frames/northeast-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/runtime-frames/northeast-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northeast/walk/walk-1.png",
+      "scale": 0.84,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          182,
+          152,
+          462,
+          502
+        ],
+        "width": 280,
+        "height": 350,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          205,
+          208,
+          440,
+          502
+        ],
+        "width": 235,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          58,
+          76,
+          197,
+          250
+        ],
+        "width": 139,
+        "height": 174,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          69,
+          103,
+          187,
+          249
+        ],
+        "width": 118,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "2aa2a14afb194c09ff2199d81f4d1cc010c028aabece8601ebda9de88535b3aa",
+        "sourceRgbaSha256": "9acec20b0d73593ee320a02e69d89f94c76fa01df813e84c00f5298a7a83fffa",
+        "archiveRuntimeFileSha256": "67c27cbe373eb8290352122cbae9f74b70007ac03a1ec61e4dcb6006597f60fd",
+        "clientRuntimeFileSha256": "6d31a646bccaa1cabacf0118a81f7e77d3de0b063ca93734c6fbac75a03ebd91"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "0d13710da43c25a2d5af118c25d550b02251ad3d96a06c07502a3752b02af538",
+        "sourceRgbaSha256": "30c414bef060589bbe7ca2f0b12cc28942c308d56f55e08788d22f68c87a8415",
+        "archiveRuntimeFileSha256": "c2f62c818bf1c13e003bc6ae4f5bbf7c01f98d79fabb97bcd70e098e781565c9",
+        "clientRuntimeFileSha256": "5fcb5c6e762ae261252c7918d2652331091f447e352f7e6ec43e2e7c9319fe96"
+      }
+    },
+    {
+      "direction": "northeast",
+      "frame": 2,
+      "slot": "northeast-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/source-frames/northeast-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/runtime-frames/northeast-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northeast/walk/walk-2.png",
+      "scale": 0.825842697,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          153,
+          146,
+          482,
+          502
+        ],
+        "width": 329,
+        "height": 356,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          182,
+          208,
+          453,
+          502
+        ],
+        "width": 271,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          47,
+          73,
+          210,
+          250
+        ],
+        "width": 163,
+        "height": 177,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          60,
+          104,
+          195,
+          250
+        ],
+        "width": 135,
+        "height": 146,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "f90051cd326d93c2d97638250b0e15b74e0e958a2d27c47e3ef1b8a08a346e29",
+        "sourceRgbaSha256": "5c975bf7aed8740a38db4729999da193d20c8e4aa1ef4e0652edc2d6941d3f98",
+        "archiveRuntimeFileSha256": "db652fb7ad5ec2766b016c28dde01f94308d1c372f84a120cfec11ebcc01b126",
+        "clientRuntimeFileSha256": "c3ca015707e3ca45fe324da6c61ca49e3f979f961cea4c4bb5d98f1576d57425"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "da22210a5b2426a9033dbdf3fd7559f920edcfd450829358445c32020147252b",
+        "sourceRgbaSha256": "5a7eedf04a29c400a6458fd428b5515950fccd49fbbd606ead969da04d1a2165",
+        "archiveRuntimeFileSha256": "477e83d69fa1e762681cdc026121f0b67b42c0d2a0f1e282d83fffa934ce3ef0",
+        "clientRuntimeFileSha256": "a3b7de4179f5343032a68faab3f313d82c1bbd05e5bbf1c0d15300905467225a"
+      }
+    },
+    {
+      "direction": "northeast",
+      "frame": 3,
+      "slot": "northeast-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/source-frames/northeast-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/runtime-frames/northeast-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northeast/walk/walk-3.png",
+      "scale": 0.845272206,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          138,
+          153,
+          447,
+          502
+        ],
+        "width": 309,
+        "height": 349,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          162,
+          207,
+          423,
+          502
+        ],
+        "width": 261,
+        "height": 295,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          51,
+          77,
+          205,
+          250
+        ],
+        "width": 154,
+        "height": 173,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          63,
+          104,
+          193,
+          250
+        ],
+        "width": 130,
+        "height": 146,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "1dba949e9236bd4186ab23b2f87e266e710cc92a2b895b6f6e63d6dfacec46cd",
+        "sourceRgbaSha256": "ec44e5c7d926b07fe1a4a823b6fbe3b23250be6d43d72e067f4b2e1d63b3c20e",
+        "archiveRuntimeFileSha256": "f143dff3a80e8a230d68c82932ff2ec2b28cb67fdc8bd954070d6e62279070e3",
+        "clientRuntimeFileSha256": "c78cb08946d33e30952b84321395a67a4984a3841f61130542913f8900cbb1d8"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "feb0c4d497cd54ad281e4388412074a1ad052ddbfdaf6566b59fa2d82aef343d",
+        "sourceRgbaSha256": "c1d068d109dfb29d97837f3376b4a606bbf787927cf52994586a711a504ac0be",
+        "archiveRuntimeFileSha256": "b18116a4d01fd231e89dbb0fd8125bab2fd533103eb5d5d592d22ae1db2fbb66",
+        "clientRuntimeFileSha256": "2e57ac6c1548130baed7d3a7661d50d82773d7051935b7fd803852b4e89d9fd2"
+      }
+    },
+    {
+      "direction": "northeast",
+      "frame": 4,
+      "slot": "northeast-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/source-frames/northeast-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-northeast/runtime-frames/northeast-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/northeast/walk/walk-4.png",
+      "scale": 0.828169014,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          153,
+          147,
+          466,
+          502
+        ],
+        "width": 313,
+        "height": 355,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          180,
+          208,
+          439,
+          502
+        ],
+        "width": 259,
+        "height": 294,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          51,
+          74,
+          207,
+          250
+        ],
+        "width": 156,
+        "height": 176,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          64,
+          103,
+          193,
+          249
+        ],
+        "width": 129,
+        "height": 146,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 146,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "fce485cc0260639e4777dc9942ffdc0c3f7c6258b3b8584d563d838845ad8f9f",
+        "sourceRgbaSha256": "99cc27d175dfefd5750034dc0686e137345b1acad676670d2b45796d4add9bbc",
+        "archiveRuntimeFileSha256": "032285f06a04c5ddda3eae0ddc7925d36c561c3fac56718047082c95da052b19",
+        "clientRuntimeFileSha256": "2f0c4fd25dc6695014233cec01a8c2d0d22bbed16e8b8b27cc44f73348c9a667"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "60d07f6b75591da7497b254ccf16f252364740d6e264f90f273a01d5c7130960",
+        "sourceRgbaSha256": "0e40fc7e1a207c9140f3f930d42043726fac3a4c4fea90f6cfa759c5addd756d",
+        "archiveRuntimeFileSha256": "7240911eb909c3c214a80d7c57664d6b14954edd23b78ab7e4be42e7dd523e38",
+        "clientRuntimeFileSha256": "753a9ab0ae4d13767ed6c9f302896699779729dbabc520f0e3a4829a4897d570"
+      }
+    },
+    {
+      "direction": "east",
+      "frame": 1,
+      "slot": "east-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/source-frames/east-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/runtime-frames/east-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/east/walk/walk-1.png",
+      "scale": 0.795389049,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          31,
+          155,
+          410,
+          502
+        ],
+        "width": 379,
+        "height": 347,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          70,
+          226,
+          371,
+          502
+        ],
+        "width": 301,
+        "height": 276,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          34,
+          78,
+          223,
+          250
+        ],
+        "width": 189,
+        "height": 172,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          53,
+          112,
+          203,
+          249
+        ],
+        "width": 150,
+        "height": 137,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 137,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "8b29d4ffa548c6937a966dc2928383e76768346175b5e748b77e1434bb596c03",
+        "sourceRgbaSha256": "7baaefd9cf5ca11df785309e35ad4a50840e3e79945c6762a441bec90856f159",
+        "archiveRuntimeFileSha256": "efb71d40e767268d774fcaeeaee29cdd95614829eb6cfc62dd9f6c7931537feb",
+        "clientRuntimeFileSha256": "70023cd80f304fcf67e1cbd86dccd9e892db35469d49d4247e0bcca320f5f6eb"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "48b453894fd064de065e337a2a1dc8d41644b2aa6d5126053ef3ab64f5e65323",
+        "sourceRgbaSha256": "0cd3976d50de5258e4bdc607df53d7c86e824b5fbd3441b9dee6456e92b8a960",
+        "archiveRuntimeFileSha256": "f665e5369408fa39269d8ba2f88ca503bc8d0ea19d1ee1b8a03b8f9c0e55b60e",
+        "clientRuntimeFileSha256": "b3c3811a23c248ab377f648292a302f9b558f9edff42b40f0f42ff99d1a59705"
+      }
+    },
+    {
+      "direction": "east",
+      "frame": 2,
+      "slot": "east-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/source-frames/east-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/runtime-frames/east-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/east/walk/walk-2.png",
+      "scale": 0.814159292,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          41,
+          163,
+          455,
+          502
+        ],
+        "width": 414,
+        "height": 339,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          79,
+          226,
+          417,
+          502
+        ],
+        "width": 338,
+        "height": 276,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          25,
+          82,
+          231,
+          250
+        ],
+        "width": 206,
+        "height": 168,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          44,
+          112,
+          212,
+          249
+        ],
+        "width": 168,
+        "height": 137,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 137,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "dd5c3f101a1b4d921e45737bf5ffc768d87aba99de961dbe5719df32f3962311",
+        "sourceRgbaSha256": "f6bb585d0a25b2b5f021a2615ca0f6539d492771627ed687236293369eae1c0b",
+        "archiveRuntimeFileSha256": "2ec6cdccb92220f295094cec2743e9f91df24ac4ee344d009b27610e1afa7490",
+        "clientRuntimeFileSha256": "3653a2f56d1376ff17afdd5356c7821f7497522f674d08866d8177119a31bf98"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "f9184e01665259b9158662a2c72f0c414f29e7d8859658abece818600b80408e",
+        "sourceRgbaSha256": "c167e9557358920ac9ef7fc3f3d16bf92fe75eda9377797c26bfea3d923ce8c6",
+        "archiveRuntimeFileSha256": "558add1e271be5869c30ac61eb797195d341ba49ecc3484dd679a91ae7a2162b",
+        "clientRuntimeFileSha256": "0b2dd43d2a3b2bd9d9bce429cf3d45932e5251a309af25c8fcc218acf98ddf50"
+      }
+    },
+    {
+      "direction": "east",
+      "frame": 3,
+      "slot": "east-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/source-frames/east-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/runtime-frames/east-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/east/walk/walk-3.png",
+      "scale": 0.797101449,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          36,
+          157,
+          417,
+          502
+        ],
+        "width": 381,
+        "height": 345,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          75,
+          226,
+          379,
+          502
+        ],
+        "width": 304,
+        "height": 276,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          33,
+          78,
+          223,
+          250
+        ],
+        "width": 190,
+        "height": 172,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          52,
+          113,
+          203,
+          250
+        ],
+        "width": 151,
+        "height": 137,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 137,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "619ba21eef6f647b84469cb74124b2e93be0ea73ff16eab609bd981962c635d1",
+        "sourceRgbaSha256": "d8c37034fb05ec481ad5cf7d95290829ed5e6d088b682496692bc325a005481e",
+        "archiveRuntimeFileSha256": "d781b5f01b6de0b8a951e0e1c3ca6bd7ca4dce216eddb60544a71d78fbfd3d13",
+        "clientRuntimeFileSha256": "ab27d0df4f0baaa0a6b2c84df06bc1692eb00312af97a08a18e28ef6d135713b"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "715c60e5ace81ddeccd9ba0537e8fa28a5ac9ec2aa5db3ae80dec85d6430687c",
+        "sourceRgbaSha256": "81fcbea12377c125a6b902811e1370de2040fd03bdae4abc3eb635f47b31c46f",
+        "archiveRuntimeFileSha256": "32234b040a996129dcef902c689dab59093dc57a90799b93d358c04609657189",
+        "clientRuntimeFileSha256": "8c85d885fe89f328bbb8aa160dd09b1330df0af2cae192bff469731af35a9b89"
+      }
+    },
+    {
+      "direction": "east",
+      "frame": 4,
+      "slot": "east-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/source-frames/east-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-east/runtime-frames/east-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/east/walk/walk-4.png",
+      "scale": 0.797687861,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          49,
+          156,
+          441,
+          502
+        ],
+        "width": 392,
+        "height": 346,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          89,
+          226,
+          402,
+          502
+        ],
+        "width": 313,
+        "height": 276,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          31,
+          78,
+          226,
+          250
+        ],
+        "width": 195,
+        "height": 172,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          51,
+          113,
+          207,
+          250
+        ],
+        "width": 156,
+        "height": 137,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 137,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "576942154e5dc1b76d0c69089c7b405d899ab636161f83f6dd61903a2fdf38e0",
+        "sourceRgbaSha256": "7174d24fb615115d435c134b80008fb5991b945260d59c5c9065cdd18f904ad8",
+        "archiveRuntimeFileSha256": "a14554f6b7be5f1a418988b50c04c6b2762e5cb7f0308e409eda64f8bc88a090",
+        "clientRuntimeFileSha256": "723e4b9692c5e0dcb05aaffa485d44722c1c1fa16adf27ea22eb012f4a30f744"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "57bc2cbde40b422d54fd39f42081c705170a12c5e92fba99a94301b08584f625",
+        "sourceRgbaSha256": "58bceddb7408c5db58c88c789be5060dd8399b4ba12780ca19078b91eb902344",
+        "archiveRuntimeFileSha256": "3c2f616ada38bd04b14361eceb8b70fe4fc7b85a7d4dc6ed097a67e827ba1336",
+        "clientRuntimeFileSha256": "b6636840c76a7d85b22d79de459ad1bbce0c559bd7ed219172cbb1681be6471f"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 1,
+      "slot": "southeast-walk-1",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/source-frames/southeast-walk-1.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/runtime-frames/southeast-walk-1.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/southeast/walk/walk-1.png",
+      "scale": 0.84045584,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          44,
+          151,
+          372,
+          502
+        ],
+        "width": 328,
+        "height": 351,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          71,
+          207,
+          346,
+          502
+        ],
+        "width": 275,
+        "height": 295,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          46,
+          75,
+          210,
+          250
+        ],
+        "width": 164,
+        "height": 175,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          60,
+          102,
+          197,
+          249
+        ],
+        "width": 137,
+        "height": 147,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "4b30edd10f99ed33250517670e13ba8c99101da7475f1f22a387033e5391cd3d",
+        "sourceRgbaSha256": "63851cc9c804ab9633470967a39a8ad47864e9bd8c7b4f9cb2a177a4daa40715",
+        "archiveRuntimeFileSha256": "1623208b9ef0d9ad3dae107f024a8db0960881f3a19c5e6fb03437d2bcfdf246",
+        "clientRuntimeFileSha256": "0f07e60f47fd1a9152d0ed8be92c2e561d9b5f0749a8e04fa761b1b7d5453668"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "d98680b7c19dd974b66ac1a3cd71c67577fe0c945d28834b58d20793ac6f9e17",
+        "sourceRgbaSha256": "869f7a576f63950ca052af4aab280ab85f35e3cd4d88adcc9aa497a1eb750fa2",
+        "archiveRuntimeFileSha256": "3ae8da0c58296fbaca650be731383c2142e51acf1b36bbe0a1c204cedc58c09a",
+        "clientRuntimeFileSha256": "d494f5a1914101adad9bb6eaf496b4f7a914390874f32b2299729dc16c7f8e43"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 2,
+      "slot": "southeast-walk-2",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/source-frames/southeast-walk-2.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/runtime-frames/southeast-walk-2.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/southeast/walk/walk-2.png",
+      "scale": 0.853025937,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          44,
+          155,
+          378,
+          502
+        ],
+        "width": 334,
+        "height": 347,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          69,
+          206,
+          354,
+          502
+        ],
+        "width": 285,
+        "height": 296,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          44,
+          78,
+          211,
+          250
+        ],
+        "width": 167,
+        "height": 172,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          57,
+          102,
+          199,
+          249
+        ],
+        "width": 142,
+        "height": 147,
+        "baselineExclusive": 249
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "39712fcc3e29e0c36f73b4dfe7e34afbeb3939975b227c116b5283d40fbeae8e",
+        "sourceRgbaSha256": "a576d8846741b71022ff38938debd49862a3e65e439c7a45579fdf7c2180557c",
+        "archiveRuntimeFileSha256": "f85f8d83f7848c2566e15309a6e039ce2feb8709fc680193efcf0b6f4f70cc78",
+        "clientRuntimeFileSha256": "66f3eaeba41a3b9f3bb48a0ce9d59c454160abebf60ef40a1759ce59ed4a03a4"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "ff0b5c7c9a45206de3bddfbab1c4bf49c4fa61499255a5f59869708f9717db44",
+        "sourceRgbaSha256": "e5ca2c3b8a9e391236f5777ceaa39b205cb69a494ae45148736da7a01e8878b3",
+        "archiveRuntimeFileSha256": "13d751b4e65fdb24a15f7e4ef3e11e737ee8b1d01d5ba926f225659047a398a5",
+        "clientRuntimeFileSha256": "36d3b0b9d870b046e5cb059d57aa8ee1f6e4f56b9bc4b4a5c1f846044b098077"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 3,
+      "slot": "southeast-walk-3",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/source-frames/southeast-walk-3.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/runtime-frames/southeast-walk-3.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/southeast/walk/walk-3.png",
+      "scale": 0.848137536,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          30,
+          153,
+          388,
+          502
+        ],
+        "width": 358,
+        "height": 349,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          57,
+          206,
+          360,
+          502
+        ],
+        "width": 303,
+        "height": 296,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          40,
+          77,
+          218,
+          250
+        ],
+        "width": 178,
+        "height": 173,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          53,
+          103,
+          204,
+          250
+        ],
+        "width": 151,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "09d34f2cf0f3bb128dce037e6107e95bcebaebd805899951f317187eb819a3f4",
+        "sourceRgbaSha256": "f08889db458867d550f2fa268248f9b9f6a1fb42ec8a1775f668a015a1f2b60c",
+        "archiveRuntimeFileSha256": "06129fa174f8c1da68ca20923d6f9b4098b910559efb96dbff97bf9c0911db90",
+        "clientRuntimeFileSha256": "0606fc22e204a261dbb6329b0d711512fb40871a652a43b088dbc9d18c9b87e8"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "c47db17459fb51e1702362a0edff92c7140f8c217b875a2555c273e8604594ec",
+        "sourceRgbaSha256": "f9d9939e6059c52cd0d0578d7487e181e867512e66b6a6b4d842925bf447188a",
+        "archiveRuntimeFileSha256": "cd33e57200f98fdf328e7038fb64b9600a9d9e6bd82f962a88da2543c203ad41",
+        "clientRuntimeFileSha256": "d0eda0e0e4edbfc0231a1ed701dbd2e05a60cbb8d3ef651f70b277eac10e03fc"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 4,
+      "slot": "southeast-walk-4",
+      "sourcePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/source-frames/southeast-walk-4.png",
+      "archiveRuntimePath": ".run/art_batch_phase320/novice_tiger/formal-production/build/mounted-world-walk-southeast/runtime-frames/southeast-walk-4.png",
+      "clientRuntimePath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/world/directions/southeast/walk/walk-4.png",
+      "scale": 0.830985915,
+      "sourceBaselineExclusive": 502,
+      "beforeSource": {
+        "bbox": [
+          48,
+          147,
+          380,
+          502
+        ],
+        "width": 332,
+        "height": 355,
+        "baselineExclusive": 502
+      },
+      "afterSource": {
+        "bbox": [
+          76,
+          207,
+          352,
+          502
+        ],
+        "width": 276,
+        "height": 295,
+        "baselineExclusive": 502
+      },
+      "beforeRuntime": {
+        "bbox": [
+          45,
+          73,
+          211,
+          250
+        ],
+        "width": 166,
+        "height": 177,
+        "baselineExclusive": 250
+      },
+      "afterRuntime": {
+        "bbox": [
+          59,
+          103,
+          197,
+          250
+        ],
+        "width": 138,
+        "height": 147,
+        "baselineExclusive": 250
+      },
+      "targetRuntimeHeight": 147,
+      "targetRuntimeBaselineExclusive": 250,
+      "minimumAlphaEdgeMargin": 4,
+      "beforeSha256": {
+        "sourceFileSha256": "7057ec52854f812f8d6fff48e276cc44d0871225e2954221d1711a22714eadf1",
+        "sourceRgbaSha256": "fbda585574aa31f4f9d910672d9f086dbfc19b9c0430dd31db076fb28dfaf3ad",
+        "archiveRuntimeFileSha256": "00ace310f4a8e59bb1617d0cd6dc2b5f859eb3e2ebb0e8f868e3985ee3e8c668",
+        "clientRuntimeFileSha256": "e42ab86951c4f75265d2355f67b76dbba0d5efbb759707df6f6c0ad796c4f712"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "f5ae0abd7af232e4e9df71ceb7cca418cbf7b2a5530bdd0b3559436bfb53c132",
+        "sourceRgbaSha256": "29eaa37fd184fbbc1f95dc494bfdd9737d3d6e15e3e87f00e076fd0d6fa0d548",
+        "archiveRuntimeFileSha256": "ee1b3f2b89a35c78c4826e687715d3c163b5f7123b45fb3477853c13400fdabb",
+        "clientRuntimeFileSha256": "b75593ca92f8a01bfddcae1d4228e6b344679e73ac068d75ac9f1c6e415507b9"
+      }
+    }
+  ]
+}

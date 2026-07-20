@@ -11,16 +11,16 @@
     {
       "sourceId": "idle-8-direction",
       "originalPng": ".run/art_batch_phase320/blue_man_dragon/world-production/raw/idle-8-direction.png",
-      "originalPngSha256": "bbbab210fdd919d036f7cc251fa885586d599dae556e1e796b114303abd39b4a",
+      "originalPngSha256": "327d7b6eeb60c197714a3e73abce6d3ff787f64f3c84e25a3a0044bbce11b61c",
       "originalMode": "RGB",
       "originalSize": [
         1536,
         1024
       ],
-      "originalDecodedPixelSha256": "06ddefca75d9ede7425f0431db2a0fdccde1130569c91832103d9f25a0a8cc07",
+      "originalDecodedPixelSha256": "20e0addc7ab9595c7ab4906f028a60e461d8162e2a80ed1946630d20f9708371",
       "losslessWebp": "source/world/raw/world-idle-8-direction-raw.webp",
-      "losslessWebpSha256": "b3612fbbf47a5d1235af9993b0ad02304097aa3dd84a7589d10878b58a7592b4",
-      "losslessWebpDecodedPixelSha256": "06ddefca75d9ede7425f0431db2a0fdccde1130569c91832103d9f25a0a8cc07",
+      "losslessWebpSha256": "3c589a765ea9d295d0e55b7a5938f1280a66e709993a3b93d1adb912eaefac48",
+      "losslessWebpDecodedPixelSha256": "20e0addc7ab9595c7ab4906f028a60e461d8162e2a80ed1946630d20f9708371",
       "decodedPixelsMatchOriginal": true
     },
     {
@@ -160,5 +160,23 @@
     "walk": "tools/repack_chroma_sprite_grid.py followed by tools/build_pet_art_bundle.py; four independent gait phases per direction",
     "strategy": "independent_8_no_runtime_mirroring",
     "frameAnchor": "bottom-center"
-  }
+  },
+  "semanticCorrections": [
+    {
+      "id": "true8-idle-nw-ne-slot-swap-v1",
+      "date": "2026-07-20",
+      "sourceId": "idle-8-direction",
+      "rawGridCells": {
+        "northwest": [
+          0,
+          3
+        ],
+        "northeast": [
+          1,
+          1
+        ]
+      },
+      "method": "swap exact 384x512 cells and corresponding 512/256 semantic slots; no pixel mirroring or redraw"
+    }
+  ]
 }

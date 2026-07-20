@@ -1,0 +1,3 @@
+Exact integrated whole-frame identity: novice_hunter_v1 integrated whole-frame on stocky red-orange baby volcanic horn beast; rider tan skin, short dark brown hair with bone ornament, cream fur-collar ochre tunic, teal diagonal strap, red belt, brown boots and reins; mount black lava-cracked forehead horn, dark rocky mane, cream muzzle, orange flank diamonds, dark cloven hooves
+Independent world direction: southwest; no mirroring.
+OpenAI built-in image generation. Uniform #FF00FF background. Exactly 2 rows x 3 columns, row-major: idle-1, walk-1, walk-2, walk-3, walk-4, idle-loop-check. One complete rider-and-mount subject per cell with consistent scale and ground anchor. No text, grid lines, shadow, scenery, effects, separate rider or separate mount.

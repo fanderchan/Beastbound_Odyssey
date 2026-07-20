@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "repairId": "pet-world-east-walk-semantic-regeneration-v2",
+  "formId": "novice_tiger_mount",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "reason": "east idle, character and mounted art faced east, but all four standalone pet east walk frames faced west",
+  "scope": [
+    "east walk"
+  ],
+  "trueDirectionRule": "four independently authored strict east side-profile gait frames; no mirroring, relabeling or west-frame reuse",
+  "prompt": "prompts/production/world-semantic-direction-repair-v2-east-exact.md",
+  "promptFileSha256": "f469920ff7bba95bbb268368cec6525a3d19e27541df7bcfbb2d49ee64c15fe6",
+  "productionArchive": ".run/art_batch_phase324/semantic-direction-repair-v1/tiger-pet/east/walk",
+  "adoptedBundle": {
+    "raw": "source/formal-production/world-semantic-direction-repair-v2/east-walk/raw.png",
+    "rawFileSha256": "9928dd493c3596970cf6a1b6ad12be651bbcba2eb01bfe8784d1fcbbeba3568a",
+    "pipeline": "source/formal-production/world-semantic-direction-repair-v2/east-walk/pipeline-meta.json",
+    "pipelineFileSha256": "14e1ab67e7d75a64ff6ae7e45ab6654bb08da84597b7c03fa2a9446efe03f601",
+    "contactSheet": "source/formal-production/world-semantic-direction-repair-v2/east-walk/contact-sheet.png",
+    "contactSheetFileSha256": "bd9dd79a69f93b8572dbc155f0ec350104a8af17e83eb2fbc3f71877def3c6fd",
+    "animation": "source/formal-production/world-semantic-direction-repair-v2/east-walk/animation.gif",
+    "animationFileSha256": "2d3dc46f04667521db8ff2dbc11d9b43e5e2825fc61e258347e2ef7ea7058519"
+  },
+  "before": [
+    {
+      "slot": "east-walk-1",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/before/walk-1.png",
+      "fileSha256": "3658f341ed9e5a3fa1fb89f5ddcb5a62018158cff430b30dab731147ae8c08fe",
+      "rgbaSha256": "0c7ffc0c6575c865da0058bbf060e1179d2260f516d00397ede7ef1ecc16b861",
+      "semanticDirection": "west"
+    },
+    {
+      "slot": "east-walk-2",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/before/walk-2.png",
+      "fileSha256": "43c2b8c44976c4af84f306be1b3c03fcfad766654d6edcb2291bdec7a58a667e",
+      "rgbaSha256": "ed4cd88557f842c1b131d29add2d6a5b2e958d132b17604d36014414165f2c18",
+      "semanticDirection": "west"
+    },
+    {
+      "slot": "east-walk-3",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/before/walk-3.png",
+      "fileSha256": "93ff54496784c7becef2b682a16958d59726d72e6c38dd45d108663a2c9bcacb",
+      "rgbaSha256": "0d1bf6288de987e91b5ceb60a7d3ad16d15cac9acc225bac5604d43aabdc8f05",
+      "semanticDirection": "west"
+    },
+    {
+      "slot": "east-walk-4",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/before/walk-4.png",
+      "fileSha256": "9666979d89335264c60c659add7288bcf2f520003725d0d3edd2cc4fc2c3ea10",
+      "rgbaSha256": "ca5b3a877ac50a4eef28c4816cd21fec2b7e03ad68525318f50188cebd4bbd61",
+      "semanticDirection": "west"
+    }
+  ],
+  "after": [
+    {
+      "slot": "east-walk-1",
+      "source": "source/formal-production/world-semantic-direction-repair-v2/east-walk/source-frames/east-walk-1.png",
+      "sourceFileSha256": "b8c8e0f00886fa9760a0b451aaca5c4e9e51c993ed04f2d79a8e669c70f18f03",
+      "sourceRgbaSha256": "9cf37dcda5495f5ab07c3fbe6b2f8b900f661f481d69ca76bbf20a627d599898",
+      "runtime": "world/directions/east/walk/walk-1.png",
+      "runtimeFileSha256": "e4037325148d857f04851c005478753b8b736529f03e3973b7bb489c9bce07df",
+      "runtimeRgbaSha256": "e2bde193dc38c8c5faefa99c448ab0b45e06da4742eec07a3c582d0bcea78eaf",
+      "runtimeVisibleBboxAlpha8": [10, 129, 207, 247],
+      "runtimeVisibleBboxAlpha1": [8, 128, 209, 249],
+      "semanticDirection": "east"
+    },
+    {
+      "slot": "east-walk-2",
+      "source": "source/formal-production/world-semantic-direction-repair-v2/east-walk/source-frames/east-walk-2.png",
+      "sourceFileSha256": "5d81ea042de80f71347296c7ae1e72747ea610dda543e5a8f750762337168483",
+      "sourceRgbaSha256": "33ea590b56aa27254fb0b086ceda3f81a5a77a65065d9bd4cb13b056c77c1c46",
+      "runtime": "world/directions/east/walk/walk-2.png",
+      "runtimeFileSha256": "2e541734f1fa79f05e70a3b12a3c8b7034c9c8a755c10d81d489674e4bdd5f85",
+      "runtimeRgbaSha256": "d7cbc99d2fa988b77e78c64cda2b798abcecb4b9dcd3bd7c818290de5e2fabed",
+      "runtimeVisibleBboxAlpha8": [21, 128, 212, 247],
+      "runtimeVisibleBboxAlpha1": [19, 126, 214, 249],
+      "semanticDirection": "east"
+    },
+    {
+      "slot": "east-walk-3",
+      "source": "source/formal-production/world-semantic-direction-repair-v2/east-walk/source-frames/east-walk-3.png",
+      "sourceFileSha256": "9c884b9bd6595fae108cd4803c33abce8f42460ca4c7a2fa23e3de821f8b6b7f",
+      "sourceRgbaSha256": "b92af310b9df992821b2215cb6717ad33a20bb1ddea780702fb2902d3fe868ab",
+      "runtime": "world/directions/east/walk/walk-3.png",
+      "runtimeFileSha256": "fe33db32f5bf775a33050f425200ac476219ffdbacdecda19e4ef2828820cb7b",
+      "runtimeRgbaSha256": "70f224a486313584c8fc03ae5152dc6af6bc670d60af37bdc4025074491b4d37",
+      "runtimeVisibleBboxAlpha8": [20, 126, 217, 247],
+      "runtimeVisibleBboxAlpha1": [18, 124, 219, 249],
+      "semanticDirection": "east"
+    },
+    {
+      "slot": "east-walk-4",
+      "source": "source/formal-production/world-semantic-direction-repair-v2/east-walk/source-frames/east-walk-4.png",
+      "sourceFileSha256": "fa96bac6934e84868f846e6c54305bce12a258e648ae4fd6bdc98f553ed3cad0",
+      "sourceRgbaSha256": "a04161780c157bfb6861a949f8fe5fa8c95a85003a3cda07a97de3f89752bd67",
+      "runtime": "world/directions/east/walk/walk-4.png",
+      "runtimeFileSha256": "3ad55e56759ba86147b8b78d91046e780c2d0344b3d11a368cc08e990f315577",
+      "runtimeRgbaSha256": "949ceec6de7d4800fde9c6dee05bd0d8d5aab5bdb6095502beb002cc7222d37a",
+      "runtimeVisibleBboxAlpha8": [17, 126, 211, 247],
+      "runtimeVisibleBboxAlpha1": [15, 125, 213, 249],
+      "semanticDirection": "east"
+    }
+  ],
+  "quality": {
+    "visualDirectionReview": "passed_by_independent_cross_audit",
+    "runtimeFrameCountChanged": 4,
+    "runtimeFrameCountTotal": 40,
+    "uniqueEastWalkRgbaFrames": 4,
+    "exactSameAsWestPairs": 0,
+    "exactHorizontalMirrorOfWestPairs": 0,
+    "runtimeMirroring": false,
+    "canonical512To256DerivationExact": true,
+    "runtimeResidualMagentaPixels": 0,
+    "minimumTouchedFrameAlphaEdgeMarginPx": 7,
+    "idleBaselineExclusiveAlpha1Px": 252,
+    "walkBaselineExclusiveAlpha1Px": [249, 249],
+    "idleVisibleHeightAlpha1Px": 131,
+    "walkVisibleHeightAlpha1Px": [121, 125],
+    "maximumGeneratedDimensionDriftRatio": 0.024631
+  },
+  "evidence": {
+    "beforeAfter": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/before-after.png",
+    "beforeAfterFileSha256": "0788a96b86d2eea0b2aa59dee56240dccded3cb4a965a45bdc12318733cb7f0f",
+    "eastIdleWalkAfter": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/novice_tiger_mount/east-walk-semantic-regeneration-v1/east-idle-walk-after.gif",
+    "eastIdleWalkAfterFileSha256": "d4929de1ab0a21384badd7878557caa65b64965b6eb3b4b5645187809ee02bf9"
+  },
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

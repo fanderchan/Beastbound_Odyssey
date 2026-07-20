@@ -14,7 +14,7 @@
     "southeast"
   ],
   "frameCount": 40,
-  "minimumRuntimeEdgeMargin": 13,
+  "minimumRuntimeEdgeMargin": 12,
   "runtimeMirroring": false,
   "integratedWholeFrame": false,
   "runtimeLayeredComposition": false,

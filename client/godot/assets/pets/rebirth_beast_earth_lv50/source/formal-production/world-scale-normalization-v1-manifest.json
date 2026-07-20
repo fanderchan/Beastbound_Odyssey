@@ -1,0 +1,1677 @@
+{
+  "schemaVersion": 1,
+  "id": "world-scale-normalization-v1",
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "pet",
+  "status": "runtime_repaired_owner_review_pending",
+  "method": "uniform scale of complete transparent subject around bottom-center alpha anchor; 512x512 source repaired first; 256x256 runtime re-derived with premultiplied-alpha Lanczos",
+  "forbiddenOperations": [
+    "non_uniform_stretch",
+    "mirror",
+    "direction_relabel",
+    "redraw",
+    "layered_composition"
+  ],
+  "alphaThreshold": 16,
+  "workingArchive": ".run/art_full_g11_g12/earth_sample/pet",
+  "runtimeRoot": "client/godot/assets/pets/rebirth_beast_earth_lv50",
+  "frameCount": 24,
+  "frames": [
+    {
+      "direction": "south",
+      "frame": 1,
+      "slot": "south-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/south-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/south-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/south/walk/walk-1.png",
+      "scale": 1.280254777,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          185,
+          325,
+          324,
+          482
+        ],
+        "width": 139,
+        "height": 157,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          165,
+          280,
+          344,
+          482
+        ],
+        "width": 179,
+        "height": 202,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          92,
+          162,
+          162,
+          241
+        ],
+        "width": 70,
+        "height": 79,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          82,
+          140,
+          172,
+          241
+        ],
+        "width": 90,
+        "height": 101,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 101,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "587d9b3729a57081b006aded51e745c4276d6253d9b31f6004956a3815bd8890",
+        "sourceRgbaSha256": "ca50fea563b5e5d7b99c06d1d70f90075fc12408a9cdcc1bb3009e8e569a2179",
+        "archiveRuntimeFileSha256": "42782c2031f16606343b7773e2c0172499ca49fbfb090c64cbd74cc97830f17e",
+        "clientRuntimeFileSha256": "42782c2031f16606343b7773e2c0172499ca49fbfb090c64cbd74cc97830f17e"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "ba418a2e01c64033e094ef9902438e131129905d78681a5feaca28eb3e875eab",
+        "sourceRgbaSha256": "adb65c69e83cb2c7578d7938d7d76b9015245e53b7691d6786dfc5e89fdf8f96",
+        "archiveRuntimeFileSha256": "dd4df0206e8e909cf72474a951f86972e5b403df210c297bfa146f7f88403770",
+        "clientRuntimeFileSha256": "dd4df0206e8e909cf72474a951f86972e5b403df210c297bfa146f7f88403770"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 2,
+      "slot": "south-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/south-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/south-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/south/walk/walk-2.png",
+      "scale": 1.2625,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          178,
+          322,
+          323,
+          482
+        ],
+        "width": 145,
+        "height": 160,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          159,
+          279,
+          343,
+          482
+        ],
+        "width": 184,
+        "height": 203,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          89,
+          161,
+          162,
+          241
+        ],
+        "width": 73,
+        "height": 80,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          79,
+          140,
+          171,
+          241
+        ],
+        "width": 92,
+        "height": 101,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 101,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "2723cf6323d71bdfe934952e0642f1cb3bd29723abf9f723393223bf03b2c2b1",
+        "sourceRgbaSha256": "998ad9483a34a6c03044df25bbf80e1567edd83ce5bc8637f50d3a201759957c",
+        "archiveRuntimeFileSha256": "e0d57a18ae4372cb8a8c8c2b23bba0aa90346059617b25faab870f053d2b5971",
+        "clientRuntimeFileSha256": "e0d57a18ae4372cb8a8c8c2b23bba0aa90346059617b25faab870f053d2b5971"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "e53e5915f0ef743f9780ba5f84e9ac6490a5f959a9d9cbcbf4e59018cb6ed15a",
+        "sourceRgbaSha256": "a8e1a9f2e0b1431ec78f898a6132243f00cdec76a0acf88d03bf892c3c955c84",
+        "archiveRuntimeFileSha256": "798e38a503415ecebdf2ea203959bfd01ee057363e98991edde27ca6d089af36",
+        "clientRuntimeFileSha256": "798e38a503415ecebdf2ea203959bfd01ee057363e98991edde27ca6d089af36"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 3,
+      "slot": "south-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/south-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/south-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/south/walk/walk-3.png",
+      "scale": 1.24691358,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          180,
+          320,
+          317,
+          482
+        ],
+        "width": 137,
+        "height": 162,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          162,
+          279,
+          334,
+          482
+        ],
+        "width": 172,
+        "height": 203,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          90,
+          160,
+          159,
+          241
+        ],
+        "width": 69,
+        "height": 81,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          81,
+          140,
+          167,
+          241
+        ],
+        "width": 86,
+        "height": 101,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 101,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "e0ebe6e40bb43d392ec58d270e4f6a15fa24a38880f34e6762a645e9bc9821fd",
+        "sourceRgbaSha256": "2df5d18630c0b9e06d43ca07bf59384c2c1da6bd474e896f6d7e6b63f7d9d14a",
+        "archiveRuntimeFileSha256": "eb8817616f5b02bbdb294ae1ddb76804d2e53e29e2d8bdad0bfea49836c6b6f9",
+        "clientRuntimeFileSha256": "eb8817616f5b02bbdb294ae1ddb76804d2e53e29e2d8bdad0bfea49836c6b6f9"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "05a56991964802cbb70cb05e888ac7a7a775b98cee3bb41b85b11f7e158670d8",
+        "sourceRgbaSha256": "4406f38ad309079f8e7e4bcf0650ad769130c46fb4ad9b3701b367febb3da9a5",
+        "archiveRuntimeFileSha256": "35fc22c472eaf253fea0035c4ffcc2847d874b3b39dcd0e4c885a6a5ff549cf8",
+        "clientRuntimeFileSha256": "35fc22c472eaf253fea0035c4ffcc2847d874b3b39dcd0e4c885a6a5ff549cf8"
+      }
+    },
+    {
+      "direction": "south",
+      "frame": 4,
+      "slot": "south-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/south-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/south-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/south/walk/walk-4.png",
+      "scale": 1.24691358,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          197,
+          320,
+          335,
+          482
+        ],
+        "width": 138,
+        "height": 162,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          179,
+          279,
+          352,
+          482
+        ],
+        "width": 173,
+        "height": 203,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          98,
+          160,
+          168,
+          241
+        ],
+        "width": 70,
+        "height": 81,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          90,
+          140,
+          176,
+          241
+        ],
+        "width": 86,
+        "height": 101,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 101,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "04c56e0c22f1cf2e55b8469df29f9d9b03048e2abdabc21af97522098cd2cf8a",
+        "sourceRgbaSha256": "7c552f757948d287ccd2ec6ccf3e054b543fc4db1e9eea343a5987522ca6240c",
+        "archiveRuntimeFileSha256": "762fc2e9f9a2c70dff90b14db2927f2066d56bc1644e9fd0f940c0156072f67b",
+        "clientRuntimeFileSha256": "762fc2e9f9a2c70dff90b14db2927f2066d56bc1644e9fd0f940c0156072f67b"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "c6b722aa950ea869b368f72ae114b91be0e9b5a920637b57f1710b4e39a9e2fb",
+        "sourceRgbaSha256": "4cdfba31b2a992d5732478978477bed89bf838c6091d86b3e79f98f6c42b7997",
+        "archiveRuntimeFileSha256": "116275af511b043d935d2ace3bfd3f44e85123eb1abdd64240e9859e6f4e0aff",
+        "clientRuntimeFileSha256": "116275af511b043d935d2ace3bfd3f44e85123eb1abdd64240e9859e6f4e0aff"
+      }
+    },
+    {
+      "direction": "southwest",
+      "frame": 1,
+      "slot": "southwest-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/southwest-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/southwest-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southwest/walk/walk-1.png",
+      "scale": 1.376623377,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          191,
+          328,
+          418,
+          482
+        ],
+        "width": 227,
+        "height": 154,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          148,
+          268,
+          461,
+          482
+        ],
+        "width": 313,
+        "height": 214,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          95,
+          164,
+          209,
+          241
+        ],
+        "width": 114,
+        "height": 77,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          74,
+          134,
+          231,
+          241
+        ],
+        "width": 157,
+        "height": 107,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 107,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "2c2d5cb57bc5869d2f541e8126a45e53370ec9a1b6a21ec396791ce470a4fff5",
+        "sourceRgbaSha256": "2952b83dd86a38795147a281ad1bf15b563b42dba5ef29c76561547752dc3f4f",
+        "archiveRuntimeFileSha256": "c89a5c28b5510680ae771060198f2dfc09f6ac2ffdd5a3fbb341f8b5735cc067",
+        "clientRuntimeFileSha256": "c89a5c28b5510680ae771060198f2dfc09f6ac2ffdd5a3fbb341f8b5735cc067"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "b34cb07b20d9b57a7e83be53453026bc28272d94765e7d54c2087258cb604dcf",
+        "sourceRgbaSha256": "4bc3403896821d1b86f22eb42b7ff1388b8f8df406c12423229b42ddfb30a65b",
+        "archiveRuntimeFileSha256": "ccd2c08c8d042883e7aa5e3e0012d6a724aa414ac65b325700e363718ad7f2c7",
+        "clientRuntimeFileSha256": "ccd2c08c8d042883e7aa5e3e0012d6a724aa414ac65b325700e363718ad7f2c7"
+      }
+    },
+    {
+      "direction": "southwest",
+      "frame": 2,
+      "slot": "southwest-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/southwest-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/southwest-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southwest/walk/walk-2.png",
+      "scale": 1.468965517,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          208,
+          337,
+          439,
+          482
+        ],
+        "width": 231,
+        "height": 145,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          139,
+          268,
+          480,
+          481
+        ],
+        "width": 341,
+        "height": 213,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          104,
+          168,
+          220,
+          241
+        ],
+        "width": 116,
+        "height": 73,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          70,
+          134,
+          240,
+          241
+        ],
+        "width": 170,
+        "height": 107,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 107,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "daf66a0a36420786847006e2cc18ef1649e0c1834c9a864a74ee4b43e40e9a43",
+        "sourceRgbaSha256": "cdb75fc9b9eff1ded6f79fab23ce2146da24009146d4c3af1e05a464b8ee8b5c",
+        "archiveRuntimeFileSha256": "4f6b0645a43df0cf8d6f5fd3783804177526e9c9707d0097c270fa82c469b3f3",
+        "clientRuntimeFileSha256": "4f6b0645a43df0cf8d6f5fd3783804177526e9c9707d0097c270fa82c469b3f3"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "e57eced3e15c4a925da144a0cd3da90e8e0e4ae607e347c0a4051d2f99bb93a1",
+        "sourceRgbaSha256": "1f8cfec7f12522c4e11f8299a92b5b49963def82146077f8bd39761a9d71c418",
+        "archiveRuntimeFileSha256": "b53d433fd9ca290f80427fec7f3921752a13b0cab92b2d9f886f1073e0e07d74",
+        "clientRuntimeFileSha256": "b53d433fd9ca290f80427fec7f3921752a13b0cab92b2d9f886f1073e0e07d74"
+      }
+    },
+    {
+      "direction": "southwest",
+      "frame": 3,
+      "slot": "southwest-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/southwest-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/southwest-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southwest/walk/walk-3.png",
+      "scale": 1.597014925,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          157,
+          348,
+          400,
+          482
+        ],
+        "width": 243,
+        "height": 134,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          85,
+          268,
+          473,
+          482
+        ],
+        "width": 388,
+        "height": 214,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          78,
+          174,
+          200,
+          241
+        ],
+        "width": 122,
+        "height": 67,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          42,
+          134,
+          236,
+          241
+        ],
+        "width": 194,
+        "height": 107,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 107,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "a244d0cdb67cab82ae70eb598d0e6215cd73b6870c65d9373bb63aac2fd1cf0b",
+        "sourceRgbaSha256": "b5af7fa5e98f32f2aef3ebff621505292e2f8c896c8146696141ada430376b4a",
+        "archiveRuntimeFileSha256": "a5aa36282f04a636c69bd6821ee9fba0835cf425cd2f090e07a2aa0678bdf846",
+        "clientRuntimeFileSha256": "a5aa36282f04a636c69bd6821ee9fba0835cf425cd2f090e07a2aa0678bdf846"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "70ecdee53299fccdfb60341d8e96fbc1458a8aad1eb562dbb8c9f0a09d5c9ee1",
+        "sourceRgbaSha256": "4a58012b70783737a826192daced853a971c633bfad21bea46496020cc465f21",
+        "archiveRuntimeFileSha256": "02645a79d5680e9e454b181c4d7a857ed510897ed15dccdfb9732ce3a1d62731",
+        "clientRuntimeFileSha256": "02645a79d5680e9e454b181c4d7a857ed510897ed15dccdfb9732ce3a1d62731"
+      }
+    },
+    {
+      "direction": "southwest",
+      "frame": 4,
+      "slot": "southwest-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/southwest-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/southwest-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southwest/walk/walk-4.png",
+      "scale": 1.468965517,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          174,
+          337,
+          400,
+          482
+        ],
+        "width": 226,
+        "height": 145,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          120,
+          268,
+          454,
+          482
+        ],
+        "width": 334,
+        "height": 214,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          87,
+          168,
+          200,
+          241
+        ],
+        "width": 113,
+        "height": 73,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          60,
+          134,
+          227,
+          241
+        ],
+        "width": 167,
+        "height": 107,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 107,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "ccfbe7439ea7cdb77f3da98cc08f25119a830995289a1f28dfb1bcce46a8344e",
+        "sourceRgbaSha256": "95ba4101b72567b8b03a5b6f88afe17080d9748daeaefd2547fb46ef97dd014e",
+        "archiveRuntimeFileSha256": "da7b5600fa17b00ce47f1aed2e90a3855cc5e6d10a6739698c1c463425207c16",
+        "clientRuntimeFileSha256": "da7b5600fa17b00ce47f1aed2e90a3855cc5e6d10a6739698c1c463425207c16"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "0f5e29f11b91d23ffda23cebf5b1c80aa2062ee4068bd1e30b5c31e30e7c9df8",
+        "sourceRgbaSha256": "c2dd5c3bdd49077a4a750e6f859bfd1191bb281133e61a1621327ecc43f40a01",
+        "archiveRuntimeFileSha256": "13bc579c313204a9f8b7ae59e8aa8a65c8528b20b4191043e883e715f8bf3ac9",
+        "clientRuntimeFileSha256": "13bc579c313204a9f8b7ae59e8aa8a65c8528b20b4191043e883e715f8bf3ac9"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 1,
+      "slot": "west-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/west-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/west-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/west/walk/walk-1.png",
+      "scale": 1.251748252,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          177,
+          339,
+          437,
+          482
+        ],
+        "width": 260,
+        "height": 143,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          144,
+          302,
+          470,
+          481
+        ],
+        "width": 326,
+        "height": 179,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          88,
+          169,
+          219,
+          241
+        ],
+        "width": 131,
+        "height": 72,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          72,
+          151,
+          235,
+          241
+        ],
+        "width": 163,
+        "height": 90,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 90,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "358bac63558d2f98a703867e9dd60eabbe7ceba4ddd0601a062db662cc98533d",
+        "sourceRgbaSha256": "9080192c186c29afe1b509e678c19d485ff1148002fd41123a61af615b703590",
+        "archiveRuntimeFileSha256": "75319c285b3de3136020c2a635b8d3ac23c3dd4822aba8253122135943ec0672",
+        "clientRuntimeFileSha256": "75319c285b3de3136020c2a635b8d3ac23c3dd4822aba8253122135943ec0672"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "2a192d0e6562427ba326a1ac7fc6c38766e44ee2f271f555f2c1ccb62ff60864",
+        "sourceRgbaSha256": "dc29de8b0bd9a6db4e0e2ef674a1f3cc52dbf36d076bdcab2d14e654696b3367",
+        "archiveRuntimeFileSha256": "5f92aa4e4bfd8230162a843fe81e33270f130c2ae3142d9dbff7eb3763867492",
+        "clientRuntimeFileSha256": "5f92aa4e4bfd8230162a843fe81e33270f130c2ae3142d9dbff7eb3763867492"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 2,
+      "slot": "west-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/west-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/west-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/west/walk/walk-2.png",
+      "scale": 1.26056338,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          153,
+          340,
+          415,
+          482
+        ],
+        "width": 262,
+        "height": 142,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          118,
+          302,
+          449,
+          482
+        ],
+        "width": 331,
+        "height": 180,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          76,
+          170,
+          208,
+          241
+        ],
+        "width": 132,
+        "height": 71,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          59,
+          151,
+          225,
+          241
+        ],
+        "width": 166,
+        "height": 90,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 90,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "357e8cb89901d00eed059f5efff14715ebd14d643770e33b290589d9462126ae",
+        "sourceRgbaSha256": "80f4c91456cba205d227a1dee0acfebff66f1402c72233f031528c205443f0eb",
+        "archiveRuntimeFileSha256": "577b2f5e7bc5c4bd9464365076c1403d361a45d02ba41f64502b3a8d05544232",
+        "clientRuntimeFileSha256": "577b2f5e7bc5c4bd9464365076c1403d361a45d02ba41f64502b3a8d05544232"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "d761c41836bff7081efb27b95daa0207893e50bf2b59053796f0d3f86abe8f05",
+        "sourceRgbaSha256": "ea31d73cabb8fa71ceb2bf575a004606c725d43ad767798e33e54251a887bdfa",
+        "archiveRuntimeFileSha256": "9be5af402682a31727c98ade30f35d1e7b3c8372d195ebdc8e9071afb9259eee",
+        "clientRuntimeFileSha256": "9be5af402682a31727c98ade30f35d1e7b3c8372d195ebdc8e9071afb9259eee"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 3,
+      "slot": "west-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/west-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/west-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/west/walk/walk-3.png",
+      "scale": 1.323529412,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          159,
+          346,
+          425,
+          482
+        ],
+        "width": 266,
+        "height": 136,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          116,
+          301,
+          469,
+          481
+        ],
+        "width": 353,
+        "height": 180,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          79,
+          173,
+          213,
+          241
+        ],
+        "width": 134,
+        "height": 68,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          58,
+          151,
+          234,
+          241
+        ],
+        "width": 176,
+        "height": 90,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 90,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "648df393408351d56d86003e07e4203a6db216634c7e1859fe1940d3f71f3b09",
+        "sourceRgbaSha256": "ff64f0e8f8571bbf6001f3960bdba8e997b55174513e95123fc394665e776b4b",
+        "archiveRuntimeFileSha256": "4be5cfc81b7d65e75b37c8c040d44571e63431b61df3c8084c1f259d840d817e",
+        "clientRuntimeFileSha256": "4be5cfc81b7d65e75b37c8c040d44571e63431b61df3c8084c1f259d840d817e"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "f0f8d3307026a5f6885e9d46fc37fc711439dc42aa5efe7c6351075e961e18c7",
+        "sourceRgbaSha256": "3165079995ef780af2a7c3f5f20fbfe29d5ab90ece4e759deca6df940ca9d4e7",
+        "archiveRuntimeFileSha256": "cf96ed87a4a37b1df3d807825b9776146beeeef087601b1b6550e21ff060261f",
+        "clientRuntimeFileSha256": "cf96ed87a4a37b1df3d807825b9776146beeeef087601b1b6550e21ff060261f"
+      }
+    },
+    {
+      "direction": "west",
+      "frame": 4,
+      "slot": "west-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/west-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/west-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/west/walk/walk-4.png",
+      "scale": 1.269503546,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          152,
+          341,
+          415,
+          482
+        ],
+        "width": 263,
+        "height": 141,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          116,
+          302,
+          451,
+          481
+        ],
+        "width": 335,
+        "height": 179,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          76,
+          170,
+          208,
+          241
+        ],
+        "width": 132,
+        "height": 71,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          58,
+          151,
+          225,
+          241
+        ],
+        "width": 167,
+        "height": 90,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 90,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "35e7e83876ac4a09f9ab768ec684a2628373ef0864c47b80a587e8807d24d683",
+        "sourceRgbaSha256": "6d483f5e4bc864d2811cc205ef90bd311af8829a1ad90de0bb66c97bfcb272a1",
+        "archiveRuntimeFileSha256": "e8ee75c4202deb7457ea976a438ffb3cb9466f19bfb0d66b6d66c52460ef0e17",
+        "clientRuntimeFileSha256": "e8ee75c4202deb7457ea976a438ffb3cb9466f19bfb0d66b6d66c52460ef0e17"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "7875e78ebc0fd31964cff989df24ea25446df4d633d2686840e072c1f50c3102",
+        "sourceRgbaSha256": "4f1ad4f8d57728c4a26a44368f56c1bbf4e8bc747ba7302114f8a32cbe9092f4",
+        "archiveRuntimeFileSha256": "63f05b01cf0d092a4e9f628a263f10a96fba0cee0073dff27dadfbf51c511294",
+        "clientRuntimeFileSha256": "63f05b01cf0d092a4e9f628a263f10a96fba0cee0073dff27dadfbf51c511294"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 1,
+      "slot": "northwest-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/northwest-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/northwest-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/northwest/walk/walk-1.png",
+      "scale": 1.312101911,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          161,
+          325,
+          354,
+          482
+        ],
+        "width": 193,
+        "height": 157,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          131,
+          276,
+          385,
+          482
+        ],
+        "width": 254,
+        "height": 206,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          80,
+          163,
+          177,
+          241
+        ],
+        "width": 97,
+        "height": 78,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          66,
+          138,
+          193,
+          241
+        ],
+        "width": 127,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "284ea566f6c5bb200363ec5e18ec92f73860ca0915bda7031e18b6ae8bdc53a8",
+        "sourceRgbaSha256": "48f79ca8b1b7b7d9f21b3779beb8af90cd191839150f1faba6857d1e19b46abb",
+        "archiveRuntimeFileSha256": "6c63534d8b718d6f4c2f3e782bbddd0e4570f79f5f3de797a3f35d88c6472fc8",
+        "clientRuntimeFileSha256": "6c63534d8b718d6f4c2f3e782bbddd0e4570f79f5f3de797a3f35d88c6472fc8"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "e592e00c88449e829a3623e2e8cf967cdcc0c2b6c3fdf510bbcc668405dfb426",
+        "sourceRgbaSha256": "80ac4cf05f75e4ec513d2d8ff0e91e090876bb13b5c25c15a8f9d4a68fb1bf2b",
+        "archiveRuntimeFileSha256": "9817a41f0de9e4e4df5fb5097dcddb726f977a8ffd2b2ab0da3c2adee42159d7",
+        "clientRuntimeFileSha256": "9817a41f0de9e4e4df5fb5097dcddb726f977a8ffd2b2ab0da3c2adee42159d7"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 2,
+      "slot": "northwest-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/northwest-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/northwest-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/northwest/walk/walk-2.png",
+      "scale": 1.271604938,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          137,
+          320,
+          341,
+          482
+        ],
+        "width": 204,
+        "height": 162,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          109,
+          276,
+          369,
+          482
+        ],
+        "width": 260,
+        "height": 206,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          68,
+          160,
+          171,
+          241
+        ],
+        "width": 103,
+        "height": 81,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          54,
+          138,
+          185,
+          241
+        ],
+        "width": 131,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "a0fcd11eb7219cbe0ffcd0b4030fc70396c0ad9c00803a4723e49907ec515393",
+        "sourceRgbaSha256": "ceceea635cdc51a97aaac556871ebd721a03a13025b7d915b361360ff977cc4f",
+        "archiveRuntimeFileSha256": "2521e9456fdfe8d97d7e58f707d3ba4b38d0ef4ba2514ac649adb751aeb464b7",
+        "clientRuntimeFileSha256": "2521e9456fdfe8d97d7e58f707d3ba4b38d0ef4ba2514ac649adb751aeb464b7"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "c1a4c543e6e9d2094197cdb3065ca9d5c987e2d2dd80c978c962456c5ab220cc",
+        "sourceRgbaSha256": "2f4c26ca7713b3f89c2de684450eb19c048bafc8d56f89f33ae069bfc05e0a82",
+        "archiveRuntimeFileSha256": "7914282c3e2260b6fb0f831c473c4ead08f171a05326816dad9ec5fa5eb348f1",
+        "clientRuntimeFileSha256": "7914282c3e2260b6fb0f831c473c4ead08f171a05326816dad9ec5fa5eb348f1"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 3,
+      "slot": "northwest-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/northwest-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/northwest-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/northwest/walk/walk-3.png",
+      "scale": 1.297468354,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          123,
+          324,
+          335,
+          482
+        ],
+        "width": 212,
+        "height": 158,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          91,
+          276,
+          367,
+          482
+        ],
+        "width": 276,
+        "height": 206,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          61,
+          162,
+          168,
+          241
+        ],
+        "width": 107,
+        "height": 79,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          45,
+          138,
+          183,
+          241
+        ],
+        "width": 138,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "c9376361d457844151f2e7394777fca30d3c3ec822b6837ddb0f4f90df778505",
+        "sourceRgbaSha256": "ece4e2a019b8d1ae5f96663bdaeaf6754c6dfde710e4f64c1f82e0dd8c87b8a1",
+        "archiveRuntimeFileSha256": "a857d28d2bb86bc5eab358b40917c4cb52064130d76db79e671dd997a8cb7eb7",
+        "clientRuntimeFileSha256": "a857d28d2bb86bc5eab358b40917c4cb52064130d76db79e671dd997a8cb7eb7"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "24b3ed350aa3c5cfca60032094403b060f60dc4bdd834647ec5f91c0a94cdfdc",
+        "sourceRgbaSha256": "a7ef68524aa82ac015e9e941008af1aacf2c30a736baaa9efbcc6c1230925318",
+        "archiveRuntimeFileSha256": "240fbaf00f10cfe00bde36103865b214f5933e343e8920b21558203b4e5aa91f",
+        "clientRuntimeFileSha256": "240fbaf00f10cfe00bde36103865b214f5933e343e8920b21558203b4e5aa91f"
+      }
+    },
+    {
+      "direction": "northwest",
+      "frame": 4,
+      "slot": "northwest-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/source-frames/northwest-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk-south-half/build/runtime-frames/northwest-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/northwest/walk/walk-4.png",
+      "scale": 1.301282051,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          149,
+          325,
+          339,
+          481
+        ],
+        "width": 190,
+        "height": 156,
+        "baselineExclusive": 481
+      },
+      "afterSource": {
+        "bbox": [
+          120,
+          277,
+          368,
+          481
+        ],
+        "width": 248,
+        "height": 204,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          74,
+          162,
+          170,
+          241
+        ],
+        "width": 96,
+        "height": 79,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          60,
+          138,
+          184,
+          241
+        ],
+        "width": 124,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "f97a5237f09536d7971880698dabaf77db290f0443721585be8beb560c9d0ba1",
+        "sourceRgbaSha256": "acd725cc1384c4c388e9ae76290fbf6f1fbd01b2b4ba3598f15bb38914b8f284",
+        "archiveRuntimeFileSha256": "56891fbafb387ca18060248099dee95d481db9d6c2d085f2a1f23d608e5cdb5b",
+        "clientRuntimeFileSha256": "56891fbafb387ca18060248099dee95d481db9d6c2d085f2a1f23d608e5cdb5b"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "dbf6371dc754a579a528b3734f8b3fa45e8e5bfbab12067fe0619d75335bcb1a",
+        "sourceRgbaSha256": "4a8056e77fdd327fc9c8506b0baa1ada0394614192cd91a40f4d6f4cf0628405",
+        "archiveRuntimeFileSha256": "7ce2a34e19d10e7ea4c24f3b1a475e723fb9ce363294a3c851ad757063b06185",
+        "clientRuntimeFileSha256": "7ce2a34e19d10e7ea4c24f3b1a475e723fb9ce363294a3c851ad757063b06185"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 1,
+      "slot": "north-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/source-frames/north-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/runtime-frames/north-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/north/walk/walk-1.png",
+      "scale": 0.64516129,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          114,
+          110,
+          345,
+          482
+        ],
+        "width": 231,
+        "height": 372,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          155,
+          242,
+          304,
+          482
+        ],
+        "width": 149,
+        "height": 240,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          57,
+          55,
+          173,
+          241
+        ],
+        "width": 116,
+        "height": 186,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          77,
+          121,
+          152,
+          241
+        ],
+        "width": 75,
+        "height": 120,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 120,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 12,
+      "beforeSha256": {
+        "sourceFileSha256": "c658b8a4c77e60c4fb4897a220fa6c2c24a86f8328b4d36087465e1d2e940a0d",
+        "sourceRgbaSha256": "d9c23abafdbe0ee22fc7e1b88104815dbc71a6ae641332301d54f93cf7c04b08",
+        "archiveRuntimeFileSha256": "e55b414311217581234ee5cb2bee25e8b52eae216a50371699bef3d3bf4d5d2b",
+        "clientRuntimeFileSha256": "e55b414311217581234ee5cb2bee25e8b52eae216a50371699bef3d3bf4d5d2b"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "27f60cbed689d6411a84542109ef792495b791e902ac72e9b8d04444f5da1866",
+        "sourceRgbaSha256": "10764b10a501161e11a487a984b9c98e0fc99c63d9f114cde13a7a1857103ece",
+        "archiveRuntimeFileSha256": "79e9abaaab63da2f20bbb018a4b92b61874b471a2bbf76a90ca6521c51c0b9a7",
+        "clientRuntimeFileSha256": "79e9abaaab63da2f20bbb018a4b92b61874b471a2bbf76a90ca6521c51c0b9a7"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 2,
+      "slot": "north-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/source-frames/north-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/runtime-frames/north-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/north/walk/walk-2.png",
+      "scale": 0.647696477,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          153,
+          113,
+          391,
+          482
+        ],
+        "width": 238,
+        "height": 369,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          194,
+          242,
+          349,
+          481
+        ],
+        "width": 155,
+        "height": 239,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          76,
+          56,
+          196,
+          241
+        ],
+        "width": 120,
+        "height": 185,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          97,
+          121,
+          175,
+          241
+        ],
+        "width": 78,
+        "height": 120,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 120,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "ed7eb936b78396b487a6a79984e0dff42ed89da16cfabb5eb13c069d79a29753",
+        "sourceRgbaSha256": "455f9edd0513fc38177827d179883331374b09201e0ceda2c32f30b02fb65436",
+        "archiveRuntimeFileSha256": "ba96294ef8522f612b843060d6f40d2263e12f4e71bb6ddf0efb86a49877a5f5",
+        "clientRuntimeFileSha256": "ba96294ef8522f612b843060d6f40d2263e12f4e71bb6ddf0efb86a49877a5f5"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "dda3330b89e4da7b44cb797a3ae4d1f3f1ad4d1dba4bc601604c7e4d9091a0fe",
+        "sourceRgbaSha256": "f1eb060906b7de21d68fddc2e0771eeabe5fad5df4ebc6dc875f8bd7100b70ed",
+        "archiveRuntimeFileSha256": "9b4a15ebe92517059a891bebb3a08158f32c16b8f07c67b3cb22b10ba0ca8e5d",
+        "clientRuntimeFileSha256": "9b4a15ebe92517059a891bebb3a08158f32c16b8f07c67b3cb22b10ba0ca8e5d"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 3,
+      "slot": "north-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/source-frames/north-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/runtime-frames/north-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/north/walk/walk-3.png",
+      "scale": 0.658402204,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          151,
+          119,
+          383,
+          482
+        ],
+        "width": 232,
+        "height": 363,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          190,
+          242,
+          343,
+          481
+        ],
+        "width": 153,
+        "height": 239,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          75,
+          59,
+          192,
+          241
+        ],
+        "width": 117,
+        "height": 182,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          95,
+          121,
+          172,
+          241
+        ],
+        "width": 77,
+        "height": 120,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 120,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "bc31bda993b9751db421d45b2f408591bd826f657462f129ea50d1f4e2b888da",
+        "sourceRgbaSha256": "dea5d200d1fcfa2f2d767a92b061f559efba8e1838918a02f5cca5b0ec5cecf3",
+        "archiveRuntimeFileSha256": "aca4319745d41067453b652f12a190e210b2a6e4b5ab4f560e8891e689099c68",
+        "clientRuntimeFileSha256": "aca4319745d41067453b652f12a190e210b2a6e4b5ab4f560e8891e689099c68"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "7d39f4ef00384693b966e5d5c505f84e753bbdf2fdc9889b8809da0612fc5ecf",
+        "sourceRgbaSha256": "b1b1898c8bd32626ad93b026eccdec6af844e2eccef93ed83aa025e48ac828ae",
+        "archiveRuntimeFileSha256": "08466f0afb46a2f06c414df928c75d2c5332f5d3fece4cc0535996e1cce68a82",
+        "clientRuntimeFileSha256": "08466f0afb46a2f06c414df928c75d2c5332f5d3fece4cc0535996e1cce68a82"
+      }
+    },
+    {
+      "direction": "north",
+      "frame": 4,
+      "slot": "north-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/source-frames/north-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/north/build/runtime-frames/north-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/north/walk/walk-4.png",
+      "scale": 0.673239437,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          138,
+          127,
+          376,
+          482
+        ],
+        "width": 238,
+        "height": 355,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          177,
+          242,
+          337,
+          481
+        ],
+        "width": 160,
+        "height": 239,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          69,
+          63,
+          188,
+          241
+        ],
+        "width": 119,
+        "height": 178,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          88,
+          121,
+          169,
+          241
+        ],
+        "width": 81,
+        "height": 120,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 120,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "3a7ee4f070ef29a9660b4561989d43e09ea9b5f661d55f8f1f825ae686ea9021",
+        "sourceRgbaSha256": "fdbf8f1c751db8d66e95335f40971814be95c3ae350a094e0a56f7614f1418fa",
+        "archiveRuntimeFileSha256": "b577e9651d6d41519c338180dfa96962df30fa40cfacbca6f94922c7389a399f",
+        "clientRuntimeFileSha256": "b577e9651d6d41519c338180dfa96962df30fa40cfacbca6f94922c7389a399f"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "7a51de5b41a5dd47efc76d5f89fe14413b21be0fad45a637c82be931564bcf9e",
+        "sourceRgbaSha256": "d1add2cfea95b13f46e5a946214a9629c559981fdff68afc8f0e473a3baae0db",
+        "archiveRuntimeFileSha256": "fd4a7a397da95c910c53ae774ffb7465183ee2a09a2606dde4733e1b66fc974d",
+        "clientRuntimeFileSha256": "fd4a7a397da95c910c53ae774ffb7465183ee2a09a2606dde4733e1b66fc974d"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 1,
+      "slot": "southeast-1",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/source-frames/southeast-1.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/runtime-frames/southeast-1.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southeast/walk/walk-1.png",
+      "scale": 1.450704225,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          94,
+          340,
+          333,
+          482
+        ],
+        "width": 239,
+        "height": 142,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          41,
+          276,
+          387,
+          481
+        ],
+        "width": 346,
+        "height": 205,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          47,
+          170,
+          167,
+          241
+        ],
+        "width": 120,
+        "height": 71,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          20,
+          138,
+          193,
+          241
+        ],
+        "width": 173,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "2e9d1135620beae12bb7a66d65448d78de0de26320aa0eb39f3f7e73f9047aed",
+        "sourceRgbaSha256": "9fad8cfb84fab04332b1582b1639af2fed197ce5b2c8ccf2325a9bd0d645b252",
+        "archiveRuntimeFileSha256": "7c8a5ae1c2303f45b0d801ae4571c83efa4bc8c4b2d8f6a4a8d30d7e550bd8cf",
+        "clientRuntimeFileSha256": "7c8a5ae1c2303f45b0d801ae4571c83efa4bc8c4b2d8f6a4a8d30d7e550bd8cf"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "c5cd3f3f1441e55ca446ac30501cd4cdaeafe13f1814c6e54184580553737958",
+        "sourceRgbaSha256": "5545bc63992575aedd537b51ae15d71ce0990bd24b3f93ce93a224986bf0435f",
+        "archiveRuntimeFileSha256": "8773a3baf888c2e1deeedfbb2f32398c927b9f79d5faf00e4436429fd103826f",
+        "clientRuntimeFileSha256": "8773a3baf888c2e1deeedfbb2f32398c927b9f79d5faf00e4436429fd103826f"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 2,
+      "slot": "southeast-2",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/source-frames/southeast-2.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/runtime-frames/southeast-2.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southeast/walk/walk-2.png",
+      "scale": 1.443661972,
+      "sourceBaselineExclusive": 482,
+      "beforeSource": {
+        "bbox": [
+          104,
+          340,
+          336,
+          482
+        ],
+        "width": 232,
+        "height": 142,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          53,
+          276,
+          388,
+          482
+        ],
+        "width": 335,
+        "height": 206,
+        "baselineExclusive": 482
+      },
+      "beforeRuntime": {
+        "bbox": [
+          52,
+          170,
+          168,
+          241
+        ],
+        "width": 116,
+        "height": 71,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          26,
+          138,
+          194,
+          241
+        ],
+        "width": 168,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "75e74a5e3b9611dec8fe2d39145dc94414246292173487585f88245af28d4e44",
+        "sourceRgbaSha256": "34f1f98fb7a306ac4d6cd1979750235ff32a409249a9681da50c2cf21f6c1387",
+        "archiveRuntimeFileSha256": "a172cd2f982607994dbca653a9001afef802ae31f3d8f32aaa45567a71897cb8",
+        "clientRuntimeFileSha256": "a172cd2f982607994dbca653a9001afef802ae31f3d8f32aaa45567a71897cb8"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "81408e170aabeeea381a7295743ff1fd675dd6f86daf9c8db1cba70676f30bac",
+        "sourceRgbaSha256": "5b241fc04b6363b334e5609c5ea297a81461848c3576b227150f6524aeaedaab",
+        "archiveRuntimeFileSha256": "e22f66dd2426a3323678efb7d72aebbbfba84d14718c10a32ce995c6d0e1b2fe",
+        "clientRuntimeFileSha256": "e22f66dd2426a3323678efb7d72aebbbfba84d14718c10a32ce995c6d0e1b2fe"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 3,
+      "slot": "southeast-3",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/source-frames/southeast-3.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/runtime-frames/southeast-3.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southeast/walk/walk-3.png",
+      "scale": 1.410958904,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          71,
+          336,
+          308,
+          482
+        ],
+        "width": 237,
+        "height": 146,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          31,
+          276,
+          366,
+          481
+        ],
+        "width": 335,
+        "height": 205,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          35,
+          168,
+          154,
+          241
+        ],
+        "width": 119,
+        "height": 73,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          15,
+          138,
+          183,
+          241
+        ],
+        "width": 168,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "ec1ae9d4da139330d6319f635a7ff023d2213c416822d7850a899ce3115755ea",
+        "sourceRgbaSha256": "555899b52c0bc484b3a153e6b429e87b1ae981889d8c02165429fad0ec34a5cb",
+        "archiveRuntimeFileSha256": "63e010c1f210e9e4b7597f25478cd5f1dd184ec725d756d73df8b3c3a5a1a332",
+        "clientRuntimeFileSha256": "63e010c1f210e9e4b7597f25478cd5f1dd184ec725d756d73df8b3c3a5a1a332"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "1b86479112550e9b26fd024dbd01a493be6e1c483ed9b9fe350802dda5643a67",
+        "sourceRgbaSha256": "901590531911e1828329ef038f463a8b4685797272aa97616398a805b916d3b9",
+        "archiveRuntimeFileSha256": "227e8d6eee4bccdf244d6ed85beb403a64089db50e3c8936edc0163d0ddd86ff",
+        "clientRuntimeFileSha256": "227e8d6eee4bccdf244d6ed85beb403a64089db50e3c8936edc0163d0ddd86ff"
+      }
+    },
+    {
+      "direction": "southeast",
+      "frame": 4,
+      "slot": "southeast-4",
+      "sourcePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/source-frames/southeast-4.png",
+      "archiveRuntimePath": ".run/art_full_g11_g12/earth_sample/pet/world-walk/southeast/build/runtime-frames/southeast-4.png",
+      "clientRuntimePath": "client/godot/assets/pets/rebirth_beast_earth_lv50/world/directions/southeast/walk/walk-4.png",
+      "scale": 1.413793103,
+      "sourceBaselineExclusive": 481,
+      "beforeSource": {
+        "bbox": [
+          99,
+          337,
+          319,
+          482
+        ],
+        "width": 220,
+        "height": 145,
+        "baselineExclusive": 482
+      },
+      "afterSource": {
+        "bbox": [
+          54,
+          277,
+          364,
+          481
+        ],
+        "width": 310,
+        "height": 204,
+        "baselineExclusive": 481
+      },
+      "beforeRuntime": {
+        "bbox": [
+          50,
+          168,
+          160,
+          241
+        ],
+        "width": 110,
+        "height": 73,
+        "baselineExclusive": 241
+      },
+      "afterRuntime": {
+        "bbox": [
+          27,
+          138,
+          182,
+          241
+        ],
+        "width": 155,
+        "height": 103,
+        "baselineExclusive": 241
+      },
+      "targetRuntimeHeight": 103,
+      "targetRuntimeBaselineExclusive": 241,
+      "minimumAlphaEdgeMargin": 13,
+      "beforeSha256": {
+        "sourceFileSha256": "f1681f76da3faa3e7f934a23b457c3d46da5771c20077494cb6b246fd030b933",
+        "sourceRgbaSha256": "1d86167d663afa86bd633807ddea207577fec2205c3ee333de10e9d30db8c6fb",
+        "archiveRuntimeFileSha256": "d0a35381f081a23a0283929aa76b410d4b93e1d6b1e62127c012b14090541d08",
+        "clientRuntimeFileSha256": "d0a35381f081a23a0283929aa76b410d4b93e1d6b1e62127c012b14090541d08"
+      },
+      "afterSha256": {
+        "sourceFileSha256": "336b9d8fb05fd6990a37656e7b38a162f025f2a5d340351ed84e5e8714162ee0",
+        "sourceRgbaSha256": "4f15ddaf42129d7632f8dfd3bd1ebf2c1f4b5b5b6e3f6aadc15ff261d7b8f878",
+        "archiveRuntimeFileSha256": "db1a3917f8f4866e77e5b98bc4fbba2e3c45beec620696795c71a0024d148afd",
+        "clientRuntimeFileSha256": "db1a3917f8f4866e77e5b98bc4fbba2e3c45beec620696795c71a0024d148afd"
+      }
+    }
+  ]
+}

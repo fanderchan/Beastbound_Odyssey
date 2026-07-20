@@ -5,39 +5,122 @@
   "artStatus": "owner_review_pending",
   "productionScope": "mounted_key_pose_gate",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
     "board": "identity/identity-board-transparent.png",
-    "poses": {"front_3quarter_sw": "identity/front_3quarter_sw.png", "back_3quarter_ne": "identity/back_3quarter_ne.png"},
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png"
+    },
     "integratedWholeFrame": true,
     "runtimeLayeredComposition": false,
     "runtimeMirroring": false
   },
   "actions": {
-    "idle": {"frameCount": 6, "status": "not_produced"},
-    "walk": {"frameCount": 8, "status": "not_produced"},
-    "attack": {"frameCount": 8, "status": "not_produced"},
-    "skill": {"frameCount": 8, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "status": "not_produced"},
-    "defend": {"frameCount": 6, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "status": "not_produced"},
-    "counter": {"frameCount": 8, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "status": "not_produced"},
-    "down": {"frameCount": 8, "status": "not_produced"},
-    "revive": {"frameCount": 8, "status": "not_produced"}
+    "idle": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "status": "not_produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "status": "not_produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "status": "not_produced"
+    }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "ai_generated_integrated_independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
     "runtimeBodyLayerCount": 1,
-    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
-    "actions": {"idle": {"frameCount": 1, "status": "not_produced"}, "walk": {"frameCount": 4, "status": "not_produced"}}
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "produced_owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "produced_owner_review_pending"
+      }
+    },
+    "runtimeSafetyEdge": {
+      "status": "passed",
+      "minimumMarginPx": 8,
+      "publishedFrameCount": 40,
+      "sourceOfTruth": "source/world-pipeline-meta.json"
+    },
+    "semanticDirectionRepair": {
+      "id": "mounted-emberhorn-southeast-idle-semantic-repair-v2",
+      "direction": "southeast",
+      "action": "idle",
+      "manifest": "source/world-direction-repair-v2/manifest.json",
+      "status": "self_review_passed_owner_pending"
+    }
   },
   "sourceArchive": {
     "policy": "tracked_lossless_webp_with_original_sha256",

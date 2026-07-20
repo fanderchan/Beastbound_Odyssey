@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "rebirth_beast_earth_lv50",
+  "kind": "mounted",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "frameCount": 40,
+  "minimumRuntimeEdgeMargin": 12,
+  "runtimeMirroring": false,
+  "integratedWholeFrame": true,
+  "runtimeLayeredComposition": false,
+  "errors": []
+}

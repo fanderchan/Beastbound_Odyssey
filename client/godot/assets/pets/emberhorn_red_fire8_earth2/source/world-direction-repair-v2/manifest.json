@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "repairId": "emberhorn-world-semantic-direction-repair-v2",
+  "asset": "emberhorn_red_fire8_earth2",
+  "generator": "OpenAI built-in image generation",
+  "reason": "prior northeast/east/southeast source pixels faced left despite rightward direction labels",
+  "runtimeMirroring": false,
+  "creativePixelComposition": false,
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "alphaThreshold": 24,
+  "directions": {
+    "northeast": {
+      "screenVector": [
+        1,
+        -1
+      ],
+      "view": "rear_three_quarter",
+      "description": "upper-right travel",
+      "selfReview": "passed",
+      "raw": {
+        "idle": {
+          "path": "source/world-direction-repair-v2/raw/northeast-idle.png",
+          "sha256": "c7e60f32cdc9d820d5d64c275a2cffdff0152d1d9629098ba082f33a26e4ce55"
+        },
+        "walk2x2": {
+          "path": "source/world-direction-repair-v2/raw/northeast-walk-2x2.png",
+          "sha256": "a9cedb2b56969a3b6742ecca0aafb6bdff63b1c846c41bc94f251ea47add4c66"
+        },
+        "originalGeneratedIdle": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-f2a7149f-5ddf-4daf-9845-93076f45cb7e.png",
+        "originalGeneratedWalk": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-96bef942-4e68-45b3-a88e-9941f794bacc.png"
+      },
+      "prompts": {
+        "idle": {
+          "path": "prompts/world-northeast-direction-repair-v2-idle.txt",
+          "sha256": "6075a8061bed6c4064d6254a915fb24c25aef08556ece2463d196b9ef5253d3b"
+        },
+        "walk": {
+          "path": "prompts/world-northeast-direction-repair-v2-walk.txt",
+          "sha256": "0e34461ccef2ecbb56d9580683ec935178385074f8aa7811558b92dc3616b80b"
+        }
+      },
+      "pipeline": {
+        "preparation": {
+          "path": "source/world-direction-repair-v2/pipeline/northeast-preparation.json",
+          "sha256": "00322681ae8ca14c410570a2a8b312f329912d5ef2d9c42caede5b6a77ff5363"
+        },
+        "build": {
+          "path": "source/world-direction-repair-v2/pipeline/northeast-build.json",
+          "sha256": "e2d0364fb9068d03b9f6e82c29c143312f4b33356151d28e957b0a9b3969e36a"
+        }
+      }
+    },
+    "east": {
+      "screenVector": [
+        1,
+        0
+      ],
+      "view": "right_profile",
+      "description": "strict screen-right travel",
+      "selfReview": "passed",
+      "raw": {
+        "idle": {
+          "path": "source/world-direction-repair-v2/raw/east-idle.png",
+          "sha256": "97fa7461c14421b4d9fc8a1d2f88162a9d659174f69a42fa90d485b33555a82a"
+        },
+        "walk2x2": {
+          "path": "source/world-direction-repair-v2/raw/east-walk-2x2.png",
+          "sha256": "6dff0c77b7cdb636ad967af5e70e7304c694a663c7b7866f1fd9f9470d2886bb"
+        },
+        "originalGeneratedIdle": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-6ee152aa-6263-4a37-8da3-d2c5864c91cd.png",
+        "originalGeneratedWalk": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-8d19ea1b-1659-466a-9618-5eb5b8447e28.png"
+      },
+      "prompts": {
+        "idle": {
+          "path": "prompts/world-east-direction-repair-v2-idle.txt",
+          "sha256": "ec8c0de3284fba4f96317cc282899013b415a056f51ec87a702c5aeda7ac84f2"
+        },
+        "walk": {
+          "path": "prompts/world-east-direction-repair-v2-walk.txt",
+          "sha256": "378b7ca5df55951a2b85d638bd60ce7764b9db9da50b4f46aa6a71422810cfe9"
+        }
+      },
+      "pipeline": {
+        "preparation": {
+          "path": "source/world-direction-repair-v2/pipeline/east-preparation.json",
+          "sha256": "0c2fa54558083c8c46c83c09708290663e0a6d5ae3c970858f5d1eb1f2d4fa99"
+        },
+        "build": {
+          "path": "source/world-direction-repair-v2/pipeline/east-build.json",
+          "sha256": "6e537af5377d15ac7676e0d8a1e273bbdd3df96d96dd2f547b35be4f2b916ca0"
+        }
+      }
+    },
+    "southeast": {
+      "screenVector": [
+        1,
+        1
+      ],
+      "view": "front_three_quarter",
+      "description": "lower-right travel",
+      "selfReview": "passed",
+      "raw": {
+        "idle": {
+          "path": "source/world-direction-repair-v2/raw/southeast-idle.png",
+          "sha256": "9e8b42af494965a62c0d876c186429014743d1cdd5f0e919fef616516db77c13"
+        },
+        "walk2x2": {
+          "path": "source/world-direction-repair-v2/raw/southeast-walk-2x2.png",
+          "sha256": "9d2dcc1784a73bd295bb29cecc1b94723db7f45089d696e4af8699a20ab11a86"
+        },
+        "originalGeneratedIdle": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-114bb770-1c46-4614-8316-0091195241ac.png",
+        "originalGeneratedWalk": "/Users/fander/.codex/generated_images/019f7ff6-c5b9-77c2-9e80-998a28616718/exec-126d829a-9064-421d-9667-f09f7949c130.png"
+      },
+      "prompts": {
+        "idle": {
+          "path": "prompts/world-southeast-direction-repair-v2-idle.txt",
+          "sha256": "88a5639b6f68c08e5f8e8852a4cbd776b101ba2b9b0180dc274806def9855483"
+        },
+        "walk": {
+          "path": "prompts/world-southeast-direction-repair-v2-walk.txt",
+          "sha256": "dd0a5b44cb9e118b0945728479fcbbf70d0d6ef98487c7cd49c3fe5db222cd2e"
+        }
+      },
+      "pipeline": {
+        "preparation": {
+          "path": "source/world-direction-repair-v2/pipeline/southeast-preparation.json",
+          "sha256": "a812c7e80b32e3826735366a30551fea3a5212677788f5e89893708b34bd50c0"
+        },
+        "build": {
+          "path": "source/world-direction-repair-v2/pipeline/southeast-build.json",
+          "sha256": "1a71fd0532f325fd5072af780f080ce7357e6999a97792060c926764f2fa97e2"
+        }
+      }
+    }
+  },
+  "frames": [
+    {
+      "direction": "northeast",
+      "action": "idle",
+      "frame": 1,
+      "path": "world/directions/northeast/idle/idle-1.png",
+      "sha256": "4cdc0ca1a13c6656305e76e8cc178e73ef8c068a7045bb3cb89310d3b8282446",
+      "rgbaSha256": "5bef1dd2ac33f7f063c53ef49c9f788153582be98d895dfee1775da8448a547f",
+      "runtimeVisibleBbox": [
+        85,
+        101,
+        194,
+        241
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 1,
+      "path": "world/directions/northeast/walk/walk-1.png",
+      "sha256": "d8e584a4143b11d6430607ef2d6598cac5400504a40ca6a5a9be399fd14cdb64",
+      "rgbaSha256": "8b1b56355aa8f94ee5026f80ad647db8d917e2a011eab5a96c460fd1acb66276",
+      "runtimeVisibleBbox": [
+        94,
+        102,
+        208,
+        241
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 2,
+      "path": "world/directions/northeast/walk/walk-2.png",
+      "sha256": "9b5a950c6770154ffed1bcf5344d2b987a883a35df9e2405c1bfd876450b2d5b",
+      "rgbaSha256": "f81bc80434be2c3423fc6f2a0968c152f821b500d5b58260e6b83b0168d73864",
+      "runtimeVisibleBbox": [
+        96,
+        102,
+        210,
+        241
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 3,
+      "path": "world/directions/northeast/walk/walk-3.png",
+      "sha256": "60452700de90aa65075298a0751b225a83e8df9e750f8aec56f1d59f37d2dfc1",
+      "rgbaSha256": "4c3e1b1afb5fd585c638478e35132f95955b35d8ceb9b0f8989f2cb6a2504f19",
+      "runtimeVisibleBbox": [
+        82,
+        103,
+        205,
+        241
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 4,
+      "path": "world/directions/northeast/walk/walk-4.png",
+      "sha256": "8e73748c31ebc6363eb696ee8aa87a506df007825c2520648b0ad3a2c560953d",
+      "rgbaSha256": "fbbb0eade1dc0a018dfcb9e752d0cee6d795428ce4f093fa7fc060208f2f2179",
+      "runtimeVisibleBbox": [
+        99,
+        103,
+        214,
+        241
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "idle",
+      "frame": 1,
+      "path": "world/directions/east/idle/idle-1.png",
+      "sha256": "909dc8fedbfbe0b2fd520be11cec256e0ca335837fa40cc0fe2dc618c4552af5",
+      "rgbaSha256": "092b77794ac3b8778cc5ff542f333765a3e583357d1370248291a648e5e55b58",
+      "runtimeVisibleBbox": [
+        55,
+        121,
+        212,
+        241
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 1,
+      "path": "world/directions/east/walk/walk-1.png",
+      "sha256": "d78d51886cfca2897f0a7e2bcfc8cdeb78d3eaae4ae6f3901d23b70f91035bb2",
+      "rgbaSha256": "161772e331778d32109250be57a786d597dafed9c73c01fafc8b82e0caea85da",
+      "runtimeVisibleBbox": [
+        56,
+        123,
+        212,
+        241
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 2,
+      "path": "world/directions/east/walk/walk-2.png",
+      "sha256": "846a299862e9f0e482252f234392072562ffbe4af5d1860855fe08490747e687",
+      "rgbaSha256": "7ae7e6213cc2521946a9eb57aa60687cfe7486774aff34e52425e44602dd8cdd",
+      "runtimeVisibleBbox": [
+        50,
+        125,
+        206,
+        241
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 3,
+      "path": "world/directions/east/walk/walk-3.png",
+      "sha256": "32c6c5697b52c18a037aecff25d2c56d9007d3ccd11858caac88fdaf5c576787",
+      "rgbaSha256": "bf2c976523f98bbb2e76e4a7107ff05f538b7a64d531d4e94ffd5effa6d7abd2",
+      "runtimeVisibleBbox": [
+        47,
+        124,
+        203,
+        241
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 4,
+      "path": "world/directions/east/walk/walk-4.png",
+      "sha256": "05438ae078f412a4179dd70b240386849ae0093a895ff4909cec103c1cb85d6d",
+      "rgbaSha256": "dc549c1eff5b8b8c382521d6e2bc27669689305d60b11a5a625308f1010c034a",
+      "runtimeVisibleBbox": [
+        58,
+        128,
+        214,
+        241
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "idle",
+      "frame": 1,
+      "path": "world/directions/southeast/idle/idle-1.png",
+      "sha256": "c9c5138f0379e1111baa88cdbbdd5f9221a6daafef25bbe0ce1bd8098a20a8ae",
+      "rgbaSha256": "e8d56f37e2e50c93ac6e3d01cb6464e2345c1d5231832d47e12bf38fce33f9ec",
+      "runtimeVisibleBbox": [
+        50,
+        133,
+        180,
+        241
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 1,
+      "path": "world/directions/southeast/walk/walk-1.png",
+      "sha256": "954d7873dfc886d59cc3bc46e01a921c183cb17a139b57ec864cab2a456eefde",
+      "rgbaSha256": "e7508adf7183c585bb32f25dde511efd4ce20e8c6bc4ecf482dbde3469bfb5c6",
+      "runtimeVisibleBbox": [
+        48,
+        133,
+        177,
+        241
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 2,
+      "path": "world/directions/southeast/walk/walk-2.png",
+      "sha256": "8e16ec19a6a51fc1f5aecc8de77afd48198f5cec6925a78db1430a46ee7652bd",
+      "rgbaSha256": "54dede15a0abb29988b31b165463a398287ddeaed29f8506c01d5c3afa0cc2f0",
+      "runtimeVisibleBbox": [
+        43,
+        140,
+        173,
+        241
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 3,
+      "path": "world/directions/southeast/walk/walk-3.png",
+      "sha256": "fa464870d028a163bc3e418266a3c3976df773db6d3032e8eaca2b8c4e143646",
+      "rgbaSha256": "2ff301d673d6f06d2d376f4818cf98d803f4f37baa3b2dfeaae064765c33d989",
+      "runtimeVisibleBbox": [
+        44,
+        135,
+        174,
+        241
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 4,
+      "path": "world/directions/southeast/walk/walk-4.png",
+      "sha256": "680269e75a7e2974e652e9d70cef6e73b3b09eeced4768d2a8f49120e181a1d5",
+      "rgbaSha256": "87913159e6541e8515ad4fcce20ae302c179e5f6df0a52f519c52e0a9e2a0198",
+      "runtimeVisibleBbox": [
+        42,
+        134,
+        171,
+        241
+      ]
+    }
+  ],
+  "rejectedCandidate": {
+    "path": "source/world-direction-repair-v2/raw/southeast-idle-rejected-v1-too-dynamic.png",
+    "sha256": "6c55e0be1ff25e06655ee6ca812ced662e8d70a3280cf801d11ebb120a40854f",
+    "reason": "direction was correct but pose read as a lunge rather than grounded idle"
+  },
+  "directionDuplicateAudit": {
+    "exactDuplicatePairs": [],
+    "horizontalMirrorDuplicatePairs": [],
+    "passed": true
+  },
+  "qa": {
+    "fullWorldContact": "qa/world/full-world-contact.png",
+    "northToSoutheastContact": "qa/world/north-to-southeast-contact.png",
+    "beforeAfter": "qa/world/direction-repair-v2-before-after.png"
+  },
+  "status": "self_review_passed_owner_pending"
+}

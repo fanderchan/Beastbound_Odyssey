@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "operation": "measured-key chroma extraction and deterministic regrid",
+  "runtimeMirroring": false,
+  "creativePixelSynthesis": false,
+  "cell": 512,
+  "fit": 0.72,
+  "rows": 1,
+  "cols": 1,
+  "frames": [
+    {
+      "slot": "idle-1",
+      "grid": [
+        0,
+        0
+      ],
+      "measuredCornerKey": "#FB02F9",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "selectedBbox": [
+        255,
+        187,
+        984,
+        1028
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          17.378,
+          16.155,
+          38.419,
+          30.166
+        ],
+        "borderConnectedPixels": 1277056,
+        "keyedCandidatePixels": 1280968,
+        "transparentPixels": 1279347,
+        "partialAlphaPixels": 1619,
+        "partialInverseOutOfGamutPixels": 399,
+        "partialInverseAdjustedPixels": 399,
+        "backgroundRatio": 0.81211,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 24,
+          "strongGreenPixelsBefore": 148,
+          "repairedPixels": 172,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 148,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 10782,
+          "strongMagentaEdgePixelsBefore": 890,
+          "strongMagentaEdgePixelsAfter": 10,
+          "strongMagentaEdgeRatioAfter": 0.000927,
+          "despilledPixels": 890,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.4352302243211334,
+      "outputSize": [
+        320,
+        369
+      ],
+      "pastePosition": [
+        96,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 726
+    }
+  ]
+}

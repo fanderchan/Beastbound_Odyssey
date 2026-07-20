@@ -395,12 +395,36 @@ static func _load_texture(path: String) -> Texture2D:
 	var cached = _texture_cache.get(path)
 	if cached is Texture2D:
 		return cached as Texture2D
-	if not ResourceLoader.exists(path):
+	if ResourceLoader.exists(path):
+		var loaded = load(path)
+		if loaded is Texture2D:
+			_texture_cache[path] = loaded
+			return loaded as Texture2D
+	# Owner-pending art is intentionally not runtime-enabled and may not have a
+	# generated Godot import sidecar yet.  A specifically enabled debug QA
+	# preview may still inspect its world PNGs directly; normal gameplay and
+	# battle asset loading never enter this branch.
+	return _load_qa_preview_world_png(path)
+
+
+static func _load_qa_preview_world_png(path: String) -> Texture2D:
+	if not OS.is_debug_build() or not path.ends_with(".png"):
 		return null
-	var loaded = load(path)
-	if loaded is Texture2D:
-		_texture_cache[path] = loaded
-		return loaded as Texture2D
+	for form_id_value in _qa_preview_forms.keys():
+		var form_id := str(form_id_value).strip_edges()
+		if not is_qa_preview_enabled(form_id):
+			continue
+		var world_root := _world_root(form_id)
+		if world_root == "" or not path.begins_with("%s/" % world_root):
+			continue
+		var image := Image.load_from_file(ProjectSettings.globalize_path(path))
+		if image == null or image.is_empty():
+			return null
+		var texture := ImageTexture.create_from_image(image)
+		if texture == null:
+			return null
+		_texture_cache[path] = texture
+		return texture
 	return null
 
 

@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 1,
+  "repairId": "mounted-world-north-northwest-semantic-regeneration-v1",
+  "formId": "wuli_normal_orange_fire10",
+  "characterId": "novice_hunter_v1",
+  "generator": "OpenAI built-in image generation",
+  "ownership": "project-owned original generated Beastbound artwork",
+  "reason": "northwest was authored as northeast and north had visible yaw",
+  "scope": [
+    "northwest idle+walk",
+    "north idle+walk"
+  ],
+  "trueDirectionRule": "independently authored; no mirroring, relabeling, or layered composition",
+  "prompt": "source/world/semantic-direction-repair-v1/prompts-exact.md",
+  "promptFileSha256": "1887b03d20842ed1d8393af9bd14abebd7db6e8038d6b5937466c13f45249ee5",
+  "originalPromptRecord": ".run/art_batch_phase324/semantic-direction-repair-v1/adopted-generation-prompts-exact.md",
+  "originalPromptRecordSha256": "0d89e39f2aeb377fda12b3554d544d19d325f292f261140c22b6095f7ae3fa38",
+  "productionArchive": ".run/art_batch_phase324/semantic-direction-repair-v1",
+  "before": [
+    {
+      "slot": "northwest-idle-1",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/northwest/idle/idle-1.png",
+      "fileSha256": "47cd02a9d52eced289fbe86e04331527940ff901799fa0a33cb63350b1ec2df3",
+      "rgbaSha256": "ae50006fd726d676469a8efda25708a7b8c61b78b5c19f3f7571b786f307295b"
+    },
+    {
+      "slot": "northwest-walk-1",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/northwest/walk/walk-1.png",
+      "fileSha256": "318e495fc0a7695a738d9c8773a0ef30dd7ab13c16e5ccea2d13fe5a4b134462",
+      "rgbaSha256": "cc9e663672f3722ba031172792bacbb2f25d208cc7969c4dafe8093443959c44"
+    },
+    {
+      "slot": "northwest-walk-2",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/northwest/walk/walk-2.png",
+      "fileSha256": "26883dd124b8c14c284797447ff7eb22d207acadac60d1aa57c9560a37defce8",
+      "rgbaSha256": "31c3497405150a742711fe713ca610c30452adc3d211d187a49d4acf48b7baa2"
+    },
+    {
+      "slot": "northwest-walk-3",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/northwest/walk/walk-3.png",
+      "fileSha256": "36e971ef750cad128e52a9d241c0923931302589dfbb851f7143865eed641ff5",
+      "rgbaSha256": "39141ee3e110c6bc774966b99cd43de8eaa1048f70d1e775644f9c9189a8e326"
+    },
+    {
+      "slot": "northwest-walk-4",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/northwest/walk/walk-4.png",
+      "fileSha256": "93fdd763baf163639e4fbd31bda599f257237c22dbebe72307cb63871d08448c",
+      "rgbaSha256": "a12cef0a61be99a16ec176d5046d0f42dc949ccc18aadf78db7b67726b7b5cb2"
+    },
+    {
+      "slot": "north-idle-1",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/north/idle/idle-1.png",
+      "fileSha256": "8e4fcb1f9a984c034b3aead8d9edfc604a2db8c03551e767a49680891190131d",
+      "rgbaSha256": "bc48155d7bfcf66db393efdff19480c10a6c8b6679744632a7abbb0fab9a83d2"
+    },
+    {
+      "slot": "north-walk-1",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/north/walk/walk-1.png",
+      "fileSha256": "f6ac641252697622f2d74ece2b8d19b4467bb58d5f4d4eef4d479b321e3104f0",
+      "rgbaSha256": "1b53d4ee90fc878041691c1056d430468362eac631a9b5a812fd3c3f2d955929"
+    },
+    {
+      "slot": "north-walk-2",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/north/walk/walk-2.png",
+      "fileSha256": "05297a311c0e556af59e3064cddf1edea9b99ed6de18616e0bbf4f951ca3b922",
+      "rgbaSha256": "3513dd4f20cb10f79fd0007c3c7015b5eaf2bb4b822630784beb8dccd9605056"
+    },
+    {
+      "slot": "north-walk-3",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/north/walk/walk-3.png",
+      "fileSha256": "278f2cc88e903a4886c20e4ee3475c2e6a01b6e6ca5f5689829f13000ccb9e1f",
+      "rgbaSha256": "5c2a7ef5f91d00377df93e2842ab3e8b165b922761c23072091f50b99536b1c2"
+    },
+    {
+      "slot": "north-walk-4",
+      "path": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before/north/walk/walk-4.png",
+      "fileSha256": "67c44d49d714ec95879f8b078bc1f69ab89b0835c26385e4098df1b599cc2543",
+      "rgbaSha256": "4d17f601708cd2d93b95ccfe8321c17f26501243cac0e370a2c3c4ca52a9e0d2"
+    }
+  ],
+  "after": [
+    {
+      "slot": "northwest-idle-1",
+      "raw": "source/world/semantic-direction-repair-v1/northwest-idle/raw.png",
+      "rawFileSha256": "80eaeabbe41edb23ea434ce7ef3b40e7fba78e61dda13dc79cc3c2e39d1d16ef",
+      "pipeline": "source/world/semantic-direction-repair-v1/northwest-idle/pipeline-meta.json",
+      "pipelineFileSha256": "cb37b442cc26473aba3b2cba8ebd54c7a2bb1453e205b71e5566e162d53e50a4",
+      "source": "source/world/semantic-direction-repair-v1/northwest-idle/source-frames/northwest-idle.png",
+      "sourceFileSha256": "04368bb48ea94e00ca51e303018269dfcc24fdd3c7d5c02723c8ceb10c20df83",
+      "sourceRgbaSha256": "cf7704058fe9e3f84568d4dc9fae5c2fa5a900550ca975c30ab3cd3637b90d82",
+      "runtime": "world/directions/northwest/idle/idle-1.png",
+      "runtimeFileSha256": "cc8d22121c8407a6c079b9abecda77206e3c5a4b5068abe64cec00e8b148c24d",
+      "runtimeRgbaSha256": "0b1971c6925ab6e211b0b5a5cb3d073ae46d82b70bc6caa547e2eb1f1dfb5272",
+      "pipelineSourceRgbaSha256": "cf7704058fe9e3f84568d4dc9fae5c2fa5a900550ca975c30ab3cd3637b90d82",
+      "pipelineRuntimeRgbaSha256": "0b1971c6925ab6e211b0b5a5cb3d073ae46d82b70bc6caa547e2eb1f1dfb5272",
+      "runtimeVisibleBbox": [
+        45,
+        76,
+        211,
+        242
+      ]
+    },
+    {
+      "slot": "northwest-walk-1",
+      "raw": "source/world/semantic-direction-repair-v1/northwest-walk/raw.png",
+      "rawFileSha256": "b6a367152d2e3ec42f2b4601420c4a2be18c271c2474f9d2c0468f7ab313c457",
+      "pipeline": "source/world/semantic-direction-repair-v1/northwest-walk/pipeline-meta.json",
+      "pipelineFileSha256": "21bddacfca319f2ad590c0901db8f99ce1bb48d6d0acca6ae54a01e8d4ea8b71",
+      "source": "source/world/semantic-direction-repair-v1/northwest-walk/source-frames/northwest-walk-1.png",
+      "sourceFileSha256": "02d61246f5fba3a79c0ae423f7ee1802094aae623d62c29f652f4f1a156088be",
+      "sourceRgbaSha256": "20c12ce0f6e1cec925fa1a8222d700d2e638273a3b6883d03d83c850c7aeb8ff",
+      "runtime": "world/directions/northwest/walk/walk-1.png",
+      "runtimeFileSha256": "37e4269e97de0d4ceef566be7bf70ee3157063e9179c20be6abe50348c7e63a9",
+      "runtimeRgbaSha256": "e39238ff0150abacea60127f8ab9e9f83e5222593c8829196d6c9ab20409f689",
+      "pipelineSourceRgbaSha256": "20c12ce0f6e1cec925fa1a8222d700d2e638273a3b6883d03d83c850c7aeb8ff",
+      "pipelineRuntimeRgbaSha256": "e39238ff0150abacea60127f8ab9e9f83e5222593c8829196d6c9ab20409f689",
+      "runtimeVisibleBbox": [
+        51,
+        83,
+        205,
+        241
+      ]
+    },
+    {
+      "slot": "northwest-walk-2",
+      "raw": "source/world/semantic-direction-repair-v1/northwest-walk/raw.png",
+      "rawFileSha256": "b6a367152d2e3ec42f2b4601420c4a2be18c271c2474f9d2c0468f7ab313c457",
+      "pipeline": "source/world/semantic-direction-repair-v1/northwest-walk/pipeline-meta.json",
+      "pipelineFileSha256": "21bddacfca319f2ad590c0901db8f99ce1bb48d6d0acca6ae54a01e8d4ea8b71",
+      "source": "source/world/semantic-direction-repair-v1/northwest-walk/source-frames/northwest-walk-2.png",
+      "sourceFileSha256": "a00c1fee72c573e11ab69995212a34174ee1904cdca1088e44a5c1e00c883651",
+      "sourceRgbaSha256": "ab270fd4c86f602e21280c18860897b94cbf9e235cd4ddd033c25ed23ac70a12",
+      "runtime": "world/directions/northwest/walk/walk-2.png",
+      "runtimeFileSha256": "ad9c2d7d1a18c71cacaa58009f33969495074344bd017e7136a25f1a88546f14",
+      "runtimeRgbaSha256": "7d9295d4ddb361ca322c657d4ce15f2154db1a05a24e00dceb7c4064e495cf81",
+      "pipelineSourceRgbaSha256": "ab270fd4c86f602e21280c18860897b94cbf9e235cd4ddd033c25ed23ac70a12",
+      "pipelineRuntimeRgbaSha256": "7d9295d4ddb361ca322c657d4ce15f2154db1a05a24e00dceb7c4064e495cf81",
+      "runtimeVisibleBbox": [
+        49,
+        82,
+        206,
+        241
+      ]
+    },
+    {
+      "slot": "northwest-walk-3",
+      "raw": "source/world/semantic-direction-repair-v1/northwest-walk/raw.png",
+      "rawFileSha256": "b6a367152d2e3ec42f2b4601420c4a2be18c271c2474f9d2c0468f7ab313c457",
+      "pipeline": "source/world/semantic-direction-repair-v1/northwest-walk/pipeline-meta.json",
+      "pipelineFileSha256": "21bddacfca319f2ad590c0901db8f99ce1bb48d6d0acca6ae54a01e8d4ea8b71",
+      "source": "source/world/semantic-direction-repair-v1/northwest-walk/source-frames/northwest-walk-3.png",
+      "sourceFileSha256": "155c04a14e5baea4cfd2000133ce6d9cc54f5a322d7c82d0510c710b38145bef",
+      "sourceRgbaSha256": "d013ace53ca1ffb2607bc0dc3d39cbdd0987ab0f7e420e0344dfbeb226554233",
+      "runtime": "world/directions/northwest/walk/walk-3.png",
+      "runtimeFileSha256": "2602b0b8f7cc618ca38ad4b7cde73ec166a20bd16badcb297694b47a74b68ea0",
+      "runtimeRgbaSha256": "a3bbbbdddccea6446e8a3d150ac8438c7c64fcd9ffca3d9f955436eaade9331c",
+      "pipelineSourceRgbaSha256": "d013ace53ca1ffb2607bc0dc3d39cbdd0987ab0f7e420e0344dfbeb226554233",
+      "pipelineRuntimeRgbaSha256": "a3bbbbdddccea6446e8a3d150ac8438c7c64fcd9ffca3d9f955436eaade9331c",
+      "runtimeVisibleBbox": [
+        48,
+        90,
+        208,
+        241
+      ]
+    },
+    {
+      "slot": "northwest-walk-4",
+      "raw": "source/world/semantic-direction-repair-v1/northwest-walk/raw.png",
+      "rawFileSha256": "b6a367152d2e3ec42f2b4601420c4a2be18c271c2474f9d2c0468f7ab313c457",
+      "pipeline": "source/world/semantic-direction-repair-v1/northwest-walk/pipeline-meta.json",
+      "pipelineFileSha256": "21bddacfca319f2ad590c0901db8f99ce1bb48d6d0acca6ae54a01e8d4ea8b71",
+      "source": "source/world/semantic-direction-repair-v1/northwest-walk/source-frames/northwest-walk-4.png",
+      "sourceFileSha256": "ddbed29d62f3a07dd763147e28236f406008e09a04bb5a4bcedbb6ef26ae2935",
+      "sourceRgbaSha256": "4599ae390735eb4dc1f66e4fd343ef537e23a0f1e2f6030978610a9684d6f787",
+      "runtime": "world/directions/northwest/walk/walk-4.png",
+      "runtimeFileSha256": "3ed6dadfeadacfc4323968724add3f0d5bcfa7248af6ee19e4afb74e61297b01",
+      "runtimeRgbaSha256": "4d48edf7ff44a3941cc4eb44a4a885017a6692fdb4f943637ef28039b3302103",
+      "pipelineSourceRgbaSha256": "4599ae390735eb4dc1f66e4fd343ef537e23a0f1e2f6030978610a9684d6f787",
+      "pipelineRuntimeRgbaSha256": "4d48edf7ff44a3941cc4eb44a4a885017a6692fdb4f943637ef28039b3302103",
+      "runtimeVisibleBbox": [
+        45,
+        85,
+        212,
+        241
+      ]
+    },
+    {
+      "slot": "north-idle-1",
+      "raw": "source/world/semantic-direction-repair-v1/north-idle/raw.png",
+      "rawFileSha256": "5aa9e146c1f08cc645fbfc302319643e8b18319d71140b5b875a9b59b61e1623",
+      "pipeline": "source/world/semantic-direction-repair-v1/north-idle/pipeline-meta.json",
+      "pipelineFileSha256": "33eb6e29d342113d54a19e92ce1a622d10c5db2f20caef97b783a9011e32e326",
+      "source": "source/world/semantic-direction-repair-v1/north-idle/source-frames/north-idle.png",
+      "sourceFileSha256": "8547a94609764d901831b234bf6a0ac2a6c9eacb17ad6e8a36ca9d28d5605799",
+      "sourceRgbaSha256": "68a04f0f1d0c2f170b00c5712c142d10d5dc7eb09b9e1493a942bfd49380594d",
+      "runtime": "world/directions/north/idle/idle-1.png",
+      "runtimeFileSha256": "a676c2c3a88c7539da305c3d25538006968a0f612004be5231a663f3b79d5701",
+      "runtimeRgbaSha256": "53f4ed5f8129333ab10ba2e860cd73c803b0b38c7e67174f98aaca1c6bf96250",
+      "pipelineSourceRgbaSha256": "68a04f0f1d0c2f170b00c5712c142d10d5dc7eb09b9e1493a942bfd49380594d",
+      "pipelineRuntimeRgbaSha256": "53f4ed5f8129333ab10ba2e860cd73c803b0b38c7e67174f98aaca1c6bf96250",
+      "runtimeVisibleBbox": [
+        92,
+        73,
+        165,
+        241
+      ]
+    },
+    {
+      "slot": "north-walk-1",
+      "raw": "source/world/semantic-direction-repair-v1/north-walk/raw.png",
+      "rawFileSha256": "096ee971dda3ded2410f7ad31cced6823ff65f452441df28fa4949a295667a66",
+      "pipeline": "source/world/semantic-direction-repair-v1/north-walk/pipeline-meta.json",
+      "pipelineFileSha256": "701e332d2c64f6a22195b87f887061875213010c24bbf3d642758a3c83d33c85",
+      "source": "source/world/semantic-direction-repair-v1/north-walk/source-frames/north-walk-1.png",
+      "sourceFileSha256": "ce0dc30daa82c8545ca1204940c66daeeae712e74ce32b8f864b54d108cfc505",
+      "sourceRgbaSha256": "1ed9f34568219b9d820c491b1ce906fb70534988cf3117b800fe279b3e6b0d66",
+      "runtime": "world/directions/north/walk/walk-1.png",
+      "runtimeFileSha256": "75548735c25ecb25c231275c40c311efb6a7114075812f475f9ad3dd20696027",
+      "runtimeRgbaSha256": "b477b67927ae8ab505220761513d448de30808b9731c569f5a0ee16761d291d5",
+      "pipelineSourceRgbaSha256": "1ed9f34568219b9d820c491b1ce906fb70534988cf3117b800fe279b3e6b0d66",
+      "pipelineRuntimeRgbaSha256": "b477b67927ae8ab505220761513d448de30808b9731c569f5a0ee16761d291d5",
+      "runtimeVisibleBbox": [
+        94,
+        80,
+        162,
+        242
+      ]
+    },
+    {
+      "slot": "north-walk-2",
+      "raw": "source/world/semantic-direction-repair-v1/north-walk/raw.png",
+      "rawFileSha256": "096ee971dda3ded2410f7ad31cced6823ff65f452441df28fa4949a295667a66",
+      "pipeline": "source/world/semantic-direction-repair-v1/north-walk/pipeline-meta.json",
+      "pipelineFileSha256": "701e332d2c64f6a22195b87f887061875213010c24bbf3d642758a3c83d33c85",
+      "source": "source/world/semantic-direction-repair-v1/north-walk/source-frames/north-walk-2.png",
+      "sourceFileSha256": "5f3daef8f87a957d4035b86d7b9afdc464aa89ac47a2c24491f88ba2b41c694b",
+      "sourceRgbaSha256": "67a8100d90771400dc266cb66693b66802ce03ad8eeb29601be8ae60d930456a",
+      "runtime": "world/directions/north/walk/walk-2.png",
+      "runtimeFileSha256": "b8181f0639b5c4a369ce79bfa6eb78311817c1d03897f7de25ddd3fce6b25673",
+      "runtimeRgbaSha256": "2acc3e6028d597973a845c26265173eb8fc515d937da32bd26e20d7cda7816bd",
+      "pipelineSourceRgbaSha256": "67a8100d90771400dc266cb66693b66802ce03ad8eeb29601be8ae60d930456a",
+      "pipelineRuntimeRgbaSha256": "2acc3e6028d597973a845c26265173eb8fc515d937da32bd26e20d7cda7816bd",
+      "runtimeVisibleBbox": [
+        93,
+        80,
+        163,
+        241
+      ]
+    },
+    {
+      "slot": "north-walk-3",
+      "raw": "source/world/semantic-direction-repair-v1/north-walk/raw.png",
+      "rawFileSha256": "096ee971dda3ded2410f7ad31cced6823ff65f452441df28fa4949a295667a66",
+      "pipeline": "source/world/semantic-direction-repair-v1/north-walk/pipeline-meta.json",
+      "pipelineFileSha256": "701e332d2c64f6a22195b87f887061875213010c24bbf3d642758a3c83d33c85",
+      "source": "source/world/semantic-direction-repair-v1/north-walk/source-frames/north-walk-3.png",
+      "sourceFileSha256": "bb9dfb64ce7872c5a95cca46e63b8c0231597c82733d6f0b5a9ad458e784f791",
+      "sourceRgbaSha256": "85785b907966e08d026c093d3b7f9f6b43734aea155fb1b8d65786e24cc58338",
+      "runtime": "world/directions/north/walk/walk-3.png",
+      "runtimeFileSha256": "c591845021a118fd51637049628b80be76e59ed4e06eeb249b27992d68d21546",
+      "runtimeRgbaSha256": "1ee358c8d73c77fe8cbebbb310e6aa7b26466dff5e6e3ed9ad8bab2cc05006c8",
+      "pipelineSourceRgbaSha256": "85785b907966e08d026c093d3b7f9f6b43734aea155fb1b8d65786e24cc58338",
+      "pipelineRuntimeRgbaSha256": "1ee358c8d73c77fe8cbebbb310e6aa7b26466dff5e6e3ed9ad8bab2cc05006c8",
+      "runtimeVisibleBbox": [
+        93,
+        79,
+        162,
+        241
+      ]
+    },
+    {
+      "slot": "north-walk-4",
+      "raw": "source/world/semantic-direction-repair-v1/north-walk/raw.png",
+      "rawFileSha256": "096ee971dda3ded2410f7ad31cced6823ff65f452441df28fa4949a295667a66",
+      "pipeline": "source/world/semantic-direction-repair-v1/north-walk/pipeline-meta.json",
+      "pipelineFileSha256": "701e332d2c64f6a22195b87f887061875213010c24bbf3d642758a3c83d33c85",
+      "source": "source/world/semantic-direction-repair-v1/north-walk/source-frames/north-walk-4.png",
+      "sourceFileSha256": "5a2d770b736746a6be33f1dd4a8589753fab6932ee668bf3558a19abc0dd5dfa",
+      "sourceRgbaSha256": "2fc862d1c507856084d4ab8196939d18dcb124da415b0e941d96a0a272be60d5",
+      "runtime": "world/directions/north/walk/walk-4.png",
+      "runtimeFileSha256": "ca87a37d1dbce2acfad00325bb7753fb625bb58ce14f7aa853709a0c71d2fc61",
+      "runtimeRgbaSha256": "c7b3110c09028eed9262daa4764f8064f55348b4c7c5f704e52bb7960c98cb7f",
+      "pipelineSourceRgbaSha256": "2fc862d1c507856084d4ab8196939d18dcb124da415b0e941d96a0a272be60d5",
+      "pipelineRuntimeRgbaSha256": "c7b3110c09028eed9262daa4764f8064f55348b4c7c5f704e52bb7960c98cb7f",
+      "runtimeVisibleBbox": [
+        93,
+        77,
+        162,
+        241
+      ]
+    }
+  ],
+  "beforeAfterEvidence": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/wuli_normal_orange_fire10/semantic-regeneration-v1/before-after.png",
+  "beforeAfterEvidenceSha256": "210ec556e3ceb6f36a62ae521ffd0064b8ae605238ec16d8112c4c31fb1a7252",
+  "runtimeFrameCountChanged": 10,
+  "runtimeFrameCountTotal": 40,
+  "runtimeMirroring": false,
+  "runtimeLayeredComposition": false,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending"
+}

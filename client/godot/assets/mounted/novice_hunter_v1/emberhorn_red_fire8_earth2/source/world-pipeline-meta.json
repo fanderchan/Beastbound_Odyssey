@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "directions": {
+    "south": "world-pipeline/south.json",
+    "southwest": "world-pipeline/southwest.json",
+    "west": "world-pipeline/west.json",
+    "northwest": "world-pipeline/northwest.json",
+    "north": "world-pipeline/north.json",
+    "northeast": "world-pipeline/northeast.json",
+    "east": "world-pipeline/east.json",
+    "southeast": "world-pipeline/southeast.json"
+  },
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "safeMargin": 10,
+  "sourceFrameCount": 40,
+  "runtimeFrameCount": 40
+}

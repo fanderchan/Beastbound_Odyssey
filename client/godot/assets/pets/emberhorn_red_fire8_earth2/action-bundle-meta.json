@@ -152,6 +152,16 @@
         "frameCount": 4,
         "status": "self_review_passed_owner_pending"
       }
+    },
+    "semanticDirectionRepair": {
+      "id": "emberhorn-world-semantic-direction-repair-v2",
+      "directions": [
+        "northeast",
+        "east",
+        "southeast"
+      ],
+      "manifest": "source/world-direction-repair-v2/manifest.json",
+      "status": "self_review_passed_owner_pending"
     }
   },
   "supportedMountedCharacterIds": [

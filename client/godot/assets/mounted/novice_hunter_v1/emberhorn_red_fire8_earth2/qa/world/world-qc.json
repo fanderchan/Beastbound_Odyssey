@@ -1,0 +1,554 @@
+{
+  "schemaVersion": 1,
+  "formId": "emberhorn_red_fire8_earth2",
+  "characterId": "novice_hunter_v1",
+  "kind": "mounted",
+  "status": "passed",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "integratedWholeFrame": true,
+  "runtimeLayeredComposition": false,
+  "runtimeMirroring": false,
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "sourceFrameCount": 40,
+  "runtimeFrameCount": 40,
+  "errors": [],
+  "frames": [
+    {
+      "direction": "south",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "e8a9f07b511ab94f787f9004ae7a79f080a69607df97c425d16221f443e0e608",
+      "runtimeRgbaSha256": "b0f27f95c2e0d52e670f337787bde8df35a81a78de67d122731e57bf38b8a9c5",
+      "runtimeVisibleBbox": [
+        72,
+        46,
+        187,
+        247
+      ]
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "bb00fb1413d5fe613dfb53648969f20d89264eb3b2ca938d741c106a856eb4ca",
+      "runtimeRgbaSha256": "ac5c585c4b78405535dfbf361e8d350a17146b9a8610fc77bad1347acc9c5b91",
+      "runtimeVisibleBbox": [
+        67,
+        40,
+        182,
+        247
+      ]
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "56782cbf6580d587ca8f863f5b5433b51ddbb86a3e7cf608e6153904ba693da3",
+      "runtimeRgbaSha256": "c3c326e63b0e9bc0a3a7e3252f36a4b10487ab00d0618e3edd264dc69d446f85",
+      "runtimeVisibleBbox": [
+        74,
+        42,
+        191,
+        247
+      ]
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "cdbf3c9c76c7c4eeae8de183fe054b8b4518f707b3c1b63f0550906e5ffe496f",
+      "runtimeRgbaSha256": "1e13e2f3d6867c9909844105244b2b53f36658d8cc1c7545ba3719bd2a6b3973",
+      "runtimeVisibleBbox": [
+        73,
+        42,
+        189,
+        247
+      ]
+    },
+    {
+      "direction": "south",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "f823ef1e9bd44b53c896768d30458b6f997c635b8fbd5c2ccf731de82e24f9ad",
+      "runtimeRgbaSha256": "325402ea1d74d242ff6fb23700d96e157722f92d4600e0cff3e1723f5d5acba1",
+      "runtimeVisibleBbox": [
+        68,
+        45,
+        184,
+        247
+      ]
+    },
+    {
+      "direction": "southwest",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "52aca4a253ee5619d0da253f589f4650d45402aee97bfa0e3f0ade78c2ad23cc",
+      "runtimeRgbaSha256": "d5702b8c62518d544866b5577caaec0f90ccb94ccd20c2695bbb50c24ea4e21b",
+      "runtimeVisibleBbox": [
+        79,
+        74,
+        221,
+        247
+      ]
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "aeb2319a7b3cc6f14b83bd17a2dc138aaa61cc6fce4aa63ffb7e0e28594fb54d",
+      "runtimeRgbaSha256": "16d56d8f645a5683111d7724163ce4ea6078b55c32a213c3707c5f3ae09922d2",
+      "runtimeVisibleBbox": [
+        78,
+        79,
+        224,
+        247
+      ]
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "e2ebe141ca9d6e71dffd9fb36c1bc956e30e515933bf9aa3dd67e4d041cc3475",
+      "runtimeRgbaSha256": "c89ab6dbdfce77bec67b18dc6affade6bebb3cab7b09a27b83c5480ec16b930d",
+      "runtimeVisibleBbox": [
+        72,
+        80,
+        222,
+        247
+      ]
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "676ec3817030f974282003e527d94056ae2c24f1288bd573aed5022c88327b4b",
+      "runtimeRgbaSha256": "4c1ce8fbcf7f6cca4f923b04cbe6c1ba0e78c96f2fb797fd791adb18da6bd234",
+      "runtimeVisibleBbox": [
+        76,
+        78,
+        225,
+        247
+      ]
+    },
+    {
+      "direction": "southwest",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "d0aceb25d8a9d9d6695d90195b091b156ff7609b5edbb850f742dd8731961e2c",
+      "runtimeRgbaSha256": "f2b01036af6553ca8bb3b193cac42e08d08cf2ab2a32779949e6fbd684c62e5a",
+      "runtimeVisibleBbox": [
+        78,
+        74,
+        230,
+        247
+      ]
+    },
+    {
+      "direction": "west",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "de7dbde94b2c4b3d64dc3036d633668d6c6fdeb2b94a030206ee4e98e3271f97",
+      "runtimeRgbaSha256": "3a78134f1d0dad15d55bf4dd00a843d66b700e014af5ee16e81ae616508daf62",
+      "runtimeVisibleBbox": [
+        31,
+        75,
+        213,
+        247
+      ]
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "0627ed41016786deda5241aa3651b20e76a1e3438d93432ebdc8b0b9a714985a",
+      "runtimeRgbaSha256": "7091b880c758bc4eafd35037380f1262b94430ebf5f0628c01c6e7029473af30",
+      "runtimeVisibleBbox": [
+        39,
+        76,
+        222,
+        247
+      ]
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "90ecc3728db8063a81f33096254a0a54ed6f39ad13ee4f928934b78e16d82d57",
+      "runtimeRgbaSha256": "b3f0b22943735cb34998228bec9d61315f4742fd503f34b9ef78492f6e0e38fb",
+      "runtimeVisibleBbox": [
+        49,
+        76,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "4bc3759ca1410db77fe854dc453913aefd7286e392dd13791c0852f572768758",
+      "runtimeRgbaSha256": "6449119575c4fee6f2319d2097c26a708dfe87366c8c7d1df0c69fd86d1a2c06",
+      "runtimeVisibleBbox": [
+        30,
+        73,
+        213,
+        247
+      ]
+    },
+    {
+      "direction": "west",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "4a9f1af23f1edf8ae402a6de59952e595b516987811de5b282a6343e30958d44",
+      "runtimeRgbaSha256": "bc73333aea0610a0094849572fba50aa6c3da075e90a3fdbe9a2191cf6a36171",
+      "runtimeVisibleBbox": [
+        45,
+        77,
+        229,
+        247
+      ]
+    },
+    {
+      "direction": "northwest",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "1cafe0d8d46c9312ed489fa7b9992becb00f0f883bba51921a9babbb8cf95af8",
+      "runtimeRgbaSha256": "04d73644e94a805cd51da2be5d1ff6e3c9e3ef5331171ab15feffc22fe7eb561",
+      "runtimeVisibleBbox": [
+        43,
+        87,
+        192,
+        247
+      ]
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "7593b50c7857c51a9109e50077387da0eb86ee58663ad9481e818f5872bb6a66",
+      "runtimeRgbaSha256": "5a84ad21fd791e6c6cde167de4fc3948f1cb3074b0fe0350b70c872a26c27ae2",
+      "runtimeVisibleBbox": [
+        26,
+        89,
+        176,
+        247
+      ]
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "61c4f02f44fd5fc12a94cffa77d233b8246c3ab4d474267e13ecd64ad98ff5f7",
+      "runtimeRgbaSha256": "c0e7a7df0c6ca7cd2ec189e90d1733c13a1a77575ab62ee5eee88ac8ae83cc86",
+      "runtimeVisibleBbox": [
+        39,
+        91,
+        187,
+        247
+      ]
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "51aae2819fb4698c5eae461276c029c1e647eb921601f8dbd8ae88e565880166",
+      "runtimeRgbaSha256": "89cbf4b45dffc70f3e33254867566ca9c11473518466ec839faa080d4df3bbd2",
+      "runtimeVisibleBbox": [
+        40,
+        89,
+        189,
+        246
+      ]
+    },
+    {
+      "direction": "northwest",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "6825cfd3a0137b803a803ded97a6da95d33b3cd863aa8e241c4321a0924518ae",
+      "runtimeRgbaSha256": "782af488bc5dcfc9672df5d13f514e64cdd04619bbbcd7ed5d2fe82124e6fc3b",
+      "runtimeVisibleBbox": [
+        32,
+        92,
+        179,
+        247
+      ]
+    },
+    {
+      "direction": "north",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "5b4faf7281381ad96ddc10b965af6eb451990065735994535dd88eb06d6ce7f6",
+      "runtimeRgbaSha256": "1de0104af18c5440f31bcb93949efee95c38bc31c8ea7cd84ebb54b6a477e660",
+      "runtimeVisibleBbox": [
+        66,
+        43,
+        209,
+        247
+      ]
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "9929288f79e5f6523d3db3c8641b6aa39614cf379fcf5858b46a897a467e368e",
+      "runtimeRgbaSha256": "435a68a9fe6748905c7893ec77a1694b7dbb19396893ef56e884bee1b04ebcff",
+      "runtimeVisibleBbox": [
+        67,
+        40,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "d57b6d842871dd13079cdb86de5471ae26446a6361f07a7ad11f8f6e3f6be0c8",
+      "runtimeRgbaSha256": "37c03abaf2bdb5837f2cb1ed97659bc2a5a24ddf46658ff63b60a84ff60b2507",
+      "runtimeVisibleBbox": [
+        69,
+        42,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "9bc06f5f87d7d550202ad15ac9e1ba8fb30f544251104a69c218a7b1abe2bb13",
+      "runtimeRgbaSha256": "8b3dc9b87e2df014a54304032ac6c6c481ec55fdf5e3a8eaa3ddcdae3f9f4fb5",
+      "runtimeVisibleBbox": [
+        60,
+        44,
+        210,
+        247
+      ]
+    },
+    {
+      "direction": "north",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "d6045872a6bac0b42549c175cfaab6a36c819afcf35e3a5ffd3415983e75c6d8",
+      "runtimeRgbaSha256": "d97b498991f78194aebb877dcfd66f03de73acebe58749404924cc44a9ff0846",
+      "runtimeVisibleBbox": [
+        66,
+        42,
+        210,
+        247
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "86229d0bec2fede196996f3e4622b2a692672f748984db97309937ee194258a2",
+      "runtimeRgbaSha256": "79ca534d7bc1f679e1c1ca71240422025d71d86cb6acd97b7844e42ffa469406",
+      "runtimeVisibleBbox": [
+        73,
+        87,
+        210,
+        247
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "ae22acf6a906f7371c7ddffe767056072d5a77a8f30b41e623d37bfecd9e6742",
+      "runtimeRgbaSha256": "aa9b93395e0ac2ff2584d535012a95ffd72dee8737812de6c751249dacab6a8a",
+      "runtimeVisibleBbox": [
+        73,
+        86,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "1728ef8c8ff96ac73bf3625454007f2eaf6b6735459158c8c9c2fb9a7a9c81e6",
+      "runtimeRgbaSha256": "9abc768f0f6a3b38375e18aa6421158ff49aa9686884ca034f5e787c887efc17",
+      "runtimeVisibleBbox": [
+        74,
+        86,
+        213,
+        247
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "56fefd6f48292d248068146075f5dfe5e002f7cceaa1d8f4a875981287d84914",
+      "runtimeRgbaSha256": "b92b33338abbe476c4b5b3237b81bffccddf419568aeb47f4ceac9b315057eb3",
+      "runtimeVisibleBbox": [
+        88,
+        86,
+        230,
+        247
+      ]
+    },
+    {
+      "direction": "northeast",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "1e216450f02018d52a969d7fd8cb859fe623947420dee4e406ed62d3cf726e40",
+      "runtimeRgbaSha256": "a3b3e234e349cb84b5a6082718fa3e941dd032667656680dc1917feadacd306a",
+      "runtimeVisibleBbox": [
+        74,
+        87,
+        216,
+        247
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "eaf0f186c59c27f17f11fd68b35f1c54943027e54d9e6128184e5c6d859bd0d6",
+      "runtimeRgbaSha256": "b050fe0856521fc06317cd646991d46c69eb8780c5a1931f8f0fa322c13631ed",
+      "runtimeVisibleBbox": [
+        40,
+        82,
+        217,
+        247
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "6de245c59371d4758c1ab9232ca39deadb34c8bbdca0fe7dac13d2470a51adb6",
+      "runtimeRgbaSha256": "a64aceac610f8000f854dfe79e4ead8b33183577cfa939baf22de7781765a4d1",
+      "runtimeVisibleBbox": [
+        39,
+        84,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "b810b2379dca5903fbb8ba902ca5eca14607866ef3bd7101a3af300b86bc3664",
+      "runtimeRgbaSha256": "db3ee690225acbd43d9531cc5ecd45a57feeec901572ba9b59f1fbd4fa4f6164",
+      "runtimeVisibleBbox": [
+        47,
+        85,
+        223,
+        247
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "163fff2df90418dc39b7b55e15f6c1936cbc787c79e41976587f149b4df8c3cd",
+      "runtimeRgbaSha256": "d1924add5738c504c3064b19713f18b201c2f678b8670a806a03e01b71922b63",
+      "runtimeVisibleBbox": [
+        33,
+        83,
+        218,
+        247
+      ]
+    },
+    {
+      "direction": "east",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "91194aa5d0149c42d2bf4e95485592a64de08fe2caf64e6b1def3ff076117e37",
+      "runtimeRgbaSha256": "15fbeede5ecaac421c77289ef7b370e0ab05fc796c69b300676601e51af1c0bb",
+      "runtimeVisibleBbox": [
+        37,
+        81,
+        224,
+        247
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "idle",
+      "frame": 1,
+      "sourceRgbaSha256": "24d9e84adedcb8cd53cd5d5207ccc8fb246ae36c8a634ff8755336698ac16283",
+      "runtimeRgbaSha256": "8a240a710d057c06553585fba86bfcfae646a60456f937a69b3648172e80062a",
+      "runtimeVisibleBbox": [
+        28,
+        66,
+        184,
+        245
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 1,
+      "sourceRgbaSha256": "c60609e365e2bb11bbfee035c07aa7853f4330b3bad913b5611c21ed7f8f4f3a",
+      "runtimeRgbaSha256": "9239aded12bb91fd277dfe42a1a0d76a7bdf6aaf8d9dca95e234025dc770f8ed",
+      "runtimeVisibleBbox": [
+        46,
+        68,
+        204,
+        247
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 2,
+      "sourceRgbaSha256": "c33cc8bee9c430da6b8d71f5460bde10ca7cef3baeab0c274fd0432d8c27294a",
+      "runtimeRgbaSha256": "14a5374b9b29c6162da6664b79c7a4daeca3c1f453b295db0933195e4df8c4d9",
+      "runtimeVisibleBbox": [
+        44,
+        72,
+        208,
+        247
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 3,
+      "sourceRgbaSha256": "b147047dd1d760b74c8f39e168d6d9d5103387efe015dec2eb9b0764040ef775",
+      "runtimeRgbaSha256": "c2cd4d80b4ead39507e316416b6593c72a5b2ba1e053191420a317fee7c8c6e3",
+      "runtimeVisibleBbox": [
+        30,
+        63,
+        192,
+        247
+      ]
+    },
+    {
+      "direction": "southeast",
+      "action": "walk",
+      "frame": 4,
+      "sourceRgbaSha256": "6c4f408497a25c33fc9c1ca4faa296955b1032ebddb9f65d05998f5bf11c2b39",
+      "runtimeRgbaSha256": "ef747b769c7f97f69f18704d20256f70d44c60f70a7c798ce9eb06225e273267",
+      "runtimeVisibleBbox": [
+        40,
+        70,
+        205,
+        247
+      ]
+    }
+  ],
+  "contactSheet": "true8-world-contact-8x5.png",
+  "contactSheetSha256": "7f7708266dec954c007261dae0ee2357be689100c76d37de6403eb52e352946c",
+  "semanticDirectionRepair": {
+    "id": "mounted-emberhorn-southeast-idle-semantic-repair-v2",
+    "status": "passed",
+    "manifest": "../../source/world-direction-repair-v2/manifest.json"
+  }
+}

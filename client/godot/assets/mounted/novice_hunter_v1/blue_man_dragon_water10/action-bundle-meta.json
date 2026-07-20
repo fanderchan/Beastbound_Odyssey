@@ -5,11 +5,20 @@
   "artStatus": "in_production",
   "productionScope": "mounted_world_true_eight_owner_review_pending",
   "runtimeEnabled": false,
-  "runtimeFrameSize": [256, 256],
-  "views": ["front_3quarter_sw", "back_3quarter_ne"],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
   "identity": {
     "status": "self_review_passed_owner_pending",
-    "sourceFrameSize": [512, 512],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
     "board": "identity/identity-board-transparent.png",
     "poses": {
       "front_3quarter_sw": "identity/front_3quarter_sw.png",
@@ -20,18 +29,78 @@
     "runtimeMirroring": false
   },
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true, "status": "not_produced"},
-    "walk": {"frameCount": 8, "fps": 10, "loop": true, "status": "not_produced"},
-    "attack": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "skill": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "hurt": {"frameCount": 6, "fps": 12, "loop": false, "status": "not_produced"},
-    "defend": {"frameCount": 6, "fps": 10, "loop": false, "status": "not_produced"},
-    "dodge": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "counter": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "stagger": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "knockaway": {"frameCount": 8, "fps": 12, "loop": false, "status": "not_produced"},
-    "down": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"},
-    "revive": {"frameCount": 8, "fps": 10, "loop": false, "status": "not_produced"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "not_produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "not_produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "not_produced"
+    }
   },
   "worldVisual": {
     "status": "self_review_passed_owner_pending",
@@ -50,8 +119,18 @@
       "southeast"
     ],
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "produced_owner_review_pending"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "produced_owner_review_pending"}
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "produced_owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "produced_owner_review_pending"
+      }
     },
     "qaPresentationCalibration": {
       "onFootCanvasPx": 160,
@@ -59,6 +138,14 @@
       "recommendedMountedCanvasPx": 196,
       "scope": "qa_recommendation_only_shared_runtime_profile_unchanged",
       "battlePresentationScaleIndependent": true
+    },
+    "runtimeSafetyEdge": {
+      "status": "passed",
+      "minimumMarginPx": 4,
+      "sourceOffsetY": -2,
+      "publishedFrameCount": 40,
+      "maxRuntimeBottomExclusive": 252,
+      "sourceOfTruth": "source/world-pipeline-meta.json"
     }
   },
   "sourceArchive": {
@@ -75,8 +162,14 @@
     "sourceMetadata": "source/world-source-meta.json",
     "pipelineMetadata": "source/world-pipeline-meta.json",
     "promptPattern": "prompts/world-{direction}-v1.txt",
-    "sourceFrameSize": [512, 512],
-    "runtimeFrameSize": [256, 256],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
     "sourceFrameCount": 40,
     "runtimeFrameCount": 40
   },

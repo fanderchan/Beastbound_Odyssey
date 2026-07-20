@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "wuli_normal_orange_fire10",
+  "kind": "mounted",
+  "strategy": "independent_8",
+  "runtimeMirroring": false,
+  "integratedWholeFrame": true,
+  "runtimeLayeredComposition": false,
+  "frameCount": 40,
+  "errors": [],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "south-idle-1",
+      "path": "world/directions/south/idle/idle-1.png",
+      "bbox": [
+        79,
+        65,
+        177,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "ee628f9c6c4afc817dfe79e36a090e8d2f1ebf35912f08ca3ef09358b7515ea3",
+      "fileSha256": "c655f78d51d6071ba71919d3a0970ad44d2596868e21673546e53b11806c5673"
+    },
+    {
+      "slot": "south-walk-1",
+      "path": "world/directions/south/walk/walk-1.png",
+      "bbox": [
+        76,
+        65,
+        178,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "c5fbfbade5b63e06826e3bb1b9e880a75d962a319b4ff00cec1aef87efd01ae6",
+      "fileSha256": "d8f7754071aeb991d96e978af6d24b1b8f6dda10e3c54fcef98427b454f0d088"
+    },
+    {
+      "slot": "south-walk-2",
+      "path": "world/directions/south/walk/walk-2.png",
+      "bbox": [
+        76,
+        69,
+        179,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "fd97ea87ecba3e762e37bdf4b5c5b2de086db2d1cd70def208f6e04bd40858b9",
+      "fileSha256": "6b973436d7f5be7071b5a90c70351143a9297bf7dde3517b4fe93bdf87d2a040"
+    },
+    {
+      "slot": "south-walk-3",
+      "path": "world/directions/south/walk/walk-3.png",
+      "bbox": [
+        78,
+        70,
+        178,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "949a684910961172faf1b699963cd374121e8d790f83555e7dedf4f93f29391d",
+      "fileSha256": "e8391dfbf237518fb47137dbefaeaa15e6ba4f0b2a700012e2f7dd390bc37739"
+    },
+    {
+      "slot": "south-walk-4",
+      "path": "world/directions/south/walk/walk-4.png",
+      "bbox": [
+        78,
+        67,
+        179,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "ffd176cfa715169ec4de782ecf6528092bbcd135c32113260adb7d4201d4c992",
+      "fileSha256": "b015b5d8b995ce5daedbdbd182bd2366a71730d5dba9da15cf287dc7e51522ab"
+    },
+    {
+      "slot": "southwest-idle-1",
+      "path": "world/directions/southwest/idle/idle-1.png",
+      "bbox": [
+        53,
+        70,
+        204,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a975f96391c362d86d7f4a2b62cb72bd74e3d60b82ab8322169803db40c87215",
+      "fileSha256": "76782ced7501597a8389e9202af52373190de8cf5c9fe79c0f712f33045166b3"
+    },
+    {
+      "slot": "southwest-walk-1",
+      "path": "world/directions/southwest/walk/walk-1.png",
+      "bbox": [
+        51,
+        69,
+        204,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "039b5519619dc9ae6e4a4976e5225f0d986320237793a84f31b0560277f78b62",
+      "fileSha256": "cee290224f7bf65976e436625c2c1d088d82f69793ca4f691e541b69744a4072"
+    },
+    {
+      "slot": "southwest-walk-2",
+      "path": "world/directions/southwest/walk/walk-2.png",
+      "bbox": [
+        54,
+        72,
+        202,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "27986118a487f44c42b532991b2d309de5defa64d3c64ad6ba274f9ad514a827",
+      "fileSha256": "c417fb71c6a5eda6fd6c306026366bd49ac259c11064e597ee4dd35ce23016fb"
+    },
+    {
+      "slot": "southwest-walk-3",
+      "path": "world/directions/southwest/walk/walk-3.png",
+      "bbox": [
+        48,
+        70,
+        208,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "c25d48d30ce99604fddf7769bc330c30a2135b0e8f608b231d6431d5d364e7e8",
+      "fileSha256": "1e94406a66f6e80e6e6d7e8cc1460790104eb698bcc7a99e68c5a503fc7bb705"
+    },
+    {
+      "slot": "southwest-walk-4",
+      "path": "world/directions/southwest/walk/walk-4.png",
+      "bbox": [
+        54,
+        66,
+        204,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "973e38010e62260fc566b849e5caa306a4ecb912c2806cfa75806d0a1501143c",
+      "fileSha256": "020401f860f2f74e157fea402e66ba5d6f4da0625ae4c7c93c0c96623c13ccef"
+    },
+    {
+      "slot": "west-idle-1",
+      "path": "world/directions/west/idle/idle-1.png",
+      "bbox": [
+        44,
+        90,
+        211,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "4fdfc7c8c5aca229dedd32c6cb9c9d69dd3166d744f656c7f02f072091d1da72",
+      "fileSha256": "e1534c05fe3e1e6c07a24c0f0b62a1ee08721ab57d9c0d2a38c01c14958a6a62"
+    },
+    {
+      "slot": "west-walk-1",
+      "path": "world/directions/west/walk/walk-1.png",
+      "bbox": [
+        40,
+        91,
+        216,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a2f3401fb4b9faac128017d50a9a6b77918838ac08298cd70634c921eb47c3f2",
+      "fileSha256": "a55fb89ed162a45315299939ce29cac9cc79f01cd0aaddda3300b03619f9b235"
+    },
+    {
+      "slot": "west-walk-2",
+      "path": "world/directions/west/walk/walk-2.png",
+      "bbox": [
+        39,
+        88,
+        218,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a8351903eb0972690529ae69d301aef3334dab6d4a9c9cb515fe249640389542",
+      "fileSha256": "182e197a88a1bd6b52cc68abd2c8f33e19c0e24ce8aa34adad64950b991aced0"
+    },
+    {
+      "slot": "west-walk-3",
+      "path": "world/directions/west/walk/walk-3.png",
+      "bbox": [
+        36,
+        89,
+        219,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "36227bb97466e3e8b8712a9ef0a921eafb2efeeee80bc52473f6eb8c53bbbcad",
+      "fileSha256": "f87215314ccbf690d059f9e123f15654c4800698d0615dcecfa2262d124592a6"
+    },
+    {
+      "slot": "west-walk-4",
+      "path": "world/directions/west/walk/walk-4.png",
+      "bbox": [
+        38,
+        89,
+        218,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "4ff9757ee4eb4bd943b582fcce1c80c4582313c03cead169d11e6bfbc3fb6f85",
+      "fileSha256": "905b07707e46a38623089369787f17f8f344fa2565808d8bdd85084352262d3a"
+    },
+    {
+      "slot": "northwest-idle-1",
+      "path": "world/directions/northwest/idle/idle-1.png",
+      "bbox": [
+        45,
+        76,
+        211,
+        242
+      ],
+      "minimumEdgeMargin": 14,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "0b1971c6925ab6e211b0b5a5cb3d073ae46d82b70bc6caa547e2eb1f1dfb5272",
+      "fileSha256": "cc8d22121c8407a6c079b9abecda77206e3c5a4b5068abe64cec00e8b148c24d"
+    },
+    {
+      "slot": "northwest-walk-1",
+      "path": "world/directions/northwest/walk/walk-1.png",
+      "bbox": [
+        51,
+        83,
+        205,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "e39238ff0150abacea60127f8ab9e9f83e5222593c8829196d6c9ab20409f689",
+      "fileSha256": "37e4269e97de0d4ceef566be7bf70ee3157063e9179c20be6abe50348c7e63a9"
+    },
+    {
+      "slot": "northwest-walk-2",
+      "path": "world/directions/northwest/walk/walk-2.png",
+      "bbox": [
+        49,
+        82,
+        206,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "7d9295d4ddb361ca322c657d4ce15f2154db1a05a24e00dceb7c4064e495cf81",
+      "fileSha256": "ad9c2d7d1a18c71cacaa58009f33969495074344bd017e7136a25f1a88546f14"
+    },
+    {
+      "slot": "northwest-walk-3",
+      "path": "world/directions/northwest/walk/walk-3.png",
+      "bbox": [
+        48,
+        90,
+        208,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a3bbbbdddccea6446e8a3d150ac8438c7c64fcd9ffca3d9f955436eaade9331c",
+      "fileSha256": "2602b0b8f7cc618ca38ad4b7cde73ec166a20bd16badcb297694b47a74b68ea0"
+    },
+    {
+      "slot": "northwest-walk-4",
+      "path": "world/directions/northwest/walk/walk-4.png",
+      "bbox": [
+        45,
+        85,
+        212,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "4d48edf7ff44a3941cc4eb44a4a885017a6692fdb4f943637ef28039b3302103",
+      "fileSha256": "3ed6dadfeadacfc4323968724add3f0d5bcfa7248af6ee19e4afb74e61297b01"
+    },
+    {
+      "slot": "north-idle-1",
+      "path": "world/directions/north/idle/idle-1.png",
+      "bbox": [
+        92,
+        73,
+        165,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "53f4ed5f8129333ab10ba2e860cd73c803b0b38c7e67174f98aaca1c6bf96250",
+      "fileSha256": "a676c2c3a88c7539da305c3d25538006968a0f612004be5231a663f3b79d5701"
+    },
+    {
+      "slot": "north-walk-1",
+      "path": "world/directions/north/walk/walk-1.png",
+      "bbox": [
+        94,
+        80,
+        162,
+        242
+      ],
+      "minimumEdgeMargin": 14,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "b477b67927ae8ab505220761513d448de30808b9731c569f5a0ee16761d291d5",
+      "fileSha256": "75548735c25ecb25c231275c40c311efb6a7114075812f475f9ad3dd20696027"
+    },
+    {
+      "slot": "north-walk-2",
+      "path": "world/directions/north/walk/walk-2.png",
+      "bbox": [
+        93,
+        80,
+        163,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "2acc3e6028d597973a845c26265173eb8fc515d937da32bd26e20d7cda7816bd",
+      "fileSha256": "b8181f0639b5c4a369ce79bfa6eb78311817c1d03897f7de25ddd3fce6b25673"
+    },
+    {
+      "slot": "north-walk-3",
+      "path": "world/directions/north/walk/walk-3.png",
+      "bbox": [
+        93,
+        79,
+        162,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "1ee358c8d73c77fe8cbebbb310e6aa7b26466dff5e6e3ed9ad8bab2cc05006c8",
+      "fileSha256": "c591845021a118fd51637049628b80be76e59ed4e06eeb249b27992d68d21546"
+    },
+    {
+      "slot": "north-walk-4",
+      "path": "world/directions/north/walk/walk-4.png",
+      "bbox": [
+        93,
+        77,
+        162,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "c7b3110c09028eed9262daa4764f8064f55348b4c7c5f704e52bb7960c98cb7f",
+      "fileSha256": "ca87a37d1dbce2acfad00325bb7753fb625bb58ce14f7aa853709a0c71d2fc61"
+    },
+    {
+      "slot": "northeast-idle-1",
+      "path": "world/directions/northeast/idle/idle-1.png",
+      "bbox": [
+        48,
+        82,
+        208,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a1dd2f9930bfc0cafe600c2f2ca7c83fed9669ac564017973fa6906e17d13c9c",
+      "fileSha256": "ae0d64eb0e998b0ba4bdcabd36f435ba9852cef5f4c56ad461db74ace32464df"
+    },
+    {
+      "slot": "northeast-walk-1",
+      "path": "world/directions/northeast/walk/walk-1.png",
+      "bbox": [
+        51,
+        83,
+        205,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "31e3f696ef0ed4138c516910a4e82052fb1ccb01a27a5e2ac9f1e18c63cddb64",
+      "fileSha256": "6efac344d26290e90d7adfdc23dd07fa3794d5ed2107e9130285bb7f9cb2bac3"
+    },
+    {
+      "slot": "northeast-walk-2",
+      "path": "world/directions/northeast/walk/walk-2.png",
+      "bbox": [
+        54,
+        83,
+        202,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "ca634e8f3985abd3ea585ee8e696c888dfaab7b7a8829962fbb259b4a3387a2e",
+      "fileSha256": "d612950a8ce073c339da84d1d492d8b49b4676ccff6f9cadaf84521dcc222e17"
+    },
+    {
+      "slot": "northeast-walk-3",
+      "path": "world/directions/northeast/walk/walk-3.png",
+      "bbox": [
+        58,
+        85,
+        199,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "0676d6857a6a8124993e8652b5212cd4571eec1d944b76ea942786634be9d5bf",
+      "fileSha256": "4fc91e90fa875d0db711b9981a04a7297fa3c94b57931736e1779825d4a4d709"
+    },
+    {
+      "slot": "northeast-walk-4",
+      "path": "world/directions/northeast/walk/walk-4.png",
+      "bbox": [
+        55,
+        82,
+        201,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "34cfbebc37a2e98423c6cbfc06f7bd2ab326e66b7bb9f61d8f6b9dd91e347223",
+      "fileSha256": "4be178d428bbfbefebdcc4f80b9841f0531fa54c7437eeada656b94b24b81190"
+    },
+    {
+      "slot": "east-idle-1",
+      "path": "world/directions/east/idle/idle-1.png",
+      "bbox": [
+        36,
+        93,
+        219,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "3e8d2e2a77de5734b44a17f96d5fd4a00c204a0c8d50581c91221799946b18ee",
+      "fileSha256": "8ac74ca475003d77caecc8b15c69216ab4d67ca2f10d347918372db39bc69404"
+    },
+    {
+      "slot": "east-walk-1",
+      "path": "world/directions/east/walk/walk-1.png",
+      "bbox": [
+        44,
+        94,
+        213,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "3e74320ed397ba2550684495fea95a9762f97409713fc78b6f04724660fd8a0e",
+      "fileSha256": "73a27d58185c075738ed8998f3b84a247fcaeef6a08d121f233f6ec00760f2f9"
+    },
+    {
+      "slot": "east-walk-2",
+      "path": "world/directions/east/walk/walk-2.png",
+      "bbox": [
+        46,
+        95,
+        211,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "c383a42487b82d0e4e8d7d2c49bf407623edea5e493b227c95ed5d8ecc5e2210",
+      "fileSha256": "61dfe9a6506bfa3a7f6ba3b6d4b17d34b3f3e32ba42aa736d76edaf532a7930e"
+    },
+    {
+      "slot": "east-walk-3",
+      "path": "world/directions/east/walk/walk-3.png",
+      "bbox": [
+        46,
+        96,
+        209,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "8f80f852860034bdd88ce8dc5c13318b8700f6c1e22b7b79890f6b3d6c0a4045",
+      "fileSha256": "ccb3de5121e1e6fa50703f94e539d83e2ba8377f28607f4c71c00392a1efb1a8"
+    },
+    {
+      "slot": "east-walk-4",
+      "path": "world/directions/east/walk/walk-4.png",
+      "bbox": [
+        47,
+        95,
+        209,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "f1df6c4ac4adce27bc938ab7d4eb813f6473afefd64a4e65c1eb0948be4855f1",
+      "fileSha256": "65b1325e887cc5cdfd51c4d9cc56b2b680535919b26ff62f6bbfd2c2dac39d5a"
+    },
+    {
+      "slot": "southeast-idle-1",
+      "path": "world/directions/southeast/idle/idle-1.png",
+      "bbox": [
+        48,
+        85,
+        208,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "a0b420ba020a179926dbb6e17becf0d36805fb7a3f027002f0731b07698cf6c8",
+      "fileSha256": "f3d9f66c0e9f09c0c457303cdbc2b818aec710dac3471642ce9e4d59af98f412"
+    },
+    {
+      "slot": "southeast-walk-1",
+      "path": "world/directions/southeast/walk/walk-1.png",
+      "bbox": [
+        52,
+        86,
+        204,
+        241
+      ],
+      "minimumEdgeMargin": 15,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "7cc39d77a66a2b49efdb895d6d87705febdb15a07822e9c62a549cbfe3f93e5f",
+      "fileSha256": "1142423cc754a93c37458541027e6b9af165d4ae0bd2b6baa25c750b84199f3c"
+    },
+    {
+      "slot": "southeast-walk-2",
+      "path": "world/directions/southeast/walk/walk-2.png",
+      "bbox": [
+        50,
+        84,
+        206,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "8028e80115b0b5bd830b3ce7a454421b29a03f4e8737c79c5a3ec015f4df0ea2",
+      "fileSha256": "f95b479fa30706f5fe3fc2264834d09a09e83da740f4e62c9f7b009854624ea3"
+    },
+    {
+      "slot": "southeast-walk-3",
+      "path": "world/directions/southeast/walk/walk-3.png",
+      "bbox": [
+        53,
+        84,
+        202,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "e04d208248ac262eb52bb4d94ff9b967aa635c8a4186f34f7689490141ec41a4",
+      "fileSha256": "e3b1bb1c60dee70c7285b2483c83ce4c76d3d9bde0d7a71d93ebbf561cd80812"
+    },
+    {
+      "slot": "southeast-walk-4",
+      "path": "world/directions/southeast/walk/walk-4.png",
+      "bbox": [
+        55,
+        86,
+        200,
+        240
+      ],
+      "minimumEdgeMargin": 16,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "rgbaSha256": "e94b352d20ce038e6ca50e2c6e082b527ca0d105ace596edb7e314d9f00bfe11",
+      "fileSha256": "702810f7c9d63532d3a60eb700fc6dccba523b1540056b1883fed91dd0d2d857"
+    }
+  ]
+}

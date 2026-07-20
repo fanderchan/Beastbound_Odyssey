@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "repairId": "emberhorn-standalone-mounted-direction-semantic-audit-v2",
+  "standalone": {
+    "directions": {
+      "northeast": {
+        "screenVector": [
+          1,
+          -1
+        ],
+        "view": "rear_three_quarter",
+        "description": "upper-right travel",
+        "frameCount": 5,
+        "result": "passed"
+      },
+      "east": {
+        "screenVector": [
+          1,
+          0
+        ],
+        "view": "right_profile",
+        "description": "strict screen-right travel",
+        "frameCount": 5,
+        "result": "passed"
+      },
+      "southeast": {
+        "screenVector": [
+          1,
+          1
+        ],
+        "view": "front_three_quarter",
+        "description": "lower-right travel",
+        "frameCount": 5,
+        "result": "passed"
+      }
+    },
+    "frameCount": 15,
+    "manifest": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/world-direction-repair-v2/manifest.json",
+    "duplicateAudit": {
+      "exactDuplicatePairs": [],
+      "horizontalMirrorDuplicatePairs": [],
+      "passed": true
+    }
+  },
+  "mounted": {
+    "direction": {
+      "screenVector": [
+        1,
+        1
+      ],
+      "view": "front_three_quarter",
+      "description": "lower-right travel",
+      "action": "idle",
+      "result": "passed"
+    },
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "manifest": "client/godot/assets/mounted/novice_hunter_v1/emberhorn_red_fire8_earth2/source/world-direction-repair-v2/manifest.json"
+  },
+  "common": {
+    "runtimeMirroring": false,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "magentaResidualPixels": 0,
+    "manualVisualSelfReview": "passed",
+    "ownerReviewStatus": "pending"
+  },
+  "evidence": {
+    "beforeAfter": ".run/evidence/phase324_full_pet_mounted_review/direction_semantic_repair_v2/emberhorn-direction-repair-v2-before-after.png",
+    "standaloneFullContact": "client/godot/assets/pets/emberhorn_red_fire8_earth2/qa/world/full-world-contact.png",
+    "mountedFullContact": "client/godot/assets/mounted/novice_hunter_v1/emberhorn_red_fire8_earth2/qa/world/true8-world-contact-8x5.png"
+  },
+  "mountedRepair": "mounted-emberhorn-southeast-idle-semantic-repair-v2"
+}

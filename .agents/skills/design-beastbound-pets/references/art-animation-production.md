@@ -43,6 +43,8 @@ For a formally supported pet, prove all three visual subjects:
 
 Minimum per subject and direction is `idle 1 + walk 4`, therefore 40 frames per subject. More frames are allowed when they improve motion. The four walk frames must show a real gait, stable ground line and stable body scale; four copies with vertical bobbing do not pass.
 
+Do not accept direction semantics from directory names, arrows, prompts, or a generator's claim. Before installation, build a review row for every canonical direction that places `idle-1` beside `walk-1..4`, and inspect the actual screen-facing/travel vector across all five frames. A direction fails if idle and walk disagree, if any frame turns into its opposite or neighboring diagonal, or if rider and mount do not share the same axis. A safe byte-preserving slot swap is allowed only when both existing sources are independently verified as the exact opposite pair; otherwise regenerate the affected source frames without mirroring.
+
 For mounted frames:
 
 - generate rider, mount, seat, hands, legs, harness and occlusion as one complete picture;
@@ -172,9 +174,13 @@ Use the isolated pet battle review lab and formal runtime path. At minimum recor
 
 Use fixed seeds/director scenes for rare combinations, then one natural randomized 10V10 run. Director clips must drive real battle events and rendering, not a separate fake animation player.
 
+The true-eight world evidence must show each direction twice: a readable idle hold followed by at least one complete four-frame walk cycle. Show standalone character, standalone pet, and integrated mounted whole-frame art together. A combined contact sheet is only an index and cross-direction consistency overview; shrinking many subjects into one image can hide facing, rider-seat contact, anatomy, alpha-edge and gait defects, so it never proves visual acceptance by itself. Direction approval must also inspect every `idle-1 + walk-1..4` source row at 1:1 pixels or a readable zoom and then watch the continuous per-form real-client video. The review scene must validate all three 40-frame collections before recording and exit non-zero on a missing/unreadable frame or an empty column; a visually blank but successfully encoded video is a failed gate. After an independent visual direction audit passes, freeze the exact reviewed paths and hashes in a semantic-direction approval manifest. Hash validation prevents later drift but never performs or replaces the visual judgment, and owner review remains pending until the project owner accepts the result.
+
 ## Acceptance gates
 
-- Contact sheets show every required subject, direction, action and formal view together.
+- Contact sheets show every required subject, direction, action and formal view together, but remain overview evidence rather than the visual-acceptance source.
+- Every direction is inspected from its original runtime PNG at 1:1 or readable zoom, and the same exact frames are watched in the per-form continuous MP4.
+- Every world-direction contact row shows `idle-1 + walk-1..4` together, and an independent reviewer verifies the five actual silhouettes against the canonical screen vector instead of trusting labels.
 - Identity, anatomy, scale, palette, markings, body count and equipment do not drift.
 - World and battle baselines, alpha bounds and frame edges remain stable.
 - Both formal views satisfy exact decoded-RGBA `down-8 == revive-1` continuity in runtime, and full-source validation proves the same handoff before lean archival.

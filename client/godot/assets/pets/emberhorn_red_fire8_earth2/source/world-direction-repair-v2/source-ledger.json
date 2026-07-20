@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "repairId": "emberhorn-world-semantic-direction-repair-v2",
+  "files": [
+    {
+      "path": "source/world-direction-repair-v2/raw/northeast-idle.png",
+      "sha256": "c7e60f32cdc9d820d5d64c275a2cffdff0152d1d9629098ba082f33a26e4ce55"
+    },
+    {
+      "path": "source/world-direction-repair-v2/raw/northeast-walk-2x2.png",
+      "sha256": "a9cedb2b56969a3b6742ecca0aafb6bdff63b1c846c41bc94f251ea47add4c66"
+    },
+    {
+      "path": "prompts/world-northeast-direction-repair-v2-idle.txt",
+      "sha256": "6075a8061bed6c4064d6254a915fb24c25aef08556ece2463d196b9ef5253d3b"
+    },
+    {
+      "path": "prompts/world-northeast-direction-repair-v2-walk.txt",
+      "sha256": "0e34461ccef2ecbb56d9580683ec935178385074f8aa7811558b92dc3616b80b"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/northeast-preparation.json",
+      "sha256": "00322681ae8ca14c410570a2a8b312f329912d5ef2d9c42caede5b6a77ff5363"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/northeast-build.json",
+      "sha256": "e2d0364fb9068d03b9f6e82c29c143312f4b33356151d28e957b0a9b3969e36a"
+    },
+    {
+      "path": "source/world-direction-repair-v2/raw/east-idle.png",
+      "sha256": "97fa7461c14421b4d9fc8a1d2f88162a9d659174f69a42fa90d485b33555a82a"
+    },
+    {
+      "path": "source/world-direction-repair-v2/raw/east-walk-2x2.png",
+      "sha256": "6dff0c77b7cdb636ad967af5e70e7304c694a663c7b7866f1fd9f9470d2886bb"
+    },
+    {
+      "path": "prompts/world-east-direction-repair-v2-idle.txt",
+      "sha256": "ec8c0de3284fba4f96317cc282899013b415a056f51ec87a702c5aeda7ac84f2"
+    },
+    {
+      "path": "prompts/world-east-direction-repair-v2-walk.txt",
+      "sha256": "378b7ca5df55951a2b85d638bd60ce7764b9db9da50b4f46aa6a71422810cfe9"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/east-preparation.json",
+      "sha256": "0c2fa54558083c8c46c83c09708290663e0a6d5ae3c970858f5d1eb1f2d4fa99"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/east-build.json",
+      "sha256": "6e537af5377d15ac7676e0d8a1e273bbdd3df96d96dd2f547b35be4f2b916ca0"
+    },
+    {
+      "path": "source/world-direction-repair-v2/raw/southeast-idle.png",
+      "sha256": "9e8b42af494965a62c0d876c186429014743d1cdd5f0e919fef616516db77c13"
+    },
+    {
+      "path": "source/world-direction-repair-v2/raw/southeast-walk-2x2.png",
+      "sha256": "9d2dcc1784a73bd295bb29cecc1b94723db7f45089d696e4af8699a20ab11a86"
+    },
+    {
+      "path": "prompts/world-southeast-direction-repair-v2-idle.txt",
+      "sha256": "88a5639b6f68c08e5f8e8852a4cbd776b101ba2b9b0180dc274806def9855483"
+    },
+    {
+      "path": "prompts/world-southeast-direction-repair-v2-walk.txt",
+      "sha256": "dd0a5b44cb9e118b0945728479fcbbf70d0d6ef98487c7cd49c3fe5db222cd2e"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-preparation.json",
+      "sha256": "a812c7e80b32e3826735366a30551fea3a5212677788f5e89893708b34bd50c0"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-build.json",
+      "sha256": "1a71fd0532f325fd5072af780f080ce7357e6999a97792060c926764f2fa97e2"
+    },
+    {
+      "path": "world/directions/northeast/idle/idle-1.png",
+      "sha256": "4cdc0ca1a13c6656305e76e8cc178e73ef8c068a7045bb3cb89310d3b8282446"
+    },
+    {
+      "path": "world/directions/northeast/walk/walk-1.png",
+      "sha256": "d8e584a4143b11d6430607ef2d6598cac5400504a40ca6a5a9be399fd14cdb64"
+    },
+    {
+      "path": "world/directions/northeast/walk/walk-2.png",
+      "sha256": "9b5a950c6770154ffed1bcf5344d2b987a883a35df9e2405c1bfd876450b2d5b"
+    },
+    {
+      "path": "world/directions/northeast/walk/walk-3.png",
+      "sha256": "60452700de90aa65075298a0751b225a83e8df9e750f8aec56f1d59f37d2dfc1"
+    },
+    {
+      "path": "world/directions/northeast/walk/walk-4.png",
+      "sha256": "8e73748c31ebc6363eb696ee8aa87a506df007825c2520648b0ad3a2c560953d"
+    },
+    {
+      "path": "world/directions/east/idle/idle-1.png",
+      "sha256": "909dc8fedbfbe0b2fd520be11cec256e0ca335837fa40cc0fe2dc618c4552af5"
+    },
+    {
+      "path": "world/directions/east/walk/walk-1.png",
+      "sha256": "d78d51886cfca2897f0a7e2bcfc8cdeb78d3eaae4ae6f3901d23b70f91035bb2"
+    },
+    {
+      "path": "world/directions/east/walk/walk-2.png",
+      "sha256": "846a299862e9f0e482252f234392072562ffbe4af5d1860855fe08490747e687"
+    },
+    {
+      "path": "world/directions/east/walk/walk-3.png",
+      "sha256": "32c6c5697b52c18a037aecff25d2c56d9007d3ccd11858caac88fdaf5c576787"
+    },
+    {
+      "path": "world/directions/east/walk/walk-4.png",
+      "sha256": "05438ae078f412a4179dd70b240386849ae0093a895ff4909cec103c1cb85d6d"
+    },
+    {
+      "path": "world/directions/southeast/idle/idle-1.png",
+      "sha256": "c9c5138f0379e1111baa88cdbbdd5f9221a6daafef25bbe0ce1bd8098a20a8ae"
+    },
+    {
+      "path": "world/directions/southeast/walk/walk-1.png",
+      "sha256": "954d7873dfc886d59cc3bc46e01a921c183cb17a139b57ec864cab2a456eefde"
+    },
+    {
+      "path": "world/directions/southeast/walk/walk-2.png",
+      "sha256": "8e16ec19a6a51fc1f5aecc8de77afd48198f5cec6925a78db1430a46ee7652bd"
+    },
+    {
+      "path": "world/directions/southeast/walk/walk-3.png",
+      "sha256": "fa464870d028a163bc3e418266a3c3976df773db6d3032e8eaca2b8c4e143646"
+    },
+    {
+      "path": "world/directions/southeast/walk/walk-4.png",
+      "sha256": "680269e75a7e2974e652e9d70cef6e73b3b09eeced4768d2a8f49120e181a1d5"
+    }
+  ]
+}

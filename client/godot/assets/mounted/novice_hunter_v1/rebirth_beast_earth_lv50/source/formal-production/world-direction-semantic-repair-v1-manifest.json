@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "world-direction-semantic-repair-v1",
+  "formId": "rebirth_beast_earth_lv50",
+  "characterId": "novice_hunter_v1",
+  "kind": "mounted",
+  "status": "self_review_passed_owner_review_pending",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "scope": {
+    "direction": "northwest",
+    "action": "idle",
+    "frame": 1,
+    "runtimePath": "world/directions/northwest/idle/idle-1.png"
+  },
+  "semanticReview": {
+    "before": "incorrect_northeast_facing",
+    "after": "strict_rear_left_northwest",
+    "riderBackVisible": true,
+    "mountHeadScreenSide": "left",
+    "mountTailScreenSide": "right",
+    "riderAndMountFacingAxisMatch": true,
+    "integratedWholeFrame": true,
+    "runtimeMirroring": false,
+    "runtimeLayeredComposition": false,
+    "exactDuplicateMatches": [],
+    "exactMirrorMatches": []
+  },
+  "generation": {
+    "provider": "OpenAI built-in imagegen",
+    "generatedImage": "/Users/fander/.codex/generated_images/019f803c-d5f5-74f0-8c1c-a3c87572e230/exec-6bb887ac-4770-436e-9c07-0c5ed9f86ae7.png",
+    "rawPngSha256": "b2802079188425b81acf85958ae8c50744074f4120399ac531bbbdb81f9ff635",
+    "trackedLosslessWebp": "source/formal-production/world-idle-northwest-repair-v1-raw.webp",
+    "trackedLosslessWebpSha256": "bf70839e85aececd9d38aa9949a0266a5df7d32e922df5130a5c5fde63ff20ed",
+    "decodedRgbSha256": "3488118184bffac59ace411074de4997a709823c614cbdeea3aa6d18f1d6b478",
+    "losslessDecodedRgbEqual": true,
+    "prompt": "prompts/production/mounted-world-idle-northwest-repair-v1.txt",
+    "promptSha256": "8eb935dcbc7b64e0ec6b7068d7b346f946716b59d01e05915538f3dc11b31487",
+    "references": [
+      ".run/art_full_g11_g12/earth_sample/mounted/world-walk/northwest/build/source-frames/northwest-1.png",
+      "identity/identity-board-transparent.png"
+    ]
+  },
+  "processing": {
+    "chromaKey": "#FF00FF",
+    "chromaHelper": "remove_chroma_key.py --key-color #FF00FF --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill --edge-contract 1",
+    "builder": "tools/build_pet_art_bundle.py",
+    "pipelineMeta": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/rebirth_beast_earth_lv50/northwest-idle-v1/build/v2/pipeline-meta.json",
+    "pipelineMetaSha256": "b5691af737306801e48c8f4add4162dd151bde5301094d03717ec6b4d7ca9ce1",
+    "fitScale": 0.72,
+    "anchor": "feet",
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "sourceRgbaSha256": "b5289b62b3e47ce6ebc37ad6fc8befd46c08ba0527dad796351521935bac1fc2",
+    "runtimeRgbaSha256": "ce0e2b783e3edb792e36b852dc8398536f8fbb6739a1a2a48c27eabba80398c1"
+  },
+  "before": {
+    "runtimeSha256": "2a9c932ce61c0c80fc8e8e29d89a1e19228a9fbe951336789ab02c6d7700e56f",
+    "runtimeRgbaSha256": "7c549789fb0315adf22e374ac89a5922a8af248387dc5f9030d1d43b3250de6a",
+    "sourceSha256": "7f452fe1cbf87c788768d678bb37df596872a9226da0ab317f4ff81ef3222ffd",
+    "sourceRgbaSha256": "af8a1c211f5b6978530eef8296cd4eb158478e06cc64353d8c797d71614bfc01"
+  },
+  "after": {
+    "runtimeSha256": "af9b52e0986afc32ce293d36276fd38c039a72ff329cbe1e6e0873062b747727",
+    "runtimeRgbaSha256": "ce0e2b783e3edb792e36b852dc8398536f8fbb6739a1a2a48c27eabba80398c1",
+    "runtimeVisibleBboxAlpha16": [47, 117, 181, 241],
+    "runtimeHeight": 124,
+    "runtimeBaselineExclusive": 241,
+    "minimumAnyAlphaEdgeMargin": 13,
+    "residualMagentaPixelsAtDistance70": 0,
+    "sourceSha256": "c9d95dcf8d97217b05e7db64c291ddb8c921e915396334532e8df9aa335c0806",
+    "sourceRgbaSha256": "b5289b62b3e47ce6ebc37ad6fc8befd46c08ba0527dad796351521935bac1fc2",
+    "sourceVisibleBboxAlpha16": [94, 234, 361, 482]
+  },
+  "evidence": {
+    "root": ".run/evidence/phase324_full_pet_mounted_review/semantic_repairs/rebirth_beast_earth_lv50/northwest-idle-v1",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "1831bb6ce0c045efb784bde50020dcd32125b6869a585ad629253abfd1cd0221",
+    "worldCycleGif": "qa/world/true8-world-cycle.gif",
+    "worldCycleGifSha256": "9fb8e66c692ac1ad43a9ae9629f89a1fcee3a9d07f9e8f677274f7e3684442c3",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "fc1432ed035afda34fe8c0abea00448f91ec14a78e6626b88b5a47e52856a057"
+  }
+}

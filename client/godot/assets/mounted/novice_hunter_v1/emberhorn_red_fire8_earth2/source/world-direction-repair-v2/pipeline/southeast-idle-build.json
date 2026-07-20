@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_art_bundle.py",
+  "input": ".run/phase324_direction_repairs/emberhorn_red_fire8_earth2/mounted/southeast/pipeline-input-transparent.png",
+  "inputSha256": "372ee513832c55456d830f2259c6774590b6c797048c558204d37fc70ac9341c",
+  "inputSize": [
+    512,
+    512
+  ],
+  "rows": 1,
+  "cols": 1,
+  "rowStart": 0,
+  "rowCount": 1,
+  "inputCellSize": [
+    512,
+    512
+  ],
+  "inputCellSizeMode": "uniform",
+  "inputGridBoundaries": {
+    "x": [
+      0,
+      512
+    ],
+    "y": [
+      0,
+      512
+    ]
+  },
+  "gridMode": "uniform",
+  "gridSearchRatio": 0.25,
+  "gridMinimumGutter": 8,
+  "slots": [
+    "southeast-idle-1"
+  ],
+  "key": "#FF00FF",
+  "transparentDistance": 40.0,
+  "opaqueDistance": 150.0,
+  "alphaThreshold": 24,
+  "componentMode": "largest",
+  "minComponentArea": 64,
+  "maxDetachedComponentRatio": 0.38,
+  "componentPadding": 2,
+  "fitScale": 0.86,
+  "sharedScale": 0.9756720367,
+  "allowUpscale": true,
+  "anchor": "feet",
+  "footBandRatio": 0.12,
+  "sourceFrameSize": 512,
+  "runtimeFrameSize": 256,
+  "safeMargin": 10,
+  "effectiveSourceMargin": 20,
+  "sourceResampleGuard": 2,
+  "sourceEdgeMargin": 8,
+  "maxDimensionDrift": 0.55,
+  "residualMagentaDistance": 20.0,
+  "fringeCleanupAlpha": 112,
+  "outputs": {
+    "sourceFrames": "source-frames",
+    "runtimeFrames": "runtime-frames",
+    "transparentSheet": "sheet-transparent.png",
+    "runtimeTransparentSheet": "sheet-runtime-transparent.png",
+    "contactSheet": "contact-sheet.png"
+  },
+  "frames": [
+    {
+      "slot": "southeast-idle-1",
+      "grid": [
+        0,
+        0
+      ],
+      "sourceCellBox": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "sourceCellSize": [
+        512,
+        512
+      ],
+      "chroma": {
+        "inputBackgroundMode": "transparent_alpha",
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "borderConnectedPixels": 0,
+        "keyedCandidatePixels": 0,
+        "transparentPixels": 206078,
+        "partialAlphaPixels": 3552,
+        "backgroundRatio": 0.786125,
+        "transparentAlphaDespill": {
+          "edgePixelCount": 4575,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0,
+          "skippedReason": "no_chroma_provenance"
+        }
+      },
+      "componentMode": "largest",
+      "components": [
+        {
+          "area": 56066,
+          "bbox": [
+            97,
+            83,
+            415,
+            450
+          ]
+        }
+      ],
+      "detachedComponentRatio": 0.0,
+      "selectedBbox": [
+        97,
+        83,
+        415,
+        450
+      ],
+      "paddedCropBbox": [
+        95,
+        81,
+        417,
+        452
+      ],
+      "paddedCropSize": [
+        322,
+        371
+      ],
+      "subjectSpan": 367.0,
+      "horizontalAnchorInCrop": 206.2578,
+      "residualMagentaPixelsBeforeResize": 0,
+      "dimensionDriftFromMedian": 0.0,
+      "sourceOutputSize": [
+        314,
+        362
+      ],
+      "sourcePastePosition": [
+        55,
+        130
+      ],
+      "resizedVisibleBbox": [
+        2,
+        2,
+        312,
+        360
+      ],
+      "sourceVisibleBbox": [
+        57,
+        132,
+        367,
+        490
+      ],
+      "sourceBaselineExclusive": 490,
+      "actualScale": [
+        0.97515528,
+        0.97574124
+      ],
+      "sourceLowAlphaMagentaPixelsCleared": 0,
+      "residualMagentaPixelsSource": 0,
+      "runtimeVisibleBbox": [
+        28,
+        66,
+        184,
+        245
+      ],
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
+      "residualMagentaPixelsRuntime": 0,
+      "sourceRgbaSha256": "24d9e84adedcb8cd53cd5d5207ccc8fb246ae36c8a634ff8755336698ac16283",
+      "runtimeRgbaSha256": "8a240a710d057c06553585fba86bfcfae646a60456f937a69b3648172e80062a"
+    }
+  ]
+}

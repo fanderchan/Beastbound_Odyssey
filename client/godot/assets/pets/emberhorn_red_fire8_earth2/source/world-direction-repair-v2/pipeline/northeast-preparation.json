@@ -1,0 +1,418 @@
+{
+  "schemaVersion": 1,
+  "operation": "measured-key chroma extraction and deterministic regrid",
+  "runtimeMirroring": false,
+  "creativePixelSynthesis": false,
+  "cell": 512,
+  "fit": 0.72,
+  "frames": [
+    {
+      "slot": "idle-1",
+      "grid": [
+        0,
+        0
+      ],
+      "measuredCornerKey": "#FB03FA",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "selectedBbox": [
+        332,
+        217,
+        940,
+        993
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          19.748,
+          15.427,
+          37.175,
+          28.653
+        ],
+        "borderConnectedPixels": 1340700,
+        "keyedCandidatePixels": 1340700,
+        "transparentPixels": 1339367,
+        "partialAlphaPixels": 1331,
+        "partialInverseOutOfGamutPixels": 348,
+        "partialInverseAdjustedPixels": 348,
+        "backgroundRatio": 0.852583,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 34,
+          "strongGreenPixelsBefore": 124,
+          "repairedPixels": 158,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 124,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 8280,
+          "strongMagentaEdgePixelsBefore": 755,
+          "strongMagentaEdgePixelsAfter": 17,
+          "strongMagentaEdgeRatioAfter": 0.002053,
+          "despilledPixels": 755,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.47140664961636825,
+      "outputSize": [
+        289,
+        369
+      ],
+      "pastePosition": [
+        111,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 762
+    },
+    {
+      "slot": "walk-1",
+      "grid": [
+        0,
+        1
+      ],
+      "measuredCornerKey": "#FA04F8",
+      "sourceSize": [
+        627,
+        627
+      ],
+      "selectedBbox": [
+        147,
+        106,
+        504,
+        546
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          16.186,
+          3.317,
+          7.071,
+          1.414
+        ],
+        "borderConnectedPixels": 323372,
+        "keyedCandidatePixels": 323372,
+        "transparentPixels": 322723,
+        "partialAlphaPixels": 648,
+        "partialInverseOutOfGamutPixels": 189,
+        "partialInverseAdjustedPixels": 189,
+        "backgroundRatio": 0.82256,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 19,
+          "strongGreenPixelsBefore": 72,
+          "repairedPixels": 91,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 72,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 4523,
+          "strongMagentaEdgePixelsBefore": 334,
+          "strongMagentaEdgePixelsAfter": 7,
+          "strongMagentaEdgeRatioAfter": 0.001548,
+          "despilledPixels": 334,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.8265470852017937,
+      "outputSize": [
+        300,
+        369
+      ],
+      "pastePosition": [
+        106,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 935
+    },
+    {
+      "slot": "walk-2",
+      "grid": [
+        0,
+        2
+      ],
+      "measuredCornerKey": "#FA05F8",
+      "sourceSize": [
+        627,
+        627
+      ],
+      "selectedBbox": [
+        88,
+        105,
+        447,
+        543
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          2.449,
+          18.574,
+          1.0,
+          1.414
+        ],
+        "borderConnectedPixels": 322038,
+        "keyedCandidatePixels": 322189,
+        "transparentPixels": 321559,
+        "partialAlphaPixels": 630,
+        "partialInverseOutOfGamutPixels": 195,
+        "partialInverseAdjustedPixels": 195,
+        "backgroundRatio": 0.819166,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 24,
+          "strongGreenPixelsBefore": 54,
+          "repairedPixels": 78,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 54,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 4260,
+          "strongMagentaEdgePixelsBefore": 329,
+          "strongMagentaEdgePixelsAfter": 4,
+          "strongMagentaEdgeRatioAfter": 0.000939,
+          "despilledPixels": 329,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.8302702702702702,
+      "outputSize": [
+        303,
+        369
+      ],
+      "pastePosition": [
+        104,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 888
+    },
+    {
+      "slot": "walk-3",
+      "grid": [
+        1,
+        0
+      ],
+      "measuredCornerKey": "#F904F8",
+      "sourceSize": [
+        627,
+        627
+      ],
+      "selectedBbox": [
+        146,
+        77,
+        506,
+        484
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          6.083,
+          1.0,
+          39.23,
+          10.817
+        ],
+        "borderConnectedPixels": 320810,
+        "keyedCandidatePixels": 320810,
+        "transparentPixels": 320108,
+        "partialAlphaPixels": 700,
+        "partialInverseOutOfGamutPixels": 167,
+        "partialInverseAdjustedPixels": 167,
+        "backgroundRatio": 0.816043,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 18,
+          "strongGreenPixelsBefore": 47,
+          "repairedPixels": 65,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 47,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 4574,
+          "strongMagentaEdgePixelsBefore": 399,
+          "strongMagentaEdgePixelsAfter": 9,
+          "strongMagentaEdgeRatioAfter": 0.001968,
+          "despilledPixels": 399,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.892590799031477,
+      "outputSize": [
+        327,
+        369
+      ],
+      "pastePosition": [
+        92,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 1017
+    },
+    {
+      "slot": "walk-4",
+      "grid": [
+        1,
+        1
+      ],
+      "measuredCornerKey": "#FA04F8",
+      "sourceSize": [
+        627,
+        627
+      ],
+      "selectedBbox": [
+        86,
+        78,
+        448,
+        516
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          0.0,
+          1.732,
+          11.358,
+          30.48
+        ],
+        "borderConnectedPixels": 323353,
+        "keyedCandidatePixels": 323353,
+        "transparentPixels": 322715,
+        "partialAlphaPixels": 638,
+        "partialInverseOutOfGamutPixels": 186,
+        "partialInverseAdjustedPixels": 186,
+        "backgroundRatio": 0.822511,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 18,
+          "strongGreenPixelsBefore": 57,
+          "repairedPixels": 75,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 57,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 4506,
+          "strongMagentaEdgePixelsBefore": 321,
+          "strongMagentaEdgePixelsAfter": 8,
+          "strongMagentaEdgeRatioAfter": 0.001775,
+          "despilledPixels": 321,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.8302702702702702,
+      "outputSize": [
+        306,
+        369
+      ],
+      "pastePosition": [
+        103,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 965
+    },
+    {
+      "slot": "idle-loop-check",
+      "grid": [
+        1,
+        2
+      ],
+      "measuredCornerKey": "#FB03FA",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "selectedBbox": [
+        332,
+        217,
+        940,
+        993
+      ],
+      "componentIsolation": "deferred to build_pet_art_bundle.py largest-component gate",
+      "chroma": {
+        "inputBackgroundMode": "chroma_key",
+        "cornerChromaDistances": [
+          19.748,
+          15.427,
+          37.175,
+          28.653
+        ],
+        "borderConnectedPixels": 1340700,
+        "keyedCandidatePixels": 1340700,
+        "transparentPixels": 1339367,
+        "partialAlphaPixels": 1331,
+        "partialInverseOutOfGamutPixels": 348,
+        "partialInverseAdjustedPixels": 348,
+        "backgroundRatio": 0.852583,
+        "partialChromaAnomalyDespill": {
+          "invalidInversePixelsBefore": 34,
+          "strongGreenPixelsBefore": 124,
+          "repairedPixels": 158,
+          "unresolvedInvalidInversePixels": 0,
+          "unresolvedStrongGreenPixels": 0,
+          "fallbackGreenPixels": 0,
+          "preservedNaturalGreenPixels": 0,
+          "strongGreenPixelsAfter": 0,
+          "referenceRadius": 12,
+          "referenceAlphaMinimum": 64,
+          "greenAutoRepairMaxComponentPixels": 4,
+          "provenGreenAnomalyPixels": 124,
+          "alphaPixelsChanged": 0
+        },
+        "postChromaEdgeDespill": {
+          "edgePixelCount": 8280,
+          "strongMagentaEdgePixelsBefore": 755,
+          "strongMagentaEdgePixelsAfter": 17,
+          "strongMagentaEdgeRatioAfter": 0.002053,
+          "despilledPixels": 755,
+          "alphaPixelsChanged": 0
+        }
+      },
+      "scale": 0.47140664961636825,
+      "outputSize": [
+        289,
+        369
+      ],
+      "pastePosition": [
+        111,
+        82
+      ],
+      "sameOperationLowAlphaChromaPixelsCleared": 762
+    }
+  ]
+}

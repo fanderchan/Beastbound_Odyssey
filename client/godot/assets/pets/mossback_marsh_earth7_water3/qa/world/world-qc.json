@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 1,
+  "formId": "mossback_marsh_earth7_water3",
+  "kind": "pet_world",
+  "status": "passed",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "directions": {
+    "south": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "f8d62af4363b453bc04f5ece898a273b9db65bfbacb99461c132f6dcacc8ccf4",
+        "8003535c125a579a82c57799bda47be56890b4667232509e731fc54fab2943d6",
+        "dc42b7c5e579742be189949eb78cc93a84c4d25681f23d22ced2491a0005d03d",
+        "7b6e1524beaa127afb0fb2e5de080dd44b9bd792cf2dd65c136e22091f6f65b7",
+        "f7f6cdcb946866b580e71609c1989d538437438f5c41160ac7d591d207078fbe"
+      ],
+      "alphaBboxes": [
+        [
+          88,
+          145,
+          169,
+          241
+        ],
+        [
+          90,
+          145,
+          166,
+          241
+        ],
+        [
+          90,
+          144,
+          166,
+          241
+        ],
+        [
+          91,
+          145,
+          166,
+          241
+        ],
+        [
+          91,
+          145,
+          166,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "southwest": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "5648f1df0e9d39e198e00321b284c74a5dccc3e9b662ee6b0f61d14f9938ba38",
+        "9b803ea81a65b317c13e1b8f68380c467daf4607413d7abcb582c6358d15335a",
+        "76abce69fc65c7cc9fba33153afdef7efd1cd615d48e544bfcb1f936cb0edbbb",
+        "b7cc414b76b1a9cdf461c596bcc5e2189fe229f4e6caa45de7311c3e9ca9821c",
+        "9dcb89edcd63a1e88967ed89676d5119f41454d50125f70d85b22469db2e1d37"
+      ],
+      "alphaBboxes": [
+        [
+          70,
+          151,
+          185,
+          241
+        ],
+        [
+          68,
+          151,
+          187,
+          241
+        ],
+        [
+          68,
+          162,
+          187,
+          241
+        ],
+        [
+          70,
+          156,
+          186,
+          241
+        ],
+        [
+          68,
+          158,
+          188,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "west": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "966ca4cab511261a18a39808f4bd4bc713073349dbe635b35838e4a86910bec4",
+        "2d819327bd7ab65d0eb2706e7b346a47525a4ebf40010def5484242171abd39b",
+        "7a41a9dd4135959abfdfc661969f500b0c37234fc086e821fef16e1d322c8018",
+        "1a60325f1e3bea9926baf71c2a0fc8b9f0ab24d4601eca0a2719a65c76928aa7",
+        "8d84b9324fe8d6aa13566cc7289597362ba1d67d2e5c83b327ef495cf06f0342"
+      ],
+      "alphaBboxes": [
+        [
+          53,
+          161,
+          203,
+          241
+        ],
+        [
+          51,
+          161,
+          205,
+          241
+        ],
+        [
+          52,
+          160,
+          204,
+          241
+        ],
+        [
+          51,
+          160,
+          205,
+          241
+        ],
+        [
+          52,
+          161,
+          205,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "northwest": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "29ce638adfa1e095544ca662bf2aadd05d1a1d5ddfd54ab690ed93e546d7cad3",
+        "549809ff43df744f02947b86c054200ad1253b4b2b2101a49538d8d0a4687960",
+        "41f47be7fe66ba8738d9a1a0bbc1150d7503c357d0580a2bd399b440576f72ec",
+        "799335de5a0a1a3ba2d3119bb4ac951e6d84ca371bf9dd8a5200df7e52a83542",
+        "00f791f917a15436f327b711698e0b853f8a07dfcca10c752b51e5a040c80bd4"
+      ],
+      "alphaBboxes": [
+        [
+          60,
+          136,
+          197,
+          241
+        ],
+        [
+          57,
+          136,
+          200,
+          241
+        ],
+        [
+          56,
+          129,
+          201,
+          241
+        ],
+        [
+          56,
+          134,
+          200,
+          241
+        ],
+        [
+          58,
+          131,
+          199,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "north": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "c1cb3870bdc18c5b34898a53ea2b766f3b75332861653e1694b82db1c9f48113",
+        "e062f236c944bf64e9ac187ebfd365d7ad11a0949be16a1221d249bbc65ea3b2",
+        "23386574fcab0280db446dca141f5b0db591a4c3c915b11c68ffb7162ccf9dce",
+        "8a31ce0456ab90edbec620b43f7242e449b1537ffe9394530801b66362871ba4",
+        "2ecf061e8a34ecae654d00ba291e60ade441c861b2fb8115a3672fdd716c42e3"
+      ],
+      "alphaBboxes": [
+        [
+          94,
+          145,
+          163,
+          241
+        ],
+        [
+          94,
+          145,
+          163,
+          241
+        ],
+        [
+          94,
+          144,
+          163,
+          241
+        ],
+        [
+          95,
+          146,
+          162,
+          241
+        ],
+        [
+          94,
+          146,
+          164,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "northeast": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "f62b8ca218ddf11965164b28a529706d5f7826b35c82139d1d74a51be3b69aaf",
+        "3ba4205d4b2bc16a64c0f058372b3e959a1306dbd3c6a3caa36f65cdb3fcea8c",
+        "7b581a571de2d26ada4925dddf0aaf38780f289342d5b5808c433ec5a5fd7f4c",
+        "390ebb9c293a62c09039d944ef5f87c4292392628e8da6bdb70053941da3796f",
+        "8940af2acd6143c299eeb93f847b6cf271382ef577c606621bc148a5c36cfe0a"
+      ],
+      "alphaBboxes": [
+        [
+          62,
+          136,
+          195,
+          241
+        ],
+        [
+          60,
+          136,
+          197,
+          241
+        ],
+        [
+          58,
+          135,
+          198,
+          241
+        ],
+        [
+          61,
+          136,
+          196,
+          241
+        ],
+        [
+          62,
+          138,
+          196,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "east": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "c564e93fa9d5d008dff90c3f082fc0c42cb4eb9cbefcc70951235bc8adf64878",
+        "0a046c0f3d2f7c6016d89b424691da8557f01161e49010f5cfde4a540e90fbf6",
+        "2b3913811b7a240ff4ee8f51a17cbd2ebf062b0d473400ef4695cc2288f62f98",
+        "8e53065966fdc293b882d7ce1bd0b608cf257769a049f5290296e675ba2e5f8d",
+        "01903cd70d7f632a06132195d6dd093493b0d99f01d4eb720bd85c1dc90c8e2b"
+      ],
+      "alphaBboxes": [
+        [
+          50,
+          161,
+          206,
+          241
+        ],
+        [
+          51,
+          161,
+          205,
+          241
+        ],
+        [
+          50,
+          160,
+          206,
+          241
+        ],
+        [
+          51,
+          161,
+          205,
+          241
+        ],
+        [
+          50,
+          160,
+          206,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    },
+    "southeast": {
+      "frameCount": 5,
+      "rgbaSha256": [
+        "3de7e4576c7389db4cd1d44b95fd8af7b46fbc5191a8c87ad36b81d1446cbb22",
+        "732c6a600e6e0d4ef9dc9db3a457a9e1f26a6718742f951eb0102b1110282835",
+        "23035fe6c15d447dde477097276058ab96d4525d7a38a1d46e847084efe7fd1c",
+        "1960b68d40ed22c5b0bb4832e64453fbd3c4cbf0a0501385da8241926e56eb08",
+        "c487ca6b7b5b1c7db5e9cc72aa42a10c862426c884f62cd757b415cba6539986"
+      ],
+      "alphaBboxes": [
+        [
+          60,
+          151,
+          195,
+          241
+        ],
+        [
+          64,
+          151,
+          190,
+          241
+        ],
+        [
+          63,
+          158,
+          192,
+          241
+        ],
+        [
+          66,
+          161,
+          189,
+          241
+        ],
+        [
+          66,
+          158,
+          189,
+          241
+        ]
+      ],
+      "duplicateFrames": []
+    }
+  },
+  "warnings": [],
+  "totalFrameCount": 40,
+  "contactSheet": "pet-world-true8-8x5-contact.png",
+  "contactSheetSha256": "c4a85297821dec389fb2fa6d1c78486825aa626263e1629f02ba273c9d43120f",
+  "cycleGif": "pet-world-true8-cycle.gif",
+  "cycleGifSha256": "d87fe61dc8c0fc0ad184def6cdd72286d836835a0ca4674b8362ae2ff25f874b"
+}

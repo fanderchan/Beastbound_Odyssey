@@ -1,0 +1,14 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey integrated rider-and-mount HD 2.5D world sprite, one idle frame
+Primary request: Create exactly ONE newly illustrated complete idle sprite of novice_hunter_v1 riding the exact 地灵转生兽, in strict NORTHWEST world direction. The result must be a single integrated whole rider-and-mount subject, never pasted layers or a collage.
+Input images: Image 1 is the binding correct northwest mounted walk frame and fixes the exact facing, identity, rider scale, seat, silhouette and rear-left travel axis. Image 2 is the binding integrated identity board and fixes the exact hunter, beast, saddle, palette and anatomy.
+Facing: strict rear-left / northwest three-quarter view travelling toward the upper-left. The rider's BACK must be visibly presented; rider head, shoulders, torso, pelvis and knees all align upper-left. The beast HEAD must be on the SCREEN LEFT and its tail on the SCREEN RIGHT. This must not read as northeast or front-facing.
+Pose: stable alert idle with all four paws grounded and no walking stride. Match the existing northwest walk frame's total subject scale, rear-left axis, low saddle position and bottom ground line. Rider pelvis stays seated; both hands hold the low reins; both complete legs and boots wrap the barrel naturally; no floating or pasted rider.
+Identity: same adult brown-haired hunter with small bone hair ornament, ochre fur-trim outfit, diagonal teal strap, red waist cloth, wrist gear and brown fur boots. Same heavy brown earth beast with one ochre forehead horn, golden layered cheek and shoulder plates, orange spiral flank mark, low back ridge, broad layered tail tuft, four legs and three claws per paw.
+Composition: exactly one complete subject centered with generous padding; no cropping. High-definition hand-painted 2.5D fantasy game sprite, crisp at 160px, production-game asset, not concept poster.
+Background: perfectly flat solid #FF00FF only, uniform corner to corner. No shadow, floor, scenery, particles, glow, text, labels, borders, UI, logo or watermark.
+Constraints: rider and mount are created together as one image; no mirroring; no standalone character/pet layers; no seam patch; no missing or extra limb; no substitute pet; no anatomy or costume drift; no opposite directions; no motion blur.
+
+Built-in imagegen references:
+- `.run/art_full_g11_g12/earth_sample/mounted/world-walk/northwest/build/source-frames/northwest-1.png`
+- `client/godot/assets/mounted/novice_hunter_v1/rebirth_beast_earth_lv50/identity/identity-board-transparent.png`

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "repairId": "mounted-emberhorn-southeast-idle-semantic-repair-v2",
+  "files": [
+    {
+      "path": "source/world-direction-repair-v2/raw/southeast-idle.png",
+      "sha256": "d5db1c7aa13ea25e65c92b3cd0f65dba544f0a0d96eeb777fc4a1aa5c4537f87"
+    },
+    {
+      "path": "prompts/world-southeast-direction-repair-v2-idle.txt",
+      "sha256": "5d1de31c6657a59b1c912e72a3e4ce5f3a67ba85e8241e373e9f2ca3df3dee01"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-idle-preparation.json",
+      "sha256": "1c347e8891787bd4154e59d64dde3a459cc5ff024fa26515b0469fb1af48f95a"
+    },
+    {
+      "path": "source/world-direction-repair-v2/pipeline/southeast-idle-build.json",
+      "sha256": "87637e73d2e0ed7f5d0ed577526e249b01bd98f43d9023efc658f568d3799b27"
+    },
+    {
+      "path": "source/world-frames/directions/southeast/idle/idle-1.png",
+      "sha256": "7d25a05166488fd0be85f9f21335880d1d4ab62b62b41ab103a80d55c2e9aecf"
+    },
+    {
+      "path": "world/directions/southeast/idle/idle-1.png",
+      "sha256": "18d3f18f7f70f620c348976dd41029f30dc0ff9de500b9f57170ba2a0b2a26f8"
+    }
+  ]
+}
