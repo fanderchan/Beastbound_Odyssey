@@ -175,12 +175,12 @@
     "worldContactSheet": "qa/world/full-world-contact.png",
     "worldContactSheetSha256": "53c10e039bf71d98c44655a94a78edad788e4855f064c6484ee4eed18390677e",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "7ad9237c36df0ba90bb187174699294e7991cd3b400eb140cf59cd810623bfcc",
+    "battleContactSheetSha256": "a7bba7006a44cc6ec06063e7b7450809ed292a2c98b1512d601e732e2d114e12",
     "battlePresentationFacingContact": "qa/battle/presentation-facing-contact.png",
     "battlePresentationFacingContactSha256": "1e11b5152471d062ac30d48c5271b86aeaa9acefba2eb7f79ad5588b8e0f0dd1",
     "realGodotEvidence": "pending_main_agent_runtime_review",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "34f1ed63162630f36bd86dbad1ff9acfe6e9d3aa703de22cd9ac67249dbf58d6",
+    "battleQcSha256": "2eeb9ef991ee70a641755c46f177136f27d32d84c818ac7518e247d2c77a9af4",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "82d08490212a32f678caf4744b019b552e601bf4c0f6e17a39261b757c4654e6",
     "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-v1-before-after.png",
@@ -188,7 +188,11 @@
     "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
     "battleDownReviveKoSemanticsBeforeAfterSha256": "b2da49a95346e5f8923b5c0a115bc376192288d1fca7523ca29e0179e41a1ede",
     "battleDownReviveKoSemanticsSequence": "qa/battle/repairs/down-revive-ko-semantics-v2-contact.png",
-    "battleDownReviveKoSemanticsSequenceSha256": "0388358264f64a932c4651fb9edcc356c981b3f8548c8eb80b7b070c3cbddf95"
+    "battleDownReviveKoSemanticsSequenceSha256": "0388358264f64a932c4651fb9edcc356c981b3f8548c8eb80b7b070c3cbddf95",
+    "motionIntegrityBeforeAfter": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+    "motionIntegrityBeforeAfterSha256": "8c1f3d997fe3ccdbac38c906904bae1d88c7d1370f8c2e63838197e67045ac9b",
+    "motionIntegrityAudit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json",
+    "motionIntegrityAuditSha256": "3a757b9d3078fb9f64e2f4f0e3d7798c743b7a4f1c43999d04f2d29dc72811c1"
   },
   "ownerReviewStatus": "pending",
   "notes": "Standalone pet true-eight world and two-view twelve-action battle matrices are self-reviewed. Runtime remains disabled until data-driven integration, real Godot review, and owner acceptance. Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。",
@@ -238,7 +242,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "f4c22b30bfdc258eeb2d978e6bf7039f46a7164e7d4fa608d5e9e11684cff36d",
+    "bundleDigest": "90aa0644ae8a95dd9293fc308ad62b5b4ab954e498a8406918b31ee69d1618f1",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -296,6 +300,23 @@
     "restorationValidation": {
       "alphaExactFrameCount": 180,
       "unexpectedChangedPixels": 0
-    }
+    },
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "front_3quarter_sw/attack",
+        "back_3quarter_ne/attack",
+        "back_3quarter_ne/skill",
+        "back_3quarter_ne/counter"
+      ],
+      "sourceDriven": true,
+      "canonicalRuntimeDerivation": true,
+      "broadDespillApplied": false,
+      "down8Revive1ExactRgbaBothViews": true,
+      "evidence": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+      "audit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json"
+    },
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1"
   }
 }

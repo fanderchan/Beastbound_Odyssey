@@ -169,8 +169,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 50,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "67a38f618ddbc02d7ca3780e24a1871edae1276c2be8e1707a66b9385bbf603a",
-      "runtimeRgbaSha256": "e46cd09688a86360d7984cf100b583935ee589b79e598f8d15bf9e523f1440ef"
+      "sourceRgbaSha256": "41a622e3bd0de74a40b2de8ec308fe52ae2436bb4e0b38fac8b4c79e59995eae",
+      "runtimeRgbaSha256": "7371c5754341634673ccc9692fb5ddb4e48e11e6b536e26303916b9cebbbaeab"
     },
     {
       "slot": "skill-2",
@@ -270,8 +270,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 36,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "00358d53fba3277c75cd31b5627a62181574f0ab8b0706646a5bf5ce9f54ec3a",
-      "runtimeRgbaSha256": "96a2aca1bab8c97ffd9212b0ecc26ead6c91bb31ea8bff78b5115c2947de2803"
+      "sourceRgbaSha256": "92b67cb4aee928f92541e2b0820932606c912ff3eb94e94b1c81d30436648ff2",
+      "runtimeRgbaSha256": "a2fb0085899f2b465b3496e9601dadd884146f17b02d9ac10bdc9bf5b423e110"
     },
     {
       "slot": "skill-3",
@@ -371,8 +371,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 22,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "2fc4ad94f6e49388e7fa26c0611d58f3c26136f5ea1abb332fcc5b3f87947874",
-      "runtimeRgbaSha256": "ce26f1413d927d83aff79ee17aeccddbe44ffcdbfc82cd185c8eba631165b902"
+      "sourceRgbaSha256": "231e0251965112c210be29d4280f203f4d6000ee4c926fbc3b1a6148e2e0f2cb",
+      "runtimeRgbaSha256": "0990a4c6f76bc961b52c8e1ac112e4756e000d4ca23c91063ff38f7cce130a73"
     },
     {
       "slot": "skill-4",
@@ -472,8 +472,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 26,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "b26f08fed5b3792931fd4a040e2103d9a57e4dc9c0b11aa3bb61c168c0d8330d",
-      "runtimeRgbaSha256": "57db733029134d06ee483b5841cd704451f785e8cbff2dae7775af157d1bb020"
+      "sourceRgbaSha256": "b6ce26bcd6a256da112600413b7156e84d14306f4e8015de336d09d5603371a3",
+      "runtimeRgbaSha256": "54930354356abe37e10bef70bb62482254717920697ee69710df10d4ff69febb"
     },
     {
       "slot": "skill-5",
@@ -573,8 +573,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 38,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "7bff4f334981db16451bd7c81e6dc85ef5f7010bfe84e376569155e0adb1c8b3",
-      "runtimeRgbaSha256": "3f86aa4132e39a579713a27e56ddd3c1677547b4cd1f6dba25d35d5a8e7984db"
+      "sourceRgbaSha256": "a0931f09e47158a6ed9fb78d7ef1e8c7b2e2a401f07815c822dba9c849b6f438",
+      "runtimeRgbaSha256": "83322fec1aeaa1e291ddf8dcf441e636338ed1a78f7ef7d0b1d3b27d027ccc57"
     },
     {
       "slot": "skill-6",
@@ -674,8 +674,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 51,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "c285afc4d5a090d4f0dd66644c18e0944b90e12dd3d9dfab0d02cb9b1978a20b",
-      "runtimeRgbaSha256": "e1a377cb91c5608971b1675c6986ee2f887cc217635d77edd932a79ad500248e"
+      "sourceRgbaSha256": "b1e1e572a5d84d8e1ed3d6b0ca68a4da701738ea5dd31af1927d04646c649349",
+      "runtimeRgbaSha256": "cb9deaa23d9c45039fd3c8339e874fcaf7d3ab3af557f4447ba76176a4b1777a"
     },
     {
       "slot": "skill-7",
@@ -775,8 +775,8 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 37,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "bbea9ee56a675adfc42d1de3fa8f5e3b75d96936f5a47b22f45470a38f51cae8",
-      "runtimeRgbaSha256": "49326a2c2c7c2ac97730f4c75e7e1acc5bc75b269afe78706c894497dfe96187"
+      "sourceRgbaSha256": "b64352b5de9c91e865b81ae48e81c017708b068f645efa9a2ab477caea1d74ec",
+      "runtimeRgbaSha256": "36deb8d291d0d2cf39b00ebe883a83228206ddc240f8c759920b16ddc7cce3f1"
     },
     {
       "slot": "skill-8",
@@ -876,8 +876,116 @@
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 48,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "046b6aa8dae6f25830e6987ab3474bba3a64b557533cd66e1372dc54f106e33c",
-      "runtimeRgbaSha256": "d7d9b546b51c21df631e483ae4f60722b6f821c833c35cc22a7f4ff9d02319d5"
+      "sourceRgbaSha256": "6b08964f8426f864de386ddfed46e356c1e39cd7dff2e247b828f5b2e9e599d3",
+      "runtimeRgbaSha256": "597fb5a2395d2d7e86611b0f737b7456d104255c0f500b8cd70a7271f3ae759f"
     }
-  ]
+  ],
+  "postProcessing": {
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "operation": "authored 512px whole-sprite resequence, uniform isotropic scale, and/or translation",
+      "creativeRedraw": false,
+      "runtimeDerivedByCanonicalFunction": true,
+      "broadDespillApplied": false,
+      "frames": [
+        {
+          "slot": "skill-1",
+          "donor": "skill-1",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "d9d66a31e18766fde9f16c7d09b552911591a089a719491bf626aaa5bc4d25ae",
+          "sourceDecodedRgbaSha256": "41a622e3bd0de74a40b2de8ec308fe52ae2436bb4e0b38fac8b4c79e59995eae",
+          "runtimeDecodedRgbaSha256": "7371c5754341634673ccc9692fb5ddb4e48e11e6b536e26303916b9cebbbaeab"
+        },
+        {
+          "slot": "skill-2",
+          "donor": "skill-2",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "687b5b9c0214f0b5ad6efd73ea205e5b943314b32815c4347494ba446f12fcc7",
+          "sourceDecodedRgbaSha256": "92b67cb4aee928f92541e2b0820932606c912ff3eb94e94b1c81d30436648ff2",
+          "runtimeDecodedRgbaSha256": "a2fb0085899f2b465b3496e9601dadd884146f17b02d9ac10bdc9bf5b423e110"
+        },
+        {
+          "slot": "skill-3",
+          "donor": "skill-3",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "e85b16de6dfc48cf1225a33745bb5f0e3ca7f98a643e0689dbd1ee994cee31c9",
+          "sourceDecodedRgbaSha256": "231e0251965112c210be29d4280f203f4d6000ee4c926fbc3b1a6148e2e0f2cb",
+          "runtimeDecodedRgbaSha256": "0990a4c6f76bc961b52c8e1ac112e4756e000d4ca23c91063ff38f7cce130a73"
+        },
+        {
+          "slot": "skill-4",
+          "donor": "skill-4",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "0f8ea521e2fe585ba0fb5a990c95bafbd087b9955a9fc86e3a696f1556c79797",
+          "sourceDecodedRgbaSha256": "b6ce26bcd6a256da112600413b7156e84d14306f4e8015de336d09d5603371a3",
+          "runtimeDecodedRgbaSha256": "54930354356abe37e10bef70bb62482254717920697ee69710df10d4ff69febb"
+        },
+        {
+          "slot": "skill-5",
+          "donor": "skill-5",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "532b1402cbaf609d645047a9719d0c9d8f1bdd83e25f4e34153dcfe668a661cc",
+          "sourceDecodedRgbaSha256": "a0931f09e47158a6ed9fb78d7ef1e8c7b2e2a401f07815c822dba9c849b6f438",
+          "runtimeDecodedRgbaSha256": "83322fec1aeaa1e291ddf8dcf441e636338ed1a78f7ef7d0b1d3b27d027ccc57"
+        },
+        {
+          "slot": "skill-6",
+          "donor": "skill-6",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "f3637a822a2b574de125da53f25a71bd2df486380151fdcc5b14b14c0349f332",
+          "sourceDecodedRgbaSha256": "b1e1e572a5d84d8e1ed3d6b0ca68a4da701738ea5dd31af1927d04646c649349",
+          "runtimeDecodedRgbaSha256": "cb9deaa23d9c45039fd3c8339e874fcaf7d3ab3af557f4447ba76176a4b1777a"
+        },
+        {
+          "slot": "skill-7",
+          "donor": "skill-7",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "a47430bd2f05628d19ee1bb99887ecfee00f87c5aecc63ff26730d0956885718",
+          "sourceDecodedRgbaSha256": "b64352b5de9c91e865b81ae48e81c017708b068f645efa9a2ab477caea1d74ec",
+          "runtimeDecodedRgbaSha256": "36deb8d291d0d2cf39b00ebe883a83228206ddc240f8c759920b16ddc7cce3f1"
+        },
+        {
+          "slot": "skill-8",
+          "donor": "skill-8",
+          "uniformScale": 1.5,
+          "translation512": [
+            0,
+            0
+          ],
+          "sourceFileSha256": "c542983bfb89c779444599efbfb51feca652c9711ae5539814a5eaba98edeaea",
+          "sourceDecodedRgbaSha256": "6b08964f8426f864de386ddfed46e356c1e39cd7dff2e247b828f5b2e9e599d3",
+          "runtimeDecodedRgbaSha256": "597fb5a2395d2d7e86611b0f737b7456d104255c0f500b8cd70a7271f3ae759f"
+        }
+      ]
+    }
+  }
 }
