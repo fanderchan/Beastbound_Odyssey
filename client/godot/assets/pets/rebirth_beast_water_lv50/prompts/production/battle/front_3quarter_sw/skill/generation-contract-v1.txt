@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: Beastbound Odyssey formal HD 2.5D pet battle animation sheet
+Primary request: Render exactly 8 sequential frames of the exact 水灵转生兽 performing skill, arranged in an exact 4 columns x 2 rows grid, read left-to-right across the top row then the bottom row.
+References: IMAGE 1 is the binding exact 水灵转生兽 identity for this view. IMAGE 2 is motion timing and equal-cell layout reference only; replace its brown earth-beast identity completely. Preserve IMAGE 1 species and palette in every frame.
+Identity lock: an adult rideable streamlined blue-teal quadruped of the four-spirit rebirth-beast bloodline: short neck, rounded wedge muzzle, low ears, long load-bearing back, exactly one short central pale horn, one layered shell cheek plate per side, one low shell-fur shoulder plate per side, low soft dorsal ridge, four legs with exactly three broad lightly webbed claws per paw, flowing cyan body markings and one heavy tail ending in a compact opaque three-lobed fin crown; no wings, extra horns or water effects.
+View contract: front three-quarter southwest source view, head and travel axis toward lower-left, tail/rear toward upper-right; this is the enemy source before the required runtime flipH=true. Keep this same source facing through every frame; no camera drift, turn-around or source mirroring.
+
+Action sequence: signature body action distinct from attack: spread stance, both forepaws dig in, shoulder plates flare, horn rises, one forceful ground-stamp, commanding hold and settle; body-only, no elemental effects.
+Continuity: one coherent animation with genuine pose progression, stable scale, stable palette and consistent anatomy; exact same individual in every cell.
+Containment: one complete subject per equal cell, inside the central 58 to 66 percent, generous #FF00FF margin around every limb, plate, horn, ring or tail; nothing crosses a cell edge.
+Style: original high-definition warm hand-painted 2.5D fantasy game sprite, Stone-Age-inspired readability without copying copyrighted art, crisp at 160 px.
+Background: perfectly flat solid #FF00FF only. No ground, shadow, scenery, detached effects, particles, text, labels, borders, UI, logo or watermark.
+Avoid: extra/missing anatomy, species drift, duplicated frames, flipped facing, cropping, sleep smile, death/gore.

@@ -3,7 +3,7 @@
   "formId": "rebirth_beast_water_lv50",
   "displayName": "水灵转生兽",
   "artStatus": "in_production",
-  "productionScope": "identity_key_pose_gate",
+  "productionScope": "identity_and_formal_two_view_12_action_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -32,73 +32,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -134,18 +134,83 @@
     "novice_hunter_v1"
   ],
   "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
     "raw": "source/identity-board-raw.webp",
     "sourceMetadata": "source/identity-board-source-meta.json",
     "repackMetadata": "source/identity-board-repack-meta.json",
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
-    "prompt": "prompts/identity-board-v1.txt"
+    "prompt": "prompts/identity-board-v1.txt",
+    "formalProductionLedger": "source/formal-production/source-ledger.json",
+    "promptDirectory": "prompts/production",
+    "workingArchive": ".run/art_full_g11_g12/rebirth_beast_water_lv50/pet"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/rebirth_beast/water/identity-build/contact-sheet.png",
-    "contactSheetSha256": "1265b46cb1b3c10aadcb252057b228f27a39f05daa542b6406e9dfbeb0967c60"
+    "contactSheetSha256": "1265b46cb1b3c10aadcb252057b228f27a39f05daa542b6406e9dfbeb0967c60",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "39c4c4f772ed10db2587e8649df122478004c155f9ab23cc486c41e517bf09e7",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "ed839438a3bd9da49568aeeb945e51205920eee0c583937f6db5b684053da96e",
+    "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+    "battleFacingContractPreviewSha256": "13326098fcf6819d6aec635fb747b81224fe13c7e508a351d28a5b644d4a7c84"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "水灵转生兽 identity and four key poses only. Four feet, three claws per paw, one central horn, paired cheek plates and paired shoulder plates were self-reviewed. World and battle matrices are intentionally not produced in this owner-review gate."
+  "notes": "独立宠物双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "static_self_review_passed_owner_pending",
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "viewCount": 2,
+    "actionCountPerView": 12,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "generatedSourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "authoredSourceMirroring": false,
+    "battlePresentationFlipH": {
+      "enemy": true,
+      "ally": true
+    },
+    "downReviveContinuity": {
+      "front_3quarter_sw": "down-8 and revive-1 are exact RGBA matches",
+      "back_3quarter_ne": "down-8 and revive-1 are exact RGBA matches"
+    },
+    "bundleDigest": "c1e555a16d36b163adb4590b333ceeea1cc093925386db16c76ea9cd2bba8c77",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "facingContractPreview": "qa/battle/facing-contract-preview.png",
+    "realGodotBattleEvidence": "pending_parent_integration_and_10v10_review"
+  }
 }
