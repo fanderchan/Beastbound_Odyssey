@@ -145,7 +145,15 @@
     "strictKoBeforeAfter": "qa/battle/repairs/emberhorn-strict-ko-temporal-v1/strict-ko-before-after.png",
     "strictKoBeforeAfterSha256": "6d9aa1392bcea7048c10cbed54fb13325a4d4417934c6dca6eef83260a711a29",
     "strictKoAudit": "qa/battle/repairs/emberhorn-strict-ko-temporal-v1/strict-audit-180.json",
-    "strictKoAuditSha256": "14d98fbf77dfeaeec7876ad592ddfa13c20e13f016cd051c7bbb10a5158ddbae"
+    "strictKoAuditSha256": "14d98fbf77dfeaeec7876ad592ddfa13c20e13f016cd051c7bbb10a5158ddbae",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "08eb8b452afb519c928d1ed9e7e8f1cf71562e13c542a1917eba0ebeb32737e0",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "7b2a68488502df9dfc3e184a3c77d050169aaf29d103a4b7a4ef614a5dc42604",
+    "motionIntegrityBeforeAfter": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+    "motionIntegrityBeforeAfterSha256": "4ef63af07fd2a9e8e7f56c6f1d8733770adf9957592b4a4c987bb25ba3f7221c",
+    "motionIntegrityAudit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json",
+    "motionIntegrityAuditSha256": "d0826f70dac66aa58ba5a8a34e48d54962415d6154c9ef589cb9b41ef4deb535"
   },
   "ownerReviewStatus": "pending",
   "notes": "Formal two-view battle pack is installed for isolated QA. Runtime remains disabled and owner review remains pending; world and mounted production are deferred.",
@@ -207,7 +215,7 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "649d8e98ebcd3edfc69cbeef85c8ee10e3016c8bf4892b6d17d439ff724fdc88",
+    "bundleDigest": "f809cef4b9ab70377158138ea3ab035fcd7cd3003fc1e93bba98de540ff09bb2",
     "archiveMode": "lean",
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
@@ -279,6 +287,21 @@
       "sourceAlphaPreserved": true,
       "canonicalRuntimeDerivation": true,
       "broadDespillApplied": false
-    }
+    },
+    "motionIntegrityRepair": {
+      "repairId": "standalone-motion-integrity-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "back_3quarter_ne/attack",
+        "back_3quarter_ne/walk"
+      ],
+      "sourceDriven": true,
+      "canonicalRuntimeDerivation": true,
+      "broadDespillApplied": false,
+      "down8Revive1ExactRgbaBothViews": true,
+      "evidence": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
+      "audit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json"
+    },
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1"
   }
 }
