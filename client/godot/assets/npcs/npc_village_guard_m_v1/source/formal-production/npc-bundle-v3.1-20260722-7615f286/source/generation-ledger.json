@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-22T01:38:50+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "modelParametersExposed": false,
+    "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; the accepted world v6 and accepted portrait v3 are independent image_gen hard-edge chroma regenerations using that board, while each rejected predecessor is reference-only."
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "north must be a complete back view with no visible face",
+    "northwest and northeast must remain visually distinct back diagonals",
+    "no labels, arrows, borders, UI, watermark or scenery",
+    "no cropped world subject or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+      "identityPromptSha256": "977fa27b18f6cfee1392933be59f1dd84051e1ae92da39e3637ccb5e06e66a89",
+      "generatedAt": "2026-07-21T17:57:09+08:00",
+      "relationship": "separately generated identity authority"
+    },
+    "worldSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "b0d69fe79d876700b82363cbea2ff9e4a24aa31427e37d3c34e7c992ced67f9b",
+      "worldPromptSha256": "3e060f449d74dcd2adb0a9ad25a795154717226518f8b45cb151aad05c19d803",
+      "identityBoardSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+      "generatedAt": "2026-07-21T23:54:26+08:00",
+      "parentRejectedPath": "source/rejected/world-idle-2x4-v4-fringe-over-contract.png",
+      "parentRejectedFileSha256": "1157a5c22ec09ed5603affb9b02b0aae7c77b5e896ef62f0ef7523388b5e6961"
+    },
+    "portraitSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "7c14193d800746c151c351c73af472581d6129bf55ea9edb02845f7c8ee480c9",
+      "portraitPromptSha256": "fdeb07e36a18adb1f253c5cce55fb88282962f2ab9aee17690cda2c0da80cfaf",
+      "identityBoardSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+      "generatedAt": "2026-07-22T01:38:50+08:00",
+      "parentRejectedPath": "source/rejected/portrait-2x2-v1-cross-cell-shield-fragments.png",
+      "parentRejectedFileSha256": "bc64bc6c98b040d069e5d4b780b48fa108dc73e207398564716b9ab96aeed0e8"
+    }
+  },
+  "observedBackgroundFact": "All opaque generated sheets contain a spatially varying near-magenta backdrop rather than guaranteed exact #FF00FF; formal removal is pending rebuild under the latest frozen residual-key-aware contract with component review and mask-bounded repair."
+}

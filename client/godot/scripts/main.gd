@@ -38,6 +38,7 @@ const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_m
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
@@ -55,6 +56,8 @@ const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
+const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
+const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
@@ -228,6 +231,7 @@ var top_panel: PanelContainer
 var side_panel: PanelContainer
 var action_bar: PanelContainer
 var dialog_panel: PanelContainer
+var dialog_portrait_rect: TextureRect
 var status_label: Label
 var version_label: Label
 var detail_label: Label
@@ -733,6 +737,7 @@ var auto_camera_click_check: bool = false
 var auto_animation_state_check: bool = false
 var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
+var auto_npc_appearance_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
 var auto_npc_quest_marker_check: bool = false
@@ -1010,6 +1015,9 @@ var battle_debug_window_enabled: bool = false
 var current_map_id: String = START_MAP_ID
 var startup_map_id: String = START_MAP_ID
 var startup_spawn_name: String = "default"
+var npc_art_review_preview: bool = false
+var npc_main_review_capture: bool = false
+var npc_main_review_capture_request: Dictionary = {}
 var map_data: Dictionary = {}
 var player_profile: Dictionary = {}
 var player_mount_visual_ride_id_cache: String = "__uninitialized__"
@@ -1245,14 +1253,35 @@ func _pet_battle_review():
 	return pet_battle_review_lab
 
 
+func _configure_npc_art_runtime() -> void:
+	NpcArtCatalog.initialize()
+	if not npc_art_review_preview:
+		NpcArtCatalog.warm_all_runtime()
+		return
+	for record in NpcArtCatalog.all_appearance_records():
+		var status := str(record.get("status", ""))
+		if not [NpcArtCatalog.STATUS_IN_PRODUCTION, NpcArtCatalog.STATUS_OWNER_REVIEW_PENDING].has(status):
+			continue
+		var appearance_id := str(record.get("appearanceId", "")).strip_edges()
+		if appearance_id != "":
+			NpcArtCatalog.enable_qa_preview_appearance(appearance_id)
+
+
 func _ready() -> void:
 	_configure_runtime_performance()
 	_apply_preview_window_args()
 	if _restart_with_startup_login_user_data_dir_if_needed():
 		return
 	_bootstrap_auth_state()
-	player_profile = PlayerProgressModel.load_profile() if account_authenticated else PlayerProgressModel.default_profile()
+	# The real Main scene remains in use, but capture evidence must not even read
+	# a player's mount, quest markers, dialogue options, or persisted profile.
+	player_profile = (
+		PlayerProgressModel.default_profile()
+		if npc_main_review_capture or not account_authenticated
+		else PlayerProgressModel.load_profile()
+	)
 	_load_map(startup_map_id, startup_spawn_name)
+	_configure_npc_art_runtime()
 	get_tree().root.size_changed.connect(_layout_hud)
 	encounter_rng.randomize()
 	_spawn_player()
@@ -1265,7 +1294,7 @@ func _ready() -> void:
 		_save_profile_after_exp_pill_starter_update()
 		_show_exp_pill_starter_notice_if_needed()
 		_refresh_mailbox_menu_button()
-	else:
+	elif not npc_main_review_capture:
 		_open_auth_panel(false)
 	_refresh_gm_visibility()
 	_layout_hud()
@@ -1275,7 +1304,9 @@ func _ready() -> void:
 	set_process(true)
 	if _startup_auth_login_requested() and not account_authenticated:
 		call_deferred("_apply_startup_auth_login")
-	if auto_auth_check:
+	if npc_main_review_capture:
+		call_deferred("_run_npc_main_review_capture")
+	elif auto_auth_check:
 		call_deferred("_run_auto_auth_check")
 	elif auto_auth_server_live_check:
 		call_deferred("_run_auto_auth_server_live_check")
@@ -1753,6 +1784,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_spirit_four_check")
 	elif auto_battle_check:
 		call_deferred("_run_auto_battle_check")
+	elif auto_npc_appearance_check:
+		call_deferred("_run_auto_npc_appearance_check")
 	elif auto_npc_collision_check:
 		call_deferred("_run_auto_npc_collision_check")
 	elif auto_npc_interaction_check:
@@ -1923,6 +1956,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == "--battle-debug-window"
 		or normalized.begins_with("--battle-visual-review=")
 		or normalized.begins_with("--pet-battle-review-")
+		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -1978,6 +2012,12 @@ func _apply_preview_window_args() -> void:
 			_apply_preview_window_size(Vector2i(390, 844))
 		elif arg == "--full-client-preview":
 			pass
+		elif arg == "--npc-art-review-preview":
+			npc_art_review_preview = true
+			startup_map_id = "firebud_village_gate"
+			startup_spawn_name = "doctor_record"
+		elif arg == NpcMainReviewCapture.CAPTURE_FLAG:
+			npc_main_review_capture = true
 		elif arg == "--gm-10v10-map":
 			startup_map_id = GM_10V10_MAP_ID
 			startup_spawn_name = "default"
@@ -2013,6 +2053,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_follow_check = true
 		elif arg == "--auto-npc-interaction-check":
 			auto_npc_interaction_check = true
+		elif arg == "--auto-npc-appearance-check":
+			auto_npc_appearance_check = true
 		elif arg == "--auto-npc-collision-check":
 			auto_npc_collision_check = true
 		elif arg == "--auto-facility-dialog-options-check":
@@ -2571,6 +2613,13 @@ func _apply_preview_window_args() -> void:
 			battle_debug_window_enabled = true
 		elif arg == "--perf-probe":
 			perf_probe_enabled = true
+	if npc_main_review_capture:
+		# Keep the explicit debug-only candidate-art access, but run the actual
+		# screenshot with normal player chrome rather than the dev GM session.
+		auth_auto_bypass = false
+		npc_main_review_capture_request = NpcMainReviewCapture.request_from_args(args)
+		startup_map_id = str(npc_main_review_capture_request.get("mapId", startup_map_id))
+		startup_spawn_name = str(npc_main_review_capture_request.get("spawnName", startup_spawn_name))
 
 
 func _restart_with_startup_login_user_data_dir_if_needed() -> bool:
@@ -3017,6 +3066,18 @@ func _run_auto_pet_follow_check() -> void:
 
 func _run_auto_npc_interaction_check() -> void:
 	await _auto_checks()._run_auto_npc_interaction_check()
+
+
+func _run_auto_npc_appearance_check() -> void:
+	var report := NpcArtCatalogCheck.run()
+	print("npc appearance check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if bool(report.get("ok", false)) else 1)
+
+
+func _run_npc_main_review_capture() -> void:
+	var report: Dictionary = await NpcMainReviewCapture.new(self).run(npc_main_review_capture_request)
+	print("npc main review capture: %s" % JSON.stringify(report))
+	get_tree().quit(0 if bool(report.get("ok", false)) else 1)
 
 
 func _run_auto_facility_dialog_options_check() -> void:
@@ -12958,6 +13019,8 @@ func _layout_hud() -> void:
 		maxf(margin + 68.0, viewport_size.y - dialog_height - reserved_bottom)
 	)
 	dialog_panel.size = Vector2(dialog_width, dialog_height)
+	if dialog_portrait_rect != null:
+		dialog_portrait_rect.visible = dialog_portrait_rect.texture != null and dialog_width >= 480.0
 
 	encounter_panel.position = Vector2(
 		(viewport_size.x - dialog_width) * 0.5,
@@ -14827,15 +14890,31 @@ func _draw_interaction_points() -> void:
 			draw_rect(board_rect.grow(-2.0), Color(0.58, 0.38, 0.18, 0.97), true)
 			draw_line(board_rect.position + Vector2(5, 8), board_rect.position + Vector2(47, 8), Color(0.82, 0.62, 0.30, 0.95), 2.0)
 			draw_line(board_rect.position + Vector2(5, 20), board_rect.position + Vector2(47, 20), Color(0.32, 0.20, 0.10, 0.55), 2.0)
+		elif item_kind == "npc":
+			var npc_texture := NpcArtCatalog.world_texture_for_instance(item)
+			if npc_texture != null:
+				var npc_rect := NpcArtCatalog.world_draw_rect_for_instance(item, marker, npc_texture)
+				var shadow_radius := Vector2(clampf(npc_rect.size.x * 0.22, 12.0, 22.0), 5.5)
+				draw_colored_polygon(
+					_battle_ellipse_points(marker + Vector2(0, 4), shadow_radius, 0.0, 28),
+					Color(0.02, 0.03, 0.025, 0.34)
+				)
+				draw_texture_rect(npc_texture, npc_rect, false)
+			else:
+				_draw_interaction_placeholder(item, marker)
 		else:
-			var blocks_movement := InteractionModel.blocks_movement(item)
-			var body_color := Color(0.74, 0.36, 0.25, 0.98) if blocks_movement else Color(0.22, 0.58, 0.66, 0.98)
-			var trim_color := Color(0.99, 0.82, 0.45, 0.95) if blocks_movement else Color(0.58, 0.89, 0.78, 0.95)
-			draw_circle(marker + Vector2(0, -9), 8.0, Color(0.99, 0.76, 0.46, 0.98))
-			draw_rect(Rect2(marker + Vector2(-8, -1), Vector2(16, 20)), body_color, true)
-			draw_line(marker + Vector2(-13, 8), marker + Vector2(13, 8), trim_color, 3.0)
+			_draw_interaction_placeholder(item, marker)
 		_draw_npc_quest_marker(item, marker)
 		_draw_facility_marker_label(item, marker, selected)
+
+
+func _draw_interaction_placeholder(item: Dictionary, marker: Vector2) -> void:
+	var blocks_movement := InteractionModel.blocks_movement(item)
+	var body_color := Color(0.74, 0.36, 0.25, 0.98) if blocks_movement else Color(0.22, 0.58, 0.66, 0.98)
+	var trim_color := Color(0.99, 0.82, 0.45, 0.95) if blocks_movement else Color(0.58, 0.89, 0.78, 0.95)
+	draw_circle(marker + Vector2(0, -9), 8.0, Color(0.99, 0.76, 0.46, 0.98))
+	draw_rect(Rect2(marker + Vector2(-8, -1), Vector2(16, 20)), body_color, true)
+	draw_line(marker + Vector2(-13, 8), marker + Vector2(13, 8), trim_color, 3.0)
 
 
 func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:

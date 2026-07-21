@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+  "generatedAt": "2026-07-21T23:09:40+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "modelParametersExposed": false,
+    "identityBoardRole": "pre-generation identity authority for both world and portrait sheets",
+    "identityPromptPath": "../prompts/identity-board-v2.txt",
+    "identityPromptSha256": "55c43b1f368f3eb700d90b2730d3f6be1827777479365590225c9dff976c0417",
+    "styleReferences": [
+      {
+        "path": "../../npc_stable_keeper_m_v1/identity/identity-board.png",
+        "fileSha256": "25ab4b6c97f8a0d0ac9536b95d2fbd4d4e9bdc9e1ac26c7cf8fc70dcaf26e9cd",
+        "role": "project rendering language only"
+      },
+      {
+        "path": "../../npc_bank_keeper_f_v1/identity/identity-board.png",
+        "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+        "role": "project rendering language only"
+      }
+    ]
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "north must be a complete back view with no visible face",
+    "no borders, dividers, labels, arrows, UI, watermark or scenery",
+    "no cropped world subject or world-cell edge crossing",
+    "no coins, ledger, abacus, modern shelf, weapon or magic",
+    "no copied StoneAge or external character art"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "a4fabeccc6e2a69cbe973b92f110bba5f17902b16fd6f26d7a318423f70702f4",
+      "promptPath": "../prompts/identity-board-v2.txt",
+      "promptSha256": "55c43b1f368f3eb700d90b2730d3f6be1827777479365590225c9dff976c0417",
+      "generatedAt": "2026-07-21T22:56:18+08:00"
+    },
+    "worldSheet": {
+      "fileSha256": "7dcc26af275100fc9d91be2792f2b0d7a19b0b81f530a41517351823754e472f",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "worldPromptSha256": "33807347064fa68ce62ecbc54c9a902af8c6cdd061f1849b3953910ddb17d955",
+      "identityBoardSha256": "a4fabeccc6e2a69cbe973b92f110bba5f17902b16fd6f26d7a318423f70702f4",
+      "generatedAt": "2026-07-21T23:04:08+08:00"
+    },
+    "portraitSheet": {
+      "fileSha256": "6fdbaa44bdc577f863305a09e8d1f6eeef72d95b2070a834ef4b7bb386737869",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "portraitPromptSha256": "be7caed0856a292a5d79fffe6e62245a9730f170592225a04955f906bf0f0bb7",
+      "identityBoardSha256": "a4fabeccc6e2a69cbe973b92f110bba5f17902b16fd6f26d7a318423f70702f4",
+      "generatedAt": "2026-07-21T23:09:40+08:00"
+    }
+  },
+  "observedBackgroundFact": "The opaque generated sheets contain a spatially varying near-magenta backdrop rather than exact uniform #FF00FF; formal background removal must use the recorded same-operation classifier and reviewed masks."
+}

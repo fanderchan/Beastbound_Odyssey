@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "built-in image_gen (model identifier not exposed)",
+  "generatedAt": "2026-07-21T23:17:32.057178+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "executionMode": "built-in image_gen",
+    "outputFormat": "PNG",
+    "modelIdentifierExposed": false,
+    "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no direction relabeling or duplication",
+    "no labels, dividers, shadows, or cropped subject pixels",
+    "no undocumented model identifier or invented generation parameter"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "8afd7b201a87dc5afa0f9668b47f9b7469e0deeb884dd627e888461796633c78",
+      "promptPath": "prompts/identity-board-v1.txt",
+      "promptSha256": "f6bae89f2f3bcd8c834256babc67885084b7d2e291be43e4da622128e4acc406",
+      "generatedAt": "2026-07-21T18:02:37.462618+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "not exposed in surviving tool record",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/raw/identity-board.png"
+      }
+    },
+    "worldSheet": {
+      "fileSha256": "2f6fe26e9dbefdd4be3c334d5e738617cd931a1d8e8c8d45b802721782b5dd76",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "worldPromptPath": "prompts/world-idle-2x4-v5.txt",
+      "worldPromptSha256": "c2217797cb7be4450373df0e0d07d41a3d13c0c3868e2dbb2b70ed6ea17380ef",
+      "identityBoardSha256": "8afd7b201a87dc5afa0f9668b47f9b7469e0deeb884dd627e888461796633c78",
+      "generatedAt": "2026-07-21T23:03:42.928095+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f851e-7ecc-7cf0-bb30-9912ecc5d5c8/exec-650393bb-574b-48bf-a3a9-cb4841b962fe.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/raw/world-idle-2x4-v5.png",
+        "retainedExecutionOutputSha256": "2f6fe26e9dbefdd4be3c334d5e738617cd931a1d8e8c8d45b802721782b5dd76",
+        "editInputPath": "source/superseded-raw-history/world-idle-2x4-v4.png",
+        "editInputFileSha256": "289d5d8c0e6016aaa13482fbe549bca15f0b07535b2cbab1a125edb346c5d89e"
+      }
+    },
+    "portraitSheet": {
+      "fileSha256": "2abda06d3f827cb4b959757edb3e08d4c416d794849ff15472d0b8d725404323",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "portraitPromptPath": "prompts/portrait-2x2-v3-edge-safe.txt",
+      "portraitPromptSha256": "10ab037f37fffe3f93c210a705e27b5e2484b4281fcedff4151b245220cffe36",
+      "identityBoardSha256": "8afd7b201a87dc5afa0f9668b47f9b7469e0deeb884dd627e888461796633c78",
+      "generatedAt": "2026-07-21T23:17:32.057178+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f851e-7ecc-7cf0-bb30-9912ecc5d5c8/exec-c42f35c0-c772-4915-ad85-afe5bcc659bb.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/raw/portrait-2x2-v3.png",
+        "retainedExecutionOutputSha256": "2abda06d3f827cb4b959757edb3e08d4c416d794849ff15472d0b8d725404323",
+        "editInputPath": "source/superseded-raw-history/portrait-2x2-v2.png",
+        "editInputFileSha256": "588331704ecf8b436d54ce5ce3eccae03a98a11563a3a322a95701b31890e169"
+      }
+    }
+  }
+}

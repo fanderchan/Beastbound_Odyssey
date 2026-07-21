@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "built-in image_gen (model identifier not exposed)",
+  "generatedAt": "2026-07-22T00:02:03.358814+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "executionMode": "built-in image_gen",
+    "outputFormat": "PNG",
+    "modelIdentifierExposed": false,
+    "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no direction relabeling or duplication",
+    "no labels, dividers, shadows, or cropped subject pixels",
+    "no undocumented model identifier or invented generation parameter"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "d83adfd6edee481b128136e14152a82d49f9f6b4e6543f2f9018a94421f5eb57",
+      "promptPath": "prompts/identity-board-v1.txt",
+      "promptSha256": "78cdd6b2d61bf400e2c8793e1a06441083e3362aa8c3d6df0b6c23d7c74a5551",
+      "generatedAt": "2026-07-21T18:02:37.465673+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "not exposed in surviving tool record",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_riding_trainer_f_v1/source/raw/identity-board.png"
+      }
+    },
+    "worldSheet": {
+      "fileSha256": "cf5ab89075acb739098e2e1edb44f8d15fcdd01bbe587381a10f53bf05ab9de4",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "worldPromptPath": "prompts/world-idle-2x4-v3-northwest-repair.txt",
+      "worldPromptSha256": "677b8ab0dfa47e59a3263195d24aa1b10902695a84563486d1872b6cee6bbce0",
+      "identityBoardSha256": "d83adfd6edee481b128136e14152a82d49f9f6b4e6543f2f9018a94421f5eb57",
+      "generatedAt": "2026-07-22T00:02:03.358814+08:00",
+      "semanticCorrection": "The complete sheet was re-emitted after independently redrawing canonical cell 4 as northwest; visual review must bind the new complete-sheet hash.",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f851e-7ecc-7cf0-bb30-9912ecc5d5c8/exec-3f6a3616-4af6-4650-a380-10c0aec804e2.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_riding_trainer_f_v1/source/raw/world-idle-2x4-v3-northwest-repaired.png",
+        "retainedExecutionOutputSha256": "cf5ab89075acb739098e2e1edb44f8d15fcdd01bbe587381a10f53bf05ab9de4",
+        "editInputPath": "source/superseded-raw-history/world-idle-2x4.png",
+        "editInputFileSha256": "ca13adf905459fe7d2c87bb73ad6e0b64cfc904f0f85e60ec8b32df4fe5b57f3"
+      }
+    },
+    "portraitSheet": {
+      "fileSha256": "ef9f9183c11654de6594024c286f4e5149062d386f38f1c4f754e5f5d01686f2",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "portraitPromptPath": "prompts/portrait-2x2-v2-edge-safe.txt",
+      "portraitPromptSha256": "e52b56e2a289a49f31ef7e392680f1182d4da244c5c1db6790233a679277d4f2",
+      "identityBoardSha256": "d83adfd6edee481b128136e14152a82d49f9f6b4e6543f2f9018a94421f5eb57",
+      "generatedAt": "2026-07-21T23:20:44.834362+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f851e-7ecc-7cf0-bb30-9912ecc5d5c8/exec-39410145-46b4-467e-ae68-7b55eb9f4eec.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_riding_trainer_f_v1/source/raw/portrait-2x2-v2.png",
+        "retainedExecutionOutputSha256": "ef9f9183c11654de6594024c286f4e5149062d386f38f1c4f754e5f5d01686f2",
+        "editInputPath": "source/superseded-raw-history/portrait-2x2.png",
+        "editInputFileSha256": "fa14182cc764275fd181abfeba141e039724899f587b50e5558608daf0391ca4"
+      }
+    }
+  }
+}

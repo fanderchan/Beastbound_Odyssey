@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: Beastbound Odyssey NPC dialogue portrait 2x2 source-sheet edge-safety correction
+Input image: Image 1 is the edit target and binding source.
+Primary request: preserve the four riding-trainer busts exactly as shown and correct only the magenta source background. Replace every background-only pixel across the canvas with one perfectly flat, uninterrupted solid #FF00FF field. In particular, make the full outer 24-pixel border on the left, top, and right sides pure flat #FF00FF with no tint drift, residue, halo, texture, speck, line, or subject pixel. The visible subjects already sit away from those outer edges; do not move, resize, crop, redraw, recolor, or restyle them.
+Canvas and layout: preserve the exact 1254x1254 canvas, exact invisible 2-row by 2-column layout, and mandatory row-major states: neutral, speaking / smile, concerned. Preserve the current bottom bust crop and inner seam crop; do not add a divider.
+Identity and expression invariants: identical adult female riding trainer, same confident oval face, deep-brown high ponytail and bone rings, indigo shoulder cape, cream inner layer, ochre trim, bone whistle, pose, lighting, and expression in each cell. All subject pixels, silhouettes, antialiasing, and state semantics must remain visually unchanged.
+Background invariants: solid #FF00FF only; no gradient, compression texture, floor, shadow, glow, halo, checkerboard, border, frame, guide, label, watermark, or text.
+Avoid: regenerating a face, changing an expression, changing hair, clothing or whistle, shifting a bust, shrinking or enlarging a bust, adding padding by cropping the subject, any non-magenta pixel on the outer left/top/right border.

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: production 2D NPC directional sprite-sheet correction\nPrimary request: Edit ONLY the TOP ROW, SECOND CELL of this exact 2x4 sheet. Keep the canvas, flat magenta background, all other seven cells, character identity, rendering, outfit, colors, body height, feet baseline, scale and cell positions unchanged.\n\nThe current top-row second character incorrectly faces screen-right. Redraw only that one cell as SOUTHWEST / front-left three-quarter: her NOSE, FACE, CHEST AXIS, KNEES AND BOTH TOES must all point diagonally toward the LEFT EDGE OF THE CANVAS while still showing the FRONT of her face and tunic. We must see her right cheek/side as she turns toward screen-left. It must be the front-facing counterpart of the bottom-right southeast pose and must be clearly distinct from the pure west profile in top-row third cell.\n\nPreserve her exact adult female bank-keeper identity: warm brown skin, braided crown and low bun, gold bone hairpin, teal tunic, cream sleeves, gold trim, brown trousers and boots, counting belt, teal ledger under her own left forearm, abacus and coin pouch at her own right waist. Render prop placement honestly from the new viewpoint.\n\nDo NOT modify or regenerate any other cell. Do not mirror an existing cell. No text, labels, arrows, border, frame lines, shadow, scenery, extra person, or watermark. Background remains exactly uniform flat #FF00FF.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "ee35dd3a833ad102ef9484a0448ec31f55e293acc217dc8fccee1afde8a88167",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate direction cells",
+        "southwest must face the canvas left and north must show no face",
+        "no labels, arrows, borders, UI, watermark, numbers or scenery",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is a deterministic post-generation reference composed from the frozen v3 south, v3 north and neutral portrait cells after both accepted source sheets already existed. It was not a pre-generation canary, was not used to generate v3, and is not an owner approval record.",
+        "identityReferenceComposedAt": "2026-07-21T22:42:06+08:00"
+      },
+      "generatedAt": "2026-07-21T14:27:38+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: production dialogue portrait expression sheet for Beastbound Odyssey NPC\nInput images: Image 1 defines only the project's clean hand-painted HD 2D rendering language. Image 2 defines the exact adult female bank-keeper identity to preserve. Do not copy the novice hunter.\n\nCreate an exact 2-row by 2-column portrait sheet of the SAME adult female bank keeper from Image 2. Chest-up / waist-up dialogue bust, front three-quarter orientation facing slightly toward screen-right, same camera, crop, head size, body scale, clothing and lighting in all four cells. Preserve her calm oval face, warm brown skin, dark auburn braided crown and compact low bun, small gold-toned bone hairpin, deep teal structured wrap tunic, cream underlayer, restrained aged-gold geometric trim, broad leather counting belt, and closed teal ledger with gold corner clasp held close against her torso. No redesign, no age drift, no costume drift.\n\nEXACT EXPRESSION ORDER:\nTop-left NEUTRAL: composed attentive listening face, mouth closed.\nTop-right SPEAKING: natural mid-sentence mouth open, professional engaged brows, not shouting.\nBottom-left SMILE: warm confident welcoming smile, mouth gently closed or slightly open.\nBottom-right CONCERNED: mild thoughtful concern, brows drawn slightly inward, mouth closed; not angry, not crying.\n\nKeep the same head angle and shoulders in all cells; change only natural facial expression and tiny supporting eyebrow/head movement. Ledger and hands remain inside each cell; no speech bubble.\n\nComposition: exact invisible 2x2 equal grid, no borders or dividers. One bust centered in each cell, same shoulder width and eye line, central 70% safe area, generous padding, nothing crossing cell edges.\nStyle: original legally distinct Beastbound Odyssey clean HD 2D dialogue illustration, crisp warm outlines, controlled soft cel shading, low texture noise, expressive readable face; not pixel art, not 3D, not photorealistic.\nBackground: perfectly uniform flat solid #FF00FF over the entire sheet, no gradients, shadow, texture, floor, scenery, or lighting variation; never use magenta on the subject.\nNo text, numbers, labels, icons, UI, watermark, border, frame line, animal, weapon, extra person, detached object, or scenery.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "51e179e5f9ffdbdc7c88dd7484d8c8bf5f2ca33d3d288a9bb4325817d4816269",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate direction cells",
+        "southwest must face the canvas left and north must show no face",
+        "no labels, arrows, borders, UI, watermark, numbers or scenery",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is a deterministic post-generation reference composed from the frozen v3 south, v3 north and neutral portrait cells after both accepted source sheets already existed. It was not a pre-generation canary, was not used to generate v3, and is not an owner approval record.",
+        "identityReferenceComposedAt": "2026-07-21T22:42:06+08:00"
+      },
+      "generatedAt": "2026-07-21T14:27:38+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

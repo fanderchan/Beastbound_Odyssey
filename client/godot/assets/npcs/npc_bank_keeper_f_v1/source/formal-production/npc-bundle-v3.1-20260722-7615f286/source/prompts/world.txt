@@ -1,0 +1,9 @@
+Use case: precise-object-edit
+Asset type: production 2D NPC directional sprite-sheet correction
+Primary request: Edit ONLY the TOP ROW, SECOND CELL of this exact 2x4 sheet. Keep the canvas, flat magenta background, all other seven cells, character identity, rendering, outfit, colors, body height, feet baseline, scale and cell positions unchanged.
+
+The current top-row second character incorrectly faces screen-right. Redraw only that one cell as SOUTHWEST / front-left three-quarter: her NOSE, FACE, CHEST AXIS, KNEES AND BOTH TOES must all point diagonally toward the LEFT EDGE OF THE CANVAS while still showing the FRONT of her face and tunic. We must see her right cheek/side as she turns toward screen-left. It must be the front-facing counterpart of the bottom-right southeast pose and must be clearly distinct from the pure west profile in top-row third cell.
+
+Preserve her exact adult female bank-keeper identity: warm brown skin, braided crown and low bun, gold bone hairpin, teal tunic, cream sleeves, gold trim, brown trousers and boots, counting belt, teal ledger under her own left forearm, abacus and coin pouch at her own right waist. Render prop placement honestly from the new viewpoint.
+
+Do NOT modify or regenerate any other cell. Do not mirror an existing cell. No text, labels, arrows, border, frame lines, shadow, scenery, extra person, or watermark. Background remains exactly uniform flat #FF00FF.

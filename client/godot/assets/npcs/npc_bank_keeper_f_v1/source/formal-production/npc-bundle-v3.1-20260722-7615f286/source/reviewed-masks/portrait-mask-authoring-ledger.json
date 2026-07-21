@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "286310bce5a87c82bedffadf4afffe5ab6f649832405e268fc58d6cb41375b30",
+    "rawSheetDecodedRgbaByteSha256": "a093be830f79223fae3091fd54ccfb45bee009de389c17c0ded99484d43f2dc0",
+    "rawSheetGodotCanonicalRgbaSha256": "87363e8301724098ae3b4f16363f7fa19aafb9a3283e2465258ca46c217a78a7",
+    "rawSheetDecodedRgbaSha256": "87363e8301724098ae3b4f16363f7fa19aafb9a3283e2465258ca46c217a78a7",
+    "explicitMaskFileSha256": "7a13cf6c6b7d8f6a0edd796388b7c73324556f8b73755290c1743b1a5b9f0bb8",
+    "explicitMaskPixelSha256": "f395312d18e1e8a47e9c4e7434b1956fb4691028403ad45a5846843a2682ac75",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "reviewEvidence": [
+    "source/mask-review-v3.1-7615f286/portrait-component-review-01.png",
+    "source/mask-review-v3.1-7615f286/portrait-component-review-02.png",
+    "source/mask-review-v3.1-7615f286/portrait-component-review-03.png",
+    "source/mask-review-v3.1-7615f286/portrait-component-review-04.png"
+  ],
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "70354b521c43491b3473bbaa80f87ba33c4790b37f3450d090f84c70e91b11de",
+      "cellBbox": [
+        389,
+        211,
+        391,
+        214
+      ],
+      "sheetBbox": [
+        389,
+        211,
+        391,
+        214
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3f2c925c52a15b402ad32f66262d1e3f09c176259e4fe7843df9b8bf8aff00bb",
+      "cellBbox": [
+        208,
+        291,
+        209,
+        292
+      ],
+      "sheetBbox": [
+        208,
+        291,
+        209,
+        292
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7bbcd7972d13e497d3c087dea8123b0f6a8769864a0b0774be96c15a67984603",
+      "cellBbox": [
+        195,
+        524,
+        211,
+        563
+      ],
+      "sheetBbox": [
+        195,
+        524,
+        211,
+        563
+      ],
+      "pixelCount": 413,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "efc92e30cbf0275cd9dbbb9d155d5a041a6d25691a53fe42b1e72bf7e01b8e0f",
+      "cellBbox": [
+        197,
+        564,
+        198,
+        565
+      ],
+      "sheetBbox": [
+        197,
+        564,
+        198,
+        565
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f0d792943916bd862223c79e920c71f8870edd925c5ac5a0b2066fba92641d44",
+      "cellBbox": [
+        94,
+        24,
+        539,
+        603
+      ],
+      "sheetBbox": [
+        94,
+        24,
+        539,
+        603
+      ],
+      "pixelCount": 2642,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8f535c94a3a4f152ea65695a64ccebc1b6edb9c645edde16b9aa320da70db47d",
+      "cellBbox": [
+        388,
+        211,
+        390,
+        217
+      ],
+      "sheetBbox": [
+        388,
+        211,
+        390,
+        217
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c4f23693a92dc11f293457caa272814ebae882947b6d45df0a6697a84eeed114",
+      "cellBbox": [
+        194,
+        522,
+        212,
+        568
+      ],
+      "sheetBbox": [
+        194,
+        522,
+        212,
+        568
+      ],
+      "pixelCount": 138,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b39bd80f251650c0157ae3a9f5c629c855137398b39b0d3ae4cd04d69ec6a303",
+      "cellBbox": [
+        389,
+        218,
+        390,
+        220
+      ],
+      "sheetBbox": [
+        389,
+        218,
+        390,
+        220
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e04b81335919fda37ded513d9d866d19c7a39d293ab54ea26b8c0b5b09b5eef6",
+      "cellBbox": [
+        212,
+        292,
+        216,
+        295
+      ],
+      "sheetBbox": [
+        212,
+        292,
+        216,
+        295
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a31cb62d4696a5b989af6777d2a4f2cf22b7ca06bc77f8ceb6cbb32d93eacbbd",
+      "cellBbox": [
+        213,
+        295,
+        214,
+        296
+      ],
+      "sheetBbox": [
+        213,
+        295,
+        214,
+        296
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "eef4a5499ae043bebca05b18105c5fb80ba7611f9de1a0c57fe57cacc31dc703",
+      "cellBbox": [
+        358,
+        212,
+        359,
+        213
+      ],
+      "sheetBbox": [
+        985,
+        212,
+        986,
+        213
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "99860ce13ed414d414343e3d2c3afefa6becc082b1c364df7089915bb1b3744a",
+      "cellBbox": [
+        356,
+        213,
+        358,
+        216
+      ],
+      "sheetBbox": [
+        983,
+        213,
+        985,
+        216
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8d13aff005bbe24db4753fbf70205254e8c41d81707ec85cb8858d2c69781f33",
+      "cellBbox": [
+        358,
+        216,
+        359,
+        217
+      ],
+      "sheetBbox": [
+        985,
+        216,
+        986,
+        217
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "856e2bffab5181796f216ea3583547d95dd8563d184510da63838e33a4f3d54e",
+      "cellBbox": [
+        160,
+        525,
+        177,
+        564
+      ],
+      "sheetBbox": [
+        787,
+        525,
+        804,
+        564
+      ],
+      "pixelCount": 459,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8e33d7f93f63e43b6a8a316c3b8384159e5bfa5cbdda8471c2f6382afff88b6a",
+      "cellBbox": [
+        161,
+        565,
+        163,
+        567
+      ],
+      "sheetBbox": [
+        788,
+        565,
+        790,
+        567
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "353d3bff040a345d86a104fabb341862d5a80354214b111a417dccd38db26e8f",
+      "cellBbox": [
+        58,
+        26,
+        504,
+        604
+      ],
+      "sheetBbox": [
+        685,
+        26,
+        1131,
+        604
+      ],
+      "pixelCount": 1950,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "6095b8eaf1ca001c0e67f003ce93e771f8f9379ee5d1e7ab94472c1208082133",
+      "cellBbox": [
+        130,
+        602,
+        377,
+        604
+      ],
+      "sheetBbox": [
+        757,
+        602,
+        1004,
+        604
+      ],
+      "pixelCount": 273,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f9ecd8d028f864689c33b35ba86bfb70cc2eeb6596b86e806e06f7365854166e",
+      "cellBbox": [
+        386,
+        602,
+        438,
+        604
+      ],
+      "sheetBbox": [
+        1013,
+        602,
+        1065,
+        604
+      ],
+      "pixelCount": 65,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "6fea9e922fba5fb1124f7a3fdba4d8e24e5fb7957c12f8f2e164395fa64144cd",
+      "cellBbox": [
+        93,
+        603,
+        99,
+        604
+      ],
+      "sheetBbox": [
+        720,
+        603,
+        726,
+        604
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a44213a075335cc422f4e34e04054241e71e0cfe41ceec26fdb42a9a5d8a5575",
+      "cellBbox": [
+        380,
+        603,
+        381,
+        604
+      ],
+      "sheetBbox": [
+        1007,
+        603,
+        1008,
+        604
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "3d3bd130b9c0b10b4aed45e2c9f7b68a3460c1e8a09f7dfb0ffe2bd5f69b0c58",
+      "cellBbox": [
+        450,
+        603,
+        461,
+        604
+      ],
+      "sheetBbox": [
+        1077,
+        603,
+        1088,
+        604
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "dcfd356ec69cb40917b1a5f4cee59f80440dc110de52aeffea623763519643ee",
+      "cellBbox": [
+        355,
+        212,
+        357,
+        218
+      ],
+      "sheetBbox": [
+        982,
+        212,
+        984,
+        218
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "4dbf9b4b887b4bf398cf9112ae2f987bb8e44573148ccad323f57f437b8ef9e6",
+      "cellBbox": [
+        158,
+        523,
+        178,
+        569
+      ],
+      "sheetBbox": [
+        785,
+        523,
+        805,
+        569
+      ],
+      "pixelCount": 145,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3d51fbf97035c5588ba9fcff8f0f0d6d3c110434adf578603bc63760a480491c",
+      "cellBbox": [
+        378,
+        230,
+        379,
+        231
+      ],
+      "sheetBbox": [
+        378,
+        857,
+        379,
+        858
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "93e995348da015c7648cc0c450b80acc13694b9f788fe3cef86bd58d2453012e",
+      "cellBbox": [
+        197,
+        511,
+        213,
+        554
+      ],
+      "sheetBbox": [
+        197,
+        1138,
+        213,
+        1181
+      ],
+      "pixelCount": 444,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "57a4e904f8e853c70bd4af9e810a4ebf01de89b09ab5fce05f00b4efa8b497ab",
+      "cellBbox": [
+        95,
+        12,
+        541,
+        592
+      ],
+      "sheetBbox": [
+        95,
+        639,
+        541,
+        1219
+      ],
+      "pixelCount": 2426,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "62375c6d407f2d174223416066949f8372c7d9ec0c73d714ba95764a77c1d1ea",
+      "cellBbox": [
+        377,
+        227,
+        380,
+        230
+      ],
+      "sheetBbox": [
+        377,
+        854,
+        380,
+        857
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c07065fc04e91fb17191fe235d49d8b567133dd45f14e7b153aa759a63c28241",
+      "cellBbox": [
+        195,
+        510,
+        214,
+        556
+      ],
+      "sheetBbox": [
+        195,
+        1137,
+        214,
+        1183
+      ],
+      "pixelCount": 123,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e744a2f3a3105d3c019211ba8370f664760d2eb1f8a2d29bd7ebfd19fec24247",
+      "cellBbox": [
+        162,
+        511,
+        178,
+        553
+      ],
+      "sheetBbox": [
+        789,
+        1138,
+        805,
+        1180
+      ],
+      "pixelCount": 411,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "26a9e4d01b74d08d77178571bdac09ba37737de3d57ebcd457151718d66f2c74",
+      "cellBbox": [
+        164,
+        530,
+        165,
+        533
+      ],
+      "sheetBbox": [
+        791,
+        1157,
+        792,
+        1160
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "10fdefffc80ab53a9b8f520daa0271aaeab0897f1f4c06be368c044a385b2a5d",
+      "cellBbox": [
+        163,
+        553,
+        164,
+        554
+      ],
+      "sheetBbox": [
+        790,
+        1180,
+        791,
+        1181
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "10cdce7433d97ab5290a7105d6c59127591ac3eaaf1bcf4ff42b451d199738eb",
+      "cellBbox": [
+        61,
+        13,
+        506,
+        591
+      ],
+      "sheetBbox": [
+        688,
+        640,
+        1133,
+        1218
+      ],
+      "pixelCount": 2261,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "00d20e2cd75bdbf1d66a44b8f07df7dd99eb2d9141f416a0b1a5ffaf02b564b1",
+      "cellBbox": [
+        121,
+        589,
+        122,
+        590
+      ],
+      "sheetBbox": [
+        748,
+        1216,
+        749,
+        1217
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "44ab506f7d06d7a4c7ee02891264e8e147a274ff407a999ddf480dc2ed440e09",
+      "cellBbox": [
+        128,
+        589,
+        131,
+        590
+      ],
+      "sheetBbox": [
+        755,
+        1216,
+        758,
+        1217
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5808b4da1574bcc3e2c0f960fe0d987f121cbd6c811a9414444f174f85f6357b",
+      "cellBbox": [
+        97,
+        590,
+        101,
+        591
+      ],
+      "sheetBbox": [
+        724,
+        1217,
+        728,
+        1218
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "2aa03395347563a518845dc8dc1daf0772cb0691683b83e0ae82695d706437e5",
+      "cellBbox": [
+        161,
+        510,
+        180,
+        556
+      ],
+      "sheetBbox": [
+        788,
+        1137,
+        807,
+        1183
+      ],
+      "pixelCount": 158,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex exact raw-keep-soft component review",
+      "reviewedAt": "2026-07-22T02:48:28+08:00"
+    }
+  ]
+}

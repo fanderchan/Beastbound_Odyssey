@@ -1,0 +1,18 @@
+Use case: identity-preserve
+Asset type: production dialogue portrait expression sheet for Beastbound Odyssey NPC
+Input images: Image 1 defines only the project's clean hand-painted HD 2D rendering language. Image 2 defines the exact adult female bank-keeper identity to preserve. Do not copy the novice hunter.
+
+Create an exact 2-row by 2-column portrait sheet of the SAME adult female bank keeper from Image 2. Chest-up / waist-up dialogue bust, front three-quarter orientation facing slightly toward screen-right, same camera, crop, head size, body scale, clothing and lighting in all four cells. Preserve her calm oval face, warm brown skin, dark auburn braided crown and compact low bun, small gold-toned bone hairpin, deep teal structured wrap tunic, cream underlayer, restrained aged-gold geometric trim, broad leather counting belt, and closed teal ledger with gold corner clasp held close against her torso. No redesign, no age drift, no costume drift.
+
+EXACT EXPRESSION ORDER:
+Top-left NEUTRAL: composed attentive listening face, mouth closed.
+Top-right SPEAKING: natural mid-sentence mouth open, professional engaged brows, not shouting.
+Bottom-left SMILE: warm confident welcoming smile, mouth gently closed or slightly open.
+Bottom-right CONCERNED: mild thoughtful concern, brows drawn slightly inward, mouth closed; not angry, not crying.
+
+Keep the same head angle and shoulders in all cells; change only natural facial expression and tiny supporting eyebrow/head movement. Ledger and hands remain inside each cell; no speech bubble.
+
+Composition: exact invisible 2x2 equal grid, no borders or dividers. One bust centered in each cell, same shoulder width and eye line, central 70% safe area, generous padding, nothing crossing cell edges.
+Style: original legally distinct Beastbound Odyssey clean HD 2D dialogue illustration, crisp warm outlines, controlled soft cel shading, low texture noise, expressive readable face; not pixel art, not 3D, not photorealistic.
+Background: perfectly uniform flat solid #FF00FF over the entire sheet, no gradients, shadow, texture, floor, scenery, or lighting variation; never use magenta on the subject.
+No text, numbers, labels, icons, UI, watermark, border, frame line, animal, weapon, extra person, detached object, or scenery.

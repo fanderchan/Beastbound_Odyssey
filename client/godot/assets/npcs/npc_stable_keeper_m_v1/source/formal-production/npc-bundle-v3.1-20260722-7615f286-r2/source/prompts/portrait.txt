@@ -1,0 +1,19 @@
+Use case: identity-preserve whole-sheet regeneration with complete four-edge background safety
+Asset type: production dialogue portrait expression sheet for Beastbound Odyssey NPC
+Input images: Image 1 is the accepted stable-keeper portrait identity and four-expression composition reference. Image 2 is the accepted true-eight world sheet and reinforces the exact character identity and costume. Generate a new complete sheet; do not overwrite or directly paint either input.
+
+Create one exact 2-row by 2-column square portrait sheet of the SAME adult male stable keeper. Preserve his broad friendly square face, warm tan skin, dark brown hair tied in a short low knot, subtle short beard, deep olive hide tunic, warm brown leather apron upper section, ochre fur collar, bone clasp, and compact tan rope coil across the torso. Preserve the same original Beastbound Odyssey clean hand-painted HD 2D style, crisp warm outlines, controlled soft cel shading, proportions, facial identity, costume construction, and palette. No redesign, age drift, body drift, hairstyle drift, beard drift, costume drift, or accessory drift.
+
+EXACT ROW-MAJOR ORDER:
+Top-left NEUTRAL: attentive calm listening face, mouth closed.
+Top-right SPEAKING: natural mid-sentence mouth open, engaged brows, not shouting.
+Bottom-left SMILE: warm genuine welcoming smile, mouth gently closed or slightly open.
+Bottom-right CONCERNED: mild worried expression, brows drawn slightly inward, mouth closed; not angry and not crying.
+
+Use the same front three-quarter orientation facing slightly toward screen-left, same camera, head size, body scale, shoulder width, eye line, clothing placement, and lighting in all four cells. Change only the facial expression and tiny supporting eyebrow/head movement. Exact invisible equal 2x2 grid with NO visible divider, gutter, border, frame, line, or seam.
+
+CRITICAL COMPOSITION: make each waist-up bust smaller and place it fully inside the central 72% of its cell. No part of any subject may touch ANY cell edge. Leave a wide, clearly visible, uninterrupted flat-magenta moat around all four sides of every bust: at least about 10% of cell width at left and right, at least about 9% of cell height above the hair, and at least about 7% of cell height below the clothing/torso. The complete character silhouette, including hair, shoulder, arm, rope, clothing, outline, antialiasing and shadow, must end before the bottom edge. All four absolute image corners and every cell corner must contain only clean background. Do not crop the bust at the bottom; finish the waist-up silhouette cleanly above the cell bottom with background underneath.
+
+Background: one perfectly uniform, flat, opaque solid #FF00FF over the whole sheet. The exact same magenta must extend continuously behind and between subjects and to every pixel of the complete outer border and all cell corners. No vignette, gradient, near-magenta variation, darker bottom corners, compression residue, shadow, texture, noise, glow, floor, scenery, lighting variation, gutter, line, divider, border, frame, or seam. Never use magenta or near-magenta on the subject.
+
+No text, labels, arrows, icons, UI, watermark, animal, weapon, extra person, detached object, speech bubble, scenery, or decorative element. Output one complete square 2x2 PNG sheet, not four separate images.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Beastbound NPCs"
+  short_description: "Create reusable true-eight-direction NPC archetypes"
+  default_prompt: "Use $design-beastbound-npcs to design and validate a reusable Beastbound NPC archetype."

@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: production dialogue portrait expression sheet correction for Beastbound Odyssey
+
+Image 1 is the exact healer 2x2 portrait sheet to correct. Image 2 is the exact identity authority. Preserve the same original mature female village healer, her approximately 50-year-old face, warm-brown skin, hazel-brown eyes, gentle eye-corner lines, silver-gray long braid coiled into a low side bun on her own right rear side, sage-green rounded short cape, ivory scarf, pale sky-blue bindings, sealed herb tube, camera, crop, lighting, scale and rendering. Preserve the canonical row-major expressions: top-left neutral, top-right speaking, bottom-left warm smile, bottom-right mild professional concern.
+
+Correct the sheet layout so every cell has a clearly flat removable near-#FF00FF magenta safety band along the sheet OUTER edge and the cell TOP edge. Keep all subject pixels at least 16 source pixels away from the sheet's left and right outer edges and from each cell's top edge. The bust may intentionally crop only at each cell's bottom and at the internal vertical seam below 65% of cell height. Do not place hair, cloak, herb tube, or residual non-magenta art on the sheet outer edges. Preserve generous magenta space around the head and outer shoulder. Keep the invisible exact 2x2 grid and the same canvas size.
+
+Background must be a flat removable magenta chroma field with no gradient, floor, shadow, texture, divider line or seam decoration. No text, labels, arrows, UI, watermark, scenery, animal, second person, modern stethoscope, nurse cap, medical cross, magic, glow, halo, religion, open liquid or particles. Output lossless PNG.

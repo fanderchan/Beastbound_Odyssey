@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "stable_keeper_m_v1",
+  "appearanceId": "npc_stable_keeper_m_v1",
+  "displayName": "兽栏管理员·男",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "aa0b658600d66bb92401871bb27b7c6ea22a13fae092381cb4f2054ff2e78db5",
+    "decodedRgbaByteSha256": "f999291753539c3264ae2a370bde32b0abc9ef994462950999aa34d7884f4647",
+    "godotCanonicalRgbaSha256": "712c396709faf947e8c91b474f880dc4cd398f249bdece627d4f3b38945fe42b",
+    "decodedRgbaSha256": "712c396709faf947e8c91b474f880dc4cd398f249bdece627d4f3b38945fe42b",
+    "size": [
+      1600,
+      1000
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-21T23:19:40+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "d71ae10a8e2cc4e906e4aabccbbb9b4e3ec4f7f49c8531cb49d360b2da4e9e06",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "6e3b25204bfad335abcbf03a89cf846a741bd8759d5317987ffea29cea7b885c",
+        "explicitSheetMaskPixelSha256": "fa166ac4c271277244d06a16371085af8f9ce682b937f26b36c0360f1a9c824b",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "93ee62076e1281dcaaa87654802162e7280323aa583101c12f05220c5350bc84",
+        "reviewedComponentCount": 145
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "c54a0db3d8b14d8e06b2d46f17ab563265b4db1b33982318e3b1995e76967cb8",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "9ff1995d865ffdebafc48bc69cb8ce145a3e6eeea42770f28ee67d56bee42dc3",
+        "explicitSheetMaskPixelSha256": "d6bea841048d29bf19422bb5e86a6daec9db0f4a9dda1e906ae99d10a80ce865",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "4f458be9e367818b3f7d134886b3e93e8b93b3575bd2536f1f4ec6cf9824408b",
+        "reviewedComponentCount": 81
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; the identity board is a deterministic post-generation reference composed from frozen generated world and portrait source cells",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no external art asset input; the project-owned novice hunter board was used only as a style reference",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_stable_keeper_m_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

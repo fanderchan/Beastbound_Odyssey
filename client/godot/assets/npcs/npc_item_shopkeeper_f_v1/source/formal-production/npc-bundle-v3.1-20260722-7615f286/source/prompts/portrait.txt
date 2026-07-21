@@ -1,0 +1,9 @@
+Use case: identity-preserve
+Asset type: production dialogue portrait expression sheet for a Beastbound Odyssey shared NPC archetype
+Input image: the supplied item-shopkeeper identity board is the exact identity authority.
+
+Create an exact invisible 2x2 sheet of the same original adult female item shopkeeper, chest-up, front three-quarter facing slightly screen-left. Preserve exactly her approximately 38-45-year-old face, short sturdy adult presentation, warm-brown skin, deep-brown eyes, long dark-chestnut braid over her own right shoulder with two amber bone beads, mustard-orange short jacket with cream trim, cream blouse, muted brick-red neck scarf, and the same small visible apron/belt details. Same camera, crop, eye line, head size, shoulder width, body angle, lighting, line weight, and scale in every cell.
+
+Order: top-left neutral attentive and approachable with mouth closed; top-right speaking naturally mid-sentence with a readable but modest open mouth, not shouting; bottom-left warm friendly smile; bottom-right mild practical concern with subtly furrowed brows and closed mouth, not angry, grieving, or crying. Change only the expression and tiny supporting eyebrow movement.
+
+Exact invisible 2x2 grid with no borders or dividers, central 68% safe area, generous uninterrupted flat-magenta padding, and nothing crossing cells. Perfectly uniform flat #FF00FF chroma-key background. No text, labels, arrows, UI, watermark, ground, shadow, scenery, animal, second person, detached prop, coins, ledger, abacus, weapon, magic, glow, magenta clothing, photorealism, 3D render, pixel art, child proportions, cropped forehead, or cropped shoulders.

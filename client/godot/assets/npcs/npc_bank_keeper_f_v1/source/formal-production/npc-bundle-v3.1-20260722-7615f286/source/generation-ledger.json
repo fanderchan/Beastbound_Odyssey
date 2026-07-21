@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-21T14:27:38+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [
+      2,
+      4
+    ],
+    "portraitGrid": [
+      2,
+      2
+    ],
+    "modelParametersExposed": false,
+    "identityBoardRelationship": "identity-board.png is a deterministic post-generation reference composed from the frozen v3 south, v3 north and neutral portrait cells after both accepted source sheets already existed. It was not a pre-generation canary, was not used to generate v3, and is not an owner approval record.",
+    "identityReferenceComposedAt": "2026-07-21T22:42:06+08:00"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate direction cells",
+    "southwest must face the canvas left and north must show no face",
+    "no labels, arrows, borders, UI, watermark, numbers or scenery",
+    "no cropped subject or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+      "relationship": "post-generation archival identity reference mechanically composed from already generated source cells; not a generation input and not owner-approved"
+    },
+    "worldSheet": {
+      "fileSha256": "93c35f959eeba4e7aa5dd3f85d4546e85c8edff9edbfb9fbb4c65c912b619364",
+      "worldPromptSha256": "ee35dd3a833ad102ef9484a0448ec31f55e293acc217dc8fccee1afde8a88167",
+      "identityBoardSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+      "identityReferenceRole": "post-generation bundle identity reference; not a world generation input",
+      "parentRejectedFileSha256": "064617d378218841f21930beb6b9c5fbd12d547c0d25e8112f8dc2f938fe4206",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    },
+    "portraitSheet": {
+      "fileSha256": "286310bce5a87c82bedffadf4afffe5ab6f649832405e268fc58d6cb41375b30",
+      "portraitPromptSha256": "51e179e5f9ffdbdc7c88dd7484d8c8bf5f2ca33d3d288a9bb4325817d4816269",
+      "identityBoardSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+      "identityReferenceRole": "post-generation bundle identity reference; portrait generation referenced the accepted v3 world source instead",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    }
+  },
+  "observedBackgroundFact": "The opaque generated sheets contain a spatially varying near-magenta backdrop rather than exact uniform #FF00FF; the builder must measure and archive a border-connected mask instead of claiming exact-key input."
+}

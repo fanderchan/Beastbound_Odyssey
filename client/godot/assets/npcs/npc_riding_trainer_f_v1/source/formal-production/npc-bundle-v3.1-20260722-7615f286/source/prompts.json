@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey static NPC true-eight 2x4 world sheet semantic direction repair\nInput image: Image 1 is the accepted riding-trainer world sheet and the binding source. Preserve the exact canvas, style, identity, cell layout, scale, lighting, and all seven already-correct figures.\nPrimary request: redraw only the fourth character in the top row, the top-right invisible cell. That character is currently another northeast-facing rear three-quarter view. Replace it with a genuinely independently authored northwest-facing rear three-quarter view of the exact same female riding trainer. Do not mirror, rotate, duplicate, relabel, move, resize, repaint, or regenerate any of the other seven characters.\nMandatory direction semantics for the corrected fourth cell: her back is dominant; her whole movement/body axis aims toward screen-left and up; the back of the indigo cape and shoulder line rotate toward screen-left; the nose, chest axis, hips, knees, boots, and toes all consistently point toward screen-left/up. Any visible face profile belongs on the screen-left side of the head. This must be visually opposite in facing from the sixth character, which remains the northeast-facing rear three-quarter view aimed toward screen-right/up.\nIdentity lock: same adult female riding trainer, same confident oval face, warm medium-brown skin, deep-brown high ponytail with the same small pale bone rings, short indigo shoulder cape, warm-ochre layered waist wrap, cream trousers, dark brown knee boots, matching forearm guards and training gloves, neck bone whistle, and compact rolled saddle blanket. Preserve every prop on the same anatomical side of her body as the accepted identity and sheet; do not solve direction by swapping left/right equipment.\nCanvas and layout: preserve exact 1536x1024 dimensions and the exact invisible 2-row by 4-column grid. Keep the corrected figure centered in its existing fourth cell with the same apparent height, foot baseline, empty magenta padding, and rendering density as the other seven. Keep the background as the same plain magenta source field with no divider, guide, shadow, label, text, watermark, or scene.\nHard invariants: canonical row-major meaning remains south, southwest, west, northwest / north, northeast, east, southeast. Only cell 4 changes. No runtime or offline mirroring. No direction relabeling. No identity drift. No added or removed prop. No pose/action change beyond the necessary facing correction.\nAvoid: another northeast view, face or toes pointing screen-right, front-dominant view, strict side profile, complete back duplicate, mirrored source pixels, changed ponytail, changed blanket side, extra person, pet, mount, whip, spear, missing limbs, cropped silhouette, shadow ellipse, border, text.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "677b8ab0dfa47e59a3263195d24aa1b10902695a84563486d1872b6cee6bbce0",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no direction relabeling or duplication",
+        "no labels, dividers, shadows, or cropped subject pixels",
+        "no undocumented model identifier or invented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "built-in image_gen (model identifier not exposed)",
+      "parameters": {
+        "executionMode": "built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+      },
+      "generatedAt": "2026-07-22T00:02:03.358814+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey NPC dialogue portrait 2x2 source-sheet edge-safety correction\nInput image: Image 1 is the edit target and binding source.\nPrimary request: preserve the four riding-trainer busts exactly as shown and correct only the magenta source background. Replace every background-only pixel across the canvas with one perfectly flat, uninterrupted solid #FF00FF field. In particular, make the full outer 24-pixel border on the left, top, and right sides pure flat #FF00FF with no tint drift, residue, halo, texture, speck, line, or subject pixel. The visible subjects already sit away from those outer edges; do not move, resize, crop, redraw, recolor, or restyle them.\nCanvas and layout: preserve the exact 1254x1254 canvas, exact invisible 2-row by 2-column layout, and mandatory row-major states: neutral, speaking / smile, concerned. Preserve the current bottom bust crop and inner seam crop; do not add a divider.\nIdentity and expression invariants: identical adult female riding trainer, same confident oval face, deep-brown high ponytail and bone rings, indigo shoulder cape, cream inner layer, ochre trim, bone whistle, pose, lighting, and expression in each cell. All subject pixels, silhouettes, antialiasing, and state semantics must remain visually unchanged.\nBackground invariants: solid #FF00FF only; no gradient, compression texture, floor, shadow, glow, halo, checkerboard, border, frame, guide, label, watermark, or text.\nAvoid: regenerating a face, changing an expression, changing hair, clothing or whistle, shifting a bust, shrinking or enlarging a bust, adding padding by cropping the subject, any non-magenta pixel on the outer left/top/right border.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "e52b56e2a289a49f31ef7e392680f1182d4da244c5c1db6790233a679277d4f2",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no direction relabeling or duplication",
+        "no labels, dividers, shadows, or cropped subject pixels",
+        "no undocumented model identifier or invented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "built-in image_gen (model identifier not exposed)",
+      "parameters": {
+        "executionMode": "built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+      },
+      "generatedAt": "2026-07-22T00:02:03.358814+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

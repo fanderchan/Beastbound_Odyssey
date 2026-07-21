@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "item_shopkeeper_f_v1",
+  "appearanceId": "npc_item_shopkeeper_f_v1",
+  "displayName": "杂货商·女",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "a4fabeccc6e2a69cbe973b92f110bba5f17902b16fd6f26d7a318423f70702f4",
+    "decodedRgbaByteSha256": "1fe624d13623837e77ed956ecad3d93422a47968b4bf5f27a179954fe725dfa0",
+    "godotCanonicalRgbaSha256": "6d357d6479bdd881e147229b8a6922a331a776935e12420dad935e471c91d804",
+    "decodedRgbaSha256": "6d357d6479bdd881e147229b8a6922a331a776935e12420dad935e471c91d804",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+    "generatedAt": "2026-07-21T23:09:40+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "7dcc26af275100fc9d91be2792f2b0d7a19b0b81f530a41517351823754e472f",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "7ae69caf4f8660ba521a75eb02e85400aa002ff83444525ad6107664bb9934b4",
+        "explicitSheetMaskPixelSha256": "1f0f28090ec2feaf6888a43b9005d7719df28d371800f7f3d0eee9a8ad1fc5aa",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "ba537083d6e994895f654b5ec5843a13f590f9490504dcf9eedcc054fd77d6e1",
+        "reviewedComponentCount": 78
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "6fdbaa44bdc577f863305a09e8d1f6eeef72d95b2070a834ef4b7bb386737869",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "52357ccf65022b509aa24e5724329b32827eb6612b52f44690d812bce7ab1302",
+        "explicitSheetMaskPixelSha256": "c03abda2152ee8e7054722a42d6ef5dd38c433582c4644a65d8ad95f063d5c71",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "2ff66a2874e6757f2ae55419a7da903109fbc0e02c08f02aa6dc978aec2249d7",
+        "reviewedComponentCount": 57
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen from a newly authored item-shopkeeper brief",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output; project-owned stable-keeper and bank-keeper identity boards were used only as rendering-style references, not copied subjects",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_item_shopkeeper_f_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

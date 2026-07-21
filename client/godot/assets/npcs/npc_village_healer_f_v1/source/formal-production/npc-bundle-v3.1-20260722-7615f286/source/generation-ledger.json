@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-22T01:53:41+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "modelParametersExposed": false,
+    "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; the accepted grid-safe world v4 is a hard-edge chroma regeneration using that board with the rejected world v3 as direction reference only, and the accepted portrait v2 uses the same board."
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "north must be a complete back view with no visible face",
+    "no modern medical device, nurse cap, medical cross, magic or religious symbol",
+    "no labels, arrows, borders, UI, watermark or scenery",
+    "no cropped world subject or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+      "identityPromptSha256": "56e8f654eb62d18ea73a58f81391fbee6fec4df91f9601e963ff9f5c13d00731",
+      "generatedAt": "2026-07-21T17:57:09+08:00",
+      "relationship": "separately generated identity authority"
+    },
+    "worldSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "8dc64119f97fe6240bd6b83852ce0a15ed60f9543c3b0d6bf37558c34f6a54e0",
+      "worldPromptSha256": "bfab22a6bbaaf430976a6f9223602764e72aac99a9e0a16d73c1cc2175847d10",
+      "identityBoardSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+      "generatedAt": "2026-07-22T01:53:41+08:00",
+      "parentRejectedPath": "source/rejected/world-idle-2x4-v3-midline-boundary-touch.png",
+      "parentRejectedFileSha256": "c58c8817bde2666ac08c4814eb3b36166bcdcb6fcdb42760fcef463651915e8e"
+    },
+    "portraitSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "e9fad1c81d2a44d8cb75625b7006790efe10c21cd36ab1f60433d1f7016e2ca4",
+      "portraitPromptSha256": "a15d7450770fc1fb9ded80ebc471b43ed8873beba4304e8b2bbf840bf56728ca",
+      "identityBoardSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+      "generatedAt": "2026-07-21T23:05:59+08:00",
+      "parentRejectedPath": "source/rejected/portrait-2x2-v1-outer-edge-background-residue.png",
+      "parentRejectedFileSha256": "55459d9af84472ddbdc66da0a7832c189c7ad44e73e50a3f9baa76735136b55f"
+    }
+  },
+  "observedBackgroundFact": "All opaque generated sheets contain a spatially varying near-magenta backdrop rather than guaranteed exact #FF00FF; formal removal is pending rebuild under the latest frozen residual-key-aware contract with component review and mask-bounded repair."
+}

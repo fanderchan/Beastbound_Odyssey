@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_npc_art_bundle.py",
+  "status": "pass",
+  "scope": "deterministic_structure_and_pixel_risk_only",
+  "checks": {
+    "worldGrid": {
+      "status": "pass",
+      "sourceMode": "opaque-chroma",
+      "rows": 2,
+      "cols": 4,
+      "order": [
+        "south",
+        "southwest",
+        "west",
+        "northwest",
+        "north",
+        "northeast",
+        "east",
+        "southeast"
+      ],
+      "boundaries": {
+        "x": [
+          0,
+          384,
+          768,
+          1152,
+          1536
+        ],
+        "y": [
+          0,
+          512,
+          1024
+        ]
+      },
+      "visibleHeights": [
+        424,
+        423,
+        419,
+        412,
+        411,
+        407,
+        411,
+        410
+      ],
+      "maximumVisibleHeightDrift": 0.04176904,
+      "maximumAllowedVisibleHeightDrift": 0.15,
+      "explicitMaskReview": true,
+      "classifierEnclosedCandidatePixels": 2019,
+      "classifierEnclosedComponentCount": 37,
+      "classifierAdjacentFringeCandidatePixels": 16063,
+      "classifierAdjacentFringeComponentCount": 8,
+      "classifierReviewedOuterBackgroundHoleCandidatePixels": 1676,
+      "classifierReviewedOuterBackgroundHoleComponentCount": 32,
+      "classifierResidualKeyColorCandidatePixels": 194,
+      "classifierResidualKeyColorComponentCount": 68,
+      "reviewedBackgroundHolePixelCount": 3695,
+      "reviewedRetainedSubjectPixelCount": 0,
+      "reviewedBackgroundFringePixelCount": 16063,
+      "reviewedOuterBackgroundHolePixelCount": 1676,
+      "reviewedResidualKeySpillPixelCount": 121,
+      "reviewedRetainedAuthoredColorPixelCount": 73,
+      "sheetAlphaStats": {
+        "totalPixelCount": 1572864,
+        "transparentPixelCount": 0,
+        "partialAlphaPixelCount": 0,
+        "opaquePixelCount": 1572864
+      }
+    },
+    "portraitGrid": {
+      "status": "pass",
+      "sourceMode": "opaque-chroma",
+      "rows": 2,
+      "cols": 2,
+      "order": [
+        "neutral",
+        "speaking",
+        "smile",
+        "concerned"
+      ],
+      "boundaries": {
+        "x": [
+          0,
+          627,
+          1254
+        ],
+        "y": [
+          0,
+          627,
+          1254
+        ]
+      },
+      "visibleHeights": [
+        481,
+        481,
+        477,
+        475
+      ],
+      "maximumVisibleHeightDrift": 0.01263158,
+      "maximumAllowedVisibleHeightDrift": 0.15,
+      "explicitMaskReview": true,
+      "classifierEnclosedCandidatePixels": 53,
+      "classifierEnclosedComponentCount": 24,
+      "classifierAdjacentFringeCandidatePixels": 11220,
+      "classifierAdjacentFringeComponentCount": 4,
+      "classifierReviewedOuterBackgroundHoleCandidatePixels": 133,
+      "classifierReviewedOuterBackgroundHoleComponentCount": 15,
+      "classifierResidualKeyColorCandidatePixels": 84,
+      "classifierResidualKeyColorComponentCount": 38,
+      "reviewedBackgroundHolePixelCount": 186,
+      "reviewedRetainedSubjectPixelCount": 0,
+      "reviewedBackgroundFringePixelCount": 11220,
+      "reviewedOuterBackgroundHolePixelCount": 133,
+      "reviewedResidualKeySpillPixelCount": 65,
+      "reviewedRetainedAuthoredColorPixelCount": 19,
+      "sheetAlphaStats": {
+        "totalPixelCount": 1572516,
+        "transparentPixelCount": 0,
+        "partialAlphaPixelCount": 0,
+        "opaquePixelCount": 1572516
+      }
+    },
+    "worldFrameCount": {
+      "status": "pass",
+      "actual": 8,
+      "expected": 8
+    },
+    "portraitFrameCount": {
+      "status": "pass",
+      "actual": 4,
+      "expected": 4
+    },
+    "outputDimensions": {
+      "status": "pass",
+      "world": [
+        256,
+        256
+      ],
+      "portraits": [
+        512,
+        512
+      ]
+    },
+    "alphaBoundsAndTransparency": {
+      "status": "pass"
+    },
+    "maskBoundedSourceProcessing": {
+      "status": "pass",
+      "operations": [
+        "recorded_border_connected_chroma_v1",
+        "genuine_transparent_alpha_preservation_v1"
+      ],
+      "reviewOperation": "reviewed_chroma_components_v3_1",
+      "eligibilityMaskPixelCount": 2207626,
+      "changedPixelCount": 2207626,
+      "changedPixelMasks": [
+        {
+          "group": "world",
+          "slot": "south",
+          "pixelSha256": "de128849fe5c7521998c30b922d92e011e6cd7a6a67f4e84784956ff5e19069b",
+          "changedPixelCount": 139816
+        },
+        {
+          "group": "world",
+          "slot": "southwest",
+          "pixelSha256": "22f66a93c0aefe3f6e61cdbc93cbd07cdeaff071aaa5466fd7256f28f2cba159",
+          "changedPixelCount": 144175
+        },
+        {
+          "group": "world",
+          "slot": "west",
+          "pixelSha256": "b299d2be720682c07b9686781c1ca5784272169b7eeec12929b837f2029fbe6e",
+          "changedPixelCount": 159688
+        },
+        {
+          "group": "world",
+          "slot": "northwest",
+          "pixelSha256": "9246c247a61bd792f20ae0771483be795d64ff684b5de38f276d7253cfa1b8b5",
+          "changedPixelCount": 147738
+        },
+        {
+          "group": "world",
+          "slot": "north",
+          "pixelSha256": "a2fc6c27674f3372a39774a593b22f7f95178aadd3dc3c899e99bd5e5436f589",
+          "changedPixelCount": 143769
+        },
+        {
+          "group": "world",
+          "slot": "northeast",
+          "pixelSha256": "c198b30eac010ea853ef2cf793361a4637aefb7f0de594d2a1008f506544294e",
+          "changedPixelCount": 149456
+        },
+        {
+          "group": "world",
+          "slot": "east",
+          "pixelSha256": "c79fdbde62551523f86da9b57234c3a192f0354880d81f0e307012a1f99d9ace",
+          "changedPixelCount": 162845
+        },
+        {
+          "group": "world",
+          "slot": "southeast",
+          "pixelSha256": "abc252442adc152b8bdb1e8d44573dfd6355f265c31e250a65c0d06fa305835d",
+          "changedPixelCount": 147753
+        },
+        {
+          "group": "portrait",
+          "slot": "neutral",
+          "pixelSha256": "02fcd0bc2f19a0eb158dea024bff52dfab955967232fc1a02fbc1d9ad43a5b55",
+          "changedPixelCount": 250794
+        },
+        {
+          "group": "portrait",
+          "slot": "speaking",
+          "pixelSha256": "12827f74146b38a4af127a42c99d9f60cfe124f262b0f6ab977f3835121fad5d",
+          "changedPixelCount": 251778
+        },
+        {
+          "group": "portrait",
+          "slot": "smile",
+          "pixelSha256": "cf9056e06a2890b763582e39c925311fa5729a38ddf95c3f688e597bc58ac621",
+          "changedPixelCount": 254104
+        },
+        {
+          "group": "portrait",
+          "slot": "concerned",
+          "pixelSha256": "c7485e529b72b5d41fb32589baa2fcbd69e9f748b1533185818ab7e34c64261f",
+          "changedPixelCount": 255710
+        }
+      ],
+      "classifierEnclosedCandidatePixels": 2072,
+      "classifierAdjacentFringeCandidatePixels": 27283,
+      "classifierResidualKeyColorCandidatePixels": 278,
+      "reviewedBackgroundHolePixelCount": 3881,
+      "reviewedBackgroundFringePixelCount": 27283,
+      "reviewedOuterBackgroundHolePixelCount": 1809,
+      "reviewedRetainedSubjectPixelCount": 0,
+      "reviewedResidualKeySpillPixelCount": 186,
+      "reviewedRetainedAuthoredColorPixelCount": 92,
+      "ambiguousEnclosedCandidatePixels": 0,
+      "unreviewedEnclosedCandidatePixels": 0,
+      "unreviewedResidualKeyColorCandidatePixels": 0,
+      "postMaskGlobalColorDeletion": false
+    },
+    "staticDetachedForeground": {
+      "status": "pass",
+      "operation": "static_detached_foreground_v1",
+      "connectivity": 4,
+      "alphaThresholdInclusive": 16,
+      "minimumBlockingDetachedPixelCount": 128,
+      "processedBlockingComponentCount": 0,
+      "runtimeBlockingComponentCount": 0,
+      "automaticDeletionApplied": false
+    },
+    "distinctFrameRisks": {
+      "status": "pass",
+      "worldExactDuplicatePairs": [],
+      "portraitExactDuplicatePairs": [],
+      "worldExactHorizontalMirrorPairs": [],
+      "worldExactVerticalMirrorPairs": [],
+      "nearVisualDistanceLimit": 0.007,
+      "worldNearDuplicatePairs": [],
+      "worldNearHorizontalMirrorPairs": [],
+      "worldNearVerticalMirrorPairs": [],
+      "semanticDirectionAutomaticallyApproved": false,
+      "blindDirectionReviewRequired": true
+    }
+  },
+  "directionReview": {
+    "automaticallyApproved": false,
+    "status": "blind_visual_review_required",
+    "reason": "Hashes can reject exact duplicates and mirrors but cannot infer whether a non-identical silhouette faces the requested direction."
+  }
+}

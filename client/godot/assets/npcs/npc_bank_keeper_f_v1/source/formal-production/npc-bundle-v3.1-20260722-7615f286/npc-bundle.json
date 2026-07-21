@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "bank_keeper_f_v1",
+  "appearanceId": "npc_bank_keeper_f_v1",
+  "displayName": "银行管理员·女",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+    "decodedRgbaByteSha256": "5626225b6e2f084538b57129ea0d8425eeff46c831acc6fb2a28c4d12ee6f72e",
+    "godotCanonicalRgbaSha256": "1b0fb05b00e5413d6cd7d464381f6af1505c549c97c658d3f26f1ffd1209e347",
+    "decodedRgbaSha256": "1b0fb05b00e5413d6cd7d464381f6af1505c549c97c658d3f26f1ffd1209e347",
+    "size": [
+      1600,
+      1000
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-21T14:27:38+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "93c35f959eeba4e7aa5dd3f85d4546e85c8edff9edbfb9fbb4c65c912b619364",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "9645fee663fbdcba63a8a4956fc64a1e539a032741f899bbf800aef9dcfbfb16",
+        "explicitSheetMaskPixelSha256": "051918ec420a748994d69eb337563079835b5135ccd14635bd75782c124ed918",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "3cfdd8b69f58d00b20b2f5e4f10c4f03e6e5cf230016a75b1ebf3607a2a4450f",
+        "reviewedComponentCount": 60
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "286310bce5a87c82bedffadf4afffe5ab6f649832405e268fc58d6cb41375b30",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "7a13cf6c6b7d8f6a0edd796388b7c73324556f8b73755290c1743b1a5b9f0bb8",
+        "explicitSheetMaskPixelSha256": "f395312d18e1e8a47e9c4e7434b1956fb4691028403ad45a5846843a2682ac75",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "d26707860e9320ecc082bd5f2debc03f6cc62d4a7fa553c87196203a9aa151a7",
+        "reviewedComponentCount": 36
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; accepted v3 is a targeted image_gen direction correction and not an offline mirror; the identity board is a deterministic post-generation reference composed from frozen generated source cells",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no external art asset input; the project-owned novice hunter board was used only as a style reference",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_bank_keeper_f_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

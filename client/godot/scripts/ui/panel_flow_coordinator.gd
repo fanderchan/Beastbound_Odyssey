@@ -388,6 +388,12 @@ var dialog_panel:
 	set(value):
 		host.dialog_panel = value
 
+var dialog_portrait_rect:
+	get:
+		return host.dialog_portrait_rect
+	set(value):
+		host.dialog_portrait_rect = value
+
 var status_label:
 	get:
 		return host.status_label
@@ -8317,21 +8323,42 @@ func _build_hud() -> void:
 	dialog_panel = _panel_container("DialogPanel")
 	dialog_panel.visible = false
 	dialog_panel.z_index = 48
+	var dialog_row = HBoxContainer.new()
+	dialog_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialog_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog_row.add_theme_constant_override("separation", 12)
+	dialog_panel.add_child(dialog_row)
+	dialog_portrait_rect = TextureRect.new()
+	dialog_portrait_rect.name = "DialogPortrait"
+	dialog_portrait_rect.custom_minimum_size = Vector2(118, 174)
+	dialog_portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	dialog_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	dialog_portrait_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dialog_portrait_rect.visible = false
+	dialog_row.add_child(dialog_portrait_rect)
 	var dialog_column = VBoxContainer.new()
 	dialog_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dialog_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	dialog_column.add_theme_constant_override("separation", 8)
-	dialog_panel.add_child(dialog_column)
+	dialog_row.add_child(dialog_column)
 	dialog_name_label = Label.new()
 	dialog_name_label.name = "DialogName"
 	dialog_name_label.add_theme_font_size_override("font_size", 20)
 	dialog_column.add_child(dialog_name_label)
+	var dialog_body_scroll = ScrollContainer.new()
+	dialog_body_scroll.name = "DialogBodyScroll"
+	dialog_body_scroll.custom_minimum_size = Vector2(0, 72)
+	dialog_body_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialog_body_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dialog_body_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	dialog_body_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	dialog_column.add_child(dialog_body_scroll)
 	dialog_body_label = Label.new()
 	dialog_body_label.name = "DialogBody"
 	dialog_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	dialog_body_label.custom_minimum_size = Vector2(0, 72)
+	dialog_body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dialog_body_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	dialog_column.add_child(dialog_body_label)
+	dialog_body_scroll.add_child(dialog_body_label)
 	dialog_button_row = HBoxContainer.new()
 	dialog_button_row.alignment = BoxContainer.ALIGNMENT_END
 	dialog_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL

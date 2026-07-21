@@ -1806,7 +1806,7 @@ func _run_auto_npc_interaction_check() -> void:
 	var quest_was_intro = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_intro_talk"
 	host._confirm_dialog_action()
 	await host.get_tree().process_frame
-	var quest_advanced = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_bank_intro"
+	var quest_advanced = PlayerProgressModel.active_quest_id(host.player_profile) == "quest_open_task_panel"
 	var quest_log_ok = host.world_log_message.find("完成任务「[1] 认识训练师」") >= 0
 	var player_close = false
 	if trainer_found:
@@ -1917,11 +1917,7 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var bank_primary_ok = host.bank_panel != null and host.bank_panel.visible and not host._dialog_is_open()
 	host._close_bank_panel()
 
-	var intro_event = PlayerProgressModel.record_quest_event(PlayerProgressModel.default_profile(), {
-		"type": "talk",
-		"targetId": "trainer",
-	})
-	host.player_profile = PlayerProgressModel.claim_active_quest(intro_event.get("profile", {}) as Dictionary).get("profile", {})
+	host.player_profile = host._profile_with_active_quest("quest_bank_intro")
 	host._open_interaction_dialog(bank_keeper)
 	await host.get_tree().process_frame
 	var bank_task_options_ok = (
@@ -1971,7 +1967,7 @@ func _run_auto_stable_facility_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 
 	host.pet_selected_instance_id = "pet_bui_tough"
@@ -2022,7 +2018,7 @@ func _run_auto_stable_facility_check() -> void:
 	var village_withdrawn = str(withdrawn_pet.get("state", "")) == PlayerProgressModel.PET_STATE_STANDBY
 	host._close_pet_panel()
 
-	host.player_profile = PlayerProgressModel.with_unlocked_ability(PlayerProgressModel.default_profile(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
+	host.player_profile = PlayerProgressModel.with_unlocked_ability(_qa_bui_pet_profile(), PlayerProgressModel.ABILITY_REMOTE_STABLE)
 	host.pet_selected_instance_id = "pet_bui_tough"
 	host._open_pet_panel(false)
 	await host.get_tree().process_frame

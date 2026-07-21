@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: stylized-concept\nAsset type: production 2D overworld NPC directional idle sprite sheet for Beastbound Odyssey\nInput image: use the local novice-hunter identity board only as a visual reference for the project's clean hand-painted HD 2D game rendering, warm outlines, readable shapes, and slightly compact adult proportions. Do not copy that character, costume, face, hair, or pose.\n\nCreate one entirely original ADULT MALE STABLE KEEPER NPC as an exact 2-row by 4-column true-eight-direction idle sheet. One character only, same identity and exact scale in all eight cells, neutral standing idle, full body visible.\n\nIdentity lock: sturdy adult male, broad friendly square face, dark brown hair tied into a short low knot, subtle short beard, deep olive sleeveless hide tunic, warm brown leather work apron, muted ochre fur trim, heavy brown boots, small bone clasp. A compact coiled tan lead rope is secured across his torso and a closed leather feed satchel sits on his own right hip. These stable-keeper props must remain attached to the body, readable, and consistent from every angle. Palette is olive, earth brown, tan, muted ochre. No animal, no weapon.\n\nMANDATORY GRID ORDER:\nTop row left to right: SOUTH = exact front view facing straight toward viewer/down-screen; SOUTHWEST = front-left three-quarter view facing down-left; WEST = exact pure left-facing side profile; NORTHWEST = rear-left three-quarter view facing up-left.\nBottom row left to right: NORTH = exact complete rear view facing straight away/up-screen, show the full back of head, tunic, apron and boots, absolutely no face and no eye visible; NORTHEAST = rear-right three-quarter view facing up-right, clearly different from both north and northwest; EAST = exact pure right-facing side profile; SOUTHEAST = front-right three-quarter view facing down-right.\n\nEvery direction must be independently authored. Do not mirror, duplicate, rotate, or reuse another cell. West and east must be true opposite side profiles. Northwest and northeast must visibly expose opposite rear shoulders. South and north must be exact front/back, not diagonal. Preserve the feed satchel on the character's own right hip and preserve the rope routing correctly through changes of viewpoint.\n\nComposition: exact 2x4 invisible grid, no visible dividers, no borders. Character centered in each cell, same full-body height, same ground/feet baseline, body fills only central 60-65% of each cell with generous empty padding. Nothing may cross a cell edge. No cast shadow or floor ellipse.\n\nStyle: original Stone-Age-inspired but legally distinct Beastbound Odyssey artwork; clean HD 2D sprite illustration, crisp warm dark outlines, controlled soft cel shading, low texture noise, adult anatomy with slightly compact game proportions, readable at small size. Not pixel art, not 3D, not photorealistic.\n\nBackground: 100% uniform perfectly flat solid #FF00FF across the entire sheet. No gradients, lighting variation, texture, shadow, reflection, or floor plane. Do not use #FF00FF on the character.\n\nNo text, no labels, no direction arrows, no UI, no watermark, no frame lines, no scenery, no extra object, no second character.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "347a7f280a74ee04c55b47c4bab0524f28658c899287eaee0233563b4000e9b5",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate direction cells",
+        "north must be a complete back view with no visible face",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is a deterministic post-generation reference composed from the frozen south, north and neutral source cells after both source sheets already existed. It was not a pre-generation canary, was not used to generate the world sheet, and is not an owner approval record.",
+        "identityReferenceComposedAt": "2026-07-22T01:23:58+08:00"
+      },
+      "generatedAt": "2026-07-21T23:19:40+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve whole-sheet regeneration with complete four-edge background safety\nAsset type: production dialogue portrait expression sheet for Beastbound Odyssey NPC\nInput images: Image 1 is the accepted stable-keeper portrait identity and four-expression composition reference. Image 2 is the accepted true-eight world sheet and reinforces the exact character identity and costume. Generate a new complete sheet; do not overwrite or directly paint either input.\n\nCreate one exact 2-row by 2-column square portrait sheet of the SAME adult male stable keeper. Preserve his broad friendly square face, warm tan skin, dark brown hair tied in a short low knot, subtle short beard, deep olive hide tunic, warm brown leather apron upper section, ochre fur collar, bone clasp, and compact tan rope coil across the torso. Preserve the same original Beastbound Odyssey clean hand-painted HD 2D style, crisp warm outlines, controlled soft cel shading, proportions, facial identity, costume construction, and palette. No redesign, age drift, body drift, hairstyle drift, beard drift, costume drift, or accessory drift.\n\nEXACT ROW-MAJOR ORDER:\nTop-left NEUTRAL: attentive calm listening face, mouth closed.\nTop-right SPEAKING: natural mid-sentence mouth open, engaged brows, not shouting.\nBottom-left SMILE: warm genuine welcoming smile, mouth gently closed or slightly open.\nBottom-right CONCERNED: mild worried expression, brows drawn slightly inward, mouth closed; not angry and not crying.\n\nUse the same front three-quarter orientation facing slightly toward screen-left, same camera, head size, body scale, shoulder width, eye line, clothing placement, and lighting in all four cells. Change only the facial expression and tiny supporting eyebrow/head movement. Exact invisible equal 2x2 grid with NO visible divider, gutter, border, frame, line, or seam.\n\nCRITICAL COMPOSITION: make each waist-up bust smaller and place it fully inside the central 72% of its cell. No part of any subject may touch ANY cell edge. Leave a wide, clearly visible, uninterrupted flat-magenta moat around all four sides of every bust: at least about 10% of cell width at left and right, at least about 9% of cell height above the hair, and at least about 7% of cell height below the clothing/torso. The complete character silhouette, including hair, shoulder, arm, rope, clothing, outline, antialiasing and shadow, must end before the bottom edge. All four absolute image corners and every cell corner must contain only clean background. Do not crop the bust at the bottom; finish the waist-up silhouette cleanly above the cell bottom with background underneath.\n\nBackground: one perfectly uniform, flat, opaque solid #FF00FF over the whole sheet. The exact same magenta must extend continuously behind and between subjects and to every pixel of the complete outer border and all cell corners. No vignette, gradient, near-magenta variation, darker bottom corners, compression residue, shadow, texture, noise, glow, floor, scenery, lighting variation, gutter, line, divider, border, frame, or seam. Never use magenta or near-magenta on the subject.\n\nNo text, labels, arrows, icons, UI, watermark, animal, weapon, extra person, detached object, speech bubble, scenery, or decorative element. Output one complete square 2x2 PNG sheet, not four separate images.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "13738973538b481b100ffde91a464610f903220140b25bd3a3f583e40acc9e7c",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate direction cells",
+        "north must be a complete back view with no visible face",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is a deterministic post-generation reference composed from the frozen south, north and neutral source cells after both source sheets already existed. It was not a pre-generation canary, was not used to generate the world sheet, and is not an owner approval record.",
+        "identityReferenceComposedAt": "2026-07-22T01:23:58+08:00"
+      },
+      "generatedAt": "2026-07-21T23:19:40+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

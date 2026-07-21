@@ -36,6 +36,12 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 - Start natural-language pet work with its validated Pet Design Contract and catalog inspection. Do not scatter an idea directly across JSON files without resolving role/counterplay, taxonomy, growth/Lv1 proxy, acquisition probability, capture, active/passive skills, server authority, safety, and tests.
 - Keep concept/numeric-only pet requests separate from visual production. When the user asks for a formal, complete, runtime-ready, rideable, sprite, animation, or art delivery, the pet-design skill must hand off to the dedicated art pipeline and its Beastbound production contract; do not call the pet complete from data and code alone.
 
+## NPC Visual Production Workflow
+
+- For any request to design, add, reuse, generate, replace, audit, animate, portrait, face, place, or otherwise change an NPC visual archetype, use the repository skill at `.agents/skills/design-beastbound-npcs/SKILL.md`.
+- Keep named NPC instances separate from shared occupational appearances: `npcId` owns name, map, dialogue and service; `appearanceId` owns the reusable model, true-eight world art, portraits, scale and anchors. A new village or NPC name alone never justifies another model.
+- Formal NPC art must use independently authored eight directions with no runtime or offline mirroring, preserve generation/provenance records, pass the skill's bundle and blind-direction gates, and remain owner-review pending until the project owner explicitly accepts frozen visual evidence.
+
 ## Change Routing And Boundaries
 
 - Do not put a new feature domain into `client/godot/scripts/main.gd`, `ui/panel_flow_coordinator.gd`, `qa/auto_check_coordinator.gd`, `server/node/src/auth-service.js`, or `server/node/src/http-server.js` merely because those files already touch everything. Add a focused model/controller/domain first and keep entrypoint changes to wiring, dispatch, and compatibility shims.

@@ -61,6 +61,8 @@
       "kind": "npc",
       "movementCollision": "block",
       "cell": [16, 12],
+      "appearanceId": "npc_village_guard_m_v1",
+      "facing": "west",
       "action": "对话",
       "dialog": ["挡路门卫：我占着这个格子，你只能走到旁边和我说话。"],
       "option": "知道了"

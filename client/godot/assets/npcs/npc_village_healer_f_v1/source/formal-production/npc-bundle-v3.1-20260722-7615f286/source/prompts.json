@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: identity-preserve.\nAsset type: grid-safe clean-source regeneration of a production 2D overworld NPC true-eight-direction static idle sheet for Beastbound Odyssey.\n\nThe first supplied image, the healer identity board, is the exact identity authority. The second supplied image is a rejected otherwise-useful true-eight reference: its first-row feet cross the exact 50% horizontal grid boundary. Regenerate the complete sheet as new independently authored pixels. Preserve the identity and direction semantics, but do not edit, trace, copy pixel-for-pixel, or preserve any boundary-crossing pixels from the rejected sheet.\n\nCreate an exact 2-row by 4-column sheet of the same original mature female village healer in eight independently authored static idle directions. She is approximately 50, medium height and softly sturdy, with warm-brown skin, hazel-brown eyes and gentle eye-corner lines. Her silver-gray long braid stays coiled in a low side bun on her own RIGHT rear side. She wears a rounded sage-green short shoulder cape, layered village tunic, ivory scarf, pale sky-blue cloth bindings, herb-brown trousers, belt and boots. A sealed corked herb tube always rests in her own LEFT arm; a closed mortar pouch remains at her own RIGHT waist; a slim closed bone-needle case remains at the back belt. All containers stay closed and close to the body.\n\nExact row-major screen-facing order:\nrow 1 south = exact front facing down-screen;\nsouthwest = front-left with nose, chest, knees and toes toward the LEFT edge;\nwest = pure left profile;\nnorthwest = back-left with back dominant and axis toward upper-left.\nrow 2 north = exact complete back with no face or eye and a vertical up-screen axis;\nnortheast = back-right with back dominant and axis toward upper-right;\neast = pure right profile;\nsoutheast = front-right with nose, chest, knees and toes toward the RIGHT edge.\nOpposite diagonals must expose opposite shoulders. Every direction is independently authored; no mirroring, duplication, rotation, relabeling or reuse.\n\nThe sheet must be an exact invisible 2x4 grid. The full-canvas horizontal row boundary is exactly at 50% height. Reserve a completely empty flat-magenta safety band from 44% through 56% of the full canvas: no top-row foot, boot, outline or antialiasing may extend below 44%, and no bottom-row hair, head, outline or antialiasing may rise above 56%. Place every top-row full body only within full-canvas y=4%-43% and every bottom-row full body only within y=57%-96%. Make all eight bodies the same height and feet baseline within their row.\n\nWithin each of the four equal-width columns, keep the complete character inside the central 56% of that cell and leave at least 18% uninterrupted flat-magenta padding at both the left and right cell boundaries. Nothing may touch or cross the vertical boundaries at 25%, 50% or 75% of full-canvas width. There must be exactly one connected character per cell and no detached line, dot, colored residue, loose prop or neighboring-cell fragment. No borders, labels, dividers, text, arrows, UI or watermark.\n\nThe entire background must be perfectly uniform, fully opaque, flat exact #FF00FF with a crisp hard boundary around the subject: no gradient, texture, floor, reflection, contact shadow, cast shadow, checkerboard, glow or halo. Reserve magenta exclusively for the removable background. Do not use magenta, hot pink, rose-purple, purple or violet anywhere in skin, hair, eyes, lips, hands, clothing, bindings, outlines, shadows, antialiasing, herb tube, pouch, needle case or other props. Keep the healer palette strictly sage green, ivory, pale sky blue, herb brown, silver gray and natural warm skin tones.\n\nClean original Beastbound Odyssey hand-painted HD 2D sprite art with warm outlines and controlled cel shading. No scenery, animal, second person, modern medical device, nurse cap, medical cross, open liquid, magic staff, religious symbol, particles, glow, halo or StoneAge source art.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "bfab22a6bbaaf430976a6f9223602764e72aac99a9e0a16d73c1cc2175847d10",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no modern medical device, nurse cap, medical cross, magic or religious symbol",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped world subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; the accepted grid-safe world v4 is a hard-edge chroma regeneration using that board with the rejected world v3 as direction reference only, and the accepted portrait v2 uses the same board."
+      },
+      "generatedAt": "2026-07-22T01:53:41+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: production dialogue portrait expression sheet correction for Beastbound Odyssey\n\nImage 1 is the exact healer 2x2 portrait sheet to correct. Image 2 is the exact identity authority. Preserve the same original mature female village healer, her approximately 50-year-old face, warm-brown skin, hazel-brown eyes, gentle eye-corner lines, silver-gray long braid coiled into a low side bun on her own right rear side, sage-green rounded short cape, ivory scarf, pale sky-blue bindings, sealed herb tube, camera, crop, lighting, scale and rendering. Preserve the canonical row-major expressions: top-left neutral, top-right speaking, bottom-left warm smile, bottom-right mild professional concern.\n\nCorrect the sheet layout so every cell has a clearly flat removable near-#FF00FF magenta safety band along the sheet OUTER edge and the cell TOP edge. Keep all subject pixels at least 16 source pixels away from the sheet's left and right outer edges and from each cell's top edge. The bust may intentionally crop only at each cell's bottom and at the internal vertical seam below 65% of cell height. Do not place hair, cloak, herb tube, or residual non-magenta art on the sheet outer edges. Preserve generous magenta space around the head and outer shoulder. Keep the invisible exact 2x2 grid and the same canvas size.\n\nBackground must be a flat removable magenta chroma field with no gradient, floor, shadow, texture, divider line or seam decoration. No text, labels, arrows, UI, watermark, scenery, animal, second person, modern stethoscope, nurse cap, medical cross, magic, glow, halo, religion, open liquid or particles. Output lossless PNG.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "a15d7450770fc1fb9ded80ebc471b43ed8873beba4304e8b2bbf840bf56728ca",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no modern medical device, nurse cap, medical cross, magic or religious symbol",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped world subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; the accepted grid-safe world v4 is a hard-edge chroma regeneration using that board with the rejected world v3 as direction reference only, and the accepted portrait v2 uses the same board."
+      },
+      "generatedAt": "2026-07-22T01:53:41+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

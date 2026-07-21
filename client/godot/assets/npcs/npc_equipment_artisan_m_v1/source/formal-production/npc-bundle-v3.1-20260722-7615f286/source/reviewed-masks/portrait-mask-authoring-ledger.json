@@ -1,0 +1,383 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "2abda06d3f827cb4b959757edb3e08d4c416d794849ff15472d0b8d725404323",
+    "rawSheetDecodedRgbaByteSha256": "e9be58c7445dcab0d0895f88644013679fd16de8eae38ec2386aff0104f88b32",
+    "rawSheetGodotCanonicalRgbaSha256": "87c279b06584f09fa08e93f31aef6c97ac914b77516de8776892ded0bd1b544a",
+    "rawSheetDecodedRgbaSha256": "87c279b06584f09fa08e93f31aef6c97ac914b77516de8776892ded0bd1b544a",
+    "explicitMaskFileSha256": "dd1c4e0de08e68ff2d325c1da984320ddc79dae3fcbd8e91678af47a344abe35",
+    "explicitMaskPixelSha256": "d135c5e014f23bedb0601faa65258459d9fe2d37026ccf41c416e65a700da713",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "reviewEvidence": [
+    "source/mask-review-v3.1/portrait-component-review-01.png",
+    "source/mask-review-v3.1/portrait-component-review-02.png"
+  ],
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "8db72222675a01ddb65031bbb96e5a46fee4fa304f4e1fe1b03c51cca98cbb4d",
+      "cellBbox": [
+        64,
+        86,
+        516,
+        592
+      ],
+      "sheetBbox": [
+        64,
+        86,
+        516,
+        592
+      ],
+      "pixelCount": 1696,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "eecea5b1d07e0781391dfab88f6bb51b5dc999fe44e704f4422f0e4b261145a0",
+      "cellBbox": [
+        382,
+        214,
+        594,
+        592
+      ],
+      "sheetBbox": [
+        382,
+        214,
+        594,
+        592
+      ],
+      "pixelCount": 666,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "2c02649c994d6aab2b9febfe893f5eb75140cfe88c67b923a03af9f415c2be57",
+      "cellBbox": [
+        521,
+        590,
+        523,
+        591
+      ],
+      "sheetBbox": [
+        521,
+        590,
+        523,
+        591
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "44e6ee2fd7281c5b449370a3134fbfba777da4c44ccc0b21dc1ea6b3d40b6895",
+      "cellBbox": [
+        546,
+        590,
+        547,
+        591
+      ],
+      "sheetBbox": [
+        546,
+        590,
+        547,
+        591
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "06fa9abbc70cfd0b659ac328455e716b8b8c4d3cfd32077b07c25725d07959c4",
+      "cellBbox": [
+        326,
+        93,
+        327,
+        94
+      ],
+      "sheetBbox": [
+        326,
+        93,
+        327,
+        94
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2734d6aaced4ab8374aed0a91b93d545cc309d08b8c841061e54846cbc42432e",
+      "cellBbox": [
+        325,
+        94,
+        326,
+        95
+      ],
+      "sheetBbox": [
+        325,
+        94,
+        326,
+        95
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "01dbe60390bf2a313d55fc42bfe317e58a706dbdcbb3e4c05e0bf0f39b5fc94d",
+      "cellBbox": [
+        348,
+        99,
+        349,
+        100
+      ],
+      "sheetBbox": [
+        348,
+        99,
+        349,
+        100
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "e3f67936f1f96b089f3bfb2aedc6cb6f2cdfa3f12b3d90ab91cd49a302d26eb0",
+      "cellBbox": [
+        18,
+        88,
+        548,
+        592
+      ],
+      "sheetBbox": [
+        645,
+        88,
+        1175,
+        592
+      ],
+      "pixelCount": 2321,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "b4dd17a36a8d27cfd6ebb0a4d204f518ff91358081bcd4e2eb8a5920b9a93b5a",
+      "cellBbox": [
+        481,
+        590,
+        482,
+        591
+      ],
+      "sheetBbox": [
+        1108,
+        590,
+        1109,
+        591
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2c77424a125e00fc287edc779b83cc9a767d993ee77cdb5f8a86c433864509d0",
+      "cellBbox": [
+        278,
+        95,
+        280,
+        96
+      ],
+      "sheetBbox": [
+        905,
+        95,
+        907,
+        96
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ce9628f06c17073a5811be7eb0e8f66fb901df918be063048b6c6bc4e16225b1",
+      "cellBbox": [
+        210,
+        106,
+        211,
+        107
+      ],
+      "sheetBbox": [
+        837,
+        106,
+        838,
+        107
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "01d230ed1194a20e81b62c2a608346b2ba2351789a11569bcb7f6fb5cd88de19",
+      "cellBbox": [
+        64,
+        50,
+        594,
+        554
+      ],
+      "sheetBbox": [
+        64,
+        677,
+        594,
+        1181
+      ],
+      "pixelCount": 2247,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "fcf842989cde7cc0d992b3868aabe721f718bc3c47dc0f60113048df970d58de",
+      "cellBbox": [
+        13,
+        54,
+        540,
+        554
+      ],
+      "sheetBbox": [
+        640,
+        681,
+        1167,
+        1181
+      ],
+      "pixelCount": 2441,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "931ba73fbd845f21b758129c419046344c4f74a627880b280322502f6629d311",
+      "cellBbox": [
+        290,
+        66,
+        291,
+        67
+      ],
+      "sheetBbox": [
+        917,
+        693,
+        918,
+        694
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "412ef1649885663585557c8c7dd676e4de14c3f83bfab13642c550aed3d5a585",
+      "cellBbox": [
+        201,
+        72,
+        202,
+        73
+      ],
+      "sheetBbox": [
+        828,
+        699,
+        829,
+        700
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a95311c159e4ebe49db95c6ad28adad387ed1f3b156aa24298aa1e20a545bd7a",
+      "cellBbox": [
+        184,
+        163,
+        185,
+        164
+      ],
+      "sheetBbox": [
+        811,
+        790,
+        812,
+        791
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex v3 exact-component visual review",
+      "reviewedAt": "2026-07-22T02:38:43+08:00"
+    }
+  ]
+}

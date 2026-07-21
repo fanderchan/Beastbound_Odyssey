@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "canonicalDirections": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "worldFrameSize": [256, 256],
+  "portraitFrameSize": [512, 512],
+  "portraitStates": ["neutral", "speaking", "smile", "concerned"],
+  "appearances": [
+    {
+      "appearanceId": "npc_stable_keeper_m_v1",
+      "displayName": "兽栏管理员·男",
+      "roleId": "stable_keeper",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "亲和可靠的年轻兽栏管理员，饲料袋、牵引绳和耐磨工作装形成职业识别；八向始终保持同一人物、服装和道具。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_stable_keeper_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_stable_keeper_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_stable_keeper_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_bank_keeper_f_v1",
+      "displayName": "银行管理员·女",
+      "roleId": "bank_keeper",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "沉稳干练的年轻银行管理员，账本、钱袋和整洁柜台制服形成职业识别；八向始终保持同一人物、服装和道具。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_bank_keeper_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_bank_keeper_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_bank_keeper_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_item_shopkeeper_f_v1",
+      "displayName": "杂货商·女",
+      "roleId": "item_shopkeeper",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "爽朗利落的杂货与道具场商人，分格货篮、腰包和便于取货的围裙形成职业识别；跨村庄同岗位复用同一人物原型。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_manor_steward_m_v1",
+      "displayName": "庄园管事·男",
+      "roleId": "manor_steward",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "稳重周到的庄园管事，钥匙串、土地册和整洁长外套形成职业识别；九座庄园复用同一职业人物原型。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_manor_steward_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_manor_steward_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_manor_steward_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_village_guard_m_v1",
+      "displayName": "村庄守卫·男",
+      "roleId": "village_guard",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "警觉可靠的村庄守卫，短矛、护臂和轻型巡防甲形成职业识别；当前静态执勤，未来实际巡逻时再补 walk4。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_village_guard_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_village_guard_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_village_guard_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_village_healer_f_v1",
+      "displayName": "村医·女",
+      "roleId": "village_healer",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "温和专注的村庄治疗师，草药包、药瓶和洁净披肩形成职业识别；治疗与记录点区域可复用同一职业人物原型。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_village_healer_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_village_healer_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_village_healer_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_equipment_artisan_m_v1",
+      "displayName": "装备工匠·男",
+      "roleId": "equipment_artisan",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "结实严谨的装备商与工匠，锻造锤、皮围裙和样品护具形成职业识别；购买、穿戴与强化教学共用此职业原型。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_equipment_artisan_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_equipment_artisan_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_equipment_artisan_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_riding_trainer_f_v1",
+      "displayName": "骑宠导师·女",
+      "roleId": "riding_trainer",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "自信亲和的骑宠导师，骨哨、训练护具和卷起鞍毯形成职业识别；用于新手老虎与骑宠许可教学。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_riding_trainer_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    }
+  ]
+}

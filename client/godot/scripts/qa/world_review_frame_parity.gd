@@ -12,6 +12,7 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 		"importSourceMd5": "",
 		"importFresh": false,
 		"loadMode": "",
+		"sourceFullDecodedRgbaSha256": "",
 		"sourceDecodedRgbaSha256": "",
 		"loadedDecodedRgbaSha256": "",
 		"canonicalRgbaMatch": false,
@@ -43,8 +44,10 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 	if source.get_size() != loaded.get_size():
 		errors.append("源 PNG 与 Godot 纹理尺寸不一致：%s != %s" % [source.get_size(), loaded.get_size()])
 		return result
+	var source_full_bytes := _full_rgba_bytes(source)
 	var source_bytes := _canonical_rgba_bytes(source)
 	var loaded_bytes := _canonical_rgba_bytes(loaded)
+	result["sourceFullDecodedRgbaSha256"] = _rgba_sha256(source.get_size(), source_full_bytes)
 	result["sourceDecodedRgbaSha256"] = _rgba_sha256(source.get_size(), source_bytes)
 	result["loadedDecodedRgbaSha256"] = _rgba_sha256(loaded.get_size(), loaded_bytes)
 	result["canonicalRgbaMatch"] = source_bytes == loaded_bytes
@@ -131,6 +134,14 @@ static func _canonical_rgba_bytes(image: Image) -> PackedByteArray:
 			bytes[offset + 1] = 0
 			bytes[offset + 2] = 0
 	return bytes
+
+
+static func _full_rgba_bytes(image: Image) -> PackedByteArray:
+	var rgba := image.duplicate()
+	if rgba.is_compressed():
+		rgba.decompress()
+	rgba.convert(Image.FORMAT_RGBA8)
+	return rgba.get_data()
 
 
 static func _rgba_sha256(size: Vector2i, bytes: PackedByteArray) -> String:

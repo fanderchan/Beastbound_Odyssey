@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "referenceScriptSha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
+  "referenceOperation": "remove_chroma_key.py _apply_alpha_to_image",
+  "parameters": {
+    "keyRgb": [255, 0, 255],
+    "tolerance": 12,
+    "softMatte": true,
+    "transparentThreshold": 12.0,
+    "opaqueThreshold": 220.0,
+    "despill": true
+  },
+  "inputRgbaByteSha256": "3a15d26ef2893cd6ac8c73bb8754466335262df8a7914e83008ac7f48278428a",
+  "goldenRgbaByteSha256": "9da999c0c6e7475661ec55ec06e2ece4c4607b8f884eb45d9a31af43c5a5b0e1",
+  "inputRgba": [
+    [[255, 0, 255, 255], [250, 4, 247, 255], [220, 40, 210, 255], [180, 70, 170, 255]],
+    [[255, 12, 255, 255], [190, 12, 184, 255], [90, 10, 85, 255], [42, 51, 63, 255]],
+    [[255, 0, 255, 255], [255, 0, 255, 255], [255, 0, 255, 255], [255, 0, 255, 255]]
+  ],
+  "goldenRgba": [
+    [[0, 0, 0, 0], [0, 0, 0, 0], [39, 40, 39, 17], [69, 70, 69, 72]],
+    [[0, 0, 0, 0], [11, 12, 11, 50], [9, 10, 9, 177], [42, 51, 63, 255]],
+    [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+  ]
+}

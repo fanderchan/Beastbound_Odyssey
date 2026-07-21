@@ -1,0 +1,21 @@
+Use case: stylized-concept
+Asset type: production 2D overworld NPC directional idle sprite sheet for Beastbound Odyssey
+Input image: use the local novice-hunter identity board only as a visual reference for the project's clean hand-painted HD 2D game rendering, warm outlines, readable shapes, and slightly compact adult proportions. Do not copy that character, costume, face, hair, or pose.
+
+Create one entirely original ADULT MALE STABLE KEEPER NPC as an exact 2-row by 4-column true-eight-direction idle sheet. One character only, same identity and exact scale in all eight cells, neutral standing idle, full body visible.
+
+Identity lock: sturdy adult male, broad friendly square face, dark brown hair tied into a short low knot, subtle short beard, deep olive sleeveless hide tunic, warm brown leather work apron, muted ochre fur trim, heavy brown boots, small bone clasp. A compact coiled tan lead rope is secured across his torso and a closed leather feed satchel sits on his own right hip. These stable-keeper props must remain attached to the body, readable, and consistent from every angle. Palette is olive, earth brown, tan, muted ochre. No animal, no weapon.
+
+MANDATORY GRID ORDER:
+Top row left to right: SOUTH = exact front view facing straight toward viewer/down-screen; SOUTHWEST = front-left three-quarter view facing down-left; WEST = exact pure left-facing side profile; NORTHWEST = rear-left three-quarter view facing up-left.
+Bottom row left to right: NORTH = exact complete rear view facing straight away/up-screen, show the full back of head, tunic, apron and boots, absolutely no face and no eye visible; NORTHEAST = rear-right three-quarter view facing up-right, clearly different from both north and northwest; EAST = exact pure right-facing side profile; SOUTHEAST = front-right three-quarter view facing down-right.
+
+Every direction must be independently authored. Do not mirror, duplicate, rotate, or reuse another cell. West and east must be true opposite side profiles. Northwest and northeast must visibly expose opposite rear shoulders. South and north must be exact front/back, not diagonal. Preserve the feed satchel on the character's own right hip and preserve the rope routing correctly through changes of viewpoint.
+
+Composition: exact 2x4 invisible grid, no visible dividers, no borders. Character centered in each cell, same full-body height, same ground/feet baseline, body fills only central 60-65% of each cell with generous empty padding. Nothing may cross a cell edge. No cast shadow or floor ellipse.
+
+Style: original Stone-Age-inspired but legally distinct Beastbound Odyssey artwork; clean HD 2D sprite illustration, crisp warm dark outlines, controlled soft cel shading, low texture noise, adult anatomy with slightly compact game proportions, readable at small size. Not pixel art, not 3D, not photorealistic.
+
+Background: 100% uniform perfectly flat solid #FF00FF across the entire sheet. No gradients, lighting variation, texture, shadow, reflection, or floor plane. Do not use #FF00FF on the character.
+
+No text, no labels, no direction arrows, no UI, no watermark, no frame lines, no scenery, no extra object, no second character.

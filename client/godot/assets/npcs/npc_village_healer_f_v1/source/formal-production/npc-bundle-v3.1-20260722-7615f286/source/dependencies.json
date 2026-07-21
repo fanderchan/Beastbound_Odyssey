@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_npc_art_bundle.py",
+  "toolVersion": "3.1.0",
+  "scriptPath": "source/tool/build_npc_art_bundle.py",
+  "scriptSha256": "7615f2860454dd23b3d51a3974257e68cc00cdf5e801199957a3ee16cb598f4b",
+  "versions": {
+    "python": "3.14.3",
+    "pythonImplementation": "CPython",
+    "pillow": "12.2.0",
+    "numpy": "2.4.6"
+  },
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O"
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: identity-preserve\nAsset type: production 2D overworld NPC true-eight-direction static idle sheet for Beastbound Odyssey\nInput image: the supplied manor-steward identity board is the exact identity authority. Preserve the exact same mature man, face, age, swept-back charcoal-gray hair with silver temples, narrow moustache, short pointed goatee, costume, palette, materials, body proportions, and equipment sides.\n\nCreate an exact invisible 2-row by 4-column sheet of the same original mature male manor steward in eight independently authored full-body static idle directions. He wears the same long straight deep-indigo sleeveless high-collared steward coat with aged-brass trim over an ivory shirt, brown diagonal document strap, muted forest-green sash, dark trousers, and knee boots. The compact leather document case remains at his own left hip, the aged-brass ring of large abstract bone keys remains at his own right hip, and the sealed blank scroll remains in his own right hand. Keep every prop close to his upright silhouette.\n\nGrid order and screen-facing semantics: row 1: south = exact front facing down-screen; southwest = front-left with nose, chest, knees, toes, scroll, and gaze aimed toward the LEFT edge; west = pure left profile with nose and toes toward the LEFT edge; northwest = back-left with back dominant, no front-facing chest, and body axis toward the UPPER-LEFT. Row 2: north = exact complete back with no face or eye and a vertical up-screen axis; northeast = back-right with back dominant, opposite shoulder exposure from northwest, and body axis toward the UPPER-RIGHT; east = pure right profile with nose and toes toward the RIGHT edge; southeast = front-right with nose, chest, knees, toes, scroll, and gaze aimed toward the RIGHT edge. Every direction is independently authored; no mirroring, duplication, rotation, relabeling, interpolation, neighboring-direction reuse, or reflected prop sides.\n\nCRITICAL SAFE-MARGIN CORRECTION: the previous attempt was rejected because several figures touched the invisible cell borders. Make each full-body figure noticeably smaller and centered within only the central 48% of its cell width and central 72% of its cell height. Leave at least 48 visible pixels of uninterrupted flat-magenta background on the TOP, BOTTOM, LEFT, and RIGHT edge of EVERY cell, including both sides of the invisible horizontal row seam and both sides of every invisible vertical column seam. Boots, hair, coat tails, scroll, keys, hands, and document case must never touch or approach any cell edge. Keep identical character height and feet baseline within the safe area.\n\nExact invisible 2x4 grid with no borders or dividers. Clean original Beastbound Odyssey hand-painted HD 2D sprite art with warm outlines and controlled soft cel shading, matching the accepted NPC rendering language without copying another character. Perfectly uniform flat #FF00FF chroma-key background with no gradient, texture, floor, reflection, contact shadow, or cast shadow. No text, labels, arrows, UI, watermark, scenery, animal, second person, readable writing, crown, throne, staff, weapon, armor, coins, abacus, modern folder, royal regalia, magic, glow, magenta clothing, photorealism, 3D render, or pixel art.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "8274ead0abc1c133784fcb84c0b72dcfcf8e7995e8141c82ef79879db44011d8",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no borders, dividers, labels, arrows, UI, watermark or scenery",
+        "no cropped world subject or world-cell edge crossing",
+        "no crown, throne, weapon, armor, coins, abacus or readable writing",
+        "no copied StoneAge or external character art"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRole": "pre-generation identity authority for both world and portrait sheets",
+        "identityPromptPath": "../prompts/identity-board-v2.txt",
+        "identityPromptSha256": "b3db1ae0553a4ede47d40e67ed27ab34976bb9fd3203cb74f276d9ab501d4701",
+        "styleReferences": [
+          {
+            "path": "../../npc_stable_keeper_m_v1/identity/identity-board.png",
+            "fileSha256": "25ab4b6c97f8a0d0ac9536b95d2fbd4d4e9bdc9e1ac26c7cf8fc70dcaf26e9cd",
+            "role": "project rendering language only"
+          },
+          {
+            "path": "../../npc_bank_keeper_f_v1/identity/identity-board.png",
+            "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+            "role": "project rendering language only"
+          }
+        ]
+      },
+      "generatedAt": "2026-07-21T23:25:01+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: production dialogue portrait expression sheet for a Beastbound Odyssey shared NPC archetype\nInput image: the supplied manor-steward identity board is the exact identity authority.\n\nCreate an exact invisible 2x2 sheet of the same original mature male manor steward, chest-up, front three-quarter facing slightly screen-right. Preserve exactly his approximately 52-60-year-old face, warm-tan skin, amber-brown eyes, restrained forehead lines, swept-back charcoal-gray hair with silver temples, narrow charcoal moustache, short pointed goatee, deep-indigo high-collared steward coat with aged-brass trim and fasteners, ivory shirt, brown diagonal leather strap, and the same small visible sash detail. Same camera, crop, eye line, head size, shoulder width, body angle, lighting, line weight, and scale in every cell.\n\nOrder: top-left calm attentive neutral with mouth closed; top-right speaking naturally mid-sentence with a readable but modest open mouth, not shouting; bottom-left restrained warm professional smile; bottom-right mild responsible concern with subtly furrowed brows and closed mouth, not angry, grieving, or crying. Change only the expression and tiny supporting eyebrow movement.\n\nExact invisible 2x2 grid with no borders or dividers, central 68% safe area, generous uninterrupted flat-magenta padding, and nothing crossing cells. Perfectly uniform flat #FF00FF chroma-key background. No text, labels, arrows, UI, watermark, ground, shadow, scenery, animal, second person, detached prop, readable document, crown, armor, weapon, coins, magic, glow, magenta clothing, photorealism, 3D render, pixel art, cropped forehead, or cropped shoulders.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "be94a0e148a27bbdaa0a666be3706ed8d4821337efbf042d1b387e9ed7e62fa2",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no borders, dividers, labels, arrows, UI, watermark or scenery",
+        "no cropped world subject or world-cell edge crossing",
+        "no crown, throne, weapon, armor, coins, abacus or readable writing",
+        "no copied StoneAge or external character art"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRole": "pre-generation identity authority for both world and portrait sheets",
+        "identityPromptPath": "../prompts/identity-board-v2.txt",
+        "identityPromptSha256": "b3db1ae0553a4ede47d40e67ed27ab34976bb9fd3203cb74f276d9ab501d4701",
+        "styleReferences": [
+          {
+            "path": "../../npc_stable_keeper_m_v1/identity/identity-board.png",
+            "fileSha256": "25ab4b6c97f8a0d0ac9536b95d2fbd4d4e9bdc9e1ac26c7cf8fc70dcaf26e9cd",
+            "role": "project rendering language only"
+          },
+          {
+            "path": "../../npc_bank_keeper_f_v1/identity/identity-board.png",
+            "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+            "role": "project rendering language only"
+          }
+        ]
+      },
+      "generatedAt": "2026-07-21T23:25:01+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

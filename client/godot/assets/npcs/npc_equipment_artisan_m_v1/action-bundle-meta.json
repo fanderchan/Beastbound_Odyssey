@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "appearanceId": "npc_equipment_artisan_m_v1",
+  "roleId": "equipment_artisan",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [256, 256],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "portraits": {
+    "states": ["neutral", "speaking", "smile", "concerned"],
+    "runtimeSize": [512, 512]
+  },
+  "review": {
+    "artStatus": "owner_review_pending",
+    "ownerReviewStatus": "pending",
+    "releaseApproved": false,
+    "runtimeEnabled": false,
+    "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/formal-production/npc-bundle-v3.1-20260722-7615f286/evidence/contact-sheets/contact-sheet-transparent.png",
+    "contactSheetSha256": "bcdf47f9fb8c05494b2db0a22ea401097d7857faa3a2a4a16bbdc7bbf55a77b2",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false,
+    "runtimeEvidenceIndex": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/evidence-index.json",
+    "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+    "runtimeVideo": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/review.mp4",
+    "runtimeVideoSha256": "508c0edb5b98cb97400b29bdc30ddedc3d7813edf9ec3f77aa42d62eff73bf23",
+    "runtimeScreenshots": [
+      "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/main-review-candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/main-dialog-1280x720.png"
+    ],
+    "runtimeScreenshotSha256s": [
+      "3146486b2996529f592faeddfb0272bbaf06ee613d5878e342c8199aa8e07f12"
+    ],
+    "mainCaptureReports": [
+      "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/main-review-candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/main-dialog-report.json"
+    ],
+    "mainCaptureReportSha256s": [
+      "b8ee62c9f55d1d089ff2945e7dfb80fba25cc1c8a9c0547d9fe5b39f39ad0cde"
+    ],
+    "blindReviewPacket": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/blind/reviewer-packet.json",
+    "blindReviewPacketSha256": "d56e5c808fa600884b4d5744bd9409ed6ed1ca5bae3ed9993afb99e7b29b1f4b",
+    "blindProducerMapping": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/private/producer-mapping.json",
+    "blindProducerMappingSha256": "e4dd1a8a5291ea653cbca108e34129f77d2659ae4ba325b8ede88d38abefc377",
+    "blindStageAResult": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/staged-review/stage-a-result.json",
+    "blindStageAResultSha256": "a1e3b98a665c6228a76158dc2985e1122a7e55ce3dd812131e550cc34140d1ca",
+    "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/staged-review/stage-b-observation.json",
+    "blindStageBObservationSha256": "7920e9554b2bab054489c0dd37e7cb68338bc8795411b42372f12726c29a5a8c",
+    "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase327_npc_archetype_art/candidate/phase327-final-v31r2-20260722-a/npc_equipment_artisan_m_v1/final/blind-audit.json",
+    "blindAuditSha256": "f16e4f6ef975dffae50987c4a597da2917b35d76beffebe0e3e2aed34646fdd5"
+  },
+  "release": {
+    "releaseApproved": false,
+    "runtimeEnabled": false,
+    "reason": "frozen production evidence passed; explicit owner acceptance and release attestation remain required"
+  },
+  "runtimeEnabled": false,
+  "installation": {
+    "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/formal-production/npc-bundle-v3.1-20260722-7615f286/npc-bundle.json",
+    "productionManifestSha256": "ab94b0f4e72ee98870e93ce0fa7e3f816982c4137a397d1e924ecc965b8b78b4",
+    "ownershipRecord": "source-and-ownership.md",
+    "ownershipRecordSha256": "da6641df58c0031b76ef997a1f309d079aceedc42640ca30a4aabdcf0104b637",
+    "sourceLedger": "source/provenance.json",
+    "sourceLedgerSha256": "62e6caa385c4db5b6c6f68ab82df755329e2721e62a7b4d79cf624e34616b57d",
+    "frames": [
+      {
+        "installedPath": "world/directions/south/idle/idle-1.png",
+        "kind": "world",
+        "slot": "south/idle/1",
+        "sourceRuntimePath": "runtime/world/south/idle-1.png",
+        "fileSha256": "eb4cebc5ff0f6fa0d8aa61dd3869e31f91c10127547549e77b2b2bf5e7e123ec",
+        "rgbaSha256": "a6d2a6f8837793ae22bdb1aa12bd9cb726a89e114965382685e280c25eb7128d"
+      },
+      {
+        "installedPath": "world/directions/southwest/idle/idle-1.png",
+        "kind": "world",
+        "slot": "southwest/idle/1",
+        "sourceRuntimePath": "runtime/world/southwest/idle-1.png",
+        "fileSha256": "ae92d86f8d1f8ce1e3a15d0b4feb3dab9408fe8db8b33794520746ae3cedfc04",
+        "rgbaSha256": "7ab7f33a31dc4abb6b65bf05f6741ba3898beb051e263cd8034bd9e3932c9d88"
+      },
+      {
+        "installedPath": "world/directions/west/idle/idle-1.png",
+        "kind": "world",
+        "slot": "west/idle/1",
+        "sourceRuntimePath": "runtime/world/west/idle-1.png",
+        "fileSha256": "271968ae713f7dd9c4bcc632a6bfd09ee4cb38d2fefdd2a7de9db3cf869040fd",
+        "rgbaSha256": "c228f6637182cd9955797410cd9f29e8b3b071748c0f3d8eda9d333ed8ec4f72"
+      },
+      {
+        "installedPath": "world/directions/northwest/idle/idle-1.png",
+        "kind": "world",
+        "slot": "northwest/idle/1",
+        "sourceRuntimePath": "runtime/world/northwest/idle-1.png",
+        "fileSha256": "5319dff2ca10dd9c13105a8f7b81a45facb344d980dc222b7f2ab6a31f9ce4c9",
+        "rgbaSha256": "5062bd5e3d5cd382ef57ca4d3eb6e3e17afb9f0f37f4a15ee8ebd1ac719e7e4a"
+      },
+      {
+        "installedPath": "world/directions/north/idle/idle-1.png",
+        "kind": "world",
+        "slot": "north/idle/1",
+        "sourceRuntimePath": "runtime/world/north/idle-1.png",
+        "fileSha256": "fa7ff6ce8e7e683b86c329fc1516e2057b3c9ef80ce7f9be270c4f999ddb02c4",
+        "rgbaSha256": "76e56098e318e37c16e72ff380092b70b16c61fcd099036457785982d7f547c1"
+      },
+      {
+        "installedPath": "world/directions/northeast/idle/idle-1.png",
+        "kind": "world",
+        "slot": "northeast/idle/1",
+        "sourceRuntimePath": "runtime/world/northeast/idle-1.png",
+        "fileSha256": "3c13f8d431be6e9a6445df1071132b0551b6c1b4ea8cc25666e69c01c404d7f6",
+        "rgbaSha256": "6cc871de04ed701c1ba101b3d11c742ae52f40cb6c59b356f113bb44655bc18a"
+      },
+      {
+        "installedPath": "world/directions/east/idle/idle-1.png",
+        "kind": "world",
+        "slot": "east/idle/1",
+        "sourceRuntimePath": "runtime/world/east/idle-1.png",
+        "fileSha256": "27e66eb7f61fa98b31c28339c3a6343e4bff74e1e407cee83d95af33ae3a1d6c",
+        "rgbaSha256": "4652bdbd8361a28776bedc609807e1d09b16c7dcab1d1d9519f3f06a67a27004"
+      },
+      {
+        "installedPath": "world/directions/southeast/idle/idle-1.png",
+        "kind": "world",
+        "slot": "southeast/idle/1",
+        "sourceRuntimePath": "runtime/world/southeast/idle-1.png",
+        "fileSha256": "9887f13778376f0c7e0fccbf92577a072d115d862018431984984dfeeb97c3aa",
+        "rgbaSha256": "16c7552acae6f9b00ec979a16a4c2fee4d5c6ee59dc38844492a3c9b0b090cd9"
+      },
+      {
+        "installedPath": "portrait/neutral.png",
+        "kind": "portrait",
+        "slot": "neutral",
+        "sourceRuntimePath": "runtime/portraits/neutral.png",
+        "fileSha256": "7101ae46d27b40b0219ff995999bcb070bc7bedb9c495fa6185863531be87b69",
+        "rgbaSha256": "37d7729b74d2c51e307958a9e99f402b93b3112f059303955ad0cdf767ae0ae3"
+      },
+      {
+        "installedPath": "portrait/speaking.png",
+        "kind": "portrait",
+        "slot": "speaking",
+        "sourceRuntimePath": "runtime/portraits/speaking.png",
+        "fileSha256": "adc47ff3f2e6fb6734575052289e706ac873be346a551ac2f1c88646c0b8f499",
+        "rgbaSha256": "2228cec9d13977eda228472f39b12c3615e56845d28e17fec771900127df2b0c"
+      },
+      {
+        "installedPath": "portrait/smile.png",
+        "kind": "portrait",
+        "slot": "smile",
+        "sourceRuntimePath": "runtime/portraits/smile.png",
+        "fileSha256": "834c70ffb5abbe497602e03a14814d9de040255598d027a41706ea9d95d236a3",
+        "rgbaSha256": "2e4551eedfbe8a976f1d0bba8f74c62945ac1f6c5205173267cd1eafd2a9a3cf"
+      },
+      {
+        "installedPath": "portrait/concerned.png",
+        "kind": "portrait",
+        "slot": "concerned",
+        "sourceRuntimePath": "runtime/portraits/concerned.png",
+        "fileSha256": "51115100852fc23ef6d4ef91cd09b2de0af33d8dba54557f302f7ae2f9b4630f",
+        "rgbaSha256": "52b74f412232f92f6c38ba35d37a0dbe6e103ffbf385167e748abff790a495b2"
+      }
+    ]
+  }
+}

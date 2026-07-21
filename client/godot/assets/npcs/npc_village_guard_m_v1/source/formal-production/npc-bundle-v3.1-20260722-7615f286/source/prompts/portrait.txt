@@ -1,0 +1,19 @@
+Use case: identity-preserve.
+Asset type: clean-source regeneration of a production dialogue portrait expression sheet for Beastbound Odyssey.
+
+The first supplied image, the guard identity board, is the exact identity authority. The second supplied image is a rejected portrait sheet and is composition/expression reference only: it has shield fragments crossing from the left cells into the right cells. Regenerate the complete sheet as new authored pixels. Do not edit, trace, copy pixel-for-pixel, or preserve any cross-cell residue from the rejected sheet.
+
+Create an exact 2x2 sheet of the same original adult male village entrance guard, chest/waist-up, front three-quarter facing slightly screen-left. Preserve his square jaw, warm-brown skin, deep-brown eyes, shallow old scar over his own left eyebrow, black short braids tied into a tiny tail, clean-shaven face, charcoal layered leather armor, rust-red shoulder cape, bone-white binding, and small belt/shoulder details. The compact spear and shield must not dominate the portrait; show at most a small attached hint that remains completely inside its own cell. Use the same camera, crop, eye line, head size, shoulder width, lighting, body scale and identity in all four cells.
+
+Exact row-major expression order:
+top-left neutral alert and approachable with mouth closed;
+top-right speaking naturally mid-sentence;
+bottom-left restrained friendly smile;
+bottom-right mildly concerned and watchful, not angry, grieving or crying.
+Change only the expression and tiny supporting eyebrow/head movement.
+
+Use an exact invisible 2x2 grid with no borders, labels, dividers, text, arrows, UI or watermark. Center the complete visible bust inside the central 62% of every cell. Keep at least 12% uniform background padding at the left and right sides of each cell. No hair, cape, armor, shield, spear, outline, antialiasing, shadow, loose fragment or neighboring-cell pixel may touch or cross any cell boundary. There must be exactly one connected portrait subject per cell and no detached lines, dots, weapon fragments or residue.
+
+The entire background must be perfectly uniform, fully opaque, flat exact #FF00FF with a crisp hard boundary around the subject: no gradient, texture, checkerboard, scene, floor, cast shadow, glow or halo. Reserve magenta exclusively for the removable background. Do not use magenta, hot pink, purple or violet anywhere in skin, hair, eyes, scar, mouth, clothing, metal, leather, outline, shading, antialiasing or props. Keep the guard palette strictly warm brown, charcoal, rust red, bone white and muted metal.
+
+Clean original Beastbound Odyssey hand-painted HD 2D sprite illustration; not pixel art, not 3D, not photorealistic. No animal, helmet, blood, magic, extra person, detached weapon, oversized prop, modern object or StoneAge source art.

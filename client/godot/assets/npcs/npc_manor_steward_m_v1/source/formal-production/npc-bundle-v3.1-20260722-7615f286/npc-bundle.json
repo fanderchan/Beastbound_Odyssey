@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "manor_steward_m_v1",
+  "appearanceId": "npc_manor_steward_m_v1",
+  "displayName": "庄园管事·男",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "ecfc2299b8c4b4c1c84e4dbe00a25383f1cf500c078b1ea4518b078d343c629e",
+    "decodedRgbaByteSha256": "c69195bbe1ce3266e294ebd0867a01bc6d8aa06334d70342e53721ab5c47f1f0",
+    "godotCanonicalRgbaSha256": "6edfacf3170c3c619e470e2b987de15d00f2eba4961f341583881e3201969e50",
+    "decodedRgbaSha256": "6edfacf3170c3c619e470e2b987de15d00f2eba4961f341583881e3201969e50",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+    "generatedAt": "2026-07-21T23:25:01+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "2e9392bbcaf65bdf15f3f3462df80348c6f07669b83b7e5bcb3a915cf2ec3953",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "eda2c3f16dafe9c01b0864d02c8d4fe56a82f9484c1be1bdab5a6767667f42c3",
+        "explicitSheetMaskPixelSha256": "6cfa7d052aacdf63b2d8fefb31c7fead4d2088d7b6ba89cd20b5f74be1b756ac",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "e95d27d9162e3772dc758479fa044bdf943aff5f05d998c2c93ff3549f58a677",
+        "reviewedComponentCount": 117
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "3a86550205887ca9c1a0a4a26974f295074aa98605756daeafc0ff699906a6df",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "16f253ca62a3b333fd43c3c3540fdd0608ed1a503782cb8ea2097a435aca4beb",
+        "explicitSheetMaskPixelSha256": "c1473d8f6361b9acae6fb78e0f6a6b9b4aee7e6010f0cb7b4acf6b6ddfc34762",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "11edd7d37e629469294d44de3ceb4af8b455e872363796718e3eae50ddde92a6",
+        "reviewedComponentCount": 24
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen from a newly authored manor-steward brief",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output; project-owned stable-keeper and bank-keeper identity boards were used only as rendering-style references, not copied subjects",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_manor_steward_m_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

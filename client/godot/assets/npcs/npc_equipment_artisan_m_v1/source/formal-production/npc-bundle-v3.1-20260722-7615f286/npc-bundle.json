@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "equipment_artisan_m_v1",
+  "appearanceId": "npc_equipment_artisan_m_v1",
+  "displayName": "equipment_artisan_m_v1",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "8afd7b201a87dc5afa0f9668b47f9b7469e0deeb884dd627e888461796633c78",
+    "decodedRgbaByteSha256": "ddb9e013702168fb448d688191ba20edab8bc919886171f5cc2a646c4ea64cad",
+    "godotCanonicalRgbaSha256": "2d251076280d2b1e1592c2ea7cad2a7505252986b1e2cdaa3f7bccb04b37d877",
+    "decodedRgbaSha256": "2d251076280d2b1e1592c2ea7cad2a7505252986b1e2cdaa3f7bccb04b37d877",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "built-in image_gen (model identifier not exposed)",
+    "generatedAt": "2026-07-21T23:17:32.057178+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "2f6fe26e9dbefdd4be3c334d5e738617cd931a1d8e8c8d45b802721782b5dd76",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "2ee3ad7771a55530cfb643dd0d53159f95efb9b3e19087b57b9250272b6d96a0",
+        "explicitSheetMaskPixelSha256": "4c1a79f6ea8466dea0a0016a458f0ad58da5e78b8eb1aa7c95c4fbb4b21771fc",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "31f3c2d17aba8d18f232d68847c82feea9e0292ad711f0c7b516b91f4f60f292",
+        "reviewedComponentCount": 79
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "2abda06d3f827cb4b959757edb3e08d4c416d794849ff15472d0b8d725404323",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "dd1c4e0de08e68ff2d325c1da984320ddc79dae3fcbd8e91678af47a344abe35",
+        "explicitSheetMaskPixelSha256": "d135c5e014f23bedb0601faa65258459d9fe2d37026ccf41c416e65a700da713",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "d6823566995549c23e13181ae53925a153f8457d5464501d05c01eefec2b4e93",
+        "reviewedComponentCount": 16
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "AI-generated original",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "project-owned generated output",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_equipment_artisan_m_v1/source/formal-production",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

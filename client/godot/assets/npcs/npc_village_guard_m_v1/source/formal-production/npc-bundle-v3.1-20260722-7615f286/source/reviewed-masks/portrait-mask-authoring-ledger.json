@@ -1,0 +1,628 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "7c14193d800746c151c351c73af472581d6129bf55ea9edb02845f7c8ee480c9",
+    "rawSheetDecodedRgbaByteSha256": "fadbbd896f83a7fbfb75ba58c8e88eceb49954381a8f803e1f5f52106adb6596",
+    "rawSheetGodotCanonicalRgbaSha256": "e1f1069f08a446fa1efe5c80c63e7dfdfe8389dc67d91eb89ac0022051c13dfc",
+    "rawSheetDecodedRgbaSha256": "e1f1069f08a446fa1efe5c80c63e7dfdfe8389dc67d91eb89ac0022051c13dfc",
+    "explicitMaskFileSha256": "b883cd120764795acfc225affea5e1b027672a6a89da56273a2558088a8bfe3f",
+    "explicitMaskPixelSha256": "c4e4db6561f9938e295d364b9af888ff89ec6c8d0999b7f659e2f839b7948d95",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024,
+    "builderVersion": "3.1.0",
+    "builderSha256": "7615f2860454dd23b3d51a3974257e68cc00cdf5e801199957a3ee16cb598f4b"
+  },
+  "reviewEvidence": [
+    "source/reviewed-mask-input/portrait-component-review-01.png",
+    "source/reviewed-mask-input/portrait-component-review-02.png",
+    "source/reviewed-mask-input/portrait-component-review-03.png"
+  ],
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6d9681bcbecfef0f62010194d444cfd1a593dc1983511f059a36b991c2be50d0",
+      "cellBbox": [
+        453,
+        219,
+        455,
+        222
+      ],
+      "sheetBbox": [
+        453,
+        219,
+        455,
+        222
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "2b3e1f49f0e705230b44f3076bf54f1809edd428681d421180d4882c0104d455",
+      "cellBbox": [
+        117,
+        58,
+        623,
+        626
+      ],
+      "sheetBbox": [
+        117,
+        58,
+        623,
+        626
+      ],
+      "pixelCount": 2794,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6b3f33bcd8ace4f2c2d19ed571f7091ddcbef4b52422f99b5b3d004195549e7b",
+      "cellBbox": [
+        452,
+        217,
+        455,
+        221
+      ],
+      "sheetBbox": [
+        452,
+        217,
+        455,
+        221
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bcac9697c599a51bc6de692862101a7a692e1cc0779dcf07acf471e9fd865709",
+      "cellBbox": [
+        461,
+        196,
+        463,
+        198
+      ],
+      "sheetBbox": [
+        461,
+        196,
+        463,
+        198
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2cd015b2914de2fadac98e27a121fe44a900375fa9a0726881e22aa0a4574b7b",
+      "cellBbox": [
+        475,
+        560,
+        476,
+        561
+      ],
+      "sheetBbox": [
+        475,
+        560,
+        476,
+        561
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7dbe74dcd708f412c8b32a3415d799364ccdc14b52ea5f103c2396fc673b0737",
+      "cellBbox": [
+        344,
+        174,
+        346,
+        176
+      ],
+      "sheetBbox": [
+        971,
+        174,
+        973,
+        176
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7ca4e583311e7d034dceced1272325b30f4486b991ac31947808e9b02bd58aae",
+      "cellBbox": [
+        378,
+        198,
+        381,
+        200
+      ],
+      "sheetBbox": [
+        1005,
+        198,
+        1008,
+        200
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8249973dd1e635abe92adb2ce41097d12b70d5f35e9ce34b12d99a7bb0542416",
+      "cellBbox": [
+        380,
+        200,
+        381,
+        202
+      ],
+      "sheetBbox": [
+        1007,
+        200,
+        1008,
+        202
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "0d673a1f5d016536612fef5fcdf4f728f88725965e3d80019fd4998b0ba11b9a",
+      "cellBbox": [
+        381,
+        202,
+        382,
+        203
+      ],
+      "sheetBbox": [
+        1008,
+        202,
+        1009,
+        203
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "1cbcfa57537974a2b26a8d844365ac70f6e1ee3c14ebefc3e49badc562979cad",
+      "cellBbox": [
+        527,
+        469,
+        529,
+        471
+      ],
+      "sheetBbox": [
+        1154,
+        469,
+        1156,
+        471
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "3f0525a006c1030badbb94cde166b00125b4626e55776c82b542abba7a395ca7",
+      "cellBbox": [
+        34,
+        59,
+        536,
+        626
+      ],
+      "sheetBbox": [
+        661,
+        59,
+        1163,
+        626
+      ],
+      "pixelCount": 2871,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "43f37562377fbe3c8c77e662a8148def1da4b51c9ef754ffc62ee6622e6511d8",
+      "cellBbox": [
+        343,
+        172,
+        350,
+        178
+      ],
+      "sheetBbox": [
+        970,
+        172,
+        977,
+        178
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3143050faffec22f503aa52135710c26764db1e898435ec497e1334554ef81a8",
+      "cellBbox": [
+        365,
+        176,
+        368,
+        179
+      ],
+      "sheetBbox": [
+        992,
+        176,
+        995,
+        179
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "12c2dbb7f27480e6ed0253df66be10cd95c6448fac2f9f7f343fc0a13aefa8d5",
+      "cellBbox": [
+        376,
+        196,
+        385,
+        203
+      ],
+      "sheetBbox": [
+        1003,
+        196,
+        1012,
+        203
+      ],
+      "pixelCount": 28,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "275c95f6e5f10bfd7879a7ab6ebb92e9c57b7dc17f641f136ef35a249d490e69",
+      "cellBbox": [
+        525,
+        468,
+        527,
+        470
+      ],
+      "sheetBbox": [
+        1152,
+        468,
+        1154,
+        470
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d1840e55a377d177314108589b3a51bbc65caea505504216b907a987ee367508",
+      "cellBbox": [
+        347,
+        121,
+        348,
+        122
+      ],
+      "sheetBbox": [
+        974,
+        121,
+        975,
+        122
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "353b51b66ec86b6ecd8f8f2d5aa12ac035d57b19f24f018b4c8b48448aa44e3b",
+      "cellBbox": [
+        518,
+        478,
+        519,
+        479
+      ],
+      "sheetBbox": [
+        1145,
+        478,
+        1146,
+        479
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "87ee69f0083bdc002fff202d83d3aebc41e4ecc720faca6540e2bd0b6cc6616c",
+      "cellBbox": [
+        118,
+        32,
+        621,
+        599
+      ],
+      "sheetBbox": [
+        118,
+        659,
+        621,
+        1226
+      ],
+      "pixelCount": 2730,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "05a9bf5aaf4e2ac779293cfe21855839e3af42f172e82a49270735716967b2ea",
+      "cellBbox": [
+        455,
+        153,
+        456,
+        154
+      ],
+      "sheetBbox": [
+        455,
+        780,
+        456,
+        781
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e883223ec8cc07325b97d65ec9f52b847fa8a0e0d7c3e633823321fbf82ee67e",
+      "cellBbox": [
+        377,
+        173,
+        379,
+        175
+      ],
+      "sheetBbox": [
+        1004,
+        800,
+        1006,
+        802
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "df58b59942c105e1147d4f11b1b105ddbf3f650df561aa064a23b669df4e2eb3",
+      "cellBbox": [
+        34,
+        35,
+        534,
+        600
+      ],
+      "sheetBbox": [
+        661,
+        662,
+        1161,
+        1227
+      ],
+      "pixelCount": 2764,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7fe32387637afa16f4709e007d48cd721f5cb46600f77f2054779d6ea84cea9b",
+      "cellBbox": [
+        375,
+        171,
+        384,
+        178
+      ],
+      "sheetBbox": [
+        1002,
+        798,
+        1011,
+        805
+      ],
+      "pixelCount": 33,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "72191ea0dc45831c97ce6aac2eac48808815a0c88482e6e77cf682ac5d16ec21",
+      "cellBbox": [
+        364,
+        152,
+        366,
+        154
+      ],
+      "sheetBbox": [
+        991,
+        779,
+        993,
+        781
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b8083bfb0012679cd80ccee2104f694c0c046ee972e9d5c869995157e50bd1ca",
+      "cellBbox": [
+        365,
+        192,
+        367,
+        194
+      ],
+      "sheetBbox": [
+        992,
+        819,
+        994,
+        821
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6922c27275815c4f8ab11526357ebf2157bdd522e7d86266a0c0f2a8d288766c",
+      "cellBbox": [
+        347,
+        203,
+        349,
+        205
+      ],
+      "sheetBbox": [
+        974,
+        830,
+        976,
+        832
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "96632a4f4b86c6f077cbd73b738e9493c0f49711b9f3b762812f34acd48d2e8f",
+      "cellBbox": [
+        525,
+        440,
+        526,
+        441
+      ],
+      "sheetBbox": [
+        1152,
+        1067,
+        1153,
+        1068
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "12f9e12f5da92517c31e81e62583ab3a809fefd7559cbdcffbe50b3fd2901c20",
+      "cellBbox": [
+        388,
+        533,
+        389,
+        534
+      ],
+      "sheetBbox": [
+        1015,
+        1160,
+        1016,
+        1161
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex guard-healer v3.1 exact-component visual reviewer (not direction blind reviewer)",
+      "reviewedAt": "2026-07-22T02:38:00+08:00"
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: identity-preserve\nAsset type: production 2D overworld NPC true-eight-direction static idle sheet for Beastbound Odyssey\nInput image: the supplied item-shopkeeper identity board is the exact identity authority. Preserve the exact same adult woman, face, age, sturdy build, chestnut braid over her own right shoulder, amber beads, costume, palette, materials, body proportions, and equipment sides.\n\nCreate an exact invisible 2-row by 4-column sheet of the same original adult female item shopkeeper in eight independently authored full-body static idle directions. She wears the same mustard-orange short jacket with cream trim, cream blouse, brick-red neck scarf, dark-brown belt, tan divided apron, loose dark trousers, wrapped calves, and brown boots. Follow the generated identity board's actual equipment layout: the close-fitting woven goods basket remains at her own LEFT hip with the same sealed cloth rolls and corked ceramic bottles; divided merchandise pouches and folding wooden scoop remain on the same apron positions. Keep every prop compact and fully inside its cell.\n\nGrid order and screen-facing semantics: row 1: south = exact front facing down-screen; southwest = front-left with nose, chest, knees, toes, basket-bearing body axis, and gaze aimed toward the LEFT edge; west = pure left profile with nose and toes toward the LEFT edge; northwest = back-left with back dominant, no front-facing chest, and body axis toward the UPPER-LEFT. Row 2: north = exact complete back with no face or eye and a vertical up-screen axis; northeast = back-right with back dominant, opposite shoulder exposure from northwest, and body axis toward the UPPER-RIGHT; east = pure right profile with nose and toes toward the RIGHT edge; southeast = front-right with nose, chest, knees, toes, basket-bearing body axis, and gaze aimed toward the RIGHT edge. Every direction is independently authored; no mirroring, duplication, rotation, relabeling, interpolation, neighboring-direction reuse, or reflected prop sides.\n\nExact invisible 2x4 grid with no borders or dividers. Full body centered in every cell, identical character height and feet baseline, central 60% safe area, generous uninterrupted flat-magenta padding, and nothing crossing cell edges. Clean original Beastbound Odyssey hand-painted HD 2D sprite art with warm outlines and controlled soft cel shading, matching the accepted NPC rendering language without copying another character. Perfectly uniform flat #FF00FF chroma-key background with no gradient, texture, floor, reflection, contact shadow, or cast shadow. No text, labels, arrows, UI, watermark, scenery, animal, second person, coins, ledger, abacus, modern shelf, weapon, magic, glow, readable writing, magenta clothing, photorealism, 3D render, or pixel art.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "33807347064fa68ce62ecbc54c9a902af8c6cdd061f1849b3953910ddb17d955",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no borders, dividers, labels, arrows, UI, watermark or scenery",
+        "no cropped world subject or world-cell edge crossing",
+        "no coins, ledger, abacus, modern shelf, weapon or magic",
+        "no copied StoneAge or external character art"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRole": "pre-generation identity authority for both world and portrait sheets",
+        "identityPromptPath": "../prompts/identity-board-v2.txt",
+        "identityPromptSha256": "55c43b1f368f3eb700d90b2730d3f6be1827777479365590225c9dff976c0417",
+        "styleReferences": [
+          {
+            "path": "../../npc_stable_keeper_m_v1/identity/identity-board.png",
+            "fileSha256": "25ab4b6c97f8a0d0ac9536b95d2fbd4d4e9bdc9e1ac26c7cf8fc70dcaf26e9cd",
+            "role": "project rendering language only"
+          },
+          {
+            "path": "../../npc_bank_keeper_f_v1/identity/identity-board.png",
+            "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+            "role": "project rendering language only"
+          }
+        ]
+      },
+      "generatedAt": "2026-07-21T23:09:40+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: production dialogue portrait expression sheet for a Beastbound Odyssey shared NPC archetype\nInput image: the supplied item-shopkeeper identity board is the exact identity authority.\n\nCreate an exact invisible 2x2 sheet of the same original adult female item shopkeeper, chest-up, front three-quarter facing slightly screen-left. Preserve exactly her approximately 38-45-year-old face, short sturdy adult presentation, warm-brown skin, deep-brown eyes, long dark-chestnut braid over her own right shoulder with two amber bone beads, mustard-orange short jacket with cream trim, cream blouse, muted brick-red neck scarf, and the same small visible apron/belt details. Same camera, crop, eye line, head size, shoulder width, body angle, lighting, line weight, and scale in every cell.\n\nOrder: top-left neutral attentive and approachable with mouth closed; top-right speaking naturally mid-sentence with a readable but modest open mouth, not shouting; bottom-left warm friendly smile; bottom-right mild practical concern with subtly furrowed brows and closed mouth, not angry, grieving, or crying. Change only the expression and tiny supporting eyebrow movement.\n\nExact invisible 2x2 grid with no borders or dividers, central 68% safe area, generous uninterrupted flat-magenta padding, and nothing crossing cells. Perfectly uniform flat #FF00FF chroma-key background. No text, labels, arrows, UI, watermark, ground, shadow, scenery, animal, second person, detached prop, coins, ledger, abacus, weapon, magic, glow, magenta clothing, photorealism, 3D render, pixel art, child proportions, cropped forehead, or cropped shoulders.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "be7caed0856a292a5d79fffe6e62245a9730f170592225a04955f906bf0f0bb7",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must be a complete back view with no visible face",
+        "no borders, dividers, labels, arrows, UI, watermark or scenery",
+        "no cropped world subject or world-cell edge crossing",
+        "no coins, ledger, abacus, modern shelf, weapon or magic",
+        "no copied StoneAge or external character art"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; exact model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRole": "pre-generation identity authority for both world and portrait sheets",
+        "identityPromptPath": "../prompts/identity-board-v2.txt",
+        "identityPromptSha256": "55c43b1f368f3eb700d90b2730d3f6be1827777479365590225c9dff976c0417",
+        "styleReferences": [
+          {
+            "path": "../../npc_stable_keeper_m_v1/identity/identity-board.png",
+            "fileSha256": "25ab4b6c97f8a0d0ac9536b95d2fbd4d4e9bdc9e1ac26c7cf8fc70dcaf26e9cd",
+            "role": "project rendering language only"
+          },
+          {
+            "path": "../../npc_bank_keeper_f_v1/identity/identity-board.png",
+            "fileSha256": "dfd4fe08b9a54ea0b64471ae47adc7e3d15591b40c5e6a142ef60aa4ad4d1b27",
+            "role": "project rendering language only"
+          }
+        ]
+      },
+      "generatedAt": "2026-07-21T23:09:40+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

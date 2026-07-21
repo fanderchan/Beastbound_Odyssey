@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey NPC true-eight 2x4 world sheet correction\nInput image: Image 1 is the edit target and binding source.\nPrimary request: change only the bottom-right eighth character (the southeast-facing equipment artisan). Move that complete bottom-right character 28 pixels to the right within its existing bottom-right invisible cell, so uninterrupted flat magenta separates it from the left edge of that cell. Keep his size, pose, southeast facing, face, clothing, tool placement, proportions, rendering and all pixels visually identical except for the necessary clean background fill at the old location. Do not move or redraw any of the other seven characters.\nCanvas and background: preserve the exact 1536x1024 canvas and exact 2-row by 4-column layout. Fill exposed space only with the same perfectly flat solid #FF00FF background. No divider, line, guide, label, shadow, text, or watermark.\nHard invariants: all eight direction meanings and row-major order unchanged; same adult male equipment artisan identity; no mirroring; no direction swap; no scale change; no added or removed prop; the bottom-right character must no longer touch global x=1152 and must have at least 28 pixels of solid magenta before its first visible pixel.\nAvoid: changing another cell, changing style, regenerating faces, resizing characters, visible seams, guide geometry, text.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "c2217797cb7be4450373df0e0d07d41a3d13c0c3868e2dbb2b70ed6ea17380ef",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no direction relabeling or duplication",
+        "no labels, dividers, shadows, or cropped subject pixels",
+        "no undocumented model identifier or invented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "built-in image_gen (model identifier not exposed)",
+      "parameters": {
+        "executionMode": "built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+      },
+      "generatedAt": "2026-07-21T23:17:32.057178+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey NPC dialogue portrait 2x2 source-sheet edge-safety correction\nInput image: Image 1 is the edit target and binding source.\nPrimary request: preserve the four equipment-artisan busts exactly as shown and correct only the magenta source background. Replace every background-only pixel across the canvas with one perfectly flat, uninterrupted solid #FF00FF field. In particular, make the full outer 24-pixel border on the left, top, and right sides pure flat #FF00FF with no tint drift, residue, halo, texture, speck, line, or subject pixel. The visible subjects already sit away from those outer edges; do not move, resize, crop, redraw, recolor, or restyle them.\nCanvas and layout: preserve the exact 1254x1254 canvas, exact invisible 2-row by 2-column layout, and mandatory row-major states: neutral, speaking / smile, concerned. Preserve the current bottom bust crop and inner seam crop; do not add a divider.\nIdentity and expression invariants: identical adult male equipment artisan, same square mature face, short dark charcoal curls, dense short beard, charcoal sleeveless shirt, copper-brown apron straps, tool-harness details, pose, lighting, and expression in each cell. All subject pixels, silhouettes, antialiasing, and state semantics must remain visually unchanged.\nBackground invariants: solid #FF00FF only; no gradient, compression texture, floor, shadow, glow, halo, checkerboard, border, frame, guide, label, watermark, or text.\nAvoid: regenerating a face, changing an expression, changing clothing or tools, shifting a bust, shrinking or enlarging a bust, adding padding by cropping the subject, any non-magenta pixel on the outer left/top/right border.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "10ab037f37fffe3f93c210a705e27b5e2484b4281fcedff4151b245220cffe36",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no direction relabeling or duplication",
+        "no labels, dividers, shadows, or cropped subject pixels",
+        "no undocumented model identifier or invented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "built-in image_gen (model identifier not exposed)",
+      "parameters": {
+        "executionMode": "built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic local post-processing only"
+      },
+      "generatedAt": "2026-07-21T23:17:32.057178+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

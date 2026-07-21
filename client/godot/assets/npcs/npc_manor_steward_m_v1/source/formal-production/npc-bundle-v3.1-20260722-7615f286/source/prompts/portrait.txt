@@ -1,0 +1,9 @@
+Use case: identity-preserve
+Asset type: production dialogue portrait expression sheet for a Beastbound Odyssey shared NPC archetype
+Input image: the supplied manor-steward identity board is the exact identity authority.
+
+Create an exact invisible 2x2 sheet of the same original mature male manor steward, chest-up, front three-quarter facing slightly screen-right. Preserve exactly his approximately 52-60-year-old face, warm-tan skin, amber-brown eyes, restrained forehead lines, swept-back charcoal-gray hair with silver temples, narrow charcoal moustache, short pointed goatee, deep-indigo high-collared steward coat with aged-brass trim and fasteners, ivory shirt, brown diagonal leather strap, and the same small visible sash detail. Same camera, crop, eye line, head size, shoulder width, body angle, lighting, line weight, and scale in every cell.
+
+Order: top-left calm attentive neutral with mouth closed; top-right speaking naturally mid-sentence with a readable but modest open mouth, not shouting; bottom-left restrained warm professional smile; bottom-right mild responsible concern with subtly furrowed brows and closed mouth, not angry, grieving, or crying. Change only the expression and tiny supporting eyebrow movement.
+
+Exact invisible 2x2 grid with no borders or dividers, central 68% safe area, generous uninterrupted flat-magenta padding, and nothing crossing cells. Perfectly uniform flat #FF00FF chroma-key background. No text, labels, arrows, UI, watermark, ground, shadow, scenery, animal, second person, detached prop, readable document, crown, armor, weapon, coins, magic, glow, magenta clothing, photorealism, 3D render, pixel art, cropped forehead, or cropped shoulders.

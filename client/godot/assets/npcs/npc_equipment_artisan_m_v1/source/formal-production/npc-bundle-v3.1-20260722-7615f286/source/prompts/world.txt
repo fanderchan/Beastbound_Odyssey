@@ -1,0 +1,7 @@
+Use case: precise-object-edit
+Asset type: Beastbound Odyssey NPC true-eight 2x4 world sheet correction
+Input image: Image 1 is the edit target and binding source.
+Primary request: change only the bottom-right eighth character (the southeast-facing equipment artisan). Move that complete bottom-right character 28 pixels to the right within its existing bottom-right invisible cell, so uninterrupted flat magenta separates it from the left edge of that cell. Keep his size, pose, southeast facing, face, clothing, tool placement, proportions, rendering and all pixels visually identical except for the necessary clean background fill at the old location. Do not move or redraw any of the other seven characters.
+Canvas and background: preserve the exact 1536x1024 canvas and exact 2-row by 4-column layout. Fill exposed space only with the same perfectly flat solid #FF00FF background. No divider, line, guide, label, shadow, text, or watermark.
+Hard invariants: all eight direction meanings and row-major order unchanged; same adult male equipment artisan identity; no mirroring; no direction swap; no scale change; no added or removed prop; the bottom-right character must no longer touch global x=1152 and must have at least 28 pixels of solid magenta before its first visible pixel.
+Avoid: changing another cell, changing style, regenerating faces, resizing characters, visible seams, guide geometry, text.

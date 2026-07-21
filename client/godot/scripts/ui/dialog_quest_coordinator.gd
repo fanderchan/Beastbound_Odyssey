@@ -1,6 +1,7 @@
 extends RefCounted
 
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
+const NpcDialogPresenter := preload("res://scripts/ui/npc_dialog_presenter.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
@@ -323,6 +324,7 @@ func _open_interaction_dialog(item: Dictionary) -> void:
 func _close_dialog() -> void:
 	if host.dialog_panel != null:
 		host.dialog_panel.visible = false
+	NpcDialogPresenter.clear_texture_rect(host.dialog_portrait_rect)
 	host.active_dialog_interaction.clear()
 
 func _dialog_is_open() -> bool:
@@ -811,6 +813,12 @@ func _update_dialog_text() -> void:
 		return
 	host.dialog_name_label.text = str(host.active_dialog_interaction.get("name", "交互"))
 	host.dialog_body_label.text = _dialog_body_for(host.active_dialog_interaction)
+	NpcDialogPresenter.apply_to_texture_rect(
+		host.dialog_portrait_rect,
+		host.active_dialog_interaction,
+		true,
+		""
+	)
 	_refresh_dialog_action_buttons(host.active_dialog_interaction)
 
 func _dialog_body_for(item: Dictionary) -> String:
