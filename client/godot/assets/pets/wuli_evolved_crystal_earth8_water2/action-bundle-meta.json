@@ -3,7 +3,7 @@
   "formId": "wuli_evolved_crystal_earth8_water2",
   "displayName": "晶甲乌力",
   "artStatus": "in_production",
-  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -102,7 +102,7 @@
     }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -120,14 +120,55 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "not_produced"
+        "status": "owner_review_pending"
       }
+    },
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 0,
+    "integratedWholeFrame": false,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 40,
+    "sourceFrameCountArchived": 50,
+    "rejectedSourceFrameCountArchived": 10,
+    "sourceLedger": "source/world/source-ledger.json",
+    "generationBrief": "source/world/generation-brief.md",
+    "contactSheet": "qa/world/true8-world-contact-8x5.png",
+    "cycleGif": "qa/world/true8-world-cycle.gif",
+    "qcSummary": "qa/world/world-qc.json",
+    "contactSheetSha256": "59f9164e10ec451741d6e6c7055dd583bcf06e03dba61150e51e5b0b9c9d715c",
+    "cycleGifSha256": "ec6d1c75099b4ac27b8f79abe6d8c57bb8a98149eca14186fb27e3635f47b6ba",
+    "qcSummarySha256": "b975433fa4e18b18c38414bcdf0f366f81ef6fb591aa9bee7347229a2b4f28c5",
+    "reviewEvidence": {
+      "evidenceIndex": {
+        "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json",
+        "sha256": "05e09302dbe68d19102ecd51edeca1c4327c8700b49f81391d14764a23056d29"
+      },
+      "independentBlindSemanticAudit": {
+        "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/phase326-blind-audit.json",
+        "sha256": "1f320705f6e55eaaf1bb459e92cdc375a09dc78dc9243019cf0021f8d1b93549"
+      },
+      "semanticDirectionApproval": {
+        "path": "client/godot/data/world_semantic_direction_approval_crystal_wuli_v1.json",
+        "sha256": "a2f9e80841ffa3c547691afb53220d51dd82fb6b6c5f25cdca0b2c71aad475ed"
+      }
+    },
+    "reviewGates": {
+      "selfReview": "passed",
+      "independentBlindSemanticAudit": "passed",
+      "ownerReview": "pending"
     }
   },
   "supportedMountedCharacterIds": [

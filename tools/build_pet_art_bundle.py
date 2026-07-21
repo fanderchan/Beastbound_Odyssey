@@ -49,6 +49,12 @@ SOURCE_FRAME_SIZE = 512
 RUNTIME_FRAME_SIZE = 256
 RESAMPLE_GUARD = 2
 DEFAULT_KEY = (255, 0, 255)
+PREMULTIPLIED_LANCZOS = "premultiplied_lanczos"
+PREMULTIPLIED_BILINEAR = "premultiplied_bilinear"
+PREMULTIPLIED_RESAMPLE_MODES = (
+    PREMULTIPLIED_LANCZOS,
+    PREMULTIPLIED_BILINEAR,
+)
 SLOT_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
@@ -785,13 +791,26 @@ def normalize_canvas(
     crop = prepared.cutout
     width = max(1, round(crop.width * common_scale))
     height = max(1, round(crop.height * common_scale))
-    resized = resize_rgba_premultiplied(crop, (width, height))
+    chroma_metadata = prepared.metadata.get("chroma")
+    source_resample_mode = (
+        PREMULTIPLIED_BILINEAR
+        if (
+            isinstance(chroma_metadata, dict)
+            and chroma_metadata.get("inputBackgroundMode") == "chroma_key"
+        )
+        else PREMULTIPLIED_LANCZOS
+    )
+    resized = resize_rgba_premultiplied(
+        crop,
+        (width, height),
+        resample_mode=source_resample_mode,
+    )
     actual_scale_x = width / crop.width
     actual_scale_y = height / crop.height
     baseline_exclusive = SOURCE_FRAME_SIZE - effective_source_margin - RESAMPLE_GUARD
     # Derive the final anchor from the already resampled alpha rather than
-    # multiplying the pre-resize bbox.  Lanczos can extend a hard alpha edge by
-    # several pixels when the source is enlarged, so theoretical coordinates
+    # multiplying the pre-resize bbox.  An interpolation filter can extend a
+    # hard alpha edge when the source is enlarged, so theoretical coordinates
     # would put the actual feet below the declared baseline.
     resized_visible_bbox = visible_bbox(resized, options.alpha_threshold)
     horizontal_anchor_px = horizontal_anchor(
@@ -842,6 +861,7 @@ def normalize_canvas(
         "sourceVisibleBbox": list(bbox),
         "sourceBaselineExclusive": baseline_exclusive,
         "actualScale": [round(actual_scale_x, 8), round(actual_scale_y, 8)],
+        "sourceResampleMode": source_resample_mode,
         "sourceLowAlphaMagentaPixelsCleared": cleaned_fringe,
         "residualMagentaPixelsSource": residual,
     }
@@ -860,8 +880,8 @@ def clean_resample_alpha(
     Resampling does not retain the exact per-pixel eligibility mask produced by
     the original chroma-key operation.  A color-distance cleanup here would
     therefore be an unprovenanced global despill and could erase legitimate
-    purple outlines or translucent effects.  Proven chroma cleanup belongs in
-    ``chroma_to_alpha`` where the exact same-operation mask exists; this stage
+    purple outlines or translucent effects.  Chroma removal belongs entirely
+    in ``chroma_to_alpha`` while exact cell provenance still exists; this stage
     only canonicalizes fully transparent pixels and the sub-threshold alpha
     floor.  The legacy color arguments remain in the public signature because
     installed bundle metadata still records them.
@@ -877,20 +897,32 @@ def clean_resample_alpha(
 def resize_rgba_premultiplied(
     image: Image.Image,
     size: tuple[int, int],
+    *,
+    resample_mode: str = PREMULTIPLIED_LANCZOS,
 ) -> Image.Image:
-    """Lanczos-resize RGBA without inventing fringe colors.
+    """Allowlisted premultiplied resize without inventing fringe colors.
 
     Straight RGB resampling lets hidden/low-alpha channel values ring
     independently, which can turn a repaired brown edge into pure green after
-    512/256 normalization.  Resample premultiplied color instead, while taking
-    the output alpha bytes from Pillow's ordinary alpha-channel resize so the
-    established silhouette contract remains unchanged.
+    512/256 normalization.  The default remains byte-compatible Lanczos;
+    chroma-keyed cells may opt into bilinear to avoid overshoot without ever
+    deleting output pixels by color.
     """
+
+    filters = {
+        PREMULTIPLIED_LANCZOS: Image.Resampling.LANCZOS,
+        PREMULTIPLIED_BILINEAR: Image.Resampling.BILINEAR,
+    }
+    if not isinstance(resample_mode, str) or resample_mode not in filters:
+        raise BundleBuildError(
+            f"unsupported premultiplied resample mode: {resample_mode!r}"
+        )
+    resample_filter = filters[resample_mode]
 
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
     alpha = rgba[:, :, 3].astype(np.float32)
     output_alpha = np.asarray(
-        image.convert("RGBA").getchannel("A").resize(size, Image.Resampling.LANCZOS),
+        image.convert("RGBA").getchannel("A").resize(size, resample_filter),
         dtype=np.uint8,
     )
     premultiplied = rgba[:, :, :3].astype(np.float32) * (alpha[:, :, None] / 255.0)
@@ -900,7 +932,7 @@ def resize_rgba_premultiplied(
             np.asarray(
                 Image.fromarray(premultiplied[:, :, channel], mode="F").resize(
                     size,
-                    Image.Resampling.LANCZOS,
+                    resample_filter,
                 ),
                 dtype=np.float32,
             )
@@ -931,18 +963,23 @@ def derive_runtime_frame(
     key: tuple[int, int, int],
     residual_distance: float,
     fringe_cleanup_alpha: int,
+    resample_mode: str = PREMULTIPLIED_LANCZOS,
 ) -> tuple[Image.Image, int]:
     """Derive the canonical 256px runtime frame from a 512px source frame.
 
     The bundle builder, fail-closed installer and any audit derivation must call
     this exact function and must not append color, alpha or resize processing
     before comparing the result.  Keeping the complete derivation here prevents
-    either tool from silently accepting a different decoded RGBA result.
+    either tool from silently accepting a different decoded RGBA result.  The
+    default Lanczos mode preserves historical bundles byte-for-byte; newer
+    chroma-keyed frames explicitly record bilinear mode so verifiers replay the
+    same interpolation without deleting any RGB color after resize.
     """
 
     runtime = resize_rgba_premultiplied(
         source,
         (RUNTIME_FRAME_SIZE, RUNTIME_FRAME_SIZE),
+        resample_mode=resample_mode,
     )
     return clean_resample_alpha(
         runtime,
@@ -990,6 +1027,15 @@ def render_frames(
 
     rendered: list[RenderedFrame] = []
     for prepared in prepared_frames:
+        chroma_metadata = prepared.metadata.get("chroma")
+        runtime_resample_mode = (
+            PREMULTIPLIED_BILINEAR
+            if (
+                isinstance(chroma_metadata, dict)
+                and chroma_metadata.get("inputBackgroundMode") == "chroma_key"
+            )
+            else PREMULTIPLIED_LANCZOS
+        )
         source, render_meta = normalize_canvas(
             prepared,
             common_scale,
@@ -1001,6 +1047,7 @@ def render_frames(
             options.key,
             options.residual_magenta_distance,
             options.fringe_cleanup_alpha,
+            resample_mode=runtime_resample_mode,
         )
         runtime_bbox = visible_bbox(runtime, options.alpha_threshold)
         if bbox_touches_margin(
@@ -1027,6 +1074,7 @@ def render_frames(
             **prepared.metadata,
             **render_meta,
             "runtimeVisibleBbox": list(runtime_bbox),
+            "runtimeResampleMode": runtime_resample_mode,
             "runtimeLowAlphaMagentaPixelsCleared": runtime_cleaned_fringe,
             "residualMagentaPixelsRuntime": runtime_residual,
             "sourceRgbaSha256": rgba_hash(source),

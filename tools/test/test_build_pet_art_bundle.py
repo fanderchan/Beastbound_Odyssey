@@ -127,6 +127,14 @@ class PetArtBundleBuilderTests(unittest.TestCase):
                 self.assertLessEqual(x1, 252)
                 self.assertLessEqual(y1, 252)
                 self.assertEqual(frame["residualMagentaPixelsRuntime"], 0)
+                self.assertEqual(
+                    frame["sourceResampleMode"],
+                    builder.PREMULTIPLIED_BILINEAR,
+                )
+                self.assertEqual(
+                    frame["runtimeResampleMode"],
+                    builder.PREMULTIPLIED_BILINEAR,
+                )
 
     def test_already_transparent_chroma_helper_output_is_supported(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -150,6 +158,14 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             self.assertEqual(
                 metadata["frames"][0]["chroma"]["inputBackgroundMode"],
                 "transparent_alpha",
+            )
+            self.assertEqual(
+                metadata["frames"][0]["sourceResampleMode"],
+                builder.PREMULTIPLIED_LANCZOS,
+            )
+            self.assertEqual(
+                metadata["frames"][0]["runtimeResampleMode"],
+                builder.PREMULTIPLIED_LANCZOS,
             )
 
     def test_transparent_alpha_contrasting_purple_rim_is_preserved_without_provenance(self) -> None:
@@ -361,8 +377,158 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             dtype=np.uint8,
         )
         resized = builder.resize_rgba_premultiplied(image, (137, 119))
+        explicit = builder.resize_rgba_premultiplied(
+            image,
+            (137, 119),
+            resample_mode=builder.PREMULTIPLIED_LANCZOS,
+        )
         actual_alpha = np.asarray(resized.getchannel("A"), dtype=np.uint8)
         self.assertTrue(np.array_equal(expected_alpha, actual_alpha))
+        self.assertEqual(builder.rgba_hash(resized), builder.rgba_hash(explicit))
+
+    def test_source_resample_mode_requires_chroma_key_provenance(self) -> None:
+        cutout = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+        ImageDraw.Draw(cutout).rectangle((8, 8, 23, 23), fill=(112, 67, 31, 255))
+        options = builder.BuildOptions(
+            input_path=Path("unused.png"),
+            output_dir=Path("unused-bundle"),
+            rows=1,
+            cols=1,
+            slots=("frame-1",),
+        )
+
+        def prepared(background_mode: str) -> builder.PreparedFrame:
+            return builder.PreparedFrame(
+                slot="frame-1",
+                row=0,
+                col=0,
+                cell_box=(0, 0, 32, 32),
+                cutout=cutout,
+                visible_bbox_in_cutout=(8, 8, 24, 24),
+                horizontal_anchor=16.0,
+                subject_span=16.0,
+                metadata={
+                    "chroma": {"inputBackgroundMode": background_mode},
+                },
+            )
+
+        keyed, keyed_metadata = builder.normalize_canvas(
+            prepared("chroma_key"),
+            1.0,
+            options,
+            8,
+        )
+        transparent, transparent_metadata = builder.normalize_canvas(
+            prepared("transparent_alpha"),
+            1.0,
+            options,
+            8,
+        )
+        keyed_x, keyed_y = keyed_metadata["sourcePastePosition"]
+        transparent_x, transparent_y = transparent_metadata["sourcePastePosition"]
+
+        self.assertEqual(
+            keyed_metadata["sourceResampleMode"],
+            builder.PREMULTIPLIED_BILINEAR,
+        )
+        self.assertEqual(
+            transparent_metadata["sourceResampleMode"],
+            builder.PREMULTIPLIED_LANCZOS,
+        )
+        self.assertGreater(keyed.getpixel((keyed_x + 12, keyed_y + 12))[3], 0)
+        self.assertGreater(
+            transparent.getpixel((transparent_x + 12, transparent_y + 12))[3],
+            0,
+        )
+
+    def test_bilinear_runtime_matches_direct_resize_and_preserves_key_near_detail(self) -> None:
+        crop = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(crop)
+        draw.rectangle((8, 8, 55, 55), fill=(112, 67, 31, 255))
+        draw.rectangle((20, 20, 31, 31), fill=(255, 0, 255, 64))
+        draw.rectangle((36, 20, 47, 31), fill=(190, 24, 205, 96))
+
+        source = builder.resize_rgba_premultiplied(
+            crop,
+            (512, 512),
+            resample_mode=builder.PREMULTIPLIED_BILINEAR,
+        )
+        runtime, cleaned = builder.derive_runtime_frame(
+            source,
+            builder.DEFAULT_KEY,
+            70.0,
+            96,
+            resample_mode=builder.PREMULTIPLIED_BILINEAR,
+        )
+        direct = builder.resize_rgba_premultiplied(
+            source,
+            (256, 256),
+            resample_mode=builder.PREMULTIPLIED_BILINEAR,
+        )
+        direct, direct_cleaned = builder.clean_resample_alpha(
+            direct,
+            builder.DEFAULT_KEY,
+            70.0,
+            96,
+        )
+
+        self.assertEqual(cleaned, 0)
+        self.assertEqual(direct_cleaned, 0)
+        self.assertEqual(builder.rgba_hash(runtime), builder.rgba_hash(direct))
+        source_key_detail = source.getpixel((204, 204))
+        runtime_key_detail = runtime.getpixel((102, 102))
+        runtime_purple_detail = runtime.getpixel((166, 102))
+        self.assertGreater(source_key_detail[3], 0)
+        self.assertGreater(runtime_key_detail[3], 0)
+        self.assertGreater(runtime_purple_detail[3], 0)
+        self.assertGreater(source_key_detail[0], 240)
+        self.assertGreater(source_key_detail[2], 240)
+        self.assertGreater(runtime_key_detail[0], 240)
+        self.assertGreater(runtime_key_detail[2], 240)
+        self.assertGreater(runtime_purple_detail[0], runtime_purple_detail[1])
+        self.assertGreater(runtime_purple_detail[2], runtime_purple_detail[1])
+
+    def test_premultiplied_resize_rejects_unknown_mode(self) -> None:
+        image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+        with self.assertRaisesRegex(
+            builder.BundleBuildError,
+            "unsupported premultiplied resample mode",
+        ):
+            builder.resize_rgba_premultiplied(
+                image,
+                (4, 4),
+                resample_mode="premultiplied_nearest",
+            )
+
+    def test_keyed_resample_fails_on_visible_magenta_instead_of_deleting_it(self) -> None:
+        cutout = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(cutout)
+        draw.rectangle((8, 8, 55, 55), fill=(112, 67, 31, 255))
+        draw.rectangle((24, 24, 39, 39), fill=(255, 0, 255, 64))
+        prepared = builder.PreparedFrame(
+            slot="frame-1",
+            row=0,
+            col=0,
+            cell_box=(0, 0, 64, 64),
+            cutout=cutout,
+            visible_bbox_in_cutout=(8, 8, 56, 56),
+            horizontal_anchor=32.0,
+            subject_span=48.0,
+            metadata={"chroma": {"inputBackgroundMode": "chroma_key"}},
+        )
+        options = builder.BuildOptions(
+            input_path=Path("unused.png"),
+            output_dir=Path("unused-bundle"),
+            rows=1,
+            cols=1,
+            slots=("frame-1",),
+        )
+
+        with self.assertRaisesRegex(
+            builder.BundleBuildError,
+            "source normalization produced .* residual magenta pixels",
+        ):
+            builder.render_frames([prepared], options)
 
     def test_runtime_derivation_does_not_globally_delete_unprovenanced_color(self) -> None:
         source = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
@@ -391,6 +557,37 @@ class PetArtBundleBuilderTests(unittest.TestCase):
         self.assertGreater(int(actual[95, 95, 3]), 0)
         self.assertGreater(int(actual[95, 95, 0]), int(actual[95, 95, 1]))
         self.assertGreater(int(actual[95, 95, 2]), int(actual[95, 95, 1]))
+
+    def test_both_runtime_modes_apply_only_the_alpha_floor(self) -> None:
+        source = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(source)
+        draw.rectangle((96, 80, 415, 447), fill=(112, 67, 31, 255))
+        draw.rectangle((144, 144, 183, 183), fill=(255, 0, 255, 64))
+        draw.rectangle((384, 144, 407, 183), fill=(41, 173, 92, 1))
+
+        raw_runtime = builder.resize_rgba_premultiplied(source, (256, 256))
+        self.assertEqual(raw_runtime.getpixel((197, 81))[3], 1)
+
+        lanczos, lanczos_cleaned = builder.derive_runtime_frame(
+            source,
+            builder.DEFAULT_KEY,
+            70.0,
+            96,
+        )
+        bilinear, bilinear_cleaned = builder.derive_runtime_frame(
+            source,
+            builder.DEFAULT_KEY,
+            70.0,
+            96,
+            resample_mode=builder.PREMULTIPLIED_BILINEAR,
+        )
+
+        self.assertEqual(lanczos_cleaned, 0)
+        self.assertEqual(bilinear_cleaned, 0)
+        self.assertGreater(lanczos.getpixel((81, 81))[3], 0)
+        self.assertGreater(bilinear.getpixel((81, 81))[3], 0)
+        self.assertEqual(lanczos.getpixel((197, 81)), (0, 0, 0, 0))
+        self.assertEqual(bilinear.getpixel((197, 81)), (0, 0, 0, 0))
 
     def assert_case_fails(self, case_name: str, message: str) -> None:
         with tempfile.TemporaryDirectory() as temporary:

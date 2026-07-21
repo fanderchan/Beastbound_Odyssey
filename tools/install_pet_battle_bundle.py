@@ -53,7 +53,12 @@ TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-from build_pet_art_bundle import derive_runtime_frame  # noqa: E402
+from build_pet_art_bundle import (  # noqa: E402
+    PREMULTIPLIED_BILINEAR,
+    PREMULTIPLIED_LANCZOS,
+    PREMULTIPLIED_RESAMPLE_MODES,
+    derive_runtime_frame,
+)
 
 
 TOOL_NAME = "install_pet_battle_bundle.py"
@@ -291,12 +296,15 @@ def _clean_resampled_runtime(
     key: tuple[int, int, int],
     residual_distance: float,
     fringe_cleanup_alpha: int,
+    *,
+    resample_mode: str = PREMULTIPLIED_LANCZOS,
 ) -> Image.Image:
     runtime, _cleaned_fringe = derive_runtime_frame(
         source,
         key,
         residual_distance,
         fringe_cleanup_alpha,
+        resample_mode=resample_mode,
     )
     return runtime
 
@@ -685,7 +693,69 @@ def _validate_action(
             raise BattleBundleError(f"{view}/{action} contains duplicate frame content at {slot}")
         seen_source.add(source_digest)
         seen_runtime.add(runtime_digest)
-        expected_runtime = _clean_resampled_runtime(source_image, key, float(residual_distance), fringe_alpha)
+        source_mode_name = "sourceResampleMode"
+        runtime_mode_name = "runtimeResampleMode"
+        source_mode_present = source_mode_name in metadata
+        runtime_mode_present = runtime_mode_name in metadata
+        if source_mode_present != runtime_mode_present:
+            raise BattleBundleError(
+                f"{view}/{action}/{slot} {source_mode_name} and "
+                f"{runtime_mode_name} must both be present or both be omitted"
+            )
+        if not source_mode_present:
+            source_resample_mode = PREMULTIPLIED_LANCZOS
+            runtime_resample_mode = PREMULTIPLIED_LANCZOS
+        else:
+            source_resample_mode = metadata[source_mode_name]
+            runtime_resample_mode = metadata[runtime_mode_name]
+            for mode_name, mode in (
+                (source_mode_name, source_resample_mode),
+                (runtime_mode_name, runtime_resample_mode),
+            ):
+                if not isinstance(mode, str):
+                    raise BattleBundleError(
+                        f"{view}/{action}/{slot} {mode_name} must be a string"
+                    )
+                if mode not in PREMULTIPLIED_RESAMPLE_MODES:
+                    raise BattleBundleError(
+                        f"{view}/{action}/{slot} {mode_name} is unsupported: {mode!r}"
+                    )
+            if source_resample_mode != runtime_resample_mode:
+                raise BattleBundleError(
+                    f"{view}/{action}/{slot} {source_mode_name} and "
+                    f"{runtime_mode_name} must match"
+                )
+            chroma_metadata = metadata.get("chroma")
+            input_background_mode = (
+                chroma_metadata.get("inputBackgroundMode")
+                if isinstance(chroma_metadata, dict)
+                else None
+            )
+            required_resample_modes = {
+                "chroma_key": PREMULTIPLIED_BILINEAR,
+                "transparent_alpha": PREMULTIPLIED_LANCZOS,
+            }
+            if input_background_mode not in required_resample_modes:
+                raise BattleBundleError(
+                    f"{view}/{action}/{slot} explicit resample modes require "
+                    "chroma.inputBackgroundMode to be chroma_key or "
+                    "transparent_alpha"
+                )
+            required_resample_mode = required_resample_modes[input_background_mode]
+            if runtime_resample_mode != required_resample_mode:
+                raise BattleBundleError(
+                    f"{view}/{action}/{slot} "
+                    f"chroma.inputBackgroundMode={input_background_mode} requires "
+                    f"{source_mode_name}={runtime_mode_name}="
+                    f"{required_resample_mode}"
+                )
+        expected_runtime = _clean_resampled_runtime(
+            source_image,
+            key,
+            float(residual_distance),
+            fringe_alpha,
+            resample_mode=runtime_resample_mode,
+        )
         if rgba_hash(expected_runtime) != runtime_digest:
             raise BattleBundleError(f"{view}/{action}/{slot} runtime is not deterministically derived from source")
         source_images.append(source_image)

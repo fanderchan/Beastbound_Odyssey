@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "input": ".run/art_batch_p1_3e/crystal_wuli/world/pet-southeast/raw.png",
+  "output": ".run/art_batch_p1_3e/crystal_wuli/world/pet-southeast/repacked.png",
+  "rows": 1,
+  "cols": 5,
+  "key": "#FF00FF",
+  "sharedScale": 0.7895327102803738,
+  "allowUpscale": true,
+  "fitScale": 0.64,
+  "bottomPaddingRatio": 0.07,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        68,
+        274,
+        357,
+        542
+      ],
+      "sourceArea": 53071,
+      "outputSize": [
+        233,
+        216
+      ],
+      "pastePosition": [
+        81,
+        521
+      ],
+      "cellMargins": [
+        81,
+        521,
+        82,
+        56
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        447,
+        274,
+        745,
+        543
+      ],
+      "sourceArea": 53861,
+      "outputSize": [
+        240,
+        217
+      ],
+      "pastePosition": [
+        474,
+        520
+      ],
+      "cellMargins": [
+        78,
+        520,
+        78,
+        56
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        825,
+        273,
+        1126,
+        545
+      ],
+      "sourceArea": 53295,
+      "outputSize": [
+        242,
+        219
+      ],
+      "pastePosition": [
+        869,
+        518
+      ],
+      "cellMargins": [
+        77,
+        518,
+        77,
+        56
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        0,
+        3
+      ],
+      "sourceBbox": [
+        1210,
+        273,
+        1513,
+        543
+      ],
+      "sourceArea": 54589,
+      "outputSize": [
+        244,
+        218
+      ],
+      "pastePosition": [
+        1264,
+        519
+      ],
+      "cellMargins": [
+        76,
+        519,
+        76,
+        56
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        0,
+        4
+      ],
+      "sourceBbox": [
+        1583,
+        278,
+        1898,
+        547
+      ],
+      "sourceArea": 53738,
+      "outputSize": [
+        253,
+        217
+      ],
+      "pastePosition": [
+        1655,
+        520
+      ],
+      "cellMargins": [
+        71,
+        520,
+        72,
+        56
+      ]
+    }
+  ]
+}

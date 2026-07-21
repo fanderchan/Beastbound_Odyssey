@@ -1,0 +1,1337 @@
+{
+  "schemaVersion": 2,
+  "manifestType": "beastbound_world_semantic_direction_approval",
+  "semanticDirectionReview": "passed_by_visual_audit",
+  "ownerReview": "pending",
+  "automaticDirectionRecognition": false,
+  "reviewStatement": "Direction semantics were judged by visual audit; automation freezes the current source frames and the exact runtime parity, video, grid, contact and probe evidence by SHA-256.",
+  "catalogPath": "client/godot/data/pet_art_catalog.json",
+  "defaultCharacterId": "novice_hunter_v1",
+  "characterRoot": "client/godot/assets/characters/novice_hunter",
+  "formIds": [
+    "wuli_evolved_crystal_earth8_water2"
+  ],
+  "canonicalDirections": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "requiredWorldActions": {
+    "idle": 1,
+    "walk": 4
+  },
+  "visualAudit": {
+    "reviewer": "codex-independent-blind-audit-phase326-v3",
+    "evidenceIndex": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json",
+    "reports": [
+      {
+        "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/phase326-blind-audit.json",
+        "sha256": "1f320705f6e55eaaf1bb459e92cdc375a09dc78dc9243019cf0021f8d1b93549",
+        "sizeBytes": 18601
+      }
+    ]
+  },
+  "evidenceAudit": {
+    "index": {
+      "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json",
+      "sha256": "05e09302dbe68d19102ecd51edeca1c4327c8700b49f81391d14764a23056d29",
+      "sizeBytes": 14493
+    },
+    "snapshot": {
+      "expected": {
+        "encodedDurationSeconds": 14.433333333333334,
+        "encodedFrameCount": 433,
+        "fps": 30.0,
+        "height": 720,
+        "parityFramesPerForm": 120,
+        "sceneDurationSeconds": 14.4,
+        "width": 1280
+      },
+      "files": [
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/godot-import.log",
+          "sha256": "23536933551e3f43cc1f9589537b0bbfe39fcd26de565e2f3e932f060b0d1d78",
+          "sizeBytes": 1177
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/contact-decode.log",
+          "sha256": "a0d5f04634e6bfbdb5fa60ee03376f24bdd819f8661abc2873c9254207e8fcaa",
+          "sizeBytes": 254
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/contact.log",
+          "sha256": "e91950ed80ca742d254320b26603c169e07d9b906090479b895902ae13012ac2",
+          "sizeBytes": 1193
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/ffprobe.json",
+          "sha256": "d49c06ed8a676f59a80d5cf46c076ddc225beb3e340a4e1bb56148cb707ccd33",
+          "sizeBytes": 691
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid-decode.log",
+          "sha256": "f5f15766f756ecb4266ee044e78960042b46f5ac7853edfd272e5482ac8c4ad8",
+          "sizeBytes": 238
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid-parity.json",
+          "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+          "sizeBytes": 87799
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid.log",
+          "sha256": "297f2d337f199bf24592b649c4dd00565c6eac7244f7f3f4a102b244a3660fe0",
+          "sizeBytes": 1534
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid.png",
+          "sha256": "8ba4d6a0e0ee5f55c2ac0b955c64cca8cc79bac4e2535e3a18a13e78fc8ebe60",
+          "sizeBytes": 163448
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/preflight-parity.json",
+          "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+          "sizeBytes": 87799
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/preflight-parity.log",
+          "sha256": "cfd00596c92f9959380aad472d6c8e398f532af1a7c4494c714c7df1e1850e27",
+          "sizeBytes": 1186
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/recording-parity.json",
+          "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+          "sizeBytes": 87799
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/recording.log",
+          "sha256": "7e89cd0cbbbc74e498150644ea2fecb28040985d15925545464fcc7fd1f52ffe",
+          "sizeBytes": 2064
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review-contact-sheet.png",
+          "sha256": "2310443208b1a6130a2e58520685aad24d6b313d1a598d01ecc81e0f3de3907b",
+          "sizeBytes": 1135426
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.avi",
+          "sha256": "00b03a75d4ad0a6fc2c2273bf4ccea04b7b727ece85be24b8246ca04345f803f",
+          "sizeBytes": 32632328
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.mp4",
+          "sha256": "c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b",
+          "sizeBytes": 886911
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/transcode.log",
+          "sha256": "ba0458875f778443a38d96262d1ac8341f7f35ba3f3dea804acc12fc485d2365",
+          "sizeBytes": 676
+        },
+        {
+          "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/video-decode.log",
+          "sha256": "fbec752f26b1426259bd2f5ed594ed1ebc8d96d91357bb3495af8c539470c00c",
+          "sizeBytes": 239
+        }
+      ],
+      "formIds": [
+        "wuli_evolved_crystal_earth8_water2"
+      ],
+      "forms": [
+        {
+          "contact": {
+            "decodeStatus": "passed",
+            "height": 2880,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review-contact-sheet.png",
+            "sampleContract": "per_direction_idle_at_0.30s_then_walk_at_1.20s",
+            "sampleFrameIndices": [
+              9,
+              36,
+              63,
+              90,
+              117,
+              144,
+              171,
+              198,
+              225,
+              252,
+              279,
+              306,
+              333,
+              360,
+              387,
+              414
+            ],
+            "sha256": "2310443208b1a6130a2e58520685aad24d6b313d1a598d01ecc81e0f3de3907b",
+            "sizeBytes": 1135426,
+            "width": 1280
+          },
+          "files": [
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/contact-decode.log",
+              "sha256": "a0d5f04634e6bfbdb5fa60ee03376f24bdd819f8661abc2873c9254207e8fcaa",
+              "sizeBytes": 254
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/contact.log",
+              "sha256": "e91950ed80ca742d254320b26603c169e07d9b906090479b895902ae13012ac2",
+              "sizeBytes": 1193
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/ffprobe.json",
+              "sha256": "d49c06ed8a676f59a80d5cf46c076ddc225beb3e340a4e1bb56148cb707ccd33",
+              "sizeBytes": 691
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid-decode.log",
+              "sha256": "f5f15766f756ecb4266ee044e78960042b46f5ac7853edfd272e5482ac8c4ad8",
+              "sizeBytes": 238
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid-parity.json",
+              "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+              "sizeBytes": 87799
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid.log",
+              "sha256": "297f2d337f199bf24592b649c4dd00565c6eac7244f7f3f4a102b244a3660fe0",
+              "sizeBytes": 1534
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid.png",
+              "sha256": "8ba4d6a0e0ee5f55c2ac0b955c64cca8cc79bac4e2535e3a18a13e78fc8ebe60",
+              "sizeBytes": 163448
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/preflight-parity.json",
+              "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+              "sizeBytes": 87799
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/preflight-parity.log",
+              "sha256": "cfd00596c92f9959380aad472d6c8e398f532af1a7c4494c714c7df1e1850e27",
+              "sizeBytes": 1186
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/recording-parity.json",
+              "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+              "sizeBytes": 87799
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/recording.log",
+              "sha256": "7e89cd0cbbbc74e498150644ea2fecb28040985d15925545464fcc7fd1f52ffe",
+              "sizeBytes": 2064
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review-contact-sheet.png",
+              "sha256": "2310443208b1a6130a2e58520685aad24d6b313d1a598d01ecc81e0f3de3907b",
+              "sizeBytes": 1135426
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.avi",
+              "sha256": "00b03a75d4ad0a6fc2c2273bf4ccea04b7b727ece85be24b8246ca04345f803f",
+              "sizeBytes": 32632328
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.mp4",
+              "sha256": "c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b",
+              "sizeBytes": 886911
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/transcode.log",
+              "sha256": "ba0458875f778443a38d96262d1ac8341f7f35ba3f3dea804acc12fc485d2365",
+              "sizeBytes": 676
+            },
+            {
+              "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/video-decode.log",
+              "sha256": "fbec752f26b1426259bd2f5ed594ed1ebc8d96d91357bb3495af8c539470c00c",
+              "sizeBytes": 239
+            }
+          ],
+          "formId": "wuli_evolved_crystal_earth8_water2",
+          "grid": {
+            "decodeStatus": "passed",
+            "height": 720,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid.png",
+            "sha256": "8ba4d6a0e0ee5f55c2ac0b955c64cca8cc79bac4e2535e3a18a13e78fc8ebe60",
+            "sizeBytes": 163448,
+            "width": 1280
+          },
+          "gridParity": {
+            "checkedFrames": 120,
+            "expectedFrames": 120,
+            "passedFrames": 120,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/grid-parity.json",
+            "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+            "sizeBytes": 87799,
+            "sourceSetSha256": "cf34bf344ef8f35abb56b998235c85c3bc187bae13925abf55a83c7337e7be0a",
+            "status": "passed"
+          },
+          "movieArchive": {
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.avi",
+            "sha256": "00b03a75d4ad0a6fc2c2273bf4ccea04b7b727ece85be24b8246ca04345f803f",
+            "sizeBytes": 32632328
+          },
+          "parity": {
+            "checkedFrames": 120,
+            "expectedFrames": 120,
+            "passedFrames": 120,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/recording-parity.json",
+            "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+            "sizeBytes": 87799,
+            "sourceSetSha256": "cf34bf344ef8f35abb56b998235c85c3bc187bae13925abf55a83c7337e7be0a",
+            "status": "passed"
+          },
+          "preflightParity": {
+            "checkedFrames": 120,
+            "expectedFrames": 120,
+            "passedFrames": 120,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/preflight-parity.json",
+            "sha256": "f515c739d0f0c217ede55dd7ccff7f787b86416d6e5c88f3fb47d1e41f6dc793",
+            "sizeBytes": 87799,
+            "sourceSetSha256": "cf34bf344ef8f35abb56b998235c85c3bc187bae13925abf55a83c7337e7be0a",
+            "status": "passed"
+          },
+          "probe": {
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/ffprobe.json",
+            "sha256": "d49c06ed8a676f59a80d5cf46c076ddc225beb3e340a4e1bb56148cb707ccd33",
+            "sizeBytes": 691
+          },
+          "runId": "phase326-crystal-wuli-world-v3",
+          "status": "passed",
+          "video": {
+            "codec": "h264",
+            "decodeStatus": "passed",
+            "durationSeconds": 14.433333,
+            "expectedDurationSeconds": 14.4,
+            "expectedEncodedDurationSeconds": 14.433333333333334,
+            "expectedFrameCount": 433,
+            "fps": 30.0,
+            "frameCount": 433,
+            "height": 720,
+            "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.mp4",
+            "sha256": "c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b",
+            "sizeBytes": 886911,
+            "width": 1280
+          }
+        }
+      ],
+      "generatedAtUtc": "2026-07-20T21:34:14.994030Z",
+      "importLog": {
+        "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/godot-import.log",
+        "sha256": "23536933551e3f43cc1f9589537b0bbfe39fcd26de565e2f3e932f060b0d1d78",
+        "sizeBytes": 1177
+      },
+      "indexSelfHashExcluded": true,
+      "indexType": "beastbound_world_direction_review_evidence",
+      "indexedFileCount": 17,
+      "runId": "phase326-crystal-wuli-world-v3",
+      "scene": "res://scenes/qa/CharacterMountDirectionReview.tscn",
+      "schemaVersion": 1,
+      "status": "passed",
+      "tools": {
+        "ffmpeg": "ffmpeg version 8.1.1 Copyright (c) 2000-2026 the FFmpeg developers",
+        "ffprobe": "ffprobe version 8.1.1 Copyright (c) 2007-2026 the FFmpeg developers",
+        "godot": "4.7.stable.official.5b4e0cb0f",
+        "python": "3.14.3 (main, Feb  3 2026, 15:32:20) [Clang 17.0.0 (clang-1700.6.3.2)]"
+      }
+    }
+  },
+  "evidenceFileCount": 18,
+  "bundleCount": 3,
+  "frameCount": 120,
+  "bundles": [
+    {
+      "bundleKey": "character:novice_hunter_v1",
+      "kind": "character",
+      "formId": null,
+      "root": "client/godot/assets/characters/novice_hunter",
+      "frameCount": 40,
+      "frames": [
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/south/idle/idle-1.png",
+          "direction": "south",
+          "action": "idle",
+          "index": 1,
+          "sha256": "1772caf03adf89b785969de2255e2bb6e9b7a8405dd3256db1b4f718976bf6ed",
+          "sizeBytes": 47172
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/south/walk/walk-1.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 1,
+          "sha256": "ea56220d682d74703643b16bd41dee6061fea5007fc963c830f7ddd25930ca38",
+          "sizeBytes": 42385
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/south/walk/walk-2.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 2,
+          "sha256": "ad3cec737d0632622f60ee49b89919137b8c050f7ad4161d579be8ffe2737829",
+          "sizeBytes": 42908
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/south/walk/walk-3.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 3,
+          "sha256": "f445e2683494f2caa6b2ea011483ba79834da7061687ddbfe8f82601c6c31293",
+          "sizeBytes": 42162
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/south/walk/walk-4.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 4,
+          "sha256": "33e67cdf06a3b5ec0437b5ab4cb1d36ee25e262a121e76e537e7429a3f39353f",
+          "sizeBytes": 41390
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southwest/idle/idle-1.png",
+          "direction": "southwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "bf444c8524b37c695817d7d9686a3ca1d0f8c16d006bdb682db199873275ad44",
+          "sizeBytes": 41503
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southwest/walk/walk-1.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "d534feff5223bd169aff8d6b52cb3c8d95c4e31453f9e55a9ed8927fb0c9f1ae",
+          "sizeBytes": 42813
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southwest/walk/walk-2.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "7ae17388bf21715e1c6aa8bde5691b63312b3fe6413c2c0dc163bfb427d7f622",
+          "sizeBytes": 42805
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southwest/walk/walk-3.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "67a29eb6e032af00af93234a593a2f0f15c378398f6865ad138ac763693ca4a3",
+          "sizeBytes": 43005
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southwest/walk/walk-4.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "42dd7318ff58cde62c5ea240a58bddb925a5fe35aaa16cb4249d9589b394b3e5",
+          "sizeBytes": 42472
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/west/idle/idle-1.png",
+          "direction": "west",
+          "action": "idle",
+          "index": 1,
+          "sha256": "50c1ab4464990343204b5d2611af1db12dfc2ed470c2bfeaf1df7ead37e0ecaa",
+          "sizeBytes": 32028
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/west/walk/walk-1.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 1,
+          "sha256": "eb2b34d30cc67b4ee02056996fcf3256f90f5b9f8c090ce99e014d1341e94bfa",
+          "sizeBytes": 37930
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/west/walk/walk-2.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 2,
+          "sha256": "0384644997c5313e51836e0fb01aa081e01e79e14b43ae60337e5c2643a66040",
+          "sizeBytes": 38899
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/west/walk/walk-3.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 3,
+          "sha256": "cd1076582f820414ca9cc06a39d5bcda8010d12c5e2323800dc5363571d03c5b",
+          "sizeBytes": 39023
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/west/walk/walk-4.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 4,
+          "sha256": "a772eba72c4e243a48e530525059345ae9d5008b21d0af376ed635077107f3f3",
+          "sizeBytes": 35484
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northwest/idle/idle-1.png",
+          "direction": "northwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "9e327337d85f1e21172bf76998c4b67e6891b22c27eb9e726266657214b91448",
+          "sizeBytes": 38803
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northwest/walk/walk-1.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "b545fcbb1cd10af4271efb3da2eaa945d968020985523dfc8878c7bd7ac797ec",
+          "sizeBytes": 38753
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northwest/walk/walk-2.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "a93951592afb94777a710020f65f65e72b4faf4fe9a0486438b3e680d0c12415",
+          "sizeBytes": 36750
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northwest/walk/walk-3.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "a14932a949f493f38a34c028d88f9d7d1c4edfe84f2575500619512c082ddc0c",
+          "sizeBytes": 38103
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northwest/walk/walk-4.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "36aa48a92722f55f50fbdad39e20cf83d7235187a839f927d8c7af3dbb825011",
+          "sizeBytes": 35719
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/north/idle/idle-1.png",
+          "direction": "north",
+          "action": "idle",
+          "index": 1,
+          "sha256": "ee4c6c2210945e61cf83a8649636806de6e89b368cd5418f95888a7303e22b05",
+          "sizeBytes": 42506
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/north/walk/walk-1.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 1,
+          "sha256": "995e52f82912a17b2527d4492387447b73f47b7f431b0510ba995092e16156c7",
+          "sizeBytes": 39807
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/north/walk/walk-2.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 2,
+          "sha256": "0cd370aa8b5ec9744befd3c1e8f8f56507bd96cc8e59a76f999aaaa9ef8193ec",
+          "sizeBytes": 39780
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/north/walk/walk-3.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 3,
+          "sha256": "6770e17d5d9fc71539a14169ae323430dc6e810b32c234c10314e9767fabfbf5",
+          "sizeBytes": 39767
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/north/walk/walk-4.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 4,
+          "sha256": "f4449a60f0ac8f54487d994c39b94f1da45bcfcc997479460c8d17d79eff341a",
+          "sizeBytes": 39782
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northeast/idle/idle-1.png",
+          "direction": "northeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "589411015febdbaebe85dd6c64815d0f7f347fb14d9cae1573af3b253550240e",
+          "sizeBytes": 44559
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northeast/walk/walk-1.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "e5c972c5b0d594f77f30b401de482b815542b7802ba57802e7faaba65a60a767",
+          "sizeBytes": 41930
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northeast/walk/walk-2.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "5269161b793f1259d16ca7ca3c30dd8e125542b0933bd1db20bcc5f30ff9e1bc",
+          "sizeBytes": 43540
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northeast/walk/walk-3.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "046f117355515d047df745a9414956b38ea7ae6fa4224b460e1f9a8399c1621c",
+          "sizeBytes": 42031
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/northeast/walk/walk-4.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "613ff7cf44935182292e87746b30abd898485cf68f9d58205e5d40aa455d6971",
+          "sizeBytes": 41009
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/east/idle/idle-1.png",
+          "direction": "east",
+          "action": "idle",
+          "index": 1,
+          "sha256": "7f096c2994b4ae17e257a6eeaaccf3c197be23f3c4667e69764bc56a152374b1",
+          "sizeBytes": 33975
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/east/walk/walk-1.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 1,
+          "sha256": "927fb79d3ee1776d1c427890f4853f99f2a7da088deda2f548b44e7e129d0858",
+          "sizeBytes": 41143
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/east/walk/walk-2.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 2,
+          "sha256": "1b55c7d22f806c1c3764718230c283336bdb3dd70356b35f2ba2185c5a9cbdae",
+          "sizeBytes": 39044
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/east/walk/walk-3.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 3,
+          "sha256": "249f2abb275c2f584c5e9df31e9d9738a2c7703094f240a79589e9941fb9e951",
+          "sizeBytes": 42695
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/east/walk/walk-4.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 4,
+          "sha256": "4660c55fe7671b9f9d0b89b875022228ba8324930feafeb8e0cc2afb9209bc4e",
+          "sizeBytes": 37636
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southeast/idle/idle-1.png",
+          "direction": "southeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "659945cbd67e65590655bdb1416e571f2946da65bb173d2a05a92b644dad96aa",
+          "sizeBytes": 45824
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southeast/walk/walk-1.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "4a32bc57ce36b7d268c7bbb572f4f9a7e432e381749f10c6e1126fc7ce8daf80",
+          "sizeBytes": 46306
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southeast/walk/walk-2.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "fe66bc429bdc193f2682adb9cd9b1b0e78ec884975b71d025e8e3c7b1b7b2217",
+          "sizeBytes": 45317
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southeast/walk/walk-3.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "70bed04cde27a7ee199d80db89266f111c82ddc537f85ef9f1943f28cfb5a2be",
+          "sizeBytes": 46368
+        },
+        {
+          "path": "client/godot/assets/characters/novice_hunter/world/directions/southeast/walk/walk-4.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "2a5324eff200769a3216b7a4472bda9036074fc6f694707dcfb84bb1392c1f38",
+          "sizeBytes": 45328
+        }
+      ]
+    },
+    {
+      "bundleKey": "pet:wuli_evolved_crystal_earth8_water2",
+      "kind": "pet",
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "root": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2",
+      "frameCount": 40,
+      "frames": [
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/south/idle/idle-1.png",
+          "direction": "south",
+          "action": "idle",
+          "index": 1,
+          "sha256": "536e6c6cd48a2214faf876280c471d70c167b80d9f34a04bc838ccfd2c436e83",
+          "sizeBytes": 39314
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-1.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 1,
+          "sha256": "0bf3d21d4e9efc2ec1a13d7037a48a8fa7d366b640652abd7681231e277d95f8",
+          "sizeBytes": 38595
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-2.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 2,
+          "sha256": "5605e69310fbea30752670a2a33075802391d5b7c7fc30288afe0d797631ca95",
+          "sizeBytes": 36898
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-3.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 3,
+          "sha256": "cf55161f54a33b0d35f13f04d9eb0671559032a462aa1e23286d31d09edc9e70",
+          "sizeBytes": 37457
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-4.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 4,
+          "sha256": "ad52837b9cf383c8c44ba3bcce991aa61562bdb448a74afc98fa213047222d8c",
+          "sizeBytes": 36997
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southwest/idle/idle-1.png",
+          "direction": "southwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "cdb08fe6da72d639439bc9582318f26c8b3b6c35a49675fe71304a5a0c8372cf",
+          "sizeBytes": 43291
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-1.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "08f600d3d43b32efe108d03cf33e64e544bf28bd4cb9c0ab0c9b609360d44bc9",
+          "sizeBytes": 41781
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-2.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "926e5e69bb7aa28d1148d6b12f5960dfa5926575dace9fc4e0ea147d36ab6ca8",
+          "sizeBytes": 39948
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-3.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "c3c6c8930712e1995084e1b45c22160373b7a452e00183bfdcd4e6f8ed3f6bf1",
+          "sizeBytes": 38733
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-4.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "833c34f688dc5590a6aea7abb28c9f294fba7da638dceb3519e4887bf643682e",
+          "sizeBytes": 37862
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/west/idle/idle-1.png",
+          "direction": "west",
+          "action": "idle",
+          "index": 1,
+          "sha256": "2349ff1336e2ecaf5c3eb6b7bed57af7c6f44f18d8b71c9b2a8b0d920604b778",
+          "sizeBytes": 40045
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-1.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 1,
+          "sha256": "8095189613b2701335ec216d5f4be955204245b01692af8e6bf7cbc38a0df4ac",
+          "sizeBytes": 38727
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-2.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 2,
+          "sha256": "397c2bab0e403c3fabf4a611da1133de67788227cbb1b9453c2e3cda52eae2f8",
+          "sizeBytes": 38500
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-3.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 3,
+          "sha256": "48a13545d7bb9f3272726f196750e8ed3137388094412ab9833f47eb0dd2ccad",
+          "sizeBytes": 37159
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-4.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 4,
+          "sha256": "3887143d81a7067d4722c69fe5cee309df0d71c3bac8033e016b4078716b47cb",
+          "sizeBytes": 38148
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northwest/idle/idle-1.png",
+          "direction": "northwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "ef90aab4c2b5e2203a58db2876db10bbb24a9300e101abf082a2272dc817e0be",
+          "sizeBytes": 35790
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-1.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "e63a806415894591767ceba58c7c09352f54f365253c4e3801fbd4ad69922f91",
+          "sizeBytes": 34823
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-2.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "94b6affa5ced10e3888e2ac8731d431d0390633fbe55558a94db35b622e2418c",
+          "sizeBytes": 33123
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-3.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "b6b633942fbdafbae3c7a27e8e9b887baba591c47f451e58aebc79be69bf96d4",
+          "sizeBytes": 33629
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-4.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "1894850b9870e0bb9ef39de109180774bb003f4874bed40cf1a9e0a82b74019e",
+          "sizeBytes": 33655
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/north/idle/idle-1.png",
+          "direction": "north",
+          "action": "idle",
+          "index": 1,
+          "sha256": "d584993f1056b250f0272e2bfc2b6c89c4358646a6c8946e41dac34c7796bdd8",
+          "sizeBytes": 36715
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-1.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 1,
+          "sha256": "ce8523848fd27bce49268df3e86764d7a5d822805d10f90eb0aa0849104bd693",
+          "sizeBytes": 39683
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-2.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 2,
+          "sha256": "80a19b2b5bea5246fa65edf7c328e422ab9887199bfacc444cd5a960fdd36156",
+          "sizeBytes": 35779
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-3.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 3,
+          "sha256": "c6efa77dedfe3f0af2ce87671d969fe962586c1b77ef11cec86cc45eba060476",
+          "sizeBytes": 40554
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-4.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 4,
+          "sha256": "e15de3fe25ae914fd4e6af8d45e73cfe0137f72cf28dce0d2d981c8a378369da",
+          "sizeBytes": 39495
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northeast/idle/idle-1.png",
+          "direction": "northeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "348acb7c0ff736a672fa9f71dd6fb108332b7c991804501a5a99b3025993e80a",
+          "sizeBytes": 35445
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-1.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "8f72458f7407698cba5d1d84f02bf4dff1b33c97f03231ad3b1f8279ecab68cd",
+          "sizeBytes": 35848
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-2.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "28975fa4b728df211dc8e062ae04dfa5078a7d571e584368db8f74091827cb72",
+          "sizeBytes": 35547
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-3.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "8f9433283454395933a0608a65b6cde800e6a83f30db3e9d625c8edd56708765",
+          "sizeBytes": 36769
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-4.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "fb3552ee58e63d826ec2568c08aabef7815f0b63ff9f0280e4f9e53c7708b59f",
+          "sizeBytes": 34805
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/east/idle/idle-1.png",
+          "direction": "east",
+          "action": "idle",
+          "index": 1,
+          "sha256": "326442b1fdec8f60022140096397eefda5007c58b528f901444d7e67b3c31a8f",
+          "sizeBytes": 40007
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-1.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 1,
+          "sha256": "db3a677dfac9bd8443be79fedcaf9d0805c352d533c3439da0674f6a24bb2aa9",
+          "sizeBytes": 39494
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-2.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 2,
+          "sha256": "76f2eb9840294578ed6308f781591738e55a6329f3450f1df98bc924b40eab68",
+          "sizeBytes": 38298
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-3.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 3,
+          "sha256": "4376fbf9b4326e6f3a000a48fcfae9b4a45df16521b04fbedb98b6874dea708b",
+          "sizeBytes": 39772
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-4.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 4,
+          "sha256": "65223267635cf85bb776ebba538741649190e54e8effc74dd8e3e58f8b777534",
+          "sizeBytes": 37850
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southeast/idle/idle-1.png",
+          "direction": "southeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "e1956e3910a8e20775745f7fccad93f02b59be4cd5487e5a209dff2a457b0880",
+          "sizeBytes": 53289
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-1.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "2b5e1a97459ee229697f2f4b9fbffba7e668e4e6869c11474246a178a558be83",
+          "sizeBytes": 53854
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-2.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "e6db72061f504f4027b8eb336367c9348492871465784367b64be72d01271114",
+          "sizeBytes": 53235
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-3.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "d09f18265c7684aa8c0cb50702fe851937337ccf54f3017e9cb31c455f65a292",
+          "sizeBytes": 54449
+        },
+        {
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-4.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "a95a1ded7514108434a4460a3b5c02ee84c3d02998503f742b139bcf9727af17",
+          "sizeBytes": 53718
+        }
+      ]
+    },
+    {
+      "bundleKey": "mounted:wuli_evolved_crystal_earth8_water2",
+      "kind": "mounted",
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "root": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2",
+      "frameCount": 40,
+      "frames": [
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/south/idle/idle-1.png",
+          "direction": "south",
+          "action": "idle",
+          "index": 1,
+          "sha256": "73f763f9778da312638979672d30b6ada4d9fb239b5a5e27529a26b25f83b511",
+          "sizeBytes": 27142
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-1.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 1,
+          "sha256": "6f4cc62c1608b6292261b286981af77ba089277f93120d82126a5d2fba1aab18",
+          "sizeBytes": 27666
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-2.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 2,
+          "sha256": "bf5be144831b5e029a97f96c14b7fac735999df0884db80d06081c1c8ea966a0",
+          "sizeBytes": 28192
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-3.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 3,
+          "sha256": "0294f3306d458269e104902d37a6f25a8a6a744504ef58ede0b4e828735c1190",
+          "sizeBytes": 28428
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/south/walk/walk-4.png",
+          "direction": "south",
+          "action": "walk",
+          "index": 4,
+          "sha256": "f7fc817e82a07e41baa202963c3b29349334683dd2e1b7c95121b83dd550b676",
+          "sizeBytes": 28545
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southwest/idle/idle-1.png",
+          "direction": "southwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "f0eff443fac80384c79bdaea101e315a608953633ebd501ffb0ad091469ce821",
+          "sizeBytes": 35273
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-1.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "0ccec85111109356be681849d91ca96b2bb51b22074ddf79b03fce677c9d9d1f",
+          "sizeBytes": 36422
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-2.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "225e65a40d778ecc58aa09d606116576b0c8b3743a7b613e5baf416aeee07d5c",
+          "sizeBytes": 36557
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-3.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "4bdf8b3e9efcbb58734aa0411cfeb2f15955c91e54e9753f94cf68b5579179eb",
+          "sizeBytes": 35580
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southwest/walk/walk-4.png",
+          "direction": "southwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "2ad79dce4ef867cc27b0665e71d2af1fc3d9969cb1a1e5c8e28d75d955f04f70",
+          "sizeBytes": 35666
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/west/idle/idle-1.png",
+          "direction": "west",
+          "action": "idle",
+          "index": 1,
+          "sha256": "8c40d68b4c82d957106facaaa5a5c4c79e12a13db7788adb31e488c4fa7a6517",
+          "sizeBytes": 35222
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-1.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 1,
+          "sha256": "75d293239ece027c2b1f7cc6e04e0f7996b4ef109926deffb83da6a99338a595",
+          "sizeBytes": 36556
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-2.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 2,
+          "sha256": "396b884ec81dd0fec01314b4648e0dc373f9295999f90900dcb10830aa5ec8b8",
+          "sizeBytes": 37710
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-3.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 3,
+          "sha256": "41da02829fb02b358e55f3fc559124c4c7901e1189a0e541e04e084666f5fb06",
+          "sizeBytes": 36660
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/west/walk/walk-4.png",
+          "direction": "west",
+          "action": "walk",
+          "index": 4,
+          "sha256": "33f0c51addc95fd53dab52b562180645de40a05d08f67e4dd223b2a384e3b3dd",
+          "sizeBytes": 36454
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northwest/idle/idle-1.png",
+          "direction": "northwest",
+          "action": "idle",
+          "index": 1,
+          "sha256": "52cd1858dade971b824e7a04e725e44a6426dd1460dc81054ccc1eedfcd6531c",
+          "sizeBytes": 35459
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-1.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 1,
+          "sha256": "e5f6581a44acf71a6ec13858130735893e757a804f34e2daa94aa62465570a73",
+          "sizeBytes": 34485
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-2.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 2,
+          "sha256": "843b9ae0d4333aa8dff880754c62bf04e386ce83e7a7d5f8c67bbedcc8e03589",
+          "sizeBytes": 35163
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-3.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 3,
+          "sha256": "faae3e9fac1eafbab706d47e22239f5b19f4f347358e80feaf45061fbd78f25b",
+          "sizeBytes": 34115
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northwest/walk/walk-4.png",
+          "direction": "northwest",
+          "action": "walk",
+          "index": 4,
+          "sha256": "b4b92618f93c3f54aa526de6c2ebdf4ccd70788532d4c0d37b62d87139b97da5",
+          "sizeBytes": 34805
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/north/idle/idle-1.png",
+          "direction": "north",
+          "action": "idle",
+          "index": 1,
+          "sha256": "7ef9b52b13ae2f9459e9735aff0c9df8a0d1569b398329c1dd3b6bba9b565d45",
+          "sizeBytes": 30892
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-1.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 1,
+          "sha256": "62daa1f5fbe8b1ef5080ff49f9e650cf7c93cd5edb163e8bae965ee181185598",
+          "sizeBytes": 31509
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-2.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 2,
+          "sha256": "e59e89672964e982786a7bba9525a38da7498eb113b43f82c844f2275db7cdb0",
+          "sizeBytes": 31084
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-3.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 3,
+          "sha256": "9b0262f843762c4f4b9da5bc5e5be472127b57f0d394fc095a2d65e0dfe67956",
+          "sizeBytes": 31369
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/north/walk/walk-4.png",
+          "direction": "north",
+          "action": "walk",
+          "index": 4,
+          "sha256": "caac46f81daa92c395c8ffc7cae2f519973f9b72f7f3b0cebc2613a01cc0fd04",
+          "sizeBytes": 31077
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northeast/idle/idle-1.png",
+          "direction": "northeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "f95367d536596f85c8f16670660eb1cca4e4745d91e9292ae1e1cf07e8cf30b0",
+          "sizeBytes": 39301
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-1.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "eff743df9c6851111d6600b812193a5486cd1c939ec19f69fee5974d6aa72654",
+          "sizeBytes": 39213
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-2.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "2bad828ed7e3131bc677af03bf64a154827c2968a9caf6f16cffe86710b88df8",
+          "sizeBytes": 38348
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-3.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "3cb44bf1366e1e5ab715297761424d002622684271b4f789819ca5fb9e4762d6",
+          "sizeBytes": 40372
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/northeast/walk/walk-4.png",
+          "direction": "northeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "6064c37b17992ef4e01e983d9d55f23e38bad1626686d84d1b660482ed72a32c",
+          "sizeBytes": 39421
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/east/idle/idle-1.png",
+          "direction": "east",
+          "action": "idle",
+          "index": 1,
+          "sha256": "f382f2cf300a62d9a37f6d0adff400e5c3a5f96ce0e748f5bd27bc4ec55e48d6",
+          "sizeBytes": 41356
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-1.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 1,
+          "sha256": "cee34120b36d0fceb814e54315caadcd17c6a7c375f8065951a39fbbb41c7a6d",
+          "sizeBytes": 41977
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-2.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 2,
+          "sha256": "38cf20ca49f75d17c390ca12646f294bce9a0c5156dc78382721cd2c04eaf0ab",
+          "sizeBytes": 41116
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-3.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 3,
+          "sha256": "fe9805979576bc6475b30ba381b8e2862d04645214c3faac88cbe450bfbd95c5",
+          "sizeBytes": 40539
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/east/walk/walk-4.png",
+          "direction": "east",
+          "action": "walk",
+          "index": 4,
+          "sha256": "08ae1a0fd36621488c700684f1b75dbfa18b84f64a74f56a3bf64ba3f8d1445e",
+          "sizeBytes": 40004
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southeast/idle/idle-1.png",
+          "direction": "southeast",
+          "action": "idle",
+          "index": 1,
+          "sha256": "1a6a7fcd6173e3974f198977f0be297b7b0e3a3665be5498dd021326a976915c",
+          "sizeBytes": 43993
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-1.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 1,
+          "sha256": "195b25f7a121f48e5247e0ab69d33486954c061f53339d1403fe0790c9002533",
+          "sizeBytes": 42384
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-2.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 2,
+          "sha256": "2ad330badd7470aef1d290e00c89e73a065ee75a8fd45a3fc463b3c9af823178",
+          "sizeBytes": 43666
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-3.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 3,
+          "sha256": "6d53c991bad0011609c5b901f3482b94d7c8caabdcf596124098527cd4e8990e",
+          "sizeBytes": 41926
+        },
+        {
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/world/directions/southeast/walk/walk-4.png",
+          "direction": "southeast",
+          "action": "walk",
+          "index": 4,
+          "sha256": "76f8b18b8ad9bc22783aa13d5cd53b93ec8a3eb0567a83e901c2795faa4aa081",
+          "sizeBytes": 42842
+        }
+      ]
+    }
+  ]
+}

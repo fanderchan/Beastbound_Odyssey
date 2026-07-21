@@ -13,3 +13,15 @@
 - 允许后处理：色键清理、单元切分、整体缩放、居中、透明画布归一化和边缘清理；不允许程序重画身体、拼接不同宠物或用普通乌力换色冒充进化。
 - 替换路径：从 `identity/identity-lock.md` 与保存的逐字 prompt 重新生成，再通过同一身份、色键、方向、mounted whole-frame、Godot、战斗和 owner review 门槛。
 - 当前状态：`identity_locked_self_review_passed_owner_review_pending`；不是运行包，也不是 release approved。
+
+<!-- phase326-crystal-world:start -->
+## Phase326 世界八方向候选
+
+- 范围：安装 40 帧宠物 world true8 候选；`pet-b` 只采用北/东北，错误朝西的东向和错误朝西南的东南向仅留失败证据，东/东南运行帧来自专门重生成组。
+- 生成器：Codex 内置 `image_gen`；输入仅为 Beastbound 自有身份板、已验真方向参考和本次留存生成结果。
+- 归档：`source/world/` 保存每个生成组的 raw、repacked、repack/pipeline 元数据、全部 512px 源帧、逐行取舍、参考输入与逐文件 SHA-256。
+- 后处理：只做色键、切格、整体缩放、脚底锚定、透明清理和 512→256 确定性派生；没有程序重画主体。
+- 审核证据：Phase326 v3 自评与独立盲审已通过；盲审报告 `.run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/phase326-blind-audit.json`（SHA-256 `1f320705f6e55eaaf1bb459e92cdc375a09dc78dc9243019cf0021f8d1b93549`），证据索引 `.run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json`（SHA-256 `05e09302dbe68d19102ecd51edeca1c4327c8700b49f81391d14764a23056d29`），语义批准清单 `client/godot/data/world_semantic_direction_approval_crystal_wuli_v1.json`（SHA-256 `a2f9e80841ffa3c547691afb53220d51dd82fb6b6c5f25cdca0b2c71aad475ed`）。
+- 当前状态：`self_review_passed_owner_pending`；项目所有者验收仍 pending，`runtimeEnabled=false`。
+- 替换路径：从归档身份/方向参考与生成记录重生成全部独立方向，再通过运行时精确帧、盲审、Godot 与 owner gate。
+<!-- phase326-crystal-world:end -->

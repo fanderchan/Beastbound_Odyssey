@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "input": ".run/art_batch_p1_3e/crystal_wuli/world/pet-east/raw.png",
+  "output": ".run/art_batch_p1_3e/crystal_wuli/world/pet-east/repacked.png",
+  "rows": 1,
+  "cols": 5,
+  "key": "#FF00FF",
+  "sharedScale": 0.7214545454545455,
+  "allowUpscale": true,
+  "fitScale": 0.64,
+  "bottomPaddingRatio": 0.07,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        43,
+        253,
+        422,
+        496
+      ],
+      "sourceArea": 56619,
+      "outputSize": [
+        278,
+        180
+      ],
+      "pastePosition": [
+        78,
+        493
+      ],
+      "cellMargins": [
+        78,
+        493,
+        78,
+        51
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        484,
+        251,
+        844,
+        496
+      ],
+      "sourceArea": 55622,
+      "outputSize": [
+        264,
+        181
+      ],
+      "pastePosition": [
+        519,
+        492
+      ],
+      "cellMargins": [
+        85,
+        492,
+        85,
+        51
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        907,
+        256,
+        1272,
+        496
+      ],
+      "sourceArea": 53794,
+      "outputSize": [
+        268,
+        177
+      ],
+      "pastePosition": [
+        951,
+        496
+      ],
+      "cellMargins": [
+        83,
+        496,
+        83,
+        51
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        0,
+        3
+      ],
+      "sourceBbox": [
+        1340,
+        255,
+        1706,
+        496
+      ],
+      "sourceArea": 55708,
+      "outputSize": [
+        268,
+        178
+      ],
+      "pastePosition": [
+        1385,
+        495
+      ],
+      "cellMargins": [
+        83,
+        495,
+        83,
+        51
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        0,
+        4
+      ],
+      "sourceBbox": [
+        1766,
+        255,
+        2134,
+        495
+      ],
+      "sourceArea": 52756,
+      "outputSize": [
+        270,
+        177
+      ],
+      "pastePosition": [
+        1818,
+        496
+      ],
+      "cellMargins": [
+        82,
+        496,
+        82,
+        51
+      ]
+    }
+  ]
+}

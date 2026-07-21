@@ -345,6 +345,238 @@ class InstallPetBattleBundleTest(unittest.TestCase):
         self.assertEqual(actual.getchannel("A").tobytes(), legacy_straight.getchannel("A").tobytes())
         self.assertNotEqual(MODULE.rgba_hash(actual), MODULE.rgba_hash(legacy_straight))
 
+    def test_install_replays_explicit_bilinear_and_keeps_legacy_default(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            action_root = staging / "views/front_3quarter_sw/attack"
+            source_path = action_root / "source-frames/attack-2.png"
+            runtime_path = action_root / "runtime-frames/attack-2.png"
+            with Image.open(source_path) as image:
+                source = image.convert("RGBA").copy()
+            ImageDraw.Draw(source).rectangle(
+                (172, 172, 211, 211),
+                fill=(190, 24, 205, 96),
+            )
+            bilinear_runtime, bilinear_cleaned = BUILDER.derive_runtime_frame(
+                source,
+                (255, 0, 255),
+                30.0,
+                96,
+                resample_mode=BUILDER.PREMULTIPLIED_BILINEAR,
+            )
+            legacy_runtime = MODULE._clean_resampled_runtime(
+                source,
+                (255, 0, 255),
+                30.0,
+                96,
+            )
+            self.assertEqual(bilinear_cleaned, 0)
+            self.assertNotEqual(
+                MODULE.rgba_hash(bilinear_runtime),
+                MODULE.rgba_hash(legacy_runtime),
+            )
+            source.save(source_path)
+            bilinear_runtime.save(runtime_path)
+
+            pipeline_path = action_root / "pipeline-meta.json"
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["chroma"] = {
+                "inputBackgroundMode": "chroma_key",
+            }
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_BILINEAR
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_BILINEAR
+            )
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+
+            bilinear_summary = MODULE.install_bundle(
+                _options(staging, root / "bilinear-asset-root")
+            )
+            self.assertTrue(bilinear_summary["changed"])
+            self.assertEqual(
+                MODULE.decoded_rgba_hash(
+                    root
+                    / "bilinear-asset-root/views/front_3quarter_sw/attack/attack-2.png"
+                ),
+                MODULE.rgba_hash(bilinear_runtime),
+            )
+
+            legacy_runtime.save(runtime_path)
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            pipeline["frames"][1]["chroma"]["inputBackgroundMode"] = (
+                "transparent_alpha"
+            )
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+
+            explicit_legacy = MODULE.install_bundle(
+                _options(staging, root / "explicit-legacy-asset-root")
+            )
+            self.assertTrue(explicit_legacy["changed"])
+            self.assertEqual(
+                MODULE.decoded_rgba_hash(
+                    root
+                    / "explicit-legacy-asset-root/views/front_3quarter_sw/attack/attack-2.png"
+                ),
+                MODULE.rgba_hash(legacy_runtime),
+            )
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["chroma"]["inputBackgroundMode"] = "chroma_key"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "chroma.inputBackgroundMode=chroma_key requires .*premultiplied_bilinear",
+            ):
+                MODULE.install_bundle(
+                    _options(staging, root / "keyed-explicit-lanczos-root")
+                )
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            del pipeline["frames"][1]["sourceResampleMode"]
+            del pipeline["frames"][1]["runtimeResampleMode"]
+            pipeline["frames"][1]["chroma"]["inputBackgroundMode"] = "chroma_key"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+
+            missing_mode = MODULE.install_bundle(
+                _options(staging, root / "missing-mode-asset-root")
+            )
+            self.assertTrue(missing_mode["changed"])
+            self.assertEqual(
+                MODULE.decoded_rgba_hash(
+                    root
+                    / "missing-mode-asset-root/views/front_3quarter_sw/attack/attack-2.png"
+                ),
+                MODULE.rgba_hash(legacy_runtime),
+            )
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "must both be present or both be omitted",
+            ):
+                MODULE.install_bundle(_options(staging, root / "runtime-only-mode-root"))
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            del pipeline["frames"][1]["runtimeResampleMode"]
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "must both be present or both be omitted",
+            ):
+                MODULE.install_bundle(_options(staging, root / "source-only-mode-root"))
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = 7
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "runtimeResampleMode must be a string",
+            ):
+                MODULE.install_bundle(_options(staging, root / "non-string-mode-root"))
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceResampleMode"] = "premultiplied_nearest"
+            pipeline["frames"][1]["runtimeResampleMode"] = "premultiplied_nearest"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "sourceResampleMode is unsupported",
+            ):
+                MODULE.install_bundle(_options(staging, root / "unknown-mode-root"))
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_BILINEAR
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "sourceResampleMode and runtimeResampleMode must match",
+            ):
+                MODULE.install_bundle(_options(staging, root / "mismatched-mode-root"))
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_BILINEAR
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_BILINEAR
+            )
+            pipeline["frames"][1]["chroma"]["inputBackgroundMode"] = "transparent_alpha"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "chroma.inputBackgroundMode=transparent_alpha requires .*premultiplied_lanczos",
+            ):
+                MODULE.install_bundle(
+                    _options(staging, root / "transparent-bilinear-root")
+                )
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            del pipeline["frames"][1]["chroma"]
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "explicit resample modes require chroma.inputBackgroundMode",
+            ):
+                MODULE.install_bundle(
+                    _options(staging, root / "missing-chroma-bilinear-root")
+                )
+
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["chroma"] = {
+                "inputBackgroundMode": "opaque_unknown",
+            }
+            pipeline["frames"][1]["sourceResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            pipeline["frames"][1]["runtimeResampleMode"] = (
+                BUILDER.PREMULTIPLIED_LANCZOS
+            )
+            legacy_runtime.save(runtime_path)
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "explicit resample modes require chroma.inputBackgroundMode",
+            ):
+                MODULE.install_bundle(
+                    _options(staging, root / "unknown-chroma-explicit-lanczos-root")
+                )
+
     def test_valid_pet_bundle_installs_180_frames_and_pending_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
