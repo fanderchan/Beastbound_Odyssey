@@ -1,0 +1,14 @@
+Use case: identity-preserve
+Asset type: production dialogue portrait expression source sheet for Beastbound Odyssey NPC
+Input images: Image 1 is the exact identity reference; Image 2 proves the same exact person's world costume and props. Preserve this woman, not merely a similar relative.
+Primary request: Create an EXACT SQUARE CANVAS with an invisible 2-row by 2-column portrait sheet of the SAME friendly approximately 33-year-old short-stocky adult welfare-registration clerk. Chest-up / waist-up dialogue bust, front three-quarter orientation facing slightly toward screen-right, same camera, crop, head size, shoulder width, body scale, outfit, lighting and prop placement in all four cells. Her completely blank small wooden registration board remains tucked under HER OWN RIGHT ARM and may enter the lower crop; her closed sealed travel supply satchel stays below the portrait crop and need not be shown. Preserve her warm approachable oval face, medium warm-tan skin, thick dark-brown compact braided bun, warm cream layered tunic, muted coral scarf/edging, blue-gray inset panel and light-brown belt. No redesign or age drift.
+EXACT EXPRESSION ORDER:
+Top-left NEUTRAL: attentive welcoming face, mouth closed.
+Top-right SPEAKING: natural mid-sentence mouth slightly open, engaged brows, not shouting.
+Bottom-left SMILE: warm confident friendly smile, mouth gently closed or slightly open.
+Bottom-right CONCERNED: mild thoughtful concern, brows slightly inward, mouth closed; not angry, not crying.
+Composition: square canvas, exact invisible equal 2x2 grid with no borders/dividers. One bust centered in each cell, same eye line and shoulder width, central safe area, generous top and outer-side padding. Nothing crosses between cells. Keep same head angle and shoulders; change only facial expression and tiny natural eyebrow/mouth movement. Board and hands remain inside each cell.
+Style: original legally distinct Beastbound Odyssey clean high-definition hand-painted 2D dialogue illustration, crisp warm dark outlines, controlled soft cel shading, low texture noise, expressive readable face; same art language as input, not pixel art, not 3D, not photorealistic.
+Background: perfectly uniform fully opaque flat solid #FF00FF across the entire square sheet, no gradient, texture, shadow, floor, scenery or lighting variation; never use magenta on subject.
+Constraints: same exact person and costume four times; blank board has no mark, paper, symbol or text; five fingers where visible; no cast/contact shadow.
+Avoid: readable text, letters, numbers, labels, arrows, UI, border, frame line, watermark, speech bubble, detached object, extra person; coins, coin purse, abacus, ledger, bank uniform/counter, open market basket, price tag, merchandise, manor keys, modern bureaucratic uniform, actual displayed goods, weapon, animal, copied StoneAge art.

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: formal Beastbound Odyssey static NPC world source sheet correction\nPrimary request: Correct exactly one semantic error in the supplied 4-by-2 source sheet. Completely redraw the TOP-RIGHT CELL (row 1, column 4) as a genuine NORTHWEST idle facing. The woman must travel away and toward IMAGE LEFT: her back dominates, her head/nose points toward IMAGE LEFT, and both boot/toe travel axes point toward IMAGE LEFT. The current top-right figure points right and is rejected. Do not mirror, flip, rearrange or copy another cell; freshly author this northwest pose from the identity reference.\nInput images: Image 1 is the rejected sheet and edit target; Image 2 is the frozen identity reference.\nScene/backdrop: preserve one perfectly flat solid #FF00FF opaque chroma-key field with no shadow, gradient, texture, divider, gutter or floor.\nSubject: preserve the exact same around-forty broad-shouldered reward custodian. In the redrawn northwest cell, retain her warm tan face, low dark-brown braided bun with terracotta cord, light-sand sleeves, terracotta-red overcoat, low-saturation cobalt-blue yoke/trim, dark-brown trousers/boots/belts and dull-brass fasteners. Her compact fully closed double-ring-sealed casket remains on her anatomical left hip and the custody belt on her anatomical right waist, with natural northwest occlusion. No egg is visible.\nStyle/medium: match the supplied sheet exactly: polished original hand-painted 2.5D fantasy RPG world art, clean dark linework, mature 5.5-head adult proportions, same camera, scale, lighting and baseline.\nComposition/framing: preserve the 4-column by 2-row layout and every other cell's identity, placement and direction. In the redrawn top-right cell keep the complete figure centered with generous magenta padding and the same height/baseline as neighboring cells. Crucial visual test: TOP-RIGHT points LEFT; bottom-row second cell (northeast) points RIGHT. They must visibly oppose each other while both remain back three-quarter views.\nConstraints: change only the top-right character needed to correct northwest; preserve flat #FF00FF everywhere; no manual-looking seam; no figure touches cell edges; no labels, text, arrows or watermark; no cast/contact shadow.\nAvoid: top-right nose or boots pointing right, duplicated northeast, mirror transform, swapped grid cells, live pet/animal, visible/cracked/broken/hatching egg, glow, magic aura, stable/feed/hay tools, diamonds/gems, scales/coins, crates, weapon, shield, missing/extra limbs, prop-side swap, cropped figure.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "bb9728ab3a455ea451eaa108454541f8d40201a3eee60a3c7a9a7379f28eeeda",
+      "negativeConstraints": [
+        "no runtime or offline mirroring and no manual cell rearrangement",
+        "no duplicate or neighboring-direction substitutions",
+        "northwest must point image-left and northeast must point image-right",
+        "closed left-hip egg casket and right-waist custody belt must preserve anatomical sides",
+        "no live pet, visible egg, broken egg, glow, stable feed, diamond merchant or warehouse cues",
+        "no labels, arrows, borders, UI, watermark, cast shadow or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelParametersExposed": false,
+        "identityBoardGeneratedFirst": true,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "portraitAcceptedGeneration": "v2 clean authored regeneration after the v1 speaking portrait failed the detached-foreground gate; no pixel deletion, reconnect or mask workaround",
+        "worldAcceptedGeneration": "v3 targeted image_gen regeneration of the rejected northwest cell; no offline transform, cell swap or mirror",
+        "identityReferenceRole": "the image_gen-authored identity canary was frozen before world and portrait expansion and was supplied as a reference to both accepted sheets"
+      },
+      "generatedAt": "2026-07-22T16:41:49Z",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: formal Beastbound Odyssey NPC dialogue portrait source sheet; clean authored regeneration after detached-hair rejection\nPrimary request: Freshly regenerate all four portraits of the exact same “2转MM守护员·女” from the supplied identity and accepted world references. Preserve the approved identity, costume, crop and four expressions, but redraw her hair as one compact connected silhouette: the low braided bun and hairline must remain physically joined to the head, with absolutely no loose flyaway strand, isolated curl, detached lock, floating ornament or separated hair island. The prior portrait sheet is only a rejected composition/expression reference and must not be repaired by deleting pixels.\nInput images: Image 1 is the rejected portrait layout/expression reference; Image 2 is the frozen identity canary; Image 3 is the accepted world identity reference.\nScene/backdrop: one perfectly flat solid #FF00FF opaque chroma-key field filling the entire image; absolutely uniform with no shadows, gradients, texture, dividers, gutters, floor plane or lighting variation.\nSubject: the same around-forty broad-shouldered female reward custodian: warm tan oval face, mature calm features, dark-brown hair gathered completely into the same low braided bun tied once with a terracotta cord, with all hair masses connected to the head; light-sand tunic collar, reinforced terracotta-red overcoat and low-saturation cobalt-blue shoulder yoke/trim. No loose tendril crosses the magenta background. A small upper edge of the closed double-ring-sealed left-hip casket may appear only if naturally within the identical bust crop; never show an egg.\nStyle/medium: polished original hand-painted 2.5D fantasy RPG dialogue art matching the identity canary and accepted world sheet; clean dark linework, warm readable forms, softly modeled materials, mature adult proportions, same camera/crop/lighting in every cell, no photorealism and no pixel art.\nComposition/framing: exactly four equally sized cells with no drawn borders, identical chest-up three-quarter-front crop, body angled slightly toward screen-left while eyes engage the viewer. Row-major states: top-left NEUTRAL (calm closed mouth), top-right SPEAKING (natural open mouth), bottom-left SMILE (warm restrained smile), bottom-right CONCERNED (protective worry, closed mouth). Keep head size, shoulder position, costume and compact connected hairstyle identical; change expression only. Generous magenta clearance at the top and each sheet-outer side; bottom bust crop may reach the lower cell edge only in the lower crop zone.\nLighting/mood: identical neutral warm light; dependable, protective and grounded.\nColor palette: terracotta red, light sand, low-saturation cobalt blue, dark brown, tiny dull-brass hardware; do not use magenta in the character.\nConstraints: fully opaque source; exact #FF00FF background requested; same woman and costume in all four cells; every alpha-visible part of each future extracted portrait must connect to the principal bust silhouette; one compact attached hair mass; no labels or text; face and both shoulders fully readable; expressions clearly distinct but subtle.\nAvoid: any loose strand, wispy tendril, detached curl, isolated hair lock, floating hair island, floating ornament, disconnected foreground fragment, live pet or animal, visible/cracked/broken/hatching egg, glow, magic aura, stable/feed/hay props, diamonds/gems, scales/coins, warehouse crates, generic clerk, extra people, pose/camera drift, different faces or ages, hairstyle drift between cells, cropped head, white dividers, borders, shadows, reflections, watermark, transparent background.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "625563a5b9c075146e7d6cfbebad95a600cb9c7afbe4f7d8b0f6fa8b187604f1",
+      "negativeConstraints": [
+        "no runtime or offline mirroring and no manual cell rearrangement",
+        "no duplicate or neighboring-direction substitutions",
+        "northwest must point image-left and northeast must point image-right",
+        "closed left-hip egg casket and right-waist custody belt must preserve anatomical sides",
+        "no live pet, visible egg, broken egg, glow, stable feed, diamond merchant or warehouse cues",
+        "no labels, arrows, borders, UI, watermark, cast shadow or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelParametersExposed": false,
+        "identityBoardGeneratedFirst": true,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "portraitAcceptedGeneration": "v2 clean authored regeneration after the v1 speaking portrait failed the detached-foreground gate; no pixel deletion, reconnect or mask workaround",
+        "worldAcceptedGeneration": "v3 targeted image_gen regeneration of the rejected northwest cell; no offline transform, cell swap or mirror",
+        "identityReferenceRole": "the image_gen-authored identity canary was frozen before world and portrait expansion and was supplied as a reference to both accepted sheets"
+      },
+      "generatedAt": "2026-07-22T16:41:49Z",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

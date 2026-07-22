@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-23T01:54:50+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "executionMode": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "modelIdentifierExposed": false,
+    "identityBoardLayout": "large neutral portrait, full-body front/back, smaller consistency views",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "formalSourceTreatment": "fully opaque chroma sources; deterministic reviewed_chroma_components_v3_1 processing only"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring, duplication, rotation, relabeling, transformed opposite direction or local pixel collage",
+    "no bank ledger, abacus, coins, grocery basket, floating diamonds or magical props",
+    "no noble, magician or modern-jeweler costume drift",
+    "no labels, dividers, scenery, shadows, cropped world subjects or unsafe portrait outer edges",
+    "no invented model identifier or undocumented generation parameter"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "a43be6439e041f0902d711efe8a06a92f36db9fecb047b8a0e957438792b408b",
+      "promptPath": "prompts/identity-board-v2-prop-side-correction.txt",
+      "promptSha256": "15c878be9090d264b4840878791b949df7f9494c8c7851b6c3dac0ab8d79deab",
+      "generatedAt": "2026-07-23T00:05:01+08:00",
+      "requestedBackground": "#FF00FF",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-4793-7d83-b97e-9862e3be6295/exec-ed739e6e-aa67-472a-94a6-0a07eae36b6e.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_diamond_merchant_m_v1/source/raw/identity-board-v2.png",
+        "editInputPath": "source/rejected/identity-board-v1-prop-side-drift.png",
+        "editInputFileSha256": "998ea9e49f266ab11c3acc4205c1428e37cebf92c3df60763416a7ebf33d38eb"
+      }
+    },
+    "worldSheet": {
+      "fileSha256": "2f48cafd961480267c854488112b97ff7d480ee09f946c98383fb15d9e958a8e",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "worldPromptPath": "prompts/world-idle-2x4-r2-northwest-v1.txt",
+      "worldPromptSha256": "c217f6479d1b637b000717dada99c38ef39fd3e8225ad93f8c843a2a61a86138",
+      "identityBoardSha256": "a43be6439e041f0902d711efe8a06a92f36db9fecb047b8a0e957438792b408b",
+      "generatedAt": "2026-07-23T01:54:50+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-4793-7d83-b97e-9862e3be6295/exec-d69c1306-2575-4e1d-9992-c9906894bdd3.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_diamond_merchant_m_v1/source/raw/world-idle-2x4-r2-northwest-v1.png",
+        "retainedExecutionOutputSha256": "2f48cafd961480267c854488112b97ff7d480ee09f946c98383fb15d9e958a8e",
+        "editInputPath": "source/raw/world-idle-2x4-v6-accepted.png",
+        "editInputFileSha256": "37ee16c2aaaa1edb052db722101bd278ca8e54d07eb676a5b48d7ce31fc92b68",
+        "editIntent": "independently redraw the northwest view at a clear rear-left 45-degree axis after frozen Stage A classified the prior silhouette as too close to north",
+        "construction": {
+          "builtInGenerativeEdit": true,
+          "localPixelCompositeApplied": false,
+          "mirroringApplied": false,
+          "rotationApplied": false,
+          "relabelingApplied": false,
+          "resizingApplied": false,
+          "interpolationApplied": false
+        }
+      },
+      "supersededRevision": {
+        "path": "source/rejected/world-idle-2x4-v6-stage-a-northwest-too-north.png",
+        "fileSha256": "37ee16c2aaaa1edb052db722101bd278ca8e54d07eb676a5b48d7ce31fc92b68",
+        "immutableBundle": "source/formal-production/npc-bundle-v3.1-20260723-7615f286/npc-bundle.json",
+        "rejection": "formal Stage A presentation index 4, privately frozen as northwest, read too close to north because the whole-body yaw was insufficient"
+      }
+    },
+    "portraitSheet": {
+      "fileSha256": "26cb78f51cb58e4a1fbffcef9df8b61aa1f731f92ca65852f52677d3edcb615a",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "portraitPromptPath": "prompts/portrait-2x2-v2-edge-safe.txt",
+      "portraitPromptSha256": "229b449ed942b26d00884741ca81a03f9508fa4894997be0456458f9da52a316",
+      "identityBoardSha256": "a43be6439e041f0902d711efe8a06a92f36db9fecb047b8a0e957438792b408b",
+      "generatedAt": "2026-07-23T00:22:52+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-4793-7d83-b97e-9862e3be6295/exec-8a62f522-eed2-4af6-8003-ca95dfd04c80.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_diamond_merchant_m_v1/source/raw/portrait-2x2-v2-edge-safe.png",
+        "retainedExecutionOutputSha256": "26cb78f51cb58e4a1fbffcef9df8b61aa1f731f92ca65852f52677d3edcb615a",
+        "editInputPath": "source/rejected/portrait-2x2-v1-right-edge-contact.png",
+        "editInputFileSha256": "6440f042193f7ce5878d5bafd9fc8770cdcef11ccffc34d7f8f383e2b7fd7db8"
+      }
+    }
+  }
+}

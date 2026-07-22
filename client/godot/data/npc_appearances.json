@@ -373,6 +373,293 @@
       },
       "releaseAttestationPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/release-attestation.json",
       "releaseAttestationSha256": "a3bd73dac4faaeb3be823811b366767fb6d2d62e9820e17978244c11c97384ff"
+    },
+    {
+      "appearanceId": "npc_player_rebirth_mentor_f_v1",
+      "displayName": "玩家转生导师·女",
+      "roleId": "player_rebirth_mentor",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "成熟沉着的玩家转生资格导师，资格标杆、封闭登记板和螺旋化石牌形成职业识别；与村医、宠物转生和宗教岗位严格分离。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_pet_mm_trial_mentor_m_v1",
+      "displayName": "1转MM试炼师·男",
+      "roleId": "pet_mm_trial_mentor",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "健壮严谨的宠物MM试炼裁判，信号骨哨、挑战计数结和裁判护臂形成职业识别；不是守卫、骑宠导师或宠技训练师。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
+      "displayName": "2转MM守护员·女",
+      "roleId": "pet_mm_stage2_keeper",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "谨慎周到的2转MM奖励保管员，贴身封闭蛋匣、双环封签和保管腰带形成职业识别；不是兽栏管理员或普通仓库员。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_diamond_merchant_m_v1",
+      "displayName": "钻石商·男",
+      "roleId": "diamond_merchant",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "干练而克制华丽的钻石专营商，封闭矿石样品匣、骨制量具和规整贵重货腰带形成职业识别；与银行和杂货商分离。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_diamond_merchant_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_diamond_merchant_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_diamond_merchant_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_pet_skill_trainer_m_v1",
+      "displayName": "宠技训练师·男",
+      "roleId": "pet_skill_trainer",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "敏捷理性的宠物行为训练师，七槽无字训练牌、信号哨和技能石收纳形成职业识别；与骑宠导师和新手训练师分离。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_welfare_clerk_f_v1",
+      "displayName": "福利员·女",
+      "roleId": "welfare_clerk",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "亲切可靠的新手福利登记员，空白木登记牌和封装远行补给袋形成职业识别；不是银行、商人或庄园管事。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_welfare_clerk_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_welfare_clerk_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_welfare_clerk_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
+    },
+    {
+      "appearanceId": "npc_storyteller_m_v1",
+      "displayName": "说书人·男",
+      "roleId": "storyteller",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "阅历丰富的年长旅人说书人，闭合札记、旅行纪念结和折叠披肩形成口述历史轮廓；不是庄园登记员或法师。",
+      "status": "owner_review_pending",
+      "ownerReviewStatus": "pending",
+      "releaseApproved": false,
+      "runtimeEnabled": false,
+      "assetRoot": "client/godot/assets/npcs/npc_storyteller_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_storyteller_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_storyteller_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {"idle": {"frameCount": 1, "fps": 1.0}},
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      }
     }
   ]
 }

@@ -1,0 +1,1743 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "world",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "2f48cafd961480267c854488112b97ff7d480ee09f946c98383fb15d9e958a8e",
+    "rawSheetDecodedRgbaByteSha256": "6a7853ee9028ddaa6efef61a40f2daad65c2676e6a5a97387485b5774d323970",
+    "rawSheetGodotCanonicalRgbaSha256": "c14f1bd54706a82ede23c9d7f9ee287dd1f00cdb8efd96e34b80e9a17494b86b",
+    "rawSheetDecodedRgbaSha256": "c14f1bd54706a82ede23c9d7f9ee287dd1f00cdb8efd96e34b80e9a17494b86b",
+    "explicitMaskFileSha256": "40feb4a5901737c2e8fdfdee218bdb8fdf8fb133f80d5a8eb78cd97827122763",
+    "explicitMaskPixelSha256": "c64d17c770770a52a41c80a1747c406c7fe26be2a4d59cbf128f9f5d82ee766a",
+    "width": 1536,
+    "height": 1024
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "all-edges-safe-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a72a4e1a275011d4b0bef000f5a01faccf4dba50ea711464fb70cf00df8f7956",
+      "cellBbox": [
+        272,
+        111,
+        273,
+        112
+      ],
+      "sheetBbox": [
+        272,
+        111,
+        273,
+        112
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "0032b7de73ba957bca3774c7eac95d0d80d4dac09a15a195d00e55c5f61664e7",
+      "cellBbox": [
+        244,
+        173,
+        245,
+        174
+      ],
+      "sheetBbox": [
+        244,
+        173,
+        245,
+        174
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "26c883afdcfd17f1746d331bf207f1de1ee508e54d7378cf9d70e358f1e9b511",
+      "cellBbox": [
+        303,
+        227,
+        317,
+        305
+      ],
+      "sheetBbox": [
+        303,
+        227,
+        317,
+        305
+      ],
+      "pixelCount": 560,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "dc60b52d479e009ce9d450e0b2d408e654a8fe9c8680953992a3f3f30674eb53",
+      "cellBbox": [
+        216,
+        234,
+        238,
+        307
+      ],
+      "sheetBbox": [
+        216,
+        234,
+        238,
+        307
+      ],
+      "pixelCount": 395,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "fc919235e531899449b82ed6c758e744a45845e35e44495fec73cb595e06affa",
+      "cellBbox": [
+        223,
+        306,
+        224,
+        308
+      ],
+      "sheetBbox": [
+        223,
+        306,
+        224,
+        308
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d46483ed7b8c50b93d1a8b6afc9945032bffa268b524665e6e7dacc23ce7e1fc",
+      "cellBbox": [
+        212,
+        315,
+        215,
+        320
+      ],
+      "sheetBbox": [
+        212,
+        315,
+        215,
+        320
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "70b15bfddc96a717690ebbff7a2f750fed681ea9ac375eafc07a44024e51600a",
+      "cellBbox": [
+        250,
+        110,
+        351,
+        279
+      ],
+      "sheetBbox": [
+        250,
+        110,
+        351,
+        279
+      ],
+      "pixelCount": 271,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "889bebf047674e964a6c33155e42ba195e70668717c0bf48c7c2df62f0f601be",
+      "cellBbox": [
+        200,
+        144,
+        351,
+        474
+      ],
+      "sheetBbox": [
+        200,
+        144,
+        351,
+        474
+      ],
+      "pixelCount": 1209,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "841e15654668fd68112fa02bd75c6a82bee9326a95e2ea92536582dad189b472",
+      "cellBbox": [
+        350,
+        283,
+        351,
+        286
+      ],
+      "sheetBbox": [
+        350,
+        283,
+        351,
+        286
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "48bdc885f1483c3f673d9bb35dfa4d79ecbdea7094310d942cb385cb7b398d28",
+      "cellBbox": [
+        349,
+        289,
+        350,
+        294
+      ],
+      "sheetBbox": [
+        349,
+        289,
+        350,
+        294
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "61c6c6377385022766abf78129add5648cfbb1de8b7dada18b5a4c2077165924",
+      "cellBbox": [
+        302,
+        225,
+        318,
+        310
+      ],
+      "sheetBbox": [
+        302,
+        225,
+        318,
+        310
+      ],
+      "pixelCount": 219,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8357fb76dd5a4cc54cd83eb1dff216f0340e8742bdb32db6e36432890d26c167",
+      "cellBbox": [
+        214,
+        232,
+        239,
+        313
+      ],
+      "sheetBbox": [
+        214,
+        232,
+        239,
+        313
+      ],
+      "pixelCount": 256,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ac845cac01057068ea97699093b2b02c6cbd93bd882ecdf1c546d220ebf9aec8",
+      "cellBbox": [
+        210,
+        312,
+        217,
+        322
+      ],
+      "sheetBbox": [
+        210,
+        312,
+        217,
+        322
+      ],
+      "pixelCount": 41,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9872e347b22716c7afc00eab00d906ff1ef376a9b6bd28721f370fb81f1af569",
+      "cellBbox": [
+        315,
+        314,
+        323,
+        323
+      ],
+      "sheetBbox": [
+        315,
+        314,
+        323,
+        323
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a4f70fadd15a23b40b14fbd9c9d50268903ce2954b23681a2929778d69e3d337",
+      "cellBbox": [
+        268,
+        318,
+        269,
+        319
+      ],
+      "sheetBbox": [
+        268,
+        318,
+        269,
+        319
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6b45dadd9284f9358a46e9e0dde9d06cf949a10c48ef3dff18a3bb3bc2b12714",
+      "cellBbox": [
+        267,
+        319,
+        268,
+        320
+      ],
+      "sheetBbox": [
+        267,
+        319,
+        268,
+        320
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7719f4e89e2f0a833fc4dab7f46c4d8380904798c854cbc69a02cbf9870ddb98",
+      "cellBbox": [
+        269,
+        319,
+        270,
+        320
+      ],
+      "sheetBbox": [
+        269,
+        319,
+        270,
+        320
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6363d6ed405fb875d67f54e43624c12d8d918bd7ec5618658d5fe624aae4f869",
+      "cellBbox": [
+        203,
+        177,
+        204,
+        178
+      ],
+      "sheetBbox": [
+        587,
+        177,
+        588,
+        178
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "456b37545811fd5ebf29ffa9ee524f363f2dec7a0aeec23817e7676927dfd74d",
+      "cellBbox": [
+        251,
+        230,
+        260,
+        278
+      ],
+      "sheetBbox": [
+        635,
+        230,
+        644,
+        278
+      ],
+      "pixelCount": 204,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "33d5b5572e6f07ef01a78bb07a62bbbd4ed92011897832e3d75f34a896872438",
+      "cellBbox": [
+        236,
+        454,
+        237,
+        455
+      ],
+      "sheetBbox": [
+        620,
+        454,
+        621,
+        455
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5203406bbbb27ccdd03a52c2ec07854e0375c54aa82fd821e203921d25654fda",
+      "cellBbox": [
+        235,
+        455,
+        236,
+        456
+      ],
+      "sheetBbox": [
+        619,
+        455,
+        620,
+        456
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f4461c28012b4155c8f0093b74a3be7ed2cbdbda92b372a6c02e6f18279c341d",
+      "cellBbox": [
+        163,
+        115,
+        295,
+        470
+      ],
+      "sheetBbox": [
+        547,
+        115,
+        679,
+        470
+      ],
+      "pixelCount": 1291,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "73a651f07d7e32b6e798936101da8874e4e0efe9e21c894395a3ea6bec778014",
+      "cellBbox": [
+        258,
+        310,
+        290,
+        447
+      ],
+      "sheetBbox": [
+        642,
+        310,
+        674,
+        447
+      ],
+      "pixelCount": 183,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "03cf6f4ce82ca36ce8f4570c2905c7273219ddb18934cc1376c1d02e6c4d80dc",
+      "cellBbox": [
+        250,
+        228,
+        261,
+        286
+      ],
+      "sheetBbox": [
+        634,
+        228,
+        645,
+        286
+      ],
+      "pixelCount": 163,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "19e5c515d9a439a25b9b83504070cf5ed01bb3b69e406ee036e5ed953e547597",
+      "cellBbox": [
+        178,
+        313,
+        186,
+        322
+      ],
+      "sheetBbox": [
+        562,
+        313,
+        570,
+        322
+      ],
+      "pixelCount": 45,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9b96d1379d9e37a839673e97e5f508736c87e7c7f740f17998a7c52c97d24abd",
+      "cellBbox": [
+        141,
+        433,
+        142,
+        434
+      ],
+      "sheetBbox": [
+        909,
+        433,
+        910,
+        434
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "d27b3ac5532b1ebbd3c3f5d76cf8dc9293f62b36c3fbae6a287d86e18663fef4",
+      "cellBbox": [
+        109,
+        87,
+        185,
+        463
+      ],
+      "sheetBbox": [
+        877,
+        87,
+        953,
+        463
+      ],
+      "pixelCount": 1075,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6056a725d1cf2b1197be2112939f71ee89be9e160db016d9c161a3d830fc934d",
+      "cellBbox": [
+        159,
+        206,
+        160,
+        210
+      ],
+      "sheetBbox": [
+        1311,
+        206,
+        1312,
+        210
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c9b4f24669eb458f4f39a4e8929f667a2c79f5e96a24333515d58c1c5c091810",
+      "cellBbox": [
+        160,
+        212,
+        161,
+        213
+      ],
+      "sheetBbox": [
+        1312,
+        212,
+        1313,
+        213
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "011666873c74d54ccfc2167f7b3de8cb8d617230d5a70df9fd6229a276296642",
+      "cellBbox": [
+        159,
+        214,
+        160,
+        217
+      ],
+      "sheetBbox": [
+        1311,
+        214,
+        1312,
+        217
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "239e4ba15c94e1401c494c99f6325548745da16bc3575fe801dc7deb3c0bdd29",
+      "cellBbox": [
+        130,
+        315,
+        148,
+        392
+      ],
+      "sheetBbox": [
+        1282,
+        315,
+        1300,
+        392
+      ],
+      "pixelCount": 834,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "ab22c8d238f2f2c8f53e7593ee0bdd554f81b7a3e9cc8fa648939b6271025226",
+      "cellBbox": [
+        68,
+        85,
+        187,
+        397
+      ],
+      "sheetBbox": [
+        1220,
+        85,
+        1339,
+        397
+      ],
+      "pixelCount": 676,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "6093b3883143f1b287f06c50de5ad6c2356ea4b985f472bf2925637824b82367",
+      "cellBbox": [
+        65,
+        281,
+        172,
+        439
+      ],
+      "sheetBbox": [
+        1217,
+        281,
+        1324,
+        439
+      ],
+      "pixelCount": 419,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "24a798682e1d28c0bf5df756c53797300b9e208eb4c9a299a4e48caa97517491",
+      "cellBbox": [
+        158,
+        204,
+        162,
+        229
+      ],
+      "sheetBbox": [
+        1310,
+        204,
+        1314,
+        229
+      ],
+      "pixelCount": 58,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ec1872f6bed431687d6ff72f6518953936054545818a0515c018b9b94dc86a79",
+      "cellBbox": [
+        129,
+        311,
+        149,
+        394
+      ],
+      "sheetBbox": [
+        1281,
+        311,
+        1301,
+        394
+      ],
+      "pixelCount": 202,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "59092d148a5ad0f5542fdfcebbe0beb28aa33b9a4f5b44e9a7874735a5b0a8d4",
+      "cellBbox": [
+        116,
+        136,
+        117,
+        137
+      ],
+      "sheetBbox": [
+        1268,
+        136,
+        1269,
+        137
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0fd6ac71049c4a8dfce2610eeb603114eea0534a17d9c7679dcc051b745b9150",
+      "cellBbox": [
+        165,
+        285,
+        166,
+        286
+      ],
+      "sheetBbox": [
+        1317,
+        285,
+        1318,
+        286
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a6ce962e540a1ed2348ff533431bbc58ec1053824610b4a39eb8252e35e93469",
+      "cellBbox": [
+        166,
+        286,
+        167,
+        287
+      ],
+      "sheetBbox": [
+        1318,
+        286,
+        1319,
+        287
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "94df185dc4566aea2de099831e5e88691fb934eddb71a5e78217d095d5162f7a",
+      "cellBbox": [
+        222,
+        155,
+        236,
+        223
+      ],
+      "sheetBbox": [
+        222,
+        667,
+        236,
+        735
+      ],
+      "pixelCount": 361,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a06278965bffe303367f76d0560df3205bffed9f432ab7f48ac4130b57a7ed2c",
+      "cellBbox": [
+        217,
+        236,
+        219,
+        238
+      ],
+      "sheetBbox": [
+        217,
+        748,
+        219,
+        750
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6e0b072d4b2355be7920eb7ebe4f495a59e0f64774523b96c462edaf7140c437",
+      "cellBbox": [
+        316,
+        237,
+        319,
+        243
+      ],
+      "sheetBbox": [
+        316,
+        749,
+        319,
+        755
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "d88f6c586e132bd46efb2efee3b0eeba07ee205fb2a0bb9b83ca3a3107a8c586",
+      "cellBbox": [
+        193,
+        48,
+        333,
+        254
+      ],
+      "sheetBbox": [
+        193,
+        560,
+        333,
+        766
+      ],
+      "pixelCount": 462,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "bbcd9dcae92b702e16c1b7dd496cef6a46b72d172526c368f80d82766c13f4c8",
+      "cellBbox": [
+        294,
+        152,
+        330,
+        252
+      ],
+      "sheetBbox": [
+        294,
+        664,
+        330,
+        764
+      ],
+      "pixelCount": 173,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c80305f4caa1a9c9632f2feffddb32b8c98da19240a7ff260ac858a847c91a55",
+      "cellBbox": [
+        295,
+        183,
+        308,
+        288
+      ],
+      "sheetBbox": [
+        295,
+        695,
+        308,
+        800
+      ],
+      "pixelCount": 109,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5efa79676d53d69b7fec4d10bca0f19b1b2b172e13e6bb9527f5b5a0e83f747c",
+      "cellBbox": [
+        329,
+        189,
+        332,
+        228
+      ],
+      "sheetBbox": [
+        329,
+        701,
+        332,
+        740
+      ],
+      "pixelCount": 38,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f7ef616e13bbb9b3d5fee2afd7d1fa543970abe0950940b591b6ed2da778d633",
+      "cellBbox": [
+        329,
+        231,
+        330,
+        232
+      ],
+      "sheetBbox": [
+        329,
+        743,
+        330,
+        744
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "4e9bd00b52ef429d217b45218debf043ae02c9e3a96506e72314a5713917c614",
+      "cellBbox": [
+        243,
+        244,
+        285,
+        361
+      ],
+      "sheetBbox": [
+        243,
+        756,
+        285,
+        873
+      ],
+      "pixelCount": 220,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c8e72b21bd289cfc88348a6740fcdd6762411176c8682a4c9ba863746c907d07",
+      "cellBbox": [
+        214,
+        259,
+        244,
+        384
+      ],
+      "sheetBbox": [
+        214,
+        771,
+        244,
+        896
+      ],
+      "pixelCount": 156,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5048880b747653f7ad3bf7dcfa5d9b59832859738e492dd8f705d0f2af661e73",
+      "cellBbox": [
+        301,
+        291,
+        304,
+        320
+      ],
+      "sheetBbox": [
+        301,
+        803,
+        304,
+        832
+      ],
+      "pixelCount": 26,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "475cf240cd4a158d254b9c241275c57fd7cb0305c3758bef85cad2387b45f55f",
+      "cellBbox": [
+        282,
+        325,
+        320,
+        385
+      ],
+      "sheetBbox": [
+        282,
+        837,
+        320,
+        897
+      ],
+      "pixelCount": 114,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "542ded7db2016afaf1276f019bbce0afbd0335912e964208bc4903faed4da9f9",
+      "cellBbox": [
+        243,
+        361,
+        244,
+        369
+      ],
+      "sheetBbox": [
+        243,
+        873,
+        244,
+        881
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "8057f4ed6eac854b3888b28436f08195429f943c82be2ef21733e23f43b7967a",
+      "cellBbox": [
+        243,
+        373,
+        244,
+        375
+      ],
+      "sheetBbox": [
+        243,
+        885,
+        244,
+        887
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "bd2b4c73b844226da280c1f04c729bee137a04cb6861de368376d2da8cd65aef",
+      "cellBbox": [
+        221,
+        153,
+        237,
+        225
+      ],
+      "sheetBbox": [
+        221,
+        665,
+        237,
+        737
+      ],
+      "pixelCount": 161,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d6d370700e22fa7d73ea2929999d07ce752f4577420483789f9336edf722760f",
+      "cellBbox": [
+        215,
+        233,
+        223,
+        242
+      ],
+      "sheetBbox": [
+        215,
+        745,
+        223,
+        754
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "644eec8846a3c9f6f5a9e8a91f34f6228dc6e0e4bc9e23f5b28ad653132175a1",
+      "cellBbox": [
+        316,
+        235,
+        322,
+        244
+      ],
+      "sheetBbox": [
+        316,
+        747,
+        322,
+        756
+      ],
+      "pixelCount": 36,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b7f08501da0bdc679cc5931b08bc7eb999a81b025265476857ee016f17903adc",
+      "cellBbox": [
+        223,
+        239,
+        224,
+        240
+      ],
+      "sheetBbox": [
+        223,
+        751,
+        224,
+        752
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "22849b12576a1895dfca79f9721dd0f3d6c005c7ba6faa915a3e8c0d7b6fd7e7",
+      "cellBbox": [
+        53,
+        233,
+        59,
+        258
+      ],
+      "sheetBbox": [
+        437,
+        745,
+        443,
+        770
+      ],
+      "pixelCount": 96,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "1ea41135db90ad884b819ef988c6755e0bafc8bd2b8dad9eba8b48fb96c2f855",
+      "cellBbox": [
+        19,
+        117,
+        149,
+        466
+      ],
+      "sheetBbox": [
+        403,
+        629,
+        533,
+        978
+      ],
+      "pixelCount": 1406,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "efaa11ddd59947d3a579f578d10581095ee7b9481245e36ca144765c9700749f",
+      "cellBbox": [
+        51,
+        231,
+        60,
+        261
+      ],
+      "sheetBbox": [
+        435,
+        743,
+        444,
+        773
+      ],
+      "pixelCount": 78,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7a62ba7815bfb52462d74f46ce2567043d1fc306a0b9ee8ce3d11a0e0c36e776",
+      "cellBbox": [
+        100,
+        143,
+        101,
+        144
+      ],
+      "sheetBbox": [
+        484,
+        655,
+        485,
+        656
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a6e227d40e78f78428423ab02f4ea7ee951f8deda9c0279dd19b83fe95a73c92",
+      "cellBbox": [
+        39,
+        310,
+        45,
+        318
+      ],
+      "sheetBbox": [
+        423,
+        822,
+        429,
+        830
+      ],
+      "pixelCount": 28,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "be17155dcd3e537a32460f6b4c273d8a8a62d5f30262d9786a6159f66e01b301",
+      "cellBbox": [
+        45,
+        311,
+        46,
+        312
+      ],
+      "sheetBbox": [
+        429,
+        823,
+        430,
+        824
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8d0e0bc5b836f6868b01c62e1117a8f0bdfe7752240db16627dff2ef1ecd0ac0",
+      "cellBbox": [
+        46,
+        313,
+        47,
+        314
+      ],
+      "sheetBbox": [
+        430,
+        825,
+        431,
+        826
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "518697c426c6a10d44db16555151bf1e75a27419e634c975a8c010ce629a694d",
+      "cellBbox": [
+        122,
+        314,
+        123,
+        315
+      ],
+      "sheetBbox": [
+        506,
+        826,
+        507,
+        827
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "31f7c0d4a907ae699a58dbf8bbe8f843ba960597e6ce0cacf45ff9bdd64cb1c9",
+      "cellBbox": [
+        128,
+        109,
+        129,
+        111
+      ],
+      "sheetBbox": [
+        896,
+        621,
+        897,
+        623
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f661ebcf639481cfa88614f6d5476405b6267b79fcc9290cff1c1b394417df27",
+      "cellBbox": [
+        124,
+        47,
+        186,
+        389
+      ],
+      "sheetBbox": [
+        892,
+        559,
+        954,
+        901
+      ],
+      "pixelCount": 941,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f532ebd9523dca05c0215c9ec7962cdb550ad2299b5a5108e1dd9a808af939e4",
+      "cellBbox": [
+        161,
+        95,
+        162,
+        96
+      ],
+      "sheetBbox": [
+        929,
+        607,
+        930,
+        608
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9077b75bb4522d3699a6ee34c0e246c6df1ddab594446c72ac09077f6524025c",
+      "cellBbox": [
+        160,
+        96,
+        161,
+        97
+      ],
+      "sheetBbox": [
+        928,
+        608,
+        929,
+        609
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ec305a93df6bb70bc76572c463153b32a4b435d1a4fc583848bc387eaf58244a",
+      "cellBbox": [
+        34,
+        161,
+        48,
+        222
+      ],
+      "sheetBbox": [
+        1186,
+        673,
+        1200,
+        734
+      ],
+      "pixelCount": 365,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "665929dcbf348c22b17debbbbd277d8aef2656752666a829462df2df97b2372a",
+      "cellBbox": [
+        10,
+        51,
+        142,
+        395
+      ],
+      "sheetBbox": [
+        1162,
+        563,
+        1294,
+        907
+      ],
+      "pixelCount": 839,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "2d28925a996d69820712c4d05d573ee9500492d6ac9a8d9e02bcd22be78a0858",
+      "cellBbox": [
+        52,
+        256,
+        131,
+        384
+      ],
+      "sheetBbox": [
+        1204,
+        768,
+        1283,
+        896
+      ],
+      "pixelCount": 380,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "df6f3b2295b89ae77aba83896cc251885a0bc8ec8e7ffd36d7e30ac32aeef9f0",
+      "cellBbox": [
+        33,
+        159,
+        48,
+        225
+      ],
+      "sheetBbox": [
+        1185,
+        671,
+        1200,
+        737
+      ],
+      "pixelCount": 144,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d61affa4c25a6f5b1160963091e6aa6fe30cb2d04dc21cf9dbbd83611c1f4a23",
+      "cellBbox": [
+        110,
+        209,
+        115,
+        230
+      ],
+      "sheetBbox": [
+        1262,
+        721,
+        1267,
+        742
+      ],
+      "pixelCount": 44,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "630ea29fac9f90301cfb56bdbe30de62f715dd8dcbe47e99ea278db9b7f88f37",
+      "cellBbox": [
+        114,
+        236,
+        125,
+        244
+      ],
+      "sheetBbox": [
+        1266,
+        748,
+        1277,
+        756
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "841d3de08147aedfcf7350ecec6b949814645dbfb43ae19b3d47da0d61f5d14b",
+      "cellBbox": [
+        34,
+        238,
+        42,
+        246
+      ],
+      "sheetBbox": [
+        1186,
+        750,
+        1194,
+        758
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "44b21f08800d39b9dd60dc3c2d28073397f56dc9759b66ce963276bcfaa10387",
+      "cellBbox": [
+        73,
+        255,
+        75,
+        257
+      ],
+      "sheetBbox": [
+        1225,
+        767,
+        1227,
+        769
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7ba7c7a54e3d282bc37bddabe9d9db5afb95c2714b42dd7cefe4b0142aec5639",
+      "cellBbox": [
+        72,
+        256,
+        73,
+        257
+      ],
+      "sheetBbox": [
+        1224,
+        768,
+        1225,
+        769
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "da65c843869d601ffa4a0f158e8adfc9be005662db70af65e7be72141899fc77",
+      "cellBbox": [
+        75,
+        257,
+        76,
+        258
+      ],
+      "sheetBbox": [
+        1227,
+        769,
+        1228,
+        770
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-diamond-merchant-r2-source-mask-reviewer",
+      "reviewedAt": "2026-07-23T02:01:05+08:00"
+    }
+  ]
+}

@@ -1,0 +1,1215 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "05954e3b97d4f6df9f008226ef24783dcd209a52487f50620a187ff1a5575f55",
+    "rawSheetDecodedRgbaByteSha256": "419c94d76f2f41d197372b68f63af0d0a0738bb10e50506c62d784a1d8bae069",
+    "rawSheetGodotCanonicalRgbaSha256": "cfb0a58aa6fe4dedc3800c1f5386d62e7c390038980b4e25b679a10484ce0434",
+    "rawSheetDecodedRgbaSha256": "cfb0a58aa6fe4dedc3800c1f5386d62e7c390038980b4e25b679a10484ce0434",
+    "explicitMaskFileSha256": "fb0d75fdb049ef2d656f6104e217acee97d20dd3a8631b492b788ec8e6d6cf2a",
+    "explicitMaskPixelSha256": "6ef52a75f390a513ee6d7f7d229037f30131384d09ac080a320129be138b56eb",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "47df248819341d1842bc3512cd80e98e51adc02f34a11178b900158f3e57868a",
+      "cellBbox": [
+        59,
+        54,
+        610,
+        615
+      ],
+      "sheetBbox": [
+        59,
+        54,
+        610,
+        615
+      ],
+      "pixelCount": 3126,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e04e176e5fe9fdb2fc64be87feb77a305f5d6980bcc4778573dc13cf8e81a870",
+      "cellBbox": [
+        470,
+        329,
+        471,
+        330
+      ],
+      "sheetBbox": [
+        470,
+        329,
+        471,
+        330
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cf9fe67ae717f9b48f6a3ed452617382aa637266f755b82344bafd2a4d2c3e87",
+      "cellBbox": [
+        475,
+        331,
+        477,
+        332
+      ],
+      "sheetBbox": [
+        475,
+        331,
+        477,
+        332
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "326281139dd6d9205253f1f3599a134e126ef0cd50b46f31b654dcd15e5d4537",
+      "cellBbox": [
+        487,
+        336,
+        488,
+        337
+      ],
+      "sheetBbox": [
+        487,
+        336,
+        488,
+        337
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "efb7e914a0d5edeaaa07413be64a43af17c568927de9ff0a4b99f385ffedf318",
+      "cellBbox": [
+        226,
+        337,
+        227,
+        338
+      ],
+      "sheetBbox": [
+        226,
+        337,
+        227,
+        338
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9bc6213e7a32239671eea2019aef91b9bddd358be1732c702be98872df180d34",
+      "cellBbox": [
+        490,
+        337,
+        492,
+        338
+      ],
+      "sheetBbox": [
+        490,
+        337,
+        492,
+        338
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "00d4761437774c67d4f2cf7129dc94743b6990222c552299fbdf0d545ed3a10f",
+      "cellBbox": [
+        494,
+        337,
+        495,
+        338
+      ],
+      "sheetBbox": [
+        494,
+        337,
+        495,
+        338
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "85e15e1a1aa1b865894e98ff20b0342f14f733b52cd10e668dfa035b8c2444e8",
+      "cellBbox": [
+        226,
+        339,
+        227,
+        340
+      ],
+      "sheetBbox": [
+        226,
+        339,
+        227,
+        340
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0167a3fcfb6ab0d0ad2feaec9899c62ce81fb6ea1f5367d14b1bf1cae374bafc",
+      "cellBbox": [
+        173,
+        361,
+        176,
+        362
+      ],
+      "sheetBbox": [
+        173,
+        361,
+        176,
+        362
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "94808d7834b8e0f9be5ae7bacfdf9397ba559fee472ae41614b4fd620aba2011",
+      "cellBbox": [
+        538,
+        361,
+        539,
+        362
+      ],
+      "sheetBbox": [
+        538,
+        361,
+        539,
+        362
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "69b62acd4eabc3400b896d37d99b40848b4fa4ca6d0b994b528ff85bbb30d3ae",
+      "cellBbox": [
+        156,
+        372,
+        157,
+        373
+      ],
+      "sheetBbox": [
+        156,
+        372,
+        157,
+        373
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fbbd2280a236864ccb0b23c39ef208aa7fc0170afabe13f039990a3700df891f",
+      "cellBbox": [
+        155,
+        373,
+        156,
+        374
+      ],
+      "sheetBbox": [
+        155,
+        373,
+        156,
+        374
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "85a10ae38cbbb6f2bef8c7b343497c0235f5276118ff6a30634cee8898980a8b",
+      "cellBbox": [
+        154,
+        374,
+        155,
+        375
+      ],
+      "sheetBbox": [
+        154,
+        374,
+        155,
+        375
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "65cfdc9c63a8e31589bdf4e61006c308209a716b8c154ec947693392583a0faa",
+      "cellBbox": [
+        151,
+        377,
+        152,
+        378
+      ],
+      "sheetBbox": [
+        151,
+        377,
+        152,
+        378
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e079a1a59061ac2b7415a6f38c1bf887b3fc2a99199b0d230b601c5342e6b20c",
+      "cellBbox": [
+        149,
+        379,
+        150,
+        380
+      ],
+      "sheetBbox": [
+        149,
+        379,
+        150,
+        380
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0f5046db4295a8d912c543f22dee08134f926839b0d14e2dc4cd0ea3f1106198",
+      "cellBbox": [
+        142,
+        388,
+        143,
+        390
+      ],
+      "sheetBbox": [
+        142,
+        388,
+        143,
+        390
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3d0a8143272179ec3e4c69847d122b45722852baf993b6d591c63ed689205eb7",
+      "cellBbox": [
+        141,
+        393,
+        142,
+        394
+      ],
+      "sheetBbox": [
+        141,
+        393,
+        142,
+        394
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "304590e44c086b040b7291bfcd88b587a1993b5bc253471d9c3a082e5e68ab93",
+      "cellBbox": [
+        133,
+        395,
+        134,
+        396
+      ],
+      "sheetBbox": [
+        133,
+        395,
+        134,
+        396
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "26ba3b2574bb89e3ed103d9735b503d4e84f04ca2d736f26b4250e1ada8c6ccc",
+      "cellBbox": [
+        132,
+        396,
+        133,
+        397
+      ],
+      "sheetBbox": [
+        132,
+        396,
+        133,
+        397
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6fb7f60275fe0db3e93fc8a394c28e2d5fe7093c8fcc17808633c1f76adb368e",
+      "cellBbox": [
+        130,
+        397,
+        131,
+        398
+      ],
+      "sheetBbox": [
+        130,
+        397,
+        131,
+        398
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "41b11ebaadd4dc339d41756db9550844d5a36ca2bf17c1aaa32074cfee1e3ccc",
+      "cellBbox": [
+        134,
+        398,
+        135,
+        399
+      ],
+      "sheetBbox": [
+        134,
+        398,
+        135,
+        399
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0fce2dc29b5f170a9cd9e67e2c7e22bd169065973a4870c88519e98e90e2e4da",
+      "cellBbox": [
+        169,
+        430,
+        170,
+        431
+      ],
+      "sheetBbox": [
+        169,
+        430,
+        170,
+        431
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6dc0489454a9ec6bc585ee3b6d9ddeadf182a05c1093c37d7437083fc89ee2c0",
+      "cellBbox": [
+        85,
+        390,
+        86,
+        391
+      ],
+      "sheetBbox": [
+        712,
+        390,
+        713,
+        391
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "195f1d7e7ea59d55e4f59413a9eb10ca9577ce31d53b5689a08eaea2d89ce95d",
+      "cellBbox": [
+        8,
+        53,
+        559,
+        615
+      ],
+      "sheetBbox": [
+        635,
+        53,
+        1186,
+        615
+      ],
+      "pixelCount": 3050,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "51649270e2b39d76ec8d190d4a24f659366ca369e061175c09af9575f3a08bd1",
+      "cellBbox": [
+        395,
+        320,
+        398,
+        321
+      ],
+      "sheetBbox": [
+        1022,
+        320,
+        1025,
+        321
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b4243a3e6a7c9cbcf650610bb6d555c2444dbb1f5b8c668809b6f3bf71834172",
+      "cellBbox": [
+        419,
+        329,
+        421,
+        330
+      ],
+      "sheetBbox": [
+        1046,
+        329,
+        1048,
+        330
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "dceb02f2ab02e055ae512fb22a3f601d8f187c80f3416e8ce5870200f76f3c54",
+      "cellBbox": [
+        425,
+        331,
+        428,
+        334
+      ],
+      "sheetBbox": [
+        1052,
+        331,
+        1055,
+        334
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fcafbe4b75eeb5abdf262a4090a08af37968d3ba0858ddf770aeaa9e5a1d7da1",
+      "cellBbox": [
+        446,
+        339,
+        448,
+        341
+      ],
+      "sheetBbox": [
+        1073,
+        339,
+        1075,
+        341
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "38440337b7f2e7a96a79a244a7520f5953b04aa416459d581e091c6f0cca606e",
+      "cellBbox": [
+        155,
+        345,
+        156,
+        346
+      ],
+      "sheetBbox": [
+        782,
+        345,
+        783,
+        346
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2f02d60a93cbe3e03da1d8f1c3c03ded34e7b9fb013d6465663ce3144b2b34b7",
+      "cellBbox": [
+        160,
+        345,
+        161,
+        346
+      ],
+      "sheetBbox": [
+        787,
+        345,
+        788,
+        346
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "610ce68752af445e1ce8192aedd8ca53f7b66681f28b40babcb4c5ee8e79426d",
+      "cellBbox": [
+        152,
+        348,
+        153,
+        349
+      ],
+      "sheetBbox": [
+        779,
+        348,
+        780,
+        349
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "36c74b75aa2bc92dc5cf41c0fa41a89101e9a910d539c8b945e163ebe388ea3b",
+      "cellBbox": [
+        468,
+        350,
+        469,
+        351
+      ],
+      "sheetBbox": [
+        1095,
+        350,
+        1096,
+        351
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "16ac4dc8d704b89713940b02ea55ceaa5dd1eefe04c14a4376c286085b352368",
+      "cellBbox": [
+        140,
+        353,
+        143,
+        354
+      ],
+      "sheetBbox": [
+        767,
+        353,
+        770,
+        354
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2519598ebf1f1f3b9e217eab7cd32537a98e6298103a88c96b0ca27433e9bb11",
+      "cellBbox": [
+        133,
+        356,
+        134,
+        357
+      ],
+      "sheetBbox": [
+        760,
+        356,
+        761,
+        357
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "895543473ffc68a95897fbb756a2af6dc7ea205c8b305e3c2fe0b81806fd6639",
+      "cellBbox": [
+        127,
+        360,
+        128,
+        361
+      ],
+      "sheetBbox": [
+        754,
+        360,
+        755,
+        361
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e369d3da89b2dc349e0b344efc6a6133d81e30dcea1fd789230b32696486c4d0",
+      "cellBbox": [
+        124,
+        361,
+        125,
+        362
+      ],
+      "sheetBbox": [
+        751,
+        361,
+        752,
+        362
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7ff8769b94ba5b1dbab09ba5da52010cc958d296dda37b233a29b0519bb6b1a9",
+      "cellBbox": [
+        112,
+        368,
+        113,
+        369
+      ],
+      "sheetBbox": [
+        739,
+        368,
+        740,
+        369
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "15846a2b1ac7bf846eb7e793fde1db7e5f6b2a46e4121c89a6adb7a7f25bfa0c",
+      "cellBbox": [
+        109,
+        369,
+        110,
+        370
+      ],
+      "sheetBbox": [
+        736,
+        369,
+        737,
+        370
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e03879943ed44803d17e22f4e7f72c9271cfe74d7bb4025813cd49ee8894bb47",
+      "cellBbox": [
+        111,
+        369,
+        112,
+        370
+      ],
+      "sheetBbox": [
+        738,
+        369,
+        739,
+        370
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "eb06750fa820c80bd140b2df60599eca0c6a43cc97c6de61321755150145b456",
+      "cellBbox": [
+        91,
+        388,
+        92,
+        389
+      ],
+      "sheetBbox": [
+        718,
+        388,
+        719,
+        389
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "14c08a583bd3ed8c4119e4bd601685af276a75225783fcc376467e16c5f7225a",
+      "cellBbox": [
+        90,
+        389,
+        91,
+        390
+      ],
+      "sheetBbox": [
+        717,
+        389,
+        718,
+        390
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "074c72a4947d0cb4b900892f8defc182ecd5bf13300704874fce45392b64cbe6",
+      "cellBbox": [
+        312,
+        426,
+        313,
+        427
+      ],
+      "sheetBbox": [
+        939,
+        426,
+        940,
+        427
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "cdb21beb4d216572df9ec2ef1385950518a1c1eca37bbae99d53b68aef93b39b",
+      "cellBbox": [
+        117,
+        374,
+        118,
+        375
+      ],
+      "sheetBbox": [
+        117,
+        1001,
+        118,
+        1002
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "8f582c13397ab2145972dc2d05d7b83b5f9341e75e569be44ea8f86312e63b59",
+      "cellBbox": [
+        49,
+        32,
+        599,
+        589
+      ],
+      "sheetBbox": [
+        49,
+        659,
+        599,
+        1216
+      ],
+      "pixelCount": 2538,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5b1d2c8415bb148cab00ece1e7d5916cd672aaa2b791e39fbaba24c3b743ede9",
+      "cellBbox": [
+        451,
+        304,
+        452,
+        305
+      ],
+      "sheetBbox": [
+        451,
+        931,
+        452,
+        932
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c5e289c134abbfd664a5169cffca8c96bfe5b1ac668bcd2564b82e286ec57d06",
+      "cellBbox": [
+        491,
+        318,
+        492,
+        319
+      ],
+      "sheetBbox": [
+        491,
+        945,
+        492,
+        946
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ee0488e215e2fa39195a4939de057be7baa3afae1654bd1df389fdc3a7c5bed2",
+      "cellBbox": [
+        140,
+        355,
+        141,
+        356
+      ],
+      "sheetBbox": [
+        140,
+        982,
+        141,
+        983
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c049ac7f78bcd850d39c178d59459ab380481f835b5d945c729e25e0a670a813",
+      "cellBbox": [
+        546,
+        358,
+        547,
+        359
+      ],
+      "sheetBbox": [
+        546,
+        985,
+        547,
+        986
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "150d557c601a83ea5b33d032d9e0778b77cb17f6a64b77f19c1452011b06ac9a",
+      "cellBbox": [
+        10,
+        34,
+        552,
+        586
+      ],
+      "sheetBbox": [
+        637,
+        661,
+        1179,
+        1213
+      ],
+      "pixelCount": 2894,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "76b640a97ddfd53a6ab7eb2fc6c05e5335d7e4f3e9b542a490c525ca27a3a59e",
+      "cellBbox": [
+        186,
+        298,
+        187,
+        299
+      ],
+      "sheetBbox": [
+        813,
+        925,
+        814,
+        926
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "06e8ae32e3f866b7848578d660b4743a214cd9f707c0e004967f607102ce37be",
+      "cellBbox": [
+        412,
+        304,
+        416,
+        305
+      ],
+      "sheetBbox": [
+        1039,
+        931,
+        1043,
+        932
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "16822beb259950c83e28b268a7f298ade28dbbe20029cb79cac2826d578bcfb2",
+      "cellBbox": [
+        156,
+        321,
+        158,
+        322
+      ],
+      "sheetBbox": [
+        783,
+        948,
+        785,
+        949
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4d9ca6744a5e92006358714b6e3406b84f721e62c2f6d9a40b9d45f427909fa2",
+      "cellBbox": [
+        108,
+        345,
+        109,
+        346
+      ],
+      "sheetBbox": [
+        735,
+        972,
+        736,
+        973
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1076055b98e411e3e68fdf537c454c134fa5ffc1f12917b38d487e06f94ea651",
+      "cellBbox": [
+        83,
+        371,
+        84,
+        372
+      ],
+      "sheetBbox": [
+        710,
+        998,
+        711,
+        999
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex produce_mm2_npc exact v3.1 visual component review",
+      "reviewedAt": "2026-07-22T16:50:00Z"
+    }
+  ]
+}

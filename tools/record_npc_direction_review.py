@@ -220,7 +220,7 @@ def _parity_source_set_sha256(frames: Sequence[dict[str, Any]]) -> str:
         f"{frame.get('kind', '')}\t{frame.get('slot', '')}\t"
         f"{frame.get('path', '')}\t{frame.get('fileSha256', '')}\t"
         f"{frame.get('sourceFullDecodedRgbaSha256', '')}\t"
-        f"{frame.get('sourceFullDecodedRgbaSha256', '')}\n"
+        f"{frame.get('sourceDecodedRgbaSha256', '')}\n"
         for frame in frames
     )
     return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()

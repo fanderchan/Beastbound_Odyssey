@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "pet_mm_trial_mentor_m_v1",
+  "appearanceId": "npc_pet_mm_trial_mentor_m_v1",
+  "displayName": "1转MM试炼师·男",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "4b7f8cd7042ef19d1e8da676e1806ed2aa82f7d0925049e62e71c9e4155822de",
+    "decodedRgbaByteSha256": "620018cfd40ce3d653d3d24495799c8c663ed3fbefc59661d08033dedce08d62",
+    "godotCanonicalRgbaSha256": "8a9f4babeca76babc200fb8af06a735f34d7492a9b530b18e008963e709b91cd",
+    "decodedRgbaSha256": "8a9f4babeca76babc200fb8af06a735f34d7492a9b530b18e008963e709b91cd",
+    "size": [
+      1024,
+      1536
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-23T02:16:53+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "0d7f6fda9861e4520ad462923b0ae67ce06510bdeca4635591d973659de6db79",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "d665bae1b091c9e55ae9e4f432b96913d92392da9dc47e3fd0a2ec6ae590aa16",
+        "explicitSheetMaskPixelSha256": "90ab94c115f620a428dfda9aec716e0fa2d9897e33ea4425fb2a38c9cc39db90",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "5493f8475d7164857a649c3f1d6b113fa5b1d127d89f1423137cebd4cf22e26d",
+        "reviewedComponentCount": 144
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "48344dfeed1f10a7e0519c5eb7f1f11855e9ed1164476734c57d7df723da1dd1",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "dc868fba62bd4771c7e642dbe051af463c0815f37db8ecb650bd102847e7f1a0",
+        "explicitSheetMaskPixelSha256": "51ce2141ce6295ad90a799abc6bef39e3c57e1db0c728e093cc90eaeaebb55d6",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "bd0d3b5e2bb21a9acbd0634bde181b8390f5633abb5782fa57f8ab3e980967d8",
+        "reviewedComponentCount": 67
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; accepted world v3 is a fresh true-eight regeneration and not an offline mirror; accepted portrait v4 is a fresh whole-sheet regeneration after the old speaking cutout failed Stage B and two non-installable repair revisions were preserved as rejected evidence",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output; no third-party game art was used as an image input",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

@@ -1,0 +1,10 @@
+Use case: precise-object-edit
+Asset type: final measured composition correction for a Beastbound Odyssey true-eight NPC world sheet
+Input image 1: the almost-final 2x4 true-eight world sheet
+Input image 2: the accepted identity authority
+
+Preserve the exact layout, exact eight independently authored direction meanings, exact equal-cell centers, character identity, costume, physical prop sides, silhouette and uniform chroma-magenta background. Make only this measured composition correction: uniformly enlarge each of the eight complete figures by approximately 6 percent relative to input image 1, anchored at the same center and baseline within its own cell. Do not shift any figure and keep wide clean empty magenta gutters at the full-canvas vertical quarter seams and horizontal midpoint. All bodies, staff tips, boots, hair, registry and medallion must remain safely inside their own equal cells with no seam or outer-edge contact.
+
+Exact row-major order: SOUTH, SOUTHWEST facing canvas left, WEST pure left profile, NORTHWEST back-left / NORTH full back no face, NORTHEAST back-right, EAST pure right profile, SOUTHEAST facing canvas right. Preserve staff on HER OWN RIGHT and registry plus spiral medallion on HER OWN LEFT.
+
+No mirror, flip, duplicate, relabel, swap, crop, detached prop, lighting change or redesign. Background remains fully opaque, textureless vivid chroma magenta with no gradient, noise, tinted seam band, shadow, floor or light spill. No borders, labels, arrows, text, UI, watermark, scenery, pet, egg, magic, extra person or StoneAge art. Return only the same-aspect clean landscape 2x4 sheet.

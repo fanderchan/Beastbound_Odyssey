@@ -1263,8 +1263,10 @@ func _pet_battle_review():
 
 func _configure_npc_art_runtime() -> void:
 	NpcArtCatalog.initialize()
+	# The explicit candidate preview is additive: first keep every released NPC
+	# on the exact normal-runtime warm path, then opt pending art into QA only.
+	NpcArtCatalog.warm_all_runtime()
 	if not npc_art_review_preview:
-		NpcArtCatalog.warm_all_runtime()
 		return
 	for record in NpcArtCatalog.all_appearance_records():
 		var status := str(record.get("status", ""))

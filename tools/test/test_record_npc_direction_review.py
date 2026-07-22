@@ -145,6 +145,47 @@ class RecordNpcDirectionReviewTest(unittest.TestCase):
         ):
             self._validate_parity(report)
 
+    def test_source_set_binds_full_and_canonical_rgba_independently(self) -> None:
+        report = _parity_report()
+        first = report["frames"][0]
+        first["sourceFullDecodedRgbaSha256"] = hashlib.sha256(
+            b"full-rgba"
+        ).hexdigest()
+        first["sourceDecodedRgbaSha256"] = hashlib.sha256(
+            b"canonical-rgba"
+        ).hexdigest()
+        first["loadedDecodedRgbaSha256"] = first[
+            "sourceDecodedRgbaSha256"
+        ]
+
+        source_set = TOOL._parity_source_set_sha256(report["frames"])
+        expected_lines = "".join(
+            f"{frame['kind']}\t{frame['slot']}\t{frame['path']}\t"
+            f"{frame['fileSha256']}\t"
+            f"{frame['sourceFullDecodedRgbaSha256']}\t"
+            f"{frame['sourceDecodedRgbaSha256']}\n"
+            for frame in report["frames"]
+        )
+        self.assertEqual(
+            source_set,
+            hashlib.sha256(expected_lines.encode("utf-8")).hexdigest(),
+        )
+
+        changed = copy.deepcopy(report["frames"])
+        changed[0]["sourceDecodedRgbaSha256"] = hashlib.sha256(
+            b"changed-canonical-rgba"
+        ).hexdigest()
+        changed[0]["loadedDecodedRgbaSha256"] = changed[0][
+            "sourceDecodedRgbaSha256"
+        ]
+        self.assertNotEqual(
+            source_set,
+            TOOL._parity_source_set_sha256(changed),
+        )
+
+        report["sourceSetSha256"] = source_set
+        self._validate_parity(report)
+
     def test_parity_report_rejects_process_and_source_set_drift(self) -> None:
         report = _parity_report(process_kind="recording")
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1,0 +1,3089 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "world",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "762a026dee6b25253cfca623c4e023e5bc7be27f083a37d996712a1d9c49706d",
+    "rawSheetDecodedRgbaByteSha256": "f6cbc89a43798a3c0fd35f6d7c48b4c24aceea0a794ed18a9c74a586fac564b4",
+    "rawSheetGodotCanonicalRgbaSha256": "088128c921da06e0b052517ba9553862aa9a36b25cda31e1ada8216d6b91c603",
+    "rawSheetDecodedRgbaSha256": "088128c921da06e0b052517ba9553862aa9a36b25cda31e1ada8216d6b91c603",
+    "explicitMaskFileSha256": "10b7004e0595cd37f4b321a448eec2e1945c8297c54e2d6c503e0005c7b54eb6",
+    "explicitMaskPixelSha256": "b2b99e9b2ee490bd597fe45611da77405613fd2a04ba1ece4dc8a68d4c252dfb",
+    "width": 1536,
+    "height": 1024
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "all-edges-safe-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "reviewEvidence": [
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-all-component-overlay.png",
+      "fileSha256": "3bea9768dda0d25898a0add15c134ad592f323cd23c2d8afb7d89e8517d17bd2"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-east-components-01.png",
+      "fileSha256": "2e65b3775bd1872efc8da1431f33323f40b6812f645cd0493b7b1b23f33a5e48"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-east-components-02.png",
+      "fileSha256": "8d3fdfaf159b9b6304cc380858dd379a3a812f2b82a681c1d96a35c73521f74e"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-east-components-03.png",
+      "fileSha256": "82071a9237f246e84452714a1327cdca4c6f92d8893363dfcf9f969b861e2a8e"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-east-overview.png",
+      "fileSha256": "2c3acb3526bad902f84ad7e98249e70b6c3ef57d997bccfc4a1d8cfabf534498"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-north-components-01.png",
+      "fileSha256": "cb35851cf35fd4ffba87d7906d480c627cf8179be4e47301493466d4e0e90ec9"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-north-components-02.png",
+      "fileSha256": "3b1079bdb4264aaaf2cc0a072f915a38525e0807a53abfb93dd30170031c9983"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-north-overview.png",
+      "fileSha256": "d8e4e10adc1003d7be2e1854fdf9bca86fc256ab0c2a2f4a67d8c1acca165fca"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northeast-components-01.png",
+      "fileSha256": "75ad736fd6015cdb57b44d54f79fe1401ca584696669e8bcc66561a0e1312b06"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northeast-components-02.png",
+      "fileSha256": "e08020949ebeb2298f51fcc1feb4cdf1f9f00670fc8d3abdbb7c7e029f7f01a2"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northeast-overview.png",
+      "fileSha256": "0915f17a4d2bae69e4432b5bb259efcbf56f26fcdd78d8af0d3a7c1b42e8fc47"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northwest-components-01.png",
+      "fileSha256": "64487a379c75d2c95ef43866e5d9f24ebd23756e1245d167c7270313341b77e6"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northwest-components-02.png",
+      "fileSha256": "e8ff5cab78022eff80617b90e42ae66a36c76f540ff5363a1d3d05b5f8205701"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-northwest-overview.png",
+      "fileSha256": "86807850875f9ed8e158f6051aeed4b087bf274c28e4490d2691333ca4773808"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-south-components-01.png",
+      "fileSha256": "8e864d18c24748a34f449f8c741390c12cf8635d2e2bb0eb5ea47120618343b0"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-south-components-02.png",
+      "fileSha256": "ecb45b1679e40af63e1b49842533746bb1c65862d3c25e258b625ff464cb0036"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-south-components-03.png",
+      "fileSha256": "b5365233255c9f0b6a99e459093351c3fa4d6d01f6a87b5bcfe81849b76161bc"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-south-overview.png",
+      "fileSha256": "bfa73d0804a06a2bb8947d4a3e1d4e60f2d0771a5426698f7d2d242bd647a76d"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southeast-components-01.png",
+      "fileSha256": "b451e41d20818e857f04e3a2e7e3f7176d068341c46461cf3b1ce76435b23382"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southeast-components-02.png",
+      "fileSha256": "d3892807f5c31058fae46962b5715ec83f8b042013af90a883b28dee88138865"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southeast-overview.png",
+      "fileSha256": "b1098ce683ebd87d2ccd00d8ff0d8ced8d84c5d580a48a90d6e7dab47188bbfa"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southwest-components-01.png",
+      "fileSha256": "d18a6b6dca8131f2ff2d94989b11fb1dbd0e7e5feb0badc770439425ca1ebf32"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southwest-components-02.png",
+      "fileSha256": "9acac354494dc54e6fa7d6363c234daba4b902e1d1697bcbbb52cbfa0c390c0d"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southwest-components-03.png",
+      "fileSha256": "34eb88d345f6f7c659b81d92425850d2c8cd551747f8bcf01407aa1a2ff390f2"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southwest-components-04.png",
+      "fileSha256": "477309fcf5edc3cb067e9f23ded36f5202104cb15f3aa327f701b3a34e4052c8"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-southwest-overview.png",
+      "fileSha256": "ec6d14eb36298cf1e41763e2c35ebb8b0e3d755131c069c79f2a125492249dc0"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-west-components-01.png",
+      "fileSha256": "4d434aacd8ac30be44dda40071a0bc69cd50d47ed9d8549c137522a087333cf1"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-west-components-02.png",
+      "fileSha256": "529acc2127229e2a91b0a2ae1e9d4233f852ecb3225e29062744ad93c4d656e2"
+    },
+    {
+      "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/mask-review-v3.1-7615f286/world-slot-west-overview.png",
+      "fileSha256": "c3aaed72be0c6a47028cec064579277192cdb2377fe3e1d4c915e20e8b8f3c81"
+    }
+  ],
+  "components": [
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "253a69a7dcf1c13b4160688019c9894c0d13e4654c7d7dffe23293a13cb0617f",
+      "cellBbox": [
+        175,
+        251,
+        176,
+        253
+      ],
+      "sheetBbox": [
+        175,
+        251,
+        176,
+        253
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south enclosed bright-magenta background hole at [175, 251, 176, 253], 2px; no authored subject detail."
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b20a023946d8497620451802cb868a363a001d2b034641bc412cd791b7352cdd",
+      "cellBbox": [
+        318,
+        255,
+        319,
+        256
+      ],
+      "sheetBbox": [
+        318,
+        255,
+        319,
+        256
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south enclosed bright-magenta background hole at [318, 255, 319, 256], 1px; no authored subject detail."
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7e0fa0a43fbcdbe45c88cb66e3a3a9fa37e1e8601df4d81f911da7b6e2e1addb",
+      "cellBbox": [
+        174,
+        257,
+        175,
+        259
+      ],
+      "sheetBbox": [
+        174,
+        257,
+        175,
+        259
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south enclosed bright-magenta background hole at [174, 257, 175, 259], 2px; no authored subject detail."
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d7b1fd539c79204f34427d240b24351b02ac6a209536204c6373004209fc728e",
+      "cellBbox": [
+        173,
+        259,
+        174,
+        264
+      ],
+      "sheetBbox": [
+        173,
+        259,
+        174,
+        264
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south enclosed bright-magenta background hole at [173, 259, 174, 264], 5px; no authored subject detail."
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9ea44a77e7023624b2287816392ee59c5f9362b857f35239dcdc41ec51083028",
+      "cellBbox": [
+        171,
+        266,
+        173,
+        268
+      ],
+      "sheetBbox": [
+        171,
+        266,
+        173,
+        268
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south enclosed bright-magenta background hole at [171, 266, 173, 268], 3px; no authored subject detail."
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "4a515e8965e4251cc2c695036f24e6cd312c86100f89f30719353778071db9ca",
+      "cellBbox": [
+        145,
+        30,
+        333,
+        492
+      ],
+      "sheetBbox": [
+        145,
+        30,
+        333,
+        492
+      ],
+      "pixelCount": 2394,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south continuous narrow purple-red key fringe around the silhouette, 2394px."
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a0bbd35195c24b0f4da4ab24ba53b065a505e50b6974ccad14d5ba185d6e115d",
+      "cellBbox": [
+        169,
+        248,
+        178,
+        284
+      ],
+      "sheetBbox": [
+        169,
+        248,
+        178,
+        284
+      ],
+      "pixelCount": 105,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south keyed background outside the silhouette or inside an open gap at [169, 248, 178, 284], 105px."
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "80027f8efdd22c5f99fb751d53e48ce4f0bf982d7a86013e8a9f082d785b9211",
+      "cellBbox": [
+        317,
+        254,
+        318,
+        256
+      ],
+      "sheetBbox": [
+        317,
+        254,
+        318,
+        256
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south keyed background outside the silhouette or inside an open gap at [317, 254, 318, 256], 2px."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "da8447b510276dad416e1ba914fc1a47759e87c520aaddc8efceca8f8c2061f9",
+      "cellBbox": [
+        204,
+        56,
+        205,
+        57
+      ],
+      "sheetBbox": [
+        204,
+        56,
+        205,
+        57
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [204, 56, 205, 57], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 118.0/68.0/110.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "25d7f5e213907176735174b78fd9d1b81ce57de0c6bf656c1bd5ca9f6fcfbc62",
+      "cellBbox": [
+        202,
+        65,
+        203,
+        66
+      ],
+      "sheetBbox": [
+        202,
+        65,
+        203,
+        66
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [202, 65, 203, 66], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 30.0/8.0/35.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6f219353678bd2cffbaea99e39d591eb80ca840ef9787ca361d2230cd60ad2d8",
+      "cellBbox": [
+        296,
+        239,
+        299,
+        243
+      ],
+      "sheetBbox": [
+        296,
+        239,
+        299,
+        243
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted exterior fringe/tassel edge at [296, 239, 299, 243], 7px is purple-red key spill (mean RGB 93.0/21.9/56.6)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "22fc0736af44e7dadd510aef5b1f4cd4feaa6bc58bda1bfdcc03b67c733b3838",
+      "cellBbox": [
+        295,
+        241,
+        296,
+        242
+      ],
+      "sheetBbox": [
+        295,
+        241,
+        296,
+        242
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [295, 241, 296, 242], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 38.0/3.0/27.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a09d18daee4dd0fdd6917eddf8a3e6a1baf9720ca55b919c41d8d23915fe6e72",
+      "cellBbox": [
+        322,
+        241,
+        326,
+        249
+      ],
+      "sheetBbox": [
+        322,
+        241,
+        326,
+        249
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted exterior fringe/tassel edge at [322, 241, 326, 249], 19px is purple-red key spill (mean RGB 125.5/18.5/90.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "77e4e8a74fce23dabec8c10ec89a260ec62b6d4c9d683af189b9ef85eb35bf76",
+      "cellBbox": [
+        300,
+        245,
+        310,
+        262
+      ],
+      "sheetBbox": [
+        300,
+        245,
+        310,
+        262
+      ],
+      "pixelCount": 44,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted exterior fringe/tassel edge at [300, 245, 310, 262], 44px is purple-red key spill (mean RGB 107.8/20.1/70.4)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "41885aa3e4463128ae49f5d3970a998434807c5c9557ac6272e6d40cb8bccf4f",
+      "cellBbox": [
+        314,
+        260,
+        315,
+        261
+      ],
+      "sheetBbox": [
+        314,
+        260,
+        315,
+        261
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [314, 260, 315, 261], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 131.0/55.0/85.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ce82f6d6222dd2ec859ce2d6d9db732eb5df8140fc31ccf3dc139c8d6b2c1077",
+      "cellBbox": [
+        313,
+        261,
+        314,
+        262
+      ],
+      "sheetBbox": [
+        313,
+        261,
+        314,
+        262
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [313, 261, 314, 262], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 89.0/16.0/37.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0631bdd696270b1c21505a6f9bac1049beea941d20e0e8bb63cf7908b547bdee",
+      "cellBbox": [
+        285,
+        414,
+        287,
+        416
+      ],
+      "sheetBbox": [
+        285,
+        414,
+        287,
+        416
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [285, 414, 287, 416], 3px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 61.3/9.7/34.0)."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "13f8179bf5ef8168b4000cba19e19218e598a8720a4b13082c3527bba1e73028",
+      "cellBbox": [
+        288,
+        418,
+        290,
+        422
+      ],
+      "sheetBbox": [
+        288,
+        418,
+        290,
+        422
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: south highlighted pixels at [288, 418, 290, 422], 5px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 116.4/32.8/57.6)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d88208cbf9027b6a5516b1ffd01fd5f5eba66d11a3001039bc6c20997d2e3811",
+      "cellBbox": [
+        132,
+        290,
+        133,
+        292
+      ],
+      "sheetBbox": [
+        516,
+        290,
+        517,
+        292
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest enclosed bright-magenta background hole at [132, 290, 133, 292], 2px; no authored subject detail."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "4cee851f6d4f076f721067f85de6d43fe0e18e10e8dcc19bdd428b6c748141d3",
+      "cellBbox": [
+        110,
+        30,
+        291,
+        493
+      ],
+      "sheetBbox": [
+        494,
+        30,
+        675,
+        493
+      ],
+      "pixelCount": 2349,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest continuous narrow purple-red key fringe around the silhouette, 2349px."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "612f151e835340bec0fe56d1305628829c9a125d3c80bab5c28c8f6fc6765b3e",
+      "cellBbox": [
+        280,
+        241,
+        285,
+        250
+      ],
+      "sheetBbox": [
+        664,
+        241,
+        669,
+        250
+      ],
+      "pixelCount": 23,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest keyed background outside the silhouette or inside an open gap at [280, 241, 285, 250], 23px."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "352e4643ce81538ee0e10a6ab8eb220778b097fb2ba79da102cbb36e5db4ab3a",
+      "cellBbox": [
+        130,
+        285,
+        134,
+        296
+      ],
+      "sheetBbox": [
+        514,
+        285,
+        518,
+        296
+      ],
+      "pixelCount": 36,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest keyed background outside the silhouette or inside an open gap at [130, 285, 134, 296], 36px."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cc866f04c5676b82cc724978a6581fcbb0658a98e4f2dcdd748ff5be9ebad96a",
+      "cellBbox": [
+        158,
+        56,
+        160,
+        59
+      ],
+      "sheetBbox": [
+        542,
+        56,
+        544,
+        59
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [158, 56, 160, 59], 4px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 88.2/34.5/62.8)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a367430359ab5ede65ba5a58a6a4099be4b2b429c23ecfb7241943309840bf0e",
+      "cellBbox": [
+        159,
+        63,
+        160,
+        64
+      ],
+      "sheetBbox": [
+        543,
+        63,
+        544,
+        64
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [159, 63, 160, 64], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 104.0/46.0/65.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "702f1a5c088bf825c488e6a42ee85d109344e831ca28a965cf26b44b1d07d031",
+      "cellBbox": [
+        158,
+        64,
+        159,
+        67
+      ],
+      "sheetBbox": [
+        542,
+        64,
+        543,
+        67
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [158, 64, 159, 67], 3px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 82.3/26.0/70.7)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f1d8a88d80631ea3899c1b61b67b13af787e2ce7382020ad1954c4ca4daf166e",
+      "cellBbox": [
+        224,
+        81,
+        225,
+        83
+      ],
+      "sheetBbox": [
+        608,
+        81,
+        609,
+        83
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [224, 81, 225, 83], 2px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 52.0/23.5/47.5)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2ebb474da7750bec1e9333b1db326f09b1c2836a14d660b7f892dfcafedcbd3d",
+      "cellBbox": [
+        255,
+        240,
+        257,
+        243
+      ],
+      "sheetBbox": [
+        639,
+        240,
+        641,
+        243
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [255, 240, 257, 243], 4px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 91.5/29.0/57.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "dff8acd503be4386688322b5704dc02140e5f7e1bfe6d26fb19343e8f52b8176",
+      "cellBbox": [
+        145,
+        244,
+        154,
+        253
+      ],
+      "sheetBbox": [
+        529,
+        244,
+        538,
+        253
+      ],
+      "pixelCount": 64,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [145, 244, 154, 253], 64px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 128.2/34.2/77.3)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b186c7dcd242285409480799b2f53c987f5a699831d8030f4019fc9ab201ef6e",
+      "cellBbox": [
+        261,
+        248,
+        266,
+        254
+      ],
+      "sheetBbox": [
+        645,
+        248,
+        650,
+        254
+      ],
+      "pixelCount": 14,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted exterior fringe/tassel edge at [261, 248, 266, 254], 14px is purple-red key spill (mean RGB 96.1/17.2/64.5)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b332f0d1c44c0d7cd20062cf0d4c383d879189a68ea979bdfda8166af53a6c9a",
+      "cellBbox": [
+        133,
+        251,
+        140,
+        277
+      ],
+      "sheetBbox": [
+        517,
+        251,
+        524,
+        277
+      ],
+      "pixelCount": 76,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted exterior fringe/tassel edge at [133, 251, 140, 277], 76px is purple-red key spill (mean RGB 93.0/17.0/65.6)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "585fc5b795689b0adddd9c62989a234817bd8bbb9dc050dbcb8f3e0b0c47afa6",
+      "cellBbox": [
+        278,
+        253,
+        279,
+        257
+      ],
+      "sheetBbox": [
+        662,
+        253,
+        663,
+        257
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted exterior fringe/tassel edge at [278, 253, 279, 257], 4px is purple-red key spill (mean RGB 129.5/44.0/95.2)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "93435beb29b9b30e4706b68f363bd623c22b5c04a2eb1433c5e172e4d8585856",
+      "cellBbox": [
+        266,
+        254,
+        267,
+        255
+      ],
+      "sheetBbox": [
+        650,
+        254,
+        651,
+        255
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [266, 254, 267, 255], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 88.0/27.0/57.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2ebe3d92fc8d71f7e7bb06e380680b7dd8472d1a0c6814630873d6354c7a392d",
+      "cellBbox": [
+        267,
+        255,
+        270,
+        260
+      ],
+      "sheetBbox": [
+        651,
+        255,
+        654,
+        260
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted exterior fringe/tassel edge at [267, 255, 270, 260], 9px is purple-red key spill (mean RGB 135.3/30.1/86.3)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "818f0ae01a20ebf4754217df5cc69fb256275055f00d03d42b2c718436e54266",
+      "cellBbox": [
+        277,
+        257,
+        278,
+        258
+      ],
+      "sheetBbox": [
+        661,
+        257,
+        662,
+        258
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [277, 257, 278, 258], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 75.0/17.0/38.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d6639c0c2dc1225c02e18469a7bcde33e2f231a5bd1639cea93800adc632d96a",
+      "cellBbox": [
+        274,
+        260,
+        275,
+        261
+      ],
+      "sheetBbox": [
+        658,
+        260,
+        659,
+        261
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [274, 260, 275, 261], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 111.0/30.0/73.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a387b897c1b3662a0224a7eff4737b7023a50fdb91245c76e0356e70a9ed0585",
+      "cellBbox": [
+        273,
+        261,
+        274,
+        262
+      ],
+      "sheetBbox": [
+        657,
+        261,
+        658,
+        262
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [273, 261, 274, 262], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 88.0/12.0/31.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "370598f7d5e594ac7075a06d1989dd7caa1cce8b14a9441ec4ccdf506dd94028",
+      "cellBbox": [
+        132,
+        279,
+        133,
+        280
+      ],
+      "sheetBbox": [
+        516,
+        279,
+        517,
+        280
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [132, 279, 133, 280], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 58.0/16.0/32.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6aa190f6a585f9dd6b523ab764ac6dae854db093ab332ae389bdbd31a63aa181",
+      "cellBbox": [
+        260,
+        332,
+        262,
+        340
+      ],
+      "sheetBbox": [
+        644,
+        332,
+        646,
+        340
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted exterior fringe/tassel edge at [260, 332, 262, 340], 13px is purple-red key spill (mean RGB 105.0/33.1/86.2)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2b1f9b5b22769054626ebc5482ad88dbef06013a620859bf740f6c1a099cfd20",
+      "cellBbox": [
+        198,
+        354,
+        199,
+        355
+      ],
+      "sheetBbox": [
+        582,
+        354,
+        583,
+        355
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [198, 354, 199, 355], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 65.0/21.0/44.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4e774296b7a389f488e1518c4df484bde7ecf2aa32688cce436522ad24be2d59",
+      "cellBbox": [
+        199,
+        355,
+        200,
+        356
+      ],
+      "sheetBbox": [
+        583,
+        355,
+        584,
+        356
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [199, 355, 200, 356], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 49.0/12.0/37.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "afbc07f4d857918ee473348835b3a4461e242fee1fbdba227bcafc4f7ef0a91e",
+      "cellBbox": [
+        253,
+        411,
+        254,
+        412
+      ],
+      "sheetBbox": [
+        637,
+        411,
+        638,
+        412
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [253, 411, 254, 412], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 63.0/14.0/45.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c0b980b185ef096312905fc59be118b86cbfddad3c0743513f30996bdaf1e899",
+      "cellBbox": [
+        254,
+        412,
+        255,
+        413
+      ],
+      "sheetBbox": [
+        638,
+        412,
+        639,
+        413
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [254, 412, 255, 413], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 44.0/5.0/26.0)."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "43c1c42242cc58137c763d2b2f12ef4ceb999f8fe95888026534b0586d0ebc3d",
+      "cellBbox": [
+        256,
+        417,
+        257,
+        420
+      ],
+      "sheetBbox": [
+        640,
+        417,
+        641,
+        420
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southwest highlighted pixels at [256, 417, 257, 420], 3px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 96.0/24.3/48.3)."
+    },
+    {
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f1c1170a159b5015c574069905f9167eb0727417246f650286ffffe832ac41cb",
+      "cellBbox": [
+        102,
+        33,
+        226,
+        491
+      ],
+      "sheetBbox": [
+        870,
+        33,
+        994,
+        491
+      ],
+      "pixelCount": 1767,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west continuous narrow purple-red key fringe around the silhouette, 1767px."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "10661d14627f639152ad84c838f7dcd86491d11bdba9b26f6e98d9401e46d0b9",
+      "cellBbox": [
+        180,
+        51,
+        181,
+        52
+      ],
+      "sheetBbox": [
+        948,
+        51,
+        949,
+        52
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [180, 51, 181, 52], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 52.0/16.0/47.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "20fd44006b28eb5304cac5487367e48349e091116e724be187ca568a2bc68779",
+      "cellBbox": [
+        184,
+        62,
+        185,
+        63
+      ],
+      "sheetBbox": [
+        952,
+        62,
+        953,
+        63
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [184, 62, 185, 63], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 53.0/22.0/41.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6c02dab416d6fd5f7be5cd6b1d474f33dcb60324533ecfadb911809f34aa4410",
+      "cellBbox": [
+        184,
+        80,
+        185,
+        82
+      ],
+      "sheetBbox": [
+        952,
+        80,
+        953,
+        82
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [184, 80, 185, 82], 2px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 46.5/16.0/41.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ea521ad14f33410204dabce5f41b84df93c8dd248703e23b05c003f6eae59f42",
+      "cellBbox": [
+        182,
+        88,
+        183,
+        89
+      ],
+      "sheetBbox": [
+        950,
+        88,
+        951,
+        89
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [182, 88, 183, 89], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 64.0/31.0/64.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "97ebf7c65045f2e5fa526d57de2cd57e7a94f1d9e619dcf9add65e063ed2ac9b",
+      "cellBbox": [
+        182,
+        95,
+        183,
+        96
+      ],
+      "sheetBbox": [
+        950,
+        95,
+        951,
+        96
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [182, 95, 183, 96], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 54.0/21.0/51.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e9f9842bb2051f6719c99559138294f18411e52631ec031b7392ca36bcfa08ec",
+      "cellBbox": [
+        183,
+        96,
+        184,
+        97
+      ],
+      "sheetBbox": [
+        951,
+        96,
+        952,
+        97
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [183, 96, 184, 97], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 21.0/1.0/18.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c25204f597862c4ff97cda2608970aa659d753ae158923df14c557fc2fe58308",
+      "cellBbox": [
+        185,
+        96,
+        186,
+        97
+      ],
+      "sheetBbox": [
+        953,
+        96,
+        954,
+        97
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [185, 96, 186, 97], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 71.0/22.0/55.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b285451d7604e8dd106d4ec441149c8acf5dc8ca36cc528df62747006cee00ae",
+      "cellBbox": [
+        130,
+        138,
+        131,
+        141
+      ],
+      "sheetBbox": [
+        898,
+        138,
+        899,
+        141
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted exterior fringe/tassel edge at [130, 138, 131, 141], 3px is purple-red key spill (mean RGB 140.7/101.0/134.3)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ed45361d50ba217045c2357d70f6741e388878874b486d9578509f6286bd8c6d",
+      "cellBbox": [
+        129,
+        141,
+        130,
+        142
+      ],
+      "sheetBbox": [
+        897,
+        141,
+        898,
+        142
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted pixels at [129, 141, 130, 142], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 34.0/18.0/40.0)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "32924a4067e034f33d42f6649e05aab262bf6497a7eec8f1c9f7f52503221c06",
+      "cellBbox": [
+        205,
+        254,
+        209,
+        264
+      ],
+      "sheetBbox": [
+        973,
+        254,
+        977,
+        264
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted exterior fringe/tassel edge at [205, 254, 209, 264], 27px is purple-red key spill (mean RGB 107.6/20.2/78.3)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0d02ec5932e15fc0c37d5861158fcdeb93150af5600b5b1bf27eaa277b9c3e45",
+      "cellBbox": [
+        214,
+        277,
+        222,
+        283
+      ],
+      "sheetBbox": [
+        982,
+        277,
+        990,
+        283
+      ],
+      "pixelCount": 31,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted exterior fringe/tassel edge at [214, 277, 222, 283], 31px is purple-red key spill (mean RGB 110.3/19.6/65.9)."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f939b664ac88e939a39aff9aa666bb19029a623115048637f2000796ab9925f1",
+      "cellBbox": [
+        217,
+        283,
+        218,
+        284
+      ],
+      "sheetBbox": [
+        985,
+        283,
+        986,
+        284
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: west highlighted exterior fringe/tassel edge at [217, 283, 218, 284], 1px is purple-red key spill (mean RGB 161.0/29.0/110.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "d539d875c61406d99451e18c154a29153878dd61593ddc9df5ebc918374e6645",
+      "cellBbox": [
+        45,
+        39,
+        214,
+        481
+      ],
+      "sheetBbox": [
+        1197,
+        39,
+        1366,
+        481
+      ],
+      "pixelCount": 1999,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest continuous narrow purple-red key fringe around the silhouette, 1999px."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "eeacf27c67e71ed8285fa55608c63a716add20f38234a31a60d97a1d656e75b2",
+      "cellBbox": [
+        76,
+        412,
+        81,
+        418
+      ],
+      "sheetBbox": [
+        1228,
+        412,
+        1233,
+        418
+      ],
+      "pixelCount": 23,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest keyed background outside the silhouette or inside an open gap at [76, 412, 81, 418], 23px."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ead8c41cd6de7ad66dc6fb2a949086e442b4539de6fdc01bb6df83c7d3b1c707",
+      "cellBbox": [
+        88,
+        74,
+        89,
+        75
+      ],
+      "sheetBbox": [
+        1240,
+        74,
+        1241,
+        75
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [88, 74, 89, 75], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 69.0/19.0/39.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1f2cd2db179b9190b25f12ddced51aa1f8e5c0cfd2b9201af36abcaaf1ead2ad",
+      "cellBbox": [
+        89,
+        76,
+        90,
+        77
+      ],
+      "sheetBbox": [
+        1241,
+        76,
+        1242,
+        77
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [89, 76, 90, 77], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 51.0/14.0/30.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c45a8c5d36f59451f6276db115c0dc32ea2637ef90d5cfaf7d24b128b58feabf",
+      "cellBbox": [
+        148,
+        85,
+        149,
+        86
+      ],
+      "sheetBbox": [
+        1300,
+        85,
+        1301,
+        86
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [148, 85, 149, 86], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 69.0/30.0/56.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "64676e87e34de330e2e83eb9428f5d71c0885d0b2c3a11b5c4cb42ca39919d77",
+      "cellBbox": [
+        148,
+        89,
+        149,
+        90
+      ],
+      "sheetBbox": [
+        1300,
+        89,
+        1301,
+        90
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [148, 89, 149, 90], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 39.0/12.0/36.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b76732315fb0874e929f13989301912b75510712fd0c458dea73965490d60444",
+      "cellBbox": [
+        101,
+        113,
+        102,
+        114
+      ],
+      "sheetBbox": [
+        1253,
+        113,
+        1254,
+        114
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [101, 113, 102, 114], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 67.0/22.0/45.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d97dd1009f5e97a271c314887d838e68e4ee39eba3534ad70b05f43b8daf29e9",
+      "cellBbox": [
+        188,
+        410,
+        192,
+        420
+      ],
+      "sheetBbox": [
+        1340,
+        410,
+        1344,
+        420
+      ],
+      "pixelCount": 28,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted exterior fringe/tassel edge at [188, 410, 192, 420], 28px is purple-red key spill (mean RGB 106.5/19.0/90.3)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bbe1d602be656b4d5f0b11914932880a1906ca6cabcc41cbbd5c2c9f964f12ae",
+      "cellBbox": [
+        194,
+        416,
+        195,
+        417
+      ],
+      "sheetBbox": [
+        1346,
+        416,
+        1347,
+        417
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [194, 416, 195, 417], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 121.0/43.0/61.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "938fa1e959c5b9ddae3b16be46088f3fc9bb4f9c043b121e0e57b0988feddd21",
+      "cellBbox": [
+        75,
+        418,
+        76,
+        419
+      ],
+      "sheetBbox": [
+        1227,
+        418,
+        1228,
+        419
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [75, 418, 76, 419], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 62.0/10.0/37.0)."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cbd987f6737fd057ff51f1747fc6fe0a5a34a4e83601adc20f4bd94fba2cdbd1",
+      "cellBbox": [
+        194,
+        418,
+        195,
+        419
+      ],
+      "sheetBbox": [
+        1346,
+        418,
+        1347,
+        419
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northwest highlighted pixels at [194, 418, 195, 419], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 130.0/56.0/72.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8395b45dc46edd3c7e5dcf11055e3cdfaf57822800ba29df9889ec5f8ecc60d9",
+      "cellBbox": [
+        287,
+        411,
+        288,
+        413
+      ],
+      "sheetBbox": [
+        287,
+        923,
+        288,
+        925
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north enclosed bright-magenta background hole at [287, 411, 288, 413], 2px; no authored subject detail."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7b5708c252d7861913de64d56abadc8484d7baa1854665647108b2b40cf8bde3",
+      "cellBbox": [
+        182,
+        413,
+        183,
+        414
+      ],
+      "sheetBbox": [
+        182,
+        925,
+        183,
+        926
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north enclosed bright-magenta background hole at [182, 413, 183, 414], 1px; no authored subject detail."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "23d5cdd6f2c163365b9ecaf5e459e95d7ba18c81851ac7b1f4525fcd91f7a9ee",
+      "cellBbox": [
+        147,
+        17,
+        326,
+        478
+      ],
+      "sheetBbox": [
+        147,
+        529,
+        326,
+        990
+      ],
+      "pixelCount": 2018,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north continuous narrow purple-red key fringe around the silhouette, 2018px."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7f41bb0b8daf2a3109962dccf2a4a5b32f8d4dfe38cd8db95b3c5ff7ef798e41",
+      "cellBbox": [
+        160,
+        231,
+        162,
+        235
+      ],
+      "sheetBbox": [
+        160,
+        743,
+        162,
+        747
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north keyed background outside the silhouette or inside an open gap at [160, 231, 162, 235], 6px."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ffb1d5e8b74f34740bdb33fe62afee7c2c428ef371bb1c09abd60ac451689603",
+      "cellBbox": [
+        164,
+        235,
+        176,
+        247
+      ],
+      "sheetBbox": [
+        164,
+        747,
+        176,
+        759
+      ],
+      "pixelCount": 57,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north keyed background outside the silhouette or inside an open gap at [164, 235, 176, 247], 57px."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f110025018c0a62c0bebe9d54cfeae36544ba47dea032840cda12763efd1a39c",
+      "cellBbox": [
+        286,
+        407,
+        291,
+        415
+      ],
+      "sheetBbox": [
+        286,
+        919,
+        291,
+        927
+      ],
+      "pixelCount": 23,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north keyed background outside the silhouette or inside an open gap at [286, 407, 291, 415], 23px."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1a6b2cda0f5de240297b3c1bf25e3273c18bae5eaee336d7270746f9176b3aa7",
+      "cellBbox": [
+        212,
+        35,
+        213,
+        36
+      ],
+      "sheetBbox": [
+        212,
+        547,
+        213,
+        548
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [212, 35, 213, 36], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 43.0/10.0/45.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "806af8fe8980cfcaf5cdf60b305d92cfb1c4e48a520a56a2f313eec5d1f0f493",
+      "cellBbox": [
+        209,
+        46,
+        210,
+        47
+      ],
+      "sheetBbox": [
+        209,
+        558,
+        210,
+        559
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [209, 46, 210, 47], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 51.0/22.0/41.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e92f623da06b45f157f89513ab845ac787b9400425371a5fcc6d2deaa302698b",
+      "cellBbox": [
+        208,
+        59,
+        209,
+        60
+      ],
+      "sheetBbox": [
+        208,
+        571,
+        209,
+        572
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [208, 59, 209, 60], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 99.0/50.0/70.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a29d1fbc4055f9322261fecf7deafcdbaf1c929d4db0428013a8139d2852afbc",
+      "cellBbox": [
+        156,
+        227,
+        159,
+        230
+      ],
+      "sheetBbox": [
+        156,
+        739,
+        159,
+        742
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted exterior fringe/tassel edge at [156, 227, 159, 230], 6px is purple-red key spill (mean RGB 116.7/20.7/67.2)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5677d038ea4bcb48c856233ddc0c7a094a7aef20a6c51a8f2dc617837de0318f",
+      "cellBbox": [
+        159,
+        230,
+        160,
+        231
+      ],
+      "sheetBbox": [
+        159,
+        742,
+        160,
+        743
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [159, 230, 160, 231], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 80.0/18.0/44.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0fae2f173783536466b51a441e03bc46863ebc626550d3f62f8936149c19e882",
+      "cellBbox": [
+        176,
+        240,
+        177,
+        241
+      ],
+      "sheetBbox": [
+        176,
+        752,
+        177,
+        753
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [176, 240, 177, 241], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 64.0/9.0/28.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "905642a00a2b433fae502bd55e12c94dd2232979947b041b6e22b45db5fecf5e",
+      "cellBbox": [
+        306,
+        295,
+        307,
+        296
+      ],
+      "sheetBbox": [
+        306,
+        807,
+        307,
+        808
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [306, 295, 307, 296], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 103.0/47.0/69.0)."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a4b97fb9ef2c2a0f60b51d9a996888403f5ff871c4e450fefb051018fd695f1e",
+      "cellBbox": [
+        183,
+        408,
+        184,
+        409
+      ],
+      "sheetBbox": [
+        183,
+        920,
+        184,
+        921
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: north highlighted pixels at [183, 408, 184, 409], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 97.0/24.0/43.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "24fc45ca7acd7231eb456c5e9cd7257b0388b1bb3d4e56cc12063a0393b75cda",
+      "cellBbox": [
+        231,
+        407,
+        233,
+        412
+      ],
+      "sheetBbox": [
+        615,
+        919,
+        617,
+        924
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast enclosed bright-magenta background hole at [231, 407, 233, 412], 6px; no authored subject detail."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "ad22302b5291356652fa232fa335406bb134b9364f60e8c3ccd245881097b4d5",
+      "cellBbox": [
+        116,
+        17,
+        275,
+        477
+      ],
+      "sheetBbox": [
+        500,
+        529,
+        659,
+        989
+      ],
+      "pixelCount": 2110,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast continuous narrow purple-red key fringe around the silhouette, 2110px."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "5981f47bfaa41abf9f8b998f49205240b57907ec9b0144857dd8400cbf17e3ee",
+      "cellBbox": [
+        134,
+        398,
+        139,
+        407
+      ],
+      "sheetBbox": [
+        518,
+        910,
+        523,
+        919
+      ],
+      "pixelCount": 17,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast keyed background outside the silhouette or inside an open gap at [134, 398, 139, 407], 17px."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "be3e380c7a46768c02097cd59800833f233c1a645163d8b692139a62a87a863f",
+      "cellBbox": [
+        229,
+        402,
+        233,
+        409
+      ],
+      "sheetBbox": [
+        613,
+        914,
+        617,
+        921
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast keyed background outside the silhouette or inside an open gap at [229, 402, 233, 409], 10px."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "63e1aec6e43acaa4d0a99dd5f07a0dbd60ef0037a6db4bf4ed411d9e873dbfe0",
+      "cellBbox": [
+        175,
+        42,
+        176,
+        46
+      ],
+      "sheetBbox": [
+        559,
+        554,
+        560,
+        558
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [175, 42, 176, 46], 4px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 100.0/41.0/90.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "49463bf0ac8931fcce1eb588cefb0578c60b19df367af426c3c193c382d95c68",
+      "cellBbox": [
+        176,
+        69,
+        177,
+        70
+      ],
+      "sheetBbox": [
+        560,
+        581,
+        561,
+        582
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [176, 69, 177, 70], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 23.0/2.0/24.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "390474ee4330c63d2fe190fdab8ec00a2a50d2ff53e68dff03e1881c5321d3be",
+      "cellBbox": [
+        133,
+        240,
+        135,
+        244
+      ],
+      "sheetBbox": [
+        517,
+        752,
+        519,
+        756
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted exterior fringe/tassel edge at [133, 240, 135, 244], 6px is purple-red key spill (mean RGB 93.8/21.7/70.8)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cfcbab8f16310ea3a91cb14870061d3740674e7e1279608a227cee434d632efa",
+      "cellBbox": [
+        135,
+        244,
+        136,
+        245
+      ],
+      "sheetBbox": [
+        519,
+        756,
+        520,
+        757
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [135, 244, 136, 245], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 57.0/11.0/32.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "eb68a43faab50f972e1764dc913c622f4fe7cb9055b3493efb832756f473d2e7",
+      "cellBbox": [
+        187,
+        334,
+        190,
+        337
+      ],
+      "sheetBbox": [
+        571,
+        846,
+        574,
+        849
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [187, 334, 190, 337], 5px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 78.2/27.6/59.8)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4671739662eb3796105b73a1ad162da0d20e683fd5fc5c32546472a3d1fd2bf4",
+      "cellBbox": [
+        186,
+        335,
+        187,
+        336
+      ],
+      "sheetBbox": [
+        570,
+        847,
+        571,
+        848
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [186, 335, 187, 336], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 44.0/12.0/29.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e98d9087f64525a75b25b2ade650b72f6edda80ac67ed6e1a67bed8e0afbc9c7",
+      "cellBbox": [
+        139,
+        401,
+        140,
+        402
+      ],
+      "sheetBbox": [
+        523,
+        913,
+        524,
+        914
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [139, 401, 140, 402], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 56.0/3.0/27.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "40b9c6388fd5eba73d34849fe9d359465594fd067be70785db6ce1f6b0e6fcde",
+      "cellBbox": [
+        228,
+        406,
+        229,
+        407
+      ],
+      "sheetBbox": [
+        612,
+        918,
+        613,
+        919
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [228, 406, 229, 407], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 53.0/12.0/28.0)."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "619c54a5e5e9dfd12c120436f72317a1bc0259b7a85971f496881e21bb776646",
+      "cellBbox": [
+        139,
+        415,
+        140,
+        417
+      ],
+      "sheetBbox": [
+        523,
+        927,
+        524,
+        929
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: northeast highlighted pixels at [139, 415, 140, 417], 2px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 86.0/27.5/46.5)."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "97fba296e4c62ddbcb3ad254258232874adaa6ceafc533cbf3cca3004122945b",
+      "cellBbox": [
+        116,
+        62,
+        117,
+        64
+      ],
+      "sheetBbox": [
+        884,
+        574,
+        885,
+        576
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [116, 62, 117, 64], 2px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "048e6236964b101d04307a6416b5ef2bb8bab2aeff826d686c5b024a92fe3bc7",
+      "cellBbox": [
+        110,
+        213,
+        111,
+        215
+      ],
+      "sheetBbox": [
+        878,
+        725,
+        879,
+        727
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [110, 213, 111, 215], 2px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "f9bb67b1c713071421ac0dde2666f55286890cf8030d81be73517c5f1682ff51",
+      "cellBbox": [
+        106,
+        219,
+        108,
+        224
+      ],
+      "sheetBbox": [
+        874,
+        731,
+        876,
+        736
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [106, 219, 108, 224], 9px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e675deb590a0041d7f41dfa8e3c554e0699ff8f5b87420a0ae059b2cf96f3360",
+      "cellBbox": [
+        104,
+        230,
+        106,
+        240
+      ],
+      "sheetBbox": [
+        872,
+        742,
+        874,
+        752
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [104, 230, 106, 240], 11px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "283109824a79e644cc093a6a5681b738f492565f9627c3f90d5b8529150caa22",
+      "cellBbox": [
+        92,
+        261,
+        93,
+        262
+      ],
+      "sheetBbox": [
+        860,
+        773,
+        861,
+        774
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [92, 261, 93, 262], 1px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ad889e2b6b643bad8e5eba8b049805b1c288c5def666b524945c4276844c8211",
+      "cellBbox": [
+        186,
+        317,
+        187,
+        320
+      ],
+      "sheetBbox": [
+        954,
+        829,
+        955,
+        832
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [186, 317, 187, 320], 3px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "766d02d46042fc611408de44e39aac05f86ed9017b7836469882fede0ac7ccd6",
+      "cellBbox": [
+        168,
+        456,
+        178,
+        458
+      ],
+      "sheetBbox": [
+        936,
+        968,
+        946,
+        970
+      ],
+      "pixelCount": 14,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east enclosed bright-magenta background hole at [168, 456, 178, 458], 14px; no authored subject detail."
+    },
+    {
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "8062b5b00c2fcf2fe1fe8d360db052a575addd0d7dc01f78a2282d76812db302",
+      "cellBbox": [
+        77,
+        17,
+        205,
+        480
+      ],
+      "sheetBbox": [
+        845,
+        529,
+        973,
+        992
+      ],
+      "pixelCount": 1905,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east continuous narrow purple-red key fringe around the silhouette, 1905px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c9b9163486a11970a153e2dc481a2ad5886b84f9d7a73d6323e7b68022f809c6",
+      "cellBbox": [
+        115,
+        58,
+        119,
+        64
+      ],
+      "sheetBbox": [
+        883,
+        570,
+        887,
+        576
+      ],
+      "pixelCount": 16,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [115, 58, 119, 64], 16px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "1899e0f1fa78d56bdbfcecc51fb017ad6168e59cf2f9574d6c13cf143e7ac809",
+      "cellBbox": [
+        102,
+        211,
+        112,
+        245
+      ],
+      "sheetBbox": [
+        870,
+        723,
+        880,
+        757
+      ],
+      "pixelCount": 134,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [102, 211, 112, 245], 134px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e0b85016acf5deabd2c700558af19e7da40f957bd56452b63c4e52a223215d55",
+      "cellBbox": [
+        94,
+        250,
+        96,
+        255
+      ],
+      "sheetBbox": [
+        862,
+        762,
+        864,
+        767
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [94, 250, 96, 255], 8px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "635b932b914193c031fdd2698b7d250e06dca9d5dc27502410aea955a4f4e6af",
+      "cellBbox": [
+        85,
+        257,
+        93,
+        264
+      ],
+      "sheetBbox": [
+        853,
+        769,
+        861,
+        776
+      ],
+      "pixelCount": 34,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [85, 257, 93, 264], 34px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "49270e5ff98628717b7e90c19c4c25f91ae73f0a763fe668090822ac930bcbeb",
+      "cellBbox": [
+        185,
+        314,
+        188,
+        320
+      ],
+      "sheetBbox": [
+        953,
+        826,
+        956,
+        832
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [185, 314, 188, 320], 12px."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "33cf13607965c975fd355afcebaf7e9a2b44591bb9a96fffc4a75d415bbff6c2",
+      "cellBbox": [
+        165,
+        454,
+        178,
+        460
+      ],
+      "sheetBbox": [
+        933,
+        966,
+        946,
+        972
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east keyed background outside the silhouette or inside an open gap at [165, 454, 178, 460], 40px."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f3e38fb978fda1143dab67bf2faa2df7e0cba8b7f17f9c456252ae653d1e3947",
+      "cellBbox": [
+        121,
+        35,
+        123,
+        38
+      ],
+      "sheetBbox": [
+        889,
+        547,
+        891,
+        550
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [121, 35, 123, 38], 4px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 38.0/15.0/46.2)."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1230695fb3f7ab6e61efe81351bf24146ff5cb9b0ac60cb6813d2e2a407fd50d",
+      "cellBbox": [
+        120,
+        45,
+        121,
+        46
+      ],
+      "sheetBbox": [
+        888,
+        557,
+        889,
+        558
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [120, 45, 121, 46], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 37.0/16.0/32.0)."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "209562f38bc87389b5b3bc93461c6ab825c3258fdeb93ffd6caa223b0417df83",
+      "cellBbox": [
+        117,
+        46,
+        120,
+        49
+      ],
+      "sheetBbox": [
+        885,
+        558,
+        888,
+        561
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [117, 46, 120, 49], 6px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 45.7/6.5/44.7)."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9021b4cecc25ed53640d64f9acb811e674c733196d127f2e32e00be382ed3a11",
+      "cellBbox": [
+        119,
+        70,
+        120,
+        71
+      ],
+      "sheetBbox": [
+        887,
+        582,
+        888,
+        583
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [119, 70, 120, 71], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 79.0/28.0/56.0)."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1a8ebd93b9a28ab15d0c95d32867020938dc340277697639ae8361a0aaca748b",
+      "cellBbox": [
+        165,
+        94,
+        166,
+        95
+      ],
+      "sheetBbox": [
+        933,
+        606,
+        934,
+        607
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [165, 94, 166, 95], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 31.0/7.0/24.0)."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3e5edbf0a09b047c5364a312dc931154c4240d8583aa96ab20750b8a430c2dba",
+      "cellBbox": [
+        184,
+        318,
+        185,
+        319
+      ],
+      "sheetBbox": [
+        952,
+        830,
+        953,
+        831
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: east highlighted pixels at [184, 318, 185, 319], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 58.0/12.0/39.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "041cb0d21f10a75c5fd671f794880606b44d12da29fa841489fe6064718344c0",
+      "cellBbox": [
+        167,
+        230,
+        168,
+        236
+      ],
+      "sheetBbox": [
+        1319,
+        742,
+        1320,
+        748
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast enclosed bright-magenta background hole at [167, 230, 168, 236], 6px; no authored subject detail."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "01336b8622f46697981d72be8cda63888e613f781a39f569e3159995e37d3a55",
+      "cellBbox": [
+        21,
+        17,
+        195,
+        477
+      ],
+      "sheetBbox": [
+        1173,
+        529,
+        1347,
+        989
+      ],
+      "pixelCount": 2079,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast continuous narrow purple-red key fringe around the silhouette, 2079px."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9106424382653b2557979be36fda8cf22a6fb2b83db6700f0c56d1b0d2d3544a",
+      "cellBbox": [
+        80,
+        57,
+        82,
+        61
+      ],
+      "sheetBbox": [
+        1232,
+        569,
+        1234,
+        573
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast keyed background outside the silhouette or inside an open gap at [80, 57, 82, 61], 5px."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c36e3de07daadc3257399d81f569501e84998111b0b8c7fb40901034e568c50c",
+      "cellBbox": [
+        186,
+        224,
+        187,
+        226
+      ],
+      "sheetBbox": [
+        1338,
+        736,
+        1339,
+        738
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast keyed background outside the silhouette or inside an open gap at [186, 224, 187, 226], 2px."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "397f56d3d00cec729e768aee23bcf89cdc8f2745f59bd4682d704c391361db7e",
+      "cellBbox": [
+        165,
+        228,
+        173,
+        235
+      ],
+      "sheetBbox": [
+        1317,
+        740,
+        1325,
+        747
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast keyed background outside the silhouette or inside an open gap at [165, 228, 173, 235], 27px."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6eafb397a5ff8208213708743cc8334e73ce0d4f15c1c0a8bbb0d524bcfdd3fc",
+      "cellBbox": [
+        144,
+        41,
+        147,
+        45
+      ],
+      "sheetBbox": [
+        1296,
+        553,
+        1299,
+        557
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [144, 41, 147, 45], 10px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 109.2/43.8/90.6)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fd000c64f379c5480b03302047975660ebb52531a704da3f9b412d462e869480",
+      "cellBbox": [
+        146,
+        49,
+        147,
+        50
+      ],
+      "sheetBbox": [
+        1298,
+        561,
+        1299,
+        562
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [146, 49, 147, 50], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 54.0/27.0/44.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2beebb174a493d962b02c76473e5813c46015682c549ed797a3b06f00db19aa6",
+      "cellBbox": [
+        175,
+        240,
+        176,
+        242
+      ],
+      "sheetBbox": [
+        1327,
+        752,
+        1328,
+        754
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [175, 240, 176, 242], 2px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 130.0/33.5/57.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c56b47cad34b85cf8429d1504c37d5b5486c14feef2570122d5a3d452036fe8d",
+      "cellBbox": [
+        176,
+        242,
+        177,
+        243
+      ],
+      "sheetBbox": [
+        1328,
+        754,
+        1329,
+        755
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [176, 242, 177, 243], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 81.0/11.0/34.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9ab414ad277c18bcbd09b57ff920943d3b8202dec2282d91f24a70672b9002a6",
+      "cellBbox": [
+        174,
+        312,
+        175,
+        313
+      ],
+      "sheetBbox": [
+        1326,
+        824,
+        1327,
+        825
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [174, 312, 175, 313], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 60.0/9.0/40.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c7be450eb991d2534b6ad0e7e73f5cda5e9b096695bce1ef2a2c657300d09918",
+      "cellBbox": [
+        113,
+        341,
+        114,
+        342
+      ],
+      "sheetBbox": [
+        1265,
+        853,
+        1266,
+        854
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [113, 341, 114, 342], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 59.0/23.0/42.0)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0bbbbfd91f5c0076674679f3e47e78858f912c0c93f45ce2636452b7063ba219",
+      "cellBbox": [
+        154,
+        396,
+        159,
+        406
+      ],
+      "sheetBbox": [
+        1306,
+        908,
+        1311,
+        918
+      ],
+      "pixelCount": 36,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted exterior fringe/tassel edge at [154, 396, 159, 406], 36px is purple-red key spill (mean RGB 110.8/15.6/88.4)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fd32e7747a5f570e7267d250e707bf042d7f4d498da88669b9d1d49582d70d76",
+      "cellBbox": [
+        58,
+        404,
+        60,
+        406
+      ],
+      "sheetBbox": [
+        1210,
+        916,
+        1212,
+        918
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [58, 404, 60, 406], 3px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 83.3/24.7/57.3)."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d48783dc33e87d6ce12a965aae45f721e27b2df7da6859b47c525bb833033950",
+      "cellBbox": [
+        57,
+        405,
+        58,
+        406
+      ],
+      "sheetBbox": [
+        1209,
+        917,
+        1210,
+        918
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "codex-storyteller-world-v7-component-reviewer",
+      "reviewedAt": "2026-07-23T01:25:00+08:00",
+      "visualObservation": "Manual crop review: southeast highlighted pixels at [57, 405, 58, 406], 1px are coherent authored hair, shawl, souvenir, trouser, or boot contour color (mean RGB 56.0/5.0/26.0)."
+    }
+  ]
+}

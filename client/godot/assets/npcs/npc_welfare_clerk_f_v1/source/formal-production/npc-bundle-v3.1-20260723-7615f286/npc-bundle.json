@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "welfare_clerk_f_v1",
+  "appearanceId": "npc_welfare_clerk_f_v1",
+  "displayName": "福利员·女",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "ca9d90fb486b1940783e16721dbc8f5f5f6c99765e3f67c26486c464e70c9d69",
+    "decodedRgbaByteSha256": "1bda39166c45e0ab01384a7af7f8415ee19adc7ba16b1deb62b53931ba2ec20f",
+    "godotCanonicalRgbaSha256": "55315c003d0c90603f39c22652a4389849d892a0b2758fcb552b5568411c4d9d",
+    "decodedRgbaSha256": "55315c003d0c90603f39c22652a4389849d892a0b2758fcb552b5568411c4d9d",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-23T00:19:12+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "5394dcacc459b780ff3eaed2f295e63b1eabdc279c50bdf815306cba63eb613f",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "b6d89e09b820d40ad84a5131e19480184869210ec71a7fab575274eb0093c49a",
+        "explicitSheetMaskPixelSha256": "a704a7e4fb283b868d844752bd7a53b4a9f35d16793ee1f06d29f6525376aa99",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "dd53b1c9885baa281c093cd646d32be5132f9bdfec38fc0ab35af0eff7871634",
+        "reviewedComponentCount": 54
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "6b20143b03c4ae7dfa3ce10de8da237bfb014d06bc6a17c4cee3ef46514a949c",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "9b5863ce9132ca2846f4d11c9f3457796a5c7dd05a9150be1a2a3ce1c9bc5dc1",
+        "explicitSheetMaskPixelSha256": "8d0ef833aa66d77ead72cd8f59ddc50d3122c4348a0e961ee115fc66bd7b9653",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "3d90915c0a047f0746d7ffe5239d47f4f5b66164f65bfa56f27cded1e80c7fff",
+        "reviewedComponentCount": 64
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; the accepted identity canary is a targeted side-placement correction and the world directions are independently authored, not offline mirrors",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no third-party art asset input",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_welfare_clerk_f_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

@@ -1,0 +1,1215 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "world",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "5394dcacc459b780ff3eaed2f295e63b1eabdc279c50bdf815306cba63eb613f",
+    "rawSheetDecodedRgbaByteSha256": "230aef05642e2c4c9b5d774f5e36b0ec8999889598ec4f64b8a6c2f981cdb12b",
+    "rawSheetGodotCanonicalRgbaSha256": "7566cda6cdbf155684a8aeb961b606f29bea0f746a2104a0b4d41d1fd1dc4f5f",
+    "rawSheetDecodedRgbaSha256": "7566cda6cdbf155684a8aeb961b606f29bea0f746a2104a0b4d41d1fd1dc4f5f",
+    "explicitMaskFileSha256": "b6d89e09b820d40ad84a5131e19480184869210ec71a7fab575274eb0093c49a",
+    "explicitMaskPixelSha256": "a704a7e4fb283b868d844752bd7a53b4a9f35d16793ee1f06d29f6525376aa99",
+    "width": 1536,
+    "height": 1024
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "all-edges-safe-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c151d4adeef8355b06289cbc2c6694d2552f048cc92eca4c10861feb5ed9afe2",
+      "cellBbox": [
+        245,
+        177,
+        250,
+        186
+      ],
+      "sheetBbox": [
+        245,
+        177,
+        250,
+        186
+      ],
+      "pixelCount": 28,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6427d4e1940d61d4445dd615464176251e3b31a13be8405ec8bb9b988c63647c",
+      "cellBbox": [
+        283,
+        177,
+        288,
+        185
+      ],
+      "sheetBbox": [
+        283,
+        177,
+        288,
+        185
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "cf83b3919182f1a74fa1aa52bf0c362823fa1229c0f5161ff3fa5acb66f74966",
+      "cellBbox": [
+        182,
+        118,
+        343,
+        466
+      ],
+      "sheetBbox": [
+        182,
+        118,
+        343,
+        466
+      ],
+      "pixelCount": 1394,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a4fb54f2fdae220982ccbf0d30f74ac3c3542b8d3b13abf2f85551f8654367dc",
+      "cellBbox": [
+        282,
+        171,
+        289,
+        185
+      ],
+      "sheetBbox": [
+        282,
+        171,
+        289,
+        185
+      ],
+      "pixelCount": 36,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "15d764903e10816a497b4d5fc104ca19b8dd1b3d324cf4b824ca16d821b63a78",
+      "cellBbox": [
+        243,
+        172,
+        251,
+        186
+      ],
+      "sheetBbox": [
+        243,
+        172,
+        251,
+        186
+      ],
+      "pixelCount": 34,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "86797ea3339235fc8acd84df0d55da5cb797539d6406ed5e5b38a6ba67205258",
+      "cellBbox": [
+        325,
+        325,
+        330,
+        334
+      ],
+      "sheetBbox": [
+        325,
+        325,
+        330,
+        334
+      ],
+      "pixelCount": 35,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "ff454052ea1113e50b0e1f20dca57b8821d90c0ce7f99259f14353ab3d001254",
+      "cellBbox": [
+        140,
+        120,
+        287,
+        464
+      ],
+      "sheetBbox": [
+        524,
+        120,
+        671,
+        464
+      ],
+      "pixelCount": 1505,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "bf74e9c6a0ca170152da995a8b4579998fe5870530be5f8c85d1b3cbf0515a1f",
+      "cellBbox": [
+        167,
+        219,
+        168,
+        220
+      ],
+      "sheetBbox": [
+        551,
+        219,
+        552,
+        220
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7c5c81f3aa50fbe53741d156ffebccccef58966f6fcc8d1304eeb3830394f083",
+      "cellBbox": [
+        195,
+        171,
+        199,
+        177
+      ],
+      "sheetBbox": [
+        579,
+        171,
+        583,
+        177
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d8364e9ca330f57c0f4957d965941f151703f31b58d830bf363dd5e05a5f8f4a",
+      "cellBbox": [
+        199,
+        176,
+        200,
+        177
+      ],
+      "sheetBbox": [
+        583,
+        176,
+        584,
+        177
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4f70cabfc9c05ef0641efbd95654551ded5119798dcaa7ba71da8dd8feabae25",
+      "cellBbox": [
+        252,
+        261,
+        256,
+        273
+      ],
+      "sheetBbox": [
+        636,
+        261,
+        640,
+        273
+      ],
+      "pixelCount": 36,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5290b40b2cbdefaa77cc9bc57b4ca22b72357ae1a7aa156a0e4912018d22a686",
+      "cellBbox": [
+        188,
+        165,
+        189,
+        166
+      ],
+      "sheetBbox": [
+        956,
+        165,
+        957,
+        166
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d2e4835c7642c6c5ba3f9208db2b5f048ffc1e2058a1458a1fbd465bc796a561",
+      "cellBbox": [
+        205,
+        363,
+        206,
+        373
+      ],
+      "sheetBbox": [
+        973,
+        363,
+        974,
+        373
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "ef590085cf3102520ae3c8dcae83c844df527eaf40ad547fa6685a2bb25d0934",
+      "cellBbox": [
+        102,
+        124,
+        209,
+        462
+      ],
+      "sheetBbox": [
+        870,
+        124,
+        977,
+        462
+      ],
+      "pixelCount": 1295,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "354f4a5a1a39b75c1cc1d8c61ffda4ab42f398bcb1ce3f8e7209f46123748115",
+      "cellBbox": [
+        203,
+        364,
+        205,
+        370
+      ],
+      "sheetBbox": [
+        971,
+        364,
+        973,
+        370
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "623f2ba531ed4df2163e8a7b737df0f56c2c0bd6d446f989d490f5bb6f9c156f",
+      "cellBbox": [
+        171,
+        184,
+        172,
+        185
+      ],
+      "sheetBbox": [
+        939,
+        184,
+        940,
+        185
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1b6bfced93088e912b1cb671723fc13278ad07c4a044439daa039dd372d187e2",
+      "cellBbox": [
+        172,
+        185,
+        173,
+        186
+      ],
+      "sheetBbox": [
+        940,
+        185,
+        941,
+        186
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "62c607436e5168d1f9f8f6a1cf710d9fc3032f002322b870a497c177f28c157d",
+      "cellBbox": [
+        113,
+        273,
+        114,
+        275
+      ],
+      "sheetBbox": [
+        881,
+        273,
+        882,
+        275
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a76b40933ca766791e05cc4ed6bf0e11abd20d146b3a653bd83dcbd36ea28126",
+      "cellBbox": [
+        121,
+        287,
+        122,
+        288
+      ],
+      "sheetBbox": [
+        889,
+        287,
+        890,
+        288
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "2db431b9f83bb80ad7f9402d868796d6446f5fa461595dae1e46f6e8ea473d94",
+      "cellBbox": [
+        51,
+        286,
+        52,
+        287
+      ],
+      "sheetBbox": [
+        1203,
+        286,
+        1204,
+        287
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "8f134ed53e0b7bff9bf6cccc3b8d326223c94eeb52843756c58bb51e7d5fb711",
+      "cellBbox": [
+        29,
+        126,
+        159,
+        457
+      ],
+      "sheetBbox": [
+        1181,
+        126,
+        1311,
+        457
+      ],
+      "pixelCount": 1228,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "96da68f7979b61a342280cd0c82eb7206f8aa4f75ccb344ae5c4d292f5f3e210",
+      "cellBbox": [
+        52,
+        284,
+        54,
+        287
+      ],
+      "sheetBbox": [
+        1204,
+        284,
+        1206,
+        287
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "16fc3e35baec7d3549e0a35690ef409d68b07ad2df5bc6a5ef344f76658dfdaf",
+      "cellBbox": [
+        285,
+        111,
+        286,
+        113
+      ],
+      "sheetBbox": [
+        285,
+        623,
+        286,
+        625
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "50529dfbce002ff501c9e845e9d1262b22036c4b25f386bbb7395fdfec338a48",
+      "cellBbox": [
+        246,
+        114,
+        249,
+        117
+      ],
+      "sheetBbox": [
+        246,
+        626,
+        249,
+        629
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "48cdcaa1c8376ef5e1fe86b00701d7dca04b5acb1c808c6800da49d648c4fa78",
+      "cellBbox": [
+        229,
+        199,
+        231,
+        203
+      ],
+      "sheetBbox": [
+        229,
+        711,
+        231,
+        715
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "29d8591636451931518670de220df5aebfb576df73debc04eb8aa706ee168b3c",
+      "cellBbox": [
+        222,
+        217,
+        223,
+        218
+      ],
+      "sheetBbox": [
+        222,
+        729,
+        223,
+        730
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ddfa86eeba9faca3d8b9baeead6b43e5b461fa185ba6073182a09cb312ff6b8c",
+      "cellBbox": [
+        221,
+        218,
+        222,
+        220
+      ],
+      "sheetBbox": [
+        221,
+        730,
+        222,
+        732
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "00e3a9e64cf1c2de0b3e342133f4fe6a4ee30d076ec8bacdea1ce25834bce6dd",
+      "cellBbox": [
+        220,
+        220,
+        221,
+        223
+      ],
+      "sheetBbox": [
+        220,
+        732,
+        221,
+        735
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "7a13ab40ba5e2323f84d48df3e3075d0450dc6e97e3c5a12f76b784efe0f1e66",
+      "cellBbox": [
+        198,
+        66,
+        340,
+        383
+      ],
+      "sheetBbox": [
+        198,
+        578,
+        340,
+        895
+      ],
+      "pixelCount": 1178,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "5d69b767c604179476ed63734ce8014214687655a53ae685367e1c200cf79d4e",
+      "cellBbox": [
+        283,
+        105,
+        286,
+        112
+      ],
+      "sheetBbox": [
+        283,
+        617,
+        286,
+        624
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8fab58a7ee9466551a87a252736bfd0ed2c3ddf80cc4dd2a66ef09880d1e7ec5",
+      "cellBbox": [
+        246,
+        113,
+        249,
+        115
+      ],
+      "sheetBbox": [
+        246,
+        625,
+        249,
+        627
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "58e42f2a2a07995e4ee3080cc0e5649039934057990d445ff9a7b91a95eb7efe",
+      "cellBbox": [
+        226,
+        196,
+        232,
+        212
+      ],
+      "sheetBbox": [
+        226,
+        708,
+        232,
+        724
+      ],
+      "pixelCount": 47,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "4abfa968869e8a2474b97451d903924714dbea5716d017d1e6d190b5a2e21733",
+      "cellBbox": [
+        218,
+        215,
+        225,
+        225
+      ],
+      "sheetBbox": [
+        218,
+        727,
+        225,
+        737
+      ],
+      "pixelCount": 35,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6dee50f53b3a71a59b53da425bc443983926a56344c27638eb4a8abebd3fb5e8",
+      "cellBbox": [
+        238,
+        244,
+        239,
+        245
+      ],
+      "sheetBbox": [
+        238,
+        756,
+        239,
+        757
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a87a44945462e4b488e15fc8ff06a785317b90b87bccbee7025dad1c02b0734e",
+      "cellBbox": [
+        154,
+        69,
+        279,
+        387
+      ],
+      "sheetBbox": [
+        538,
+        581,
+        663,
+        899
+      ],
+      "pixelCount": 1301,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "efffd1986ca068ab0eb75369df759a0f2d29d5d1e6fc658a986c0dcfca8eb2a6",
+      "cellBbox": [
+        200,
+        119,
+        201,
+        120
+      ],
+      "sheetBbox": [
+        584,
+        631,
+        585,
+        632
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a044ac530a954df1c5b28154f5abb1c2814c51c6ac6c0ab9e7589d49f3979fc7",
+      "cellBbox": [
+        201,
+        120,
+        202,
+        121
+      ],
+      "sheetBbox": [
+        585,
+        632,
+        586,
+        633
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "86114922ac16be42636c0354408d626f38a146d4591d036ef86de1ae5a68f421",
+      "cellBbox": [
+        228,
+        128,
+        229,
+        129
+      ],
+      "sheetBbox": [
+        612,
+        640,
+        613,
+        641
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2efc226daa5f6503d1a5b496ad6d04ad53658d7c7094fc9f9937102208a19699",
+      "cellBbox": [
+        227,
+        129,
+        228,
+        130
+      ],
+      "sheetBbox": [
+        611,
+        641,
+        612,
+        642
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "749c269df1a0a2bd7d310ad92c2ca5e5de2d65e2617cf9236416a8e27ddb2da7",
+      "cellBbox": [
+        228,
+        131,
+        229,
+        132
+      ],
+      "sheetBbox": [
+        612,
+        643,
+        613,
+        644
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "05ed4c8a9d356d9565bdb2fcc80cd15e0364a06ae67b1b2bbe5d1c6ed47cbfd8",
+      "cellBbox": [
+        229,
+        132,
+        230,
+        133
+      ],
+      "sheetBbox": [
+        613,
+        644,
+        614,
+        645
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "4c1793f63ba31bdb9f87e2cb0804b31e33788552d83fbccac4b87d6199e0a225",
+      "cellBbox": [
+        196,
+        292,
+        197,
+        293
+      ],
+      "sheetBbox": [
+        964,
+        804,
+        965,
+        805
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a58a43039f9247d4c34bd87573a8c3ad5479992cc3c724382d8354d3382dac92",
+      "cellBbox": [
+        103,
+        69,
+        199,
+        388
+      ],
+      "sheetBbox": [
+        871,
+        581,
+        967,
+        900
+      ],
+      "pixelCount": 1052,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3e9a0562ca932ff9dfc8d5a39d675fa3533e176689d2d1e858471b2c7867cc1a",
+      "cellBbox": [
+        168,
+        367,
+        172,
+        371
+      ],
+      "sheetBbox": [
+        936,
+        879,
+        940,
+        883
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "aa50ff7c3e105f5f85c58b72d501330a2fa4553a5b000fa861b5227a192434e4",
+      "cellBbox": [
+        173,
+        100,
+        174,
+        101
+      ],
+      "sheetBbox": [
+        941,
+        612,
+        942,
+        613
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f7d10fdbb8f421402114b5c3c4088cad0a509b06f71deb767177db736507f29f",
+      "cellBbox": [
+        173,
+        104,
+        174,
+        105
+      ],
+      "sheetBbox": [
+        941,
+        616,
+        942,
+        617
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b59662bc3e77213a357fe3d9d1ef3a47677962561c97cf8238a3412dcf6db6ed",
+      "cellBbox": [
+        172,
+        105,
+        173,
+        106
+      ],
+      "sheetBbox": [
+        940,
+        617,
+        941,
+        618
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1db97af07992fb7ac197184c1be68c82040d380010ff92f4e9fbf5d4a7c1dfd2",
+      "cellBbox": [
+        172,
+        107,
+        173,
+        108
+      ],
+      "sheetBbox": [
+        940,
+        619,
+        941,
+        620
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a29a476475b4ffc048d080e34979dbaf832799dbeb5650ab1f007ba676164146",
+      "cellBbox": [
+        187,
+        188,
+        188,
+        189
+      ],
+      "sheetBbox": [
+        955,
+        700,
+        956,
+        701
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "503cc1cf4dd143a77000a047bc40f199ca97b473e920705f67e05fa558c98b68",
+      "cellBbox": [
+        171,
+        371,
+        172,
+        372
+      ],
+      "sheetBbox": [
+        939,
+        883,
+        940,
+        884
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "62eebaa48eac678e2c63b31e3a2f7b25d2c4600190be33d5b7608c774b96e2ca",
+      "cellBbox": [
+        19,
+        69,
+        155,
+        396
+      ],
+      "sheetBbox": [
+        1171,
+        581,
+        1307,
+        908
+      ],
+      "pixelCount": 1225,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "07b2881b476d8f0cc25005e7d65831f3464ff09b5b5b29a94a98398e9df71df1",
+      "cellBbox": [
+        111,
+        111,
+        112,
+        112
+      ],
+      "sheetBbox": [
+        1263,
+        623,
+        1264,
+        624
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ba698dcb528910e165e1b7c63f148837a94eee65baec9e62adf39c785a1af976",
+      "cellBbox": [
+        111,
+        119,
+        112,
+        120
+      ],
+      "sheetBbox": [
+        1263,
+        631,
+        1264,
+        632
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6d19c0cc2ba2c8b06c3a59f3ab2c3fae7e3c7048c266bb5e0bcb82ad90775dbb",
+      "cellBbox": [
+        108,
+        120,
+        111,
+        124
+      ],
+      "sheetBbox": [
+        1260,
+        632,
+        1263,
+        636
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex producer visual mask reviewer: welfare clerk",
+      "reviewedAt": "2026-07-23T00:31:00+08:00"
+    }
+  ]
+}

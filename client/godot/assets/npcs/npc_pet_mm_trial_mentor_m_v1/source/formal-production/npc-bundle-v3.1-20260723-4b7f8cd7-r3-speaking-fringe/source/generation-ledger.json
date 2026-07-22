@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-23T02:16:53+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "modelParametersExposed": false,
+    "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; accepted world v3 is a fresh eight-view regeneration after two rejected southeast attempts; accepted portrait v4 is a fresh same-identity regeneration after the old speaking cutout failed Stage B, v2 crossed an internal grid seam, and v3 exposed a builder/auditor classifier disagreement on a four-pixel hair-collar background slit."
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "north is a complete back view with no visible face",
+    "northwest and northeast remain visually distinct back diagonals",
+    "southwest faces screen-left and southeast faces screen-right",
+    "no labels, arrows, borders, UI, watermark or scenery",
+    "no cropped world subject or cell-edge crossing",
+    "no spear, shield, reins, riding crop, seven-slot training board, pet or magic",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "4b7f8cd7042ef19d1e8da676e1806ed2aa82f7d0925049e62e71c9e4155822de",
+      "identityPromptSha256": "14a03f0e7d7ba51741418b6450e759d69c187854d147506329721a8b324d193e",
+      "generatedAt": "2026-07-23T00:02:01+08:00",
+      "relationship": "separately generated identity authority"
+    },
+    "worldSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "0d7f6fda9861e4520ad462923b0ae67ce06510bdeca4635591d973659de6db79",
+      "worldPromptSha256": "982e0a3de6424d120fc4bb485947a44c5d39072f7a9452a70516de52e0f57212",
+      "identityBoardSha256": "4b7f8cd7042ef19d1e8da676e1806ed2aa82f7d0925049e62e71c9e4155822de",
+      "generatedAt": "2026-07-23T00:17:58+08:00",
+      "rejectedPredecessors": [
+        {
+          "path": "source/rejected/world-idle-2x4-v1-southeast-facing-wrong.png",
+          "fileSha256": "7ad6a98795a04f7894b15a2dda11e89677093987901d55382fbe7a04a9e4542d",
+          "reason": "bottom-right southeast silhouette faced screen-left"
+        },
+        {
+          "path": "source/rejected/world-idle-2x4-v2-southeast-facing-wrong.png",
+          "fileSha256": "180f387e1e624d4d7d4828e92286cb64c6058cad744452ca81831be76c3faf5d",
+          "reason": "targeted regeneration still left the southeast face and nose screen-left"
+        }
+      ]
+    },
+    "portraitSheet": {
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "fileSha256": "48344dfeed1f10a7e0519c5eb7f1f11855e9ed1164476734c57d7df723da1dd1",
+      "portraitPromptSha256": "3b2f5bf69366637f55e9cb05b5c67e70702e4438370f3e55d9edb4fd9db230d0",
+      "identityBoardSha256": "4b7f8cd7042ef19d1e8da676e1806ed2aa82f7d0925049e62e71c9e4155822de",
+      "generatedAt": "2026-07-23T02:16:53+08:00",
+      "rejectedPredecessors": [
+        {
+          "path": "source/portrait-2x2-raw.png",
+          "fileSha256": "fd64af993585fad4d370f0be901bc679ec9e1afc669cb705370976fe500753a4",
+          "reason": "the speaking cell inherited a generated internal-seam backdrop strip; legal background-fringe processing left 73 detached runtime pixels at x=36, y=342..456 with alpha 1..15, and formal Stage B rejected the colored vertical fringe"
+        },
+        {
+          "path": "source/rejected/portrait-2x2-v2-cross-corridor-failed.png",
+          "fileSha256": "0b09cac466912d192db891affe8f171725765f186704be945f3763da25a01123",
+          "reason": "the first whole-sheet regeneration crossed the horizontal 50% boundary with top-row torso pixels and was rejected before bundle construction"
+        },
+        {
+          "path": "source/portrait-2x2-v3-safe-cross-raw.png",
+          "fileSha256": "b7ae2783daaa2b3adb8ceedc59864ad7882b937777a0543742148e2e766d08c9",
+          "reason": "the safe-cross regeneration removed the speaking fringe, but the immutable r2 bundle failed independent replay because a four-pixel smile hair-collar background component 6023ca99b9d9a5cbf439f4a2901b351475b4cc4f5f7448e36938db1c0018644e was classified differently by the numpy builder and pure-Python auditor"
+        }
+      ]
+    }
+  },
+  "observedBackgroundFact": "Built-in image generation returned fully opaque near-magenta sheets; formal removal is limited to the frozen automatic border core and exact v3.1 reviewed-component masks."
+}

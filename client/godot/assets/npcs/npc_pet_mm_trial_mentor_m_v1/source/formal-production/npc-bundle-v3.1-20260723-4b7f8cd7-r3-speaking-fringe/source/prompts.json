@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: stylized-concept\nAsset type: regenerated Beastbound Odyssey production NPC static world sprite sheet, exact independent true-eight-direction 4-column by 2-row matrix\nInput images: Image 1 is the binding identity board; reproduce this exact adult male, costume, proportions and three close-fitting role cues.\nPrimary request: Draw eight independently authored full-body idle views. This is a fresh generation, not an edit and not a mirror. The result must obey the exact row-major orientation below.\nCanvas: landscape 3:2 canvas, perfectly flat opaque solid #FF00FF across all background. Eight equal invisible cells in 4 columns x 2 rows; no visible dividers, labels, arrows, compass, text, UI, shadow or floor.\nTOP ROW, left to right:\n1 SOUTH: exact front, face and chest toward camera.\n2 SOUTHWEST: front three-quarter looking toward the LEFT edge of the canvas; nose visibly projects LEFT.\n3 WEST: exact left-facing side profile; nose and toes point LEFT.\n4 NORTHWEST: back three-quarter looking toward the LEFT edge; back dominant.\nBOTTOM ROW, left to right:\n5 NORTH: exact complete back; no face, nose, eyes or chest visible.\n6 NORTHEAST: back three-quarter looking toward the RIGHT edge; back dominant.\n7 EAST: exact right-facing side profile; nose and toes point RIGHT.\n8 SOUTHEAST: front three-quarter looking toward the RIGHT edge of the canvas; nose must visibly project RIGHT. This eighth figure is the opposite front diagonal to figure 2 and must not look left.\nFor each cell, the head, nose when visible, torso, hips and both feet must all share that cell's direction. West/east and the diagonal pairs are separately authored and visibly distinct; never mirror, flip, duplicate, rotate or relabel pixels.\nExact character identity: approximately 34-year-old robust male trial adjudicator, wide shoulders tapering to a narrow waist, sun-warmed medium skin, calm square jaw, grey-blue eyes, short deep-brown hair swept back with a small tied nape lock, clean-shaven. Storm-blue-grey sleeveless layered judging tunic over bone-white short sleeves, restrained ochre-yellow piping and sash, dark-brown belt, fitted trousers and sturdy ankle boots. Distinct storm-blue-grey challenge bracer strapped only to his OWN LEFT forearm, a small bone whistle tight at the base of the neck, a compact three-cord challenge-counting knot tied close to his OWN RIGHT HIP. Accessories retain anatomical sides in every direction.\nStyle: exactly Image 1's polished hand-painted 2.5D fantasy RPG style: warm dark outlines, compact adult sprite proportions, controlled cel shading, tactile leather/woven cloth, readable at 256px. Same face, scale, lighting, costume and materials across all eight.\nPose/layout: upright static adjudicator stance with arms relaxed close to body and feet planted. Consistent scale and baseline. Every full body stays completely within its invisible 384x512 cell with generous #FF00FF padding, no edge touching and no cross-cell element.\nConstraints: fully opaque source; hard clean chroma edge with no magenta reflection; complete anatomy; no detached components.\nAbsolutely avoid: southeast facing left, any weapon, spear, sword, shield, staff, whip, riding crop, reins, saddle, pet, animal, magic, VFX, seven-slot training board, seven tokens, sign, scoreboard, clipboard, book, loose remote prop, second person, scenery, shadows, text, watermark, extra limbs, cropping, accessory swapping, bright red/green/purple/cyan costume drift.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "982e0a3de6424d120fc4bb485947a44c5d39072f7a9452a70516de52e0f57212",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north is a complete back view with no visible face",
+        "northwest and northeast remain visually distinct back diagonals",
+        "southwest faces screen-left and southeast faces screen-right",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped world subject or cell-edge crossing",
+        "no spear, shield, reins, riding crop, seven-slot training board, pet or magic",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; accepted world v3 is a fresh eight-view regeneration after two rejected southeast attempts; accepted portrait v4 is a fresh same-identity regeneration after the old speaking cutout failed Stage B, v2 crossed an internal grid seam, and v3 exposed a builder/auditor classifier disagreement on a four-pixel hair-collar background slit."
+      },
+      "generatedAt": "2026-07-23T02:16:53+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey production NPC 2x2 portrait source sheet\nPrimary request: Re-render the entire sheet while preserving the exact same four portraits, expressions, identity, costume, safe layout, scale, camera, lighting and painterly style. Make one topology correction only: eliminate every tiny 1–8 pixel background slit or enclosed key-color hole between the small tied-back hair tail and the raised collar in all four portraits.\nInput image: this clean safe-cross four-expression MM trial mentor sheet is the full identity and composition authority. Do not restore any earlier seam or colored fringe.\nHair/collar correction: in each portrait, make the tied tail and collar silhouette visually simple and unambiguous. Either let the tied tail overlap/connect cleanly into the collar silhouette, or leave a clearly open flat-magenta gap at least 18 pixels wide all around it. Do not leave a pinhole, narrow slit, isolated magenta island, or 1–8 pixel corridor between hair and collar.\nScene/backdrop: perfectly flat solid vivid #FF00FF, uniform with no gradient, texture, shadow, halo, bleed, divider or seam.\nLayout invariant: exact 2x2 order—top-left neutral, top-right speaking, bottom-left restrained smile, bottom-right concerned. Preserve the current wide uninterrupted flat-magenta cross corridor around the vertical and horizontal 50% boundaries and all outer padding. No subject pixel may approach or cross those internal boundaries.\nSilhouette invariant: every colored pixel in each quadrant belongs to and is 4-connected with its main bust; no detached colored pixel, thin vertical fringe, dark strip, antialias island, decorative mark or floating fragment.\nPreserve exactly: same clean-shaven square-jawed grey-blue-eyed adult man; same swept-back dark-brown hair and small tied tail; same storm blue-grey sleeveless tunic, bone-white undershirt, restrained ochre trim, deep-brown straps and small bone whistle; same four expression meanings.\nAvoid: changing identity, expression order, costume, pose or crop; weapons, reins, whip, board, pet, animal, magic, glow, text, labels, arrows, UI, border, watermark, cast shadow, contact shadow, extra person, seam artifact.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "3b2f5bf69366637f55e9cb05b5c67e70702e4438370f3e55d9edb4fd9db230d0",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north is a complete back view with no visible face",
+        "northwest and northeast remain visually distinct back diagonals",
+        "southwest faces screen-left and southeast faces screen-right",
+        "no labels, arrows, borders, UI, watermark or scenery",
+        "no cropped world subject or cell-edge crossing",
+        "no spear, shield, reins, riding crop, seven-slot training board, pet or magic",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-raw.png is the separately generated identity authority; accepted world v3 is a fresh eight-view regeneration after two rejected southeast attempts; accepted portrait v4 is a fresh same-identity regeneration after the old speaking cutout failed Stage B, v2 crossed an internal grid seam, and v3 exposed a builder/auditor classifier disagreement on a four-pixel hair-collar background slit."
+      },
+      "generatedAt": "2026-07-23T02:16:53+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

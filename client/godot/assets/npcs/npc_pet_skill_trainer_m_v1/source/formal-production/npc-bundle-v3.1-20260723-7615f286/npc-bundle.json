@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "pet_skill_trainer_m_v1",
+  "appearanceId": "npc_pet_skill_trainer_m_v1",
+  "displayName": "宠技训练师·男",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "d5f6d766f5e8d131a7f90fab806184335b21a708db3d1f524a56ebe70583ec50",
+    "decodedRgbaByteSha256": "c6b71fa508f367cbea79e622b6b81442cdba2496826ba29287738566d69848dc",
+    "godotCanonicalRgbaSha256": "b0e76810e3668440b654ab3373353046cabf3dd7fa2622fe7b67636e77c79638",
+    "decodedRgbaSha256": "b0e76810e3668440b654ab3373353046cabf3dd7fa2622fe7b67636e77c79638",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+    "generatedAt": "2026-07-23T00:37:17+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "753c805aaa299fc4cd76eb3413cecb8456223bc5e9a60ce45caa6d21758cfb2b",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "cbda682d4e93fd693e2e5110acb86e0168e9d127e00d726fe187accd167d695e",
+        "explicitSheetMaskPixelSha256": "1ea665a23dca5e1c20376b8a8c7307738fe582fcefb2cd14195a81cb125e2704",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "02f6bb5cc2ff8a770d0a2340cd8f09db57579f595a4e3f837955d4160f845ef2",
+        "reviewedComponentCount": 64
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "c3d00d1b9683e411a6d8b9155d86e343f3a8a9e9bff1aaed6b4af43f2245489f",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "f6bd54cae769e5953d9dbba3313323b7dda87a4b86ffc1a3554608c41b5e61d9",
+        "explicitSheetMaskPixelSha256": "94952fe8fedbf626786d872481aa590ca394a6935b8ad68fae03ba761831e3e8",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "306b9a338098b68a8aee909447d996833d31fa16e72c99cb6cc8dc305ae69c39",
+        "reviewedComponentCount": 176
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; the accepted southwest correction is a separately authored image_gen edit and not an offline mirror",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no external art asset input; no StoneAge code, data, names, characters, textures, costumes, or other proprietary art were supplied or copied",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

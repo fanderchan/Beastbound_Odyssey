@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import re
@@ -122,7 +123,9 @@ class PrepareNpcBlindReviewPacketTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _write_index(self, frames: list[dict[str, object]]) -> None:
+    def _frozen_frames(
+        self, frames: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
         normalized = TOOL._installation_frames(
             {
                 "appearanceId": self.appearance_id,
@@ -130,7 +133,92 @@ class PrepareNpcBlindReviewPacketTest(unittest.TestCase):
             },
             self.appearance_id,
         )
-        source_set = TOOL._source_set_sha256(self.appearance_id, normalized)
+        frozen = []
+        for frame in normalized:
+            path = self.asset_root / str(frame["installedPath"])
+            with Image.open(path) as image:
+                image.load()
+                source_full = TOOL._rgba_sha256(image)
+                source_canonical = TOOL._canonical_rgba_sha256(image)
+            frozen.append(
+                {
+                    **frame,
+                    "sourceFullDecodedRgbaSha256": source_full,
+                    "sourceDecodedRgbaSha256": source_canonical,
+                }
+            )
+        return frozen
+
+    def _write_index(self, frames: list[dict[str, object]]) -> None:
+        frozen = self._frozen_frames(frames)
+        source_set = TOOL._source_set_sha256(self.appearance_id, frozen)
+        parity_frames = []
+        for frame in frozen:
+            source_path = (
+                f"res://assets/npcs/{self.appearance_id}/"
+                f"{frame['installedPath']}"
+            )
+            parity_frames.append(
+                {
+                    "kind": frame["kind"],
+                    "slot": frame["slot"],
+                    "path": source_path,
+                    "status": "passed",
+                    "errors": [],
+                    "fileSha256": frame["fileSha256"],
+                    "sourceFullDecodedRgbaSha256": frame[
+                        "sourceFullDecodedRgbaSha256"
+                    ],
+                    "sourceDecodedRgbaSha256": frame[
+                        "sourceDecodedRgbaSha256"
+                    ],
+                    "loadedDecodedRgbaSha256": frame[
+                        "sourceDecodedRgbaSha256"
+                    ],
+                    "sourceLoadedRgbaMatch": True,
+                    "canonicalRgbaMatch": True,
+                    "importFresh": True,
+                    "loadMode": "godot_import",
+                }
+            )
+        parity_report = {
+            "schemaVersion": 1,
+            "reportType": TOOL.PARITY_TYPE,
+            "runId": self.run_id,
+            "appearanceId": self.appearance_id,
+            "processKind": "preflight",
+            "status": "passed",
+            "checkedFrames": 12,
+            "passedFrames": 12,
+            "runtimeMirroring": False,
+            "errors": [],
+            "frames": parity_frames,
+            "sourceSetSha256": source_set,
+        }
+        self.preflight_path = (
+            self.run_dir
+            / self.appearance_id
+            / "preflight-parity.json"
+        )
+        self.preflight_path.parent.mkdir(parents=True, exist_ok=True)
+        self.preflight_path.write_text(
+            json.dumps(
+                parity_report, ensure_ascii=False, indent=2, sort_keys=True
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        preflight_artifact = {
+            "path": self.preflight_path.relative_to(self.root).as_posix(),
+            "sha256": TOOL._sha256_file(self.preflight_path),
+            "sizeBytes": self.preflight_path.stat().st_size,
+            "status": "passed",
+            "processKind": "preflight",
+            "checkedFrames": 12,
+            "passedFrames": 12,
+            "expectedFrames": 12,
+            "sourceSetSha256": source_set,
+        }
         value = {
             "schemaVersion": 1,
             "indexType": TOOL.INDEX_TYPE,
@@ -145,11 +233,30 @@ class PrepareNpcBlindReviewPacketTest(unittest.TestCase):
                     "runId": self.run_id,
                     "status": "passed",
                     "sourceSetSha256": source_set,
+                    "preflightParity": preflight_artifact,
                 }
             ],
         }
         self.index_path.write_text(
             json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def _rewrite_preflight(
+        self, report: dict[str, object], index: dict[str, object]
+    ) -> None:
+        self.preflight_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+        appearance = index["appearances"][0]
+        artifact = appearance["preflightParity"]
+        artifact["sha256"] = TOOL._sha256_file(self.preflight_path)
+        artifact["sizeBytes"] = self.preflight_path.stat().st_size
+        self.index_path.write_text(
+            json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True)
             + "\n",
             encoding="utf-8",
         )
@@ -231,12 +338,9 @@ class PrepareNpcBlindReviewPacketTest(unittest.TestCase):
 
     def test_shuffle_is_deterministic_and_non_identity(self) -> None:
         index_sha = TOOL._sha256_file(self.index_path)
-        normalized = TOOL._installation_frames(
-            json.loads(self.metadata_path.read_text(encoding="utf-8")),
-            self.appearance_id,
-        )
+        frozen = self._frozen_frames(self.frames)
         source_set_sha = TOOL._source_set_sha256(
-            self.appearance_id, normalized
+            self.appearance_id, frozen
         )
         first = TOOL._deterministic_order(
             run_id=self.run_id,
@@ -301,6 +405,64 @@ class PrepareNpcBlindReviewPacketTest(unittest.TestCase):
         value["appearances"][0]["sourceSetSha256"] = "0" * 64
         self.index_path.write_text(json.dumps(value), encoding="utf-8")
         with self.assertRaisesRegex(TOOL.BlindPacketError, "sourceSet"):
+            self._prepare()
+
+    def test_source_set_binds_full_and_frozen_canonical_independently(self) -> None:
+        frozen = self._frozen_frames(self.frames)
+        self.assertTrue(
+            any(
+                frame["sourceFullDecodedRgbaSha256"]
+                != frame["sourceDecodedRgbaSha256"]
+                for frame in frozen
+            )
+        )
+        baseline = TOOL._source_set_sha256(self.appearance_id, frozen)
+        changed = copy.deepcopy(frozen)
+        changed[0]["sourceDecodedRgbaSha256"] = "1" * 64
+        self.assertNotEqual(
+            baseline,
+            TOOL._source_set_sha256(self.appearance_id, changed),
+        )
+        del changed[0]["sourceDecodedRgbaSha256"]
+        with self.assertRaisesRegex(
+            TOOL.BlindPacketError, "sourceDecodedRgbaSha256"
+        ):
+            TOOL._source_set_sha256(self.appearance_id, changed)
+
+    def test_refuses_tampered_frozen_preflight_artifact(self) -> None:
+        with self.preflight_path.open("a", encoding="utf-8") as stream:
+            stream.write(" ")
+        with self.assertRaisesRegex(
+            TOOL.BlindPacketError, "preflight parity 文件 hash 漂移"
+        ):
+            self._prepare()
+
+    def test_refuses_missing_frozen_canonical_hash(self) -> None:
+        report = json.loads(self.preflight_path.read_text(encoding="utf-8"))
+        report["frames"][0]["sourceDecodedRgbaSha256"] = ""
+        index = json.loads(self.index_path.read_text(encoding="utf-8"))
+        self._rewrite_preflight(report, index)
+        with self.assertRaisesRegex(
+            TOOL.BlindPacketError, "sourceDecodedRgbaSha256"
+        ):
+            self._prepare()
+
+    def test_refuses_frozen_canonical_that_does_not_match_current_png(self) -> None:
+        report = json.loads(self.preflight_path.read_text(encoding="utf-8"))
+        index = json.loads(self.index_path.read_text(encoding="utf-8"))
+        frozen = self._frozen_frames(self.frames)
+        frozen[0]["sourceDecodedRgbaSha256"] = "1" * 64
+        source_set = TOOL._source_set_sha256(self.appearance_id, frozen)
+        report["frames"][0]["sourceDecodedRgbaSha256"] = "1" * 64
+        report["frames"][0]["loadedDecodedRgbaSha256"] = "1" * 64
+        report["sourceSetSha256"] = source_set
+        appearance = index["appearances"][0]
+        appearance["sourceSetSha256"] = source_set
+        appearance["preflightParity"]["sourceSetSha256"] = source_set
+        self._rewrite_preflight(report, index)
+        with self.assertRaisesRegex(
+            TOOL.BlindPacketError, "canonical RGBA 与冻结 parity 漂移"
+        ):
             self._prepare()
 
 

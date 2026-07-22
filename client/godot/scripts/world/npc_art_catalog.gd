@@ -31,6 +31,25 @@ const MOBILE_MOBILITY := "mobile"
 const MOBILITY_VALUES: Array[String] = [STATIC_MOBILITY, MOBILE_MOBILITY]
 const NORMAL_RUNTIME_STRICT_RELEASE_EVIDENCE := false
 const RELEASE_ATTESTATION_TYPE := "beastbound_npc_runtime_release_attestation"
+# Eight already-approved bundles are frozen as v1 and historically bind the
+# full decoded RGBA hash in both source-set pixel columns.  V2 keeps that chain
+# readable while requiring the distinct Godot-canonical RGBA hash explicitly.
+const RELEASE_ATTESTATION_SCHEMA_VERSION_V1 := 1
+const RELEASE_ATTESTATION_SCHEMA_VERSION_V2 := 2
+# V1 is a read-only compatibility window for the exact eight attestations that
+# were owner-approved before canonical RGBA became a distinct source-set field.
+# A new attestation, including a replacement for one of these appearances,
+# must use V2 instead of inheriting the legacy full/full calculation.
+const LEGACY_RELEASE_ATTESTATION_V1_SHA256_BY_APPEARANCE: Dictionary = {
+	"npc_stable_keeper_m_v1": "946bd3415e1f55079271724e4af3092983468a50b19b797ea10a561ed67befec",
+	"npc_bank_keeper_f_v1": "78e16394045acdb095588611d40a2a82abaa3815ce7f25c70c87b651fdec4702",
+	"npc_item_shopkeeper_f_v1": "b85f53b15b633ab1f63d610df8c51455f9dd5972fdf7ce2d40b3951d8ee0e9c0",
+	"npc_manor_steward_m_v1": "3f2fa07f810df06d3c95ca95eb1dbef2caaf1428bf739dc7874dcd5855abd072",
+	"npc_village_guard_m_v1": "e7e8f70d4ba30a709582a719d230733e00c230003a314e2b2fe973d9236bf268",
+	"npc_village_healer_f_v1": "bd55ff3c0a9d6594a4e87c72e7501a9fe8e7c63665e021c6fb235b06bf3c148c",
+	"npc_equipment_artisan_m_v1": "e49715dcf59c0af1668b6f0a2f801ddfade55b7c42424fd9ff79b8b2ad0cc934",
+	"npc_riding_trainer_f_v1": "a3bd73dac4faaeb3be823811b366767fb6d2d62e9820e17978244c11c97384ff",
+}
 const OWNER_RELEASE_DECISION_TYPE := "beastbound_npc_owner_release_decision"
 const STRICT_EVIDENCE_HASH_KEYS: Array[String] = [
 	"sourceSetSha256",
@@ -467,6 +486,11 @@ static func runtime_release_attestation_document_errors(
 		errors.append("approved NPC release attestation 与 catalog SHA-256 不一致：%s" % appearance_id)
 
 	var owner_approved_at := str(attestation.get("ownerApprovedAtUtc", ""))
+	var attestation_schema_version := (
+		int(attestation.get("schemaVersion", 0))
+		if _is_json_integer(attestation.get("schemaVersion"))
+		else 0
+	)
 	var expected_owner_path := "client/godot/assets/npcs/%s/release-owner-decision.json" % appearance_id
 	var owner_path := str(attestation.get("ownerDecisionRecord", ""))
 	var expected_owner_sha := str(attestation.get("ownerDecisionRecordSha256", ""))
@@ -478,8 +502,8 @@ static func runtime_release_attestation_document_errors(
 	]):
 		errors.append("approved NPC releaseAttestation 顶层字段集合无效：%s" % appearance_id)
 	if (
-		not _is_json_integer(attestation.get("schemaVersion"))
-		or int(attestation.get("schemaVersion", 0)) != 1
+		attestation_schema_version != RELEASE_ATTESTATION_SCHEMA_VERSION_V1
+		and attestation_schema_version != RELEASE_ATTESTATION_SCHEMA_VERSION_V2
 		or str(attestation.get("attestationType", "")) != RELEASE_ATTESTATION_TYPE
 		or str(attestation.get("status", "")) != "passed"
 		or str(attestation.get("appearanceId", "")) != appearance_id
@@ -491,6 +515,19 @@ static func runtime_release_attestation_document_errors(
 		or not _is_utc_timestamp(owner_approved_at)
 	):
 		errors.append("approved NPC releaseAttestation 状态/owner approval 无效：%s" % appearance_id)
+	if attestation_schema_version == RELEASE_ATTESTATION_SCHEMA_VERSION_V1:
+		var frozen_legacy_sha := str(
+			LEGACY_RELEASE_ATTESTATION_V1_SHA256_BY_APPEARANCE.get(appearance_id, "")
+		)
+		if (
+			not _is_sha256(frozen_legacy_sha)
+			or catalog_attestation_sha != frozen_legacy_sha
+			or actual_attestation_sha256 != frozen_legacy_sha
+		):
+			errors.append(
+				"NPC releaseAttestation v1 仅允许精确冻结的旧批次证明；新批准必须使用 v2：%s"
+				% appearance_id
+			)
 	if owner_path != expected_owner_path or not _is_safe_repo_relative_path(owner_path):
 		errors.append("NPC releaseAttestation owner decision 路径未冻结：%s" % appearance_id)
 	if (
@@ -546,6 +583,12 @@ static func runtime_release_attestation_document_errors(
 		var expected := expected_value as Dictionary
 		var file_sha := str(frame.get("fileSha256", ""))
 		var rgba_sha := str(frame.get("rgbaSha256", ""))
+		var source_decoded_rgba_sha := str(frame.get("sourceDecodedRgbaSha256", ""))
+		if (
+			attestation_schema_version == RELEASE_ATTESTATION_SCHEMA_VERSION_V2
+			and not _is_sha256(source_decoded_rgba_sha)
+		):
+			errors.append("NPC releaseAttestation v2 帧缺少 canonical RGBA SHA-256：%s/%s" % [appearance_id, installed_path])
 		if (
 			str(frame.get("kind", "")) != str(expected.get("kind", ""))
 			or str(frame.get("slot", "")) != str(expected.get("slot", ""))
@@ -562,7 +605,11 @@ static func runtime_release_attestation_document_errors(
 	if seen_installed_paths.size() != expected_frames.size():
 		errors.append("NPC releaseAttestation 漏登记运行帧：%s" % appearance_id)
 
-	var source_set_sha := _release_attestation_source_set_sha256(appearance_id, frames_by_source_path)
+	var source_set_sha := _release_attestation_source_set_sha256(
+		appearance_id,
+		frames_by_source_path,
+		attestation_schema_version
+	)
 	if (
 		not _is_sha256(str(attestation.get("sourceSetSha256", "")))
 		or str(attestation.get("sourceSetSha256", "")) != source_set_sha
@@ -611,6 +658,51 @@ static func runtime_release_attestation_document_errors(
 		or not accepted_evidence_matches
 	):
 		errors.append("NPC owner release decision 内容未绑定当前批准证据：%s" % appearance_id)
+	return errors
+
+
+static func release_evidence_source_set_schema_version(
+	record: Dictionary,
+	actual_attestation_sha256: String
+) -> int:
+	var appearance_id := str(record.get("appearanceId", ""))
+	var frozen_legacy_sha := str(
+		LEGACY_RELEASE_ATTESTATION_V1_SHA256_BY_APPEARANCE.get(appearance_id, "")
+	)
+	if (
+		_record_has_release_access(record)
+		and _is_sha256(frozen_legacy_sha)
+		and str(record.get("releaseAttestationSha256", "")) == frozen_legacy_sha
+		and actual_attestation_sha256 == frozen_legacy_sha
+	):
+		return RELEASE_ATTESTATION_SCHEMA_VERSION_V1
+	return RELEASE_ATTESTATION_SCHEMA_VERSION_V2
+
+
+static func release_attestation_frozen_source_set_errors(
+	appearance_id: String,
+	attestation: Dictionary,
+	frozen_runtime_source_set_sha256: String
+) -> Array[String]:
+	var errors: Array[String] = []
+	var schema_version := (
+		int(attestation.get("schemaVersion", 0))
+		if _is_json_integer(attestation.get("schemaVersion"))
+		else 0
+	)
+	if schema_version != RELEASE_ATTESTATION_SCHEMA_VERSION_V2:
+		return errors
+	var strict_value = attestation.get("strictEvidence", {})
+	var strict_evidence := strict_value as Dictionary if strict_value is Dictionary else {}
+	if (
+		not _is_sha256(frozen_runtime_source_set_sha256)
+		or str(attestation.get("sourceSetSha256", "")) != frozen_runtime_source_set_sha256
+		or str(strict_evidence.get("sourceSetSha256", "")) != frozen_runtime_source_set_sha256
+	):
+		errors.append(
+			"NPC releaseAttestation v2 sourceSet 未绑定 frozen runtime evidence：%s"
+			% appearance_id
+		)
 	return errors
 
 
@@ -826,12 +918,25 @@ static func _append_metadata_errors(
 			errors.append("NPC action-bundle-meta.review 与目录状态不一致：%s" % appearance_id)
 		var status := str(record.get("status", ""))
 		if strict_external_evidence or [STATUS_OWNER_REVIEW_PENDING, STATUS_APPROVED].has(status):
+			var source_set_schema_version := RELEASE_ATTESTATION_SCHEMA_VERSION_V2
+			if strict_external_evidence:
+				var attestation_path := _resource_path(str(record.get("releaseAttestationPath", "")))
+				var actual_attestation_sha := (
+					FileAccess.get_sha256(attestation_path)
+					if FileAccess.file_exists(attestation_path)
+					else ""
+				)
+				source_set_schema_version = release_evidence_source_set_schema_version(
+					record,
+					actual_attestation_sha
+				)
 			_append_review_evidence_errors(
 				appearance_id,
 				review,
 				metadata,
 				errors,
-				strict_external_evidence
+				strict_external_evidence,
+				source_set_schema_version
 			)
 	_append_installation_metadata_errors(record, metadata, errors, strict_external_evidence)
 	if strict_external_evidence and _record_has_release_access(record):
@@ -843,7 +948,8 @@ static func _append_review_evidence_errors(
 	review: Dictionary,
 	metadata: Dictionary,
 	errors: Array[String],
-	strict_external_evidence: bool
+	strict_external_evidence: bool,
+	source_set_schema_version: int
 ) -> void:
 	var installation_value = metadata.get("installation", {})
 	if strict_external_evidence:
@@ -851,7 +957,8 @@ static func _append_review_evidence_errors(
 			appearance_id,
 			review,
 			installation_value as Dictionary if installation_value is Dictionary else {},
-			errors
+			errors,
+			source_set_schema_version
 		)
 	_append_frozen_external_evidence_errors(
 		str(review.get("blindAudit", "")),
@@ -1106,6 +1213,22 @@ static func _append_release_attestation_strict_binding_errors(
 		return
 	var review := review_value as Dictionary
 	var strict_evidence := strict_value as Dictionary
+	var attestation_schema_version := (
+		int(attestation.get("schemaVersion", 0))
+		if _is_json_integer(attestation.get("schemaVersion"))
+		else 0
+	)
+	if attestation_schema_version == RELEASE_ATTESTATION_SCHEMA_VERSION_V2:
+		var frozen_source_set_sha := NpcArtReleaseEvidence.frozen_runtime_source_set_sha256(
+			appearance_id,
+			review,
+			errors
+		)
+		errors.append_array(release_attestation_frozen_source_set_errors(
+			appearance_id,
+			attestation,
+			frozen_source_set_sha
+		))
 	for key in [
 		"runtimeEvidenceIndexSha256", "blindStageAResultSha256",
 		"blindStageBObservationSha256", "blindAuditSha256",
@@ -1902,7 +2025,8 @@ static func _expected_installation_frames(record: Dictionary) -> Dictionary:
 
 static func _release_attestation_source_set_sha256(
 	appearance_id: String,
-	frames_by_source_path: Dictionary
+	frames_by_source_path: Dictionary,
+	schema_version: int
 ) -> String:
 	var source_set_lines := ""
 	for direction in WorldVisualDirectionContract.DIRECTIONS:
@@ -1911,9 +2035,16 @@ static func _release_attestation_source_set_sha256(
 		if not (frame_value is Dictionary):
 			continue
 		var frame := frame_value as Dictionary
+		# Never infer a V2 canonical hash from full RGBA. V1 alone retains the
+		# legacy full/full calculation so existing owner approvals stay frozen.
+		var canonical_rgba_sha := (
+			str(frame.get("sourceDecodedRgbaSha256", ""))
+			if schema_version == RELEASE_ATTESTATION_SCHEMA_VERSION_V2
+			else str(frame.get("rgbaSha256", ""))
+		)
 		source_set_lines += "world\t%s\tres://assets/npcs/%s/%s\t%s\t%s\t%s\n" % [
 			direction, appearance_id, str(frame.get("installedPath", "")),
-			str(frame.get("fileSha256", "")), str(frame.get("rgbaSha256", "")), str(frame.get("rgbaSha256", "")),
+			str(frame.get("fileSha256", "")), str(frame.get("rgbaSha256", "")), canonical_rgba_sha,
 		]
 	for state in PORTRAIT_STATES:
 		var source_path := "runtime/portraits/%s.png" % state
@@ -1921,9 +2052,14 @@ static func _release_attestation_source_set_sha256(
 		if not (frame_value is Dictionary):
 			continue
 		var frame := frame_value as Dictionary
+		var canonical_rgba_sha := (
+			str(frame.get("sourceDecodedRgbaSha256", ""))
+			if schema_version == RELEASE_ATTESTATION_SCHEMA_VERSION_V2
+			else str(frame.get("rgbaSha256", ""))
+		)
 		source_set_lines += "portrait\t%s\tres://assets/npcs/%s/%s\t%s\t%s\t%s\n" % [
 			state, appearance_id, str(frame.get("installedPath", "")),
-			str(frame.get("fileSha256", "")), str(frame.get("rgbaSha256", "")), str(frame.get("rgbaSha256", "")),
+			str(frame.get("fileSha256", "")), str(frame.get("rgbaSha256", "")), canonical_rgba_sha,
 		]
 	return _sha256_text(source_set_lines)
 

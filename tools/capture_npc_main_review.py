@@ -2,10 +2,11 @@
 """Capture immutable real-Main NPC world + dialogue portrait evidence.
 
 The recorder launches the normal ``res://scenes/Main.tscn`` path once for each
-of the eight fixed first-batch occupational appearances.  The Godot helper
-opens the mapped NPC's real interaction dialog, captures a 1280x720 viewport,
-and freezes both source-file and actually-loaded RGBA hashes.  A failed or
-partial run deliberately receives no ``evidence-index.json``.
+appearance in the selected frozen target batch.  The original eight-role batch
+remains the default; ``remaining7`` selects the second Firebud production batch.
+The Godot helper opens the mapped NPC's real interaction dialog, captures a
+1280x720 viewport, and freezes both source-file and actually-loaded RGBA hashes.
+A failed or partial run deliberately receives no ``evidence-index.json``.
 """
 
 from __future__ import annotations
@@ -78,6 +79,9 @@ FRAME_FIELDS = frozenset(
 SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9_]{0,127}$")
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 LOWER_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+DEFAULT_TARGET_BATCH = "first8"
+REMAINING_TARGET_BATCH = "remaining7"
 
 TARGETS: tuple[dict[str, str], ...] = (
     {
@@ -153,6 +157,91 @@ TARGETS: tuple[dict[str, str], ...] = (
         "portraitState": "speaking",
     },
 )
+
+REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
+    {
+        "roleId": "player_rebirth_mentor",
+        "appearanceId": "npc_player_rebirth_mentor_f_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_rebirth_mentor",
+        "facing": "southwest",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "pet_mm_trial_mentor",
+        "appearanceId": "npc_pet_mm_trial_mentor_m_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_pet_mm_trial_mentor",
+        "facing": "southwest",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "pet_mm_stage2_keeper",
+        "appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_pet_mm_stage2_keeper",
+        "facing": "northwest",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "diamond_merchant",
+        "appearanceId": "npc_diamond_merchant_m_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_diamond_keeper",
+        "facing": "southeast",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "pet_skill_trainer",
+        "appearanceId": "npc_pet_skill_trainer_m_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_pet_skill_trainer",
+        "facing": "southeast",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "welfare_clerk",
+        "appearanceId": "npc_welfare_clerk_f_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_welfare_clerk",
+        "facing": "southeast",
+        "portraitState": "speaking",
+    },
+    {
+        "roleId": "storyteller",
+        "appearanceId": "npc_storyteller_m_v1",
+        "mapId": "firebud_village_gate",
+        "spawnName": "doctor_record",
+        "npcId": "firebud_storyteller",
+        "facing": "northwest",
+        "portraitState": "speaking",
+    },
+)
+
+TARGET_BATCHES: dict[str, tuple[dict[str, str], ...]] = {
+    DEFAULT_TARGET_BATCH: TARGETS,
+    REMAINING_TARGET_BATCH: REMAINING7_TARGETS,
+}
+EXPECTED_TARGET_BATCH_COUNTS: dict[str, int] = {
+    DEFAULT_TARGET_BATCH: 8,
+    REMAINING_TARGET_BATCH: 7,
+}
+TARGET_BATCH_CAPTURE_MODES: dict[str, dict[str, bool]] = {
+    DEFAULT_TARGET_BATCH: {
+        "qaPreview": False,
+        "normalPlayerRuntimeEnabled": True,
+    },
+    REMAINING_TARGET_BATCH: {
+        "qaPreview": True,
+        "normalPlayerRuntimeEnabled": False,
+    },
+}
 
 
 class NpcMainReviewError(RuntimeError):
@@ -305,7 +394,7 @@ def _source_set_sha256(sources: Sequence[dict[str, Any]]) -> str:
         f"{source.get('kind', '')}\t{source.get('slot', '')}\t"
         f"{source.get('path', '')}\t{source.get('fileSha256', '')}\t"
         f"{source.get('sourceFullDecodedRgbaSha256', '')}\t"
-        f"{source.get('sourceFullDecodedRgbaSha256', '')}\n"
+        f"{source.get('sourceDecodedRgbaSha256', '')}\n"
         for source in sources
     )
     return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
@@ -374,6 +463,8 @@ def _validate_capture_report(
     target: dict[str, str],
     screenshot_path: Path,
     run_id: str,
+    qa_preview: bool,
+    normal_player_runtime_enabled: bool,
 ) -> dict[str, Any]:
     report = _read_json(report_path, label="NPC Main capture report")
     errors: list[str] = []
@@ -385,7 +476,8 @@ def _validate_capture_report(
         "status": "passed",
         "ok": True,
         "scene": MAIN_SCENE,
-        "qaPreview": True,
+        "qaPreview": qa_preview,
+        "normalPlayerRuntimeEnabled": normal_player_runtime_enabled,
         "debugBuild": True,
         "runtimeMirroring": False,
         "defaultProfileIsolation": True,
@@ -587,14 +679,40 @@ def _require_executable(value: str, *, label: str) -> str:
     return resolved
 
 
-def _validate_fixed_targets() -> None:
-    if len(TARGETS) != 8:
-        raise NpcMainReviewError("Main NPC 取证必须固定覆盖首批 8 个岗位")
-    appearance_ids = [target["appearanceId"] for target in TARGETS]
-    npc_keys = [(target["mapId"], target["npcId"]) for target in TARGETS]
-    if len(set(appearance_ids)) != 8 or len(set(npc_keys)) != 8:
-        raise NpcMainReviewError("Main NPC 取证目标存在重复 appearance/npc 映射")
-    for target in TARGETS:
+def _targets_for_batch(batch: str) -> tuple[dict[str, str], ...]:
+    targets = TARGET_BATCHES.get(batch)
+    if targets is None:
+        raise NpcMainReviewError(f"未知 Main NPC 取证批次：{batch!r}")
+    return targets
+
+
+def _capture_mode_for_batch(batch: str) -> dict[str, bool]:
+    mode = TARGET_BATCH_CAPTURE_MODES.get(batch)
+    if mode is None:
+        raise NpcMainReviewError(f"未知 Main NPC 取证批次：{batch!r}")
+    return dict(mode)
+
+
+def _validate_target_batch(
+    batch: str, targets: tuple[dict[str, str], ...]
+) -> None:
+    expected_count = EXPECTED_TARGET_BATCH_COUNTS.get(batch)
+    if expected_count is None:
+        raise NpcMainReviewError(f"未知 Main NPC 取证批次：{batch!r}")
+    if len(targets) != expected_count:
+        raise NpcMainReviewError(
+            f"Main NPC {batch} 取证必须固定覆盖 {expected_count} 个岗位"
+        )
+    appearance_ids = [target["appearanceId"] for target in targets]
+    npc_keys = [(target["mapId"], target["npcId"]) for target in targets]
+    if (
+        len(set(appearance_ids)) != expected_count
+        or len(set(npc_keys)) != expected_count
+    ):
+        raise NpcMainReviewError(
+            f"Main NPC {batch} 取证目标存在重复 appearance/npc 映射"
+        )
+    for target in targets:
         for field in (
             "roleId",
             "appearanceId",
@@ -615,6 +733,37 @@ def _validate_fixed_targets() -> None:
             raise NpcMainReviewError("Main 真实 interaction 取证必须固定 speaking")
 
 
+def _validate_fixed_targets() -> None:
+    """Retain the original first-eight validation entry point for callers."""
+    _validate_target_batch(DEFAULT_TARGET_BATCH, TARGETS)
+
+
+def _validate_all_target_batches() -> None:
+    for batch, targets in TARGET_BATCHES.items():
+        _validate_target_batch(batch, targets)
+    all_targets = tuple(
+        target for targets in TARGET_BATCHES.values() for target in targets
+    )
+    appearance_ids = [target["appearanceId"] for target in all_targets]
+    npc_keys = [(target["mapId"], target["npcId"]) for target in all_targets]
+    if len(set(appearance_ids)) != len(all_targets) or len(set(npc_keys)) != len(
+        all_targets
+    ):
+        raise NpcMainReviewError(
+            "Main NPC 各取证批次之间存在重复 appearance/npc 映射"
+        )
+    if set(TARGET_BATCH_CAPTURE_MODES) != set(TARGET_BATCHES):
+        raise NpcMainReviewError("Main NPC 取证批次缺少冻结 capture mode")
+    for batch in TARGET_BATCHES:
+        mode = _capture_mode_for_batch(batch)
+        if set(mode) != {"qaPreview", "normalPlayerRuntimeEnabled"}:
+            raise NpcMainReviewError(f"Main NPC {batch} capture mode 字段不完整")
+        if mode["qaPreview"] == mode["normalPlayerRuntimeEnabled"]:
+            raise NpcMainReviewError(
+                f"Main NPC {batch} 必须且只能选择 QA preview 或正常运行资源"
+            )
+
+
 def _capture_target(
     *,
     target: dict[str, str],
@@ -622,6 +771,8 @@ def _capture_target(
     godot: str,
     timeout_seconds: float,
     run_id: str,
+    qa_preview: bool,
+    normal_player_runtime_enabled: bool,
 ) -> dict[str, Any]:
     target_dir.mkdir(parents=False, exist_ok=False)
     screenshot_path = (target_dir / "main-dialog-1280x720.png").resolve()
@@ -637,6 +788,7 @@ def _capture_target(
             run_id=run_id,
             screenshot_path=screenshot_path,
             report_path=report_path,
+            qa_preview=qa_preview,
         )
         _run_logged(command, log_path=log_path, timeout_seconds=timeout_seconds)
     report = _validate_capture_report(
@@ -644,6 +796,8 @@ def _capture_target(
         target=target,
         screenshot_path=screenshot_path,
         run_id=run_id,
+        qa_preview=qa_preview,
+        normal_player_runtime_enabled=normal_player_runtime_enabled,
     )
     screenshot_record = _artifact_record(screenshot_path)
     return {
@@ -655,7 +809,8 @@ def _capture_target(
         "facing": target["facing"],
         "portraitState": target["portraitState"],
         "scene": MAIN_SCENE,
-        "qaPreview": True,
+        "qaPreview": qa_preview,
+        "normalPlayerRuntimeEnabled": normal_player_runtime_enabled,
         "defaultProfileIsolation": True,
         "profileIsolation": "default_profile_ephemeral_no_save",
         "debugUiVisible": False,
@@ -683,8 +838,9 @@ def _build_capture_command(
     run_id: str,
     screenshot_path: Path,
     report_path: Path,
+    qa_preview: bool,
 ) -> list[str]:
-    return [
+    engine_args = [
         godot,
         "--path",
         str(GODOT_PROJECT),
@@ -693,8 +849,9 @@ def _build_capture_command(
         "--scene",
         MAIN_SCENE,
         "--",
+    ]
+    user_args = [
         "--qa-viewport=1280x720",
-        "--npc-art-review-preview",
         "--npc-main-review-capture",
         f"--npc-main-review-appearance-id={target['appearanceId']}",
         f"--npc-main-review-map-id={target['mapId']}",
@@ -705,6 +862,9 @@ def _build_capture_command(
         f"--npc-main-review-output={screenshot_path}",
         f"--npc-main-review-report={report_path}",
     ]
+    if qa_preview:
+        user_args.insert(1, "--npc-art-review-preview")
+    return engine_args + user_args
 
 
 def _record(args: argparse.Namespace) -> Path:
@@ -712,7 +872,10 @@ def _record(args: argparse.Namespace) -> Path:
         raise NpcMainReviewError(f"必须从仓库根执行：cd {REPO_ROOT}")
     if not GODOT_PROJECT.is_dir():
         raise NpcMainReviewError(f"Godot 项目不存在：{GODOT_PROJECT}")
-    _validate_fixed_targets()
+    _validate_all_target_batches()
+    target_batch = getattr(args, "batch", DEFAULT_TARGET_BATCH)
+    targets = _targets_for_batch(target_batch)
+    capture_mode = _capture_mode_for_batch(target_batch)
     run_id = args.run_id or _new_run_id()
     if SAFE_RUN_ID.fullmatch(run_id) is None:
         raise NpcMainReviewError(f"不安全的 runId：{run_id!r}")
@@ -732,9 +895,9 @@ def _record(args: argparse.Namespace) -> Path:
         timeout_seconds=timeout_seconds,
     )
     captures: list[dict[str, Any]] = []
-    for target in TARGETS:
+    for target in targets:
         print(
-            f"[phase327-main] {target['mapId']}/{target['npcId']} -> "
+            f"[npc-main:{target_batch}] {target['mapId']}/{target['npcId']} -> "
             f"{target['appearanceId']}"
         )
         captures.append(
@@ -744,6 +907,10 @@ def _record(args: argparse.Namespace) -> Path:
                 godot=godot,
                 timeout_seconds=timeout_seconds,
                 run_id=run_id,
+                qa_preview=capture_mode["qaPreview"],
+                normal_player_runtime_enabled=capture_mode[
+                    "normalPlayerRuntimeEnabled"
+                ],
             )
         )
 
@@ -759,10 +926,12 @@ def _record(args: argparse.Namespace) -> Path:
         "status": "passed",
         "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
         "scene": MAIN_SCENE,
-        "qaPreview": True,
-        "appearanceIds": [target["appearanceId"] for target in TARGETS],
+        "qaPreview": capture_mode["qaPreview"],
+        "targetBatch": target_batch,
+        "appearanceIds": [target["appearanceId"] for target in targets],
+        "npcIds": [target["npcId"] for target in targets],
         "expected": {
-            "captureCount": 8,
+            "captureCount": len(targets),
             "width": EXPECTED_WIDTH,
             "height": EXPECTED_HEIGHT,
             "framesPerCapture": EXPECTED_FRAME_COUNT,
@@ -772,7 +941,9 @@ def _record(args: argparse.Namespace) -> Path:
             "profileIsolation": "default_profile_ephemeral_no_save",
             "debugUiVisible": False,
             "normalPlayerUi": True,
-            "normalPlayerRuntimeEnabled": False,
+            "normalPlayerRuntimeEnabled": capture_mode[
+                "normalPlayerRuntimeEnabled"
+            ],
         },
         "tools": {
             "godot": _capture_version(godot, ["--version"]),
@@ -805,7 +976,13 @@ def _record(args: argparse.Namespace) -> Path:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="在真实 Main.tscn 中录制首批 8 类 NPC 世界像和对话人像。"
+        description="在真实 Main.tscn 中录制所选固定批次的 NPC 世界像和对话人像。"
+    )
+    parser.add_argument(
+        "--batch",
+        choices=tuple(TARGET_BATCHES),
+        default=DEFAULT_TARGET_BATCH,
+        help="固定目标批次；默认 first8 保留原首批 8 类行为。",
     )
     parser.add_argument(
         "--output-root",

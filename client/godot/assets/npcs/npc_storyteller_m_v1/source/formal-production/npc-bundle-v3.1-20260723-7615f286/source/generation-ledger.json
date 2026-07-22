@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-23T01:01:50+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "identityBoardLayout": "four-panel landscape identity board",
+    "worldGrid": [
+      2,
+      4
+    ],
+    "portraitGrid": [
+      2,
+      2
+    ],
+    "modelParametersExposed": false,
+    "identityBoardRelationship": "identity-board-v3 was accepted only after two image_gen prop-side corrections; the accepted board physically binds notebook to the character own left and the single souvenir cluster to own right in both front and back views; it remains owner-review pending",
+    "acceptedWorldGeneration": "v7 targeted image_gen correction of only the southwest cell from the v6 independently authored true-eight source; v6 itself corrected prop-side placement from the independently authored v4 direction sheet; no offline mirror, flip, rotation, relabel or compositing was used",
+    "acceptedWorldGeneratedAt": "2026-07-23T00:58:12+08:00",
+    "portraitGeneratedAt": "2026-07-23T01:01:50+08:00",
+    "identityBoardCorrectedAt": "2026-07-23T00:47:56+08:00"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring, flipping, rotation or direction relabeling",
+    "no duplicate direction cells",
+    "southwest and west look toward canvas left; northeast, east and southeast look toward canvas right; north shows no face",
+    "no manor key, scepter, cane, staff, wand, magic, readable text, quest icon, second person or scenery",
+    "no labels, arrows, borders, UI, watermark, numbers, ground plane or cast shadow",
+    "no cropped subject or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "84d5fdddcdc4fd6f4b8a6184271da55b2790fe1c83a4f01c6d260247c68e91c5",
+      "promptSha256": "f7a920d99084e2244fbe8c7dd0ff2d3e7601c5687b536c01d475b9bb2c075250",
+      "parentFileSha256": "dfbc3921be36846827f9bf1495279776e607100c46501bb35b466b7bb6aef952",
+      "parentPromptSha256": "e2a658fd087484ca804291f3f7d88a91a971783423b4c3f05e2bee531d374e2f",
+      "relationship": "accepted prop-side-corrected identity canary supplied to accepted world and portrait edits; pending owner review"
+    },
+    "worldSheet": {
+      "fileSha256": "762a026dee6b25253cfca623c4e023e5bc7be27f083a37d996712a1d9c49706d",
+      "worldPromptSha256": "b1c532700b9d1705c99dca4464724d966c4a33c28627121ddfbee8d7065dfc06",
+      "identityBoardSha256": "84d5fdddcdc4fd6f4b8a6184271da55b2790fe1c83a4f01c6d260247c68e91c5",
+      "identityReferenceRole": "exact corrected subject identity and physical body-side reference",
+      "parentFileSha256": "e4bb5c7b8f90cddd7c052fa107a63ec4572baeb65ea86d0fb5b52d6f16eec043",
+      "parentPromptSha256": "2757300f9ec319e8a9a68bf1533999c65ab2d1714156c6788b7efad40ae3a861",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    },
+    "portraitSheet": {
+      "fileSha256": "76c6b5b41665b7acc642d6a7bc1da4019e178527a0bd9fdac327ad9874f4752b",
+      "portraitPromptSha256": "8cb1fc6cf995325dbb155600797dc7c24477d669ed91255eb8f151a2f5f7b0c1",
+      "identityBoardSha256": "84d5fdddcdc4fd6f4b8a6184271da55b2790fe1c83a4f01c6d260247c68e91c5",
+      "identityReferenceRole": "exact corrected identity reference; accepted portrait expressions were conformed through a final image_gen edit",
+      "parentFileSha256": "70f216aa0636179a986c9ded68f47ac9e957872a961f85e32197fdc262a5d4a3",
+      "parentPromptSha256": "1e792c2d3f681282081ac5786671e161f7c712cf8d4a1ae7d2aaf83bc0661436",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    }
+  },
+  "observedBackgroundFact": "All accepted generated sheets are fully opaque but contain spatially varying near-magenta pixels rather than a mathematically uniform #FF00FF backdrop; deterministic v3.1 classification, reviewed component decisions and archived masks are required."
+}

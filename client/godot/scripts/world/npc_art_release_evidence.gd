@@ -20,6 +20,8 @@ const BLIND_MAPPING_TYPE := "beastbound_npc_blind_producer_mapping"
 const MAIN_CAPTURE_SCHEMA_VERSION := 1
 const MAIN_CAPTURE_TYPE := "beastbound_npc_main_review_capture"
 const MAIN_SCENE := "res://scenes/Main.tscn"
+const SOURCE_SET_SCHEMA_VERSION_V1 := 1
+const SOURCE_SET_SCHEMA_VERSION_V2 := 2
 
 const PORTRAIT_STATES: Array[String] = ["neutral", "speaking", "smile", "concerned"]
 const PARITY_PROCESS_KEYS: Dictionary = {
@@ -40,7 +42,8 @@ static func append_strict_errors(
 	appearance_id: String,
 	review: Dictionary,
 	installation: Dictionary,
-	errors: Array[String]
+	errors: Array[String],
+	source_set_schema_version: int = SOURCE_SET_SCHEMA_VERSION_V2
 ) -> void:
 	var index_path := str(review.get("runtimeEvidenceIndex", ""))
 	var index_sha256 := str(review.get("runtimeEvidenceIndexSha256", ""))
@@ -158,9 +161,29 @@ static func append_strict_errors(
 		stage_a_result,
 		stage_b_observation,
 		main_capture_reports,
-		repo_root
+		repo_root,
+		source_set_schema_version
 	):
 		errors.append(value)
+
+
+static func frozen_runtime_source_set_sha256(
+	appearance_id: String,
+	review: Dictionary,
+	errors: Array[String]
+) -> String:
+	var evidence_index := _read_frozen_json(
+		str(review.get("runtimeEvidenceIndex", "")),
+		str(review.get("runtimeEvidenceIndexSha256", "")),
+		"NPC review.runtimeEvidenceIndex sourceSet binding",
+		errors
+	)
+	var appearance_entry := _index_appearance_entry(evidence_index, appearance_id)
+	var source_set_sha := str(appearance_entry.get("sourceSetSha256", ""))
+	if not _is_sha256(source_set_sha):
+		errors.append("NPC runtime evidence index 缺少当前 appearance sourceSet：%s" % appearance_id)
+		return ""
+	return source_set_sha
 
 
 static func validation_errors_from_documents(
@@ -175,9 +198,14 @@ static func validation_errors_from_documents(
 	stage_a_result: Dictionary,
 	stage_b_observation: Dictionary,
 	main_capture_reports: Array[Dictionary],
-	repo_root: String
+	repo_root: String,
+	source_set_schema_version: int = SOURCE_SET_SCHEMA_VERSION_V2
 ) -> Array[String]:
 	var errors: Array[String] = []
+	var effective_source_set_schema_version := source_set_schema_version
+	if not [SOURCE_SET_SCHEMA_VERSION_V1, SOURCE_SET_SCHEMA_VERSION_V2].has(source_set_schema_version):
+		errors.append("NPC evidence sourceSet schemaVersion 仅支持 1 或 2：%s" % appearance_id)
+		effective_source_set_schema_version = SOURCE_SET_SCHEMA_VERSION_V2
 	var installation_frames := _expected_review_installation_frames(
 		appearance_id,
 		installation,
@@ -196,6 +224,7 @@ static func validation_errors_from_documents(
 		appearance_entry,
 		parity_reports,
 		installation_frames,
+		effective_source_set_schema_version,
 		errors
 	)
 	_append_blind_errors(
@@ -210,22 +239,31 @@ static func validation_errors_from_documents(
 		stage_b_observation,
 		main_capture_reports,
 		repo_root,
+		effective_source_set_schema_version,
 		errors
 	)
 	return errors
 
 
-static func parity_source_set_sha256(frames: Array) -> String:
+static func parity_source_set_sha256(
+	frames: Array,
+	source_set_schema_version: int = SOURCE_SET_SCHEMA_VERSION_V2
+) -> String:
 	var text := ""
 	for frame_value in frames:
 		var frame := frame_value as Dictionary if frame_value is Dictionary else {}
+		var canonical_rgba_sha := (
+			str(frame.get("sourceFullDecodedRgbaSha256", ""))
+			if source_set_schema_version == SOURCE_SET_SCHEMA_VERSION_V1
+			else str(frame.get("sourceDecodedRgbaSha256", ""))
+		)
 		text += "%s\t%s\t%s\t%s\t%s\t%s\n" % [
 			str(frame.get("kind", "")),
 			str(frame.get("slot", "")),
 			str(frame.get("path", "")),
 			str(frame.get("fileSha256", "")),
 			str(frame.get("sourceFullDecodedRgbaSha256", "")),
-			str(frame.get("sourceFullDecodedRgbaSha256", "")),
+			canonical_rgba_sha,
 		]
 	return _sha256_text(text)
 
@@ -327,6 +365,7 @@ static func _append_parity_errors(
 	appearance_entry: Dictionary,
 	parity_reports: Dictionary,
 	installation_frames: Dictionary,
+	source_set_schema_version: int,
 	errors: Array[String]
 ) -> void:
 	var expected_source_set := str(appearance_entry.get("sourceSetSha256", ""))
@@ -409,7 +448,7 @@ static func _append_parity_errors(
 				errors.append("NPC %s parity 帧未分别绑定 installation full RGBA 与 Godot canonical RGBA：%s/%s" % [process_kind, appearance_id, frame_key])
 		if seen_keys.size() != installation_frames.size():
 			errors.append("NPC %s parity 未覆盖当前 8 世界帧 + 4 人像：%s" % [process_kind, appearance_id])
-		var recomputed_source_set := parity_source_set_sha256(frames)
+		var recomputed_source_set := parity_source_set_sha256(frames, source_set_schema_version)
 		if (
 			str(report.get("sourceSetSha256", "")) != expected_source_set
 			or recomputed_source_set != expected_source_set
@@ -429,6 +468,7 @@ static func _append_blind_errors(
 	stage_b_observation: Dictionary,
 	main_capture_reports: Array[Dictionary],
 	repo_root: String,
+	source_set_schema_version: int,
 	errors: Array[String]
 ) -> void:
 	var evidence_index_sha := str(review.get("runtimeEvidenceIndexSha256", ""))
@@ -547,6 +587,7 @@ static func _append_blind_errors(
 		appearance_entry,
 		installation_frames,
 		main_capture_reports,
+		source_set_schema_version,
 		errors
 	)
 	_append_main_observation_errors(appearance_id, review, audit, capture_reports_by_screenshot, repo_root, errors)
@@ -1079,6 +1120,7 @@ static func _append_main_capture_report_errors(
 	appearance_entry: Dictionary,
 	installation_frames: Dictionary,
 	reports: Array[Dictionary],
+	source_set_schema_version: int,
 	errors: Array[String]
 ) -> Dictionary:
 	var result: Dictionary = {}
@@ -1237,7 +1279,10 @@ static func _append_main_capture_report_errors(
 				errors.append("NPC Main capture report 帧未分别绑定 installation full RGBA 与 Godot canonical RGBA：%s/%s" % [appearance_id, key])
 		if seen_keys.size() != installation_frames.size():
 			errors.append("NPC Main capture report 未覆盖当前 world8+portrait4：%s" % appearance_id)
-		if str(report.get("sourceSetSha256", "")) != expected_source_set or parity_source_set_sha256(frames) != expected_source_set:
+		if (
+			str(report.get("sourceSetSha256", "")) != expected_source_set
+			or parity_source_set_sha256(frames, source_set_schema_version) != expected_source_set
+		):
 			errors.append("NPC Main capture report sourceSet 与 evidence index/current 12 不一致：%s" % appearance_id)
 	if result.size() != expected_screenshot_hashes.size():
 		errors.append("NPC Main capture reports 未逐张覆盖 runtimeScreenshots：%s" % appearance_id)

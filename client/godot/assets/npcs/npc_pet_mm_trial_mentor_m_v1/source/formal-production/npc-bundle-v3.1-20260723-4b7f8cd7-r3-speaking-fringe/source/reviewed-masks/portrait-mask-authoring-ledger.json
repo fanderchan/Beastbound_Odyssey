@@ -1,0 +1,1501 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "48344dfeed1f10a7e0519c5eb7f1f11855e9ed1164476734c57d7df723da1dd1",
+    "rawSheetDecodedRgbaByteSha256": "f9a58c67e575fc110e86e366414cd81477b3cf450467c9f91bf5d3dec7871974",
+    "rawSheetGodotCanonicalRgbaSha256": "e8084e958956d16a02839a5273dd31f1a170adafaf4a1418288a8a01441510e2",
+    "rawSheetDecodedRgbaSha256": "e8084e958956d16a02839a5273dd31f1a170adafaf4a1418288a8a01441510e2",
+    "explicitMaskFileSha256": "dc868fba62bd4771c7e642dbe051af463c0815f37db8ecb650bd102847e7f1a0",
+    "explicitMaskPixelSha256": "51ce2141ce6295ad90a799abc6bef39e3c57e1db0c728e093cc90eaeaebb55d6",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c0bb91e876e204d47b0b89c6d67f6e2390dce33780d87afd9d467daf04cee8e8",
+      "cellBbox": [
+        353,
+        132,
+        354,
+        133
+      ],
+      "sheetBbox": [
+        353,
+        132,
+        354,
+        133
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "b44cdc6d75d50264c3d96734b96caeacd3ed15b8404ea5d17a3fe61d5050535d",
+      "cellBbox": [
+        113,
+        123,
+        573,
+        553
+      ],
+      "sheetBbox": [
+        113,
+        123,
+        573,
+        553
+      ],
+      "pixelCount": 2597,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "7e26b2cbbd5c5f6d6662b619bfdbfd5fb4f8ee9dc49d960e49bc26fce51e9813",
+      "cellBbox": [
+        504,
+        379,
+        505,
+        380
+      ],
+      "sheetBbox": [
+        504,
+        379,
+        505,
+        380
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a7eb43e3ea537d69775628f05a07ba3320d8b458b6135c93f89e46d26e140e13",
+      "cellBbox": [
+        348,
+        131,
+        353,
+        134
+      ],
+      "sheetBbox": [
+        348,
+        131,
+        353,
+        134
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f7f7bb08b3c5b34f520ed118dfc0751f5845fd05dab7fcac05250d34120f3267",
+      "cellBbox": [
+        313,
+        131,
+        316,
+        134
+      ],
+      "sheetBbox": [
+        313,
+        131,
+        316,
+        134
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "faf20da1841c8fb95fd98ca00093782bbf14d1ad9aa2a3e2d40dc1fdb9f4d934",
+      "cellBbox": [
+        386,
+        150,
+        389,
+        152
+      ],
+      "sheetBbox": [
+        386,
+        150,
+        389,
+        152
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ff02ffa87319c12b886e8be8239ee80e5362e4a5fd512a4e959612afddffe25e",
+      "cellBbox": [
+        401,
+        169,
+        402,
+        170
+      ],
+      "sheetBbox": [
+        401,
+        169,
+        402,
+        170
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2d05bcb5a1f808c1bbb4a47daa19e3cd7e6b286a058418081e5ef85e898db89a",
+      "cellBbox": [
+        259,
+        175,
+        262,
+        181
+      ],
+      "sheetBbox": [
+        259,
+        175,
+        262,
+        181
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "53aa92f102bb887ec413fd8ac1a17cf39e9ca2c8f026a9f7aef1af8f2a2ed20e",
+      "cellBbox": [
+        260,
+        182,
+        261,
+        183
+      ],
+      "sheetBbox": [
+        260,
+        182,
+        261,
+        183
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9dbbb35181800aebd00d3c35891bf3873168bb4b0c1763dfc7ce307ae53710ba",
+      "cellBbox": [
+        256,
+        194,
+        258,
+        196
+      ],
+      "sheetBbox": [
+        256,
+        194,
+        258,
+        196
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "07467f77eb7027acad9a8c9b4aa450cac44d0e9e8f82397ca076762d7d43ed86",
+      "cellBbox": [
+        258,
+        202,
+        259,
+        203
+      ],
+      "sheetBbox": [
+        258,
+        202,
+        259,
+        203
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "482944060b9f12751080324afedf01566461475d8a1e66df85bd7e8cf76bea62",
+      "cellBbox": [
+        259,
+        203,
+        260,
+        204
+      ],
+      "sheetBbox": [
+        259,
+        203,
+        260,
+        204
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "711335683fcaaa752a45d5e94fee22aed27120ae878c63a38a084d107b0035a6",
+      "cellBbox": [
+        400,
+        287,
+        401,
+        288
+      ],
+      "sheetBbox": [
+        400,
+        287,
+        401,
+        288
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0ec824652b4998d21c1e9adefd3a0756982d77b09a067ab06c9506be4c447650",
+      "cellBbox": [
+        394,
+        296,
+        401,
+        305
+      ],
+      "sheetBbox": [
+        394,
+        296,
+        401,
+        305
+      ],
+      "pixelCount": 41,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ee1231ff2bd757634af94e7c535d9b0bf0640173ed1a56388ec1b4d811b21cfe",
+      "cellBbox": [
+        408,
+        307,
+        410,
+        312
+      ],
+      "sheetBbox": [
+        408,
+        307,
+        410,
+        312
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3a57a47d9272b4fd50c0aa9e62b058fce37bab92bf9100f8f33c35c5c84d60d8",
+      "cellBbox": [
+        410,
+        312,
+        411,
+        314
+      ],
+      "sheetBbox": [
+        410,
+        312,
+        411,
+        314
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4a370b39fc7b29acbd4ebf7855fc7e6ca6bda902fdd3b41510eea194ae3f4527",
+      "cellBbox": [
+        464,
+        371,
+        465,
+        372
+      ],
+      "sheetBbox": [
+        464,
+        371,
+        465,
+        372
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "698c265b136ecba0dfaa20f6fd8c4e9ffd97aba7d42ba740d6a820bf0b5e2988",
+      "cellBbox": [
+        266,
+        130,
+        267,
+        131
+      ],
+      "sheetBbox": [
+        893,
+        130,
+        894,
+        131
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "72f48d41ad4a769958489a26b87e50d2f26f89e006c68fa725cf692d6d676ed9",
+      "cellBbox": [
+        315,
+        136,
+        316,
+        137
+      ],
+      "sheetBbox": [
+        942,
+        136,
+        943,
+        137
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "25cfb066eeb96ae1bc6528539161d2ae68812729b65af89a4a8d90733c898ef7",
+      "cellBbox": [
+        337,
+        151,
+        338,
+        152
+      ],
+      "sheetBbox": [
+        964,
+        151,
+        965,
+        152
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "bdcba19f5806d9e15e9da29d9ac0aa55c9c23767498ec3799d81aacc29709c55",
+      "cellBbox": [
+        207,
+        181,
+        208,
+        182
+      ],
+      "sheetBbox": [
+        834,
+        181,
+        835,
+        182
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "37292e31be03cd84936e2caadb498201e4143af3b3f689fc1ffc7d695dd85372",
+      "cellBbox": [
+        76,
+        122,
+        521,
+        553
+      ],
+      "sheetBbox": [
+        703,
+        122,
+        1148,
+        553
+      ],
+      "pixelCount": 2372,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "87cfa21bcd3ae9c949ccdbf564ae2a3287bda2152d728ab1007f83bafcbff7a0",
+      "cellBbox": [
+        262,
+        130,
+        267,
+        134
+      ],
+      "sheetBbox": [
+        889,
+        130,
+        894,
+        134
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "97584c7baed64b8accd4c3ebf0be7e1238f24fc675f8ab1e24b81dbbf4c85847",
+      "cellBbox": [
+        297,
+        131,
+        300,
+        134
+      ],
+      "sheetBbox": [
+        924,
+        131,
+        927,
+        134
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "434e3ad41fcd735182f3a81f03e07dcb964bbdf62b07f6a01e4453a2718e2d4e",
+      "cellBbox": [
+        314,
+        137,
+        315,
+        138
+      ],
+      "sheetBbox": [
+        941,
+        137,
+        942,
+        138
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c3d7a3d09649f185b4d0b574c30d1c382326efd1584b7178cc8ddcd0b4945438",
+      "cellBbox": [
+        229,
+        144,
+        230,
+        145
+      ],
+      "sheetBbox": [
+        856,
+        144,
+        857,
+        145
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2b61c23e7f5a6d628ad656e0efb0e1969b074455386f55d28bc0768de9ccd1cd",
+      "cellBbox": [
+        335,
+        150,
+        337,
+        152
+      ],
+      "sheetBbox": [
+        962,
+        150,
+        964,
+        152
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b47fd0459b1024f49a92cb85ffd73359791f80de5d478196f76426908edb5a69",
+      "cellBbox": [
+        350,
+        169,
+        351,
+        170
+      ],
+      "sheetBbox": [
+        977,
+        169,
+        978,
+        170
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "39ff850061866a9b6ebc2b93c30ec969c0e16bff70785c0cffd123fca4c4a036",
+      "cellBbox": [
+        208,
+        175,
+        211,
+        179
+      ],
+      "sheetBbox": [
+        835,
+        175,
+        838,
+        179
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b5ddd2a2045c3323fc0ead12aaa6481afd62c92ed5d9c949747e2d6e2d5e6541",
+      "cellBbox": [
+        205,
+        194,
+        207,
+        196
+      ],
+      "sheetBbox": [
+        832,
+        194,
+        834,
+        196
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8399b98e66cbd248ff1a2d5d800019f5c288261534c688e012a5eaf77cc9ecb4",
+      "cellBbox": [
+        346,
+        284,
+        347,
+        285
+      ],
+      "sheetBbox": [
+        973,
+        284,
+        974,
+        285
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ff1afdfbc05035cb034167ff697e3db7399e22d1b2cd88009eb884ad1281dc85",
+      "cellBbox": [
+        347,
+        285,
+        348,
+        286
+      ],
+      "sheetBbox": [
+        974,
+        285,
+        975,
+        286
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f6a2042ae20ab0afca838fdcbbc2b5289f4e5e94ccf81358ace92446c3942f76",
+      "cellBbox": [
+        348,
+        286,
+        349,
+        287
+      ],
+      "sheetBbox": [
+        975,
+        286,
+        976,
+        287
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f25de4c5b6a377625b33e7599b99b5927cb295cb8782958ec73bfdeb951a2b0f",
+      "cellBbox": [
+        349,
+        287,
+        350,
+        288
+      ],
+      "sheetBbox": [
+        976,
+        287,
+        977,
+        288
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e93505bc583439534d6aa3632491665616a3e42348c55771776e11fe1a43cf1f",
+      "cellBbox": [
+        350,
+        288,
+        351,
+        289
+      ],
+      "sheetBbox": [
+        977,
+        288,
+        978,
+        289
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "00ee2eb376bcf28e29ba79fb8b5b648bdeea91ab9a1e98c4cfdd35a5dd4461b7",
+      "cellBbox": [
+        343,
+        295,
+        350,
+        306
+      ],
+      "sheetBbox": [
+        970,
+        295,
+        977,
+        306
+      ],
+      "pixelCount": 51,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "eca759e257332339cbc61b183e5663706a08615fd741b4396a8953f57b1cf47b",
+      "cellBbox": [
+        357,
+        306,
+        361,
+        314
+      ],
+      "sheetBbox": [
+        984,
+        306,
+        988,
+        314
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8ef06d43c31f63f224b6124e62c2d56ffc7ce843c4b22ca387d2f2c9441e080c",
+      "cellBbox": [
+        386,
+        89,
+        387,
+        90
+      ],
+      "sheetBbox": [
+        386,
+        716,
+        387,
+        717
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "cde80c5c258b5c6cfcdcdf23033eec725bec5b2c263b17a11baca5f776f0de6b",
+      "cellBbox": [
+        255,
+        118,
+        256,
+        119
+      ],
+      "sheetBbox": [
+        255,
+        745,
+        256,
+        746
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "70bf3095dc23c1a1543923b4039fbf639ac60ab7149401be74751c5660c5ec95",
+      "cellBbox": [
+        256,
+        119,
+        257,
+        120
+      ],
+      "sheetBbox": [
+        256,
+        746,
+        257,
+        747
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "b52ba371bca7370561e3eae21886a492b5bca8a4df117fc4a2f84bf9db0da3de",
+      "cellBbox": [
+        113,
+        61,
+        568,
+        489
+      ],
+      "sheetBbox": [
+        113,
+        688,
+        568,
+        1116
+      ],
+      "pixelCount": 2163,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ccd07324e5c4384fa8b3e6fecca7d14436842a6736bdb45776ab217840c39f20",
+      "cellBbox": [
+        345,
+        69,
+        346,
+        70
+      ],
+      "sheetBbox": [
+        345,
+        696,
+        346,
+        697
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "13ef726278c05a2dbbb16339808d40473c247a751fecefeb044398d23c554d97",
+      "cellBbox": [
+        311,
+        70,
+        313,
+        72
+      ],
+      "sheetBbox": [
+        311,
+        697,
+        313,
+        699
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c6061c95d15ca62a44f3c86ef2853cc343923f1b1012cf4fb44131d96445be89",
+      "cellBbox": [
+        384,
+        87,
+        386,
+        90
+      ],
+      "sheetBbox": [
+        384,
+        714,
+        386,
+        717
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2634b2527bac4db35c412d56671871bd97a34e994bf5a86cae45da9fe81bf9ee",
+      "cellBbox": [
+        257,
+        113,
+        259,
+        115
+      ],
+      "sheetBbox": [
+        257,
+        740,
+        259,
+        742
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "95e0ac3de99b463e269a35419389aa199eefe09a6fd012683952d83d69e6a230",
+      "cellBbox": [
+        256,
+        117,
+        257,
+        118
+      ],
+      "sheetBbox": [
+        256,
+        744,
+        257,
+        745
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0fe086acd8074991c86dc337a2733c3a75c9922cc8f002e2420df20f13b5ffac",
+      "cellBbox": [
+        257,
+        118,
+        258,
+        119
+      ],
+      "sheetBbox": [
+        257,
+        745,
+        258,
+        746
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "53001a7de6edb0c92c6ca635e9850f1d24c884a4a2b29b5529f1c517b4014d1b",
+      "cellBbox": [
+        254,
+        131,
+        257,
+        134
+      ],
+      "sheetBbox": [
+        254,
+        758,
+        257,
+        761
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "abacc2981c2711530af170b72148e048c686ca0700bb80fa494f6634538c22f1",
+      "cellBbox": [
+        392,
+        232,
+        399,
+        242
+      ],
+      "sheetBbox": [
+        392,
+        859,
+        399,
+        869
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2811ea20a9c71eb900c4255dfab6857109b4b518b8c191fed2f77dd2ae28ab01",
+      "cellBbox": [
+        406,
+        245,
+        407,
+        247
+      ],
+      "sheetBbox": [
+        406,
+        872,
+        407,
+        874
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "08b80e08e147d7d41e5a1e22517a22649316d5566814828b46e52c0c53aef01e",
+      "cellBbox": [
+        265,
+        68,
+        266,
+        69
+      ],
+      "sheetBbox": [
+        892,
+        695,
+        893,
+        696
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9ef353272e88c4885a41df18a09d0d0a5c505b44ea80bc70bd8185a3e56067f8",
+      "cellBbox": [
+        355,
+        129,
+        356,
+        130
+      ],
+      "sheetBbox": [
+        982,
+        756,
+        983,
+        757
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "32ddaf26da9fbfdd680da9504f6b9bee9fb8abacae4a1df8d5db14fce425dacf",
+      "cellBbox": [
+        204,
+        134,
+        205,
+        136
+      ],
+      "sheetBbox": [
+        831,
+        761,
+        832,
+        763
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3a63f16ae087fc66d901f54b46a59b5b0c4f89b38b4581cc8f09dffc06fb3e4f",
+      "cellBbox": [
+        352,
+        226,
+        353,
+        227
+      ],
+      "sheetBbox": [
+        979,
+        853,
+        980,
+        854
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "d6bcc655b73a4dc3f59a3dd1814c9eb4e19444919a6d8e86d0467212ee0f7cb5",
+      "cellBbox": [
+        72,
+        60,
+        520,
+        489
+      ],
+      "sheetBbox": [
+        699,
+        687,
+        1147,
+        1116
+      ],
+      "pixelCount": 2282,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ea5f72db8141d49a2c849b33ad246bdbda7cdc0be7ca969472047f85a9e27b93",
+      "cellBbox": [
+        334,
+        87,
+        336,
+        89
+      ],
+      "sheetBbox": [
+        961,
+        714,
+        963,
+        716
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "45211fc6093f7ef9a5d13f5e6ae2f5564ce68e9f091cb2499d0f4be0ee258939",
+      "cellBbox": [
+        204,
+        131,
+        207,
+        136
+      ],
+      "sheetBbox": [
+        831,
+        758,
+        834,
+        763
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8e67ea80d7205c761405fd92ab59965af071894f6e50103083cec98b2b4b3694",
+      "cellBbox": [
+        262,
+        68,
+        265,
+        72
+      ],
+      "sheetBbox": [
+        889,
+        695,
+        892,
+        699
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7481e55cbdbb3b1b8b583908e6a2a211b4c5fa52e3730b1c9ffa809bffe60707",
+      "cellBbox": [
+        295,
+        70,
+        296,
+        71
+      ],
+      "sheetBbox": [
+        922,
+        697,
+        923,
+        698
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8a22608c99e76479f841d834509cbbf7349a2f2daca79262590a5b40f0ed4308",
+      "cellBbox": [
+        296,
+        71,
+        297,
+        72
+      ],
+      "sheetBbox": [
+        923,
+        698,
+        924,
+        699
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ab4e9c37620ca671fae4f37bbd6c6bffbca92088c43c135de330dda1269a1b54",
+      "cellBbox": [
+        349,
+        107,
+        351,
+        109
+      ],
+      "sheetBbox": [
+        976,
+        734,
+        978,
+        736
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c1661452417ff48d1298463bad65f1f1fc8f1927a700aff4ee00a5faab43af14",
+      "cellBbox": [
+        209,
+        114,
+        210,
+        115
+      ],
+      "sheetBbox": [
+        836,
+        741,
+        837,
+        742
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "76e1ca8e173e6a1259dd99c19648de4775ad570566b4e67954c6a42cffff9c6f",
+      "cellBbox": [
+        206,
+        115,
+        208,
+        117
+      ],
+      "sheetBbox": [
+        833,
+        742,
+        835,
+        744
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b88dbc03ae13eedb3792d8149cd2e2babd8ad1aafe241eb9ec92170e6a6cf4ab",
+      "cellBbox": [
+        354,
+        127,
+        355,
+        129
+      ],
+      "sheetBbox": [
+        981,
+        754,
+        982,
+        756
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cc1b0f3b6c6582a3b87df847f34f14273384684b361cf54e2bc11ee38152f4c5",
+      "cellBbox": [
+        342,
+        232,
+        348,
+        242
+      ],
+      "sheetBbox": [
+        969,
+        859,
+        975,
+        869
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "88bcfb660bd4bc079ab3c67b4c1b6b2f22dad5b0077f3f3e665ab85e664c2301",
+      "cellBbox": [
+        356,
+        246,
+        357,
+        248
+      ],
+      "sheetBbox": [
+        983,
+        873,
+        984,
+        875
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a9882cdf97f846f9c3ee2f5995b3a42f8bf5f5452363c543573ca0c477cf84ad",
+      "cellBbox": [
+        202,
+        294,
+        203,
+        295
+      ],
+      "sheetBbox": [
+        829,
+        921,
+        830,
+        922
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer visual mask reviewer: MM1 trial mentor",
+      "reviewedAt": "2026-07-23T02:23:40+08:00"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-23T00:43:45+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "modelParametersExposed": false,
+    "identityBoardGeneratedAt": "2026-07-22T23:55:27+08:00",
+    "worldSheetGeneratedAt": "2026-07-23T00:42:26+08:00",
+    "portraitSheetGeneratedAt": "2026-07-23T00:18:54+08:00",
+    "referenceInputs": [
+      {
+        "path": "client/godot/assets/npcs/npc_village_guard_m_v1/source/identity-board-raw.png",
+        "fileSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+        "role": "project style and adult scale only"
+      },
+      {
+        "path": "client/godot/assets/npcs/npc_village_healer_f_v1/source/identity-board-raw.png",
+        "fileSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+        "role": "project style and adult scale only"
+      }
+    ],
+    "rejectedIdentityPromptCorrection": {
+      "reason": "initial canary prompt incorrectly named a pet rebirth role instead of the player-character rebirth service",
+      "rejectedFileSha256": "a695e0ceba8520454f04014ce002e2bc54046de1537c7e2e576a1b390c64bf49"
+    },
+    "rejectedPortraitCorrection": {
+      "reason": "concerned cell alone contained a registry tablet, violating expression-only variation",
+      "rejectedFileSha256": "7384d80ef0e72db494d7681b1c8a9917c359a72d5ea7e6c727dff97ea86277d7"
+    },
+    "rejectedOpaqueBackgroundInputs": {
+      "reason": "first otherwise accepted world and expression-consistent portrait sources failed the builder's required-safe-edge chroma contract and were regenerated through image_gen instead of being silently repainted",
+      "worldFileSha256": "5a07c8d6d429ddaa23a7aed22228653fe58d702ca5a2bb341b7c5d634eec99a3",
+      "portraitFileSha256": "744b408d402d307252935d6ffcecd74f47fd7f735c88a1c7ce0f427302f60ec6"
+    },
+    "rejectedCellAlignmentInputs": {
+      "reason": "two regenerated world candidates still placed authored pixels on an invisible 2x4 cell seam; both were archived and the final sheet was regenerated with explicit cell centers instead of being cropped, shifted or repainted",
+      "intermediateWorldFileSha256": "8243889dac605faa1869372637e45a888ada39d5109eff3b64eae35709fa142a",
+      "parentWorldFileSha256": "772334c75b3d8cf51a58280f119e59e22a7506b21cf529ede81c130f67ea899f"
+    },
+    "rejectedScaleInput": {
+      "reason": "the first cell-centered regeneration passed every required safe edge but its south cell had 94.4381 percent automatic background, narrowly above the builder maximum; the final sheet was regenerated 6 percent larger at the same centers instead of changing the audited threshold",
+      "rejectedFileSha256": "39a62d66209ae95849c6c04f30602291fe83decfbbd3bf4e06543338c464dd9f"
+    }
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "no pet, egg, animal, medicine, healing, magic or religion imagery",
+    "no labels, arrows, borders, UI, watermark, readable text or scenery",
+    "no cropped subject, detached prop or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "37aa5b004573e9fd50ac77708b4e17022c462e9b16c8de9c7fe146e8bb0135ae",
+      "identityPromptSha256": "4650d53f78d10754d8ff217b3b54255365593f74f2359e3d0d6c600ef3913652",
+      "relationship": "pre-generation visual identity canary corrected to the player-character rebirth qualification service"
+    },
+    "worldSheet": {
+      "fileSha256": "7a8e9de1c15ecb150030afaccc6565673db3f81c77856af8c031d8c5bbaec220",
+      "worldPromptSha256": "818440436ce0ee42a9c28f5bde4dc15f7db75759dd81b8cdfb0bedcc6d21770e",
+      "identityBoardSha256": "37aa5b004573e9fd50ac77708b4e17022c462e9b16c8de9c7fe146e8bb0135ae",
+      "identityReferenceRole": "exact identity authority; final image_gen edit also referenced the archived cell-centered candidate and regenerated all eight authored pixels at runtime-safe scale without shifting their centers",
+      "parentRejectedFileSha256": "39a62d66209ae95849c6c04f30602291fe83decfbbd3bf4e06543338c464dd9f",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    },
+    "portraitSheet": {
+      "fileSha256": "7338651064f449f9870d151ed9b77731ba1f4f177b386c9815ebb505c4dfd8f3",
+      "portraitPromptSha256": "5c0f6e4359d95acc030ccaf9a9ff3641b1b2fa3e8553c669ee32fff586127640",
+      "identityBoardSha256": "37aa5b004573e9fd50ac77708b4e17022c462e9b16c8de9c7fe146e8bb0135ae",
+      "identityReferenceRole": "identity authority; final targeted edit also referenced the rejected first portrait sheet to preserve crop and remove the inconsistent tablet",
+      "parentRejectedFileSha256": "744b408d402d307252935d6ffcecd74f47fd7f735c88a1c7ce0f427302f60ec6",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    }
+  },
+  "observedBackgroundFact": "Both accepted source sheets are fully opaque RGB PNGs. The requested flat #FF00FF background is treated as measured opaque chroma; exact pixels are not assumed from the prompt. The accepted world sheet is the untouched final image_gen output; no crop, shift, repaint, mirror or other offline pixel edit was applied."
+}

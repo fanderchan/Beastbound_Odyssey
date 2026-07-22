@@ -1,0 +1,21 @@
+Use case: stylized-concept
+Asset type: regenerated Beastbound Odyssey production NPC static world sprite sheet, exact independent true-eight-direction 4-column by 2-row matrix
+Input images: Image 1 is the binding identity board; reproduce this exact adult male, costume, proportions and three close-fitting role cues.
+Primary request: Draw eight independently authored full-body idle views. This is a fresh generation, not an edit and not a mirror. The result must obey the exact row-major orientation below.
+Canvas: landscape 3:2 canvas, perfectly flat opaque solid #FF00FF across all background. Eight equal invisible cells in 4 columns x 2 rows; no visible dividers, labels, arrows, compass, text, UI, shadow or floor.
+TOP ROW, left to right:
+1 SOUTH: exact front, face and chest toward camera.
+2 SOUTHWEST: front three-quarter looking toward the LEFT edge of the canvas; nose visibly projects LEFT.
+3 WEST: exact left-facing side profile; nose and toes point LEFT.
+4 NORTHWEST: back three-quarter looking toward the LEFT edge; back dominant.
+BOTTOM ROW, left to right:
+5 NORTH: exact complete back; no face, nose, eyes or chest visible.
+6 NORTHEAST: back three-quarter looking toward the RIGHT edge; back dominant.
+7 EAST: exact right-facing side profile; nose and toes point RIGHT.
+8 SOUTHEAST: front three-quarter looking toward the RIGHT edge of the canvas; nose must visibly project RIGHT. This eighth figure is the opposite front diagonal to figure 2 and must not look left.
+For each cell, the head, nose when visible, torso, hips and both feet must all share that cell's direction. West/east and the diagonal pairs are separately authored and visibly distinct; never mirror, flip, duplicate, rotate or relabel pixels.
+Exact character identity: approximately 34-year-old robust male trial adjudicator, wide shoulders tapering to a narrow waist, sun-warmed medium skin, calm square jaw, grey-blue eyes, short deep-brown hair swept back with a small tied nape lock, clean-shaven. Storm-blue-grey sleeveless layered judging tunic over bone-white short sleeves, restrained ochre-yellow piping and sash, dark-brown belt, fitted trousers and sturdy ankle boots. Distinct storm-blue-grey challenge bracer strapped only to his OWN LEFT forearm, a small bone whistle tight at the base of the neck, a compact three-cord challenge-counting knot tied close to his OWN RIGHT HIP. Accessories retain anatomical sides in every direction.
+Style: exactly Image 1's polished hand-painted 2.5D fantasy RPG style: warm dark outlines, compact adult sprite proportions, controlled cel shading, tactile leather/woven cloth, readable at 256px. Same face, scale, lighting, costume and materials across all eight.
+Pose/layout: upright static adjudicator stance with arms relaxed close to body and feet planted. Consistent scale and baseline. Every full body stays completely within its invisible 384x512 cell with generous #FF00FF padding, no edge touching and no cross-cell element.
+Constraints: fully opaque source; hard clean chroma edge with no magenta reflection; complete anatomy; no detached components.
+Absolutely avoid: southeast facing left, any weapon, spear, sword, shield, staff, whip, riding crop, reins, saddle, pet, animal, magic, VFX, seven-slot training board, seven tokens, sign, scoreboard, clipboard, book, loose remote prop, second person, scenery, shadows, text, watermark, extra limbs, cropping, accessory swapping, bright red/green/purple/cyan costume drift.

@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: Beastbound Odyssey NPC 2x2 dialogue portrait source sheet
+Primary request: Preserve the exact same four portraits, same man, face, hairstyle, costume, expressions, row-major order, rendering style, colors, lighting and flat magenta background, but scale each bust down uniformly to about 84 percent and center it safely inside its own quadrant.
+Required correction: create a clearly visible uninterrupted magenta safety band along the entire TOP canvas edge, entire LEFT canvas edge and entire RIGHT canvas edge. No hair, shoulder, tunic, outline or antialiasing may touch those three outer edges. Also keep the vertical outer edge of each left/right cell free of subject. The lower bust may still crop at the BOTTOM canvas edge because this is an intentional dialogue bust crop. Keep the four cells implied only; add no divider lines.
+Layout: exact 2 rows x 2 columns. Top-left neutral closed mouth; top-right speaking naturally open mouth; bottom-left modest professional smile; bottom-right concerned knit brows with closed worried mouth. Same camera, crop, head size, shoulders and identity in all cells after the uniform downscale.
+Background: opaque perfectly flat removable #FF00FF, no gradient, floor, texture, shadow or halo.
+Constraints: change only scale and safe padding; preserve facial identity and all expression semantics. Exactly four portraits. No text, labels, borders, arrows, numbers, logos, watermark, extra person, added props or magenta clothing.
+Avoid: cropped hair, shoulder touching left/right outer canvas edge, bank ledger, abacus, coins, grocery basket, diamonds, magic, noble, modern jeweler, face drift, costume drift.

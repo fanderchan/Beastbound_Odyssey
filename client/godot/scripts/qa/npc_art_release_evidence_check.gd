@@ -2,9 +2,13 @@ extends SceneTree
 
 const NpcArtReleaseEvidence := preload("res://scripts/world/npc_art_release_evidence.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
+const NpcDirectionReview := preload("res://scripts/qa/npc_direction_review.gd")
+const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
 
 const APPEARANCE_ID := "npc_evidence_fixture_m_v1"
+const LEGACY_RELEASE_APPEARANCE_ID := "npc_stable_keeper_m_v1"
+const LEGACY_RELEASE_ATTESTATION_SHA256 := "946bd3415e1f55079271724e4af3092983468a50b19b797ea10a561ed67befec"
 const REPO_ROOT := "/repo/Beastbound_Odyssey"
 
 
@@ -14,6 +18,14 @@ func _initialize() -> void:
 	var base_errors := _validate(fixture)
 	if not base_errors.is_empty():
 		failures.append("有效 fixture 被拒绝：%s" % "；".join(base_errors))
+	var fixture_frames := (((fixture["parityReports"] as Dictionary)["preflight"] as Dictionary)["frames"] as Array)
+	var expected_source_set := NpcArtReleaseEvidence.parity_source_set_sha256(fixture_frames)
+	var direction_review := NpcDirectionReview.new()
+	if direction_review._source_set_sha256(fixture_frames) != expected_source_set:
+		failures.append("NpcDirectionReview sourceSet 未按 kind/slot/path/file/full/canonical 绑定")
+	direction_review.free()
+	if NpcMainReviewCapture._source_set_sha256(fixture_frames) != expected_source_set:
+		failures.append("NpcMainReviewCapture sourceSet 未按 kind/slot/path/file/full/canonical 绑定")
 
 	var unrelated_video := fixture.duplicate(true)
 	var unrelated_entry := ((unrelated_video["evidenceIndex"] as Dictionary)["appearances"] as Array)[0] as Dictionary
@@ -126,6 +138,13 @@ func _initialize() -> void:
 	stale_capture_frame["fileSha256"] = _hash("stale-main-capture-frame")
 	_expect_rejection(stale_main_capture, "Main capture", "Main capture 旧帧", failures)
 
+	var canonical_source_set_drift := fixture.duplicate(true)
+	var canonical_drift_frame := (((canonical_source_set_drift["parityReports"] as Dictionary)["preflight"] as Dictionary)["frames"] as Array)[0] as Dictionary
+	var drifted_canonical_sha := _hash("drifted-canonical-rgba")
+	canonical_drift_frame["sourceDecodedRgbaSha256"] = drifted_canonical_sha
+	canonical_drift_frame["loadedDecodedRgbaSha256"] = drifted_canonical_sha
+	_expect_rejection(canonical_source_set_drift, "sourceSet", "canonical RGBA 未纳入 sourceSet", failures)
+
 	var partial_alpha_fixture := fixture.duplicate(true)
 	var partial_canonical_sha := _hash("partial-alpha-canonical-rgba")
 	for report_value in (partial_alpha_fixture["parityReports"] as Dictionary).values():
@@ -135,9 +154,38 @@ func _initialize() -> void:
 	var partial_main_frame := ((((partial_alpha_fixture["mainCaptureReports"] as Array)[0] as Dictionary)["frames"] as Array)[0] as Dictionary)
 	partial_main_frame["sourceDecodedRgbaSha256"] = partial_canonical_sha
 	partial_main_frame["loadedDecodedRgbaSha256"] = partial_canonical_sha
+	var partial_main_source := ((((partial_alpha_fixture["mainCaptureReports"] as Array)[0] as Dictionary)["sources"] as Array)[0] as Dictionary)
+	partial_main_source["sourceDecodedRgbaSha256"] = partial_canonical_sha
+	partial_main_source["loadedDecodedRgbaSha256"] = partial_canonical_sha
+	var partial_frames := (((partial_alpha_fixture["parityReports"] as Dictionary)["preflight"] as Dictionary)["frames"] as Array)
+	_set_candidate_source_set(
+		partial_alpha_fixture,
+		NpcArtReleaseEvidence.parity_source_set_sha256(partial_frames)
+	)
 	var partial_errors := _validate(partial_alpha_fixture)
 	if not partial_errors.is_empty():
 		failures.append("full != canonical 的 partial-alpha fixture 被误拒绝：%s" % "；".join(partial_errors))
+	var legacy_source_set_fixture := partial_alpha_fixture.duplicate(true)
+	var legacy_source_set_frames := (((legacy_source_set_fixture["parityReports"] as Dictionary)["preflight"] as Dictionary)["frames"] as Array)
+	_set_candidate_source_set(
+		legacy_source_set_fixture,
+		NpcArtReleaseEvidence.parity_source_set_sha256(
+			legacy_source_set_frames,
+			NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V1
+		)
+	)
+	var legacy_source_set_errors := _validate(
+		legacy_source_set_fixture,
+		NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V1
+	)
+	if not legacy_source_set_errors.is_empty():
+		failures.append("exact legacy v1 frozen evidence 被误拒绝：%s" % "；".join(legacy_source_set_errors))
+	var legacy_as_v2_errors := _validate(
+		legacy_source_set_fixture,
+		NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V2
+	)
+	if not _errors_contain(legacy_as_v2_errors, "sourceSet"):
+		failures.append("legacy full/full evidence 被错误接受为 v2")
 
 	var wrong_full_hash := partial_alpha_fixture.duplicate(true)
 	var wrong_full_frame := ((((wrong_full_hash["parityReports"] as Dictionary)["preflight"] as Dictionary)["frames"] as Array)[0] as Dictionary)
@@ -153,6 +201,89 @@ func _initialize() -> void:
 	var attestation_base_errors := _validate_release_attestation(attestation_fixture)
 	if not attestation_base_errors.is_empty():
 		failures.append("有效 release attestation fixture 被拒绝：%s" % "；".join(attestation_base_errors))
+	if (
+		NpcArtCatalog.release_evidence_source_set_schema_version(
+			attestation_fixture["record"] as Dictionary,
+			str(attestation_fixture.get("actualAttestationSha256", ""))
+		)
+		!= NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V1
+	):
+		failures.append("exact legacy v1 attestation 未选择 frozen evidence v1 算法")
+	var attestation_v2_fixture := _valid_release_attestation_fixture_v2()
+	var attestation_v2_errors := _validate_release_attestation(attestation_v2_fixture)
+	if not attestation_v2_errors.is_empty():
+		failures.append("有效 release attestation v2 fixture 被拒绝：%s" % "；".join(attestation_v2_errors))
+	if (
+		str((attestation_v2_fixture["attestation"] as Dictionary).get("sourceSetSha256", ""))
+		== str((attestation_fixture["attestation"] as Dictionary).get("sourceSetSha256", ""))
+	):
+		failures.append("release attestation v2 sourceSet 没有绑定 canonical RGBA")
+	var attestation_v2_source_set := str(
+		(attestation_v2_fixture["attestation"] as Dictionary).get("sourceSetSha256", "")
+	)
+	var frozen_binding_errors := NpcArtCatalog.release_attestation_frozen_source_set_errors(
+		str((attestation_v2_fixture["record"] as Dictionary).get("appearanceId", "")),
+		attestation_v2_fixture["attestation"] as Dictionary,
+		attestation_v2_source_set
+	)
+	if not frozen_binding_errors.is_empty():
+		failures.append("有效 v2 attestation 未通过 frozen runtime sourceSet 绑定：%s" % "；".join(frozen_binding_errors))
+	var frozen_source_set_drift_errors := NpcArtCatalog.release_attestation_frozen_source_set_errors(
+		str((attestation_v2_fixture["record"] as Dictionary).get("appearanceId", "")),
+		attestation_v2_fixture["attestation"] as Dictionary,
+		_hash("drifted-frozen-runtime-source-set")
+	)
+	if not _errors_contain(frozen_source_set_drift_errors, "frozen runtime evidence"):
+		failures.append("v2 attestation 未拒绝 frozen runtime evidence sourceSet 漂移")
+	var missing_v2_canonical := attestation_v2_fixture.duplicate(true)
+	((((missing_v2_canonical["attestation"] as Dictionary)["frames"] as Array)[0]) as Dictionary).erase("sourceDecodedRgbaSha256")
+	_expect_attestation_rejection(missing_v2_canonical, "canonical RGBA", "v2 attestation 漏 canonical", failures)
+	var drifted_v2_canonical := attestation_v2_fixture.duplicate(true)
+	var drifted_v2_frame := ((((drifted_v2_canonical["attestation"] as Dictionary)["frames"] as Array)[0]) as Dictionary)
+	drifted_v2_frame["sourceDecodedRgbaSha256"] = _hash("attestation-v2-canonical-drift")
+	_expect_attestation_rejection(drifted_v2_canonical, "sourceSet", "v2 canonical 未绑定 sourceSet", failures)
+	var replacement_v1_attestation := attestation_fixture.duplicate(true)
+	var replacement_v1_sha := _hash("replacement-v1-attestation")
+	(replacement_v1_attestation["record"] as Dictionary)["releaseAttestationSha256"] = replacement_v1_sha
+	replacement_v1_attestation["actualAttestationSha256"] = replacement_v1_sha
+	if (
+		NpcArtCatalog.release_evidence_source_set_schema_version(
+			replacement_v1_attestation["record"] as Dictionary,
+			replacement_v1_sha
+		)
+		!= NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V2
+	):
+		failures.append("replacement v1 attestation 错误继承 frozen evidence v1 算法")
+	_expect_attestation_rejection(
+		replacement_v1_attestation,
+		"v1 仅允许精确冻结的旧批次证明",
+		"v1 替换证明绕过 canonical",
+		failures
+	)
+	var new_candidate_v1 := attestation_fixture.duplicate(true)
+	var new_candidate_record := new_candidate_v1["record"] as Dictionary
+	var new_candidate_attestation := new_candidate_v1["attestation"] as Dictionary
+	var new_candidate_owner_decision := new_candidate_v1["ownerDecision"] as Dictionary
+	new_candidate_record["appearanceId"] = APPEARANCE_ID
+	new_candidate_record["assetRoot"] = "client/godot/assets/npcs/%s" % APPEARANCE_ID
+	new_candidate_record["releaseAttestationPath"] = "client/godot/assets/npcs/%s/release-attestation.json" % APPEARANCE_ID
+	new_candidate_attestation["appearanceId"] = APPEARANCE_ID
+	new_candidate_attestation["ownerDecisionRecord"] = "client/godot/assets/npcs/%s/release-owner-decision.json" % APPEARANCE_ID
+	new_candidate_owner_decision["appearanceId"] = APPEARANCE_ID
+	if (
+		NpcArtCatalog.release_evidence_source_set_schema_version(
+			new_candidate_record,
+			str(new_candidate_v1.get("actualAttestationSha256", ""))
+		)
+		!= NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V2
+	):
+		failures.append("新候选错误继承 frozen evidence v1 算法")
+	_expect_attestation_rejection(
+		new_candidate_v1,
+		"v1 仅允许精确冻结的旧批次证明",
+		"新候选 v1 证明绕过 canonical",
+		failures
+	)
 
 	var catalog_flag_flip := attestation_fixture.duplicate(true)
 	(catalog_flag_flip["record"] as Dictionary)["ownerReviewStatus"] = "pending"
@@ -308,7 +439,10 @@ func _validate_release_attestation(fixture: Dictionary) -> Array[String]:
 	)
 
 
-func _validate(fixture: Dictionary) -> Array[String]:
+func _validate(
+	fixture: Dictionary,
+	source_set_schema_version: int = NpcArtReleaseEvidence.SOURCE_SET_SCHEMA_VERSION_V2
+) -> Array[String]:
 	var main_capture_reports: Array[Dictionary] = []
 	var reports_value = fixture.get("mainCaptureReports", [])
 	if reports_value is Array:
@@ -327,8 +461,29 @@ func _validate(fixture: Dictionary) -> Array[String]:
 		fixture["stageAResult"] as Dictionary,
 		fixture["stageBObservation"] as Dictionary,
 		main_capture_reports,
-		REPO_ROOT
+		REPO_ROOT,
+		source_set_schema_version
 	)
+
+
+func _errors_contain(errors: Array[String], expected_fragment: String) -> bool:
+	for error in errors:
+		if error.contains(expected_fragment):
+			return true
+	return false
+
+
+func _set_candidate_source_set(fixture: Dictionary, source_set_sha: String) -> void:
+	var evidence_index := fixture["evidenceIndex"] as Dictionary
+	var appearance_entry := ((evidence_index["appearances"] as Array)[0]) as Dictionary
+	appearance_entry["sourceSetSha256"] = source_set_sha
+	for artifact_key in ["preflightParity", "recordingParity", "gridParity"]:
+		(appearance_entry[artifact_key] as Dictionary)["sourceSetSha256"] = source_set_sha
+	for report_value in (fixture["parityReports"] as Dictionary).values():
+		(report_value as Dictionary)["sourceSetSha256"] = source_set_sha
+	(fixture["producerMapping"] as Dictionary)["sourceSetSha256"] = source_set_sha
+	for report_value in fixture["mainCaptureReports"] as Array:
+		(report_value as Dictionary)["sourceSetSha256"] = source_set_sha
 
 
 func _valid_fixture() -> Dictionary:
@@ -651,16 +806,17 @@ func _valid_fixture() -> Dictionary:
 
 
 func _valid_release_attestation_fixture() -> Dictionary:
-	var attestation_file_sha := _hash("release-attestation-file")
+	var appearance_id := LEGACY_RELEASE_APPEARANCE_ID
+	var attestation_file_sha := LEGACY_RELEASE_ATTESTATION_SHA256
 	var owner_decision_file_sha := _hash("release-owner-decision-file")
 	var record := {
-		"appearanceId": APPEARANCE_ID,
+		"appearanceId": appearance_id,
 		"status": "approved",
 		"ownerReviewStatus": "approved",
 		"releaseApproved": true,
 		"runtimeEnabled": true,
-		"assetRoot": "client/godot/assets/npcs/%s" % APPEARANCE_ID,
-		"releaseAttestationPath": "client/godot/assets/npcs/%s/release-attestation.json" % APPEARANCE_ID,
+		"assetRoot": "client/godot/assets/npcs/%s" % appearance_id,
+		"releaseAttestationPath": "client/godot/assets/npcs/%s/release-attestation.json" % appearance_id,
 		"releaseAttestationSha256": attestation_file_sha,
 		"world": {
 			"actions": {"idle": {"frameCount": 1}},
@@ -689,7 +845,7 @@ func _valid_release_attestation_fixture() -> Dictionary:
 		}
 		frames.append(frame)
 		current_file_hashes[installed_path] = frame["fileSha256"]
-		parity_frames.append(_parity_frame("world", direction, frame))
+		parity_frames.append(_parity_frame("world", direction, frame, appearance_id))
 	for state in NpcArtReleaseEvidence.PORTRAIT_STATES:
 		var installed_path := "portrait/%s.png" % state
 		var frame := {
@@ -702,7 +858,7 @@ func _valid_release_attestation_fixture() -> Dictionary:
 		}
 		frames.append(frame)
 		current_file_hashes[installed_path] = frame["fileSha256"]
-		parity_frames.append(_parity_frame("portrait", state, frame))
+		parity_frames.append(_parity_frame("portrait", state, frame, appearance_id))
 	var source_set_sha := NpcArtReleaseEvidence.parity_source_set_sha256(parity_frames)
 	var runtime_evidence_index_sha := _hash("attestation-evidence-index")
 	var approved_at := "2026-07-21T13:00:00Z"
@@ -722,12 +878,12 @@ func _valid_release_attestation_fixture() -> Dictionary:
 		"schemaVersion": 1,
 		"attestationType": "beastbound_npc_runtime_release_attestation",
 		"status": "passed",
-		"appearanceId": APPEARANCE_ID,
+		"appearanceId": appearance_id,
 		"ownerReviewStatus": "approved",
 		"releaseApproved": true,
 		"runtimeEnabled": true,
 		"ownerApprovedAtUtc": approved_at,
-		"ownerDecisionRecord": "client/godot/assets/npcs/%s/release-owner-decision.json" % APPEARANCE_ID,
+		"ownerDecisionRecord": "client/godot/assets/npcs/%s/release-owner-decision.json" % appearance_id,
 		"ownerDecisionRecordSha256": owner_decision_file_sha,
 		"sourceSetSha256": source_set_sha,
 		"strictEvidence": strict_evidence,
@@ -736,7 +892,7 @@ func _valid_release_attestation_fixture() -> Dictionary:
 	var owner_decision := {
 		"schemaVersion": 1,
 		"decisionType": "beastbound_npc_owner_release_decision",
-		"appearanceId": APPEARANCE_ID,
+		"appearanceId": appearance_id,
 		"decision": "approved",
 		"ownerReviewStatus": "approved",
 		"ownerId": "project-owner:test-fixture",
@@ -757,11 +913,48 @@ func _valid_release_attestation_fixture() -> Dictionary:
 	}
 
 
-func _parity_frame(kind: String, slot: String, installed: Dictionary) -> Dictionary:
+func _valid_release_attestation_fixture_v2() -> Dictionary:
+	var fixture := _valid_release_attestation_fixture()
+	var attestation := fixture["attestation"] as Dictionary
+	attestation["schemaVersion"] = 2
+	var appearance_id := str(attestation.get("appearanceId", ""))
+	var parity_frames: Array[Dictionary] = []
+	var frames := attestation["frames"] as Array
+	for index in range(frames.size()):
+		var frame := frames[index] as Dictionary
+		var kind := str(frame.get("kind", ""))
+		var source_runtime_path := str(frame.get("sourceRuntimePath", ""))
+		var logical_slot := ""
+		if kind == "world":
+			logical_slot = source_runtime_path.trim_prefix("runtime/world/").trim_suffix("/idle-1.png")
+		elif kind == "portrait":
+			logical_slot = source_runtime_path.trim_prefix("runtime/portraits/").trim_suffix(".png")
+		var canonical_rgba_sha := _hash("attestation-v2-canonical-%d" % index)
+		frame["sourceDecodedRgbaSha256"] = canonical_rgba_sha
+		var parity_frame := _parity_frame(kind, logical_slot, frame, appearance_id)
+		parity_frame["sourceDecodedRgbaSha256"] = canonical_rgba_sha
+		parity_frame["loadedDecodedRgbaSha256"] = canonical_rgba_sha
+		parity_frames.append(parity_frame)
+	var source_set_sha := NpcArtReleaseEvidence.parity_source_set_sha256(parity_frames)
+	attestation["sourceSetSha256"] = source_set_sha
+	var strict_evidence := attestation["strictEvidence"] as Dictionary
+	strict_evidence["sourceSetSha256"] = source_set_sha
+	var owner_decision := fixture["ownerDecision"] as Dictionary
+	owner_decision["sourceSetSha256"] = source_set_sha
+	(owner_decision["acceptedEvidence"] as Dictionary)["sourceSetSha256"] = source_set_sha
+	return fixture
+
+
+func _parity_frame(
+	kind: String,
+	slot: String,
+	installed: Dictionary,
+	appearance_id: String = APPEARANCE_ID
+) -> Dictionary:
 	return {
 		"kind": kind,
 		"slot": slot,
-		"path": "res://assets/npcs/%s/%s" % [APPEARANCE_ID, installed["installedPath"]],
+		"path": "res://assets/npcs/%s/%s" % [appearance_id, installed["installedPath"]],
 		"fileSha256": installed["fileSha256"],
 		"sourceFullDecodedRgbaSha256": installed["rgbaSha256"],
 		"sourceDecodedRgbaSha256": installed["rgbaSha256"],

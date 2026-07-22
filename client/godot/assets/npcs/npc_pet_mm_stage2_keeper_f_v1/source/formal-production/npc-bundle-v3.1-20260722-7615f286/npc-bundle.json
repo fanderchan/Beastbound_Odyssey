@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "pet_mm_stage2_keeper_f_v1",
+  "appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
+  "displayName": "2转MM守护员·女",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "d77391f7b7cbe8bfba16a9ab9c89a81fcebed533cbf4a3b5afa6d2c804c8e59d",
+    "decodedRgbaByteSha256": "afb01e57173f8c590d42cfd5e041cb563dd41afd68d91c1ea9fe5f2e9b454f68",
+    "godotCanonicalRgbaSha256": "926ba5412c4187bb84445baa83edbeab4dd68a8e316a89a7684945435317bf55",
+    "decodedRgbaSha256": "926ba5412c4187bb84445baa83edbeab4dd68a8e316a89a7684945435317bf55",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-22T16:41:49Z",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "b66dbd884c639f159453163bdd5d082422e8dbd6bec4b905a803889cd7c4587b",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "1612f479c5a66dd87e13087d4111e43a8639de9d71a134c0ae1bcd8caf2fe8e6",
+        "explicitSheetMaskPixelSha256": "077c6552712eb6f58218febd642a0029d036f393c85eeb65192f5b69f13a068f",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "5c293a8a16c95e92f8c28d4660bb7e822b7b639edaa9331475e15730857c2d57",
+        "reviewedComponentCount": 107
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "05954e3b97d4f6df9f008226ef24783dcd209a52487f50620a187ff1a5575f55",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "fb0d75fdb049ef2d656f6104e217acee97d20dd3a8631b492b788ec8e6d6cf2a",
+        "explicitSheetMaskPixelSha256": "6ef52a75f390a513ee6d7f7d229037f30131384d09ac080a320129be138b56eb",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "f5ad22f777fd88e71bc523ce96c39063240fd3e0207c3842a63e137a8b37e5aa",
+        "reviewedComponentCount": 54
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated sequentially with OpenAI built-in image_gen: identity canary, independent true-eight world sheet, then four-expression portrait sheet; accepted northwest is a targeted image_gen redraw and not an offline mirror or cell swap",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no third-party or StoneAge art input; the new project-owned identity board was the only character reference used for world expansion, and identity plus accepted world were the only character references used for portraits",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

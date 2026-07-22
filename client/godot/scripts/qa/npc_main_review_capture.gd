@@ -99,8 +99,8 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 	request["qaPreviewFlagPresent"] = qa_preview_count == 1
 	if capture_count != 1:
 		(request["parseErrors"] as Array).append("%s 必须且只能出现一次" % CAPTURE_FLAG)
-	if qa_preview_count != 1:
-		(request["parseErrors"] as Array).append("%s 必须且只能显式出现一次" % QA_PREVIEW_FLAG)
+	if qa_preview_count > 1:
+		(request["parseErrors"] as Array).append("%s 最多只能显式出现一次" % QA_PREVIEW_FLAG)
 	for flag in REQUIRED_VALUE_FLAGS:
 		if int(counts.get(flag, 0)) != 1:
 			(request["parseErrors"] as Array).append("%s 必须且只能出现一次" % flag)
@@ -119,12 +119,21 @@ func run(request: Dictionary) -> Dictionary:
 	var output_path := str(request.get("outputPath", "")).strip_edges()
 	if not errors.is_empty():
 		return _finish_report(report, errors, report_path)
+	var appearance_id := str(request.get("appearanceId", ""))
+	var appearance_record := NpcArtCatalog.appearance_record(appearance_id)
+	var normal_release_access := _record_has_normal_release_access(appearance_record)
+	report["normalPlayerRuntimeEnabled"] = normal_release_access
+	if appearance_record.is_empty():
+		errors.append("NPC appearanceId 未登记：%s" % appearance_id)
+	elif not normal_release_access:
+		if not bool(request.get("qaPreviewFlagPresent", false)):
+			errors.append("待审 NPC Main 取证缺少显式 --npc-art-review-preview 隔离通道")
+		if not bool(host.npc_art_review_preview):
+			errors.append("待审 NPC Main 取证未启用候选美术预览")
 	if not OS.is_debug_build():
 		errors.append("NPC Main 取证只能在 Godot debug build 运行")
 	if DisplayServer.get_name().to_lower() == "headless":
 		errors.append("NPC Main 视觉取证禁止使用 headless DisplayServer")
-	if not bool(host.npc_art_review_preview):
-		errors.append("NPC Main 取证缺少显式 --npc-art-review-preview 隔离通道")
 	if bool(host.auth_auto_bypass):
 		errors.append("NPC Main 取证禁止 dev GM auth bypass")
 	if bool(host.account_authenticated):
@@ -144,7 +153,6 @@ func run(request: Dictionary) -> Dictionary:
 		return _finish_report(report, errors, report_path)
 
 	var npc_id := str(request.get("npcId", ""))
-	var appearance_id := str(request.get("appearanceId", ""))
 	var portrait_state := str(request.get("portraitState", DEFAULT_PORTRAIT_STATE))
 	var item := InteractionModel.find_by_id(host.map_data, npc_id)
 	if item.is_empty():
@@ -157,15 +165,12 @@ func run(request: Dictionary) -> Dictionary:
 	if facing == "":
 		errors.append("NPC 没有规范真八向 facing：%s" % npc_id)
 	report["facing"] = facing
-	if not NpcArtCatalog.is_qa_preview_enabled(appearance_id):
+	if not normal_release_access and not NpcArtCatalog.is_qa_preview_enabled(appearance_id):
 		errors.append("appearanceId 未进入显式 QA preview：%s" % appearance_id)
 	if not NpcArtCatalog.is_world_ready(appearance_id):
 		errors.append("appearanceId 世界纹理未通过 QA 预热：%s" % appearance_id)
 	if not NpcArtCatalog.is_portrait_ready(appearance_id):
 		errors.append("appearanceId 对话人像未通过 QA 预热：%s" % appearance_id)
-	var appearance_record := NpcArtCatalog.appearance_record(appearance_id)
-	if appearance_record.is_empty():
-		errors.append("NPC appearanceId 未登记：%s" % appearance_id)
 	if not errors.is_empty():
 		return _finish_report(report, errors, report_path)
 
@@ -528,7 +533,7 @@ static func _source_set_sha256(sources: Array) -> String:
 			str(source.get("path", "")),
 			str(source.get("fileSha256", "")),
 			str(source.get("sourceFullDecodedRgbaSha256", "")),
-			str(source.get("sourceFullDecodedRgbaSha256", "")),
+			str(source.get("sourceDecodedRgbaSha256", "")),
 		]
 	return _sha256_bytes(lines.to_utf8_buffer())
 
@@ -562,6 +567,7 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"ok": false,
 		"scene": MAIN_SCENE,
 		"qaPreview": bool(request.get("qaPreviewFlagPresent", false)),
+		"normalPlayerRuntimeEnabled": false,
 		"debugBuild": OS.is_debug_build(),
 		"displayServer": DisplayServer.get_name(),
 		"runtimeMirroring": false,
@@ -633,8 +639,6 @@ func _finish_report(report: Dictionary, errors: Array[String], report_path: Stri
 static func _validate_request(request: Dictionary, errors: Array[String]) -> void:
 	if not bool(request.get("enabled", false)):
 		errors.append("NPC Main capture flag 未正确解析")
-	if not bool(request.get("qaPreviewFlagPresent", false)):
-		errors.append("缺少显式 NPC art review preview flag")
 	for key in ["appearanceId", "mapId", "spawnName", "npcId"]:
 		var value := str(request.get(key, ""))
 		if not _is_safe_id(value):
@@ -658,6 +662,18 @@ static func _validate_request(request: Dictionary, errors: Array[String]) -> voi
 		errors.append("截图输出已存在，证据目录必须 immutable：%s" % output_path)
 	if FileAccess.file_exists(report_path):
 		errors.append("report 输出已存在，证据目录必须 immutable：%s" % report_path)
+
+
+static func _record_has_normal_release_access(record: Dictionary) -> bool:
+	return (
+		not record.is_empty()
+		and typeof(record.get("runtimeEnabled")) == TYPE_BOOL
+		and bool(record.get("runtimeEnabled", false))
+		and typeof(record.get("releaseApproved")) == TYPE_BOOL
+		and bool(record.get("releaseApproved", false))
+		and str(record.get("status", "")) == NpcArtCatalog.STATUS_APPROVED
+		and str(record.get("ownerReviewStatus", "")) == "approved"
+	)
 
 
 static func _can_write_report_path(path: String) -> bool:

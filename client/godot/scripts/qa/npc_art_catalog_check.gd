@@ -5,6 +5,25 @@ const NpcDialogPresenter := preload("res://scripts/ui/npc_dialog_presenter.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
 
+const RELEASED_APPEARANCE_IDS: Array[String] = [
+	"npc_stable_keeper_m_v1",
+	"npc_bank_keeper_f_v1",
+	"npc_item_shopkeeper_f_v1",
+	"npc_manor_steward_m_v1",
+	"npc_village_guard_m_v1",
+	"npc_village_healer_f_v1",
+	"npc_equipment_artisan_m_v1",
+	"npc_riding_trainer_f_v1",
+]
+const PENDING_REVIEW_APPEARANCE_IDS: Array[String] = [
+	"npc_player_rebirth_mentor_f_v1",
+	"npc_pet_mm_trial_mentor_m_v1",
+	"npc_pet_mm_stage2_keeper_f_v1",
+	"npc_diamond_merchant_m_v1",
+	"npc_pet_skill_trainer_m_v1",
+	"npc_welfare_clerk_f_v1",
+	"npc_storyteller_m_v1",
+]
 const REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_stable_keeper_m_v1",
 	"npc_bank_keeper_f_v1",
@@ -14,6 +33,13 @@ const REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_village_healer_f_v1",
 	"npc_equipment_artisan_m_v1",
 	"npc_riding_trainer_f_v1",
+	"npc_player_rebirth_mentor_f_v1",
+	"npc_pet_mm_trial_mentor_m_v1",
+	"npc_pet_mm_stage2_keeper_f_v1",
+	"npc_diamond_merchant_m_v1",
+	"npc_pet_skill_trainer_m_v1",
+	"npc_welfare_clerk_f_v1",
+	"npc_storyteller_m_v1",
 ]
 const EXPECTED_REUSE_COUNTS := {
 	"npc_stable_keeper_m_v1": 1,
@@ -24,6 +50,13 @@ const EXPECTED_REUSE_COUNTS := {
 	"npc_village_healer_f_v1": 1,
 	"npc_equipment_artisan_m_v1": 1,
 	"npc_riding_trainer_f_v1": 1,
+	"npc_player_rebirth_mentor_f_v1": 1,
+	"npc_pet_mm_trial_mentor_m_v1": 1,
+	"npc_pet_mm_stage2_keeper_f_v1": 1,
+	"npc_diamond_merchant_m_v1": 1,
+	"npc_pet_skill_trainer_m_v1": 1,
+	"npc_welfare_clerk_f_v1": 1,
+	"npc_storyteller_m_v1": 1,
 }
 const EXPECTED_BATCH_CONTRACT := {
 	"npc_stable_keeper_m_v1": {"roleId": "stable_keeper", "gender": "male"},
@@ -34,6 +67,13 @@ const EXPECTED_BATCH_CONTRACT := {
 	"npc_village_healer_f_v1": {"roleId": "village_healer", "gender": "female"},
 	"npc_equipment_artisan_m_v1": {"roleId": "equipment_artisan", "gender": "male"},
 	"npc_riding_trainer_f_v1": {"roleId": "riding_trainer", "gender": "female"},
+	"npc_player_rebirth_mentor_f_v1": {"roleId": "player_rebirth_mentor", "gender": "female"},
+	"npc_pet_mm_trial_mentor_m_v1": {"roleId": "pet_mm_trial_mentor", "gender": "male"},
+	"npc_pet_mm_stage2_keeper_f_v1": {"roleId": "pet_mm_stage2_keeper", "gender": "female"},
+	"npc_diamond_merchant_m_v1": {"roleId": "diamond_merchant", "gender": "male"},
+	"npc_pet_skill_trainer_m_v1": {"roleId": "pet_skill_trainer", "gender": "male"},
+	"npc_welfare_clerk_f_v1": {"roleId": "welfare_clerk", "gender": "female"},
+	"npc_storyteller_m_v1": {"roleId": "storyteller", "gender": "male"},
 }
 const FIXED_MAP_BINDINGS := {
 	"firebud_stable_keeper": {
@@ -84,6 +124,48 @@ const FIXED_MAP_BINDINGS := {
 		"roleId": "riding_trainer",
 		"facilityType": "riding_trainer",
 	},
+	"firebud_rebirth_mentor": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_player_rebirth_mentor_f_v1",
+		"roleId": "player_rebirth_mentor",
+		"facilityType": "rebirth",
+	},
+	"firebud_pet_mm_trial_mentor": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_pet_mm_trial_mentor_m_v1",
+		"roleId": "pet_mm_trial_mentor",
+		"facilityType": "pet_mm_trial",
+	},
+	"firebud_pet_mm_stage2_keeper": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
+		"roleId": "pet_mm_stage2_keeper",
+		"facilityType": "pet_mm_stage2",
+	},
+	"firebud_diamond_keeper": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_diamond_merchant_m_v1",
+		"roleId": "diamond_merchant",
+		"facilityType": "diamond_shop",
+	},
+	"firebud_pet_skill_trainer": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_pet_skill_trainer_m_v1",
+		"roleId": "pet_skill_trainer",
+		"facilityType": "trainer",
+	},
+	"firebud_welfare_clerk": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_welfare_clerk_f_v1",
+		"roleId": "welfare_clerk",
+		"facilityType": "welfare",
+	},
+	"firebud_storyteller": {
+		"mapId": "firebud_village_gate",
+		"appearanceId": "npc_storyteller_m_v1",
+		"roleId": "storyteller",
+		"facilityType": "storyteller",
+	},
 }
 
 
@@ -96,32 +178,47 @@ static func run() -> Dictionary:
 		records_by_id[appearance_id] = record
 	_append_batch_contract_errors(records, records_by_id, errors)
 	errors.append_array(NpcArtCatalog.validation_errors(false, false))
-	var preview_ids: Array[String] = []
-	var preview_warm_success: Dictionary = {}
+	var warm_success: Dictionary = {}
 	for appearance_id in REVIEW_APPEARANCE_IDS:
+		if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
+			errors.append("NPC 目录检查开始前不得遗留 QA 候选开关：%s" % appearance_id)
+	var runtime_warmed := NpcArtCatalog.warm_all_runtime()
+	if not runtime_warmed:
+		errors.append("已发布 8 类 NPC 未能先通过普通运行链整体预热")
+	for appearance_id in RELEASED_APPEARANCE_IDS:
 		if not records_by_id.has(appearance_id):
-			errors.append("NPC canary 未登记：%s" % appearance_id)
+			errors.append("已发布 NPC 未登记：%s" % appearance_id)
 			continue
-		var canary := records_by_id[appearance_id] as Dictionary
-		_append_review_state_errors(canary, errors)
-		if str(canary.get("status", "")) == NpcArtCatalog.STATUS_APPROVED:
-			if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
-				errors.append("已批准 NPC 在普通运行预热前意外启用了 QA 候选开关：%s" % appearance_id)
-			if not NpcArtCatalog.warm_appearance(appearance_id):
-				errors.append("已批准 NPC 未能通过普通运行发布链预热：%s" % appearance_id)
-				errors.append_array(NpcArtCatalog.warm_errors_for(appearance_id))
-		else:
-			if NpcArtCatalog.warm_appearance(appearance_id):
-				errors.append("未批准 NPC 绕过 QA 开关进入正常运行路径：%s" % appearance_id)
+		var released := records_by_id[appearance_id] as Dictionary
+		_append_review_state_errors(released, NpcArtCatalog.STATUS_APPROVED, errors)
+		var released_warmed := NpcArtCatalog.warm_appearance(appearance_id)
+		warm_success[appearance_id] = released_warmed
+		if not released_warmed:
+			errors.append("已发布 NPC 未能通过普通运行发布链预热：%s" % appearance_id)
+			errors.append_array(NpcArtCatalog.warm_errors_for(appearance_id))
+	var preview_ids: Array[String] = []
+	for appearance_id in PENDING_REVIEW_APPEARANCE_IDS:
+		if not records_by_id.has(appearance_id):
+			errors.append("待 owner 评审 NPC 未登记：%s" % appearance_id)
+			continue
+		var candidate := records_by_id[appearance_id] as Dictionary
+		_append_review_state_errors(candidate, NpcArtCatalog.STATUS_OWNER_REVIEW_PENDING, errors)
+		if NpcArtCatalog.warm_appearance(appearance_id):
+			errors.append("待评审 NPC 绕过 QA 开关进入正常运行路径：%s" % appearance_id)
 		var preview_warmed := NpcArtCatalog.enable_qa_preview_appearance(appearance_id)
-		preview_warm_success[appearance_id] = preview_warmed
+		warm_success[appearance_id] = preview_warmed
 		if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
 			preview_ids.append(appearance_id)
 		if not preview_warmed:
-			errors.append("NPC 显式 QA 候选预热失败：%s" % appearance_id)
+			errors.append("待评审 NPC 显式 QA 候选预热失败：%s" % appearance_id)
 			errors.append_array(NpcArtCatalog.warm_errors_for(appearance_id))
+	if preview_ids.size() != PENDING_REVIEW_APPEARANCE_IDS.size():
+		errors.append("QA 候选开关必须仅覆盖待评审 7 类 NPC")
+	for appearance_id in RELEASED_APPEARANCE_IDS:
+		if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
+			errors.append("已发布 NPC 不应依赖 QA 候选开关：%s" % appearance_id)
 	for appearance_id in REVIEW_APPEARANCE_IDS:
-		if bool(preview_warm_success.get(appearance_id, false)):
+		if bool(warm_success.get(appearance_id, false)):
 			errors.append_array(NpcArtCatalog.validation_errors_for_appearance(appearance_id, true, true))
 	var world_frame_count := 0
 	var portrait_count := 0
@@ -130,9 +227,9 @@ static func run() -> Dictionary:
 			continue
 		var record := records_by_id[appearance_id] as Dictionary
 		if not NpcArtCatalog.is_world_ready(appearance_id):
-			errors.append("NPC 世界候选未进入显式 QA 缓存：%s" % appearance_id)
+			errors.append("NPC 世界像未进入预热缓存：%s" % appearance_id)
 		if not NpcArtCatalog.is_portrait_ready(appearance_id):
-			errors.append("NPC 人像候选未进入显式 QA 缓存：%s" % appearance_id)
+			errors.append("NPC 人像未进入预热缓存：%s" % appearance_id)
 		var mobility := str(record.get("mobility", ""))
 		var expects_walk := mobility == NpcArtCatalog.MOBILE_MOBILITY
 		if NpcArtCatalog.has_world_action(appearance_id, NpcArtCatalog.WORLD_ACTION_WALK) != expects_walk:
@@ -172,7 +269,7 @@ static func run() -> Dictionary:
 				portrait_count += 1
 		_append_instance_contract_errors(appearance_id, errors)
 	var cache_count_after_warm := NpcArtCatalog.cached_texture_count()
-	for appearance_id in preview_ids:
+	for appearance_id in REVIEW_APPEARANCE_IDS:
 		NpcArtCatalog.world_texture_for_frame(appearance_id, "north", "idle", 1)
 		NpcArtCatalog.portrait_texture(appearance_id, "speaking")
 	if NpcArtCatalog.cached_texture_count() != cache_count_after_warm:
@@ -188,12 +285,17 @@ static func run() -> Dictionary:
 			release_approved_count += 1
 		if bool(record.get("runtimeEnabled", false)):
 			runtime_enabled_count += 1
-	if release_approved_count != REVIEW_APPEARANCE_IDS.size():
-		errors.append("首批 NPC 必须全部获得 owner/release 批准：%d/%d" % [release_approved_count, REVIEW_APPEARANCE_IDS.size()])
-	if runtime_enabled_count != REVIEW_APPEARANCE_IDS.size():
-		errors.append("首批 NPC 必须全部进入普通运行目录：%d/%d" % [runtime_enabled_count, REVIEW_APPEARANCE_IDS.size()])
-	if NpcArtCatalog.runtime_appearance_records().size() != REVIEW_APPEARANCE_IDS.size():
-		errors.append("首批 NPC 普通运行记录数必须为 %d" % REVIEW_APPEARANCE_IDS.size())
+	if release_approved_count != RELEASED_APPEARANCE_IDS.size():
+		errors.append("已发布 NPC release 批准数必须保持 %d：实际=%d" % [RELEASED_APPEARANCE_IDS.size(), release_approved_count])
+	if runtime_enabled_count != RELEASED_APPEARANCE_IDS.size():
+		errors.append("已发布 NPC 普通运行启用数必须保持 %d：实际=%d" % [RELEASED_APPEARANCE_IDS.size(), runtime_enabled_count])
+	var runtime_records := NpcArtCatalog.runtime_appearance_records()
+	if runtime_records.size() != RELEASED_APPEARANCE_IDS.size():
+		errors.append("NPC 普通运行记录必须仅包含已发布 %d 类" % RELEASED_APPEARANCE_IDS.size())
+	for runtime_record in runtime_records:
+		var runtime_appearance_id := str(runtime_record.get("appearanceId", ""))
+		if not RELEASED_APPEARANCE_IDS.has(runtime_appearance_id):
+			errors.append("待评审 NPC 不得进入普通运行记录：%s" % runtime_appearance_id)
 	var runtime_mirroring_count := _runtime_mirroring_count(records)
 	var map_reference_summary := _map_reference_summary(errors)
 	var map_reuse_counts := map_reference_summary.get("reuseCounts", {}) as Dictionary
@@ -223,7 +325,9 @@ static func run() -> Dictionary:
 	return {
 		"ok": errors.is_empty(),
 		"appearanceCount": records.size(),
-		"releaseRuntimeAppearanceCount": NpcArtCatalog.runtime_appearance_records().size(),
+		"releasedAppearanceCount": RELEASED_APPEARANCE_IDS.size(),
+		"pendingReviewAppearanceCount": PENDING_REVIEW_APPEARANCE_IDS.size(),
+		"releaseRuntimeAppearanceCount": runtime_records.size(),
 		"catalogRuntimeEnabledCount": runtime_enabled_count,
 		"qaPreviewAppearanceCount": preview_ids.size(),
 		"releaseApprovedCount": release_approved_count,
@@ -245,38 +349,38 @@ static func _append_batch_contract_errors(
 	errors: Array[String]
 ) -> void:
 	if records.size() != REVIEW_APPEARANCE_IDS.size() or records_by_id.size() != REVIEW_APPEARANCE_IDS.size():
-		errors.append("首批 NPC 目录必须恰好登记 8 个唯一职业原型")
+		errors.append("NPC 目录必须恰好登记旧 8 个已发布原型与新 7 个待评审原型")
 	var male_count := 0
 	var female_count := 0
 	for appearance_id in REVIEW_APPEARANCE_IDS:
 		var record_value = records_by_id.get(appearance_id, {})
 		if not (record_value is Dictionary) or (record_value as Dictionary).is_empty():
-			errors.append("首批 NPC 缺少职业原型：%s" % appearance_id)
+			errors.append("NPC 目录缺少职业原型：%s" % appearance_id)
 			continue
 		var record := record_value as Dictionary
 		var expected := EXPECTED_BATCH_CONTRACT[appearance_id] as Dictionary
 		if str(record.get("roleId", "")) != str(expected.get("roleId", "")):
-			errors.append("NPC roleId 与首批职业合同不一致：%s" % appearance_id)
+			errors.append("NPC roleId 与职业合同不一致：%s" % appearance_id)
 		var gender := str(record.get("gender", ""))
 		if gender != str(expected.get("gender", "")):
-			errors.append("NPC gender 与首批职业合同不一致：%s" % appearance_id)
+			errors.append("NPC gender 与职业合同不一致：%s" % appearance_id)
 		male_count += int(gender == "male")
 		female_count += int(gender == "female")
 		if str(record.get("mobility", "")) != NpcArtCatalog.STATIC_MOBILITY:
-			errors.append("首批 NPC 必须全部为 static idle8：%s" % appearance_id)
-	if male_count != 4 or female_count != 4:
-		errors.append("首批 NPC 必须保持 4 男 4 女：male=%d female=%d" % [male_count, female_count])
+			errors.append("当前 15 类 NPC 必须全部为 static idle8：%s" % appearance_id)
+	if male_count != 8 or female_count != 7:
+		errors.append("当前 NPC 职业原型必须保持 8 男 7 女：male=%d female=%d" % [male_count, female_count])
 
 
-static func _append_review_state_errors(record: Dictionary, errors: Array[String]) -> void:
+static func _append_review_state_errors(
+	record: Dictionary,
+	expected_status: String,
+	errors: Array[String]
+) -> void:
 	var appearance_id := str(record.get("appearanceId", ""))
 	var status := str(record.get("status", ""))
-	if not [
-		NpcArtCatalog.STATUS_IN_PRODUCTION,
-		NpcArtCatalog.STATUS_OWNER_REVIEW_PENDING,
-		NpcArtCatalog.STATUS_APPROVED,
-	].has(status):
-		errors.append("NPC canary 状态不可评审：%s/%s" % [appearance_id, status])
+	if status != expected_status:
+		errors.append("NPC 分组状态错误：%s=%s，期望=%s" % [appearance_id, status, expected_status])
 		return
 	if status == NpcArtCatalog.STATUS_APPROVED:
 		if (

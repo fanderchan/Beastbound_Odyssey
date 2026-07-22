@@ -1,0 +1,4229 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "portrait",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "7338651064f449f9870d151ed9b77731ba1f4f177b386c9815ebb505c4dfd8f3",
+    "rawSheetDecodedRgbaByteSha256": "837dd8b48dd8d609695f35a3bea51445bb9d4ce00a1f0d2ffec090d2ac059316",
+    "rawSheetGodotCanonicalRgbaSha256": "fb2bc3af851e11d57f3b508a7fb09710308bc5750f728bd7bbb214bf611b0f23",
+    "rawSheetDecodedRgbaSha256": "fb2bc3af851e11d57f3b508a7fb09710308bc5750f728bd7bbb214bf611b0f23",
+    "explicitMaskFileSha256": "f5c88aaae5620bfa046594d76422bf50f96941b110d17fe243733949a6757a63",
+    "explicitMaskPixelSha256": "1f069f538befffc68bec8e204e80c7b674a6665d7600d7f52975d3dd38e76b38",
+    "width": 1254,
+    "height": 1254
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "portrait-bust-crop-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ee0130d029776a4a69fffd1e91c62859cf777c5dbf4f83434fcbcc31eaf11b60",
+      "cellBbox": [
+        438,
+        94,
+        440,
+        95
+      ],
+      "sheetBbox": [
+        438,
+        94,
+        440,
+        95
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a680a2d37d0adb2bcca0e29b8bdf316abe4d8e7f358c0056ee690c5830c391a7",
+      "cellBbox": [
+        440,
+        95,
+        441,
+        96
+      ],
+      "sheetBbox": [
+        440,
+        95,
+        441,
+        96
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "dcafb0bc26cf31326ec8abeea5e545f205e09732e2bcb6ee715f6632edfbf768",
+      "cellBbox": [
+        272,
+        105,
+        273,
+        106
+      ],
+      "sheetBbox": [
+        272,
+        105,
+        273,
+        106
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e1dac132c5a3b1f51d1d648a0cdc7c57008a1be344c4258295788e03d2e7e3b7",
+      "cellBbox": [
+        271,
+        106,
+        272,
+        107
+      ],
+      "sheetBbox": [
+        271,
+        106,
+        272,
+        107
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6482daf15651a98e778daedbfe4dbf06c618fc38e381dca2b8634593a2693fef",
+      "cellBbox": [
+        270,
+        107,
+        271,
+        108
+      ],
+      "sheetBbox": [
+        270,
+        107,
+        271,
+        108
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ac5694c577976fe0479615863684c50e31de5f789c108363c4e8087dc7f88532",
+      "cellBbox": [
+        269,
+        109,
+        270,
+        110
+      ],
+      "sheetBbox": [
+        269,
+        109,
+        270,
+        110
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "41a3e7bcdc158b9408e714ee52589a6b07e6e181a625ed1076893f4c2ffbf147",
+      "cellBbox": [
+        256,
+        181,
+        259,
+        188
+      ],
+      "sheetBbox": [
+        256,
+        181,
+        259,
+        188
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "269d8af89c6a9d644310a0d6661a2e48d96a09251285603a7be7a076e0ea68a1",
+      "cellBbox": [
+        263,
+        200,
+        264,
+        202
+      ],
+      "sheetBbox": [
+        263,
+        200,
+        264,
+        202
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "17a63fc9845ab16751caf99223f9c3f502ab40f93b68f9637eb2751ef191b0e0",
+      "cellBbox": [
+        262,
+        202,
+        263,
+        205
+      ],
+      "sheetBbox": [
+        262,
+        202,
+        263,
+        205
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "4811c70098c1f37ae1c85138ba22f24f6a51377c96a9e56bbee0d729e3ecdd9f",
+      "cellBbox": [
+        467,
+        259,
+        473,
+        285
+      ],
+      "sheetBbox": [
+        467,
+        259,
+        473,
+        285
+      ],
+      "pixelCount": 74,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "10bc680ec8ab10c99c6c80bf9b6ea230ebb63ecc666ee8b15c496bbf55d92683",
+      "cellBbox": [
+        423,
+        279,
+        424,
+        280
+      ],
+      "sheetBbox": [
+        423,
+        279,
+        424,
+        280
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "37a7b19cca11c80c29d5fc09a4df770f477e141922ec8f970cb34ce86010870c",
+      "cellBbox": [
+        424,
+        280,
+        426,
+        283
+      ],
+      "sheetBbox": [
+        424,
+        280,
+        426,
+        283
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6bb54eec848afeb528f9cf552c9beca9e8178201b02b9eee9fbf691a943ede70",
+      "cellBbox": [
+        417,
+        282,
+        430,
+        301
+      ],
+      "sheetBbox": [
+        417,
+        282,
+        430,
+        301
+      ],
+      "pixelCount": 146,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "250180cec57eca5bc049094bd59148e4c986a018b5be9ae1f4339597687f50fe",
+      "cellBbox": [
+        426,
+        283,
+        427,
+        284
+      ],
+      "sheetBbox": [
+        426,
+        283,
+        427,
+        284
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5a60eca0e22909480e75d6ec399056f06e0f1ff5bcb1bef5d295414b58b39975",
+      "cellBbox": [
+        427,
+        284,
+        428,
+        285
+      ],
+      "sheetBbox": [
+        427,
+        284,
+        428,
+        285
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "72cb168ebd9fbb785fcab0bbc6c7227d6fe8cd0326b43f69c9259bb6cdfadf19",
+      "cellBbox": [
+        423,
+        293,
+        438,
+        314
+      ],
+      "sheetBbox": [
+        423,
+        293,
+        438,
+        314
+      ],
+      "pixelCount": 139,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "26ce8b610ff0845845702c9f583563daa8ecfba68c8bad56512388f32e8c69a1",
+      "cellBbox": [
+        458,
+        297,
+        463,
+        305
+      ],
+      "sheetBbox": [
+        458,
+        297,
+        463,
+        305
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "401d5c318d4e351225a2c60dae8f9c3417e610dccc3676ba2d50078f565934bf",
+      "cellBbox": [
+        457,
+        304,
+        458,
+        305
+      ],
+      "sheetBbox": [
+        457,
+        304,
+        458,
+        305
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5bb2652280ec74781d8daa4570d3b83b654115fad9d662852bfb46fa25f3aba1",
+      "cellBbox": [
+        458,
+        305,
+        459,
+        306
+      ],
+      "sheetBbox": [
+        458,
+        305,
+        459,
+        306
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "76833af3861615bcc2e629379617fc64e247d139f94046bf9fd4fc3bc2e39bf7",
+      "cellBbox": [
+        429,
+        309,
+        445,
+        320
+      ],
+      "sheetBbox": [
+        429,
+        309,
+        445,
+        320
+      ],
+      "pixelCount": 54,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6cca8c9274ce1eb9a0699ae2d4025b39cdec3344c312539edff2f07cfe7fc3c5",
+      "cellBbox": [
+        567,
+        510,
+        568,
+        511
+      ],
+      "sheetBbox": [
+        567,
+        510,
+        568,
+        511
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "886da6e78c2671b8d4aea84eb726c4e8bf8ad77e228b22449191160f0f7a8c81",
+      "cellBbox": [
+        565,
+        511,
+        567,
+        513
+      ],
+      "sheetBbox": [
+        565,
+        511,
+        567,
+        513
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "f7744e2457dfe359580dc26ba3ebf1c6c3ca209c2e7cd337d39be1cc77b40238",
+      "cellBbox": [
+        568,
+        512,
+        569,
+        513
+      ],
+      "sheetBbox": [
+        568,
+        512,
+        569,
+        513
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "74b5c9a7df9c0265fe01c4c0f22138bd6ea19a92d44200fed73ff726df001d78",
+      "cellBbox": [
+        137,
+        44,
+        583,
+        613
+      ],
+      "sheetBbox": [
+        137,
+        44,
+        583,
+        613
+      ],
+      "pixelCount": 2871,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "b9358fb351774ec45474c83812eafeef5de2432505f03101bae873b16bd30d2d",
+      "cellBbox": [
+        437,
+        93,
+        444,
+        100
+      ],
+      "sheetBbox": [
+        437,
+        93,
+        444,
+        100
+      ],
+      "pixelCount": 17,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6d40239f05f03f5377a2131653e4ea8aac0dd7371838a84e8f104833f831b1fc",
+      "cellBbox": [
+        269,
+        104,
+        276,
+        113
+      ],
+      "sheetBbox": [
+        269,
+        104,
+        276,
+        113
+      ],
+      "pixelCount": 17,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3ea9a86cf20b77d60d64c1a979fc2ddca57274476c92aaf7f84a06ebc7c78547",
+      "cellBbox": [
+        255,
+        177,
+        260,
+        189
+      ],
+      "sheetBbox": [
+        255,
+        177,
+        260,
+        189
+      ],
+      "pixelCount": 20,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "eef27aee4f82e017734cdda74f230d1ed697b792e9f22193743f52d8a9bbb1e5",
+      "cellBbox": [
+        261,
+        198,
+        266,
+        209
+      ],
+      "sheetBbox": [
+        261,
+        198,
+        266,
+        209
+      ],
+      "pixelCount": 24,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "4b41e4572a7b10c309a8842de28a8dadb5e599e0ae74ac823b4ac0f9d3c374a9",
+      "cellBbox": [
+        464,
+        255,
+        474,
+        286
+      ],
+      "sheetBbox": [
+        464,
+        255,
+        474,
+        286
+      ],
+      "pixelCount": 67,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9b1893cbe5474f793e5bcc05e5cf35ac8176d078a51ceb5fb186201700945a0a",
+      "cellBbox": [
+        415,
+        277,
+        446,
+        320
+      ],
+      "sheetBbox": [
+        415,
+        277,
+        446,
+        320
+      ],
+      "pixelCount": 212,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d13d63ecf1824acd3149fa11380dcf40ff1c12d2853b1c7084dc72beaf7631fb",
+      "cellBbox": [
+        457,
+        292,
+        465,
+        303
+      ],
+      "sheetBbox": [
+        457,
+        292,
+        465,
+        303
+      ],
+      "pixelCount": 22,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "b2d51acdbb99ba9d87980b323e27ff0435438fff44e1bbd90dbf36708e26195c",
+      "cellBbox": [
+        563,
+        506,
+        573,
+        515
+      ],
+      "sheetBbox": [
+        563,
+        506,
+        573,
+        515
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "be7da061e27c04b5d9691e730262e0efa2ceeb96cd53ab7f3ffeadc8b3c70a05",
+      "cellBbox": [
+        388,
+        48,
+        389,
+        49
+      ],
+      "sheetBbox": [
+        388,
+        48,
+        389,
+        49
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bd0a757b0be2a6abbe5d3f1f65473a46edfa1759f2ca804794968c7d78ef691c",
+      "cellBbox": [
+        390,
+        49,
+        391,
+        50
+      ],
+      "sheetBbox": [
+        390,
+        49,
+        391,
+        50
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "67e0eeb4bc3899cbd18c811ce73b275f5bd7e30504430211fc2944fedb65b0a5",
+      "cellBbox": [
+        407,
+        55,
+        409,
+        56
+      ],
+      "sheetBbox": [
+        407,
+        55,
+        409,
+        56
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "26c92e0fe053456c372e195adfbcf08be6333dde86fcedd96e991acac1af1f8a",
+      "cellBbox": [
+        409,
+        56,
+        410,
+        57
+      ],
+      "sheetBbox": [
+        409,
+        56,
+        410,
+        57
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e19fbf0718f58edacd1cd64a7c45473c533b8be10ef9f8c518b50c2b4530aecb",
+      "cellBbox": [
+        418,
+        67,
+        420,
+        69
+      ],
+      "sheetBbox": [
+        418,
+        67,
+        420,
+        69
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "eecf49a37b726a7c81e135b6753cd4b1ec9cd063f39423763c47ffa4e015194b",
+      "cellBbox": [
+        429,
+        74,
+        430,
+        75
+      ],
+      "sheetBbox": [
+        429,
+        74,
+        430,
+        75
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ee6e91058fb9e8e1d23f38073b1bdbf62a46230d1869b77f4fe4c070d9478d60",
+      "cellBbox": [
+        430,
+        75,
+        433,
+        79
+      ],
+      "sheetBbox": [
+        430,
+        75,
+        433,
+        79
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5ccb487d3035c150eee69e2f107fd6366a4850920ce550eede2dd53807cd67eb",
+      "cellBbox": [
+        433,
+        79,
+        434,
+        80
+      ],
+      "sheetBbox": [
+        433,
+        79,
+        434,
+        80
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f8481acea698eaecf72616794db71394d4036e0a1d8b75c4f7d295da16b74152",
+      "cellBbox": [
+        444,
+        100,
+        445,
+        101
+      ],
+      "sheetBbox": [
+        444,
+        100,
+        445,
+        101
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8ffb76413eef6defab2d2c0ef8a4756aac886689a29b44f1c604df7af171a1ef",
+      "cellBbox": [
+        412,
+        247,
+        418,
+        255
+      ],
+      "sheetBbox": [
+        412,
+        247,
+        418,
+        255
+      ],
+      "pixelCount": 31,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ff2c0bb1128b2d8e807222867c273212690b47aafa1ee0359c04971b8ddd460a",
+      "cellBbox": [
+        399,
+        283,
+        405,
+        294
+      ],
+      "sheetBbox": [
+        399,
+        283,
+        405,
+        294
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1998ae4f30e646f10c3c591b5c256696dffb2c1d603ecc5317446ec68820d119",
+      "cellBbox": [
+        467,
+        286,
+        468,
+        287
+      ],
+      "sheetBbox": [
+        467,
+        286,
+        468,
+        287
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "518965ae08ef601ab313eaedb188c8c1fe468059022f9b09dda5101f1b5b5744",
+      "cellBbox": [
+        289,
+        323,
+        290,
+        324
+      ],
+      "sheetBbox": [
+        289,
+        323,
+        290,
+        324
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "27c7c951dd442ed9352a2593b2daa08101dfa930cb0ba3b4216a76d9fd8a5c24",
+      "cellBbox": [
+        440,
+        330,
+        441,
+        331
+      ],
+      "sheetBbox": [
+        440,
+        330,
+        441,
+        331
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8d96f42e68c9ea6c1354273df2f654dc4dc504d1630e908a3731e0cef679cae3",
+      "cellBbox": [
+        441,
+        331,
+        442,
+        332
+      ],
+      "sheetBbox": [
+        441,
+        331,
+        442,
+        332
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3c1bcb7c32e5edac8456ede518f5572c4eb39e84381e22c4be0050749aa847c1",
+      "cellBbox": [
+        154,
+        465,
+        155,
+        466
+      ],
+      "sheetBbox": [
+        154,
+        465,
+        155,
+        466
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a5afdf49e29b870fe4b2f9655c7f6474bdd836815773e78b17c1acbeea33d972",
+      "cellBbox": [
+        572,
+        504,
+        573,
+        505
+      ],
+      "sheetBbox": [
+        572,
+        504,
+        573,
+        505
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fa7e5515029f2fcef851bc6ceb0b638c6070cf07baf337d5a908d1c24882a422",
+      "cellBbox": [
+        155,
+        506,
+        156,
+        507
+      ],
+      "sheetBbox": [
+        155,
+        506,
+        156,
+        507
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9dfa2a25a7e6fff6c5e202d4669825dff98bf30a66d8b68a9f802e3b5c65df86",
+      "cellBbox": [
+        156,
+        507,
+        158,
+        508
+      ],
+      "sheetBbox": [
+        156,
+        507,
+        158,
+        508
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "66c9a124f95f8b97401188463b96a2f1314ca5dac33fad3eaaa0e883a738f7e1",
+      "cellBbox": [
+        148,
+        508,
+        149,
+        509
+      ],
+      "sheetBbox": [
+        148,
+        508,
+        149,
+        509
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ae5c96bdd37022dfd267c8248ccc0dd3ae56e9b152f689fa93c88339bec01f29",
+      "cellBbox": [
+        148,
+        509,
+        159,
+        519
+      ],
+      "sheetBbox": [
+        148,
+        509,
+        159,
+        519
+      ],
+      "pixelCount": 59,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d0994e2de05b1bd28b0e05de33487436d5bbaec35c0d176b9142437284c0926f",
+      "cellBbox": [
+        455,
+        552,
+        457,
+        554
+      ],
+      "sheetBbox": [
+        455,
+        552,
+        457,
+        554
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "62e334ce9e7c97cec1a41da18856625017611c45c15b11d834947e2c1a5ac1dc",
+      "cellBbox": [
+        372,
+        77,
+        373,
+        78
+      ],
+      "sheetBbox": [
+        999,
+        77,
+        1000,
+        78
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b69926b3f09c838df9e492fb44a30d8e8da8fae3c29e9e29acc325983bb11cef",
+      "cellBbox": [
+        378,
+        94,
+        380,
+        96
+      ],
+      "sheetBbox": [
+        1005,
+        94,
+        1007,
+        96
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c285779f6d05cb71ffd236eaee312fc9cc9d4aa1f18d241e9eeb8678750466e3",
+      "cellBbox": [
+        380,
+        96,
+        381,
+        97
+      ],
+      "sheetBbox": [
+        1007,
+        96,
+        1008,
+        97
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "bbfbc01373aec9f51284d8a3aa8b7d41b6b3c519f4ea86e23e64efb2fbd6b951",
+      "cellBbox": [
+        215,
+        105,
+        216,
+        106
+      ],
+      "sheetBbox": [
+        842,
+        105,
+        843,
+        106
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "af8d6c51811340b7a3d594580b08b7a644e60c89ad0591eefb3e97a70fb9f87d",
+      "cellBbox": [
+        213,
+        106,
+        215,
+        107
+      ],
+      "sheetBbox": [
+        840,
+        106,
+        842,
+        107
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "76b4923bcec9267626d73fe80b28de98a455fde66fc07097665a2b5d27a9b08a",
+      "cellBbox": [
+        212,
+        107,
+        213,
+        108
+      ],
+      "sheetBbox": [
+        839,
+        107,
+        840,
+        108
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5eae088406b242d5f647f0477ae36282165161be10562c5f8ad7b94522bea67a",
+      "cellBbox": [
+        211,
+        109,
+        212,
+        110
+      ],
+      "sheetBbox": [
+        838,
+        109,
+        839,
+        110
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "1146aba9c06751fdffee9811db81ab5c2a1af077374043dc77b132af32f93754",
+      "cellBbox": [
+        197,
+        181,
+        200,
+        188
+      ],
+      "sheetBbox": [
+        824,
+        181,
+        827,
+        188
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "91b8191ffb0f2fb901b049c5a1284c1d18842dc9b75ad7a310bb6c59d0bef561",
+      "cellBbox": [
+        203,
+        201,
+        204,
+        202
+      ],
+      "sheetBbox": [
+        830,
+        201,
+        831,
+        202
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "72e369f6cbb603fd24cfd6957d3515a8d508d079671ac01496ce36b62f92f464",
+      "cellBbox": [
+        202,
+        203,
+        203,
+        205
+      ],
+      "sheetBbox": [
+        829,
+        203,
+        830,
+        205
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "2395399c4514ea773f7d4206672d064424cb11f042c1b009d099c9cf696ae065",
+      "cellBbox": [
+        406,
+        258,
+        407,
+        260
+      ],
+      "sheetBbox": [
+        1033,
+        258,
+        1034,
+        260
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "141e57d27670951c63cff080bf704e9506966944ede37cc07eebaed0ce5233c9",
+      "cellBbox": [
+        407,
+        260,
+        412,
+        285
+      ],
+      "sheetBbox": [
+        1034,
+        260,
+        1039,
+        285
+      ],
+      "pixelCount": 83,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b0f74783da0b5cb4409eac59bd7e9fef59fe9cfb714e2b08b3f8f01716efef51",
+      "cellBbox": [
+        362,
+        279,
+        363,
+        280
+      ],
+      "sheetBbox": [
+        989,
+        279,
+        990,
+        280
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "22230c40108a5a636f82003162d22e391a73337d4b44e64f9c9bf527a3909503",
+      "cellBbox": [
+        356,
+        281,
+        369,
+        300
+      ],
+      "sheetBbox": [
+        983,
+        281,
+        996,
+        300
+      ],
+      "pixelCount": 143,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8dfd90a7d9625ee4d4c668efa423a699eaf1dc72205b285408986e72211a52a6",
+      "cellBbox": [
+        365,
+        282,
+        366,
+        283
+      ],
+      "sheetBbox": [
+        992,
+        282,
+        993,
+        283
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "fd7cfcd3cb6a5f482f8f7f023228249d7645d942f21993ec4cbd2079930a5691",
+      "cellBbox": [
+        341,
+        291,
+        342,
+        292
+      ],
+      "sheetBbox": [
+        968,
+        291,
+        969,
+        292
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b21113bb18ffece40759316cd971f81e09223f6abdd06115845ae3f46719f206",
+      "cellBbox": [
+        363,
+        294,
+        377,
+        312
+      ],
+      "sheetBbox": [
+        990,
+        294,
+        1004,
+        312
+      ],
+      "pixelCount": 111,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a47907bb6f2d9aacdeb0058a09469e793486fdf62f8e2343489712cd01e35a52",
+      "cellBbox": [
+        362,
+        300,
+        363,
+        301
+      ],
+      "sheetBbox": [
+        989,
+        300,
+        990,
+        301
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5eb48b19f9f2245d6fae0a2f52b82f9db704ff154bf2079aec856b4f0d15661c",
+      "cellBbox": [
+        369,
+        308,
+        384,
+        321
+      ],
+      "sheetBbox": [
+        996,
+        308,
+        1011,
+        321
+      ],
+      "pixelCount": 55,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "34e031ce6f92e14516aa84e3b8046335f13698057eba4c830c268d14b13d8d38",
+      "cellBbox": [
+        507,
+        508,
+        509,
+        511
+      ],
+      "sheetBbox": [
+        1134,
+        508,
+        1136,
+        511
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "cd29f35bdf10ce7342ad8ee0b0bb535185ccf1e4ad00430e253916996d9302cb",
+      "cellBbox": [
+        77,
+        44,
+        522,
+        612
+      ],
+      "sheetBbox": [
+        704,
+        44,
+        1149,
+        612
+      ],
+      "pixelCount": 2849,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "103fe9143bf43c32f067fb07991cf4680700cf397a29547107392324ddc0f9c9",
+      "cellBbox": [
+        370,
+        75,
+        373,
+        80
+      ],
+      "sheetBbox": [
+        997,
+        75,
+        1000,
+        80
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "585c9a8430080bb934bb6cfcabd29cbef37170a47e7a4e51a30ca246fb555aff",
+      "cellBbox": [
+        377,
+        93,
+        383,
+        100
+      ],
+      "sheetBbox": [
+        1004,
+        93,
+        1010,
+        100
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e394b49c6b5eddbcbc7711f2580b9fc2f62dfe8b643a611b13c3b2366a6ea999",
+      "cellBbox": [
+        211,
+        104,
+        219,
+        113
+      ],
+      "sheetBbox": [
+        838,
+        104,
+        846,
+        113
+      ],
+      "pixelCount": 26,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c238ad8fc0da2c55c1ad924f87336710698c93c36b70b6de8c512de63aad9f41",
+      "cellBbox": [
+        196,
+        177,
+        201,
+        190
+      ],
+      "sheetBbox": [
+        823,
+        177,
+        828,
+        190
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3c42a9eb22704218ed1b21057ffb47799b61b7f1a92ab9e1311d8e192fdca3a9",
+      "cellBbox": [
+        201,
+        198,
+        206,
+        207
+      ],
+      "sheetBbox": [
+        828,
+        198,
+        833,
+        207
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "87617c9241098a0374451fa5ba1a14484d519d54e628780fd104d5d21372dad6",
+      "cellBbox": [
+        403,
+        254,
+        413,
+        286
+      ],
+      "sheetBbox": [
+        1030,
+        254,
+        1040,
+        286
+      ],
+      "pixelCount": 67,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3e0cdfbf95a44a50a6f7751d768dc9471810db26c3e890d025bc8f62397b77ed",
+      "cellBbox": [
+        354,
+        277,
+        385,
+        320
+      ],
+      "sheetBbox": [
+        981,
+        277,
+        1012,
+        320
+      ],
+      "pixelCount": 225,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "0cdb44b0c0534f1769244a8c13cfe4380b23ffc797ed6fb8986cfd60b4b0a158",
+      "cellBbox": [
+        339,
+        283,
+        344,
+        294
+      ],
+      "sheetBbox": [
+        966,
+        283,
+        971,
+        294
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "503d559755509ed0413ba0d5328aba2cf40e7a873b8d3340ea35a80c43e7d8a9",
+      "cellBbox": [
+        507,
+        504,
+        512,
+        511
+      ],
+      "sheetBbox": [
+        1134,
+        504,
+        1139,
+        511
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "aff0098b0b67dc56a835b30ca4608259e40c2229d76bce36e47784f5ed966d35",
+      "cellBbox": [
+        87,
+        506,
+        96,
+        518
+      ],
+      "sheetBbox": [
+        714,
+        506,
+        723,
+        518
+      ],
+      "pixelCount": 53,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a07766b7fc746e8723a427c6cb89c990d4d44d6cad918b2f31d90ff39b18cdcc",
+      "cellBbox": [
+        330,
+        49,
+        331,
+        50
+      ],
+      "sheetBbox": [
+        957,
+        49,
+        958,
+        50
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6e819f8f8cd5769bd8b3f638761d8129a4ad11757167d37e5b1bfb3a5d75e50a",
+      "cellBbox": [
+        332,
+        50,
+        333,
+        51
+      ],
+      "sheetBbox": [
+        959,
+        50,
+        960,
+        51
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "071d26b6df0596cfb69b7c14f27296e6446fa8b15109404d736bad605c93e24f",
+      "cellBbox": [
+        347,
+        55,
+        349,
+        57
+      ],
+      "sheetBbox": [
+        974,
+        55,
+        976,
+        57
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "147ad4d4e5a6e5bb7478b9640b34418adf6473cc79d03c6f5dda00973c7d56c3",
+      "cellBbox": [
+        349,
+        57,
+        350,
+        58
+      ],
+      "sheetBbox": [
+        976,
+        57,
+        977,
+        58
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a8679f4c094a2e7fc607afff2a6408a62e7c0187054181cd41dde2b73a89c7fc",
+      "cellBbox": [
+        358,
+        67,
+        359,
+        68
+      ],
+      "sheetBbox": [
+        985,
+        67,
+        986,
+        68
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "202e206a1d3ef72eed288c73af2de8d99567f705eefebeec67d1fd441ae883c9",
+      "cellBbox": [
+        359,
+        68,
+        360,
+        69
+      ],
+      "sheetBbox": [
+        986,
+        68,
+        987,
+        69
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cc5c584ea10ba4453057f152913c7ef7a62b2141e0af3452c013b9a498df0f64",
+      "cellBbox": [
+        373,
+        80,
+        374,
+        81
+      ],
+      "sheetBbox": [
+        1000,
+        80,
+        1001,
+        81
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a96f2f4c0f5e9123be0a1d6db863d22d38c24c03d0d30310bfe61393bfce197c",
+      "cellBbox": [
+        383,
+        100,
+        384,
+        101
+      ],
+      "sheetBbox": [
+        1010,
+        100,
+        1011,
+        101
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "285d32e3b54a5475bada643baf38eea0ade49db119a6d2ae67f9742ab13455b5",
+      "cellBbox": [
+        198,
+        178,
+        199,
+        179
+      ],
+      "sheetBbox": [
+        825,
+        178,
+        826,
+        179
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4f754408929af03745193b24d747d00eebf98c6872ca68f6f1143aee1161f03c",
+      "cellBbox": [
+        352,
+        247,
+        357,
+        254
+      ],
+      "sheetBbox": [
+        979,
+        247,
+        984,
+        254
+      ],
+      "pixelCount": 25,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e9d7ffd75e75f485068fe90d3db3b3837e45f6feb5bc526d8ef78ea3445d20d9",
+      "cellBbox": [
+        405,
+        252,
+        406,
+        254
+      ],
+      "sheetBbox": [
+        1032,
+        252,
+        1033,
+        254
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "497cd2586f6e1cd7d31607e2f243dd4d8a33cbb20e3a30bd3889b7601ce5e2d0",
+      "cellBbox": [
+        406,
+        254,
+        407,
+        255
+      ],
+      "sheetBbox": [
+        1033,
+        254,
+        1034,
+        255
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "66496d58b7f4c21d67724f1a13eae8da7253867678f9b5b2473a9230753f00b9",
+      "cellBbox": [
+        407,
+        255,
+        408,
+        256
+      ],
+      "sheetBbox": [
+        1034,
+        255,
+        1035,
+        256
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0ca1850d8a367e70bf6f2841add581ed2b14454b569c1f7186ab470f4b75dc9b",
+      "cellBbox": [
+        402,
+        291,
+        404,
+        294
+      ],
+      "sheetBbox": [
+        1029,
+        291,
+        1031,
+        294
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "583d9fe58062242b563f6b136bc20db1874860789de546d9f0e7bffc0fe71f3b",
+      "cellBbox": [
+        122,
+        392,
+        123,
+        394
+      ],
+      "sheetBbox": [
+        749,
+        392,
+        750,
+        394
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d09a86fadffc1e88740cf7f939c44cec6c9759e885083968aadfad406bd89bdd",
+      "cellBbox": [
+        337,
+        480,
+        338,
+        481
+      ],
+      "sheetBbox": [
+        964,
+        480,
+        965,
+        481
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f69be5fd7cc2b776dd08c707c234daa6a01bbd88011312792af4aec3d6159875",
+      "cellBbox": [
+        95,
+        493,
+        96,
+        494
+      ],
+      "sheetBbox": [
+        722,
+        493,
+        723,
+        494
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "612e123d3b47573b2339539f51a138582d6cdc380cc56f540dbdded403200172",
+      "cellBbox": [
+        512,
+        503,
+        513,
+        504
+      ],
+      "sheetBbox": [
+        1139,
+        503,
+        1140,
+        504
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "91b66a77680105d2326566bfd721e618f6a128ed9f1b1b1a7177067ceed82fd6",
+      "cellBbox": [
+        89,
+        504,
+        90,
+        505
+      ],
+      "sheetBbox": [
+        716,
+        504,
+        717,
+        505
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "647ec2ea45fe88203a5c977e9c218f3084d7c34debb0b6ae3108c41a9f6dc4ca",
+      "cellBbox": [
+        90,
+        505,
+        93,
+        507
+      ],
+      "sheetBbox": [
+        717,
+        505,
+        720,
+        507
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c688f9a30e4e0096e7aba0bec50677e05362878203f82bf1bcbee13721f9dd0c",
+      "cellBbox": [
+        93,
+        507,
+        94,
+        508
+      ],
+      "sheetBbox": [
+        720,
+        507,
+        721,
+        508
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c48998fb353f1fb5a6eefede0a184ff0aee350a8488080a6c014d61ea5af4e6b",
+      "cellBbox": [
+        395,
+        551,
+        396,
+        552
+      ],
+      "sheetBbox": [
+        1022,
+        551,
+        1023,
+        552
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a9ca921aee7bcfc7f5e2138bc79de27c750fd472007f0e84e11288f2d3240e1e",
+      "cellBbox": [
+        429,
+        50,
+        430,
+        51
+      ],
+      "sheetBbox": [
+        429,
+        677,
+        430,
+        678
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3bb258f156e0e47ac84bb2084a70075dd2747bb1551c7cf7c7512d98702712c1",
+      "cellBbox": [
+        436,
+        68,
+        438,
+        69
+      ],
+      "sheetBbox": [
+        436,
+        695,
+        438,
+        696
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6ac647137c240b8ae695cc99d38a01f56f3f653d3023f3ead42e53d8b33ef3c3",
+      "cellBbox": [
+        438,
+        69,
+        439,
+        70
+      ],
+      "sheetBbox": [
+        438,
+        696,
+        439,
+        697
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e37e7d7bbcd6cfa14b90fd5d339971909d1e31b1b007094544dc62b8f82b1644",
+      "cellBbox": [
+        272,
+        79,
+        273,
+        80
+      ],
+      "sheetBbox": [
+        272,
+        706,
+        273,
+        707
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "51a8956bfc2a9b322d94b08635eea3d4af1687336f6a30090ab0a1a9644675ac",
+      "cellBbox": [
+        271,
+        80,
+        272,
+        81
+      ],
+      "sheetBbox": [
+        271,
+        707,
+        272,
+        708
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "284ef15a0d50f0deb5f8f6e83cd9ec39c9ff39215ba95c7b806341b360c381e3",
+      "cellBbox": [
+        270,
+        82,
+        271,
+        83
+      ],
+      "sheetBbox": [
+        270,
+        709,
+        271,
+        710
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "83cc941c7de194a5a1b92fb3ff48c075c9c39d0914eb8fcb92bf1c394bdc8318",
+      "cellBbox": [
+        257,
+        152,
+        260,
+        159
+      ],
+      "sheetBbox": [
+        257,
+        779,
+        260,
+        786
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d966e057b152b2978c7ff4057c54ab53d9a12b48b8952b7a03039445442c97ae",
+      "cellBbox": [
+        263,
+        172,
+        264,
+        176
+      ],
+      "sheetBbox": [
+        263,
+        799,
+        264,
+        803
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5b54a096536d9e65ea6c34a83ed27a485ab092b2b3322600b7aedc03d0e37043",
+      "cellBbox": [
+        412,
+        218,
+        414,
+        221
+      ],
+      "sheetBbox": [
+        412,
+        845,
+        414,
+        848
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ef2b290643e4f8de55c63741a85502c4a782eb5538eafda67344db768989e43b",
+      "cellBbox": [
+        463,
+        227,
+        470,
+        254
+      ],
+      "sheetBbox": [
+        463,
+        854,
+        470,
+        881
+      ],
+      "pixelCount": 96,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "cee99dc6d14ae8d50109ff0beaea57b4a55c92746cff64be546f75b3f63b13cb",
+      "cellBbox": [
+        420,
+        247,
+        423,
+        251
+      ],
+      "sheetBbox": [
+        420,
+        874,
+        423,
+        878
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "45b45be736b5a8ad1986b05f4b0e53c8ac47f985b5bad9bd2c7380b067960543",
+      "cellBbox": [
+        414,
+        250,
+        427,
+        268
+      ],
+      "sheetBbox": [
+        414,
+        877,
+        427,
+        895
+      ],
+      "pixelCount": 155,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d95985005f647aca62f638b2253278ff8933da178a0c519dde6321fa74f6ba53",
+      "cellBbox": [
+        423,
+        251,
+        424,
+        252
+      ],
+      "sheetBbox": [
+        423,
+        878,
+        424,
+        879
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "24417f6dac982c547422b64771b5797771923ba9ba608505c0a87f23ca3b5143",
+      "cellBbox": [
+        398,
+        255,
+        401,
+        261
+      ],
+      "sheetBbox": [
+        398,
+        882,
+        401,
+        888
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "2d6e505e80fd08c6ca865e7e8334b4e364192b783be380e3914988fbf4c53939",
+      "cellBbox": [
+        453,
+        261,
+        460,
+        274
+      ],
+      "sheetBbox": [
+        453,
+        888,
+        460,
+        901
+      ],
+      "pixelCount": 33,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b7b979377633fc5093bf1d3d8147495923117f56749cc9f6eb311f66f2c71043",
+      "cellBbox": [
+        442,
+        276,
+        443,
+        277
+      ],
+      "sheetBbox": [
+        442,
+        903,
+        443,
+        904
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c813c4fe6851b84896a984c1a5c045e1a68870c6ede94f8f0102215c9c9a5ba8",
+      "cellBbox": [
+        564,
+        475,
+        565,
+        476
+      ],
+      "sheetBbox": [
+        564,
+        1102,
+        565,
+        1103
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "66365ec931662812ff546fbbe1878d69008310eb24d50896da36745df3805d3e",
+      "cellBbox": [
+        153,
+        477,
+        156,
+        482
+      ],
+      "sheetBbox": [
+        153,
+        1104,
+        156,
+        1109
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "08a79d40804d00cc4c0cffa7c15964b269007fe7d6f7678d732635b0308b7a3e",
+      "cellBbox": [
+        139,
+        19,
+        578,
+        578
+      ],
+      "sheetBbox": [
+        139,
+        646,
+        578,
+        1205
+      ],
+      "pixelCount": 2719,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c7499565b79fa18ef70e37d46338a9983337437b03d48a37b0facfb79320af8b",
+      "cellBbox": [
+        483,
+        571,
+        502,
+        573
+      ],
+      "sheetBbox": [
+        483,
+        1198,
+        502,
+        1200
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "1120de17382c30922df1995b0dcda3fe04e127ded44365bf20c0f554945bc1b2",
+      "cellBbox": [
+        427,
+        48,
+        430,
+        52
+      ],
+      "sheetBbox": [
+        427,
+        675,
+        430,
+        679
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6ebc135af08eff8411c82402118aaca1dce167c61ca660198abdd6f48d4b6afe",
+      "cellBbox": [
+        435,
+        67,
+        440,
+        72
+      ],
+      "sheetBbox": [
+        435,
+        694,
+        440,
+        699
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "acc97181fa4e158d8dcaa9f7fd257044d5369d9a501883f9266fb7d577a35840",
+      "cellBbox": [
+        271,
+        78,
+        276,
+        84
+      ],
+      "sheetBbox": [
+        271,
+        705,
+        276,
+        711
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "833752b7b6d0f7cf37476011c715e3c95b0140f6a86a65bcfa37f1ae74b1ba9a",
+      "cellBbox": [
+        257,
+        149,
+        261,
+        160
+      ],
+      "sheetBbox": [
+        257,
+        776,
+        261,
+        787
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ce6d9607904dfd6aaa0759abb5e8edbf3adc89bb58f983473c5b42d2a838d987",
+      "cellBbox": [
+        261,
+        169,
+        266,
+        180
+      ],
+      "sheetBbox": [
+        261,
+        796,
+        266,
+        807
+      ],
+      "pixelCount": 22,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "09ecc98308d2ea8143dc08d1eb94a3319ced63c1be74686a12ce5d3f77f166e7",
+      "cellBbox": [
+        410,
+        216,
+        416,
+        224
+      ],
+      "sheetBbox": [
+        410,
+        843,
+        416,
+        851
+      ],
+      "pixelCount": 23,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "637e1bd8e410e4ae7995aaee0524b622aca8090c5754c7aa52b105e19af9b663",
+      "cellBbox": [
+        460,
+        223,
+        469,
+        254
+      ],
+      "sheetBbox": [
+        460,
+        850,
+        469,
+        881
+      ],
+      "pixelCount": 50,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9c57e8a30b92453f4cc15e600e6fbc8dd69cccae4d7c11ffd767bfea62983bc9",
+      "cellBbox": [
+        412,
+        245,
+        428,
+        270
+      ],
+      "sheetBbox": [
+        412,
+        872,
+        428,
+        897
+      ],
+      "pixelCount": 74,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "89972f885c9edebd98949513acba74efd17e2906020ce5304edbdbb2fae75570",
+      "cellBbox": [
+        396,
+        252,
+        403,
+        263
+      ],
+      "sheetBbox": [
+        396,
+        879,
+        403,
+        890
+      ],
+      "pixelCount": 34,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "160187cda1bd096471642cff41a987710a6f5fcd03b1ac9ec8d103b1dcbce94e",
+      "cellBbox": [
+        453,
+        260,
+        461,
+        272
+      ],
+      "sheetBbox": [
+        453,
+        887,
+        461,
+        899
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f4fde68fd5ef234c6696ab8c87e44fc2cc2fe8767b1de4ea12715f1fcc5e04cd",
+      "cellBbox": [
+        564,
+        471,
+        568,
+        476
+      ],
+      "sheetBbox": [
+        564,
+        1098,
+        568,
+        1103
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c27db81770a69dc6ba69f7be9d11ddbca04b29f9d1ae4542944eb4970533a4a5",
+      "cellBbox": [
+        150,
+        473,
+        158,
+        482
+      ],
+      "sheetBbox": [
+        150,
+        1100,
+        158,
+        1109
+      ],
+      "pixelCount": 29,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b41e7dcfb3b60e821fd5ee0d30caf34d58a3110d3f7f93ef84538b25869beed0",
+      "cellBbox": [
+        430,
+        52,
+        431,
+        54
+      ],
+      "sheetBbox": [
+        430,
+        679,
+        431,
+        681
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e73a27db6cfbc7f1deedba2e80a2a5faca983e1086a13b0f7e4ac1959abaf848",
+      "cellBbox": [
+        440,
+        72,
+        441,
+        73
+      ],
+      "sheetBbox": [
+        440,
+        699,
+        441,
+        700
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1ae7464083170dcd0c02ef33feb77415c82c4edeb4ddc3409373725065aaddc2",
+      "cellBbox": [
+        276,
+        77,
+        278,
+        78
+      ],
+      "sheetBbox": [
+        276,
+        704,
+        278,
+        705
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "26b7373c454bcab67140c608b61d4a1fc3641d13bc88aab1d6fd4eec3ba56378",
+      "cellBbox": [
+        443,
+        275,
+        444,
+        276
+      ],
+      "sheetBbox": [
+        443,
+        902,
+        444,
+        903
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "07f717f2e0502eab52089cd9648fa268023e4e0fb23c805e7c20df6ae8803f47",
+      "cellBbox": [
+        302,
+        283,
+        303,
+        284
+      ],
+      "sheetBbox": [
+        302,
+        910,
+        303,
+        911
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bd1f8f618351a3efa98e8b4e2318f7aeb81996c4d3c5b257c4d5f196514e9775",
+      "cellBbox": [
+        187,
+        355,
+        188,
+        356
+      ],
+      "sheetBbox": [
+        187,
+        982,
+        188,
+        983
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cc4bf3c576d5aa899e7863e02623aa45ae944603f0fa3165d70a18dd5709784b",
+      "cellBbox": [
+        151,
+        466,
+        152,
+        467
+      ],
+      "sheetBbox": [
+        151,
+        1093,
+        152,
+        1094
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3d80c5a70ede266210878223997daba6914e58950197baf456592c9708f138d0",
+      "cellBbox": [
+        568,
+        469,
+        569,
+        470
+      ],
+      "sheetBbox": [
+        568,
+        1096,
+        569,
+        1097
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "107d169a7683d12cb8f7d22683c970846e09370b71cd97ffacdf18a97b3195e3",
+      "cellBbox": [
+        149,
+        471,
+        150,
+        473
+      ],
+      "sheetBbox": [
+        149,
+        1098,
+        150,
+        1100
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3b6082a132279b99fac6c068b3703498211591bcc4aaa62324017d5c052e50c5",
+      "cellBbox": [
+        155,
+        474,
+        156,
+        475
+      ],
+      "sheetBbox": [
+        155,
+        1101,
+        156,
+        1102
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fbaf3941c2639350a00ca6954a37debe8a87c3586d5208c3a7227e165aa86054",
+      "cellBbox": [
+        156,
+        475,
+        157,
+        476
+      ],
+      "sheetBbox": [
+        156,
+        1102,
+        157,
+        1103
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "dad07f679e1b6bef77df7a6a0a782c90739233a4832f0444bc61f2e2442b6a0d",
+      "cellBbox": [
+        157,
+        476,
+        158,
+        477
+      ],
+      "sheetBbox": [
+        157,
+        1103,
+        158,
+        1104
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "85dc8754729f1314e08461c0fcc94a25f78fc77741be8deeb77ccb6f7eca5346",
+      "cellBbox": [
+        367,
+        66,
+        369,
+        68
+      ],
+      "sheetBbox": [
+        994,
+        693,
+        996,
+        695
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "837dc3849a40638cec4e9636ac1b377b5969dde55337422cd4762107d12e37df",
+      "cellBbox": [
+        369,
+        68,
+        370,
+        69
+      ],
+      "sheetBbox": [
+        996,
+        695,
+        997,
+        696
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "aa1d1f6d4b9db234ae8c7ae958855f5a8e6f6d3949e3f3ea1a4a72da32c37d8b",
+      "cellBbox": [
+        208,
+        78,
+        209,
+        79
+      ],
+      "sheetBbox": [
+        835,
+        705,
+        836,
+        706
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "0ca0b68f3f09fe2e31cb36c933a17f4fdedac456ab05349c159c7c41c6375bc2",
+      "cellBbox": [
+        207,
+        79,
+        208,
+        80
+      ],
+      "sheetBbox": [
+        834,
+        706,
+        835,
+        707
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "dcb004bb473612f89054c75e258a15d46b8b75dba397da06b437fd52a96cbc1a",
+      "cellBbox": [
+        206,
+        80,
+        207,
+        81
+      ],
+      "sheetBbox": [
+        833,
+        707,
+        834,
+        708
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3f5f19ba0b7caf73f0753a1e485721c2c542412acbb5e94c2c651545b8a607bb",
+      "cellBbox": [
+        205,
+        82,
+        206,
+        83
+      ],
+      "sheetBbox": [
+        832,
+        709,
+        833,
+        710
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "6a649b4d48d9a500968e0d1a202ffad7545af2ae09ce702d38b722339744a1d5",
+      "cellBbox": [
+        194,
+        152,
+        195,
+        156
+      ],
+      "sheetBbox": [
+        821,
+        779,
+        822,
+        783
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e25f86a365649b45acef3d1a8bbd494be02cf1aba046661482a9a6c50b3d3ea6",
+      "cellBbox": [
+        199,
+        169,
+        200,
+        171
+      ],
+      "sheetBbox": [
+        826,
+        796,
+        827,
+        798
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d01b9450f92b6f45b8c88a655ab82837d6a9c577ee4cde26a1424d5b81c684f7",
+      "cellBbox": [
+        198,
+        171,
+        199,
+        174
+      ],
+      "sheetBbox": [
+        825,
+        798,
+        826,
+        801
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "df06b1fb10a3473753d373a3d060db4c290ac7960870fb23a35ebdad21e13035",
+      "cellBbox": [
+        395,
+        225,
+        401,
+        251
+      ],
+      "sheetBbox": [
+        1022,
+        852,
+        1028,
+        878
+      ],
+      "pixelCount": 82,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "87618f2f9a344f500c6dbd0864563628e92858ba235d3a1e54bfd2e2d581d258",
+      "cellBbox": [
+        352,
+        246,
+        354,
+        247
+      ],
+      "sheetBbox": [
+        979,
+        873,
+        981,
+        874
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "1a3898f487de0db79258b6bf232f8ec64f6f81312b9211aaab56c62b43f8dba4",
+      "cellBbox": [
+        354,
+        248,
+        355,
+        249
+      ],
+      "sheetBbox": [
+        981,
+        875,
+        982,
+        876
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "12367e31f004f34cbd3c724c5d7ffcda0fdf0f981eb5b91dbcf6808b8c76fd57",
+      "cellBbox": [
+        346,
+        249,
+        359,
+        266
+      ],
+      "sheetBbox": [
+        973,
+        876,
+        986,
+        893
+      ],
+      "pixelCount": 123,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "912842b05d364b11c8fd2f175fbe8b8f9360f5eec91f01ea3d38734d3ea89cf3",
+      "cellBbox": [
+        355,
+        249,
+        356,
+        250
+      ],
+      "sheetBbox": [
+        982,
+        876,
+        983,
+        877
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "18421735908207bc49dd72598a41e3fc5d614795c1fd1fc90a5f516b07ba10ec",
+      "cellBbox": [
+        356,
+        250,
+        357,
+        251
+      ],
+      "sheetBbox": [
+        983,
+        877,
+        984,
+        878
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "f16536fe66eac9af7423fe2ffe918f95899d367fe745bb950ac751e0a2318f03",
+      "cellBbox": [
+        385,
+        260,
+        392,
+        272
+      ],
+      "sheetBbox": [
+        1012,
+        887,
+        1019,
+        899
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "53be3edc82f1abac75a6862b21e788397b46065d4d6852e7781bf0daff11781a",
+      "cellBbox": [
+        355,
+        261,
+        367,
+        277
+      ],
+      "sheetBbox": [
+        982,
+        888,
+        994,
+        904
+      ],
+      "pixelCount": 103,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "bb598d49266a42f4cc2e9bb912430a0f2632650575d08e47c91fd743699594e9",
+      "cellBbox": [
+        389,
+        272,
+        390,
+        273
+      ],
+      "sheetBbox": [
+        1016,
+        899,
+        1017,
+        900
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "0fa309bd35624e336ef28bec464692d1cb82e15b16059e38297b6c9b6e439e2c",
+      "cellBbox": [
+        91,
+        472,
+        93,
+        475
+      ],
+      "sheetBbox": [
+        718,
+        1099,
+        720,
+        1102
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "cf104998edad89337864146a8e8f8374df956047118c1b097eb5ae3fa730afd2",
+      "cellBbox": [
+        77,
+        18,
+        511,
+        575
+      ],
+      "sheetBbox": [
+        704,
+        645,
+        1138,
+        1202
+      ],
+      "pixelCount": 2775,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "0a321669d8ed9267b6f17ea151ea8dca85e8c83f077fdcf4e3994be805931ddb",
+      "cellBbox": [
+        366,
+        66,
+        372,
+        72
+      ],
+      "sheetBbox": [
+        993,
+        693,
+        999,
+        699
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "65567297b917589a64bdb0aff06bbf5f55c97e487d201f488ea87a81b9179d7c",
+      "cellBbox": [
+        206,
+        77,
+        211,
+        84
+      ],
+      "sheetBbox": [
+        833,
+        704,
+        838,
+        711
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3266aa0a067b4353c462fffb889e21c194024f6de653d195527e80454015dad1",
+      "cellBbox": [
+        193,
+        148,
+        196,
+        157
+      ],
+      "sheetBbox": [
+        820,
+        775,
+        823,
+        784
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "703b4aefbe27a814cea175430ae32e46496c79cf6e6d4ac748b9aefbdd18a1d1",
+      "cellBbox": [
+        197,
+        166,
+        202,
+        174
+      ],
+      "sheetBbox": [
+        824,
+        793,
+        829,
+        801
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "886bf2c33bc3a8ced22f8999e18136656e5906ec13465f668a9a921b87c84c95",
+      "cellBbox": [
+        392,
+        221,
+        401,
+        251
+      ],
+      "sheetBbox": [
+        1019,
+        848,
+        1028,
+        878
+      ],
+      "pixelCount": 55,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "67fb50ef4edf007a524fcb7babc506bd909b5fccda5c044711b8d6e5286056b1",
+      "cellBbox": [
+        345,
+        244,
+        369,
+        278
+      ],
+      "sheetBbox": [
+        972,
+        871,
+        996,
+        905
+      ],
+      "pixelCount": 176,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "54621c5d16c64d1d893b9b772516dbd664a37e50e3030eac291451aea5be3eb9",
+      "cellBbox": [
+        385,
+        257,
+        393,
+        271
+      ],
+      "sheetBbox": [
+        1012,
+        884,
+        1020,
+        898
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a345675f058f5d17c82c03fbc06e7f101ba3f347978d3afaa91eeed357554ec7",
+      "cellBbox": [
+        88,
+        467,
+        95,
+        478
+      ],
+      "sheetBbox": [
+        715,
+        1094,
+        722,
+        1105
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c3479536f4ee9dd21dcf83ec37dd1e5e124c86c3f1b2916c3b474116d66d1c06",
+      "cellBbox": [
+        359,
+        48,
+        360,
+        49
+      ],
+      "sheetBbox": [
+        986,
+        675,
+        987,
+        676
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6f00d3a5ac6ccb849916ab07232da7b86cc27ccf245da3b1647ff7fdf1119a80",
+      "cellBbox": [
+        360,
+        49,
+        361,
+        50
+      ],
+      "sheetBbox": [
+        987,
+        676,
+        988,
+        677
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "019a96152204997a8f3b3fcb4c68ada694eb5720838ac92a1b6298a66fb9ef45",
+      "cellBbox": [
+        361,
+        50,
+        363,
+        54
+      ],
+      "sheetBbox": [
+        988,
+        677,
+        990,
+        681
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "da4bd7e8a9e8eeb7808044cea3a3607d0e5cd109478f9e23e260beab75527499",
+      "cellBbox": [
+        372,
+        72,
+        373,
+        73
+      ],
+      "sheetBbox": [
+        999,
+        699,
+        1000,
+        700
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0a1e5278e05ac7f70a1c299240e214bdd45d29182fdf512d3d419dc7f9c249f3",
+      "cellBbox": [
+        208,
+        81,
+        209,
+        82
+      ],
+      "sheetBbox": [
+        835,
+        708,
+        836,
+        709
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b987f8566b02f2253afaed5a5eb1d1d463703447a7981b32cda279f546b2cc4e",
+      "cellBbox": [
+        342,
+        215,
+        347,
+        223
+      ],
+      "sheetBbox": [
+        969,
+        842,
+        974,
+        850
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f0a2b07e9e30d5d85522486c4b3ba9889639d7e4b06610210c6fdf0199b311ae",
+      "cellBbox": [
+        394,
+        220,
+        395,
+        221
+      ],
+      "sheetBbox": [
+        1021,
+        847,
+        1022,
+        848
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a9141738a1f36c73cc6dca60568f74509a115300254cc3d73fb54c8b730953e3",
+      "cellBbox": [
+        331,
+        251,
+        335,
+        260
+      ],
+      "sheetBbox": [
+        958,
+        878,
+        962,
+        887
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1b5db130a5318e42dd24463d287d4a7735715918e2db783de289cad73e108c8c",
+      "cellBbox": [
+        138,
+        334,
+        139,
+        335
+      ],
+      "sheetBbox": [
+        765,
+        961,
+        766,
+        962
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c272853e32682924e6142f4a2e4ffcf209298552c3b4e7b9b65a784b62bb1711",
+      "cellBbox": [
+        123,
+        353,
+        124,
+        354
+      ],
+      "sheetBbox": [
+        750,
+        980,
+        751,
+        981
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8c88b95e4ec2802a37bc26e35df841f1d02ad2ce644cf9419d22004894b84ba7",
+      "cellBbox": [
+        499,
+        466,
+        501,
+        469
+      ],
+      "sheetBbox": [
+        1126,
+        1093,
+        1128,
+        1096
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    },
+    {
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "df22c1c0e519e4400365e56f7473ab819552d4f24f9dbdd84f1467c7a44af953",
+      "cellBbox": [
+        387,
+        512,
+        388,
+        513
+      ],
+      "sheetBbox": [
+        1014,
+        1139,
+        1015,
+        1140
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "retain-authored-color",
+      "reviewer": "Codex visual mask reviewer: player rebirth mentor female frozen v6",
+      "reviewedAt": "2026-07-23T02:20:00+08:00"
+    }
+  ]
+}

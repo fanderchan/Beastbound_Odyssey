@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+  "generatedAt": "2026-07-23T00:37:17+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "executionMode": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "modelIdentifierExposed": false,
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "formalSourceTreatment": "opaque chroma-key source sheets; deterministic mask-bounded local processing only",
+    "identityReferencePolicy": "the generated identity board is the binding reference for world and portrait production; the accepted world sheet is an additional portrait identity reference"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "no weapons, armor, magic, reins, riding tools, actual pet, mount, or novice-trainer styling",
+    "the own-left seven-slot blank training board, own-right skill stones, and neck whistle may not side-swap",
+    "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+    "no StoneAge source art, character, texture, name, or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "d5f6d766f5e8d131a7f90fab806184335b21a708db3d1f524a56ebe70583ec50",
+      "promptPath": "prompts/identity-board-v1.txt",
+      "promptSha256": "6ed9a856e935e273580d6605c70002149802bf1dcc204a0d00f31d2e8f7c42e6",
+      "generatedAt": "2026-07-23T00:05:09+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-902c-70b0-af0f-5db86442d9c9/exec-5f540813-02e1-4444-8847-b87235c501c4.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/identity/identity-board.png"
+      }
+    },
+    "worldSheet": {
+      "fileSha256": "753c805aaa299fc4cd76eb3413cecb8456223bc5e9a60ce45caa6d21758cfb2b",
+      "worldPromptSha256": "41dbe68ee598aff65b7618fdcbabb56ca125f1300709939aced8a0e58a613987",
+      "identityBoardSha256": "d5f6d766f5e8d131a7f90fab806184335b21a708db3d1f524a56ebe70583ec50",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "generatedAt": "2026-07-23T00:37:17+08:00",
+      "promptPath": "prompts/world-idle-2x4-v4-cell-safe-accepted.txt",
+      "parentFileSha256": "3f26002814525db393637cccdd8d1a611dd858c37e76f977717e07cd91a424ea",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-902c-70b0-af0f-5db86442d9c9/exec-3d39e251-4dcd-4f7a-b363-58a60057f121.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source/raw/world-idle-2x4-v4.png",
+        "editInputPath": "source/raw/world-idle-2x4-v3.png",
+        "editInputFileSha256": "3f26002814525db393637cccdd8d1a611dd858c37e76f977717e07cd91a424ea"
+      }
+    },
+    "portraitSheet": {
+      "fileSha256": "c3d00d1b9683e411a6d8b9155d86e343f3a8a9e9bff1aaed6b4af43f2245489f",
+      "portraitPromptSha256": "d1ca8a33673c1ba300eeffeae36f2f93ae4d0eda204812eebc427ce141c50f0b",
+      "identityBoardSha256": "d5f6d766f5e8d131a7f90fab806184335b21a708db3d1f524a56ebe70583ec50",
+      "worldIdentityReferenceSha256": "1fd1f95089034c83a80f60eb7367fbba8b4c8b4d39e8d19f395bacd85f742e98",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "generatedAt": "2026-07-23T00:21:33+08:00",
+      "promptPath": "prompts/portrait-2x2-v1.txt",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8a8b-902c-70b0-af0f-5db86442d9c9/exec-ba97880a-0af8-424a-af0a-238dd2de8614.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source/raw/portrait-2x2-v1.png"
+      }
+    }
+  },
+  "observedBackgroundFact": "Both accepted generation sheets are fully opaque and contain a spatially varying near-magenta backdrop rather than a guaranteed exact #FF00FF field; the v3.1 builder must measure, review, archive, and replay the exact classifier components instead of applying whole-image color deletion."
+}

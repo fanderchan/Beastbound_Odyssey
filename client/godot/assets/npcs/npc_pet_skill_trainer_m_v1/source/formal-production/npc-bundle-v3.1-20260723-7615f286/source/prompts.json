@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey production NPC true-eight 2x4 world-sheet cell-boundary correction\nInput images: Image 1 is the exact edit target and binding source.\nPrimary request: Change ONLY the BOTTOM-RIGHT EIGHTH CHARACTER, the southeast-facing pet-skill trainer. Move that complete bottom-right character exactly 32 pixels to the RIGHT within its existing bottom-right invisible cell so uninterrupted generated magenta background separates the character from the cell's left boundary at global x=1152. Keep his size, southeast-facing pose, face, hair, clothing, seven-slot board, skill stones, whistle, anatomy, proportions, baseline, rendering, and colors visually identical. Do not move, redraw, resize, recolor, sharpen, soften, or alter any of the other seven characters.\nCanvas and layout: preserve the exact 1536x1024 canvas and exact invisible 2-row by 4-column layout. Keep all eight row-major direction meanings unchanged: south, southwest, west, northwest / north, northeast, east, southeast.\nBoundary requirement: after the move, the bottom-right southeast subject must not touch or cross global x=1152. Create at least 32 pixels of clean safe background before its first visible pixel inside that cell wherever geometry allows. Fill the exposed old location only with the same generated perfectly flat solid #FF00FF background. Keep the entire moved subject safely inside the bottom-right cell and away from the outer right edge; do not crop any limb or prop.\nIdentity invariants: exact same 36-year-old lean male pet behavior and skill trainer. His OWN LEFT FOREARM still carries the compact board with EXACTLY SEVEN blank shallow slots, his OWN RIGHT HIP still carries the bundled smooth skill stones, and the short whistle remains at his neck. No prop side swap. The southeast body still faces front-right / screen-bottom-right.\nHard invariants: no mirroring, no direction swap, no scale change, no changed baseline, no added or removed prop, no altered face, no altered expression, no altered outfit.\nBackground: perfectly uniform flat solid #FF00FF only; no gradient, shadow, floor, texture, residue, halo, seam, divider, line, label, or guide.\nAvoid: changing another cell, changing style, regenerating another character, visible seams, subject pixels on x=1152, weapon, armor, magic, reins, saddle, riding crop, horsewhip, actual pet, mount, text, numbers, letters, runes, icons, labels, arrows, compass, border, frame, watermark, extra person, detached object.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "41dbe68ee598aff65b7618fdcbabb56ca125f1300709939aced8a0e58a613987",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no weapons, armor, magic, reins, riding tools, actual pet, mount, or novice-trainer styling",
+        "the own-left seven-slot blank training board, own-right skill stones, and neck whistle may not side-swap",
+        "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+        "no StoneAge source art, character, texture, name, or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic mask-bounded local processing only",
+        "identityReferencePolicy": "the generated identity board is the binding reference for world and portrait production; the accepted world sheet is an additional portrait identity reference"
+      },
+      "generatedAt": "2026-07-23T00:37:17+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: Beastbound Odyssey production NPC dialogue portrait expression sheet\nInput images: Image 1 is the binding identity board. Image 2 is the accepted true-eight world source sheet and binding costume/asymmetry reference. Preserve the exact same person; do not redesign him.\nPrimary request: Create ONE exact 2-row by 2-column dialogue portrait sheet of the SAME adult male pet behavior and skill trainer from the reference images. Chest-to-waist bust, front three-quarter orientation facing slightly toward screen-left, exact same camera, crop, head size, shoulders, body scale, costume, props, and lighting in all four cells. Only the facial expression may change.\nExact identity: 36-year-old lean agile man, warm tan skin, angular friendly face, alert almond-shaped dark-brown eyes, short tousled dark-brown hair with narrow red-brown wrap at the back, very light stubble. Same sand-brown short field coat over muted gray-teal fitted tunic, red-brown sash/edge bindings, charcoal details and small fingerless gloves.\nMandatory occupational read and asymmetry: his OWN LEFT FOREARM training board remains visible at the lower screen-right side of every front three-quarter bust, with EXACTLY SEVEN distinct blank shallow slots and no markings. His OWN RIGHT-HIP bundle of smooth training skill stones is partially visible at the lower screen-left side when the crop allows. The same small short signal whistle sits close at the base of his neck. Hands remain empty. No side swap and no missing/replaced prop.\nEXACT ROW-MAJOR EXPRESSION ORDER:\nTop-left NEUTRAL: composed attentive listening face, mouth closed, observant eyes.\nTop-right SPEAKING: natural mid-sentence mouth open, engaged technical-instructor brows, not shouting.\nBottom-left SMILE: warm encouraging confident smile, mouth gently closed or slightly open.\nBottom-right CONCERNED: mild thoughtful concern, brows drawn slightly inward, mouth closed; not angry, not afraid, not crying.\nComposition: exact invisible 2x2 equal grid on a square canvas, no borders or dividers. One bust centered in each cell, same shoulder width and eye line, central safe area, generous top and outer-side padding, nothing crossing another cell. A dialogue-bust crop may end cleanly at the bottom of each cell, but head, hair, face, whistle, shoulders, and training board must remain wholly readable.\nStyle/medium: match the references' original legally distinct Beastbound Odyssey clean HD 2D game illustration; crisp warm outlines, controlled soft cel shading, slightly stylized 2.5D village-NPC proportions, expressive readable face, low texture noise; not pixel art, not 3D, not photorealistic.\nScene/backdrop: perfectly uniform flat solid #FF00FF over the entire sheet for background removal; no gradients, shadow, texture, floor, scenery, halo, divider, line, or lighting variation. Never use #FF00FF or vivid magenta in the subject.\nLighting/mood: identical fixed soft warm upper-left studio light in all four cells.\nHard constraints: same identity, age, face, hair, stubble, costume, colors, asymmetry, crop, scale, pose, and lighting across all four; change expression only; exactly two arms/hands as naturally visible; no mirroring.\nAvoid: warrior, riding instructor, novice trainer, combat pose, weapon, spear, sword, knife, axe, hammer, bow, shield, staff, wand, armor, magic, reins, bridle, saddle, riding crop, horsewhip, actual pet, animal, mount, extra person, speech bubble, text, numbers, letters, runes, icons, labels, arrows, border, frame, watermark, logo, detached object, more or fewer than seven board slots, costume drift, age drift, face drift.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "d1ca8a33673c1ba300eeffeae36f2f93ae4d0eda204812eebc427ce141c50f0b",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no weapons, armor, magic, reins, riding tools, actual pet, mount, or novice-trainer styling",
+        "the own-left seven-slot blank training board, own-right skill stones, and neck whistle may not side-swap",
+        "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+        "no StoneAge source art, character, texture, name, or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic mask-bounded local processing only",
+        "identityReferencePolicy": "the generated identity board is the binding reference for world and portrait production; the accepted world sheet is an additional portrait identity reference"
+      },
+      "generatedAt": "2026-07-23T00:37:17+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Edit ONLY the TOP ROW, SECOND CELL (the SOUTHWEST front-three-quarter figure) of this 4x2 sheet. Leave all other seven cells pixel-compositionally unchanged in character design and direction. In that SOUTHWEST cell, the CLOSED notebook is already correctly on the figure's image-right under his own LEFT arm. MOVE the entire bronze dangling travel-souvenir gourd/knot cluster from the image-right hip to the image-left hip under his free arm, matching the corrected front identity-board view. Completely erase the old cluster on image-right so the notebook is the only asymmetric prop there. Leave exactly one cluster on image-left and no second pouch that could be confused with it. Preserve the SOUTHWEST face direction toward image-left, chest exposure, pose, body, shawl, costume, scale, safe margins, near-magenta background, and all cell positions. No new object, person, text, symbol, mark, border, shadow, scenery, open book, key, cane, staff, magic, mirroring, or direction change.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "b1c532700b9d1705c99dca4464724d966c4a33c28627121ddfbee8d7065dfc06",
+      "negativeConstraints": [
+        "no runtime or offline mirroring, flipping, rotation or direction relabeling",
+        "no duplicate direction cells",
+        "southwest and west look toward canvas left; northeast, east and southeast look toward canvas right; north shows no face",
+        "no manor key, scepter, cane, staff, wand, magic, readable text, quest icon, second person or scenery",
+        "no labels, arrows, borders, UI, watermark, numbers, ground plane or cast shadow",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "identityBoardLayout": "four-panel landscape identity board",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-v3 was accepted only after two image_gen prop-side corrections; the accepted board physically binds notebook to the character own left and the single souvenir cluster to own right in both front and back views; it remains owner-review pending",
+        "acceptedWorldGeneration": "v7 targeted image_gen correction of only the southwest cell from the v6 independently authored true-eight source; v6 itself corrected prop-side placement from the independently authored v4 direction sheet; no offline mirror, flip, rotation, relabel or compositing was used",
+        "acceptedWorldGeneratedAt": "2026-07-23T00:58:12+08:00",
+        "portraitGeneratedAt": "2026-07-23T01:01:50+08:00",
+        "identityBoardCorrectedAt": "2026-07-23T00:47:56+08:00"
+      },
+      "generatedAt": "2026-07-23T01:01:50+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Conform the supplied 2-columns by 2-rows storyteller portrait sheet to the corrected identity board while preserving the four accepted expressions and composition. Keep the exact same 62-year-old lean male face, gray-brown swept hair, natural age lines, broad folded faded-chestnut shawl, warm-sand layers, smoke-gray accents, copper-brown CLOSED notebook, polished hand-painted 2.5D style, bust crop, lighting, scale, and fully opaque near-magenta background. The notebook must remain under the character's own LEFT arm, which is image-right in these front-facing portraits. Do not show the right-hip souvenir cluster in this tight bust crop and do not add any extra pouch or ornament. Canonical row-major expressions stay: top-left NEUTRAL attentive; top-right SPEAKING with natural open mouth; bottom-left restrained warm SMILE; bottom-right CONCERNED but not frightened. Same person, same camera, same costume, only expression changes. Keep every bust inside its cell with safe top and outer margins. No text, labels, arrows, borders, scenery, floor, shadow, extra person, open book, readable writing, key, cane, staff, magic, icon, or watermark.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "8cb1fc6cf995325dbb155600797dc7c24477d669ed91255eb8f151a2f5f7b0c1",
+      "negativeConstraints": [
+        "no runtime or offline mirroring, flipping, rotation or direction relabeling",
+        "no duplicate direction cells",
+        "southwest and west look toward canvas left; northeast, east and southeast look toward canvas right; north shows no face",
+        "no manor key, scepter, cane, staff, wand, magic, readable text, quest icon, second person or scenery",
+        "no labels, arrows, borders, UI, watermark, numbers, ground plane or cast shadow",
+        "no cropped subject or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "identityBoardLayout": "four-panel landscape identity board",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board-v3 was accepted only after two image_gen prop-side corrections; the accepted board physically binds notebook to the character own left and the single souvenir cluster to own right in both front and back views; it remains owner-review pending",
+        "acceptedWorldGeneration": "v7 targeted image_gen correction of only the southwest cell from the v6 independently authored true-eight source; v6 itself corrected prop-side placement from the independently authored v4 direction sheet; no offline mirror, flip, rotation, relabel or compositing was used",
+        "acceptedWorldGeneratedAt": "2026-07-23T00:58:12+08:00",
+        "portraitGeneratedAt": "2026-07-23T01:01:50+08:00",
+        "identityBoardCorrectedAt": "2026-07-23T00:47:56+08:00"
+      },
+      "generatedAt": "2026-07-23T01:01:50+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

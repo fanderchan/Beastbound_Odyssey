@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: production 2D NPC true-eight-direction sheet safe-cell correction\nInput images: Image 1 is the exact 2x4 world sheet to correct. Image 2 is the exact identity lock. Edit the layout of Image 1 while preserving its eight direction meanings and identity.\nPrimary request: Re-create the same exact invisible 2-row by 4-column sheet, but uniformly reduce each of the eight full-body characters to about 82% of its current size and center each one INSIDE ITS OWN EQUAL CELL so every cell has generous untouched magenta background on all four cell edges. The horizontal midpoint between rows must be a completely empty continuous magenta band: all top-row boots must end well ABOVE the sheet midpoint, and all bottom-row hair must start well BELOW the midpoint. Likewise keep empty magenta bands at every vertical quarter-cell seam. Nothing may cross or touch any cell boundary.\nPreserve exactly: same friendly approximately 33-year-old short-stocky adult woman; same face, braided bun, costume, warm cream/muted coral/blue-gray/light-brown palette; blank wooden registration board under HER OWN RIGHT ARM; closed sealed travel supply satchel at HER OWN LEFT HIP; same eight independently authored poses, direction semantics, prop sides, drawing style, body proportions and neutral expression. Do not mirror, flip, rotate, duplicate, relabel, swap, redesign or alter direction.\nRequired unchanged row-major directions: top SOUTH, SOUTHWEST facing canvas left, WEST pure left profile, NORTHWEST back-left; bottom NORTH complete back with no face, NORTHEAST back-right, EAST pure right profile, SOUTHEAST facing canvas right.\nComposition: exact invisible equal 2x4 grid, identical adult scale and baseline inside each row, generous padding on sheet outer edges and every cell seam, all body/props inside cells. No visible dividers.\nBackground: perfectly uniform fully opaque flat solid #FF00FF across all empty space, no gradient, texture, shadow, floor, scenery or lighting change; no magenta on subject.\nAvoid: changing any facing or swapping prop sides; text, labels, arrows, borders, dividers, UI, watermark, cast/contact shadow, detached objects, extra person; coins, bank props, open merchandise, price tags, keys, modern uniform, actual goods, weapon, animal, copied StoneAge art.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "b65ec31d781dc17286e344224f6bbaa429886842fcbc83d69dd8b55cc87074e4",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must show no face and adjacent diagonals must expose opposite back shoulders",
+        "the blank registration board remains on the subject's own right and the sealed satchel remains on her own left",
+        "no text, labels, arrows, borders, UI, watermark, shadow or scenery",
+        "no coins, banking props, open merchandise, manor keys, modern uniform or displayed goods",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is the accepted v2 built-in image_gen identity canary; v1 was rejected because its front view put the satchel on the wrong body side",
+        "generationDirectory": "/Users/fander/.codex/generated_images/019f8a8b-cf6b-7f10-9aa9-c3fe921ee43c"
+      },
+      "generatedAt": "2026-07-23T00:19:12+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: production dialogue portrait expression source sheet for Beastbound Odyssey NPC\nInput images: Image 1 is the exact identity reference; Image 2 proves the same exact person's world costume and props. Preserve this woman, not merely a similar relative.\nPrimary request: Create an EXACT SQUARE CANVAS with an invisible 2-row by 2-column portrait sheet of the SAME friendly approximately 33-year-old short-stocky adult welfare-registration clerk. Chest-up / waist-up dialogue bust, front three-quarter orientation facing slightly toward screen-right, same camera, crop, head size, shoulder width, body scale, outfit, lighting and prop placement in all four cells. Her completely blank small wooden registration board remains tucked under HER OWN RIGHT ARM and may enter the lower crop; her closed sealed travel supply satchel stays below the portrait crop and need not be shown. Preserve her warm approachable oval face, medium warm-tan skin, thick dark-brown compact braided bun, warm cream layered tunic, muted coral scarf/edging, blue-gray inset panel and light-brown belt. No redesign or age drift.\nEXACT EXPRESSION ORDER:\nTop-left NEUTRAL: attentive welcoming face, mouth closed.\nTop-right SPEAKING: natural mid-sentence mouth slightly open, engaged brows, not shouting.\nBottom-left SMILE: warm confident friendly smile, mouth gently closed or slightly open.\nBottom-right CONCERNED: mild thoughtful concern, brows slightly inward, mouth closed; not angry, not crying.\nComposition: square canvas, exact invisible equal 2x2 grid with no borders/dividers. One bust centered in each cell, same eye line and shoulder width, central safe area, generous top and outer-side padding. Nothing crosses between cells. Keep same head angle and shoulders; change only facial expression and tiny natural eyebrow/mouth movement. Board and hands remain inside each cell.\nStyle: original legally distinct Beastbound Odyssey clean high-definition hand-painted 2D dialogue illustration, crisp warm dark outlines, controlled soft cel shading, low texture noise, expressive readable face; same art language as input, not pixel art, not 3D, not photorealistic.\nBackground: perfectly uniform fully opaque flat solid #FF00FF across the entire square sheet, no gradient, texture, shadow, floor, scenery or lighting variation; never use magenta on subject.\nConstraints: same exact person and costume four times; blank board has no mark, paper, symbol or text; five fingers where visible; no cast/contact shadow.\nAvoid: readable text, letters, numbers, labels, arrows, UI, border, frame line, watermark, speech bubble, detached object, extra person; coins, coin purse, abacus, ledger, bank uniform/counter, open market basket, price tag, merchandise, manor keys, modern bureaucratic uniform, actual displayed goods, weapon, animal, copied StoneAge art.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "cf7c99187cdecfc6c679e53514cce1b1472c03118d8050bfe15512e2b14b9f21",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must show no face and adjacent diagonals must expose opposite back shoulders",
+        "the blank registration board remains on the subject's own right and the sealed satchel remains on her own left",
+        "no text, labels, arrows, borders, UI, watermark, shadow or scenery",
+        "no coins, banking props, open merchandise, manor keys, modern uniform or displayed goods",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is the accepted v2 built-in image_gen identity canary; v1 was rejected because its front view put the satchel on the wrong body side",
+        "generationDirectory": "/Users/fander/.codex/generated_images/019f8a8b-cf6b-7f10-9aa9-c3fe921ee43c"
+      },
+      "generatedAt": "2026-07-23T00:19:12+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

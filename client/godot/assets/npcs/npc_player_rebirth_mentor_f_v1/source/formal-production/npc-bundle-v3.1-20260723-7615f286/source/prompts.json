@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: final measured composition correction for a Beastbound Odyssey true-eight NPC world sheet\nInput image 1: the almost-final 2x4 true-eight world sheet\nInput image 2: the accepted identity authority\n\nPreserve the exact layout, exact eight independently authored direction meanings, exact equal-cell centers, character identity, costume, physical prop sides, silhouette and uniform chroma-magenta background. Make only this measured composition correction: uniformly enlarge each of the eight complete figures by approximately 6 percent relative to input image 1, anchored at the same center and baseline within its own cell. Do not shift any figure and keep wide clean empty magenta gutters at the full-canvas vertical quarter seams and horizontal midpoint. All bodies, staff tips, boots, hair, registry and medallion must remain safely inside their own equal cells with no seam or outer-edge contact.\n\nExact row-major order: SOUTH, SOUTHWEST facing canvas left, WEST pure left profile, NORTHWEST back-left / NORTH full back no face, NORTHEAST back-right, EAST pure right profile, SOUTHEAST facing canvas right. Preserve staff on HER OWN RIGHT and registry plus spiral medallion on HER OWN LEFT.\n\nNo mirror, flip, duplicate, relabel, swap, crop, detached prop, lighting change or redesign. Background remains fully opaque, textureless vivid chroma magenta with no gradient, noise, tinted seam band, shadow, floor or light spill. No borders, labels, arrows, text, UI, watermark, scenery, pet, egg, magic, extra person or StoneAge art. Return only the same-aspect clean landscape 2x4 sheet.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "818440436ce0ee42a9c28f5bde4dc15f7db75759dd81b8cdfb0bedcc6d21770e",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no pet, egg, animal, medicine, healing, magic or religion imagery",
+        "no labels, arrows, borders, UI, watermark, readable text or scenery",
+        "no cropped subject, detached prop or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardGeneratedAt": "2026-07-22T23:55:27+08:00",
+        "worldSheetGeneratedAt": "2026-07-23T00:42:26+08:00",
+        "portraitSheetGeneratedAt": "2026-07-23T00:18:54+08:00",
+        "referenceInputs": [
+          {
+            "path": "client/godot/assets/npcs/npc_village_guard_m_v1/source/identity-board-raw.png",
+            "fileSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+            "role": "project style and adult scale only"
+          },
+          {
+            "path": "client/godot/assets/npcs/npc_village_healer_f_v1/source/identity-board-raw.png",
+            "fileSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+            "role": "project style and adult scale only"
+          }
+        ],
+        "rejectedIdentityPromptCorrection": {
+          "reason": "initial canary prompt incorrectly named a pet rebirth role instead of the player-character rebirth service",
+          "rejectedFileSha256": "a695e0ceba8520454f04014ce002e2bc54046de1537c7e2e576a1b390c64bf49"
+        },
+        "rejectedPortraitCorrection": {
+          "reason": "concerned cell alone contained a registry tablet, violating expression-only variation",
+          "rejectedFileSha256": "7384d80ef0e72db494d7681b1c8a9917c359a72d5ea7e6c727dff97ea86277d7"
+        },
+        "rejectedOpaqueBackgroundInputs": {
+          "reason": "first otherwise accepted world and expression-consistent portrait sources failed the builder's required-safe-edge chroma contract and were regenerated through image_gen instead of being silently repainted",
+          "worldFileSha256": "5a07c8d6d429ddaa23a7aed22228653fe58d702ca5a2bb341b7c5d634eec99a3",
+          "portraitFileSha256": "744b408d402d307252935d6ffcecd74f47fd7f735c88a1c7ce0f427302f60ec6"
+        },
+        "rejectedCellAlignmentInputs": {
+          "reason": "two regenerated world candidates still placed authored pixels on an invisible 2x4 cell seam; both were archived and the final sheet was regenerated with explicit cell centers instead of being cropped, shifted or repainted",
+          "intermediateWorldFileSha256": "8243889dac605faa1869372637e45a888ada39d5109eff3b64eae35709fa142a",
+          "parentWorldFileSha256": "772334c75b3d8cf51a58280f119e59e22a7506b21cf529ede81c130f67ea899f"
+        },
+        "rejectedScaleInput": {
+          "reason": "the first cell-centered regeneration passed every required safe edge but its south cell had 94.4381 percent automatic background, narrowly above the builder maximum; the final sheet was regenerated 6 percent larger at the same centers instead of changing the audited threshold",
+          "rejectedFileSha256": "39a62d66209ae95849c6c04f30602291fe83decfbbd3bf4e06543338c464dd9f"
+        }
+      },
+      "generatedAt": "2026-07-23T00:43:45+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: clean-source regeneration of a Beastbound Odyssey dialogue portrait sheet\nInput image: exact identity, four expressions, crop, camera, costume and 2x2 composition authority.\n\nRegenerate the complete sheet as new authored pixels while preserving the same woman and exact row-major expressions neutral, speaking, smile, concerned. All four remain unobstructed busts with no hand-held props. Preserve face, age, hair and silver streak, costume, palette, head scale, shoulder width, eye line, lighting and expression meanings.\n\nCritical correction: replace the entire varying pink backdrop with one perfectly uniform, textureless, fully opaque flat exact #FF00FF over every background pixel and invisible seam. No gradient, noise, lighting, shadow, checkerboard, vignette or color variation. Keep a crisp hard warm near-black contour with no magenta spill, halo, feathering or translucent blend. Maintain at least 14% pure background clearance at required safe edges and upper seams; nothing may cross a cell boundary. Exactly one connected portrait subject per cell, no detached fragments.\n\nNo borders, dividers, labels, text, arrows, UI, watermark, floor, scenery, pet, egg, animal, magic, second person or StoneAge source art. Return only the corrected square opaque-chroma 2x2 portrait sheet.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "5c0f6e4359d95acc030ccaf9a9ff3641b1b2fa3e8553c669ee32fff586127640",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no pet, egg, animal, medicine, healing, magic or religion imagery",
+        "no labels, arrows, borders, UI, watermark, readable text or scenery",
+        "no cropped subject, detached prop or cell-edge crossing",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardGeneratedAt": "2026-07-22T23:55:27+08:00",
+        "worldSheetGeneratedAt": "2026-07-23T00:42:26+08:00",
+        "portraitSheetGeneratedAt": "2026-07-23T00:18:54+08:00",
+        "referenceInputs": [
+          {
+            "path": "client/godot/assets/npcs/npc_village_guard_m_v1/source/identity-board-raw.png",
+            "fileSha256": "fa869ab0af3325488a933297d47229321978a9f6f1daf2d504a02db2fd3ecabe",
+            "role": "project style and adult scale only"
+          },
+          {
+            "path": "client/godot/assets/npcs/npc_village_healer_f_v1/source/identity-board-raw.png",
+            "fileSha256": "afffb94ff0a97daa4a4fd30574be02ec19363455512281214e69280a250073ae",
+            "role": "project style and adult scale only"
+          }
+        ],
+        "rejectedIdentityPromptCorrection": {
+          "reason": "initial canary prompt incorrectly named a pet rebirth role instead of the player-character rebirth service",
+          "rejectedFileSha256": "a695e0ceba8520454f04014ce002e2bc54046de1537c7e2e576a1b390c64bf49"
+        },
+        "rejectedPortraitCorrection": {
+          "reason": "concerned cell alone contained a registry tablet, violating expression-only variation",
+          "rejectedFileSha256": "7384d80ef0e72db494d7681b1c8a9917c359a72d5ea7e6c727dff97ea86277d7"
+        },
+        "rejectedOpaqueBackgroundInputs": {
+          "reason": "first otherwise accepted world and expression-consistent portrait sources failed the builder's required-safe-edge chroma contract and were regenerated through image_gen instead of being silently repainted",
+          "worldFileSha256": "5a07c8d6d429ddaa23a7aed22228653fe58d702ca5a2bb341b7c5d634eec99a3",
+          "portraitFileSha256": "744b408d402d307252935d6ffcecd74f47fd7f735c88a1c7ce0f427302f60ec6"
+        },
+        "rejectedCellAlignmentInputs": {
+          "reason": "two regenerated world candidates still placed authored pixels on an invisible 2x4 cell seam; both were archived and the final sheet was regenerated with explicit cell centers instead of being cropped, shifted or repainted",
+          "intermediateWorldFileSha256": "8243889dac605faa1869372637e45a888ada39d5109eff3b64eae35709fa142a",
+          "parentWorldFileSha256": "772334c75b3d8cf51a58280f119e59e22a7506b21cf529ede81c130f67ea899f"
+        },
+        "rejectedScaleInput": {
+          "reason": "the first cell-centered regeneration passed every required safe edge but its south cell had 94.4381 percent automatic background, narrowly above the builder maximum; the final sheet was regenerated 6 percent larger at the same centers instead of changing the audited threshold",
+          "rejectedFileSha256": "39a62d66209ae95849c6c04f30602291fe83decfbbd3bf4e06543338c464dd9f"
+        }
+      },
+      "generatedAt": "2026-07-23T00:43:45+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

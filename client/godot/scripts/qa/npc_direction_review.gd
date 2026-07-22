@@ -393,7 +393,7 @@ func _source_set_sha256(records: Array[Dictionary]) -> String:
 			str(record.get("path", "")),
 			str(record.get("fileSha256", "")),
 			str(record.get("sourceFullDecodedRgbaSha256", "")),
-			str(record.get("sourceFullDecodedRgbaSha256", "")),
+			str(record.get("sourceDecodedRgbaSha256", "")),
 		])
 	var context := HashingContext.new()
 	context.start(HashingContext.HASH_SHA256)

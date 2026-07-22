@@ -39,9 +39,11 @@ UTC_TIMESTAMP = re.compile(
 )
 INDEX_TYPE = "beastbound_npc_direction_review_evidence"
 INDEX_SCENE = "res://scenes/qa/NpcDirectionReview.tscn"
+PARITY_TYPE = "beastbound_npc_direction_review_parity"
 PACKET_TYPE = "beastbound_npc_blind_review_packet"
 MAPPING_TYPE = "beastbound_npc_blind_producer_mapping"
 WRAPPER_OPERATION = "transparent_pad_32_to_320_v1"
+EXPECTED_FRAME_COUNT = 12
 
 
 class BlindPacketError(RuntimeError):
@@ -64,6 +66,19 @@ def _rgba_sha256(image: Image.Image) -> str:
     rgba = image if image.mode == "RGBA" else image.convert("RGBA")
     prefix = f"{rgba.width}x{rgba.height}:RGBA\n".encode("utf-8")
     return _sha256_bytes(prefix + rgba.tobytes())
+
+
+def _canonical_rgba_sha256(image: Image.Image) -> str:
+    """Match WorldReviewFrameParity's partial-alpha canonical RGBA hash."""
+    rgba = image if image.mode == "RGBA" else image.convert("RGBA")
+    pixels = bytearray(rgba.tobytes())
+    for offset in range(0, len(pixels), 4):
+        if pixels[offset + 3] < 255:
+            pixels[offset] = 0
+            pixels[offset + 1] = 0
+            pixels[offset + 2] = 0
+    prefix = f"{rgba.width}x{rgba.height}:RGBA\n".encode("utf-8")
+    return _sha256_bytes(prefix + pixels)
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -185,15 +200,168 @@ def _source_set_sha256(appearance_id: str, frames: list[dict[str, Any]]) -> str:
                 str(frame["kind"]),
                 str(frame["slot"]),
                 f"res://assets/npcs/{appearance_id}/{frame['installedPath']}",
-                str(frame["fileSha256"]),
-                str(frame["rgbaSha256"]),
-                str(frame["rgbaSha256"]),
+                _required_hash(
+                    frame.get("fileSha256"),
+                    label=f"{frame['installedPath']}.fileSha256",
+                ),
+                _required_hash(
+                    frame.get("sourceFullDecodedRgbaSha256"),
+                    label=(
+                        f"{frame['installedPath']}.sourceFullDecodedRgbaSha256"
+                    ),
+                ),
+                _required_hash(
+                    frame.get("sourceDecodedRgbaSha256"),
+                    label=f"{frame['installedPath']}.sourceDecodedRgbaSha256",
+                ),
             )
         )
         + "\n"
         for frame in frames
     )
     return _sha256_bytes(lines.encode("utf-8"))
+
+
+def _frozen_preflight_frames(
+    *,
+    repo_root: Path,
+    evidence_index_path: Path,
+    appearance_entry: dict[str, Any],
+    appearance_id: str,
+    run_id: str,
+    installation_frames: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    artifact = appearance_entry.get("preflightParity")
+    if not isinstance(artifact, dict):
+        raise BlindPacketError("evidence index 缺少冻结 preflightParity")
+    artifact_path_value = _safe_relative_path(
+        artifact.get("path"), label="preflightParity.path"
+    )
+    artifact_path = _resolved_under(
+        repo_root / artifact_path_value,
+        repo_root,
+        label="preflightParity.path",
+    )
+    expected_artifact_path = (
+        evidence_index_path.parent
+        / appearance_id
+        / "preflight-parity.json"
+    ).resolve(strict=False)
+    if artifact_path != expected_artifact_path:
+        raise BlindPacketError(
+            "preflightParity.path 未绑定当前 run/appearance"
+        )
+    if not artifact_path.is_file():
+        raise BlindPacketError("冻结 preflight parity 文件不存在")
+    artifact_sha = _required_hash(
+        artifact.get("sha256"), label="preflightParity.sha256"
+    )
+    if _sha256_file(artifact_path) != artifact_sha:
+        raise BlindPacketError("冻结 preflight parity 文件 hash 漂移")
+    artifact_size = artifact.get("sizeBytes")
+    if (
+        type(artifact_size) is not int
+        or artifact_size <= 0
+        or artifact_path.stat().st_size != artifact_size
+    ):
+        raise BlindPacketError("冻结 preflight parity 文件大小漂移")
+
+    expected_source_set = _required_hash(
+        appearance_entry.get("sourceSetSha256"),
+        label="evidence index appearance.sourceSetSha256",
+    )
+    if (
+        artifact.get("status") != "passed"
+        or artifact.get("processKind") != "preflight"
+        or artifact.get("checkedFrames") != EXPECTED_FRAME_COUNT
+        or artifact.get("passedFrames") != EXPECTED_FRAME_COUNT
+        or artifact.get("expectedFrames") != EXPECTED_FRAME_COUNT
+        or artifact.get("sourceSetSha256") != expected_source_set
+    ):
+        raise BlindPacketError(
+            "evidence index preflightParity sourceSet/摘要无效"
+        )
+
+    report = _read_json(artifact_path, label="冻结 preflight parity")
+    if (
+        report.get("schemaVersion") != 1
+        or report.get("reportType") != PARITY_TYPE
+        or report.get("status") != "passed"
+        or report.get("appearanceId") != appearance_id
+        or report.get("runId") != run_id
+        or report.get("processKind") != "preflight"
+        or report.get("checkedFrames") != EXPECTED_FRAME_COUNT
+        or report.get("passedFrames") != EXPECTED_FRAME_COUNT
+        or report.get("runtimeMirroring") is not False
+        or report.get("errors") != []
+    ):
+        raise BlindPacketError("冻结 preflight parity 报告合同无效")
+    report_source_set = _required_hash(
+        report.get("sourceSetSha256"),
+        label="preflight parity sourceSetSha256",
+    )
+    if report_source_set != expected_source_set:
+        raise BlindPacketError("冻结 preflight parity sourceSet 与 index 不一致")
+    report_frames = report.get("frames")
+    if (
+        not isinstance(report_frames, list)
+        or len(report_frames) != EXPECTED_FRAME_COUNT
+        or len(installation_frames) != EXPECTED_FRAME_COUNT
+    ):
+        raise BlindPacketError("冻结 preflight parity 必须覆盖 world8/portrait4")
+
+    frozen: list[dict[str, Any]] = []
+    for ordinal, (installed, parity_value) in enumerate(
+        zip(installation_frames, report_frames, strict=True)
+    ):
+        label = f"preflight parity frames[{ordinal}]"
+        if not isinstance(parity_value, dict):
+            raise BlindPacketError(f"{label} 不是对象")
+        expected_path = (
+            f"res://assets/npcs/{appearance_id}/{installed['installedPath']}"
+        )
+        source_full = _required_hash(
+            parity_value.get("sourceFullDecodedRgbaSha256"),
+            label=f"{label}.sourceFullDecodedRgbaSha256",
+        )
+        source_canonical = _required_hash(
+            parity_value.get("sourceDecodedRgbaSha256"),
+            label=f"{label}.sourceDecodedRgbaSha256",
+        )
+        loaded_canonical = _required_hash(
+            parity_value.get("loadedDecodedRgbaSha256"),
+            label=f"{label}.loadedDecodedRgbaSha256",
+        )
+        if (
+            parity_value.get("kind") != installed["kind"]
+            or parity_value.get("slot") != installed["slot"]
+            or parity_value.get("path") != expected_path
+            or parity_value.get("fileSha256") != installed["fileSha256"]
+            or source_full != installed["rgbaSha256"]
+            or source_canonical != loaded_canonical
+            or parity_value.get("sourceLoadedRgbaMatch") is not True
+            or parity_value.get("canonicalRgbaMatch") is not True
+            or parity_value.get("importFresh") is not True
+            or parity_value.get("loadMode") != "godot_import"
+            or parity_value.get("status") != "passed"
+            or parity_value.get("errors") != []
+        ):
+            raise BlindPacketError(
+                f"{label} 未绑定当前 installation/file/full/canonical"
+            )
+        frozen.append(
+            {
+                **installed,
+                "sourceFullDecodedRgbaSha256": source_full,
+                "sourceDecodedRgbaSha256": source_canonical,
+            }
+        )
+
+    if _source_set_sha256(appearance_id, frozen) != expected_source_set:
+        raise BlindPacketError(
+            "冻结 preflight parity sourceSet 未同时绑定 file/full/canonical"
+        )
+    return frozen
 
 
 def _appearance_entry(
@@ -289,7 +457,15 @@ def prepare_blind_packet(
     metadata = _read_json(metadata_path, label="action-bundle-meta")
     appearance_entry = _appearance_entry(index, appearance_id, run_id)
     evidence_index_sha = _sha256_file(evidence_index_path)
-    frames = _installation_frames(metadata, appearance_id)
+    installation_frames = _installation_frames(metadata, appearance_id)
+    frames = _frozen_preflight_frames(
+        repo_root=repo_root,
+        evidence_index_path=evidence_index_path,
+        appearance_entry=appearance_entry,
+        appearance_id=appearance_id,
+        run_id=run_id,
+        installation_frames=installation_frames,
+    )
     source_set_sha = _source_set_sha256(appearance_id, frames)
     if appearance_entry.get("sourceSetSha256") != source_set_sha:
         raise BlindPacketError("evidence index sourceSet 未绑定当前 installation world8/portrait4")
@@ -316,6 +492,10 @@ def prepare_blind_packet(
             raise BlindPacketError(f"当前安装 PNG 无法解码：{installed}") from error
         if _rgba_sha256(image) != frame["rgbaSha256"]:
             raise BlindPacketError(f"当前安装 PNG decoded RGBA 漂移：{installed}")
+        if _canonical_rgba_sha256(image) != frame["sourceDecodedRgbaSha256"]:
+            raise BlindPacketError(
+                f"当前安装 PNG canonical RGBA 与冻结 parity 漂移：{installed}"
+            )
         if frame["kind"] == "world":
             if image.size != (256, 256):
                 raise BlindPacketError(f"世界 PNG 必须为 256x256：{installed}")

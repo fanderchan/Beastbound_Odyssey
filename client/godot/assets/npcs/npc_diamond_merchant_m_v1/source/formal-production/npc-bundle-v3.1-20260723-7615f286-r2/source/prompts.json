@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey static NPC true-eight world sprite source sheet repair\nInput images: Image 1 is the exact 2x4 world-sheet edit target; Image 2 is the locked same-person identity and costume reference.\nPrimary request: Change only the upper-right cell (row 1, column 4), which is the canonical NORTHWEST / screen-up-left idle view. Redraw that one cell as a genuinely new independently authored view. Do not mirror, rotate, relabel, warp, paste, collage, or transform another direction. Preserve the other seven cells, their subjects, background, scale, positions, spacing, and the full 1536x1024 2x4 layout exactly.\nNorthwest pose semantics: the man's whole body, head, hips, shoulders, knees, and both boots clearly point toward screen upper-left at about 45 degrees. Show primarily his back, but reveal a clearly readable narrow left cheek/ear side profile and a strong left-shoulder/left-side silhouette. Make the shoulder line and hip line visibly diagonal, not square to camera. Both boot axes must point upper-left with intentional near/far foreshortening. The result must be unmistakably more left-turned than the full-back NORTH cell below-left and unmistakably less side-on than the strict WEST cell to its left.\nIdentity invariants: exact same circa-38 slim neat male precious-goods specialist, same face/hair/body proportions, deep emerald fitted tunic, ivory shirt/cuffs, brass trim, charcoal trousers and brown boots. His own left forearm still carries the closed rectangular mineral sample case; his own right waist still carries the bone measuring gauge and tidy precious-goods belt. Keep prop ownership anatomically correct for this rear-left view; do not swap body sides.\nComposition: one full-body idle character centered inside that cell, identical apparent scale and ground baseline family, at least 12 px safe chroma padding on every cell edge, no crop, no floor, no shadow.\nBackdrop: preserve the existing fully opaque near-magenta chroma backdrop and its natural slight generated variation; no transparency, scenery, gradients, floor plane, reflections, guides, borders, dividers, labels, arrows, text, watermark, or signature.\nAvoid: near-north pose; shoulders or heels square to camera; face fully hidden; face front-facing; wrong diagonal; extra limbs/fingers; prop side swap; bank ledger; abacus; coins; grocery basket; floating diamonds; magic; noble costume; modern jeweler; visual changes to any of the other seven cells.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "c217f6479d1b637b000717dada99c38ef39fd3e8225ad93f8c843a2a61a86138",
+      "negativeConstraints": [
+        "no runtime or offline mirroring, duplication, rotation, relabeling, transformed opposite direction or local pixel collage",
+        "no bank ledger, abacus, coins, grocery basket, floating diamonds or magical props",
+        "no noble, magician or modern-jeweler costume drift",
+        "no labels, dividers, scenery, shadows, cropped world subjects or unsafe portrait outer edges",
+        "no invented model identifier or undocumented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "identityBoardLayout": "large neutral portrait, full-body front/back, smaller consistency views",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "fully opaque chroma sources; deterministic reviewed_chroma_components_v3_1 processing only"
+      },
+      "generatedAt": "2026-07-23T01:54:50+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: precise-object-edit\nAsset type: Beastbound Odyssey NPC 2x2 dialogue portrait source sheet\nPrimary request: Preserve the exact same four portraits, same man, face, hairstyle, costume, expressions, row-major order, rendering style, colors, lighting and flat magenta background, but scale each bust down uniformly to about 84 percent and center it safely inside its own quadrant.\nRequired correction: create a clearly visible uninterrupted magenta safety band along the entire TOP canvas edge, entire LEFT canvas edge and entire RIGHT canvas edge. No hair, shoulder, tunic, outline or antialiasing may touch those three outer edges. Also keep the vertical outer edge of each left/right cell free of subject. The lower bust may still crop at the BOTTOM canvas edge because this is an intentional dialogue bust crop. Keep the four cells implied only; add no divider lines.\nLayout: exact 2 rows x 2 columns. Top-left neutral closed mouth; top-right speaking naturally open mouth; bottom-left modest professional smile; bottom-right concerned knit brows with closed worried mouth. Same camera, crop, head size, shoulders and identity in all cells after the uniform downscale.\nBackground: opaque perfectly flat removable #FF00FF, no gradient, floor, texture, shadow or halo.\nConstraints: change only scale and safe padding; preserve facial identity and all expression semantics. Exactly four portraits. No text, labels, borders, arrows, numbers, logos, watermark, extra person, added props or magenta clothing.\nAvoid: cropped hair, shoulder touching left/right outer canvas edge, bank ledger, abacus, coins, grocery basket, diamonds, magic, noble, modern jeweler, face drift, costume drift.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "229b449ed942b26d00884741ca81a03f9508fa4894997be0456458f9da52a316",
+      "negativeConstraints": [
+        "no runtime or offline mirroring, duplication, rotation, relabeling, transformed opposite direction or local pixel collage",
+        "no bank ledger, abacus, coins, grocery basket, floating diamonds or magical props",
+        "no noble, magician or modern-jeweler costume drift",
+        "no labels, dividers, scenery, shadows, cropped world subjects or unsafe portrait outer edges",
+        "no invented model identifier or undocumented generation parameter"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "identityBoardLayout": "large neutral portrait, full-body front/back, smaller consistency views",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "fully opaque chroma sources; deterministic reviewed_chroma_components_v3_1 processing only"
+      },
+      "generatedAt": "2026-07-23T01:54:50+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

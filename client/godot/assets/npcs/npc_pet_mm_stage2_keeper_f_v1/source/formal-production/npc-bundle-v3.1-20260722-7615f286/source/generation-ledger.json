@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+  "generatedAt": "2026-07-22T16:41:49Z",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "interface": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "modelParametersExposed": false,
+    "identityBoardGeneratedFirst": true,
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "portraitAcceptedGeneration": "v2 clean authored regeneration after the v1 speaking portrait failed the detached-foreground gate; no pixel deletion, reconnect or mask workaround",
+    "worldAcceptedGeneration": "v3 targeted image_gen regeneration of the rejected northwest cell; no offline transform, cell swap or mirror",
+    "identityReferenceRole": "the image_gen-authored identity canary was frozen before world and portrait expansion and was supplied as a reference to both accepted sheets"
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring and no manual cell rearrangement",
+    "no duplicate or neighboring-direction substitutions",
+    "northwest must point image-left and northeast must point image-right",
+    "closed left-hip egg casket and right-waist custody belt must preserve anatomical sides",
+    "no live pet, visible egg, broken egg, glow, stable feed, diamond merchant or warehouse cues",
+    "no labels, arrows, borders, UI, watermark, cast shadow or cell-edge crossing",
+    "no StoneAge source art, character, texture or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "d77391f7b7cbe8bfba16a9ab9c89a81fcebed533cbf4a3b5afa6d2c804c8e59d",
+      "promptSha256": "9b64bdc6ee100e210f1640523428e06875b7cf9784432053d134743309beda82",
+      "generatedAt": "2026-07-22T16:04:21Z",
+      "toolOutput": "/Users/fander/.codex/generated_images/019f8a8a-fb6f-7b90-8954-12f4d4c583cc/exec-c6ed98cd-3628-4db5-85a1-6da9a981ddf7.png",
+      "relationship": "pre-generation identity canary and exact world/portrait reference; not an owner approval record"
+    },
+    "worldSheet": {
+      "fileSha256": "b66dbd884c639f159453163bdd5d082422e8dbd6bec4b905a803889cd7c4587b",
+      "worldPromptSha256": "bb9728ab3a455ea451eaa108454541f8d40201a3eee60a3c7a9a7379f28eeeda",
+      "identityBoardSha256": "d77391f7b7cbe8bfba16a9ab9c89a81fcebed533cbf4a3b5afa6d2c804c8e59d",
+      "generatedAt": "2026-07-22T16:20:51Z",
+      "toolOutput": "/Users/fander/.codex/generated_images/019f8a8a-fb6f-7b90-8954-12f4d4c583cc/exec-3d7e1588-8f35-409a-9d7d-4eef1ccc22cd.png",
+      "parentRejectedFileSha256": "3f9791d17b7c5acf88cd0f893ffa98bdd5c06233c6d353410980059132c90c5e",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    },
+    "portraitSheet": {
+      "fileSha256": "05954e3b97d4f6df9f008226ef24783dcd209a52487f50620a187ff1a5575f55",
+      "portraitPromptSha256": "625563a5b9c075146e7d6cfbebad95a600cb9c7afbe4f7d8b0f6fa8b187604f1",
+      "identityBoardSha256": "d77391f7b7cbe8bfba16a9ab9c89a81fcebed533cbf4a3b5afa6d2c804c8e59d",
+      "worldReferenceSha256": "b66dbd884c639f159453163bdd5d082422e8dbd6bec4b905a803889cd7c4587b",
+      "generatedAt": "2026-07-22T16:41:49Z",
+      "toolOutput": "/Users/fander/.codex/generated_images/019f8a8a-fb6f-7b90-8954-12f4d4c583cc/exec-3f1a4be9-99d3-48c1-98b3-0b11fb6040e3.png",
+      "parentRejectedFileSha256": "df251afab8c97accb1fc75780589016845af446a8f00c4be3f63bdbd9f81d48d",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF"
+    }
+  },
+  "observedBackgroundFact": "Both accepted sheets are fully opaque but contain a spatially varying near-magenta generated backdrop rather than exact uniform #FF00FF; the formal builder must derive and archive reviewed masks from the untouched raw files."
+}

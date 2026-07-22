@@ -1,0 +1,9 @@
+Use case: precise-object-edit
+Asset type: clean-source regeneration of a Beastbound Odyssey dialogue portrait sheet
+Input image: exact identity, four expressions, crop, camera, costume and 2x2 composition authority.
+
+Regenerate the complete sheet as new authored pixels while preserving the same woman and exact row-major expressions neutral, speaking, smile, concerned. All four remain unobstructed busts with no hand-held props. Preserve face, age, hair and silver streak, costume, palette, head scale, shoulder width, eye line, lighting and expression meanings.
+
+Critical correction: replace the entire varying pink backdrop with one perfectly uniform, textureless, fully opaque flat exact #FF00FF over every background pixel and invisible seam. No gradient, noise, lighting, shadow, checkerboard, vignette or color variation. Keep a crisp hard warm near-black contour with no magenta spill, halo, feathering or translucent blend. Maintain at least 14% pure background clearance at required safe edges and upper seams; nothing may cross a cell boundary. Exactly one connected portrait subject per cell, no detached fragments.
+
+No borders, dividers, labels, text, arrows, UI, watermark, floor, scenery, pet, egg, animal, magic, second person or StoneAge source art. Return only the corrected square opaque-chroma 2x2 portrait sheet.

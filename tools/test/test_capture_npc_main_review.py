@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image, ImageDraw
 
@@ -130,7 +133,8 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             "status": "passed",
             "ok": True,
             "scene": TOOL.MAIN_SCENE,
-            "qaPreview": True,
+            "qaPreview": False,
+            "normalPlayerRuntimeEnabled": True,
             "debugBuild": True,
             "displayServer": "metal",
             "runtimeMirroring": False,
@@ -220,6 +224,8 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             target=self.target,
             screenshot_path=self.screenshot,
             run_id=self.run_id,
+            qa_preview=False,
+            normal_player_runtime_enabled=True,
         )
 
     def test_valid_report_binds_real_main_target_and_sources(self) -> None:
@@ -232,6 +238,16 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             [(frame["kind"], frame["slot"]) for frame in result["frames"]],
             [(kind, slot) for kind, slot, _path in TOOL._expected_frame_specs(self.target)],
         )
+
+    def test_rejects_capture_mode_drift(self) -> None:
+        self.report["qaPreview"] = True
+        self.report["normalPlayerRuntimeEnabled"] = False
+        self._write_report()
+        with self.assertRaisesRegex(
+            TOOL.NpcMainReviewError,
+            "qaPreview=.*normalPlayerRuntimeEnabled",
+        ):
+            self._validate()
 
     def test_partial_alpha_keeps_full_and_canonical_hash_domains_separate(self) -> None:
         frame = self.report["frames"][0]
@@ -263,6 +279,33 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             TOOL.NpcMainReviewError, "sourceFullDecodedRgbaSha256"
         ):
             self._validate()
+
+    def test_source_set_hash_binds_full_and_canonical_rgba_domains(self) -> None:
+        sources = [
+            {
+                "kind": "world",
+                "slot": "south",
+                "path": "res://world.png",
+                "fileSha256": "file-sha",
+                "sourceFullDecodedRgbaSha256": "full-rgba-sha",
+                "sourceDecodedRgbaSha256": "canonical-rgba-sha",
+            }
+        ]
+        expected_payload = (
+            "world\tsouth\tres://world.png\tfile-sha\t"
+            "full-rgba-sha\tcanonical-rgba-sha\n"
+        )
+        expected = hashlib.sha256(expected_payload.encode("utf-8")).hexdigest()
+        self.assertEqual(TOOL._source_set_sha256(sources), expected)
+
+        canonical_changed = [
+            {**sources[0], "sourceDecodedRgbaSha256": "changed-canonical-sha"}
+        ]
+        full_changed = [
+            {**sources[0], "sourceFullDecodedRgbaSha256": "changed-full-sha"}
+        ]
+        self.assertNotEqual(TOOL._source_set_sha256(canonical_changed), expected)
+        self.assertNotEqual(TOOL._source_set_sha256(full_changed), expected)
 
     def test_rejects_wrong_scene_or_run_id(self) -> None:
         self.report["scene"] = "res://scenes/qa/NpcDirectionReview.tscn"
@@ -338,7 +381,7 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         ):
             self._validate()
 
-    def test_capture_command_keeps_engine_and_user_arguments_separate(self) -> None:
+    def test_first8_capture_command_uses_normal_released_runtime(self) -> None:
         command = TOOL._build_capture_command(
             godot="/opt/godot",
             user_data_dir="/tmp/npc-main-user",
@@ -346,6 +389,7 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             run_id=self.run_id,
             screenshot_path=self.screenshot,
             report_path=self.report_path,
+            qa_preview=False,
         )
         separator = command.index("--")
         self.assertEqual(command.count("--"), 1)
@@ -353,10 +397,26 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertIn(TOOL.MAIN_SCENE, command[:separator])
         self.assertNotIn("--npc-main-review-capture", command[:separator])
         self.assertIn("--npc-main-review-capture", command[separator + 1 :])
-        self.assertIn("--npc-art-review-preview", command[separator + 1 :])
+        self.assertNotIn("--npc-art-review-preview", command[separator + 1 :])
         self.assertIn(
             f"--npc-main-review-run-id={self.run_id}", command[separator + 1 :]
         )
+
+    def test_remaining7_capture_command_requires_explicit_qa_preview(self) -> None:
+        target = dict(TOOL.REMAINING7_TARGETS[0])
+        command = TOOL._build_capture_command(
+            godot="/opt/godot",
+            user_data_dir="/tmp/npc-main-user",
+            target=target,
+            run_id=self.run_id,
+            screenshot_path=self.screenshot,
+            report_path=self.report_path,
+            qa_preview=True,
+        )
+        separator = command.index("--")
+        self.assertEqual(command.count("--"), 1)
+        self.assertIn("--npc-main-review-capture", command[separator + 1 :])
+        self.assertIn("--npc-art-review-preview", command[separator + 1 :])
 
     def test_rejects_non_1280x720_screenshot(self) -> None:
         Image.new("RGBA", (640, 360), (20, 70, 80, 255)).save(self.screenshot)
@@ -373,6 +433,190 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             len({(target["mapId"], target["npcId"]) for target in TOOL.TARGETS}),
             8,
         )
+
+    def test_remaining7_target_contract_is_exact_and_disjoint(self) -> None:
+        TOOL._validate_all_target_batches()
+        remaining = TOOL._targets_for_batch(TOOL.REMAINING_TARGET_BATCH)
+        self.assertEqual(
+            [target["npcId"] for target in remaining],
+            [
+                "firebud_rebirth_mentor",
+                "firebud_pet_mm_trial_mentor",
+                "firebud_pet_mm_stage2_keeper",
+                "firebud_diamond_keeper",
+                "firebud_pet_skill_trainer",
+                "firebud_welfare_clerk",
+                "firebud_storyteller",
+            ],
+        )
+        self.assertEqual(
+            [target["appearanceId"] for target in remaining],
+            [
+                "npc_player_rebirth_mentor_f_v1",
+                "npc_pet_mm_trial_mentor_m_v1",
+                "npc_pet_mm_stage2_keeper_f_v1",
+                "npc_diamond_merchant_m_v1",
+                "npc_pet_skill_trainer_m_v1",
+                "npc_welfare_clerk_f_v1",
+                "npc_storyteller_m_v1",
+            ],
+        )
+        all_targets = TOOL.TARGETS + remaining
+        self.assertEqual(len(all_targets), 15)
+        self.assertEqual(
+            len({target["appearanceId"] for target in all_targets}), 15
+        )
+        self.assertEqual(
+            len({(target["mapId"], target["npcId"]) for target in all_targets}),
+            15,
+        )
+
+    def test_parser_preserves_first8_default_and_selects_remaining7(self) -> None:
+        self.assertEqual(
+            TOOL._parser().parse_args([]).batch, TOOL.DEFAULT_TARGET_BATCH
+        )
+        self.assertEqual(
+            TOOL._parser().parse_args(["--batch", "remaining7"]).batch,
+            TOOL.REMAINING_TARGET_BATCH,
+        )
+        self.assertEqual(
+            TOOL._capture_mode_for_batch(TOOL.DEFAULT_TARGET_BATCH),
+            {"qaPreview": False, "normalPlayerRuntimeEnabled": True},
+        )
+        self.assertEqual(
+            TOOL._capture_mode_for_batch(TOOL.REMAINING_TARGET_BATCH),
+            {"qaPreview": True, "normalPlayerRuntimeEnabled": False},
+        )
+
+    def test_remaining7_index_metadata_matches_selected_targets(self) -> None:
+        output_root = self.root / "main-evidence"
+        run_id = "phase-main-remaining7-test-v1"
+        original_cwd = Path.cwd()
+        resolved_root = self.root.resolve()
+
+        def fake_run_logged(
+            _command: object, *, log_path: Path, timeout_seconds: float
+        ) -> None:
+            self.assertGreater(timeout_seconds, 0)
+            log_path.write_text("fake capture passed\n", encoding="utf-8")
+
+        def fake_capture_target(**kwargs: object) -> dict[str, object]:
+            target = kwargs["target"]
+            target_dir = kwargs["target_dir"]
+            assert isinstance(target, dict)
+            assert isinstance(target_dir, Path)
+            self.assertIs(kwargs["qa_preview"], True)
+            self.assertIs(kwargs["normal_player_runtime_enabled"], False)
+            target_dir.mkdir(parents=False, exist_ok=False)
+            (target_dir / "fake-main.log").write_text(
+                "fake Main capture passed\n", encoding="utf-8"
+            )
+            return {
+                "appearanceId": target["appearanceId"],
+                "npcId": target["npcId"],
+            }
+
+        os.chdir(self.root)
+        try:
+            with (
+                mock.patch.object(TOOL, "REPO_ROOT", resolved_root),
+                mock.patch.object(
+                    TOOL, "_require_executable", return_value="/opt/godot"
+                ),
+                mock.patch.object(TOOL, "_run_logged", side_effect=fake_run_logged),
+                mock.patch.object(
+                    TOOL, "_capture_target", side_effect=fake_capture_target
+                ),
+                mock.patch.object(TOOL, "_capture_version", return_value="test"),
+            ):
+                args = TOOL._parser().parse_args(
+                    [
+                        "--batch",
+                        "remaining7",
+                        "--output-root",
+                        str(output_root.relative_to(self.root)),
+                        "--run-id",
+                        run_id,
+                    ]
+                )
+                index_path = TOOL._record(args)
+        finally:
+            os.chdir(original_cwd)
+
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        targets = TOOL.REMAINING7_TARGETS
+        self.assertEqual(index["targetBatch"], TOOL.REMAINING_TARGET_BATCH)
+        self.assertTrue(index["qaPreview"])
+        self.assertEqual(index["expected"]["captureCount"], 7)
+        self.assertFalse(index["expected"]["normalPlayerRuntimeEnabled"])
+        self.assertEqual(
+            index["appearanceIds"],
+            [target["appearanceId"] for target in targets],
+        )
+        self.assertEqual(index["npcIds"], [target["npcId"] for target in targets])
+        self.assertEqual(
+            [capture["npcId"] for capture in index["captures"]],
+            [target["npcId"] for target in targets],
+        )
+
+    def test_first8_index_marks_normal_player_runtime_enabled(self) -> None:
+        output_root = self.root / "main-evidence"
+        run_id = "phase-main-first8-test-v1"
+        original_cwd = Path.cwd()
+        resolved_root = self.root.resolve()
+
+        def fake_run_logged(
+            _command: object, *, log_path: Path, timeout_seconds: float
+        ) -> None:
+            self.assertGreater(timeout_seconds, 0)
+            log_path.write_text("fake capture passed\n", encoding="utf-8")
+
+        def fake_capture_target(**kwargs: object) -> dict[str, object]:
+            target = kwargs["target"]
+            target_dir = kwargs["target_dir"]
+            assert isinstance(target, dict)
+            assert isinstance(target_dir, Path)
+            self.assertIs(kwargs["qa_preview"], False)
+            self.assertIs(kwargs["normal_player_runtime_enabled"], True)
+            target_dir.mkdir(parents=False, exist_ok=False)
+            (target_dir / "fake-main.log").write_text(
+                "fake Main capture passed\n", encoding="utf-8"
+            )
+            return {
+                "appearanceId": target["appearanceId"],
+                "npcId": target["npcId"],
+            }
+
+        os.chdir(self.root)
+        try:
+            with (
+                mock.patch.object(TOOL, "REPO_ROOT", resolved_root),
+                mock.patch.object(
+                    TOOL, "_require_executable", return_value="/opt/godot"
+                ),
+                mock.patch.object(TOOL, "_run_logged", side_effect=fake_run_logged),
+                mock.patch.object(
+                    TOOL, "_capture_target", side_effect=fake_capture_target
+                ),
+                mock.patch.object(TOOL, "_capture_version", return_value="test"),
+            ):
+                args = TOOL._parser().parse_args(
+                    [
+                        "--output-root",
+                        str(output_root.relative_to(self.root)),
+                        "--run-id",
+                        run_id,
+                    ]
+                )
+                index_path = TOOL._record(args)
+        finally:
+            os.chdir(original_cwd)
+
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        self.assertEqual(index["targetBatch"], TOOL.DEFAULT_TARGET_BATCH)
+        self.assertFalse(index["qaPreview"])
+        self.assertEqual(index["expected"]["captureCount"], 8)
+        self.assertTrue(index["expected"]["normalPlayerRuntimeEnabled"])
 
 
 if __name__ == "__main__":

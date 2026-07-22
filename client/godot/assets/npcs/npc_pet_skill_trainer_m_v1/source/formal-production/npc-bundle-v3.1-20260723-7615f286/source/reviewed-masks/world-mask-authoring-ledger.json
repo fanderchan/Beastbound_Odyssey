@@ -1,0 +1,1511 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "world",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "753c805aaa299fc4cd76eb3413cecb8456223bc5e9a60ce45caa6d21758cfb2b",
+    "rawSheetDecodedRgbaByteSha256": "ab4601be47c78f89b08fe525f48e3679a68b22ee630167eb58680b1cc0e9ea74",
+    "rawSheetGodotCanonicalRgbaSha256": "eb984426208977fb93e5977415ed8684d615192b3588dd54b625cdd2820f91a3",
+    "rawSheetDecodedRgbaSha256": "eb984426208977fb93e5977415ed8684d615192b3588dd54b625cdd2820f91a3",
+    "explicitMaskFileSha256": "cbda682d4e93fd693e2e5110acb86e0168e9d127e00d726fe187accd167d695e",
+    "explicitMaskPixelSha256": "1ea665a23dca5e1c20376b8a8c7307738fe582fcefb2cd14195a81cb125e2704",
+    "width": 1536,
+    "height": 1024
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "all-edges-safe-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "reviewSummary": {
+    "componentCount": 64,
+    "backgroundHoleCount": 35,
+    "backgroundFringeCount": 12,
+    "outerBackgroundHoleCount": 15,
+    "retainSubjectCount": 0,
+    "residualKeyRepairCount": 17,
+    "retainAuthoredColorCount": 0,
+    "candidateEvidence": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/qc/mask-review/world/world-component-candidates.json",
+    "overlayEvidence": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/qc/mask-review/world/world-all-component-overlay.png",
+    "decisionPolicy": "Every indexed component, including one-pixel residual-key candidates, was reviewed at readable zoom. Only visually certain generated-background holes, gaps, edge spill, and residual key-color pixels were selected; no authored keyed-gamut subject material was found."
+  },
+  "components": [
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "64674125765d7ffab676bb7660e8a19ca63ddee30ff648bb2ddd4fafb616b8ef",
+      "cellBbox": [
+        321,
+        194,
+        336,
+        264
+      ],
+      "sheetBbox": [
+        321,
+        194,
+        336,
+        264
+      ],
+      "pixelCount": 210,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "09fd682d9f7a128289a72f584439c65b1f7838547d6161059dce3c2533bd09d1",
+      "cellBbox": [
+        213,
+        198,
+        232,
+        277
+      ],
+      "sheetBbox": [
+        213,
+        198,
+        232,
+        277
+      ],
+      "pixelCount": 203,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "83f81eecb4813f03e6dca71ace7c18a0eeeaf878f205c992a4df2ba5541fd472",
+      "cellBbox": [
+        194,
+        34,
+        367,
+        500
+      ],
+      "sheetBbox": [
+        194,
+        34,
+        367,
+        500
+      ],
+      "pixelCount": 1922,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f46485c8923cd909c18fc665ffbc1dab40efbbcdcece9684a609907115ed0b33",
+      "cellBbox": [
+        320,
+        193,
+        338,
+        273
+      ],
+      "sheetBbox": [
+        320,
+        193,
+        338,
+        273
+      ],
+      "pixelCount": 215,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6860094631da01e9dd29e2d74e57a74b9f1b4b675d8c02611a0c0392c0f80591",
+      "cellBbox": [
+        212,
+        195,
+        234,
+        279
+      ],
+      "sheetBbox": [
+        212,
+        195,
+        234,
+        279
+      ],
+      "pixelCount": 247,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7bc67476fa07e178adda13eb0c921320aca27a88ee71279330d422bda9fc55c7",
+      "cellBbox": [
+        205,
+        293,
+        213,
+        309
+      ],
+      "sheetBbox": [
+        205,
+        293,
+        213,
+        309
+      ],
+      "pixelCount": 83,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "851ab8432222d18a385e5b8901d6b73b0af70a8d2cc926b9d5d55faaa1d09b0f",
+      "cellBbox": [
+        274,
+        297,
+        275,
+        298
+      ],
+      "sheetBbox": [
+        274,
+        297,
+        275,
+        298
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c17393c27769f9cdb53b46be84e2dc909acf24e5e86cd086d5797d210c73016d",
+      "cellBbox": [
+        334,
+        308,
+        335,
+        309
+      ],
+      "sheetBbox": [
+        334,
+        308,
+        335,
+        309
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b92dc31971dc8d64f9bfa8b8a35cd2cb9d8b23eb1273d80c61d8bcce1b327691",
+      "cellBbox": [
+        186,
+        53,
+        187,
+        54
+      ],
+      "sheetBbox": [
+        570,
+        53,
+        571,
+        54
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7baff23546c42562bf038466c6ff3384429c09af142037cadb7fc684e894b204",
+      "cellBbox": [
+        258,
+        198,
+        260,
+        203
+      ],
+      "sheetBbox": [
+        642,
+        198,
+        644,
+        203
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "18c6c792d6e3a2882cb1f01567669034609f8b6e848f3e5a3ec1cf22fedd4a01",
+      "cellBbox": [
+        259,
+        209,
+        260,
+        210
+      ],
+      "sheetBbox": [
+        643,
+        209,
+        644,
+        210
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "51cddce29b4005fe6bbb4f1f68a3b633850cf1d632ab7f4581588a6c14800458",
+      "cellBbox": [
+        132,
+        35,
+        297,
+        507
+      ],
+      "sheetBbox": [
+        516,
+        35,
+        681,
+        507
+      ],
+      "pixelCount": 1934,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d89f84bde006ca1e8d2e6f2bd71c5b6ca070bdc7e03df7bff57bb88829b00dc2",
+      "cellBbox": [
+        257,
+        197,
+        263,
+        215
+      ],
+      "sheetBbox": [
+        641,
+        197,
+        647,
+        215
+      ],
+      "pixelCount": 52,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "efb939f930eeee7fce5bca8a69e4c756a5448e0a1c6f3421c06f55a0dbec72b7",
+      "cellBbox": [
+        187,
+        64,
+        188,
+        65
+      ],
+      "sheetBbox": [
+        571,
+        64,
+        572,
+        65
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8f105566e7b86bba285be9c1c9196faef65651f24aa115c5e5017a7a31b07598",
+      "cellBbox": [
+        260,
+        219,
+        264,
+        233
+      ],
+      "sheetBbox": [
+        644,
+        219,
+        648,
+        233
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9aa5a65b35ce900c3d0455d5a2397298c76cb836c721a4c435f177d8b5092c5d",
+      "cellBbox": [
+        148,
+        297,
+        149,
+        298
+      ],
+      "sheetBbox": [
+        532,
+        297,
+        533,
+        298
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d84f46b91fbaaa313414a1cb24ff0f61781a5055ab59e366edef6a7c2a84b340",
+      "cellBbox": [
+        149,
+        299,
+        150,
+        300
+      ],
+      "sheetBbox": [
+        533,
+        299,
+        534,
+        300
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "44ba49805805bfa25980ffb5245bf12d07df3b8cf3a4ba48e94c095ee9e836c4",
+      "cellBbox": [
+        150,
+        300,
+        154,
+        306
+      ],
+      "sheetBbox": [
+        534,
+        300,
+        538,
+        306
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "bb981c64169bedd20c50249984128274e5501adad6c835429d9dfa5e63fae37e",
+      "cellBbox": [
+        94,
+        40,
+        189,
+        503
+      ],
+      "sheetBbox": [
+        862,
+        40,
+        957,
+        503
+      ],
+      "pixelCount": 1513,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "west",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ddb8c9566df17daa702b7f55c32f06e77922bda5518610baff46377da88cb733",
+      "cellBbox": [
+        117,
+        61,
+        123,
+        69
+      ],
+      "sheetBbox": [
+        885,
+        61,
+        891,
+        69
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "eba30a4326be66bd37e04b8fa4091bfabdaf4407b86a1b14cafbbca5fcfdb0bd",
+      "cellBbox": [
+        116,
+        61,
+        117,
+        62
+      ],
+      "sheetBbox": [
+        884,
+        61,
+        885,
+        62
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e35ff4724bca87697437ee277097e39ff1636c2f4ba46471c5a548541eddca8e",
+      "cellBbox": [
+        105,
+        309,
+        107,
+        311
+      ],
+      "sheetBbox": [
+        873,
+        309,
+        875,
+        311
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d23382bc955793675314ec23b881266cf176cdcd5079df04883b6d3e61bb7ffc",
+      "cellBbox": [
+        104,
+        311,
+        105,
+        312
+      ],
+      "sheetBbox": [
+        872,
+        311,
+        873,
+        312
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "664cfa5312607858e3fface473469f934f28ff772e9c8881dfd437f5027cf85f",
+      "cellBbox": [
+        118,
+        221,
+        121,
+        233
+      ],
+      "sheetBbox": [
+        1270,
+        221,
+        1273,
+        233
+      ],
+      "pixelCount": 20,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ac6b66431e9f4212e57ac4e4407181b5dd3cf025afbe8fde6ab5b8d33aaa63df",
+      "cellBbox": [
+        119,
+        235,
+        122,
+        246
+      ],
+      "sheetBbox": [
+        1271,
+        235,
+        1274,
+        246
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "65bcd9cbda4c02c5b75becb6aa099f435b16fc46864da733761efeb6d22b3ebe",
+      "cellBbox": [
+        6,
+        43,
+        148,
+        506
+      ],
+      "sheetBbox": [
+        1158,
+        43,
+        1300,
+        506
+      ],
+      "pixelCount": 1812,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a6f0d12890b0f2218bef55bd439135a660f27cb1f50d065896f92fbec4d2fad6",
+      "cellBbox": [
+        117,
+        219,
+        125,
+        258
+      ],
+      "sheetBbox": [
+        1269,
+        219,
+        1277,
+        258
+      ],
+      "pixelCount": 124,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b972732431be5d3778382fd34e644440cdb15165c9c61f9c31b627c74de9bc6e",
+      "cellBbox": [
+        314,
+        167,
+        332,
+        252
+      ],
+      "sheetBbox": [
+        314,
+        679,
+        332,
+        764
+      ],
+      "pixelCount": 441,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7e3a1f0e4ea84422331e3298179f676e4a3932f6bc4affc6020f9e34f4c06ff6",
+      "cellBbox": [
+        220,
+        168,
+        234,
+        228
+      ],
+      "sheetBbox": [
+        220,
+        680,
+        234,
+        740
+      ],
+      "pixelCount": 248,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e51b474d8fdb198739b5be237b27f396100d09df906ae4b0a567fc473976ed1f",
+      "cellBbox": [
+        211,
+        263,
+        213,
+        275
+      ],
+      "sheetBbox": [
+        211,
+        775,
+        213,
+        787
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "df715e5dd0e1735d1cb7c57fdac1ab41555dbea106149f6974377343b380f7d7",
+      "cellBbox": [
+        332,
+        264,
+        337,
+        278
+      ],
+      "sheetBbox": [
+        332,
+        776,
+        337,
+        790
+      ],
+      "pixelCount": 38,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a04c7f97864e4a432bda125c2f094ea013c4ccf3b402eca1f20baef7e467f74f",
+      "cellBbox": [
+        190,
+        15,
+        351,
+        297
+      ],
+      "sheetBbox": [
+        190,
+        527,
+        351,
+        809
+      ],
+      "pixelCount": 733,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "bcd66dfe7f358853b8001c30fa252396c2dfa3b988f9e4bd6ed624250bbc461a",
+      "cellBbox": [
+        195,
+        260,
+        244,
+        475
+      ],
+      "sheetBbox": [
+        195,
+        772,
+        244,
+        987
+      ],
+      "pixelCount": 309,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "0b8c27a495cede504c633b900170e4972ae208f2d462f6f8d1580ab44689c2c2",
+      "cellBbox": [
+        261,
+        277,
+        280,
+        350
+      ],
+      "sheetBbox": [
+        261,
+        789,
+        280,
+        862
+      ],
+      "pixelCount": 100,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5de186f29cecefb886753813404a13424eb51d085e2011278d98e8a8ed1aa808",
+      "cellBbox": [
+        280,
+        300,
+        339,
+        474
+      ],
+      "sheetBbox": [
+        280,
+        812,
+        339,
+        986
+      ],
+      "pixelCount": 373,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "e958674476f50d84728e0ad13eeefba052c94db13f33336f1f12ddb0c8c90936",
+      "cellBbox": [
+        242,
+        355,
+        263,
+        462
+      ],
+      "sheetBbox": [
+        242,
+        867,
+        263,
+        974
+      ],
+      "pixelCount": 111,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "03ecf36c727e8cd391c527325009f9a8d2cd772ee4773e9ccdac20bcd8ebbe1f",
+      "cellBbox": [
+        313,
+        165,
+        333,
+        254
+      ],
+      "sheetBbox": [
+        313,
+        677,
+        333,
+        766
+      ],
+      "pixelCount": 225,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8a671c0c5e8fb303ac68acd6c28129182ddd9329f3094650f0380529f58743ac",
+      "cellBbox": [
+        217,
+        166,
+        235,
+        238
+      ],
+      "sheetBbox": [
+        217,
+        678,
+        235,
+        750
+      ],
+      "pixelCount": 179,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6c2535dd3b83c1af0d1b40857ecddd5824912acb20b5ed3d449de35a85a44b02",
+      "cellBbox": [
+        210,
+        261,
+        215,
+        278
+      ],
+      "sheetBbox": [
+        210,
+        773,
+        215,
+        790
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9b4513cdc67a3079f16dcf2e405654a5c8da16970cbaf015d4051e8321da8b39",
+      "cellBbox": [
+        331,
+        262,
+        339,
+        278
+      ],
+      "sheetBbox": [
+        331,
+        774,
+        339,
+        790
+      ],
+      "pixelCount": 58,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6c8a18a1239b2466c3206decfe020fbd24ffdd9abb3c601d552aed84f7a575f4",
+      "cellBbox": [
+        217,
+        239,
+        218,
+        240
+      ],
+      "sheetBbox": [
+        217,
+        751,
+        218,
+        752
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "19806f7d2699a54af3cc43e4e4f69ddd16e440476c328ba55850d6542c0be7a3",
+      "cellBbox": [
+        210,
+        242,
+        217,
+        248
+      ],
+      "sheetBbox": [
+        210,
+        754,
+        217,
+        760
+      ],
+      "pixelCount": 30,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "77bb468fe49a4b409629d9bbcefe2f5c1ba45823e9d1761db9455ffd2683cd47",
+      "cellBbox": [
+        265,
+        232,
+        267,
+        237
+      ],
+      "sheetBbox": [
+        649,
+        744,
+        651,
+        749
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7d3ee09477e4cfd435b00b1a645c9ca9c06a43fb0b5207af3e58ca289a63875d",
+      "cellBbox": [
+        267,
+        243,
+        268,
+        245
+      ],
+      "sheetBbox": [
+        651,
+        755,
+        652,
+        757
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b4ea556b9f90ba2caf7446a4c203473499e124a733e81c50b864f00d523262d5",
+      "cellBbox": [
+        268,
+        249,
+        269,
+        252
+      ],
+      "sheetBbox": [
+        652,
+        761,
+        653,
+        764
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c7b9b1aa85505f5c9502e821d3bbc8891f42f446f582cfdd37562be7434f74f1",
+      "cellBbox": [
+        270,
+        260,
+        274,
+        278
+      ],
+      "sheetBbox": [
+        654,
+        772,
+        658,
+        790
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5de004861e3155b94b3c5ff297b6706b1d097933d1cdd2ddf6fd7a06274854d1",
+      "cellBbox": [
+        144,
+        14,
+        293,
+        477
+      ],
+      "sheetBbox": [
+        528,
+        526,
+        677,
+        989
+      ],
+      "pixelCount": 1803,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c67839b6f55d9cf59d3f19c5d09de3220d23e65fa87d6da19ca7322d5bff4b4f",
+      "cellBbox": [
+        263,
+        227,
+        271,
+        255
+      ],
+      "sheetBbox": [
+        647,
+        739,
+        655,
+        767
+      ],
+      "pixelCount": 98,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "29f86934fe1f25640f08f18297a3e7e46b47e45dfb9068406e36e068ee2bdfee",
+      "cellBbox": [
+        269,
+        258,
+        276,
+        280
+      ],
+      "sheetBbox": [
+        653,
+        770,
+        660,
+        792
+      ],
+      "pixelCount": 56,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f887be7d8c370d1b314727dad61c64a66d8d0a14b80c9910bf5b1df98e1ebc14",
+      "cellBbox": [
+        211,
+        309,
+        215,
+        313
+      ],
+      "sheetBbox": [
+        595,
+        821,
+        599,
+        825
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "25db0f85a35476f1138ccd9b5791fa851eb715c2699e04f5ab3f7007cc9e628c",
+      "cellBbox": [
+        166,
+        282,
+        168,
+        285
+      ],
+      "sheetBbox": [
+        550,
+        794,
+        552,
+        797
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "68d533ca3843dd2276a725cc16d699458245d765df8abee1c7b779bae3a51246",
+      "cellBbox": [
+        163,
+        23,
+        164,
+        24
+      ],
+      "sheetBbox": [
+        931,
+        535,
+        932,
+        536
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a0733c887740c2ee741e93dafddf66c29d7562d948af20007c853a1256076c73",
+      "cellBbox": [
+        167,
+        36,
+        169,
+        39
+      ],
+      "sheetBbox": [
+        935,
+        548,
+        937,
+        551
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9226ba049cfe77a72cb5e210e2c9b3d32073be8ee302abf44b02abddb0d1c214",
+      "cellBbox": [
+        120,
+        76,
+        122,
+        80
+      ],
+      "sheetBbox": [
+        888,
+        588,
+        890,
+        592
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "34187fa7e0f7749940affbf9f71405f8afdff6abb1b980323c8abdb024643394",
+      "cellBbox": [
+        119,
+        81,
+        120,
+        84
+      ],
+      "sheetBbox": [
+        887,
+        593,
+        888,
+        596
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "2beb46cb2bade3105e2da4bc3f20c5ff0b37d1b4258d1e860572e834efb99a44",
+      "cellBbox": [
+        102,
+        15,
+        193,
+        476
+      ],
+      "sheetBbox": [
+        870,
+        527,
+        961,
+        988
+      ],
+      "pixelCount": 1435,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "cbf6690acf2d5f39ec657462dd4ec407b800e77b068acf2f827285ec5c35cbbb",
+      "cellBbox": [
+        166,
+        35,
+        169,
+        39
+      ],
+      "sheetBbox": [
+        934,
+        547,
+        937,
+        551
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3482e5a5c36774bd5898152cb2514d869dc6aed1579ad0d94784454e9439abf9",
+      "cellBbox": [
+        118,
+        75,
+        124,
+        85
+      ],
+      "sheetBbox": [
+        886,
+        587,
+        892,
+        597
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e561db85e96c81e9ec95f557c89674c971cb2769e2f804d6ab850541625c79f9",
+      "cellBbox": [
+        151,
+        19,
+        152,
+        20
+      ],
+      "sheetBbox": [
+        919,
+        531,
+        920,
+        532
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "087476574ea5df265cfac2e1a65e23ca2b1b6f64cb4316d66a017acc955926b8",
+      "cellBbox": [
+        95,
+        175,
+        104,
+        228
+      ],
+      "sheetBbox": [
+        1247,
+        687,
+        1256,
+        740
+      ],
+      "pixelCount": 127,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c27fe7fe1a3adf736fff5ff034c27e56baa791955061ddbc76e791d3941261e2",
+      "cellBbox": [
+        71,
+        18,
+        224,
+        480
+      ],
+      "sheetBbox": [
+        1223,
+        530,
+        1376,
+        992
+      ],
+      "pixelCount": 1740,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "0bc0a66b92caf9308deeef7b4a83c89b4d2b952cc03d2075b9c05edbe51478cc",
+      "cellBbox": [
+        94,
+        173,
+        106,
+        235
+      ],
+      "sheetBbox": [
+        1246,
+        685,
+        1258,
+        747
+      ],
+      "pixelCount": 170,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c6a2c9a355387f773e2b81136aff73b4680cadf947f710b60a6e2cd0614c4f74",
+      "cellBbox": [
+        198,
+        233,
+        202,
+        257
+      ],
+      "sheetBbox": [
+        1350,
+        745,
+        1354,
+        769
+      ],
+      "pixelCount": 70,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6e6c34a3e275151b9242c5a15773d84ab2e66f14cdaa81b9020798df65c5bde6",
+      "cellBbox": [
+        202,
+        261,
+        212,
+        276
+      ],
+      "sheetBbox": [
+        1354,
+        773,
+        1364,
+        788
+      ],
+      "pixelCount": 68,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "Codex producer exact-component visual review",
+      "reviewedAt": "2026-07-23T00:45:53+08:00",
+      "reviewNote": "Visually confirmed on the indexed original-plus-overlay review page as generated near-magenta backdrop visible through or around the subject; no keyed-gamut subject material is present in this complete classifier component."
+    }
+  ]
+}
