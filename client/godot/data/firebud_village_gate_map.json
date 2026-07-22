@@ -405,6 +405,8 @@
     {
       "id": "firebud_rebirth_mentor",
       "name": "转生导师阿岚",
+      "roleLabel": "转生导师",
+      "personalName": "阿岚",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [11, 14],
@@ -418,6 +420,8 @@
     {
       "id": "firebud_pet_mm_trial_mentor",
       "name": "1转MM试炼师阿澄",
+      "roleLabel": "1转MM试炼师",
+      "personalName": "阿澄",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [12, 14],
@@ -446,6 +450,8 @@
     {
       "id": "firebud_pet_mm_stage2_keeper",
       "name": "2转MM守护员阿岚",
+      "roleLabel": "2转MM守护员",
+      "personalName": "阿岚",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [12, 16],
@@ -459,6 +465,8 @@
     {
       "id": "firebud_doctor",
       "name": "村医阿萝",
+      "roleLabel": "村医",
+      "personalName": "阿萝",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [9, 16],
@@ -493,6 +501,8 @@
     {
       "id": "firebud_shopkeeper",
       "name": "杂货商阿芸",
+      "roleLabel": "杂货商",
+      "personalName": "阿芸",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [6, 15],
@@ -508,6 +518,8 @@
     {
       "id": "firebud_diamond_keeper",
       "name": "钻石商阿璨",
+      "roleLabel": "钻石商",
+      "personalName": "阿璨",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [6, 16],
@@ -521,6 +533,8 @@
     {
       "id": "firebud_stable_keeper",
       "name": "兽栏管理员阿牧",
+      "roleLabel": "兽栏管理员",
+      "personalName": "阿牧",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [5, 16],
@@ -536,6 +550,8 @@
     {
       "id": "firebud_riding_trainer",
       "name": "骑宠导师阿越",
+      "roleLabel": "骑宠导师",
+      "personalName": "阿越",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [4, 16],
@@ -550,6 +566,8 @@
     {
       "id": "firebud_pet_skill_trainer",
       "name": "宠技训练师阿拓",
+      "roleLabel": "宠技训练师",
+      "personalName": "阿拓",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [8, 16],
@@ -564,6 +582,8 @@
     {
       "id": "firebud_equipment_keeper",
       "name": "装备商阿石",
+      "roleLabel": "装备商",
+      "personalName": "阿石",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [7, 16],
@@ -579,6 +599,8 @@
     {
       "id": "firebud_welfare_clerk",
       "name": "福利员阿檀",
+      "roleLabel": "福利员",
+      "personalName": "阿檀",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [5, 15],
@@ -591,6 +613,8 @@
     {
       "id": "firebud_storyteller",
       "name": "说书人阿舟",
+      "roleLabel": "说书人",
+      "personalName": "阿舟",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [13, 15],
@@ -603,6 +627,8 @@
     {
       "id": "firebud_bank_keeper",
       "name": "银行管理员阿衡",
+      "roleLabel": "银行管理员",
+      "personalName": "阿衡",
       "kind": "npc",
       "movementCollision": "block",
       "cell": [13, 16],

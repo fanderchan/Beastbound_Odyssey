@@ -59,6 +59,7 @@ const HangSettingsModel := preload("res://scripts/progression/hang_settings_mode
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
@@ -1829,6 +1830,253 @@ func _run_auto_npc_interaction_check() -> void:
 		str(player_close),
 		str(trainer_blocks),
 		str(not_on_trainer),
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+func _run_auto_npc_hover_identity_check() -> void:
+	host.profile_save_enabled = false
+	host.player_profile = PlayerProgressModel.default_profile()
+	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
+	await host.get_tree().process_frame
+	var bank = InteractionModel.find_by_id(host.map_data, "firebud_bank_keeper")
+	var record_point = InteractionModel.find_by_id(host.map_data, "firebud_record_pillar")
+	var bank_marker = InteractionModel.marker_world_position(host.map_data, bank)
+	var bank_texture = NpcArtCatalog.world_texture_for_instance(bank)
+	var bank_face_world = bank_marker
+	var bank_draw_rect := Rect2()
+	if bank_texture != null:
+		bank_draw_rect = NpcArtCatalog.world_draw_rect_for_instance(bank, bank_marker, bank_texture)
+		bank_face_world = Vector2(bank_draw_rect.get_center().x, bank_draw_rect.position.y + bank_draw_rect.size.y * 0.32)
+	var bank_face_screen = host._world_to_screen(bank_face_world)
+
+	var hover_event := InputEventMouseMotion.new()
+	hover_event.position = bank_face_screen
+	hover_event.global_position = bank_face_screen
+	hover_event.relative = Vector2(1.0, 0.0)
+	host._input(hover_event)
+	await host.get_tree().process_frame
+	var hover_ok = (
+		host.npc_hover_identity_presenter != null
+		and host.npc_hover_identity_presenter.is_visible()
+		and host.npc_hover_identity_presenter.current_npc_id == "firebud_bank_keeper"
+		and host.npc_hover_identity_presenter.current_identity_text == "银行管理员：阿衡"
+	)
+
+	var click_event := InputEventMouseButton.new()
+	var click_face_screen = host._world_to_screen(bank_face_world)
+	click_event.position = click_face_screen
+	click_event.global_position = click_face_screen
+	click_event.button_index = MOUSE_BUTTON_LEFT
+	click_event.pressed = true
+	var face_resolve_count_before = host.click_move_screen_resolve_count
+	host._input(click_event)
+	await host.get_tree().process_frame
+	var click_pending_id = str(host.pending_interaction.get("id", ""))
+	var click_dialog_id = str(host.active_dialog_interaction.get("id", ""))
+	var click_face_ok = (
+		(host.has_pending_interaction and click_pending_id == "firebud_bank_keeper")
+		or (host._dialog_is_open() and click_dialog_id == "firebud_bank_keeper")
+	)
+	var face_resolver_ok = host.click_move_screen_resolve_count == face_resolve_count_before + 1
+	click_event.pressed = false
+	host._input(click_event)
+	host._clear_pending_interaction()
+	host._close_dialog()
+	host._clear_pending_click_move_target()
+	host._clear_navigation_state()
+
+	host.encounter_active = true
+	var encounter_resolve_count_before = host.click_move_screen_resolve_count
+	click_event.pressed = true
+	host._input(click_event)
+	var encounter_gate_ok = (
+		not host.has_pending_interaction
+		and not host._dialog_is_open()
+		and host.click_move_screen_resolve_count == encounter_resolve_count_before
+	)
+	click_event.pressed = false
+	host._input(click_event)
+	host.encounter_active = false
+
+	var bank_cell := InteractionModel.cell_for(bank)
+	var overlap_drop := {
+		"dropId": "qa_npc_hover_drop",
+		"mapId": host.current_map_id,
+		"cell": [bank_cell.x, bank_cell.y],
+		"expiresAtSec": int(Time.get_unix_time_from_system()) + 600,
+		"pet": {"name": "优先级测试宠物"},
+	}
+	host.player_profile["groundPetDrops"] = [overlap_drop]
+	host._clear_pending_interaction()
+	host._clear_pending_click_move_target()
+	var drop_screen: Vector2 = host._world_to_screen(host._ground_pet_marker_world_position(overlap_drop))
+	var drop_resolve_count_before = host.click_move_screen_resolve_count
+	host._handle_world_pointer_pressed(drop_screen, false)
+	var drop_priority_ok = (
+		host.has_pending_interaction
+		and str(host.pending_interaction.get("kind", "")) == "ground_pet_drop"
+		and str(host.pending_interaction.get("dropId", "")) == "qa_npc_hover_drop"
+		and host.click_move_screen_resolve_count == drop_resolve_count_before + 1
+	)
+	host.player_profile["groundPetDrops"] = []
+	host._clear_pending_interaction()
+	host._clear_pending_click_move_target()
+	host._clear_navigation_state()
+
+	var transparent_world := Vector2.ZERO
+	var transparent_canvas_ignored := false
+	if bank_texture != null and bank_draw_rect.size.x > 0.0:
+		var image := bank_texture.get_image()
+		if image != null and not image.is_empty():
+			var image_size := image.get_size()
+			var candidates: Array[Vector2i] = [
+				Vector2i(1, 1),
+				Vector2i(image_size.x - 2, 1),
+				Vector2i(1, image_size.y - 2),
+				Vector2i(image_size.x - 2, image_size.y - 2),
+			]
+			for pixel in candidates:
+				if image.get_pixel(pixel.x, pixel.y).a > 0.08:
+					continue
+				var candidate_world := bank_draw_rect.position + Vector2(
+					(float(pixel.x) + 0.5) / float(image_size.x) * bank_draw_rect.size.x,
+					(float(pixel.y) + 0.5) / float(image_size.y) * bank_draw_rect.size.y
+				)
+				if host.npc_hover_identity_presenter.npc_at_world_point(candidate_world).is_empty():
+					transparent_world = candidate_world
+					transparent_canvas_ignored = true
+					break
+	var transparent_click_ok := false
+	if transparent_canvas_ignored:
+		host._resolve_click_screen_point(host._world_to_screen(transparent_world))
+		transparent_click_ok = not host.has_pending_interaction or str(host.pending_interaction.get("kind", "")) != "npc"
+		host._clear_pending_interaction()
+		host._clear_pending_click_move_target()
+		host._clear_navigation_state()
+	var marker_slop_world := Vector2.ZERO
+	var marker_slop_hover_ok := false
+	for offset_y in range(-32, 17, 4):
+		for offset_x in range(-32, 33, 4):
+			var offset := Vector2(float(offset_x), float(offset_y))
+			if offset.length() > 32.0:
+				continue
+			var candidate: Vector2 = bank_marker + offset
+			if host.npc_hover_identity_presenter.npc_at_world_point(candidate).is_empty():
+				marker_slop_world = candidate
+				marker_slop_hover_ok = true
+				break
+		if marker_slop_hover_ok:
+			break
+	var marker_slop_click_ok := false
+	if marker_slop_hover_ok:
+		host._resolve_click_screen_point(host._world_to_screen(marker_slop_world))
+		marker_slop_click_ok = not host.has_pending_interaction or str(host.pending_interaction.get("kind", "")) != "npc"
+		host._clear_pending_interaction()
+		host._clear_pending_click_move_target()
+		host._clear_navigation_state()
+
+	var empty_event := InputEventMouseMotion.new()
+	empty_event.position = Vector2(host.get_viewport_rect().size.x * 0.5, host.get_viewport_rect().size.y - 24.0)
+	empty_event.global_position = empty_event.position
+	empty_event.relative = empty_event.position - bank_face_screen
+	host._input(empty_event)
+	await host.get_tree().process_frame
+	var leave_hidden_ok = not host.npc_hover_identity_presenter.is_visible()
+
+	bank_face_screen = host._world_to_screen(bank_face_world)
+	hover_event.position = bank_face_screen
+	hover_event.global_position = bank_face_screen
+	host._input(hover_event)
+	await host.get_tree().process_frame
+	host._clear_npc_hover_identity()
+	host._refresh_npc_hover_identity_from_cached_pointer()
+	var cached_pointer_refresh_ok = host.npc_hover_identity_presenter.is_visible()
+	var camera_smoothing_tail_refresh_ok := false
+	var camera_test_target_moved := false
+	var camera_actual_tail_distance := 0.0
+	var camera_stale_identity_replaced := false
+	if host.player != null and host.game_camera != null:
+		var test_window: Window = host.get_window()
+		var original_window_size: Vector2i = test_window.size
+		test_window.size = Vector2i(640, 360)
+		await host.get_tree().process_frame
+		host._update_camera_position(true)
+		bank_face_screen = host._world_to_screen(bank_face_world)
+		hover_event.position = bank_face_screen
+		hover_event.global_position = bank_face_screen
+		host._input(hover_event)
+		await host.get_tree().process_frame
+		var original_player_position: Vector2 = host.player.global_position
+		var original_camera_target: Vector2 = host._clamped_camera_center(original_player_position)
+		var camera_test_player_position := original_player_position
+		var camera_move_candidates: Array[Vector2] = [Vector2(24, 0), Vector2(-24, 0), Vector2(0, 24), Vector2(0, -24)]
+		for camera_delta in camera_move_candidates:
+			var candidate_position: Vector2 = original_player_position + camera_delta
+			if host._clamped_camera_center(candidate_position).distance_to(original_camera_target) > 4.0:
+				camera_test_player_position = candidate_position
+				break
+		if camera_test_player_position != original_player_position:
+			camera_test_target_moved = true
+			host.player.global_position = camera_test_player_position
+			host.player.clear_move_target()
+			await host.get_tree().process_frame
+			var actual_center_before_tail: Vector2 = host.game_camera.get_screen_center_position()
+			host.npc_hover_identity_presenter.show_item({
+				"id": "qa_stale_hover",
+				"kind": "npc",
+				"name": "过期身份",
+			})
+			var actual_center_changed := false
+			var stale_identity_replaced := false
+			for _frame in range(16):
+				await host.get_tree().process_frame
+				camera_actual_tail_distance = maxf(camera_actual_tail_distance, host.game_camera.get_screen_center_position().distance_to(actual_center_before_tail))
+				if camera_actual_tail_distance > 0.05:
+					actual_center_changed = true
+				if host.npc_hover_identity_presenter.current_npc_id != "qa_stale_hover":
+					stale_identity_replaced = true
+			camera_stale_identity_replaced = stale_identity_replaced
+			camera_smoothing_tail_refresh_ok = actual_center_changed and stale_identity_replaced
+			host.player.global_position = original_player_position
+			host.player.clear_move_target()
+			host._update_camera_position(true)
+		test_window.size = original_window_size
+		await host.get_tree().process_frame
+		host._update_camera_position(true)
+	var ui_event := InputEventMouseMotion.new()
+	ui_event.position = host.top_panel.position + host.top_panel.size * 0.5
+	ui_event.global_position = ui_event.position
+	ui_event.relative = ui_event.position - bank_face_screen
+	host._input(ui_event)
+	await host.get_tree().process_frame
+	var ui_hidden_ok = not host.npc_hover_identity_presenter.is_visible()
+	var marker_policy_ok = (
+		InteractionModel.world_marker_label_for(bank) == ""
+		and InteractionModel.world_marker_label_for(record_point) == "记录"
+	)
+	var cache_ok = host.npc_hover_identity_presenter.cached_npc_count() == 14
+	var status = "ok" if loaded and not bank.is_empty() and hover_ok and click_face_ok and face_resolver_ok and encounter_gate_ok and drop_priority_ok and transparent_canvas_ignored and transparent_click_ok and marker_slop_hover_ok and marker_slop_click_ok and cached_pointer_refresh_ok and camera_smoothing_tail_refresh_ok and leave_hidden_ok and ui_hidden_ok and marker_policy_ok and cache_ok else "failed"
+	print("npc hover identity check ready: status=%s loaded=%s hover=%s click_face=%s resolver=%s encounter_gate=%s drop_priority=%s transparent_canvas=%s transparent_click=%s marker_slop_hover=%s marker_slop_click=%s camera_refresh=%s camera_tail=%s camera_target=%s camera_distance=%.3f camera_replaced=%s leave_hidden=%s ui_hidden=%s marker_policy=%s cache=%s" % [
+		status,
+		str(loaded),
+		str(hover_ok),
+		str(click_face_ok),
+		str(face_resolver_ok),
+		str(encounter_gate_ok),
+		str(drop_priority_ok),
+		str(transparent_canvas_ignored),
+		str(transparent_click_ok),
+		str(marker_slop_hover_ok),
+		str(marker_slop_click_ok),
+		str(cached_pointer_refresh_ok),
+		str(camera_smoothing_tail_refresh_ok),
+		str(camera_test_target_moved),
+		camera_actual_tail_distance,
+		str(camera_stale_identity_replaced),
+		str(leave_hidden_ok),
+		str(ui_hidden_ok),
+		str(marker_policy_ok),
+		str(cache_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -17616,6 +17864,16 @@ func _run_auto_facility_marker_check() -> void:
 		and InteractionModel.facility_label_for(rebirth_mentor) == "转生"
 		and InteractionModel.facility_label_for(intro_trainer) == "训练"
 	)
+	var world_marker_policy_ok = (
+		InteractionModel.world_marker_label_for(doctor) == ""
+		and InteractionModel.world_marker_label_for(item_shop) == ""
+		and InteractionModel.world_marker_label_for(bank_keeper) == ""
+		and InteractionModel.world_marker_label_for(stable_keeper) == ""
+		and InteractionModel.world_marker_label_for(equipment_shop) == ""
+		and InteractionModel.world_marker_label_for(pet_trainer) == ""
+		and InteractionModel.world_marker_label_for(rebirth_mentor) == ""
+		and InteractionModel.world_marker_label_for(record_point) == "记录"
+	)
 	host._open_map_panel()
 	await host.get_tree().process_frame
 	var map_button_ok = (
@@ -17680,11 +17938,12 @@ func _run_auto_facility_marker_check() -> void:
 		and str(host.pending_interaction.get("id", "")) == "firebud_equipment_keeper"
 		and host.world_log_message.find("装备商阿石") >= 0
 	)
-	var status = "ok" if loaded and facility_data_ok and map_button_ok and target_pick_ok and quest_target_ok and route_ok else "failed"
-	print("facility marker check ready: status=%s loaded=%s data=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s bank=%s stable=%s trainer_map=%s log=%s" % [
+	var status = "ok" if loaded and facility_data_ok and world_marker_policy_ok and map_button_ok and target_pick_ok and quest_target_ok and route_ok else "failed"
+	print("facility marker check ready: status=%s loaded=%s data=%s world_marker_policy=%s map_buttons=%s target_pick=%s quest_target=%s route=%s shop=%s equipment=%s bank=%s stable=%s trainer_map=%s log=%s" % [
 		status,
 		str(loaded),
 		str(facility_data_ok),
+		str(world_marker_policy_ok),
 		str(map_button_ok),
 		str(target_pick_ok),
 		str(quest_target_ok),

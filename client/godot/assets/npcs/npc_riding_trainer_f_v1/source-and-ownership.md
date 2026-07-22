@@ -7,5 +7,5 @@
 - 两次“直接重画紫色污染”的 image-gen 实验因全画布像素漂移且仍残留发丝、耳部或衣边键色被明确拒绝；实验只保存在本地前期生产档案，不属于生产源或本次冻结交付。
 - v3.0 候选缺少 v3.1 残余键色门槛，已拒绝且只保存在本地前期生产档案，不得安装。
 - 唯一正式包是 `source/formal-production/npc-bundle-v3.1-20260722-7615f286/`。其世界 8 帧、人像 4 帧和根目录 `source/provenance.json` 已逐字节安装；没有运行时镜像。
-- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；当前状态为 `owner_review_pending / ownerReviewStatus=pending / releaseApproved=false / runtimeEnabled=false`。本记录不是所有者视觉批准、发布批准或运行启用声明。
+- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；项目所有者于 2026-07-22 明确要求将当前冻结形象实装，现状态为 `approved / ownerReviewStatus=approved / releaseApproved=true / runtimeEnabled=true`。根目录 owner decision 与 release attestation 精确绑定冻结证据和 12 张安装图；任一绑定哈希漂移都会失败关闭。
 - 商业使用与最终权利判断仍服从仓库所有者政策、OpenAI 适用条款及项目发布审核。

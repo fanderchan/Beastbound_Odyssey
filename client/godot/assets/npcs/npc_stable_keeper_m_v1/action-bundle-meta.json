@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_stable_keeper_m_v1/source/formal-production/npc-bundle-v3.1-20260722-7615f286-r2/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "780d3a89b7064aa991950fdd8c1505c35656e3eb73248496c2b6424694b7379e",
     "blindDirectionAudit": "required",
@@ -71,16 +71,16 @@
     "blindAuditSha256": "c880ff67aa9e671716d450580cd59fba5f9910df675882e0ff41e6515cda6734"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "frozen production evidence passed; explicit owner acceptance and release attestation remain required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 327 evidence; owner decision and runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_stable_keeper_m_v1/source/formal-production/npc-bundle-v3.1-20260722-7615f286-r2/npc-bundle.json",
     "productionManifestSha256": "841572b4e2b06f713ed5bbcc9274fe90de327bb61fb4601949e377d6d6b63caf",
     "ownershipRecord": "source-and-ownership.md",
-    "ownershipRecordSha256": "d35dd2c763f24a37083a7b2936f8bb0ba573daf1c4cc6957f9d6e3a0a22704f0",
+    "ownershipRecordSha256": "842aebb270efc319ce9cf79b87b9b00c680738aea8ff4953ccc014d62287c1ab",
     "sourceLedger": "source/provenance.json",
     "sourceLedgerSha256": "b725484ae8d6d439f457ad25fe9e355db8baf98e2790b38e244d792aa45797ca",
     "frames": [

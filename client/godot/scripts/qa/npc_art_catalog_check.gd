@@ -104,7 +104,13 @@ static func run() -> Dictionary:
 			continue
 		var canary := records_by_id[appearance_id] as Dictionary
 		_append_review_state_errors(canary, errors)
-		if str(canary.get("status", "")) != NpcArtCatalog.STATUS_APPROVED:
+		if str(canary.get("status", "")) == NpcArtCatalog.STATUS_APPROVED:
+			if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
+				errors.append("已批准 NPC 在普通运行预热前意外启用了 QA 候选开关：%s" % appearance_id)
+			if not NpcArtCatalog.warm_appearance(appearance_id):
+				errors.append("已批准 NPC 未能通过普通运行发布链预热：%s" % appearance_id)
+				errors.append_array(NpcArtCatalog.warm_errors_for(appearance_id))
+		else:
 			if NpcArtCatalog.warm_appearance(appearance_id):
 				errors.append("未批准 NPC 绕过 QA 开关进入正常运行路径：%s" % appearance_id)
 		var preview_warmed := NpcArtCatalog.enable_qa_preview_appearance(appearance_id)
@@ -182,6 +188,12 @@ static func run() -> Dictionary:
 			release_approved_count += 1
 		if bool(record.get("runtimeEnabled", false)):
 			runtime_enabled_count += 1
+	if release_approved_count != REVIEW_APPEARANCE_IDS.size():
+		errors.append("首批 NPC 必须全部获得 owner/release 批准：%d/%d" % [release_approved_count, REVIEW_APPEARANCE_IDS.size()])
+	if runtime_enabled_count != REVIEW_APPEARANCE_IDS.size():
+		errors.append("首批 NPC 必须全部进入普通运行目录：%d/%d" % [runtime_enabled_count, REVIEW_APPEARANCE_IDS.size()])
+	if NpcArtCatalog.runtime_appearance_records().size() != REVIEW_APPEARANCE_IDS.size():
+		errors.append("首批 NPC 普通运行记录数必须为 %d" % REVIEW_APPEARANCE_IDS.size())
 	var runtime_mirroring_count := _runtime_mirroring_count(records)
 	var map_reference_summary := _map_reference_summary(errors)
 	var map_reuse_counts := map_reference_summary.get("reuseCounts", {}) as Dictionary
@@ -198,7 +210,12 @@ static func run() -> Dictionary:
 	for appearance_id in preview_ids:
 		NpcArtCatalog.disable_qa_preview_appearance(appearance_id)
 		var record := records_by_id.get(appearance_id, {}) as Dictionary
-		if str(record.get("status", "")) != NpcArtCatalog.STATUS_APPROVED:
+		if str(record.get("status", "")) == NpcArtCatalog.STATUS_APPROVED:
+			if NpcArtCatalog.world_texture_for_frame(appearance_id, "south", "idle", 1) == null:
+				errors.append("QA 关闭后已批准 NPC 未保留普通世界纹理：%s" % appearance_id)
+			if NpcArtCatalog.portrait_texture(appearance_id, "neutral") == null:
+				errors.append("QA 关闭后已批准 NPC 未保留普通对话人像：%s" % appearance_id)
+		else:
 			if NpcArtCatalog.world_texture_for_frame(appearance_id, "south", "idle", 1) != null:
 				errors.append("QA 关闭后未批准 NPC 仍可进入正常世界路径：%s" % appearance_id)
 			if NpcArtCatalog.portrait_texture(appearance_id, "neutral") != null:

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_npc_owner_release_decision",
+  "appearanceId": "npc_equipment_artisan_m_v1",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "approvedAtUtc": "2026-07-22T14:23:46Z",
+  "sourceSetSha256": "0555fe26630d27bbfbfafe6bb7c2ed0ce24cee3750b8518d553e4780fd5ef243",
+  "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+  "acceptedEvidence": {
+    "sourceSetSha256": "0555fe26630d27bbfbfafe6bb7c2ed0ce24cee3750b8518d553e4780fd5ef243",
+    "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+    "blindStageAResultSha256": "a1e3b98a665c6228a76158dc2985e1122a7e55ce3dd812131e550cc34140d1ca",
+    "blindStageBObservationSha256": "7920e9554b2bab054489c0dd37e7cb68338bc8795411b42372f12726c29a5a8c",
+    "blindAuditSha256": "f16e4f6ef975dffae50987c4a597da2917b35d76beffebe0e3e2aed34646fdd5",
+    "blindReviewPacketSha256": "d56e5c808fa600884b4d5744bd9409ed6ed1ca5bae3ed9993afb99e7b29b1f4b",
+    "blindProducerMappingSha256": "e4dd1a8a5291ea653cbca108e34129f77d2659ae4ba325b8ede88d38abefc377",
+    "runtimeVideoSha256": "508c0edb5b98cb97400b29bdc30ddedc3d7813edf9ec3f77aa42d62eff73bf23",
+    "mainCaptureReportSha256s": [
+      "b8ee62c9f55d1d089ff2945e7dfb80fba25cc1c8a9c0547d9fe5b39f39ad0cde"
+    ],
+    "runtimeScreenshotSha256s": [
+      "3146486b2996529f592faeddfb0272bbaf06ee613d5878e342c8199aa8e07f12"
+    ]
+  }
+}

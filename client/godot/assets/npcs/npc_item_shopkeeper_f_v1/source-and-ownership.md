@@ -9,4 +9,4 @@
 - 耐久替换路径是唯一正式包中的 `identity/identity-board.png`、`source/prompts/`、raw 与生成账本：依此重新调用内置生成，再通过正式遮罩、方向、Godot 与所有者视觉 gate。
 - 旧 v3 因分类器遗漏残余键色组件而明确拒绝，从未作为正式安装源，只保存在本地前期生产档案。
 - 已从通过冻结 v3.1 独立审计的 `source/formal-production/npc-bundle-v3.1-20260722-7615f286` 按字节安装 8 张世界待机帧与 4 张表情人像；安装只建立可追溯候选，不代表发布。
-- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；当前状态为 `owner_review_pending / ownerReviewStatus=pending / releaseApproved=false / runtimeEnabled=false`。没有所有者批准声明或发布 attestation，普通玩家运行时不得选用本外观。
+- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；项目所有者于 2026-07-22 明确要求将当前冻结形象实装，现状态为 `approved / ownerReviewStatus=approved / releaseApproved=true / runtimeEnabled=true`。根目录 owner decision 与 release attestation 精确绑定冻结证据和 12 张安装图；任一绑定哈希漂移都会失败关闭。

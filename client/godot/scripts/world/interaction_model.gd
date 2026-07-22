@@ -92,6 +92,12 @@ static func facility_label_for(item: Dictionary) -> String:
 	return ""
 
 
+static func world_marker_label_for(item: Dictionary) -> String:
+	if str(item.get("kind", "")).strip_edges() == "npc":
+		return ""
+	return facility_label_for(item)
+
+
 static func is_facility(item: Dictionary) -> bool:
 	return facility_type_for(item) != ""
 
@@ -131,12 +137,19 @@ static func marker_world_position(map_data: Dictionary, item: Dictionary) -> Vec
 	return IsoMapModel.grid_to_world(map_data, cell_for(item)) + Vector2(0, -18)
 
 
-static func find_at_world_point(map_data: Dictionary, world_point: Vector2, hit_radius: float = 34.0) -> Dictionary:
+static func find_at_world_point(
+	map_data: Dictionary,
+	world_point: Vector2,
+	hit_radius: float = 34.0,
+	include_npcs: bool = true
+) -> Dictionary:
 	var clicked_cell := IsoMapModel.world_to_grid(map_data, world_point)
 	var best_item: Dictionary = {}
 	var best_distance := INF
 	for value in interaction_points(map_data):
 		var item := value as Dictionary
+		if not include_npcs and str(item.get("kind", "")) == "npc":
+			continue
 		var item_cell := cell_for(item)
 		var marker_point := marker_world_position(map_data, item)
 		var distance := world_point.distance_to(marker_point)

@@ -8,4 +8,4 @@
 - 生成器实际输出全不透明近洋红背景而非均匀纯 `#FF00FF`。v3.1 正式去背只在同一原图冻结的边界连通区域、逐组件人工决定和逐组件 residual 修复遮罩内执行；禁止全图按色相删除。处理后 12 帧在 `alpha >= 16` 下各只有一个连通主体组件；低透明度发丝抗锯齿像素不属于纯键色残留。
 - 不可变生产包为 `source/formal-production/npc-bundle-v3.1-20260722-7615f286/npc-bundle.json`，manifest SHA-256 为 `4672690b1a32171e8e4c1bd23d9beb8a10033a25f4f8dd3b3c7d89376eac7e6d`。包内 8 张世界图与 4 张人像已逐字节复制到本职业外观根目录；`source/provenance.json` 也与包内 ledger 字节一致。
 - 无损 raw、逐字提示词、身份板、生成 ledger、组件审片页、显式 mask、背景测量与哈希均封装在唯一正式包的 `source/`、`source/prompts/`、`identity/` 与 evidence 文件中。耐久替换必须从该冻结包出发，重新完整执行显式组件审查、不可变 bundle、只读审计、Godot 客户端证据、独立盲向审片和所有者审批门禁。
-- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；当前状态为 `owner_review_pending / ownerReviewStatus=pending / releaseApproved=false / runtimeEnabled=false`。自动结构审计、作者目检或代理复核都不能替代项目所有者审批；未生成所有者放行文件，也不会进入玩家运行时。
+- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；项目所有者于 2026-07-22 明确要求将当前冻结形象实装，现状态为 `approved / ownerReviewStatus=approved / releaseApproved=true / runtimeEnabled=true`。根目录 owner decision 与 release attestation 精确绑定冻结证据和 12 张安装图；任一绑定哈希漂移都会失败关闭。

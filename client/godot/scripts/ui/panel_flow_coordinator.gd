@@ -12239,7 +12239,13 @@ func _resolve_click_screen_point(screen_point: Vector2) -> void:
 	if not ground_drop.is_empty():
 		_set_interaction_target(_ground_pet_interaction_for_drop(ground_drop))
 		return
-	var interaction = InteractionModel.find_at_world_point(map_data, world_point)
+	var visual_npc_interaction = host._npc_hover_interaction_at_screen_point(screen_point)
+	if not visual_npc_interaction.is_empty():
+		_set_interaction_target(visual_npc_interaction)
+		return
+	# NPCs use the same alpha-aware figure hit test as hover. The generic marker
+	# fallback remains for warps and non-NPC facilities only.
+	var interaction = InteractionModel.find_at_world_point(map_data, world_point, 34.0, false)
 	if not interaction.is_empty():
 		_set_interaction_target(interaction)
 		return

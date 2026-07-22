@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_npc_runtime_release_attestation",
+  "status": "passed",
+  "appearanceId": "npc_stable_keeper_m_v1",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "ownerApprovedAtUtc": "2026-07-22T14:23:46Z",
+  "ownerDecisionRecord": "client/godot/assets/npcs/npc_stable_keeper_m_v1/release-owner-decision.json",
+  "ownerDecisionRecordSha256": "bce7c371266e191762787833033838a682dbadea5ff1320fc6f7510a00c8a540",
+  "sourceSetSha256": "63118c63421d114541ff7901338bc2d6f322db04e1eabb5d0803e3b527e74d80",
+  "strictEvidence": {
+    "sourceSetSha256": "63118c63421d114541ff7901338bc2d6f322db04e1eabb5d0803e3b527e74d80",
+    "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+    "blindStageAResultSha256": "93532b845e6049d4b2383a1f6545b73c18f01ecf4717a183d408f9a74aac0c77",
+    "blindStageBObservationSha256": "25b8ac974420e4fb4c63ceaac5098fd5d6bb695633f8b60a62dadf388f91e06e",
+    "blindAuditSha256": "c880ff67aa9e671716d450580cd59fba5f9910df675882e0ff41e6515cda6734",
+    "blindReviewPacketSha256": "e107940f8aac131f6c93740d7be1996e3344399c7b437ea70d8fd839d550d16b",
+    "blindProducerMappingSha256": "26f7adfa10aadba7a386cbe788cefc654e0e8fdb5a2f19d2839b5aca6fd5b82a",
+    "runtimeVideoSha256": "6c0af3018c01913424fd5ae7bea282ab9851c214383481ca18410d9c9c2eeb31",
+    "mainCaptureReportSha256s": [
+      "25438af4b82fec1d1aa7d2966a5af74e5384a3c9402d979b97c2e4104689b2e1"
+    ],
+    "runtimeScreenshotSha256s": [
+      "55b194e284f46e103dc7c46f875b689340466a9682987e64fa9259a47678dd09"
+    ]
+  },
+  "frames": [
+    {
+      "installedPath": "world/directions/south/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/south/idle-1.png",
+      "kind": "world",
+      "slot": "south/idle/1",
+      "fileSha256": "fdca390d57d0e424738e77c144ce6b531646ebae323430980f74039b9f81f394",
+      "rgbaSha256": "1e026368d671a293bc4d2884f1ca77ba7e60145101462241bf90cf5974e59310"
+    },
+    {
+      "installedPath": "world/directions/southwest/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/southwest/idle-1.png",
+      "kind": "world",
+      "slot": "southwest/idle/1",
+      "fileSha256": "1803fe68d74d8714942cba935ac21c9aa247ac404b7a9deec30338a8d8d5ab84",
+      "rgbaSha256": "71399c0c7d0f923158bb04242a725128d3319a8c237935edfc36b97b40dec412"
+    },
+    {
+      "installedPath": "world/directions/west/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/west/idle-1.png",
+      "kind": "world",
+      "slot": "west/idle/1",
+      "fileSha256": "cf31739e6887d2d826e9bf3c3a88d57c86cc2e33f2834ed04683b9e7a8c25423",
+      "rgbaSha256": "d93c97cf1caf99ad724ae719f17af528c781ad310f59634c9b3950cef59b750c"
+    },
+    {
+      "installedPath": "world/directions/northwest/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/northwest/idle-1.png",
+      "kind": "world",
+      "slot": "northwest/idle/1",
+      "fileSha256": "3fd0680ff81683622a5d944970848d7d7ea0fe12582751bb6da1c3039ba623db",
+      "rgbaSha256": "929431526506a54bb1fe147a8e4056da485de02cd88151ab9d862d8efb1323c4"
+    },
+    {
+      "installedPath": "world/directions/north/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/north/idle-1.png",
+      "kind": "world",
+      "slot": "north/idle/1",
+      "fileSha256": "73bebe795c65eec6036d491c3924ed7f0461f3a68a2fc072bd2bc04aaf85d044",
+      "rgbaSha256": "9693ea3f4011719403d002221db0d4d3b14de0d9bdadcb06146c08c9b5a7e766"
+    },
+    {
+      "installedPath": "world/directions/northeast/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/northeast/idle-1.png",
+      "kind": "world",
+      "slot": "northeast/idle/1",
+      "fileSha256": "24f50a2fb600c76c10a2acf20af1b928581c077824e13627abfd404bd7f3886c",
+      "rgbaSha256": "52d85d9dac4a91ecb46bd2ace9af0f129b92753f23ea92b4a997694bed586cfc"
+    },
+    {
+      "installedPath": "world/directions/east/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/east/idle-1.png",
+      "kind": "world",
+      "slot": "east/idle/1",
+      "fileSha256": "4aebb975235bf806a19545b760dae41439fb00c40fa6ed1e9dd60767474f600a",
+      "rgbaSha256": "86d8ad5c6645d48aa3366538e7a2611844ada310be1751cfcde0011780eb540c"
+    },
+    {
+      "installedPath": "world/directions/southeast/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/southeast/idle-1.png",
+      "kind": "world",
+      "slot": "southeast/idle/1",
+      "fileSha256": "5355f402081c638f4e3093b27583d81035fee960b2f5fe18afc51dfc68854fc8",
+      "rgbaSha256": "eb5ae8762d0c5b0192f1e6b4fd7df3b65d7c6ea5d75bca0caefd7a1436767de4"
+    },
+    {
+      "installedPath": "portrait/neutral.png",
+      "sourceRuntimePath": "runtime/portraits/neutral.png",
+      "kind": "portrait",
+      "slot": "neutral",
+      "fileSha256": "d44e607e5e0d5a67fa481df1b787e270520cec56ee9b8f8a34d694f3f35273a6",
+      "rgbaSha256": "8ff293af693bc8b2f04f19151a0b24dd6e7861aa8c033a3c33346046d703c78f"
+    },
+    {
+      "installedPath": "portrait/speaking.png",
+      "sourceRuntimePath": "runtime/portraits/speaking.png",
+      "kind": "portrait",
+      "slot": "speaking",
+      "fileSha256": "77a4b76c9d72c1d9d452b3a617e6c04dcc31767a323a8d876a6ec9ec3fa938f9",
+      "rgbaSha256": "1fdaee37e50fe551aed7dc70f11f410049d79a554a0909650d8a42e062144d26"
+    },
+    {
+      "installedPath": "portrait/smile.png",
+      "sourceRuntimePath": "runtime/portraits/smile.png",
+      "kind": "portrait",
+      "slot": "smile",
+      "fileSha256": "d5486d176c8381c88e7ffcf313ca8a2807ae7959e9c912ebc7e2d4261d965e20",
+      "rgbaSha256": "99b8a8493e03ea961d7464d8bcac3e70db30641e63d32cb62ec909ac8d2e7991"
+    },
+    {
+      "installedPath": "portrait/concerned.png",
+      "sourceRuntimePath": "runtime/portraits/concerned.png",
+      "kind": "portrait",
+      "slot": "concerned",
+      "fileSha256": "3202402e95da70f80a2385fbd265b42d9363b5040349d7f74e645704015fcba1",
+      "rgbaSha256": "ba4a26e683bf122b899032c58c5119c2cddb4a70aafd984b125ce7db9a0737d9"
+    }
+  ]
+}

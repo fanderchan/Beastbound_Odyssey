@@ -49,6 +49,7 @@ const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const AdventureGoalPresenter := preload("res://scripts/ui/adventure_goal_presenter.gd")
+const NpcHoverIdentityPresenter := preload("res://scripts/ui/npc_hover_identity_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
 const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
@@ -227,6 +228,12 @@ var pet
 var path_line_node: Line2D
 var hud_root: Control
 var panel_registry
+var npc_hover_identity_presenter
+var npc_hover_last_screen_point := Vector2.ZERO
+var npc_hover_has_screen_point: bool = false
+var npc_hover_pointer_over_world: bool = false
+var npc_hover_last_camera_screen_center := Vector2.ZERO
+var npc_hover_camera_screen_center_valid: bool = false
 var top_panel: PanelContainer
 var side_panel: PanelContainer
 var action_bar: PanelContainer
@@ -737,6 +744,7 @@ var auto_camera_click_check: bool = false
 var auto_animation_state_check: bool = false
 var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
+var auto_npc_hover_identity_check: bool = false
 var auto_npc_appearance_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
@@ -1790,6 +1798,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_npc_collision_check")
 	elif auto_npc_interaction_check:
 		call_deferred("_run_auto_npc_interaction_check")
+	elif auto_npc_hover_identity_check:
+		call_deferred("_run_auto_npc_hover_identity_check")
 	elif auto_facility_dialog_options_check:
 		call_deferred("_run_auto_facility_dialog_options_check")
 	elif auto_npc_quest_marker_check:
@@ -2053,6 +2063,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_follow_check = true
 		elif arg == "--auto-npc-interaction-check":
 			auto_npc_interaction_check = true
+		elif arg == "--auto-npc-hover-identity-check":
+			auto_npc_hover_identity_check = true
 		elif arg == "--auto-npc-appearance-check":
 			auto_npc_appearance_check = true
 		elif arg == "--auto-npc-collision-check":
@@ -2741,6 +2753,8 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
+	if npc_hover_identity_presenter != null:
+		npc_hover_identity_presenter.configure_map(map_data)
 	map_world_bounds_cache_valid = false
 	_mark_progress_ui_caches_dirty()
 	_set_hang_mode(false)
@@ -3066,6 +3080,10 @@ func _run_auto_pet_follow_check() -> void:
 
 func _run_auto_npc_interaction_check() -> void:
 	await _auto_checks()._run_auto_npc_interaction_check()
+
+
+func _run_auto_npc_hover_identity_check() -> void:
+	await _auto_checks()._run_auto_npc_hover_identity_check()
 
 
 func _run_auto_npc_appearance_check() -> void:
@@ -7554,14 +7572,48 @@ func _input(event: InputEvent) -> void:
 			_handle_world_pointer_pressed(mouse_event.position, mouse_event.button_index == MOUSE_BUTTON_RIGHT)
 	elif event is InputEventMouseMotion:
 		var motion_event := event as InputEventMouseMotion
+		npc_hover_last_screen_point = motion_event.position
+		npc_hover_has_screen_point = true
 		if _is_ui_point(motion_event.position):
+			npc_hover_pointer_over_world = false
+			_clear_npc_hover_identity()
 			return
+		npc_hover_pointer_over_world = true
 		if battle_active:
+			_clear_npc_hover_identity()
 			_update_battle_hover_at_screen_point(motion_event.position)
+		else:
+			_update_npc_hover_identity_at_screen_point(motion_event.position)
 	elif event is InputEventScreenTouch:
 		var touch_event := event as InputEventScreenTouch
 		if touch_event.pressed:
 			_handle_world_pointer_pressed(touch_event.position, false)
+
+
+func _update_npc_hover_identity_at_screen_point(screen_point: Vector2) -> void:
+	if npc_hover_identity_presenter == null:
+		return
+	if map_data.is_empty() or encounter_active or battle_active or _dialog_is_open() or _world_menu_is_open():
+		_clear_npc_hover_identity()
+		return
+	npc_hover_identity_presenter.update_at_world_point(_screen_to_world(screen_point))
+
+
+func _npc_hover_interaction_at_screen_point(screen_point: Vector2) -> Dictionary:
+	if npc_hover_identity_presenter == null:
+		return {}
+	return npc_hover_identity_presenter.npc_at_world_point(_screen_to_world(screen_point))
+
+
+func _clear_npc_hover_identity() -> void:
+	if npc_hover_identity_presenter != null:
+		npc_hover_identity_presenter.clear()
+
+
+func _refresh_npc_hover_identity_from_cached_pointer() -> void:
+	if not npc_hover_has_screen_point or not npc_hover_pointer_over_world:
+		return
+	_update_npc_hover_identity_at_screen_point(npc_hover_last_screen_point)
 
 
 func _sync_keyboard_movement_input_gate() -> void:
@@ -7944,6 +7996,9 @@ func _build_camera() -> void:
 
 func _build_hud() -> void:
 	_panel_flow()._build_hud()
+	npc_hover_identity_presenter = NpcHoverIdentityPresenter.new()
+	npc_hover_identity_presenter.build(hud_root)
+	npc_hover_identity_presenter.configure_map(map_data)
 
 func _build_online_position_sync() -> void:
 	online_position_http_request = HTTPRequest.new()
@@ -12148,6 +12203,7 @@ func _update_battle_float_texts(delta: float) -> void:
 
 
 func _open_interaction_dialog(item: Dictionary) -> void:
+	_clear_npc_hover_identity()
 	_dialog_quest()._open_interaction_dialog(item)
 
 
@@ -12953,6 +13009,8 @@ func _layout_hud() -> void:
 	top_panel.position = Vector2(margin, margin)
 	top_panel.size = Vector2(top_width, 56)
 	top_panel.visible = true
+	if npc_hover_identity_presenter != null:
+		npc_hover_identity_presenter.layout(viewport_size, Rect2(top_panel.position, top_panel.size))
 	if battle_round_panel != null:
 		var round_size := Vector2(128.0, 40.0)
 		var round_y := top_panel.position.y + top_panel.size.y + 8.0
@@ -13506,10 +13564,24 @@ func _update_camera_position(force: bool) -> void:
 	if game_camera == null or player == null:
 		return
 	var next_position := _clamped_camera_center(player.global_position)
-	if force or game_camera.global_position.distance_to(next_position) > 0.1:
+	var target_moved := force or game_camera.global_position.distance_to(next_position) > 0.1
+	if target_moved:
 		game_camera.global_position = next_position
 	if force:
 		game_camera.reset_smoothing()
+		npc_hover_last_camera_screen_center = game_camera.get_screen_center_position()
+		npc_hover_camera_screen_center_valid = true
+		return
+	var actual_screen_center := game_camera.get_screen_center_position()
+	var actual_center_moved := (
+		not npc_hover_camera_screen_center_valid
+		or npc_hover_last_camera_screen_center.distance_to(actual_screen_center) > 0.05
+	)
+	if actual_center_moved:
+		npc_hover_last_camera_screen_center = actual_screen_center
+		npc_hover_camera_screen_center_valid = true
+	if target_moved or actual_center_moved:
+		_refresh_npc_hover_identity_from_cached_pointer()
 
 
 func _clamped_camera_center(target: Vector2) -> Vector2:
@@ -15143,7 +15215,7 @@ func _first_blocked_unfinished_quest_for_marker(normalized_profile: Dictionary =
 
 
 func _draw_facility_marker_label(item: Dictionary, marker: Vector2, selected: bool) -> void:
-	var facility_label := InteractionModel.facility_label_for(item)
+	var facility_label := InteractionModel.world_marker_label_for(item)
 	if facility_label == "":
 		return
 	var font := _canvas_text_font()

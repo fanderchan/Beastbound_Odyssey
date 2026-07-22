@@ -10,4 +10,4 @@
 - 旧 v3 因分类器漏掉残余紫幕被拒绝，从未作为最终安装源，只保存在本地前期生产档案。
 - 当前唯一安装源是 `source/formal-production/npc-bundle-v3.1-20260722-7615f286/npc-bundle.json`，manifest SHA-256 为 `3881a790122891499d53c2d8f6955c08afe3fabb68b7c723688570fcc7d9346d`。冻结 builder SHA-256 为 `7615f2860454dd23b3d51a3974257e68cc00cdf5e801199957a3ee16cb598f4b`，独立 auditor SHA-256 为 `e7f5772dc2d3810d4854f5a60485db9cbb107cf41a48ec57e0eba027daecd38a`，auditor 结果为 PASS（世界 8 帧、人像 4 帧）。
 - 最终包的 8 个世界帧与 4 张人像已逐字节安装到本外观目录；`source/provenance.json` 同样与最终包副本一致。正式包内联系表、QC、运行帧和账本构成可提交复核链，根级本地预览不作为证据。
-- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；当前状态为 `owner_review_pending / ownerReviewStatus=pending / releaseApproved=false / runtimeEnabled=false`。仍缺项目所有者接受与发布 attestation，本记录不构成发布批准。
+- 技术门禁、匿名八方向盲审、四人像复核和真实 Godot Main 截图均已通过；项目所有者于 2026-07-22 明确要求将当前冻结形象实装，现状态为 `approved / ownerReviewStatus=approved / releaseApproved=true / runtimeEnabled=true`。根目录 owner decision 与 release attestation 精确绑定冻结证据和 12 张安装图；任一绑定哈希漂移都会失败关闭。

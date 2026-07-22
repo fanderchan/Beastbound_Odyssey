@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_npc_owner_release_decision",
+  "appearanceId": "npc_village_healer_f_v1",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "approvedAtUtc": "2026-07-22T14:23:46Z",
+  "sourceSetSha256": "c354c6e48112027ab0ad8384a7d4d1e34bbfcb02fb36e0949f5dfdea4d5f33ee",
+  "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+  "acceptedEvidence": {
+    "sourceSetSha256": "c354c6e48112027ab0ad8384a7d4d1e34bbfcb02fb36e0949f5dfdea4d5f33ee",
+    "runtimeEvidenceIndexSha256": "3613f0e939a06ed2e425b1bec76cf439ef920cb6c4a8f52e1c1e705cc20e6326",
+    "blindStageAResultSha256": "0e5b28ae92b021d8b91fbfb5f123b604e1b002c4303d4c462a32daaa1f1e9428",
+    "blindStageBObservationSha256": "bf8c5d983bf5155ae622898b512af30cdfd4240c311501773330df3be6482405",
+    "blindAuditSha256": "c92b5cff38ee6245ec3298d39761712c247c9df9fcb29a987c358f2a774a0213",
+    "blindReviewPacketSha256": "3458676ee49823b363dabae64dc26969e4685fe70f3bc984d6268741e681455c",
+    "blindProducerMappingSha256": "e1c93a5cdd64fc097e7546d3a65dcc364748e4104e42d1d246c0d4c5229f67f6",
+    "runtimeVideoSha256": "64bd17d65365bda28894262e71c888574330a106125db069d29ba924965097b0",
+    "mainCaptureReportSha256s": [
+      "928277b6430352337f8c1c7723a1deecfb3df054e610c6a000b74d0d0c8cfa5e"
+    ],
+    "runtimeScreenshotSha256s": [
+      "95966f737c3513dbe2355bd564b1c5b3d5c9ac3274153bcb916a4af93edaee71"
+    ]
+  }
+}

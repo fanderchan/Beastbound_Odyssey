@@ -21,10 +21,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "亲和可靠的年轻兽栏管理员，饲料袋、牵引绳和耐磨工作装形成职业识别；八向始终保持同一人物、服装和道具。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_stable_keeper_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_stable_keeper_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_stable_keeper_m_v1/source-and-ownership.md",
@@ -55,7 +55,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_stable_keeper_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "946bd3415e1f55079271724e4af3092983468a50b19b797ea10a561ed67befec"
     },
     {
       "appearanceId": "npc_bank_keeper_f_v1",
@@ -64,10 +66,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "沉稳干练的年轻银行管理员，账本、钱袋和整洁柜台制服形成职业识别；八向始终保持同一人物、服装和道具。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_bank_keeper_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_bank_keeper_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_bank_keeper_f_v1/source-and-ownership.md",
@@ -98,7 +100,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_bank_keeper_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "78e16394045acdb095588611d40a2a82abaa3815ce7f25c70c87b651fdec4702"
     },
     {
       "appearanceId": "npc_item_shopkeeper_f_v1",
@@ -107,10 +111,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "爽朗利落的杂货与道具场商人，分格货篮、腰包和便于取货的围裙形成职业识别；跨村庄同岗位复用同一人物原型。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1/source-and-ownership.md",
@@ -141,7 +145,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_item_shopkeeper_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "b85f53b15b633ab1f63d610df8c51455f9dd5972fdf7ce2d40b3951d8ee0e9c0"
     },
     {
       "appearanceId": "npc_manor_steward_m_v1",
@@ -150,10 +156,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "稳重周到的庄园管事，钥匙串、土地册和整洁长外套形成职业识别；九座庄园复用同一职业人物原型。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_manor_steward_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_manor_steward_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_manor_steward_m_v1/source-and-ownership.md",
@@ -184,7 +190,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_manor_steward_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "3f2fa07f810df06d3c95ca95eb1dbef2caaf1428bf739dc7874dcd5855abd072"
     },
     {
       "appearanceId": "npc_village_guard_m_v1",
@@ -193,10 +201,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "警觉可靠的村庄守卫，短矛、护臂和轻型巡防甲形成职业识别；当前静态执勤，未来实际巡逻时再补 walk4。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_village_guard_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_village_guard_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_village_guard_m_v1/source-and-ownership.md",
@@ -227,7 +235,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_village_guard_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "e7e8f70d4ba30a709582a719d230733e00c230003a314e2b2fe973d9236bf268"
     },
     {
       "appearanceId": "npc_village_healer_f_v1",
@@ -236,10 +246,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "温和专注的村庄治疗师，草药包、药瓶和洁净披肩形成职业识别；治疗与记录点区域可复用同一职业人物原型。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_village_healer_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_village_healer_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_village_healer_f_v1/source-and-ownership.md",
@@ -270,7 +280,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_village_healer_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "bd55ff3c0a9d6594a4e87c72e7501a9fe8e7c63665e021c6fb235b06bf3c148c"
     },
     {
       "appearanceId": "npc_equipment_artisan_m_v1",
@@ -279,10 +291,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "结实严谨的装备商与工匠，锻造锤、皮围裙和样品护具形成职业识别；购买、穿戴与强化教学共用此职业原型。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_equipment_artisan_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_equipment_artisan_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_equipment_artisan_m_v1/source-and-ownership.md",
@@ -313,7 +325,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_equipment_artisan_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "e49715dcf59c0af1668b6f0a2f801ddfade55b7c42424fd9ff79b8b2ad0cc934"
     },
     {
       "appearanceId": "npc_riding_trainer_f_v1",
@@ -322,10 +336,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "自信亲和的骑宠导师，骨哨、训练护具和卷起鞍毯形成职业识别；用于新手老虎与骑宠许可教学。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_riding_trainer_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/source-and-ownership.md",
@@ -356,7 +370,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_riding_trainer_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "a3bd73dac4faaeb3be823811b366767fb6d2d62e9820e17978244c11c97384ff"
     }
   ]
 }
