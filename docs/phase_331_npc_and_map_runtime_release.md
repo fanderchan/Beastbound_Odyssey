@@ -167,6 +167,14 @@ releaseApproved=true
 runtimeEnabled=true
 ```
 
+## 发布后启动登录隔离时序回归
+
+普通 `--login` 启动会先由父进程创建账号专属 `user://` 目录，再拉起真正承载游戏的子进程。发布后手工终端复核发现：父进程成功创建子进程并请求退出后，Godot 仍可能在退出生效前执行一帧 `_process()`；此时 `_ready()` 已从重启分支提前返回，世界覆盖层尚未创建，因而在重绘热路径调用空 `world_overlay_layer`。子进程随后能正常登录并显示地图，所以玩家窗口看似可用，但父进程终端留下真实 `SCRIPT ERROR`。
+
+修复方式是在 `_ready()` 的第一步关闭 `_process()`，只有世界层、玩家、相机、HUD 和在线同步全部初始化完成后，才通过原有 `set_process(true)` 开启帧处理。没有在重绘函数里单独吞掉空值，以免掩盖其他非启动期的非法生命周期。
+
+修复前，现有真实跨进程 `--auto-startup-login-check` 记录子进程 `status=ok`，但仍因父进程 `SCRIPT ERROR` 正确失败；修复后同一门禁为 `2/2 PASS`，父进程隔离标记和子进程登录成功标记均存在，合并输出中无 `SCRIPT ERROR`，见 `.run/godot_auto_checks/2026-07-23T19-33-00-582Z_summary.json`。地图运行、相机、移动与鼠标点击相邻回归另为 `5/5 PASS`，见 `.run/godot_auto_checks/2026-07-23T19-33-39-224Z_summary.json`。
+
 ## 未改变与提交边界
 
 - 未修改服务端、协议、数据库、账号、档案、经济、战斗、任务奖励或地图权威拓扑；

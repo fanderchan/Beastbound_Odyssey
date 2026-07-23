@@ -1302,6 +1302,11 @@ func _configure_npc_art_runtime() -> void:
 
 
 func _ready() -> void:
+	# `_process()` is enabled by default when the method exists. Keep it paused
+	# until every world dependency is built so early-exit bootstrap paths (most
+	# notably the startup-login user-data relaunch parent) cannot process a
+	# partially initialized scene while their deferred quit is draining.
+	set_process(false)
 	_configure_runtime_performance()
 	_apply_preview_window_args()
 	if map_art_review_invalid_map_id != "":
