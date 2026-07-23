@@ -38,6 +38,11 @@ const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_m
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const WorldAudioContextModel := preload("res://scripts/audio/world_audio_context_model.gd")
+const GameAudioManager := preload("res://scripts/audio/game_audio_manager.gd")
+const BattleAudioTimelineController := preload(
+	"res://scripts/audio/battle_audio_timeline_controller.gd"
+)
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
@@ -60,6 +65,8 @@ const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
+const AudioSettingsPanel := preload("res://scripts/ui/audio_settings_panel.gd")
+const AudioMainRuntimeCheck := preload("res://scripts/qa/audio_main_runtime_check.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
@@ -648,6 +655,9 @@ var server_battle_state_poll_request_active: bool = false
 var server_battle_coordinator
 var dialog_quest_coordinator
 var auto_check_coordinator
+var game_audio_manager
+var battle_audio_timeline_controller
+var audio_settings_panel
 var player_action_panel: PanelContainer
 var player_action_title_label: Label
 var player_action_detail_label: Label
@@ -806,6 +816,7 @@ var auto_battle_status_hit_check: bool = false
 var auto_battle_status_rule_check: bool = false
 var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
+var auto_audio_runtime_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
@@ -1285,6 +1296,112 @@ func _pet_battle_review():
 	return pet_battle_review_lab
 
 
+func _build_game_audio_manager() -> void:
+	if game_audio_manager != null:
+		return
+	game_audio_manager = GameAudioManager.new()
+	game_audio_manager.name = "GameAudioManager"
+	add_child(game_audio_manager)
+	battle_audio_timeline_controller = BattleAudioTimelineController.new()
+	battle_audio_timeline_controller.configure(game_audio_manager)
+
+
+func _mount_audio_settings_panel() -> void:
+	if (
+		audio_settings_panel != null
+		or game_audio_manager == null
+		or account_panel == null
+		or account_panel.get_child_count() <= 0
+	):
+		return
+	var outer := account_panel.get_child(0)
+	if not (outer is VBoxContainer):
+		return
+	audio_settings_panel = AudioSettingsPanel.new()
+	audio_settings_panel.mount(outer, game_audio_manager)
+	if audio_settings_panel.root != null:
+		# Keep sound controls between account identity and logout actions.
+		outer.move_child(audio_settings_panel.root, mini(2, outer.get_child_count() - 1))
+
+
+func _audio_sync_current_map() -> void:
+	if game_audio_manager == null:
+		return
+	var context := WorldAudioContextModel.context_for(current_map_id, map_data)
+	if context == "":
+		game_audio_manager.silence_world_context()
+		push_warning("地图缺少音频语境，已停止地图音乐：%s" % current_map_id)
+		return
+	game_audio_manager.sync_map_context(current_map_id, context)
+
+
+func _audio_enter_battle(_state: Dictionary = {}) -> void:
+	if battle_audio_timeline_controller != null:
+		battle_audio_timeline_controller.end_event()
+	if game_audio_manager != null:
+		# Boss music remains disabled until battle authority exposes an explicit
+		# boss flag; do not infer it from map names or enemy display names.
+		game_audio_manager.enter_battle(false)
+
+
+func _audio_exit_battle() -> void:
+	if battle_audio_timeline_controller != null:
+		battle_audio_timeline_controller.end_event()
+	if game_audio_manager != null:
+		game_audio_manager.exit_battle()
+
+
+func _audio_play_cue(cue_id: String, options: Dictionary = {}) -> bool:
+	if game_audio_manager == null:
+		return false
+	return game_audio_manager.play_cue(cue_id, options)
+
+
+func _audio_play_battle_result(result_key: String) -> void:
+	match result_key:
+		"victory":
+			_audio_play_cue("outcome.victory")
+		"defeat":
+			_audio_play_cue("outcome.defeat")
+
+
+func _audio_begin_battle_event(event: Dictionary, ledger: Dictionary) -> void:
+	if battle_audio_timeline_controller == null:
+		return
+	var audio_event := ledger.duplicate(true)
+	for value in event.keys():
+		var key := str(value)
+		if not audio_event.has(key):
+			audio_event[key] = event[value]
+	var attacker := BattleModel.actor_by_id(
+		battle_state,
+		str(audio_event.get("attackerId", ""))
+	)
+	var target_kinds := {}
+	for target_id_value in audio_event.get("targetIds", []):
+		var target_id := str(target_id_value)
+		var target := BattleModel.actor_by_id(battle_state, target_id)
+		if target_id != "" and not target.is_empty():
+			target_kinds[target_id] = str(target.get("kind", ""))
+	var actor_context := {
+		"attackerKind": str(attacker.get("kind", "")),
+		"targetKinds": target_kinds,
+	}
+	if target_kinds.size() == 1:
+		actor_context["targetKind"] = str(target_kinds.values()[0])
+	battle_audio_timeline_controller.begin_event(audio_event, actor_context)
+
+
+func _audio_update_battle_event_progress(progress: float) -> void:
+	if battle_audio_timeline_controller != null:
+		battle_audio_timeline_controller.update_progress(progress)
+
+
+func _audio_end_battle_event() -> void:
+	if battle_audio_timeline_controller != null:
+		battle_audio_timeline_controller.end_event()
+
+
 func _configure_npc_art_runtime() -> void:
 	NpcArtCatalog.initialize()
 	# The explicit candidate preview is additive: first keep every released NPC
@@ -1326,6 +1443,7 @@ func _ready() -> void:
 	if _restart_with_startup_login_user_data_dir_if_needed():
 		return
 	_bootstrap_auth_state()
+	_build_game_audio_manager()
 	# The real Main scene remains in use, but capture evidence must not even read
 	# a player's mount, quest markers, dialogue options, or persisted profile.
 	player_profile = (
@@ -1344,6 +1462,7 @@ func _ready() -> void:
 	_build_path_line_overlay()
 	_build_camera()
 	_build_hud()
+	_mount_audio_settings_panel()
 	_sync_world_visual_layers(true)
 	_build_online_position_sync()
 	if account_authenticated:
@@ -1506,6 +1625,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_passive_hover_check")
 	elif auto_battle_reaction_check:
 		call_deferred("_run_auto_battle_reaction_check")
+	elif auto_audio_runtime_check:
+		call_deferred("_run_auto_audio_runtime_check")
 	elif auto_battle_result_check:
 		call_deferred("_run_auto_battle_result_check")
 	elif auto_battle_knockaway_result_check:
@@ -2247,6 +2368,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_passive_hover_check = true
 		elif arg == "--auto-battle-reaction-check":
 			auto_battle_reaction_check = true
+		elif arg == "--auto-audio-runtime-check":
+			auto_audio_runtime_check = true
 		elif arg == "--auto-battle-result-check":
 			auto_battle_result_check = true
 		elif arg == "--auto-battle-knockaway-result-check":
@@ -2846,6 +2969,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
+	_audio_sync_current_map()
 	map_visual_render_state = MapVisualCatalog.prepare_map(current_map_id, map_data, map_art_review_preview)
 	world_depth_map_signature_cache = ""
 	world_depth_remote_signature_cache = ""
@@ -3637,6 +3761,12 @@ func _run_auto_battle_event_ledger_check() -> void:
 
 func _run_auto_battle_reaction_check() -> void:
 	await _auto_checks()._run_auto_battle_reaction_check()
+
+
+func _run_auto_audio_runtime_check() -> void:
+	var report := AudioMainRuntimeCheck.run(self)
+	print("audio main runtime check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
 
 
 func _run_auto_battle_result_check() -> void:
@@ -6506,6 +6636,7 @@ func _open_battle_launch_preview(mode: String) -> void:
 	battle_last_round_applied_events = 1
 	_record_battle_event(event, ledger)
 	battle_current_event = BattleEventLedger.playback_event(event, ledger)
+	_audio_begin_battle_event(battle_current_event, ledger)
 	battle_current_event_actor_snapshots = actor_snapshots
 	_add_battle_event_feedback(battle_current_event, ledger)
 	_set_battle_message(str(battle_state.get("message", "")))
@@ -8958,6 +9089,8 @@ func _refresh_gm_visibility() -> void:
 
 func _open_account_panel() -> void:
 	_panel_flow()._open_account_panel()
+	if audio_settings_panel != null:
+		audio_settings_panel.refresh()
 
 func _close_account_panel(update_layout: bool = true) -> void:
 	_panel_flow()._close_account_panel(update_layout)
@@ -11587,6 +11720,7 @@ func _play_next_battle_event() -> void:
 		if not bool(event.get("serverResolved", false)) and counter_event is Dictionary and not (counter_event as Dictionary).is_empty():
 			battle_event_queue.push_front((counter_event as Dictionary).duplicate(true))
 		battle_current_event = BattleEventLedger.playback_event(event, ledger)
+		_audio_begin_battle_event(battle_current_event, ledger)
 		_add_battle_event_feedback(battle_current_event, ledger)
 		_set_battle_message(str(battle_state.get("message", "")))
 		_sync_battle_target_selection()
@@ -11954,20 +12088,37 @@ func _add_battle_float_text(actor_id: String, text: String, color: Color, delay:
 
 func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 	var duration := _battle_event_duration(event)
-	if _battle_last_event_has_down_target():
+	var has_down_target := _battle_last_event_has_down_target()
+	if has_down_target:
 		duration = maxf(duration, 1.25)
 	var delays_result := _battle_event_delays_result(event)
 	var reveal_progress := _battle_event_result_reveal_progress(event) if delays_result else 0.0
-	if _battle_last_event_is_nonlaunch_counter_ko(event):
+	var is_nonlaunch_counter_ko := _battle_last_event_is_nonlaunch_counter_ko(event)
+	if is_nonlaunch_counter_ko:
 		duration = maxf(duration, BATTLE_COUNTER_KO_SECONDS)
 		reveal_progress = BATTLE_COUNTER_KO_REVEAL_PROGRESS
 	var launch_start := reveal_progress
-	return {
+	var timeline := {
 		"durationSeconds": duration,
 		"delaysResult": delays_result,
 		"damageRevealProgress": reveal_progress,
 		"launchStartProgress": launch_start,
 	}
+	if has_down_target:
+		# Bind the body-fall cue to the same visible phase that draws the down
+		# animation. A non-launch counter KO first staggers back to its own slot,
+		# so its fall cannot reuse the ordinary post-contact threshold.
+		timeline["downSoundProgress"] = (
+			minf(
+				0.96,
+				BattleVisualPresentationModel.counter_ko_return_end_progress(
+					reveal_progress
+				) + 0.02
+			)
+			if is_nonlaunch_counter_ko
+			else minf(0.96, reveal_progress + 0.12)
+		)
+	return timeline
 
 
 func _battle_last_event_has_down_target() -> bool:
@@ -12722,6 +12873,7 @@ func _update_battle_animation(delta: float) -> void:
 			_advance_battle_after_current_event()
 		return
 	battle_action_timer = maxf(0.0, battle_action_timer - scaled_delta)
+	_audio_update_battle_event_progress(_battle_current_event_progress())
 	if battle_action_timer <= 0.001:
 		battle_action_timer = 0.0
 		if battle_current_event.is_empty():
@@ -12732,6 +12884,7 @@ func _update_battle_animation(delta: float) -> void:
 
 
 func _advance_battle_after_current_event() -> void:
+	_audio_end_battle_event()
 	battle_state = BattleModel.reset_action_states(battle_state)
 	battle_current_event.clear()
 	battle_current_event_duration = 0.0
@@ -13976,7 +14129,7 @@ func _layout_hud() -> void:
 
 	if account_panel != null:
 		var account_width: float = minf(viewport_size.x - margin * 2.0, 440.0)
-		var account_height: float = minf(viewport_size.y - margin * 2.0, 284.0)
+		var account_height: float = minf(viewport_size.y - margin * 2.0, 500.0)
 		account_panel.position = Vector2((viewport_size.x - account_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - account_height) * 0.5))
 		account_panel.size = Vector2(account_width, account_height)
 		if account_panel.visible:

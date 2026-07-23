@@ -1,0 +1,284 @@
+{
+  "bundleId": "beastbound_audio_v1",
+  "contexts": {
+    "battle_normal": "music.battle_normal",
+    "cave": "music.cave",
+    "town": "music.town",
+    "wilderness": "music.wilderness"
+  },
+  "cues": {
+    "combat.block": {
+      "assetId": "combat_block_v1",
+      "bus": "Combat",
+      "cooldownMs": 75,
+      "gainDb": -0.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_block.wav",
+      "priority": 64,
+      "role": "contact"
+    },
+    "combat.cast_skill": {
+      "assetId": "combat_cast_skill_v1",
+      "bus": "Combat",
+      "cooldownMs": 100,
+      "gainDb": -2.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_cast_skill.wav",
+      "priority": 38,
+      "role": "motion"
+    },
+    "combat.counter": {
+      "assetId": "combat_counter_v1",
+      "bus": "Combat",
+      "cooldownMs": 110,
+      "gainDb": 0.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_counter.wav",
+      "priority": 78,
+      "role": "reaction"
+    },
+    "combat.critical": {
+      "assetId": "combat_critical_v1",
+      "bus": "Combat",
+      "cooldownMs": 90,
+      "gainDb": 0.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_critical.wav",
+      "priority": 68,
+      "role": "contact"
+    },
+    "combat.down": {
+      "assetId": "combat_down_v1",
+      "bus": "Combat",
+      "cooldownMs": 120,
+      "gainDb": 0.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_down.wav",
+      "priority": 82,
+      "role": "reaction"
+    },
+    "combat.evade": {
+      "assetId": "combat_evade_v1",
+      "bus": "Combat",
+      "cooldownMs": 65,
+      "gainDb": -1.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_evade.wav",
+      "priority": 61,
+      "role": "reaction"
+    },
+    "combat.hit_heavy": {
+      "assetId": "combat_hit_heavy_v1",
+      "bus": "Combat",
+      "cooldownMs": 60,
+      "gainDb": 0.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_hit_heavy.wav",
+      "priority": 58,
+      "role": "contact"
+    },
+    "combat.hit_light": {
+      "assetId": "combat_hit_light_v1",
+      "bus": "Combat",
+      "cooldownMs": 45,
+      "gainDb": -1.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_hit_light.wav",
+      "priority": 52,
+      "role": "contact"
+    },
+    "combat.knockback": {
+      "assetId": "combat_knockback_v1",
+      "bus": "Combat",
+      "cooldownMs": 95,
+      "gainDb": -0.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_knockback.wav",
+      "priority": 74,
+      "role": "reaction"
+    },
+    "combat.launch": {
+      "assetId": "combat_launch_v1",
+      "bus": "Combat",
+      "cooldownMs": 95,
+      "gainDb": -0.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_launch.wav",
+      "priority": 76,
+      "role": "reaction"
+    },
+    "combat.motion_character": {
+      "assetId": "combat_motion_character_v1",
+      "bus": "Combat",
+      "cooldownMs": 70,
+      "gainDb": -2.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_motion_character.wav",
+      "priority": 30,
+      "role": "motion"
+    },
+    "combat.motion_pet": {
+      "assetId": "combat_motion_pet_v1",
+      "bus": "Combat",
+      "cooldownMs": 70,
+      "gainDb": -1.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_motion_pet.wav",
+      "priority": 30,
+      "role": "motion"
+    },
+    "combat.revive": {
+      "assetId": "combat_revive_v1",
+      "bus": "Combat",
+      "cooldownMs": 120,
+      "gainDb": -1.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/combat_revive.wav",
+      "priority": 84,
+      "role": "reaction"
+    },
+    "creature.pet_effort": {
+      "assetId": "creature_pet_effort_v1",
+      "bus": "Pet",
+      "cooldownMs": 100,
+      "gainDb": -2.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/creature_pet_effort.wav",
+      "priority": 28,
+      "role": "voice"
+    },
+    "creature.pet_hurt": {
+      "assetId": "creature_pet_hurt_v1",
+      "bus": "Pet",
+      "cooldownMs": 100,
+      "gainDb": -1.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/creature_pet_hurt.wav",
+      "priority": 56,
+      "role": "voice"
+    },
+    "music.battle_normal": {
+      "assetId": "music_battle_normal_v1",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -3.5,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/music/battle_normal_loop.wav",
+      "priority": 100,
+      "role": "music"
+    },
+    "music.cave": {
+      "assetId": "music_cave_v1",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -5.0,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/music/cave_loop.wav",
+      "priority": 100,
+      "role": "music"
+    },
+    "music.town": {
+      "assetId": "music_town_v1",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -4.0,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/music/town_loop.wav",
+      "priority": 100,
+      "role": "music"
+    },
+    "music.wilderness": {
+      "assetId": "music_wilderness_v1",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -4.5,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/music/wilderness_loop.wav",
+      "priority": 100,
+      "role": "music"
+    },
+    "outcome.defeat": {
+      "assetId": "outcome_defeat_v1",
+      "bus": "SFX",
+      "cooldownMs": 500,
+      "gainDb": -0.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/outcome_defeat.wav",
+      "priority": 100,
+      "role": "outcome"
+    },
+    "outcome.victory": {
+      "assetId": "outcome_victory_v1",
+      "bus": "SFX",
+      "cooldownMs": 500,
+      "gainDb": 0.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/outcome_victory.wav",
+      "priority": 100,
+      "role": "outcome"
+    },
+    "ui.cancel": {
+      "assetId": "ui_cancel_v1",
+      "bus": "UI",
+      "cooldownMs": 45,
+      "gainDb": -4.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/ui_cancel.wav",
+      "priority": 24,
+      "role": "ui"
+    },
+    "ui.confirm": {
+      "assetId": "ui_confirm_v1",
+      "bus": "UI",
+      "cooldownMs": 45,
+      "gainDb": -4.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/ui_confirm.wav",
+      "priority": 24,
+      "role": "ui"
+    },
+    "ui.error": {
+      "assetId": "ui_error_v1",
+      "bus": "UI",
+      "cooldownMs": 120,
+      "gainDb": -2.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/ui_error.wav",
+      "priority": 45,
+      "role": "ui"
+    },
+    "world.encounter": {
+      "assetId": "world_encounter_v1",
+      "bus": "SFX",
+      "cooldownMs": 400,
+      "gainDb": -0.5,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/world_encounter.wav",
+      "priority": 88,
+      "role": "world"
+    },
+    "world.warp": {
+      "assetId": "world_warp_v1",
+      "bus": "SFX",
+      "cooldownMs": 400,
+      "gainDb": -1.0,
+      "loop": false,
+      "path": "res://assets/audio/beastbound_audio_v1/runtime/sfx/world_warp.wav",
+      "priority": 72,
+      "role": "world"
+    }
+  },
+  "format": {
+    "music": "PCM16 WAV first pass; catalog loop flag is authoritative",
+    "sampleRate": 48000,
+    "sfx": "PCM16 WAV"
+  },
+  "mixDefaults": {
+    "crossfadeSeconds": 0.75,
+    "musicGainDb": -4.0,
+    "sfxGainDb": -1.5,
+    "sfxVoiceCap": 12
+  },
+  "reviewState": "owner_listening_pending",
+  "schemaVersion": 1
+}

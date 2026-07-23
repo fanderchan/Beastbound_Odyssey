@@ -2695,7 +2695,15 @@ static func _apply_server_resolved_damage_event(state: Dictionary, event: Dictio
 	if participant_ids.is_empty():
 		participant_ids.append(attacker_id)
 	var actors: Array = state.get("actors", [])
-	var action_state := "combo" if event_type == "combo_attack" else ("skill" if event_type == "skill_attack" else "attack")
+	var action_state := (
+		"combo"
+		if event_type == "combo_attack"
+		else (
+			"skill"
+			if event_type == "skill_attack"
+			else ("counter_attack" if event_type == "counter_attack" else "attack")
+		)
+	)
 	for participant_id in participant_ids:
 		var participant_index := actor_index(state, participant_id)
 		if participant_index < 0:
@@ -2971,7 +2979,15 @@ static func _apply_damage_event(state: Dictionary, event: Dictionary) -> Diction
 			continue
 		if BattleStatusModel.blocking_status_id(participant) != "":
 			continue
-		participant["actionState"] = "combo" if event_type == "combo_attack" else ("skill" if event_type == "skill_attack" else "attack")
+		participant["actionState"] = (
+			"combo"
+			if event_type == "combo_attack"
+			else (
+				"skill"
+				if event_type == "skill_attack"
+				else ("counter_attack" if event_type == "counter_attack" else "attack")
+			)
+		)
 		actors[participant_index] = participant
 
 	var target_index := actor_index(state, target_id)

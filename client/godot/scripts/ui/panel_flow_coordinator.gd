@@ -9927,6 +9927,7 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	server_battle_room_restore_poll_elapsed = 0.0
 	server_battle_last_playback_turn_key = ""
 	server_battle_state["room"] = null
+	host._audio_play_battle_result(result_key)
 	_end_battle(true)
 	var returned_to_record_point = _apply_server_battle_return(closed_room)
 	if returned_to_record_point:
@@ -11003,6 +11004,8 @@ func _close_account_panel(update_layout: bool = true) -> void:
 func _refresh_account_panel() -> void:
 	if account_info_label == null:
 		return
+	if host.audio_settings_panel != null:
+		host.audio_settings_panel.refresh()
 	if account_switch_button != null:
 		account_switch_button.disabled = false
 	if account_logout_here_button != null:
@@ -12948,6 +12951,7 @@ func _transfer_from_warp(item: Dictionary) -> void:
 		return
 	if not host._load_map(to_map, to_spawn):
 		return
+	host._audio_play_cue("world.warp")
 	_reset_server_step_move_authority_after_map_change()
 	_request_online_position_snapshot(_current_online_map_payload())
 	if not continuation_target.is_empty():
@@ -13075,6 +13079,7 @@ func _trigger_encounter(zone: Dictionary) -> void:
 		return
 	active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(encounter_zone, encounter_rng, _encounter_enemy_count_fallback())
 	encounter_active = true
+	host._audio_play_cue("world.encounter")
 	_start_battle(_battle_state_for_encounter_zone(active_encounter_zone))
 
 func _progression_encounter_zone(zone: Dictionary) -> Dictionary:
@@ -13304,6 +13309,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		battle_state = _local_battle_state_with_current_team(next_battle_state.duplicate(true))
 	_refresh_battle_target_seed()
 	battle_active = true
+	host._audio_enter_battle(battle_state)
 	server_battle_command_request_active = false
 	battle_action_timer = 0.0
 	battle_auto_attack_delay = 0.0
@@ -13374,6 +13380,8 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 func _end_battle(_restore_world: bool = true) -> void:
 	host.pending_server_encounter_permit.clear()
 	var was_battle_active = battle_active
+	if was_battle_active:
+		host._audio_exit_battle()
 	battle_active = false
 	battle_state.clear()
 	server_battle_command_request_active = false
@@ -13470,6 +13478,7 @@ func _finish_battle_and_return_to_world(result_override: String = "") -> Diction
 	var hang_stop_message = _hang_stop_message_for_battle_result(ended_state)
 	var player_knocked_away = PlayerProgressModel.battle_actor_knocked_away(ended_state, BattleModel.PLAYER_ACTOR_ID)
 	var result = PlayerProgressModel.apply_battle_result(player_profile, ended_state, result_override)
+	host._audio_play_battle_result(str(result.get("result", result_override)))
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = []
 	for line in result.get("logLines", []):

@@ -95,6 +95,12 @@ func run() -> void:
 		"dodge":
 			await _play_twice(_dodge_event(), 1.0)
 
+	if host.game_audio_manager != null:
+		host.game_audio_manager.stop_all()
+	# AudioServer releases active playback objects asynchronously. Let the
+	# stopped streams drain before the MovieWriter/QA process exits.
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
 	host.get_tree().quit(0)
 
 
