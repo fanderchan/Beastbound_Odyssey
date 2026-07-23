@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_collision_audit",
+  "bundleId": "firebud_region_visual_v1",
+  "result": "PASS",
+  "generatedAtUtc": "2026-07-22T22:47:56Z",
+  "scene": "res://scenes/Main.tscn",
+  "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd",
+  "testedMapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "checks": {
+    "authoritativeBlockedCells": "PASS",
+    "objectCollisionFootprints": "PASS",
+    "pathLinkEndpointsAndExactReachability": "PASS",
+    "spawnProtection": "PASS",
+    "warpSourceAndDestinationProtection": "PASS",
+    "npcSourceAndReachableApproachProtection": "PASS",
+    "encounterCellsAndRectsRespectWalkability": "PASS",
+    "bindingAndMapDataHashes": "PASS"
+  },
+  "maps": [
+    {
+      "mapId": "firebud_training_yard",
+      "groundDraws": 1224,
+      "objectCount": 4,
+      "protectedCells": 140
+    },
+    {
+      "mapId": "firebud_village_gate",
+      "groundDraws": 672,
+      "objectCount": 4,
+      "protectedCells": 184
+    }
+  ],
+  "authoritySnapshot": {
+    "catalogContractSha256": "3c1cccabde1c376227330e27bcdecc6a355c5a2a40a773e7f8a3cea3a2ee22b8",
+    "bindingHashes": {
+      "firebud_training_yard": "70809c226e8dc6f00e45f3904daab8e3ff0b1f63d0ea0402295949972351b12b",
+      "firebud_village_gate": "5084ff9345030cc26cc1955f05a0d7a81520c6b3e08107ab9b88581dbd50a27b"
+    },
+    "mapDataHashes": {
+      "firebud_training_yard": "49f062dd83ca12d4159cc4d864028a6c6390e4e6ebdb3f603e0d5acde03aa791",
+      "firebud_village_gate": "9acc9579c17249d3ed4db74faacd57fc21c1a38adc5ab3b7dffa4b82f91a127f"
+    }
+  },
+  "excludedReleaseGate": "Tall-object occlusion interleaving with actors is not covered by this collision audit and remains release-blocking.",
+  "blockers": [
+    "Tall-object occlusion interleaving with actors still needs frozen runtime evidence."
+  ]
+}

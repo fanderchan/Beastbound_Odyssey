@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "mistcap_marsh_visual_v1",
+  "mapId": "mistcap_marsh",
+  "mapGridSize": [34, 28],
+  "ground": {
+    "defaultTileId": "mistcap_marsh_moss",
+    "blockedTileId": "mistcap_shallow_bog",
+    "encounterTileId": "mistcap_dense_reeds",
+    "warpTileId": "mistcap_wet_mud_path",
+    "pathTileId": "mistcap_wet_mud_path",
+    "plazaTileId": "mistcap_wet_mud_path",
+    "pathDilation": 1,
+    "pathLinks": [
+      {"from": [4, 22], "to": [9, 14]},
+      {"from": [9, 14], "to": [20, 9]}
+    ],
+    "plazaRects": [],
+    "plazaCells": [],
+    "overrides": []
+  },
+  "objectPlacements": [
+    {
+      "instanceId": "mistcap_reeds_blocked_cluster_01",
+      "objectId": "mistcap_reed_clump",
+      "grid": [11, 8],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[8, 7], [9, 7], [10, 8], [11, 8]]
+    },
+    {
+      "instanceId": "mistcap_boulder_blocked_cluster_01",
+      "objectId": "mistcap_moss_boulder",
+      "grid": [25, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[23, 6], [24, 6], [25, 7]]
+    },
+    {
+      "instanceId": "mistcap_mushrooms_blocked_cluster_01",
+      "objectId": "mistcap_mushroom_cluster",
+      "grid": [15, 21],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[13, 20], [14, 20], [15, 21]]
+    },
+    {
+      "instanceId": "mistcap_log_blocked_cluster_01",
+      "objectId": "mistcap_fallen_log",
+      "grid": [29, 21],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[28, 20], [29, 21]]
+    }
+  ]
+}

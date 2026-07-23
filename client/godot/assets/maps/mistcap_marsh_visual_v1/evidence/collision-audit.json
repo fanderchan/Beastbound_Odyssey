@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_collision_audit",
+  "bundleId": "mistcap_marsh_visual_v1",
+  "result": "PASS",
+  "generatedAtUtc": "2026-07-22T22:47:56Z",
+  "scene": "res://scenes/Main.tscn",
+  "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd",
+  "testedMapIds": [
+    "mistcap_marsh"
+  ],
+  "checks": {
+    "authoritativeBlockedCells": "PASS",
+    "objectCollisionFootprints": "PASS",
+    "pathLinkEndpointsAndExactReachability": "PASS",
+    "spawnProtection": "PASS",
+    "warpSourceAndDestinationProtection": "PASS",
+    "npcSourceAndReachableApproachProtection": "PASS",
+    "encounterCellsAndRectsRespectWalkability": "PASS",
+    "bindingAndMapDataHashes": "PASS"
+  },
+  "maps": [
+    {
+      "mapId": "mistcap_marsh",
+      "groundDraws": 952,
+      "objectCount": 4,
+      "protectedCells": 147
+    }
+  ],
+  "authoritySnapshot": {
+    "catalogContractSha256": "fb1182f0e1935e00fd031cefbf69896f24c6d0889a52daabc944d8974d448465",
+    "bindingHashes": {
+      "mistcap_marsh": "4e81634e770d7059c47df5f1bb884e8798a69a27299cb48facefc7d7230dd5b3"
+    },
+    "mapDataHashes": {
+      "mistcap_marsh": "cc38b0aecacd0864f26a6d08c10602d33cebf77f669f8ec4e89db9819c9bcaf0"
+    }
+  },
+  "excludedReleaseGate": "Tall-object occlusion interleaving with actors is not covered by this collision audit and remains release-blocking.",
+  "blockers": [
+    "Tall-object occlusion interleaving with actors still needs frozen runtime evidence."
+  ]
+}

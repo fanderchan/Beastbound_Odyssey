@@ -1,0 +1,47 @@
+{
+	"bindingHashes": {
+		"firebud_training_yard": "70809c226e8dc6f00e45f3904daab8e3ff0b1f63d0ea0402295949972351b12b",
+		"firebud_village_gate": "5084ff9345030cc26cc1955f05a0d7a81520c6b3e08107ab9b88581dbd50a27b"
+	},
+	"bundleId": "firebud_region_visual_v1",
+	"catalogSha256": "f4c4758e22e9d457b1abda1bec377070eb0098e9fdc54c9bbe96fcce62d9e09d",
+	"checks": {
+		"allIndependentChecksPassed": true,
+		"catalogCoverageExact": true,
+		"catalogInitialized": true,
+		"catalogPathsExact": true,
+		"currentHashesComplete": true,
+		"frozenReportValidationSkippedForGeneration": true,
+		"normalLifecycleAccessValid": true,
+		"qaPreviewEnabled": true,
+		"repeatPrepareIoStable": true,
+		"unknownMapFailedClosed": true
+	},
+	"errors": [],
+	"generatedAtUtc": "2026-07-22T23:08:05Z",
+	"mapDataHashes": {
+		"firebud_training_yard": "49f062dd83ca12d4159cc4d864028a6c6390e4e6ebdb3f603e0d5acde03aa791",
+		"firebud_village_gate": "9acc9579c17249d3ed4db74faacd57fc21c1a38adc5ab3b7dffa4b82f91a127f"
+	},
+	"maps": [
+		{
+			"groundDraws": 1224,
+			"mapId": "firebud_training_yard",
+			"objects": 4,
+			"protectedCells": 140
+		},
+		{
+			"groundDraws": 672,
+			"mapId": "firebud_village_gate",
+			"objects": 4,
+			"protectedCells": 184
+		}
+	],
+	"reportType": "beastbound.map_visual_catalog_contract",
+	"result": "PASS",
+	"schemaVersion": 1,
+	"testedMapIds": [
+		"firebud_training_yard",
+		"firebud_village_gate"
+	]
+}

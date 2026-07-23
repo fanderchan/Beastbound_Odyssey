@@ -1,0 +1,4 @@
+interface:
+  display_name: "Beastbound 地图设计"
+  short_description: "生成、实装并验收 Beastbound 城镇与野外地图"
+  default_prompt: "Use $design-beastbound-maps to create and integrate a production-ready Beastbound town or wilderness map."

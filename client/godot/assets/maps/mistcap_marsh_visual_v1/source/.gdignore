@@ -1,0 +1,1 @@
+# Production-only generation sources; keep them out of Godot import and export.

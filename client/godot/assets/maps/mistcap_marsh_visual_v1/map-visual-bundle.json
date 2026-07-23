@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "mistcap_marsh_visual_v1",
+  "mapStyleId": "mistcap_marsh_v1",
+  "mapIds": ["mistcap_marsh"],
+  "status": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "tileSize": [80, 40],
+  "catalogContractCheck": {
+    "path": "evidence/catalog-contract-check.json",
+    "sha256": "fb1182f0e1935e00fd031cefbf69896f24c6d0889a52daabc944d8974d448465"
+  },
+  "source": {
+    "origin": "AI-generated original",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "project-owned generated output",
+    "mirrored": false,
+    "bakedActors": false,
+    "rawFiles": [
+      {"path": "source/generated/mistcap-ground-sheet-v1.png", "sha256": "68bd759a7abb6976ce06dfc139d23231e86d0e87847d73df2ca3cffbf1c43744", "dimensions": [1254, 1254]},
+      {"path": "source/generated/mistcap-low-props-sheet-v1.png", "sha256": "d6d8438b7826dd6c86e67baf60301942f9ffbcbe79421a387d1fbbccfd8d7e6d", "dimensions": [1254, 1254]}
+    ],
+    "buildArtifacts": [
+      {"path": "source/processed/mistcap-ground-sheet-v1-alpha.png", "sha256": "7151759be0c7aa630e0f42ad018d1a98e6687538d39ee8e7dcc2d4ab0fd2a7ce", "dimensions": [1254, 1254]},
+      {"path": "source/processed/mistcap-low-props-sheet-v1-alpha.png", "sha256": "3f02b6f937555eaa2c20bf57e596526446befd03de4a2c02c8de0f5731872c52", "dimensions": [1254, 1254]}
+    ],
+    "promptFiles": [
+      {"path": "source/prompts/mistcap-ground-atlas.md", "sha256": "a6868d3a46d981bf67f7e52af782e05f236d6161e955a3894d5393ccea301823"},
+      {"path": "source/prompts/mistcap-low-props.md", "sha256": "9aec547f201e31ac9ffaccb2a8b380d83511bdfe15a6d17cf076f53899cf1672"}
+    ],
+    "provenance": {"path": "source/provenance.json", "sha256": "fd8cf81d141649069206bc4e001bc51e751e83cce8b199287e3237285d6744ed"}
+  },
+  "groundAtlas": {"path": "runtime/ground/atlas.png", "sha256": "0ccbac4af7691ea3abdf38b3a92af6468887ee20c7a5f7ba826cf7a180c80cef", "dimensions": [160, 80], "alphaMode": "mixed"},
+  "tiles": [
+    {"tileId": "mistcap_marsh_moss", "rect": [0, 0, 80, 40], "role": "ground"},
+    {"tileId": "mistcap_wet_mud_path", "rect": [80, 0, 80, 40], "role": "path_transition"},
+    {"tileId": "mistcap_shallow_bog", "rect": [0, 40, 80, 40], "role": "blocked"},
+    {"tileId": "mistcap_dense_reeds", "rect": [80, 40, 80, 40], "role": "encounter"}
+  ],
+  "objects": [
+    {
+      "objectId": "mistcap_reed_clump",
+      "asset": {"path": "runtime/objects/mistcap_reed_clump.png", "sha256": "4e8c1aaacc4a95992e80397f63ac42aaf9183bb07b4a0af066d488c99c4d36f9", "dimensions": [256, 187], "alphaMode": "mixed"},
+      "displaySize": [120, 88], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[46, 130], [210, 130], [224, 176], [32, 176]]}
+    },
+    {
+      "objectId": "mistcap_moss_boulder",
+      "asset": {"path": "runtime/objects/mistcap_moss_boulder.png", "sha256": "c77616fdcce729a95e0697a3be293498679cf6b69b466ef5895f79c575036cef", "dimensions": [256, 151], "alphaMode": "mixed"},
+      "displaySize": [112, 66], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[50, 104], [206, 104], [220, 140], [36, 140]]}
+    },
+    {
+      "objectId": "mistcap_mushroom_cluster",
+      "asset": {"path": "runtime/objects/mistcap_mushroom_cluster.png", "sha256": "30456f908d19e098aa7adf09271eb717e85b830b2c8b23d300884d029527c24a", "dimensions": [256, 181], "alphaMode": "mixed"},
+      "displaySize": [104, 74], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[48, 124], [208, 124], [220, 170], [36, 170]]}
+    },
+    {
+      "objectId": "mistcap_fallen_log",
+      "asset": {"path": "runtime/objects/mistcap_fallen_log.png", "sha256": "122636c28a731bf2cec8a3eab39d4773080fb94ee346adc9a20ce26e3755d892", "dimensions": [256, 153], "alphaMode": "mixed"},
+      "displaySize": [136, 81], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[28, 108], [228, 108], [238, 142], [18, 142]]}
+    }
+  ],
+  "mapBindings": [
+    {"mapId": "mistcap_marsh", "binding": {"path": "bindings/mistcap_marsh.json", "sha256": "4e81634e770d7059c47df5f1bb884e8798a69a27299cb48facefc7d7230dd5b3"}}
+  ],
+  "evidence": {
+    "dressedReference": null,
+    "layeredPreview": null,
+    "runtimeScreenshots": [
+      {
+        "mapId": "mistcap_marsh",
+        "mode": "idle",
+        "image": {"path": "evidence/mistcap_marsh_idle_1280x720.png", "sha256": "7adbf5f4ae1f96ae246839291f6a7634f2f979e8ab6f1213f149d0f182203425", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/mistcap_marsh_idle_capture.json", "sha256": "cb14c3122279fbe4d43be0aaf3fabaee7fd7d140bd4618a41fee5b8dc21c4164"}
+      },
+      {
+        "mapId": "mistcap_marsh",
+        "mode": "moving",
+        "image": {"path": "evidence/mistcap_marsh_moving_1280x720.png", "sha256": "592ef453ac0a8b52d70d78c22b5dc2f557302cc8a46f8b6a3219c6439b4ffb53", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/mistcap_marsh_moving_capture.json", "sha256": "e6837b78e53b2c9b9e4dcb7007339085f02d980b89862c2bf1528db5ae837e4c"}
+      }
+    ],
+    "computerUseReport": null,
+    "collisionAudit": {"path": "evidence/collision-audit.json", "sha256": "08feaa8b8b3545d070c6e32621a67f57f6b23db05ece255bf94c47fd4751538c"},
+    "performanceReport": {"path": "evidence/performance-report.json", "sha256": "de2192d3d3df7371729396c75d51db23e5590f25bae2e5b314724dbaeded7ccf"},
+    "ownerAcceptance": null
+  }
+}

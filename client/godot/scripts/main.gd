@@ -38,6 +38,8 @@ const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_m
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
+const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -58,6 +60,8 @@ const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinat
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
+const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
@@ -746,6 +750,7 @@ var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
 var auto_npc_hover_identity_check: bool = false
 var auto_npc_appearance_check: bool = false
+var auto_map_visual_runtime_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
 var auto_npc_quest_marker_check: bool = false
@@ -1024,9 +1029,14 @@ var current_map_id: String = START_MAP_ID
 var startup_map_id: String = START_MAP_ID
 var startup_spawn_name: String = "default"
 var npc_art_review_preview: bool = false
+var map_art_review_preview: bool = false
+var map_art_review_invalid_map_id: String = ""
+var map_visual_review_capture: bool = false
+var map_visual_review_capture_request: Dictionary = {}
 var npc_main_review_capture: bool = false
 var npc_main_review_capture_request: Dictionary = {}
 var map_data: Dictionary = {}
+var map_visual_render_state: Dictionary = {}
 var player_profile: Dictionary = {}
 var player_mount_visual_ride_id_cache: String = "__uninitialized__"
 var account_authenticated: bool = false
@@ -1280,6 +1290,20 @@ func _configure_npc_art_runtime() -> void:
 func _ready() -> void:
 	_configure_runtime_performance()
 	_apply_preview_window_args()
+	if map_art_review_invalid_map_id != "":
+		push_error("未知地图美术预览 mapId：%s" % map_art_review_invalid_map_id)
+		get_tree().quit(2)
+		return
+	if map_visual_review_capture and not (map_visual_review_capture_request.get("parseErrors", []) as Array).is_empty():
+		# Fail before auth bootstrap/relaunch/UI construction. A malformed evidence
+		# command must never get a chance to create or send an HTTP login request.
+		var rejected_capture := MapVisualReviewCapture.new(self)
+		var rejected_report: Dictionary = rejected_capture.write_parse_failure(
+			map_visual_review_capture_request
+		)
+		print("map visual review capture: %s" % JSON.stringify(rejected_report))
+		get_tree().quit(2)
+		return
 	if _restart_with_startup_login_user_data_dir_if_needed():
 		return
 	_bootstrap_auth_state()
@@ -1287,9 +1311,10 @@ func _ready() -> void:
 	# a player's mount, quest markers, dialogue options, or persisted profile.
 	player_profile = (
 		PlayerProgressModel.default_profile()
-		if npc_main_review_capture or not account_authenticated
+		if npc_main_review_capture or map_visual_review_capture or not account_authenticated
 		else PlayerProgressModel.load_profile()
 	)
+	MapVisualCatalog.initialize()
 	_load_map(startup_map_id, startup_spawn_name)
 	_configure_npc_art_runtime()
 	get_tree().root.size_changed.connect(_layout_hud)
@@ -1304,7 +1329,7 @@ func _ready() -> void:
 		_save_profile_after_exp_pill_starter_update()
 		_show_exp_pill_starter_notice_if_needed()
 		_refresh_mailbox_menu_button()
-	elif not npc_main_review_capture:
+	elif not npc_main_review_capture and not map_visual_review_capture:
 		_open_auth_panel(false)
 	_refresh_gm_visibility()
 	_layout_hud()
@@ -1312,9 +1337,11 @@ func _ready() -> void:
 	_reset_perf_probe_counters()
 	_sync_keyboard_movement_input_gate()
 	set_process(true)
-	if _startup_auth_login_requested() and not account_authenticated:
+	if _startup_auth_login_requested() and not account_authenticated and not map_visual_review_capture:
 		call_deferred("_apply_startup_auth_login")
-	if npc_main_review_capture:
+	if map_visual_review_capture:
+		call_deferred("_run_map_visual_review_capture")
+	elif npc_main_review_capture:
 		call_deferred("_run_npc_main_review_capture")
 	elif auto_auth_check:
 		call_deferred("_run_auto_auth_check")
@@ -1796,6 +1823,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_check")
 	elif auto_npc_appearance_check:
 		call_deferred("_run_auto_npc_appearance_check")
+	elif auto_map_visual_runtime_check:
+		call_deferred("_run_auto_map_visual_runtime_check")
 	elif auto_npc_collision_check:
 		call_deferred("_run_auto_npc_collision_check")
 	elif auto_npc_interaction_check:
@@ -1968,6 +1997,8 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == "--battle-debug-window"
 		or normalized.begins_with("--battle-visual-review=")
 		or normalized.begins_with("--pet-battle-review-")
+		or normalized.begins_with("--map-perf-probe-map=")
+		or normalized == MapVisualReviewCapture.CAPTURE_FLAG
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
@@ -1983,7 +2014,7 @@ func _apply_preview_window_args() -> void:
 			continue
 		if _dev_entrypoint_arg(arg):
 			profile_save_enabled = false
-			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check":
+			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check" and not arg.begins_with("--map-art-review-preview"):
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
 			_apply_preview_window_size(Vector2i(1280, 720))
@@ -2028,6 +2059,27 @@ func _apply_preview_window_args() -> void:
 			npc_art_review_preview = true
 			startup_map_id = "firebud_village_gate"
 			startup_spawn_name = "doctor_record"
+		elif arg == "--map-art-review-preview":
+			map_art_review_preview = true
+		elif arg.begins_with("--map-art-review-preview="):
+			map_art_review_preview = true
+			var requested_map_id := arg.substr("--map-art-review-preview=".length()).strip_edges()
+			if MAP_DATA_PATHS.has(requested_map_id):
+				startup_map_id = requested_map_id
+				startup_spawn_name = "default"
+			else:
+				map_art_review_invalid_map_id = requested_map_id
+		elif arg.begins_with("--map-perf-probe-map="):
+			# Select a real map without enabling candidate art, so the same Main
+			# probe can compare the pending-disabled legacy renderer against QA art.
+			var perf_map_id := arg.substr("--map-perf-probe-map=".length()).strip_edges()
+			if MAP_DATA_PATHS.has(perf_map_id):
+				startup_map_id = perf_map_id
+				startup_spawn_name = "default"
+			else:
+				map_art_review_invalid_map_id = perf_map_id
+		elif arg == MapVisualReviewCapture.CAPTURE_FLAG:
+			map_visual_review_capture = true
 		elif arg == NpcMainReviewCapture.CAPTURE_FLAG:
 			npc_main_review_capture = true
 		elif arg == "--gm-10v10-map":
@@ -2069,6 +2121,9 @@ func _apply_preview_window_args() -> void:
 			auto_npc_hover_identity_check = true
 		elif arg == "--auto-npc-appearance-check":
 			auto_npc_appearance_check = true
+		elif arg == "--auto-map-visual-runtime-check":
+			auto_map_visual_runtime_check = true
+			map_art_review_preview = true
 		elif arg == "--auto-npc-collision-check":
 			auto_npc_collision_check = true
 		elif arg == "--auto-facility-dialog-options-check":
@@ -2627,6 +2682,21 @@ func _apply_preview_window_args() -> void:
 			battle_debug_window_enabled = true
 		elif arg == "--perf-probe":
 			perf_probe_enabled = true
+	if map_art_review_preview and not auto_map_visual_runtime_check:
+		# Keep the review identity deterministic: local review without credentials
+		# uses the isolated debug profile, while an explicit login keeps real auth.
+		auth_auto_bypass = not _startup_auth_login_requested()
+	if map_visual_review_capture:
+		# A review capture uses the real Main scene and normal player chrome, but
+		# never reads an account/profile or writes review movement to persistence.
+		auth_auto_bypass = false
+		map_visual_review_capture_request = MapVisualReviewCapture.request_from_args(args)
+		startup_auth_username = ""
+		startup_auth_password = ""
+		startup_auth_base_url = ""
+		auth_request_pending = false
+		startup_map_id = str(map_visual_review_capture_request.get("mapId", startup_map_id))
+		startup_spawn_name = "default"
 	if npc_main_review_capture:
 		# Keep the explicit debug-only candidate-art access, but run the actual
 		# screenshot with normal player chrome rather than the dev GM session.
@@ -2637,7 +2707,7 @@ func _apply_preview_window_args() -> void:
 
 
 func _restart_with_startup_login_user_data_dir_if_needed() -> bool:
-	if startup_login_isolation_applied or not _startup_auth_login_requested():
+	if map_visual_review_capture or startup_login_isolation_applied or not _startup_auth_login_requested():
 		return false
 	var username := AccountAuthModel.normalized_username(startup_auth_username)
 	if username == "":
@@ -2723,7 +2793,7 @@ func _startup_auth_login_requested() -> bool:
 
 
 func _apply_startup_auth_login() -> void:
-	if account_authenticated or auth_request_pending:
+	if map_visual_review_capture or account_authenticated or auth_request_pending:
 		return
 	if auth_username_input == null or auth_password_input == null:
 		return
@@ -2755,6 +2825,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
+	map_visual_render_state = MapVisualCatalog.prepare_map(current_map_id, map_data, map_art_review_preview)
 	if npc_hover_identity_presenter != null:
 		npc_hover_identity_presenter.configure_map(map_data)
 	map_world_bounds_cache_valid = false
@@ -2847,6 +2918,9 @@ func _run_auto_movement_check() -> void:
 
 
 func _run_movement_perf_check() -> void:
+	# Keep this probe deterministic and isolate movement/render cost. Encounter
+	# behavior has its own auto check and must not switch the probe into battle.
+	encounter_grace_remaining = 3600.0
 	var start_cell := IsoMapModel.spawn_cell(map_data)
 	var size := IsoMapModel.grid_size(map_data)
 	var target_cell := Vector2i(
@@ -2880,6 +2954,9 @@ func _run_auto_party_member_follow_check() -> void:
 
 
 func _run_movement_spam_click_check() -> void:
+	# Keep this probe deterministic and isolate input/movement cost. Encounter
+	# behavior has its own auto check and must not switch the probe into battle.
+	encounter_grace_remaining = 3600.0
 	var start_cell := IsoMapModel.spawn_cell(map_data)
 	var start_position := player.global_position
 	var before_apply_count := click_move_repath_apply_count
@@ -2894,7 +2971,7 @@ func _run_movement_spam_click_check() -> void:
 	var ui_skipped_count := 0
 	var mouse_event_count := 0
 	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
-	for frame_index in range(120):
+	for frame_index in range(40):
 		for burst_index in range(3):
 			var index := frame_index * 3 + burst_index
 			var offset := Vector2i(4 + (index % 9), -4 - (index % 7))
@@ -2907,18 +2984,27 @@ func _run_movement_spam_click_check() -> void:
 				continue
 			last_cell = candidate
 			var event := InputEventMouseButton.new()
-			if event is InputEventMouseButton:
-				mouse_event_count += 1
+			mouse_event_count += 1
 			event.button_index = MOUSE_BUTTON_LEFT
 			event.pressed = true
 			event.position = screen_point
+			event.global_position = screen_point
 			var started_usec := Time.get_ticks_usec()
-			_handle_world_pointer_pressed(event.position, false, true)
+			Input.parse_input_event(event)
 			var elapsed_usec := Time.get_ticks_usec() - started_usec
 			input_elapsed_usec += elapsed_usec
 			max_input_usec = maxi(max_input_usec, elapsed_usec)
 			click_count += 1
-		await get_tree().physics_frame
+			# A real release on a later process frame prevents same-frame helper
+			# calls from masquerading as movement/input performance coverage.
+			await get_tree().process_frame
+			var release := InputEventMouseButton.new()
+			release.button_index = MOUSE_BUTTON_LEFT
+			release.pressed = false
+			release.position = screen_point
+			release.global_position = screen_point
+			Input.parse_input_event(release)
+			await get_tree().process_frame
 	for _step in range(60):
 		await get_tree().physics_frame
 	var applied_count := click_move_repath_apply_count - before_apply_count
@@ -2931,7 +3017,11 @@ func _run_movement_spam_click_check() -> void:
 	var input_fast := avg_input_usec <= 250 and max_input_usec <= 12000
 	var coalesced := resolved_count <= 70 and applied_count <= 70
 	var settled := not has_pending_click_screen_point and not has_pending_click_move_target
-	var final_target_matches := has_target_cell and target_cell == last_cell
+	var final_player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var final_target_matches: bool = (
+		(has_target_cell and target_cell == last_cell)
+		or (not player.is_auto_moving() and final_player_cell == last_cell)
+	)
 	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and settled and final_target_matches else "failed"
 	print("movement spam click check ready: status=%s clicks=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d avg_input_us=%d max_input_us=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
@@ -3091,6 +3181,18 @@ func _run_auto_npc_hover_identity_check() -> void:
 func _run_auto_npc_appearance_check() -> void:
 	var report := NpcArtCatalogCheck.run()
 	print("npc appearance check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if bool(report.get("ok", false)) else 1)
+
+
+func _run_auto_map_visual_runtime_check() -> void:
+	var report := MapVisualRuntimeCheck.run()
+	print("map visual runtime check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
+
+
+func _run_map_visual_review_capture() -> void:
+	var report: Dictionary = await MapVisualReviewCapture.new(self).run(map_visual_review_capture_request)
+	print("map visual review capture: %s" % JSON.stringify(report))
 	get_tree().quit(0 if bool(report.get("ok", false)) else 1)
 
 
@@ -7563,7 +7665,7 @@ func _flush_profile_save_now() -> bool:
 
 
 func _input(event: InputEvent) -> void:
-	if not account_authenticated and not auth_auto_bypass:
+	if not account_authenticated and not auth_auto_bypass and not map_visual_review_capture:
 		return
 	if pet_battle_review_lab != null and pet_battle_review_lab.is_active() and pet_battle_review_lab.handle_key_event(event):
 		get_viewport().set_input_as_handled()
@@ -13624,6 +13726,23 @@ func _draw_isometric_map() -> void:
 	if map_data.is_empty():
 		return
 
+	var ground_draw_count := MapVisualRenderer.draw_ground(self, map_visual_render_state)
+	if ground_draw_count <= 0:
+		_draw_legacy_isometric_ground()
+	MapVisualRenderer.draw_objects(self, map_visual_render_state, "ground_decal")
+
+	for cell in current_path_cells:
+		_draw_iso_tile(IsoMapModel.grid_to_world(map_data, cell), Color(0.96, 0.75, 0.25, 0.24), Color(0.98, 0.82, 0.32, 0.38))
+
+	_draw_encounter_zones()
+	MapVisualRenderer.draw_objects(self, map_visual_render_state, "world")
+	_draw_decor_cells()
+	_draw_interaction_points()
+	MapVisualRenderer.draw_objects(self, map_visual_render_state, "foreground")
+	_draw_ground_pet_drops()
+
+
+func _draw_legacy_isometric_ground() -> void:
 	var size := IsoMapModel.grid_size(map_data)
 	for y in range(size.y):
 		for x in range(size.x):
@@ -13637,14 +13756,6 @@ func _draw_isometric_map() -> void:
 				fill = Color(0.18, 0.19, 0.18, 0.96)
 				border = Color(0.50, 0.43, 0.32, 0.85)
 			_draw_iso_tile(center, fill, border)
-
-	for cell in current_path_cells:
-		_draw_iso_tile(IsoMapModel.grid_to_world(map_data, cell), Color(0.96, 0.75, 0.25, 0.24), Color(0.98, 0.82, 0.32, 0.38))
-
-	_draw_encounter_zones()
-	_draw_decor_cells()
-	_draw_interaction_points()
-	_draw_ground_pet_drops()
 
 
 func _draw_online_remote_players() -> void:

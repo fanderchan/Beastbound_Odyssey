@@ -1,0 +1,38 @@
+{
+	"bindingHashes": {
+		"mistcap_marsh": "4e81634e770d7059c47df5f1bb884e8798a69a27299cb48facefc7d7230dd5b3"
+	},
+	"bundleId": "mistcap_marsh_visual_v1",
+	"catalogSha256": "f4c4758e22e9d457b1abda1bec377070eb0098e9fdc54c9bbe96fcce62d9e09d",
+	"checks": {
+		"allIndependentChecksPassed": true,
+		"catalogCoverageExact": true,
+		"catalogInitialized": true,
+		"catalogPathsExact": true,
+		"currentHashesComplete": true,
+		"frozenReportValidationSkippedForGeneration": true,
+		"normalLifecycleAccessValid": true,
+		"qaPreviewEnabled": true,
+		"repeatPrepareIoStable": true,
+		"unknownMapFailedClosed": true
+	},
+	"errors": [],
+	"generatedAtUtc": "2026-07-22T23:08:05Z",
+	"mapDataHashes": {
+		"mistcap_marsh": "cc38b0aecacd0864f26a6d08c10602d33cebf77f669f8ec4e89db9819c9bcaf0"
+	},
+	"maps": [
+		{
+			"groundDraws": 952,
+			"mapId": "mistcap_marsh",
+			"objects": 4,
+			"protectedCells": 147
+		}
+	],
+	"reportType": "beastbound.map_visual_catalog_contract",
+	"result": "PASS",
+	"schemaVersion": 1,
+	"testedMapIds": [
+		"mistcap_marsh"
+	]
+}

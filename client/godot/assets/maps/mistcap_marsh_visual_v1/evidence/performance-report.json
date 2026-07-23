@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_performance_report",
+  "bundleId": "mistcap_marsh_visual_v1",
+  "result": "PASS",
+  "comparisonMode": "legacy_fallback_vs_candidate",
+  "generatedAtUtc": "2026-07-22T22:30:42.495Z",
+  "scene": "res://scenes/Main.tscn",
+  "viewport": [
+    1280,
+    720
+  ],
+  "displayServer": "macOS Metal",
+  "movingInputDelivery": "Input.parse_input_event",
+  "movingInputFrameSeparated": true,
+  "testedMapIds": [
+    "mistcap_marsh"
+  ],
+  "maps": [
+    {
+      "mapId": "mistcap_marsh",
+      "baseline": {
+        "renderer": "legacy_fallback",
+        "idle": {
+          "samples": 5,
+          "fpsMinMeanMax": [25.8, 29.16, 30.0],
+          "processTotalMsMinMeanMax": [0.28, 0.342, 0.48],
+          "drawWorldMsMinMeanMax": [3.09, 3.09, 3.09]
+        },
+        "moving": {
+          "samples": 5,
+          "fpsMinMeanMax": [46.7, 56.3, 60.3],
+          "processTotalMsMinMeanMax": [0.09, 0.116, 0.2],
+          "drawWorldMsMinMeanMax": [1.05, 3.338, 5.44],
+          "clicks": 117,
+          "accepted": 117,
+          "resolved": 37,
+          "applied": 37,
+          "avgInputUs": 0,
+          "maxInputUs": 11,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "candidate": {
+        "renderer": "map_visual_candidate",
+        "idle": {
+          "samples": 5,
+          "fpsMinMeanMax": [27.2, 29.44, 30.0],
+          "processTotalMsMinMeanMax": [0.14, 0.25, 0.32],
+          "drawWorldMsMinMeanMax": [1.36, 1.36, 1.36]
+        },
+        "moving": {
+          "samples": 5,
+          "fpsMinMeanMax": [51.5, 58.28, 60.0],
+          "processTotalMsMinMeanMax": [0.28, 0.362, 0.44],
+          "drawWorldMsMinMeanMax": [0.17, 1.53, 2.08],
+          "clicks": 117,
+          "accepted": 117,
+          "resolved": 36,
+          "applied": 36,
+          "avgInputUs": 2,
+          "maxInputUs": 3,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "comparison": {
+        "processTotalMeanDeltaMs": {
+          "idle": -0.092,
+          "moving": 0.246
+        },
+        "thresholds": {
+          "candidateIdleProcessMeanMaxMs": 0.5,
+          "candidateMovingProcessMeanMaxMs": 0.6,
+          "idleRegressionMaxMs": 0.1,
+          "movingRegressionMaxMs": 0.35
+        },
+        "gates": {
+          "candidateIdleWithinLimit": "PASS",
+          "candidateMovingWithinLimit": "PASS",
+          "idleRegressionWithinLimit": "PASS",
+          "movingRegressionWithinLimit": "PASS"
+        }
+      }
+    }
+  ],
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "notes": [
+    "Both variants ran through res://scenes/Main.tscn at 1280x720 on macOS Metal.",
+    "The baseline kept pending map art disabled and used the legacy fallback renderer; the candidate enabled only the matching QA map-art preview.",
+    "The candidate moving process-wall duration was anomalously long, but the in-engine probe samples stayed stable; wall elapsed is intentionally not a release metric.",
+    "Moving probes delivered real InputEventMouseButton events across process frames with encounter grace, so battle transitions did not contaminate the comparison."
+  ]
+}

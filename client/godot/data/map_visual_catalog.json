@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "mapId": "firebud_training_yard",
+      "bundleManifest": "res://assets/maps/firebud_region_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/firebud_region_visual_v1/bindings/firebud_training_yard.json"
+    },
+    {
+      "mapId": "firebud_village_gate",
+      "bundleManifest": "res://assets/maps/firebud_region_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/firebud_region_visual_v1/bindings/firebud_village_gate.json"
+    },
+    {
+      "mapId": "mistcap_marsh",
+      "bundleManifest": "res://assets/maps/mistcap_marsh_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/mistcap_marsh_visual_v1/bindings/mistcap_marsh.json"
+    }
+  ]
+}

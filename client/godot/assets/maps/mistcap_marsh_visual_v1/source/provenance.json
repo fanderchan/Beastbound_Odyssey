@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "mistcap_marsh_visual_v1",
+  "origin": "AI-generated original",
+  "owner": "Beastbound Odyssey project",
+  "licenseBasis": "project-owned generated output",
+  "generatedAt": "2026-07-23",
+  "tool": "OpenAI image_gen",
+  "rawFiles": [
+    {
+      "path": "source/generated/mistcap-ground-sheet-v1.png",
+      "sha256": "68bd759a7abb6976ce06dfc139d23231e86d0e87847d73df2ca3cffbf1c43744",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/generated/mistcap-low-props-sheet-v1.png",
+      "sha256": "d6d8438b7826dd6c86e67baf60301942f9ffbcbe79421a387d1fbbccfd8d7e6d",
+      "dimensions": [1254, 1254]
+    }
+  ],
+  "buildArtifacts": [
+    {"path": "source/processed/mistcap-ground-sheet-v1-alpha.png", "sha256": "7151759be0c7aa630e0f42ad018d1a98e6687538d39ee8e7dcc2d4ab0fd2a7ce", "dimensions": [1254, 1254]},
+    {"path": "source/processed/mistcap-low-props-sheet-v1-alpha.png", "sha256": "3f02b6f937555eaa2c20bf57e596526446befd03de4a2c02c8de0f5731872c52", "dimensions": [1254, 1254]}
+  ],
+  "assets": [
+    {
+      "assetId": "mistcap_ground_atlas",
+      "path": "runtime/ground/atlas.png",
+      "sha256": "0ccbac4af7691ea3abdf38b3a92af6468887ee20c7a5f7ba826cf7a180c80cef",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "promptPath": "source/prompts/mistcap-ground-atlas.md",
+      "rawPath": "source/generated/mistcap-ground-sheet-v1.png",
+      "generatedAt": "2026-07-23T03:27:49+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "normalize to exact 80x40", "assemble 2x2 atlas"]
+    },
+    {
+      "assetId": "mistcap_reed_clump",
+      "path": "runtime/objects/mistcap_reed_clump.png",
+      "sha256": "4e8c1aaacc4a95992e80397f63ac42aaf9183bb07b4a0af066d488c99c4d36f9",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "promptPath": "source/prompts/mistcap-low-props.md",
+      "rawPath": "source/generated/mistcap-low-props-sheet-v1.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    },
+    {
+      "assetId": "mistcap_moss_boulder",
+      "path": "runtime/objects/mistcap_moss_boulder.png",
+      "sha256": "c77616fdcce729a95e0697a3be293498679cf6b69b466ef5895f79c575036cef",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "promptPath": "source/prompts/mistcap-low-props.md",
+      "rawPath": "source/generated/mistcap-low-props-sheet-v1.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    },
+    {
+      "assetId": "mistcap_mushroom_cluster",
+      "path": "runtime/objects/mistcap_mushroom_cluster.png",
+      "sha256": "30456f908d19e098aa7adf09271eb717e85b830b2c8b23d300884d029527c24a",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "promptPath": "source/prompts/mistcap-low-props.md",
+      "rawPath": "source/generated/mistcap-low-props-sheet-v1.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    },
+    {
+      "assetId": "mistcap_fallen_log",
+      "path": "runtime/objects/mistcap_fallen_log.png",
+      "sha256": "122636c28a731bf2cec8a3eab39d4773080fb94ee346adc9a20ce26e3755d892",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "promptPath": "source/prompts/mistcap-low-props.md",
+      "rawPath": "source/generated/mistcap-low-props-sheet-v1.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    }
+  ],
+  "toolchain": {
+    "python": "3.14.3",
+    "pillow": "12.2.0",
+    "externalChromaKeyTool": {
+      "path": "/Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py",
+      "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
+      "repositoryOwned": false
+    }
+  },
+  "processing": [
+    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-ground-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-ground-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-low-props-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-low-props-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 .agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-ground-sheet-v1-alpha.png --rows 2 --columns 2 --labels mistcap_marsh_moss mistcap_wet_mud_path mistcap_shallow_bog mistcap_dense_reeds --output-dir .run/rebuild/mistcap-ground --atlas-columns 2 --alpha-threshold 0 --atlas-name atlas.png --manifest-name build-manifest.json",
+    "cp .run/rebuild/mistcap-ground/atlas.png client/godot/assets/maps/mistcap_marsh_visual_v1/runtime/ground/atlas.png",
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-low-props-sheet-v1-alpha.png --rows 2 --columns 2 --labels mistcap_reed_clump mistcap_moss_boulder mistcap_mushroom_cluster mistcap_fallen_log --output-dir .run/rebuild/mistcap-low-props --padding 8 --max-dimension 256 --alpha-threshold 0 --anchor 0.5 1.0 --manifest-name objects-manifest.json",
+    "cp .run/rebuild/mistcap-low-props/mistcap_reed_clump.png .run/rebuild/mistcap-low-props/mistcap_moss_boulder.png .run/rebuild/mistcap-low-props/mistcap_mushroom_cluster.png .run/rebuild/mistcap-low-props/mistcap_fallen_log.png client/godot/assets/maps/mistcap_marsh_visual_v1/runtime/objects/"
+  ],
+  "reproducibility": {
+    "rawToProcessedByteExact": true,
+    "processedToRuntimeByteExact": true,
+    "outputPrecondition": ".run/rebuild output directories must not exist before executing the listed build commands.",
+    "externalToolVendored": false,
+    "releaseBlocker": "The chroma-key helper is hash-frozen but external to this repository."
+  },
+  "mirrored": false,
+  "bakedActors": false,
+  "replacementPath": "Regenerate separated ground and low-prop sources from the frozen prompts, then rebuild the runtime atlas and independent object PNGs with the repository map skill scripts."
+}

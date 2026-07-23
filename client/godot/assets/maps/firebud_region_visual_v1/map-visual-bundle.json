@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "firebud_region_visual_v1",
+  "mapStyleId": "firebud_warm_stone_v1",
+  "mapIds": ["firebud_training_yard", "firebud_village_gate"],
+  "status": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "tileSize": [80, 40],
+  "catalogContractCheck": {
+    "path": "evidence/catalog-contract-check.json",
+    "sha256": "3c1cccabde1c376227330e27bcdecc6a355c5a2a40a773e7f8a3cea3a2ee22b8"
+  },
+  "source": {
+    "origin": "AI-generated original",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "project-owned generated output",
+    "mirrored": false,
+    "bakedActors": false,
+    "rawFiles": [
+      {
+        "path": "source/generated/history/firebud-ground-sheet-raised-v1.png",
+        "sha256": "6cb32db34beb35af223f8820f4cf7e2135e67eb7f61b4bfec89d8deb58a8f0fb",
+        "acceptedForRuntime": false,
+        "lineageOnly": true,
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/generated/history/firebud-low-props-sheet-v1.png",
+        "sha256": "4621564fda413dd8538a864ac47d0a48e39c148449dfc8e3901e7252914a69aa",
+        "acceptedForRuntime": false,
+        "lineageOnly": true,
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/generated/firebud-ground-sheet-v2.png",
+        "sha256": "bc70fe71869bd542c06d712bde79e54d3216b1087e8312417eabb2059b124d98",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/generated/firebud-low-props-sheet-v2.png",
+        "sha256": "a311c693c4cb5093a7b74b59e84014f22026662d36d1ece1c35b895551fdacc5",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/generated/firebud-service-pavilion-v1.png",
+        "sha256": "a0258aaeb9d64d8ae82a926469c7aa7bb904bebb7e9d90e0a6936e37c915a1ae",
+        "dimensions": [1254, 1254]
+      }
+    ],
+    "buildArtifacts": [
+      {"path": "source/processed/firebud-ground-sheet-v2-alpha.png", "sha256": "6c28983102e52f79bbb35b7be4bbd94f6cdb14a034eeb9564eecca965b138e32", "dimensions": [1254, 1254]},
+      {"path": "source/processed/firebud-low-props-sheet-v2-alpha.png", "sha256": "c4b28e15d42048c63429caccfd08153101f047a2519ed88216c40b1fc2156126", "dimensions": [1254, 1254]},
+      {"path": "source/processed/firebud-service-pavilion-v1-alpha.png", "sha256": "ed193e22a3445cbe8324272c6775436059c5caf25eeebfb4cf8bf59a9f695cc8", "dimensions": [1254, 1254]}
+    ],
+    "promptFiles": [
+      {
+        "path": "source/prompts/firebud-ground-atlas.md",
+        "sha256": "7dc35a8cf37080c67e75ae50f6dec16c78502c23da7be901adce399ad2b3742b"
+      },
+      {
+        "path": "source/prompts/firebud-low-props.md",
+        "sha256": "99cf8a4a367f9c279508ff96bcc2cf19c3acbee042ca0b0dd4e24b9a1805b58f"
+      },
+      {
+        "path": "source/prompts/firebud-service-pavilion.md",
+        "sha256": "be8362d85d347b6a3a24282ab81854a0b6fbde4f0c0ccb8d04cdda8ffb44b179"
+      }
+    ],
+    "provenance": {
+      "path": "source/provenance.json",
+      "sha256": "044eb1b6f65a793e1a5c6689da789f0f35eeade54b1311cd55c9dbb1dbbd1c33"
+    }
+  },
+  "groundAtlas": {
+    "path": "runtime/ground/atlas.png",
+    "sha256": "8f80342a99cec91d2331af6fe53a05aeec558d7c0d1ba8bd4329d02262864f4c",
+    "dimensions": [160, 80],
+    "alphaMode": "mixed"
+  },
+  "tiles": [
+    {"tileId": "firebud_meadow", "rect": [0, 0, 80, 40], "role": "ground"},
+    {"tileId": "firebud_ochre_path", "rect": [80, 0, 80, 40], "role": "path"},
+    {"tileId": "firebud_honey_stone", "rect": [0, 40, 80, 40], "role": "plaza_transition"},
+    {"tileId": "firebud_dark_root_soil", "rect": [80, 40, 80, 40], "role": "blocked"}
+  ],
+  "objects": [
+    {
+      "objectId": "firebud_training_target",
+      "asset": {"path": "runtime/objects/firebud_training_target.png", "sha256": "9286753d988db31c6503f3522ce7ee7c8576b4f0f95e30c4edd0ed34b776a8d4", "dimensions": [256, 233], "alphaMode": "mixed"},
+      "displaySize": [112, 102], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "polygon", "points": [[64, 180], [192, 180], [210, 220], [46, 220]]}
+    },
+    {
+      "objectId": "firebud_supply_pots",
+      "asset": {"path": "runtime/objects/firebud_supply_pots.png", "sha256": "6b7051bf7f5c6250759066d90a08ea86c9c592c3c26365ceba11f151baaebb21", "dimensions": [256, 220], "alphaMode": "mixed"},
+      "displaySize": [112, 96], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "polygon", "points": [[60, 164], [196, 164], [220, 208], [36, 208]]}
+    },
+    {
+      "objectId": "firebud_low_planter",
+      "asset": {"path": "runtime/objects/firebud_low_planter.png", "sha256": "ccff5c7242ac8f27526ef76b006ace872dbca12929f0f60e3b3e972233e61380", "dimensions": [256, 204], "alphaMode": "mixed"},
+      "displaySize": [120, 96], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "polygon", "points": [[42, 150], [214, 150], [226, 192], [30, 192]]}
+    },
+    {
+      "objectId": "firebud_low_fence",
+      "asset": {"path": "runtime/objects/firebud_low_fence.png", "sha256": "1741d5f9be507da0926ea7a72246b177773aaee9e930b25f9cf5c4aa12685fee", "dimensions": [256, 222], "alphaMode": "mixed"},
+      "displaySize": [128, 111], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "polygon", "points": [[38, 174], [218, 174], [228, 210], [28, 210]]}
+    },
+    {
+      "objectId": "firebud_service_pavilion",
+      "asset": {"path": "runtime/objects/firebud_service_pavilion.png", "sha256": "1eaa9f5a13781419a0c6ea1c611cfcdd60a28bc2fbabce237789631de0740eec", "dimensions": [319, 320], "alphaMode": "mixed"},
+      "displaySize": [176, 177], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "polygon", "points": [[56, 244], [263, 244], [286, 304], [34, 304]]}
+    }
+  ],
+  "mapBindings": [
+    {"mapId": "firebud_training_yard", "binding": {"path": "bindings/firebud_training_yard.json", "sha256": "70809c226e8dc6f00e45f3904daab8e3ff0b1f63d0ea0402295949972351b12b"}},
+    {"mapId": "firebud_village_gate", "binding": {"path": "bindings/firebud_village_gate.json", "sha256": "5084ff9345030cc26cc1955f05a0d7a81520c6b3e08107ab9b88581dbd50a27b"}}
+  ],
+  "evidence": {
+    "dressedReference": null,
+    "layeredPreview": null,
+    "runtimeScreenshots": [
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "idle",
+        "image": {"path": "evidence/firebud_training_yard_idle_1280x720.png", "sha256": "d478e08ccdceaa2e9ab1db402d3120e8743bd3fa1bb6831fb84eebabae0114b6", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/firebud_training_yard_idle_capture.json", "sha256": "f99db799a38032c40f944cc563d9348838d708d0f17cb1f7cb13fcff273e638d"}
+      },
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "moving",
+        "image": {"path": "evidence/firebud_training_yard_moving_1280x720.png", "sha256": "60fcbab67f9bdbbc4f21bad4549683e445aa5c97762496d53732b1ac245554cf", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/firebud_training_yard_moving_capture.json", "sha256": "084c7ae716b9c9b2667d957c07cb13ed6edfd801c02222a05ba80d84f7076f3b"}
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "idle",
+        "image": {"path": "evidence/firebud_village_gate_idle_1280x720.png", "sha256": "a8780cf085336f1c778f55945b65fe5a1a1f7d28fea30515dd6a90e673ea9bee", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/firebud_village_gate_idle_capture.json", "sha256": "c094f3d2c22e6fae1c38e09ee3ce5d58dac0b70c39c777f2c4628aedb19611c2"}
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "moving",
+        "image": {"path": "evidence/firebud_village_gate_moving_1280x720.png", "sha256": "c59d3cb0777dd79ef7a7fff782d5a7cb5333d0d96520221773177500076e19fa", "dimensions": [1280, 720], "alphaMode": "opaque"},
+        "captureReport": {"path": "evidence/firebud_village_gate_moving_capture.json", "sha256": "7ee4e947bfd3ab53449121817a3dffd919dcc380b4986d6b59355802f06a591e"}
+      }
+    ],
+    "computerUseReport": null,
+    "collisionAudit": {"path": "evidence/collision-audit.json", "sha256": "5e98974d5965c7d548a6a32d062ab67c9748e8e4652145446fe2a7f0c47c4e45"},
+    "performanceReport": {"path": "evidence/performance-report.json", "sha256": "cfbd2d93580841d81fa6a6beaa2c04a08b4a91af376151ab09a33274831b427d"},
+    "ownerAcceptance": null
+  }
+}

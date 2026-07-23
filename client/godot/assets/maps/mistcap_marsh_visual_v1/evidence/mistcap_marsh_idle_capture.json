@@ -1,0 +1,74 @@
+{
+	"schemaVersion": 1,
+	"reportType": "beastbound_map_visual_main_review_capture",
+	"scene": "res://scenes/Main.tscn",
+	"mapId": "mistcap_marsh",
+	"mode": "idle",
+	"qaPreviewFlagPresent": true,
+	"qaPreviewMapId": "mistcap_marsh",
+	"displayServer": "macOS",
+	"debugBuild": true,
+	"profileIsolation": "default_profile_ephemeral_no_save",
+	"defaultProfileIsolation": true,
+	"authAutoBypass": false,
+	"accountAuthenticated": false,
+	"profileSaveEnabled": false,
+	"serverAccountSession": false,
+	"networkRequestAttempted": false,
+	"authPanelVisible": false,
+	"qaMenuVisible": false,
+	"qaPanelVisible": false,
+	"numericWorkbenchVisible": false,
+	"debugUiVisible": false,
+	"normalPlayerHud": true,
+	"viewport": [
+		1280,
+		720
+	],
+	"mapArtActive": true,
+	"mapArtQaPreview": true,
+	"mapArtStatus": "owner_review_pending",
+	"bundleId": "mistcap_marsh_visual_v1",
+	"mapStyleId": "mistcap_marsh_v1",
+	"groundDrawCount": 952,
+	"objectCount": 4,
+	"tileCounts": {
+		"mistcap_marsh_moss": 790,
+		"mistcap_shallow_bog": 15,
+		"mistcap_wet_mud_path": 72,
+		"mistcap_dense_reeds": 75
+	},
+	"startCell": [
+		4,
+		22
+	],
+	"targetCell": [
+		4,
+		22
+	],
+	"endCell": [
+		4,
+		22
+	],
+	"playerCellChanged": false,
+	"input": {
+		"eventClass": "",
+		"delivery": "none",
+		"pressProcessFrame": -1,
+		"releaseProcessFrame": -1,
+		"frameSeparated": false,
+		"screenPoint": []
+	},
+	"screenshotPath": "res://assets/maps/mistcap_marsh_visual_v1/evidence/mistcap_marsh_idle_1280x720.png",
+	"screenshotSha256": "7adbf5f4ae1f96ae246839291f6a7634f2f979e8ab6f1213f149d0f182203425",
+	"screenshot": {
+		"path": "res://assets/maps/mistcap_marsh_visual_v1/evidence/mistcap_marsh_idle_1280x720.png",
+		"sha256": "7adbf5f4ae1f96ae246839291f6a7634f2f979e8ab6f1213f149d0f182203425",
+		"width": 1280,
+		"height": 720
+	},
+	"errors": [],
+	"result": "PASS",
+	"ok": true,
+	"generatedAtUtc": "2026-07-22T22:54:54Z"
+}
