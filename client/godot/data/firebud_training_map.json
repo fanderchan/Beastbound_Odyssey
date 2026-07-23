@@ -48,11 +48,13 @@
   "interactionPoints": [
     {
       "id": "overlap_tester",
-      "name": "可重叠路人",
+      "name": "村民阿禾",
       "kind": "npc",
       "cell": [13, 12],
+      "appearanceId": "npc_village_civilian_f_v1",
+      "facing": "southeast",
       "action": "对话",
-      "dialog": ["可重叠路人：你可以直接走到我脚下。这类玩家、路人或触发点默认不挡路。"],
+      "dialog": ["村民阿禾：训练场人来人往，从我身边经过就好，我不会挡住你的路。"],
       "option": "知道了"
     },
     {
@@ -73,6 +75,8 @@
       "kind": "npc",
       "movementCollision": "block",
       "cell": [5, 10],
+      "appearanceId": "npc_novice_trainer_m_v1",
+      "facing": "southeast",
       "facilityType": "trainer",
       "facilityLabel": "训练",
       "action": "对话",

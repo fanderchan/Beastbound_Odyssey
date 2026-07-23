@@ -2,15 +2,20 @@
   "schemaVersion": 1,
   "bundleId": "mistcap_marsh_visual_v1",
   "mapStyleId": "mistcap_marsh_v1",
-  "mapIds": ["mistcap_marsh"],
-  "status": "owner_review_pending",
-  "ownerReviewStatus": "pending",
-  "releaseApproved": false,
-  "runtimeEnabled": false,
-  "tileSize": [80, 40],
+  "mapIds": [
+    "mistcap_marsh"
+  ],
+  "status": "released",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "tileSize": [
+    80,
+    40
+  ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "fb1182f0e1935e00fd031cefbf69896f24c6d0889a52daabc944d8974d448465"
+    "sha256": "752e108e6f62f5f7063900763869a874ace16cb08543d42df691e259e1d2f344"
   },
   "source": {
     "origin": "AI-generated original",
@@ -19,75 +24,463 @@
     "mirrored": false,
     "bakedActors": false,
     "rawFiles": [
-      {"path": "source/generated/mistcap-ground-sheet-v1.png", "sha256": "68bd759a7abb6976ce06dfc139d23231e86d0e87847d73df2ca3cffbf1c43744", "dimensions": [1254, 1254]},
-      {"path": "source/generated/mistcap-low-props-sheet-v1.png", "sha256": "d6d8438b7826dd6c86e67baf60301942f9ffbcbe79421a387d1fbbccfd8d7e6d", "dimensions": [1254, 1254]}
+      {
+        "path": "source/generated/mistcap-ground-sheet-v1.png",
+        "sha256": "68bd759a7abb6976ce06dfc139d23231e86d0e87847d73df2ca3cffbf1c43744",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/generated/mistcap-low-props-sheet-v1.png",
+        "sha256": "d6d8438b7826dd6c86e67baf60301942f9ffbcbe79421a387d1fbbccfd8d7e6d",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
     ],
     "buildArtifacts": [
-      {"path": "source/processed/mistcap-ground-sheet-v1-alpha.png", "sha256": "7151759be0c7aa630e0f42ad018d1a98e6687538d39ee8e7dcc2d4ab0fd2a7ce", "dimensions": [1254, 1254]},
-      {"path": "source/processed/mistcap-low-props-sheet-v1-alpha.png", "sha256": "3f02b6f937555eaa2c20bf57e596526446befd03de4a2c02c8de0f5731872c52", "dimensions": [1254, 1254]}
+      {
+        "path": "source/processed/mistcap-ground-sheet-v1-alpha.png",
+        "sha256": "7151759be0c7aa630e0f42ad018d1a98e6687538d39ee8e7dcc2d4ab0fd2a7ce",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/processed/mistcap-low-props-sheet-v1-alpha.png",
+        "sha256": "3f02b6f937555eaa2c20bf57e596526446befd03de4a2c02c8de0f5731872c52",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
     ],
     "promptFiles": [
-      {"path": "source/prompts/mistcap-ground-atlas.md", "sha256": "a6868d3a46d981bf67f7e52af782e05f236d6161e955a3894d5393ccea301823"},
-      {"path": "source/prompts/mistcap-low-props.md", "sha256": "9aec547f201e31ac9ffaccb2a8b380d83511bdfe15a6d17cf076f53899cf1672"}
+      {
+        "path": "source/prompts/mistcap-ground-atlas.md",
+        "sha256": "a6868d3a46d981bf67f7e52af782e05f236d6161e955a3894d5393ccea301823"
+      },
+      {
+        "path": "source/prompts/mistcap-low-props.md",
+        "sha256": "9aec547f201e31ac9ffaccb2a8b380d83511bdfe15a6d17cf076f53899cf1672"
+      }
     ],
-    "provenance": {"path": "source/provenance.json", "sha256": "fd8cf81d141649069206bc4e001bc51e751e83cce8b199287e3237285d6744ed"}
+    "provenance": {
+      "path": "source/provenance.json",
+      "sha256": "968438a10244ba9ebf15ea9ec01afec6da91696d8e04dfe1102f970f31d0c6a9"
+    }
   },
-  "groundAtlas": {"path": "runtime/ground/atlas.png", "sha256": "0ccbac4af7691ea3abdf38b3a92af6468887ee20c7a5f7ba826cf7a180c80cef", "dimensions": [160, 80], "alphaMode": "mixed"},
+  "groundAtlas": {
+    "path": "runtime/ground/atlas.png",
+    "sha256": "0ccbac4af7691ea3abdf38b3a92af6468887ee20c7a5f7ba826cf7a180c80cef",
+    "dimensions": [
+      160,
+      80
+    ],
+    "alphaMode": "mixed"
+  },
   "tiles": [
-    {"tileId": "mistcap_marsh_moss", "rect": [0, 0, 80, 40], "role": "ground"},
-    {"tileId": "mistcap_wet_mud_path", "rect": [80, 0, 80, 40], "role": "path_transition"},
-    {"tileId": "mistcap_shallow_bog", "rect": [0, 40, 80, 40], "role": "blocked"},
-    {"tileId": "mistcap_dense_reeds", "rect": [80, 40, 80, 40], "role": "encounter"}
+    {
+      "tileId": "mistcap_marsh_moss",
+      "rect": [
+        0,
+        0,
+        80,
+        40
+      ],
+      "role": "ground"
+    },
+    {
+      "tileId": "mistcap_wet_mud_path",
+      "rect": [
+        80,
+        0,
+        80,
+        40
+      ],
+      "role": "path_transition"
+    },
+    {
+      "tileId": "mistcap_shallow_bog",
+      "rect": [
+        0,
+        40,
+        80,
+        40
+      ],
+      "role": "blocked"
+    },
+    {
+      "tileId": "mistcap_dense_reeds",
+      "rect": [
+        80,
+        40,
+        80,
+        40
+      ],
+      "role": "encounter"
+    }
   ],
   "objects": [
     {
       "objectId": "mistcap_reed_clump",
-      "asset": {"path": "runtime/objects/mistcap_reed_clump.png", "sha256": "4e8c1aaacc4a95992e80397f63ac42aaf9183bb07b4a0af066d488c99c4d36f9", "dimensions": [256, 187], "alphaMode": "mixed"},
-      "displaySize": [120, 88], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
-      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[46, 130], [210, 130], [224, 176], [32, 176]]}
+      "asset": {
+        "path": "runtime/objects/mistcap_reed_clump.png",
+        "sha256": "4e8c1aaacc4a95992e80397f63ac42aaf9183bb07b4a0af066d488c99c4d36f9",
+        "dimensions": [
+          256,
+          187
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        120,
+        88
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.92
+      ],
+      "sortPoint": [
+        0.5,
+        0.92
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            46,
+            130
+          ],
+          [
+            210,
+            130
+          ],
+          [
+            224,
+            176
+          ],
+          [
+            32,
+            176
+          ]
+        ]
+      }
     },
     {
       "objectId": "mistcap_moss_boulder",
-      "asset": {"path": "runtime/objects/mistcap_moss_boulder.png", "sha256": "c77616fdcce729a95e0697a3be293498679cf6b69b466ef5895f79c575036cef", "dimensions": [256, 151], "alphaMode": "mixed"},
-      "displaySize": [112, 66], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
-      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[50, 104], [206, 104], [220, 140], [36, 140]]}
+      "asset": {
+        "path": "runtime/objects/mistcap_moss_boulder.png",
+        "sha256": "c77616fdcce729a95e0697a3be293498679cf6b69b466ef5895f79c575036cef",
+        "dimensions": [
+          256,
+          151
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        112,
+        66
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.92
+      ],
+      "sortPoint": [
+        0.5,
+        0.92
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            50,
+            104
+          ],
+          [
+            206,
+            104
+          ],
+          [
+            220,
+            140
+          ],
+          [
+            36,
+            140
+          ]
+        ]
+      }
     },
     {
       "objectId": "mistcap_mushroom_cluster",
-      "asset": {"path": "runtime/objects/mistcap_mushroom_cluster.png", "sha256": "30456f908d19e098aa7adf09271eb717e85b830b2c8b23d300884d029527c24a", "dimensions": [256, 181], "alphaMode": "mixed"},
-      "displaySize": [104, 74], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
-      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[48, 124], [208, 124], [220, 170], [36, 170]]}
+      "asset": {
+        "path": "runtime/objects/mistcap_mushroom_cluster.png",
+        "sha256": "30456f908d19e098aa7adf09271eb717e85b830b2c8b23d300884d029527c24a",
+        "dimensions": [
+          256,
+          181
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        104,
+        74
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.92
+      ],
+      "sortPoint": [
+        0.5,
+        0.92
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            48,
+            124
+          ],
+          [
+            208,
+            124
+          ],
+          [
+            220,
+            170
+          ],
+          [
+            36,
+            170
+          ]
+        ]
+      }
     },
     {
       "objectId": "mistcap_fallen_log",
-      "asset": {"path": "runtime/objects/mistcap_fallen_log.png", "sha256": "122636c28a731bf2cec8a3eab39d4773080fb94ee346adc9a20ce26e3755d892", "dimensions": [256, 153], "alphaMode": "mixed"},
-      "displaySize": [136, 81], "renderLayer": "world", "collisionRole": "blocking", "scale": [1.0, 1.0], "anchor": [0.5, 0.92], "sortPoint": [0.5, 0.92],
-      "sort": {"mode": "y", "offset": 0}, "collision": {"mode": "polygon", "points": [[28, 108], [228, 108], [238, 142], [18, 142]]}
+      "asset": {
+        "path": "runtime/objects/mistcap_fallen_log.png",
+        "sha256": "122636c28a731bf2cec8a3eab39d4773080fb94ee346adc9a20ce26e3755d892",
+        "dimensions": [
+          256,
+          153
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        136,
+        81
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.92
+      ],
+      "sortPoint": [
+        0.5,
+        0.92
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            28,
+            108
+          ],
+          [
+            228,
+            108
+          ],
+          [
+            238,
+            142
+          ],
+          [
+            18,
+            142
+          ]
+        ]
+      }
     }
   ],
   "mapBindings": [
-    {"mapId": "mistcap_marsh", "binding": {"path": "bindings/mistcap_marsh.json", "sha256": "4e81634e770d7059c47df5f1bb884e8798a69a27299cb48facefc7d7230dd5b3"}}
+    {
+      "mapId": "mistcap_marsh",
+      "binding": {
+        "path": "bindings/mistcap_marsh.json",
+        "sha256": "e2c8f1be5b4aaaec7bf294aac64f85d67945f98ba88a33d9b37ebc5f0b76a828"
+      }
+    }
   ],
   "evidence": {
-    "dressedReference": null,
-    "layeredPreview": null,
+    "dressedReference": {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-pointer-1280x720.png",
+      "sha256": "86a102928e296b834855bb77925a80a42a58cc84951702a1a151690167a0e50c",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "alphaMode": "opaque"
+    },
+    "layeredPreview": {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-movement_path-1280x720.png",
+      "sha256": "8808afa9f59444691d8e8fe12ddd376fa90cd8d9ea870bb2e965760a77b4a582",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "alphaMode": "opaque"
+    },
     "runtimeScreenshots": [
       {
         "mapId": "mistcap_marsh",
         "mode": "idle",
-        "image": {"path": "evidence/mistcap_marsh_idle_1280x720.png", "sha256": "7adbf5f4ae1f96ae246839291f6a7634f2f979e8ab6f1213f149d0f182203425", "dimensions": [1280, 720], "alphaMode": "opaque"},
-        "captureReport": {"path": "evidence/mistcap_marsh_idle_capture.json", "sha256": "cb14c3122279fbe4d43be0aaf3fabaee7fd7d140bd4618a41fee5b8dc21c4164"}
+        "image": {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-pointer-1280x720.png",
+          "sha256": "86a102928e296b834855bb77925a80a42a58cc84951702a1a151690167a0e50c",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-captures/mistcap_marsh-pointer.json",
+          "sha256": "72dd6bad393d097919dc8113880d066e83474e621ca7ede0e996aa584a019cbd"
+        }
       },
       {
         "mapId": "mistcap_marsh",
         "mode": "moving",
-        "image": {"path": "evidence/mistcap_marsh_moving_1280x720.png", "sha256": "592ef453ac0a8b52d70d78c22b5dc2f557302cc8a46f8b6a3219c6439b4ffb53", "dimensions": [1280, 720], "alphaMode": "opaque"},
-        "captureReport": {"path": "evidence/mistcap_marsh_moving_capture.json", "sha256": "e6837b78e53b2c9b9e4dcb7007339085f02d980b89862c2bf1528db5ae837e4c"}
+        "image": {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-movement_path-1280x720.png",
+          "sha256": "8808afa9f59444691d8e8fe12ddd376fa90cd8d9ea870bb2e965760a77b4a582",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-captures/mistcap_marsh-movement_path.json",
+          "sha256": "20131bf7e9c3a980eb33fad5c96aff075f506e147fa8a49a1134de63a5d15193"
+        }
+      },
+      {
+        "mapId": "mistcap_marsh",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-warp-1280x720.png",
+          "sha256": "199e11dd991adb953cc5ea2c0ad7b0070a2fb91621104e64cc656df629327c4b",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-captures/mistcap_marsh-warp.json",
+          "sha256": "927d461905418773d55e700fd90d27ef05ed4d7b65a562c8f1e4bccb4ae2037d"
+        }
+      },
+      {
+        "mapId": "mistcap_marsh",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-collision-1280x720.png",
+          "sha256": "445c693ae0e602237c3136eba9434a355a1c23f88d4fa77bb580397e29644c95",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-captures/mistcap_marsh-collision.json",
+          "sha256": "643511dcc6584440c507d8785e63d850d01fd550bf95cb993fd2c285b1148501"
+        }
+      },
+      {
+        "mapId": "mistcap_marsh",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-occlusion-1280x720.png",
+          "sha256": "bfcf0b92cbe62d6884656beba77ec778121eff50c83ff8b4d373f0f1a06bd2fd",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-captures/mistcap_marsh-occlusion.json",
+          "sha256": "fad447800fca984baa3c734223e252b6b358fc96c4a146a7ec16ede1ee6aa49a"
+        }
       }
     ],
-    "computerUseReport": null,
-    "collisionAudit": {"path": "evidence/collision-audit.json", "sha256": "08feaa8b8b3545d070c6e32621a67f57f6b23db05ece255bf94c47fd4751538c"},
-    "performanceReport": {"path": "evidence/performance-report.json", "sha256": "de2192d3d3df7371729396c75d51db23e5590f25bae2e5b314724dbaeded7ccf"},
-    "ownerAcceptance": null
+    "computerUseReport": {
+      "path": "evidence/computer-use.json",
+      "sha256": "568ec044ea5c27e9c4727faeb33d3cdd42afcc87240d213ab07eeac720dc2e37"
+    },
+    "collisionAudit": {
+      "path": "evidence/collision-audit.json",
+      "sha256": "bbab2622edc3a344ef4128a664e68c4fb02a844559f8180e0e03e0ca6019d297"
+    },
+    "performanceReport": {
+      "path": "evidence/performance-report.json",
+      "sha256": "d0a92f5d8416fa8b2fb6d5d6c69ee216cef31299f8b5f682d4b80348133127f7"
+    },
+    "ownerAcceptance": {
+      "path": "evidence/owner-acceptance.json",
+      "sha256": "047007a83befe762b82eb99a42033915ccfc6c52d8bbbaf4911be904fc251387"
+    }
+  },
+  "releaseAttestation": {
+    "path": "release-attestation.json",
+    "sha256": "90c53c0585d750216e3d4afba5b0c3a568f0bc696e7b4a9ac3aa0d0b32a8f29c"
   }
 }

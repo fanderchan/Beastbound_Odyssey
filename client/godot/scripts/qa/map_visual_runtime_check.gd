@@ -1175,6 +1175,7 @@ static func _validate_prepared_map(
 	if not bool(prepared.get("qaPreview", false)):
 		errors.append("canary 地图没有标记 QA preview：%s" % map_id)
 
+	var ground := prepared.get("groundRules", {}) as Dictionary
 	var ground_draws: Array = prepared.get("groundDraws", [])
 	if ground_draws.size() != grid_size.x * grid_size.y:
 		errors.append("地表绘制命令数不等于完整地图网格：%s" % map_id)
@@ -1199,7 +1200,46 @@ static func _validate_prepared_map(
 		if not (source is Rect2) or Vector2i((source as Rect2).size) != TILE_SIZE:
 			errors.append("地表 atlas source 不是 80x40：%s/%s" % [map_id, key])
 
-	var ground := prepared.get("groundRules", {}) as Dictionary
+	var edge_padding := int(ground.get("edgePaddingCells", 0))
+	var edge_draws: Array = prepared.get("edgeGroundDraws", [])
+	var expected_edge_draws := (
+		(grid_size.x + edge_padding * 2) * (grid_size.y + edge_padding * 2)
+		- grid_size.x * grid_size.y
+	)
+	if edge_draws.size() != expected_edge_draws:
+		errors.append("视觉 edge skirt 绘制命令数不完整：%s" % map_id)
+	var edge_seen: Dictionary = {}
+	var tile_ids := prepared.get("tileIdsByCell", {}) as Dictionary
+	var blocked := prepared.get("blockedLookup", {}) as Dictionary
+	var protected := prepared.get("protectedLookup", {}) as Dictionary
+	for value in edge_draws:
+		if not (value is Dictionary):
+			errors.append("视觉 edge skirt 绘制命令不是对象：%s" % map_id)
+			continue
+		var command := value as Dictionary
+		var cell_value: Variant = command.get("cell")
+		var destination_value: Variant = command.get("destination")
+		var source_value: Variant = command.get("source")
+		if not (cell_value is Vector2i):
+			errors.append("视觉 edge skirt 缺少 Vector2i 格：%s" % map_id)
+			continue
+		var edge_cell := cell_value as Vector2i
+		if IsoMapModel.is_inside(map_data, edge_cell):
+			errors.append("视觉 edge skirt 侵入权威网格：%s/%s" % [map_id, str(edge_cell)])
+			continue
+		var edge_key := IsoMapModel.cell_key(edge_cell)
+		if edge_seen.has(edge_key):
+			errors.append("视觉 edge skirt 格重复：%s/%s" % [map_id, edge_key])
+		edge_seen[edge_key] = true
+		if tile_ids.has(edge_key) or blocked.has(edge_key) or protected.has(edge_key):
+			errors.append("视觉 edge skirt 污染玩法 lookup：%s/%s" % [map_id, edge_key])
+		if str(command.get("tileId", "")) != str(ground.get("defaultTileId", "")):
+			errors.append("视觉 edge skirt 未使用 defaultTileId：%s/%s" % [map_id, edge_key])
+		if not (destination_value is Rect2) or Vector2i((destination_value as Rect2).size) != TILE_SIZE:
+			errors.append("视觉 edge skirt destination 不是 80x40：%s/%s" % [map_id, edge_key])
+		if not (source_value is Rect2) or Vector2i((source_value as Rect2).size) != TILE_SIZE:
+			errors.append("视觉 edge skirt atlas source 不是 80x40：%s/%s" % [map_id, edge_key])
+
 	if int(ground.get("pathDilation", -1)) != 1:
 		errors.append("canary 主路必须使用 Chebyshev 一格扩张：%s" % map_id)
 	var independent := _independent_ground_lookups(map_id, map_data, ground, errors)

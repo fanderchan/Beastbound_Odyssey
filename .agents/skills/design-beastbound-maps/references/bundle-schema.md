@@ -10,6 +10,7 @@ existing gameplay data. All paths below are relative to the bundle root.
 ```text
 <bundle>/
 ├── map-visual-bundle.json
+├── release-attestation.json
 ├── source/
 │   ├── .gdignore
 │   ├── prompts/
@@ -92,6 +93,7 @@ normally use `opaque`.
   "ownerReviewStatus": "pending",
   "releaseApproved": false,
   "runtimeEnabled": false,
+  "releaseAttestation": null,
   "tileSize": [80, 40],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
@@ -236,10 +238,12 @@ structural auditor `status: "PASS"`, but it is still expected to report
 `releaseApproved` and `runtimeEnabled` remain false. `released` is the only
 normal-player state and requires both flags true. Because `source/` and
 `evidence/` are excluded from Godot import/export, runtime lifecycle fields are
-not an evidence verifier: every lifecycle candidate and every export must be
-checked by the offline auditor, and the pre-export job must require all three of
-`status == "PASS"`, `releaseReady == true`, and `missingReleaseGates == []`.
-Checking only process exit status is insufficient.
+not an evidence verifier by themselves. A released bundle also requires the
+bundle-root `releaseAttestation` described below. Every lifecycle candidate and
+every export must still be checked by the offline auditor, and the pre-export
+job must require all three of `status == "PASS"`, `releaseReady == true`, and
+`missingReleaseGates == []`. Checking only process exit status or only the
+runtime attestation is insufficient.
 
 ## Tiles and independent objects
 
@@ -291,6 +295,7 @@ Each binding reference must parse as JSON and contain the same `schemaVersion`,
   "mapGridSize": [48, 36],
   "ground": {
     "defaultTileId": "warm_grass_a",
+    "edgePaddingCells": 20,
     "overrides": [
       {"grid": [12, 8], "tileId": "warm_path_a"}
     ]
@@ -310,7 +315,13 @@ Each binding reference must parse as JSON and contain the same `schemaVersion`,
 ```
 
 `ground.defaultTileId`, `ground.overrides`, and `objectPlacements` are required;
-the two arrays may be empty. Every override and placement `grid` is a
+the two arrays may be empty. `ground.edgePaddingCells` is optional and must be
+an integer from 0 through 32; formal 1280x720 map art should normally use 20
+unless frozen viewport evidence proves a smaller skirt sufficient. It creates
+visual-only `defaultTileId` diamonds outside `mapGridSize`. These cells never
+enter authoritative `tileIdsByCell`, pathfinding, blocked/protected lookups,
+collision, interactions, encounters, spawns or warps, and are never gameplay
+coordinates. Every override and placement `grid` is a
 non-negative integer pair. Every placement has a unique stable `instanceId`, a
 finite numeric two-value `offset`, explicit `mirrored: false`, an
 `interactionLink` that is either `null` or a stable ID, and a
@@ -537,6 +548,111 @@ invalid unless that repository-owned reference is valid. Independently, any
 `provenance.processing_external_path`; replacing the tool metadata alone does
 not close it.
 
+## Runtime release attestation
+
+`source/` and `evidence/` are excluded from the exported Godot project. A normal
+runtime therefore cannot reconstruct the offline review, and the four lifecycle
+fields alone must never enable a bundle. Every `approved` or `released` bundle
+uses this root-level manifest reference:
+
+```json
+{
+  "releaseAttestation": {
+    "path": "release-attestation.json",
+    "sha256": "64 lowercase hex characters"
+  }
+}
+```
+
+The reference contains exactly `path` and `sha256`; the path is fixed to the
+bundle-root `release-attestation.json`. That JSON file contains exactly:
+
+```json
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_map_runtime_release_attestation",
+  "status": "passed",
+  "bundleId": "firebud_region_visual_v1",
+  "mapStyleId": "firebud_warm_stone_v1",
+  "mapIds": ["firebud_training_yard", "firebud_village_gate"],
+  "manifest": {
+    "path": "map-visual-bundle.json",
+    "summarySha256": "..."
+  },
+  "lifecycle": {
+    "status": "released",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true
+  },
+  "offlineAudit": {
+    "status": "PASS",
+    "releaseReady": true,
+    "missingReleaseGates": []
+  },
+  "summaries": {
+    "evidenceSha256": "...",
+    "assetSha256": "...",
+    "bundleSha256": "..."
+  }
+}
+```
+
+All shown objects use exactly the shown keys. `mapIds` preserves and exactly
+matches the manifest order. `lifecycle` always records the intended released
+state, including when the attestation is staged while the manifest is still
+`approved`. `offlineAudit` is an attested release result, not authority to skip
+the real pre-export audit; the gate must rerun the auditor against the final
+candidate. Types are exact: `schemaVersion` is a JSON integer, while
+`releaseApproved`, `runtimeEnabled`, `releaseReady` are JSON booleans. Numeric
+`1` and boolean `true` are never interchangeable.
+
+The four summary hashes use a second, explicitly non-circular canonicalization:
+
+1. recursively turn every finite integral JSON number into an integer;
+2. serialize UTF-8 JSON with `ensure_ascii=False`, `sort_keys=True`, and
+   `separators=(",", ":")`, preserving array order;
+3. `manifest.summarySha256` hashes the manifest after removing top-level
+   `status`, `ownerReviewStatus`, `releaseApproved`, `runtimeEnabled`, and
+   `releaseAttestation`, and removing only `evidence.ownerAcceptance`;
+4. `summaries.evidenceSha256` hashes
+   `{"catalogContractCheck": manifest.catalogContractCheck,
+   "evidence": <manifest.evidence without ownerAcceptance>}`;
+5. `summaries.assetSha256` hashes
+   `{"groundAtlas": manifest.groundAtlas, "tiles": manifest.tiles,
+   "objects": manifest.objects, "mapBindings": manifest.mapBindings}`;
+6. `summaries.bundleSha256` hashes
+   `{"schemaVersion", "bundleId", "mapStyleId", "mapIds", "tileSize",
+   "manifestSha256", "evidenceSha256", "assetSha256"}` with values taken from
+   the manifest and the preceding three hashes.
+
+The runtime validates the attestation file's byte SHA, exact type/status,
+bundle/style/map identity, target lifecycle, empty offline missing-gate set and
+all four summaries. It also hashes the current exported ground atlas, every
+object asset and every binding file against their manifest references. Any
+drift fails closed to the legacy map renderer. Runtime does not read excluded
+source or evidence files. A process-local validation cache may be shared by
+multiple maps only when bundle root, declared attestation SHA and canonical
+bundle summary are all identical; bundle-root alone is never a valid cache key.
+
+There is intentionally no owner-acceptance digest inside the attestation.
+Embedding it would create a hash cycle: owner acceptance must accept the
+manifest's attestation path/SHA, while that SHA would then depend on the owner
+acceptance. Use this one-way freeze order instead:
+
+1. finish and freeze all non-owner evidence;
+2. compute and write `release-attestation.json`, then add its path/SHA to the
+   manifest;
+3. compute the normal owner `manifestReviewSubjectSha256`, which includes the
+   attestation reference, and write `ownerAcceptance`;
+4. run the final released candidate through the offline auditor/pre-export
+   gate.
+
+The attestation file itself is part of the owner's exact `acceptedFiles` set.
+The owner acceptance record and the offline auditor remain the authority for
+the excluded review material; the attestation is the exported runtime proof
+that the exact reviewed runtime declarations and asset bytes are still present.
+
 ## Frozen approval and formal release evidence
 
 Evidence may be partial while production is pending. `approved` already means
@@ -569,8 +685,9 @@ enable the art for normal players. Both `approved` and `released` require:
 - `ownerAcceptance` with the matching `bundleId`, `approved: true`, non-empty
   `reviewer` and `reviewedAt`, a `manifestReviewSubjectSha256` matching the
   auditor's canonical digest, plus `acceptedFiles` exactly matching the complete
-  review subject: every prompt, provenance ledger, raw source, build artifact,
-  runtime atlas and object PNG, binding, catalog report, displayed
+  review subject: the root runtime release attestation, every prompt, provenance
+  ledger, raw source, build artifact, runtime atlas and object PNG, binding,
+  catalog report, displayed
   reference/screenshot and paired capture report, QA report, raw runner receipt,
   and Computer Use nested evidence path/SHA pair, including every unique
   `actionReceipt`. The acceptance file does not list itself, avoiding a circular
@@ -596,7 +713,9 @@ This exclusion lets one accepted review subject move from `approved` to
 exclude any source, build artifact, runtime asset, binding, catalog snapshot,
 capture, report, or other evidence reference. Any change to one of those
 references changes the digest and invalidates the old acceptance. Do not hash a
-pretty-printed manifest or remove additional keys.
+pretty-printed manifest or remove additional keys. In particular, the top-level
+`releaseAttestation` path/SHA remains in this owner-review subject; only the
+separate attestation summary algorithm removes it to avoid self-hashing.
 
 ### Collision/performance runner identity and raw receipt
 
@@ -771,4 +890,5 @@ not release authorization. In particular, an unvendored external tool, any
 provenance `releaseBlocker`, missing runner identity/raw receipt, incomplete
 Computer Use matrix, reused/wrong-mode action pairs, missing unique action
 receipts, or missing owner acceptance remains a formal blocker even when other
-structural checks pass.
+structural checks pass. A missing, invalid, summary-drifted, or byte-drifted
+root runtime release attestation is likewise a formal blocker.

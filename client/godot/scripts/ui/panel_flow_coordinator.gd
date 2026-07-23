@@ -4839,6 +4839,7 @@ var player_profile:
 		return host.player_profile
 	set(value):
 		host.player_profile = value
+		host._invalidate_ground_pet_drop_depth_cache()
 
 var account_authenticated:
 	get:
@@ -25723,6 +25724,7 @@ func _on_pet_drop_pressed() -> void:
 			"nowSec": int(Time.get_unix_time_from_system()),
 		}, "丢弃宠物失败。")
 		if bool(parsed.get("ok", false)):
+			host._invalidate_ground_pet_drop_depth_cache()
 			pet_selected_instance_id = ""
 		_close_pet_rename_panel()
 		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
@@ -25736,6 +25738,7 @@ func _on_pet_drop_pressed() -> void:
 		int(Time.get_unix_time_from_system())
 	)
 	player_profile = result.get("profile", player_profile)
+	host._invalidate_ground_pet_drop_depth_cache()
 	if bool(result.get("ok", false)):
 		pet_selected_instance_id = ""
 		if profile_save_enabled:
@@ -25858,6 +25861,7 @@ func _pickup_ground_pet_drop(drop_id: String) -> void:
 		}, "拾取宠物失败。")
 		var result = parsed.get("result", {}) as Dictionary if parsed.get("result", {}) is Dictionary else {}
 		if bool(parsed.get("ok", false)):
+			host._invalidate_ground_pet_drop_depth_cache()
 			pet_selected_instance_id = str(result.get("instanceId", pet_selected_instance_id))
 		if pet_panel != null and pet_panel.visible:
 			_refresh_pet_panel()
@@ -25865,6 +25869,7 @@ func _pickup_ground_pet_drop(drop_id: String) -> void:
 		return
 	var result = PlayerProgressModel.pickup_ground_pet(player_profile, drop_id, int(Time.get_unix_time_from_system()))
 	player_profile = result.get("profile", player_profile)
+	host._invalidate_ground_pet_drop_depth_cache()
 	if (bool(result.get("ok", false)) or bool(result.get("changed", false))) and profile_save_enabled:
 		host._save_player_profile_now()
 	if bool(result.get("ok", false)):
@@ -25943,6 +25948,7 @@ func _update_ground_pet_drop_expiration(delta: float) -> void:
 	if _is_server_account_session():
 		var parsed = await _submit_server_profile_action("pet_expire_drops", {"nowSec": now_sec}, "")
 		if bool(parsed.get("ok", false)):
+			host._invalidate_ground_pet_drop_depth_cache()
 			if pet_panel != null and pet_panel.visible:
 				_refresh_pet_panel()
 			_set_world_log_message("地上的宠物离开了。")
@@ -25951,6 +25957,7 @@ func _update_ground_pet_drop_expiration(delta: float) -> void:
 	if not bool(result.get("ok", false)):
 		return
 	player_profile = result.get("profile", player_profile)
+	host._invalidate_ground_pet_drop_depth_cache()
 	if profile_save_enabled:
 		host._save_player_profile_now()
 	if pet_panel != null and pet_panel.visible:

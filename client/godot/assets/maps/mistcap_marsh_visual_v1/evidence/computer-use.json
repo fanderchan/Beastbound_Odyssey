@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_computer_use_review",
+  "generatedAtUtc": "2026-07-23T18:44:11Z",
+  "bundleId": "mistcap_marsh_visual_v1",
+  "result": "PASS",
+  "testedMapIds": [
+    "mistcap_marsh"
+  ],
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "method": "computer_use",
+  "scene": "res://scenes/Main.tscn",
+  "viewport": [
+    1280,
+    720
+  ],
+  "displayServer": "macOS Metal",
+  "actions": [
+    {
+      "actionId": "mistcap_marsh_pointer",
+      "actionKind": "pointer",
+      "mapId": "mistcap_marsh",
+      "description": "Use Computer Use to click a live target and verify pointer feedback on the formal map",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-pointer-1280x720.png",
+          "sha256": "86a102928e296b834855bb77925a80a42a58cc84951702a1a151690167a0e50c"
+        },
+        {
+          "path": "evidence/runtime-captures/mistcap_marsh-pointer.json",
+          "sha256": "72dd6bad393d097919dc8113880d066e83474e621ca7ede0e996aa584a019cbd"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/mistcap_marsh_pointer.jsonl",
+        "sha256": "9e6db48a6b0bc1f2bc7cba5c7a2b80a50711ef125ce3be0ad641de886cda4dd3"
+      }
+    },
+    {
+      "actionId": "mistcap_marsh_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "mistcap_marsh",
+      "description": "Use Computer Use to click terrain and verify the player traverses a live path",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-movement_path-1280x720.png",
+          "sha256": "8808afa9f59444691d8e8fe12ddd376fa90cd8d9ea870bb2e965760a77b4a582"
+        },
+        {
+          "path": "evidence/runtime-captures/mistcap_marsh-movement_path.json",
+          "sha256": "20131bf7e9c3a980eb33fad5c96aff075f506e147fa8a49a1134de63a5d15193"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/mistcap_marsh_movement_path.jsonl",
+        "sha256": "9df6e12a517ecab50fd50057b88d34c4f92a02b7d4cd2c053a188c63961d36ad"
+      }
+    },
+    {
+      "actionId": "mistcap_marsh_warp",
+      "actionKind": "warp",
+      "mapId": "mistcap_marsh",
+      "description": "Use Computer Use to enter the map warp and verify the formal destination map loads",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-warp-1280x720.png",
+          "sha256": "199e11dd991adb953cc5ea2c0ad7b0070a2fb91621104e64cc656df629327c4b"
+        },
+        {
+          "path": "evidence/runtime-captures/mistcap_marsh-warp.json",
+          "sha256": "927d461905418773d55e700fd90d27ef05ed4d7b65a562c8f1e4bccb4ae2037d"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/mistcap_marsh_warp.jsonl",
+        "sha256": "8780e0348523ff5c8a4187ad13f4375fd200b5f47daffabf5d1004fb47d3ef6a"
+      }
+    },
+    {
+      "actionId": "mistcap_marsh_collision",
+      "actionKind": "collision",
+      "mapId": "mistcap_marsh",
+      "description": "Use Computer Use to click a blocked formal prop and verify the player stops outside its footprint",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-collision-1280x720.png",
+          "sha256": "445c693ae0e602237c3136eba9434a355a1c23f88d4fa77bb580397e29644c95"
+        },
+        {
+          "path": "evidence/runtime-captures/mistcap_marsh-collision.json",
+          "sha256": "643511dcc6584440c507d8785e63d850d01fd550bf95cb993fd2c285b1148501"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/mistcap_marsh_collision.jsonl",
+        "sha256": "b8447c9a3fa0b21d82b8eba66c27678138e41cc5434f15b1239f0896e45129da"
+      }
+    },
+    {
+      "actionId": "mistcap_marsh_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "mistcap_marsh",
+      "description": "Use Computer Use to traverse behind and in front of a tall formal prop and verify depth ordering",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/mistcap_marsh-occlusion-1280x720.png",
+          "sha256": "bfcf0b92cbe62d6884656beba77ec778121eff50c83ff8b4d373f0f1a06bd2fd"
+        },
+        {
+          "path": "evidence/runtime-captures/mistcap_marsh-occlusion.json",
+          "sha256": "fad447800fca984baa3c734223e252b6b358fc96c4a146a7ec16ede1ee6aa49a"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/mistcap_marsh_occlusion.jsonl",
+        "sha256": "5f0fc6b6664cd5b98ad256905d4e692d8c53b8bce398325ec8a4f0436b9e893f"
+      }
+    }
+  ]
+}

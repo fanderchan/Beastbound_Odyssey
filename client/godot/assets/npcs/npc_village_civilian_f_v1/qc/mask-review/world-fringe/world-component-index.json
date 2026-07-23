@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "world",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/world-idle-2x4-raw.png",
+  "rawSheetFileSha256": "fef6859ee24e2fb6fc08db5a62cbf8e8cca66b6658ad882fe9d1c2ba4566aa8e",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-fringe/world-component-review-01.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-fringe/world-component-review-02.png"
+  ],
+  "components": [
+    {
+      "key": "south|adjacent-chroma-fringe|c34c28533fb211f6e5a950197a5e0db72d7e82973b834fe4f06c2421774d9534",
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c34c28533fb211f6e5a950197a5e0db72d7e82973b834fe4f06c2421774d9534",
+      "cellBbox": [
+        139,
+        231,
+        265,
+        576
+      ],
+      "sheetBbox": [
+        139,
+        231,
+        265,
+        576
+      ],
+      "pixelCount": 1227,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|adjacent-chroma-fringe|6f0a15240965e5e4c59d7d945a1e2754097bd331848a5902fea8ba9243f6305a",
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "6f0a15240965e5e4c59d7d945a1e2754097bd331848a5902fea8ba9243f6305a",
+      "cellBbox": [
+        116,
+        232,
+        225,
+        574
+      ],
+      "sheetBbox": [
+        429,
+        232,
+        538,
+        574
+      ],
+      "pixelCount": 1541,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "west|adjacent-chroma-fringe|b1c4a60f0acdb5c48d81c395590b70e836c698588cb245ad15e0698797fa0daa",
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "b1c4a60f0acdb5c48d81c395590b70e836c698588cb245ad15e0698797fa0daa",
+      "cellBbox": [
+        103,
+        233,
+        186,
+        571
+      ],
+      "sheetBbox": [
+        730,
+        233,
+        813,
+        571
+      ],
+      "pixelCount": 1301,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "northwest|adjacent-chroma-fringe|ace294ddbda83be13bcbd3ae1a92497e08cda049e0559344812caf17ba975bcc",
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "ace294ddbda83be13bcbd3ae1a92497e08cda049e0559344812caf17ba975bcc",
+      "cellBbox": [
+        40,
+        236,
+        149,
+        569
+      ],
+      "sheetBbox": [
+        980,
+        236,
+        1089,
+        569
+      ],
+      "pixelCount": 1137,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|adjacent-chroma-fringe|c6b8ea164daed730f34a726ccdcdd5d7fa4cdbeadb4ae8e066f05b090aeeed5b",
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "c6b8ea164daed730f34a726ccdcdd5d7fa4cdbeadb4ae8e066f05b090aeeed5b",
+      "cellBbox": [
+        143,
+        84,
+        256,
+        339
+      ],
+      "sheetBbox": [
+        143,
+        711,
+        256,
+        966
+      ],
+      "pixelCount": 589,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|adjacent-chroma-fringe|aa06f18dcf8932cc2da2ae7a332d798623748f6d1ed12e8d4f65834077f958e6",
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "aa06f18dcf8932cc2da2ae7a332d798623748f6d1ed12e8d4f65834077f958e6",
+      "cellBbox": [
+        239,
+        238,
+        256,
+        298
+      ],
+      "sheetBbox": [
+        239,
+        865,
+        256,
+        925
+      ],
+      "pixelCount": 82,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|adjacent-chroma-fringe|7d5ea8bad98e32dda89bba75858d14e809509c15ce0c75a4b011279ad7fac31f",
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "7d5ea8bad98e32dda89bba75858d14e809509c15ce0c75a4b011279ad7fac31f",
+      "cellBbox": [
+        208,
+        301,
+        245,
+        412
+      ],
+      "sheetBbox": [
+        208,
+        928,
+        245,
+        1039
+      ],
+      "pixelCount": 161,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|adjacent-chroma-fringe|d7c731c2424ca07389576b7a2928f1f7637dc9d12ecd751a7efccb7a56bccd97",
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "d7c731c2424ca07389576b7a2928f1f7637dc9d12ecd751a7efccb7a56bccd97",
+      "cellBbox": [
+        150,
+        338,
+        206,
+        412
+      ],
+      "sheetBbox": [
+        150,
+        965,
+        206,
+        1039
+      ],
+      "pixelCount": 192,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|adjacent-chroma-fringe|e5e19a91b99f741ed550c90a6a8a5f1b75a88dcf5853922e4179e6cb4e18a19f",
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "e5e19a91b99f741ed550c90a6a8a5f1b75a88dcf5853922e4179e6cb4e18a19f",
+      "cellBbox": [
+        204,
+        344,
+        210,
+        388
+      ],
+      "sheetBbox": [
+        204,
+        971,
+        210,
+        1015
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "northeast|adjacent-chroma-fringe|a829ea81be1cfcca6d0702ab04c0df2886de8e3c3b7b9affddcfd98964cf41e7",
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a829ea81be1cfcca6d0702ab04c0df2886de8e3c3b7b9affddcfd98964cf41e7",
+      "cellBbox": [
+        120,
+        86,
+        221,
+        417
+      ],
+      "sheetBbox": [
+        433,
+        713,
+        534,
+        1044
+      ],
+      "pixelCount": 1234,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "east|adjacent-chroma-fringe|5eca6d0eebdd2f82951035516dc3fb7415dd87b3ec399c830b285e2b1a9dec9d",
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "5eca6d0eebdd2f82951035516dc3fb7415dd87b3ec399c830b285e2b1a9dec9d",
+      "cellBbox": [
+        97,
+        84,
+        179,
+        417
+      ],
+      "sheetBbox": [
+        724,
+        711,
+        806,
+        1044
+      ],
+      "pixelCount": 1135,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|adjacent-chroma-fringe|f99cb1ccd203133065061df28b86c79c93fbb40b500e68b65ddb816293626b2a",
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "f99cb1ccd203133065061df28b86c79c93fbb40b500e68b65ddb816293626b2a",
+      "cellBbox": [
+        30,
+        88,
+        141,
+        423
+      ],
+      "sheetBbox": [
+        970,
+        715,
+        1081,
+        1050
+      ],
+      "pixelCount": 1140,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

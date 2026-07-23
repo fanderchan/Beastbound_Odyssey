@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "portrait",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/portrait-2x2-raw.png",
+  "rawSheetFileSha256": "8218a1656ae57fba296f3f7633417f97e09334c44a12efa5666a72ecaf867c1d",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-fringe/portrait-component-review-01.png"
+  ],
+  "components": [
+    {
+      "key": "neutral|adjacent-chroma-fringe|e53f9873ac20818da5085aa8a11cbbdf1e27ded26781c56d50b472983f057f4d",
+      "slot": "neutral",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "e53f9873ac20818da5085aa8a11cbbdf1e27ded26781c56d50b472983f057f4d",
+      "cellBbox": [
+        99,
+        71,
+        546,
+        620
+      ],
+      "sheetBbox": [
+        99,
+        71,
+        546,
+        620
+      ],
+      "pixelCount": 3367,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|adjacent-chroma-fringe|6d4e457f40e88a1574366bbb67a97532ad04af6130a77fd28e6bd2912af30043",
+      "slot": "speaking",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "6d4e457f40e88a1574366bbb67a97532ad04af6130a77fd28e6bd2912af30043",
+      "cellBbox": [
+        44,
+        71,
+        496,
+        620
+      ],
+      "sheetBbox": [
+        671,
+        71,
+        1123,
+        620
+      ],
+      "pixelCount": 3777,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|adjacent-chroma-fringe|4ae814aa9f2f91c5d55e32ba54d4cc5aef7adc6791c623711d0fa7908ce6359d",
+      "slot": "smile",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "4ae814aa9f2f91c5d55e32ba54d4cc5aef7adc6791c623711d0fa7908ce6359d",
+      "cellBbox": [
+        103,
+        11,
+        553,
+        565
+      ],
+      "sheetBbox": [
+        103,
+        638,
+        553,
+        1192
+      ],
+      "pixelCount": 3110,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|adjacent-chroma-fringe|30eb83d49a3cfdeb66aff812b836ecc0363ffc497277a8cfdb0119520f795267",
+      "slot": "concerned",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "30eb83d49a3cfdeb66aff812b836ecc0363ffc497277a8cfdb0119520f795267",
+      "cellBbox": [
+        60,
+        12,
+        507,
+        562
+      ],
+      "sheetBbox": [
+        687,
+        639,
+        1134,
+        1189
+      ],
+      "pixelCount": 3392,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

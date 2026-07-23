@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "mistcap_marsh_visual_v1",
   "result": "PASS",
-  "generatedAtUtc": "2026-07-22T22:47:56Z",
+  "generatedAtUtc": "2026-07-23T18:18:01Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd",
   "testedMapIds": [
@@ -28,16 +28,27 @@
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "fb1182f0e1935e00fd031cefbf69896f24c6d0889a52daabc944d8974d448465",
+    "catalogContractSha256": "752e108e6f62f5f7063900763869a874ace16cb08543d42df691e259e1d2f344",
     "bindingHashes": {
-      "mistcap_marsh": "4e81634e770d7059c47df5f1bb884e8798a69a27299cb48facefc7d7230dd5b3"
+      "mistcap_marsh": "e2c8f1be5b4aaaec7bf294aac64f85d67945f98ba88a33d9b37ebc5f0b76a828"
     },
     "mapDataHashes": {
       "mistcap_marsh": "cc38b0aecacd0864f26a6d08c10602d33cebf77f669f8ec4e89db9819c9bcaf0"
     }
   },
-  "excludedReleaseGate": "Tall-object occlusion interleaving with actors is not covered by this collision audit and remains release-blocking.",
-  "blockers": [
-    "Tall-object occlusion interleaving with actors still needs frozen runtime evidence."
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:7c67c25266024b0a50e1b2b33e5c2a7bc29d5ebb+beastbound-map-runtime-surface-v2:26596d25cf966682ac068d56fbcd262e69886b3cee2f6efbcc2cb6cd5a783a9a"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/collision-runner-receipt.log",
+    "sha256": "399e9d3a230e0d4b3585a41fd41ed09dbdb7b9c7ffeead3c08e579f6c03c9bbd"
+  },
+  "notes": [
+    "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
+    "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action."
   ]
 }

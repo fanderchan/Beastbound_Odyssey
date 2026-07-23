@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "tool": "image_gen",
+  "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+  "generatedAt": "2026-07-23T23:48:08+08:00",
+  "requestedBackground": "#FF00FF",
+  "parameters": {
+    "executionMode": "Codex built-in image_gen",
+    "outputFormat": "PNG",
+    "modelIdentifierExposed": false,
+    "worldGrid": [2, 4],
+    "portraitGrid": [2, 2],
+    "formalSourceTreatment": "opaque chroma-key source sheets; deterministic reviewed-mask processing only",
+    "worldAssembly": {
+      "operation": "lossless_grid_assembly_with_uniform_source_resize_v1",
+      "mirroringApplied": false,
+      "report": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/world-sheet-assembly.json",
+      "reportSha256": "e087e35d4fd081076138d3f08140068706c7dddf1bc9e19b7dfec16b93e04278"
+    }
+  },
+  "negativeConstraints": [
+    "no runtime or offline mirroring",
+    "no duplicate or relabeled direction cells",
+    "no weapon, shield, armor, magic, pet, mount, saddle, reins, whip, seven-slot board, skill stones, or whistle",
+    "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+    "no StoneAge source art, character, texture, name, or costume copying"
+  ],
+  "sources": {
+    "identityBoard": {
+      "fileSha256": "a42b819fe2cdb5a93e9bc14ba5c08c65163ae6ea9a78ed683ad79ce0466099a0",
+      "promptPath": "prompts/identity-board-v1.txt",
+      "promptSha256": "e7ce6010cef322b0cddca7c30722849c8da79c4cbf12f7396c03cc5c8db82bf1",
+      "generatedAt": "2026-07-23T23:31:00+08:00",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8f92-eef2-76c2-8d85-740c53181afc/call_R2eiDprbKfNUbtEhuDeAUYcg.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1/identity/identity-board.png"
+      }
+    },
+    "worldSheet": {
+      "fileSha256": "584f738e9243d1c50ce314e1389ccdf9ade9a97e662599191efb234adc56b5c2",
+      "worldPromptSha256": "e2b2e433515be19565380bade9d300f28fd5bb6ec41da24f8da7a7a028e9506a",
+      "identityBoardSha256": "a42b819fe2cdb5a93e9bc14ba5c08c65163ae6ea9a78ed683ad79ce0466099a0",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "generatedAt": "2026-07-23T23:43:00+08:00",
+      "promptPath": "prompts/world-idle-2x4-v1.txt",
+      "acceptedSourceChain": {
+        "baseImageGenOutputSha256": "306c7ee78cddd0f284b6dff5d2132d34c50443f19e21eaa23cb4cf4b00123370",
+        "independentlyAuthoredWestImageGenOutputSha256": "d839fecd3e7d996c49b483b26e49058f6b6c7316e93aa0775731ab0cd7df9430",
+        "westPromptPath": "prompts/world-west-idle-v1.txt",
+        "westPromptSha256": "734d67c1615a9ddd38a2edca694a93690ff700e5fb766f5f6dd614aa6b5b94a9",
+        "assemblyReportSha256": "e087e35d4fd081076138d3f08140068706c7dddf1bc9e19b7dfec16b93e04278",
+        "mirroringApplied": false
+      },
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen plus deterministic non-mirrored grid assembly",
+        "modelIdentifier": "not exposed by tool",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1/source/raw/world-idle-2x4-v3-accepted.png"
+      }
+    },
+    "portraitSheet": {
+      "fileSha256": "258205c183640bbc3552c2dcba21e92de555b3b3ddcaf314a278c3177b6a5881",
+      "portraitPromptSha256": "e22382fcda88681cec03b5b08664e1d5f98791fd6c03c48d9bb3642862d424bb",
+      "identityBoardSha256": "a42b819fe2cdb5a93e9bc14ba5c08c65163ae6ea9a78ed683ad79ce0466099a0",
+      "worldIdentityReferenceSha256": "584f738e9243d1c50ce314e1389ccdf9ade9a97e662599191efb234adc56b5c2",
+      "sourceMode": "opaque-chroma",
+      "requestedBackground": "#FF00FF",
+      "generatedAt": "2026-07-23T23:47:00+08:00",
+      "promptPath": "prompts/portrait-2x2-v1.txt",
+      "toolRecord": {
+        "toolCall": "image_gen.imagegen",
+        "modelIdentifier": "not exposed by tool",
+        "retainedExecutionOutput": "/Users/fander/.codex/generated_images/019f8f92-eef2-76c2-8d85-740c53181afc/call_Qe9T8fz1La00fQd2lyG5anky.png",
+        "repositoryOutput": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1/source/raw/portrait-2x2-v1.png"
+      }
+    }
+  },
+  "observedBackgroundFact": "Accepted world and portrait sheets are fully opaque near-magenta sources; release processing must use the v3.1 component ledger and exact reviewed masks rather than global color deletion."
+}

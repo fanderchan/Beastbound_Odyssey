@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_computer_use_review",
+  "generatedAtUtc": "2026-07-23T18:44:11Z",
+  "bundleId": "firebud_region_visual_v1",
+  "result": "PASS",
+  "testedMapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "method": "computer_use",
+  "scene": "res://scenes/Main.tscn",
+  "viewport": [
+    1280,
+    720
+  ],
+  "displayServer": "macOS Metal",
+  "actions": [
+    {
+      "actionId": "firebud_training_yard_pointer",
+      "actionKind": "pointer",
+      "mapId": "firebud_training_yard",
+      "description": "Use Computer Use to click a live target and verify pointer feedback on the formal map",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_training_yard-pointer-1280x720.png",
+          "sha256": "3d40ae9427caaf195012c2726e76b747dcd6f13a892d5318eb5fb1ba4576d764"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_training_yard-pointer.json",
+          "sha256": "5577287f70e6ff1c15540583367ab25ba120545b339d5986529494cb623b7c61"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
+        "sha256": "0b7471ea41e5b52180417af19fbfe46a1a8e6a3735d695b015bb50ecfca3ddcd"
+      }
+    },
+    {
+      "actionId": "firebud_training_yard_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "firebud_training_yard",
+      "description": "Use Computer Use to click terrain and verify the player traverses a live path",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_training_yard-movement_path-1280x720.png",
+          "sha256": "d5bcbc0a2c5367ef6ddc15eb9f38105d6d208cf920eac2c32a939db77e2d1e3a"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_training_yard-movement_path.json",
+          "sha256": "fb226c2acbe095853d0386167a3f7d5e00713beda5780d17c9173aabbfb16034"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
+        "sha256": "cf726a7b836e813d851a462e28c43015eeed9df2f530df1a567f8c44710c6b91"
+      }
+    },
+    {
+      "actionId": "firebud_training_yard_warp",
+      "actionKind": "warp",
+      "mapId": "firebud_training_yard",
+      "description": "Use Computer Use to enter the map warp and verify the formal destination map loads",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_training_yard-warp-1280x720.png",
+          "sha256": "c4b52f23db8df34270290a3ef742560d172de62535be16d9b7b5c22bab1d154b"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_training_yard-warp.json",
+          "sha256": "ed5a25014b73d37589c2edb2be68a133caddc968a93871696b4f5845ce2b9740"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
+        "sha256": "ffd7065ac9eb137d8ac7b328215f2d3deb1c4cdf92158f6b16bea7e9654ec3f7"
+      }
+    },
+    {
+      "actionId": "firebud_training_yard_collision",
+      "actionKind": "collision",
+      "mapId": "firebud_training_yard",
+      "description": "Use Computer Use to click a blocked formal prop and verify the player stops outside its footprint",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_training_yard-collision-1280x720.png",
+          "sha256": "be77e2b0783864dd5c667cda8aa77107490b3445e37136b6948d0ce6a4575e24"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_training_yard-collision.json",
+          "sha256": "69b0af8f9e30fa1fa24566432cc2f6f656dcdd90403ed8b23ba6ba7504e30f7d"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
+        "sha256": "582a0e231b3ddad56d792e3f0bd58b3885c782284bfdde9b100ee6dca143c233"
+      }
+    },
+    {
+      "actionId": "firebud_training_yard_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "firebud_training_yard",
+      "description": "Use Computer Use to traverse behind and in front of a tall formal prop and verify depth ordering",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_training_yard-occlusion-1280x720.png",
+          "sha256": "64c0077af64515c8c45072db5bb3b9db9833fa06973e28ee213aabbf7732a782"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_training_yard-occlusion.json",
+          "sha256": "c1929e03996d4a98dbd259d5740c9a69772013c3fa43c88e2d325eaacf88223b"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
+        "sha256": "caff5d25b0ad41ef4e0279a1dd2398412c9891d3c37bed99b0bd26c9e2ed5511"
+      }
+    },
+    {
+      "actionId": "firebud_village_gate_pointer",
+      "actionKind": "pointer",
+      "mapId": "firebud_village_gate",
+      "description": "Use Computer Use to click a live target and verify pointer feedback on the formal map",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_village_gate-pointer-1280x720.png",
+          "sha256": "88d3d4c7ee891623b98deb05f05db8c179df28ab66a5d0fba6c30cbc04d592b7"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_village_gate-pointer.json",
+          "sha256": "4bb9b293251ab3c5f596e21652d0092bcf5712580a7b28fb30aeb2eb6a123d26"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
+        "sha256": "0368573dbe8cbd4b613a10b1073bb1dce1d215fd86955be18f2e64cd9502edda"
+      }
+    },
+    {
+      "actionId": "firebud_village_gate_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "firebud_village_gate",
+      "description": "Use Computer Use to click terrain and verify the player traverses a live path",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_village_gate-movement_path-1280x720.png",
+          "sha256": "b2e386a0984f3fdc52215270e35910ceceda7141e953b593422cec0c5ca6267f"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_village_gate-movement_path.json",
+          "sha256": "767da107dc6615986ef8ced20a17a49195ffab0aa9dc05b82f608bd0df7d1cca"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
+        "sha256": "bc24013be174a2ad8fd75853530ce446da8e675208949b5eb08a821e34c1d75d"
+      }
+    },
+    {
+      "actionId": "firebud_village_gate_warp",
+      "actionKind": "warp",
+      "mapId": "firebud_village_gate",
+      "description": "Use Computer Use to enter the map warp and verify the formal destination map loads",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_village_gate-warp-1280x720.png",
+          "sha256": "edd01a79f14ed27a896b41dfd2a33771b01a411c0955e98157222e307d153b8f"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_village_gate-warp.json",
+          "sha256": "156cf508e238c680734ed6254754433f8a4ff45ffc2f1b1ff3ebda606333898b"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
+        "sha256": "2b01246c58cdd15a6db9fa2421b1676edf50b383e8622b63b7abfbcff5a2a0ef"
+      }
+    },
+    {
+      "actionId": "firebud_village_gate_collision",
+      "actionKind": "collision",
+      "mapId": "firebud_village_gate",
+      "description": "Use Computer Use to click a blocked formal prop and verify the player stops outside its footprint",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_village_gate-collision-1280x720.png",
+          "sha256": "df9bc97cafa79072dd7f832a44aacf3d4b8a130a5424bf2fea908ede64116747"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_village_gate-collision.json",
+          "sha256": "69f47afac3374042a41b0b2050df1ed5668db72869834236771286abb466f437"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
+        "sha256": "8bbf1e8f21766475fd1e7971a83be7ed25d7fdf861b808c6c26cbf5c75cb4e2a"
+      }
+    },
+    {
+      "actionId": "firebud_village_gate_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "firebud_village_gate",
+      "description": "Use Computer Use to traverse behind and in front of a tall formal prop and verify depth ordering",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-screenshots/firebud_village_gate-occlusion-1280x720.png",
+          "sha256": "69ab1f0957524178d0125afc45bd9d1de3b9d095e6815a404ac7e3174f310e1d"
+        },
+        {
+          "path": "evidence/runtime-captures/firebud_village_gate-occlusion.json",
+          "sha256": "6921f6830bec34877ca4f715a2509b8f097a17c3943e73785d3db9d956def935"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",
+        "sha256": "51ae5796d58ede8dba478b456dfd14c6b67f20f8ce9fc0b8ee0ecacaece62240"
+      }
+    }
+  ]
+}

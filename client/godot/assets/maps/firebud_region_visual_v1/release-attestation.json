@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_map_runtime_release_attestation",
+  "status": "passed",
+  "bundleId": "firebud_region_visual_v1",
+  "mapStyleId": "firebud_warm_stone_v1",
+  "mapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "manifest": {
+    "path": "map-visual-bundle.json",
+    "summarySha256": "96df075c5e9eb80e11ed4b949e903c873740eca5e3f3b94a52436411a45fd213"
+  },
+  "lifecycle": {
+    "status": "released",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true
+  },
+  "offlineAudit": {
+    "status": "PASS",
+    "releaseReady": true,
+    "missingReleaseGates": []
+  },
+  "summaries": {
+    "evidenceSha256": "58ab863de995a155625bf93fc9222bc69fc34552c7e4ae23cb73ccbd0b57b92e",
+    "assetSha256": "615ee954457463733578a0c0b2f92f635b28d27a95637311a81d4ed3725f8a75",
+    "bundleSha256": "d3e5dbf0967d6326ee5441b5bf133821204f4bf240e54703ba2af1f4f9cec579"
+  }
+}

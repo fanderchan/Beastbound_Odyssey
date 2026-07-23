@@ -78,14 +78,14 @@
     "python": "3.14.3",
     "pillow": "12.2.0",
     "externalChromaKeyTool": {
-      "path": "/Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py",
+      "path": "source/tools/remove_chroma_key.py",
       "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
-      "repositoryOwned": false
+      "repositoryOwned": true
     }
   },
   "processing": [
-    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-ground-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-ground-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
-    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-low-props-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-low-props-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/mistcap_marsh_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-ground-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-ground-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/mistcap_marsh_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/mistcap_marsh_visual_v1/source/generated/mistcap-low-props-sheet-v1.png --out client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-low-props-sheet-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
     "python3 .agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-ground-sheet-v1-alpha.png --rows 2 --columns 2 --labels mistcap_marsh_moss mistcap_wet_mud_path mistcap_shallow_bog mistcap_dense_reeds --output-dir .run/rebuild/mistcap-ground --atlas-columns 2 --alpha-threshold 0 --atlas-name atlas.png --manifest-name build-manifest.json",
     "cp .run/rebuild/mistcap-ground/atlas.png client/godot/assets/maps/mistcap_marsh_visual_v1/runtime/ground/atlas.png",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/mistcap_marsh_visual_v1/source/processed/mistcap-low-props-sheet-v1-alpha.png --rows 2 --columns 2 --labels mistcap_reed_clump mistcap_moss_boulder mistcap_mushroom_cluster mistcap_fallen_log --output-dir .run/rebuild/mistcap-low-props --padding 8 --max-dimension 256 --alpha-threshold 0 --anchor 0.5 1.0 --manifest-name objects-manifest.json",
@@ -95,8 +95,8 @@
     "rawToProcessedByteExact": true,
     "processedToRuntimeByteExact": true,
     "outputPrecondition": ".run/rebuild output directories must not exist before executing the listed build commands.",
-    "externalToolVendored": false,
-    "releaseBlocker": "The chroma-key helper is hash-frozen but external to this repository."
+    "externalToolVendored": true,
+    "releaseBlocker": null
   },
   "mirrored": false,
   "bakedActors": false,

@@ -1,0 +1,2227 @@
+{
+  "schemaVersion": 1,
+  "operation": "reviewed_chroma_components_v3_1",
+  "group": "world",
+  "reviewMethod": "visual-inspection",
+  "source": {
+    "rawSheetFileSha256": "584f738e9243d1c50ce314e1389ccdf9ade9a97e662599191efb234adc56b5c2",
+    "rawSheetDecodedRgbaByteSha256": "e5199bbe166bccafa8c2d78f1de01015430ffdabe49a58f4d2489820217e8f24",
+    "rawSheetGodotCanonicalRgbaSha256": "24c1a332d6760c2fd809795b202c8d78a401766e1a07b53700cfed60fa939fd2",
+    "rawSheetDecodedRgbaSha256": "24c1a332d6760c2fd809795b202c8d78a401766e1a07b53700cfed60fa939fd2",
+    "explicitMaskFileSha256": "c6c61d5e1644b7f30246f46fd4f6c4ee71141973df7009680cc437b5ccaa644e",
+    "explicitMaskPixelSha256": "b09d0c0ba236f6f27ec4b5b602a284ed2f94620720a3c0cb67396cf26b64c539",
+    "width": 1536,
+    "height": 1024
+  },
+  "classifier": {
+    "operation": "recorded_border_connected_chroma_v1",
+    "connectivity": 4,
+    "edgePolicy": "all-edges-safe-v1",
+    "fringeMaximumFourNeighbourDistance": 3,
+    "fringeReviewGrouping": "gap-bridged-8-v1",
+    "residualKeyReviewGrouping": "connected-4-v1",
+    "largeEnclosedComponentReviewThreshold": 1024
+  },
+  "components": [
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b87931eec2f22e2ac87c268ea9140114d61b127f6be3b90f9e0cddb6298605a1",
+      "cellBbox": [
+        165,
+        204,
+        175,
+        233
+      ],
+      "sheetBbox": [
+        165,
+        204,
+        175,
+        233
+      ],
+      "pixelCount": 154,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7d4b1aa96e1a97d2fdd703097701e625f1c8b6a169e425b2115a4ddc74a915b2",
+      "cellBbox": [
+        164,
+        230,
+        165,
+        232
+      ],
+      "sheetBbox": [
+        164,
+        230,
+        165,
+        232
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "953946dc0011dd5e47218cb651c75808bb07df6d57c0325bf2f142594d4fd5a5",
+      "cellBbox": [
+        163,
+        232,
+        164,
+        233
+      ],
+      "sheetBbox": [
+        163,
+        232,
+        164,
+        233
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "98457f1267d7e1b4ca71329b32497a11f95c9d20ed755cd7b27316dbc88a5d1b",
+      "cellBbox": [
+        147,
+        248,
+        159,
+        285
+      ],
+      "sheetBbox": [
+        147,
+        248,
+        159,
+        285
+      ],
+      "pixelCount": 183,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d6252ac9ad23a7446e46577c76c2ada083e7f273852bb15191f512a8d5f3cca2",
+      "cellBbox": [
+        141,
+        306,
+        142,
+        307
+      ],
+      "sheetBbox": [
+        141,
+        306,
+        142,
+        307
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "1811d3771c6a559f09f5cffb0798d9bd2d7d868539474b951d3d0b7bf698bf48",
+      "cellBbox": [
+        142,
+        308,
+        144,
+        310
+      ],
+      "sheetBbox": [
+        142,
+        308,
+        144,
+        310
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "fd4c878279e0549513e270516b4772e3ce7e26a41151f15b6a7ddabed1e9fcc3",
+      "cellBbox": [
+        143,
+        313,
+        145,
+        318
+      ],
+      "sheetBbox": [
+        143,
+        313,
+        145,
+        318
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b7f72cbbe512e1efffef9d5581d60cc7ac75ec9fd63a981264510aedc2e0be2f",
+      "cellBbox": [
+        293,
+        322,
+        294,
+        324
+      ],
+      "sheetBbox": [
+        293,
+        322,
+        294,
+        324
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "e4f608b1fb90e00fed032b4058f025013d30894d59af51a27eb3a0a56d0befa1",
+      "cellBbox": [
+        121,
+        37,
+        333,
+        501
+      ],
+      "sheetBbox": [
+        121,
+        37,
+        333,
+        501
+      ],
+      "pixelCount": 2655,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f40c1910f505a57a3f6850f55fc85dc349b6674949e272db13f3b049b5c9f3c6",
+      "cellBbox": [
+        162,
+        199,
+        177,
+        236
+      ],
+      "sheetBbox": [
+        162,
+        199,
+        177,
+        236
+      ],
+      "pixelCount": 139,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "1164e6227872c554d5c04b531ed3f73d2457e463ff6ff79ad3b76662df615206",
+      "cellBbox": [
+        146,
+        244,
+        161,
+        289
+      ],
+      "sheetBbox": [
+        146,
+        244,
+        161,
+        289
+      ],
+      "pixelCount": 150,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "aba53e1a20b675f19a6d65c195411a7b021132a5b1e4a1509ac75ecc213a9ea0",
+      "cellBbox": [
+        139,
+        300,
+        147,
+        322
+      ],
+      "sheetBbox": [
+        139,
+        300,
+        147,
+        322
+      ],
+      "pixelCount": 115,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "6fdefe4b1e85d0a7e3f60a076828d3eea69629f639aafbdfd4a73c5d4fa0d53b",
+      "cellBbox": [
+        292,
+        322,
+        293,
+        324
+      ],
+      "sheetBbox": [
+        292,
+        322,
+        293,
+        324
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ab0f1e4b126817e7f0990591d44549c82204114854d980713b2c6dd1ed283881",
+      "cellBbox": [
+        202,
+        60,
+        203,
+        61
+      ],
+      "sheetBbox": [
+        202,
+        60,
+        203,
+        61
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cfe1f81958fe2efbe69c315964b9d45aa46fbf6bdaae1c0c2a3ba2745089b630",
+      "cellBbox": [
+        201,
+        61,
+        202,
+        62
+      ],
+      "sheetBbox": [
+        201,
+        61,
+        202,
+        62
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "71d4320669ecf39297b81c989ccf6d4a0eb38c935c6f9de58d8cf6ea83b99a11",
+      "cellBbox": [
+        204,
+        106,
+        206,
+        108
+      ],
+      "sheetBbox": [
+        204,
+        106,
+        206,
+        108
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "96495761c5e1502a6ce09dbc21b622c4d0c005b50422df66d1df4c1a616c3d4d",
+      "cellBbox": [
+        282,
+        203,
+        285,
+        209
+      ],
+      "sheetBbox": [
+        282,
+        203,
+        285,
+        209
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "south",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8f326e7da73b07f265af40783b4db38614d5e6c9cd2014552d29036e6616fe21",
+      "cellBbox": [
+        230,
+        318,
+        232,
+        320
+      ],
+      "sheetBbox": [
+        230,
+        318,
+        232,
+        320
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d2c77cd25231e3ea64c6bda625ae9b51751243f3e35e48162fceac58855232ad",
+      "cellBbox": [
+        236,
+        109,
+        239,
+        112
+      ],
+      "sheetBbox": [
+        620,
+        109,
+        623,
+        112
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "963d2ec99edeec792177ba4b911a19c9ae13896b46b0331dafed216251e77c43",
+      "cellBbox": [
+        252,
+        224,
+        257,
+        232
+      ],
+      "sheetBbox": [
+        636,
+        224,
+        641,
+        232
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "16ceb5e5143f5438cb3eee38b085c7371eec872fd5115468edc28f47598c96fd",
+      "cellBbox": [
+        256,
+        246,
+        260,
+        256
+      ],
+      "sheetBbox": [
+        640,
+        246,
+        644,
+        256
+      ],
+      "pixelCount": 20,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "4a42aaac6a4afee04d6e4e585eecac620e03f5d6646ed9b097ca14421f6e7085",
+      "cellBbox": [
+        206,
+        384,
+        208,
+        388
+      ],
+      "sheetBbox": [
+        590,
+        384,
+        592,
+        388
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "d6cf94c3005a8ccb84123764b8255bd2623d530660dd13095e3c1b69dc0278a9",
+      "cellBbox": [
+        220,
+        399,
+        221,
+        403
+      ],
+      "sheetBbox": [
+        604,
+        399,
+        605,
+        403
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "aed961473f9c3b422813490a8217fc9bfaf521bbc1b0af4b9477a276f9c742ce",
+      "cellBbox": [
+        115,
+        43,
+        303,
+        504
+      ],
+      "sheetBbox": [
+        499,
+        43,
+        687,
+        504
+      ],
+      "pixelCount": 2401,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "42bdca662d9d2975db7b3c6f7a54cc7f47f7f7fcc1d5b190fbcacd94d99088e6",
+      "cellBbox": [
+        234,
+        88,
+        236,
+        93
+      ],
+      "sheetBbox": [
+        618,
+        88,
+        620,
+        93
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "1fb8e09af5eda42be6fb7caeaa9ff9fef1720ca2b20ca467535d2523d1224ac1",
+      "cellBbox": [
+        235,
+        106,
+        239,
+        114
+      ],
+      "sheetBbox": [
+        619,
+        106,
+        623,
+        114
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7c11447b5bd326c0b30c1c71774961f923a2b06b39cb5acb11de502fc380664b",
+      "cellBbox": [
+        250,
+        220,
+        262,
+        261
+      ],
+      "sheetBbox": [
+        634,
+        220,
+        646,
+        261
+      ],
+      "pixelCount": 169,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d80374af7f4b6b13e53cc2c66cc9fa67cc3e59f0fd4f51a39075b95281e941e6",
+      "cellBbox": [
+        204,
+        355,
+        210,
+        374
+      ],
+      "sheetBbox": [
+        588,
+        355,
+        594,
+        374
+      ],
+      "pixelCount": 61,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "32284824237dd8571d9ddeac0b2c134f7c5760fc0ef179062df65a11541d5765",
+      "cellBbox": [
+        222,
+        399,
+        223,
+        401
+      ],
+      "sheetBbox": [
+        606,
+        399,
+        607,
+        401
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f7611ea96618fcbcbcc4ed69609b57dff58a15f5ddecc5c9de279f91b1c49343",
+      "cellBbox": [
+        179,
+        65,
+        181,
+        68
+      ],
+      "sheetBbox": [
+        563,
+        65,
+        565,
+        68
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "700c67ec1524c09701a70a721a4c051368f4ee08d807676627934364547eb8b8",
+      "cellBbox": [
+        236,
+        93,
+        237,
+        94
+      ],
+      "sheetBbox": [
+        620,
+        93,
+        621,
+        94
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e879ce9227eb07ba1b82946e0a2963b83a7d3c4da4424c0b5c221a0f4805d9bb",
+      "cellBbox": [
+        133,
+        297,
+        136,
+        308
+      ],
+      "sheetBbox": [
+        517,
+        297,
+        520,
+        308
+      ],
+      "pixelCount": 29,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "747affb84edd0ffb0c770855bda54c5e3e4699941ac362764921510ec472d2f2",
+      "cellBbox": [
+        153,
+        327,
+        154,
+        328
+      ],
+      "sheetBbox": [
+        537,
+        327,
+        538,
+        328
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b6901aedc28cef420399f24bee23eb0533e00f5aabcdbf73afef961af1e10e81",
+      "cellBbox": [
+        154,
+        328,
+        155,
+        329
+      ],
+      "sheetBbox": [
+        538,
+        328,
+        539,
+        329
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "99105dd7901532df315262f41999958e3022e5026f4335edd69f6582c52f0f9c",
+      "cellBbox": [
+        205,
+        385,
+        206,
+        386
+      ],
+      "sheetBbox": [
+        589,
+        385,
+        590,
+        386
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "57b258a9949d619b2fc569eafe030e06f902b36588d5dd893c03f36438053b1f",
+      "cellBbox": [
+        154,
+        47,
+        155,
+        48
+      ],
+      "sheetBbox": [
+        922,
+        47,
+        923,
+        48
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "7c8b2b63b3a5c457911c70713e225c743fd0a3a12bf262e6a5c7204ab47d6f9b",
+      "cellBbox": [
+        213,
+        111,
+        214,
+        112
+      ],
+      "sheetBbox": [
+        981,
+        111,
+        982,
+        112
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8d978a96e75ca6ff82fd5934f5f3d465d063857deed68843e25f74def53d31ec",
+      "cellBbox": [
+        214,
+        112,
+        215,
+        113
+      ],
+      "sheetBbox": [
+        982,
+        112,
+        983,
+        113
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "f583e424bc3e54878e00aba339184d95601eb766d0440e28994490e4e923634a",
+      "cellBbox": [
+        148,
+        478,
+        149,
+        479
+      ],
+      "sheetBbox": [
+        916,
+        478,
+        917,
+        479
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "9528fed4d467966e6b0b55f9bf140898f241d5df376f448c90f8bfa6181da13d",
+      "cellBbox": [
+        127,
+        38,
+        234,
+        498
+      ],
+      "sheetBbox": [
+        895,
+        38,
+        1002,
+        498
+      ],
+      "pixelCount": 1273,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "08ccbd932cc3f50f319c91b54b6cfada258f87985313b0eb4fce7393f79f2445",
+      "cellBbox": [
+        155,
+        56,
+        158,
+        61
+      ],
+      "sheetBbox": [
+        923,
+        56,
+        926,
+        61
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8e9542ed524a967a39365875212ebb565a16b880c4709cd661c7590bdcffb0fb",
+      "cellBbox": [
+        211,
+        110,
+        214,
+        112
+      ],
+      "sheetBbox": [
+        979,
+        110,
+        982,
+        112
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "8747d13b222b4c45cdf78abf4886405302195b7a9fd31e505dcce00bcd7dce7c",
+      "cellBbox": [
+        150,
+        478,
+        151,
+        479
+      ],
+      "sheetBbox": [
+        918,
+        478,
+        919,
+        479
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7917793dc40a95dc153bd5f9c4f2e2c42b0a7c70bb1c2561159156d79a1d8ce9",
+      "cellBbox": [
+        153,
+        53,
+        154,
+        54
+      ],
+      "sheetBbox": [
+        921,
+        53,
+        922,
+        54
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b0116ee82dec4000981221af706775f7898d78861fe42a386e4da5dd7c9edcdc",
+      "cellBbox": [
+        204,
+        97,
+        208,
+        101
+      ],
+      "sheetBbox": [
+        972,
+        97,
+        976,
+        101
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cc62affafb2f3f562ab65ea5d0817194a3311a5fd7c9a6c80cc6fcbe03baf5fd",
+      "cellBbox": [
+        208,
+        105,
+        209,
+        106
+      ],
+      "sheetBbox": [
+        976,
+        105,
+        977,
+        106
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e2e344d60b661587ea1d9262b268bd4387e92e28369b99d57c1b3081fa516858",
+      "cellBbox": [
+        144,
+        208,
+        145,
+        210
+      ],
+      "sheetBbox": [
+        912,
+        208,
+        913,
+        210
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "550b9b611ecb022cd680f0f4da9f506e22211907bb8f37491715acc51aab8b95",
+      "cellBbox": [
+        151,
+        305,
+        152,
+        306
+      ],
+      "sheetBbox": [
+        919,
+        305,
+        920,
+        306
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "west",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f9dcd03fb8f086d75867bcebe2bc9b14eb1a98aa49a8a17056c0f0d983ea46a4",
+      "cellBbox": [
+        152,
+        306,
+        153,
+        307
+      ],
+      "sheetBbox": [
+        920,
+        306,
+        921,
+        307
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "df786c0b3585bab728901d00f8740ff4af8b35f3da1bad6f58504f168a12a754",
+      "cellBbox": [
+        175,
+        216,
+        189,
+        279
+      ],
+      "sheetBbox": [
+        1327,
+        216,
+        1341,
+        279
+      ],
+      "pixelCount": 240,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9e5526fc41da852f6a0f52e14c93c9b4b47c10f9654749ef1d2648d8eb327f0f",
+      "cellBbox": [
+        72,
+        267,
+        75,
+        273
+      ],
+      "sheetBbox": [
+        1224,
+        267,
+        1227,
+        273
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "3b71e54894f32a006387e22f779ed2e1d122eac8b77e7034ad9febe785032358",
+      "cellBbox": [
+        39,
+        43,
+        221,
+        503
+      ],
+      "sheetBbox": [
+        1191,
+        43,
+        1373,
+        503
+      ],
+      "pixelCount": 2304,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "82edc21a1fafc9dc75aa1131998dff0976b627adb7f907ca9c479c6cca8b2b44",
+      "cellBbox": [
+        99,
+        117,
+        102,
+        121
+      ],
+      "sheetBbox": [
+        1251,
+        117,
+        1254,
+        121
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c8484c75849d969ae02eb72c129bc885ae2cd53997cd8b4da5e076154e923c47",
+      "cellBbox": [
+        172,
+        211,
+        190,
+        282
+      ],
+      "sheetBbox": [
+        1324,
+        211,
+        1342,
+        282
+      ],
+      "pixelCount": 276,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9f3db462173444113fff003dd69bfc3a90e8348a84e75f5013d46c53f32334a6",
+      "cellBbox": [
+        71,
+        263,
+        78,
+        274
+      ],
+      "sheetBbox": [
+        1223,
+        263,
+        1230,
+        274
+      ],
+      "pixelCount": 35,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "46b79cd1fe205eb94a64660d763905bd9aa54483d4abd31df6dc68a2b3efc8e9",
+      "cellBbox": [
+        70,
+        270,
+        71,
+        271
+      ],
+      "sheetBbox": [
+        1222,
+        270,
+        1223,
+        271
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "543e4c3b47ddd966a5af2fe1fa5066ab9c19257df3350f26644c37f681b4ce33",
+      "cellBbox": [
+        56,
+        306,
+        59,
+        310
+      ],
+      "sheetBbox": [
+        1208,
+        306,
+        1211,
+        310
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "000287f9e77ea6462059f00768e86a8fc5d0b6b063be28594fdfdf1df2549353",
+      "cellBbox": [
+        54,
+        307,
+        55,
+        308
+      ],
+      "sheetBbox": [
+        1206,
+        307,
+        1207,
+        308
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c27039f628e86951013e4aea35a87e32a9d1f95106e1000718da3c37ea826c07",
+      "cellBbox": [
+        54,
+        319,
+        57,
+        322
+      ],
+      "sheetBbox": [
+        1206,
+        319,
+        1209,
+        322
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "58c35c2f5e2d172292bb709aa1794606507361e3cdd6c8c94fc5e6d332237ec4",
+      "cellBbox": [
+        57,
+        322,
+        58,
+        323
+      ],
+      "sheetBbox": [
+        1209,
+        322,
+        1210,
+        323
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9f4a554b0a5f657921fbb045aa41b084e868766706961a52453dbc7176c46d6a",
+      "cellBbox": [
+        131,
+        350,
+        135,
+        354
+      ],
+      "sheetBbox": [
+        1283,
+        350,
+        1287,
+        354
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northwest",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ba659679d410cf7752411d5eff6182109325fbd1fb97c77c791cde6856968535",
+      "cellBbox": [
+        130,
+        351,
+        131,
+        352
+      ],
+      "sheetBbox": [
+        1282,
+        351,
+        1283,
+        352
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8e8502e7804557a6f5b853a8bb0a8dda560fd63eb067a36676228db85ea031fb",
+      "cellBbox": [
+        152,
+        163,
+        182,
+        268
+      ],
+      "sheetBbox": [
+        152,
+        675,
+        182,
+        780
+      ],
+      "pixelCount": 901,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c72aa9df3d4b212f38e85af270de3adb8e250422be4128da2bae95704ba8dc5b",
+      "cellBbox": [
+        279,
+        164,
+        293,
+        199
+      ],
+      "sheetBbox": [
+        279,
+        676,
+        293,
+        711
+      ],
+      "pixelCount": 219,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c7bdefc4793288d1c8613d314819124084eecc2e9097edef4dd66b8b0d6e28e9",
+      "cellBbox": [
+        298,
+        211,
+        310,
+        245
+      ],
+      "sheetBbox": [
+        298,
+        723,
+        310,
+        757
+      ],
+      "pixelCount": 186,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "519a630d55a3a70a08b46fe1e783211b478cd2a22bec4daa0e8fbe9efbb454fb",
+      "cellBbox": [
+        308,
+        264,
+        315,
+        275
+      ],
+      "sheetBbox": [
+        308,
+        776,
+        315,
+        787
+      ],
+      "pixelCount": 33,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "8e49fa34de1090ab00336a480ac303077f3ef480e6b2cfc310f764bcfe63955b",
+      "cellBbox": [
+        311,
+        274,
+        312,
+        275
+      ],
+      "sheetBbox": [
+        311,
+        786,
+        312,
+        787
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "52631b1afe729efb8722be7ca3634cf8203b315004957408b0dee688c8861e72",
+      "cellBbox": [
+        310,
+        275,
+        311,
+        276
+      ],
+      "sheetBbox": [
+        310,
+        787,
+        311,
+        788
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "fd4c9891f545f241e463d1ca0f1f64c77a50687f788b96d274c328ecb9a8111d",
+      "cellBbox": [
+        127,
+        8,
+        335,
+        461
+      ],
+      "sheetBbox": [
+        127,
+        520,
+        335,
+        973
+      ],
+      "pixelCount": 1916,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "dee971c17dd44b7e728d2bee96aff050bcea263529af08c5f0afcf6040fef787",
+      "cellBbox": [
+        150,
+        160,
+        184,
+        271
+      ],
+      "sheetBbox": [
+        150,
+        672,
+        184,
+        783
+      ],
+      "pixelCount": 319,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "4cc6d3c73ed41ac4f3aea19d2263abaf80316617b0ce4b41a51feedcb806453c",
+      "cellBbox": [
+        278,
+        161,
+        294,
+        201
+      ],
+      "sheetBbox": [
+        278,
+        673,
+        294,
+        713
+      ],
+      "pixelCount": 119,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f50dade41acceaea5b7feea6542ede71e0ed91f77fc6557ce9b41857d81bd328",
+      "cellBbox": [
+        297,
+        209,
+        311,
+        249
+      ],
+      "sheetBbox": [
+        297,
+        721,
+        311,
+        761
+      ],
+      "pixelCount": 111,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "da18823915201bda45d3a9b538cb95ed9b76ef83061eb835075cae6def3e8d96",
+      "cellBbox": [
+        307,
+        261,
+        316,
+        280
+      ],
+      "sheetBbox": [
+        307,
+        773,
+        316,
+        792
+      ],
+      "pixelCount": 78,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "north",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "62eab0cf08705c0eba7942bf9f93841f654888dbd04495dc4f6eecc0dcf48557",
+      "cellBbox": [
+        228,
+        277,
+        230,
+        279
+      ],
+      "sheetBbox": [
+        228,
+        789,
+        230,
+        791
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "13248771a37151f53946c8838b519863e54a5168b180ee14e4238c2bc31419ec",
+      "cellBbox": [
+        130,
+        10,
+        289,
+        453
+      ],
+      "sheetBbox": [
+        514,
+        522,
+        673,
+        965
+      ],
+      "pixelCount": 2001,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "36493f6f712ca60f3b35bc7323952d68af127901ef1a8a88ff3437e9a778d694",
+      "cellBbox": [
+        226,
+        78,
+        229,
+        82
+      ],
+      "sheetBbox": [
+        610,
+        590,
+        613,
+        594
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5ccec304187a016896e14bfa349c57a19060a603473808d66f5a274db37eb068",
+      "cellBbox": [
+        232,
+        23,
+        233,
+        24
+      ],
+      "sheetBbox": [
+        616,
+        535,
+        617,
+        536
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f951e9197273e35fa6fa7238e62db5ebab44d6837b37034589a4fb04e6393d47",
+      "cellBbox": [
+        257,
+        238,
+        258,
+        239
+      ],
+      "sheetBbox": [
+        641,
+        750,
+        642,
+        751
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c550766a1a03725b8e419c5b6650ce0c3c6fba426e1d0b957b8943f8905d7174",
+      "cellBbox": [
+        155,
+        253,
+        156,
+        254
+      ],
+      "sheetBbox": [
+        539,
+        765,
+        540,
+        766
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "northeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1121efeac9aa82bf582252f9538a1cc21e663a7b0a05ce51a3c7c9f15f5bcd59",
+      "cellBbox": [
+        194,
+        341,
+        195,
+        342
+      ],
+      "sheetBbox": [
+        578,
+        853,
+        579,
+        854
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "a901304dae8d7a61ff248cb3ff07a07f0a9fda375d6ff7684e1813f867e8836a",
+      "cellBbox": [
+        104,
+        8,
+        194,
+        456
+      ],
+      "sheetBbox": [
+        872,
+        520,
+        962,
+        968
+      ],
+      "pixelCount": 1603,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7b3d3a2a60a55084bbf45996e46bddfee5d4fe0ede19fa0d5523ea95ea506a59",
+      "cellBbox": [
+        165,
+        428,
+        169,
+        432
+      ],
+      "sheetBbox": [
+        933,
+        940,
+        937,
+        944
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "47a485c2d18e083427eb59fcaf8458954cb11004b5db030a9b3f9afadac8723c",
+      "cellBbox": [
+        123,
+        26,
+        124,
+        27
+      ],
+      "sheetBbox": [
+        891,
+        538,
+        892,
+        539
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "448b02974a35bc2bbcc6aad9ae016ee29570309fee18fb3e4f88a3fa8ff0fe97",
+      "cellBbox": [
+        124,
+        63,
+        130,
+        69
+      ],
+      "sheetBbox": [
+        892,
+        575,
+        898,
+        581
+      ],
+      "pixelCount": 27,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9b7939aca5bc16dec0f799d8ab04c2305bb2212b3d7ca238b0d732c71e0ed419",
+      "cellBbox": [
+        118,
+        75,
+        122,
+        80
+      ],
+      "sheetBbox": [
+        886,
+        587,
+        890,
+        592
+      ],
+      "pixelCount": 14,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "63c959703a50a62df70a843a549fe03384f34960740fbe60a0b94e871c86bff5",
+      "cellBbox": [
+        165,
+        78,
+        167,
+        79
+      ],
+      "sheetBbox": [
+        933,
+        590,
+        935,
+        591
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "07cbedb21c4458845daa254661008acca6eaf56691a9553abdc2e34b5b7de3b7",
+      "cellBbox": [
+        119,
+        186,
+        120,
+        187
+      ],
+      "sheetBbox": [
+        887,
+        698,
+        888,
+        699
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b7d8e6a1185e4da75e91d0a38c8702d8d7df47786a32a794f846ebcd30589cf3",
+      "cellBbox": [
+        118,
+        187,
+        119,
+        188
+      ],
+      "sheetBbox": [
+        886,
+        699,
+        887,
+        700
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "east",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "064635b33512d05e9f213f7fa35726520ce185e6b3b63fb5ee033814e94cf036",
+      "cellBbox": [
+        189,
+        189,
+        190,
+        190
+      ],
+      "sheetBbox": [
+        957,
+        701,
+        958,
+        702
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ef384e7fd94b08cf55565874f97fb29adc6018a8d982cd6a932ac1f8b502f2dc",
+      "cellBbox": [
+        65,
+        188,
+        77,
+        237
+      ],
+      "sheetBbox": [
+        1217,
+        700,
+        1229,
+        749
+      ],
+      "pixelCount": 200,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5b91ca18db41da41781ef0882998ede2084aaff023912e479337352352251c78",
+      "cellBbox": [
+        185,
+        235,
+        186,
+        236
+      ],
+      "sheetBbox": [
+        1337,
+        747,
+        1338,
+        748
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "cd0a7b29fab9be1709f07bc18274ca1b7b4f505d9436bafb76e520a50c2d16af",
+      "cellBbox": [
+        186,
+        236,
+        188,
+        241
+      ],
+      "sheetBbox": [
+        1338,
+        748,
+        1340,
+        753
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b9bc27efed10bd4b14bc16216572d899cad056f1cf9fc6d404e5583488686ed1",
+      "cellBbox": [
+        186,
+        242,
+        194,
+        275
+      ],
+      "sheetBbox": [
+        1338,
+        754,
+        1346,
+        787
+      ],
+      "pixelCount": 112,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "adjacent-chroma-fringe",
+      "componentPixelSha256": "2a47856e6bb6a6e8131a159631cf60581932b1a3039258dd68c168bc37ec8f0c",
+      "cellBbox": [
+        28,
+        10,
+        215,
+        469
+      ],
+      "sheetBbox": [
+        1180,
+        522,
+        1367,
+        981
+      ],
+      "pixelCount": 1898,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-fringe",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "2431f4d22d0817c3eac197b0e02482eeffb1e12197205ff55c2876e226393dab",
+      "cellBbox": [
+        64,
+        175,
+        78,
+        241
+      ],
+      "sheetBbox": [
+        1216,
+        687,
+        1230,
+        753
+      ],
+      "pixelCount": 220,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "244b4d7d5c8c021c29eb82611a46d64fe548bcf6162f81b1ee08b31669757270",
+      "cellBbox": [
+        180,
+        224,
+        195,
+        278
+      ],
+      "sheetBbox": [
+        1332,
+        736,
+        1347,
+        790
+      ],
+      "pixelCount": 194,
+      "requiresLargeComponentAttention": false,
+      "decision": "background-hole",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2b0a9ecdf3d1c841ab03b3c8fc30c1e079837abe84f1b19d7b2ce1897d3e57a7",
+      "cellBbox": [
+        148,
+        20,
+        149,
+        21
+      ],
+      "sheetBbox": [
+        1300,
+        532,
+        1301,
+        533
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5a12c2fb6ef980e25bde70fdbccd06eba37c3404592897d25a9705183f38786d",
+      "cellBbox": [
+        151,
+        35,
+        152,
+        36
+      ],
+      "sheetBbox": [
+        1303,
+        547,
+        1304,
+        548
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2015e7fec4a2f2ebe620cdd6fa02b1a245c5afbcaabd93782ad6a7667107ce5d",
+      "cellBbox": [
+        123,
+        307,
+        127,
+        311
+      ],
+      "sheetBbox": [
+        1275,
+        819,
+        1279,
+        823
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    },
+    {
+      "slot": "southeast",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "35bce0e4d0a4c5b4d9e77ccad0c5043792a5114eea79fd710c14c2e204dcf4b8",
+      "cellBbox": [
+        122,
+        310,
+        123,
+        311
+      ],
+      "sheetBbox": [
+        1274,
+        822,
+        1275,
+        823
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false,
+      "decision": "repair-key-spill",
+      "reviewer": "producer:phase331-novice-trainer-chroma-review",
+      "reviewedAt": "2026-07-23T23:52:00+08:00"
+    }
+  ]
+}

@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "3abe990e0efa039f23a397918f3a899da9062ea9f7a4371b5ae3e35ca02b3163",
     "blindDirectionAudit": "required",
@@ -68,17 +68,14 @@
     "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_storyteller_m_v1/staged-review/stage-b-observation-v2.json",
     "blindStageBObservationSha256": "8673aa1cd2dab11d5f5600656452fe9e3fc07c22fe01bc57d755a5d0f07bf2c1",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_storyteller_m_v1/final/blind-audit.json",
-    "blindAuditSha256": "42b52b77b4c6ed2c0355276c4b3eb4629a1ce096dc0c8888884040c0f3331773",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "42b52b77b4c6ed2c0355276c4b3eb4629a1ce096dc0c8888884040c0f3331773"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_storyteller_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/npc-bundle.json",
     "productionManifestSha256": "bcb09d1ca8122979a53b5f32e635d116c522a52f923c08d3553172f001e574d6",

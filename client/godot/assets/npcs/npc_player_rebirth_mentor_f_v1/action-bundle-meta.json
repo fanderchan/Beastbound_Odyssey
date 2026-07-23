@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "2889d72d1e98be00fbad4967106237162d180b5ae43e6a73e0581192e09ba66c",
     "blindDirectionAudit": "required",
@@ -68,17 +68,14 @@
      "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_player_rebirth_mentor_f_v1/staged-review/stage-b-observation.json",
     "blindStageBObservationSha256": "11392d70cc129af74e46955da817983c63c57fcf5cd5aac708ab3d02229d6dd9",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_player_rebirth_mentor_f_v1/final/blind-audit.json",
-    "blindAuditSha256": "0ab33d2ae0fbc01f542f270bc9cc5b00e038a8a95b98bb4bde84bba74483e56f",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "0ab33d2ae0fbc01f542f270bc9cc5b00e038a8a95b98bb4bde84bba74483e56f"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/npc-bundle.json",
     "productionManifestSha256": "05d88acb091c342962b9204a9f5adaa81af4a8d04061cdb9017946f9dde32d81",

@@ -23,6 +23,8 @@ const FACING_KEYS := [
 @onready var formal_sprite: Sprite2D = $FormalSprite
 
 const IDLE_ANIMATION_STEP_SECONDS := 0.125
+const FORMAL_DEPTH_FOOT_OFFSET_Y := 2.0
+const PLACEHOLDER_DEPTH_FOOT_OFFSET_Y := 18.0
 
 var follow_target: Vector2 = Vector2.ZERO
 var has_follow_target: bool = false
@@ -135,6 +137,10 @@ func is_moving() -> bool:
 
 func get_animation_clip_key() -> String:
 	return "%s_%s" % [animation_state, facing_key]
+
+
+func get_world_depth_foot_offset_y() -> float:
+	return FORMAL_DEPTH_FOOT_OFFSET_Y if formal_asset_enabled else PLACEHOLDER_DEPTH_FOOT_OFFSET_Y
 
 
 func _facing_index_for_direction(direction: Vector2) -> int:

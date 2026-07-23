@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "world",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/world-idle-2x4-raw.png",
+  "rawSheetFileSha256": "fef6859ee24e2fb6fc08db5a62cbf8e8cca66b6658ad882fe9d1c2ba4566aa8e",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-outer/world-component-review-01.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-outer/world-component-review-02.png"
+  ],
+  "components": [
+    {
+      "key": "south|reviewed-outer-background-hole|63d5c0806a8e18e602766959e38abb065c4d4d84e6cfd6c1c20fc875b513e40f",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "63d5c0806a8e18e602766959e38abb065c4d4d84e6cfd6c1c20fc875b513e40f",
+      "cellBbox": [
+        185,
+        276,
+        192,
+        294
+      ],
+      "sheetBbox": [
+        185,
+        276,
+        192,
+        294
+      ],
+      "pixelCount": 33,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|reviewed-outer-background-hole|1a1b5c7ea49b6cc08d5b61b2b0b88a296467a8d46519d3fbc4859015b9a77493",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "1a1b5c7ea49b6cc08d5b61b2b0b88a296467a8d46519d3fbc4859015b9a77493",
+      "cellBbox": [
+        225,
+        276,
+        227,
+        281
+      ],
+      "sheetBbox": [
+        225,
+        276,
+        227,
+        281
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|reviewed-outer-background-hole|fa76302532f771b735782baf04851ce5bfd438d145466ebd3aba90839557974f",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "fa76302532f771b735782baf04851ce5bfd438d145466ebd3aba90839557974f",
+      "cellBbox": [
+        232,
+        353,
+        240,
+        382
+      ],
+      "sheetBbox": [
+        232,
+        353,
+        240,
+        382
+      ],
+      "pixelCount": 108,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|reviewed-outer-background-hole|a5b68286360ed77dc318aa6cc43f9e3bace3081b7af503ae6cf6cf0c6c92e611",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a5b68286360ed77dc318aa6cc43f9e3bace3081b7af503ae6cf6cf0c6c92e611",
+      "cellBbox": [
+        153,
+        385,
+        166,
+        417
+      ],
+      "sheetBbox": [
+        153,
+        385,
+        166,
+        417
+      ],
+      "pixelCount": 91,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|reviewed-outer-background-hole|b554f2409025a27e2cee6eb6b32bac0c738643e0620a3937c9a9cb9975360530",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "b554f2409025a27e2cee6eb6b32bac0c738643e0620a3937c9a9cb9975360530",
+      "cellBbox": [
+        240,
+        388,
+        250,
+        420
+      ],
+      "sheetBbox": [
+        240,
+        388,
+        250,
+        420
+      ],
+      "pixelCount": 82,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|reviewed-outer-background-hole|b1be254fbb3148b0843c362d84c110a4bf560e9353efd0fd8611b42a91dcb461",
+      "slot": "south",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "b1be254fbb3148b0843c362d84c110a4bf560e9353efd0fd8611b42a91dcb461",
+      "cellBbox": [
+        148,
+        433,
+        153,
+        446
+      ],
+      "sheetBbox": [
+        148,
+        433,
+        153,
+        446
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|reviewed-outer-background-hole|db6ed6639a9863f5eafd9692041213479400d0c977c8e0ecd06eb19c61d98f2f",
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "db6ed6639a9863f5eafd9692041213479400d0c977c8e0ecd06eb19c61d98f2f",
+      "cellBbox": [
+        194,
+        268,
+        198,
+        281
+      ],
+      "sheetBbox": [
+        507,
+        268,
+        511,
+        281
+      ],
+      "pixelCount": 24,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|reviewed-outer-background-hole|c8ff7ea50f3a90d9fc4607e1fe728d93ed9d806d86965595feb21dabdf84a89a",
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "c8ff7ea50f3a90d9fc4607e1fe728d93ed9d806d86965595feb21dabdf84a89a",
+      "cellBbox": [
+        149,
+        272,
+        150,
+        274
+      ],
+      "sheetBbox": [
+        462,
+        272,
+        463,
+        274
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|reviewed-outer-background-hole|f09cd003655f5032e93b7997bc3d1555b5d676119e04bdedf6fb7fe82b237588",
+      "slot": "southwest",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f09cd003655f5032e93b7997bc3d1555b5d676119e04bdedf6fb7fe82b237588",
+      "cellBbox": [
+        193,
+        354,
+        198,
+        373
+      ],
+      "sheetBbox": [
+        506,
+        354,
+        511,
+        373
+      ],
+      "pixelCount": 47,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|reviewed-outer-background-hole|efa2c7bebbe2cf076caf38d8fff1f9a1bcffc8a0de1b0cc9ee65ff96dcde3544",
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "efa2c7bebbe2cf076caf38d8fff1f9a1bcffc8a0de1b0cc9ee65ff96dcde3544",
+      "cellBbox": [
+        216,
+        119,
+        218,
+        123
+      ],
+      "sheetBbox": [
+        216,
+        746,
+        218,
+        750
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|reviewed-outer-background-hole|65730b73a3876bd52e56a3c2103e01fc2dc7d65505e93fdc3241f92379a27101",
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "65730b73a3876bd52e56a3c2103e01fc2dc7d65505e93fdc3241f92379a27101",
+      "cellBbox": [
+        225,
+        195,
+        243,
+        252
+      ],
+      "sheetBbox": [
+        225,
+        822,
+        243,
+        879
+      ],
+      "pixelCount": 149,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|reviewed-outer-background-hole|139309c6c7973f3436a5814e0aa08a1195885b4192bffd5f92362107078ca514",
+      "slot": "north",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "139309c6c7973f3436a5814e0aa08a1195885b4192bffd5f92362107078ca514",
+      "cellBbox": [
+        165,
+        199,
+        171,
+        218
+      ],
+      "sheetBbox": [
+        165,
+        826,
+        171,
+        845
+      ],
+      "pixelCount": 51,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|reviewed-outer-background-hole|b77200fa5130a068e9184a99021483cc98d7fe1bf6b882784f80e97d557f530f",
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "b77200fa5130a068e9184a99021483cc98d7fe1bf6b882784f80e97d557f530f",
+      "cellBbox": [
+        101,
+        131,
+        104,
+        136
+      ],
+      "sheetBbox": [
+        1041,
+        758,
+        1044,
+        763
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|reviewed-outer-background-hole|4f2c7aa5a375dc663abc9221ab1f9b7e19b71f06abef9c69f4258ff56c8dce1a",
+      "slot": "southeast",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "4f2c7aa5a375dc663abc9221ab1f9b7e19b71f06abef9c69f4258ff56c8dce1a",
+      "cellBbox": [
+        67,
+        138,
+        73,
+        147
+      ],
+      "sheetBbox": [
+        1007,
+        765,
+        1013,
+        774
+      ],
+      "pixelCount": 24,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

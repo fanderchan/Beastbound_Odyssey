@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_diamond_merchant_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286-r2/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "ad55b7aeed3f4e510a7caf4e56cdfd0b7b39b59bfe21e95b07de07525c650cf3",
     "authorDirectionReview": "qc/author-direction-review-r2.md",
@@ -73,17 +73,14 @@
     "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-diamond-r2-20260723-a/npc_diamond_merchant_m_v1/staged-review/stage-b-observation-v2.json",
     "blindStageBObservationSha256": "72b35f719da32464ed0a373c548c2a8594bf181d13105d72cdf445c531b3db8d",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-diamond-r2-20260723-a/npc_diamond_merchant_m_v1/final/blind-audit.json",
-    "blindAuditSha256": "0264f4bdf2e7f2b624ddef9da1e3c4478bbb8898dceba28178c90c4bef2c0437",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "0264f4bdf2e7f2b624ddef9da1e3c4478bbb8898dceba28178c90c4bef2c0437"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "r1 northwest was rejected and independently redrawn; r2 formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_diamond_merchant_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286-r2/npc-bundle.json",
     "productionManifestSha256": "6968c08e162af968fd131d3b8a8662a5cc2ec0568bcf6a417e68e0bb133cafab",

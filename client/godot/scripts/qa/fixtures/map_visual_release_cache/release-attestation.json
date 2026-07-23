@@ -1,0 +1,31 @@
+{
+  "attestationType": "beastbound_map_runtime_release_attestation",
+  "bundleId": "cache_fixture_visual_v1",
+  "lifecycle": {
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "status": "released"
+  },
+  "manifest": {
+    "path": "map-visual-bundle.json",
+    "summarySha256": "d81e7728f490c7cadb7350c1c5490f967f5e19d49c40664bcb932b8733de97a6"
+  },
+  "mapIds": [
+    "cache_map_a",
+    "cache_map_b"
+  ],
+  "mapStyleId": "cache_style_v1",
+  "offlineAudit": {
+    "missingReleaseGates": [],
+    "releaseReady": true,
+    "status": "PASS"
+  },
+  "schemaVersion": 1,
+  "status": "passed",
+  "summaries": {
+    "assetSha256": "a9e8e00ed5bd5f460e8af922d5bcb555afaf6e5c8d25001c336da5472c174be5",
+    "bundleSha256": "234e2fcd77f4b0cedfc8245bd16d60f6e2eab547c9e40fd7cedade041e3d3b87",
+    "evidenceSha256": "aa6ceac55b5475a25d7e4f1fd4d52ae1d9d5732b800f54fadd637480f8a60b73"
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "village_civilian_f_v1",
+  "appearanceId": "npc_village_civilian_f_v1",
+  "displayName": "普通村民·女",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "fa581d6577e8a7aead8f6c17f380b49f5094ff1762a37b9cef1529d808b16eeb",
+    "decodedRgbaByteSha256": "bf6d9a2744744258064dfa8ab69e2da9d89a475f20598df976b5fe0d7db6d15c",
+    "godotCanonicalRgbaSha256": "f866b0d38965b1fd56cc699afdbb84ebd07027c3cfbf5d2851c7411a6fe53581",
+    "decodedRgbaSha256": "f866b0d38965b1fd56cc699afdbb84ebd07027c3cfbf5d2851c7411a6fe53581",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+    "generatedAt": "2026-07-23T23:45:31+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "fef6859ee24e2fb6fc08db5a62cbf8e8cca66b6658ad882fe9d1c2ba4566aa8e",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "01fabe1633f151c20319f449067b7e0d69c31aa440a14f5d583d947de58b70e4",
+        "explicitSheetMaskPixelSha256": "38b91bf32136e84b7ee25d4ffd9cc2127ee66b985378a0c23ef7e5718b4c9f62",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "81c470bf47fe83ccf9fd08d66261e046f14246123e894a273f6618b583aae89d",
+        "reviewedComponentCount": 75
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "8218a1656ae57fba296f3f7633417f97e09334c44a12efa5666a72ecaf867c1d",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "0901e7c6ea1089c71b42a6f4e646ecdacc6fbda4842ec0b5d1b17d50ee9f862a",
+        "explicitSheetMaskPixelSha256": "c066537c24eb86fc133f53764927cb73770079b9af5caec33a95cc751d46fe98",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "2f1ea460ae6402dfcb32b0a0a1e31ac46ca6a9d32bfdefb96db7b39184634324",
+        "reviewedComponentCount": 272
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; the accepted identity canary is a targeted flask-side correction and the world directions are independently authored, not offline mirrors",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no third-party art asset input or compositing",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

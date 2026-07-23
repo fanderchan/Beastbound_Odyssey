@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_npc_owner_release_decision",
+  "appearanceId": "npc_player_rebirth_mentor_f_v1",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "approvedAtUtc": "2026-07-23T15:32:19Z",
+  "sourceSetSha256": "52761ed519503ed460e962fe99a4f2b35fffec33bfc9af5b6b04983afc347b7c",
+  "runtimeEvidenceIndexSha256": "3ebf15b053cc5800151e129a947c320e534574d1ad4dfed3b229791083c1e705",
+  "acceptedEvidence": {
+    "sourceSetSha256": "52761ed519503ed460e962fe99a4f2b35fffec33bfc9af5b6b04983afc347b7c",
+    "runtimeEvidenceIndexSha256": "3ebf15b053cc5800151e129a947c320e534574d1ad4dfed3b229791083c1e705",
+    "blindStageAResultSha256": "ee0d1e18072da4dfa49dc76d0de2d066f12a7f78279e39b039c2203fee9112cf",
+    "blindStageBObservationSha256": "11392d70cc129af74e46955da817983c63c57fcf5cd5aac708ab3d02229d6dd9",
+    "blindAuditSha256": "0ab33d2ae0fbc01f542f270bc9cc5b00e038a8a95b98bb4bde84bba74483e56f",
+    "blindReviewPacketSha256": "1e825c9f7286c2bce8755322bb6f3337adf050cf9f88ebb7ad8dff47d27f730c",
+    "blindProducerMappingSha256": "1b4cee734e637e1b77022cd509005515ee35b38b1a5acfd6dbcbf8e1c5c37950",
+    "runtimeVideoSha256": "0643bf9a7ac2e73ec7d6fe98de049488d55f2e2a8ac2b3c53a940dd31790a021",
+    "mainCaptureReportSha256s": [
+      "1f28286010cd96ccc18c7c8eccf4159fffa52213f0e30c40807b962cb73ba05b"
+    ],
+    "runtimeScreenshotSha256s": [
+      "5a942a79c96e05d3a9d79afd784ba34676e52fca9da84866973af435372b9b9d"
+    ]
+  }
+}

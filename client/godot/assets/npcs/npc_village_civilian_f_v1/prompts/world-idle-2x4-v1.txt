@@ -1,0 +1,18 @@
+Use case: identity-preserve
+Asset type: production 2D NPC static true-eight-direction world sprite source sheet for Beastbound Odyssey
+Input image: Image 1 is the exact identity reference. Preserve this precise woman, face, adult sturdy proportions, low thick braid, costume, palette, asymmetric shawl and closed gourd flask.
+Primary request: Create an EXACT SQUARE CANVAS with an invisible 2-row by 4-column sheet containing EIGHT INDEPENDENTLY AUTHORED full-body static idle views of the SAME ordinary village civilian. Each view is separately drawn for its requested facing; do not mirror, flip, rotate, duplicate, relabel, or derive one cell from another.
+EXACT ROW-MAJOR DIRECTION ORDER:
+Top row cell 1 SOUTH: full front, face/chest/knees/toes point down toward viewer.
+Top row cell 2 SOUTHWEST: front-left three-quarter, nose/chest/knees/toes clearly point diagonally toward the LEFT EDGE while the front remains visible; distinct from west.
+Top row cell 3 WEST: pure left profile, nose/chest/knees/toes point directly to LEFT EDGE.
+Top row cell 4 NORTHWEST: back-left three-quarter, back is dominant and travel axis points up-left; only a restrained sliver of left cheek if anatomically natural.
+Bottom row cell 1 NORTH: complete straight back, face entirely invisible, chest points away/up.
+Bottom row cell 2 NORTHEAST: back-right three-quarter, back dominant and axis points up-right; distinct from northwest.
+Bottom row cell 3 EAST: pure right profile, nose/chest/knees/toes point directly to RIGHT EDGE.
+Bottom row cell 4 SOUTHEAST: front-right three-quarter, nose/chest/knees/toes clearly point diagonally toward RIGHT EDGE while front remains visible; distinct from east.
+Identity invariants: approachable approximately 29-year-old adult woman, average height, sturdy believable adult anatomy; warm-tan skin; deep-brown softly wavy long hair in one low thick braid; warm ochre short outer tunic over cream inner shirt, muted blue-green woven shawl fixed over HER OWN LEFT SHOULDER, brick-red apron/skirt panel, dark-brown belt/leggings/boots. A small completely closed undecorated gourd water flask with no text or symbol stays fixed at HER OWN RIGHT HIP in every direction. Render near/far occlusion honestly without swapping sides. Neutral relaxed idle expression and natural practical stance. She must read as an ordinary civilian, not a professional service NPC or hero.
+Composition: exact invisible equal 2x4 grid, no borders or dividers. One full body centered in each cell at about 58% of cell height, identical adult scale and feet baseline within each row, large untouched background padding on all four sides of every cell, all hair/limbs/flask fully inside its cell. Keep a completely empty continuous magenta band at the horizontal midpoint and at every vertical quarter-cell seam. Existing formal NPC adult world-art scale.
+Style: original legally distinct Beastbound Odyssey clean high-definition hand-painted 2D sprite art, crisp warm dark outline, controlled soft cel shading, low texture noise, readable at 256px runtime; same exact rendering language as the identity reference, not pixel art, not 3D, not photorealistic.
+Background: perfectly uniform fully opaque flat solid #FF00FF across the entire square sheet; no gradients, texture, shadow, lighting change, floor or scenery. Never use magenta or purple on the subject.
+Avoid: text, numbers, symbols, labels, arrows, compass, UI, borders, dividers, watermark, cast/contact shadow, ground ellipse, extra person, detached object; coins, coin purse, abacus, ledger, registration board, clipboard, bank-counter uniform, open market basket, price tag, merchandise, manor keys/key ring, medical satchel, training gear, weapon, shield, animal, modern uniform, copied StoneAge art.

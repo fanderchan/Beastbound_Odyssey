@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: precise-object-edit\nAsset type: production 2D NPC true-eight-direction sheet safe-cell correction\nInput image: Image 1 is the exact 2x4 world sheet to correct.\nPrimary request: Re-create the same exact invisible 2-row by 4-column sheet, but uniformly reduce each of the eight full-body characters to about 72% of its current size and center each one INSIDE ITS OWN EQUAL CELL so every cell has a wide untouched magenta background margin on all four cell edges. The horizontal midpoint between rows must be a completely empty continuous magenta band at least 44 pixels tall: all top-row boots must end well ABOVE the sheet midpoint, and all bottom-row hair must start well BELOW the midpoint. Likewise keep an empty magenta band at least 32 pixels wide centered on every vertical quarter-cell seam. Nothing may cross or touch any cell boundary.\nPreserve exactly: the same approachable approximately 29-year-old sturdy adult woman; same face, low thick braid, costume, warm-ochre/cream/blue-green/brick-red/dark-brown palette; blue-green shawl over HER OWN LEFT SHOULDER; closed gourd flask at HER OWN RIGHT HIP; same eight independently authored poses, direction semantics, prop sides, drawing style, body proportions and neutral expression. Do not mirror, flip, rotate, duplicate, relabel, swap, redesign or alter direction.\nRequired unchanged row-major directions: top SOUTH, SOUTHWEST facing canvas left, WEST pure left profile, NORTHWEST back-left; bottom NORTH complete back with no face, NORTHEAST back-right, EAST pure right profile, SOUTHEAST facing canvas right.\nComposition: exact square canvas and exact invisible equal 2x4 grid, identical adult scale and baseline inside each row, generous padding on sheet outer edges and every cell seam, all body/hair/flask inside cells. No visible dividers.\nBackground: perfectly uniform fully opaque flat solid #FF00FF across all empty space, no gradient, texture, shadow, floor, scenery or lighting change; no magenta or purple on subject.\nAvoid: changing any facing or swapping shawl/flask sides; text, labels, arrows, borders, dividers, UI, watermark, cast/contact shadow, detached objects, extra person; professional service props or uniforms, coins, bank props, open merchandise, price tags, keys, medicine, training gear, weapon, shield, animal, copied StoneAge art.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "deb01dbdd6f59ad8b4224035eca876d88dfb97e8ff4eb4c8a947b0574ac1da60",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must show no face and adjacent diagonals must expose opposite back shoulders",
+        "the blue-green shawl remains on the subject's own left shoulder and the closed gourd flask remains on her own right hip",
+        "no text, labels, arrows, borders, UI, watermark, shadow or scenery",
+        "no professional service uniforms or props, coins, open merchandise, keys, medicine, training gear, weapon or shield",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is the accepted v2 built-in image_gen identity canary; v1 was rejected because its front view put the flask on the wrong body side",
+        "generationDirectory": "/Users/fander/.codex/generated_images/019f8f93-298f-7ec0-9686-de24bfe1a3a3",
+        "styleReference": {
+          "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_welfare_clerk_f_v1/identity/identity-board.png",
+          "usage": "rendering quality, adult scale and three-view layout reference only; no person, face, costume, prop, palette or occupation pixels were copied or composited"
+        }
+      },
+      "generatedAt": "2026-07-23T23:45:31+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: production dialogue portrait expression source sheet for Beastbound Odyssey NPC\nInput image: Image 1 is the exact identity reference. Preserve this woman, not merely a similar relative.\nPrimary request: Create an EXACT SQUARE CANVAS with an invisible 2-row by 2-column portrait sheet of the SAME approachable approximately 29-year-old sturdy adult ordinary village civilian. Chest-up / waist-up dialogue bust, front three-quarter orientation facing slightly toward screen-right, same camera, crop, head size, shoulder width, body scale, outfit and lighting in all four cells. Her muted blue-green woven shawl stays over HER OWN LEFT SHOULDER; the closed gourd flask remains below the portrait crop and need not be shown. Preserve her warm-tan soft square-oval face, kind dark eyes, deep-brown softly wavy low thick braid, warm ochre outer tunic, cream inner shirt and brick-red lower accent. No redesign, profession drift, age drift or hero treatment.\nEXACT EXPRESSION ORDER:\nTop-left NEUTRAL: attentive relaxed face, mouth closed.\nTop-right SPEAKING: natural mid-sentence mouth slightly open, engaged brows, not shouting.\nBottom-left SMILE: warm unforced neighborly smile, mouth gently closed or slightly open.\nBottom-right CONCERNED: mild thoughtful concern, brows slightly inward, mouth closed; not angry, not crying.\nComposition: square canvas, exact invisible equal 2x2 grid with no borders/dividers. One bust centered in each cell, same eye line and shoulder width, central safe area, generous top and outer-side padding. Nothing crosses between cells. Keep same head angle and shoulders; change only facial expression and tiny natural eyebrow/mouth movement. Hair and clothing remain inside each cell.\nStyle: original legally distinct Beastbound Odyssey clean high-definition hand-painted 2D dialogue illustration, crisp warm dark outlines, controlled soft cel shading, low texture noise, expressive readable face; same exact art language as input, not pixel art, not 3D, not photorealistic.\nBackground: perfectly uniform fully opaque flat solid #FF00FF across the entire square sheet, no gradient, texture, shadow, floor, scenery or lighting variation; never use magenta or purple on subject.\nConstraints: same exact person and costume four times; five fingers where visible; no cast/contact shadow.\nAvoid: readable text, letters, numbers, labels, arrows, UI, border, frame line, watermark, speech bubble, detached object, extra person; coins, coin purse, abacus, ledger, registration board, bank uniform/counter, open market basket, price tag, merchandise, manor keys, medical satchel, training gear, weapon, shield, animal, copied StoneAge art.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "46d865376b507203f1bddcc6ec782e5c14b279873bf3468aeea88ccd83b42e45",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "north must show no face and adjacent diagonals must expose opposite back shoulders",
+        "the blue-green shawl remains on the subject's own left shoulder and the closed gourd flask remains on her own right hip",
+        "no text, labels, arrows, borders, UI, watermark, shadow or scenery",
+        "no professional service uniforms or props, coins, open merchandise, keys, medicine, training gear, weapon or shield",
+        "no StoneAge source art, character, texture or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image generation; model identifier not exposed by tool",
+      "parameters": {
+        "interface": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "modelParametersExposed": false,
+        "identityBoardRelationship": "identity-board.png is the accepted v2 built-in image_gen identity canary; v1 was rejected because its front view put the flask on the wrong body side",
+        "generationDirectory": "/Users/fander/.codex/generated_images/019f8f93-298f-7ec0-9686-de24bfe1a3a3",
+        "styleReference": {
+          "path": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_welfare_clerk_f_v1/identity/identity-board.png",
+          "usage": "rendering quality, adult scale and three-view layout reference only; no person, face, costume, prop, palette or occupation pixels were copied or composited"
+        }
+      },
+      "generatedAt": "2026-07-23T23:45:31+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

@@ -11,6 +11,9 @@ const STATUS_OWNER_REVIEW_PENDING := "owner_review_pending"
 const STATUS_RELEASED := "released"
 const OWNER_REVIEW_PENDING := "pending"
 const OWNER_REVIEW_APPROVED := "approved"
+const RELEASE_ATTESTATION_PATH := "release-attestation.json"
+const RELEASE_ATTESTATION_TYPE := "beastbound_map_runtime_release_attestation"
+const RELEASE_ATTESTATION_STATUS := "passed"
 const RENDER_LAYERS: Array[String] = ["ground_decal", "world", "foreground"]
 const COLLISION_ROLES: Array[String] = ["none", "decorative", "blocking", "interaction"]
 
@@ -19,11 +22,14 @@ static var _catalog_errors: Array[String] = []
 static var _entries_by_map_id: Dictionary = {}
 static var _json_cache: Dictionary = {}
 static var _contract_cache: Dictionary = {}
+static var _release_attestation_cache: Dictionary = {}
+static var _release_attestation_json_cache: Dictionary = {}
 static var _texture_cache: Dictionary = {}
 static var _map_errors: Dictionary = {}
 static var _json_load_count := 0
 static var _texture_load_count := 0
 static var _image_fallback_load_count := 0
+static var _release_attestation_validation_count := 0
 
 
 static func initialize() -> bool:
@@ -61,7 +67,9 @@ static func debug_io_counts() -> Dictionary:
 		"jsonLoads": _json_load_count,
 		"textureLoads": _texture_load_count,
 		"imageFallbackLoads": _image_fallback_load_count,
-		"cachedJson": _json_cache.size(),
+		"releaseAttestationValidations": _release_attestation_validation_count,
+		"cachedJson": _json_cache.size() + _release_attestation_json_cache.size(),
+		"cachedReleaseAttestationJson": _release_attestation_json_cache.size(),
 		"cachedTextures": _texture_cache.size(),
 	}
 
@@ -89,7 +97,12 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 	if contract.is_empty():
 		return {}
 	var manifest := contract.get("manifest", {}) as Dictionary
-	if not _access_allowed(manifest, qa_preview, errors):
+	if not _access_allowed(
+		manifest,
+		str(contract.get("bundleRoot", "")),
+		qa_preview,
+		errors
+	):
 		return {}
 
 	var binding := contract.get("binding", {}) as Dictionary
@@ -146,6 +159,14 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 				"destination": Rect2(center - Vector2(TILE_SIZE) * 0.5, Vector2(TILE_SIZE)),
 				"source": source_rect,
 			})
+	var edge_ground_draws := _build_edge_ground_draws(
+		map_data,
+		ground_rules,
+		tile_rects,
+		errors
+	)
+	if not errors.is_empty():
+		return {}
 
 	return {
 		"active": true,
@@ -158,6 +179,7 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 		"gridSize": grid_size,
 		"atlasTexture": atlas_texture,
 		"groundDraws": ground_draws,
+		"edgeGroundDraws": edge_ground_draws,
 		"tileIdsByCell": tile_ids_by_cell,
 		"tileCounts": ground_state.get("tileCounts", {}),
 		"pathLookup": ground_state.get("pathLookup", {}),
@@ -304,7 +326,12 @@ static func _validate_manifest_binding_reference(
 		errors.append("地图视觉 manifest 与 catalog binding 路径不一致：%s" % map_id)
 
 
-static func _access_allowed(manifest: Dictionary, qa_preview: bool, errors: Array[String]) -> bool:
+static func _access_allowed(
+	manifest: Dictionary,
+	bundle_root: String,
+	qa_preview: bool,
+	errors: Array[String]
+) -> bool:
 	var status := str(manifest.get("status", ""))
 	var review := str(manifest.get("ownerReviewStatus", ""))
 	if typeof(manifest.get("releaseApproved")) != TYPE_BOOL:
@@ -322,7 +349,7 @@ static func _access_allowed(manifest: Dictionary, qa_preview: bool, errors: Arra
 		and runtime_enabled
 	)
 	if released:
-		return true
+		return _validate_runtime_release_attestation(manifest, bundle_root, errors)
 	if not qa_preview or not OS.is_debug_build():
 		return false
 	var pending := (
@@ -334,6 +361,294 @@ static func _access_allowed(manifest: Dictionary, qa_preview: bool, errors: Arra
 	if not pending:
 		errors.append("地图视觉生命周期门禁组合无效")
 	return pending
+
+
+static func _validate_runtime_release_attestation(
+	manifest: Dictionary,
+	bundle_root: String,
+	errors: Array[String]
+) -> bool:
+	var local_errors: Array[String] = []
+	var attestation_ref_value: Variant = manifest.get("releaseAttestation")
+	if not (attestation_ref_value is Dictionary):
+		local_errors.append("released 地图缺少 releaseAttestation")
+		errors.append_array(local_errors)
+		return false
+	var attestation_ref := attestation_ref_value as Dictionary
+	if not _dictionary_has_exact_keys(attestation_ref, ["path", "sha256"]):
+		local_errors.append("地图视觉 releaseAttestation 引用字段集合无效")
+		errors.append_array(local_errors)
+		return false
+	var relative_path := str(attestation_ref.get("path", ""))
+	var declared_sha := str(attestation_ref.get("sha256", ""))
+	if relative_path != RELEASE_ATTESTATION_PATH:
+		local_errors.append("地图视觉 releaseAttestation 必须位于 bundle 根目录")
+	if not _is_sha256(declared_sha):
+		local_errors.append("地图视觉 releaseAttestation SHA-256 无效")
+	if not local_errors.is_empty():
+		errors.append_array(local_errors)
+		return false
+	var attestation_path := _resolve_bundle_path(bundle_root, relative_path)
+	if attestation_path == "" or not FileAccess.file_exists(attestation_path):
+		_release_attestation_validation_count += 1
+		local_errors.append("地图视觉 releaseAttestation 文件不存在")
+		errors.append_array(local_errors)
+		return false
+	var attestation_bytes := FileAccess.get_file_as_bytes(attestation_path)
+	var actual_sha := _sha256_bytes(attestation_bytes)
+	var cache_key := _release_attestation_cache_key(manifest, bundle_root)
+	if actual_sha == declared_sha and _release_attestation_cache.has(cache_key):
+		var cached := _release_attestation_cache.get(cache_key, {}) as Dictionary
+		errors.append_array(cached.get("errors", []) as Array[String])
+		return bool(cached.get("valid", false))
+	_release_attestation_validation_count += 1
+	if actual_sha != declared_sha:
+		local_errors.append("地图视觉 releaseAttestation 文件 SHA-256 漂移")
+		errors.append_array(local_errors)
+		return false
+	var attestation := _read_release_attestation_json(
+		attestation_path,
+		attestation_bytes,
+		actual_sha,
+		local_errors,
+		"地图视觉 releaseAttestation"
+	)
+	if not attestation.is_empty():
+		_validate_release_attestation_payload(manifest, attestation, local_errors)
+		_validate_attested_runtime_files(manifest, bundle_root, local_errors)
+	var valid := local_errors.is_empty()
+	_store_release_attestation_result(cache_key, valid, local_errors, errors)
+	return valid
+
+
+static func _release_attestation_cache_key(
+	manifest: Dictionary,
+	bundle_root: String
+) -> String:
+	var attestation_ref := _dictionary_or_empty(manifest.get("releaseAttestation"))
+	return "%s|%s|%s" % [
+		bundle_root.simplify_path(),
+		str(attestation_ref.get("sha256", "")),
+		str(_release_summary_hashes(manifest).get("bundleSha256", "")),
+	]
+
+
+static func _store_release_attestation_result(
+	cache_key: String,
+	valid: bool,
+	local_errors: Array[String],
+	errors: Array[String]
+) -> void:
+	_release_attestation_cache[cache_key] = {
+		"valid": valid,
+		"errors": local_errors.duplicate(),
+	}
+	errors.append_array(local_errors)
+
+
+static func _validate_release_attestation_payload(
+	manifest: Dictionary,
+	attestation: Dictionary,
+	errors: Array[String]
+) -> void:
+	var expected_top_level_keys: Array[String] = [
+		"schemaVersion",
+		"attestationType",
+		"status",
+		"bundleId",
+		"mapStyleId",
+		"mapIds",
+		"manifest",
+		"lifecycle",
+		"offlineAudit",
+		"summaries",
+	]
+	if not _dictionary_has_exact_keys(attestation, expected_top_level_keys):
+		errors.append("地图视觉 releaseAttestation 顶层字段集合无效")
+	var schema_version_value: Variant = attestation.get("schemaVersion")
+	var schema_version_type := typeof(schema_version_value)
+	var schema_version_number := (
+		float(schema_version_value)
+		if schema_version_type == TYPE_INT or schema_version_type == TYPE_FLOAT
+		else NAN
+	)
+	if (
+		schema_version_type != TYPE_INT
+		and schema_version_type != TYPE_FLOAT
+	) or (
+		not is_finite(schema_version_number)
+		or floor(schema_version_number) != schema_version_number
+		or int(schema_version_number) != SCHEMA_VERSION
+	):
+		errors.append("地图视觉 releaseAttestation schemaVersion 必须为整数 1")
+	if str(attestation.get("attestationType", "")) != RELEASE_ATTESTATION_TYPE:
+		errors.append("地图视觉 releaseAttestation 类型无效")
+	if str(attestation.get("status", "")) != RELEASE_ATTESTATION_STATUS:
+		errors.append("地图视觉 releaseAttestation 状态必须为 passed")
+	if str(attestation.get("bundleId", "")) != str(manifest.get("bundleId", "")):
+		errors.append("地图视觉 releaseAttestation bundleId 不一致")
+	if str(attestation.get("mapStyleId", "")) != str(manifest.get("mapStyleId", "")):
+		errors.append("地图视觉 releaseAttestation mapStyleId 不一致")
+	if attestation.get("mapIds", []) != manifest.get("mapIds", []):
+		errors.append("地图视觉 releaseAttestation mapIds 不一致")
+
+	var manifest_binding := _dictionary_or_empty(attestation.get("manifest"))
+	if not _dictionary_has_exact_keys(manifest_binding, ["path", "summarySha256"]):
+		errors.append("地图视觉 releaseAttestation.manifest 字段集合无效")
+	if str(manifest_binding.get("path", "")) != "map-visual-bundle.json":
+		errors.append("地图视觉 releaseAttestation.manifest.path 无效")
+
+	var lifecycle := _dictionary_or_empty(attestation.get("lifecycle"))
+	if not _dictionary_has_exact_keys(
+		lifecycle,
+		["status", "ownerReviewStatus", "releaseApproved", "runtimeEnabled"]
+	) or (
+		str(lifecycle.get("status", "")) != STATUS_RELEASED
+		or str(lifecycle.get("ownerReviewStatus", "")) != OWNER_REVIEW_APPROVED
+		or typeof(lifecycle.get("releaseApproved")) != TYPE_BOOL
+		or lifecycle.get("releaseApproved") != true
+		or typeof(lifecycle.get("runtimeEnabled")) != TYPE_BOOL
+		or lifecycle.get("runtimeEnabled") != true
+	):
+		errors.append("地图视觉 releaseAttestation.lifecycle 必须声明正式 released 状态")
+
+	var offline_audit := _dictionary_or_empty(attestation.get("offlineAudit"))
+	if not _dictionary_has_exact_keys(
+		offline_audit,
+		["status", "releaseReady", "missingReleaseGates"]
+	):
+		errors.append("地图视觉 releaseAttestation.offlineAudit 字段集合无效")
+	if (
+		str(offline_audit.get("status", "")) != "PASS"
+		or typeof(offline_audit.get("releaseReady")) != TYPE_BOOL
+		or offline_audit.get("releaseReady") != true
+		or not (offline_audit.get("missingReleaseGates") is Array)
+		or not (offline_audit.get("missingReleaseGates") as Array).is_empty()
+	):
+		errors.append("地图视觉 releaseAttestation.offlineAudit 未冻结完整 PASS")
+
+	var summary_values := _dictionary_or_empty(attestation.get("summaries"))
+	if not _dictionary_has_exact_keys(
+		summary_values,
+		["evidenceSha256", "assetSha256", "bundleSha256"]
+	):
+		errors.append("地图视觉 releaseAttestation.summaries 字段集合无效")
+	var expected_summaries := _release_summary_hashes(manifest)
+	var manifest_summary := str(manifest_binding.get("summarySha256", ""))
+	if (
+		not _is_sha256(manifest_summary)
+		or manifest_summary != str(expected_summaries.get("manifestSha256", ""))
+	):
+		errors.append("地图视觉 releaseAttestation manifest 摘要不匹配")
+	for key in ["evidenceSha256", "assetSha256", "bundleSha256"]:
+		var digest := str(summary_values.get(key, ""))
+		if not _is_sha256(digest) or digest != str(expected_summaries.get(key, "")):
+			errors.append("地图视觉 releaseAttestation %s 摘要不匹配" % key)
+
+
+static func _validate_attested_runtime_files(
+	manifest: Dictionary,
+	bundle_root: String,
+	errors: Array[String]
+) -> void:
+	_validate_attested_file_ref(
+		manifest.get("groundAtlas"),
+		bundle_root,
+		"地图视觉 releaseAttestation groundAtlas",
+		errors
+	)
+	var objects_value: Variant = manifest.get("objects", [])
+	if not (objects_value is Array):
+		errors.append("地图视觉 releaseAttestation objects 必须是数组")
+	else:
+		for index in range((objects_value as Array).size()):
+			var object_value: Variant = (objects_value as Array)[index]
+			if not (object_value is Dictionary):
+				continue
+			_validate_attested_file_ref(
+				(object_value as Dictionary).get("asset"),
+				bundle_root,
+				"地图视觉 releaseAttestation object[%d]" % index,
+				errors
+			)
+	var bindings_value: Variant = manifest.get("mapBindings", [])
+	if not (bindings_value is Array):
+		errors.append("地图视觉 releaseAttestation mapBindings 必须是数组")
+	else:
+		for index in range((bindings_value as Array).size()):
+			var binding_value: Variant = (bindings_value as Array)[index]
+			if not (binding_value is Dictionary):
+				continue
+			_validate_attested_file_ref(
+				(binding_value as Dictionary).get("binding"),
+				bundle_root,
+				"地图视觉 releaseAttestation binding[%d]" % index,
+				errors
+			)
+
+
+static func _validate_attested_file_ref(
+	value: Variant,
+	bundle_root: String,
+	label: String,
+	errors: Array[String]
+) -> void:
+	if not (value is Dictionary):
+		errors.append("%s 缺少文件引用" % label)
+		return
+	var file_ref := value as Dictionary
+	var relative_path := str(file_ref.get("path", ""))
+	var declared_sha := str(file_ref.get("sha256", ""))
+	var resolved := _resolve_bundle_path(bundle_root, relative_path)
+	if resolved == "" or not FileAccess.file_exists(resolved):
+		errors.append("%s 文件不存在" % label)
+		return
+	if not _is_sha256(declared_sha) or FileAccess.get_sha256(resolved) != declared_sha:
+		errors.append("%s SHA-256 漂移" % label)
+
+
+static func _release_summary_hashes(manifest: Dictionary) -> Dictionary:
+	var evidence_subject := _dictionary_or_empty(manifest.get("evidence")).duplicate(true)
+	evidence_subject.erase("ownerAcceptance")
+	var manifest_subject := manifest.duplicate(true)
+	for key in [
+		"status",
+		"ownerReviewStatus",
+		"releaseApproved",
+		"runtimeEnabled",
+		"releaseAttestation",
+	]:
+		manifest_subject.erase(key)
+	manifest_subject["evidence"] = evidence_subject.duplicate(true)
+	var asset_subject := {
+		"groundAtlas": manifest.get("groundAtlas"),
+		"tiles": manifest.get("tiles"),
+		"objects": manifest.get("objects"),
+		"mapBindings": manifest.get("mapBindings"),
+	}
+	var frozen_evidence_subject := {
+		"catalogContractCheck": manifest.get("catalogContractCheck"),
+		"evidence": evidence_subject,
+	}
+	var manifest_sha := _sha256_canonical_json(manifest_subject)
+	var evidence_sha := _sha256_canonical_json(frozen_evidence_subject)
+	var asset_sha := _sha256_canonical_json(asset_subject)
+	var bundle_subject := {
+		"schemaVersion": manifest.get("schemaVersion"),
+		"bundleId": manifest.get("bundleId"),
+		"mapStyleId": manifest.get("mapStyleId"),
+		"mapIds": manifest.get("mapIds"),
+		"tileSize": manifest.get("tileSize"),
+		"manifestSha256": manifest_sha,
+		"evidenceSha256": evidence_sha,
+		"assetSha256": asset_sha,
+	}
+	return {
+		"manifestSha256": manifest_sha,
+		"evidenceSha256": evidence_sha,
+		"assetSha256": asset_sha,
+		"bundleSha256": _sha256_canonical_json(bundle_subject),
+	}
 
 
 static func _tile_rects_for_manifest(
@@ -383,6 +698,48 @@ static func _validate_ground_tile_ids(
 		var tile_id := str(ground.get(key, ""))
 		if tile_id == "" or not tile_rects.has(tile_id):
 			errors.append("地图视觉 ground.%s 未解析到 tile：%s" % [key, tile_id])
+
+
+static func _build_edge_ground_draws(
+	map_data: Dictionary,
+	ground: Dictionary,
+	tile_rects: Dictionary,
+	errors: Array[String]
+) -> Array[Dictionary]:
+	var padding_value: Variant = ground.get("edgePaddingCells", 0)
+	if not (padding_value is int or padding_value is float) or padding_value is bool:
+		errors.append("地图视觉 ground.edgePaddingCells 必须是 0..32 整数")
+		return []
+	var padding_number := float(padding_value)
+	if not is_finite(padding_number) or padding_number != floor(padding_number):
+		errors.append("地图视觉 ground.edgePaddingCells 必须是 0..32 整数")
+		return []
+	var padding := int(padding_number)
+	if padding < 0 or padding > 32:
+		errors.append("地图视觉 ground.edgePaddingCells 必须是 0..32 整数")
+		return []
+	if padding == 0:
+		return []
+	var default_tile_id := str(ground.get("defaultTileId", ""))
+	if not tile_rects.has(default_tile_id):
+		errors.append("地图视觉 edge skirt 未解析到 defaultTileId")
+		return []
+	var source_rect := tile_rects.get(default_tile_id, Rect2()) as Rect2
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var result: Array[Dictionary] = []
+	for y in range(-padding, grid_size.y + padding):
+		for x in range(-padding, grid_size.x + padding):
+			var cell := Vector2i(x, y)
+			if _cell_in_size(cell, grid_size):
+				continue
+			var center := IsoMapModel.grid_to_world(map_data, cell)
+			result.append({
+				"cell": cell,
+				"tileId": default_tile_id,
+				"destination": Rect2(center - Vector2(TILE_SIZE) * 0.5, Vector2(TILE_SIZE)),
+				"source": source_rect,
+			})
+	return result
 
 
 static func _build_ground_state(
@@ -921,6 +1278,49 @@ static func _read_json_cached(path: String, errors: Array[String], label: String
 	return parsed as Dictionary
 
 
+static func _read_release_attestation_json(
+	path: String,
+	current_bytes: PackedByteArray,
+	current_sha: String,
+	errors: Array[String],
+	label: String
+) -> Dictionary:
+	if not _is_resource_path(path) or not FileAccess.file_exists(path):
+		errors.append("%s 文件不存在：%s" % [label, path])
+		return {}
+	if not _is_sha256(current_sha) or _sha256_bytes(current_bytes) != current_sha:
+		errors.append("%s 当前字节与缓存身份不一致：%s" % [label, path])
+		return {}
+	var cache_key := "%s|%s" % [path, current_sha]
+	if _release_attestation_json_cache.has(cache_key):
+		return _release_attestation_json_cache.get(cache_key, {}) as Dictionary
+	var text := current_bytes.get_string_from_utf8()
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		errors.append("%s 不是有效 JSON 对象：%s" % [label, path])
+		return {}
+	var schema_key_regex := RegEx.new()
+	var schema_integer_regex := RegEx.new()
+	if (
+		schema_key_regex.compile("\"schemaVersion\"\\s*:") != OK
+		or schema_integer_regex.compile("\"schemaVersion\"\\s*:\\s*1\\s*[,}]") != OK
+	):
+		errors.append("%s 无法建立 schemaVersion 词法门禁" % label)
+		return {}
+	if (
+		schema_key_regex.search_all(text).size() != 1
+		or schema_integer_regex.search_all(text).size() != 1
+	):
+		errors.append("%s schemaVersion 必须是唯一 JSON 整数 1" % label)
+	else:
+		# Godot JSON decodes every JSON number as float. Normalize only after
+		# the raw token proved it was the integer literal 1, never true or 1.0.
+		(parsed as Dictionary)["schemaVersion"] = SCHEMA_VERSION
+	_release_attestation_json_cache[cache_key] = parsed
+	_json_load_count += 1
+	return parsed as Dictionary
+
+
 static func _load_texture(path: String, errors: Array[String], label: String) -> Texture2D:
 	if _texture_cache.has(path):
 		return _texture_cache.get(path) as Texture2D
@@ -1002,3 +1402,81 @@ static func _cell_in_size(cell: Vector2i, grid_size: Vector2i) -> bool:
 
 static func _normalized_point(point: Vector2) -> bool:
 	return point.x >= 0.0 and point.y >= 0.0 and point.x <= 1.0 and point.y <= 1.0
+
+
+static func _dictionary_has_exact_keys(value: Dictionary, expected: Array[String]) -> bool:
+	var actual: Array[String] = []
+	for key_value in value.keys():
+		actual.append(str(key_value))
+	actual.sort()
+	var sorted_expected := expected.duplicate()
+	sorted_expected.sort()
+	return actual == sorted_expected
+
+
+static func _dictionary_or_empty(value: Variant) -> Dictionary:
+	return value as Dictionary if value is Dictionary else {}
+
+
+static func _is_sha256(value: String) -> bool:
+	if value.length() != 64:
+		return false
+	for index in range(value.length()):
+		var code := value.unicode_at(index)
+		var digit := code >= 48 and code <= 57
+		var lowercase_hex := code >= 97 and code <= 102
+		if not digit and not lowercase_hex:
+			return false
+	return true
+
+
+static func _sha256_bytes(value: PackedByteArray) -> String:
+	var context := HashingContext.new()
+	if context.start(HashingContext.HASH_SHA256) != OK:
+		return ""
+	if context.update(value) != OK:
+		return ""
+	return context.finish().hex_encode()
+
+
+static func _sha256_canonical_json(value: Variant) -> String:
+	var context := HashingContext.new()
+	if context.start(HashingContext.HASH_SHA256) != OK:
+		return ""
+	if context.update(_canonical_json(value).to_utf8_buffer()) != OK:
+		return ""
+	return context.finish().hex_encode()
+
+
+static func _canonical_json(value: Variant) -> String:
+	match typeof(value):
+		TYPE_NIL:
+			return "null"
+		TYPE_BOOL:
+			return "true" if bool(value) else "false"
+		TYPE_INT:
+			return str(int(value))
+		TYPE_FLOAT:
+			var number := float(value)
+			if is_finite(number) and number == floor(number):
+				return str(int(number))
+			return JSON.stringify(number)
+		TYPE_STRING, TYPE_STRING_NAME:
+			return JSON.stringify(str(value))
+		TYPE_ARRAY:
+			var items: Array[String] = []
+			for item in value as Array:
+				items.append(_canonical_json(item))
+			return "[%s]" % ",".join(items)
+		TYPE_DICTIONARY:
+			var dictionary := value as Dictionary
+			var keys: Array[String] = []
+			for key_value in dictionary.keys():
+				keys.append(str(key_value))
+			keys.sort()
+			var parts: Array[String] = []
+			for key in keys:
+				parts.append("%s:%s" % [JSON.stringify(key), _canonical_json(dictionary.get(key))])
+			return "{%s}" % ",".join(parts)
+		_:
+			return JSON.stringify(value)

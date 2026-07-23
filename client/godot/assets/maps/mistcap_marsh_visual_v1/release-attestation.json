@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_map_runtime_release_attestation",
+  "status": "passed",
+  "bundleId": "mistcap_marsh_visual_v1",
+  "mapStyleId": "mistcap_marsh_v1",
+  "mapIds": [
+    "mistcap_marsh"
+  ],
+  "manifest": {
+    "path": "map-visual-bundle.json",
+    "summarySha256": "ae5e2eea34c368958fa151e52fd60ed611bb614405f41a5a5758b5d709ba0972"
+  },
+  "lifecycle": {
+    "status": "released",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true
+  },
+  "offlineAudit": {
+    "status": "PASS",
+    "releaseReady": true,
+    "missingReleaseGates": []
+  },
+  "summaries": {
+    "evidenceSha256": "8963829771511937c55449f494ae9917a8f9f38ba26b56e8202f0e504a15c9e9",
+    "assetSha256": "7a2b6ff50a3ecfd707efbb533c2d0f60c16f36cea28867edd91a56c1ccbac86f",
+    "bundleSha256": "988ac1fa25e7c1a6b08d1cef4f158c43e7042455c54fc8339cbbd5965d354641"
+  }
+}

@@ -73,6 +73,9 @@ COMPUTER_USE_ACTION_KINDS = {
     "occlusion",
 }
 CATALOG_CONTRACT_REPORT_TYPE = "beastbound.map_visual_catalog_contract"
+RELEASE_ATTESTATION_NAME = "release-attestation.json"
+RELEASE_ATTESTATION_TYPE = "beastbound_map_runtime_release_attestation"
+RELEASE_ATTESTATION_STATUS = "passed"
 CATALOG_CONTRACT_CHECKS = {
     "catalogInitialized",
     "catalogCoverageExact",
@@ -146,6 +149,7 @@ class Audit:
     missing_release_gates: list[str] = field(default_factory=list)
     provenance_release_gates: set[str] = field(default_factory=set)
     report_release_gates: set[str] = field(default_factory=set)
+    release_attestation_valid: bool = False
 
     def error(self, field_name: str, message: str) -> None:
         self.errors.append(f"{field_name}: {message}")
@@ -591,6 +595,255 @@ def manifest_review_subject_sha256(manifest: dict[str, Any]) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
+
+
+def _normalized_summary_value(value: Any) -> Any:
+    """Normalize JSON numbers so Godot and Python hash parsed JSON identically."""
+    if isinstance(value, dict):
+        return {
+            str(key): _normalized_summary_value(nested)
+            for key, nested in value.items()
+        }
+    if isinstance(value, list):
+        return [_normalized_summary_value(nested) for nested in value]
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    return value
+
+
+def _canonical_summary_sha256(value: Any) -> str:
+    canonical = json.dumps(
+        _normalized_summary_value(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def release_summary_hashes(manifest: dict[str, Any]) -> dict[str, str]:
+    """Compute the non-circular summaries frozen by runtime release attestation."""
+    evidence_value = manifest.get("evidence")
+    evidence_subject = dict(evidence_value) if isinstance(evidence_value, dict) else {}
+    evidence_subject.pop("ownerAcceptance", None)
+
+    manifest_subject = {
+        key: value
+        for key, value in manifest.items()
+        if key
+        not in {
+            "status",
+            "ownerReviewStatus",
+            "releaseApproved",
+            "runtimeEnabled",
+            "releaseAttestation",
+        }
+    }
+    manifest_subject["evidence"] = evidence_subject
+    asset_subject = {
+        "groundAtlas": manifest.get("groundAtlas"),
+        "tiles": manifest.get("tiles"),
+        "objects": manifest.get("objects"),
+        "mapBindings": manifest.get("mapBindings"),
+    }
+    frozen_evidence_subject = {
+        "catalogContractCheck": manifest.get("catalogContractCheck"),
+        "evidence": evidence_subject,
+    }
+    manifest_sha = _canonical_summary_sha256(manifest_subject)
+    evidence_sha = _canonical_summary_sha256(frozen_evidence_subject)
+    asset_sha = _canonical_summary_sha256(asset_subject)
+    bundle_subject = {
+        "schemaVersion": manifest.get("schemaVersion"),
+        "bundleId": manifest.get("bundleId"),
+        "mapStyleId": manifest.get("mapStyleId"),
+        "mapIds": manifest.get("mapIds"),
+        "tileSize": manifest.get("tileSize"),
+        "manifestSha256": manifest_sha,
+        "evidenceSha256": evidence_sha,
+        "assetSha256": asset_sha,
+    }
+    return {
+        "manifestSha256": manifest_sha,
+        "evidenceSha256": evidence_sha,
+        "assetSha256": asset_sha,
+        "bundleSha256": _canonical_summary_sha256(bundle_subject),
+    }
+
+
+def validate_release_attestation(
+    audit: Audit,
+    manifest: dict[str, Any],
+    *,
+    required: bool,
+) -> tuple[str, str] | None:
+    value = manifest.get("releaseAttestation")
+    if value is None:
+        if required:
+            audit.error(
+                "releaseAttestation",
+                "is required for owner-approved or released map art",
+            )
+        return None
+
+    error_count_before = len(audit.errors)
+    if not isinstance(value, dict) or set(value) != {"path", "sha256"}:
+        audit.error(
+            "releaseAttestation",
+            "must contain exactly path and sha256",
+        )
+    if isinstance(value, dict) and value.get("path") != RELEASE_ATTESTATION_NAME:
+        audit.error(
+            "releaseAttestation.path",
+            f"must be the bundle-root file {RELEASE_ATTESTATION_NAME!r}",
+        )
+    attestation = audit.validate_json_ref(value, "releaseAttestation")
+    attestation_key = file_ref_key(value)
+    if not isinstance(attestation, dict):
+        if attestation is not None:
+            audit.error("releaseAttestation", "expected a JSON object")
+        return attestation_key
+
+    expected_top_level_keys = {
+        "schemaVersion",
+        "attestationType",
+        "status",
+        "bundleId",
+        "mapStyleId",
+        "mapIds",
+        "manifest",
+        "lifecycle",
+        "offlineAudit",
+        "summaries",
+    }
+    if set(attestation) != expected_top_level_keys:
+        audit.error(
+            "releaseAttestation",
+            "top-level fields must exactly match the runtime attestation v1 contract",
+        )
+    attestation_schema_version = attestation.get("schemaVersion")
+    if (
+        not isinstance(attestation_schema_version, int)
+        or isinstance(attestation_schema_version, bool)
+        or attestation_schema_version != SCHEMA_VERSION
+    ):
+        audit.error(
+            "releaseAttestation.schemaVersion",
+            f"must be the integer {SCHEMA_VERSION}",
+        )
+    if attestation.get("attestationType") != RELEASE_ATTESTATION_TYPE:
+        audit.error(
+            "releaseAttestation.attestationType",
+            f"must equal {RELEASE_ATTESTATION_TYPE!r}",
+        )
+    if attestation.get("status") != RELEASE_ATTESTATION_STATUS:
+        audit.error(
+            "releaseAttestation.status",
+            f"must equal {RELEASE_ATTESTATION_STATUS!r}",
+        )
+    if attestation.get("bundleId") != manifest.get("bundleId"):
+        audit.error(
+            "releaseAttestation.bundleId",
+            "must match manifest bundleId",
+        )
+    if attestation.get("mapStyleId") != manifest.get("mapStyleId"):
+        audit.error(
+            "releaseAttestation.mapStyleId",
+            "must match manifest mapStyleId",
+        )
+    if attestation.get("mapIds") != manifest.get("mapIds"):
+        audit.error(
+            "releaseAttestation.mapIds",
+            "must exactly match manifest mapIds and order",
+        )
+
+    manifest_binding = attestation.get("manifest")
+    if not isinstance(manifest_binding, dict) or set(manifest_binding) != {
+        "path",
+        "summarySha256",
+    }:
+        audit.error(
+            "releaseAttestation.manifest",
+            "must contain exactly path and summarySha256",
+        )
+        manifest_binding = {}
+    if manifest_binding.get("path") != MANIFEST_NAME:
+        audit.error(
+            "releaseAttestation.manifest.path",
+            f"must equal {MANIFEST_NAME!r}",
+        )
+
+    lifecycle = attestation.get("lifecycle")
+    if (
+        not isinstance(lifecycle, dict)
+        or set(lifecycle)
+        != {
+            "status",
+            "ownerReviewStatus",
+            "releaseApproved",
+            "runtimeEnabled",
+        }
+        or lifecycle.get("status") != "released"
+        or lifecycle.get("ownerReviewStatus") != "approved"
+        or lifecycle.get("releaseApproved") is not True
+        or lifecycle.get("runtimeEnabled") is not True
+    ):
+        audit.error(
+            "releaseAttestation.lifecycle",
+            "must exactly freeze the released/approved/true/true lifecycle",
+        )
+
+    offline_audit = attestation.get("offlineAudit")
+    if (
+        not isinstance(offline_audit, dict)
+        or set(offline_audit)
+        != {"status", "releaseReady", "missingReleaseGates"}
+        or offline_audit.get("status") != "PASS"
+        or offline_audit.get("releaseReady") is not True
+        or not isinstance(offline_audit.get("missingReleaseGates"), list)
+        or offline_audit.get("missingReleaseGates") != []
+    ):
+        audit.error(
+            "releaseAttestation.offlineAudit",
+            "must exactly freeze PASS, releaseReady=true and no missing gates",
+        )
+
+    summaries = attestation.get("summaries")
+    if not isinstance(summaries, dict) or set(summaries) != {
+        "evidenceSha256",
+        "assetSha256",
+        "bundleSha256",
+    }:
+        audit.error(
+            "releaseAttestation.summaries",
+            "must contain exactly evidenceSha256, assetSha256 and bundleSha256",
+        )
+        summaries = {}
+    expected_summaries = release_summary_hashes(manifest)
+    manifest_summary = manifest_binding.get("summarySha256")
+    if (
+        not isinstance(manifest_summary, str)
+        or not SHA256_RE.fullmatch(manifest_summary)
+        or manifest_summary != expected_summaries["manifestSha256"]
+    ):
+        audit.error(
+            "releaseAttestation.manifest.summarySha256",
+            "must match the canonical non-circular manifest summary",
+        )
+    for key in ("evidenceSha256", "assetSha256", "bundleSha256"):
+        digest = summaries.get(key)
+        if (
+            not isinstance(digest, str)
+            or not SHA256_RE.fullmatch(digest)
+            or digest != expected_summaries[key]
+        ):
+            audit.error(
+                f"releaseAttestation.summaries.{key}",
+                "must match the canonical runtime release summary",
+            )
+
+    audit.release_attestation_valid = len(audit.errors) == error_count_before
+    return attestation_key
 
 
 def validate_source(
@@ -1163,6 +1416,17 @@ def validate_bindings(
                     f"{field_name}.binding.ground.defaultTileId",
                     f"unknown tileId {default_tile_id!r}",
                 )
+            if "edgePaddingCells" in ground:
+                edge_padding = ground.get("edgePaddingCells")
+                if (
+                    not isinstance(edge_padding, int)
+                    or isinstance(edge_padding, bool)
+                    or not 0 <= edge_padding <= 32
+                ):
+                    audit.error(
+                        f"{field_name}.binding.ground.edgePaddingCells",
+                        "must be an integer in the inclusive range 0..32",
+                    )
             overrides = ground.get("overrides")
             if not isinstance(overrides, list):
                 audit.error(
@@ -2665,10 +2929,10 @@ def validate_evidence(
                         "must be exactly [1280, 720] for frozen approval",
                     )
     if frozen_required:
-        if len(coverage) < 3:
+        if len(runtime_pair_refs) < 3:
             audit.error(
                 "evidence.runtimeScreenshots",
-                "requires at least three unique mapId/mode captures",
+                "requires at least three unique screenshot/captureReport pairs",
             )
         covered_maps = {map_id for map_id, _mode in coverage}
         missing_maps = sorted(map_ids - covered_maps)
@@ -2799,6 +3063,20 @@ def _read_referenced_json_for_readiness(audit: Audit, value: Any) -> dict[str, A
     return parsed if isinstance(parsed, dict) else None
 
 
+def runtime_screenshot_coverage_complete(
+    concrete_pair_count: int,
+    coverage: set[tuple[str, str]],
+    map_ids: set[str],
+) -> bool:
+    covered_maps = {map_id for map_id, _mode in coverage}
+    covered_modes = {mode for _map_id, mode in coverage}
+    return (
+        concrete_pair_count >= 3
+        and covered_maps == map_ids
+        and {"idle", "moving"}.issubset(covered_modes)
+    )
+
+
 def evaluate_release_readiness(
     audit: Audit,
     manifest: dict[str, Any],
@@ -2812,6 +3090,8 @@ def evaluate_release_readiness(
         and manifest.get("runtimeEnabled") is True
     ):
         missing.append("lifecycle_released_and_enabled")
+    if not audit.release_attestation_valid:
+        missing.append("release_attestation")
 
     evidence = manifest.get("evidence")
     if not isinstance(evidence, dict):
@@ -2836,6 +3116,9 @@ def evaluate_release_readiness(
 
         screenshots = evidence.get("runtimeScreenshots")
         coverage: set[tuple[str, str]] = set()
+        concrete_pairs: set[
+            tuple[str, tuple[str, str], tuple[str, str]]
+        ] = set()
         if isinstance(screenshots, list):
             for screenshot in screenshots:
                 if not isinstance(screenshot, dict):
@@ -2844,12 +3127,14 @@ def evaluate_release_readiness(
                 mode = screenshot.get("mode")
                 if map_id in map_ids and mode in VALID_SCREENSHOT_MODES:
                     coverage.add((map_id, mode))
-        covered_maps = {map_id for map_id, _mode in coverage}
-        covered_modes = {mode for _map_id, mode in coverage}
-        if (
-            len(coverage) < 3
-            or covered_maps != map_ids
-            or not {"idle", "moving"}.issubset(covered_modes)
+                    image_key = file_ref_key(screenshot.get("image"))
+                    capture_key = file_ref_key(screenshot.get("captureReport"))
+                    if image_key is not None and capture_key is not None:
+                        concrete_pairs.add((map_id, image_key, capture_key))
+        if not runtime_screenshot_coverage_complete(
+            len(concrete_pairs),
+            coverage,
+            map_ids,
         ):
             missing.append("runtime_screenshot_coverage")
 
@@ -2973,6 +3258,14 @@ def audit_manifest(manifest_path: Path) -> Audit:
         collision_roles,
     )
     review_subject_files.update(binding_review_files)
+    frozen_required = owner_status == "approved" or status in {"approved", "released"}
+    release_attestation_key = validate_release_attestation(
+        audit,
+        manifest,
+        required=frozen_required,
+    )
+    if release_attestation_key is not None:
+        review_subject_files.add(release_attestation_key)
     catalog_contract_ref = manifest.get("catalogContractCheck")
     catalog_contract_key = file_ref_key(catalog_contract_ref)
     if catalog_contract_key is not None:
@@ -2985,7 +3278,6 @@ def audit_manifest(manifest_path: Path) -> Audit:
         binding_hashes,
     )
 
-    frozen_required = owner_status == "approved" or status in {"approved", "released"}
     if frozen_required and audit.provenance_release_gates:
         audit.error(
             "source.provenance.reproducibility",

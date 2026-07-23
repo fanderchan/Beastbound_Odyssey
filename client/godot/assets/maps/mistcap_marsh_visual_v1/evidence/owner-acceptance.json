@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "recordType": "beastbound_map_visual_owner_acceptance",
+  "bundleId": "mistcap_marsh_visual_v1",
+  "approved": true,
+  "reviewer": "project-owner:fander",
+  "reviewedAt": "2026-07-23T18:48:28Z",
+  "manifestReviewSubjectSha256": "ce97bfa3dd62e9a6c2ad2fc102b799a2a10d42e7ee32e27859446ea81d41dd37",
+  "acceptedFiles": [
+    {
+      "path": "bindings/mistcap_marsh.json",
+      "sha256": "e2c8f1be5b4aaaec7bf294aac64f85d67945f98ba88a33d9b37ebc5f0b76a828"
+    },
+    {
+      "path": "evidence/catalog-contract-check.json",
+      "sha256": "752e108e6f62f5f7063900763869a874ace16cb08543d42df691e259e1d2f344"
+    },
+    {
+      "path": "evidence/collision-audit.json",
+      "sha256": "bbab2622edc3a344ef4128a664e68c4fb02a844559f8180e0e03e0ca6019d297"
+    },
+    {
+      "path": "evidence/collision-runner-receipt.log",
+      "sha256": "399e9d3a230e0d4b3585a41fd41ed09dbdb7b9c7ffeead3c08e579f6c03c9bbd"
+    },
+    {
+      "path": "evidence/computer-use-actions/mistcap_marsh_collision.jsonl",
+      "sha256": "b8447c9a3fa0b21d82b8eba66c27678138e41cc5434f15b1239f0896e45129da"
+    },
+    {
+      "path": "evidence/computer-use-actions/mistcap_marsh_movement_path.jsonl",
+      "sha256": "9df6e12a517ecab50fd50057b88d34c4f92a02b7d4cd2c053a188c63961d36ad"
+    },
+    {
+      "path": "evidence/computer-use-actions/mistcap_marsh_occlusion.jsonl",
+      "sha256": "5f0fc6b6664cd5b98ad256905d4e692d8c53b8bce398325ec8a4f0436b9e893f"
+    },
+    {
+      "path": "evidence/computer-use-actions/mistcap_marsh_pointer.jsonl",
+      "sha256": "9e6db48a6b0bc1f2bc7cba5c7a2b80a50711ef125ce3be0ad641de886cda4dd3"
+    },
+    {
+      "path": "evidence/computer-use-actions/mistcap_marsh_warp.jsonl",
+      "sha256": "8780e0348523ff5c8a4187ad13f4375fd200b5f47daffabf5d1004fb47d3ef6a"
+    },
+    {
+      "path": "evidence/computer-use.json",
+      "sha256": "568ec044ea5c27e9c4727faeb33d3cdd42afcc87240d213ab07eeac720dc2e37"
+    },
+    {
+      "path": "evidence/performance-report.json",
+      "sha256": "d0a92f5d8416fa8b2fb6d5d6c69ee216cef31299f8b5f682d4b80348133127f7"
+    },
+    {
+      "path": "evidence/performance-runner-receipt.jsonl",
+      "sha256": "cda3729ecd4c2ccdc7fcf28c52392ebdc6cc69968352c9453ccfeb9d8b90e51d"
+    },
+    {
+      "path": "evidence/runtime-captures/mistcap_marsh-collision.json",
+      "sha256": "643511dcc6584440c507d8785e63d850d01fd550bf95cb993fd2c285b1148501"
+    },
+    {
+      "path": "evidence/runtime-captures/mistcap_marsh-movement_path.json",
+      "sha256": "20131bf7e9c3a980eb33fad5c96aff075f506e147fa8a49a1134de63a5d15193"
+    },
+    {
+      "path": "evidence/runtime-captures/mistcap_marsh-occlusion.json",
+      "sha256": "fad447800fca984baa3c734223e252b6b358fc96c4a146a7ec16ede1ee6aa49a"
+    },
+    {
+      "path": "evidence/runtime-captures/mistcap_marsh-pointer.json",
+      "sha256": "72dd6bad393d097919dc8113880d066e83474e621ca7ede0e996aa584a019cbd"
+    },
+    {
+      "path": "evidence/runtime-captures/mistcap_marsh-warp.json",
+      "sha256": "927d461905418773d55e700fd90d27ef05ed4d7b65a562c8f1e4bccb4ae2037d"
+    },
+    {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-collision-1280x720.png",
+      "sha256": "445c693ae0e602237c3136eba9434a355a1c23f88d4fa77bb580397e29644c95"
+    },
+    {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-movement_path-1280x720.png",
+      "sha256": "8808afa9f59444691d8e8fe12ddd376fa90cd8d9ea870bb2e965760a77b4a582"
+    },
+    {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-occlusion-1280x720.png",
+      "sha256": "bfcf0b92cbe62d6884656beba77ec778121eff50c83ff8b4d373f0f1a06bd2fd"
+    },
+    {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-pointer-1280x720.png",
+      "sha256": "86a102928e296b834855bb77925a80a42a58cc84951702a1a151690167a0e50c"
+    },
+    {
+      "path": "evidence/runtime-screenshots/mistcap_marsh-warp-1280x720.png",
+      "sha256": "199e11dd991adb953cc5ea2c0ad7b0070a2fb91621104e64cc656df629327c4b"
+    },
+    {
+      "path": "release-attestation.json",
+      "sha256": "90c53c0585d750216e3d4afba5b0c3a568f0bc696e7b4a9ac3aa0d0b32a8f29c"
+    },
+    {
+      "path": "runtime/ground/atlas.png",
+      "sha256": "0ccbac4af7691ea3abdf38b3a92af6468887ee20c7a5f7ba826cf7a180c80cef"
+    },
+    {
+      "path": "runtime/objects/mistcap_fallen_log.png",
+      "sha256": "122636c28a731bf2cec8a3eab39d4773080fb94ee346adc9a20ce26e3755d892"
+    },
+    {
+      "path": "runtime/objects/mistcap_moss_boulder.png",
+      "sha256": "c77616fdcce729a95e0697a3be293498679cf6b69b466ef5895f79c575036cef"
+    },
+    {
+      "path": "runtime/objects/mistcap_mushroom_cluster.png",
+      "sha256": "30456f908d19e098aa7adf09271eb717e85b830b2c8b23d300884d029527c24a"
+    },
+    {
+      "path": "runtime/objects/mistcap_reed_clump.png",
+      "sha256": "4e8c1aaacc4a95992e80397f63ac42aaf9183bb07b4a0af066d488c99c4d36f9"
+    },
+    {
+      "path": "source/generated/mistcap-ground-sheet-v1.png",
+      "sha256": "68bd759a7abb6976ce06dfc139d23231e86d0e87847d73df2ca3cffbf1c43744"
+    },
+    {
+      "path": "source/generated/mistcap-low-props-sheet-v1.png",
+      "sha256": "d6d8438b7826dd6c86e67baf60301942f9ffbcbe79421a387d1fbbccfd8d7e6d"
+    },
+    {
+      "path": "source/processed/mistcap-ground-sheet-v1-alpha.png",
+      "sha256": "7151759be0c7aa630e0f42ad018d1a98e6687538d39ee8e7dcc2d4ab0fd2a7ce"
+    },
+    {
+      "path": "source/processed/mistcap-low-props-sheet-v1-alpha.png",
+      "sha256": "3f02b6f937555eaa2c20bf57e596526446befd03de4a2c02c8de0f5731872c52"
+    },
+    {
+      "path": "source/prompts/mistcap-ground-atlas.md",
+      "sha256": "a6868d3a46d981bf67f7e52af782e05f236d6161e955a3894d5393ccea301823"
+    },
+    {
+      "path": "source/prompts/mistcap-low-props.md",
+      "sha256": "9aec547f201e31ac9ffaccb2a8b380d83511bdfe15a6d17cf076f53899cf1672"
+    },
+    {
+      "path": "source/provenance.json",
+      "sha256": "968438a10244ba9ebf15ea9ec01afec6da91696d8e04dfe1102f970f31d0c6a9"
+    },
+    {
+      "path": "source/tools/remove_chroma_key.py",
+      "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e"
+    }
+  ]
+}

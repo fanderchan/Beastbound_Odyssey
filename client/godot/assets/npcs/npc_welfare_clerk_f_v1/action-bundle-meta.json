@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_welfare_clerk_f_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "265fa95b2bb0a53c6e616e553088d49e6f72216a86b4ef450edac3ab08260cd7",
     "blindDirectionAudit": "required",
@@ -68,17 +68,14 @@
      "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_welfare_clerk_f_v1/staged-review/stage-b-observation.json",
     "blindStageBObservationSha256": "aca96007be042c12e339545288ccc87017cab1bd617f98b412886f8479bc3019",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_welfare_clerk_f_v1/final/blind-audit.json",
-    "blindAuditSha256": "0ef22fad64ee619b7aa876c9b05341c016024858bed033442a7af3055c30aa72",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "0ef22fad64ee619b7aa876c9b05341c016024858bed033442a7af3055c30aa72"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_welfare_clerk_f_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/npc-bundle.json",
     "productionManifestSha256": "e1eb92d8fd969c66142d40a732899e04c56d4add2fd08b5c65caffd85a4469f1",

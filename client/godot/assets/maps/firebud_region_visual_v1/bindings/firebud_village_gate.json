@@ -4,6 +4,7 @@
   "mapId": "firebud_village_gate",
   "mapGridSize": [28, 24],
   "ground": {
+    "edgePaddingCells": 20,
     "defaultTileId": "firebud_meadow",
     "blockedTileId": "firebud_dark_root_soil",
     "encounterTileId": "firebud_meadow",

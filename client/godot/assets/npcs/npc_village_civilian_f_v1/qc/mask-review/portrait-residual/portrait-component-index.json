@@ -1,0 +1,2164 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "portrait",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/portrait-2x2-raw.png",
+  "rawSheetFileSha256": "8218a1656ae57fba296f3f7633417f97e09334c44a12efa5666a72ecaf867c1d",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-01.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-02.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-03.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-04.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-05.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-06.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-07.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-08.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-09.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-10.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-11.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-residual/portrait-component-review-12.png"
+  ],
+  "components": [
+    {
+      "key": "neutral|residual-key-color-candidate|5f4f2ad3f5d5356f21eefe4fe3c6e007b84c1cc670a9ad5d2ca53473b07e78f8",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5f4f2ad3f5d5356f21eefe4fe3c6e007b84c1cc670a9ad5d2ca53473b07e78f8",
+      "cellBbox": [
+        267,
+        92,
+        268,
+        93
+      ],
+      "sheetBbox": [
+        267,
+        92,
+        268,
+        93
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|e5add2a88a0436415b49751c4649fc82de7c78f8afbda854dc519f8595f82554",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e5add2a88a0436415b49751c4649fc82de7c78f8afbda854dc519f8595f82554",
+      "cellBbox": [
+        383,
+        103,
+        384,
+        104
+      ],
+      "sheetBbox": [
+        383,
+        103,
+        384,
+        104
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|ec563a13bcffb039b31eeeb0ca2bdd461b038974cccc1c07928dc4a318a8374f",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ec563a13bcffb039b31eeeb0ca2bdd461b038974cccc1c07928dc4a318a8374f",
+      "cellBbox": [
+        389,
+        111,
+        390,
+        112
+      ],
+      "sheetBbox": [
+        389,
+        111,
+        390,
+        112
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|5ad8327ee651ecc6c4767f40e31da97604ab093c3c36126f76c8eb8445d7daf8",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5ad8327ee651ecc6c4767f40e31da97604ab093c3c36126f76c8eb8445d7daf8",
+      "cellBbox": [
+        248,
+        112,
+        249,
+        113
+      ],
+      "sheetBbox": [
+        248,
+        112,
+        249,
+        113
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|1fac1e9b03f772bdc1075a8cf6d2dca86ae00510e1fda65394987645250a7e94",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1fac1e9b03f772bdc1075a8cf6d2dca86ae00510e1fda65394987645250a7e94",
+      "cellBbox": [
+        242,
+        122,
+        243,
+        123
+      ],
+      "sheetBbox": [
+        242,
+        122,
+        243,
+        123
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|1bff974ebb6d80b9775ea324cd6b3feff60531071b998f5ca5e178f64cbc0f3b",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1bff974ebb6d80b9775ea324cd6b3feff60531071b998f5ca5e178f64cbc0f3b",
+      "cellBbox": [
+        241,
+        124,
+        242,
+        125
+      ],
+      "sheetBbox": [
+        241,
+        124,
+        242,
+        125
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|531c991f72472e8622597d52fb8ff6a8f509866ae568c5322effd2dc66e024d6",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "531c991f72472e8622597d52fb8ff6a8f509866ae568c5322effd2dc66e024d6",
+      "cellBbox": [
+        240,
+        126,
+        241,
+        127
+      ],
+      "sheetBbox": [
+        240,
+        126,
+        241,
+        127
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|02209d2952a9d0d40a30afc36e58a3d5b58f789bde6857e292bf517a5580c770",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "02209d2952a9d0d40a30afc36e58a3d5b58f789bde6857e292bf517a5580c770",
+      "cellBbox": [
+        414,
+        170,
+        415,
+        172
+      ],
+      "sheetBbox": [
+        414,
+        170,
+        415,
+        172
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|3cb5d98c7057bc7ad995317262d5e316dd4205627e63cb974fdbe087308e60fb",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3cb5d98c7057bc7ad995317262d5e316dd4205627e63cb974fdbe087308e60fb",
+      "cellBbox": [
+        415,
+        173,
+        416,
+        176
+      ],
+      "sheetBbox": [
+        415,
+        173,
+        416,
+        176
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|efb93d196e090a849aefac3c64fdeef9ca826695244fe28501230c7829f6295b",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "efb93d196e090a849aefac3c64fdeef9ca826695244fe28501230c7829f6295b",
+      "cellBbox": [
+        416,
+        178,
+        417,
+        182
+      ],
+      "sheetBbox": [
+        416,
+        178,
+        417,
+        182
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|dac93d9128f6b3f2aaf21333d9318ce43f47a179f1074edf32f8e0cdbf30b483",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "dac93d9128f6b3f2aaf21333d9318ce43f47a179f1074edf32f8e0cdbf30b483",
+      "cellBbox": [
+        240,
+        213,
+        241,
+        214
+      ],
+      "sheetBbox": [
+        240,
+        213,
+        241,
+        214
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|e37c205ce24e0e54cc03a73a2b927e0efa293b193e21b053ae381c1ab1542da7",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e37c205ce24e0e54cc03a73a2b927e0efa293b193e21b053ae381c1ab1542da7",
+      "cellBbox": [
+        240,
+        216,
+        244,
+        221
+      ],
+      "sheetBbox": [
+        240,
+        216,
+        244,
+        221
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|29231b55b0bdbd3271b2a9156afe4be41656d410faf616e24fb699ae1f69ec17",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "29231b55b0bdbd3271b2a9156afe4be41656d410faf616e24fb699ae1f69ec17",
+      "cellBbox": [
+        255,
+        235,
+        256,
+        236
+      ],
+      "sheetBbox": [
+        255,
+        235,
+        256,
+        236
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|8bad7ba561a269450961c676f4868a20fd7bcaf159f3a8c58d6f50129c9473b1",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8bad7ba561a269450961c676f4868a20fd7bcaf159f3a8c58d6f50129c9473b1",
+      "cellBbox": [
+        256,
+        236,
+        257,
+        237
+      ],
+      "sheetBbox": [
+        256,
+        236,
+        257,
+        237
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|29bd3415be29ca26ee9a9feb0e7e4913cb10fa1d66a39c887f148c5cbbba6a80",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "29bd3415be29ca26ee9a9feb0e7e4913cb10fa1d66a39c887f148c5cbbba6a80",
+      "cellBbox": [
+        257,
+        237,
+        261,
+        241
+      ],
+      "sheetBbox": [
+        257,
+        237,
+        261,
+        241
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|b56e8495f9d9909ead302e42a4850c0b91e9573c02d49a1be3026f48422eb7fc",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b56e8495f9d9909ead302e42a4850c0b91e9573c02d49a1be3026f48422eb7fc",
+      "cellBbox": [
+        246,
+        249,
+        247,
+        250
+      ],
+      "sheetBbox": [
+        246,
+        249,
+        247,
+        250
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|93a1eb2979d83f6b41af2b913f79d861b2731962968492d0bec1671d508a6df7",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "93a1eb2979d83f6b41af2b913f79d861b2731962968492d0bec1671d508a6df7",
+      "cellBbox": [
+        247,
+        251,
+        248,
+        252
+      ],
+      "sheetBbox": [
+        247,
+        251,
+        248,
+        252
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|abbcffbafe4440db8f1f220fdb95f92c2b965949bbdb5a914cc197afa75ba6fc",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "abbcffbafe4440db8f1f220fdb95f92c2b965949bbdb5a914cc197afa75ba6fc",
+      "cellBbox": [
+        417,
+        274,
+        418,
+        277
+      ],
+      "sheetBbox": [
+        417,
+        274,
+        418,
+        277
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|df7f09164991e743012bfe91c07fe3c818a071e1bb70bad012a55d72bd48886d",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "df7f09164991e743012bfe91c07fe3c818a071e1bb70bad012a55d72bd48886d",
+      "cellBbox": [
+        416,
+        278,
+        417,
+        281
+      ],
+      "sheetBbox": [
+        416,
+        278,
+        417,
+        281
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|e080daa7ea464c32c59d1d6808b7b1089aaa277524dbfee38a28369c25551eb6",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e080daa7ea464c32c59d1d6808b7b1089aaa277524dbfee38a28369c25551eb6",
+      "cellBbox": [
+        419,
+        292,
+        420,
+        293
+      ],
+      "sheetBbox": [
+        419,
+        292,
+        420,
+        293
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|bec0846b5cbb31c62ebf2a7747490e15a731da4b6994d5d577cf2ae9fbf062fb",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bec0846b5cbb31c62ebf2a7747490e15a731da4b6994d5d577cf2ae9fbf062fb",
+      "cellBbox": [
+        420,
+        293,
+        422,
+        296
+      ],
+      "sheetBbox": [
+        420,
+        293,
+        422,
+        296
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|d96821e9e3e0f9b3a7d6c68f0b9de3db22614b1520b61063869530162815b408",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d96821e9e3e0f9b3a7d6c68f0b9de3db22614b1520b61063869530162815b408",
+      "cellBbox": [
+        421,
+        298,
+        422,
+        300
+      ],
+      "sheetBbox": [
+        421,
+        298,
+        422,
+        300
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|8d4bc2d9b097d97df85a4069cad6c7b04c1d9354619655aacb0bad46b6362527",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8d4bc2d9b097d97df85a4069cad6c7b04c1d9354619655aacb0bad46b6362527",
+      "cellBbox": [
+        516,
+        440,
+        517,
+        441
+      ],
+      "sheetBbox": [
+        516,
+        440,
+        517,
+        441
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|residual-key-color-candidate|25e859b0ef1fe940995ab1ec0fe7e750489886408d1e6e39fa2741e57e7b4946",
+      "slot": "neutral",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "25e859b0ef1fe940995ab1ec0fe7e750489886408d1e6e39fa2741e57e7b4946",
+      "cellBbox": [
+        513,
+        441,
+        516,
+        445
+      ],
+      "sheetBbox": [
+        513,
+        441,
+        516,
+        445
+      ],
+      "pixelCount": 9,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|7a90f05e650a223321ac4616182c741e31fc31d7bd6b2a6b76fe30e24d4fb79b",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7a90f05e650a223321ac4616182c741e31fc31d7bd6b2a6b76fe30e24d4fb79b",
+      "cellBbox": [
+        228,
+        81,
+        229,
+        82
+      ],
+      "sheetBbox": [
+        855,
+        81,
+        856,
+        82
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|f82a10d01006268c1a806b781f5129d75829a70798b23df60a19d1602afaacff",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f82a10d01006268c1a806b781f5129d75829a70798b23df60a19d1602afaacff",
+      "cellBbox": [
+        332,
+        103,
+        333,
+        104
+      ],
+      "sheetBbox": [
+        959,
+        103,
+        960,
+        104
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|4441dec666c0145a12b3b4ffd5d3038e545cc9f5680f50c6a29b3e927d69fe51",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4441dec666c0145a12b3b4ffd5d3038e545cc9f5680f50c6a29b3e927d69fe51",
+      "cellBbox": [
+        195,
+        114,
+        196,
+        116
+      ],
+      "sheetBbox": [
+        822,
+        114,
+        823,
+        116
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|2ceac7bf3e2a4ba66800a2c2114084e1ed9d86fe80e408411456e68eb6864a17",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2ceac7bf3e2a4ba66800a2c2114084e1ed9d86fe80e408411456e68eb6864a17",
+      "cellBbox": [
+        339,
+        114,
+        340,
+        115
+      ],
+      "sheetBbox": [
+        966,
+        114,
+        967,
+        115
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|11eb0e94340966b85495c2a96497ca3a99af60473eace1732e846498474b89da",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "11eb0e94340966b85495c2a96497ca3a99af60473eace1732e846498474b89da",
+      "cellBbox": [
+        187,
+        128,
+        188,
+        129
+      ],
+      "sheetBbox": [
+        814,
+        128,
+        815,
+        129
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|375aa17f775ddaba3bb0eee5e38d9e0a60ce29951666b76ba6e2cf2d80a94f30",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "375aa17f775ddaba3bb0eee5e38d9e0a60ce29951666b76ba6e2cf2d80a94f30",
+      "cellBbox": [
+        186,
+        130,
+        187,
+        133
+      ],
+      "sheetBbox": [
+        813,
+        130,
+        814,
+        133
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|a858a19aa0e310479822eeff94317a8152c91fea457d87101c9e857fc1fba416",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a858a19aa0e310479822eeff94317a8152c91fea457d87101c9e857fc1fba416",
+      "cellBbox": [
+        185,
+        133,
+        186,
+        136
+      ],
+      "sheetBbox": [
+        812,
+        133,
+        813,
+        136
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|8f10770bd287ea8f784f1c002155381b5f1b8b06f4b3ca66e6ffc93186b14ef7",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8f10770bd287ea8f784f1c002155381b5f1b8b06f4b3ca66e6ffc93186b14ef7",
+      "cellBbox": [
+        184,
+        137,
+        185,
+        139
+      ],
+      "sheetBbox": [
+        811,
+        137,
+        812,
+        139
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|c2ca99d05570b130d11d2eafe1b73e3bfcd3182d71541339501efb29ba1b9b3e",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "c2ca99d05570b130d11d2eafe1b73e3bfcd3182d71541339501efb29ba1b9b3e",
+      "cellBbox": [
+        361,
+        169,
+        365,
+        184
+      ],
+      "sheetBbox": [
+        988,
+        169,
+        992,
+        184
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|ae35242acabcae8dc2ac0ede16226af8296cdb649ccd2fb8a2d8bb450cec8673",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ae35242acabcae8dc2ac0ede16226af8296cdb649ccd2fb8a2d8bb450cec8673",
+      "cellBbox": [
+        363,
+        190,
+        364,
+        191
+      ],
+      "sheetBbox": [
+        990,
+        190,
+        991,
+        191
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|fb9611bed52aa51dc4c0a3ccb5cf3eb786b9a30d1a14e9cb9f301364aba14de5",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fb9611bed52aa51dc4c0a3ccb5cf3eb786b9a30d1a14e9cb9f301364aba14de5",
+      "cellBbox": [
+        190,
+        219,
+        191,
+        220
+      ],
+      "sheetBbox": [
+        817,
+        219,
+        818,
+        220
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|04f2bac337f7fb2e43c6a17d80c421735fd9d5d6fa8bc1c4e5f02687a51d9190",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "04f2bac337f7fb2e43c6a17d80c421735fd9d5d6fa8bc1c4e5f02687a51d9190",
+      "cellBbox": [
+        191,
+        221,
+        192,
+        222
+      ],
+      "sheetBbox": [
+        818,
+        221,
+        819,
+        222
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|345b6148d5a7d76c364fbe93180fbdf6266f7f96b878382fbb9dd1e2512428b1",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "345b6148d5a7d76c364fbe93180fbdf6266f7f96b878382fbb9dd1e2512428b1",
+      "cellBbox": [
+        192,
+        222,
+        193,
+        223
+      ],
+      "sheetBbox": [
+        819,
+        222,
+        820,
+        223
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|9b55aa294e7bcb2178a4c18b8bf7b19bac6a99d4fe42b6c4689c2de921b58076",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9b55aa294e7bcb2178a4c18b8bf7b19bac6a99d4fe42b6c4689c2de921b58076",
+      "cellBbox": [
+        193,
+        223,
+        194,
+        225
+      ],
+      "sheetBbox": [
+        820,
+        223,
+        821,
+        225
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|f6a3a11d925b7723cff6722a2578806eec4102e92ec1152e1ae956e3b5c218ec",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f6a3a11d925b7723cff6722a2578806eec4102e92ec1152e1ae956e3b5c218ec",
+      "cellBbox": [
+        194,
+        225,
+        195,
+        226
+      ],
+      "sheetBbox": [
+        821,
+        225,
+        822,
+        226
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|efc2883c56ee884e2cf0b67c216acec1a9084f85fd24f60b0aeba377384ee796",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "efc2883c56ee884e2cf0b67c216acec1a9084f85fd24f60b0aeba377384ee796",
+      "cellBbox": [
+        203,
+        237,
+        204,
+        238
+      ],
+      "sheetBbox": [
+        830,
+        237,
+        831,
+        238
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|379a146d7d439bd1351aa6b8dc38b482b8d4739378a618197f0ca0cdbf738160",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "379a146d7d439bd1351aa6b8dc38b482b8d4739378a618197f0ca0cdbf738160",
+      "cellBbox": [
+        204,
+        238,
+        205,
+        239
+      ],
+      "sheetBbox": [
+        831,
+        238,
+        832,
+        239
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|14fd4ccae4985bd39d8e56ea5e10f3e747d1a230dd0fb3892238fe12182268ad",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "14fd4ccae4985bd39d8e56ea5e10f3e747d1a230dd0fb3892238fe12182268ad",
+      "cellBbox": [
+        205,
+        239,
+        206,
+        240
+      ],
+      "sheetBbox": [
+        832,
+        239,
+        833,
+        240
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|73f3a13abe385e25fe8d869255feaf5a6d40f14d3a0ba61b9a28a393c0010a87",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "73f3a13abe385e25fe8d869255feaf5a6d40f14d3a0ba61b9a28a393c0010a87",
+      "cellBbox": [
+        206,
+        240,
+        209,
+        243
+      ],
+      "sheetBbox": [
+        833,
+        240,
+        836,
+        243
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|1b6ed6c1ec05596ac9889ea253780213b0447fcfafeb276d58d079dee39dfc6d",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1b6ed6c1ec05596ac9889ea253780213b0447fcfafeb276d58d079dee39dfc6d",
+      "cellBbox": [
+        209,
+        243,
+        211,
+        244
+      ],
+      "sheetBbox": [
+        836,
+        243,
+        838,
+        244
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|4017f4eda016aec213291afc07275f1595a45649f543a1960d83959d1c28ed51",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4017f4eda016aec213291afc07275f1595a45649f543a1960d83959d1c28ed51",
+      "cellBbox": [
+        195,
+        251,
+        196,
+        252
+      ],
+      "sheetBbox": [
+        822,
+        251,
+        823,
+        252
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|9b72728576ce1aab3a53b8396f7281de0febc9c475ff29655ad1e0be7ca57874",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9b72728576ce1aab3a53b8396f7281de0febc9c475ff29655ad1e0be7ca57874",
+      "cellBbox": [
+        196,
+        253,
+        197,
+        254
+      ],
+      "sheetBbox": [
+        823,
+        253,
+        824,
+        254
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|390c8bcf7043df26d7c19070b5ad084c8977f12299b9b530852e935f056d9c05",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "390c8bcf7043df26d7c19070b5ad084c8977f12299b9b530852e935f056d9c05",
+      "cellBbox": [
+        197,
+        254,
+        199,
+        257
+      ],
+      "sheetBbox": [
+        824,
+        254,
+        826,
+        257
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|0c69482ddbb5b7a51d3e41037608835a0c98b1b36df8dd177fded0df0711eca4",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "0c69482ddbb5b7a51d3e41037608835a0c98b1b36df8dd177fded0df0711eca4",
+      "cellBbox": [
+        365,
+        273,
+        366,
+        281
+      ],
+      "sheetBbox": [
+        992,
+        273,
+        993,
+        281
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|4bc0e443709032e7bbae818b7754d8fb1a45a56b1f02289d1e919a210803fcc9",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4bc0e443709032e7bbae818b7754d8fb1a45a56b1f02289d1e919a210803fcc9",
+      "cellBbox": [
+        364,
+        281,
+        365,
+        284
+      ],
+      "sheetBbox": [
+        991,
+        281,
+        992,
+        284
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|7154c59c02caf1b52871566f896541617eaba0ed49fe74dbea1f98f74c76d1f2",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7154c59c02caf1b52871566f896541617eaba0ed49fe74dbea1f98f74c76d1f2",
+      "cellBbox": [
+        368,
+        293,
+        369,
+        294
+      ],
+      "sheetBbox": [
+        995,
+        293,
+        996,
+        294
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|f3e7abc2df331744edac84a21d75b87517aa67b773f58db92b4a4ace17b623ae",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "f3e7abc2df331744edac84a21d75b87517aa67b773f58db92b4a4ace17b623ae",
+      "cellBbox": [
+        369,
+        295,
+        370,
+        297
+      ],
+      "sheetBbox": [
+        996,
+        295,
+        997,
+        297
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|residual-key-color-candidate|3f3fb8a0433d87f7306a6e24e7b1cc6cc66799730da8966afb5900ba1c13fba9",
+      "slot": "speaking",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3f3fb8a0433d87f7306a6e24e7b1cc6cc66799730da8966afb5900ba1c13fba9",
+      "cellBbox": [
+        370,
+        300,
+        371,
+        303
+      ],
+      "sheetBbox": [
+        997,
+        300,
+        998,
+        303
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|993e27d79867b394b15b1fee32dcf879851568b39cf0495d691363da28628c7b",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "993e27d79867b394b15b1fee32dcf879851568b39cf0495d691363da28628c7b",
+      "cellBbox": [
+        280,
+        23,
+        281,
+        24
+      ],
+      "sheetBbox": [
+        280,
+        650,
+        281,
+        651
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|023b681fb99a28a8f6a0b33c981fe2304373de919a54b2f2ed157440746ebcf4",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "023b681fb99a28a8f6a0b33c981fe2304373de919a54b2f2ed157440746ebcf4",
+      "cellBbox": [
+        270,
+        33,
+        271,
+        34
+      ],
+      "sheetBbox": [
+        270,
+        660,
+        271,
+        661
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|e503ad22fd7f03510621f9253ae9d0d70800cdd8fe312b9be84ade75546b1990",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e503ad22fd7f03510621f9253ae9d0d70800cdd8fe312b9be84ade75546b1990",
+      "cellBbox": [
+        384,
+        43,
+        385,
+        44
+      ],
+      "sheetBbox": [
+        384,
+        670,
+        385,
+        671
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|3600e590d366cb49fa2c7a2f998382399657a04071f0dc436561ab4728fda64a",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3600e590d366cb49fa2c7a2f998382399657a04071f0dc436561ab4728fda64a",
+      "cellBbox": [
+        257,
+        45,
+        258,
+        46
+      ],
+      "sheetBbox": [
+        257,
+        672,
+        258,
+        673
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|213f9dcbd0cb414fd51eaa4dea09af4bb344fe7194bad3c929c8a768cdde2e2b",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "213f9dcbd0cb414fd51eaa4dea09af4bb344fe7194bad3c929c8a768cdde2e2b",
+      "cellBbox": [
+        250,
+        55,
+        251,
+        56
+      ],
+      "sheetBbox": [
+        250,
+        682,
+        251,
+        683
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|d9da66ad31d23f1ce10618cf00c24ba69b66728e50b055cac8084c198637391c",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d9da66ad31d23f1ce10618cf00c24ba69b66728e50b055cac8084c198637391c",
+      "cellBbox": [
+        238,
+        78,
+        239,
+        79
+      ],
+      "sheetBbox": [
+        238,
+        705,
+        239,
+        706
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|8459d68510c5f65175b51b63baaafc175d7a2dd3e9f4a8213dcc62b980dc96ec",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8459d68510c5f65175b51b63baaafc175d7a2dd3e9f4a8213dcc62b980dc96ec",
+      "cellBbox": [
+        416,
+        110,
+        417,
+        111
+      ],
+      "sheetBbox": [
+        416,
+        737,
+        417,
+        738
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|b4f942bf64d368220846bd6985619aaeab33a0587fe9eeee9e3ecab1b9d2bcd3",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "b4f942bf64d368220846bd6985619aaeab33a0587fe9eeee9e3ecab1b9d2bcd3",
+      "cellBbox": [
+        417,
+        112,
+        418,
+        115
+      ],
+      "sheetBbox": [
+        417,
+        739,
+        418,
+        742
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|5a0577055db4dec58cb94cf56312cdfb86bbc15f21e00996de5240ab323f80a0",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5a0577055db4dec58cb94cf56312cdfb86bbc15f21e00996de5240ab323f80a0",
+      "cellBbox": [
+        418,
+        115,
+        419,
+        121
+      ],
+      "sheetBbox": [
+        418,
+        742,
+        419,
+        748
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|bdf83ecb2596cde0838567ed651d3a90eb76acd5ed01347214ac69c848fdba54",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bdf83ecb2596cde0838567ed651d3a90eb76acd5ed01347214ac69c848fdba54",
+      "cellBbox": [
+        242,
+        157,
+        243,
+        158
+      ],
+      "sheetBbox": [
+        242,
+        784,
+        243,
+        785
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|3629f9c09b57cc28d4f744346849f8130a02b21e4b6fd756f4d95e36019632c9",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "3629f9c09b57cc28d4f744346849f8130a02b21e4b6fd756f4d95e36019632c9",
+      "cellBbox": [
+        244,
+        161,
+        245,
+        162
+      ],
+      "sheetBbox": [
+        244,
+        788,
+        245,
+        789
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|980f3b5a049b72f2cd7b5dec5decd4168efebc3138672607eb4ee03d00a5226d",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "980f3b5a049b72f2cd7b5dec5decd4168efebc3138672607eb4ee03d00a5226d",
+      "cellBbox": [
+        245,
+        163,
+        246,
+        164
+      ],
+      "sheetBbox": [
+        245,
+        790,
+        246,
+        791
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|72b11fc777495a898a890cc66d56eaa97228bbd89a8e1dbb8a71bddb37c6af18",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "72b11fc777495a898a890cc66d56eaa97228bbd89a8e1dbb8a71bddb37c6af18",
+      "cellBbox": [
+        246,
+        164,
+        247,
+        165
+      ],
+      "sheetBbox": [
+        246,
+        791,
+        247,
+        792
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|14daecae770d1de0ac0f1634547241f23972989f72a3df469f415d850411d2a6",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "14daecae770d1de0ac0f1634547241f23972989f72a3df469f415d850411d2a6",
+      "cellBbox": [
+        258,
+        179,
+        264,
+        185
+      ],
+      "sheetBbox": [
+        258,
+        806,
+        264,
+        812
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|ebf33c19b5f87f2668355c30752b493b6f78c1b3239c28657107f12241af5627",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ebf33c19b5f87f2668355c30752b493b6f78c1b3239c28657107f12241af5627",
+      "cellBbox": [
+        264,
+        185,
+        265,
+        186
+      ],
+      "sheetBbox": [
+        264,
+        812,
+        265,
+        813
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|229432cf398656979553218f3bf3de41dbd6815c5c7e22170627e1ced2b0e915",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "229432cf398656979553218f3bf3de41dbd6815c5c7e22170627e1ced2b0e915",
+      "cellBbox": [
+        265,
+        186,
+        266,
+        187
+      ],
+      "sheetBbox": [
+        265,
+        813,
+        266,
+        814
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|d28024f54c76055b7882dddddb9b8949c135aeef1810eb4dc7a687b8c3d885bf",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d28024f54c76055b7882dddddb9b8949c135aeef1810eb4dc7a687b8c3d885bf",
+      "cellBbox": [
+        249,
+        194,
+        250,
+        195
+      ],
+      "sheetBbox": [
+        249,
+        821,
+        250,
+        822
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|5cbcee89bc0dda0809dbcef49e9a81b1bd43448485fb71e3e8f0a10c22560ca2",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5cbcee89bc0dda0809dbcef49e9a81b1bd43448485fb71e3e8f0a10c22560ca2",
+      "cellBbox": [
+        250,
+        195,
+        251,
+        196
+      ],
+      "sheetBbox": [
+        250,
+        822,
+        251,
+        823
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|e78a1360fd81157e669ba82fe90b10f591e6f7783e8b8ce9bfa708dbae55276a",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e78a1360fd81157e669ba82fe90b10f591e6f7783e8b8ce9bfa708dbae55276a",
+      "cellBbox": [
+        420,
+        217,
+        422,
+        223
+      ],
+      "sheetBbox": [
+        420,
+        844,
+        422,
+        850
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|fbac188c20a50ab1647a91c0973b5bc1ae161caefd6a3abd3c086c866e27eff0",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fbac188c20a50ab1647a91c0973b5bc1ae161caefd6a3abd3c086c866e27eff0",
+      "cellBbox": [
+        419,
+        223,
+        420,
+        224
+      ],
+      "sheetBbox": [
+        419,
+        850,
+        420,
+        851
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|71188140a9d89868956261b222ad783866f92dc8680fb1ffa544b68f3e1361cb",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "71188140a9d89868956261b222ad783866f92dc8680fb1ffa544b68f3e1361cb",
+      "cellBbox": [
+        424,
+        236,
+        425,
+        237
+      ],
+      "sheetBbox": [
+        424,
+        863,
+        425,
+        864
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|5bc2290aff21eb5bbe99a98b7e5f0621e316e70c372fb14b831ff613397be211",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5bc2290aff21eb5bbe99a98b7e5f0621e316e70c372fb14b831ff613397be211",
+      "cellBbox": [
+        425,
+        239,
+        426,
+        240
+      ],
+      "sheetBbox": [
+        425,
+        866,
+        426,
+        867
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|8f81e5bba332be7ab51d679434af657abb290bfb1aed0584d4b0c2222fa9de77",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8f81e5bba332be7ab51d679434af657abb290bfb1aed0584d4b0c2222fa9de77",
+      "cellBbox": [
+        519,
+        383,
+        524,
+        388
+      ],
+      "sheetBbox": [
+        519,
+        1010,
+        524,
+        1015
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|a0ac36aff2e0b216e9f32a85991937d11dfc67cf6171af998ccfae27f613a885",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a0ac36aff2e0b216e9f32a85991937d11dfc67cf6171af998ccfae27f613a885",
+      "cellBbox": [
+        519,
+        388,
+        520,
+        389
+      ],
+      "sheetBbox": [
+        519,
+        1015,
+        520,
+        1016
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|68ad8457131f3ce10762d12bb0cf1a0489f854f736072368062b9fb5f492d8e3",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "68ad8457131f3ce10762d12bb0cf1a0489f854f736072368062b9fb5f492d8e3",
+      "cellBbox": [
+        451,
+        497,
+        452,
+        498
+      ],
+      "sheetBbox": [
+        451,
+        1124,
+        452,
+        1125
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|d2d05d038264b722aaa2dc32f0dfcf2536b6fb92a95a446b89e26cb887a469d4",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "d2d05d038264b722aaa2dc32f0dfcf2536b6fb92a95a446b89e26cb887a469d4",
+      "cellBbox": [
+        203,
+        553,
+        204,
+        554
+      ],
+      "sheetBbox": [
+        203,
+        1180,
+        204,
+        1181
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|residual-key-color-candidate|6467a12325b2a580c1c9aea4d9572b372fa1498338350dcd47fbfbde90ba1246",
+      "slot": "smile",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6467a12325b2a580c1c9aea4d9572b372fa1498338350dcd47fbfbde90ba1246",
+      "cellBbox": [
+        202,
+        554,
+        203,
+        555
+      ],
+      "sheetBbox": [
+        202,
+        1181,
+        203,
+        1182
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|5ba8ee21fe2937ac4198b8fcaa36769542c3aff797f702371706ea9464ff2e2e",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5ba8ee21fe2937ac4198b8fcaa36769542c3aff797f702371706ea9464ff2e2e",
+      "cellBbox": [
+        230,
+        34,
+        231,
+        35
+      ],
+      "sheetBbox": [
+        857,
+        661,
+        858,
+        662
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|40977a5ca8be501244e712f2537a999ee1c59cb4bf0a54717c579588219bac86",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "40977a5ca8be501244e712f2537a999ee1c59cb4bf0a54717c579588219bac86",
+      "cellBbox": [
+        229,
+        35,
+        230,
+        36
+      ],
+      "sheetBbox": [
+        856,
+        662,
+        857,
+        663
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|4c15db768adc8c591012418781bfe0cf8a7387581947d76cb102f6f65c07ae11",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "4c15db768adc8c591012418781bfe0cf8a7387581947d76cb102f6f65c07ae11",
+      "cellBbox": [
+        349,
+        53,
+        350,
+        54
+      ],
+      "sheetBbox": [
+        976,
+        680,
+        977,
+        681
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|9eee1bb6f8d01bb5300668e22c62e7c251c8d295dd854de7f6f09635180bebf5",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "9eee1bb6f8d01bb5300668e22c62e7c251c8d295dd854de7f6f09635180bebf5",
+      "cellBbox": [
+        210,
+        56,
+        211,
+        58
+      ],
+      "sheetBbox": [
+        837,
+        683,
+        838,
+        685
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|7d9800cceb847bba9b0267cf78ab77aa7d57d59d5c2f66dc79ed9a3b476984c6",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7d9800cceb847bba9b0267cf78ab77aa7d57d59d5c2f66dc79ed9a3b476984c6",
+      "cellBbox": [
+        200,
+        73,
+        201,
+        74
+      ],
+      "sheetBbox": [
+        827,
+        700,
+        828,
+        701
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|34af21543cc9e398502a878769f0a714c0610f5986a041fde5b5feed750c9ed0",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "34af21543cc9e398502a878769f0a714c0610f5986a041fde5b5feed750c9ed0",
+      "cellBbox": [
+        199,
+        76,
+        200,
+        78
+      ],
+      "sheetBbox": [
+        826,
+        703,
+        827,
+        705
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|e5f23b255fcfa8a858c42ed505161c78f4a0bee18649ee4b0e48d000ac9d1a14",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "e5f23b255fcfa8a858c42ed505161c78f4a0bee18649ee4b0e48d000ac9d1a14",
+      "cellBbox": [
+        374,
+        113,
+        375,
+        115
+      ],
+      "sheetBbox": [
+        1001,
+        740,
+        1002,
+        742
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|ee3d97136fdd689197cfe1fce91a7d6c6b004c1c56dbf43c58b325ec13ec178a",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "ee3d97136fdd689197cfe1fce91a7d6c6b004c1c56dbf43c58b325ec13ec178a",
+      "cellBbox": [
+        375,
+        116,
+        376,
+        123
+      ],
+      "sheetBbox": [
+        1002,
+        743,
+        1003,
+        750
+      ],
+      "pixelCount": 7,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|cce6d9eae901a34aa73b1cb56fd012b5e7e18f65e5e20bb1c96564c066ec5c88",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "cce6d9eae901a34aa73b1cb56fd012b5e7e18f65e5e20bb1c96564c066ec5c88",
+      "cellBbox": [
+        375,
+        130,
+        376,
+        131
+      ],
+      "sheetBbox": [
+        1002,
+        757,
+        1003,
+        758
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|2f7a736e225c0a7591955177628a57287786acfccd435f91ba43a20421cda365",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2f7a736e225c0a7591955177628a57287786acfccd435f91ba43a20421cda365",
+      "cellBbox": [
+        201,
+        157,
+        202,
+        158
+      ],
+      "sheetBbox": [
+        828,
+        784,
+        829,
+        785
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|08df7df1f27d8aee39b8e4e81acdc3b717a2be288ad2cee3e285cbe8c5fc1649",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "08df7df1f27d8aee39b8e4e81acdc3b717a2be288ad2cee3e285cbe8c5fc1649",
+      "cellBbox": [
+        202,
+        159,
+        203,
+        161
+      ],
+      "sheetBbox": [
+        829,
+        786,
+        830,
+        788
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|da6046d8f887da1d00e937e75b85e75f236267cb4aa8c5566f0722c4c4e90421",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "da6046d8f887da1d00e937e75b85e75f236267cb4aa8c5566f0722c4c4e90421",
+      "cellBbox": [
+        203,
+        161,
+        204,
+        162
+      ],
+      "sheetBbox": [
+        830,
+        788,
+        831,
+        789
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|6d72fa5c182d0f5cc1a6d117a65c086053829bf8b15932b61bebdaff45f49cf4",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "6d72fa5c182d0f5cc1a6d117a65c086053829bf8b15932b61bebdaff45f49cf4",
+      "cellBbox": [
+        203,
+        163,
+        205,
+        165
+      ],
+      "sheetBbox": [
+        830,
+        790,
+        832,
+        792
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|180a684623c8f47b306461fb19d3d4b2de261cc89fa1dee784fdf8aac217b00f",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "180a684623c8f47b306461fb19d3d4b2de261cc89fa1dee784fdf8aac217b00f",
+      "cellBbox": [
+        205,
+        165,
+        206,
+        166
+      ],
+      "sheetBbox": [
+        832,
+        792,
+        833,
+        793
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|fa28abeca08772e40ebd0c949cc76268c0b6fe77cb664f27451e7ae70d3dc96a",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "fa28abeca08772e40ebd0c949cc76268c0b6fe77cb664f27451e7ae70d3dc96a",
+      "cellBbox": [
+        220,
+        183,
+        221,
+        184
+      ],
+      "sheetBbox": [
+        847,
+        810,
+        848,
+        811
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|78c63937c30b215680359fde4c298722ea2620afb53afa1f3e40cef4c5910e19",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "78c63937c30b215680359fde4c298722ea2620afb53afa1f3e40cef4c5910e19",
+      "cellBbox": [
+        221,
+        184,
+        222,
+        185
+      ],
+      "sheetBbox": [
+        848,
+        811,
+        849,
+        812
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|8dc002de16fe400992f37bfa52156bca49f09e0e61419f9891fb2dd49dc5307d",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "8dc002de16fe400992f37bfa52156bca49f09e0e61419f9891fb2dd49dc5307d",
+      "cellBbox": [
+        223,
+        184,
+        225,
+        186
+      ],
+      "sheetBbox": [
+        850,
+        811,
+        852,
+        813
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|bd87c92e5bcdfa4b793d3cf168c8bd2898d4f4d6fea25057386f6f868b7ff25c",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "bd87c92e5bcdfa4b793d3cf168c8bd2898d4f4d6fea25057386f6f868b7ff25c",
+      "cellBbox": [
+        208,
+        194,
+        209,
+        195
+      ],
+      "sheetBbox": [
+        835,
+        821,
+        836,
+        822
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|5cd494fe5f344766f824f7c18d23bce79212db522ebbf13b57f38e64892b04b8",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "5cd494fe5f344766f824f7c18d23bce79212db522ebbf13b57f38e64892b04b8",
+      "cellBbox": [
+        209,
+        196,
+        210,
+        197
+      ],
+      "sheetBbox": [
+        836,
+        823,
+        837,
+        824
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|dbaf975c51f79da3148c75ac2bfbb3345b39cea8b32c11f43db03538a17a94f8",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "dbaf975c51f79da3148c75ac2bfbb3345b39cea8b32c11f43db03538a17a94f8",
+      "cellBbox": [
+        217,
+        202,
+        218,
+        203
+      ],
+      "sheetBbox": [
+        844,
+        829,
+        845,
+        830
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|a2570bdb2390aea4d62fea6a21abd18098348c40c2d61a005a703bc24af57414",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "a2570bdb2390aea4d62fea6a21abd18098348c40c2d61a005a703bc24af57414",
+      "cellBbox": [
+        218,
+        204,
+        219,
+        206
+      ],
+      "sheetBbox": [
+        845,
+        831,
+        846,
+        833
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|65fef0b7f21a3ea0227093cac5cf778e2fb965ab8fade83c84f6a07032f24355",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "65fef0b7f21a3ea0227093cac5cf778e2fb965ab8fade83c84f6a07032f24355",
+      "cellBbox": [
+        377,
+        216,
+        378,
+        217
+      ],
+      "sheetBbox": [
+        1004,
+        843,
+        1005,
+        844
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|37d85bafb310c5f890a663fe964e7746355f24ead664aa7d9e389138f50432f2",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "37d85bafb310c5f890a663fe964e7746355f24ead664aa7d9e389138f50432f2",
+      "cellBbox": [
+        376,
+        219,
+        377,
+        223
+      ],
+      "sheetBbox": [
+        1003,
+        846,
+        1004,
+        850
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|1e995f8e2586eedcafd644241ced3d377a20401012b09b01d8a1f699ac26064a",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "1e995f8e2586eedcafd644241ced3d377a20401012b09b01d8a1f699ac26064a",
+      "cellBbox": [
+        380,
+        235,
+        381,
+        237
+      ],
+      "sheetBbox": [
+        1007,
+        862,
+        1008,
+        864
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|06ddc7754a7b7e1359f9079d12f69a5708f89daba064b9ff489641285f354dd1",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "06ddc7754a7b7e1359f9079d12f69a5708f89daba064b9ff489641285f354dd1",
+      "cellBbox": [
+        381,
+        239,
+        382,
+        241
+      ],
+      "sheetBbox": [
+        1008,
+        866,
+        1009,
+        868
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|7988b533f5ac2d7daa8d889e19c0a202b5628d8c3c3e6de492c5ba4cc4751da5",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "7988b533f5ac2d7daa8d889e19c0a202b5628d8c3c3e6de492c5ba4cc4751da5",
+      "cellBbox": [
+        473,
+        380,
+        479,
+        388
+      ],
+      "sheetBbox": [
+        1100,
+        1007,
+        1106,
+        1015
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|98a5151623cf0abb7812dd9931eb703e8cbab41d653f9f8cda96414e73d4f896",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "98a5151623cf0abb7812dd9931eb703e8cbab41d653f9f8cda96414e73d4f896",
+      "cellBbox": [
+        401,
+        464,
+        402,
+        465
+      ],
+      "sheetBbox": [
+        1028,
+        1091,
+        1029,
+        1092
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|residual-key-color-candidate|2436987e9b5e55b779f99afcccd708c5a86460b79eeef1835375f21ecc91a30d",
+      "slot": "concerned",
+      "componentType": "residual-key-color-candidate",
+      "componentPixelSha256": "2436987e9b5e55b779f99afcccd708c5a86460b79eeef1835375f21ecc91a30d",
+      "cellBbox": [
+        402,
+        465,
+        403,
+        466
+      ],
+      "sheetBbox": [
+        1029,
+        1092,
+        1030,
+        1093
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

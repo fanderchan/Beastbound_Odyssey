@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "prompts": [
+    {
+      "id": "world",
+      "text": "Use case: identity-preserve\nAsset type: Beastbound Odyssey production static NPC true-eight world source sheet\nInput images: Image 1 is the binding identity reference. Preserve this exact same man, face, build, costume, colors and actual observed asymmetry: the rolled cream beginner manual is on his OWN RIGHT hip; the three round wooden training tokens are on his OWN LEFT belt; the novice badge stays on his chest. Do not redesign or side-swap them.\nPrimary request: Create ONE exact landscape 3:2 sheet with an invisible 2-ROW by 4-COLUMN equal grid containing eight independently authored full-body idle views of this exact adult male novice trainer. Static friendly standing, empty hands, no walking or combat. Never mirror, flip, duplicate, interpolate or derive one view from another.\nCanonical row-major order:\nTOP ROW: 1 SOUTH = exact straight front, face/chest/knees/toes toward viewer and screen-bottom. 2 SOUTHWEST = obvious front-left 45-degree three-quarter, face/chest/knees/toes toward screen-bottom-left. 3 WEST = true left profile, nose/chest/knees/toes directly screen-left. 4 NORTHWEST = obvious back-left 45-degree three-quarter, back dominates and face looks away toward screen-top-left.\nBOTTOM ROW: 5 NORTH = exact straight back, no face visible, heels and back toward viewer. 6 NORTHEAST = obvious back-right 45-degree three-quarter, back dominates and face looks away toward screen-top-right. 7 EAST = true right profile, nose/chest/knees/toes directly screen-right. 8 SOUTHEAST = obvious front-right 45-degree three-quarter, face/chest/knees/toes toward screen-bottom-right.\nIdentity lock: exactly the same friendly sturdy 43-year-old warm-tan man from Image 1, broad kind bearded face, short wavy dark-brown hair and copper nape tie. Burnt-ochre sleeveless short vest over muted blue-gray long-sleeve tunic, dark leather belt, charcoal cropped trousers, wrapped calves, sturdy brown boots, wrist wraps. Rolled cream manual with two ochre straps remains on OWN RIGHT hip; three chunky round wooden tokens remain on OWN LEFT belt; small sun-shaped novice badge remains on chest. Render natural near/far occlusion in every independently authored view. Both hands empty.\nComposition: exactly eight complete head-to-boots people, one centered in each invisible cell, identical body height, head size, baseline and generous safe padding. Each character and every limb/prop stays wholly inside its own cell and away from all outer and internal boundaries. No borders or dividers.\nStyle/medium: match Image 1's polished hand-painted HD 2.5D game-character illustration; crisp readable silhouette, warm outlines, controlled cel shading, realistic cloth/leather/wood texture, slightly stylized proportions, readable when reduced to a 256px transparent world frame. Original design only.\nScene/backdrop: perfectly uniform flat solid vivid #FF00FF chroma background over the entire sheet. No shadows, contact shadows, gradient, texture, floor, horizon, vignette, glow, seam, divider or lighting variation. Never use magenta in the subject.\nLighting/mood: identical soft warm upper-left studio light in every cell; patient welcoming competence.\nHard constraints: all eight views are the exact same identity and outfit; exactly two arms, two hands, two legs, two feet; all limbs complete; no cast shadow; no mirroring; no text.\nAvoid: weapon, spear, shield, armor, magic, pet, mount, saddle, reins, whip, whistle, seven-slot forearm board, skill stones, guard uniform, riding trainer, pet-skill trainer, merchant goods, healer tools, extra person, label, number, letter, rune, icon, arrow, compass, border, frame, watermark, detached object, cropped foot, crossed cell boundary, side-swapped manual or tokens.\n",
+      "copiedPath": "source/prompts/world.txt",
+      "fileSha256": "e2b2e433515be19565380bade9d300f28fd5bb6ec41da24f8da7a7a028e9506a",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no weapon, shield, armor, magic, pet, mount, saddle, reins, whip, seven-slot board, skill stones, or whistle",
+        "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+        "no StoneAge source art, character, texture, name, or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic reviewed-mask processing only",
+        "worldAssembly": {
+          "operation": "lossless_grid_assembly_with_uniform_source_resize_v1",
+          "mirroringApplied": false,
+          "report": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/world-sheet-assembly.json",
+          "reportSha256": "e087e35d4fd081076138d3f08140068706c7dddf1bc9e19b7dfec16b93e04278"
+        }
+      },
+      "generatedAt": "2026-07-23T23:48:08+08:00",
+      "requestedBackground": "#FF00FF"
+    },
+    {
+      "id": "portrait",
+      "text": "Use case: identity-preserve\nAsset type: Beastbound Odyssey production NPC dialogue portrait expression sheet\nInput images: Image 1 is the binding identity board. Image 2 is the accepted true-eight world source sheet and binding costume/asymmetry reference. Preserve the exact same person; do not redesign him.\nPrimary request: Create ONE exact square 2-row by 2-column dialogue portrait sheet of the SAME adult male novice trainer from the references. Chest-to-waist bust, front three-quarter orientation facing slightly toward screen-left, exact same camera, crop, head size, shoulders, body scale, costume, props and lighting in all four cells. Only facial expression may change.\nExact identity: friendly sturdy 43-year-old man, warm tan skin, broad kind bearded face, dark-brown eyes, short wavy dark-brown hair with copper cloth tie at the nape. Same burnt-ochre sleeveless vest over muted blue-gray long-sleeve tunic, dark leather belt and wrist wraps.\nOccupational identity: the large rolled cream beginner manual on his OWN RIGHT hip may be partly visible at the lower screen-left/appropriate physical side; three round wooden training tokens on his OWN LEFT belt may be partly visible at the lower opposite side; the small sun-shaped novice badge stays on his chest. Preserve physical sides and do not introduce pet-skill equipment.\nEXACT ROW-MAJOR EXPRESSION ORDER:\nTop-left NEUTRAL: calm attentive listening, mouth closed, welcoming eyes.\nTop-right SPEAKING: natural mid-sentence mouth open, patient teaching brows, not shouting.\nBottom-left SMILE: warm encouraging broad-but-gentle smile.\nBottom-right CONCERNED: mild thoughtful concern for a confused beginner, brows slightly inward, mouth closed; not angry, afraid or crying.\nComposition: exact invisible 2x2 equal grid on a square canvas, no borders or dividers. One bust centered in each cell, identical shoulder width and eye line, generous safe padding at top and outer sides, nothing crosses into another cell. Bust may crop cleanly at bottom only.\nStyle/medium: match the references' polished hand-painted HD 2.5D game illustration; crisp warm outlines, controlled cel shading, expressive readable face, realistic cloth/leather/wood, low noise; original design, not pixel art, not 3D, not photorealistic.\nScene/backdrop: perfectly uniform flat solid vivid #FF00FF over the entire sheet for chroma removal; no gradient, shadow, floor, texture, halo, divider, line or lighting variation. Never use magenta in subject.\nLighting/mood: identical soft warm upper-left studio light in all four cells.\nHard constraints: exact same identity, age, face, beard, hair, costume, badge, crop, scale, pose and lighting across all four; change expression only; no mirroring; no text.\nAvoid: identity drift, beard drift, costume drift, pet-skill trainer, riding trainer, guard, merchant, weapon, armor, shield, magic, pet, mount, saddle, reins, whip, whistle, seven-slot forearm board, skill stones, extra person, speech bubble, label, number, letter, rune, icon, arrow, border, frame, watermark, detached object.\n",
+      "copiedPath": "source/prompts/portrait.txt",
+      "fileSha256": "e22382fcda88681cec03b5b08664e1d5f98791fd6c03c48d9bb3642862d424bb",
+      "negativeConstraints": [
+        "no runtime or offline mirroring",
+        "no duplicate or relabeled direction cells",
+        "no weapon, shield, armor, magic, pet, mount, saddle, reins, whip, seven-slot board, skill stones, or whistle",
+        "no labels, numbers, runes, dividers, shadows, scenery, watermark, or cell-edge crossing",
+        "no StoneAge source art, character, texture, name, or costume copying"
+      ],
+      "tool": "image_gen",
+      "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+      "parameters": {
+        "executionMode": "Codex built-in image_gen",
+        "outputFormat": "PNG",
+        "modelIdentifierExposed": false,
+        "worldGrid": [
+          2,
+          4
+        ],
+        "portraitGrid": [
+          2,
+          2
+        ],
+        "formalSourceTreatment": "opaque chroma-key source sheets; deterministic reviewed-mask processing only",
+        "worldAssembly": {
+          "operation": "lossless_grid_assembly_with_uniform_source_resize_v1",
+          "mirroringApplied": false,
+          "report": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/world-sheet-assembly.json",
+          "reportSha256": "e087e35d4fd081076138d3f08140068706c7dddf1bc9e19b7dfec16b93e04278"
+        }
+      },
+      "generatedAt": "2026-07-23T23:48:08+08:00",
+      "requestedBackground": "#FF00FF"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: Beastbound Odyssey NPC identity-board correction
+Input image: the just-generated identity board is the edit target.
+Primary request: Correct ONLY the water-flask side in the LEFTMOST FRONT-FACING full-body view. Move the small closed undecorated gourd water flask from the image-right hip to the image-left hip, which is the woman's OWN RIGHT HIP when she faces the viewer. Keep the blue-green shawl over the image-right shoulder, which is her OWN LEFT SHOULDER. The shawl and flask must be on opposite sides of her body.
+Preserve exactly: the same approachable approximately 29-year-old sturdy adult woman, face, low thick braid, warm-tan skin, adult proportions, outfit, warm-ochre/cream/blue-green/brick-red/dark-brown palette, drawing style, pose, scale, solid background, center back view, right portrait, and every other detail. In the back-facing center view, keep the flask on image-right (her own right) and the blue-green shawl beginning at image-left shoulder (her own left). Do not redesign or add anything.
+Scene/backdrop: perfectly flat fully opaque solid #FF00FF, no variation, shadow, floor or scenery.
+Constraints: flask closed and unmarked; no text or symbols.
+Avoid: editing the center or right subjects; coins, ledger, board, bank accessories, market basket, price tag, merchandise, keys, medical or training gear, weapon, extra objects, text, labels, dividers, watermark, shadow.

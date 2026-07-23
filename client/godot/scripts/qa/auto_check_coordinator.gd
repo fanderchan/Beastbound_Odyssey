@@ -59,6 +59,8 @@ const HangSettingsModel := preload("res://scripts/progression/hang_settings_mode
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
+const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -1057,9 +1059,9 @@ func _run_auto_right_click_facing_check() -> void:
 	var remote_cell := start_cell + Vector2i(-2, 2)
 	host.online_position_remote_players.clear()
 	host.online_position_remote_players.append({
-		"accountId": "remote_account",
-		"username": "remote",
-		"displayName": "远端",
+		"accountId": "remote_z_front",
+		"username": "remote_z",
+		"displayName": "远端前层",
 		"position": {
 			"mapId": host.current_map_id,
 			"cellX": remote_cell.x,
@@ -1068,6 +1070,20 @@ func _run_auto_right_click_facing_check() -> void:
 			"moving": false,
 		},
 	})
+	host.online_position_remote_players.append({
+		"accountId": "remote_a_back",
+		"username": "remote_a",
+		"displayName": "远端后层",
+		"position": {
+			"mapId": host.current_map_id,
+			"cellX": remote_cell.x,
+			"cellY": remote_cell.y,
+			"facing": "east",
+			"moving": false,
+		},
+	})
+	host.world_depth_remote_signature_cache = ""
+	host._sync_world_visual_layers(true)
 	if host.player != null and loaded:
 		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, start_cell)
 		host.player.face_direction(Vector2.DOWN)
@@ -1077,7 +1093,8 @@ func _run_auto_right_click_facing_check() -> void:
 	remote_event.button_index = MOUSE_BUTTON_RIGHT
 	remote_event.pressed = true
 	remote_event.position = host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, remote_cell) + Vector2(0.0, -14.0)) if loaded else Vector2.ZERO
-	var remote_hit_ok: bool = not host._online_remote_player_at_screen_point(remote_event.position, true).is_empty()
+	var remote_hit: Dictionary = host._online_remote_player_at_screen_point(remote_event.position, true)
+	var remote_hit_ok: bool = str(remote_hit.get("accountId", "")) == "remote_z_front"
 	host._input(remote_event)
 	await host.get_tree().physics_frame
 	var remote_facing_ok: bool = host.player != null and host.player.get_facing_key() == "west"
@@ -1573,6 +1590,77 @@ func _run_auto_pathfinding_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_camera_check() -> void:
+	MapVisualCatalog.initialize()
+	var normal_visual := MapVisualCatalog.prepare_map(
+		host.current_map_id,
+		host.map_data,
+		false
+	)
+	var normal_visual_errors := MapVisualCatalog.errors_for_map(host.current_map_id)
+	var runtime_visual_active := bool(host.map_visual_render_state.get("active", false))
+	var expected_visual_active := bool(normal_visual.get("active", false))
+	var normal_runtime_state_matches := (
+		runtime_visual_active == expected_visual_active
+		and str(host.map_visual_render_state.get("mapId", ""))
+			== str(normal_visual.get("mapId", ""))
+		and str(host.map_visual_render_state.get("bundleId", ""))
+			== str(normal_visual.get("bundleId", ""))
+	)
+	var normal_runtime_lifecycle_valid := (
+		normal_visual_errors.is_empty()
+		and normal_runtime_state_matches
+		and not bool(host.map_visual_render_state.get("qaPreview", false))
+	)
+	var original_path_cells: Array[Vector2i] = host.current_path_cells.duplicate()
+	var original_path_is_direct: bool = host.current_path_is_direct
+	var original_has_target_marker: bool = host.has_target_marker
+	var original_target_marker: Vector2 = host.target_marker
+	var original_has_pending_interaction: bool = host.has_pending_interaction
+	var original_pending_interaction: Dictionary = host.pending_interaction.duplicate(true)
+	var overlay_signature_before_path: String = host._world_overlay_signature()
+	var overlay_replace_count_before_path: int = int(host.world_overlay_layer.call("replace_count"))
+	var spawn_cell := IsoMapModel.spawn_cell(host.map_data)
+	host.current_path_cells.assign([
+		spawn_cell,
+		IsoMapModel.nearest_walkable_cell(host.map_data, spawn_cell + Vector2i(2, 0)),
+	])
+	host.current_path_is_direct = false
+	host._queue_world_redraw_if_needed()
+	var path_only_keeps_overlay: bool = (
+		host._world_overlay_signature() == overlay_signature_before_path
+		and int(host.world_overlay_layer.call("replace_count")) == overlay_replace_count_before_path
+	)
+	host.has_target_marker = true
+	host.target_marker = IsoMapModel.grid_to_world(host.map_data, spawn_cell + Vector2i(1, 0))
+	host._queue_world_redraw_if_needed()
+	var target_replace_count := int(host.world_overlay_layer.call("replace_count"))
+	var first_target_position: Vector2 = host.world_overlay_layer.call("target_marker_position")
+	host.target_marker = IsoMapModel.grid_to_world(host.map_data, spawn_cell + Vector2i(2, 0))
+	host._queue_world_redraw_if_needed()
+	var target_marker_updates_in_place: bool = (
+		int(host.world_overlay_layer.call("replace_count")) == target_replace_count
+		and first_target_position != host.target_marker
+		and (host.world_overlay_layer.call("target_marker_position") as Vector2).is_equal_approx(host.target_marker)
+	)
+	var pending_change_refreshes_overlay := false
+	for value in host.map_data.get("interactionPoints", []):
+		if not (value is Dictionary):
+			continue
+		host.has_pending_interaction = true
+		host.pending_interaction = (value as Dictionary).duplicate(true)
+		host._queue_world_redraw_if_needed()
+		pending_change_refreshes_overlay = (
+			int(host.world_overlay_layer.call("replace_count")) > target_replace_count
+			and int(host.world_overlay_layer.call("command_count", "selection")) > 0
+		)
+		break
+	host.current_path_cells.assign(original_path_cells)
+	host.current_path_is_direct = original_path_is_direct
+	host.has_target_marker = original_has_target_marker
+	host.target_marker = original_target_marker
+	host.has_pending_interaction = original_has_pending_interaction
+	host.pending_interaction = original_pending_interaction
+	host._queue_world_redraw_if_needed()
 	var left_cell = Vector2i(0, 33)
 	var right_cell = Vector2i(35, 0)
 	var top_cell = Vector2i(0, 0)
@@ -1588,16 +1676,102 @@ func _run_auto_camera_check() -> void:
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, top_cell)
 	host._update_camera_position(true)
 	var top_camera = host.game_camera.global_position
+	host.world_draw_signature_cache = host._world_draw_signature()
+	host.queue_redraw()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, bottom_cell)
 	host._update_camera_position(true)
 	var bottom_camera = host.game_camera.global_position
+	var signature_before_camera_only_render = host._world_draw_signature()
+	host.world_draw_signature_cache = signature_before_camera_only_render
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var signature_after_camera_only_render = host._world_draw_signature()
+	var camera_only_keeps_signature = (
+		signature_before_camera_only_render == signature_after_camera_only_render
+	)
+	var edge_draws = host.map_visual_render_state.get("edgeGroundDraws", [])
+	var edge_visual_active = (
+		runtime_visual_active
+		and edge_draws is Array
+		and (edge_draws as Array).size() > 0
+	)
+	var grid_size := IsoMapModel.grid_size(host.map_data)
+	var static_ground_draw_list_complete := (
+		MapVisualRenderer.ground_draw_count(host.map_visual_render_state) == grid_size.x * grid_size.y
+		and MapVisualRenderer.edge_ground_draw_count(host.map_visual_render_state) > 0
+	)
+	var coverage_sample_count = 0
+	var background_sample_count = 0
+	var coverage_color_buckets: Dictionary = {}
+	var headless_rendering := DisplayServer.get_name() == "headless"
+	var moved_view_ground_covered := (
+		not runtime_visual_active
+		or (static_ground_draw_list_complete if headless_rendering else false)
+	)
+	var viewport_texture: Texture2D = host.get_viewport().get_texture()
+	var moved_view_image: Image = (
+		viewport_texture.get_image()
+		if not headless_rendering and viewport_texture != null
+		else null
+	)
+	if (
+		runtime_visual_active
+		and moved_view_image != null
+		and moved_view_image.get_width() >= 1280
+		and moved_view_image.get_height() >= 720
+	):
+		var background_color = Color(0.085, 0.13, 0.14)
+		for sample_y in [520, 540, 560]:
+			for sample_x in range(160, 1121, 80):
+				var sample = moved_view_image.get_pixel(sample_x, sample_y)
+				coverage_sample_count += 1
+				if (
+					absf(sample.r - background_color.r) <= 0.015
+					and absf(sample.g - background_color.g) <= 0.015
+					and absf(sample.b - background_color.b) <= 0.015
+				):
+					background_sample_count += 1
+				var bucket = "%d:%d:%d" % [
+					roundi(sample.r * 31.0),
+					roundi(sample.g * 31.0),
+					roundi(sample.b * 31.0),
+				]
+				coverage_color_buckets[bucket] = true
+		moved_view_ground_covered = (
+			coverage_sample_count > 0
+			and background_sample_count <= maxi(2, coverage_sample_count / 4)
+			and coverage_color_buckets.size() >= 3
+		)
 
 	var moved_horizontal = absf(right_camera.x - left_camera.x) > 240.0
 	var moved_vertical = absf(bottom_camera.y - top_camera.y) > 160.0
 	var inside_limits = host._camera_center_is_inside_limits(right_camera) and host._camera_center_is_inside_limits(bottom_camera)
 	var player_on_map = IsoMapModel.is_inside(host.map_data, IsoMapModel.world_to_grid(host.map_data, host.player.global_position))
-	var status = "ok" if moved_horizontal and moved_vertical and inside_limits and player_on_map else "failed"
-	print("camera check ready: status=%s left_camera=%s right_camera=%s top_camera=%s bottom_camera=%s moved_horizontal=%s moved_vertical=%s inside_limits=%s player_on_map=%s" % [
+	var normal_visual_surface_valid := (
+		not runtime_visual_active
+		or (
+			edge_visual_active
+			and static_ground_draw_list_complete
+			and moved_view_ground_covered
+		)
+	)
+	var status = "ok" if (
+		moved_horizontal
+		and moved_vertical
+		and inside_limits
+		and player_on_map
+		and normal_runtime_lifecycle_valid
+		and normal_visual_surface_valid
+		and camera_only_keeps_signature
+		and path_only_keeps_overlay
+		and target_marker_updates_in_place
+		and pending_change_refreshes_overlay
+	) else "failed"
+	print("camera check ready: status=%s left_camera=%s right_camera=%s top_camera=%s bottom_camera=%s moved_horizontal=%s moved_vertical=%s inside_limits=%s player_on_map=%s normal_lifecycle=%s runtime_visual=%s qa_preview=%s lifecycle_errors=%d edge_visual=%s full_draw_list=%s surface_valid=%s static_signature=%s moved_view_covered=%s path_overlay_static=%s target_in_place=%s pending_refresh=%s headless=%s samples=%d background=%d color_buckets=%d" % [
 		status,
 		str(left_camera),
 		str(right_camera),
@@ -1607,6 +1781,22 @@ func _run_auto_camera_check() -> void:
 		str(moved_vertical),
 		str(inside_limits),
 		str(player_on_map),
+		str(normal_runtime_lifecycle_valid),
+		str(runtime_visual_active),
+		str(bool(host.map_visual_render_state.get("qaPreview", false))),
+		normal_visual_errors.size(),
+		str(edge_visual_active),
+		str(static_ground_draw_list_complete),
+		str(normal_visual_surface_valid),
+		str(camera_only_keeps_signature),
+		str(moved_view_ground_covered),
+		str(path_only_keeps_overlay),
+		str(target_marker_updates_in_place),
+		str(pending_change_refreshes_overlay),
+		str(headless_rendering),
+		coverage_sample_count,
+		background_sample_count,
+		coverage_color_buckets.size(),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -9100,7 +9290,7 @@ func _run_auto_pet_stable_check() -> void:
 func _run_auto_pet_drop_pickup_check() -> void:
 	host.profile_save_enabled = false
 	host.pet_drop_expire_elapsed = 0.0
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.pet_selected_instance_id = ""
 	host._open_pet_panel()
 	await host.get_tree().process_frame
@@ -9156,7 +9346,7 @@ func _run_auto_pet_drop_pickup_check() -> void:
 		and host.world_log_message == "不能拾取超过自己5级以上的宠物。"
 	)
 
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	var full_drop_result = PlayerProgressModel.drop_pet(host.player_profile, "pet_bui_speed", host.current_map_id, player_cell + Vector2i(0, 1), check_now)
 	host.player_profile = full_drop_result.get("profile", host.player_profile)
 	var full_drop_id = str(full_drop_result.get("dropId", ""))
@@ -9173,7 +9363,7 @@ func _run_auto_pet_drop_pickup_check() -> void:
 		and host.world_log_message == "队伍已满。"
 	)
 
-	var expire_profile = PlayerProgressModel.default_profile()
+	var expire_profile = _qa_bui_pet_profile()
 	var expire_drop_result = PlayerProgressModel.drop_pet(expire_profile, "pet_bui_tough", host.current_map_id, player_cell + Vector2i(-1, 0), 1000)
 	var expire_result = PlayerProgressModel.expire_ground_pet_drops(expire_drop_result.get("profile", expire_profile), 1600)
 	var expire_ok = (
@@ -9182,7 +9372,7 @@ func _run_auto_pet_drop_pickup_check() -> void:
 		and PlayerProgressModel.ground_pet_drops(expire_result.get("profile", {})).is_empty()
 	)
 
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	var fill_drops: Array = []
 	var fill_serial = 1
 	var fill_now = int(Time.get_unix_time_from_system())
@@ -25644,7 +25834,31 @@ func _run_auto_server_profile_sync_check() -> void:
 	}
 	host.current_account_session = session
 	host.account_authenticated = true
-	host.player_profile = PlayerProgressModel.default_profile()
+	var login_probe_drop_id := "ground_profile_login_probe"
+	var login_probe_profile := PlayerProgressModel.default_profile()
+	login_probe_profile["groundPetDrops"] = [{
+		"dropId": login_probe_drop_id,
+		"mapId": host.current_map_id,
+		"cell": [0, 0],
+		"pet": {
+			"instanceId": "pet_profile_login_probe",
+			"name": "旧账号地面宠物",
+			"elements": {"earth": 5, "wind": 5},
+		},
+	}]
+	host._panel_flow().player_profile = login_probe_profile
+	host._sync_world_visual_layers(true)
+	var login_probe_installed: bool = (
+		host.world_depth_layer != null
+		and host.world_depth_layer.has_depth_member("ground_drop:%s" % login_probe_drop_id)
+	)
+	host._panel_flow().player_profile = PlayerProgressModel.default_profile()
+	var login_profile_reset_clears_ground_node: bool = (
+		login_probe_installed
+		and host.world_depth_layer != null
+		and not host.world_depth_layer.has_depth_member("ground_drop:%s" % login_probe_drop_id)
+		and host.world_depth_layer.group_count("ground_pet_drops") == 0
+	)
 	host._apply_server_profile_summary(session.get("serverProfileSummary", {}) as Dictionary)
 	host.server_profile_sync_state = "ready"
 	var revision_zero_ok = host.server_profile_sync_expected_revision == 0
@@ -25701,9 +25915,33 @@ func _run_auto_server_profile_sync_check() -> void:
 			"serverAuthority": "profile_document",
 		},
 	}).to_utf8_buffer())
+	var pull_probe_drop_id := "ground_profile_pull_probe"
+	login_probe_profile["groundPetDrops"] = [{
+		"dropId": pull_probe_drop_id,
+		"mapId": host.current_map_id,
+		"cell": [0, 0],
+		"pet": {
+			"instanceId": "pet_profile_pull_probe",
+			"name": "待替换地面宠物",
+			"elements": {"fire": 5, "water": 5},
+		},
+	}]
+	host._panel_flow().player_profile = login_probe_profile
+	host._sync_world_visual_layers(true)
+	var pull_probe_installed: bool = (
+		host.world_depth_layer != null
+		and host.world_depth_layer.has_depth_member("ground_drop:%s" % pull_probe_drop_id)
+	)
 	host._apply_server_profile_pull_result(pull_response)
 	var pulled_player = host.player_profile.get("player", {}) as Dictionary if host.player_profile.get("player", {}) is Dictionary else {}
-	var pull_ok = str(pulled_player.get("name", "")) == "云端猎人" and host.server_profile_sync_expected_revision == 2
+	var pull_ok = (
+		str(pulled_player.get("name", "")) == "云端猎人"
+		and host.server_profile_sync_expected_revision == 2
+		and pull_probe_installed
+		and host.world_depth_layer != null
+		and not host.world_depth_layer.has_depth_member("ground_drop:%s" % pull_probe_drop_id)
+		and host.world_depth_layer.group_count("ground_pet_drops") == 0
+	)
 	var stale_remote_profile := remote_profile.duplicate(true)
 	var stale_remote_player := stale_remote_profile.get("player", {}) as Dictionary
 	stale_remote_player["name"] = "过期响应"
@@ -25879,6 +26117,23 @@ func _run_auto_server_profile_sync_check() -> void:
 	)
 	host._close_shop_panel()
 	var panel_defer_ok = panel_queue_defer_ok and panel_response_defer_ok and panel_deferred_apply_ok and panel_deferred_timeout_ok
+	var logout_probe_drop_id := "ground_profile_logout_probe"
+	login_probe_profile["groundPetDrops"] = [{
+		"dropId": logout_probe_drop_id,
+		"mapId": host.current_map_id,
+		"cell": [0, 0],
+		"pet": {
+			"instanceId": "pet_profile_logout_probe",
+			"name": "待登出地面宠物",
+			"elements": {"water": 5, "wind": 5},
+		},
+	}]
+	host._panel_flow().player_profile = login_probe_profile
+	host._sync_world_visual_layers(true)
+	var logout_probe_installed: bool = (
+		host.world_depth_layer != null
+		and host.world_depth_layer.has_depth_member("ground_drop:%s" % logout_probe_drop_id)
+	)
 	var session_expired_response = ServerAuthClientModel.parse_profile_response(401, JSON.stringify({
 		"ok": false,
 		"code": "session_expired",
@@ -25894,10 +26149,15 @@ func _run_auto_server_profile_sync_check() -> void:
 		and host.auth_username_input != null
 		and host.auth_username_input.text == "syncuser"
 		and host.world_log_message.find("登录会话已过期") >= 0
+		and logout_probe_installed
+		and host.world_depth_layer != null
+		and not host.world_depth_layer.has_depth_member("ground_drop:%s" % logout_probe_drop_id)
+		and host.world_depth_layer.group_count("ground_pet_drops") == 0
 	)
-	var status = "ok" if revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and monotonic_response_ok and invalid_pull_rejected_ok and panel_defer_ok and session_expired_ok else "failed"
-	print("server profile sync check ready: status=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s monotonic=%s equal=%s zero_missing=%s invalid_rejected=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
+	var status = "ok" if login_profile_reset_clears_ground_node and revision_zero_ok and no_upload_ok and upload_denied_ok and upload_conflict_disabled_ok and pull_ok and monotonic_response_ok and invalid_pull_rejected_ok and panel_defer_ok and session_expired_ok else "failed"
+	print("server profile sync check ready: status=%s login_ground_clear=%s rev0=%s no_upload=%s denied=%s conflict_disabled=%s pull=%s monotonic=%s equal=%s zero_missing=%s invalid_rejected=%s panel_defer=%s panel_timeout=%s session_expired=%s state=%s rev=%d" % [
 		status,
+		str(login_profile_reset_clears_ground_node),
 		str(revision_zero_ok),
 		str(no_upload_ok),
 		str(upload_denied_ok),

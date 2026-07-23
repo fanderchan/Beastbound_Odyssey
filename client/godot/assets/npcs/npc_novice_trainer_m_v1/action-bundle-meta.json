@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "appearanceId": "npc_novice_trainer_m_v1",
+  "roleId": "novice_trainer",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ]
+  },
+  "review": {
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1/source/formal-production/npc-bundle-v3.1-20260723-novice-trainer-a/evidence/contact-sheets/contact-sheet-transparent.png",
+    "contactSheetSha256": "633ee9243b15b629164e015ba380399df19a7e8db714675208ca0eb69a52ba66",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false,
+    "runtimeEvidenceIndex": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/evidence-index.json",
+    "runtimeEvidenceIndexSha256": "972a782c7bedd634ceaec7058de20e83908347ac7f16117feb4831f0ddbbd672",
+    "runtimeVideo": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/review.mp4",
+    "runtimeVideoSha256": "1ea8ed1417d94429d864838f41f58e4dc64494dc23cd957312138715c42aa48c",
+    "runtimeScreenshots": [
+      "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/main-review-candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/main-dialog-1280x720.png"
+    ],
+    "runtimeScreenshotSha256s": [
+      "b63cbbc73208be7ef6a8f896549ac7f6df913ea9e2c97857af9c64777c96a538"
+    ],
+    "mainCaptureReports": [
+      "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/main-review-candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/main-dialog-report.json"
+    ],
+    "mainCaptureReportSha256s": [
+      "7d5612367ff4720826515c5b20f31dbe2707260891598ed51eb86fde380acffe"
+    ],
+    "blindReviewPacket": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/blind/reviewer-packet.json",
+    "blindReviewPacketSha256": "77095aff91b4c63374583a87afe44227b9aa0092002d37c048089c788302a9a8",
+    "blindProducerMapping": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/private/producer-mapping.json",
+    "blindProducerMappingSha256": "f60789fe8bb83dbb1f193efdb8c3f2f8d1039da7b086b95e984a037bf719e30e",
+    "blindStageAResult": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/staged-review/stage-a-result-v2.json",
+    "blindStageAResultSha256": "16117d34c85b3dbf5ce0cd329177bd3e0ec8e2898f331d776e04fb3bf8db4d41",
+    "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/staged-review/stage-b-observation-v4.json",
+    "blindStageBObservationSha256": "3f0956c3a2acfe4e172aff1ede05ba6871f1d6ced13cde80e688e200ff8b99c8",
+    "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase331_npc_novice_trainer_m_v1/candidate/phase331-novice-trainer-final-20260723-a/npc_novice_trainer_m_v1/final/blind-audit.json",
+    "blindAuditSha256": "b008679d8db87d6ae606bea0ed03cfe655817a1d65d4600449ab537bc219d80f"
+  },
+  "release": {
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen NPC evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
+  },
+  "runtimeEnabled": true,
+  "installation": {
+    "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1/source/formal-production/npc-bundle-v3.1-20260723-novice-trainer-a/npc-bundle.json",
+    "productionManifestSha256": "14111428980c81beaab77089d97a052970d81543086a10d59516460ea66e0020",
+    "ownershipRecord": "source-and-ownership.md",
+    "ownershipRecordSha256": "86288e8cdc83f543f69f1442a97c93a8860918b96dd964d23de9b26c306f17f1",
+    "sourceLedger": "source/provenance.json",
+    "sourceLedgerSha256": "7216ecc475dc2890ad802aa5e18c2402129d9a70d63c8738df43998d3da50d4b",
+    "frames": [
+      {
+        "installedPath": "world/directions/south/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/south/idle-1.png",
+        "kind": "world",
+        "slot": "south/idle/1",
+        "fileSha256": "5ec53537c8d39ba60556851118061386d7ddb06d671d57314ca37b7c9319917f",
+        "rgbaSha256": "950f6aac0942c7571686866c24530e23442463c631658fa1a1ce6095470c7e08"
+      },
+      {
+        "installedPath": "world/directions/southwest/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/southwest/idle-1.png",
+        "kind": "world",
+        "slot": "southwest/idle/1",
+        "fileSha256": "40f2651ce5104dd1c3a17249bb0d3a4f9fb78cd2caa36393e12fcc6c58bbc8bf",
+        "rgbaSha256": "74bd12e9a693f66dabb8ec2c15c3847124003618b04c71354dc49eae8d26da5d"
+      },
+      {
+        "installedPath": "world/directions/west/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/west/idle-1.png",
+        "kind": "world",
+        "slot": "west/idle/1",
+        "fileSha256": "12e42f211208b86d716bd27ff59c35fbd5def2a1009d16913698695ffb8d7e53",
+        "rgbaSha256": "92c905c90496881dd6e86978903e7f1cbebcb0bda62f635f80c350562d05620a"
+      },
+      {
+        "installedPath": "world/directions/northwest/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/northwest/idle-1.png",
+        "kind": "world",
+        "slot": "northwest/idle/1",
+        "fileSha256": "eea7bd13dae886d9555b8756b2ad267a2d0bf33c39a11b971c8da18cdfd5ffbf",
+        "rgbaSha256": "2c46c0dbdebc4be9c222846cf7e5751e107b18bf118936d2bc122b22174e0d6d"
+      },
+      {
+        "installedPath": "world/directions/north/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/north/idle-1.png",
+        "kind": "world",
+        "slot": "north/idle/1",
+        "fileSha256": "a07b0e283fb1ddf1bb372120f0e1a2da5c88f418495237d57e7ad3b5be14f8bd",
+        "rgbaSha256": "d14ddaf90084bd5a46bab3bcae4f81c6cb9a0f29662196af5be75876835ee7a1"
+      },
+      {
+        "installedPath": "world/directions/northeast/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/northeast/idle-1.png",
+        "kind": "world",
+        "slot": "northeast/idle/1",
+        "fileSha256": "4896e6afad930d13b574df574add6a198417cd22bc847dc21ae66cd5cd51fe17",
+        "rgbaSha256": "d429ebc64b0581abad834d5bd2624cbc3330c25e224aff446a277981c0438a1c"
+      },
+      {
+        "installedPath": "world/directions/east/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/east/idle-1.png",
+        "kind": "world",
+        "slot": "east/idle/1",
+        "fileSha256": "6e84be789639abef4b79ed8c91f51433a00a423a18821b328b5d8c94115903be",
+        "rgbaSha256": "051f8125d9589cbb6cbd945957dd684f93ad28097b7f96ea4fd0103cbfc564e5"
+      },
+      {
+        "installedPath": "world/directions/southeast/idle/idle-1.png",
+        "sourceRuntimePath": "runtime/world/southeast/idle-1.png",
+        "kind": "world",
+        "slot": "southeast/idle/1",
+        "fileSha256": "85ebb00c36620929123e9d51579f44bec5d8c90822d7b8e8860603c9d87b7b14",
+        "rgbaSha256": "49da63410a1e867441c54458a9061c7d710e8286fb8a18ccd78ff2bdb2259d6f"
+      },
+      {
+        "installedPath": "portrait/neutral.png",
+        "sourceRuntimePath": "runtime/portraits/neutral.png",
+        "kind": "portrait",
+        "slot": "neutral",
+        "fileSha256": "e79cc6b59fc4f06a4b7cdd92028287a96100c7a05f01a66deaa5e579816e5e23",
+        "rgbaSha256": "12658af62038e809169c62ddfe824cb15e525afa215076c25d8dc56dfa2e4e9f"
+      },
+      {
+        "installedPath": "portrait/speaking.png",
+        "sourceRuntimePath": "runtime/portraits/speaking.png",
+        "kind": "portrait",
+        "slot": "speaking",
+        "fileSha256": "43ba7cd89ba087527c1d485497a1e8dd940e5b049e5e6744bd9d83735d8316c0",
+        "rgbaSha256": "75f5fc03c43ac65b6cb885d818092e8258d35aa8c3936670e097f214e78aa8ad"
+      },
+      {
+        "installedPath": "portrait/smile.png",
+        "sourceRuntimePath": "runtime/portraits/smile.png",
+        "kind": "portrait",
+        "slot": "smile",
+        "fileSha256": "bbdd6789eb553703d9ad7f2520bc6c5f7e87d15624b8f44118129425625a0abe",
+        "rgbaSha256": "ba6f064e2ed0c5b5f4c03ef21353fe1dd4c3d0810b72cf73b8f2a77639dea4b8"
+      },
+      {
+        "installedPath": "portrait/concerned.png",
+        "sourceRuntimePath": "runtime/portraits/concerned.png",
+        "kind": "portrait",
+        "slot": "concerned",
+        "fileSha256": "eb397e8d6eadcfed93f0a07c428e4fd92546e901e4c04776b6c8c917a97505a3",
+        "rgbaSha256": "c4adf80e115a5fd46ccdb8d8295900b4dd1a5e40e99b86b8e6b25c8f22ef7c5b"
+      }
+    ]
+  }
+}

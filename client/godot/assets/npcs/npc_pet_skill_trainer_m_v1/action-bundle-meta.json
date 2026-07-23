@@ -24,10 +24,10 @@
     "runtimeSize": [512, 512]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "af822099bc58449c578d720b3595630b0692b0f3bd27aba471e8617514c3843e",
     "blindDirectionAudit": "required",
@@ -57,17 +57,14 @@
     "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_pet_skill_trainer_m_v1/staged-review/stage-b-observation-v2.json",
     "blindStageBObservationSha256": "d68f8c82bb2996962b5ad44800bb4286b90b0bfe4c404c7f60e6918a8ca45e76",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-final-v3-20260723-a/npc_pet_skill_trainer_m_v1/final/blind-audit.json",
-    "blindAuditSha256": "a7f36abb4e9900111bd208c3c940226b6750fc2bb5839aeb08a8d503387c5d58",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "a7f36abb4e9900111bd208c3c940226b6750fc2bb5839aeb08a8d503387c5d58"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source/formal-production/npc-bundle-v3.1-20260723-7615f286/npc-bundle.json",
     "productionManifestSha256": "ca4d9e473b1a8dac72b6e5f0373247df97b8030369205a26174211f62d04cc67",

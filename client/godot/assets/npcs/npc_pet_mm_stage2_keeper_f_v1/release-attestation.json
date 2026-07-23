@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "attestationType": "beastbound_npc_runtime_release_attestation",
+  "status": "passed",
+  "appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "ownerApprovedAtUtc": "2026-07-23T15:32:19Z",
+  "ownerDecisionRecord": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/release-owner-decision.json",
+  "ownerDecisionRecordSha256": "c4843c46f0a52edd41b07262a407f52791f15d837e1715ab0836423ec13aa692",
+  "sourceSetSha256": "07ec4b59999210aba5e8244da17fe166b812273652bab44e6d13731e3da3d9f0",
+  "strictEvidence": {
+    "sourceSetSha256": "07ec4b59999210aba5e8244da17fe166b812273652bab44e6d13731e3da3d9f0",
+    "runtimeEvidenceIndexSha256": "3ebf15b053cc5800151e129a947c320e534574d1ad4dfed3b229791083c1e705",
+    "blindStageAResultSha256": "d4bcba3c87485b6f8e9a63248560f9f9a1f780aab9590e0b260e69fd324d2207",
+    "blindStageBObservationSha256": "a2998809ce354b52a578435af7f9bac6e58bc64263c98507b5d900211ffc0e9a",
+    "blindAuditSha256": "389f0da03288bf944e92f7390f4c6cd76702d408a952d569e4c4996bb09b53c5",
+    "blindReviewPacketSha256": "0490875b8b4c5029c1b733308215bb02c72a79075dbb81507b43a5835128afdd",
+    "blindProducerMappingSha256": "9d3193d89b1083f6861d1c9b90f707b4b296808347c9041335bb15a6a81726a5",
+    "runtimeVideoSha256": "7b11072347c8be82b951abc3664a5121796512dadeee06e5291a4145b53348dd",
+    "mainCaptureReportSha256s": [
+      "08f1175de5e71ca157aacb746d609e90d3e16c668aa0cbdbffb65e68ed1ffd31"
+    ],
+    "runtimeScreenshotSha256s": [
+      "3e916d8fd4bd2bd857d834d10e506b7270352f5864c8c9386f6f3573479f2696"
+    ]
+  },
+  "frames": [
+    {
+      "installedPath": "world/directions/south/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/south/idle-1.png",
+      "kind": "world",
+      "slot": "south/idle/1",
+      "fileSha256": "b8f893b40286d66ecdd679824e7670282855b2a25206e938d5e23d0f19731a31",
+      "rgbaSha256": "bfd9f4bab57bb8fef33135586df98562bccf39c4f4a7e35c25dd004957cd7cfd",
+      "sourceDecodedRgbaSha256": "5b7f1d5adfd222373d14d08cc75cc76b01122e78b34fb4425ddb718bf888aea4"
+    },
+    {
+      "installedPath": "world/directions/southwest/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/southwest/idle-1.png",
+      "kind": "world",
+      "slot": "southwest/idle/1",
+      "fileSha256": "72d53d15df78ffd212746fe56f327990718f6d415bec8dd07f366749064916d3",
+      "rgbaSha256": "bc45966174e4d473516a7aaf6c33cd24fc4c79ff018dd7c2b2b7be0041f2cd68",
+      "sourceDecodedRgbaSha256": "b4abfa7fd3c97fa2fea9357e8094a7f4d63e60cae756024063fde3933cd7aefe"
+    },
+    {
+      "installedPath": "world/directions/west/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/west/idle-1.png",
+      "kind": "world",
+      "slot": "west/idle/1",
+      "fileSha256": "15f606aeb820c44771e9fe87da79437416177e3c03b6ba3e0b999c6c3c8340f4",
+      "rgbaSha256": "32fcbdf95206b8f6468f0ae366ccb1915f21719581838abb9e53b2de97501d09",
+      "sourceDecodedRgbaSha256": "a366b538cfa7daf458e53f681bad0d29e4b444a6dc8922d852d9fc3e91b861d1"
+    },
+    {
+      "installedPath": "world/directions/northwest/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/northwest/idle-1.png",
+      "kind": "world",
+      "slot": "northwest/idle/1",
+      "fileSha256": "f70a860855ba71f311d4a47d9fffd7e50e57b40dcebf39767b6d0165da33e855",
+      "rgbaSha256": "c03d1c3cb5800f06ea7d622c1b0c880bad05f15b664523a80d8aeefbf6e5c9b4",
+      "sourceDecodedRgbaSha256": "d6d099d28b5796627dce9b5134116264f0383f72a09ae8932be7c196d5caca14"
+    },
+    {
+      "installedPath": "world/directions/north/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/north/idle-1.png",
+      "kind": "world",
+      "slot": "north/idle/1",
+      "fileSha256": "51a7f18fbe138e15b3f783ea55b9b0641f24cfab9992acfe64a7117363520538",
+      "rgbaSha256": "33715b60a6c4d357b93603973e1058b93105f101eb3686555bfbbeebdf614d1a",
+      "sourceDecodedRgbaSha256": "3dad2f1d3520e49bf66b48d4ba440daf21a6d1281bf0993c64b41ce446f48a1a"
+    },
+    {
+      "installedPath": "world/directions/northeast/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/northeast/idle-1.png",
+      "kind": "world",
+      "slot": "northeast/idle/1",
+      "fileSha256": "5a999495da6980bd3e67a8e40756369aa374eada38d433ea24721eea55671f56",
+      "rgbaSha256": "4d49614fd89b9a3563aeab2fafcfeed21aed4f8125dfc98a2268c78c3cc75888",
+      "sourceDecodedRgbaSha256": "154eb607c090b17ca20fecbee0c9b1885733feb8100a7f46346af0d1c9eb1458"
+    },
+    {
+      "installedPath": "world/directions/east/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/east/idle-1.png",
+      "kind": "world",
+      "slot": "east/idle/1",
+      "fileSha256": "db301bf04c69f740c0227547e33a03b9c0376b71836baa31e00a8a72d8301efb",
+      "rgbaSha256": "5e14ce910077946d69dd37cad24a432bc40819e31d370994f0437d9791c9e7f0",
+      "sourceDecodedRgbaSha256": "c20df5dc6e128018d430d0ede428e3c7dd1d423618df0cf032db6cc849da77a8"
+    },
+    {
+      "installedPath": "world/directions/southeast/idle/idle-1.png",
+      "sourceRuntimePath": "runtime/world/southeast/idle-1.png",
+      "kind": "world",
+      "slot": "southeast/idle/1",
+      "fileSha256": "01a18dbcd8146a2f64e65311d7c1f0d28519bb1ab8b4f224add1926e4e356495",
+      "rgbaSha256": "c81fe8be10d5387d483a4ed6519ae148f8e50c90aa293ff4178635593e56c513",
+      "sourceDecodedRgbaSha256": "1ceb22ff82d5dc0beae5cdfda97c37d8426419b85d3959c06f743e43f67dd2e3"
+    },
+    {
+      "installedPath": "portrait/neutral.png",
+      "sourceRuntimePath": "runtime/portraits/neutral.png",
+      "kind": "portrait",
+      "slot": "neutral",
+      "fileSha256": "6fa7fc5b04a88e5c9001c0b9af7534e8ffff30a35240d7463d831ab09dc3111d",
+      "rgbaSha256": "c015830d63e2727db84dd5a4990d85d5725f8d13b0ac7e8f1bb9cdaed9b7127b",
+      "sourceDecodedRgbaSha256": "57d50b36986b6117400ca0f51d94daa1d847351391fb9dfe0203389e2ae7148a"
+    },
+    {
+      "installedPath": "portrait/speaking.png",
+      "sourceRuntimePath": "runtime/portraits/speaking.png",
+      "kind": "portrait",
+      "slot": "speaking",
+      "fileSha256": "248a8fa924c48ff1a7a6666207d9cc3136b287ba0de89909ed4068e3edfed51f",
+      "rgbaSha256": "8566f65fbaeeabc2e5c4e38772a59bd8df09a26a55972a39cb5a7c4db9fa41ee",
+      "sourceDecodedRgbaSha256": "5facb200b5ce0c2aa93672988a2894418e6ddde6374879caba4416f98657bd44"
+    },
+    {
+      "installedPath": "portrait/smile.png",
+      "sourceRuntimePath": "runtime/portraits/smile.png",
+      "kind": "portrait",
+      "slot": "smile",
+      "fileSha256": "a9a55a4ff1af52e3b43fc181ca02a76b7d93263a3b5d822e6d46e3e8724b58c6",
+      "rgbaSha256": "00b3fd562d52bd10f04db63708f59068e7e11df20d2ff1aacaeaf4c34aa762a3",
+      "sourceDecodedRgbaSha256": "e2eca57ee295bf5535b7533b38b826120d8e51921476a3a4b59f95faff9b5cbe"
+    },
+    {
+      "installedPath": "portrait/concerned.png",
+      "sourceRuntimePath": "runtime/portraits/concerned.png",
+      "kind": "portrait",
+      "slot": "concerned",
+      "fileSha256": "558a39a1524a34094b288e65ea49dabda808fed6f2adcf03c1b6e40eebe6581b",
+      "rgbaSha256": "91e02990c81be48db9287167042e93d0adb7e9f4b54a25e3da2c24f81551fba9",
+      "sourceDecodedRgbaSha256": "ce500dd25c5e61d76e97c8036e512a56bd4055a1f0173d94e5dbf3789ab46be8"
+    }
+  ]
+}

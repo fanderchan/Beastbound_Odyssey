@@ -1,0 +1,74 @@
+{
+	"schemaVersion": 1,
+	"reportType": "beastbound_map_visual_main_review_capture",
+	"scene": "res://scenes/Main.tscn",
+	"mapId": "firebud_training_yard",
+	"mode": "idle",
+	"qaPreviewFlagPresent": true,
+	"qaPreviewMapId": "firebud_training_yard",
+	"displayServer": "macOS",
+	"debugBuild": true,
+	"profileIsolation": "default_profile_ephemeral_no_save",
+	"defaultProfileIsolation": true,
+	"authAutoBypass": false,
+	"accountAuthenticated": false,
+	"profileSaveEnabled": false,
+	"serverAccountSession": false,
+	"networkRequestAttempted": false,
+	"authPanelVisible": false,
+	"qaMenuVisible": false,
+	"qaPanelVisible": false,
+	"numericWorkbenchVisible": false,
+	"debugUiVisible": false,
+	"normalPlayerHud": true,
+	"viewport": [
+		1280,
+		720
+	],
+	"mapArtActive": true,
+	"mapArtQaPreview": true,
+	"mapArtStatus": "owner_review_pending",
+	"bundleId": "firebud_region_visual_v1",
+	"mapStyleId": "firebud_warm_stone_v1",
+	"groundDrawCount": 1224,
+	"objectCount": 4,
+	"tileCounts": {
+		"firebud_meadow": 1058,
+		"firebud_dark_root_soil": 21,
+		"firebud_honey_stone": 41,
+		"firebud_ochre_path": 104
+	},
+	"startCell": [
+		14,
+		12
+	],
+	"targetCell": [
+		14,
+		12
+	],
+	"endCell": [
+		14,
+		12
+	],
+	"playerCellChanged": false,
+	"input": {
+		"eventClass": "",
+		"delivery": "none",
+		"pressProcessFrame": -1,
+		"releaseProcessFrame": -1,
+		"frameSeparated": false,
+		"screenPoint": []
+	},
+	"screenshotPath": "res://assets/maps/firebud_region_visual_v1/evidence/runtime-screenshots/firebud_training_yard-pointer-1280x720.png",
+	"screenshotSha256": "3d40ae9427caaf195012c2726e76b747dcd6f13a892d5318eb5fb1ba4576d764",
+	"screenshot": {
+		"path": "res://assets/maps/firebud_region_visual_v1/evidence/runtime-screenshots/firebud_training_yard-pointer-1280x720.png",
+		"sha256": "3d40ae9427caaf195012c2726e76b747dcd6f13a892d5318eb5fb1ba4576d764",
+		"width": 1280,
+		"height": 720
+	},
+	"errors": [],
+	"result": "PASS",
+	"ok": true,
+	"generatedAtUtc": "2026-07-23T16:49:14Z"
+}

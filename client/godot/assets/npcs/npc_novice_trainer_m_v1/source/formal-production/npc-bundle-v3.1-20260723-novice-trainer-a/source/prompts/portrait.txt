@@ -1,0 +1,17 @@
+Use case: identity-preserve
+Asset type: Beastbound Odyssey production NPC dialogue portrait expression sheet
+Input images: Image 1 is the binding identity board. Image 2 is the accepted true-eight world source sheet and binding costume/asymmetry reference. Preserve the exact same person; do not redesign him.
+Primary request: Create ONE exact square 2-row by 2-column dialogue portrait sheet of the SAME adult male novice trainer from the references. Chest-to-waist bust, front three-quarter orientation facing slightly toward screen-left, exact same camera, crop, head size, shoulders, body scale, costume, props and lighting in all four cells. Only facial expression may change.
+Exact identity: friendly sturdy 43-year-old man, warm tan skin, broad kind bearded face, dark-brown eyes, short wavy dark-brown hair with copper cloth tie at the nape. Same burnt-ochre sleeveless vest over muted blue-gray long-sleeve tunic, dark leather belt and wrist wraps.
+Occupational identity: the large rolled cream beginner manual on his OWN RIGHT hip may be partly visible at the lower screen-left/appropriate physical side; three round wooden training tokens on his OWN LEFT belt may be partly visible at the lower opposite side; the small sun-shaped novice badge stays on his chest. Preserve physical sides and do not introduce pet-skill equipment.
+EXACT ROW-MAJOR EXPRESSION ORDER:
+Top-left NEUTRAL: calm attentive listening, mouth closed, welcoming eyes.
+Top-right SPEAKING: natural mid-sentence mouth open, patient teaching brows, not shouting.
+Bottom-left SMILE: warm encouraging broad-but-gentle smile.
+Bottom-right CONCERNED: mild thoughtful concern for a confused beginner, brows slightly inward, mouth closed; not angry, afraid or crying.
+Composition: exact invisible 2x2 equal grid on a square canvas, no borders or dividers. One bust centered in each cell, identical shoulder width and eye line, generous safe padding at top and outer sides, nothing crosses into another cell. Bust may crop cleanly at bottom only.
+Style/medium: match the references' polished hand-painted HD 2.5D game illustration; crisp warm outlines, controlled cel shading, expressive readable face, realistic cloth/leather/wood, low noise; original design, not pixel art, not 3D, not photorealistic.
+Scene/backdrop: perfectly uniform flat solid vivid #FF00FF over the entire sheet for chroma removal; no gradient, shadow, floor, texture, halo, divider, line or lighting variation. Never use magenta in subject.
+Lighting/mood: identical soft warm upper-left studio light in all four cells.
+Hard constraints: exact same identity, age, face, beard, hair, costume, badge, crop, scale, pose and lighting across all four; change expression only; no mirroring; no text.
+Avoid: identity drift, beard drift, costume drift, pet-skill trainer, riding trainer, guard, merchant, weapon, armor, shield, magic, pet, mount, saddle, reins, whip, whistle, seven-slot forearm board, skill stones, extra person, speech bubble, label, number, letter, rune, icon, arrow, border, frame, watermark, detached object.

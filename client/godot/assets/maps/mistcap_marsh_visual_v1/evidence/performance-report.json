@@ -4,7 +4,7 @@
   "bundleId": "mistcap_marsh_visual_v1",
   "result": "PASS",
   "comparisonMode": "legacy_fallback_vs_candidate",
-  "generatedAtUtc": "2026-07-22T22:30:42.495Z",
+  "generatedAtUtc": "2026-07-23T18:21:55.140Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -22,22 +22,46 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 5,
-          "fpsMinMeanMax": [25.8, 29.16, 30.0],
-          "processTotalMsMinMeanMax": [0.28, 0.342, 0.48],
-          "drawWorldMsMinMeanMax": [3.09, 3.09, 3.09]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.06,
+            0.09,
+            0.21
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.156,
+            1.25
+          ]
         },
         "moving": {
           "samples": 5,
-          "fpsMinMeanMax": [46.7, 56.3, 60.3],
-          "processTotalMsMinMeanMax": [0.09, 0.116, 0.2],
-          "drawWorldMsMinMeanMax": [1.05, 3.338, 5.44],
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.15,
+            0.178,
+            0.21
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            4.38,
+            6.97
+          ],
           "clicks": 117,
           "accepted": 117,
-          "resolved": 37,
-          "applied": 37,
-          "avgInputUs": 0,
-          "maxInputUs": 11,
+          "resolved": 35,
+          "applied": 35,
+          "avgInputUs": 1,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -49,22 +73,46 @@
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 5,
-          "fpsMinMeanMax": [27.2, 29.44, 30.0],
-          "processTotalMsMinMeanMax": [0.14, 0.25, 0.32],
-          "drawWorldMsMinMeanMax": [1.36, 1.36, 1.36]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.05,
+            0.069,
+            0.19
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.022,
+            0.18
+          ]
         },
         "moving": {
           "samples": 5,
-          "fpsMinMeanMax": [51.5, 58.28, 60.0],
-          "processTotalMsMinMeanMax": [0.28, 0.362, 0.44],
-          "drawWorldMsMinMeanMax": [0.17, 1.53, 2.08],
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.17,
+            0.192,
+            0.21
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.61,
+            0.97
+          ],
           "clicks": 117,
           "accepted": 117,
-          "resolved": 36,
-          "applied": 36,
-          "avgInputUs": 2,
-          "maxInputUs": 3,
+          "resolved": 35,
+          "applied": 35,
+          "avgInputUs": 1,
+          "maxInputUs": 5,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -75,8 +123,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": -0.092,
-          "moving": 0.246
+          "idle": -0.021,
+          "moving": 0.014
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -95,10 +143,18 @@
   ],
   "excludedReleaseGate": null,
   "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:7c67c25266024b0a50e1b2b33e5c2a7bc29d5ebb+beastbound-map-runtime-surface-v2:26596d25cf966682ac068d56fbcd262e69886b3cee2f6efbcc2cb6cd5a783a9a"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/performance-runner-receipt.jsonl",
+    "sha256": "cda3729ecd4c2ccdc7fcf28c52392ebdc6cc69968352c9453ccfeb9d8b90e51d"
+  },
   "notes": [
-    "Both variants ran through res://scenes/Main.tscn at 1280x720 on macOS Metal.",
-    "The baseline kept pending map art disabled and used the legacy fallback renderer; the candidate enabled only the matching QA map-art preview.",
-    "The candidate moving process-wall duration was anomalously long, but the in-engine probe samples stayed stable; wall elapsed is intentionally not a release metric.",
-    "Moving probes delivered real InputEventMouseButton events across process frames with encounter grace, so battle transitions did not contaminate the comparison."
+    "All twelve variants ran through the real Main.tscn non-headless Metal path.",
+    "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
+    "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt."
   ]
 }

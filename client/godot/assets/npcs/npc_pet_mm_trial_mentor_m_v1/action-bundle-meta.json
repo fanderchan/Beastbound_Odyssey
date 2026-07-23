@@ -35,10 +35,10 @@
     ]
   },
   "review": {
-    "artStatus": "owner_review_pending",
-    "ownerReviewStatus": "pending",
-    "releaseApproved": false,
-    "runtimeEnabled": false,
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true,
     "contactSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/source/formal-production/npc-bundle-v3.1-20260723-4b7f8cd7-r3-speaking-fringe/evidence/contact-sheets/contact-sheet-transparent.png",
     "contactSheetSha256": "327d4485f06295438b355414be23c12feab1e6f9522484971d6798f818b37214",
     "blindDirectionAudit": "required",
@@ -68,17 +68,14 @@
     "blindStageBObservation": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-mm1-r3-20260723-a/npc_pet_mm_trial_mentor_m_v1/staged-review/stage-b-result.json",
     "blindStageBObservationSha256": "9bd07f99614113d01a8cfeb0f8f84e5b7b82d414f9ca85b89fea1bd360b200df",
     "blindAudit": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/phase329_remaining_npc_archetypes/candidate/phase329-mm1-r3-20260723-a/npc_pet_mm_trial_mentor_m_v1/final/blind-audit.json",
-    "blindAuditSha256": "79d2ca025d85397f4aaffda55a76909ef8c63f941ae85cf54865b92971aa713c",
-    "remainingEvidence": [
-      "explicit project owner acceptance"
-    ]
+    "blindAuditSha256": "79d2ca025d85397f4aaffda55a76909ef8c63f941ae85cf54865b92971aa713c"
   },
   "release": {
-    "releaseApproved": false,
-    "runtimeEnabled": false,
-    "reason": "formal bundle, byte-identical installation, blind direction/portrait review and real Godot evidence pass; explicit project owner acceptance remains required"
+    "releaseApproved": true,
+    "runtimeEnabled": true,
+    "reason": "project owner accepted the frozen Phase 329 evidence; owner decision and schema-v2 runtime release attestation are hash-bound"
   },
-  "runtimeEnabled": false,
+  "runtimeEnabled": true,
   "installation": {
     "productionBundlePath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/source/formal-production/npc-bundle-v3.1-20260723-4b7f8cd7-r3-speaking-fringe/npc-bundle.json",
     "productionManifestSha256": "f42a82c9866a404137fe67f63d95bf729c716813d1455433f1e52a5244b9ed10",

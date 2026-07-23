@@ -4,7 +4,7 @@
   "bundleId": "firebud_region_visual_v1",
   "result": "PASS",
   "comparisonMode": "legacy_fallback_vs_candidate",
-  "generatedAtUtc": "2026-07-22T22:30:42.495Z",
+  "generatedAtUtc": "2026-07-23T18:21:17.806Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -23,21 +23,45 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 6,
-          "fpsMinMeanMax": [25.4, 29.233, 30.0],
-          "processTotalMsMinMeanMax": [0.14, 0.410, 0.51],
-          "drawWorldMsMinMeanMax": [4.26, 4.26, 4.26]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.05,
+            0.058,
+            0.11
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.204,
+            1.63
+          ]
         },
         "moving": {
           "samples": 4,
-          "fpsMinMeanMax": [45.7, 56.2, 59.9],
-          "processTotalMsMinMeanMax": [0.09, 0.092, 0.1],
-          "drawWorldMsMinMeanMax": [3.78, 4.415, 5.93],
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.2,
+            0.21,
+            0.22
+          ],
+          "drawWorldMsMinMeanMax": [
+            4.85,
+            6.115,
+            7.65
+          ],
           "clicks": 112,
           "accepted": 112,
-          "resolved": 37,
-          "applied": 37,
-          "avgInputUs": 0,
+          "resolved": 33,
+          "applied": 33,
+          "avgInputUs": 1,
           "maxInputUs": 2,
           "moved": true,
           "coalesced": true,
@@ -50,22 +74,46 @@
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 5,
-          "fpsMinMeanMax": [27.4, 29.44, 30.0],
-          "processTotalMsMinMeanMax": [0.23, 0.302, 0.34],
-          "drawWorldMsMinMeanMax": [1.35, 1.35, 1.35]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.06,
+            0.072,
+            0.16
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.013,
+            0.1
+          ]
         },
         "moving": {
           "samples": 4,
-          "fpsMinMeanMax": [52.2, 58.05, 60.0],
-          "processTotalMsMinMeanMax": [0.25, 0.292, 0.34],
-          "drawWorldMsMinMeanMax": [0.39, 0.652, 1.29],
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.11,
+            0.152,
+            0.23
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.3,
+            0.405,
+            0.58
+          ],
           "clicks": 112,
           "accepted": 112,
-          "resolved": 34,
-          "applied": 34,
+          "resolved": 33,
+          "applied": 33,
           "avgInputUs": 1,
-          "maxInputUs": 3,
+          "maxInputUs": 2,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -76,8 +124,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": -0.108,
-          "moving": 0.200
+          "idle": 0.014,
+          "moving": -0.058
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -98,22 +146,46 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 5,
-          "fpsMinMeanMax": [26.2, 29.24, 30.0],
-          "processTotalMsMinMeanMax": [0.26, 0.408, 0.54],
-          "drawWorldMsMinMeanMax": [2.77, 2.77, 2.77]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.2,
+            0.22,
+            0.27
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.115,
+            0.92
+          ]
         },
         "moving": {
-          "samples": 5,
-          "fpsMinMeanMax": [47.8, 55.6, 60.0],
-          "processTotalMsMinMeanMax": [0.12, 0.18, 0.31],
-          "drawWorldMsMinMeanMax": [0.78, 3.258, 4.81],
+          "samples": 4,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.21,
+            0.223,
+            0.24
+          ],
+          "drawWorldMsMinMeanMax": [
+            3.14,
+            3.912,
+            5.39
+          ],
           "clicks": 113,
           "accepted": 113,
-          "resolved": 38,
-          "applied": 38,
-          "avgInputUs": 0,
-          "maxInputUs": 2,
+          "resolved": 33,
+          "applied": 33,
+          "avgInputUs": 1,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -125,22 +197,46 @@
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 5,
-          "fpsMinMeanMax": [26.5, 29.3, 30.0],
-          "processTotalMsMinMeanMax": [0.19, 0.288, 0.35],
-          "drawWorldMsMinMeanMax": [2.27, 2.27, 2.27]
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.19,
+            0.219,
+            0.28
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.021,
+            0.17
+          ]
         },
         "moving": {
           "samples": 4,
-          "fpsMinMeanMax": [51.3, 57.5, 60.0],
-          "processTotalMsMinMeanMax": [0.21, 0.472, 0.95],
-          "drawWorldMsMinMeanMax": [1.42, 1.542, 1.85],
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.17,
+            0.198,
+            0.23
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.4,
+            0.527,
+            0.72
+          ],
           "clicks": 113,
           "accepted": 113,
-          "resolved": 35,
-          "applied": 35,
+          "resolved": 33,
+          "applied": 33,
           "avgInputUs": 1,
-          "maxInputUs": 11,
+          "maxInputUs": 2,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -151,8 +247,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": -0.120,
-          "moving": 0.292
+          "idle": -0.001,
+          "moving": -0.025
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -171,9 +267,18 @@
   ],
   "excludedReleaseGate": null,
   "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:7c67c25266024b0a50e1b2b33e5c2a7bc29d5ebb+beastbound-map-runtime-surface-v2:26596d25cf966682ac068d56fbcd262e69886b3cee2f6efbcc2cb6cd5a783a9a"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/performance-runner-receipt.jsonl",
+    "sha256": "6e65cca03270dea6fc638106d11c4eadfc9372e8a1e2e984194b4030f904c808"
+  },
   "notes": [
-    "Both variants ran through res://scenes/Main.tscn at 1280x720 on macOS Metal.",
-    "The baseline kept pending map art disabled and used the legacy fallback renderer; the candidate enabled only the matching QA map-art preview.",
-    "Moving probes delivered real InputEventMouseButton events across process frames with encounter grace, so battle transitions did not contaminate the comparison."
+    "All twelve variants ran through the real Main.tscn non-headless Metal path.",
+    "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
+    "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt."
   ]
 }

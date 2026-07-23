@@ -1,0 +1,10 @@
+Use case: identity-preserve
+Asset type: one Beastbound Odyssey NPC world-source cell, WEST direction only
+Input images: Image 1 is the exact binding identity board.
+Primary request: Create exactly ONE complete full-body idle view of the same novice trainer, facing true WEST. This is a strict LEFT-facing side profile: his FACE and NOSE project toward the SCREEN-LEFT edge; his chest axis, knees and both boot toes point directly SCREEN-LEFT. We see his leftward silhouette from head to boots. He is not facing right and not facing the viewer.
+Identity: exact same sturdy friendly 43-year-old warm-tan bearded man with short wavy dark-brown hair and copper nape tie; burnt-ochre sleeveless short vest over muted blue-gray long-sleeve tunic; leather belt, charcoal cropped trousers, wrapped calves, brown boots, wrist wraps. Rolled cream beginner manual on his OWN RIGHT hip; three round wooden training tokens on his OWN LEFT belt; chest novice badge. Honest profile occlusion and empty hands.
+Composition: one and only one complete head-to-boots character, centered, same proportions as reference, large generous padding on all four sides, no crop, no shadow.
+Style: polished hand-painted HD 2.5D game NPC sprite source, crisp silhouette, warm outlines and controlled cel shading, matching the reference.
+Backdrop: perfectly flat uniform vivid #FF00FF chroma background, no gradient, texture, floor, shadow, halo or variation; no magenta in subject.
+Constraints: newly authored left profile, not a mirror or flip; exact anatomy and costume; no text.
+Avoid: nose pointing right, front view, three-quarter view, extra person, weapon, armor, shield, magic, pet, mount, whistle, seven-slot board, skill stones, side swap, detached prop, crop, label, arrow, compass, border, watermark.

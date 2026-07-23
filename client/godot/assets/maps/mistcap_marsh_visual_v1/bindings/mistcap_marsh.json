@@ -4,6 +4,7 @@
   "mapId": "mistcap_marsh",
   "mapGridSize": [34, 28],
   "ground": {
+    "edgePaddingCells": 20,
     "defaultTileId": "mistcap_marsh_moss",
     "blockedTileId": "mistcap_shallow_bog",
     "encounterTileId": "mistcap_dense_reeds",

@@ -40,6 +40,8 @@ const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
+const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -61,6 +63,7 @@ const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.g
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
@@ -1037,6 +1040,14 @@ var npc_main_review_capture: bool = false
 var npc_main_review_capture_request: Dictionary = {}
 var map_data: Dictionary = {}
 var map_visual_render_state: Dictionary = {}
+var world_depth_layer: Node2D
+var world_overlay_layer: Node2D
+var world_depth_map_signature_cache: String = ""
+var world_depth_remote_signature_cache: String = ""
+var world_depth_drop_signature_cache: String = ""
+var world_depth_drop_content_signature_cache: String = ""
+var world_depth_drop_signature_dirty: bool = true
+var world_overlay_signature_cache: String = ""
 var player_profile: Dictionary = {}
 var player_mount_visual_ride_id_cache: String = "__uninitialized__"
 var account_authenticated: bool = false
@@ -1088,6 +1099,9 @@ var click_move_screen_resolve_count: int = 0
 var click_move_input_accept_count: int = 0
 var click_move_input_ui_reject_count: int = 0
 var click_move_input_remote_hit_count: int = 0
+var movement_spam_expected_screen_point := Vector2.ZERO
+var movement_spam_input_screen_match_count: int = 0
+var movement_spam_input_screen_mismatch_count: int = 0
 var has_pending_click_screen_point: bool = false
 var pending_click_screen_point := Vector2.ZERO
 var has_pending_click_move_target: bool = false
@@ -1319,11 +1333,13 @@ func _ready() -> void:
 	_configure_npc_art_runtime()
 	get_tree().root.size_changed.connect(_layout_hud)
 	encounter_rng.randomize()
+	_build_world_visual_layers()
 	_spawn_player()
 	_spawn_pet()
 	_build_path_line_overlay()
 	_build_camera()
 	_build_hud()
+	_sync_world_visual_layers(true)
 	_build_online_position_sync()
 	if account_authenticated:
 		_save_profile_after_exp_pill_starter_update()
@@ -2826,6 +2842,11 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	map_data = loaded_map
 	current_map_id = str(map_data.get("id", map_id))
 	map_visual_render_state = MapVisualCatalog.prepare_map(current_map_id, map_data, map_art_review_preview)
+	world_depth_map_signature_cache = ""
+	world_depth_remote_signature_cache = ""
+	world_depth_drop_signature_cache = ""
+	world_depth_drop_signature_dirty = true
+	world_overlay_signature_cache = ""
 	if npc_hover_identity_presenter != null:
 		npc_hover_identity_presenter.configure_map(map_data)
 	map_world_bounds_cache_valid = false
@@ -2857,6 +2878,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	if status_label != null:
 		_update_hud_text()
 	_refresh_quick_bar()
+	_sync_world_visual_layers(true)
 	queue_redraw()
 	return true
 
@@ -2964,6 +2986,8 @@ func _run_movement_spam_click_check() -> void:
 	var before_input_accept_count := click_move_input_accept_count
 	var before_input_ui_reject_count := click_move_input_ui_reject_count
 	var before_input_remote_hit_count := click_move_input_remote_hit_count
+	var before_input_screen_match_count := movement_spam_input_screen_match_count
+	var before_input_screen_mismatch_count := movement_spam_input_screen_mismatch_count
 	var last_cell := start_cell
 	var click_count := 0
 	var input_elapsed_usec := 0
@@ -2982,13 +3006,18 @@ func _run_movement_spam_click_check() -> void:
 			if not viewport_rect.has_point(screen_point) or _is_ui_point(screen_point):
 				ui_skipped_count += 1
 				continue
+			# Input.parse_input_event accepts host-window coordinates. Convert the
+			# desired viewport point first so the delivered event remains correct
+			# when headless uses a tiny backing window with a scaled viewport.
+			var input_position := get_viewport().get_screen_transform() * screen_point
+			movement_spam_expected_screen_point = screen_point
 			last_cell = candidate
 			var event := InputEventMouseButton.new()
 			mouse_event_count += 1
 			event.button_index = MOUSE_BUTTON_LEFT
 			event.pressed = true
-			event.position = screen_point
-			event.global_position = screen_point
+			event.position = input_position
+			event.global_position = input_position
 			var started_usec := Time.get_ticks_usec()
 			Input.parse_input_event(event)
 			var elapsed_usec := Time.get_ticks_usec() - started_usec
@@ -3001,29 +3030,46 @@ func _run_movement_spam_click_check() -> void:
 			var release := InputEventMouseButton.new()
 			release.button_index = MOUSE_BUTTON_LEFT
 			release.pressed = false
-			release.position = screen_point
-			release.global_position = screen_point
+			release.position = input_position
+			release.global_position = input_position
 			Input.parse_input_event(release)
 			await get_tree().process_frame
-	for _step in range(60):
+	var settle_frame_count := 0
+	while settle_frame_count < 240:
 		await get_tree().physics_frame
+		settle_frame_count += 1
+		var settle_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+		if (
+			not has_pending_click_screen_point
+			and not has_pending_click_move_target
+			and not player.is_auto_moving()
+			and settle_cell == last_cell
+		):
+			break
 	var applied_count := click_move_repath_apply_count - before_apply_count
 	var resolved_count := click_move_screen_resolve_count - before_resolve_count
 	var input_accept_count := click_move_input_accept_count - before_input_accept_count
 	var input_ui_reject_count := click_move_input_ui_reject_count - before_input_ui_reject_count
 	var input_remote_hit_count := click_move_input_remote_hit_count - before_input_remote_hit_count
+	var input_screen_match_count := movement_spam_input_screen_match_count - before_input_screen_match_count
+	var input_screen_mismatch_count := movement_spam_input_screen_mismatch_count - before_input_screen_mismatch_count
 	var moved := player.global_position.distance_to(start_position) > 16.0
 	var avg_input_usec := int(round(float(input_elapsed_usec) / maxf(1.0, float(click_count))))
 	var input_fast := avg_input_usec <= 250 and max_input_usec <= 12000
-	var coalesced := resolved_count <= 70 and applied_count <= 70
-	var settled := not has_pending_click_screen_point and not has_pending_click_move_target
+	var input_screen_roundtrip := input_screen_match_count == click_count and input_screen_mismatch_count == 0
+	# The debounce is time-based, so a fixed resolved-count ceiling is unstable
+	# across headless frame cadences. Require the burst to collapse at least one
+	# accepted click and never apply more paths than it resolves.
+	var coalesced := input_accept_count > 0 and resolved_count < input_accept_count and applied_count <= resolved_count
 	var final_player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
-	var final_target_matches: bool = (
-		(has_target_cell and target_cell == last_cell)
-		or (not player.is_auto_moving() and final_player_cell == last_cell)
+	var settled: bool = (
+		not has_pending_click_screen_point
+		and not has_pending_click_move_target
+		and not player.is_auto_moving()
 	)
-	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d avg_input_us=%d max_input_us=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
+	var final_target_matches := final_player_cell == last_cell
+	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
+	print("movement spam click check ready: status=%s clicks=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
 		click_count,
 		ui_skipped_count,
@@ -3033,8 +3079,12 @@ func _run_movement_spam_click_check() -> void:
 		input_accept_count,
 		resolved_count,
 		applied_count,
+		input_screen_match_count,
+		input_screen_mismatch_count,
+		str(input_screen_roundtrip),
 		avg_input_usec,
 		max_input_usec,
+		settle_frame_count,
 		str(moved),
 		str(coalesced),
 		str(settled),
@@ -3186,6 +3236,21 @@ func _run_auto_npc_appearance_check() -> void:
 
 func _run_auto_map_visual_runtime_check() -> void:
 	var report := MapVisualRuntimeCheck.run()
+	_sync_world_visual_layers(true)
+	var depth_report := WorldDepthLayerCheck.run(
+		world_depth_layer,
+		world_overlay_layer,
+		map_visual_render_state,
+		map_data,
+		player,
+		pet
+	)
+	report["worldDepthIntegration"] = depth_report
+	if str(depth_report.get("result", "FAIL")) != "PASS":
+		report["result"] = "FAIL"
+		var errors := report.get("errors", []) as Array
+		errors.append_array(depth_report.get("errors", []) as Array)
+		report["errors"] = errors
 	print("map visual runtime check: %s" % JSON.stringify(report))
 	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
 
@@ -7481,6 +7546,7 @@ func _process(delta: float) -> void:
 	var frame_start := _perf_now()
 	_sync_keyboard_movement_input_gate()
 	_sync_player_mount_visual_if_needed()
+	_sync_world_layer_visibility()
 	_update_runtime_frame_budget()
 	_flush_profile_save_if_due(delta)
 	if battle_active:
@@ -7673,6 +7739,11 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
 		if (mouse_event.button_index == MOUSE_BUTTON_LEFT or mouse_event.button_index == MOUSE_BUTTON_RIGHT) and mouse_event.pressed:
+			if movement_spam_click_check and mouse_event.button_index == MOUSE_BUTTON_LEFT:
+				if mouse_event.position.distance_to(movement_spam_expected_screen_point) <= 0.1:
+					movement_spam_input_screen_match_count += 1
+				else:
+					movement_spam_input_screen_mismatch_count += 1
 			_handle_world_pointer_pressed(mouse_event.position, mouse_event.button_index == MOUSE_BUTTON_RIGHT)
 	elif event is InputEventMouseMotion:
 		var motion_event := event as InputEventMouseMotion
@@ -7788,27 +7859,393 @@ func _face_player_toward_screen_point(screen_point: Vector2) -> bool:
 
 
 func _queue_world_redraw_if_needed() -> void:
-	var signature := _world_draw_signature()
-	var should_redraw := signature != world_draw_signature_cache
-	if not should_redraw:
+	var draw_signature := _world_draw_signature()
+	var overlay_signature := _world_overlay_signature()
+	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
+	var drop_signature := "%s|%s" % [
+		current_map_id,
+		_ground_pet_drop_depth_signature_cached(),
+	]
+	var visual_layers_changed := (
+		overlay_signature != world_overlay_signature_cache
+		or remote_signature != world_depth_remote_signature_cache
+		or drop_signature != world_depth_drop_signature_cache
+	)
+	if visual_layers_changed:
+		_sync_world_visual_layers()
+	world_overlay_layer.call(
+		"set_target_marker",
+		has_target_marker,
+		target_marker
+	)
+	if draw_signature == world_draw_signature_cache:
 		return
-	world_draw_signature_cache = signature
+	world_draw_signature_cache = draw_signature
 	queue_redraw()
 
 
 func _world_draw_signature() -> String:
-	var ground_drops = player_profile.get("groundPetDrops", [])
-	var ground_drop_count := (ground_drops as Array).size() if ground_drops is Array else 0
-	return "%s|%s|%s|%s|%d|%s|%d|%s|%s" % [
+	var ground_drop_signature := _ground_pet_drop_depth_signature_cached()
+	return "%s|%s|%s|%s|%d|%s|%s|%s|%s" % [
 		current_map_id,
 		str(has_target_marker),
 		str(target_marker),
 		str(current_path_is_direct),
 		current_path_cells.size(),
 		str(has_pending_interaction),
-		ground_drop_count,
+		ground_drop_signature,
 		_quest_marker_signature(),
 		online_position_draw_signature_cache,
+	]
+
+
+func _ground_pet_drop_depth_signature_cached() -> String:
+	if not world_depth_drop_signature_dirty:
+		return world_depth_drop_content_signature_cache
+	world_depth_drop_signature_dirty = false
+	var raw_drops: Variant = player_profile.get("groundPetDrops", [])
+	if not (raw_drops is Array):
+		world_depth_drop_content_signature_cache = ""
+		return world_depth_drop_content_signature_cache
+	var parts: Array[String] = []
+	for value in raw_drops as Array:
+		if not (value is Dictionary):
+			continue
+		var drop := value as Dictionary
+		if str(drop.get("mapId", "")) != current_map_id:
+			continue
+		var pet_value: Variant = drop.get("pet", {})
+		var pet_data := pet_value as Dictionary if pet_value is Dictionary else {}
+		parts.append("%s:%s:%s:%s" % [
+			str(drop.get("dropId", "")),
+			str(drop.get("cell", [])),
+			str(pet_data.get("name", "")),
+			str(pet_data.get("elements", {})),
+		])
+	parts.sort()
+	world_depth_drop_content_signature_cache = "|".join(parts)
+	return world_depth_drop_content_signature_cache
+
+
+func _invalidate_ground_pet_drop_depth_cache() -> void:
+	world_depth_drop_signature_dirty = true
+	world_depth_drop_content_signature_cache = ""
+	world_depth_drop_signature_cache = ""
+	if world_depth_layer != null:
+		world_depth_layer.clear_group("ground_pet_drops")
+
+
+func _sync_world_layer_visibility() -> void:
+	var world_visible := not battle_active
+	if world_depth_layer != null and world_depth_layer.visible != world_visible:
+		world_depth_layer.visible = world_visible
+	if world_overlay_layer != null and world_overlay_layer.visible != world_visible:
+		world_overlay_layer.visible = world_visible
+
+
+func _sync_world_visual_layers(
+	force: bool = false
+) -> void:
+	if world_depth_layer == null or world_overlay_layer == null or map_data.is_empty():
+		return
+	var map_signature := "%s|%s|%s|%d|%s" % [
+		current_map_id,
+		str(map_visual_render_state.get("bundleId", "")),
+		str(map_visual_render_state.get("active", false)),
+		MapVisualRenderer.object_draw_count(map_visual_render_state),
+		str(npc_art_review_preview),
+	]
+	if force or map_signature != world_depth_map_signature_cache:
+		world_depth_map_signature_cache = map_signature
+		world_depth_layer.replace_group(
+			"map_objects",
+			MapVisualRenderer.world_depth_commands(map_visual_render_state)
+		)
+		world_depth_layer.replace_group("npcs", _world_depth_npc_commands())
+		world_depth_layer.replace_group("interaction_props", _world_depth_interaction_prop_commands())
+	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
+	if force or remote_signature != world_depth_remote_signature_cache:
+		world_depth_remote_signature_cache = remote_signature
+		world_depth_layer.replace_group("remote_actors", _world_depth_remote_commands())
+	var ground_drops := _ground_pet_drops_on_map_fast(current_map_id)
+	var drop_signature := "%s|%s" % [
+		current_map_id,
+		_ground_pet_drop_depth_signature_cached(),
+	]
+	if force or drop_signature != world_depth_drop_signature_cache:
+		world_depth_drop_signature_cache = drop_signature
+		world_depth_layer.replace_group(
+			"ground_pet_drops",
+			_world_depth_ground_pet_drop_commands(ground_drops)
+		)
+	var overlay_signature := _world_overlay_signature()
+	if force or overlay_signature != world_overlay_signature_cache:
+		world_overlay_signature_cache = overlay_signature
+		world_overlay_layer.replace_commands(
+			_world_overlay_commands(),
+			overlay_signature,
+			force
+		)
+	world_overlay_layer.call(
+		"set_target_marker",
+		has_target_marker,
+		target_marker
+	)
+	world_depth_layer.refresh_depth_order(force)
+	_sync_world_layer_visibility()
+
+
+func _world_depth_npc_commands() -> Array[Dictionary]:
+	var commands: Array[Dictionary] = []
+	var index := 0
+	for value in map_data.get("interactionPoints", []):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		if str(item.get("kind", "")) != "npc":
+			continue
+		var item_id := str(item.get("id", "")).strip_edges()
+		if item_id == "":
+			item_id = "map_npc_%d" % index
+		index += 1
+		var cell := InteractionModel.cell_for(item)
+		var ground_contact := IsoMapModel.grid_to_world(map_data, cell)
+		var marker := InteractionModel.marker_world_position(map_data, item)
+		var npc_texture := NpcArtCatalog.world_texture_for_instance(item)
+		if npc_texture != null:
+			var npc_rect := NpcArtCatalog.world_draw_rect_for_instance(item, marker, npc_texture)
+			var shadow_radius := Vector2(clampf(npc_rect.size.x * 0.22, 12.0, 22.0), 5.5)
+			commands.append({
+				"stableId": "npc:%s" % item_id,
+				"kind": "npc",
+				"position": ground_contact,
+				"depthY": npc_rect.end.y,
+				"tiePriority": 10,
+				"texture": npc_texture,
+				"drawRect": npc_rect,
+				"shadowCenter": marker + Vector2(0, 4),
+				"shadowRadius": shadow_radius,
+			})
+		else:
+			commands.append({
+				"stableId": "npc:%s" % item_id,
+				"kind": "npc_placeholder",
+				"position": ground_contact,
+				"depthY": ground_contact.y,
+				"tiePriority": 10,
+				"marker": marker,
+				"blocksMovement": InteractionModel.blocks_movement(item),
+			})
+	return commands
+
+
+func _world_depth_interaction_prop_commands() -> Array[Dictionary]:
+	var commands: Array[Dictionary] = []
+	var index := 0
+	for value in map_data.get("interactionPoints", []):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		var kind := str(item.get("kind", "")).strip_edges()
+		if not ["gate", "record_point", "sign", "guardian"].has(kind):
+			continue
+		var item_id := str(item.get("id", "")).strip_edges()
+		if item_id == "":
+			item_id = "map_interaction_%d" % index
+		index += 1
+		var cell := InteractionModel.cell_for(item)
+		var ground_contact := IsoMapModel.grid_to_world(map_data, cell)
+		commands.append({
+			"stableId": "interaction:%s" % item_id,
+			"kind": "npc_placeholder" if kind == "guardian" else kind,
+			"position": ground_contact,
+			"depthY": ground_contact.y,
+			"tiePriority": 10 if kind == "guardian" else 20,
+			"marker": InteractionModel.marker_world_position(map_data, item),
+			"blocksMovement": InteractionModel.blocks_movement(item),
+		})
+	return commands
+
+
+func _world_depth_ground_pet_drop_commands(ground_drops: Array) -> Array[Dictionary]:
+	var commands: Array[Dictionary] = []
+	var fallback_index := 0
+	var font := _canvas_text_font()
+	for value in ground_drops:
+		if not (value is Dictionary):
+			continue
+		var drop := value as Dictionary
+		var drop_id := str(drop.get("dropId", "")).strip_edges()
+		if drop_id == "":
+			drop_id = "map_drop_%d" % fallback_index
+		fallback_index += 1
+		var cell := PlayerProgressModel.ground_pet_drop_cell(drop)
+		var contact := IsoMapModel.grid_to_world(map_data, cell)
+		var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
+		commands.append({
+			"stableId": "ground_drop:%s" % drop_id,
+			"kind": "ground_pet_drop",
+			"position": contact,
+			"depthY": contact.y,
+			"tiePriority": 10,
+			"marker": _ground_pet_marker_world_position(drop),
+			"bodyColor": _ground_pet_body_color(pet_instance),
+			"name": str(pet_instance.get("name", "宠物")),
+			"font": font,
+		})
+	return commands
+
+
+func _world_depth_remote_commands() -> Array[Dictionary]:
+	var commands: Array[Dictionary] = []
+	var fallback_index := 0
+	var font := _canvas_text_font()
+	for value in online_position_remote_players:
+		if not (value is Dictionary):
+			continue
+		var player_info := value as Dictionary
+		var state := _online_remote_player_world_state(player_info, fallback_index)
+		if state.is_empty():
+			continue
+		fallback_index += 1
+		var position := state.get("position", {}) as Dictionary
+		var center := state.get("center", Vector2.ZERO) as Vector2
+		commands.append({
+			"stableId": str(state.get("stableId", "")),
+			"kind": "remote_actor",
+			"position": center,
+			"depthY": center.y + 24.0,
+			"tiePriority": 10,
+			"moving": bool(position.get("moving", false)),
+			"facingOffset": _online_facing_offset(str(position.get("facing", "south"))),
+			"label": str(state.get("label", "")),
+			"font": font,
+		})
+	return commands
+
+
+func _online_remote_player_world_state(
+	player_info: Dictionary,
+	fallback_index: int
+) -> Dictionary:
+	var username := str(player_info.get("username", "")).strip_edges()
+	var account_id := str(player_info.get("accountId", "")).strip_edges()
+	var current_username := str(current_account_session.get("username", "")).strip_edges()
+	var current_account_id := str(current_account_session.get("accountId", "")).strip_edges()
+	if (
+		(username != "" and username == current_username)
+		or (account_id != "" and account_id == current_account_id)
+	):
+		return {}
+	var position := (
+		player_info.get("position", {}) as Dictionary
+		if player_info.get("position", {}) is Dictionary
+		else {}
+	)
+	if position.has("hasCell") and not bool(position.get("hasCell", false)):
+		return {}
+	if str(position.get("precision", "")).strip_edges().to_lower() == "map":
+		return {}
+	if str(position.get("mapId", "")) != current_map_id:
+		return {}
+	var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
+	if not IsoMapModel.is_inside(map_data, cell):
+		return {}
+	var identity := account_id if account_id != "" else username
+	if identity == "":
+		identity = "remote_%d" % fallback_index
+	return {
+		"stableId": "remote:%s" % identity,
+		"center": IsoMapModel.grid_to_world(map_data, cell),
+		"label": _online_player_label(player_info),
+		"position": position,
+	}
+
+
+func _world_overlay_commands() -> Array[Dictionary]:
+	var commands := MapVisualRenderer.foreground_overlay_commands(map_visual_render_state)
+	var font := _canvas_text_font()
+	for value in map_data.get("interactionPoints", []):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		var item_id := str(item.get("id", "")).strip_edges()
+		if item_id == "":
+			continue
+		var marker := InteractionModel.marker_world_position(map_data, item)
+		var selected := (
+			has_pending_interaction
+			and str(pending_interaction.get("id", "")) == item_id
+		)
+		selected = selected or (
+			_dialog_is_open()
+			and str(active_dialog_interaction.get("id", "")) == item_id
+		)
+		if selected:
+			commands.append({
+				"stableId": "selection:%s" % item_id,
+				"kind": "selection",
+				"position": marker,
+			})
+		var marker_state := _quest_marker_state_for_item(item, false)
+		var marker_visual := _quest_marker_visual_for_state(marker_state)
+		if not marker_visual.is_empty():
+			commands.append({
+				"stableId": "quest:%s" % item_id,
+				"kind": "npc_quest",
+				"position": marker + Vector2(0, -86),
+				"glyph": str(marker_visual.get("glyph", "!")),
+				"fill": marker_visual.get("fill", Color(1.0, 0.82, 0.18, 0.98)),
+				"border": marker_visual.get("border", Color(1.0, 0.95, 0.54, 0.98)),
+				"textColor": marker_visual.get("textColor", Color(0.16, 0.12, 0.04, 0.98)),
+				"font": font,
+			})
+		var facility_label := InteractionModel.world_marker_label_for(item)
+		if facility_label != "":
+			commands.append({
+				"stableId": "facility:%s" % item_id,
+				"kind": "facility",
+				"position": marker,
+				"text": facility_label,
+				"width": maxf(42.0, float(facility_label.length()) * 18.0 + 18.0),
+				"fill": _facility_marker_color(
+					InteractionModel.facility_type_for(item),
+					selected
+				),
+				"font": font,
+			})
+	if (
+		has_pending_interaction
+		and str(pending_interaction.get("kind", "")) == "ground_pet_drop"
+	):
+		var selected_drop_id := str(pending_interaction.get("dropId", "")).strip_edges()
+		for drop in _ground_pet_drops_on_map_fast(current_map_id):
+			if str(drop.get("dropId", "")).strip_edges() != selected_drop_id:
+				continue
+			commands.append({
+				"stableId": "selection:ground_drop:%s" % selected_drop_id,
+				"kind": "selection",
+				"position": _ground_pet_marker_world_position(drop) + Vector2(0, 12),
+			})
+			break
+	return commands
+
+
+func _world_overlay_signature() -> String:
+	return "%s|bundle:%s|active:%s|preview:%s|pending:%s,%s,%s,%s|dialog:%s,%s|drops:%s|quest:%s|foreground:%d" % [
+		current_map_id,
+		str(map_visual_render_state.get("bundleId", "")),
+		str(map_visual_render_state.get("active", false)),
+		str(map_visual_render_state.get("qaPreview", false)),
+		str(has_pending_interaction),
+		str(pending_interaction.get("kind", "")),
+		str(pending_interaction.get("id", "")),
+		str(pending_interaction.get("dropId", "")),
+		str(_dialog_is_open()),
+		str(active_dialog_interaction.get("id", "")),
+		_ground_pet_drop_depth_signature_cached(),
+		_quest_marker_signature(),
+		MapVisualRenderer.object_draw_count(map_visual_render_state, "foreground"),
 	]
 
 
@@ -8025,15 +8462,25 @@ func _draw() -> void:
 		_perf_add("draw_battle", draw_start)
 		return
 	_draw_isometric_map()
-	_draw_online_remote_players()
-	if has_target_marker:
-		_draw_target_marker(target_marker)
 	_perf_add("draw_world", draw_start)
+
+
+func _build_world_visual_layers() -> void:
+	world_depth_layer = WorldDepthLayer.new()
+	world_depth_layer.name = "WorldDepthLayer"
+	add_child(world_depth_layer)
+	world_overlay_layer = WorldOverlayLayer.new()
+	world_overlay_layer.name = "WorldOverlayLayer"
+	add_child(world_overlay_layer)
 
 
 func _spawn_player() -> void:
 	player = PLAYER_SCENE.instantiate()
-	add_child(player)
+	if world_depth_layer != null:
+		world_depth_layer.add_child(player)
+		world_depth_layer.register_actor("actor:player", player, 24.0)
+	else:
+		add_child(player)
 	if map_data.is_empty():
 		player.global_position = _layout_size() * 0.5
 	else:
@@ -8067,7 +8514,11 @@ func _sync_player_mount_visual_if_needed(force: bool = false) -> void:
 
 func _spawn_pet() -> void:
 	pet = PET_SCENE.instantiate()
-	add_child(pet)
+	if world_depth_layer != null:
+		world_depth_layer.add_child(pet)
+		world_depth_layer.register_actor("actor:pet", pet, 18.0)
+	else:
+		add_child(pet)
 	pet.visible = false
 	pet.global_position = player.global_position + Vector2(-56, 36)
 	_sync_gm_speed_multiplier()
@@ -13735,10 +14186,8 @@ func _draw_isometric_map() -> void:
 		_draw_iso_tile(IsoMapModel.grid_to_world(map_data, cell), Color(0.96, 0.75, 0.25, 0.24), Color(0.98, 0.82, 0.32, 0.38))
 
 	_draw_encounter_zones()
-	MapVisualRenderer.draw_objects(self, map_visual_render_state, "world")
 	_draw_decor_cells()
 	_draw_interaction_points()
-	MapVisualRenderer.draw_objects(self, map_visual_render_state, "foreground")
 	_draw_ground_pet_drops()
 
 
@@ -13795,31 +14244,46 @@ func _online_remote_player_at_screen_point(screen_point: Vector2, ui_checked: bo
 	if not _is_server_account_session() or online_position_remote_players.is_empty() or map_data.is_empty() or (not ui_checked and _is_ui_point(screen_point)):
 		return {}
 	var world_point := _screen_to_world(screen_point)
-	for index in range(online_position_remote_players.size() - 1, -1, -1):
-		var value = online_position_remote_players[index]
+	var states_by_id: Dictionary = {}
+	var fallback_entries: Array[Dictionary] = []
+	var fallback_index := 0
+	for value in online_position_remote_players:
 		if not (value is Dictionary):
 			continue
 		var player_info := value as Dictionary
-		var username := str(player_info.get("username", "")).strip_edges()
-		if username == "" or username == str(current_account_session.get("username", "")).strip_edges():
+		var state := _online_remote_player_world_state(player_info, fallback_index)
+		if state.is_empty():
 			continue
-		var position := player_info.get("position", {}) as Dictionary if player_info.get("position", {}) is Dictionary else {}
-		if position.has("hasCell") and not bool(position.get("hasCell", false)):
+		fallback_index += 1
+		var stable_id := str(state.get("stableId", ""))
+		state["playerInfo"] = player_info
+		states_by_id[stable_id] = state
+		var center := state.get("center", Vector2.ZERO) as Vector2
+		fallback_entries.append({
+			"stableId": stable_id,
+			"depthY": center.y + 24.0,
+			"tiePriority": 10,
+		})
+	var ordered_ids: Array[String] = []
+	if world_depth_layer != null:
+		ordered_ids = world_depth_layer.stable_ids_front_to_back("remote_actors")
+	var fallback_ids := WorldDepthLayer.debug_sorted_ids(fallback_entries)
+	fallback_ids.reverse()
+	for stable_id in fallback_ids:
+		if not ordered_ids.has(stable_id):
+			ordered_ids.append(stable_id)
+	for stable_id in ordered_ids:
+		var state_value: Variant = states_by_id.get(stable_id)
+		if not (state_value is Dictionary):
 			continue
-		if str(position.get("precision", "")).strip_edges().to_lower() == "map":
-			continue
-		if str(position.get("mapId", "")) != current_map_id:
-			continue
-		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
-		if not IsoMapModel.is_inside(map_data, cell):
-			continue
-		var center := IsoMapModel.grid_to_world(map_data, cell)
-		var label := _online_player_label(player_info)
+		var state := state_value as Dictionary
+		var center := state.get("center", Vector2.ZERO) as Vector2
+		var label := str(state.get("label", ""))
 		var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
 		var label_rect := Rect2(center + Vector2(-label_width * 0.5, -70.0), Vector2(label_width, 30.0))
 		var body_rect := Rect2(center + Vector2(-28.0, -50.0), Vector2(56.0, 92.0))
 		if label_rect.has_point(world_point) or body_rect.has_point(world_point) or world_point.distance_to(center + Vector2(0.0, -14.0)) <= 52.0:
-			return player_info.duplicate(true)
+			return (state.get("playerInfo", {}) as Dictionary).duplicate(true)
 	return {}
 
 
@@ -15052,45 +15516,54 @@ func _draw_interaction_points() -> void:
 		selected = selected or (_dialog_is_open() and str(active_dialog_interaction.get("id", "")) == str(item.get("id", "")))
 		if selected:
 			_draw_iso_tile(center, Color(0.97, 0.75, 0.22, 0.18), Color(0.98, 0.80, 0.28, 0.7))
-			draw_arc(marker, 24.0, 0.0, TAU, 32, Color(1.0, 0.82, 0.25, 0.95), 3.0, true)
+			if world_overlay_layer == null:
+				draw_arc(marker, 24.0, 0.0, TAU, 32, Color(1.0, 0.82, 0.25, 0.95), 3.0, true)
 		var item_kind := str(item.get("kind", ""))
 		if item_kind == "warp":
 			draw_arc(marker, 18.0, 0.0, TAU, 28, Color(0.48, 0.83, 1.0, 0.95), 4.0, true)
 			draw_arc(marker, 10.0, 0.0, TAU, 24, Color(1.0, 0.88, 0.35, 0.92), 3.0, true)
 			draw_line(marker + Vector2(-16, 12), marker + Vector2(16, 12), Color(0.36, 0.56, 0.70, 0.9), 3.0)
 		elif item_kind == "gate":
-			draw_line(marker + Vector2(-14, 14), marker + Vector2(-14, -10), Color(0.73, 0.54, 0.34, 0.95), 5.0)
-			draw_line(marker + Vector2(14, 14), marker + Vector2(14, -10), Color(0.73, 0.54, 0.34, 0.95), 5.0)
-			draw_line(marker + Vector2(-14, -10), marker + Vector2(14, -10), Color(0.90, 0.72, 0.43, 0.95), 5.0)
-			draw_circle(marker + Vector2(0, 4), 4.0, Color(1.0, 0.86, 0.42, 0.95))
+			if world_depth_layer == null:
+				draw_line(marker + Vector2(-14, 14), marker + Vector2(-14, -10), Color(0.73, 0.54, 0.34, 0.95), 5.0)
+				draw_line(marker + Vector2(14, 14), marker + Vector2(14, -10), Color(0.73, 0.54, 0.34, 0.95), 5.0)
+				draw_line(marker + Vector2(-14, -10), marker + Vector2(14, -10), Color(0.90, 0.72, 0.43, 0.95), 5.0)
+				draw_circle(marker + Vector2(0, 4), 4.0, Color(1.0, 0.86, 0.42, 0.95))
 		elif item_kind == "record_point":
-			draw_rect(Rect2(marker + Vector2(-7, -26), Vector2(14, 36)), Color(0.56, 0.62, 0.66, 0.98), true)
-			draw_line(marker + Vector2(-13, -18), marker + Vector2(13, -18), Color(0.95, 0.82, 0.46, 0.95), 4.0)
-			draw_circle(marker + Vector2(0, -31), 9.0, Color(0.98, 0.78, 0.34, 0.98))
-			draw_arc(marker + Vector2(0, -31), 13.0, 0.0, TAU, 24, Color(0.55, 0.79, 1.0, 0.76), 2.0, true)
+			if world_depth_layer == null:
+				draw_rect(Rect2(marker + Vector2(-7, -26), Vector2(14, 36)), Color(0.56, 0.62, 0.66, 0.98), true)
+				draw_line(marker + Vector2(-13, -18), marker + Vector2(13, -18), Color(0.95, 0.82, 0.46, 0.95), 4.0)
+				draw_circle(marker + Vector2(0, -31), 9.0, Color(0.98, 0.78, 0.34, 0.98))
+				draw_arc(marker + Vector2(0, -31), 13.0, 0.0, TAU, 24, Color(0.55, 0.79, 1.0, 0.76), 2.0, true)
 		elif item_kind == "sign":
-			var board_rect := Rect2(marker + Vector2(-26, -47), Vector2(52, 28))
-			draw_line(marker + Vector2(0, 16), marker + Vector2(0, -18), Color(0.42, 0.27, 0.14, 0.98), 5.0)
-			draw_rect(board_rect, Color(0.05, 0.04, 0.03, 0.55), true)
-			draw_rect(board_rect.grow(-2.0), Color(0.58, 0.38, 0.18, 0.97), true)
-			draw_line(board_rect.position + Vector2(5, 8), board_rect.position + Vector2(47, 8), Color(0.82, 0.62, 0.30, 0.95), 2.0)
-			draw_line(board_rect.position + Vector2(5, 20), board_rect.position + Vector2(47, 20), Color(0.32, 0.20, 0.10, 0.55), 2.0)
-		elif item_kind == "npc":
-			var npc_texture := NpcArtCatalog.world_texture_for_instance(item)
-			if npc_texture != null:
-				var npc_rect := NpcArtCatalog.world_draw_rect_for_instance(item, marker, npc_texture)
-				var shadow_radius := Vector2(clampf(npc_rect.size.x * 0.22, 12.0, 22.0), 5.5)
-				draw_colored_polygon(
-					_battle_ellipse_points(marker + Vector2(0, 4), shadow_radius, 0.0, 28),
-					Color(0.02, 0.03, 0.025, 0.34)
-				)
-				draw_texture_rect(npc_texture, npc_rect, false)
-			else:
+			if world_depth_layer == null:
+				var board_rect := Rect2(marker + Vector2(-26, -47), Vector2(52, 28))
+				draw_line(marker + Vector2(0, 16), marker + Vector2(0, -18), Color(0.42, 0.27, 0.14, 0.98), 5.0)
+				draw_rect(board_rect, Color(0.05, 0.04, 0.03, 0.55), true)
+				draw_rect(board_rect.grow(-2.0), Color(0.58, 0.38, 0.18, 0.97), true)
+				draw_line(board_rect.position + Vector2(5, 8), board_rect.position + Vector2(47, 8), Color(0.82, 0.62, 0.30, 0.95), 2.0)
+				draw_line(board_rect.position + Vector2(5, 20), board_rect.position + Vector2(47, 20), Color(0.32, 0.20, 0.10, 0.55), 2.0)
+		elif item_kind == "guardian":
+			if world_depth_layer == null:
 				_draw_interaction_placeholder(item, marker)
+		elif item_kind == "npc":
+			if world_depth_layer == null:
+				var npc_texture := NpcArtCatalog.world_texture_for_instance(item)
+				if npc_texture != null:
+					var npc_rect := NpcArtCatalog.world_draw_rect_for_instance(item, marker, npc_texture)
+					var shadow_radius := Vector2(clampf(npc_rect.size.x * 0.22, 12.0, 22.0), 5.5)
+					draw_colored_polygon(
+						_battle_ellipse_points(marker + Vector2(0, 4), shadow_radius, 0.0, 28),
+						Color(0.02, 0.03, 0.025, 0.34)
+					)
+					draw_texture_rect(npc_texture, npc_rect, false)
+				else:
+					_draw_interaction_placeholder(item, marker)
 		else:
 			_draw_interaction_placeholder(item, marker)
-		_draw_npc_quest_marker(item, marker)
-		_draw_facility_marker_label(item, marker, selected)
+		if world_overlay_layer == null:
+			_draw_npc_quest_marker(item, marker)
+			_draw_facility_marker_label(item, marker, selected)
 
 
 func _draw_interaction_placeholder(item: Dictionary, marker: Vector2) -> void:
@@ -15378,7 +15851,10 @@ func _draw_ground_pet_drops() -> void:
 		)
 		if selected:
 			_draw_iso_tile(center, Color(0.97, 0.75, 0.22, 0.18), Color(0.98, 0.80, 0.28, 0.7))
-			draw_arc(marker + Vector2(0, 12), 24.0, 0.0, TAU, 32, Color(1.0, 0.82, 0.25, 0.95), 3.0, true)
+			if world_overlay_layer == null:
+				draw_arc(marker + Vector2(0, 12), 24.0, 0.0, TAU, 32, Color(1.0, 0.82, 0.25, 0.95), 3.0, true)
+		if world_depth_layer != null:
+			continue
 		var pet_instance := PlayerProgressModel.ground_pet_drop_pet(drop)
 		var body_color := _ground_pet_body_color(pet_instance)
 		var trim_color := Color(1.0, 0.86, 0.42, 0.96)

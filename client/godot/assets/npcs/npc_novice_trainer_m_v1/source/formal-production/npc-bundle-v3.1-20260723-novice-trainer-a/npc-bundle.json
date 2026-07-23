@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "archetypeId": "novice_trainer_m_v1",
+  "appearanceId": "npc_novice_trainer_m_v1",
+  "displayName": "新手训练师·男",
+  "mobility": "static",
+  "directions": [
+    "south",
+    "southwest",
+    "west",
+    "northwest",
+    "north",
+    "northeast",
+    "east",
+    "southeast"
+  ],
+  "world": {
+    "runtimeSize": [
+      256,
+      256
+    ],
+    "idleFrames": 1,
+    "walkFrames": 0,
+    "runtimeMirroring": false
+  },
+  "identity": {
+    "board": "identity/identity-board.png",
+    "fileSha256": "a42b819fe2cdb5a93e9bc14ba5c08c65163ae6ea9a78ed683ad79ce0466099a0",
+    "decodedRgbaByteSha256": "988697e6219f255b97f1bccb128ca09e037ed5b288770526ed55018beb5498a6",
+    "godotCanonicalRgbaSha256": "ccb2de864fee3fcd93866e016c0e5e7c45fc17db5f45972268af2651cbabb1f0",
+    "decodedRgbaSha256": "ccb2de864fee3fcd93866e016c0e5e7c45fc17db5f45972268af2651cbabb1f0",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "portraits": {
+    "states": [
+      "neutral",
+      "speaking",
+      "smile",
+      "concerned"
+    ],
+    "runtimeSize": [
+      512,
+      512
+    ],
+    "defaultState": "neutral",
+    "speakingState": "speaking"
+  },
+  "generation": {
+    "tool": "image_gen",
+    "model": "OpenAI built-in image_gen (model identifier not exposed by tool)",
+    "generatedAt": "2026-07-23T23:48:08+08:00",
+    "requestedBackground": "#FF00FF",
+    "sourceModes": {
+      "world": "opaque-chroma",
+      "portrait": "opaque-chroma"
+    },
+    "backgroundOperations": {
+      "opaqueChroma": "recorded_border_connected_chroma_v1",
+      "genuineTransparent": "genuine_transparent_alpha_preservation_v1",
+      "reviewedComponents": "reviewed_chroma_components_v3_1"
+    },
+    "promptLedger": "source/prompts.json",
+    "provenanceLedger": "source/provenance.json",
+    "generationLedger": "source/generation-ledger.json",
+    "explicitMaskReviews": {
+      "world": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "584f738e9243d1c50ce314e1389ccdf9ade9a97e662599191efb234adc56b5c2",
+        "explicitSheetMaskPath": "source/reviewed-masks/world-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "c6c61d5e1644b7f30246f46fd4f6c4ee71141973df7009680cc437b5ccaa644e",
+        "explicitSheetMaskPixelSha256": "b09d0c0ba236f6f27ec4b5b602a284ed2f94620720a3c0cb67396cf26b64c539",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/world-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "58b07340dbd3cb46bfef5548811c545f45c5e8cf133267c035e4e5e1871f77ea",
+        "reviewedComponentCount": 100
+      },
+      "portrait": {
+        "operation": "reviewed_chroma_components_v3_1",
+        "reviewMethod": "visual-inspection",
+        "rawSheetFileSha256": "258205c183640bbc3552c2dcba21e92de555b3b3ddcaf314a278c3177b6a5881",
+        "explicitSheetMaskPath": "source/reviewed-masks/portrait-sheet-mask.png",
+        "explicitSheetMaskFileSha256": "28eb042b87c006bae2050534384d514bcb4a1977063b8d3a6316d74fa96c6120",
+        "explicitSheetMaskPixelSha256": "7f900fa59f4a9329f584058f39f85ebf0f8cbe60933af679b63aca2681749078",
+        "maskAuthoringLedgerPath": "source/reviewed-masks/portrait-mask-authoring-ledger.json",
+        "maskAuthoringLedgerFileSha256": "348f2bb1c222d18b53d82123fb4c543b10b34d475b9a19df048575539a9ef0a7",
+        "reviewedComponentCount": 153
+      }
+    },
+    "pipelineMetadata": "pipeline-meta.json",
+    "qcSummary": "evidence/qc/qc-summary.json"
+  },
+  "ownership": {
+    "origin": "Project-directed AI-assisted original generated with OpenAI built-in image_gen; the west view is separately authored and assembled without mirroring",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "Project-directed generated output with no external art asset input; no StoneAge code, data, names, characters, textures, costumes, or proprietary art were supplied or copied",
+    "replacementPath": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_novice_trainer_m_v1",
+    "ledger": "source/ownership-ledger.json"
+  },
+  "review": {
+    "artStatus": "in_production",
+    "ownerReviewStatus": "pending",
+    "contactSheet": "evidence/contact-sheets/contact-sheet-transparent.png",
+    "blindDirectionAudit": "required",
+    "automaticDirectionApproval": false
+  },
+  "release": {
+    "runtimeEnabled": false,
+    "releaseApproved": false,
+    "reason": "builder output lacks real-Godot, blind-direction and explicit owner acceptance evidence"
+  }
+}

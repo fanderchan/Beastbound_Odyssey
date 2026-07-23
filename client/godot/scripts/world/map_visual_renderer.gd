@@ -15,8 +15,27 @@ static func draw_ground(canvas: CanvasItem, prepared: Dictionary) -> int:
 	if canvas == null or not has_prepared_visual(prepared):
 		return 0
 	var atlas := prepared.get("atlasTexture") as Texture2D
+	_draw_ground_commands(
+		canvas,
+		atlas,
+		prepared.get("edgeGroundDraws", [])
+	)
+	return _draw_ground_commands(
+		canvas,
+		atlas,
+		prepared.get("groundDraws", [])
+	)
+
+
+static func _draw_ground_commands(
+	canvas: CanvasItem,
+	atlas: Texture2D,
+	values: Variant
+) -> int:
+	if canvas == null or atlas == null or not (values is Array):
+		return 0
 	var count := 0
-	for value in prepared.get("groundDraws", []):
+	for value in values as Array:
 		if not (value is Dictionary):
 			continue
 		var command := value as Dictionary
@@ -54,10 +73,85 @@ static func draw_objects(
 	return count
 
 
+static func world_depth_commands(prepared: Dictionary) -> Array[Dictionary]:
+	if not bool(prepared.get("active", false)):
+		return []
+	var commands: Array[Dictionary] = []
+	var by_layer := prepared.get("objectDrawsByLayer", {}) as Dictionary
+	var values: Variant = by_layer.get("world", [])
+	if not (values is Array):
+		return commands
+	for value in values as Array:
+		if not (value is Dictionary):
+			continue
+		var command := value as Dictionary
+		var instance_id := str(command.get("instanceId", "")).strip_edges()
+		var texture: Variant = command.get("texture")
+		var draw_rect: Variant = command.get("drawRect")
+		var contact_point: Variant = command.get("contactPoint")
+		if (
+			instance_id == ""
+			or not (texture is Texture2D)
+			or not (draw_rect is Rect2)
+			or not (contact_point is Vector2)
+		):
+			continue
+		commands.append({
+			"stableId": "object:%s" % instance_id,
+			"kind": "map_object",
+			"position": contact_point as Vector2,
+			"depthY": float(command.get("sortKey", (contact_point as Vector2).y)),
+			"tiePriority": 20,
+			"texture": texture,
+			"drawRect": draw_rect,
+		})
+	return commands
+
+
+static func foreground_overlay_commands(prepared: Dictionary) -> Array[Dictionary]:
+	if not bool(prepared.get("active", false)):
+		return []
+	var commands: Array[Dictionary] = []
+	var by_layer := prepared.get("objectDrawsByLayer", {}) as Dictionary
+	var values: Variant = by_layer.get("foreground", [])
+	if not (values is Array):
+		return commands
+	for value in values as Array:
+		if not (value is Dictionary):
+			continue
+		var command := value as Dictionary
+		var instance_id := str(command.get("instanceId", "")).strip_edges()
+		var texture: Variant = command.get("texture")
+		var draw_rect: Variant = command.get("drawRect")
+		var contact_point: Variant = command.get("contactPoint")
+		if (
+			instance_id == ""
+			or not (texture is Texture2D)
+			or not (draw_rect is Rect2)
+			or not (contact_point is Vector2)
+		):
+			continue
+		commands.append({
+			"stableId": "foreground:%s" % instance_id,
+			"kind": "texture",
+			"position": contact_point as Vector2,
+			"texture": texture,
+			"drawRect": draw_rect,
+		})
+	return commands
+
+
 static func ground_draw_count(prepared: Dictionary) -> int:
 	if not has_prepared_visual(prepared):
 		return 0
 	return (prepared.get("groundDraws", []) as Array).size()
+
+
+static func edge_ground_draw_count(prepared: Dictionary) -> int:
+	if not has_prepared_visual(prepared):
+		return 0
+	var values: Variant = prepared.get("edgeGroundDraws", [])
+	return (values as Array).size() if values is Array else 0
 
 
 static func object_draw_count(prepared: Dictionary, render_layer: String = "") -> int:

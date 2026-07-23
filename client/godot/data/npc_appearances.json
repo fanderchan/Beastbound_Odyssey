@@ -381,10 +381,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "成熟沉着的玩家转生资格导师，资格标杆、封闭登记板和螺旋化石牌形成职业识别；与村医、宠物转生和宗教岗位严格分离。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/source-and-ownership.md",
@@ -413,7 +413,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_player_rebirth_mentor_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "c172502593ea5f2d2e91c36910d10672329ce2bdb32501fc127fffbbee81712d"
     },
     {
       "appearanceId": "npc_pet_mm_trial_mentor_m_v1",
@@ -422,10 +424,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "健壮严谨的宠物MM试炼裁判，信号骨哨、挑战计数结和裁判护臂形成职业识别；不是守卫、骑宠导师或宠技训练师。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/source-and-ownership.md",
@@ -454,7 +456,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_pet_mm_trial_mentor_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "7d9f089cd3be171a92a7a6af4975b0af81425e7601cebc4c811ba178b6b566cf"
     },
     {
       "appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
@@ -463,10 +467,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "谨慎周到的2转MM奖励保管员，贴身封闭蛋匣、双环封签和保管腰带形成职业识别；不是兽栏管理员或普通仓库员。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/source-and-ownership.md",
@@ -495,7 +499,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_pet_mm_stage2_keeper_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "67ad9e63b9366dd552e308b6287817c9209e93efda2c69d752111062702447b4"
     },
     {
       "appearanceId": "npc_diamond_merchant_m_v1",
@@ -504,10 +510,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "干练而克制华丽的钻石专营商，封闭矿石样品匣、骨制量具和规整贵重货腰带形成职业识别；与银行和杂货商分离。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_diamond_merchant_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_diamond_merchant_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_diamond_merchant_m_v1/source-and-ownership.md",
@@ -536,7 +542,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_diamond_merchant_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "ff45883f655dc36135e8442771a2da2416ae62d27cdc20223b0b5304735c4b91"
     },
     {
       "appearanceId": "npc_pet_skill_trainer_m_v1",
@@ -545,10 +553,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "敏捷理性的宠物行为训练师，七槽无字训练牌、信号哨和技能石收纳形成职业识别；与骑宠导师和新手训练师分离。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/source-and-ownership.md",
@@ -577,7 +585,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_pet_skill_trainer_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "91e1a0e1f96b21bb223f2bf41580b6a6e165a19f3538e388c814bd0760b20f3c"
     },
     {
       "appearanceId": "npc_welfare_clerk_f_v1",
@@ -586,10 +596,10 @@
       "gender": "female",
       "mobility": "static",
       "identityBrief": "亲切可靠的新手福利登记员，空白木登记牌和封装远行补给袋形成职业识别；不是银行、商人或庄园管事。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_welfare_clerk_f_v1",
       "metadataPath": "client/godot/assets/npcs/npc_welfare_clerk_f_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_welfare_clerk_f_v1/source-and-ownership.md",
@@ -618,7 +628,9 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_welfare_clerk_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "e1110869f51a952041b798e285867fc238156d549a99d8c3147775f625245e31"
     },
     {
       "appearanceId": "npc_storyteller_m_v1",
@@ -627,10 +639,10 @@
       "gender": "male",
       "mobility": "static",
       "identityBrief": "阅历丰富的年长旅人说书人，闭合札记、旅行纪念结和折叠披肩形成口述历史轮廓；不是庄园登记员或法师。",
-      "status": "owner_review_pending",
-      "ownerReviewStatus": "pending",
-      "releaseApproved": false,
-      "runtimeEnabled": false,
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
       "assetRoot": "client/godot/assets/npcs/npc_storyteller_m_v1",
       "metadataPath": "client/godot/assets/npcs/npc_storyteller_m_v1/action-bundle-meta.json",
       "ownershipPath": "client/godot/assets/npcs/npc_storyteller_m_v1/source-and-ownership.md",
@@ -659,7 +671,99 @@
           "smile": "portrait/smile.png",
           "concerned": "portrait/concerned.png"
         }
-      }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_storyteller_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "7cda56f743c763a01a906db768835ecd7cb8178d6fea6ff629bd40e25fea9fde"
+    },
+    {
+      "appearanceId": "npc_village_civilian_f_v1",
+      "displayName": "普通村民·女",
+      "roleId": "village_civilian",
+      "gender": "female",
+      "mobility": "static",
+      "identityBrief": "朴实亲切的成年普通女村民，低位粗辫、蓝绿色单肩披巾、砖红围裙裙摆和封口陶葫芦形成身份识别；无职业服务道具，作为普通村民由不同 npcId 复用。",
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
+      "assetRoot": "client/godot/assets/npcs/npc_village_civilian_f_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_village_civilian_f_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_village_civilian_f_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_village_civilian_f_v1/release-attestation.json",
+      "releaseAttestationSha256": "1a0f3fecc935c296f60982faff5c89e542508c5da4093e105e79277e96382996"
+    },
+    {
+      "appearanceId": "npc_novice_trainer_m_v1",
+      "displayName": "新手训练师·男",
+      "roleId": "novice_trainer",
+      "gender": "male",
+      "mobility": "static",
+      "identityBrief": "结实亲和的新手训练师，右髋卷起的新手手册、左腰三枚圆木训练筹码和胸前太阳形徽记形成职业识别；与守卫、骑宠导师和宠技训练师分离。",
+      "status": "approved",
+      "ownerReviewStatus": "approved",
+      "releaseApproved": true,
+      "runtimeEnabled": true,
+      "assetRoot": "client/godot/assets/npcs/npc_novice_trainer_m_v1",
+      "metadataPath": "client/godot/assets/npcs/npc_novice_trainer_m_v1/action-bundle-meta.json",
+      "ownershipPath": "client/godot/assets/npcs/npc_novice_trainer_m_v1/source-and-ownership.md",
+      "world": {
+        "visualStrategy": "independent_8",
+        "frameSize": [256, 256],
+        "presentationScale": 0.36,
+        "anchorOffset": [0, 18],
+        "actions": {
+          "idle": {"frameCount": 1, "fps": 1.0}
+        },
+        "directionMapping": {
+          "south": {"sourceDirection": "south", "flipH": false},
+          "southwest": {"sourceDirection": "southwest", "flipH": false},
+          "west": {"sourceDirection": "west", "flipH": false},
+          "northwest": {"sourceDirection": "northwest", "flipH": false},
+          "north": {"sourceDirection": "north", "flipH": false},
+          "northeast": {"sourceDirection": "northeast", "flipH": false},
+          "east": {"sourceDirection": "east", "flipH": false},
+          "southeast": {"sourceDirection": "southeast", "flipH": false}
+        }
+      },
+      "portraits": {
+        "frameSize": [512, 512],
+        "states": {
+          "neutral": "portrait/neutral.png",
+          "speaking": "portrait/speaking.png",
+          "smile": "portrait/smile.png",
+          "concerned": "portrait/concerned.png"
+        }
+      },
+      "releaseAttestationPath": "client/godot/assets/npcs/npc_novice_trainer_m_v1/release-attestation.json",
+      "releaseAttestationSha256": "2a28a1e1d39e8d391364cb1956edb32a5336413e89e8ede681073e809c33f51e"
     }
   ]
 }

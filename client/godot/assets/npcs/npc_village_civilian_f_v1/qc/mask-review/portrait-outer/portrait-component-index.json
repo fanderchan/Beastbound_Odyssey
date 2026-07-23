@@ -1,0 +1,877 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "portrait",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/portrait-2x2-raw.png",
+  "rawSheetFileSha256": "8218a1656ae57fba296f3f7633417f97e09334c44a12efa5666a72ecaf867c1d",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-outer/portrait-component-review-01.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-outer/portrait-component-review-02.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-outer/portrait-component-review-03.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-outer/portrait-component-review-04.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/portrait-outer/portrait-component-review-05.png"
+  ],
+  "components": [
+    {
+      "key": "neutral|reviewed-outer-background-hole|7e3d1a61658c66ac8d3a0bd77aba69246f135f2555c7ddeb3a7c2f8e4a7f9bc8",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7e3d1a61658c66ac8d3a0bd77aba69246f135f2555c7ddeb3a7c2f8e4a7f9bc8",
+      "cellBbox": [
+        268,
+        81,
+        280,
+        92
+      ],
+      "sheetBbox": [
+        268,
+        81,
+        280,
+        92
+      ],
+      "pixelCount": 22,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|7a8d18580be019d7e4d1951bd7453118c9eea6b1441f3f12219b4b32fb4b5424",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7a8d18580be019d7e4d1951bd7453118c9eea6b1441f3f12219b4b32fb4b5424",
+      "cellBbox": [
+        249,
+        103,
+        255,
+        112
+      ],
+      "sheetBbox": [
+        249,
+        103,
+        255,
+        112
+      ],
+      "pixelCount": 16,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|3098d4691e7f9e3cd81c5d21b2d12e5978ea95627d0b4b4873f9a2ff9d674efb",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3098d4691e7f9e3cd81c5d21b2d12e5978ea95627d0b4b4873f9a2ff9d674efb",
+      "cellBbox": [
+        384,
+        104,
+        389,
+        111
+      ],
+      "sheetBbox": [
+        384,
+        104,
+        389,
+        111
+      ],
+      "pixelCount": 8,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|f8d50099b16ef2f11832a4a28e62df0ccb8cc4c9458b527f753e6079d5e22840",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f8d50099b16ef2f11832a4a28e62df0ccb8cc4c9458b527f753e6079d5e22840",
+      "cellBbox": [
+        400,
+        124,
+        408,
+        146
+      ],
+      "sheetBbox": [
+        400,
+        124,
+        408,
+        146
+      ],
+      "pixelCount": 42,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|f4d16e8bc826f60f2db2d2667743a61d08bb3218f02badb746c1b5c1e30e94ef",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f4d16e8bc826f60f2db2d2667743a61d08bb3218f02badb746c1b5c1e30e94ef",
+      "cellBbox": [
+        228,
+        151,
+        233,
+        165
+      ],
+      "sheetBbox": [
+        228,
+        151,
+        233,
+        165
+      ],
+      "pixelCount": 37,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|94e3bf88b0ecd5f7af1b06dea8ec75bbeee0a4aea770b49d9ded05fd112d1818",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "94e3bf88b0ecd5f7af1b06dea8ec75bbeee0a4aea770b49d9ded05fd112d1818",
+      "cellBbox": [
+        409,
+        211,
+        415,
+        225
+      ],
+      "sheetBbox": [
+        409,
+        211,
+        415,
+        225
+      ],
+      "pixelCount": 51,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|a4eabce37a6b7574ff8292acbea2b698225346beb3451eaa09c3c0f14f70bb4b",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a4eabce37a6b7574ff8292acbea2b698225346beb3451eaa09c3c0f14f70bb4b",
+      "cellBbox": [
+        401,
+        229,
+        416,
+        255
+      ],
+      "sheetBbox": [
+        401,
+        229,
+        416,
+        255
+      ],
+      "pixelCount": 137,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|e126d869a863a4f90962fa7e6c8f6c457c00a5c30c1d53a8280e19ffec8ee43c",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e126d869a863a4f90962fa7e6c8f6c457c00a5c30c1d53a8280e19ffec8ee43c",
+      "cellBbox": [
+        268,
+        248,
+        280,
+        263
+      ],
+      "sheetBbox": [
+        268,
+        248,
+        280,
+        263
+      ],
+      "pixelCount": 58,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|63c2bb56b167329018bf559d3f19eb9bc3d2729d0f7480e816075cff9ef4a103",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "63c2bb56b167329018bf559d3f19eb9bc3d2729d0f7480e816075cff9ef4a103",
+      "cellBbox": [
+        521,
+        429,
+        526,
+        436
+      ],
+      "sheetBbox": [
+        521,
+        429,
+        526,
+        436
+      ],
+      "pixelCount": 22,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|32f689de64549907cc9b7276efcb8cb714e73c3b8ee5c222ac2b6aa3f81ba17a",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "32f689de64549907cc9b7276efcb8cb714e73c3b8ee5c222ac2b6aa3f81ba17a",
+      "cellBbox": [
+        186,
+        509,
+        211,
+        617
+      ],
+      "sheetBbox": [
+        186,
+        509,
+        211,
+        617
+      ],
+      "pixelCount": 355,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "neutral|reviewed-outer-background-hole|25ce8eeac5f3922814592cde43863d2bd00c17589e2b84bf7721283cf6ccfd7b",
+      "slot": "neutral",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "25ce8eeac5f3922814592cde43863d2bd00c17589e2b84bf7721283cf6ccfd7b",
+      "cellBbox": [
+        436,
+        520,
+        446,
+        551
+      ],
+      "sheetBbox": [
+        436,
+        520,
+        446,
+        551
+      ],
+      "pixelCount": 105,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|cc74d65d9de1eaacd7132e911fe6e5f87638a85036cd4243f83e22d85cef74af",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "cc74d65d9de1eaacd7132e911fe6e5f87638a85036cd4243f83e22d85cef74af",
+      "cellBbox": [
+        216,
+        82,
+        228,
+        92
+      ],
+      "sheetBbox": [
+        843,
+        82,
+        855,
+        92
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|d19df91f24281abf2c717c41af09d76c822effff93a0deded34fc2804dc6f5fa",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d19df91f24281abf2c717c41af09d76c822effff93a0deded34fc2804dc6f5fa",
+      "cellBbox": [
+        196,
+        104,
+        203,
+        114
+      ],
+      "sheetBbox": [
+        823,
+        104,
+        830,
+        114
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|78183fcfe9198a62b900437aacb007cc26338de421659fca64a2347e5aead271",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "78183fcfe9198a62b900437aacb007cc26338de421659fca64a2347e5aead271",
+      "cellBbox": [
+        333,
+        104,
+        339,
+        114
+      ],
+      "sheetBbox": [
+        960,
+        104,
+        966,
+        114
+      ],
+      "pixelCount": 16,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|cf0d426bd244272e995f5bfd58c5bb345e3606ef92bb8952981d48d72551fdaa",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "cf0d426bd244272e995f5bfd58c5bb345e3606ef92bb8952981d48d72551fdaa",
+      "cellBbox": [
+        350,
+        127,
+        356,
+        147
+      ],
+      "sheetBbox": [
+        977,
+        127,
+        983,
+        147
+      ],
+      "pixelCount": 34,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|edeb4e80b6fb99fbaf7acd7d50935bf5842ce96e4a92b750edfedadf7395cd2d",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "edeb4e80b6fb99fbaf7acd7d50935bf5842ce96e4a92b750edfedadf7395cd2d",
+      "cellBbox": [
+        175,
+        156,
+        180,
+        168
+      ],
+      "sheetBbox": [
+        802,
+        156,
+        807,
+        168
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|2d0209e33702d3b2a20124dc47fc8fec577ed4d1178ddea847e48f4024436de1",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "2d0209e33702d3b2a20124dc47fc8fec577ed4d1178ddea847e48f4024436de1",
+      "cellBbox": [
+        357,
+        212,
+        363,
+        226
+      ],
+      "sheetBbox": [
+        984,
+        212,
+        990,
+        226
+      ],
+      "pixelCount": 35,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|67813e02ab8e110ad8c4837d03974514de555b924f8e492851a1217ddd1c7aa6",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "67813e02ab8e110ad8c4837d03974514de555b924f8e492851a1217ddd1c7aa6",
+      "cellBbox": [
+        350,
+        230,
+        365,
+        255
+      ],
+      "sheetBbox": [
+        977,
+        230,
+        992,
+        255
+      ],
+      "pixelCount": 159,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|07fbff6cc8617e94314eb933bcfaae9c24001a472fca4c93f75ca7d61ecfa297",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "07fbff6cc8617e94314eb933bcfaae9c24001a472fca4c93f75ca7d61ecfa297",
+      "cellBbox": [
+        217,
+        250,
+        230,
+        264
+      ],
+      "sheetBbox": [
+        844,
+        250,
+        857,
+        264
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|70b239f325e95fc454daa7e224fae93aa0380e5b3589907fe0e4c94e04cfaeda",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "70b239f325e95fc454daa7e224fae93aa0380e5b3589907fe0e4c94e04cfaeda",
+      "cellBbox": [
+        470,
+        432,
+        475,
+        438
+      ],
+      "sheetBbox": [
+        1097,
+        432,
+        1102,
+        438
+      ],
+      "pixelCount": 21,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "speaking|reviewed-outer-background-hole|75965e53f0f55b2ea26f78ffa600f73871de3b14afae584ffc42fdfe4e731386",
+      "slot": "speaking",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "75965e53f0f55b2ea26f78ffa600f73871de3b14afae584ffc42fdfe4e731386",
+      "cellBbox": [
+        462,
+        440,
+        469,
+        448
+      ],
+      "sheetBbox": [
+        1089,
+        440,
+        1096,
+        448
+      ],
+      "pixelCount": 28,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|e47e2f6636e89777af866ac636ede91b5389b5b7cf25484d264a6465cb4a8d96",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e47e2f6636e89777af866ac636ede91b5389b5b7cf25484d264a6465cb4a8d96",
+      "cellBbox": [
+        271,
+        24,
+        280,
+        33
+      ],
+      "sheetBbox": [
+        271,
+        651,
+        280,
+        660
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|eecc6bf412e3c388df2c97349bdf88605fd19e73de3d267c7f34c1a0ea7e3bc3",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "eecc6bf412e3c388df2c97349bdf88605fd19e73de3d267c7f34c1a0ea7e3bc3",
+      "cellBbox": [
+        385,
+        44,
+        392,
+        53
+      ],
+      "sheetBbox": [
+        385,
+        671,
+        392,
+        680
+      ],
+      "pixelCount": 11,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|fd48218e7b18539844fe52c56a7075a227bb43564aa17dcf0b0e81950dcc2fb6",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "fd48218e7b18539844fe52c56a7075a227bb43564aa17dcf0b0e81950dcc2fb6",
+      "cellBbox": [
+        251,
+        46,
+        257,
+        55
+      ],
+      "sheetBbox": [
+        251,
+        673,
+        257,
+        682
+      ],
+      "pixelCount": 14,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|7cd45958535db16086dbe2ce3b10e38b050d8bf3dc591d53163b0339919869c5",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "7cd45958535db16086dbe2ce3b10e38b050d8bf3dc591d53163b0339919869c5",
+      "cellBbox": [
+        403,
+        67,
+        411,
+        88
+      ],
+      "sheetBbox": [
+        403,
+        694,
+        411,
+        715
+      ],
+      "pixelCount": 40,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|923ff8dd7acf285d6d2cec30c96e855ccb603f695bb0a74a323ef3bca2af6cfe",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "923ff8dd7acf285d6d2cec30c96e855ccb603f695bb0a74a323ef3bca2af6cfe",
+      "cellBbox": [
+        230,
+        97,
+        235,
+        110
+      ],
+      "sheetBbox": [
+        230,
+        724,
+        235,
+        737
+      ],
+      "pixelCount": 25,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|97aac44677a8aab70145229da89659cbbf086662956b4ee02c98ef4adc182b5f",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "97aac44677a8aab70145229da89659cbbf086662956b4ee02c98ef4adc182b5f",
+      "cellBbox": [
+        413,
+        150,
+        418,
+        165
+      ],
+      "sheetBbox": [
+        413,
+        777,
+        418,
+        792
+      ],
+      "pixelCount": 41,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|9ff01429e0a4ff8a4035fce4ef9f1288c200a23475a6d5b5b3782dce2d2874eb",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "9ff01429e0a4ff8a4035fce4ef9f1288c200a23475a6d5b5b3782dce2d2874eb",
+      "cellBbox": [
+        406,
+        169,
+        420,
+        195
+      ],
+      "sheetBbox": [
+        406,
+        796,
+        420,
+        822
+      ],
+      "pixelCount": 110,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|40932834a992b948a0f22e7b2b77ae674366782c7077d528d86d443cba432347",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "40932834a992b948a0f22e7b2b77ae674366782c7077d528d86d443cba432347",
+      "cellBbox": [
+        270,
+        191,
+        284,
+        205
+      ],
+      "sheetBbox": [
+        270,
+        818,
+        284,
+        832
+      ],
+      "pixelCount": 47,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|3402912f6974ecb64ec9f7c5d53f9755791ea12a40248eed37ecef60e52a1490",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "3402912f6974ecb64ec9f7c5d53f9755791ea12a40248eed37ecef60e52a1490",
+      "cellBbox": [
+        525,
+        374,
+        531,
+        381
+      ],
+      "sheetBbox": [
+        525,
+        1001,
+        531,
+        1008
+      ],
+      "pixelCount": 29,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|ef53bf8acc210c350f598dd9b9fa444c9b148be9514b03798c73de3ad03eedab",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ef53bf8acc210c350f598dd9b9fa444c9b148be9514b03798c73de3ad03eedab",
+      "cellBbox": [
+        189,
+        455,
+        215,
+        561
+      ],
+      "sheetBbox": [
+        189,
+        1082,
+        215,
+        1188
+      ],
+      "pixelCount": 297,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "smile|reviewed-outer-background-hole|a9eaa718bc0405c4c5a36398c0b6afabf755cf118410884af88fb9a17afa26d1",
+      "slot": "smile",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a9eaa718bc0405c4c5a36398c0b6afabf755cf118410884af88fb9a17afa26d1",
+      "cellBbox": [
+        441,
+        467,
+        451,
+        497
+      ],
+      "sheetBbox": [
+        441,
+        1094,
+        451,
+        1124
+      ],
+      "pixelCount": 97,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|266731a726aea0450dbf351bb41f62649069e50179b210bae5cd359a9baa79c2",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "266731a726aea0450dbf351bb41f62649069e50179b210bae5cd359a9baa79c2",
+      "cellBbox": [
+        231,
+        24,
+        241,
+        34
+      ],
+      "sheetBbox": [
+        858,
+        651,
+        868,
+        661
+      ],
+      "pixelCount": 18,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|2828d7300202ea25a665e7557bc69fe9ae255d4c88cb359b0493779c1cc56ad1",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "2828d7300202ea25a665e7557bc69fe9ae255d4c88cb359b0493779c1cc56ad1",
+      "cellBbox": [
+        343,
+        44,
+        349,
+        53
+      ],
+      "sheetBbox": [
+        970,
+        671,
+        976,
+        680
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|a9d6a3ec0ecdd3c8e12931a226e404828c82dd11301e53c3035cc0b075c0197a",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "a9d6a3ec0ecdd3c8e12931a226e404828c82dd11301e53c3035cc0b075c0197a",
+      "cellBbox": [
+        211,
+        47,
+        217,
+        56
+      ],
+      "sheetBbox": [
+        838,
+        674,
+        844,
+        683
+      ],
+      "pixelCount": 17,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|69f7df9d0e7b27bf573e96e2833a90268e3c99406b524f27bb64da5719d09a9e",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "69f7df9d0e7b27bf573e96e2833a90268e3c99406b524f27bb64da5719d09a9e",
+      "cellBbox": [
+        361,
+        68,
+        368,
+        89
+      ],
+      "sheetBbox": [
+        988,
+        695,
+        995,
+        716
+      ],
+      "pixelCount": 38,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|f77dabe88999520f618707afa346b0a405fd5a4ffac3f53f21cf98d19917e52b",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "f77dabe88999520f618707afa346b0a405fd5a4ffac3f53f21cf98d19917e52b",
+      "cellBbox": [
+        190,
+        98,
+        194,
+        109
+      ],
+      "sheetBbox": [
+        817,
+        725,
+        821,
+        736
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|e0b5f4de948042ffd274d1c51c2f1c2c43f09ab53c3adb2ba46c8b051f88320e",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e0b5f4de948042ffd274d1c51c2f1c2c43f09ab53c3adb2ba46c8b051f88320e",
+      "cellBbox": [
+        369,
+        152,
+        375,
+        166
+      ],
+      "sheetBbox": [
+        996,
+        779,
+        1002,
+        793
+      ],
+      "pixelCount": 43,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|deb5c1713426ebb7154ff0708ebf48fcdbde8979b41fa27a41adf6c3edf20020",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "deb5c1713426ebb7154ff0708ebf48fcdbde8979b41fa27a41adf6c3edf20020",
+      "cellBbox": [
+        362,
+        169,
+        377,
+        196
+      ],
+      "sheetBbox": [
+        989,
+        796,
+        1004,
+        823
+      ],
+      "pixelCount": 139,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|e262686b54b4bb7ab55a09bffff3d63a284d155df4748d84e4b24bf61fe26a21",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "e262686b54b4bb7ab55a09bffff3d63a284d155df4748d84e4b24bf61fe26a21",
+      "cellBbox": [
+        211,
+        177,
+        220,
+        186
+      ],
+      "sheetBbox": [
+        838,
+        804,
+        847,
+        813
+      ],
+      "pixelCount": 33,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|fd4241d2c2b9c5a311a1e9e083f2849bb7e6b1900a33c3b8a8da9e31261b4382",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "fd4241d2c2b9c5a311a1e9e083f2849bb7e6b1900a33c3b8a8da9e31261b4382",
+      "cellBbox": [
+        229,
+        191,
+        241,
+        205
+      ],
+      "sheetBbox": [
+        856,
+        818,
+        868,
+        832
+      ],
+      "pixelCount": 46,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|d576c962de97e21152f0c55b1b56cb54134c07a3f3d47b61ca94f1d75179bd08",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "d576c962de97e21152f0c55b1b56cb54134c07a3f3d47b61ca94f1d75179bd08",
+      "cellBbox": [
+        480,
+        372,
+        486,
+        380
+      ],
+      "sheetBbox": [
+        1107,
+        999,
+        1113,
+        1007
+      ],
+      "pixelCount": 30,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "concerned|reviewed-outer-background-hole|ddf3ff5e3e113191aefc8d8027c59967249a37506ea99623c28fc1368d5e5734",
+      "slot": "concerned",
+      "componentType": "reviewed-outer-background-hole",
+      "componentPixelSha256": "ddf3ff5e3e113191aefc8d8027c59967249a37506ea99623c28fc1368d5e5734",
+      "cellBbox": [
+        146,
+        450,
+        172,
+        559
+      ],
+      "sheetBbox": [
+        773,
+        1077,
+        799,
+        1186
+      ],
+      "pixelCount": 341,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

@@ -14,8 +14,6 @@ const RELEASED_APPEARANCE_IDS: Array[String] = [
 	"npc_village_healer_f_v1",
 	"npc_equipment_artisan_m_v1",
 	"npc_riding_trainer_f_v1",
-]
-const PENDING_REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_player_rebirth_mentor_f_v1",
 	"npc_pet_mm_trial_mentor_m_v1",
 	"npc_pet_mm_stage2_keeper_f_v1",
@@ -23,7 +21,10 @@ const PENDING_REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_pet_skill_trainer_m_v1",
 	"npc_welfare_clerk_f_v1",
 	"npc_storyteller_m_v1",
+	"npc_novice_trainer_m_v1",
+	"npc_village_civilian_f_v1",
 ]
+const PENDING_REVIEW_APPEARANCE_IDS: Array[String] = []
 const REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_stable_keeper_m_v1",
 	"npc_bank_keeper_f_v1",
@@ -40,6 +41,8 @@ const REVIEW_APPEARANCE_IDS: Array[String] = [
 	"npc_pet_skill_trainer_m_v1",
 	"npc_welfare_clerk_f_v1",
 	"npc_storyteller_m_v1",
+	"npc_novice_trainer_m_v1",
+	"npc_village_civilian_f_v1",
 ]
 const EXPECTED_REUSE_COUNTS := {
 	"npc_stable_keeper_m_v1": 1,
@@ -57,6 +60,8 @@ const EXPECTED_REUSE_COUNTS := {
 	"npc_pet_skill_trainer_m_v1": 1,
 	"npc_welfare_clerk_f_v1": 1,
 	"npc_storyteller_m_v1": 1,
+	"npc_novice_trainer_m_v1": 1,
+	"npc_village_civilian_f_v1": 1,
 }
 const EXPECTED_BATCH_CONTRACT := {
 	"npc_stable_keeper_m_v1": {"roleId": "stable_keeper", "gender": "male"},
@@ -74,6 +79,8 @@ const EXPECTED_BATCH_CONTRACT := {
 	"npc_pet_skill_trainer_m_v1": {"roleId": "pet_skill_trainer", "gender": "male"},
 	"npc_welfare_clerk_f_v1": {"roleId": "welfare_clerk", "gender": "female"},
 	"npc_storyteller_m_v1": {"roleId": "storyteller", "gender": "male"},
+	"npc_novice_trainer_m_v1": {"roleId": "novice_trainer", "gender": "male"},
+	"npc_village_civilian_f_v1": {"roleId": "village_civilian", "gender": "female"},
 }
 const FIXED_MAP_BINDINGS := {
 	"firebud_stable_keeper": {
@@ -105,6 +112,18 @@ const FIXED_MAP_BINDINGS := {
 		"appearanceId": "npc_village_guard_m_v1",
 		"roleId": "village_guard",
 		"facilityType": "",
+	},
+	"overlap_tester": {
+		"mapId": "firebud_training_yard",
+		"appearanceId": "npc_village_civilian_f_v1",
+		"roleId": "village_civilian",
+		"facilityType": "",
+	},
+	"trainer": {
+		"mapId": "firebud_training_yard",
+		"appearanceId": "npc_novice_trainer_m_v1",
+		"roleId": "novice_trainer",
+		"facilityType": "trainer",
 	},
 	"firebud_doctor": {
 		"mapId": "firebud_village_gate",
@@ -184,7 +203,7 @@ static func run() -> Dictionary:
 			errors.append("NPC 目录检查开始前不得遗留 QA 候选开关：%s" % appearance_id)
 	var runtime_warmed := NpcArtCatalog.warm_all_runtime()
 	if not runtime_warmed:
-		errors.append("已发布 8 类 NPC 未能先通过普通运行链整体预热")
+		errors.append("已发布 %d 类 NPC 未能先通过普通运行链整体预热" % RELEASED_APPEARANCE_IDS.size())
 	for appearance_id in RELEASED_APPEARANCE_IDS:
 		if not records_by_id.has(appearance_id):
 			errors.append("已发布 NPC 未登记：%s" % appearance_id)
@@ -213,7 +232,7 @@ static func run() -> Dictionary:
 			errors.append("待评审 NPC 显式 QA 候选预热失败：%s" % appearance_id)
 			errors.append_array(NpcArtCatalog.warm_errors_for(appearance_id))
 	if preview_ids.size() != PENDING_REVIEW_APPEARANCE_IDS.size():
-		errors.append("QA 候选开关必须仅覆盖待评审 7 类 NPC")
+		errors.append("QA 候选开关必须仅覆盖待评审 %d 类 NPC" % PENDING_REVIEW_APPEARANCE_IDS.size())
 	for appearance_id in RELEASED_APPEARANCE_IDS:
 		if NpcArtCatalog.is_qa_preview_enabled(appearance_id):
 			errors.append("已发布 NPC 不应依赖 QA 候选开关：%s" % appearance_id)
@@ -349,7 +368,7 @@ static func _append_batch_contract_errors(
 	errors: Array[String]
 ) -> void:
 	if records.size() != REVIEW_APPEARANCE_IDS.size() or records_by_id.size() != REVIEW_APPEARANCE_IDS.size():
-		errors.append("NPC 目录必须恰好登记旧 8 个已发布原型与新 7 个待评审原型")
+		errors.append("NPC 目录必须恰好登记当前 17 个已发布职业原型")
 	var male_count := 0
 	var female_count := 0
 	for appearance_id in REVIEW_APPEARANCE_IDS:
@@ -367,9 +386,9 @@ static func _append_batch_contract_errors(
 		male_count += int(gender == "male")
 		female_count += int(gender == "female")
 		if str(record.get("mobility", "")) != NpcArtCatalog.STATIC_MOBILITY:
-			errors.append("当前 15 类 NPC 必须全部为 static idle8：%s" % appearance_id)
-	if male_count != 8 or female_count != 7:
-		errors.append("当前 NPC 职业原型必须保持 8 男 7 女：male=%d female=%d" % [male_count, female_count])
+			errors.append("当前 17 类 NPC 必须全部为 static idle8：%s" % appearance_id)
+	if male_count != 9 or female_count != 8:
+		errors.append("当前 NPC 职业原型必须保持 9 男 8 女：male=%d female=%d" % [male_count, female_count])
 
 
 static func _append_review_state_errors(

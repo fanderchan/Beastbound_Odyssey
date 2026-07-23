@@ -121,15 +121,15 @@
     "pillow": "12.2.0",
     "ffmpeg": "8.1.1",
     "externalChromaKeyTool": {
-      "path": "/Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py",
+      "path": "source/tools/remove_chroma_key.py",
       "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
-      "repositoryOwned": false
+      "repositoryOwned": true
     }
   },
   "processing": [
-    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-ground-sheet-v2.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-ground-sheet-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
-    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-low-props-sheet-v2.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-low-props-sheet-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
-    "python3 /Users/fander/.codex/skills/.system/imagegen/scripts/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-service-pavilion-v1.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-service-pavilion-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-ground-sheet-v2.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-ground-sheet-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-low-props-sheet-v2.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-low-props-sheet-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v1/source/generated/firebud-service-pavilion-v1.png --out client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-service-pavilion-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
     "python3 .agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-ground-sheet-v2-alpha.png --rows 2 --columns 2 --labels firebud_meadow firebud_ochre_path firebud_honey_stone firebud_dark_root_soil --output-dir .run/rebuild/firebud-ground --atlas-columns 2 --alpha-threshold 0 --atlas-name atlas-pre-grade.png --manifest-name build-manifest.json",
     "ffmpeg -i .run/rebuild/firebud-ground/atlas-pre-grade.png -vf hue=h=12:s=0.78,eq=brightness=-0.08:saturation=0.72:contrast=0.98 -frames:v 1 -pix_fmt rgba client/godot/assets/maps/firebud_region_visual_v1/runtime/ground/atlas.png",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v1/source/processed/firebud-low-props-sheet-v2-alpha.png --rows 2 --columns 2 --labels firebud_training_target firebud_supply_pots firebud_low_planter firebud_low_fence --output-dir .run/rebuild/firebud-low-props --padding 8 --max-dimension 256 --alpha-threshold 0 --anchor 0.5 1.0 --manifest-name objects-manifest.json",
@@ -141,8 +141,8 @@
     "rawToProcessedByteExact": true,
     "processedToRuntimeByteExact": true,
     "outputPrecondition": ".run/rebuild output directories must not exist before executing the listed build commands.",
-    "externalToolVendored": false,
-    "releaseBlocker": "The chroma-key helper is hash-frozen but external to this repository."
+    "externalToolVendored": true,
+    "releaseBlocker": null
   },
   "mirrored": false,
   "bakedActors": false,

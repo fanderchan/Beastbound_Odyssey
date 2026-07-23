@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "purpose": "manual-exact-component-decision-review",
+  "toolVersion": "3.1.0",
+  "group": "world",
+  "rawSheet": "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/source/world-idle-2x4-raw.png",
+  "rawSheetFileSha256": "fef6859ee24e2fb6fc08db5a62cbf8e8cca66b6658ad882fe9d1c2ba4566aa8e",
+  "reviewPages": [
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-enclosed/world-component-review-01.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-enclosed/world-component-review-02.png",
+    "/Users/fander/projects/Beastbound_Odyssey/client/godot/assets/npcs/npc_village_civilian_f_v1/qc/mask-review/world-enclosed/world-component-review-03.png"
+  ],
+  "components": [
+    {
+      "key": "south|enclosed-chroma|3d1fecdf20aa4cc700d3e14697c0d0329491940798a099faada39420b6f24cbc",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3d1fecdf20aa4cc700d3e14697c0d0329491940798a099faada39420b6f24cbc",
+      "cellBbox": [
+        184,
+        277,
+        191,
+        292
+      ],
+      "sheetBbox": [
+        184,
+        277,
+        191,
+        292
+      ],
+      "pixelCount": 54,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|313fa7185266ae9a39b69040c75557d9685fa9e4ff8228f4f5958a2d2de06bf8",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "313fa7185266ae9a39b69040c75557d9685fa9e4ff8228f4f5958a2d2de06bf8",
+      "cellBbox": [
+        227,
+        277,
+        228,
+        281
+      ],
+      "sheetBbox": [
+        227,
+        277,
+        228,
+        281
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|b0fecd2c24d3d01ecf6e0ab4088025cc846fbc2d8b36f56f8d8a153ca2d3a08e",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b0fecd2c24d3d01ecf6e0ab4088025cc846fbc2d8b36f56f8d8a153ca2d3a08e",
+      "cellBbox": [
+        235,
+        362,
+        236,
+        365
+      ],
+      "sheetBbox": [
+        235,
+        362,
+        236,
+        365
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|2ecae68773468b08000194bd00c27fde038440857e714bd1f139d5c4a612073f",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "2ecae68773468b08000194bd00c27fde038440857e714bd1f139d5c4a612073f",
+      "cellBbox": [
+        234,
+        365,
+        235,
+        371
+      ],
+      "sheetBbox": [
+        234,
+        365,
+        235,
+        371
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|ec9fc78073ac0fd305f1a7fc0a235f169abce760635e591cf7a05ab70aafcf04",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "ec9fc78073ac0fd305f1a7fc0a235f169abce760635e591cf7a05ab70aafcf04",
+      "cellBbox": [
+        234,
+        371,
+        237,
+        378
+      ],
+      "sheetBbox": [
+        234,
+        371,
+        237,
+        378
+      ],
+      "pixelCount": 13,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|00e808cf248a087835e327c8ea4a972c83b44f950e230df4c3f872eb1ff9b023",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "00e808cf248a087835e327c8ea4a972c83b44f950e230df4c3f872eb1ff9b023",
+      "cellBbox": [
+        237,
+        378,
+        238,
+        379
+      ],
+      "sheetBbox": [
+        237,
+        378,
+        238,
+        379
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|f16584cfed5d4c8a59561d323fc363ad6be04be094bf58d59ab868531cffdff9",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "f16584cfed5d4c8a59561d323fc363ad6be04be094bf58d59ab868531cffdff9",
+      "cellBbox": [
+        243,
+        391,
+        249,
+        418
+      ],
+      "sheetBbox": [
+        243,
+        391,
+        249,
+        418
+      ],
+      "pixelCount": 38,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|142417055838dc15a265f959bd68e1c677a141a0e605e576f82653cdaff83583",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "142417055838dc15a265f959bd68e1c677a141a0e605e576f82653cdaff83583",
+      "cellBbox": [
+        160,
+        394,
+        161,
+        397
+      ],
+      "sheetBbox": [
+        160,
+        394,
+        161,
+        397
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|e6aa9d3f38a7876518df1018fe60b7599dc8105500170ba3193af541725aa523",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e6aa9d3f38a7876518df1018fe60b7599dc8105500170ba3193af541725aa523",
+      "cellBbox": [
+        154,
+        397,
+        160,
+        413
+      ],
+      "sheetBbox": [
+        154,
+        397,
+        160,
+        413
+      ],
+      "pixelCount": 30,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "south|enclosed-chroma|3f75badc9e4b59e2ffbeb96fbf537cedbffe0a787986ee5d759ff10760a70b14",
+      "slot": "south",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "3f75badc9e4b59e2ffbeb96fbf537cedbffe0a787986ee5d759ff10760a70b14",
+      "cellBbox": [
+        150,
+        436,
+        151,
+        438
+      ],
+      "sheetBbox": [
+        150,
+        436,
+        151,
+        438
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|e8cf7f7be6128bddf36cd2305059efcfb88a91f30c11e0ec04476b398f2aa75f",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "e8cf7f7be6128bddf36cd2305059efcfb88a91f30c11e0ec04476b398f2aa75f",
+      "cellBbox": [
+        199,
+        271,
+        200,
+        272
+      ],
+      "sheetBbox": [
+        512,
+        271,
+        513,
+        272
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|323e0df4b1a1bf0f7f0a8717c8afbd76d3d3b2704e718a472b8a0e9e80cd4e8e",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "323e0df4b1a1bf0f7f0a8717c8afbd76d3d3b2704e718a472b8a0e9e80cd4e8e",
+      "cellBbox": [
+        198,
+        272,
+        199,
+        274
+      ],
+      "sheetBbox": [
+        511,
+        272,
+        512,
+        274
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|0eb8bd18c6f4d7c52aeef591ec944f80d1b56f3ced68befcd4a9499a39a4485c",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "0eb8bd18c6f4d7c52aeef591ec944f80d1b56f3ced68befcd4a9499a39a4485c",
+      "cellBbox": [
+        196,
+        274,
+        198,
+        278
+      ],
+      "sheetBbox": [
+        509,
+        274,
+        511,
+        278
+      ],
+      "pixelCount": 6,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|9b3eefc1e850076b7eb59cec15bb1955123927508ffaaec46fb1e48e91dbc895",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "9b3eefc1e850076b7eb59cec15bb1955123927508ffaaec46fb1e48e91dbc895",
+      "cellBbox": [
+        197,
+        279,
+        199,
+        283
+      ],
+      "sheetBbox": [
+        510,
+        279,
+        512,
+        283
+      ],
+      "pixelCount": 5,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|a48f533c06c08c6628b559e6dcdb52740a410b59ebc4e4bafafae28baad1300d",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "a48f533c06c08c6628b559e6dcdb52740a410b59ebc4e4bafafae28baad1300d",
+      "cellBbox": [
+        194,
+        361,
+        196,
+        370
+      ],
+      "sheetBbox": [
+        507,
+        361,
+        509,
+        370
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southwest|enclosed-chroma|931678d50f47d47e355472614a87af204acb9b36fabd4a2728eeb1b33cea90fd",
+      "slot": "southwest",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "931678d50f47d47e355472614a87af204acb9b36fabd4a2728eeb1b33cea90fd",
+      "cellBbox": [
+        200,
+        565,
+        201,
+        568
+      ],
+      "sheetBbox": [
+        513,
+        565,
+        514,
+        568
+      ],
+      "pixelCount": 3,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "west|enclosed-chroma|b2644910c4ac7cbf288b33f5619f7600ac88c402ae8bd48995f86c5fc7e123b6",
+      "slot": "west",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "b2644910c4ac7cbf288b33f5619f7600ac88c402ae8bd48995f86c5fc7e123b6",
+      "cellBbox": [
+        176,
+        334,
+        177,
+        335
+      ],
+      "sheetBbox": [
+        803,
+        334,
+        804,
+        335
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|enclosed-chroma|265b4af6ff25b720103d312f67d7b87df37df37d3d7ea988e93b459d595c519b",
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "265b4af6ff25b720103d312f67d7b87df37df37d3d7ea988e93b459d595c519b",
+      "cellBbox": [
+        217,
+        121,
+        219,
+        124
+      ],
+      "sheetBbox": [
+        217,
+        748,
+        219,
+        751
+      ],
+      "pixelCount": 4,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|enclosed-chroma|4162f5ce65af1f30d945f45813300adedde0405a16a2649ab0d02efdecf17056",
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "4162f5ce65af1f30d945f45813300adedde0405a16a2649ab0d02efdecf17056",
+      "cellBbox": [
+        225,
+        200,
+        227,
+        208
+      ],
+      "sheetBbox": [
+        225,
+        827,
+        227,
+        835
+      ],
+      "pixelCount": 10,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|enclosed-chroma|5c451507c4f644b2c7cdb07185fc512bcf4b8bb1d1d41d6926877691a354b611",
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "5c451507c4f644b2c7cdb07185fc512bcf4b8bb1d1d41d6926877691a354b611",
+      "cellBbox": [
+        166,
+        206,
+        170,
+        216
+      ],
+      "sheetBbox": [
+        166,
+        833,
+        170,
+        843
+      ],
+      "pixelCount": 19,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "north|enclosed-chroma|1d64efb4e1ed783da86fc234ee0c16889f2ed41bde2c2c67add23c094ad2791f",
+      "slot": "north",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "1d64efb4e1ed783da86fc234ee0c16889f2ed41bde2c2c67add23c094ad2791f",
+      "cellBbox": [
+        234,
+        229,
+        237,
+        237
+      ],
+      "sheetBbox": [
+        234,
+        856,
+        237,
+        864
+      ],
+      "pixelCount": 12,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "east|enclosed-chroma|90af7600dc86b44cf7d5c8601b31696e40d881e13492ba6d3b05873a0781ec90",
+      "slot": "east",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "90af7600dc86b44cf7d5c8601b31696e40d881e13492ba6d3b05873a0781ec90",
+      "cellBbox": [
+        104,
+        173,
+        105,
+        174
+      ],
+      "sheetBbox": [
+        731,
+        800,
+        732,
+        801
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|enclosed-chroma|c0ab73720dac94020585329b5ecbf334f9d846479e69863a8caeac202a7f14ca",
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c0ab73720dac94020585329b5ecbf334f9d846479e69863a8caeac202a7f14ca",
+      "cellBbox": [
+        103,
+        133,
+        104,
+        135
+      ],
+      "sheetBbox": [
+        1043,
+        760,
+        1044,
+        762
+      ],
+      "pixelCount": 2,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|enclosed-chroma|48a8aa1091f1ac115fe7e24b0d256e36738e3eec6076f1a2452d73db2ab7c6d9",
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "48a8aa1091f1ac115fe7e24b0d256e36738e3eec6076f1a2452d73db2ab7c6d9",
+      "cellBbox": [
+        62,
+        134,
+        63,
+        135
+      ],
+      "sheetBbox": [
+        1002,
+        761,
+        1003,
+        762
+      ],
+      "pixelCount": 1,
+      "requiresLargeComponentAttention": false
+    },
+    {
+      "key": "southeast|enclosed-chroma|c3583db0d464f48a00371f9b0e71f34de0e94488ba6ff78dba0b3c9157ae83ae",
+      "slot": "southeast",
+      "componentType": "enclosed-chroma",
+      "componentPixelSha256": "c3583db0d464f48a00371f9b0e71f34de0e94488ba6ff78dba0b3c9157ae83ae",
+      "cellBbox": [
+        67,
+        139,
+        72,
+        145
+      ],
+      "sheetBbox": [
+        1007,
+        766,
+        1012,
+        772
+      ],
+      "pixelCount": 15,
+      "requiresLargeComponentAttention": false
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+	"schemaVersion": 1,
+	"reportType": "beastbound_map_visual_main_review_capture",
+	"scene": "res://scenes/Main.tscn",
+	"mapId": "firebud_village_gate",
+	"mode": "moving",
+	"qaPreviewFlagPresent": true,
+	"qaPreviewMapId": "firebud_village_gate",
+	"displayServer": "macOS",
+	"debugBuild": true,
+	"profileIsolation": "default_profile_ephemeral_no_save",
+	"defaultProfileIsolation": true,
+	"authAutoBypass": false,
+	"accountAuthenticated": false,
+	"profileSaveEnabled": false,
+	"serverAccountSession": false,
+	"networkRequestAttempted": false,
+	"authPanelVisible": false,
+	"qaMenuVisible": false,
+	"qaPanelVisible": false,
+	"numericWorkbenchVisible": false,
+	"debugUiVisible": false,
+	"normalPlayerHud": true,
+	"viewport": [
+		1280,
+		720
+	],
+	"mapArtActive": true,
+	"mapArtQaPreview": true,
+	"mapArtStatus": "owner_review_pending",
+	"bundleId": "firebud_region_visual_v1",
+	"mapStyleId": "firebud_warm_stone_v1",
+	"groundDrawCount": 672,
+	"objectCount": 4,
+	"tileCounts": {
+		"firebud_meadow": 497,
+		"firebud_dark_root_soil": 13,
+		"firebud_ochre_path": 98,
+		"firebud_honey_stone": 64
+	},
+	"startCell": [
+		3,
+		15
+	],
+	"targetCell": [
+		6,
+		12
+	],
+	"endCell": [
+		6,
+		12
+	],
+	"playerCellChanged": true,
+	"input": {
+		"eventClass": "InputEventMouseButton",
+		"delivery": "Input.parse_input_event",
+		"pressProcessFrame": 9,
+		"releaseProcessFrame": 11,
+		"frameSeparated": true,
+		"screenPoint": [
+			800.0,
+			360.0
+		]
+	},
+	"screenshotPath": "res://assets/maps/firebud_region_visual_v1/evidence/runtime-screenshots/firebud_village_gate-occlusion-1280x720.png",
+	"screenshotSha256": "69ab1f0957524178d0125afc45bd9d1de3b9d095e6815a404ac7e3174f310e1d",
+	"screenshot": {
+		"path": "res://assets/maps/firebud_region_visual_v1/evidence/runtime-screenshots/firebud_village_gate-occlusion-1280x720.png",
+		"sha256": "69ab1f0957524178d0125afc45bd9d1de3b9d095e6815a404ac7e3174f310e1d",
+		"width": 1280,
+		"height": 720
+	},
+	"errors": [],
+	"result": "PASS",
+	"ok": true,
+	"generatedAtUtc": "2026-07-23T16:51:48Z"
+}

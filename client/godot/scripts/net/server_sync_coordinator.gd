@@ -385,6 +385,7 @@ func apply_server_profile_payload(parsed: Dictionary) -> bool:
 		host.server_profile_sync_pull_queued = true
 		return false
 	host.player_profile = (runtime_snapshot.get("profile", {}) as Dictionary).duplicate(true)
+	host._invalidate_ground_pet_drop_depth_cache()
 	_notify_pending_offline_hang_once(host.player_profile)
 	host._apply_auth_profile_metadata_fields(str(host.current_account_session.get("displayName", "")))
 	var summary = parsed.get("profileSummary", {})
