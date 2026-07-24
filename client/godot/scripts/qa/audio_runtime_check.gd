@@ -2,7 +2,8 @@ extends SceneTree
 
 const GameAudioManager := preload("res://scripts/audio/game_audio_manager.gd")
 const WorldAudioContextModel := preload("res://scripts/audio/world_audio_context_model.gd")
-const CATALOG_PATH := "res://assets/audio/beastbound_audio_v1/audio-cues.json"
+const CATALOG_PATH := "res://assets/audio/beastbound_audio_v2/audio-cues.json"
+const EXPECTED_CUE_COUNT := 31
 
 
 func _initialize() -> void:
@@ -56,6 +57,11 @@ func _run() -> void:
 
 	var played_cues := 0
 	var cues = catalog.get("cues", {}) as Dictionary
+	if cues.size() != EXPECTED_CUE_COUNT:
+		errors.append(
+			"正式音频目录必须正好有%d个 cue，实际%d"
+			% [EXPECTED_CUE_COUNT, cues.size()]
+		)
 	for cue_id_value in cues.keys():
 		var cue_id := str(cue_id_value)
 		var cue = cues.get(cue_id, {}) as Dictionary

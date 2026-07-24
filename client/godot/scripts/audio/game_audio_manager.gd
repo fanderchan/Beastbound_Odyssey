@@ -4,7 +4,7 @@ extends Node
 signal music_context_changed(context: String, cue_id: String)
 signal settings_changed(settings: Dictionary)
 
-const DEFAULT_CATALOG_PATH := "res://assets/audio/beastbound_audio_v1/audio-cues.json"
+const DEFAULT_CATALOG_PATH := "res://assets/audio/beastbound_audio_v2/audio-cues.json"
 const DEFAULT_SETTINGS_PATH := "user://beastbound_audio_settings.json"
 const MUSIC_CROSSFADE_SECONDS := 0.75
 const SFX_VOICE_COUNT := 12
@@ -190,12 +190,15 @@ func play_cue(cue_id: String, options: Dictionary = {}) -> bool:
 		return false
 	var now_msec := _now_msec()
 	var cooldown_msec := maxi(0, int(info.get("cooldownMs", 0)))
-	if _last_cue_played_msec.has(cue_id):
-		var elapsed := now_msec - int(_last_cue_played_msec[cue_id])
+	var cooldown_key := str(options.get("cooldownKey", cue_id)).strip_edges()
+	if cooldown_key == "":
+		cooldown_key = cue_id
+	if _last_cue_played_msec.has(cooldown_key):
+		var elapsed := now_msec - int(_last_cue_played_msec[cooldown_key])
 		if elapsed >= 0 and elapsed < cooldown_msec:
 			return false
 	if not _playback_enabled:
-		_last_cue_played_msec[cue_id] = now_msec
+		_last_cue_played_msec[cooldown_key] = now_msec
 		return true
 	var stream := _stream_for_path(path)
 	if stream == null:
@@ -221,7 +224,7 @@ func play_cue(cue_id: String, options: Dictionary = {}) -> bool:
 	record["startedMsec"] = now_msec
 	record["serial"] = _voice_serial
 	_sfx_voices[voice_index] = record
-	_last_cue_played_msec[cue_id] = now_msec
+	_last_cue_played_msec[cooldown_key] = now_msec
 	return true
 
 

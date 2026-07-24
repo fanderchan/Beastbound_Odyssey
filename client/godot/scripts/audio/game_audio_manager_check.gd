@@ -87,6 +87,21 @@ func _run() -> void:
 
 	_expect(manager.play_cue("ui.cooldown"), "冷却 cue 首次播放失败", failures)
 	_expect(not manager.play_cue("ui.cooldown"), "同 cue 冷却未去重", failures)
+	_expect(
+		manager.play_cue("ui.cooldown", {"cooldownKey": "combo.contact.0"}),
+		"同 cue 的独立排程冷却键被错误吞掉",
+		failures
+	)
+	_expect(
+		manager.play_cue("ui.cooldown", {"cooldownKey": "combo.contact.1"}),
+		"同帧第二个独立排程冷却键被错误吞掉",
+		failures
+	)
+	_expect(
+		not manager.play_cue("ui.cooldown", {"cooldownKey": "combo.contact.1"}),
+		"相同排程冷却键没有去重",
+		failures
+	)
 	now[0] = 1201
 	_expect(manager.play_cue("ui.cooldown"), "冷却结束后 cue 未恢复", failures)
 

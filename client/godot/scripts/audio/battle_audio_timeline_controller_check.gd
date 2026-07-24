@@ -28,12 +28,11 @@ func _initialize() -> void:
 		"launchMode": "straight",
 		"timeline": {
 			"damageRevealProgress": 0.50,
-			"downSoundProgress": 0.82,
 		},
 		"targets": [{
 			"id": "target",
 			"stateBefore": "idle",
-			"stateAfter": "down",
+			"stateAfter": "launched",
 			"hpBefore": 40,
 			"hpAfter": 0,
 		}],
@@ -65,19 +64,93 @@ func _initialize() -> void:
 		errors.append("击飞反应没有在命中后触发")
 	if not _cue_ids(manager.calls).has("creature.pet_hurt"):
 		errors.append("宠物受击声没有在反应阶段触发")
-	controller.update_progress(0.78)
-	if _cue_ids(manager.calls).has("combat.down"):
-		errors.append("倒地声早于显式视觉倒地标记")
-	controller.update_progress(0.82)
-	if not _cue_ids(manager.calls).has("combat.down"):
-		errors.append("倒地声没有在显式视觉标记触发")
 	var final_count := manager.calls.size()
 	controller.update_progress(1.0)
 	if manager.calls.size() != final_count:
 		errors.append("事件末帧重复触发")
+	if _cue_ids(manager.calls).has("combat.down"):
+		errors.append("直线击飞的 launched 结果错误叠加了 down cue")
 	controller.end_event()
 	if bool(controller.debug_snapshot().get("active", true)):
 		errors.append("事件结束后调度状态未清空")
+
+	manager.calls.clear()
+	controller.begin_event({
+		"type": "attack",
+		"damage": 40,
+		"timeline": {
+			"damageRevealProgress": 0.50,
+			"downSoundProgress": 0.82,
+		},
+		"targets": [{
+			"id": "target",
+			"stateBefore": "idle",
+			"stateAfter": "down",
+			"hpBefore": 40,
+			"hpAfter": 0,
+		}],
+	})
+	controller.update_progress(0.78)
+	if _cue_ids(manager.calls).has("combat.down"):
+		errors.append("普通倒地声早于显式视觉倒地标记")
+	controller.update_progress(0.82)
+	if not _cue_ids(manager.calls).has("combat.down"):
+		errors.append("普通倒地声没有在显式视觉标记触发")
+	controller.end_event()
+
+	manager.calls.clear()
+	controller.begin_event({
+		"type": "combo_attack",
+		"attackerId": "ally_a",
+		"participantIds": ["ally_a", "ally_b", "ally_c"],
+		"damage": 54,
+		"timeline": {
+			"damageRevealProgress": 0.60,
+			"comboContactProgresses": [0.20, 0.40, 0.60],
+		},
+	})
+	if _cue_ids(manager.calls) != ["combat.combo_start"]:
+		errors.append("合击起点没有只播放共同蓄势声")
+	controller.update_progress(0.20)
+	controller.update_progress(0.40)
+	controller.update_progress(0.60)
+	var combo_ids := _cue_ids(manager.calls)
+	if combo_ids.count("combat.hit_light") != 3:
+		errors.append("三人合击没有逐人触发三次轻接触：%s" % JSON.stringify(combo_ids))
+	if combo_ids.count("combat.hit_combo") != 1:
+		errors.append("三人合击没有只触发一次主冲击：%s" % JSON.stringify(combo_ids))
+	var first_contact_options := {}
+	for call in manager.calls:
+		if str(call.get("cueId", "")) == "combat.hit_light":
+			first_contact_options = call.get("options", {}) as Dictionary
+			break
+	if (
+		not first_contact_options.has("cooldownKey")
+		or not first_contact_options.has("gainDbOffset")
+		or not first_contact_options.has("pitchScale")
+	):
+		errors.append("合击轻接触的增益／音高选项没有传给 manager")
+
+	manager.calls.clear()
+	controller.begin_event({
+		"type": "attack",
+		"damage": 90,
+		"launch": true,
+		"launchMode": "bounce",
+		"timeline": {
+			"damageRevealProgress": 0.30,
+			"launchSoundProgress": 0.30,
+			"bounceImpactProgress": 0.56,
+		},
+	})
+	controller.update_progress(0.30)
+	if not _cue_ids(manager.calls).has("combat.launch"):
+		errors.append("反弹击飞没有在起飞点播放 launch")
+	if _cue_ids(manager.calls).has("combat.bounce_edge"):
+		errors.append("反弹撞边声早于显式撞边点")
+	controller.update_progress(0.56)
+	if not _cue_ids(manager.calls).has("combat.bounce_edge"):
+		errors.append("反弹撞边声没有在显式撞边点播放")
 
 	var report := {
 		"schemaVersion": 1,

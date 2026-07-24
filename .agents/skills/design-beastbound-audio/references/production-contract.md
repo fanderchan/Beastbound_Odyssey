@@ -19,6 +19,13 @@ Every runtime asset must have one ledger entry containing:
 
 Do not install copied game audio, copyrighted melodies, opaque downloads, or a file whose origin cannot be proven.
 
+For licensed layers, also keep one source record per immutable input file with
+`sourceId`, bundle-relative `sourcePath` or repository-relative `projectPath`,
+author, source type, license name and URI, source-page URI when available,
+expected SHA-256, and current SHA-256. Re-hash the source during every audit.
+Use [licensed-layer-bundle-contract.md](licensed-layer-bundle-contract.md) for
+the canonical specification and FFmpeg processing order.
+
 ## Format
 
 | Role | Runtime default | Channels | Sample rate |
@@ -35,6 +42,7 @@ MP3 is not a production master. Opus is not a Beastbound Godot runtime format fo
 - Remove unintended DC offset. Formal first-pass SFX fail when absolute mean sample amplitude exceeds `0.001` full scale. A deliberate asymmetric waveform must be documented and still avoid speaker-risking low-frequency bias.
 - Music should begin near `-18 LUFS-I` and remain subordinate to critical battle feedback. Treat this as a mix starting point, not a reason to destroy dynamics.
 - Short cues are assessed by peak, RMS, crest factor, duration, and listening; integrated LUFS is not reliable for very short effects.
+- Before bus gain and the master limiter, newly mastered one-shot files should normally retain at least `3 dB` sample-peak headroom. Any exception needs an overlap capture proving the final mix remains within the true-peak gate.
 - Start with music crossfade `0.75 s`, ordinary SFX cap `12`, and per-cue cooldown `40–120 ms`. Tune only from overlap evidence.
 - Same-context synchronization is idempotent: it must not restart or stack the current music.
 - The Master HardLimiter ceiling is explicitly configured, not merely the engine default. Start at `-2.0 dB` for this Godot PCM path, then analyze the frozen mixed capture and tune only as needed to keep reconstructed true peak at or below `-1 dBTP`.
@@ -66,6 +74,7 @@ A complete bundle contains:
 ```text
 source/spec.json
 source/provenance.json
+source/third_party/* (when the license permits redistribution)
 runtime/music/*
 runtime/sfx/*
 audio-cues.json
@@ -88,4 +97,5 @@ Generated Godot cache under `.godot/imported/` is never source. Track `.import` 
 - the normal-client capture contains an audio stream and no clipping;
 - the Godot-imported runtime stream is non-silent; canonical-WAV analysis alone is not runtime evidence;
 - QA/MovieWriter exit stops active players, clears their streams, waits for AudioServer drainage, and reports no leaked playback resource;
+- effect-family review uses one continuous numbered movie: isolated cues first, then representative dense cases under low music;
 - owner listening status is explicit.

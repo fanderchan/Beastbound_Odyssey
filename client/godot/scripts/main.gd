@@ -67,6 +67,12 @@ const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinat
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
 const AudioSettingsPanel := preload("res://scripts/ui/audio_settings_panel.gd")
 const AudioMainRuntimeCheck := preload("res://scripts/qa/audio_main_runtime_check.gd")
+const AudioImpactReviewModelCheck := preload(
+	"res://scripts/audio/audio_impact_review_model_check.gd"
+)
+const AudioImpactReviewPreview := preload(
+	"res://scripts/qa/audio_impact_review_preview.gd"
+)
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
@@ -817,6 +823,7 @@ var auto_battle_status_rule_check: bool = false
 var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
 var auto_audio_runtime_check: bool = false
+var auto_audio_impact_review_model_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
@@ -1003,6 +1010,7 @@ var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
+var audio_impact_review_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
@@ -1383,9 +1391,16 @@ func _audio_begin_battle_event(event: Dictionary, ledger: Dictionary) -> void:
 		var target := BattleModel.actor_by_id(battle_state, target_id)
 		if target_id != "" and not target.is_empty():
 			target_kinds[target_id] = str(target.get("kind", ""))
+	var participant_kinds := {}
+	for participant_id_value in audio_event.get("participantIds", []):
+		var participant_id := str(participant_id_value)
+		var participant := BattleModel.actor_by_id(battle_state, participant_id)
+		if participant_id != "" and not participant.is_empty():
+			participant_kinds[participant_id] = str(participant.get("kind", ""))
 	var actor_context := {
 		"attackerKind": str(attacker.get("kind", "")),
 		"targetKinds": target_kinds,
+		"participantKinds": participant_kinds,
 	}
 	if target_kinds.size() == 1:
 		actor_context["targetKind"] = str(target_kinds.values()[0])
@@ -1627,6 +1642,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_reaction_check")
 	elif auto_audio_runtime_check:
 		call_deferred("_run_auto_audio_runtime_check")
+	elif auto_audio_impact_review_model_check:
+		call_deferred("_run_auto_audio_impact_review_model_check")
 	elif auto_battle_result_check:
 		call_deferred("_run_auto_battle_result_check")
 	elif auto_battle_knockaway_result_check:
@@ -1913,6 +1930,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
 		call_deferred("_run_battle_visual_review_preview")
+	elif audio_impact_review_preview:
+		call_deferred("_run_audio_impact_review_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
 	elif pet_order_preview:
@@ -2370,6 +2389,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_reaction_check = true
 		elif arg == "--auto-audio-runtime-check":
 			auto_audio_runtime_check = true
+		elif arg == "--auto-audio-impact-review-model-check":
+			auto_audio_impact_review_model_check = true
 		elif arg == "--auto-battle-result-check":
 			auto_battle_result_check = true
 		elif arg == "--auto-battle-knockaway-result-check":
@@ -2742,6 +2763,8 @@ func _apply_preview_window_args() -> void:
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
 			battle_visual_review_scenario = arg.trim_prefix("--battle-visual-review=").strip_edges().to_lower()
+		elif arg == "--audio-impact-review-preview":
+			audio_impact_review_preview = true
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
 		elif arg == "--pet-order-preview":
@@ -3769,6 +3792,12 @@ func _run_auto_audio_runtime_check() -> void:
 	get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
 
 
+func _run_auto_audio_impact_review_model_check() -> void:
+	var report := AudioImpactReviewModelCheck.run()
+	print("audio impact review model check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
+
+
 func _run_auto_battle_result_check() -> void:
 	await _auto_checks()._run_auto_battle_result_check()
 
@@ -3962,6 +3991,10 @@ func _run_pet_action_art_preview() -> void:
 
 func _run_battle_visual_review_preview() -> void:
 	await BattleVisualReviewPreview.new(self, battle_visual_review_scenario).run()
+
+
+func _run_audio_impact_review_preview() -> void:
+	await AudioImpactReviewPreview.new(self).run()
 
 
 func _run_pet_order_preview() -> void:
@@ -12104,6 +12137,45 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		"damageRevealProgress": reveal_progress,
 		"launchStartProgress": launch_start,
 	}
+	if str(event.get("type", "")) == "combo_attack":
+		var participant_ids: Array = event.get(
+			"participantIds",
+			[str(event.get("attackerId", ""))]
+		)
+		var combo_contact_progresses: Array[float] = []
+		for participant_index in range(maxi(1, participant_ids.size())):
+			var contact_seconds := (
+				BATTLE_COMBO_STAGGER_SECONDS * float(participant_index)
+				+ BATTLE_COMBO_ACTION_SECONDS * BATTLE_COMBO_APPROACH_RATIO
+				+ 0.06
+			)
+			combo_contact_progresses.append(
+				clampf(contact_seconds / maxf(0.01, duration), 0.0, 0.99)
+			)
+		timeline["comboContactProgresses"] = combo_contact_progresses
+	var launched := bool(
+		event.get(
+			"launch",
+			event.get("serverLaunched", battle_state.get("lastLaunch", false))
+		)
+	)
+	if launched:
+		timeline["launchSoundProgress"] = launch_start
+		var launch_mode := str(
+			event.get(
+				"launchMode",
+				battle_state.get("lastLaunchMode", battle_last_event_launch_mode)
+			)
+		)
+		if launch_mode == "bounce":
+			timeline["bounceImpactProgress"] = clampf(
+				launch_start
+				+ (1.0 - launch_start)
+				* BATTLE_LAUNCH_FINISH_HOLD_RATIO
+				* BATTLE_BOUNCE_EDGE_RATIO,
+				launch_start,
+				0.99
+			)
 	if has_down_target:
 		# Bind the body-fall cue to the same visible phase that draws the down
 		# animation. A non-launch counter KO first staggers back to its own slot,

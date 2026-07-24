@@ -1,0 +1,1155 @@
+{
+  "bundleId": "beastbound_audio_v2",
+  "format": {
+    "musicRuntimeFormatDecision": "The reviewed v1 project-owned music masters remain the v2 source and are deterministically decoded to 48 kHz stereo PCM16 WAV. Combat, creature, and outcome SFX are rebuilt from creator-authored CC0 sources as 48 kHz mono PCM16 WAV; reviewed long-form replacements may move to Ogg Vorbis after decoded-loop auditing.",
+    "sampleRate": 48000,
+    "sampleWidthBits": 16
+  },
+  "reviewState": "owner_listening_pending",
+  "freezeTimestampUtc": "2026-07-24T00:00:00Z",
+  "ownership": {
+    "basis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
+    "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review."
+  },
+  "contexts": {
+    "battle_normal": "music.battle_normal",
+    "cave": "music.cave",
+    "town": "music.town",
+    "wilderness": "music.wilderness"
+  },
+  "mixDefaults": {
+    "crossfadeSeconds": 0.75,
+    "musicGainDb": -4.0,
+    "sfxGainDb": -1.5,
+    "sfxVoiceCap": 12
+  },
+  "sources": [
+    {
+      "sourceId": "v1_music_town",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/town_loop.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "9642690f5eda63a436c15590defd3fce521dc75990c16fe262658f5b470a882f"
+    },
+    {
+      "sourceId": "v1_music_wilderness",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/wilderness_loop.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "d4f9dd4fc2ecde75b8146c2994d7609f14dad523b6abf3b979eb5fbdf18ca7c2"
+    },
+    {
+      "sourceId": "v1_music_cave",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/cave_loop.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "dcda79bb9651f1f647960537e4382dc181df9a078fca50599e037df055486e77"
+    },
+    {
+      "sourceId": "v1_music_battle_normal",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/battle_normal_loop.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "953758dab09e3fa9aa0d39a5bf257a9db89049d962d753bf52bfa1c0137009bc"
+    },
+    {
+      "sourceId": "v1_ui_confirm",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/sfx/ui_confirm.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "0f8214ce3efc718b0692144019eeb8055cecb71dd77b474195554cb42194eab8"
+    },
+    {
+      "sourceId": "v1_ui_cancel",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/sfx/ui_cancel.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "43a7cb98fb48555095161f7ba8711edf4aeae73c86ac3b530372c3d99069bca8"
+    },
+    {
+      "sourceId": "v1_ui_error",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/sfx/ui_error.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "739ca72b8cb86e95ce310fe43902cdc0b78979618146e8c1234c39d52d6bb2b4"
+    },
+    {
+      "sourceId": "v1_world_encounter",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/sfx/world_encounter.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "5803f45252465e8fe50c7e65e41453eb5592f53b19ae6bfa01b0bd9dfea9b463"
+    },
+    {
+      "sourceId": "v1_world_warp",
+      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/sfx/world_warp.wav",
+      "sourceType": "project_owned_carry_forward",
+      "author": "Beastbound Odyssey",
+      "licenseName": "Project-owned original",
+      "licenseUrl": "project://beastbound-odyssey/original-audio",
+      "expectedSha256": "f4a758fb7d9cbbcc60d41be991a161eba3ebe2a2a924b5d2897eb325ee9c885f"
+    },
+    {
+      "sourceId": "artisticdude_swish_7",
+      "sourcePath": "source/third_party/artisticdude_swishes/swish-7.wav",
+      "sourceType": "licensed_cc0",
+      "author": "artisticdude",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/swishes-sound-pack",
+      "expectedSha256": "e6de737a34de16afed094d6170d7679149022f149e0a8356d2f029b0e8f4a4d7"
+    },
+    {
+      "sourceId": "artisticdude_swish_9",
+      "sourcePath": "source/third_party/artisticdude_swishes/swish-9.wav",
+      "sourceType": "licensed_cc0",
+      "author": "artisticdude",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/swishes-sound-pack",
+      "expectedSha256": "123883f006ce55feecbff11eea5f87c4493df4399989983037144570a23723c1"
+    },
+    {
+      "sourceId": "artisticdude_swish_12",
+      "sourcePath": "source/third_party/artisticdude_swishes/swish-12.wav",
+      "sourceType": "licensed_cc0",
+      "author": "artisticdude",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/swishes-sound-pack",
+      "expectedSha256": "0513a86d428d9ed8601e93b8554580a5932c6c1a82d39d81a8f48883f1807a67"
+    },
+    {
+      "sourceId": "kenney_bell_heavy_001",
+      "sourcePath": "source/third_party/kenney_impact/impactBell_heavy_001.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "9df61e3ae9a83dc65e5a1fd3ed19d480876f3b22b963a1b9ef6fa293592dcec4"
+    },
+    {
+      "sourceId": "kenney_bell_heavy_004",
+      "sourcePath": "source/third_party/kenney_impact/impactBell_heavy_004.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "49fe4fafa2001bd0d312976796824571ca8429851f285997e1327d17bb34fd00"
+    },
+    {
+      "sourceId": "kenney_plate_medium_002",
+      "sourcePath": "source/third_party/kenney_impact/impactPlate_medium_002.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "68762e1ed49bb59ae6602fad6ce2ebac61958478ddb2668de9106f010cd4b6b0"
+    },
+    {
+      "sourceId": "kenney_punch_heavy_001",
+      "sourcePath": "source/third_party/kenney_impact/impactPunch_heavy_001.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "f92f5cb6ba4ff2766497292ffd90865654317eeca976f5652e0708dbdcdc0dd9"
+    },
+    {
+      "sourceId": "kenney_punch_medium_001",
+      "sourcePath": "source/third_party/kenney_impact/impactPunch_medium_001.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "e71d23abcc3f10d9d6bc9615b2a431fff70b12333a5fcdd9964457564ace4349"
+    },
+    {
+      "sourceId": "kenney_soft_heavy_004",
+      "sourcePath": "source/third_party/kenney_impact/impactSoft_heavy_004.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "e008f0b6b14f62339c8fe9f9b45cbd6317ba4f66604c4899053b8017020a36f0"
+    },
+    {
+      "sourceId": "kenney_soft_medium_001",
+      "sourcePath": "source/third_party/kenney_impact/impactSoft_medium_001.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf"
+    },
+    {
+      "sourceId": "kenney_soft_medium_002",
+      "sourcePath": "source/third_party/kenney_impact/impactSoft_medium_002.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://www.kenney.nl/assets/impact-sounds",
+      "expectedSha256": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089"
+    },
+    {
+      "sourceId": "kenney_cloth_belt_2",
+      "sourcePath": "source/third_party/kenney_rpg/clothBelt2.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://kenney.nl/assets/rpg-audio",
+      "expectedSha256": "d545b1d9f20e6188140aaf551a96f1e82fe0d15f7ca066fac8b065e1231e0038"
+    },
+    {
+      "sourceId": "kenney_draw_knife_3",
+      "sourcePath": "source/third_party/kenney_rpg/drawKnife3.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://kenney.nl/assets/rpg-audio",
+      "expectedSha256": "a11ae62fb1a628425769d11a9de394980ad8909c31f4c9a4316f226963e21caf"
+    },
+    {
+      "sourceId": "kenney_drop_leather",
+      "sourcePath": "source/third_party/kenney_rpg/dropLeather.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://kenney.nl/assets/rpg-audio",
+      "expectedSha256": "097e1d3b74949b0145fda0519d40b7e0773ab82ec4858727f95be830927e1a45"
+    },
+    {
+      "sourceId": "kenney_metal_click",
+      "sourcePath": "source/third_party/kenney_rpg/metalClick.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Kenney",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://kenney.nl/assets/rpg-audio",
+      "expectedSha256": "9851a69d0c613e13bceef08060ecc4148f098ef487927cbebe270d642398a3b3"
+    },
+    {
+      "sourceId": "rubberduck_wood_slam_04",
+      "sourcePath": "source/third_party/rubberduck_100_wood_metal/wood_slam_04.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/100-cc0-metal-and-wood-sfx",
+      "expectedSha256": "a1b97f2f3821eb52ab42852fb4538b7bd0a6f080e1608fba0a813105ba85cace"
+    },
+    {
+      "sourceId": "rubberduck_bfh1_hit_02",
+      "sourcePath": "source/third_party/rubberduck_75_impacts/bfh1_hit_02.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx",
+      "expectedSha256": "a3bd154c391e65947dcd700dfa64b927676253a2e1d229e63443f0ef5f955474"
+    },
+    {
+      "sourceId": "rubberduck_bfh1_hit_06",
+      "sourcePath": "source/third_party/rubberduck_75_impacts/bfh1_hit_06.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx",
+      "expectedSha256": "25d4a1eb98a413a15618f5d4ea0dcc3358b7ceae90c609c34c6e56c5ab962c58"
+    },
+    {
+      "sourceId": "rubberduck_creature_hurt_01",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/creature_hurt_01.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "9948f9ce067e1aae7bd780e974d51ceae03f2611a52afffb0e092ba47e9dc8e1"
+    },
+    {
+      "sourceId": "rubberduck_creature_misc_02",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/creature_misc_02.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "cbaafa1a24ac04f803b3cdabcd13e6e1b1e64f36e53cc200da426cef7d33a20b"
+    },
+    {
+      "sourceId": "rubberduck_item_coins_02",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/item_coins_02.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "c1124868c928ef06e9b95fd9bd314eb3aa9a2869cbfde7f5aadcc341fe3edca0"
+    },
+    {
+      "sourceId": "rubberduck_item_gem_02",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/item_gem_02.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "a5f4b0b3ae0e272765619289ef6709513e0dfa0785d7559e8a223176a8bcf181"
+    },
+    {
+      "sourceId": "rubberduck_item_gem_04",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/item_gem_04.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "e12eb95d0458675c2692831454ed09c7a680de966e7c705ce67a7e12560aa73a"
+    },
+    {
+      "sourceId": "rubberduck_spell_01",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/spell_01.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "09821a53c418c5eeeac4fa25bada9d245e822fed302eeeae9ae4151522a45ae5"
+    },
+    {
+      "sourceId": "rubberduck_spell_02",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/spell_02.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "bf9c48b76921e56aa266172d969a2c08215d6ce0ffae7c3584f23fa05d3f8bd4"
+    },
+    {
+      "sourceId": "rubberduck_spell_fire_07",
+      "sourcePath": "source/third_party/rubberduck_80_rpg/spell_fire_07.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "rubberduck",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "expectedSha256": "bb13cef9c0b0b4ec7f9335c356b14814c88418abd85dd3747cb62469e9ada93f"
+    }
+  ],
+  "music": [
+    {
+      "assetId": "music_town_v2",
+      "cueId": "music.town",
+      "filename": "town_loop.wav",
+      "projectCopy": "v1_music_town",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -4.0,
+      "loop": true,
+      "priority": 100,
+      "role": "music"
+    },
+    {
+      "assetId": "music_wilderness_v2",
+      "cueId": "music.wilderness",
+      "filename": "wilderness_loop.wav",
+      "projectCopy": "v1_music_wilderness",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -4.5,
+      "loop": true,
+      "priority": 100,
+      "role": "music"
+    },
+    {
+      "assetId": "music_cave_v2",
+      "cueId": "music.cave",
+      "filename": "cave_loop.wav",
+      "projectCopy": "v1_music_cave",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -5.0,
+      "loop": true,
+      "priority": 100,
+      "role": "music"
+    },
+    {
+      "assetId": "music_battle_normal_v2",
+      "cueId": "music.battle_normal",
+      "filename": "battle_normal_loop.wav",
+      "projectCopy": "v1_music_battle_normal",
+      "bus": "Music",
+      "cooldownMs": 0,
+      "gainDb": -3.5,
+      "loop": true,
+      "priority": 100,
+      "role": "music"
+    }
+  ],
+  "sfx": [
+    {
+      "assetId": "combat_motion_character_v2",
+      "cueId": "combat.motion_character",
+      "filename": "combat_motion_character.wav",
+      "layers": [
+        {
+          "sourceId": "artisticdude_swish_7",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.155,
+          "highpassHz": 110,
+          "lowpassHz": 6200,
+          "gainDb": -14.0
+        }
+      ],
+      "durationSeconds": 0.155,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 70,
+      "gainDb": -2.0,
+      "loop": false,
+      "priority": 30,
+      "role": "motion"
+    },
+    {
+      "assetId": "combat_motion_pet_v2",
+      "cueId": "combat.motion_pet",
+      "filename": "combat_motion_pet.wav",
+      "layers": [
+        {
+          "sourceId": "artisticdude_swish_9",
+          "trimStartSeconds": 0.025,
+          "trimEndSeconds": 0.172,
+          "pitchScale": 0.92,
+          "highpassHz": 90,
+          "lowpassHz": 5500,
+          "gainDb": -13.0
+        }
+      ],
+      "durationSeconds": 0.17,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 70,
+      "gainDb": -1.5,
+      "loop": false,
+      "priority": 30,
+      "role": "motion"
+    },
+    {
+      "assetId": "combat_cast_skill_v2",
+      "cueId": "combat.cast_skill",
+      "filename": "combat_cast_skill.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_spell_01",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.54,
+          "highpassHz": 120,
+          "lowpassHz": 5300,
+          "gainDb": -11.0
+        }
+      ],
+      "durationSeconds": 0.54,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 100,
+      "gainDb": -2.0,
+      "loop": false,
+      "priority": 38,
+      "role": "motion"
+    },
+    {
+      "assetId": "combat_hit_light_v2",
+      "cueId": "combat.hit_light",
+      "filename": "combat_hit_light.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_punch_medium_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.245,
+          "highpassHz": 75,
+          "lowpassHz": 5200,
+          "gainDb": -8.0
+        },
+        {
+          "sourceId": "rubberduck_bfh1_hit_06",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.31,
+          "lowpassHz": 4500,
+          "gainDb": -15.0,
+          "delayMs": 8
+        }
+      ],
+      "durationSeconds": 0.33,
+      "masterGainDb": -2.0,
+      "bus": "Combat",
+      "cooldownMs": 45,
+      "gainDb": -1.0,
+      "loop": false,
+      "priority": 52,
+      "role": "contact"
+    },
+    {
+      "assetId": "combat_hit_heavy_v2",
+      "cueId": "combat.hit_heavy",
+      "filename": "combat_hit_heavy.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_punch_heavy_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.39,
+          "highpassHz": 65,
+          "lowpassHz": 4800,
+          "gainDb": -6.5
+        },
+        {
+          "sourceId": "rubberduck_bfh1_hit_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.52,
+          "highpassHz": 80,
+          "lowpassHz": 4200,
+          "gainDb": -8.0,
+          "delayMs": 12
+        }
+      ],
+      "durationSeconds": 0.54,
+      "masterGainDb": -1.0,
+      "bus": "Combat",
+      "cooldownMs": 60,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 58,
+      "role": "contact"
+    },
+    {
+      "assetId": "combat_block_v2",
+      "cueId": "combat.block",
+      "filename": "combat_block.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_plate_medium_002",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.49,
+          "highpassHz": 110,
+          "lowpassHz": 5200,
+          "gainDb": -8.0
+        },
+        {
+          "sourceId": "kenney_soft_medium_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.18,
+          "lowpassHz": 4000,
+          "gainDb": -14.0
+        }
+      ],
+      "durationSeconds": 0.49,
+      "masterGainDb": -1.5,
+      "bus": "Combat",
+      "cooldownMs": 75,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 64,
+      "role": "contact"
+    },
+    {
+      "assetId": "combat_evade_v2",
+      "cueId": "combat.evade",
+      "filename": "combat_evade.wav",
+      "layers": [
+        {
+          "sourceId": "artisticdude_swish_12",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.076,
+          "highpassHz": 180,
+          "lowpassHz": 6200,
+          "gainDb": -17.0
+        }
+      ],
+      "durationSeconds": 0.076,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 65,
+      "gainDb": -1.5,
+      "loop": false,
+      "priority": 61,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_critical_v2",
+      "cueId": "combat.critical",
+      "filename": "combat_critical.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_bell_heavy_004",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.16,
+          "highpassHz": 90,
+          "lowpassHz": 3800,
+          "gainDb": -12.0
+        }
+      ],
+      "durationSeconds": 0.16,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 90,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 68,
+      "role": "contact"
+    },
+    {
+      "assetId": "combat_counter_v2",
+      "cueId": "combat.counter",
+      "filename": "combat_counter.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_draw_knife_3",
+          "trimStartSeconds": 0.052,
+          "trimEndSeconds": 0.325,
+          "highpassHz": 140,
+          "lowpassHz": 5000,
+          "gainDb": 0.0
+        },
+        {
+          "sourceId": "artisticdude_swish_12",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.076,
+          "highpassHz": 180,
+          "lowpassHz": 6200,
+          "gainDb": -19.0,
+          "delayMs": 25
+        }
+      ],
+      "durationSeconds": 0.31,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 110,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 78,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_launch_v2",
+      "cueId": "combat.launch",
+      "filename": "combat_launch.wav",
+      "layers": [
+        {
+          "sourceId": "artisticdude_swish_9",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.172,
+          "pitchScale": 0.84,
+          "highpassHz": 90,
+          "lowpassHz": 5500,
+          "gainDb": -13.0
+        },
+        {
+          "sourceId": "rubberduck_bfh1_hit_06",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.31,
+          "lowpassHz": 4500,
+          "gainDb": -11.0,
+          "delayMs": 35
+        }
+      ],
+      "durationSeconds": 0.36,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 95,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 76,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_knockback_v2",
+      "cueId": "combat.knockback",
+      "filename": "combat_knockback.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_soft_medium_002",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.135,
+          "highpassHz": 75,
+          "lowpassHz": 4300,
+          "gainDb": -8.0
+        },
+        {
+          "sourceId": "rubberduck_bfh1_hit_06",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.28,
+          "highpassHz": 80,
+          "lowpassHz": 4200,
+          "gainDb": -14.0,
+          "delayMs": 10
+        }
+      ],
+      "durationSeconds": 0.29,
+      "masterGainDb": -1.0,
+      "bus": "Combat",
+      "cooldownMs": 95,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 74,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_down_v2",
+      "cueId": "combat.down",
+      "filename": "combat_down.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_drop_leather",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.32,
+          "highpassHz": 75,
+          "lowpassHz": 4300,
+          "gainDb": 3.0
+        },
+        {
+          "sourceId": "kenney_soft_heavy_004",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.46,
+          "lowpassHz": 3500,
+          "gainDb": -10.0,
+          "delayMs": 15
+        }
+      ],
+      "durationSeconds": 0.48,
+      "masterGainDb": -7.0,
+      "bus": "Combat",
+      "cooldownMs": 120,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 82,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_revive_v2",
+      "cueId": "combat.revive",
+      "filename": "combat_revive.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_spell_02",
+          "trimStartSeconds": 0.015,
+          "trimEndSeconds": 0.46,
+          "highpassHz": 160,
+          "lowpassHz": 5500,
+          "gainDb": -12.0
+        },
+        {
+          "sourceId": "rubberduck_item_gem_04",
+          "trimStartSeconds": 0.015,
+          "trimEndSeconds": 0.54,
+          "highpassHz": 250,
+          "lowpassHz": 5000,
+          "gainDb": -18.0,
+          "delayMs": 80
+        }
+      ],
+      "durationSeconds": 0.61,
+      "masterGainDb": 0.0,
+      "bus": "Combat",
+      "cooldownMs": 120,
+      "gainDb": -1.0,
+      "loop": false,
+      "priority": 84,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_guard_ready_v2",
+      "cueId": "combat.guard_ready",
+      "filename": "combat_guard_ready.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_cloth_belt_2",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.42,
+          "highpassHz": 150,
+          "lowpassHz": 4800,
+          "gainDb": -7.0
+        },
+        {
+          "sourceId": "kenney_metal_click",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.22,
+          "highpassHz": 180,
+          "lowpassHz": 5000,
+          "gainDb": -5.0,
+          "delayMs": 28
+        }
+      ],
+      "durationSeconds": 0.42,
+      "masterGainDb": -1.0,
+      "bus": "Combat",
+      "cooldownMs": 100,
+      "gainDb": -1.0,
+      "loop": false,
+      "priority": 48,
+      "role": "motion"
+    },
+    {
+      "assetId": "combat_combo_start_v2",
+      "cueId": "combat.combo_start",
+      "filename": "combat_combo_start.wav",
+      "layers": [
+        {
+          "sourceId": "artisticdude_swish_9",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.172,
+          "highpassHz": 90,
+          "lowpassHz": 5500,
+          "gainDb": -16.0
+        },
+        {
+          "sourceId": "kenney_cloth_belt_2",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.42,
+          "highpassHz": 150,
+          "lowpassHz": 4800,
+          "gainDb": -5.0
+        }
+      ],
+      "durationSeconds": 0.42,
+      "masterGainDb": -1.0,
+      "bus": "Combat",
+      "cooldownMs": 110,
+      "gainDb": -1.5,
+      "loop": false,
+      "priority": 45,
+      "role": "motion"
+    },
+    {
+      "assetId": "combat_hit_combo_v2",
+      "cueId": "combat.hit_combo",
+      "filename": "combat_hit_combo.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_punch_heavy_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.39,
+          "highpassHz": 65,
+          "lowpassHz": 4800,
+          "gainDb": -5.5
+        },
+        {
+          "sourceId": "rubberduck_bfh1_hit_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.52,
+          "highpassHz": 80,
+          "lowpassHz": 4200,
+          "gainDb": -7.0,
+          "delayMs": 12
+        }
+      ],
+      "durationSeconds": 0.54,
+      "masterGainDb": -1.5,
+      "bus": "Combat",
+      "cooldownMs": 70,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 72,
+      "role": "contact"
+    },
+    {
+      "assetId": "combat_bounce_edge_v2",
+      "cueId": "combat.bounce_edge",
+      "filename": "combat_bounce_edge.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_wood_slam_04",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.32,
+          "highpassHz": 75,
+          "lowpassHz": 4500,
+          "gainDb": -8.0
+        }
+      ],
+      "durationSeconds": 0.32,
+      "masterGainDb": -1.0,
+      "bus": "Combat",
+      "cooldownMs": 95,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 80,
+      "role": "reaction"
+    },
+    {
+      "assetId": "combat_hit_skill_v2",
+      "cueId": "combat.hit_skill",
+      "filename": "combat_hit_skill.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_punch_medium_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.245,
+          "highpassHz": 75,
+          "lowpassHz": 5200,
+          "gainDb": -9.0
+        },
+        {
+          "sourceId": "rubberduck_spell_fire_07",
+          "trimStartSeconds": 0.035,
+          "trimEndSeconds": 0.5,
+          "highpassHz": 120,
+          "lowpassHz": 4800,
+          "gainDb": 3.0,
+          "delayMs": 12
+        }
+      ],
+      "durationSeconds": 0.49,
+      "masterGainDb": -2.0,
+      "bus": "Combat",
+      "cooldownMs": 55,
+      "gainDb": -1.0,
+      "loop": false,
+      "priority": 60,
+      "role": "contact"
+    },
+    {
+      "assetId": "creature_pet_effort_v2",
+      "cueId": "creature.pet_effort",
+      "filename": "creature_pet_effort.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_creature_misc_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.189,
+          "highpassHz": 80,
+          "lowpassHz": 4500,
+          "gainDb": -5.0
+        }
+      ],
+      "durationSeconds": 0.189,
+      "masterGainDb": 0.0,
+      "bus": "Pet",
+      "cooldownMs": 100,
+      "gainDb": -2.0,
+      "loop": false,
+      "priority": 28,
+      "role": "voice"
+    },
+    {
+      "assetId": "creature_pet_hurt_v2",
+      "cueId": "creature.pet_hurt",
+      "filename": "creature_pet_hurt.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_creature_hurt_01",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.52,
+          "highpassHz": 80,
+          "lowpassHz": 4000,
+          "gainDb": -10.0
+        }
+      ],
+      "durationSeconds": 0.52,
+      "masterGainDb": 0.0,
+      "bus": "Pet",
+      "cooldownMs": 100,
+      "gainDb": -1.5,
+      "loop": false,
+      "priority": 56,
+      "role": "voice"
+    },
+    {
+      "assetId": "outcome_victory_v2",
+      "cueId": "outcome.victory",
+      "filename": "outcome_victory.wav",
+      "layers": [
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 0.94,
+          "highpassHz": 250,
+          "lowpassHz": 5000,
+          "gainDb": -10.0
+        },
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 1.06,
+          "highpassHz": 250,
+          "lowpassHz": 5000,
+          "gainDb": -12.0,
+          "delayMs": 130
+        },
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 1.19,
+          "highpassHz": 250,
+          "lowpassHz": 5000,
+          "gainDb": -14.0,
+          "delayMs": 260
+        },
+        {
+          "sourceId": "rubberduck_item_coins_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.616,
+          "highpassHz": 180,
+          "lowpassHz": 5200,
+          "gainDb": -17.0,
+          "delayMs": 300
+        }
+      ],
+      "durationSeconds": 0.92,
+      "masterGainDb": 0.0,
+      "bus": "SFX",
+      "cooldownMs": 500,
+      "gainDb": 0.0,
+      "loop": false,
+      "priority": 100,
+      "role": "outcome"
+    },
+    {
+      "assetId": "outcome_defeat_v2",
+      "cueId": "outcome.defeat",
+      "filename": "outcome_defeat.wav",
+      "layers": [
+        {
+          "sourceId": "kenney_bell_heavy_001",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 1.1,
+          "pitchScale": 0.86,
+          "highpassHz": 60,
+          "lowpassHz": 3200,
+          "gainDb": -9.0
+        }
+      ],
+      "durationSeconds": 1.28,
+      "masterGainDb": 0.0,
+      "bus": "SFX",
+      "cooldownMs": 500,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 100,
+      "role": "outcome"
+    },
+    {
+      "assetId": "ui_confirm_v2",
+      "cueId": "ui.confirm",
+      "filename": "ui_confirm.wav",
+      "projectCopy": "v1_ui_confirm",
+      "bus": "UI",
+      "cooldownMs": 45,
+      "gainDb": -4.0,
+      "loop": false,
+      "priority": 24,
+      "role": "ui"
+    },
+    {
+      "assetId": "ui_cancel_v2",
+      "cueId": "ui.cancel",
+      "filename": "ui_cancel.wav",
+      "projectCopy": "v1_ui_cancel",
+      "bus": "UI",
+      "cooldownMs": 45,
+      "gainDb": -4.0,
+      "loop": false,
+      "priority": 24,
+      "role": "ui"
+    },
+    {
+      "assetId": "ui_error_v2",
+      "cueId": "ui.error",
+      "filename": "ui_error.wav",
+      "projectCopy": "v1_ui_error",
+      "bus": "UI",
+      "cooldownMs": 120,
+      "gainDb": -2.5,
+      "loop": false,
+      "priority": 45,
+      "role": "ui"
+    },
+    {
+      "assetId": "world_encounter_v2",
+      "cueId": "world.encounter",
+      "filename": "world_encounter.wav",
+      "projectCopy": "v1_world_encounter",
+      "bus": "SFX",
+      "cooldownMs": 400,
+      "gainDb": -0.5,
+      "loop": false,
+      "priority": 88,
+      "role": "world"
+    },
+    {
+      "assetId": "world_warp_v2",
+      "cueId": "world.warp",
+      "filename": "world_warp.wav",
+      "projectCopy": "v1_world_warp",
+      "bus": "SFX",
+      "cooldownMs": 400,
+      "gainDb": -1.0,
+      "loop": false,
+      "priority": 72,
+      "role": "world"
+    }
+  ],
+  "requiredCanonicalCues": [
+    "combat.block",
+    "combat.bounce_edge",
+    "combat.cast_skill",
+    "combat.combo_start",
+    "combat.counter",
+    "combat.critical",
+    "combat.down",
+    "combat.evade",
+    "combat.guard_ready",
+    "combat.hit_combo",
+    "combat.hit_heavy",
+    "combat.hit_light",
+    "combat.hit_skill",
+    "combat.knockback",
+    "combat.launch",
+    "combat.motion_character",
+    "combat.motion_pet",
+    "combat.revive",
+    "creature.pet_effort",
+    "creature.pet_hurt",
+    "music.battle_normal",
+    "music.cave",
+    "music.town",
+    "music.wilderness",
+    "outcome.defeat",
+    "outcome.victory",
+    "ui.cancel",
+    "ui.confirm",
+    "ui.error",
+    "world.encounter",
+    "world.warp"
+  ]
+}

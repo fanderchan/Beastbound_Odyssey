@@ -7,11 +7,12 @@ const REACTION_PROGRESS_AFTER_CONTACT := 0.08
 
 var _manager: Object
 var _event: Dictionary = {}
-var _requests_by_phase: Dictionary = {}
+var _markers: Array[Dictionary] = []
 var _contact_progress := 0.0
 var _reaction_progress := 0.0
 var _down_progress := 0.0
 var _fired_phases: Dictionary = {}
+var _fired_marker_ids: Dictionary = {}
 
 
 func configure(manager: Object) -> void:
@@ -21,17 +22,7 @@ func configure(manager: Object) -> void:
 func begin_event(event: Dictionary, actor_context: Dictionary = {}) -> void:
 	end_event()
 	_event = event.duplicate(true)
-	for phase in [
-		BattleAudioCueModel.PHASE_ACTION_START,
-		BattleAudioCueModel.PHASE_CONTACT,
-		BattleAudioCueModel.PHASE_REACTION,
-		BattleAudioCueModel.PHASE_DOWN,
-	]:
-		_requests_by_phase[phase] = BattleAudioCueModel.requests_for_phase(
-			_event,
-			phase,
-			actor_context
-		)
+	_markers = BattleAudioCueModel.timed_markers(_event, actor_context)
 	_contact_progress = BattleAudioCueModel.damage_reveal_progress(_event)
 	_reaction_progress = minf(
 		0.94,
@@ -48,7 +39,15 @@ func begin_event(event: Dictionary, actor_context: Dictionary = {}) -> void:
 			0.0,
 			0.99
 		)
-	_fire_phase(BattleAudioCueModel.PHASE_ACTION_START)
+	for marker in _markers:
+		var phase := str(marker.get("phase", ""))
+		var marker_progress := float(marker.get("progress", 0.0))
+		if phase == BattleAudioCueModel.PHASE_CONTACT:
+			_contact_progress = minf(_contact_progress, marker_progress)
+		elif phase == BattleAudioCueModel.PHASE_REACTION:
+			_reaction_progress = minf(_reaction_progress, marker_progress)
+		elif phase == BattleAudioCueModel.PHASE_DOWN:
+			_down_progress = minf(_down_progress, marker_progress)
 	update_progress(0.0)
 
 
@@ -56,18 +55,16 @@ func update_progress(progress: float) -> void:
 	if _event.is_empty():
 		return
 	var normalized := clampf(progress, 0.0, 1.0)
-	if normalized >= _contact_progress:
-		_fire_phase(BattleAudioCueModel.PHASE_CONTACT)
-	if normalized >= _reaction_progress:
-		_fire_phase(BattleAudioCueModel.PHASE_REACTION)
-	if normalized >= _down_progress:
-		_fire_phase(BattleAudioCueModel.PHASE_DOWN)
+	for marker in _markers:
+		if normalized >= float(marker.get("progress", 0.0)):
+			_fire_marker(marker)
 
 
 func end_event() -> void:
 	_event.clear()
-	_requests_by_phase.clear()
+	_markers.clear()
 	_fired_phases.clear()
+	_fired_marker_ids.clear()
 	_contact_progress = 0.0
 	_reaction_progress = 0.0
 	_down_progress = 0.0
@@ -80,24 +77,32 @@ func debug_snapshot() -> Dictionary:
 		"reactionProgress": _reaction_progress,
 		"downProgress": _down_progress,
 		"firedPhases": _fired_phases.keys(),
+		"markerCount": _markers.size(),
+		"firedMarkerCount": _fired_marker_ids.size(),
 	}
 
 
-func _fire_phase(phase: String) -> void:
-	if bool(_fired_phases.get(phase, false)):
+func _fire_marker(marker: Dictionary) -> void:
+	var marker_id := str(marker.get("markerId", ""))
+	if marker_id == "":
+		marker_id = "%s@%.4f" % [
+			str(marker.get("cueId", "")),
+			float(marker.get("progress", 0.0)),
+		]
+	if bool(_fired_marker_ids.get(marker_id, false)):
 		return
-	_fired_phases[phase] = true
-	var requests = _requests_by_phase.get(phase, [])
-	if not (requests is Array):
+	_fired_marker_ids[marker_id] = true
+	var phase := str(marker.get("phase", ""))
+	if phase != "":
+		_fired_phases[phase] = true
+	var cue_id := str(marker.get("cueId", ""))
+	if cue_id == "" or _manager == null or not is_instance_valid(_manager):
 		return
-	for value in requests:
-		if not (value is Dictionary):
-			continue
-		var request := value as Dictionary
-		var cue_id := str(request.get("cueId", ""))
-		if cue_id == "" or _manager == null or not is_instance_valid(_manager):
-			continue
-		if _manager.has_method("play_cue"):
-			_manager.call("play_cue", cue_id, {
-				"priority": int(request.get("priority", 0)),
-			})
+	if not _manager.has_method("play_cue"):
+		return
+	var options := {}
+	var marker_options = marker.get("options", {})
+	if marker_options is Dictionary:
+		options = (marker_options as Dictionary).duplicate(true)
+	options["priority"] = int(marker.get("priority", 0))
+	_manager.call("play_cue", cue_id, options)
