@@ -6881,6 +6881,16 @@ func _update_battle_auto_attack(delta: float) -> void:
 func _submit_battle_auto_player_action() -> bool:
 	if not battle_active or battle_command_owner != "player" or _battle_commands_locked():
 		return false
+	if (
+		pet_battle_review_lab != null
+		and pet_battle_review_lab.uses_tactical_ai(battle_state)
+	):
+		battle_pending_player_command = {"command": "review_ai"}
+		battle_pending_pet_command = {"command": "review_ai"}
+		battle_auto_attack_player_submissions += 1
+		battle_auto_attack_delay = BATTLE_AUTO_ATTACK_STEP_DELAY
+		_battle_start_pending_round()
+		return true
 	var settings := _battle_auto_settings()
 	var capture_settings := PlayerProgressModel.auto_capture_settings(player_profile)
 	var capture_hold_target_id := _battle_auto_capture_hold_target_id(capture_settings)
@@ -11675,12 +11685,26 @@ func _battle_start_pending_round() -> void:
 			"command": "attack",
 			"targetId": battle_selected_target_id,
 			}
-	_refresh_battle_target_seed()
-	battle_event_queue = BattleModel.build_player_pet_round_events(
-		battle_state,
-		battle_pending_player_command,
-		battle_pending_pet_command
-	)
+	if (
+		pet_battle_review_lab != null
+		and pet_battle_review_lab.uses_tactical_ai(battle_state)
+	):
+		var review_round_seed := "pet_battle_review_%d_round_%d" % [
+			int(battle_state.get("reviewSeed", 1)),
+			int(battle_state.get("round", 1)),
+		]
+		battle_state["targetSeed"] = review_round_seed
+		battle_state["forcedTargetSeed"] = review_round_seed
+		battle_event_queue = pet_battle_review_lab.build_tactical_round_events(
+			battle_state
+		)
+	else:
+		_refresh_battle_target_seed()
+		battle_event_queue = BattleModel.build_player_pet_round_events(
+			battle_state,
+			battle_pending_player_command,
+			battle_pending_pet_command
+		)
 	battle_round_end_status_processed = false
 	battle_pending_player_command.clear()
 	battle_pending_pet_command.clear()

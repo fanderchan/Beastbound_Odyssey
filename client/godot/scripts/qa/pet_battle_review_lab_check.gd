@@ -17,6 +17,11 @@ func run() -> void:
 	var errors := PetBattleReviewModel.validation_errors()
 	var form_id := PetBattleReviewModel.default_form_id()
 	var lab = host._pet_battle_review()
+	var audio_world_context: String = (
+		host.game_audio_manager.world_context()
+		if host.game_audio_manager != null
+		else ""
+	)
 	lab.open(form_id, PetBattleReviewModel.MODE_BRAWL, 424242, false)
 	await host.get_tree().process_frame
 	var first_signature := PetBattleReviewModel.state_signature(host.battle_state)
@@ -28,6 +33,48 @@ func run() -> void:
 		errors.append("宠物选择目录没有完整载入")
 	if (host.battle_state.get("actors", []) as Array).size() != 20:
 		errors.append("实机验收场不是10V10")
+	if (
+		not bool(host.battle_state.get("reviewAiSpectator", false))
+		or str(host.battle_state.get("reviewPlacement", ""))
+		!= PetBattleReviewModel.PLACEMENT_RANDOM_ALL
+	):
+		errors.append("GM默认入口没有进入随机战术AI观战")
+	var spectator_counts := _spectator_counts(host.battle_state)
+	var random_mount_count: int = lab.random_mount_form_count()
+	if int(spectator_counts.get("level140", 0)) != 20:
+		errors.append("GM随机观战不是20个140级单位：%s" % str(spectator_counts))
+	if (
+		int(spectator_counts.get("allyPlayerRoles", 0)) != 5
+		or int(spectator_counts.get("enemyPlayerRoles", 0)) != 5
+		or int(spectator_counts.get("allyPetRoles", 0)) != 5
+		or int(spectator_counts.get("enemyPetRoles", 0)) != 5
+	):
+		errors.append("GM随机观战没有覆盖双方人物/宠物战术角色：%s" % str(spectator_counts))
+	if int(spectator_counts.get("petForms", 0)) < 2:
+		errors.append("GM随机观战没有随机出多种宠物形态：%s" % str(spectator_counts))
+	if random_mount_count < 2:
+		errors.append("GM随机观战没有至少两种可用随机坐骑资产")
+	if (
+		int(spectator_counts.get("mounted", 0)) != 10
+		or int(spectator_counts.get("mountForms", 0)) < 2
+	):
+		errors.append("GM随机观战没有形成10名随机骑手：%s" % str(spectator_counts))
+	if (
+		host.game_audio_manager == null
+		or not host.game_audio_manager.is_battle_active()
+		or host.game_audio_manager.current_music_context() != "battle_normal"
+		or host.game_audio_manager.current_music_cue() != "music.battle_normal"
+	):
+		errors.append("GM随机观战没有切入正式战斗音乐")
+	var tactical_events: Array[Dictionary] = lab.build_tactical_round_events(
+		host.battle_state.duplicate(true)
+	)
+	if tactical_events.size() < 10:
+		errors.append("战术AI没有为存活单位生成足够决策：%d" % tactical_events.size())
+	for event in tactical_events:
+		if str(event.get("aiIntent", "")).strip_edges() == "" and str(event.get("type", "")) != "combo_attack":
+			errors.append("战术AI事件没有可解释的决策意图：%s" % str(event))
+			break
 	var layout_size: Vector2 = host._layout_size()
 	var top_anchor_y: float = host._battle_enemy_slot_screen_position("back", 4, layout_size).y
 	var bottom_anchor_y: float = host._battle_ally_slot_screen_position("back", 4, layout_size).y
@@ -50,6 +97,12 @@ func run() -> void:
 	if absf(lab.scaled_battle_delta(0.1) - (1.0 / 60.0)) > 0.0001:
 		errors.append("单帧没有推进固定一帧")
 	lab.set_paused(false)
+	var observed_ai_frames := 0
+	while observed_ai_frames < 600 and host.battle_recorded_event_sequence <= 0:
+		await host.get_tree().process_frame
+		observed_ai_frames += 1
+	if host.battle_recorded_event_sequence <= 0:
+		errors.append("GM实机自动战斗没有执行战术AI事件")
 
 	lab.close(false)
 	var revive_step_ids: Array[String] = [PetBattleReviewModel.REVIVE_REVIEW_STEP_ID]
@@ -141,14 +194,26 @@ func run() -> void:
 	await host.get_tree().process_frame
 	if lab.is_active() or host.battle_active:
 		errors.append("退出验收场后仍残留战斗或控制面板")
+	if (
+		host.game_audio_manager != null
+		and (
+			host.game_audio_manager.is_battle_active()
+			or host.game_audio_manager.current_music_context()
+			!= audio_world_context
+		)
+	):
+		errors.append("退出GM观战后没有恢复原地图音乐语境")
 	var status := "ok" if errors.is_empty() else "failed"
-	print("pet battle review lab check ready: status=%s form=%s options=%d steps=%d director_frames=%d revive_frames=%d coverage=%s revive_coverage=%s revive=%s actors=%s errors=%s" % [
+	print("pet battle review lab check ready: status=%s form=%s options=%d mounts=%d steps=%d ai_frames=%d director_frames=%d revive_frames=%d spectator=%s coverage=%s revive_coverage=%s revive=%s actors=%s errors=%s" % [
 		status,
 		form_id,
 		PetBattleReviewModel.pet_options().size(),
+		random_mount_count,
 		PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size(),
+		observed_ai_frames,
 		director_frames,
 		revive_frames,
+		str(spectator_counts),
 		str(director_coverage),
 		str(revive_coverage),
 		str(revive_sequence),
@@ -156,6 +221,56 @@ func run() -> void:
 		str(errors),
 	])
 	host.get_tree().quit(0 if errors.is_empty() else 1)
+
+
+func _spectator_counts(state: Dictionary) -> Dictionary:
+	var result := {
+		"level140": 0,
+		"mounted": 0,
+		"petForms": 0,
+		"mountForms": 0,
+		"allyPlayerRoles": 0,
+		"enemyPlayerRoles": 0,
+		"allyPetRoles": 0,
+		"enemyPetRoles": 0,
+	}
+	var pet_forms := {}
+	var mount_forms := {}
+	var roles := {
+		"allyPlayerRoles": {},
+		"enemyPlayerRoles": {},
+		"allyPetRoles": {},
+		"enemyPetRoles": {},
+	}
+	for value in state.get("actors", []):
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if int(actor.get("level", 0)) == PetBattleReviewModel.LEVEL_CAP:
+			result["level140"] = int(result.get("level140", 0)) + 1
+		var side := str(actor.get("side", ""))
+		var kind := str(actor.get("kind", ""))
+		var role_id := str(actor.get("reviewAiRole", ""))
+		var role_key := (
+			"%s%sRoles" % [
+				"ally" if side == BattleModel.SIDE_ALLY else "enemy",
+				"Player" if kind == "player" else "Pet",
+			]
+		)
+		if roles.has(role_key) and role_id != "":
+			(roles.get(role_key, {}) as Dictionary)[role_id] = true
+		if kind == "pet" or kind == "wild_pet":
+			pet_forms[str(actor.get("formId", ""))] = true
+		if kind == "player":
+			var mount_form_id := str(actor.get("ridePetFormId", "")).strip_edges()
+			if mount_form_id != "":
+				result["mounted"] = int(result.get("mounted", 0)) + 1
+				mount_forms[mount_form_id] = true
+	result["petForms"] = pet_forms.size()
+	result["mountForms"] = mount_forms.size()
+	for role_key in roles.keys():
+		result[str(role_key)] = (roles.get(role_key, {}) as Dictionary).size()
+	return result
 
 
 func _actor_counts(state: Dictionary) -> Dictionary:

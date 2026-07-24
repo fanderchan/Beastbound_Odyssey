@@ -52,6 +52,8 @@ const SKILL_EVENT_TYPES: Array[String] = [
 	"skill_attack",
 	"skill_status",
 	"multi_attack",
+	"spirit_heal",
+	"spirit_heal_all",
 ]
 const PET_KINDS: Array[String] = ["pet", "wild_pet"]
 

@@ -1,12 +1,13 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetBattleReviewModel := preload("res://scripts/battle/pet_battle_review_model.gd")
 
-const SPEED_STEPS: Array[float] = [0.25, 0.5, 1.0, 2.0]
+const SPEED_STEPS: Array[float] = [0.25, 0.5, 1.0, 1.25, 1.5, 2.0]
 const DEFAULT_SEED := 309001
 
 var host
@@ -26,10 +27,10 @@ var active: bool = false
 var mode: String = PetBattleReviewModel.MODE_BRAWL
 var focus_form_id: String = ""
 var mount_form_id: String = ""
-var placement: String = PetBattleReviewModel.PLACEMENT_BOTH_ALL
+var placement: String = PetBattleReviewModel.PLACEMENT_RANDOM_ALL
 var pool_id: String = PetBattleReviewModel.POOL_FORMAL
 var seed_value: int = DEFAULT_SEED
-var speed_scale: float = 1.0
+var speed_scale: float = 1.25
 var paused: bool = false
 var collapsed: bool = false
 var completed_brawls: int = 0
@@ -46,10 +47,64 @@ var _step_frames: int = 0
 var _scaled_delta_frame: int = -1
 var _scaled_delta_cache: float = 0.0
 var _last_revive_sequence: Dictionary = {}
+var _last_ai_intent: String = ""
+var _preview_pet_form_ids: Array[String] = []
+var _preview_mount_form_ids: Array[String] = []
+var _random_mount_form_ids: Array[String] = []
 
 
 func _init(host_node) -> void:
 	host = host_node
+
+
+func _enable_preview_assets() -> void:
+	_preview_pet_form_ids.clear()
+	_preview_mount_form_ids.clear()
+	_random_mount_form_ids.clear()
+	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+	# Pending art is exposed only inside this explicit debug lab. Normal world
+	# and battle paths still require runtimeEnabled in their authoritative
+	# catalogs.
+	for option in PetBattleReviewModel.pet_options():
+		var form_id := str(option.get("formId", "")).strip_edges()
+		if form_id == "":
+			continue
+		if PetActionAssetCatalog.enable_qa_preview_form(form_id):
+			_preview_pet_form_ids.append(form_id)
+		if MountedCharacterAssetCatalog.enable_qa_preview_combination(
+			character_id,
+			form_id
+		):
+			_preview_mount_form_ids.append(form_id)
+			MountVisualProfileCatalog.enable_qa_preview_form(form_id)
+			if (
+				MountedCharacterAssetCatalog.supports_battle_combination(
+					character_id,
+					form_id
+				)
+				and MountedCharacterAssetCatalog.warm_battle_bundle(
+					character_id,
+					form_id
+				)
+				and not _random_mount_form_ids.has(form_id)
+			):
+				_random_mount_form_ids.append(form_id)
+	if (
+		focus_form_id != ""
+		and not _preview_pet_form_ids.has(focus_form_id)
+		and PetActionAssetCatalog.enable_qa_preview_form(focus_form_id)
+	):
+		_preview_pet_form_ids.append(focus_form_id)
+	if (
+		mount_form_id != ""
+		and not _preview_mount_form_ids.has(mount_form_id)
+		and MountedCharacterAssetCatalog.enable_qa_preview_combination(
+			character_id,
+			mount_form_id
+		)
+	):
+		_preview_mount_form_ids.append(mount_form_id)
+		MountVisualProfileCatalog.enable_qa_preview_form(mount_form_id)
 
 
 func open(
@@ -67,24 +122,17 @@ func open(
 	mode = requested_mode if [PetBattleReviewModel.MODE_BRAWL, PetBattleReviewModel.MODE_DIRECTOR].has(requested_mode) else PetBattleReviewModel.MODE_BRAWL
 	focus_form_id = PetBattleReviewModel.normalized_form_id(requested_form_id)
 	mount_form_id = PetBattleReviewModel.normalized_mount_form_id(requested_mount_form_id)
-	# Pending production art is visible only inside an explicit debug review lab.
-	# Normal world and battle paths continue to require runtimeEnabled in the
-	# authoritative pet-art catalog.
-	PetActionAssetCatalog.enable_qa_preview_form(focus_form_id)
-	if mount_form_id != "":
-		PetActionAssetCatalog.enable_qa_preview_form(mount_form_id)
-		var mount_character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
-		if MountedCharacterAssetCatalog.enable_qa_preview_combination(mount_character_id, mount_form_id):
-			MountVisualProfileCatalog.enable_qa_preview_form(mount_form_id)
+	_enable_preview_assets()
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed)
-	placement = PetBattleReviewModel.PLACEMENT_BOTH_ALL
+	placement = PetBattleReviewModel.PLACEMENT_RANDOM_ALL
 	pool_id = PetBattleReviewModel.POOL_FORMAL
-	speed_scale = 1.0
+	speed_scale = 1.25
 	paused = false
 	collapsed = start_collapsed
 	completed_brawls = 0
 	completed_director_loops = 0
 	director_step_id = ""
+	_last_ai_intent = ""
 	quit_after_director_loop = quit_after_one_director_loop
 	director_step_filter = PetBattleReviewModel.normalized_director_step_ids(
 		requested_director_step_ids,
@@ -110,14 +158,17 @@ func close(restore_world: bool = true) -> void:
 	if not active and root == null:
 		return
 	active = false
-	PetActionAssetCatalog.disable_qa_preview_form(focus_form_id)
-	if mount_form_id != "":
-		PetActionAssetCatalog.disable_qa_preview_form(mount_form_id)
-		MountVisualProfileCatalog.disable_qa_preview_form(mount_form_id)
+	for form_id in _preview_pet_form_ids:
+		PetActionAssetCatalog.disable_qa_preview_form(form_id)
+	for form_id in _preview_mount_form_ids:
+		MountVisualProfileCatalog.disable_qa_preview_form(form_id)
 		MountedCharacterAssetCatalog.disable_qa_preview_combination(
 			MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID,
-			mount_form_id
+			form_id
 		)
+	_preview_pet_form_ids.clear()
+	_preview_mount_form_ids.clear()
+	_random_mount_form_ids.clear()
 	_generation += 1
 	director_step_id = ""
 	paused = false
@@ -161,6 +212,28 @@ func current_mount_form_id() -> String:
 
 func current_director_step_ids() -> Array[String]:
 	return director_step_filter.duplicate()
+
+
+func random_mount_form_count() -> int:
+	return _random_mount_form_ids.size()
+
+
+func uses_tactical_ai(state: Dictionary = {}) -> bool:
+	if not active or mode != PetBattleReviewModel.MODE_BRAWL:
+		return false
+	var target_state: Dictionary = (
+		state if not state.is_empty() else host.battle_state
+	)
+	return (
+		bool(target_state.get("reviewLab", false))
+		and bool(target_state.get("reviewAiSpectator", false))
+	)
+
+
+func build_tactical_round_events(state: Dictionary) -> Array[Dictionary]:
+	if not uses_tactical_ai(state):
+		return []
+	return BattleSpectatorAiModel.build_round_events(state)
 
 
 func coverage_counts() -> Dictionary:
@@ -248,7 +321,15 @@ func start_brawl(requested_seed: int = 0) -> void:
 	_step_frames = 0
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed if requested_seed != 0 else seed_value)
 	_observed_event_sequence = 0
-	var state := PetBattleReviewModel.build_brawl_state(focus_form_id, seed_value, placement, pool_id, mount_form_id)
+	_last_ai_intent = ""
+	var state := PetBattleReviewModel.build_brawl_state(
+		focus_form_id,
+		seed_value,
+		placement,
+		pool_id,
+		mount_form_id,
+		_random_mount_form_ids if mount_form_id == "" else []
+	)
 	state["reviewTopInset"] = _review_top_inset()
 	host._start_battle(state)
 	host._set_battle_auto_attack_enabled(true, false)
@@ -330,6 +411,12 @@ func handle_battle_finished() -> bool:
 		return false
 	if mode == PetBattleReviewModel.MODE_BRAWL:
 		completed_brawls += 1
+		var result_key := (
+			"victory"
+			if BattleModel.living_enemy_id(host.battle_state) == ""
+			else "defeat"
+		)
+		host._audio_play_battle_result(result_key)
 		start_brawl(seed_value + 1)
 	else:
 		start_director()
@@ -523,6 +610,14 @@ func _record_latest_event() -> void:
 	var ledger := host.battle_last_event_ledger as Dictionary if host.battle_last_event_ledger is Dictionary else {}
 	if ledger.is_empty():
 		return
+	if host.battle_current_event is Dictionary:
+		var current_event := host.battle_current_event as Dictionary
+		var intent := str(current_event.get("aiIntent", "")).strip_edges()
+		if intent != "":
+			_last_ai_intent = "%s：%s" % [
+				str(current_event.get("aiRoleLabel", "AI")),
+				intent,
+			]
 	var event_type := str(ledger.get("type", host.battle_last_event_type))
 	var target_id := str(ledger.get("resolvedTargetId", host.battle_last_event_target_id))
 	var target := BattleModel.actor_by_id(host.battle_state, target_id)
@@ -605,12 +700,17 @@ func _build_ui() -> void:
 	header.add_theme_constant_override("separation", 8)
 	column.add_child(header)
 	var title := Label.new()
-	title.text = "10骑乘人物＋10战宠验收场" if mount_form_id != "" else "宠物战斗动作验收场"
+	title.text = (
+		"Lv140随机10V10 · AI观战场"
+		if mount_form_id == ""
+		else "Lv140全员骑乘 · 动作验收场"
+	)
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color(1.0, 0.84, 0.38, 1.0))
 	header.add_child(title)
 	mode_label = Label.new()
 	mode_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_label.clip_text = true
 	mode_label.add_theme_font_size_override("font_size", 14)
 	mode_label.add_theme_color_override("font_color", Color(0.72, 0.88, 0.82, 1.0))
 	header.add_child(mode_label)
@@ -643,9 +743,9 @@ func _build_ui() -> void:
 	pool_option.custom_minimum_size = Vector2(190, 34)
 	pool_option.item_selected.connect(_on_pool_selected)
 	option_row.add_child(pool_option)
-	option_row.add_child(_button("新随机", 88.0, new_random_brawl))
-	option_row.add_child(_button("重播", 76.0, replay))
-	option_row.add_child(_button("动作必现", 96.0, start_director))
+	option_row.add_child(_button("换一场", 88.0, new_random_brawl))
+	option_row.add_child(_button("复盘本场", 88.0, replay))
+	option_row.add_child(_button("动作验收", 96.0, start_director))
 
 	var control_row := HBoxContainer.new()
 	control_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -659,7 +759,7 @@ func _build_ui() -> void:
 	control_row.add_child(_button("清零覆盖", 88.0, clear_coverage))
 	control_row.add_child(_button("真实10V10草丛", 132.0, return_to_real_grass))
 	var hint := Label.new()
-	hint.text = "快捷键：空格暂停  .单帧  N新随机  R重播  D必现  H收起"
+	hint.text = "快捷键：空格暂停  .单帧  N换一场  R复盘  D动作验收  H收起"
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint.add_theme_font_size_override("font_size", 13)
@@ -733,8 +833,14 @@ func _on_pool_selected(index: int) -> void:
 func _refresh_status() -> void:
 	if root == null:
 		return
-	var mode_text := "自由乱斗" if mode == PetBattleReviewModel.MODE_BRAWL else "动作必现"
-	if mount_form_id != "":
+	var mode_text := (
+		"战术AI观战 · 随机人物/坐骑/宠物/属性"
+		if mode == PetBattleReviewModel.MODE_BRAWL
+		else "动作必现"
+	)
+	if mode == PetBattleReviewModel.MODE_BRAWL and _last_ai_intent != "":
+		mode_text += " · %s" % _last_ai_intent
+	elif mount_form_id != "":
 		mode_text = "全员骑乘 · %s" % mode_text
 	if director_step_id != "":
 		mode_text += " · %s" % PetBattleReviewModel.director_step_name(director_step_id)

@@ -1162,7 +1162,6 @@ static func _make_attack_event(state: Dictionary, attacker_id: String, target_id
 	var attack_action_id := _attack_action_id_for_actor(state, attacker_id)
 	if (
 		attack_action_id != ""
-		and target_side == SIDE_ENEMY
 		and BattleActionCatalog.target_mode_for(attack_action_id) == BattleActionCatalog.TARGET_MODE_ENEMY_RANDOM_RANGE
 	):
 		return _make_multi_attack_event(state, attacker_id, target_side, sequence, attack_action_id)
@@ -1698,17 +1697,26 @@ static func controlled_pet_id(state: Dictionary) -> String:
 
 
 static func best_ally_heal_target_id(state: Dictionary) -> String:
+	return best_side_heal_target_id(state, SIDE_ALLY)
+
+
+static func best_side_heal_target_id(state: Dictionary, side: String) -> String:
 	var best_id := ""
 	var best_missing := -1
-	for actor_id in living_actor_ids(state, SIDE_ALLY):
+	for actor_id in living_actor_ids(state, side):
 		var actor := actor_by_id(state, actor_id)
 		var missing := int(actor.get("maxHp", 0)) - int(actor.get("hp", 0))
 		if missing > best_missing:
 			best_missing = missing
 			best_id = actor_id
-	var player_id := player_actor_id(state)
-	if best_missing <= 0 and player_id != "":
-		return player_id
+	if best_missing <= 0:
+		if side == SIDE_ALLY:
+			var player_id := player_actor_id(state)
+			if player_id != "":
+				return player_id
+		var living_ids := living_actor_ids(state, side)
+		if not living_ids.is_empty():
+			return living_ids[0]
 	return best_id
 
 
@@ -3703,10 +3711,11 @@ static func _apply_field_effect_event(state: Dictionary, event: Dictionary) -> D
 static func _apply_spirit_heal_event(state: Dictionary, event: Dictionary) -> Dictionary:
 	var attacker_id := str(event.get("attackerId", ""))
 	var target_id := str(event.get("targetId", ""))
-	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
+	var target_side := str(event.get("targetSide", SIDE_ALLY))
+	if not _is_living_side_actor(state, attacker_id, target_side):
 		return state
-	if not _is_living_side_actor(state, target_id, SIDE_ALLY):
-		target_id = best_ally_heal_target_id(state)
+	if not _is_living_side_actor(state, target_id, target_side):
+		target_id = best_side_heal_target_id(state, target_side)
 	if target_id == "":
 		return state
 	var actors: Array = state.get("actors", [])
@@ -3753,7 +3762,8 @@ static func _apply_spirit_heal_event(state: Dictionary, event: Dictionary) -> Di
 
 static func _apply_spirit_heal_all_event(state: Dictionary, event: Dictionary) -> Dictionary:
 	var attacker_id := str(event.get("attackerId", ""))
-	if not _is_living_side_actor(state, attacker_id, SIDE_ALLY):
+	var target_side := str(event.get("targetSide", SIDE_ALLY))
+	if not _is_living_side_actor(state, attacker_id, target_side):
 		return state
 	var actors: Array = state.get("actors", [])
 	var attacker_index := actor_index(state, attacker_id)
@@ -3768,7 +3778,7 @@ static func _apply_spirit_heal_all_event(state: Dictionary, event: Dictionary) -
 	var total_healed := 0
 	for index in range(actors.size()):
 		var target := actors[index] as Dictionary
-		if str(target.get("side", "")) != SIDE_ALLY or int(target.get("hp", 0)) <= 0:
+		if str(target.get("side", "")) != target_side or int(target.get("hp", 0)) <= 0:
 			continue
 		var hp := int(target.get("hp", 0))
 		var max_hp := int(target.get("maxHp", hp))
@@ -3793,9 +3803,10 @@ static func _apply_spirit_heal_all_event(state: Dictionary, event: Dictionary) -
 	state["lastHeal"] = total_healed
 	state["lastEffectPerTarget"] = effect_per_target
 	state["lastParticipants"] = [attacker_id]
-	state["message"] = "%s 使用%s，我方全体回复生命。" % [
+	state["message"] = "%s 使用%s，%s全体回复生命。" % [
 		str(attacker.get("name", "我方")),
 		str(event.get("skillName", "精灵")),
+		"我方" if target_side == SIDE_ALLY else "敌方",
 	]
 	return state
 

@@ -2,6 +2,7 @@ extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 
@@ -13,6 +14,7 @@ const PLACEMENT_BOTH_CENTER := "both_center"
 const PLACEMENT_ALLY_ALL := "ally_all"
 const PLACEMENT_ENEMY_ALL := "enemy_all"
 const PLACEMENT_RANDOM_ONE_EACH := "random_one_each"
+const PLACEMENT_RANDOM_ALL := "random_all"
 
 const POOL_FORMAL := "formal"
 const POOL_ALL := "all"
@@ -49,13 +51,63 @@ const REQUIRED_COVERAGE: Array[String] = [
 
 const OPTIONAL_COVERAGE: Array[String] = [REVIVE_REVIEW_STEP_ID]
 
-const ARCHETYPES: Array[Dictionary] = [
-	{"id": "balanced", "hp": Vector2i(220, 300), "attack": Vector2i(24, 36), "defense": Vector2i(10, 20), "quick": Vector2i(55, 100)},
-	{"id": "striker", "hp": Vector2i(165, 235), "attack": Vector2i(38, 52), "defense": Vector2i(6, 14), "quick": Vector2i(72, 128)},
-	{"id": "tank", "hp": Vector2i(310, 430), "attack": Vector2i(18, 30), "defense": Vector2i(25, 42), "quick": Vector2i(28, 72)},
-	{"id": "swift", "hp": Vector2i(180, 260), "attack": Vector2i(22, 38), "defense": Vector2i(8, 18), "quick": Vector2i(115, 170)},
-	{"id": "fragile", "hp": Vector2i(105, 165), "attack": Vector2i(34, 50), "defense": Vector2i(3, 10), "quick": Vector2i(45, 125)},
+const LEVEL_CAP := 140
+const CHARACTER_NAMES: Array[String] = [
+	"岚影",
+	"赤牙",
+	"星澜",
+	"岩锋",
+	"逐月",
+	"霜弦",
+	"青禾",
+	"流火",
+	"暮川",
+	"白羽",
+	"苍沐",
+	"曜石",
 ]
+const ROLE_STAT_RANGES := {
+	BattleSpectatorAiModel.PLAYER_ROLE_ARCHER: {
+		"hp": Vector2i(1500, 1900), "attack": Vector2i(330, 410),
+		"defense": Vector2i(100, 150), "quick": Vector2i(210, 280),
+	},
+	BattleSpectatorAiModel.PLAYER_ROLE_HEALER: {
+		"hp": Vector2i(1650, 2100), "attack": Vector2i(210, 280),
+		"defense": Vector2i(130, 190), "quick": Vector2i(180, 240),
+	},
+	BattleSpectatorAiModel.PLAYER_ROLE_GUARDIAN: {
+		"hp": Vector2i(2300, 3000), "attack": Vector2i(190, 260),
+		"defense": Vector2i(240, 330), "quick": Vector2i(100, 160),
+	},
+	BattleSpectatorAiModel.PLAYER_ROLE_DUELIST: {
+		"hp": Vector2i(1500, 1950), "attack": Vector2i(390, 480),
+		"defense": Vector2i(95, 150), "quick": Vector2i(190, 255),
+	},
+	BattleSpectatorAiModel.PLAYER_ROLE_TACTICIAN: {
+		"hp": Vector2i(1700, 2200), "attack": Vector2i(270, 340),
+		"defense": Vector2i(145, 210), "quick": Vector2i(225, 295),
+	},
+	BattleSpectatorAiModel.PET_ROLE_BURST: {
+		"hp": Vector2i(1550, 2050), "attack": Vector2i(410, 500),
+		"defense": Vector2i(90, 150), "quick": Vector2i(215, 295),
+	},
+	BattleSpectatorAiModel.PET_ROLE_CONFUSION: {
+		"hp": Vector2i(1700, 2200), "attack": Vector2i(260, 330),
+		"defense": Vector2i(120, 180), "quick": Vector2i(235, 305),
+	},
+	BattleSpectatorAiModel.PET_ROLE_STONE: {
+		"hp": Vector2i(2000, 2550), "attack": Vector2i(240, 310),
+		"defense": Vector2i(180, 250), "quick": Vector2i(130, 190),
+	},
+	BattleSpectatorAiModel.PET_ROLE_SLEEP: {
+		"hp": Vector2i(1600, 2100), "attack": Vector2i(260, 330),
+		"defense": Vector2i(115, 180), "quick": Vector2i(250, 320),
+	},
+	BattleSpectatorAiModel.PET_ROLE_CHARGER: {
+		"hp": Vector2i(1900, 2450), "attack": Vector2i(340, 430),
+		"defense": Vector2i(140, 210), "quick": Vector2i(170, 240),
+	},
+}
 
 
 static func default_form_id() -> String:
@@ -97,6 +149,7 @@ static func formal_form_ids() -> Array[String]:
 
 static func placement_options() -> Array[Dictionary]:
 	return [
+		{"id": PLACEMENT_RANDOM_ALL, "label": "全场随机十宠"},
 		{"id": PLACEMENT_BOTH_ALL, "label": "双方全部宠位"},
 		{"id": PLACEMENT_BOTH_CENTER, "label": "双方中位各一只"},
 		{"id": PLACEMENT_ALLY_ALL, "label": "只铺满我方五宠"},
@@ -131,35 +184,83 @@ static func build_brawl_state(
 	seed_value: int,
 	placement: String = PLACEMENT_BOTH_ALL,
 	pool_id: String = POOL_FORMAL,
-	mount_form_id: String = ""
+	mount_form_id: String = "",
+	random_mount_form_ids: Array[String] = []
 ) -> Dictionary:
 	var form_id := normalized_form_id(focus_form_id)
 	var resolved_mount_form_id := normalized_mount_form_id(mount_form_id)
+	var random_mount_pool := _normalized_form_ids(random_mount_form_ids)
+	var use_random_mounts := resolved_mount_form_id == "" and not random_mount_pool.is_empty()
 	var seed := normalized_seed(seed_value)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var state := BattleModel.create_formation_preview_battle({
 		"id": "pet_battle_review_zone",
-		"name": "宠物战斗动作验收场",
+		"name": "Lv140随机10V10战术观战场",
 	})
 	state["id"] = "local_pet_battle_review_%d" % seed
 	state["targetSeed"] = "pet_battle_review_%d" % seed
 	state["forcedTargetSeed"] = state["targetSeed"]
 	state["round"] = 1
 	state["phase"] = "command"
-	state["message"] = "宠物动作验收场：随机种子 %d。" % seed
+	state["message"] = "Lv140随机10V10：双方战术AI已接管，随机种子 %d。" % seed
 	state["reviewLab"] = true
 	state["reviewMode"] = MODE_BRAWL
+	state["reviewAiSpectator"] = true
 	state["reviewSeed"] = seed
 	state["reviewFocusFormId"] = form_id
 	state["reviewPlacement"] = placement
 	state["reviewPoolId"] = pool_id
-	state["reviewMountAllPlayers"] = resolved_mount_form_id != ""
+	state["reviewMountAllPlayers"] = resolved_mount_form_id != "" or use_random_mounts
+	state["reviewRandomMounts"] = use_random_mounts
 	state["reviewMountFormId"] = resolved_mount_form_id
-	state["reviewExpectedMountedPlayers"] = 10 if resolved_mount_form_id != "" else 0
+	state["reviewMountFormIds"] = (
+		random_mount_pool.duplicate()
+		if use_random_mounts
+		else ([resolved_mount_form_id] if resolved_mount_form_id != "" else [])
+	)
+	state["reviewExpectedMountedPlayers"] = (
+		10
+		if resolved_mount_form_id != "" or use_random_mounts
+		else 0
+	)
+	state["reviewMusicContext"] = "battle_normal"
+	state["reviewMusicCueId"] = "music.battle_normal"
 	state["reviewTopInset"] = 164.0
 
 	var pool := _pool_form_ids(pool_id, form_id)
+	var player_roles_by_side := {
+		BattleModel.SIDE_ALLY: _shuffled_strings(
+			BattleSpectatorAiModel.PLAYER_ROLES,
+			rng
+		),
+		BattleModel.SIDE_ENEMY: _shuffled_strings(
+			BattleSpectatorAiModel.PLAYER_ROLES,
+			rng
+		),
+	}
+	var pet_roles_by_side := {
+		BattleModel.SIDE_ALLY: _shuffled_strings(
+			BattleSpectatorAiModel.PET_ROLES,
+			rng
+		),
+		BattleModel.SIDE_ENEMY: _shuffled_strings(
+			BattleSpectatorAiModel.PET_ROLES,
+			rng
+		),
+	}
+	var character_names_by_side := {
+		BattleModel.SIDE_ALLY: _shuffled_strings(CHARACTER_NAMES, rng),
+		BattleModel.SIDE_ENEMY: _shuffled_strings(CHARACTER_NAMES, rng),
+	}
+	var player_role_index := {
+		BattleModel.SIDE_ALLY: 0,
+		BattleModel.SIDE_ENEMY: 0,
+	}
+	var pet_role_index := {
+		BattleModel.SIDE_ALLY: 0,
+		BattleModel.SIDE_ENEMY: 0,
+	}
 	var random_focus_slots := {
 		BattleModel.SIDE_ALLY: rng.randi_range(1, BattleModel.SLOTS_PER_ROW),
 		BattleModel.SIDE_ENEMY: rng.randi_range(1, BattleModel.SLOTS_PER_ROW),
@@ -171,19 +272,66 @@ static func build_brawl_state(
 		var previous := actors[index] as Dictionary
 		var side := str(previous.get("side", ""))
 		var kind := str(previous.get("kind", ""))
-		var stats := _random_stats(rng, index)
 		if kind == "player":
+			var side_player_roles := (
+				player_roles_by_side.get(side, []) as Array[String]
+			)
+			var role_index := int(player_role_index.get(side, 0))
+			var role_id := side_player_roles[
+				role_index % side_player_roles.size()
+			]
+			player_role_index[side] = role_index + 1
+			var stats := _random_stats(rng, role_id)
 			var player_actor := previous.duplicate(true)
 			_apply_stats(player_actor, stats)
-			player_actor["level"] = rng.randi_range(80, 140)
+			player_actor["level"] = LEVEL_CAP
+			player_actor["reviewAiRole"] = role_id
+			player_actor["reviewAiRoleLabel"] = (
+				BattleSpectatorAiModel.role_label(role_id)
+			)
+			var side_character_names := (
+				character_names_by_side.get(side, []) as Array[String]
+			)
+			var character_name := side_character_names[
+				role_index % side_character_names.size()
+			]
+			player_actor["name"] = "%s·%s" % [
+				BattleSpectatorAiModel.role_label(role_id),
+				character_name,
+			]
+			player_actor["reviewWeaponClass"] = (
+				"bow" if role_id == BattleSpectatorAiModel.PLAYER_ROLE_ARCHER
+				else "melee"
+			)
+			if role_id == BattleSpectatorAiModel.PLAYER_ROLE_ARCHER:
+				player_actor["attackActionId"] = "weapon_shadow_group_shot"
+			else:
+				player_actor.erase("attackActionId")
+			if role_id == BattleSpectatorAiModel.PLAYER_ROLE_HEALER:
+				player_actor["spiritIds"] = [
+					BattleModel.SPIRIT_GRACE_ALL,
+					BattleModel.SPIRIT_MOIST_SINGLE,
+				]
 			player_actor["counterRateOverride"] = rng.randf_range(0.08, 0.26)
 			player_actor["dodgeRateOverride"] = rng.randf_range(0.03, 0.13)
 			player_actor["criticalRateOverride"] = rng.randf_range(0.08, 0.20)
 			player_actor["comboBaseRateOverride"] = rng.randf_range(0.24, 0.52)
 			if resolved_mount_form_id != "":
 				_apply_review_mount(player_actor, resolved_mount_form_id)
+			elif use_random_mounts:
+				_apply_review_mount(
+					player_actor,
+					random_mount_pool[
+						rng.randi_range(0, random_mount_pool.size() - 1)
+					]
+				)
 			actors[index] = player_actor
 			continue
+		var side_pet_roles := pet_roles_by_side.get(side, []) as Array[String]
+		var role_index := int(pet_role_index.get(side, 0))
+		var role_id := side_pet_roles[role_index % side_pet_roles.size()]
+		pet_role_index[side] = role_index + 1
+		var stats := _random_stats(rng, role_id)
 		var slot_number := _slot_number(str(previous.get("slotId", "")))
 		var use_focus := _pet_slot_uses_focus(side, slot_number, placement, random_focus_slots)
 		var selected_form_id := form_id if use_focus else pool[rng.randi_range(0, pool.size() - 1)]
@@ -193,17 +341,23 @@ static func build_brawl_state(
 			side,
 			"pet" if side == BattleModel.SIDE_ALLY else "wild_pet",
 			str(previous.get("slotId", "")),
-			"%s·%s%d" % [
+			"%s·%s" % [
 				str(PetTemplateCatalog.form_by_id(selected_form_id).get("formName", "宠物")),
-				"我" if side == BattleModel.SIDE_ALLY else "敌",
-				slot_number,
+				BattleSpectatorAiModel.role_label(role_id),
 			],
 			stats
 		)
 		if pet_actor.is_empty():
 			pet_actor = previous.duplicate(true)
 		_apply_stats(pet_actor, stats)
-		pet_actor["level"] = rng.randi_range(80, 140)
+		pet_actor["level"] = LEVEL_CAP
+		pet_actor["reviewAiRole"] = role_id
+		pet_actor["reviewAiRoleLabel"] = (
+			BattleSpectatorAiModel.role_label(role_id)
+		)
+		var skill_id := _pet_skill_for_role(role_id)
+		pet_actor["activeSkillIds"] = [skill_id]
+		pet_actor["petSkillSlots"] = [skill_id]
 		pet_actor["catchable"] = false
 		pet_actor["actionState"] = "idle"
 		pet_actor["petBattleState"] = "battle"
@@ -213,6 +367,7 @@ static func build_brawl_state(
 		pet_actor["comboBaseRateOverride"] = rng.randf_range(0.28, 0.58)
 		actors[index] = pet_actor
 	state["actors"] = actors
+	state["reviewRosterSummary"] = _roster_summary(actors)
 	state["petParty"] = BattleModel.default_player_pet_party(BattleModel.actor_by_id(state, BattleModel.PLAYER_PET_ID))
 	return state
 
@@ -233,6 +388,7 @@ static func build_director_state(
 	)
 	state["id"] = "local_pet_battle_review_director_%s_%d" % [step_id, normalized_seed(seed_value)]
 	state["reviewMode"] = MODE_DIRECTOR
+	state["reviewAiSpectator"] = false
 	state["reviewDirectorStep"] = step_id
 	state["message"] = director_step_label(step_id)
 	var actors: Array = state.get("actors", [])
@@ -418,10 +574,13 @@ static func state_signature(state: Dictionary) -> String:
 		if not (value is Dictionary):
 			continue
 		var actor := value as Dictionary
-		rows.append("%s|%s|%s|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%s|%s|%d|%d|%s" % [
+		rows.append("%s|%s|%s|%s|%s|%d|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%s|%s|%d|%d|%s|%s|%s" % [
 			str(actor.get("id", "")),
+			str(actor.get("name", "")),
 			str(actor.get("formId", "")),
 			str(actor.get("reviewArchetype", "")),
+			str(actor.get("reviewAiRole", "")),
+			int(actor.get("level", 0)),
 			int(actor.get("maxHp", 0)),
 			int(actor.get("attack", 0)),
 			int(actor.get("defense", 0)),
@@ -435,6 +594,8 @@ static func state_signature(state: Dictionary) -> String:
 			int(actor.get("ridePetHp", 0)),
 			int(actor.get("ridePetMaxHp", 0)),
 			str(actor.get("ridePetBattleState", "")),
+			str(actor.get("attackActionId", "")),
+			str((actor.get("activeSkillIds", []) as Array).front()) if not (actor.get("activeSkillIds", []) as Array).is_empty() else "",
 		])
 	return "\n".join(rows)
 
@@ -453,6 +614,14 @@ static func validation_errors() -> Array[String]:
 	if state_signature(first) == state_signature(next):
 		errors.append("不同随机种子没有产生阵容或数值差异")
 	var side_kind_counts := {}
+	var side_player_roles := {
+		BattleModel.SIDE_ALLY: {},
+		BattleModel.SIDE_ENEMY: {},
+	}
+	var side_pet_roles := {
+		BattleModel.SIDE_ALLY: {},
+		BattleModel.SIDE_ENEMY: {},
+	}
 	var pet_count := 0
 	for value in first.get("actors", []):
 		if not (value is Dictionary):
@@ -462,17 +631,23 @@ static func validation_errors() -> Array[String]:
 		var kind := str(actor.get("kind", ""))
 		var key := "%s:%s" % [side, kind]
 		side_kind_counts[key] = int(side_kind_counts.get(key, 0)) + 1
+		var role_id := str(actor.get("reviewAiRole", ""))
+		if kind == "player":
+			(side_player_roles.get(side, {}) as Dictionary)[role_id] = true
 		if kind == "pet" or kind == "wild_pet":
 			pet_count += 1
+			(side_pet_roles.get(side, {}) as Dictionary)[role_id] = true
 			if str(actor.get("formId", "")) != form_id:
 				errors.append("双方全部宠位没有使用指定宠物")
-		if int(actor.get("maxHp", 0)) < 100 or int(actor.get("maxHp", 0)) > 440:
+		if int(actor.get("level", 0)) != LEVEL_CAP:
+			errors.append("随机观战单位不是140级满级")
+		if int(actor.get("maxHp", 0)) < 1500 or int(actor.get("maxHp", 0)) > 3000:
 			errors.append("随机生命越界")
-		if int(actor.get("attack", 0)) < 16 or int(actor.get("attack", 0)) > 54:
+		if int(actor.get("attack", 0)) < 190 or int(actor.get("attack", 0)) > 500:
 			errors.append("随机攻击越界")
-		if int(actor.get("defense", 0)) < 3 or int(actor.get("defense", 0)) > 44:
+		if int(actor.get("defense", 0)) < 90 or int(actor.get("defense", 0)) > 330:
 			errors.append("随机防御越界")
-		if int(actor.get("quick", 0)) < 20 or int(actor.get("quick", 0)) > 175:
+		if int(actor.get("quick", 0)) < 100 or int(actor.get("quick", 0)) > 320:
 			errors.append("随机敏捷越界")
 	if (first.get("actors", []) as Array).size() != 20:
 		errors.append("验收场必须正好有20个单位")
@@ -481,6 +656,90 @@ static func validation_errors() -> Array[String]:
 	for key in ["ally:player", "ally:pet", "enemy:player", "enemy:wild_pet"]:
 		if int(side_kind_counts.get(key, 0)) != 5:
 			errors.append("阵容不是每方5人5宠：%s" % key)
+	for side in [BattleModel.SIDE_ALLY, BattleModel.SIDE_ENEMY]:
+		if (side_player_roles.get(side, {}) as Dictionary).size() != BattleSpectatorAiModel.PLAYER_ROLES.size():
+			errors.append("%s没有覆盖五种人物战术角色" % side)
+		if (side_pet_roles.get(side, {}) as Dictionary).size() != BattleSpectatorAiModel.PET_ROLES.size():
+			errors.append("%s没有覆盖五种宠物战术角色" % side)
+	if not bool(first.get("reviewAiSpectator", false)):
+		errors.append("随机乱斗没有启用战术观战AI")
+	var first_events := BattleSpectatorAiModel.build_round_events(first.duplicate(true))
+	var replay_events := BattleSpectatorAiModel.build_round_events(replay.duplicate(true))
+	if BattleSpectatorAiModel.event_signature(first_events) != BattleSpectatorAiModel.event_signature(replay_events):
+		errors.append("同种子同回合的战术AI决策不能重放")
+	var status_ids: Array[String] = []
+	var event_sides := {}
+	var saw_burst := false
+	for event in first_events:
+		var event_type := str(event.get("type", ""))
+		status_ids.append(str(event.get("statusId", "")))
+		if event_type == "multi_attack":
+			var attacker := BattleModel.actor_by_id(
+				first,
+				str(event.get("attackerId", ""))
+			)
+			event_sides[str(attacker.get("side", ""))] = true
+		if (
+			str(event.get("skillId", ""))
+			== BattleModel.PET_SKILL_FOCUS_BITE
+			and int(event.get("damage", 0)) > 0
+		):
+			saw_burst = true
+	for status_id in [
+		BattleModel.STATUS_CONFUSION,
+		BattleModel.STATUS_STONE,
+		BattleModel.STATUS_SLEEP,
+	]:
+		if not status_ids.has(status_id):
+			errors.append("战术AI首回合缺少控制技能：%s" % status_id)
+	if event_sides.size() != 2:
+		errors.append("双方弓手没有都生成群攻事件")
+	if not saw_burst:
+		errors.append("战术AI没有生成宠物高伤害爆发")
+	var wounded_state := first.duplicate(true)
+	var wounded_actors: Array = wounded_state.get("actors", [])
+	for index in range(wounded_actors.size()):
+		var wounded_actor := wounded_actors[index] as Dictionary
+		wounded_actor["hp"] = maxi(
+			1,
+			int(round(float(wounded_actor.get("maxHp", 1)) * 0.48))
+		)
+		wounded_actors[index] = wounded_actor
+	wounded_state["actors"] = wounded_actors
+	var heal_events := BattleSpectatorAiModel.build_round_events(wounded_state)
+	var heal_sides := {}
+	var enemy_heal_event := {}
+	for event in heal_events:
+		if not ["spirit_heal", "spirit_heal_all"].has(str(event.get("type", ""))):
+			continue
+		var attacker := BattleModel.actor_by_id(
+			wounded_state,
+			str(event.get("attackerId", ""))
+		)
+		var side := str(attacker.get("side", ""))
+		heal_sides[side] = true
+		if side == BattleModel.SIDE_ENEMY:
+			enemy_heal_event = event
+	if heal_sides.size() != 2:
+		errors.append("双方治疗没有根据伤势生成治疗决策")
+	if not enemy_heal_event.is_empty():
+		var enemy_target_id := str(enemy_heal_event.get("targetId", ""))
+		if enemy_target_id == "":
+			var enemy_target_ids := enemy_heal_event.get("targetIds", []) as Array
+			if not enemy_target_ids.is_empty():
+				enemy_target_id = str(enemy_target_ids.front())
+		var enemy_hp_before := int(
+			BattleModel.actor_by_id(wounded_state, enemy_target_id).get("hp", 0)
+		)
+		var healed_state := BattleModel.apply_battle_event(
+			wounded_state.duplicate(true),
+			enemy_heal_event
+		)
+		var enemy_hp_after := int(
+			BattleModel.actor_by_id(healed_state, enemy_target_id).get("hp", 0)
+		)
+		if not bool(healed_state.get("lastEventApplied", false)) or enemy_hp_after <= enemy_hp_before:
+			errors.append("敌方治疗事件不能实际治疗敌方单位")
 	var mounted_first := build_brawl_state(
 		form_id,
 		309001,
@@ -620,6 +879,28 @@ static func _pool_form_ids(pool_id: String, fallback_form_id: String) -> Array[S
 	return result
 
 
+static func _normalized_form_ids(values: Array[String]) -> Array[String]:
+	var result: Array[String] = []
+	for value in values:
+		var form_id := normalized_mount_form_id(value)
+		if form_id != "" and not result.has(form_id):
+			result.append(form_id)
+	return result
+
+
+static func _shuffled_strings(
+	values: Array[String],
+	rng: RandomNumberGenerator
+) -> Array[String]:
+	var result: Array[String] = values.duplicate()
+	for index in range(result.size() - 1, 0, -1):
+		var swap_index := rng.randi_range(0, index)
+		var previous: String = result[index]
+		result[index] = result[swap_index]
+		result[swap_index] = previous
+	return result
+
+
 static func _revive_review_step() -> Dictionary:
 	return {
 		"id": REVIVE_REVIEW_STEP_ID,
@@ -642,6 +923,8 @@ static func _all_form_ids() -> Array[String]:
 
 static func _pet_slot_uses_focus(side: String, slot_number: int, placement: String, random_focus_slots: Dictionary) -> bool:
 	match placement:
+		PLACEMENT_RANDOM_ALL:
+			return false
 		PLACEMENT_BOTH_CENTER:
 			return slot_number == 3
 		PLACEMENT_ALLY_ALL:
@@ -658,13 +941,20 @@ static func _slot_number(slot_id: String) -> int:
 	return clampi(int(parts[parts.size() - 1]), 1, BattleModel.SLOTS_PER_ROW) if not parts.is_empty() else 3
 
 
-static func _random_stats(rng: RandomNumberGenerator, actor_index: int) -> Dictionary:
-	var archetype_index := (actor_index + rng.randi_range(0, ARCHETYPES.size() - 1)) % ARCHETYPES.size()
-	var archetype := ARCHETYPES[archetype_index]
-	var hp_range := archetype.get("hp", Vector2i(200, 300)) as Vector2i
-	var attack_range := archetype.get("attack", Vector2i(20, 36)) as Vector2i
-	var defense_range := archetype.get("defense", Vector2i(8, 20)) as Vector2i
-	var quick_range := archetype.get("quick", Vector2i(50, 100)) as Vector2i
+static func _random_stats(
+	rng: RandomNumberGenerator,
+	role_id: String
+) -> Dictionary:
+	var profile_value = ROLE_STAT_RANGES.get(role_id, {})
+	var profile := (
+		profile_value as Dictionary
+		if profile_value is Dictionary
+		else {}
+	)
+	var hp_range := profile.get("hp", Vector2i(1500, 2100)) as Vector2i
+	var attack_range := profile.get("attack", Vector2i(250, 360)) as Vector2i
+	var defense_range := profile.get("defense", Vector2i(110, 190)) as Vector2i
+	var quick_range := profile.get("quick", Vector2i(150, 250)) as Vector2i
 	var max_hp := rng.randi_range(hp_range.x, hp_range.y)
 	return {
 		"hp": max_hp,
@@ -672,8 +962,44 @@ static func _random_stats(rng: RandomNumberGenerator, actor_index: int) -> Dicti
 		"attack": rng.randi_range(attack_range.x, attack_range.y),
 		"defense": rng.randi_range(defense_range.x, defense_range.y),
 		"quick": rng.randi_range(quick_range.x, quick_range.y),
-		"reviewArchetype": str(archetype.get("id", "balanced")),
+		"reviewArchetype": role_id,
 	}
+
+
+static func _pet_skill_for_role(role_id: String) -> String:
+	match role_id:
+		BattleSpectatorAiModel.PET_ROLE_BURST:
+			return BattleModel.PET_SKILL_FOCUS_BITE
+		BattleSpectatorAiModel.PET_ROLE_CONFUSION:
+			return BattleModel.PET_SKILL_CONFUSE_CRY
+		BattleSpectatorAiModel.PET_ROLE_STONE:
+			return BattleModel.PET_SKILL_STONE_GAZE
+		BattleSpectatorAiModel.PET_ROLE_SLEEP:
+			return BattleModel.PET_SKILL_SLEEP_POWDER
+	return BattleModel.PET_SKILL_BUI_CHARGE
+
+
+static func _roster_summary(actors: Array) -> String:
+	var ally_roles: Array[String] = []
+	var enemy_roles: Array[String] = []
+	for value in actors:
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		var label := str(actor.get("reviewAiRoleLabel", ""))
+		if label == "":
+			continue
+		var target := (
+			ally_roles
+			if str(actor.get("side", "")) == BattleModel.SIDE_ALLY
+			else enemy_roles
+		)
+		if not target.has(label):
+			target.append(label)
+	return "我方：%s｜敌方：%s" % [
+		"、".join(ally_roles),
+		"、".join(enemy_roles),
+	]
 
 
 static func _apply_stats(actor: Dictionary, stats: Dictionary) -> void:

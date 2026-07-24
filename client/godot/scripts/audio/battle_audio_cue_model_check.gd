@@ -35,6 +35,16 @@ func _initialize() -> void:
 		errors
 	)
 	_expect_cues(
+		"healer cast start",
+		BattleAudioCueModel.requests_for_phase(
+			{"type": "spirit_heal_all", "heal": 320},
+			BattleAudioCueModel.PHASE_ACTION_START,
+			{"attackerKind": "player"}
+		),
+		["combat.cast_skill"],
+		errors
+	)
+	_expect_cues(
 		"defend stance start",
 		BattleAudioCueModel.requests_for_phase(
 			{"type": "defend"},
