@@ -186,6 +186,8 @@ const BATTLE_BOUNCE_ROLL_RATIO := 0.76
 const BATTLE_LAUNCH_STRAIGHT_SECONDS := 1.45
 const BATTLE_LAUNCH_BOUNCE_SECONDS := 1.95
 const BATTLE_LAUNCH_FINISH_HOLD_RATIO := 0.86
+const BATTLE_LAUNCH_SOUND_DELAY_SECONDS := 0.065
+const BATTLE_DOWN_SOUND_DELAY_SECONDS := 0.30
 const BATTLE_FLOAT_TEXT_FONT_SIZE := 21
 const BATTLE_FLOAT_TEXT_MIN_WIDTH := 90.0
 const BATTLE_FLOAT_TEXT_HORIZONTAL_PADDING := 10.0
@@ -12160,7 +12162,12 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		)
 	)
 	if launched:
-		timeline["launchSoundProgress"] = launch_start
+		timeline["launchSoundProgress"] = clampf(
+			launch_start
+				+ BATTLE_LAUNCH_SOUND_DELAY_SECONDS / maxf(0.01, duration),
+			launch_start,
+			0.98
+		)
 		var launch_mode := str(
 			event.get(
 				"launchMode",
@@ -12188,7 +12195,11 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 				) + 0.02
 			)
 			if is_nonlaunch_counter_ko
-			else minf(0.96, reveal_progress + 0.12)
+			else minf(
+				0.96,
+				reveal_progress
+					+ BATTLE_DOWN_SOUND_DELAY_SECONDS / maxf(0.01, duration)
+			)
 		)
 	return timeline
 

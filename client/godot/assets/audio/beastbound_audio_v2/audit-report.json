@@ -82,15 +82,15 @@
     "combat.down": {
       "channels": 1,
       "compression": "NONE",
-      "dcOffset": 0.00024845,
-      "durationSeconds": 0.472104,
-      "frameCount": 22661,
-      "peakDbfs": -9.813,
-      "rmsDbfs": -25.801,
+      "dcOffset": 0.00023629,
+      "durationSeconds": 0.66875,
+      "frameCount": 32100,
+      "peakDbfs": -6.721,
+      "rmsDbfs": -23.486,
       "sampleRate": 48000,
       "sampleWidthBits": 16,
-      "sha256": "7762afed3857b0b0410975834ceea5533e91b938d3a045ba89ea6980d1ea99cc",
-      "zeroCrossingsPerSecond": 745.598
+      "sha256": "f49b66e7f81b615e48b3737adc35247440dc763fcc044b277c5db2989b72bca0",
+      "zeroCrossingsPerSecond": 2586.916
     },
     "combat.evade": {
       "channels": 1,
@@ -186,15 +186,15 @@
     "combat.launch": {
       "channels": 1,
       "compression": "NONE",
-      "dcOffset": 6.18e-06,
-      "durationSeconds": 0.345,
-      "frameCount": 16560,
-      "peakDbfs": -7.962,
-      "rmsDbfs": -25.55,
+      "dcOffset": 2.6e-07,
+      "durationSeconds": 0.574896,
+      "frameCount": 27595,
+      "peakDbfs": -3.79,
+      "rmsDbfs": -20.358,
       "sampleRate": 48000,
       "sampleWidthBits": 16,
-      "sha256": "af48ae26758b9728e0876855e87401294140965a92ef57d223f49055b663f608",
-      "zeroCrossingsPerSecond": 1814.493
+      "sha256": "c91a48b6db44f43a907b83ea989c52fc32838357628aaf4736edd294f13151f9",
+      "zeroCrossingsPerSecond": 4633.883
     },
     "combat.motion_character": {
       "channels": 1,

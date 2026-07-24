@@ -26,6 +26,13 @@ const REACTION_PROGRESS_AFTER_CONTACT := 0.08
 const DOWN_PROGRESS_FLOOR := 0.74
 const DOWN_PROGRESS_AFTER_CONTACT := 0.28
 const BOUNCE_EDGE_FRACTION_AFTER_LAUNCH := 0.36
+const LAUNCH_MIN_PROGRESS_AFTER_CONTACT := 0.03
+const BOUNCE_MIN_PROGRESS_AFTER_LAUNCH := 0.03
+const DOWN_MIN_PROGRESS_AFTER_CONTACT := 0.16
+const LAUNCH_PROGRESS_MAX := 0.97
+const BOUNCE_LAUNCH_PROGRESS_MAX := 0.96
+const BOUNCE_PROGRESS_MAX := 0.99
+const DOWN_PROGRESS_MAX := 0.96
 
 const MARKER_OPTION_KEYS: Array[String] = [
 	"cooldownKey",
@@ -139,7 +146,10 @@ static func timed_markers(
 			)
 		)
 
-	var contact_progress := damage_reveal_progress(event)
+	var contact_progress := _safe_contact_progress(
+		event,
+		damage_reveal_progress(event)
+	)
 	_append_phase_markers(
 		markers,
 		requests_for_phase(event, PHASE_CONTACT, actor_context),
@@ -205,10 +215,15 @@ static func timed_markers(
 		)
 
 	var down_progress := minf(
-		0.96,
+		DOWN_PROGRESS_MAX,
 		maxf(DOWN_PROGRESS_FLOOR, contact_progress + DOWN_PROGRESS_AFTER_CONTACT)
 	)
 	down_progress = _timeline_progress(event, "downSoundProgress", down_progress)
+	down_progress = clampf(
+		maxf(down_progress, contact_progress + DOWN_MIN_PROGRESS_AFTER_CONTACT),
+		0.0,
+		DOWN_PROGRESS_MAX
+	)
 	_append_phase_markers(
 		markers,
 		requests_for_phase(event, PHASE_DOWN, actor_context),
@@ -387,10 +402,18 @@ static func _combo_timed_markers(
 	)
 
 	var down_progress := minf(
-		0.96,
+		DOWN_PROGRESS_MAX,
 		maxf(DOWN_PROGRESS_FLOOR, final_contact_progress + DOWN_PROGRESS_AFTER_CONTACT)
 	)
 	down_progress = _timeline_progress(event, "downSoundProgress", down_progress)
+	down_progress = clampf(
+		maxf(
+			down_progress,
+			final_contact_progress + DOWN_MIN_PROGRESS_AFTER_CONTACT
+		),
+		0.0,
+		DOWN_PROGRESS_MAX
+	)
 	_append_phase_markers(
 		markers,
 		requests_for_phase(event, PHASE_DOWN, actor_context),
@@ -759,9 +782,21 @@ static func _combo_contact_progresses(
 				normalized.append(clampf(float(value), 0.0, 0.99))
 			if normalized.size() == count:
 				normalized.sort()
+				var requested_final := normalized[normalized.size() - 1]
+				var safe_final := _safe_contact_progress(event, requested_final)
+				var overflow := requested_final - safe_final
+				if overflow > 0.0:
+					for index in range(normalized.size()):
+						normalized[index] = maxf(
+							0.0,
+							normalized[index] - overflow
+						)
 				return normalized
 
-	var final_progress := damage_reveal_progress(event)
+	var final_progress := _safe_contact_progress(
+		event,
+		damage_reveal_progress(event)
+	)
 	if final_progress <= 0.0:
 		final_progress = COMBO_DEFAULT_CONTACT_PROGRESS
 	var duration_seconds := 1.0
@@ -788,13 +823,31 @@ static func _combo_contact_progresses(
 
 static func _launch_sound_progress(event: Dictionary, contact_progress: float) -> float:
 	var launch_default := maxf(contact_progress, 0.30)
+	var resolved := launch_default
 	var timeline = event.get("timeline", {})
 	if timeline is Dictionary:
 		if (timeline as Dictionary).has("launchSoundProgress"):
-			return _timeline_progress(event, "launchSoundProgress", launch_default)
-		if (timeline as Dictionary).has("launchStartProgress"):
-			return _timeline_progress(event, "launchStartProgress", launch_default)
-	return clampf(launch_default, 0.0, 0.94)
+			resolved = _timeline_progress(
+				event,
+				"launchSoundProgress",
+				launch_default
+			)
+		elif (timeline as Dictionary).has("launchStartProgress"):
+			resolved = _timeline_progress(
+				event,
+				"launchStartProgress",
+				launch_default
+			)
+	var progress_max := (
+		BOUNCE_LAUNCH_PROGRESS_MAX
+		if str(event.get("launchMode", "")) == "bounce"
+		else LAUNCH_PROGRESS_MAX
+	)
+	return clampf(
+		maxf(resolved, contact_progress + LAUNCH_MIN_PROGRESS_AFTER_CONTACT),
+		0.0,
+		progress_max
+	)
 
 
 static func _bounce_impact_progress(
@@ -804,7 +857,35 @@ static func _bounce_impact_progress(
 	var fallback := launch_progress + (
 		1.0 - launch_progress
 	) * BOUNCE_EDGE_FRACTION_AFTER_LAUNCH
-	return _timeline_progress(event, "bounceImpactProgress", fallback)
+	var resolved := _timeline_progress(event, "bounceImpactProgress", fallback)
+	return clampf(
+		maxf(
+			resolved,
+			launch_progress + BOUNCE_MIN_PROGRESS_AFTER_LAUNCH
+		),
+		0.0,
+		BOUNCE_PROGRESS_MAX
+	)
+
+
+static func _safe_contact_progress(event: Dictionary, requested: float) -> float:
+	var progress_max := BOUNCE_PROGRESS_MAX
+	if bool(event.get("launch", event.get("serverLaunched", false))):
+		var launch_progress_max := (
+			BOUNCE_LAUNCH_PROGRESS_MAX
+			if str(event.get("launchMode", "")) == "bounce"
+			else LAUNCH_PROGRESS_MAX
+		)
+		progress_max = minf(
+			progress_max,
+			launch_progress_max - LAUNCH_MIN_PROGRESS_AFTER_CONTACT
+		)
+	if _has_down_transition(event):
+		progress_max = minf(
+			progress_max,
+			DOWN_PROGRESS_MAX - DOWN_MIN_PROGRESS_AFTER_CONTACT
+		)
+	return clampf(requested, 0.0, progress_max)
 
 
 static func _timeline_progress(

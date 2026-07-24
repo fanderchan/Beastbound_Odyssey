@@ -44,3 +44,17 @@ non-abrupt mix even before simultaneous battle layers.
 
 The per-cue processing and exact source hashes are machine-readable in
 `spec.json` and `provenance.json`.
+
+## Phase 334 readability correction
+
+Owner listening found that the first v2 `combat.down` master communicated only
+a soft body drop, while `combat.launch` was masked by the preceding contact.
+The same frozen CC0 sources are therefore remixed without adding new downloads:
+
+- `combat.down` keeps its leather/body landing and adds three descending,
+  delayed `rubberduck_item_gem_02` accents to communicate a short dazed or
+  unconscious state without reusing the ascending victory pattern;
+- `combat.launch` raises the dry air-displacement layer, adds a second
+  high-frequency swish plus a sustained spell-air tail, while removing the
+  redundant ordinary hit layer that previously masked the flight sound;
+- neither change introduces a looping status sound or a new gameplay rule.

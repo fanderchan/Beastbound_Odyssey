@@ -85,7 +85,7 @@ func run() -> void:
 
 	_show_section(
 		"第一部分｜无背景音乐",
-		"01—18：逐段隔离试听动作、接触、反应与结果音。"
+		"01—18：逐段试听正式动作链中的动作、接触、反应与结果音。"
 	)
 	await _wait(SECTION_LEAD_SECONDS)
 	for step in AudioImpactReviewModel.isolated_steps():
@@ -98,7 +98,7 @@ func run() -> void:
 	_apply_review_audio_settings(LOW_BGM_VOLUME)
 	_show_section(
 		"第二部分｜低音量战斗音乐",
-		"A—D：复测普通命中、技能、合击与撞边在实战混音中的可读性。"
+		"A—F：复测普通命中、技能、合击、撞边、直线击飞与倒地在实战混音中的可读性。"
 	)
 	await _wait(SECTION_LEAD_SECONDS)
 	for step in AudioImpactReviewModel.low_bgm_steps():
@@ -107,7 +107,7 @@ func run() -> void:
 			await _finish(1)
 			return
 
-	_show_section("试听完成", "请按 01—18 或 A—D 反馈需要返工的声音。")
+	_show_section("试听完成", "请按 01—18 或 A—F 反馈需要返工的声音。")
 	await _wait(1.10)
 	await _finish(0)
 

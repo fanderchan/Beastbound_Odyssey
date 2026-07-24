@@ -56,14 +56,24 @@ func _initialize() -> void:
 		errors.append("命中帧没有重击声")
 	if not _cue_ids(manager.calls).has("combat.critical"):
 		errors.append("命中帧没有暴击强调")
+	if _cue_ids(manager.calls).has("combat.launch"):
+		errors.append("击飞声仍与命中声同帧触发")
 	controller.update_progress(0.50)
 	if manager.calls.size() != contact_count:
 		errors.append("同一命中阈值重复触发")
-	controller.update_progress(0.58)
-	if not _cue_ids(manager.calls).has("combat.launch"):
-		errors.append("击飞反应没有在命中后触发")
-	if not _cue_ids(manager.calls).has("creature.pet_hurt"):
-		errors.append("宠物受击声没有在反应阶段触发")
+	controller.update_progress(0.52)
+	if _cue_ids(manager.calls).has("combat.launch"):
+		errors.append("击飞声早于首个离地保护间隔")
+	var before_launch_count := manager.calls.size()
+	controller.update_progress(0.53)
+	var launch_delta := _cue_ids(
+		manager.calls.slice(before_launch_count)
+	)
+	if launch_delta != ["combat.launch", "creature.pet_hurt"]:
+		errors.append(
+			"离地帧没有独立播放击飞与宠物受伤声：%s"
+			% JSON.stringify(launch_delta)
+		)
 	var final_count := manager.calls.size()
 	controller.update_progress(1.0)
 	if manager.calls.size() != final_count:
@@ -140,17 +150,26 @@ func _initialize() -> void:
 		"timeline": {
 			"damageRevealProgress": 0.30,
 			"launchSoundProgress": 0.30,
-			"bounceImpactProgress": 0.56,
+			"bounceImpactProgress": 0.31,
 		},
 	})
 	controller.update_progress(0.30)
-	if not _cue_ids(manager.calls).has("combat.launch"):
-		errors.append("反弹击飞没有在起飞点播放 launch")
+	if _cue_ids(manager.calls).has("combat.launch"):
+		errors.append("反弹击飞声仍与命中声同帧")
+	controller.update_progress(0.32)
+	if _cue_ids(manager.calls).has("combat.launch"):
+		errors.append("反弹击飞声早于首个可见离地帧")
+	controller.update_progress(0.33)
+	if _cue_ids(manager.calls).count("combat.launch") != 1:
+		errors.append("反弹击飞没有在受保护的离地点播放一次 launch")
 	if _cue_ids(manager.calls).has("combat.bounce_edge"):
 		errors.append("反弹撞边声早于显式撞边点")
-	controller.update_progress(0.56)
-	if not _cue_ids(manager.calls).has("combat.bounce_edge"):
-		errors.append("反弹撞边声没有在显式撞边点播放")
+	controller.update_progress(0.35)
+	if _cue_ids(manager.calls).has("combat.bounce_edge"):
+		errors.append("反弹撞边声没有晚于 launch")
+	controller.update_progress(0.36)
+	if _cue_ids(manager.calls).count("combat.bounce_edge") != 1:
+		errors.append("反弹撞边声没有在受保护的撞边点播放一次")
 
 	var report := {
 		"schemaVersion": 1,

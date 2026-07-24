@@ -92,6 +92,7 @@ Generated Godot cache under `.godot/imported/` is never source. Track `.import` 
 - dodge/block replace ordinary contact correctly;
 - counter is heard as its own action;
 - launch/knockback and down/outcome follow the hit in order;
+- launch remains distinct from the preceding contact under low battle music, and down remains distinguishable from ordinary knockback by its short unconscious/daze accent;
 - music and SFX volume settings persist;
 - muted output stays muted after transition and relaunch;
 - the normal-client capture contains an audio stream and no clipping;

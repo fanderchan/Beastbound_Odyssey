@@ -65,8 +65,8 @@ world.warp
 - `block`: motion + `combat.block`; do not also play ordinary contact at full weight.
 - `critical`: normal action family + short `combat.critical` emphasis at contact.
 - `counter_attack`: use `combat.counter` at its own action start, then its own contact cue.
-- `launch`/knockaway: contact first, then `combat.launch` during target travel. A visible wall/edge bounce adds `combat.bounce_edge` at the collision marker. Keep `combat.knockback` reserved for a distinct non-airborne displacement rule rather than reusing it for bounce.
-- `down`: use an explicit visual timeline marker such as `downSoundProgress`; play only after the target reaches its own slot/ground or the down animation becomes visible. Do not guess one universal post-contact delay, because counter-KO and launch paths have different return phases.
+- `launch`/knockaway: contact first, then `combat.launch` during target travel. The launch cue must contain a clearly readable takeoff/air-displacement layer rather than sounding like another contact hit; a straight launch with no landing still needs an audible flight tail. A visible wall/edge bounce adds `combat.bounce_edge` at the collision marker. Keep `combat.knockback` reserved for a distinct non-airborne displacement rule rather than reusing it for bounce.
+- `down`: use an explicit visual timeline marker such as `downSoundProgress`; play only after the target reaches its own slot/ground or the down animation becomes visible. In the Beastbound cartoon battle language, the cue must communicate both body/ground contact and loss of consciousness with a short non-looping daze accent; a generic dull thud alone is insufficient. Do not guess one universal post-contact delay, because counter-KO and launch paths have different return phases.
 - `revive`: play when the revive animation/state begins, not when the server packet arrives.
 
 ## Priority and de-duplication

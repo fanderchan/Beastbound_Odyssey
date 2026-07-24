@@ -666,23 +666,35 @@
         {
           "sourceId": "artisticdude_swish_9",
           "trimStartSeconds": 0.0,
-          "trimEndSeconds": 0.172,
-          "pitchScale": 0.84,
+          "trimEndSeconds": 0.196,
+          "pitchScale": 0.78,
           "highpassHz": 90,
-          "lowpassHz": 5500,
-          "gainDb": -13.0
+          "lowpassHz": 6500,
+          "gainDb": -7.0
         },
         {
-          "sourceId": "rubberduck_bfh1_hit_06",
+          "sourceId": "artisticdude_swish_7",
           "trimStartSeconds": 0.0,
-          "trimEndSeconds": 0.31,
-          "lowpassHz": 4500,
-          "gainDb": -11.0,
-          "delayMs": 35
+          "trimEndSeconds": 0.187,
+          "pitchScale": 1.12,
+          "highpassHz": 260,
+          "lowpassHz": 9000,
+          "gainDb": -10.0,
+          "delayMs": 18
+        },
+        {
+          "sourceId": "rubberduck_spell_01",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.46,
+          "pitchScale": 0.86,
+          "highpassHz": 160,
+          "lowpassHz": 5500,
+          "gainDb": -6.0,
+          "delayMs": 40
         }
       ],
-      "durationSeconds": 0.36,
-      "masterGainDb": 0.0,
+      "durationSeconds": 0.58,
+      "masterGainDb": -1.0,
       "bus": "Combat",
       "cooldownMs": 95,
       "gainDb": -0.5,
@@ -740,12 +752,42 @@
           "trimStartSeconds": 0.0,
           "trimEndSeconds": 0.46,
           "lowpassHz": 3500,
-          "gainDb": -10.0,
+          "gainDb": -8.0,
           "delayMs": 15
+        },
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 1.08,
+          "highpassHz": 350,
+          "lowpassHz": 6500,
+          "gainDb": -7.0,
+          "delayMs": 160
+        },
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 0.93,
+          "highpassHz": 350,
+          "lowpassHz": 6500,
+          "gainDb": -9.0,
+          "delayMs": 290
+        },
+        {
+          "sourceId": "rubberduck_item_gem_02",
+          "trimStartSeconds": 0.0,
+          "trimEndSeconds": 0.199,
+          "pitchScale": 0.8,
+          "highpassHz": 350,
+          "lowpassHz": 6500,
+          "gainDb": -11.0,
+          "delayMs": 420
         }
       ],
-      "durationSeconds": 0.48,
-      "masterGainDb": -7.0,
+      "durationSeconds": 0.68,
+      "masterGainDb": -4.0,
       "bus": "Combat",
       "cooldownMs": 120,
       "gainDb": 0.0,

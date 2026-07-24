@@ -30,10 +30,12 @@ const EXPECTED_ISOLATED_NUMBERS: Array[String] = [
 	"18 / 18",
 ]
 const EXPECTED_LOW_BGM_NUMBERS: Array[String] = [
-	"A / D",
-	"B / D",
-	"C / D",
-	"D / D",
+	"A / F",
+	"B / F",
+	"C / F",
+	"D / F",
+	"E / F",
+	"F / F",
 ]
 const EXPECTED_RESERVED_IDS: Array[String] = [
 	"12_knockback_reserved",
@@ -53,7 +55,7 @@ static func run() -> Dictionary:
 	)
 	_expect(
 		low_bgm.size() == AudioImpactReviewModel.LOW_BGM_STEP_COUNT,
-		"低背景音乐复测不是4段",
+		"低背景音乐复测不是6段",
 		errors
 	)
 	_expect(
@@ -63,7 +65,7 @@ static func run() -> Dictionary:
 	)
 	_expect(
 		_numbers(low_bgm) == EXPECTED_LOW_BGM_NUMBERS,
-		"A—D编号不连续或顺序错误",
+		"A—F编号不连续或顺序错误",
 		errors
 	)
 

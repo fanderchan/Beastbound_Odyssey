@@ -30,7 +30,7 @@ const SECTION_ISOLATED := "isolated"
 const SECTION_LOW_BGM := "low_bgm"
 
 const ISOLATED_STEP_COUNT := 18
-const LOW_BGM_STEP_COUNT := 4
+const LOW_BGM_STEP_COUNT := 6
 
 
 static func isolated_steps() -> Array[Dictionary]:
@@ -171,7 +171,8 @@ static func isolated_steps() -> Array[Dictionary]:
 			"13 / 18",
 			"直线击飞",
 			EXECUTION_BATTLE_EVENTS,
-			[_launch_event("straight", 113)]
+			[_launch_event("straight", 113)],
+			"先听命中，再听目标真正离地时的独立破空爆发与飞行尾。"
 		),
 		_step(
 			"14_launch_bounce",
@@ -184,9 +185,10 @@ static func isolated_steps() -> Array[Dictionary]:
 		_step(
 			"15_down",
 			"15 / 18",
-			"倒地",
+			"倒地与晕眩尾音",
 			EXECUTION_BATTLE_EVENTS,
-			[_down_event(115)]
+			[_down_event(115)],
+			"受伤声之后再听落地，以及三颗音高递降的短促晕眩星点。"
 		),
 		_reserved_step(
 			"16_revive_reserved",
@@ -215,10 +217,12 @@ static func isolated_steps() -> Array[Dictionary]:
 
 static func low_bgm_steps() -> Array[Dictionary]:
 	return [
-		_mix_step("mix_a_character_hit", "A / D", "人物普通命中", "01_character_hit"),
-		_mix_step("mix_b_skill", "B / D", "技能起手与命中", "09_skill"),
-		_mix_step("mix_c_combo", "C / D", "三宠合击", "10_combo"),
-		_mix_step("mix_d_bounce", "D / D", "反弹撞边", "14_launch_bounce"),
+		_mix_step("mix_a_character_hit", "A / F", "人物普通命中", "01_character_hit"),
+		_mix_step("mix_b_skill", "B / F", "技能起手与命中", "09_skill"),
+		_mix_step("mix_c_combo", "C / F", "三宠合击", "10_combo"),
+		_mix_step("mix_d_bounce", "D / F", "反弹撞边", "14_launch_bounce"),
+		_mix_step("mix_e_launch", "E / F", "直线击飞", "13_launch_straight"),
+		_mix_step("mix_f_down", "F / F", "倒地与晕眩尾音", "15_down"),
 	]
 
 
@@ -402,7 +406,7 @@ static func validation_errors() -> Array[String]:
 	if isolated.size() != ISOLATED_STEP_COUNT:
 		errors.append("无背景音乐试听必须正好有18段")
 	if mixed.size() != LOW_BGM_STEP_COUNT:
-		errors.append("低背景音乐复测必须正好有4段")
+		errors.append("低背景音乐复测必须正好有6段")
 
 	var ids := {}
 	var numbers := {}

@@ -47,6 +47,56 @@ static func run(host) -> Dictionary:
 		if manager.cue_info(cue_id).is_empty():
 			errors.append("Main 音频目录缺少动作 cue：%s" % cue_id)
 
+	var battle_state_before: Dictionary = host.battle_state.duplicate(true)
+	host.battle_state = {
+		"actors": [{
+			"id": "audio_qa_down_target",
+			"hp": 0,
+			"actionState": "down",
+		}],
+		"lastTargetId": "audio_qa_down_target",
+		"lastTargetIds": ["audio_qa_down_target"],
+		"lastLaunch": false,
+	}
+	var down_timeline: Dictionary = host._battle_event_timeline_for_applied_event({
+		"type": "attack",
+		"targetId": "audio_qa_down_target",
+		"timeline": {
+			"durationSeconds": 0.62,
+			"damageRevealProgress": 0.50,
+			"delaysResult": true,
+		},
+	})
+	host.battle_state = battle_state_before
+	if (
+		float(down_timeline.get("downSoundProgress", 0.0))
+		- float(down_timeline.get("damageRevealProgress", 0.0))
+		< 0.20
+	):
+		errors.append("Main 倒地声仍挤在命中／受伤声附近")
+
+	var launch_timeline: Dictionary = host._battle_event_timeline_for_applied_event({
+		"type": "attack",
+		"launch": true,
+		"launchMode": "bounce",
+		"timeline": {
+			"durationSeconds": 1.95,
+			"damageRevealProgress": 0.30,
+			"delaysResult": true,
+		},
+	})
+	var launch_contact := float(
+		launch_timeline.get("damageRevealProgress", 0.0)
+	)
+	var launch_progress := float(
+		launch_timeline.get("launchSoundProgress", 0.0)
+	)
+	var bounce_progress := float(
+		launch_timeline.get("bounceImpactProgress", 0.0)
+	)
+	if not (launch_contact < launch_progress and launch_progress < bounce_progress):
+		errors.append("Main 没有保持命中 < 离地破空 < 撞边的正式时序")
+
 	var before: Dictionary = manager.debug_snapshot()
 	var world_context := str(before.get("worldContext", ""))
 	var expected_world_cue: String = manager.context_cue(world_context)

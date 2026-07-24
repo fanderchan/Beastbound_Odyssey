@@ -476,8 +476,8 @@ func _initialize() -> void:
 		"launchMode": "bounce",
 		"timeline": {
 			"damageRevealProgress": 0.30,
-			"launchSoundProgress": 0.31,
-			"bounceImpactProgress": 0.57,
+			"launchSoundProgress": 0.30,
+			"bounceImpactProgress": 0.31,
 		},
 	})
 	_expect_marker_cues(
@@ -494,7 +494,7 @@ func _initialize() -> void:
 	if (
 		not is_equal_approx(
 			float(_marker_by_id(bounce_markers, "launch").get("progress", -1.0)),
-			0.31
+			0.33
 		)
 		or not is_equal_approx(
 			float(
@@ -503,11 +503,151 @@ func _initialize() -> void:
 					-1.0
 				)
 			),
-			0.57
+			0.36
 		)
 		or not _markers_by_cue(bounce_markers, "combat.knockback").is_empty()
 	):
-		errors.append("bounce marker timing still uses the legacy knockback cue")
+		errors.append(
+			"bounce marker timing did not preserve contact < launch < bounce"
+		)
+
+	var guarded_down_markers := BattleAudioCueModel.timed_markers({
+		"type": "attack",
+		"damage": 36,
+		"timeline": {
+			"damageRevealProgress": 0.50,
+			"downSoundProgress": 0.51,
+		},
+		"targets": [{
+			"targetId": "enemy_0",
+			"hpBefore": 36,
+			"hpAfter": 0,
+			"stateBefore": "idle",
+			"stateAfter": "down",
+		}],
+	})
+	var guarded_down_matches := _markers_by_cue(
+		guarded_down_markers,
+		"combat.down"
+	)
+	if (
+		guarded_down_matches.size() != 1
+		or not is_equal_approx(
+			float(guarded_down_matches[0].get("progress", -1.0)),
+			0.66
+		)
+	):
+		errors.append(
+			"down marker accepted an inaudibly crowded post-contact timeline"
+		)
+
+	var late_bounce_markers := BattleAudioCueModel.timed_markers({
+		"type": "attack",
+		"damage": 36,
+		"launch": true,
+		"launchMode": "bounce",
+		"timeline": {
+			"damageRevealProgress": 0.99,
+			"launchSoundProgress": 0.99,
+			"bounceImpactProgress": 0.99,
+		},
+	})
+	var late_contact_progress := float(
+		_markers_by_cue(late_bounce_markers, "combat.hit_light")[0].get(
+			"progress",
+			-1.0
+		)
+	)
+	var late_launch_progress := float(
+		_marker_by_id(late_bounce_markers, "launch").get("progress", -1.0)
+	)
+	var late_bounce_progress := float(
+		_marker_by_id(late_bounce_markers, "bounce_edge").get("progress", -1.0)
+	)
+	if not (
+		is_equal_approx(late_contact_progress, 0.93)
+		and is_equal_approx(late_launch_progress, 0.96)
+		and is_equal_approx(late_bounce_progress, 0.99)
+		and late_contact_progress < late_launch_progress
+		and late_launch_progress < late_bounce_progress
+	):
+		errors.append(
+			"late explicit timeline reversed contact, launch, or bounce ordering"
+		)
+
+	var late_combo_bounce_markers := BattleAudioCueModel.timed_markers({
+		"type": "combo_attack",
+		"participantIds": ["a", "b", "c"],
+		"damage": 36,
+		"launch": true,
+		"launchMode": "bounce",
+		"timeline": {
+			"comboContactProgresses": [0.97, 0.98, 0.99],
+			"launchSoundProgress": 0.99,
+			"bounceImpactProgress": 0.99,
+		},
+	})
+	var late_combo_contact_progress := float(
+		_marker_by_id(late_combo_bounce_markers, "combo_impact").get(
+			"progress",
+			-1.0
+		)
+	)
+	var late_combo_launch_progress := float(
+		_marker_by_id(late_combo_bounce_markers, "launch").get("progress", -1.0)
+	)
+	var late_combo_bounce_progress := float(
+		_marker_by_id(late_combo_bounce_markers, "bounce_edge").get(
+			"progress",
+			-1.0
+		)
+	)
+	if not (
+		is_equal_approx(late_combo_contact_progress, 0.93)
+		and is_equal_approx(late_combo_launch_progress, 0.96)
+		and is_equal_approx(late_combo_bounce_progress, 0.99)
+		and late_combo_contact_progress < late_combo_launch_progress
+		and late_combo_launch_progress < late_combo_bounce_progress
+	):
+		errors.append(
+			"late explicit combo timeline reversed contact, launch, or bounce ordering"
+		)
+
+	var late_down_markers := BattleAudioCueModel.timed_markers({
+		"type": "attack",
+		"damage": 36,
+		"timeline": {
+			"damageRevealProgress": 0.99,
+			"downSoundProgress": 0.99,
+		},
+		"targets": [{
+			"targetId": "enemy_0",
+			"hpBefore": 36,
+			"hpAfter": 0,
+			"stateBefore": "idle",
+			"stateAfter": "down",
+		}],
+	})
+	var late_down_contact_progress := float(
+		_markers_by_cue(late_down_markers, "combat.hit_light")[0].get(
+			"progress",
+			-1.0
+		)
+	)
+	var late_down_progress := float(
+		_markers_by_cue(late_down_markers, "combat.down")[0].get(
+			"progress",
+			-1.0
+		)
+	)
+	if not (
+		is_equal_approx(late_down_contact_progress, 0.80)
+		and is_equal_approx(late_down_progress, 0.96)
+		and late_down_contact_progress < late_down_progress
+	):
+		errors.append(
+			"late explicit timeline reversed contact and down ordering"
+		)
 
 	var source_event := {
 		"type": "multi_attack",
