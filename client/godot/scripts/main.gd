@@ -12,6 +12,12 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
+const BattleArenaVisualCatalog := preload(
+	"res://scripts/battle/battle_arena_visual_catalog.gd"
+)
+const MountedBattlePresentationModel := preload(
+	"res://scripts/battle/mounted_battle_presentation_model.gd"
+)
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
@@ -9401,6 +9407,9 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
+	if bool(next_battle_state.get("reviewLab", false)):
+		MountedBattlePresentationModel.warm_battle_state(next_battle_state)
+	BattleArenaVisualCatalog.warm_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
 func _end_battle(_restore_world: bool = true) -> void:
@@ -14609,8 +14618,17 @@ func _online_player_label(player_info: Dictionary) -> String:
 
 func _draw_battle_scene() -> void:
 	var rect := _viewport_world_rect()
-	draw_rect(rect, Color(0.32, 0.36, 0.32), true)
-	_draw_battle_floor_noise(rect)
+	var arena_texture := BattleArenaVisualCatalog.texture_for_state(battle_state)
+	if arena_texture != null:
+		draw_texture_rect(arena_texture, rect, false)
+		var readability_overlay := (
+			BattleArenaVisualCatalog.readability_overlay_for_state(battle_state)
+		)
+		if readability_overlay.a > 0.0:
+			draw_rect(rect, readability_overlay, true)
+	else:
+		draw_rect(rect, Color(0.32, 0.36, 0.32), true)
+		_draw_battle_floor_noise(rect)
 	if _battle_should_draw_formation_grid():
 		_draw_battle_formation_grid(rect)
 	var launched_draw_queue: Array[Dictionary] = []
@@ -14981,7 +14999,17 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 		)
 	if texture == null:
 		return false
-	var presentation_scale := MountVisualProfileCatalog.battle_presentation_scale_for_form(form_id) * visual_scale * 0.72
+	var subject_scale_multiplier := (
+		MountedBattlePresentationModel.scale_multiplier_for(character_id, form_id)
+		if bool(battle_state.get("reviewLab", false))
+		else 1.0
+	)
+	var presentation_scale := (
+		MountVisualProfileCatalog.battle_presentation_scale_for_form(form_id)
+		* subject_scale_multiplier
+		* visual_scale
+		* 0.72
+	)
 	var ground_anchor_y := MountedCharacterAssetCatalog.world_ground_anchor_y(character_id, form_id)
 	var texture_rect := Rect2(
 		Vector2(-128.0 * presentation_scale, -ground_anchor_y * presentation_scale),

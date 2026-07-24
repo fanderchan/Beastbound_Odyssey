@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "battle_review_arenas_v1",
+  "visualMode": "baked_scene",
+  "scope": "gm_pet_battle_review_only",
+  "topologyImpact": "none",
+  "sourceTool": "OpenAI image generation tool",
+  "generatedDate": "2026-07-25",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "qaPreviewEnabled": true,
+  "processing": {
+    "inputSize": [1672, 941],
+    "outputSize": [1280, 720],
+    "command": "sips -z 720 1280 <raw.png> --out <runtime.png>"
+  },
+  "arenas": [
+    {
+      "id": "moss_meadow",
+      "name": "苔光草甸",
+      "generationCallId": "call_iaCW0WRsHLibn3COrempqrg1",
+      "prompt": "source/prompts/moss_meadow.txt",
+      "raw": "source/raw/moss_meadow_raw.png",
+      "runtime": "runtime/moss_meadow.png",
+      "rawSha256": "ae49628e4e69a6e9f40caf73a8e2cec3a41b6b12f731bb85757abfef80d9ead8",
+      "runtimeSha256": "215210ead48013359fe16cf0d4043811d4ef86d160cbedcdc08c1f11c0effa69"
+    },
+    {
+      "id": "amber_sandstone",
+      "name": "琥珀砂岩",
+      "generationCallId": "call_mvRji3auRiV67b8fP3nD8QCc",
+      "prompt": "source/prompts/amber_sandstone.txt",
+      "raw": "source/raw/amber_sandstone_raw.png",
+      "runtime": "runtime/amber_sandstone.png",
+      "rawSha256": "17c39538aa8904bde903c36e44f3224af90710cc8cb23cf646822a95fb77ef29",
+      "runtimeSha256": "418a1eceaecbd8d1af89dda777eb984e16e0fd4b24aceb91287abebb0a1b0198"
+    },
+    {
+      "id": "moonlit_slate",
+      "name": "月影石坪",
+      "generationCallId": "call_Sd0uAzOmBwp1sqrvNhDo6g43",
+      "prompt": "source/prompts/moonlit_slate.txt",
+      "raw": "source/raw/moonlit_slate_raw.png",
+      "runtime": "runtime/moonlit_slate.png",
+      "rawSha256": "c4d14d67ff623f5e173fbf73ee1ff646fd530d202bf754f8ac1cad19185d03c9",
+      "runtimeSha256": "19f466ad281ca5ada4a4f7f10b1f2cea62576f849d2d0be1af0f121f2c660f2f"
+    },
+    {
+      "id": "red_clay",
+      "name": "赤土高原",
+      "generationCallId": "call_5ky2bQB866w2dsKtTFynGB3z",
+      "prompt": "source/prompts/red_clay.txt",
+      "raw": "source/raw/red_clay_raw.png",
+      "runtime": "runtime/red_clay.png",
+      "rawSha256": "9214dee7cd3e16b2fd61bea266871e00e030b1bb818721052d20a24c417b6407",
+      "runtimeSha256": "a8a8fe7d760b3e4cdf61fdf5e77a9289b81273db5301014b060610a91f6b3608"
+    }
+  ]
+}

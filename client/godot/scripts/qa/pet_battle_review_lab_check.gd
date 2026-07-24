@@ -41,6 +41,7 @@ func run() -> void:
 		errors.append("GM默认入口没有进入随机战术AI观战")
 	var spectator_counts := _spectator_counts(host.battle_state)
 	var random_mount_count: int = lab.random_mount_form_count()
+	var mount_scale_reports: Array[Dictionary] = lab.random_mount_scale_reports()
 	if int(spectator_counts.get("level140", 0)) != 20:
 		errors.append("GM随机观战不是20个140级单位：%s" % str(spectator_counts))
 	if (
@@ -54,6 +55,26 @@ func run() -> void:
 		errors.append("GM随机观战没有随机出多种宠物形态：%s" % str(spectator_counts))
 	if random_mount_count < 2:
 		errors.append("GM随机观战没有至少两种可用随机坐骑资产")
+	if mount_scale_reports.size() != random_mount_count:
+		errors.append(
+			"随机坐骑没有全部完成主体缩放测量：%d/%d"
+			% [mount_scale_reports.size(), random_mount_count]
+		)
+	var saw_small_mount_correction := false
+	for report in mount_scale_reports:
+		if not bool(report.get("ok", false)):
+			errors.append("随机坐骑主体缩放测量失败：%s" % str(report))
+			continue
+		var estimated_height := float(report.get("estimatedReviewHeight", 0.0))
+		if estimated_height < 80.0 or estimated_height > 110.0:
+			errors.append(
+				"随机坐骑10V10待机高度没有归一到可读区间：%s"
+				% str(report)
+			)
+		if float(report.get("scaleMultiplier", 1.0)) >= 1.1:
+			saw_small_mount_correction = true
+	if not saw_small_mount_correction:
+		errors.append("随机坐骑池没有命中任何小主体自动放大校准")
 	if (
 		int(spectator_counts.get("mounted", 0)) != 10
 		or int(spectator_counts.get("mountForms", 0)) < 2
@@ -80,6 +101,32 @@ func run() -> void:
 	var bottom_anchor_y: float = host._battle_ally_slot_screen_position("back", 4, layout_size).y
 	if top_anchor_y < 250.0 or bottom_anchor_y > layout_size.y - 70.0:
 		errors.append("展开控制台遮挡了10V10阵位：top=%.1f bottom=%.1f" % [top_anchor_y, bottom_anchor_y])
+	lab.toggle_collapsed()
+	await host.get_tree().process_frame
+	var spectator_top_anchor_y: float = host._battle_enemy_slot_screen_position(
+		"back",
+		4,
+		layout_size
+	).y
+	if (
+		lab.is_root_visible()
+		or not lab.is_restore_visible()
+		or float(host.battle_state.get("reviewTopInset", -1.0)) != 0.0
+	):
+		errors.append("纯观战没有完全隐藏顶部工具或释放顶部空间")
+	if spectator_top_anchor_y >= top_anchor_y - 80.0:
+		errors.append(
+			"纯观战没有让10V10阵型使用完整画面：expanded=%.1f spectator=%.1f"
+			% [top_anchor_y, spectator_top_anchor_y]
+		)
+	lab.toggle_collapsed()
+	await host.get_tree().process_frame
+	if (
+		not lab.is_root_visible()
+		or lab.is_restore_visible()
+		or float(host.battle_state.get("reviewTopInset", -1.0)) != 164.0
+	):
+		errors.append("GM工具不能从右侧小按钮恢复")
 
 	lab.replay()
 	var replay_signature := PetBattleReviewModel.state_signature(host.battle_state)
@@ -89,6 +136,21 @@ func run() -> void:
 	var next_signature := PetBattleReviewModel.state_signature(host.battle_state)
 	if first_signature == next_signature or lab.current_seed() != 424243:
 		errors.append("实机新种子没有改变阵容或数值")
+	if str(host.battle_state.get("reviewArenaId", "")) == str(
+		PetBattleReviewModel.build_brawl_state(
+			form_id,
+			424242,
+			PetBattleReviewModel.PLACEMENT_RANDOM_ALL,
+			PetBattleReviewModel.POOL_FORMAL
+		).get("reviewArenaId", "")
+	):
+		errors.append("实机换一场没有切换随机战场地面")
+	var arena_before_random_button := str(
+		host.battle_state.get("reviewArenaId", "")
+	)
+	lab.new_random_brawl()
+	if str(host.battle_state.get("reviewArenaId", "")) == arena_before_random_button:
+		errors.append("GM“换一场”按钮随机到了相同战场地面")
 
 	lab.set_paused(true)
 	if lab.scaled_battle_delta(0.1) != 0.0:
@@ -204,7 +266,7 @@ func run() -> void:
 	):
 		errors.append("退出GM观战后没有恢复原地图音乐语境")
 	var status := "ok" if errors.is_empty() else "failed"
-	print("pet battle review lab check ready: status=%s form=%s options=%d mounts=%d steps=%d ai_frames=%d director_frames=%d revive_frames=%d spectator=%s coverage=%s revive_coverage=%s revive=%s actors=%s errors=%s" % [
+	print("pet battle review lab check ready: status=%s form=%s options=%d mounts=%d steps=%d ai_frames=%d director_frames=%d revive_frames=%d spectator=%s mount_scales=%s coverage=%s revive_coverage=%s revive=%s actors=%s errors=%s" % [
 		status,
 		form_id,
 		PetBattleReviewModel.pet_options().size(),
@@ -214,6 +276,7 @@ func run() -> void:
 		director_frames,
 		revive_frames,
 		str(spectator_counts),
+		str(mount_scale_reports),
 		str(director_coverage),
 		str(revive_coverage),
 		str(revive_sequence),

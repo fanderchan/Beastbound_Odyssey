@@ -1,6 +1,9 @@
 extends RefCounted
 
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
+const BattleArenaVisualCatalog := preload(
+	"res://scripts/battle/battle_arena_visual_catalog.gd"
+)
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
@@ -226,6 +229,10 @@ static func build_brawl_state(
 	)
 	state["reviewMusicContext"] = "battle_normal"
 	state["reviewMusicCueId"] = "music.battle_normal"
+	state["reviewArenaId"] = BattleArenaVisualCatalog.arena_id_for_seed(seed)
+	state["reviewArenaName"] = BattleArenaVisualCatalog.arena_name_for_id(
+		str(state.get("reviewArenaId", ""))
+	)
 	state["reviewTopInset"] = 164.0
 
 	var pool := _pool_form_ids(pool_id, form_id)
@@ -569,7 +576,9 @@ static func coverage_ids() -> Array[String]:
 
 
 static func state_signature(state: Dictionary) -> String:
-	var rows: Array[String] = []
+	var rows: Array[String] = [
+		"arena|%s" % str(state.get("reviewArenaId", "")),
+	]
 	for value in state.get("actors", []):
 		if not (value is Dictionary):
 			continue
@@ -601,7 +610,7 @@ static func state_signature(state: Dictionary) -> String:
 
 
 static func validation_errors() -> Array[String]:
-	var errors: Array[String] = []
+	var errors: Array[String] = BattleArenaVisualCatalog.validation_errors()
 	var form_id := default_form_id()
 	if form_id == "":
 		errors.append("验收场没有可用宠物模板")
@@ -613,6 +622,8 @@ static func validation_errors() -> Array[String]:
 		errors.append("同一随机种子不能原样重放")
 	if state_signature(first) == state_signature(next):
 		errors.append("不同随机种子没有产生阵容或数值差异")
+	if str(first.get("reviewArenaId", "")) == str(next.get("reviewArenaId", "")):
+		errors.append("连续随机种子没有切换GM观战战场")
 	var side_kind_counts := {}
 	var side_player_roles := {
 		BattleModel.SIDE_ALLY: {},

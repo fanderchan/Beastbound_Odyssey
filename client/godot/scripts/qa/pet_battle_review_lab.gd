@@ -1,7 +1,13 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleArenaVisualCatalog := preload(
+	"res://scripts/battle/battle_arena_visual_catalog.gd"
+)
 const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
+const MountedBattlePresentationModel := preload(
+	"res://scripts/battle/mounted_battle_presentation_model.gd"
+)
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
@@ -22,6 +28,7 @@ var coverage_label: Label
 var pause_button: Button
 var speed_button: Button
 var collapse_button: Button
+var restore_button: Button
 
 var active: bool = false
 var mode: String = PetBattleReviewModel.MODE_BRAWL
@@ -89,6 +96,10 @@ func _enable_preview_assets() -> void:
 				and not _random_mount_form_ids.has(form_id)
 			):
 				_random_mount_form_ids.append(form_id)
+				MountedBattlePresentationModel.warm_form(
+					character_id,
+					form_id
+				)
 	if (
 		focus_form_id != ""
 		and not _preview_pet_form_ids.has(focus_form_id)
@@ -180,6 +191,11 @@ func close(restore_world: bool = true) -> void:
 			host.panel_registry.remove_input_blocker(root)
 		root.queue_free()
 		root = null
+	if restore_button != null:
+		if host.panel_registry != null:
+			host.panel_registry.remove_input_blocker(restore_button)
+		restore_button.queue_free()
+		restore_button = null
 	if host.battle_active and bool(host.battle_state.get("reviewLab", false)):
 		host._end_battle(restore_world)
 	host._set_gm_speed_multiplier(1)
@@ -192,6 +208,10 @@ func is_active() -> bool:
 
 func is_root_visible() -> bool:
 	return root != null and root.visible
+
+
+func is_restore_visible() -> bool:
+	return restore_button != null and restore_button.visible
 
 
 func form_option_count() -> int:
@@ -216,6 +236,19 @@ func current_director_step_ids() -> Array[String]:
 
 func random_mount_form_count() -> int:
 	return _random_mount_form_ids.size()
+
+
+func random_mount_scale_reports() -> Array[Dictionary]:
+	var reports: Array[Dictionary] = []
+	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
+	for form_id in _random_mount_form_ids:
+		var report := MountedBattlePresentationModel.report_for(
+			character_id,
+			form_id
+		)
+		if not report.is_empty():
+			reports.append(report)
+	return reports
 
 
 func uses_tactical_ai(state: Dictionary = {}) -> bool:
@@ -361,6 +394,11 @@ func new_random_brawl() -> void:
 	var next_seed := int(Time.get_ticks_usec() % 2147483647)
 	if next_seed <= 0 or next_seed == seed_value:
 		next_seed = seed_value + 7919
+	if (
+		BattleArenaVisualCatalog.arena_id_for_seed(next_seed)
+		== str(host.battle_state.get("reviewArenaId", ""))
+	):
+		next_seed += 1
 	start_brawl(next_seed)
 
 
@@ -717,7 +755,7 @@ func _build_ui() -> void:
 	seed_label = Label.new()
 	seed_label.add_theme_font_size_override("font_size", 14)
 	header.add_child(seed_label)
-	collapse_button = _button("收起", 68.0, toggle_collapsed)
+	collapse_button = _button("纯观战", 76.0, toggle_collapsed)
 	header.add_child(collapse_button)
 	header.add_child(_button("退出", 68.0, func() -> void: close(true)))
 
@@ -759,7 +797,7 @@ func _build_ui() -> void:
 	control_row.add_child(_button("清零覆盖", 88.0, clear_coverage))
 	control_row.add_child(_button("真实10V10草丛", 132.0, return_to_real_grass))
 	var hint := Label.new()
-	hint.text = "快捷键：空格暂停  .单帧  N换一场  R复盘  D动作验收  H收起"
+	hint.text = "快捷键：空格暂停  .单帧  N换一场  R复盘  D动作验收  H隐藏/显示"
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint.add_theme_font_size_override("font_size", 13)
@@ -773,8 +811,25 @@ func _build_ui() -> void:
 	body.add_child(coverage_label)
 
 	host.hud_root.add_child(root)
+	restore_button = _button("GM工具", 60.0, toggle_collapsed)
+	restore_button.name = "PetBattleReviewRestore"
+	restore_button.z_index = 61
+	restore_button.tooltip_text = "恢复观战工具（快捷键 H）"
+	restore_button.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	restore_button.offset_left = -74.0
+	restore_button.offset_top = -17.0
+	restore_button.offset_right = -12.0
+	restore_button.offset_bottom = 17.0
+	var restore_style := StyleBoxFlat.new()
+	restore_style.bg_color = Color(0.035, 0.075, 0.075, 0.78)
+	restore_style.border_color = Color(0.78, 0.58, 0.22, 0.72)
+	restore_style.set_border_width_all(1)
+	restore_style.set_corner_radius_all(8)
+	restore_button.add_theme_stylebox_override("normal", restore_style)
+	host.hud_root.add_child(restore_button)
 	if host.panel_registry != null:
 		host.panel_registry.add_input_blocker(root)
+		host.panel_registry.add_input_blocker(restore_button)
 
 
 func _button(text: String, minimum_width: float, callback: Callable) -> Button:
@@ -838,6 +893,9 @@ func _refresh_status() -> void:
 		if mode == PetBattleReviewModel.MODE_BRAWL
 		else "动作必现"
 	)
+	var arena_name := str(host.battle_state.get("reviewArenaName", "")).strip_edges()
+	if arena_name != "":
+		mode_text += " · %s" % arena_name
 	if mode == PetBattleReviewModel.MODE_BRAWL and _last_ai_intent != "":
 		mode_text += " · %s" % _last_ai_intent
 	elif mount_form_id != "":
@@ -864,11 +922,14 @@ func _refresh_status() -> void:
 func _apply_collapsed_state() -> void:
 	if root == null:
 		return
+	root.visible = not collapsed
 	if body != null:
-		body.visible = not collapsed
+		body.visible = true
 	if collapse_button != null:
-		collapse_button.text = "展开" if collapsed else "收起"
-	root.offset_bottom = 60.0 if collapsed else 154.0
+		collapse_button.text = "纯观战"
+	if restore_button != null:
+		restore_button.visible = collapsed
+	root.offset_bottom = 154.0
 	if host.battle_active and bool(host.battle_state.get("reviewLab", false)):
 		host.battle_state["reviewTopInset"] = _review_top_inset()
 		host.queue_redraw()
@@ -876,4 +937,4 @@ func _apply_collapsed_state() -> void:
 
 
 func _review_top_inset() -> float:
-	return 64.0 if collapsed else 164.0
+	return 0.0 if collapsed else 164.0
