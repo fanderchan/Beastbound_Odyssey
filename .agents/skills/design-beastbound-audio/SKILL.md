@@ -55,8 +55,15 @@ Do not restart the same track for UI changes or minor subareas. Crossfade only w
 - When owner feedback shows that a procedural canary is acoustically unsuitable, prefer verified CC0 sources from the author or official project page. Freeze the downloaded bytes, license URI, source page, author, and SHA-256 before processing. Never extract sounds from StoneAge or another commercial game.
 - Do not rewrite or “clean up” a downloaded source after its hash is frozen. Change processing in `spec.json`, rebuild the runtime master, and keep the immutable licensed input.
 - Keep a deterministic, canonical source specification and generator for procedural assets. Freeze tool versions and hashes for every installed runtime file.
+- For multi-layer FFmpeg SFX, pin input, filter-graph, and output threads and
+  fix each layer to a common frame cadence with `asetnsamples` padding
+  disabled. Verify at least three consecutive rebuilds; do not accept a
+  “stable” result that changes a previously reviewed waveform or duration.
 - Use 48 kHz. Prefer mono PCM16 WAV for short/high-concurrency effects and stereo Ogg Vorbis for long music or ambience; retain a reproducible lossless master or generator specification.
-- Make loops intrinsically seamless or audit the seam after encoding. Do not hide a pop with a long fade that creates an audible hole.
+- Make loops intrinsically seamless or audit the seam after encoding. For Ogg,
+  honor granule duration, measure three independently decoded boundaries, and
+  rotate a lossless circular master to a deterministic stable cut when needed.
+  Do not hide a pop with a start/end fade that creates a recurring audible hole.
 - Do not normalize every sound to the same peak. Balance by perceived role: music is a bed, UI is concise, contact is readable, and critical counter/launch/outcome cues win under contention.
 - Keep first-pass music restrained and loopable. Do not begin with one song per map, adaptive stems, every-pet voice sets, or every-skill exclusives.
 
@@ -94,7 +101,7 @@ python3 .agents/skills/design-beastbound-audio/tests/test_audio_pipeline.py -v
 6. A dodge keeps its motion sound but replaces contact with a short evade cue. A block replaces ordinary contact. A counter is its own action sequence. A launch/knockback/down cue follows the hit rather than masking it.
 7. A multi-participant combo uses one quiet start cue, staggered low-gain contact markers for visible participants, and exactly one dominant convergence impact. Do not stack one full-volume hit per participant on the final frame.
 8. Pet and character differences use declared acoustic profiles with safe shared fallbacks. Missing optional audio must not block battle progression.
-9. On battle entry, fade world music out and battle music in. On battle exit or reconnect recovery, restore the current map context exactly once.
+9. On battle entry, fade world music out and battle music in. On battle exit or reconnect recovery, restore the current map context exactly once. If a third context interrupts an unfinished two-player crossfade, continue from the currently louder player and reuse the quieter slot; never stop the dominant track and create a temporary volume hole.
 10. Persist settings locally and clamp values. Apply slider changes to buses immediately but debounce disk persistence; a drag must not perform repeated `FileAccess` writes or renames. Muting or changing volume must not rebuild the world, restart the same BGM, or affect authoritative state.
 11. Headless checks may exercise catalog, routing, cooldown, pooling, and state transitions without creating physical `AudioStreamPlayback` objects. A focused playback test may opt in explicitly, but it must stop players, clear streams, and allow AudioServer at least two frames to drain before immediate process exit.
 12. When new audio files are not yet visible to `ResourceLoader`, freeze all source/runtime writes, confirm no other Godot process is importing the project, then run exactly one editor import scan (`godot --headless --editor --path client/godot --quit`). Do not run parse checks, previews, or subagent Godot jobs concurrently against the same `.godot/imported` cache. Never commit `.godot/imported/` as source.
@@ -108,6 +115,10 @@ For every integrated canary:
 - Parse every changed JSON and run `git diff --check`.
 - Run the source/bundle auditor and verify sample rate, channels, duration, clipping, DC offset, hashes, cue coverage, orphan assets, loop seam, and provenance.
 - Run `godot --headless --path client/godot --quit` plus focused cue-model, state-transition, battle-timeline, settings-persistence, and pool-cap tests.
+- Prove deferred playback separately: a context selected while physical
+  playback is disabled must start after playback is enabled. Prove a rapid
+  three-context switch with intermediate total-power samples, not only the
+  final settled cue.
 - Exercise the normal `res://scenes/Main.tscn` path at 1280x720. Verify town startup, map transition, battle entry, attack/contact, dodge or block, counter, launch/knockback, outcome, battle exit, and restored world music.
 - Capture a short MP4 or synchronized video-plus-audio evidence from the real client. Confirm the output contains an audio stream; inspect decoded sample peak, reconstructed true peak, and loudness, then listen to the final artifact. Do not infer true-peak safety from a sample-peak limiter setting.
 - When an owner asks to compare a whole effect family, capture one continuous 1280x720 review movie with stable Chinese segment numbers. First isolate every cue family without music, then repeat representative dense cases under low battle music. Label unavailable gameplay as reserved cue previews rather than fabricating authoritative rules.

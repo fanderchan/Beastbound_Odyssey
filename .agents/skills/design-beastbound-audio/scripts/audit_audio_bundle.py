@@ -9,16 +9,22 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import shutil
+import subprocess
 import sys
+import tempfile
 import wave
 
 
-AUDITOR_VERSION = "2.0.1"
+AUDITOR_VERSION = "3.0.0"
+REQUIRED_FFMPEG_MAJOR = 8
 PEAK_LIMIT_DBFS = -1.0
 SILENCE_FLOOR_DBFS = -60.0
 DC_ABSOLUTE_LIMIT = 0.001
 LOOP_BOUNDARY_DELTA_LIMIT = 0.002
 LOOP_WINDOW_RMS_DELTA_DB_LIMIT = 1.0
+MUSIC_FINGERPRINT_DISTANCE_LIMIT = 0.12
+TEMPORAL_PROFILE_BLOCKS = 16
 
 
 def _repo_root() -> Path:
@@ -56,6 +62,292 @@ def _linear_to_db(value: float) -> float:
     return 20.0 * math.log10(max(value, 1e-12))
 
 
+def _ffmpeg_version(ffmpeg: str) -> dict:
+    try:
+        result = subprocess.run(
+            [ffmpeg, "-version"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as error:
+        detail = getattr(error, "stderr", "") or str(error)
+        raise RuntimeError(f"FFmpeg is unavailable: {detail.strip()}") from error
+    first_line = result.stdout.splitlines()[0] if result.stdout else ""
+    fields = first_line.split()
+    version_token = fields[2] if len(fields) >= 3 else ""
+    major_text = version_token.split(".", 1)[0]
+    if not major_text.isdigit():
+        raise RuntimeError(f"cannot parse FFmpeg version: {first_line}")
+    major = int(major_text)
+    if major != REQUIRED_FFMPEG_MAJOR:
+        raise RuntimeError(
+            f"FFmpeg {REQUIRED_FFMPEG_MAJOR} is required, got: {first_line}"
+        )
+    return {"major": major, "versionLine": first_line}
+
+
+def _ffprobe_executable(ffmpeg: str) -> str:
+    resolved_ffmpeg = shutil.which(ffmpeg)
+    if resolved_ffmpeg is None:
+        resolved_ffmpeg = str(Path(ffmpeg).expanduser())
+    sibling = Path(resolved_ffmpeg).resolve().with_name("ffprobe")
+    if sibling.is_file():
+        return str(sibling)
+    fallback = shutil.which("ffprobe")
+    if fallback is None:
+        raise RuntimeError("FFprobe from the FFmpeg 8 installation is required")
+    return fallback
+
+
+def _probe_audio_stream(path: Path, *, ffmpeg: str) -> dict:
+    command = [
+        _ffprobe_executable(ffmpeg),
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        (
+            "stream=codec_name,sample_rate,channels,duration,"
+            "duration_ts,time_base"
+        ),
+        "-of",
+        "json",
+        str(path),
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as error:
+        detail = getattr(error, "stderr", "") or str(error)
+        raise RuntimeError(f"FFprobe failed: {detail.strip()}") from error
+    parsed = json.loads(result.stdout)
+    streams = parsed.get("streams", [])
+    if not streams:
+        raise ValueError(f"{path}: no audio stream")
+    stream = streams[0]
+    sample_rate = int(stream.get("sample_rate", 0))
+    duration_frames = 0
+    duration_ts = stream.get("duration_ts")
+    time_base = str(stream.get("time_base", ""))
+    if duration_ts not in (None, "N/A") and "/" in time_base:
+        numerator_text, denominator_text = time_base.split("/", 1)
+        numerator = int(numerator_text)
+        denominator = int(denominator_text)
+        duration_frames = int(
+            round(
+                int(duration_ts)
+                * numerator
+                / denominator
+                * sample_rate
+            )
+        )
+    if duration_frames <= 0:
+        duration_frames = int(
+            round(float(stream.get("duration", 0.0)) * sample_rate)
+        )
+    if sample_rate <= 0 or duration_frames <= 0:
+        raise ValueError(f"{path}: invalid stream duration or sample rate")
+    return {
+        "channels": int(stream.get("channels", 0)),
+        "codecName": str(stream.get("codec_name", "")),
+        "durationFrames": duration_frames,
+        "sampleRate": sample_rate,
+    }
+
+
+def _probe_audio_codec(path: Path, *, ffmpeg: str) -> str:
+    return str(_probe_audio_stream(path, ffmpeg=ffmpeg)["codecName"])
+
+
+def _decode_ogg(
+    path: Path,
+    *,
+    ffmpeg: str,
+    channels: int,
+) -> tuple[dict, array]:
+    stream_metadata = _probe_audio_stream(path, ffmpeg=ffmpeg)
+    handle = tempfile.NamedTemporaryFile(suffix=".decoded.wav", delete=False)
+    handle.close()
+    decoded_path = Path(handle.name)
+    command = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(path),
+        "-map",
+        "0:a:0",
+        "-vn",
+        "-map_metadata",
+        "-1",
+        "-ar",
+        "48000",
+        "-ac",
+        str(channels),
+        "-c:a",
+        "pcm_s16le",
+        str(decoded_path),
+    ]
+    try:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        metadata, samples = _load_wav(decoded_path)
+        declared_frames = int(stream_metadata["durationFrames"])
+        if metadata["frameCount"] < declared_frames:
+            raise ValueError(
+                f"{path}: decoded stream is shorter than its Ogg granule "
+                f"duration ({metadata['frameCount']} < {declared_frames})"
+            )
+        samples = samples[: declared_frames * channels]
+        metadata["frameCount"] = declared_frames
+    except (FileNotFoundError, subprocess.CalledProcessError) as error:
+        detail = getattr(error, "stderr", "") or str(error)
+        raise RuntimeError(f"FFmpeg Ogg decode failed: {detail.strip()}") from error
+    finally:
+        decoded_path.unlink(missing_ok=True)
+    metadata["runtimeCodec"] = "vorbis"
+    return metadata, samples
+
+
+def _decode_three_loop_boundaries(
+    path: Path,
+    *,
+    ffmpeg: str,
+    metadata: dict,
+) -> dict:
+    """Decode four continuous copies and measure all three real boundaries."""
+
+    channels = int(metadata["channels"])
+    frames_per_copy = int(metadata["frameCount"])
+    frame_width = channels * 2
+    boundary_frames = [
+        frames_per_copy,
+        frames_per_copy * 2,
+        frames_per_copy * 3,
+    ]
+    wanted_frames = {
+        frame
+        for boundary in boundary_frames
+        for frame in (boundary - 1, boundary)
+    }
+    captured: dict[int, tuple[int, ...]] = {}
+    command = [ffmpeg, "-hide_banner", "-loglevel", "error"]
+    for _copy_index in range(4):
+        command.extend(["-i", str(path)])
+    filter_parts = [
+        (
+            f"[{copy_index}:a:0]"
+            f"atrim=end_sample={frames_per_copy},"
+            f"asetpts=PTS-STARTPTS[copy{copy_index}]"
+        )
+        for copy_index in range(4)
+    ]
+    filter_parts.append(
+        "".join(f"[copy{copy_index}]" for copy_index in range(4))
+        + "concat=n=4:v=0:a=1[out]"
+    )
+    command.extend(
+        [
+        "-filter_complex",
+        ";".join(filter_parts),
+        "-map",
+        "[out]",
+        "-vn",
+        "-map_metadata",
+        "-1",
+        "-ar",
+        str(metadata["sampleRate"]),
+        "-ac",
+        str(channels),
+        "-f",
+        "s16le",
+        "pipe:1",
+        ]
+    )
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError(f"FFmpeg is unavailable: {error}") from error
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        raise RuntimeError("FFmpeg loop decode pipes were not created")
+
+    carry = b""
+    decoded_frames = 0
+    while True:
+        chunk = process.stdout.read(1024 * 1024)
+        if not chunk:
+            break
+        payload = carry + chunk
+        complete_bytes = len(payload) - (len(payload) % frame_width)
+        complete_payload = payload[:complete_bytes]
+        complete_frames = complete_bytes // frame_width
+        upper_frame = decoded_frames + complete_frames
+        for frame in sorted(wanted_frames):
+            if decoded_frames <= frame < upper_frame:
+                offset = (frame - decoded_frames) * frame_width
+                frame_samples = array(
+                    "h",
+                    complete_payload[offset : offset + frame_width],
+                )
+                if sys.byteorder != "little":
+                    frame_samples.byteswap()
+                captured[frame] = tuple(frame_samples)
+        decoded_frames = upper_frame
+        carry = payload[complete_bytes:]
+
+    stderr = process.stderr.read().decode("utf-8", errors="replace").strip()
+    process.stdout.close()
+    process.stderr.close()
+    return_code = process.wait()
+    if return_code != 0:
+        raise RuntimeError(f"FFmpeg repeated Ogg decode failed: {stderr}")
+    if carry:
+        raise RuntimeError("FFmpeg repeated Ogg decode ended on a partial frame")
+    minimum_frames = frames_per_copy * 4
+    if decoded_frames < minimum_frames:
+        raise RuntimeError(
+            "FFmpeg repeated Ogg decode was short: "
+            f"{decoded_frames} < {minimum_frames} frames"
+        )
+
+    deltas: list[float] = []
+    for boundary in boundary_frames:
+        before = captured.get(boundary - 1)
+        after = captured.get(boundary)
+        if before is None or after is None:
+            raise RuntimeError(
+                f"FFmpeg repeated Ogg decode missed boundary {boundary}"
+            )
+        delta = max(
+            abs(after[channel] - before[channel]) / 32768.0
+            for channel in range(channels)
+        )
+        deltas.append(delta)
+    return {
+        "checkedBoundaryCount": len(deltas),
+        "repeatedFrameCount": decoded_frames,
+        "threeBoundaryDeltas": [round(value, 8) for value in deltas],
+        "threeBoundaryMaxDelta": round(max(deltas, default=0.0), 8),
+    }
+
+
 def _load_wav(path: Path) -> tuple[dict, array]:
     with wave.open(str(path), "rb") as handle:
         channels = handle.getnchannels()
@@ -82,35 +374,100 @@ def _load_wav(path: Path) -> tuple[dict, array]:
     )
 
 
-def _signal_metrics(metadata: dict, samples: array, loop: bool) -> dict:
-    normalized = [value / 32768.0 for value in samples]
-    peak = max((abs(value) for value in normalized), default=0.0)
-    mean = sum(normalized) / max(1, len(normalized))
-    rms = math.sqrt(
-        sum(value * value for value in normalized) / max(1, len(normalized))
-    )
+def _signal_metrics(
+    metadata: dict,
+    samples: array,
+    loop: bool,
+    *,
+    repeated_boundaries: dict | None = None,
+) -> dict:
+    sample_count = len(samples)
+    channels = int(metadata["channels"])
+    frame_count = int(metadata["frameCount"])
+    peak_integer = 0
+    total = 0
+    total_squares = 0
+    mid_squares = 0.0
+    side_squares = 0.0
+    for frame in range(frame_count):
+        offset = frame * channels
+        for channel in range(channels):
+            value = int(samples[offset + channel])
+            absolute = abs(value)
+            if absolute > peak_integer:
+                peak_integer = absolute
+            total += value
+            total_squares += value * value
+        if channels == 2:
+            left = int(samples[offset])
+            right = int(samples[offset + 1])
+            mid = (left + right) * 0.5
+            side = (left - right) * 0.5
+            mid_squares += mid * mid
+            side_squares += side * side
+
+    peak = peak_integer / 32768.0
+    mean = total / max(1, sample_count) / 32768.0
+    rms_integer = math.sqrt(total_squares / max(1, sample_count))
+    rms = rms_integer / 32768.0
     zero_crossings = 0
-    previous = normalized[0] if normalized else 0.0
-    for value in normalized[1:]:
-        if (previous < 0.0 <= value) or (previous >= 0.0 > value):
-            zero_crossings += 1
-        previous = value
+    for channel in range(channels):
+        previous = int(samples[channel]) if sample_count > channel else 0
+        for index in range(channel + channels, sample_count, channels):
+            value = int(samples[index])
+            if (previous < 0 <= value) or (previous >= 0 > value):
+                zero_crossings += 1
+            previous = value
+
+    temporal_profile: list[float] = []
+    for block in range(TEMPORAL_PROFILE_BLOCKS):
+        first_frame = frame_count * block // TEMPORAL_PROFILE_BLOCKS
+        final_frame = frame_count * (block + 1) // TEMPORAL_PROFILE_BLOCKS
+        first_sample = first_frame * channels
+        final_sample = final_frame * channels
+        block_squares = 0
+        for index in range(first_sample, final_sample):
+            value = int(samples[index])
+            block_squares += value * value
+        block_rms = math.sqrt(
+            block_squares / max(1, final_sample - first_sample)
+        )
+        temporal_profile.append(
+            round(block_rms / max(rms_integer, 1e-9), 6)
+        )
+
     duration = metadata["frameCount"] / metadata["sampleRate"]
+    peak_dbfs = _linear_to_db(peak)
+    rms_dbfs = _linear_to_db(rms)
+    if channels == 2:
+        mid_rms = math.sqrt(mid_squares / max(1, frame_count))
+        side_rms = math.sqrt(side_squares / max(1, frame_count))
+        stereo_side_ratio_db = _linear_to_db(
+            side_rms / max(mid_rms, 1e-12)
+        )
+    else:
+        stereo_side_ratio_db = -240.0
     metrics = {
         **metadata,
+        "crestFactorDb": round(peak_dbfs - rms_dbfs, 3),
         "dcOffset": round(mean, 8),
         "durationSeconds": round(duration, 6),
-        "peakDbfs": round(_linear_to_db(peak), 3),
-        "rmsDbfs": round(_linear_to_db(rms), 3),
-        "zeroCrossingsPerSecond": round(zero_crossings / max(duration, 1e-9), 3),
+        "peakDbfs": round(peak_dbfs, 3),
+        "rmsDbfs": round(rms_dbfs, 3),
+        "stereoSideRatioDb": round(stereo_side_ratio_db, 3),
+        "temporalRmsProfile": temporal_profile,
+        "zeroCrossingsPerSecond": round(
+            zero_crossings / max(duration * channels, 1e-9),
+            3,
+        ),
     }
     if loop:
-        channels = metadata["channels"]
         first_frame = [
-            normalized[channel] for channel in range(min(channels, len(normalized)))
+            samples[channel] / 32768.0
+            for channel in range(min(channels, sample_count))
         ]
         final_frame = [
-            normalized[len(normalized) - channels + channel]
+            samples[sample_count - channels + channel] / 32768.0
             for channel in range(channels)
         ]
         boundary_delta = max(
@@ -125,27 +482,64 @@ def _signal_metrics(metadata: dict, samples: array, loop: bool) -> dict:
             max(1, int(metadata["sampleRate"] * 0.020)),
         )
         window_samples = window_frames * channels
-        first_window = normalized[:window_samples]
-        final_window = normalized[-window_samples:]
         first_rms = math.sqrt(
-            sum(value * value for value in first_window)
-            / max(1, len(first_window))
-        )
+            sum(
+                int(samples[index]) * int(samples[index])
+                for index in range(window_samples)
+            )
+            / max(1, window_samples)
+        ) / 32768.0
         final_rms = math.sqrt(
-            sum(value * value for value in final_window)
-            / max(1, len(final_window))
-        )
+            sum(
+                int(samples[index]) * int(samples[index])
+                for index in range(sample_count - window_samples, sample_count)
+            )
+            / max(1, window_samples)
+        ) / 32768.0
         window_delta_db = abs(
             _linear_to_db(max(first_rms, 1e-12))
             - _linear_to_db(max(final_rms, 1e-12))
         )
         metrics["loop"] = {
             "boundarySampleDelta": round(boundary_delta, 8),
-            "threeBoundaryMaxDelta": round(boundary_delta, 8),
             "windowMilliseconds": 20,
             "windowRmsDeltaDb": round(window_delta_db, 3),
         }
+        if repeated_boundaries is not None:
+            metrics["loop"].update(repeated_boundaries)
     return metrics
+
+
+def _music_feature_distance(left: dict, right: dict) -> float:
+    """Gain- and duration-independent distance between decoded music signals."""
+
+    left_zcr = float(left["zeroCrossingsPerSecond"])
+    right_zcr = float(right["zeroCrossingsPerSecond"])
+    zcr_distance = abs(
+        math.log2((left_zcr + 1.0) / (right_zcr + 1.0))
+    )
+    crest_distance = abs(
+        float(left["crestFactorDb"]) - float(right["crestFactorDb"])
+    ) / 12.0
+    side_distance = min(
+        abs(
+            float(left["stereoSideRatioDb"])
+            - float(right["stereoSideRatioDb"])
+        ),
+        24.0,
+    ) / 24.0
+    left_profile = left["temporalRmsProfile"]
+    right_profile = right["temporalRmsProfile"]
+    profile_distance = sum(
+        abs(
+            math.log2(
+                (float(left_value) + 0.01)
+                / (float(right_value) + 0.01)
+            )
+        )
+        for left_value, right_value in zip(left_profile, right_profile)
+    ) / max(1, min(len(left_profile), len(right_profile)))
+    return zcr_distance + crest_distance + side_distance + profile_distance
 
 
 def _failure(failures: list[dict], code: str, detail: str) -> None:
@@ -349,6 +743,7 @@ def audit_bundle(
     *,
     write_report: bool = True,
     project_root: Path | None = None,
+    ffmpeg: str = "ffmpeg",
 ) -> dict:
     bundle_root = Path(bundle_root).resolve()
     project_root = (
@@ -403,14 +798,44 @@ def audit_bundle(
         str(generator_relative_path).endswith("build_cc0_audio_bundle.py")
         or int(provenance.get("schemaVersion", 1)) >= 2
     )
+    is_ogg_music_bundle = (
+        is_layered_bundle and int(provenance.get("schemaVersion", 1)) >= 3
+    )
+    live_ffmpeg: dict | None = None
     source_record_ids: set[str] = set()
     if is_layered_bundle:
+        try:
+            live_ffmpeg = _ffmpeg_version(ffmpeg)
+        except RuntimeError as error:
+            _failure(failures, "ffmpeg_runtime", str(error))
         if int(generator_info.get("ffmpegMajor", 0)) != 8:
             _failure(
                 failures,
                 "ffmpeg_version",
                 f"expected FFmpeg 8, got {generator_info.get('ffmpegVersion')}",
             )
+        if is_ogg_music_bundle:
+            if generator_info.get("vorbisEncoder") not in {
+                "libvorbis",
+                "vorbis",
+            }:
+                _failure(
+                    failures,
+                    "vorbis_encoder",
+                    (
+                        "generator must record the actual Vorbis encoder, got "
+                        f"{generator_info.get('vorbisEncoder')!r}"
+                    ),
+                )
+            if int(generator_info.get("vorbisQuality", -1)) != 5:
+                _failure(
+                    failures,
+                    "vorbis_quality",
+                    (
+                        "expected Vorbis quality 5, got "
+                        f"{generator_info.get('vorbisQuality')!r}"
+                    ),
+                )
         source_record_ids = _audit_source_records(
             bundle_root=bundle_root,
             project_root=project_root,
@@ -485,7 +910,7 @@ def audit_bundle(
         for asset in [*spec.get("music", []), *spec.get("sfx", [])]
     }
     expected_runtime_paths: set[Path] = set()
-    music_features: dict[str, tuple[float, float, float]] = {}
+    music_features: dict[str, dict] = {}
     peak_limit = 10.0 ** (PEAK_LIMIT_DBFS / 20.0)
 
     for cue_id, cue in sorted(catalog.get("cues", {}).items()):
@@ -516,12 +941,51 @@ def audit_bundle(
         if not absolute_path.is_file():
             _failure(failures, "missing_runtime_asset", f"{cue_id}: {relative_path}")
             continue
+        expected_suffix = (
+            ".ogg"
+            if cue.get("role") == "music" and is_ogg_music_bundle
+            else ".wav"
+        )
+        if absolute_path.suffix.lower() != expected_suffix:
+            _failure(
+                failures,
+                "runtime_format",
+                f"{cue_id}: expected {expected_suffix}, got {absolute_path.suffix}",
+            )
         try:
-            metadata, samples = _load_wav(absolute_path)
-        except (ValueError, wave.Error) as error:
-            _failure(failures, "invalid_wav", str(error))
+            if absolute_path.suffix.lower() == ".ogg":
+                codec_name = _probe_audio_codec(absolute_path, ffmpeg=ffmpeg)
+                if codec_name != "vorbis":
+                    raise ValueError(
+                        f"{absolute_path}: expected Vorbis, got {codec_name}"
+                    )
+                metadata, samples = _decode_ogg(
+                    absolute_path,
+                    ffmpeg=ffmpeg,
+                    channels=2,
+                )
+                repeated_boundaries = (
+                    _decode_three_loop_boundaries(
+                        absolute_path,
+                        ffmpeg=ffmpeg,
+                        metadata=metadata,
+                    )
+                    if bool(cue["loop"])
+                    else None
+                )
+            else:
+                metadata, samples = _load_wav(absolute_path)
+                metadata["runtimeCodec"] = "pcm_s16le"
+                repeated_boundaries = None
+        except (RuntimeError, ValueError, wave.Error) as error:
+            _failure(failures, "invalid_runtime_audio", str(error))
             continue
-        metrics = _signal_metrics(metadata, samples, bool(cue["loop"]))
+        metrics = _signal_metrics(
+            metadata,
+            samples,
+            bool(cue["loop"]),
+            repeated_boundaries=repeated_boundaries,
+        )
         metrics["sha256"] = _sha256_file(absolute_path)
         asset_metrics[cue_id] = metrics
 
@@ -538,7 +1002,10 @@ def audit_bundle(
                 "channels",
                 f"{cue_id}: expected {expected_channels}, got {metadata['channels']}",
             )
-        if metadata["compression"] != "NONE":
+        if (
+            absolute_path.suffix.lower() == ".wav"
+            and metadata["compression"] != "NONE"
+        ):
             _failure(
                 failures,
                 "compression",
@@ -574,6 +1041,28 @@ def audit_bundle(
                         f"{loop_metrics['boundarySampleDelta']}"
                     ),
                 )
+            if absolute_path.suffix.lower() == ".ogg":
+                if loop_metrics.get("checkedBoundaryCount") != 3:
+                    _failure(
+                        failures,
+                        "loop_boundary_count",
+                        (
+                            f"{cue_id}: expected 3 actual boundaries, got "
+                            f"{loop_metrics.get('checkedBoundaryCount')}"
+                        ),
+                    )
+                if (
+                    float(loop_metrics.get("threeBoundaryMaxDelta", 1.0))
+                    > LOOP_BOUNDARY_DELTA_LIMIT
+                ):
+                    _failure(
+                        failures,
+                        "loop_three_boundaries",
+                        (
+                            f"{cue_id}: repeated max sample delta "
+                            f"{loop_metrics.get('threeBoundaryMaxDelta')}"
+                        ),
+                    )
             if (
                 loop_metrics["windowRmsDeltaDb"]
                 > LOOP_WINDOW_RMS_DELTA_DB_LIMIT
@@ -586,11 +1075,7 @@ def audit_bundle(
                         f"{loop_metrics['windowRmsDeltaDb']} dB"
                     ),
                 )
-            music_features[cue_id] = (
-                metrics["rmsDbfs"],
-                metrics["zeroCrossingsPerSecond"],
-                metrics["durationSeconds"],
-            )
+            music_features[cue_id] = metrics
 
         asset_id = cue["assetId"]
         ledger = ledger_by_asset.get(asset_id)
@@ -647,6 +1132,29 @@ def audit_bundle(
             if source_asset is None:
                 _failure(failures, "source_asset", f"{cue_id}: missing from spec")
             else:
+                if cue.get("role") == "music" and is_ogg_music_bundle:
+                    required_music_fields = (
+                        "filename",
+                        "projectCopy",
+                        "trimStartSeconds",
+                        "trimEndSeconds",
+                        "loopCrossfadeSeconds",
+                        "masterGainDb",
+                    )
+                    missing_music_fields = [
+                        field
+                        for field in required_music_fields
+                        if field not in source_asset
+                    ]
+                    if missing_music_fields:
+                        _failure(
+                            failures,
+                            "music_spec_fields",
+                            (
+                                f"{cue_id}: missing "
+                                + ", ".join(missing_music_fields)
+                            ),
+                        )
                 source_fragment = json.dumps(
                     source_asset,
                     ensure_ascii=False,
@@ -666,7 +1174,8 @@ def audit_bundle(
 
     actual_runtime_paths = {
         path.relative_to(bundle_root)
-        for path in (bundle_root / "runtime").rglob("*.wav")
+        for suffix in ("*.wav", "*.ogg")
+        for path in (bundle_root / "runtime").rglob(suffix)
         if path.is_file()
     }
     orphan_paths = sorted(
@@ -686,16 +1195,15 @@ def audit_bundle(
         for right_id in music_cues[left_index + 1 :]:
             left = music_features[left_id]
             right = music_features[right_id]
-            feature_distance = (
-                abs(left[0] - right[0])
-                + abs(left[1] - right[1]) / 100.0
-                + abs(left[2] - right[2])
-            )
-            if feature_distance < 0.25:
+            feature_distance = _music_feature_distance(left, right)
+            if feature_distance < MUSIC_FINGERPRINT_DISTANCE_LIMIT:
                 _failure(
                     failures,
                     "music_distinguishability",
-                    f"{left_id} and {right_id} feature distance {feature_distance:.3f}",
+                    (
+                        f"{left_id} and {right_id} duration-independent "
+                        f"feature distance {feature_distance:.3f}"
+                    ),
                 )
 
     context_cues = set(catalog.get("contexts", {}).values())
@@ -715,6 +1223,7 @@ def audit_bundle(
         "assetCount": len(asset_metrics),
         "assets": asset_metrics,
         "auditor": {
+            "ffmpeg": live_ffmpeg,
             "implementation": (
                 ".agents/skills/design-beastbound-audio/scripts/"
                 "audit_audio_bundle.py"
@@ -728,6 +1237,9 @@ def audit_bundle(
             "dcAbsoluteLimit": DC_ABSOLUTE_LIMIT,
             "loopBoundaryDeltaLimit": LOOP_BOUNDARY_DELTA_LIMIT,
             "loopWindowRmsDeltaDbLimit": LOOP_WINDOW_RMS_DELTA_DB_LIMIT,
+            "musicFingerprintDistanceLimit": (
+                MUSIC_FINGERPRINT_DISTANCE_LIMIT
+            ),
             "peakLimitDbfs": PEAK_LIMIT_DBFS,
             "silenceFloorDbfs": SILENCE_FLOOR_DBFS,
         },
@@ -748,12 +1260,21 @@ def main() -> int:
         help="audio bundle root",
     )
     parser.add_argument(
+        "--ffmpeg",
+        default="ffmpeg",
+        help="FFmpeg 8 executable",
+    )
+    parser.add_argument(
         "--no-write-report",
         action="store_true",
         help="audit without replacing audit-report.json",
     )
     args = parser.parse_args()
-    report = audit_bundle(args.bundle, write_report=not args.no_write_report)
+    report = audit_bundle(
+        args.bundle,
+        write_report=not args.no_write_report,
+        ffmpeg=args.ffmpeg,
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1
 

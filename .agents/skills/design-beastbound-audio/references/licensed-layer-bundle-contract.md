@@ -55,13 +55,29 @@ Use `projectCopy` for one declared source:
 {
   "assetId": "music_town_v2",
   "cueId": "music.town",
-  "filename": "town_loop.wav",
-  "projectCopy": {"sourceId": "music_town_v1"}
+  "filename": "town_loop.ogg",
+  "projectCopy": "music_town_source",
+  "trimStartSeconds": 1.0,
+  "trimEndSeconds": 65.0,
+  "loopCrossfadeSeconds": 2.0,
+  "loopRotationSeconds": 48.25,
+  "highpassHz": 10.0,
+  "masterGainDb": 3.0
 }
 ```
 
 `projectCopy` may also be the source ID string. Music must use exactly one
-source. It is decoded to 48 kHz PCM16 while retaining a stereo runtime layout.
+source. The builder keeps the immutable input unchanged, renders a reviewed
+trim and tail-to-head crossfade to a lossless 48 kHz stereo intermediate,
+selects a deterministic natural low-discontinuity rotation point without
+adding an edge fade, and emits Ogg Vorbis quality 5. The rotation changes only
+where playback starts; it must not change the loop duration.
+`loopRotationSeconds` is an optional reviewed override measured in the
+lossless circular intermediate, not in the immutable source. Use it only when
+the final encoded Ogg fails a boundary gate after deterministic search, and
+keep the encoded result under the same three-boundary audit. `highpassHz` is
+optional and limited to inaudible/subsonic cleanup; declare and preserve it in
+provenance rather than silently filtering a licensed master.
 
 Use `layers` for one or more SFX sources:
 
@@ -96,9 +112,16 @@ The builder:
 - requires FFmpeg 8;
 - decodes each layer, trims, resets timestamps, resamples, applies pitch,
   high/low-pass filters, gain, and delay in that order;
+- pins FFmpeg input, filter-complex, and output threading to one, and uses
+  `asetnsamples=n=1024:p=0` to stabilize each layer's frame cadence without
+  extending a shorter source past its natural EOF;
 - mixes with `amix normalize=0`;
 - applies optional master gain, a 3 ms fade-in, and a 40 ms fade-out;
-- writes 48 kHz mono PCM16 WAV for SFX and 48 kHz stereo PCM16 WAV for music.
+- writes 48 kHz mono PCM16 WAV for SFX and 48 kHz stereo Ogg Vorbis quality 5
+  for music;
+- records the actual Vorbis encoder used (`libvorbis`, or FFmpeg 8 native
+  `vorbis -strict experimental` when libvorbis is unavailable), all trim,
+  crossfade and gain fields, plus the deterministic rotation search result.
 
 The builder does not loudness-normalize or rescue an over-hot mix. Choose layer
 and master gain deliberately, then let the bundle auditor reject clipping,
@@ -119,3 +142,12 @@ records the generator and FFmpeg version, implementation hash, complete
 processing command, source IDs and hashes, license fields, runtime hashes, and
 specification fragment hash. The auditor re-hashes both runtime and source
 files; a provenance document alone is not proof that the current files match.
+For Ogg loops it decodes to the declared granule duration, concatenates four
+independently decoded copies, and measures all three real boundaries. Do not
+reuse one boundary value three times or include duration in a “music is
+distinct” score.
+
+Run at least three consecutive builds against the same frozen specification
+and compare every runtime hash. A scheduling workaround that pads EOF, changes
+an already reviewed sample count, or merely happens to match twice is not a
+valid determinism fix.

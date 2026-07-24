@@ -1,15 +1,15 @@
 {
   "bundleId": "beastbound_audio_v2",
   "format": {
-    "musicRuntimeFormatDecision": "The reviewed v1 project-owned music masters remain the v2 source and are deterministically decoded to 48 kHz stereo PCM16 WAV. Combat, creature, and outcome SFX are rebuilt from creator-authored CC0 sources as 48 kHz mono PCM16 WAV; reviewed long-form replacements may move to Ogg Vorbis after decoded-loop auditing.",
+    "musicRuntimeFormatDecision": "Four author-released, license-clear long-form music sources are trimmed, seam-crossfaded, gain-matched and deterministically encoded as 48 kHz stereo Ogg Vorbis. Combat, creature, outcome, UI and world SFX remain 48 kHz mono PCM16 WAV. The auditor decodes runtime Ogg before signal, loudness-family and three-loop seam checks.",
     "sampleRate": 48000,
     "sampleWidthBits": 16
   },
   "reviewState": "owner_listening_pending",
-  "freezeTimestampUtc": "2026-07-24T00:00:00Z",
+  "freezeTimestampUtc": "2026-07-24T18:05:31Z",
   "ownership": {
-    "basis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-    "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review."
+    "basis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+    "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review."
   },
   "contexts": {
     "battle_normal": "music.battle_normal",
@@ -25,40 +25,44 @@
   },
   "sources": [
     {
-      "sourceId": "v1_music_town",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/town_loop.wav",
-      "sourceType": "project_owned_carry_forward",
-      "author": "Beastbound Odyssey",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "expectedSha256": "9642690f5eda63a436c15590defd3fce521dc75990c16fe262658f5b470a882f"
+      "sourceId": "composerbeck_town_theme",
+      "sourcePath": "source/third_party/composerbeck_town_theme/town_theme.wav",
+      "sourceType": "licensed_cc_by_4_0",
+      "author": "ComposerBeck",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourcePageUrl": "https://opengameart.org/content/town-theme-rpg-0",
+      "expectedSha256": "cdd0b06d587475fc69634e27f3c351c3c874585f137063a3b0500ac0abd82918"
     },
     {
-      "sourceId": "v1_music_wilderness",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/wilderness_loop.wav",
-      "sourceType": "project_owned_carry_forward",
-      "author": "Beastbound Odyssey",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "expectedSha256": "d4f9dd4fc2ecde75b8146c2994d7609f14dad523b6abf3b979eb5fbdf18ca7c2"
+      "sourceId": "pauliuw_field_of_dreams",
+      "sourcePath": "source/third_party/pauliuw_field_of_dreams/the_field_of_dreams.mp3",
+      "sourceType": "licensed_cc0",
+      "author": "pauliuw",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/the-field-of-dreams",
+      "expectedSha256": "103a7032a49be7e8399c5cb771f7759eac9ac1a0d2bf227f41fff42ad8d78194"
     },
     {
-      "sourceId": "v1_music_cave",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/cave_loop.wav",
-      "sourceType": "project_owned_carry_forward",
-      "author": "Beastbound Odyssey",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "expectedSha256": "dcda79bb9651f1f647960537e4382dc181df9a078fca50599e037df055486e77"
+      "sourceId": "brandon_morris_cave_theme",
+      "sourcePath": "source/third_party/brandon_morris_cave_theme/cave_theme.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Brandon Morris (Brandon75689, submitted by HaelDB)",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/cave-theme",
+      "expectedSha256": "1ddf7a0845c808136edfda7ea829e48fa2b7c57793e008d706dadbb5917dff9c"
     },
     {
-      "sourceId": "v1_music_battle_normal",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/battle_normal_loop.wav",
-      "sourceType": "project_owned_carry_forward",
-      "author": "Beastbound Odyssey",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "expectedSha256": "953758dab09e3fa9aa0d39a5bf257a9db89049d962d753bf52bfa1c0137009bc"
+      "sourceId": "telaron_regular_battle",
+      "sourcePath": "source/third_party/telaron_regular_battle/regular_battle.mp3",
+      "sourceType": "licensed_cc_by_3_0",
+      "author": "Telaron",
+      "licenseName": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "sourcePageUrl": "https://opengameart.org/content/a-regular-battle",
+      "expectedSha256": "fd7b2d4658628cff2aaf1a6596a0126ad1557fb8fc3bcab440843889dfbb135c"
     },
     {
       "sourceId": "v1_ui_confirm",
@@ -370,8 +374,12 @@
     {
       "assetId": "music_town_v2",
       "cueId": "music.town",
-      "filename": "town_loop.wav",
-      "projectCopy": "v1_music_town",
+      "filename": "town_loop.ogg",
+      "projectCopy": "composerbeck_town_theme",
+      "trimStartSeconds": 1.02356,
+      "trimEndSeconds": 65.3,
+      "loopCrossfadeSeconds": 2.0,
+      "masterGainDb": 9.5,
       "bus": "Music",
       "cooldownMs": 0,
       "gainDb": -4.0,
@@ -382,8 +390,12 @@
     {
       "assetId": "music_wilderness_v2",
       "cueId": "music.wilderness",
-      "filename": "wilderness_loop.wav",
-      "projectCopy": "v1_music_wilderness",
+      "filename": "wilderness_loop.ogg",
+      "projectCopy": "pauliuw_field_of_dreams",
+      "trimStartSeconds": 0.861066,
+      "trimEndSeconds": 83.31585,
+      "loopCrossfadeSeconds": 2.0,
+      "masterGainDb": 4.8,
       "bus": "Music",
       "cooldownMs": 0,
       "gainDb": -4.5,
@@ -394,8 +406,14 @@
     {
       "assetId": "music_cave_v2",
       "cueId": "music.cave",
-      "filename": "cave_loop.wav",
-      "projectCopy": "v1_music_cave",
+      "filename": "cave_loop.ogg",
+      "projectCopy": "brandon_morris_cave_theme",
+      "trimStartSeconds": 0.396599,
+      "trimEndSeconds": 279.752698,
+      "loopCrossfadeSeconds": 3.0,
+      "loopRotationSeconds": 275.008604,
+      "highpassHz": 10.0,
+      "masterGainDb": -5.5,
       "bus": "Music",
       "cooldownMs": 0,
       "gainDb": -5.0,
@@ -406,8 +424,12 @@
     {
       "assetId": "music_battle_normal_v2",
       "cueId": "music.battle_normal",
-      "filename": "battle_normal_loop.wav",
-      "projectCopy": "v1_music_battle_normal",
+      "filename": "battle_normal_loop.ogg",
+      "projectCopy": "telaron_regular_battle",
+      "trimStartSeconds": 1.148322,
+      "trimEndSeconds": 95.001088,
+      "loopCrossfadeSeconds": 2.0,
+      "masterGainDb": -2.5,
       "bus": "Music",
       "cooldownMs": 0,
       "gainDb": -3.5,

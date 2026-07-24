@@ -1,18 +1,20 @@
 {
   "bundleId": "beastbound_audio_v2",
-  "freezeTimestampUtc": "2026-07-24T00:00:00Z",
+  "freezeTimestampUtc": "2026-07-24T18:05:31Z",
   "generator": {
     "ffmpegMajor": 8,
     "ffmpegVersion": "ffmpeg version 8.1.1 Copyright (c) 2000-2026 the FFmpeg developers",
     "implementation": ".agents/skills/design-beastbound-audio/scripts/build_cc0_audio_bundle.py",
-    "implementationSha256": "cd9a925a461fe0eb7e1089266429cf712bf5609ffe6c921915ab19ec5ac56900",
+    "implementationSha256": "01176d24ea23f6738cb2398d1e6090d364b60a515308685c516d427742f08dd4",
     "pythonImplementation": "CPython",
-    "version": "2.0.0"
+    "version": "3.0.0",
+    "vorbisEncoder": "vorbis",
+    "vorbisQuality": 5
   },
   "ledger": [
     {
       "assetId": "combat_block_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.block"
@@ -20,10 +22,10 @@
       "durationFrames": 23520,
       "durationSeconds": 0.49,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_plate_medium_002 -i source:kenney_soft_medium_001 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.490000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=110.000,lowpass=f=5200.000,volume=-8.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.180000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=4000.000,volume=-14.000dB[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.490000,volume=-1.500dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_block.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_plate_medium_002 -threads 1 -i source:kenney_soft_medium_001 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.490000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=110.000,lowpass=f=5200.000,volume=-8.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.180000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=4000.000,volume=-14.000dB,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.490000,volume=-1.500dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_block.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_block.wav",
@@ -39,7 +41,7 @@
     },
     {
       "assetId": "combat_bounce_edge_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.bounce_edge"
@@ -47,10 +49,10 @@
       "durationFrames": 15360,
       "durationSeconds": 0.32,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_wood_slam_04 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.320000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4500.000,volume=-8.000dB[layer0];[layer0]atrim=end=0.320000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_bounce_edge.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_wood_slam_04 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.320000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4500.000,volume=-8.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.320000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_bounce_edge.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_bounce_edge.wav",
@@ -65,7 +67,7 @@
     },
     {
       "assetId": "combat_cast_skill_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.cast_skill"
@@ -73,10 +75,10 @@
       "durationFrames": 25920,
       "durationSeconds": 0.54,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_spell_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.540000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=120.000,lowpass=f=5300.000,volume=-11.000dB[layer0];[layer0]atrim=end=0.540000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_cast_skill.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_spell_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.540000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=120.000,lowpass=f=5300.000,volume=-11.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.540000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_cast_skill.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "motion",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_cast_skill.wav",
@@ -91,7 +93,7 @@
     },
     {
       "assetId": "combat_combo_start_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.combo_start"
@@ -99,10 +101,10 @@
       "durationFrames": 20160,
       "durationSeconds": 0.42,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:artisticdude_swish_9 -i source:kenney_cloth_belt_2 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.172000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=90.000,lowpass=f=5500.000,volume=-16.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.420000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=150.000,lowpass=f=4800.000,volume=-5.000dB[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.420000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_combo_start.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:artisticdude_swish_9 -threads 1 -i source:kenney_cloth_belt_2 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.172000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=90.000,lowpass=f=5500.000,volume=-16.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.420000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=150.000,lowpass=f=4800.000,volume=-5.000dB,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.420000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_combo_start.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "motion",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_combo_start.wav",
@@ -118,7 +120,7 @@
     },
     {
       "assetId": "combat_counter_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.counter"
@@ -126,10 +128,10 @@
       "durationFrames": 13104,
       "durationSeconds": 0.273,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_draw_knife_3 -i source:artisticdude_swish_12 -filter_complex '[0:a:0]atrim=start=0.052000:end=0.325000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=140.000,lowpass=f=5000.000[layer0];[1:a:0]atrim=start=0.000000:end=0.076000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=6200.000,volume=-19.000dB,adelay=25:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.310000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_counter.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_draw_knife_3 -threads 1 -i source:artisticdude_swish_12 -filter_complex '[0:a:0]atrim=start=0.052000:end=0.325000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=140.000,lowpass=f=5000.000,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.076000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=6200.000,volume=-19.000dB,adelay=25:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.310000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_counter.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_counter.wav",
@@ -145,7 +147,7 @@
     },
     {
       "assetId": "combat_critical_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.critical"
@@ -153,10 +155,10 @@
       "durationFrames": 7541,
       "durationSeconds": 0.157104,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_bell_heavy_004 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.160000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=90.000,lowpass=f=3800.000,volume=-12.000dB[layer0];[layer0]atrim=end=0.160000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_critical.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_bell_heavy_004 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.160000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=90.000,lowpass=f=3800.000,volume=-12.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.160000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_critical.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_critical.wav",
@@ -171,7 +173,7 @@
     },
     {
       "assetId": "combat_down_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.down"
@@ -179,10 +181,10 @@
       "durationFrames": 32100,
       "durationSeconds": 0.66875,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_drop_leather -i source:kenney_soft_heavy_004 -i source:rubberduck_item_gem_02 -i source:rubberduck_item_gem_02 -i source:rubberduck_item_gem_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.320000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4300.000,volume=3.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=3500.000,volume=-8.000dB,adelay=15:all=1[layer1];[2:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.08000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-7.000dB,adelay=160:all=1[layer2];[3:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.93000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-9.000dB,adelay=290:all=1[layer3];[4:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.80000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-11.000dB,adelay=420:all=1[layer4];[layer0][layer1][layer2][layer3][layer4]amix=inputs=5:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.680000,volume=-4.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_down.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_drop_leather -threads 1 -i source:kenney_soft_heavy_004 -threads 1 -i source:rubberduck_item_gem_02 -threads 1 -i source:rubberduck_item_gem_02 -threads 1 -i source:rubberduck_item_gem_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.320000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4300.000,volume=3.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=3500.000,volume=-8.000dB,adelay=15:all=1,asetnsamples=n=1024:p=0[layer1];[2:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.08000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-7.000dB,adelay=160:all=1,asetnsamples=n=1024:p=0[layer2];[3:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.93000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-9.000dB,adelay=290:all=1,asetnsamples=n=1024:p=0[layer3];[4:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.80000000,aresample=48000:async=0,highpass=f=350.000,lowpass=f=6500.000,volume=-11.000dB,adelay=420:all=1,asetnsamples=n=1024:p=0[layer4];[layer0][layer1][layer2][layer3][layer4]amix=inputs=5:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.680000,volume=-4.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_down.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_down.wav",
@@ -201,7 +203,7 @@
     },
     {
       "assetId": "combat_evade_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.evade"
@@ -209,10 +211,10 @@
       "durationFrames": 3648,
       "durationSeconds": 0.076,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:artisticdude_swish_12 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.076000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=6200.000,volume=-17.000dB[layer0];[layer0]atrim=end=0.076000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_evade.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:artisticdude_swish_12 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.076000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=6200.000,volume=-17.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.076000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_evade.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_evade.wav",
@@ -227,7 +229,7 @@
     },
     {
       "assetId": "combat_guard_ready_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.guard_ready"
@@ -235,10 +237,10 @@
       "durationFrames": 20160,
       "durationSeconds": 0.42,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_cloth_belt_2 -i source:kenney_metal_click -filter_complex '[0:a:0]atrim=start=0.000000:end=0.420000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=150.000,lowpass=f=4800.000,volume=-7.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.220000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=5000.000,volume=-5.000dB,adelay=28:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.420000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_guard_ready.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_cloth_belt_2 -threads 1 -i source:kenney_metal_click -filter_complex '[0:a:0]atrim=start=0.000000:end=0.420000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=150.000,lowpass=f=4800.000,volume=-7.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.220000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=5000.000,volume=-5.000dB,adelay=28:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.420000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_guard_ready.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "motion",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_guard_ready.wav",
@@ -254,7 +256,7 @@
     },
     {
       "assetId": "combat_hit_combo_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.hit_combo"
@@ -262,10 +264,10 @@
       "durationFrames": 25536,
       "durationSeconds": 0.532,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_punch_heavy_001 -i source:rubberduck_bfh1_hit_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.390000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=65.000,lowpass=f=4800.000,volume=-5.500dB[layer0];[1:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-7.000dB,adelay=12:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.540000,volume=-1.500dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_hit_combo.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_punch_heavy_001 -threads 1 -i source:rubberduck_bfh1_hit_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.390000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=65.000,lowpass=f=4800.000,volume=-5.500dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-7.000dB,adelay=12:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.540000,volume=-1.500dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_hit_combo.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_hit_combo.wav",
@@ -281,7 +283,7 @@
     },
     {
       "assetId": "combat_hit_heavy_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.hit_heavy"
@@ -289,10 +291,10 @@
       "durationFrames": 25536,
       "durationSeconds": 0.532,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_punch_heavy_001 -i source:rubberduck_bfh1_hit_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.390000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=65.000,lowpass=f=4800.000,volume=-6.500dB[layer0];[1:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-8.000dB,adelay=12:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.540000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_hit_heavy.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_punch_heavy_001 -threads 1 -i source:rubberduck_bfh1_hit_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.390000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=65.000,lowpass=f=4800.000,volume=-6.500dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-8.000dB,adelay=12:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.540000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_hit_heavy.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_hit_heavy.wav",
@@ -308,7 +310,7 @@
     },
     {
       "assetId": "combat_hit_light_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.hit_light"
@@ -316,10 +318,10 @@
       "durationFrames": 15264,
       "durationSeconds": 0.318,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_punch_medium_001 -i source:rubberduck_bfh1_hit_06 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.245000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=5200.000,volume=-8.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.310000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=4500.000,volume=-15.000dB,adelay=8:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.330000,volume=-2.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_hit_light.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_punch_medium_001 -threads 1 -i source:rubberduck_bfh1_hit_06 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.245000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=5200.000,volume=-8.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.310000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,lowpass=f=4500.000,volume=-15.000dB,adelay=8:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.330000,volume=-2.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_hit_light.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_hit_light.wav",
@@ -335,7 +337,7 @@
     },
     {
       "assetId": "combat_hit_skill_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.hit_skill"
@@ -343,10 +345,10 @@
       "durationFrames": 22896,
       "durationSeconds": 0.477,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_punch_medium_001 -i source:rubberduck_spell_fire_07 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.245000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=5200.000,volume=-9.000dB[layer0];[1:a:0]atrim=start=0.035000:end=0.500000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=120.000,lowpass=f=4800.000,volume=3.000dB,adelay=12:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.490000,volume=-2.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_hit_skill.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_punch_medium_001 -threads 1 -i source:rubberduck_spell_fire_07 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.245000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=5200.000,volume=-9.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.035000:end=0.500000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=120.000,lowpass=f=4800.000,volume=3.000dB,adelay=12:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.490000,volume=-2.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_hit_skill.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "contact",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_hit_skill.wav",
@@ -362,7 +364,7 @@
     },
     {
       "assetId": "combat_knockback_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.knockback"
@@ -370,10 +372,10 @@
       "durationFrames": 13920,
       "durationSeconds": 0.29,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_soft_medium_002 -i source:rubberduck_bfh1_hit_06 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.135000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4300.000,volume=-8.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.280000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-14.000dB,adelay=10:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.290000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_knockback.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_soft_medium_002 -threads 1 -i source:rubberduck_bfh1_hit_06 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.135000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=75.000,lowpass=f=4300.000,volume=-8.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.280000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4200.000,volume=-14.000dB,adelay=10:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.290000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_knockback.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_knockback.wav",
@@ -389,7 +391,7 @@
     },
     {
       "assetId": "combat_launch_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.launch"
@@ -397,10 +399,10 @@
       "durationFrames": 27595,
       "durationSeconds": 0.574896,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:artisticdude_swish_9 -i source:artisticdude_swish_7 -i source:rubberduck_spell_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.196000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.78000000,aresample=48000:async=0,highpass=f=90.000,lowpass=f=6500.000,volume=-7.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.187000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.12000000,aresample=48000:async=0,highpass=f=260.000,lowpass=f=9000.000,volume=-10.000dB,adelay=18:all=1[layer1];[2:a:0]atrim=start=0.000000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.86000000,aresample=48000:async=0,highpass=f=160.000,lowpass=f=5500.000,volume=-6.000dB,adelay=40:all=1[layer2];[layer0][layer1][layer2]amix=inputs=3:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.580000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_launch.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:artisticdude_swish_9 -threads 1 -i source:artisticdude_swish_7 -threads 1 -i source:rubberduck_spell_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.196000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.78000000,aresample=48000:async=0,highpass=f=90.000,lowpass=f=6500.000,volume=-7.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.187000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.12000000,aresample=48000:async=0,highpass=f=260.000,lowpass=f=9000.000,volume=-10.000dB,adelay=18:all=1,asetnsamples=n=1024:p=0[layer1];[2:a:0]atrim=start=0.000000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.86000000,aresample=48000:async=0,highpass=f=160.000,lowpass=f=5500.000,volume=-6.000dB,adelay=40:all=1,asetnsamples=n=1024:p=0[layer2];[layer0][layer1][layer2]amix=inputs=3:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.580000,volume=-1.000dB,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_launch.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_launch.wav",
@@ -417,7 +419,7 @@
     },
     {
       "assetId": "combat_motion_character_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.motion_character"
@@ -425,10 +427,10 @@
       "durationFrames": 7440,
       "durationSeconds": 0.155,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:artisticdude_swish_7 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.155000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=110.000,lowpass=f=6200.000,volume=-14.000dB[layer0];[layer0]atrim=end=0.155000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_motion_character.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:artisticdude_swish_7 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.155000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=110.000,lowpass=f=6200.000,volume=-14.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.155000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_motion_character.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "motion",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_motion_character.wav",
@@ -443,7 +445,7 @@
     },
     {
       "assetId": "combat_motion_pet_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.motion_pet"
@@ -451,10 +453,10 @@
       "durationFrames": 7670,
       "durationSeconds": 0.159792,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:artisticdude_swish_9 -filter_complex '[0:a:0]atrim=start=0.025000:end=0.172000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.92000000,aresample=48000:async=0,highpass=f=90.000,lowpass=f=5500.000,volume=-13.000dB[layer0];[layer0]atrim=end=0.170000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_motion_pet.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:artisticdude_swish_9 -filter_complex '[0:a:0]atrim=start=0.025000:end=0.172000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.92000000,aresample=48000:async=0,highpass=f=90.000,lowpass=f=5500.000,volume=-13.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.170000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_motion_pet.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "motion",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_motion_pet.wav",
@@ -469,7 +471,7 @@
     },
     {
       "assetId": "combat_revive_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "combat.revive"
@@ -477,10 +479,10 @@
       "durationFrames": 29040,
       "durationSeconds": 0.605,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_spell_02 -i source:rubberduck_item_gem_04 -filter_complex '[0:a:0]atrim=start=0.015000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=160.000,lowpass=f=5500.000,volume=-12.000dB[layer0];[1:a:0]atrim=start=0.015000:end=0.540000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=250.000,lowpass=f=5000.000,volume=-18.000dB,adelay=80:all=1[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.610000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/combat_revive.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_spell_02 -threads 1 -i source:rubberduck_item_gem_04 -filter_complex '[0:a:0]atrim=start=0.015000:end=0.460000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=160.000,lowpass=f=5500.000,volume=-12.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.015000:end=0.540000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=250.000,lowpass=f=5000.000,volume=-18.000dB,adelay=80:all=1,asetnsamples=n=1024:p=0[layer1];[layer0][layer1]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.610000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/combat_revive.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "reaction",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/combat_revive.wav",
@@ -496,7 +498,7 @@
     },
     {
       "assetId": "creature_pet_effort_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "creature.pet_effort"
@@ -504,10 +506,10 @@
       "durationFrames": 8944,
       "durationSeconds": 0.186333,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_creature_misc_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.189000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4500.000,volume=-5.000dB[layer0];[layer0]atrim=end=0.189000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/creature_pet_effort.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_creature_misc_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.189000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4500.000,volume=-5.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.189000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/creature_pet_effort.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "voice",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/creature_pet_effort.wav",
@@ -522,7 +524,7 @@
     },
     {
       "assetId": "creature_pet_hurt_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "creature.pet_hurt"
@@ -530,10 +532,10 @@
       "durationFrames": 24960,
       "durationSeconds": 0.52,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_creature_hurt_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4000.000,volume=-10.000dB[layer0];[layer0]atrim=end=0.520000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/creature_pet_hurt.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_creature_hurt_01 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.520000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=80.000,lowpass=f=4000.000,volume=-10.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=0.520000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/creature_pet_hurt.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "voice",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/creature_pet_hurt.wav",
@@ -548,111 +550,199 @@
     },
     {
       "assetId": "music_battle_normal_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 2,
       "cueIds": [
         "music.battle_normal"
       ],
-      "durationFrames": 349091,
-      "durationSeconds": 7.272729,
+      "durationFrames": 4408896,
+      "durationSeconds": 91.852,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_music_battle_normal -map 0:a:0 -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -flags:a +bitexact runtime/music/battle_normal_loop.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "musicProcessing": {
+        "appliedLoopCrossfadeSeconds": 2.000770833333333,
+        "highpassHz": 0.0,
+        "loopCrossfadeSeconds": 2.0,
+        "loopRotation": {
+          "preEncodeBoundarySampleDelta": 0.00024414,
+          "preEncodeLocalRmsDbfs": -46.617,
+          "preEncodeWindowRmsDeltaDb": 0.350346,
+          "rotationFrames": 1382732,
+          "rotationSeconds": 28.806917,
+          "searchSeconds": 60.0,
+          "searchStepFrames": 1,
+          "selectionMode": "deterministic_search",
+          "windowMilliseconds": 20
+        },
+        "masterGainDb": -2.5,
+        "trimEndSeconds": 95.001088,
+        "trimStartSeconds": 1.148322,
+        "vorbisEncoder": "vorbis",
+        "vorbisFrameAlignmentAdjustmentFrames": 37,
+        "vorbisQuality": 5
+      },
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i source:telaron_regular_battle -filter_complex '[0:a:0]atrim=start=1.148322:end=95.001088,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,volume=-2.500dB,asplit=3[body_source][tail_source][head_source];[body_source]atrim=start=2.000771:end=91.851995,asetpts=PTS-STARTPTS[body];[tail_source]atrim=start=91.851995:end=93.852766,asetpts=PTS-STARTPTS,afade=t=out:st=0:d=2.000771[tail];[head_source]atrim=start=0:end=2.000771,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=2.000771[head];[tail][head]amix=inputs=2:normalize=0:duration=longest[seam];[body][seam]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -threads 1 -flags:a +bitexact prepared-pcm:music_battle_normal_v2 && ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i prepared-pcm:music_battle_normal_v2 -filter_complex '[0:a:0]asplit=2[after_source][before_source];[after_source]atrim=start_sample=1382732,asetpts=PTS-STARTPTS[after];[before_source]atrim=end_sample=1382732,asetpts=PTS-STARTPTS[before];[after][before]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -fflags +bitexact -ar 48000 -ac 2 -c:a vorbis -q:a 5 -threads 1 -strict experimental -serial_offset 0 -flags:a +bitexact runtime/music/battle_normal_loop.ogg",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "music",
-      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/battle_normal_loop.wav",
-      "runtimeSha256": "7313afe8dd95658af549325f113a9f909e23eb3142269575a2a84b3eda2b4046",
+      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/battle_normal_loop.ogg",
+      "runtimeSha256": "22b09adc8548b0f8c59f6a0dd8ae0123604415a801a79e5d255cb4431d138b3b",
       "sampleRate": 48000,
       "sourceIds": [
-        "v1_music_battle_normal"
+        "telaron_regular_battle"
       ],
-      "sourceSpecificationFragmentSha256": "1f390d7f62f0e7c9ebd7332f82724fae7551ccd285a55a3aeae878e114cf8440",
+      "sourceSpecificationFragmentSha256": "77293b074f6960d3ffa68e561f5d073026dab834ce0c6ad95c81207e56dda0e9",
       "sourceSpecificationPath": "client/godot/assets/audio/beastbound_audio_v2/source/spec.json",
-      "sourceType": "project_owned_carry_forward"
+      "sourceType": "licensed_cc_by_3_0"
     },
     {
       "assetId": "music_cave_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 2,
       "cueIds": [
         "music.cave"
       ],
-      "durationFrames": 606316,
-      "durationSeconds": 12.631583,
+      "durationFrames": 13265088,
+      "durationSeconds": 276.356,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_music_cave -map 0:a:0 -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -flags:a +bitexact runtime/music/cave_loop.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "musicProcessing": {
+        "appliedLoopCrossfadeSeconds": 3.0001041666666666,
+        "highpassHz": 10.0,
+        "loopCrossfadeSeconds": 3.0,
+        "loopRotation": {
+          "preEncodeBoundarySampleDelta": 0.00015259,
+          "preEncodeLocalRmsDbfs": -42.973,
+          "preEncodeWindowRmsDeltaDb": 0.108031,
+          "rotationFrames": 13200413,
+          "rotationSeconds": 275.008604,
+          "searchSeconds": 0.0,
+          "searchStepFrames": 0,
+          "selectionMode": "reviewed_spec_override",
+          "windowMilliseconds": 20
+        },
+        "masterGainDb": -5.5,
+        "trimEndSeconds": 279.752698,
+        "trimStartSeconds": 0.396599,
+        "vorbisEncoder": "vorbis",
+        "vorbisFrameAlignmentAdjustmentFrames": 5,
+        "vorbisQuality": 5
+      },
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i source:brandon_morris_cave_theme -filter_complex '[0:a:0]atrim=start=0.396599:end=279.752698,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,highpass=f=10.000,volume=-5.500dB,asplit=3[body_source][tail_source][head_source];[body_source]atrim=start=3.000104:end=276.355995,asetpts=PTS-STARTPTS[body];[tail_source]atrim=start=276.355995:end=279.356099,asetpts=PTS-STARTPTS,afade=t=out:st=0:d=3.000104[tail];[head_source]atrim=start=0:end=3.000104,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=3.000104[head];[tail][head]amix=inputs=2:normalize=0:duration=longest[seam];[body][seam]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -threads 1 -flags:a +bitexact prepared-pcm:music_cave_v2 && ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i prepared-pcm:music_cave_v2 -filter_complex '[0:a:0]asplit=2[after_source][before_source];[after_source]atrim=start_sample=13200413,asetpts=PTS-STARTPTS[after];[before_source]atrim=end_sample=13200413,asetpts=PTS-STARTPTS[before];[after][before]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -fflags +bitexact -ar 48000 -ac 2 -c:a vorbis -q:a 5 -threads 1 -strict experimental -serial_offset 0 -flags:a +bitexact runtime/music/cave_loop.ogg",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "music",
-      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/cave_loop.wav",
-      "runtimeSha256": "fb19a59574c74cf6693f6b47c23318746c7f7ce70082d62a4f5b3802962ab91e",
+      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/cave_loop.ogg",
+      "runtimeSha256": "8af10e3d28e294056ba9d2adf1482b4aea38b906d5f90b589c487382ce3644d7",
       "sampleRate": 48000,
       "sourceIds": [
-        "v1_music_cave"
+        "brandon_morris_cave_theme"
       ],
-      "sourceSpecificationFragmentSha256": "15881775d4bc70920aaf5f0bdc804f0a70f0db115d81ee29ac1bf95c7829852c",
+      "sourceSpecificationFragmentSha256": "1c8aae934b1a4cdc481f272b74a84e7688c54504afc1c182722c6df428ae20eb",
       "sourceSpecificationPath": "client/godot/assets/audio/beastbound_audio_v2/source/spec.json",
-      "sourceType": "project_owned_carry_forward"
+      "sourceType": "licensed_cc0"
     },
     {
       "assetId": "music_town_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 2,
       "cueIds": [
         "music.town"
       ],
-      "durationFrames": 500870,
-      "durationSeconds": 10.434792,
+      "durationFrames": 2989248,
+      "durationSeconds": 62.276,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_music_town -map 0:a:0 -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -flags:a +bitexact runtime/music/town_loop.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "musicProcessing": {
+        "appliedLoopCrossfadeSeconds": 2.0004375,
+        "highpassHz": 0.0,
+        "loopCrossfadeSeconds": 2.0,
+        "loopRotation": {
+          "preEncodeBoundarySampleDelta": 0.00021362,
+          "preEncodeLocalRmsDbfs": -28.363,
+          "preEncodeWindowRmsDeltaDb": 0.270089,
+          "rotationFrames": 2320479,
+          "rotationSeconds": 48.343313,
+          "searchSeconds": 60.0,
+          "searchStepFrames": 1,
+          "selectionMode": "deterministic_search",
+          "windowMilliseconds": 20
+        },
+        "masterGainDb": 9.5,
+        "trimEndSeconds": 65.3,
+        "trimStartSeconds": 1.02356,
+        "vorbisEncoder": "vorbis",
+        "vorbisFrameAlignmentAdjustmentFrames": 21,
+        "vorbisQuality": 5
+      },
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i source:composerbeck_town_theme -filter_complex '[0:a:0]atrim=start=1.023560:end=65.300000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,volume=9.500dB,asplit=3[body_source][tail_source][head_source];[body_source]atrim=start=2.000437:end=62.276002,asetpts=PTS-STARTPTS[body];[tail_source]atrim=start=62.276002:end=64.276440,asetpts=PTS-STARTPTS,afade=t=out:st=0:d=2.000437[tail];[head_source]atrim=start=0:end=2.000437,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=2.000437[head];[tail][head]amix=inputs=2:normalize=0:duration=longest[seam];[body][seam]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -threads 1 -flags:a +bitexact prepared-pcm:music_town_v2 && ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i prepared-pcm:music_town_v2 -filter_complex '[0:a:0]asplit=2[after_source][before_source];[after_source]atrim=start_sample=2320479,asetpts=PTS-STARTPTS[after];[before_source]atrim=end_sample=2320479,asetpts=PTS-STARTPTS[before];[after][before]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -fflags +bitexact -ar 48000 -ac 2 -c:a vorbis -q:a 5 -threads 1 -strict experimental -serial_offset 0 -flags:a +bitexact runtime/music/town_loop.ogg",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "music",
-      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/town_loop.wav",
-      "runtimeSha256": "db94c13c4de83377cffc625bf1c2135399b5849d703dcce1dbcd55a587726a08",
+      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/town_loop.ogg",
+      "runtimeSha256": "61fb2b709df53c5cb2c709169261cb30fad01661de5bd6ebb938cf612759c3b2",
       "sampleRate": 48000,
       "sourceIds": [
-        "v1_music_town"
+        "composerbeck_town_theme"
       ],
-      "sourceSpecificationFragmentSha256": "b47629163f8b31addb0d9b4b717fbba38a28c201d5626d720f8c71ea81bf0674",
+      "sourceSpecificationFragmentSha256": "6073910146445d63756d7c3bfa6c3173763e177cdc6d2e30a7e9976cedf34624",
       "sourceSpecificationPath": "client/godot/assets/audio/beastbound_audio_v2/source/spec.json",
-      "sourceType": "project_owned_carry_forward"
+      "sourceType": "licensed_cc_by_4_0"
     },
     {
       "assetId": "music_wilderness_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 2,
       "cueIds": [
         "music.wilderness"
       ],
-      "durationFrames": 426667,
-      "durationSeconds": 8.888896,
+      "durationFrames": 3861824,
+      "durationSeconds": 80.454667,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_music_wilderness -map 0:a:0 -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -flags:a +bitexact runtime/music/wilderness_loop.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "musicProcessing": {
+        "appliedLoopCrossfadeSeconds": 2.000125,
+        "highpassHz": 0.0,
+        "loopCrossfadeSeconds": 2.0,
+        "loopRotation": {
+          "preEncodeBoundarySampleDelta": 0.00012207,
+          "preEncodeLocalRmsDbfs": -39.571,
+          "preEncodeWindowRmsDeltaDb": 0.079703,
+          "rotationFrames": 343233,
+          "rotationSeconds": 7.150688,
+          "searchSeconds": 60.0,
+          "searchStepFrames": 1,
+          "selectionMode": "deterministic_search",
+          "windowMilliseconds": 20
+        },
+        "masterGainDb": 4.8,
+        "trimEndSeconds": 83.31585,
+        "trimStartSeconds": 0.861066,
+        "vorbisEncoder": "vorbis",
+        "vorbisFrameAlignmentAdjustmentFrames": 6,
+        "vorbisQuality": 5
+      },
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i source:pauliuw_field_of_dreams -filter_complex '[0:a:0]atrim=start=0.861066:end=83.315850,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,volume=4.800dB,asplit=3[body_source][tail_source][head_source];[body_source]atrim=start=2.000125:end=80.454659,asetpts=PTS-STARTPTS[body];[tail_source]atrim=start=80.454659:end=82.454784,asetpts=PTS-STARTPTS,afade=t=out:st=0:d=2.000125[tail];[head_source]atrim=start=0:end=2.000125,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=2.000125[head];[tail][head]amix=inputs=2:normalize=0:duration=longest[seam];[body][seam]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 2 -c:a pcm_s16le -threads 1 -flags:a +bitexact prepared-pcm:music_wilderness_v2 && ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -i prepared-pcm:music_wilderness_v2 -filter_complex '[0:a:0]asplit=2[after_source][before_source];[after_source]atrim=start_sample=343233,asetpts=PTS-STARTPTS[after];[before_source]atrim=end_sample=343233,asetpts=PTS-STARTPTS[before];[after][before]concat=n=2:v=0:a=1,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]' -map '[out]' -vn -map_metadata -1 -fflags +bitexact -ar 48000 -ac 2 -c:a vorbis -q:a 5 -threads 1 -strict experimental -serial_offset 0 -flags:a +bitexact runtime/music/wilderness_loop.ogg",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "music",
-      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/wilderness_loop.wav",
-      "runtimeSha256": "9d3f1a6df3c9599bceca6b0d6bc8816196be0fc764431e678b3d01769c0c0fb5",
+      "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/music/wilderness_loop.ogg",
+      "runtimeSha256": "383e3bb4b06307de8ca014334df8deac967a72a621b2830e8650216b1f5bf015",
       "sampleRate": 48000,
       "sourceIds": [
-        "v1_music_wilderness"
+        "pauliuw_field_of_dreams"
       ],
-      "sourceSpecificationFragmentSha256": "82dffecf38809c659988817ea870caa4f8ed77b77ec98378fb199c26a67708f7",
+      "sourceSpecificationFragmentSha256": "c709accd0a57680da85e76caae52e70c3f81da47c9aff2c83d22ceb2fdadd15f",
       "sourceSpecificationPath": "client/godot/assets/audio/beastbound_audio_v2/source/spec.json",
-      "sourceType": "project_owned_carry_forward"
+      "sourceType": "licensed_cc0"
     },
     {
       "assetId": "outcome_defeat_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "outcome.defeat"
@@ -660,10 +750,10 @@
       "durationFrames": 61396,
       "durationSeconds": 1.279083,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:kenney_bell_heavy_001 -filter_complex '[0:a:0]atrim=start=0.000000:end=1.100000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.86000000,aresample=48000:async=0,highpass=f=60.000,lowpass=f=3200.000,volume=-9.000dB[layer0];[layer0]atrim=end=1.280000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/outcome_defeat.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:kenney_bell_heavy_001 -filter_complex '[0:a:0]atrim=start=0.000000:end=1.100000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.86000000,aresample=48000:async=0,highpass=f=60.000,lowpass=f=3200.000,volume=-9.000dB,asetnsamples=n=1024:p=0[layer0];[layer0]atrim=end=1.280000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/outcome_defeat.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "outcome",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/outcome_defeat.wav",
@@ -678,7 +768,7 @@
     },
     {
       "assetId": "outcome_victory_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "outcome.victory"
@@ -686,10 +776,10 @@
       "durationFrames": 43967,
       "durationSeconds": 0.915979,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:rubberduck_item_gem_02 -i source:rubberduck_item_gem_02 -i source:rubberduck_item_gem_02 -i source:rubberduck_item_coins_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.94000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-10.000dB[layer0];[1:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.06000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-12.000dB,adelay=130:all=1[layer1];[2:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.19000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-14.000dB,adelay=260:all=1[layer2];[3:a:0]atrim=start=0.000000:end=0.616000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=5200.000,volume=-17.000dB,adelay=300:all=1[layer3];[layer0][layer1][layer2][layer3]amix=inputs=4:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.920000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/outcome_victory.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:rubberduck_item_gem_02 -threads 1 -i source:rubberduck_item_gem_02 -threads 1 -i source:rubberduck_item_gem_02 -threads 1 -i source:rubberduck_item_coins_02 -filter_complex '[0:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*0.94000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-10.000dB,asetnsamples=n=1024:p=0[layer0];[1:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.06000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-12.000dB,adelay=130:all=1,asetnsamples=n=1024:p=0[layer1];[2:a:0]atrim=start=0.000000:end=0.199000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,asetrate=48000*1.19000000,aresample=48000:async=0,highpass=f=250.000,lowpass=f=5000.000,volume=-14.000dB,adelay=260:all=1,asetnsamples=n=1024:p=0[layer2];[3:a:0]atrim=start=0.000000:end=0.616000,asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=180.000,lowpass=f=5200.000,volume=-17.000dB,adelay=300:all=1,asetnsamples=n=1024:p=0[layer3];[layer0][layer1][layer2][layer3]amix=inputs=4:duration=longest:dropout_transition=0:normalize=0[mixed];[mixed]atrim=end=0.920000,afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/outcome_victory.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "outcome",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/outcome_victory.wav",
@@ -707,7 +797,7 @@
     },
     {
       "assetId": "ui_cancel_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "ui.cancel"
@@ -715,10 +805,10 @@
       "durationFrames": 7680,
       "durationSeconds": 0.16,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_ui_cancel -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/ui_cancel.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:v1_ui_cancel -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/ui_cancel.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "ui",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/ui_cancel.wav",
@@ -733,7 +823,7 @@
     },
     {
       "assetId": "ui_confirm_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "ui.confirm"
@@ -741,10 +831,10 @@
       "durationFrames": 6720,
       "durationSeconds": 0.14,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_ui_confirm -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/ui_confirm.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:v1_ui_confirm -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/ui_confirm.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "ui",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/ui_confirm.wav",
@@ -759,7 +849,7 @@
     },
     {
       "assetId": "ui_error_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "ui.error"
@@ -767,10 +857,10 @@
       "durationFrames": 14400,
       "durationSeconds": 0.3,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_ui_error -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/ui_error.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:v1_ui_error -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/ui_error.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "ui",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/ui_error.wav",
@@ -785,7 +875,7 @@
     },
     {
       "assetId": "world_encounter_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "world.encounter"
@@ -793,10 +883,10 @@
       "durationFrames": 37440,
       "durationSeconds": 0.78,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_world_encounter -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/world_encounter.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:v1_world_encounter -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/world_encounter.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "world",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/world_encounter.wav",
@@ -811,7 +901,7 @@
     },
     {
       "assetId": "world_warp_v2",
-      "authorTool": "Beastbound FFmpeg layered audio builder 2.0.0",
+      "authorTool": "Beastbound FFmpeg layered audio builder 3.0.0",
       "channels": 1,
       "cueIds": [
         "world.warp"
@@ -819,10 +909,10 @@
       "durationFrames": 44160,
       "durationSeconds": 0.92,
       "license": "See sourceRecords by sourceIds",
-      "ownershipBasis": "Mixed-source Beastbound production bundle: project-owned v1 music, UI, and world masters plus creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. No StoneAge or other commercial-game audio is copied.",
-      "processing": "FFmpeg 8 deterministic decode/mix; music remains stereo, SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
-      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -i source:v1_world_warp -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -flags:a +bitexact runtime/sfx/world_warp.wav",
-      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed CC0 masters; update expected hashes and rerun the deterministic builder, auditor, runtime checks, and owner listening review.",
+      "ownershipBasis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+      "processing": "FFmpeg 8 deterministic processing; music is trimmed, circularly crossfaded, gain staged, and encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono amix normalize=0 plus 3 ms fade-in and 40 ms fade-out",
+      "processingCommand": "ffmpeg -hide_banner -loglevel error -y -fflags +bitexact -filter_complex_threads 1 -threads 1 -i source:v1_world_warp -filter_complex '[0:a:0]asetpts=PTS-STARTPTS,aresample=48000:async=0,aformat=sample_fmts=fltp:channel_layouts=mono[layer0];[layer0]afade=t=in:st=0:d=0.003,areverse,afade=t=in:st=0:d=0.040,areverse,aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=mono[out]' -map '[out]' -vn -map_metadata -1 -ar 48000 -ac 1 -c:a pcm_s16le -threads 1 -flags:a +bitexact runtime/sfx/world_warp.wav",
+      "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review.",
       "reviewState": "owner_listening_pending",
       "role": "world",
       "runtimePath": "res://assets/audio/beastbound_audio_v2/runtime/sfx/world_warp.wav",
@@ -836,9 +926,9 @@
       "sourceType": "project_owned_carry_forward"
     }
   ],
-  "musicRuntimeFormatDecision": "The reviewed v1 project-owned music masters remain the v2 source and are deterministically decoded to 48 kHz stereo PCM16 WAV. Combat, creature, and outcome SFX are rebuilt from creator-authored CC0 sources as 48 kHz mono PCM16 WAV; reviewed long-form replacements may move to Ogg Vorbis after decoded-loop auditing.",
+  "musicRuntimeFormatDecision": "Four author-released, license-clear long-form music sources are trimmed, seam-crossfaded, gain-matched and deterministically encoded as 48 kHz stereo Ogg Vorbis. Combat, creature, outcome, UI and world SFX remain 48 kHz mono PCM16 WAV. The auditor decodes runtime Ogg before signal, loudness-family and three-loop seam checks.",
   "reviewState": "owner_listening_pending",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "sourceRecords": [
     {
       "author": "artisticdude",
@@ -875,6 +965,30 @@
       "sourcePath": "source/third_party/artisticdude_swishes/swish-9.wav",
       "sourceSha256": "123883f006ce55feecbff11eea5f87c4493df4399989983037144570a23723c1",
       "sourceType": "licensed_cc0"
+    },
+    {
+      "author": "Brandon Morris (Brandon75689, submitted by HaelDB)",
+      "expectedSha256": "1ddf7a0845c808136edfda7ea829e48fa2b7c57793e008d706dadbb5917dff9c",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "pathKind": "bundle",
+      "sourceId": "brandon_morris_cave_theme",
+      "sourcePageUrl": "https://opengameart.org/content/cave-theme",
+      "sourcePath": "source/third_party/brandon_morris_cave_theme/cave_theme.ogg",
+      "sourceSha256": "1ddf7a0845c808136edfda7ea829e48fa2b7c57793e008d706dadbb5917dff9c",
+      "sourceType": "licensed_cc0"
+    },
+    {
+      "author": "ComposerBeck",
+      "expectedSha256": "cdd0b06d587475fc69634e27f3c351c3c874585f137063a3b0500ac0abd82918",
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "pathKind": "bundle",
+      "sourceId": "composerbeck_town_theme",
+      "sourcePageUrl": "https://opengameart.org/content/town-theme-rpg-0",
+      "sourcePath": "source/third_party/composerbeck_town_theme/town_theme.wav",
+      "sourceSha256": "cdd0b06d587475fc69634e27f3c351c3c874585f137063a3b0500ac0abd82918",
+      "sourceType": "licensed_cc_by_4_0"
     },
     {
       "author": "Kenney",
@@ -1021,6 +1135,18 @@
       "sourceType": "licensed_cc0"
     },
     {
+      "author": "pauliuw",
+      "expectedSha256": "103a7032a49be7e8399c5cb771f7759eac9ac1a0d2bf227f41fff42ad8d78194",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "pathKind": "bundle",
+      "sourceId": "pauliuw_field_of_dreams",
+      "sourcePageUrl": "https://opengameart.org/content/the-field-of-dreams",
+      "sourcePath": "source/third_party/pauliuw_field_of_dreams/the_field_of_dreams.mp3",
+      "sourceSha256": "103a7032a49be7e8399c5cb771f7759eac9ac1a0d2bf227f41fff42ad8d78194",
+      "sourceType": "licensed_cc0"
+    },
+    {
       "author": "rubberduck",
       "expectedSha256": "a3bd154c391e65947dcd700dfa64b927676253a2e1d229e63443f0ef5f955474",
       "licenseName": "CC0 1.0",
@@ -1153,48 +1279,16 @@
       "sourceType": "licensed_cc0"
     },
     {
-      "author": "Beastbound Odyssey",
-      "expectedSha256": "953758dab09e3fa9aa0d39a5bf257a9db89049d962d753bf52bfa1c0137009bc",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "pathKind": "project",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/battle_normal_loop.wav",
-      "sourceId": "v1_music_battle_normal",
-      "sourceSha256": "953758dab09e3fa9aa0d39a5bf257a9db89049d962d753bf52bfa1c0137009bc",
-      "sourceType": "project_owned_carry_forward"
-    },
-    {
-      "author": "Beastbound Odyssey",
-      "expectedSha256": "dcda79bb9651f1f647960537e4382dc181df9a078fca50599e037df055486e77",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "pathKind": "project",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/cave_loop.wav",
-      "sourceId": "v1_music_cave",
-      "sourceSha256": "dcda79bb9651f1f647960537e4382dc181df9a078fca50599e037df055486e77",
-      "sourceType": "project_owned_carry_forward"
-    },
-    {
-      "author": "Beastbound Odyssey",
-      "expectedSha256": "9642690f5eda63a436c15590defd3fce521dc75990c16fe262658f5b470a882f",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "pathKind": "project",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/town_loop.wav",
-      "sourceId": "v1_music_town",
-      "sourceSha256": "9642690f5eda63a436c15590defd3fce521dc75990c16fe262658f5b470a882f",
-      "sourceType": "project_owned_carry_forward"
-    },
-    {
-      "author": "Beastbound Odyssey",
-      "expectedSha256": "d4f9dd4fc2ecde75b8146c2994d7609f14dad523b6abf3b979eb5fbdf18ca7c2",
-      "licenseName": "Project-owned original",
-      "licenseUrl": "project://beastbound-odyssey/original-audio",
-      "pathKind": "project",
-      "projectPath": "client/godot/assets/audio/beastbound_audio_v1/runtime/music/wilderness_loop.wav",
-      "sourceId": "v1_music_wilderness",
-      "sourceSha256": "d4f9dd4fc2ecde75b8146c2994d7609f14dad523b6abf3b979eb5fbdf18ca7c2",
-      "sourceType": "project_owned_carry_forward"
+      "author": "Telaron",
+      "expectedSha256": "fd7b2d4658628cff2aaf1a6596a0126ad1557fb8fc3bcab440843889dfbb135c",
+      "licenseName": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "pathKind": "bundle",
+      "sourceId": "telaron_regular_battle",
+      "sourcePageUrl": "https://opengameart.org/content/a-regular-battle",
+      "sourcePath": "source/third_party/telaron_regular_battle/regular_battle.mp3",
+      "sourceSha256": "fd7b2d4658628cff2aaf1a6596a0126ad1557fb8fc3bcab440843889dfbb135c",
+      "sourceType": "licensed_cc_by_3_0"
     },
     {
       "author": "Beastbound Odyssey",
@@ -1252,5 +1346,5 @@
       "sourceType": "project_owned_carry_forward"
     }
   ],
-  "sourceSpecificationSha256": "86a248e05f27c1903546960e8f8e39fca4b9f303b950b876169b915df3c11843"
+  "sourceSpecificationSha256": "cd6617b7cacab4a820cca007de5bfdc7403d70f1181dfdaa043c836eefa2236c"
 }

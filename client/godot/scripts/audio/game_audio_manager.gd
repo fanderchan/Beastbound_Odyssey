@@ -35,6 +35,7 @@ var _catalog_error := ""
 var _settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
 var _stream_cache: Dictionary = {}
 var _missing_stream_paths: Dictionary = {}
+var _warmed_music_paths: Dictionary = {}
 var _stream_loader: Callable
 var _clock_msec: Callable
 var _playback_enabled := true
@@ -65,6 +66,7 @@ func configure_catalog_path(path: String) -> void:
 	_cues.clear()
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
+	_warmed_music_paths.clear()
 	if is_inside_tree():
 		_load_catalog_once()
 		_sync_effective_music()
@@ -81,6 +83,9 @@ func configure_stream_loader(loader: Callable) -> void:
 	_stream_loader = loader
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
+	_warmed_music_paths.clear()
+	if is_inside_tree() and _catalog_loaded:
+		_warm_context_music_streams()
 
 
 func configure_clock_msec(clock: Callable) -> void:
@@ -96,6 +101,7 @@ func configure_playback_enabled(value: bool) -> void:
 	if not _playback_enabled:
 		stop_all()
 	else:
+		_warm_context_music_streams()
 		_sync_effective_music()
 
 
@@ -120,6 +126,7 @@ func _exit_tree() -> void:
 	_release_player_streams()
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
+	_warmed_music_paths.clear()
 
 
 func _release_player_streams() -> void:
@@ -367,9 +374,12 @@ func debug_snapshot() -> Dictionary:
 		"bossBattleActive": _boss_battle_active,
 		"activeMusicContext": _active_music_context,
 		"activeMusicCue": _active_music_cue,
+		"activeMusicPlayerIndex": _active_music_player_index,
+		"combinedMusicPowerLinear": _combined_playing_music_power_linear(),
 		"musicTransitionSerial": _music_transition_serial,
 		"playbackEnabled": _playback_enabled,
 		"streamCacheCount": _stream_cache.size(),
+		"warmedMusicStreamCount": _warmed_music_paths.size(),
 		"missingStreamCount": _missing_stream_paths.size(),
 		"voicePoolSize": _sfx_voices.size(),
 		"activeVoiceCount": active_voice_count,
@@ -413,6 +423,7 @@ func _load_catalog_once() -> void:
 	_contexts = (raw_contexts as Dictionary).duplicate(true)
 	_cues = (raw_cues as Dictionary).duplicate(true)
 	_catalog_loaded = true
+	_warm_context_music_streams()
 
 
 func _load_settings() -> void:
@@ -523,7 +534,8 @@ func _switch_music_context(context: String) -> bool:
 func _switch_music_cue(cue_id: String, context: String) -> bool:
 	if cue_id == _active_music_cue:
 		_active_music_context = context
-		return true
+		if not _playback_enabled or _active_music_playback_is_valid():
+			return true
 	var info := cue_info(cue_id)
 	if info.is_empty():
 		_silence_music_players()
@@ -546,10 +558,12 @@ func _switch_music_cue(cue_id: String, context: String) -> bool:
 	_configure_music_loop(stream, bool(info.get("loop", true)))
 	if _music_players.size() < 2:
 		return false
+	var previous_index := _loudest_playing_music_player_index()
 	var previous: AudioStreamPlayer = null
-	if _active_music_player_index >= 0:
-		previous = _music_players[_active_music_player_index]
-	var target_index := 0 if _active_music_player_index != 0 else 1
+	if previous_index >= 0:
+		previous = _music_players[previous_index]
+	var previous_gain_linear := _combined_playing_music_power_linear()
+	var target_index := 0 if previous_index != 0 else 1
 	var target := _music_players[target_index]
 	if _music_tween != null and _music_tween.is_valid():
 		_music_tween.kill()
@@ -559,13 +573,29 @@ func _switch_music_cue(cue_id: String, context: String) -> bool:
 	target.volume_db = SILENCE_DB
 	target.play()
 	var target_gain_db := float(info.get("gainDb", 0.0))
+	var target_gain_linear := db_to_linear(target_gain_db)
+	if previous != null and previous != target:
+		# A second context change may interrupt an in-flight two-track fade. Keep
+		# the currently louder source as the outgoing bed, and promote its gain to
+		# the pre-interruption combined power before reusing the quieter slot. This
+		# preserves the envelope instead of abruptly dropping the still-dominant
+		# old source merely because metadata already points at the incoming cue.
+		_set_music_player_linear_gain(previous, previous_gain_linear)
 	_music_transition_serial += 1
 	var transition_serial := _music_transition_serial
-	_music_tween = create_tween().set_parallel(true)
-	_music_tween.tween_property(target, "volume_db", target_gain_db, MUSIC_CROSSFADE_SECONDS)
-	if previous != null and previous != target:
-		_music_tween.tween_property(previous, "volume_db", SILENCE_DB, MUSIC_CROSSFADE_SECONDS)
-	_music_tween.chain().tween_callback(
+	_music_tween = create_tween()
+	_music_tween.tween_method(
+		Callable(self, "_apply_music_crossfade_progress").bind(
+			target,
+			previous,
+			target_gain_linear,
+			previous_gain_linear
+		),
+		0.0,
+		1.0,
+		MUSIC_CROSSFADE_SECONDS
+	)
+	_music_tween.tween_callback(
 		_finish_music_crossfade.bind(previous, transition_serial)
 	)
 	_active_music_player_index = target_index
@@ -581,6 +611,97 @@ func _finish_music_crossfade(previous: AudioStreamPlayer, transition_serial: int
 	if previous != null and previous != _music_players[_active_music_player_index]:
 		previous.stop()
 		previous.stream = null
+
+
+static func music_crossfade_linear_gains(
+	progress: float,
+	incoming_final_linear: float,
+	outgoing_start_linear: float
+) -> Vector2:
+	var phase := clampf(progress, 0.0, 1.0) * PI * 0.5
+	return Vector2(
+		sin(phase) * maxf(0.0, incoming_final_linear),
+		cos(phase) * maxf(0.0, outgoing_start_linear)
+	)
+
+
+func _apply_music_crossfade_progress(
+	progress: float,
+	target: AudioStreamPlayer,
+	previous: AudioStreamPlayer,
+	target_gain_linear: float,
+	previous_gain_linear: float
+) -> void:
+	var gains := music_crossfade_linear_gains(
+		progress,
+		target_gain_linear,
+		previous_gain_linear
+	)
+	if target != null and is_instance_valid(target):
+		_set_music_player_linear_gain(target, gains.x)
+	if previous != null and previous != target and is_instance_valid(previous):
+		_set_music_player_linear_gain(previous, gains.y)
+
+
+func _set_music_player_linear_gain(player: AudioStreamPlayer, linear_gain: float) -> void:
+	player.volume_db = (
+		SILENCE_DB
+		if linear_gain <= db_to_linear(SILENCE_DB)
+		else linear_to_db(linear_gain)
+	)
+
+
+func _active_music_playback_is_valid() -> bool:
+	if (
+		_active_music_player_index < 0
+		or _active_music_player_index >= _music_players.size()
+	):
+		return false
+	var player := _music_players[_active_music_player_index]
+	return player != null and player.stream != null and player.playing
+
+
+func _loudest_playing_music_player_index() -> int:
+	var result := -1
+	var loudest_linear := -1.0
+	for index in _music_players.size():
+		var player := _music_players[index]
+		if player == null or player.stream == null or not player.playing:
+			continue
+		var linear_gain := db_to_linear(player.volume_db)
+		if linear_gain > loudest_linear:
+			result = index
+			loudest_linear = linear_gain
+	return result
+
+
+func _combined_playing_music_power_linear() -> float:
+	var power_squared := 0.0
+	for player in _music_players:
+		if player == null or player.stream == null or not player.playing:
+			continue
+		var linear_gain := db_to_linear(player.volume_db)
+		power_squared += linear_gain * linear_gain
+	return sqrt(power_squared)
+
+
+func _warm_context_music_streams() -> void:
+	if not _catalog_loaded or not _playback_enabled:
+		return
+	var context_names: Array[String] = []
+	for context_value in _contexts.keys():
+		context_names.append(str(context_value))
+	context_names.sort()
+	for context in context_names:
+		var cue_id := context_cue(context)
+		var info := cue_info(cue_id)
+		if str(info.get("role", "")).strip_edges().to_lower() != "music":
+			continue
+		var path := str(info.get("path", "")).strip_edges()
+		if path == "" or _warmed_music_paths.has(path):
+			continue
+		if _stream_for_path(path) != null:
+			_warmed_music_paths[path] = true
 
 
 func _stream_for_path(path: String) -> AudioStream:
@@ -605,6 +726,10 @@ func _stream_for_path(path: String) -> AudioStream:
 
 func _source_path_exists(path: String) -> bool:
 	if path == "":
+		return false
+	if _stream_cache.has(path):
+		return true
+	if _missing_stream_paths.has(path):
 		return false
 	if _stream_loader.is_valid():
 		return true

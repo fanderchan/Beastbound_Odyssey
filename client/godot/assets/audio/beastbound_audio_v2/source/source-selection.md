@@ -1,16 +1,16 @@
-# Beastbound combat audio v2 source selection
+# Beastbound audio v2 source selection
 
-## Goal
+## Combat SFX goal
 
 Replace the first procedural combat pass with short, dry, materially legible
 Foley while keeping every semantic cue independently replaceable. This is an
 owner-listening candidate, not a frozen final master.
 
-## Selection rules
+## Combat SFX selection rules
 
 - Only project-owned source or creator-authored CC0 packs are accepted.
 - No audio extracted from StoneAge or another commercial game is present.
-- Runtime masters are 48 kHz mono PCM16 and retain at least 3 dB of per-file
+- SFX runtime masters are 48 kHz mono PCM16 and retain at least 3 dB of per-file
   peak headroom before bus gain and the master limiter.
 - Main impacts use low-centroid punch and soft-body recordings. Bright layers
   are low-passed and kept well below the body layer.
@@ -44,6 +44,34 @@ non-abrupt mix even before simultaneous battle layers.
 
 The per-cue processing and exact source hashes are machine-readable in
 `spec.json` and `provenance.json`.
+
+## Phase 335 formal background music
+
+The four v1 carry-forward music canaries were only 7–13 seconds long and used
+one procedural oscillator template. They are replaced without changing the
+stable semantic cue IDs or the map/battle routing contract.
+
+The selected author-published OpenGameArt tracks provide distinct long-form
+roles:
+
+- town: ComposerBeck's flute-and-harp **Town Theme RPG**;
+- wilderness: pauliuw's open, cinematic **The Field Of Dreams**;
+- cave: Brandon Morris's atmospheric **Cave Theme**;
+- normal battle: Telaron's purpose-written **A Regular Battle**.
+
+Source files remain byte-for-byte frozen. Runtime masters trim leading/trailing
+silence, create a 2–3 second tail-to-head crossfade, resample to 48 kHz stereo,
+apply static gain only, and encode Ogg Vorbis. The cave source additionally
+uses an inaudible 10 Hz high-pass to remove DC and a reviewed circular cut at
+275.008604 seconds so the encoded result passes the same strict seam gate as
+the other three tracks. The result keeps 62–276 seconds of musical development
+per loop instead of repeating four bars.
+
+All four runtime masters target the same quiet background family
+(`-18.3` to `-18.8 LUFS-I` before cue and user-volume gain). Their source,
+license, required attribution, hashes, edits and replacement path are frozen in
+`ATTRIBUTION.md`, `OpenGameArt-BGM-sources.md`, `spec.json`, and
+`provenance.json`. The two CC BY credits must remain in distributions.
 
 ## Phase 334 readability correction
 

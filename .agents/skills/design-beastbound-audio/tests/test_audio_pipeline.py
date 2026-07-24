@@ -106,6 +106,7 @@ class AudioPipelineTest(unittest.TestCase):
                 frequency=frequency,
                 duration_seconds=1.0,
                 channels=2,
+                amplitude=0.015,
                 close_loop=True,
             )
             cue_id = f"music.{context}"
@@ -129,14 +130,21 @@ class AudioPipelineTest(unittest.TestCase):
                     "bus": "Music",
                     "cooldownMs": 0,
                     "cueId": cue_id,
-                    "filename": f"{context}_loop.wav",
+                    "filename": f"{context}_loop.ogg",
                     "gainDb": -6.0,
                     "loop": True,
+                    "loopCrossfadeSeconds": 0.08,
+                    "masterGainDb": 0.0,
                     "priority": 100,
                     "projectCopy": {"sourceId": source_id},
                     "role": "music",
+                    "trimEndSeconds": 0.95,
+                    "trimStartSeconds": 0.05,
                 }
             )
+            if context == "town":
+                music_assets[-1]["highpassHz"] = 10.0
+                music_assets[-1]["loopRotationSeconds"] = 0.101146
 
         layer_sources: list[dict] = []
         for index, frequency in enumerate((96.0, 720.0)):
@@ -170,7 +178,7 @@ class AudioPipelineTest(unittest.TestCase):
             "contexts": contexts,
             "format": {
                 "musicRuntimeFormatDecision": (
-                    "Test fixture music remains stereo PCM16 WAV."
+                    "Test fixture music is 48 kHz stereo Ogg Vorbis quality 5."
                 ),
                 "sampleRate": 48000,
                 "sampleWidthBits": 16,
@@ -192,7 +200,7 @@ class AudioPipelineTest(unittest.TestCase):
                 "combat.hit_light",
             ],
             "reviewState": "owner_listening_pending",
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "sfx": [
                 {
                     "assetId": "test_hit_light_asset",
@@ -305,13 +313,12 @@ class AudioPipelineTest(unittest.TestCase):
                 self.assertEqual(handle.getframerate(), 48000)
                 self.assertEqual(handle.getnchannels(), 1)
                 self.assertEqual(handle.getsampwidth(), 2)
-            with wave.open(
-                str(bundle / "runtime/music/town_loop.wav"),
-                "rb",
-            ) as handle:
-                self.assertEqual(handle.getframerate(), 48000)
-                self.assertEqual(handle.getnchannels(), 2)
-                self.assertEqual(handle.getsampwidth(), 2)
+            town_music = bundle / "runtime/music/town_loop.ogg"
+            self.assertTrue(town_music.is_file())
+            self.assertEqual(
+                AUDIT._probe_audio_codec(town_music, ffmpeg="ffmpeg"),
+                "vorbis",
+            )
 
             catalog = json.loads(
                 (bundle / "audio-cues.json").read_text(encoding="utf-8")
@@ -328,6 +335,11 @@ class AudioPipelineTest(unittest.TestCase):
                 )
             )
             self.assertEqual(provenance["generator"]["ffmpegMajor"], 8)
+            self.assertIn(
+                provenance["generator"]["vorbisEncoder"],
+                {"libvorbis", "vorbis"},
+            )
+            self.assertEqual(provenance["generator"]["vorbisQuality"], 5)
             self.assertEqual(len(provenance["sourceRecords"]), 6)
             self.assertTrue(
                 all(
@@ -354,33 +366,169 @@ class AudioPipelineTest(unittest.TestCase):
                 "afade=t=in:st=0:d=0.040",
                 ledger["test_hit_light_asset"]["processingCommand"],
             )
+            town_ledger = ledger["test_music_town_asset"]
+            self.assertEqual(
+                town_ledger["runtimePath"],
+                (
+                    "res://assets/audio/beastbound_audio_test/"
+                    "runtime/music/town_loop.ogg"
+                ),
+            )
+            music_processing = town_ledger["musicProcessing"]
+            self.assertEqual(music_processing["highpassHz"], 10.0)
+            self.assertEqual(music_processing["loopCrossfadeSeconds"], 0.08)
+            self.assertEqual(music_processing["masterGainDb"], 0.0)
+            self.assertEqual(music_processing["trimEndSeconds"], 0.95)
+            self.assertEqual(music_processing["trimStartSeconds"], 0.05)
+            self.assertEqual(
+                music_processing["vorbisEncoder"],
+                provenance["generator"]["vorbisEncoder"],
+            )
+            self.assertEqual(music_processing["vorbisQuality"], 5)
+            rotation = music_processing["loopRotation"]
+            self.assertGreater(rotation["rotationFrames"], 0)
+            self.assertEqual(rotation["searchStepFrames"], 0)
+            self.assertEqual(
+                rotation["selectionMode"],
+                "reviewed_spec_override",
+            )
+            self.assertLessEqual(
+                rotation["preEncodeBoundarySampleDelta"],
+                LAYERED.LOOP_ROTATION_DELTA_TARGET,
+            )
+            self.assertLessEqual(
+                rotation["preEncodeWindowRmsDeltaDb"],
+                LAYERED.LOOP_ROTATION_WINDOW_DB_TARGET,
+            )
+            self.assertIn("atrim=start=0.050000", town_ledger["processingCommand"])
+            self.assertIn(
+                "afade=t=out:st=0:d=0.080000",
+                town_ledger["processingCommand"],
+            )
+            self.assertIn(
+                "afade=t=in:st=0:d=0.080000",
+                town_ledger["processingCommand"],
+            )
+            self.assertIn(
+                f"-c:a {provenance['generator']['vorbisEncoder']}",
+                town_ledger["processingCommand"],
+            )
+            self.assertIn(
+                f"atrim=start_sample={rotation['rotationFrames']}",
+                town_ledger["processingCommand"],
+            )
             report = AUDIT.audit_bundle(
                 bundle,
                 write_report=False,
                 project_root=root,
             )
             self.assertEqual(report["status"], "pass", report["failures"])
-            repeated_bundle, _repeated_spec = self._prepare_layered_bundle(
-                root / "repeated"
+            town_metrics = report["assets"]["music.town"]
+            self.assertEqual(town_metrics["runtimeCodec"], "vorbis")
+            self.assertEqual(town_metrics["sampleRate"], 48000)
+            self.assertEqual(town_metrics["channels"], 2)
+            self.assertEqual(
+                town_metrics["loop"]["checkedBoundaryCount"],
+                3,
             )
-            repeated_provenance = json.loads(
-                (repeated_bundle / "source/provenance.json").read_text(
-                    encoding="utf-8"
+            self.assertEqual(
+                len(town_metrics["loop"]["threeBoundaryDeltas"]),
+                3,
+            )
+            self.assertGreater(
+                town_metrics["loop"]["repeatedFrameCount"],
+                town_metrics["frameCount"] * 3,
+            )
+            expected_hashes = {
+                item["runtimePath"]: item["runtimeSha256"]
+                for item in provenance["ledger"]
+            }
+            for repeat_index in range(2):
+                repeated_bundle, _repeated_spec = self._prepare_layered_bundle(
+                    root / f"repeated-{repeat_index + 1}"
                 )
+                repeated_provenance = json.loads(
+                    (repeated_bundle / "source/provenance.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(
+                    expected_hashes,
+                    {
+                        item["runtimePath"]: item["runtimeSha256"]
+                        for item in repeated_provenance["ledger"]
+                    },
+                )
+                self.assertEqual(
+                    (bundle / "audio-cues.json").read_bytes(),
+                    (repeated_bundle / "audio-cues.json").read_bytes(),
+                )
+                self.assertEqual(
+                    (bundle / "runtime/music/town_loop.ogg").read_bytes(),
+                    (
+                        repeated_bundle / "runtime/music/town_loop.ogg"
+                    ).read_bytes(),
+                )
+
+    def test_music_fingerprint_does_not_use_duration(self) -> None:
+        feature = {
+            "crestFactorDb": 8.0,
+            "durationSeconds": 12.0,
+            "stereoSideRatioDb": -9.0,
+            "temporalRmsProfile": [1.0] * 16,
+            "zeroCrossingsPerSecond": 250.0,
+        }
+        longer_feature = {**feature, "durationSeconds": 240.0}
+        self.assertEqual(
+            AUDIT._music_feature_distance(feature, longer_feature),
+            0.0,
+        )
+
+    def test_three_loop_boundaries_are_measured_independently(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fake_ffmpeg = Path(temporary) / "fake_ffmpeg.py"
+            fake_ffmpeg.write_text(
+                "\n".join(
+                    (
+                        "#!/usr/bin/env python3",
+                        "import struct",
+                        "import sys",
+                        "samples = (",
+                        "    0, 100, 200, 300,",
+                        "    1000, 1100, 1200, 1300,",
+                        "    -500, -400, -300, -200,",
+                        "    2000, 2100, 2200, 2300,",
+                        ")",
+                        "sys.stdout.buffer.write(",
+                        "    struct.pack('<' + 'h' * len(samples), *samples)",
+                        ")",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            fake_ffmpeg.chmod(0o755)
+            result = AUDIT._decode_three_loop_boundaries(
+                Path(temporary) / "fixture.ogg",
+                ffmpeg=str(fake_ffmpeg),
+                metadata={
+                    "channels": 1,
+                    "frameCount": 4,
+                    "sampleRate": 48000,
+                },
+            )
+            self.assertEqual(result["checkedBoundaryCount"], 3)
+            self.assertEqual(
+                result["threeBoundaryDeltas"],
+                [
+                    round(700 / 32768.0, 8),
+                    round(1800 / 32768.0, 8),
+                    round(2200 / 32768.0, 8),
+                ],
             )
             self.assertEqual(
-                {
-                    item["runtimePath"]: item["runtimeSha256"]
-                    for item in provenance["ledger"]
-                },
-                {
-                    item["runtimePath"]: item["runtimeSha256"]
-                    for item in repeated_provenance["ledger"]
-                },
-            )
-            self.assertEqual(
-                (bundle / "audio-cues.json").read_bytes(),
-                (repeated_bundle / "audio-cues.json").read_bytes(),
+                result["threeBoundaryMaxDelta"],
+                round(2200 / 32768.0, 8),
             )
 
     @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is unavailable")

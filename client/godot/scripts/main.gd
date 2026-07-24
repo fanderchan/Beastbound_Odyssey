@@ -73,6 +73,12 @@ const AudioImpactReviewModelCheck := preload(
 const AudioImpactReviewPreview := preload(
 	"res://scripts/qa/audio_impact_review_preview.gd"
 )
+const AudioMusicReviewModelCheck := preload(
+	"res://scripts/audio/audio_music_review_model_check.gd"
+)
+const AudioMusicReviewPreview := preload(
+	"res://scripts/qa/audio_music_review_preview.gd"
+)
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
@@ -826,6 +832,7 @@ var auto_battle_passive_hover_check: bool = false
 var auto_battle_reaction_check: bool = false
 var auto_audio_runtime_check: bool = false
 var auto_audio_impact_review_model_check: bool = false
+var auto_audio_music_review_model_check: bool = false
 var auto_battle_result_check: bool = false
 var auto_battle_knockaway_result_check: bool = false
 var auto_pet_management_check: bool = false
@@ -1013,6 +1020,7 @@ var pet_management_preview: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
+var audio_music_review_preview: bool = false
 var pet_rename_preview: bool = false
 var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
@@ -1646,6 +1654,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_audio_runtime_check")
 	elif auto_audio_impact_review_model_check:
 		call_deferred("_run_auto_audio_impact_review_model_check")
+	elif auto_audio_music_review_model_check:
+		call_deferred("_run_auto_audio_music_review_model_check")
 	elif auto_battle_result_check:
 		call_deferred("_run_auto_battle_result_check")
 	elif auto_battle_knockaway_result_check:
@@ -1934,6 +1944,8 @@ func _ready() -> void:
 		call_deferred("_run_battle_visual_review_preview")
 	elif audio_impact_review_preview:
 		call_deferred("_run_audio_impact_review_preview")
+	elif audio_music_review_preview:
+		call_deferred("_run_audio_music_review_preview")
 	elif pet_rename_preview:
 		call_deferred("_run_pet_rename_preview")
 	elif pet_order_preview:
@@ -2393,6 +2405,8 @@ func _apply_preview_window_args() -> void:
 			auto_audio_runtime_check = true
 		elif arg == "--auto-audio-impact-review-model-check":
 			auto_audio_impact_review_model_check = true
+		elif arg == "--auto-audio-music-review-model-check":
+			auto_audio_music_review_model_check = true
 		elif arg == "--auto-battle-result-check":
 			auto_battle_result_check = true
 		elif arg == "--auto-battle-knockaway-result-check":
@@ -2767,6 +2781,8 @@ func _apply_preview_window_args() -> void:
 			battle_visual_review_scenario = arg.trim_prefix("--battle-visual-review=").strip_edges().to_lower()
 		elif arg == "--audio-impact-review-preview":
 			audio_impact_review_preview = true
+		elif arg == "--audio-music-review-preview":
+			audio_music_review_preview = true
 		elif arg == "--pet-rename-preview":
 			pet_rename_preview = true
 		elif arg == "--pet-order-preview":
@@ -3800,6 +3816,12 @@ func _run_auto_audio_impact_review_model_check() -> void:
 	get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
 
 
+func _run_auto_audio_music_review_model_check() -> void:
+	var report := AudioMusicReviewModelCheck.run()
+	print("audio music review model check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
+
+
 func _run_auto_battle_result_check() -> void:
 	await _auto_checks()._run_auto_battle_result_check()
 
@@ -3997,6 +4019,10 @@ func _run_battle_visual_review_preview() -> void:
 
 func _run_audio_impact_review_preview() -> void:
 	await AudioImpactReviewPreview.new(self).run()
+
+
+func _run_audio_music_review_preview() -> void:
+	await AudioMusicReviewPreview.new(self).run()
 
 
 func _run_pet_order_preview() -> void:

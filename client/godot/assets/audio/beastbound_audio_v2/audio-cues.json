@@ -213,7 +213,7 @@
       "cooldownMs": 0,
       "gainDb": -3.5,
       "loop": true,
-      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/battle_normal_loop.wav",
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/battle_normal_loop.ogg",
       "priority": 100,
       "role": "music"
     },
@@ -223,7 +223,7 @@
       "cooldownMs": 0,
       "gainDb": -5.0,
       "loop": true,
-      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/cave_loop.wav",
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/cave_loop.ogg",
       "priority": 100,
       "role": "music"
     },
@@ -233,7 +233,7 @@
       "cooldownMs": 0,
       "gainDb": -4.0,
       "loop": true,
-      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/town_loop.wav",
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/town_loop.ogg",
       "priority": 100,
       "role": "music"
     },
@@ -243,7 +243,7 @@
       "cooldownMs": 0,
       "gainDb": -4.5,
       "loop": true,
-      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/wilderness_loop.wav",
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/music/wilderness_loop.ogg",
       "priority": 100,
       "role": "music"
     },
@@ -319,7 +319,7 @@
     }
   },
   "format": {
-    "music": "48 kHz stereo PCM16 WAV",
+    "music": "48 kHz stereo Ogg Vorbis quality 5",
     "sampleRate": 48000,
     "sfx": "48 kHz mono PCM16 WAV"
   },
@@ -330,5 +330,5 @@
     "sfxVoiceCap": 12
   },
   "reviewState": "owner_listening_pending",
-  "schemaVersion": 2
+  "schemaVersion": 3
 }

@@ -45,6 +45,12 @@ MP3 is not a production master. Opus is not a Beastbound Godot runtime format fo
 - Before bus gain and the master limiter, newly mastered one-shot files should normally retain at least `3 dB` sample-peak headroom. Any exception needs an overlap capture proving the final mix remains within the true-peak gate.
 - Start with music crossfade `0.75 s`, ordinary SFX cap `12`, and per-cue cooldown `40–120 ms`. Tune only from overlap evidence.
 - Same-context synchronization is idempotent: it must not restart or stack the current music.
+- Enabling physical playback after a deferred/headless context selection must
+  start that selected cue; metadata equality alone must not suppress the first
+  real stream load.
+- If a new context interrupts an unfinished crossfade, retain the currently
+  louder stream as the outgoing side and reuse the quieter player. The summed
+  equal-power envelope must not collapse between transitions.
 - The Master HardLimiter ceiling is explicitly configured, not merely the engine default. Start at `-2.0 dB` for this Godot PCM path, then analyze the frozen mixed capture and tune only as needed to keep reconstructed true peak at or below `-1 dBTP`.
 - A sample-peak limiter ceiling is not a true-peak measurement. Measure both decoded sample peak and oversampled/reconstructed true peak; do not claim `-1 dBTP` merely because the limiter reads `-1 dB`.
 
@@ -58,6 +64,13 @@ Audit the decoded runtime stream, not only the source:
 4. listen on headphones and speakers.
 
 Fail an audible click, sudden ambience reset, beat truncation, or silence hole. Record the exact method and thresholds in the bundle auditor; do not rely on a prose “seamless” claim.
+
+For Ogg Vorbis, honor the container granule duration when removing decoder
+padding. Build the repeated-loop audit from independently decoded copies rather
+than assuming a decoder's `stream_loop` output has no per-copy padding. If a
+natural encoded cut misses the hard sample/window gates, choose a deterministic
+stable cut in the lossless circular master and rotate before encoding; never
+hide the problem with a start/end fade that creates a recurring volume hole.
 
 For the deterministic PCM16 canary, fail when:
 
@@ -74,6 +87,7 @@ A complete bundle contains:
 ```text
 source/spec.json
 source/provenance.json
+source/.gdignore
 source/third_party/* (when the license permits redistribution)
 runtime/music/*
 runtime/sfx/*
@@ -82,12 +96,18 @@ audit-report.json
 evidence/
 ```
 
-Generated Godot cache under `.godot/imported/` is never source. Track `.import` only when project policy requires it to freeze import/loop settings; otherwise set loop behavior in the focused runtime catalog/manager and prove it through Godot.
+Generated Godot cache under `.godot/imported/` is never source. Put
+`source/.gdignore` in a runtime bundle so raw masters and third-party downloads
+are not imported a second time by Godot. Track `.import` only when project
+policy requires it to freeze import/loop settings; otherwise set loop behavior
+in the focused runtime catalog/manager and prove it through Godot.
 
 ## Required first-pass evidence
 
 - town, wilderness, cave, and normal battle music are non-silent and distinguishable;
 - battle entry and exit crossfade without stacking or abrupt volume jumps;
+- deferred playback starts the selected context when enabled, and an
+  interrupted three-context crossfade preserves intermediate total power;
 - motion and contact are separate;
 - dodge/block replace ordinary contact correctly;
 - counter is heard as its own action;
