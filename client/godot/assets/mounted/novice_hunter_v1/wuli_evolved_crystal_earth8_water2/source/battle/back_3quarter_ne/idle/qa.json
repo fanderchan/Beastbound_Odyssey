@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "idle",
+  "frameCount": 6,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "idle-1",
+      "bbox": [
+        34,
+        60,
+        222,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-2",
+      "bbox": [
+        34,
+        64,
+        222,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-3",
+      "bbox": [
+        32,
+        62,
+        224,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-4",
+      "bbox": [
+        34,
+        64,
+        222,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-5",
+      "bbox": [
+        33,
+        67,
+        223,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "idle-6",
+      "bbox": [
+        34,
+        64,
+        222,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}

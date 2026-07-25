@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "knockaway",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "knockaway-1",
+      "bbox": [
+        45,
+        77,
+        210,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-2",
+      "bbox": [
+        42,
+        119,
+        213,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-3",
+      "bbox": [
+        40,
+        121,
+        216,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-4",
+      "bbox": [
+        42,
+        111,
+        214,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-5",
+      "bbox": [
+        46,
+        104,
+        210,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-6",
+      "bbox": [
+        34,
+        144,
+        222,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-7",
+      "bbox": [
+        35,
+        152,
+        220,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "knockaway-8",
+      "bbox": [
+        33,
+        160,
+        224,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}

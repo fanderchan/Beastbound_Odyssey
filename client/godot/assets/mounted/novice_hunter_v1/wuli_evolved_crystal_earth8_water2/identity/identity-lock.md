@@ -1,8 +1,8 @@
 # 见习猎人骑晶甲乌力身份锁 v1
 
-状态：`self_review_passed_owner_pending`
+状态：基础坐骑方向已由项目所有者于 2026-07-25 确认；完整动作成片仍为 `owner_review_pending`
 
-本锁只批准 `front_3quarter_sw` 与 `back_3quarter_ne` 两张一体生成的骑乘关键姿势；不批准真八向、移动、战斗动作或运行时接入。
+本锁冻结 `front_3quarter_sw` 与 `back_3quarter_ne` 两张一体生成的骑乘关键姿势。项目所有者已确认当前晶甲乌力外形适合作为坐骑；这次确认只批准继续制作，不等同于批准尚未生产的完整战斗动作、进化演出或运行时开放。
 
 ## 一体生成与人物比例
 
@@ -28,3 +28,10 @@
 生成合同：`../prompts/generation-contract.md`
 
 关键姿势板：`identity-board-transparent.png`
+
+## 完整动作仍待验收
+
+- 战斗动作必须继续使用成年见习猎人与晶甲乌力的一体整图，不得把已有角色层叠到宠物层上。
+- 两侧均需完整生产 `idle / walk / attack / skill / hurt / defend / dodge / counter / stagger / knockaway / down / revive`。
+- 每个动作必须保持骨盆承重、双腿跨坐、双手握低握把；肩堡、背甲和尾晶不得穿过人物。
+- `down-8` 与 `revive-1` 必须是完全相同的 RGBA 帧；完整动作包、1280×720 游戏内 1× 视频与最终运行开关仍需项目所有者另行验收。

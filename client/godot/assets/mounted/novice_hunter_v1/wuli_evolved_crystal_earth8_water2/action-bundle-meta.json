@@ -3,7 +3,7 @@
   "mountFormId": "wuli_evolved_crystal_earth8_water2",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_key_pose_and_world_true8_owner_review_pending",
+  "productionScope": "mounted_world_true8_and_formal_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -31,51 +31,75 @@
   "actions": {
     "idle": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -164,5 +188,77 @@
     "mounted160ContactSheetSha256": "dd37a24037149112fe359985271266c6771a3df6b07a5cad3cc72950fbd1cea4"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated mounted world true-eight actions are complete and independently audited; mounted battle actions remain unproduced. Crystal shoulder bastions frame the rider without piercing."
+  "notes": "Integrated mounted world true-eight and mounted battle two-view actions are complete. The 180-frame battle candidate preserves the adult novice hunter seat behind the shoulder bastions without crystal-rider intersections; owner review remains pending and runtime stays disabled.",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "3844e961e828f2b07ecd500e5f2a6378b0ca0181bfa23fce2e36e24a7ea7196c",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "aed3935da5ccfa636c4222c59b015f9b86eb87d4eace4b3aacc834eee98272f9",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "qcSummarySha256": "10fb881d1c0cf980d8c2e81e291dee685545850085682f7ed07f611ab528dfc8",
+    "reviewVideo": ".run/evidence/phase340_crystal_wuli_mounted/Beastbound_Phase340_Crystal_Wuli_Mounted_1x.mp4",
+    "reviewVideoSha256": "1eae905e5fd429be27134183515ba5b9e2a3ce16154fb8a49cb2711960cfbd0e",
+    "reviewVideoSpeedScale": 1.0
+  }
 }
