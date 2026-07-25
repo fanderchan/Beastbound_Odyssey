@@ -38,3 +38,16 @@
 - 状态边界：Phase343 世界真八方向已获 `visual_only` 批准；本次战斗包仍为工程自检候选，项目所有者验收 `pending`、`runtimeEnabled=false`，不会进入普通玩家运行路径。
 - 替换路径：从身份锁、逐动作生成合同与完整本地生产归档重新生成，再依次通过安装审计、Godot 180 帧加载、1× 动态复核和 owner gate。
 <!-- phase344-moon-gale-mounted-battle:end -->
+
+<!-- phase348-moon-gale-mounted-battle-semantic-review:start -->
+## Phase348 骑乘战斗整图第二遍语义自审
+
+- 本轮没有重生成、重采样或修改任何动作像素；只复核 Phase344 已冻结的双视角、12 动作、180 帧候选。
+- 当前 180 张 PNG、Godot import 与实际 `Texture2D` canonical RGBA `180/180` 一致；source-set SHA-256 为 `34b22b2f2818ea26bf6e51064a54545c97edc6561e718895abd5950c5e0a7e63`。
+- 当前帧与 `source/battle/source-ledger.json` 的 decoded RGBA `180/180` 一致；16 组完全重复仅来自两视角 `down` 与 `revive` 的确定性反向配对，意外重复为 0、跨视角水平镜像为 0、最小安全边为 4px。
+- 真实 `Main.tscn` 以正式 `BattleModel`、骑乘动作目录和整图渲染连续覆盖行进、攻击、技能、防御承压、受击、反击、致死反击负伤归位、三人合击、回避、回避反击、直线击飞、场边弹飞、倒地和复起共 14 段。
+- 39.533333 秒成片为 1280×720、60 FPS、有声、全程 `1.00x`；MP4 SHA-256 为 `edfb2e1975b6b97091600327d2aea6db4048018aa53e730691ff3ebf8963a390`。录制脚本只为审片隐藏顶部状态、指令和计时面板，没有修改普通玩家运行时代码。
+- 自审未观察到人物/坐骑分离、异常缩放、骑手幼体化、明显穿模、单尾/多尾漂移或动作中途换视角；直飞与弹飞均由真实事件状态 `launched` 驱动，普通致死反击和可复起倒地继续保持非击飞。
+- 跟踪报告：`qa/battle/semantic-review-v2.json`，SHA-256 为 `d73a3e3ad987b50bed5afc65032dceef5936475deeee36ca14feecb6a5df7fc2`。
+- 当前状态仅提升为 `independent_semantic_self_review_passed_owner_pending`；项目所有者尚未观看本次成片，`ownerReviewStatus=pending`、`runtimeEnabled=false` 均保持不变。
+<!-- phase348-moon-gale-mounted-battle-semantic-review:end -->

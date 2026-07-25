@@ -3,7 +3,7 @@
   "mountFormId": "driftfox_evolved_moon_gale_wind7_water3",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_world_true8_owner_approved_visual_only_and_formal_battle_owner_review_pending",
+  "productionScope": "mounted_world_true8_owner_approved_visual_only_and_formal_battle_semantic_self_review_passed_owner_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -168,7 +168,8 @@
     "prompt": "prompts/generation-contract.md",
     "worldSourceLedger": "source/world/source-ledger.json",
     "worldGenerationBrief": "source/world/generation-brief.md",
-    "battleSourceLedger": "source/battle/source-ledger.json"
+    "battleSourceLedger": "source/battle/source-ledger.json",
+    "battleSourceLedgerSha256": "c9a986ef1bd1b179aefbf12648ec1b8c7cebc5275e8f812242525efec9b7cb26"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/driftfox_mounted/evolved/mounted-build-v1/contact-sheet.png",
@@ -182,11 +183,15 @@
     "worldOwnerDecision": "qa/world/owner-decision.json",
     "worldOwnerDecisionSha256": "9a7739c009f30fa75d03148a50dbe1f87b0658355a3d816a5cf060ef660aea19",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleQc": "qa/battle/qc-summary.json"
+    "battleContactSheetSha256": "473096a570312306fa47aebb3d92025ac39f7e01d3229f0155323ce42edec0e1",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "83f8a56d69ac25743cf41a377e029e140586431173e76c8b08d2b0b52d83b9f2",
+    "battleSemanticReview": "qa/battle/semantic-review-v2.json",
+    "battleSemanticReviewSha256": "d73a3e3ad987b50bed5afc65032dceef5936475deeee36ca14feecb6a5df7fc2"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "完整人宠骑乘世界真八方向视觉已获项目所有者批准，但 runtime 仍关闭；本阶段新增双视角 12 动作、180 帧正式战斗候选，保持整骑同帧、无运行时分层、无战斗视角镜像，战斗视觉仍待项目所有者审阅，未修改玩法规则或运行时路由。",
+  "notes": "完整人宠骑乘世界真八方向视觉已获项目所有者批准，但 runtime 仍关闭；双视角 12 动作、180 帧正式战斗候选已补齐第二遍源图/import/运行时像素一致性、结构与真实 Main.tscn 14 段语义自审，保持整骑同帧、成人骑手比例、两条实体尾巴、无运行时分层和无跨视角镜像。战斗视觉仍待项目所有者审阅，本轮没有修改动作像素、玩法规则或运行时路由。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -200,7 +205,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "independent_semantic_self_review_passed_owner_pending",
     "kind": "mounted",
     "views": [
       "front_3quarter_sw",
@@ -255,8 +260,25 @@
     "contactSheetSha256": "473096a570312306fa47aebb3d92025ac39f7e01d3229f0155323ce42edec0e1",
     "qcSummary": "qa/battle/qc-summary.json",
     "qcSummarySha256": "83f8a56d69ac25743cf41a377e029e140586431173e76c8b08d2b0b52d83b9f2",
-    "reviewVideo": ".run/evidence/phase344_moon_gale_mounted/Beastbound_Phase344_Moon_Gale_Mounted_1x.mp4",
-    "reviewVideoSha256": "dc6eac7415bb98dba17093e35c9a65b3902cb3b33e69cc78d0ebc71366cf48d8",
-    "reviewVideoSpeedScale": 1.0
+    "reviewVideo": ".run/evidence/phase348_moon_gale_mounted_battle/Beastbound_Phase348_Moon_Gale_Mounted_Semantic_1x.mp4",
+    "reviewVideoSha256": "edfb2e1975b6b97091600327d2aea6db4048018aa53e730691ff3ebf8963a390",
+    "reviewVideoSpeedScale": 1.0,
+    "reviewVideoFrameRate": 60,
+    "reviewVideoDurationSeconds": 39.533333,
+    "priorReviewVideo": ".run/evidence/phase344_moon_gale_mounted/Beastbound_Phase344_Moon_Gale_Mounted_1x.mp4",
+    "priorReviewVideoSha256": "dc6eac7415bb98dba17093e35c9a65b3902cb3b33e69cc78d0ebc71366cf48d8",
+    "semanticReview": {
+      "status": "passed_owner_pending",
+      "reviewer": "codex_self_review_not_project_owner",
+      "report": "qa/battle/semantic-review-v2.json",
+      "reportSha256": "d73a3e3ad987b50bed5afc65032dceef5936475deeee36ca14feecb6a5df7fc2",
+      "runtimeParitySha256": "30c6806f6e0ee1b5009dc8862182fc40e9c57a07d14370ebfdc419d96569763c",
+      "structureAuditSha256": "c0d694bd7f77d18a4b5b2ded66c10848e2e95b43a866306c35e79a39c5f61c90",
+      "sourceSetSha256": "34b22b2f2818ea26bf6e51064a54545c97edc6561e718895abd5950c5e0a7e63",
+      "checkedFrames": 180,
+      "runtimeCanonicalRgbaMatchCount": 180,
+      "eventDrivenStepCount": 12,
+      "reviewStepCount": 14
+    }
   }
 }

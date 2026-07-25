@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "phase": 348,
+  "reviewDate": "2026-07-26",
+  "characterId": "novice_hunter_v1",
+  "mountFormId": "driftfox_evolved_moon_gale_wind7_water3",
+  "kind": "mounted_integrated_whole_frame",
+  "status": "independent_semantic_self_review_passed_owner_pending",
+  "reviewer": "codex_self_review_not_project_owner",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "pixelChanges": 0,
+  "productCodeChanges": 0,
+  "scope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "frameCount": 180,
+    "runtimeFrameSize": [
+      256,
+      256
+    ]
+  },
+  "assetIntegrity": {
+    "bundleDigest": "70bcdd1eb626cfa4744fd74986902e932b4c71399d1897bd79cf4e72cc184315",
+    "sourceLedgerSha256": "c9a986ef1bd1b179aefbf12648ec1b8c7cebc5275e8f812242525efec9b7cb26",
+    "sourceSetSha256": "34b22b2f2818ea26bf6e51064a54545c97edc6561e718895abd5950c5e0a7e63",
+    "decodedRgbaSetSha256": "a65f4b3c32ee79a2357ad19fae86b75fb366028f49ca4cd090c7e7e3ba7a6639",
+    "checkedFrames": 180,
+    "importFreshCount": 180,
+    "runtimeCanonicalRgbaMatchCount": 180,
+    "ledgerRgbaMatchCount": 180,
+    "uniqueDecodedRgbaFrameCount": 164,
+    "minimumEdgeMargin": 4,
+    "intentionalDownReviveReverseDuplicatePairCount": 16,
+    "unexpectedDuplicatePairCount": 0,
+    "mirroredCrossViewPairCount": 0,
+    "downReviveReverseExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "runtimeReview": {
+    "scene": "res://scenes/Main.tscn",
+    "speedScale": 1.0,
+    "resolution": [
+      1280,
+      720
+    ],
+    "frameRate": 60,
+    "videoFrameCount": 2372,
+    "durationSeconds": 39.533333,
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "audioSampleRate": 48000,
+    "audioChannels": 2,
+    "audioMeanDb": -26.9,
+    "audioMaxDb": -3.8,
+    "fullDecodeErrors": 0,
+    "productionModels": [
+      "BattleModel",
+      "PetBattleReviewModel",
+      "MountedCharacterAssetCatalog",
+      "MountedBattlePresentationModel"
+    ],
+    "eventDrivenStepCount": 12,
+    "visualOnlyCatalogStepIds": [
+      "mounted_walk",
+      "mounted_revive"
+    ],
+    "stepIds": [
+      "mounted_walk",
+      "mounted_attack",
+      "mounted_skill",
+      "mounted_defend_hit",
+      "mounted_hurt",
+      "mounted_counter",
+      "mounted_counter_ko",
+      "mounted_combo",
+      "mounted_dodge",
+      "mounted_dodge_counter",
+      "mounted_knockaway_straight",
+      "mounted_knockaway_bounce",
+      "mounted_down",
+      "mounted_revive"
+    ],
+    "verifiedOutcomes": {
+      "mounted_counter_ko": {
+        "actionState": "down",
+        "launched": false
+      },
+      "mounted_dodge": {
+        "visibleRetreat": true,
+        "damageApplied": false
+      },
+      "mounted_dodge_counter": {
+        "visibleRetreat": true,
+        "counterFollowup": true
+      },
+      "mounted_knockaway_straight": {
+        "actionState": "launched",
+        "launchMode": "straight"
+      },
+      "mounted_knockaway_bounce": {
+        "actionState": "launched",
+        "launchMode": "bounce"
+      },
+      "mounted_down": {
+        "actionState": "down",
+        "launched": false
+      }
+    },
+    "captureOnlyUiTreatment": [
+      "hide_top_status_panel",
+      "hide_battle_command_panel",
+      "hide_battle_timer_panel"
+    ]
+  },
+  "semanticFindings": {
+    "integratedRiderMountContinuity": "passed",
+    "adultRiderScale": "passed",
+    "seatAndLimbContinuity": "passed",
+    "twoTailIdentityContinuity": "passed",
+    "attackSkillReadability": "passed",
+    "defendHurtSeparation": "passed",
+    "dodgeRetreatReadability": "passed",
+    "counterAndWoundedReturnCausality": "passed",
+    "straightAndBounceLaunchReadability": "passed",
+    "downReviveContinuity": "passed",
+    "unexpectedClipping": "not_observed",
+    "runtimeLayerSeparation": "not_observed"
+  },
+  "evidence": {
+    "trackedContactSheet": "qa/battle/contact-sheet.png",
+    "trackedContactSheetSha256": "473096a570312306fa47aebb3d92025ac39f7e01d3229f0155323ce42edec0e1",
+    "trackedQcSummary": "qa/battle/qc-summary.json",
+    "trackedQcSummarySha256": "83f8a56d69ac25743cf41a377e029e140586431173e76c8b08d2b0b52d83b9f2",
+    "runtimeParity": ".run/evidence/phase348_moon_gale_mounted_battle/runtime-parity.json",
+    "runtimeParitySha256": "30c6806f6e0ee1b5009dc8862182fc40e9c57a07d14370ebfdc419d96569763c",
+    "structureAudit": ".run/evidence/phase348_moon_gale_mounted_battle/image-structure-audit.json",
+    "structureAuditSha256": "c0d694bd7f77d18a4b5b2ded66c10848e2e95b43a866306c35e79a39c5f61c90",
+    "reviewVideo": ".run/evidence/phase348_moon_gale_mounted_battle/Beastbound_Phase348_Moon_Gale_Mounted_Semantic_1x.mp4",
+    "reviewVideoSha256": "edfb2e1975b6b97091600327d2aea6db4048018aa53e730691ff3ebf8963a390",
+    "movieLog": ".run/evidence/phase348_moon_gale_mounted_battle/godot-movie-final.log",
+    "movieLogSha256": "15ab44d3d5d2ee08e9f2159a2967ea0239db5bc63e2f5e06263e652dc6a09bae",
+    "contactActions01To07": ".run/evidence/phase348_moon_gale_mounted_battle/contact-actions-01-07.png",
+    "contactActions01To07Sha256": "82e96291d3509e7cb8a6f151490cde5343494c4801fe7f7184d161381b28dcb2",
+    "contactActions08To14": ".run/evidence/phase348_moon_gale_mounted_battle/contact-actions-08-14.png",
+    "contactActions08To14Sha256": "b6527c71882a8ac64e1f1fb2cb67ce386fc484a81dcec8d62af5637c829e2ebf"
+  },
+  "remainingGates": [
+    "project_owner_mounted_battle_visual_review",
+    "mounted_world_independent_direction_semantic_audit",
+    "route_asset_gate_and_runtime_enablement_discussion",
+    "two_reject_two_allow_end_to_end_acceptance"
+  ]
+}
