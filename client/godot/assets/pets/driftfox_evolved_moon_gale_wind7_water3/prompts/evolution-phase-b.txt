@@ -1,0 +1,30 @@
+Use case: stylized-concept
+Asset type: production 2D creature evolution animation sprite sheet for Beastbound Odyssey
+Primary request: Generate the SECOND HALF of the same continuous Highland Driftfox to Moon-Gale Driftfox physical evolution. Image 1 is the exact frame immediately before this sheet. Images 2 and 3 define the exact final evolved identity and ready-pose endpoint. Image 4 is layout-only.
+
+Style/medium: exactly match the clean high-definition hand-painted 2.5D game-sprite style, crisp deep plum-blue outlines, layered soft fur, readable collectible-RPG silhouette, polished but not painterly, photorealistic, plastic 3D, or pixel art.
+
+View: fixed front three-quarter view facing screen-left with a little front visible, identical camera, body angle, ground plane, and facing in all six cells.
+
+Sheet: exactly 2 rows by 3 columns, exactly 6 equal invisible square cells. Read left-to-right across row 1, then left-to-right across row 2.
+
+Frame 7: continue directly from Image 1 with the same partially evolved fox, same planted feet, same adult proportions, same exactly two separately traceable attached tails, and the same incomplete color transition. The upper tail curls up/back, the lower tail curls down/back, and the open crescent gap remains visible.
+Frame 8: the pearl silver-white coat and moon-blue-gray shadows finish spreading over the torso; the moon-white neck mane becomes full and layered; the two tails broaden into their final generous fur volume without merging or adding another tail.
+Frame 9: cyan-teal gradients finish flowing into both ear tips, all four lower legs, and both tail tips. Each ear retains exactly two attached mist-fin-shaped fur vanes. Restrained body-connected mist-flow fur grows along neck and shoulder/back, but never becomes wings, floating ribbons, or detached magic.
+Frame 10: the cyan forehead crescent and exactly two long crescent wind marks on the visible flank finish forming; deep-teal eyes reach the final color. The two tails open slightly farther to display the clean moon-crescent negative space, while all four feet remain grounded.
+Frame 11: a restrained cool cyan pulse travels only along the attached crescent marks, ear vanes, shoulder fur flow, lower legs, and both tail tips, then begins receding. Do not cover the anatomy or double the creature.
+Frame 12: exact final Moon-Gale Driftfox identity and formal ready pose matching Images 2 and 3: one larger rideable adult quadruped wind fox, pearl silver-white fur, moon-blue-gray shadows, thick moon-white neck mane, deep-teal eyes, mature narrow fox muzzle, long ears with exactly two attached mist-fin-shaped fur vanes per ear, four long weight-bearing legs, cyan forehead crescent, exactly two long crescent wind marks on the visible flank, and exactly two large physical tails from the same hindquarter—upper tail curled upward/back, lower tail curled downward/back, with a clean open crescent-shaped gap between them. Normal restrained accents only; evolution light has settled.
+
+Motion and transformation: continuous physical completion and settle, no crossfade, double exposure, duplicate creature, teleport, explosion, or anatomy replacement. Progress must be monotonic through frame 10 and then settle without losing any target marker.
+
+Identity invariants: exactly one fox in every cell; same individual as Image 1; preserve mature narrow muzzle, four legs, two ears, eye placement, adult long-back proportions, and fixed front-three-quarter view. Never become a wolf, cat, deer, dragon, bird, human, robot, nine-tailed fox, chibi cub, or another animal.
+
+Strict tail and fur rules: exactly two tails in all six cells, both traceable from the same hindquarter, both visibly separate, never fused, hidden, multiplied, or read as detached wind. Exactly two attached fur vanes on each ear. Shoulder/back mist-flow structures must be soft body-connected fur fins, not wings, feathers, cloth, or magical ribbons.
+
+Composition: full body fully visible and centered, same subject scale and stable feet/bottom anchor, subject inside the same central 60 to 70 percent safe area, generous magenta margin on every side. No ear, tail, fur tip, glow, or effect may cross a cell edge.
+
+Background: perfectly flat solid #FF00FF in every cell, no gradient, texture, shadow, floor, horizon, vignette, or lighting patch.
+
+Layout guide: use Image 4 only for rows, columns, equal invisible slots, centering, and safe padding. Do not reproduce it: no boxes, borders, guide lines, safe-area rectangles, center marks, labels, or guide background.
+
+Avoid: text, numbers, captions, UI, watermark, panel borders, white grid lines, magenta inside the creature, cast shadows, detached fog, detached wind ribbons, sparks, giant glow, motion blur, cropped limbs, scale pumping, anatomy pumping, changing view, extra ears, extra legs, one tail, three tails, nine tails, wings, antlers, armor, clothing, saddle, rider, or weapons.

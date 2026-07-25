@@ -25,3 +25,16 @@
 - 当前状态：`self_review_passed_owner_pending`；独立语义复核与 owner 连续视频验收 pending，`runtimeEnabled=false`。
 - 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
 <!-- phase343-moon-gale-world:end -->
+
+<!-- phase345-moon-gale-evolution:start -->
+## Phase345 高地风狐→月岚风狐进化候选
+
+- 范围：固定 `front_3quarter_sw` 的 12 帧进化演出；12 FPS、1.000 秒、不循环，源帧 512×512、运行帧 256×256。
+- 生成方式：Codex 内置 `image_gen` 分两张 2×3 sheet 原创生成，输入只包含 Beastbound 自有的高地风狐/月岚风狐身份板、正式正面 idle 与纯几何排版参考。
+- 连续语义：前四帧保持高地风狐单尾，随后从同一尾根形成上下两条实体尾；成年深胸长背、月白颈鬃、银白月蓝毛色、深青眼和新月纹逐步定型。没有用双宠交叉淡化、浓雾或巨型光效跳过变化。
+- 后处理：只做色键、切格、共同比例、脚底锚定、透明清理和确定性 512→256 派生；两张生成图相差 1px 的画布规格仅在远离主体的色键边界做裁补，没有程序重画主体。
+- 硬门禁：12/12 源帧与运行帧归档；最大尺寸漂移 0.085308，运行帧最小安全边 6px，脱体组件、源帧残余洋红和运行帧残余洋红均为 0。
+- 真实客户端证据：临时、未跟踪的 QA capture 脚本实例化真实 `Main.tscn`，在 Apple M5 Metal 下录制 1280×720、60 FPS、有声 MP4；每张进化帧固定显示 5 个视频帧，两轮均为 12 FPS / `1.00x`。证据位于 `.run/evidence/phase345_moon_gale_evolution/`。
+- 当前状态：`self_review_passed_owner_pending`。项目所有者已说明正在休息、无法验收，因此没有代替所有者批准；`runtimeEnabled=false`，也没有修改正式成功回调、进化消耗或路线门禁。
+- 替换路径：从本目录逐字 prompt、两张 raw、pipeline、512px 源帧和身份锁重建，再复跑接触表、Godot 加载、真实 1× 成片与 owner review。
+<!-- phase345-moon-gale-evolution:end -->

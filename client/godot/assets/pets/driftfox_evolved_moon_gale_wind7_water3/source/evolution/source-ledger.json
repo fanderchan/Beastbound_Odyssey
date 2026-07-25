@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "animationId": "driftfox_moon_gale_evolution_front_v1",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "sourceFormId": "driftfox_highland_wind9_earth1",
+  "view": "front_3quarter_sw",
+  "generator": {
+    "name": "Codex built-in image_gen",
+    "cliFallbackUsed": false,
+    "generatedAt": "2026-07-26",
+    "sourceInputs": [
+      "client/godot/assets/pets/driftfox_highland_wind9_earth1/identity/identity-board-transparent.png",
+      "client/godot/assets/pets/driftfox_highland_wind9_earth1/views/front_3quarter_sw/idle/idle-1.png",
+      "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/identity/identity-board-transparent.png",
+      "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/views/front_3quarter_sw/idle/idle-1.png"
+    ],
+    "externalAssets": []
+  },
+  "rawSheets": [
+    {
+      "phase": "frames_1_to_6",
+      "generatedImagePath": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/call_5feUu08H1srpBqB0kXqi4XTJ.png",
+      "archivePath": "source/evolution/raw/phase-a-raw.png",
+      "sourceSize": [1536, 1024],
+      "promptPath": "prompts/evolution-phase-a.txt",
+      "sha256": "06e711ed6cf6015b56b3536c3221b66debf1a6edbdc9445ac7fb38395831bc5d",
+      "promptSha256": "3db1471fb13a70a9231f91088b6a37abe97069a30531a636031e5684b3317b3a"
+    },
+    {
+      "phase": "frames_7_to_12",
+      "generatedImagePath": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/call_frJMvyo2zcmA91pPAwzE5Hs4.png",
+      "archivePath": "source/evolution/raw/phase-b-raw.png",
+      "sourceSize": [1537, 1023],
+      "promptPath": "prompts/evolution-phase-b.txt",
+      "sha256": "f034a7ef37842da548d4893e862c92373da9f8c6955d2ea930f0c432f2418318",
+      "promptSha256": "5109fc5fffd5a05a7cc6cd63c7705be185a2021c259420cc23af15069a528e74"
+    }
+  ],
+  "deterministicBuild": {
+    "tool": "tools/build_pet_art_bundle.py",
+    "pipelineMetadata": "source/evolution/pipeline-meta.json",
+    "pipelineMetadataSha256": "f69fc6199821174ed2cb896c67be558947c98eacb9dec7d1545c18f4c7f0f696",
+    "compositeMethod": "phase A kept at 1536x1024; phase B cropped by one pure-chroma pixel on the right and padded by one pure #FF00FF row at the bottom to 1536x1024; phase A then phase B stacked vertically into a 1536x2048 4x3 grid",
+    "subjectPixelsChangedByCompositeNormalization": false,
+    "compositeSha256": "d9c90e962c75a0a598df6a450d597bf94579b0cc9ec3a0e8c058e3fcc0ce6da2",
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "sharedScale": 0.6005847327,
+    "anchor": "feet",
+    "runtimeBundleDigestAlgorithm": "sha256(newline-delimited runtime RGBA hashes in frame order)",
+    "runtimeBundleDigest": "daba0e310c76c165ccac511d15366b3db40a792c80b52cbbd44dee7402549187"
+  },
+  "frameRgbaSha256": [
+    {"slot": "evolution-1", "source": "bb969059c2e3848601d6d9e276ba4928e846ad271238b84b186ea9ff7b295f70", "runtime": "d5bd6e856ebe99455099400f2cf38d3c7e9b423267a64920cb0827fd38b8bac3"},
+    {"slot": "evolution-2", "source": "f37d3f24479bb069df7060aca4461bc6a4ef5f85b8abd9e9687ecdd95a04b0bb", "runtime": "958ed63991ec99a911643d4cbb386842b2fc57a2bb528e7d5c8fd4e583aa547c"},
+    {"slot": "evolution-3", "source": "861bbed1119eecefb1152b6cdaf20b15ab892c87ddaa1a6bb5e33d604c7adfc0", "runtime": "37353e8cc7a435353719303480b3460218ed28de6b9917e202ae7f06e3826a8c"},
+    {"slot": "evolution-4", "source": "106fd49854886f186ef51568abf306f2b830989641d861f2e80f99137175d4d5", "runtime": "672471fd4d829e847f999865108d3945bab6d4bd986ae09875d74a2983e276b3"},
+    {"slot": "evolution-5", "source": "e5e77684e92928acb8361b3723d63b043645bddb2726fd774b6f6b19a8516cfc", "runtime": "3f0c677595c6e49fb148acbcf4f37b3a25ad834478201dd1286238b35bcafa94"},
+    {"slot": "evolution-6", "source": "2ca648c51619dfd6cff83c567a4c9178113b5d8c0fa49039f55e93dc71499b22", "runtime": "d83d12df6e1079a1ab3d20430b95ab9a15395ebd0df54e4a15b779b473e418f0"},
+    {"slot": "evolution-7", "source": "9c2f72943e81f6a9bcc9865ee945d2dcd17c210f80746e33699972b37166267d", "runtime": "bccec330c0fe697fa189d2befbd195e34b413376455c8b27684107a2ce2a7147"},
+    {"slot": "evolution-8", "source": "a10d3e7ef7f5e509f54e57f2a521fc8f23730240048135e61468eb27fe9025f7", "runtime": "2ad321935d876066646bfbb0bd2fe1abdf213d24979b92b75d51268aab60e61f"},
+    {"slot": "evolution-9", "source": "eb20135b217ac45318ab89270e7e0e9b866531add3df3cdd473a28e67db7a6bc", "runtime": "db0eea012e6cf7b188c0070c7a0286bfebdec14f54f831639d3ec37d4e421f7b"},
+    {"slot": "evolution-10", "source": "fdaec53abc3413336ed59d19e8815d66210af7bd76e0c399a3787ba90731f069", "runtime": "dc7917593b8fa101aaea077f46c693884c090d51d04b4bc156ab3cea8bd7988e"},
+    {"slot": "evolution-11", "source": "e9f8d8d2469f71742a08dcf05631fbdcee1327ff7da4484cf02153983b07196d", "runtime": "97735ed223015700c1f1d545a4b60b5ebe45a78c09a4cb8e5e214b934a8187a2"},
+    {"slot": "evolution-12", "source": "242d3dceaa29a7673bed4ebdc8e2fcd858fdb47df7caf929ebe9cc24abaa3ff1", "runtime": "fa25a423b3b899f0546dc5ecf119e96d893ade8781b0b5a738ac20b28adab4fd"}
+  ],
+  "ownership": {
+    "project": "Beastbound Odyssey",
+    "intent": "original project asset produced for this repository",
+    "stoneAgeAssetsCopied": false,
+    "replacementPath": "regenerate from the archived prompts and Beastbound-owned source and target identity references"
+  },
+  "localFullArchive": ".run/art_batch_phase345/moon_gale_evolution/",
+  "status": "owner_review_pending"
+}

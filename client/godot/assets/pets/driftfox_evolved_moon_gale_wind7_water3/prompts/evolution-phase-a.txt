@@ -1,0 +1,30 @@
+Use case: stylized-concept
+Asset type: production 2D creature evolution animation sprite sheet for Beastbound Odyssey
+Primary request: Generate the FIRST HALF of one continuous physical evolution animation from the Highland Driftfox in Images 1 and 2 into the Moon-Gale Driftfox in Images 3 and 4. Image 5 is layout-only.
+
+Style/medium: exactly match the clean high-definition hand-painted 2.5D game-sprite style, crisp deep plum-blue outlines, layered soft fur, readable collectible-RPG silhouette, polished but not painterly, photorealistic, plastic 3D, or pixel art.
+
+View: one fixed front three-quarter view matching the formal idle references, facing screen-left with a little front visible. Keep the identical camera, body angle, ground plane, and facing in all six cells.
+
+Sheet: exactly 2 rows by 3 columns, exactly 6 equal invisible square cells. Read left-to-right across row 1, then left-to-right across row 2.
+
+Frame 1: the exact Highland Driftfox source identity from Images 1 and 2: one adult quadruped fox, warm sand-gold coat, cream muzzle/chest/belly, narrow mature muzzle, large olive-teal eyes, four long high-hocked legs, one and only one long tapered windswept ribbon-fur tail with one tail root, swept-back long ears with exactly two attached jade-green streamlined fur vanes on each ear, pale green triangular forehead wind mark, two rear-swept green wedge marks on the visible flank, restrained jade-green lower-leg and tail-tip accents.
+Frame 2: the same fox braces gently and lowers by only a few pixels; a cool moon-blue sheen begins inside the existing forehead mark, ear vanes, flank marks, lower legs, and tail tip. Keep one tail only.
+Frame 3: its chest and shoulder structure physically deepen, the back lengthens slightly, and cream chest fur begins growing into a fuller moon-white mane. Sand-gold fur starts becoming pearl cream along the face, neck, and spine. Keep one tail only.
+Frame 4: the single tail broadens near its base and begins a clearly anatomical bifurcation into two attached tail lobes, both emerging from the same hindquarter area; the split is incomplete but readable. The upper lobe starts curling upward and the lower lobe starts curling downward. Do not add a detached third tail.
+Frame 5: two physical tail bodies are now separately traceable from the same hindquarter, with a small open crescent-shaped negative space appearing between them. The adult chest, long back, stable shoulders and hips continue growing; silver-white coat and moon-blue-gray shadows spread. Each long ear still has exactly two attached fur vanes, becoming fuller and mist-fin-shaped but never wing-like.
+Frame 6: about seventy percent transformed. It is clearly the same individual and now an adult silver-white wind fox with deeper chest, longer stable back, thickening moon-white neck mane, deep-teal eyes beginning to replace olive, exactly two large attached tails with upper and lower curls and a clear open crescent gap, cyan-teal tips beginning on ears/lower legs/both tails, a developing cyan forehead crescent, and two developing long crescent wind marks on the visible flank. It must remain less complete and slightly less settled than the final Moon-Gale Driftfox so the second sheet can finish the transformation.
+
+Motion and transformation: one continuous physical growth sequence. Every anatomical and color change advances monotonically from cell to cell. The fox may brace and breathe, but the four feet stay planted in a consistent stance. The one source tail must visibly divide into exactly two target tails; do not hide the transition with light, fog, blur, duplicate bodies, or a crossfade.
+
+Identity invariants: exactly one fox in every cell; same mature narrow muzzle, same four legs, same two ears, same eye placement, same windswept bloodline, same individual. Never become a wolf, cat, deer, dragon, bird, human, robot, nine-tailed fox, chibi cub, or another animal.
+
+Target identity lock: the evolved body is larger and more rideable than the source, with deeper chest, longer back, stable shoulders and hips, thick moon-white neck mane, exactly two large physical tails, and exactly two attached mist-fin-shaped fur vanes per ear. The tail roots, both tail bodies, and both tail tips must be traceable. No one-tail, three-tail, or nine-tail frame. Attached shoulder/back fur flow may grow later, but it must remain body-connected fur and never look like wings or floating ribbons.
+
+Composition: full body fully visible in every cell, centered inside the same central 60 to 70 percent safe area, consistent subject scale and stable feet/bottom anchor, generous margin on every side. No ear, tail, fur tip, glow, or effect may cross a cell edge.
+
+Background: perfectly flat solid #FF00FF in every cell, no gradient, texture, shadow, floor, horizon, vignette, or lighting patch.
+
+Layout guide: use Image 5 only to understand rows, columns, equal invisible slots, centering, and safe padding. Do not reproduce it: no boxes, borders, guide lines, safe-area rectangles, center marks, labels, or guide background.
+
+Avoid: text, numbers, captions, UI, watermark, panel borders, white grid lines, magenta inside the creature, cast shadows, detached fog, detached wind ribbons, sparks, giant glow, explosion, motion blur, duplicate creature, double exposure, crossfade, teleport, cropped limbs, scale pumping, anatomy pumping, changing view, extra ears, extra legs, extra tails, wings, antlers, armor, clothing, saddle, rider, or weapons.

@@ -3,7 +3,7 @@
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "displayName": "月岚风狐",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
+  "productionScope": "identity_world_true8_formal_two_view_battle_and_front_evolution_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -181,7 +181,9 @@
       "blocksReviewedRuntimeToRuntimeOverlay": false
     },
     "worldSourceLedger": "source/world/source-ledger.json",
-    "worldGenerationBrief": "source/world/generation-brief.md"
+    "worldGenerationBrief": "source/world/generation-brief.md",
+    "evolutionSourceLedger": "source/evolution/source-ledger.json",
+    "evolutionSourceLedgerSha256": "fcf1c7edb6c82dd03c403c4cde1796dc6c762121f51839911ec4f4945e5b6b3d"
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
@@ -237,11 +239,21 @@
     "worldQc": "qa/world/world-qc.json",
     "worldQcSha256": "c894aefd2a72a3ef7c2ed710cbaf358fe80eb854cb4454a29413cc4cd42f912f",
     "worldOwnerDecision": "qa/world/owner-decision.json",
-    "worldOwnerDecisionSha256": "76098cac2175425f0f3070d5676aceed0b1dfda33022e81436ebd0f23ab3fd6d"
+    "worldOwnerDecisionSha256": "76098cac2175425f0f3070d5676aceed0b1dfda33022e81436ebd0f23ab3fd6d",
+    "evolutionContactSheet": "qa/evolution/contact-sheet.png",
+    "evolutionContactSheetSha256": "c2eec3fe70c0c177adc173f586637f575b07d27a9c15d506a4d36911daadf0af",
+    "evolutionQc": "qa/evolution/qc-summary.json",
+    "evolutionQcSha256": "08eab34bf04d4dbbaea7319985a7e6eff8bf3580700f1ec0c75f9e9c83ba88cc",
+    "evolutionGif": "qa/evolution/evolution.gif",
+    "evolutionGifSha256": "71d5a3be27bed6fa1f50bdeab7ad3bfb7e73528b428e08a23ee55baf43a6f6fd",
+    "evolutionOwnerDecision": "qa/evolution/owner-decision.json",
+    "evolutionOwnerDecisionSha256": "1a25641f4a418da32c99ce1a2586aa69c0eaf8a09c693a0848bd7f17425bd48d",
+    "evolutionRealMainVideo": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
+    "evolutionRealMainVideoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。",
+  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。Phase345 新增高地风狐到月岚风狐的 12 帧正面进化候选、512/256 双层归档和真实 Main.tscn 1x 成片；当前仅自审通过，项目所有者因休息未验收，进化视觉和所有路线门禁继续 pending/disabled。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -4851,5 +4863,40 @@
         }
       ]
     }
+  },
+  "evolutionVisual": {
+    "status": "self_review_passed_owner_pending",
+    "animationId": "driftfox_moon_gale_evolution_front_v1",
+    "sourceFormId": "driftfox_highland_wind9_earth1",
+    "targetFormId": "driftfox_evolved_moon_gale_wind7_water3",
+    "view": "front_3quarter_sw",
+    "frameCount": 12,
+    "fps": 12,
+    "loop": false,
+    "runtimeRoot": "views/front_3quarter_sw/evolution",
+    "sourceRoot": "source/evolution/frames",
+    "sourceLedger": "source/evolution/source-ledger.json",
+    "pipelineMetadata": "source/evolution/pipeline-meta.json",
+    "contactSheet": "qa/evolution/contact-sheet.png",
+    "qcSummary": "qa/evolution/qc-summary.json",
+    "animationGif": "qa/evolution/evolution.gif",
+    "ownerDecision": "qa/evolution/owner-decision.json",
+    "ownerDecisionSha256": "1a25641f4a418da32c99ce1a2586aa69c0eaf8a09c693a0848bd7f17425bd48d",
+    "realMainSceneReview": {
+      "video": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
+      "videoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "evolutionFps": 12,
+      "displayFramesPerEvolutionFrame": 5,
+      "speedScale": 1.0,
+      "cycleCount": 2,
+      "audioPresent": true,
+      "fullDecodePassed": true
+    },
+    "runtimeBundleDigest": "daba0e310c76c165ccac511d15366b3db40a792c80b52cbbd44dee7402549187",
+    "runtimeEnabled": false,
+    "ownerReview": "pending"
   }
 }
