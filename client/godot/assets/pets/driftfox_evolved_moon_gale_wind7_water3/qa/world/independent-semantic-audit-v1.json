@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "phase": 347,
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "displayName": "月岚风狐",
+  "reviewType": "second_pass_label_blind_world_direction_semantic_audit",
+  "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+  "status": "passed_owner_visual_already_approved_runtime_disabled",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "approved_visual_only",
+  "runtimeEnabled": false,
+  "approvalScope": "technical_world_direction_semantic_audit_only",
+  "pixelChangesInThisPhase": 0,
+  "scope": {
+    "kind": "standalone_pet_world",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": 1,
+      "walk": 4
+    },
+    "runtimeFrameCount": 40,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "runtimeMirroring": false
+  },
+  "labelBlindReview": {
+    "mappingReadBeforePredictionsFrozen": false,
+    "board": ".run/evidence/phase347_moon_gale_world_blind/blind-contact-8x5.png",
+    "boardSha256": "a6dc55bd16a909cefd89a88d971db2e5c3fbc96db12ec9e839dd0587881378e2",
+    "mapping": ".run/evidence/phase347_moon_gale_world_blind/blind-code-mapping.json",
+    "mappingSha256": "d8ddb3ecb310fd9b1611b867db14f2516eb5f17f5e3a1d6d4a7955dffc430706",
+    "predictionsBeforeReveal": ".run/evidence/phase347_moon_gale_world_blind/blind-predictions-before-reveal.json",
+    "predictionsBeforeRevealSha256": "7ae126204c768cb1a20612b73bcde6ec90439faef065ef4abc07618ebff7a978",
+    "predictedDirections": {
+      "A": "south",
+      "B": "northwest",
+      "C": "southwest",
+      "D": "southeast",
+      "E": "northeast",
+      "F": "north",
+      "G": "west",
+      "H": "east"
+    },
+    "revealedDirections": {
+      "A": "south",
+      "B": "northwest",
+      "C": "southwest",
+      "D": "southeast",
+      "E": "northeast",
+      "F": "north",
+      "G": "west",
+      "H": "east"
+    },
+    "correctDirectionCount": 8,
+    "expectedDirectionCount": 8,
+    "accuracy": 1.0
+  },
+  "currentRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase347_moon_gale_world_blind/runtime-parity.json",
+    "reportSha256": "0d3eb06c33d73fa590bc191478da9ad53e7af26d95d2adc5ee951ad617412682",
+    "checkedFrames": 40,
+    "importFreshCount": 40,
+    "canonicalRgbaMatchCount": 40,
+    "sourceSetSha256": "0e6e34e5c099d6e5efdee727e3adbdc1e8509f71b8bbf0a3cd5ae7cca8bde75c",
+    "errors": []
+  },
+  "currentImageStructure": {
+    "status": "passed",
+    "report": ".run/evidence/phase347_moon_gale_world_blind/image-structure-audit.json",
+    "reportSha256": "30e66fc7f8de4ed5da8a7abb9d82fa8b25f5c3beba7195371668a1be36e6e6d9",
+    "checkedFrames": 40,
+    "uniqueDecodedRgbaFrameCount": 40,
+    "trackedQcFileSha256MatchCount": 40,
+    "trackedQcRgbaSha256MatchCount": 40,
+    "minimumEdgeMargin": 14,
+    "duplicatePairCount": 0,
+    "mirroredCrossDirectionPairCount": 0,
+    "currentDecodedRgbaSetSha256": "cb37918e5c624698378f81733f453b123272f2cf6b88f4879834ff8c69c26be7"
+  },
+  "semanticResults": {
+    "directionReadability": {
+      "status": "passed",
+      "notes": "去除目录方向名后，正面、背面、两个纯侧向和四个斜向均可只凭主体朝向区分；揭示映射后 8/8 与目录合同一致。"
+    },
+    "identity": {
+      "status": "passed",
+      "notes": "八向 40 帧均保持成年银白月蓝体态、长腿、月白颈鬃、深青眼与月纹；没有换种、幼化或体量跳变。"
+    },
+    "doubleTail": {
+      "status": "passed",
+      "notes": "每条 idle/walk 序列都能持续追踪同一尾根发出的两条大尾巴；正背遮挡方向可在连续步态中分清根部和末梢，没有单尾、并尾或九尾化。"
+    },
+    "backFins": {
+      "status": "passed",
+      "notes": "肩背毛鳍始终贴体且克制，没有读成翅膀、第三条尾巴或脱体风效。"
+    },
+    "motionContinuity": {
+      "status": "passed",
+      "notes": "每个方向的 idle 与 walk 1..4 朝向一致，前后肢交替和身体起伏连续，没有跨方向跳帧、异常缩放或脚底断层。"
+    },
+    "independentAuthorship": {
+      "status": "passed",
+      "notes": "40 帧 decoded RGBA 全部唯一，跨方向水平镜像对为 0；运行合同继续禁止镜像。"
+    }
+  },
+  "existingOwnerDecision": {
+    "decision": "approved",
+    "scope": "standalone_pet_world_true8_visual_only",
+    "decisionRecord": "qa/world/owner-decision.json",
+    "decisionRecordSha256": "76098cac2175425f0f3070d5676aceed0b1dfda33022e81436ebd0f23ab3fd6d",
+    "acceptedMainSceneVideo": ".run/evidence/phase343_moon_gale_world/main-client-1x/Beastbound_Phase343_Moon_Gale_World_1x.mp4",
+    "acceptedMainSceneVideoSha256": "2f1c0ff82cf5feb334149cc3444820d2f5ba0929f2b87b500594d6bbf1cad19b",
+    "note": "owner-decision.json 是批准当时的不可改历史快照；其中独立审计为 pending 是当时事实，本阶段不重写所有者决定。"
+  },
+  "targetedValidation": {
+    "godotExplicitReimport": "passed",
+    "worldRuntimeParity": "passed 40/40 import fresh and canonical RGBA match",
+    "worldImageStructure": "passed 40/40 tracked QC hashes, 40 unique, 0 duplicate, 0 mirrored cross-direction pair",
+    "labelBlindDirectionReview": "passed 8/8",
+    "pixelMutationAudit": "passed, 0 world frame files changed"
+  },
+  "residualRisks": [
+    "本阶段只补齐独立宠物 world true8 的技术盲审；没有批准 battle、mounted battle、evolution 或整宠发布。",
+    "项目所有者正在休息，Phase344 骑乘战斗与 Phase345 进化成片仍待其本人验收。",
+    "runtimeEnabled、进化成功路径、两条路线 asset gate 和全局进化开关继续关闭。"
+  ]
+}

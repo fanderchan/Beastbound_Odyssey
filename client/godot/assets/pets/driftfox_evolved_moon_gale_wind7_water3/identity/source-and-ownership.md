@@ -22,7 +22,7 @@
 - 生成方式：Codex 内置 `image_gen`，只使用 Beastbound 自有身份参考；宠物每帧均为独立完整主体。
 - 后处理：仅色键、切格、共享缩放、底部居中锚定、透明清理与确定性 512→256 派生；不镜像、不分层拼接。
 - 失败留痕：方向漂移、单尾/并尾及翼状毛鳍版本均保留在 `source/world/`，但没有进入运行候选。
-- 当前状态：`self_review_passed_owner_pending`；独立语义复核与 owner 连续视频验收 pending，`runtimeEnabled=false`。
+- 当前状态：主审和 Phase347 去标签方向语义复核均通过；项目所有者已基于 Phase343 的 1× 连续成片批准 `standalone_pet_world_true8_visual_only`，但没有批准 battle、mounted battle、evolution 或路线开放，`runtimeEnabled=false`。
 - 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
 <!-- phase343-moon-gale-world:end -->
 
@@ -49,3 +49,13 @@
 - 当前状态：第二遍运行时语义自审通过，但项目所有者正在休息，未观看本次成片，故 battle 仍为 `owner_pending/runtimeEnabled=false`。
 - 保留债务：历史 48 帧的 512px canonical 与当前 lean ledger RGBA 不一致没有被本轮消除；Phase346 只证明当前 256px runtime 的真实加载与语义，不能声称重新建立了新鲜 512px canonical。
 <!-- phase346-moon-gale-standalone-battle-semantic-review:end -->
+
+<!-- phase347-moon-gale-world-independent-semantic-audit:start -->
+## Phase347 世界真八向去标签语义复核
+
+- 复核对象：Phase343 已获 `visual_only` 批准的月岚风狐独立宠物 world true8，共 40 张 256×256 运行帧；本阶段没有修改任何世界帧像素。
+- 盲审方法：随机打乱八个方向，只显示 A–H 与每条 `idle + walk 1..4`；在读取编码映射前冻结方向判断和身份观察，揭示后 `8/8` 全部命中。
+- 当前像素证明：显式重导入后，源 PNG、import `source_md5` 与 Godot 实载 canonical RGBA `40/40` 一致；40 张 decoded RGBA 全部唯一，完全重复 `0`、跨方向水平镜像对 `0`、最小安全边 `14px`。
+- 语义结论：八方向均保持成年银白月蓝身份、月纹、两条可追踪大尾巴和克制贴体毛鳍；没有单尾、并尾、九尾化、翼状毛鳍、方向错配或步态跨向跳变。
+- 审批边界：这是 Codex 第二遍去标签技术盲审，不是新的项目所有者决定；已有 owner 决定仍只批准独立宠物 world true8 视觉，`runtimeEnabled=false`。
+<!-- phase347-moon-gale-world-independent-semantic-audit:end -->

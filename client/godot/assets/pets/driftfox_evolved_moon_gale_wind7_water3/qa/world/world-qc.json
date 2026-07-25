@@ -1,11 +1,12 @@
 {
   "schemaVersion": 2,
   "phase": 343,
-  "status": "self_review_passed_owner_pending",
+  "status": "self_and_blind_semantic_review_passed_owner_approved_visual_only_runtime_disabled",
   "contractValidation": "passed",
   "selfReviewStatus": "passed",
-  "independentBlindSemanticAuditStatus": "pending",
-  "ownerReviewStatus": "pending",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "approved_visual_only",
+  "lastAuditPhase": 347,
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "kind": "pet",
   "characterId": null,
@@ -24,6 +25,29 @@
   "contactSheetSha256": "d9a821b38f6cf5e1a3d2374c138fa69761e8f7e35a8dcf28488c907f096078f9",
   "cycleGif": "qa/world/true8-world-cycle.gif",
   "cycleGifSha256": "0d2be29108afa309f3ab67cd188f25ff00638c5d3b8f7e1951ed82fec65e716e",
+  "independentSemanticAudit": {
+    "path": "qa/world/independent-semantic-audit-v1.json",
+    "sha256": "67a0943dc8ae058ffaeeb65ffcd6bab78d48329010fbbd4f70d515921059533f",
+    "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+    "labelBlindDirectionAccuracy": "8/8",
+    "currentRuntimeParity": {
+      "report": ".run/evidence/phase347_moon_gale_world_blind/runtime-parity.json",
+      "sha256": "0d3eb06c33d73fa590bc191478da9ad53e7af26d95d2adc5ee951ad617412682",
+      "checkedFrames": 40,
+      "importFreshCount": 40,
+      "canonicalRgbaMatchCount": 40,
+      "sourceSetSha256": "0e6e34e5c099d6e5efdee727e3adbdc1e8509f71b8bbf0a3cd5ae7cca8bde75c"
+    },
+    "imageStructure": {
+      "report": ".run/evidence/phase347_moon_gale_world_blind/image-structure-audit.json",
+      "sha256": "30e66fc7f8de4ed5da8a7abb9d82fa8b25f5c3beba7195371668a1be36e6e6d9",
+      "uniqueDecodedRgbaFrameCount": 40,
+      "minimumEdgeMargin": 14,
+      "duplicatePairCount": 0,
+      "mirroredCrossDirectionPairCount": 0
+    },
+    "pixelChanges": 0
+  },
   "errors": [],
   "frames": [
     {
