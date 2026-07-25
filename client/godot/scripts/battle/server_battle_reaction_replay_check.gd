@@ -393,6 +393,66 @@ static func run() -> Dictionary:
 		and not bool(multi_result.get("lastCounterTriggered", true))
 	)
 
+	var lethal_arrow_state := _server_state()
+	lethal_arrow_state = _set_actor_fields(
+		lethal_arrow_state,
+		"enemy_front_3",
+		{"hp": 5, "maxHp": 100}
+	)
+	var lethal_arrow_replay := _replay(
+		lethal_arrow_state,
+		_event_list([{
+			"eventId": "evt_equipment_multi_lethal",
+			"eventType": "multi_attack",
+			"sequence": 1,
+			"actorId": BattleModel.PLAYER_ACTOR_ID,
+			"actorKind": "player",
+			"targetActorId": "enemy_front_3",
+			"targetActorIds": ["enemy_front_3"],
+			"targetCount": 1,
+			"requestedTargetCount": 6,
+			"candidateTargetCount": 1,
+			"actionId": "weapon_shadow_group_shot",
+			"damage": 5,
+			"dodged": false,
+			"critical": false,
+			"counterTriggered": false,
+			"targets": [{
+				"targetActorId": "enemy_front_3",
+				"targetKind": "wild_pet",
+				"damage": 5,
+				"actorDamage": 5,
+				"rideDamage": 0,
+				"hpBefore": 5,
+				"hpAfter": 0,
+				"dodged": false,
+				"critical": false,
+				"launched": true,
+				"defeated": true,
+				"statusesAfter": {},
+			}],
+		}])
+	)
+	var lethal_arrow_events: Array = lethal_arrow_replay.get("events", [])
+	var lethal_arrow_event := (
+		lethal_arrow_events[0] as Dictionary
+		if not lethal_arrow_events.is_empty()
+		else {}
+	)
+	var lethal_arrow_result := lethal_arrow_replay.get("state", {}) as Dictionary
+	var lethal_arrow_target := BattleModel.actor_by_id(
+		lethal_arrow_result,
+		"enemy_front_3"
+	)
+	checks["equipment_multi_attack_lethal_never_launches"] = (
+		str(lethal_arrow_event.get("movementStyle", "")) == "ranged_multi"
+		and not bool(lethal_arrow_event.get("canLaunch", true))
+		and int(lethal_arrow_target.get("hp", -1)) == 0
+		and str(lethal_arrow_target.get("actionState", "")) == "down"
+		and not bool(lethal_arrow_target.get("launched", true))
+		and not bool(lethal_arrow_result.get("lastLaunch", true))
+	)
+
 	var status_replay := _replay(_server_state(), _event_list([{
 		"eventId": "evt_enemy_status",
 		"eventType": "skill_status",

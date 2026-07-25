@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "battle_ranged_bow_v1",
+  "scope": "gm_pet_battle_review_only",
+  "sourceTool": "OpenAI image generation tool",
+  "generatedDate": "2026-07-25",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "qaPreviewEnabled": true,
+  "processing": {
+    "script": "Codex generate2dsprite skill scripts/generate2dsprite.py",
+    "python": "/opt/homebrew/bin/python3",
+    "inputGrid": [2, 2],
+    "outputSize": [256, 256],
+    "backgroundRemoval": "chroma_key_magenta_threshold_100",
+    "parameters": "source/processed/<action>/pipeline-meta.json"
+  },
+  "actions": [
+    {
+      "id": "bow_draw",
+      "generationCallId": "call_drqXKl5lmhTfYFmfBsg7uiUH",
+      "prompt": "source/prompts/bow_draw.txt",
+      "raw": "source/raw/bow_draw_2x2.png",
+      "rawSha256": "1ed1130923720c61a7a4a1634c4a6cfc1917d2caa407281df9bbe27beda44561",
+      "frames": [
+        {
+          "path": "runtime/bow_draw/bow_draw-1.png",
+          "sha256": "acc003ef61d88d3968148abfde7298fb8cd17952ce0a0dd364728597e19ffb54"
+        },
+        {
+          "path": "runtime/bow_draw/bow_draw-2.png",
+          "sha256": "6cf550bef4178cb296578cf0115382525f0a41243b0c606df727e5d2fc0178d5"
+        },
+        {
+          "path": "runtime/bow_draw/bow_draw-3.png",
+          "sha256": "61a0972533c966c0e806eb615727c9dc170ad691a68665774c80258f8155069c"
+        },
+        {
+          "path": "runtime/bow_draw/bow_draw-4.png",
+          "sha256": "bd1ad3d281eb20326feafdaeb6ac5102061e35605b69d98c14d677e09db7a0f3"
+        }
+      ]
+    },
+    {
+      "id": "arrow_flight",
+      "generationCallId": "call_TysO53bmbQ8NG0H6TbEUUFkz",
+      "prompt": "source/prompts/arrow_flight.txt",
+      "raw": "source/raw/arrow_flight_2x2.png",
+      "rawSha256": "a5ebbb19259cb412827e3bc90c6bb1b696cc7bbe7c288ab51d174f47d91200d5",
+      "frames": [
+        {
+          "path": "runtime/arrow_flight/arrow_flight-1.png",
+          "sha256": "161e21fdad914eed7bd8f13dcb90314cc7d98611e6e9fe9e29c3db07cdfbbd81"
+        },
+        {
+          "path": "runtime/arrow_flight/arrow_flight-2.png",
+          "sha256": "3d85b0a23d2689c982a7b916d0a1668112c8ac5b2e4160895bc8a6b26f5ce868"
+        },
+        {
+          "path": "runtime/arrow_flight/arrow_flight-3.png",
+          "sha256": "dc9da21e6a9e6546d32d4eac89deac6c53cdefa76bf40f5c39fc3c3cce27bf0c"
+        },
+        {
+          "path": "runtime/arrow_flight/arrow_flight-4.png",
+          "sha256": "4a1dfa6f6438d3d9ae29ff6fa97b121ba1244c0c69649b65720716c1b38de2f1"
+        }
+      ]
+    },
+    {
+      "id": "arrow_hit",
+      "generationCallId": "call_FaD4ALIpFt8pVbDMdGDd73Yd",
+      "prompt": "source/prompts/arrow_hit.txt",
+      "raw": "source/raw/arrow_hit_2x2.png",
+      "rawSha256": "eca05a30f9e60a57ec5ad818a992cd507ad6aa59fa43146a7ae8db0d642a17b6",
+      "frames": [
+        {
+          "path": "runtime/arrow_hit/arrow_hit-1.png",
+          "sha256": "8902fc35ef4ff6b785b8da50817251145c9db7380c8dffbb1154d9f47c9066a4"
+        },
+        {
+          "path": "runtime/arrow_hit/arrow_hit-2.png",
+          "sha256": "978d27d7b16f8e4270a7a80aa2bbc48d9464d896aee8bc24183af16c42d61751"
+        },
+        {
+          "path": "runtime/arrow_hit/arrow_hit-3.png",
+          "sha256": "92896c0854712b4df3d075088ed380215ffdc023405d95bdd813b3eaa67828a6"
+        },
+        {
+          "path": "runtime/arrow_hit/arrow_hit-4.png",
+          "sha256": "f74724fb9e930ff3dcb66213d0664d2d5ae01f6aa4485e0c086577bb95847a7b"
+        }
+      ]
+    },
+    {
+      "id": "arrow_ground",
+      "generationCallId": "call_HQMD8A9W06UUacCjrMVe5K92",
+      "prompt": "source/prompts/arrow_ground.txt",
+      "raw": "source/raw/arrow_ground_2x2.png",
+      "rawSha256": "921bce07e07e437f59887b46187d61078437efe0c1e3fdaaf8a5dfa208352033",
+      "frames": [
+        {
+          "path": "runtime/arrow_ground/arrow_ground-1.png",
+          "sha256": "4ead1e68173dd79fbf2c7cb9461248309ae3e86cf7ec3914241d8a8364ff8850"
+        },
+        {
+          "path": "runtime/arrow_ground/arrow_ground-2.png",
+          "sha256": "eef9c04919f2c0b4fa076f4fb04330161339e4e3d41687f13fd69323f70d6cb8"
+        },
+        {
+          "path": "runtime/arrow_ground/arrow_ground-3.png",
+          "sha256": "ada999e538e6ec0076c767c86f981f05b1f81b224ee5d567989987d051eff05d"
+        },
+        {
+          "path": "runtime/arrow_ground/arrow_ground-4.png",
+          "sha256": "8d161d1e7c74fcb4aefa0c5604de276932a4835e4ec6a93d43f9ba62a16d2ddf"
+        }
+      ]
+    }
+  ]
+}

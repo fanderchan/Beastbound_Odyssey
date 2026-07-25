@@ -4,6 +4,12 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const BattleArenaVisualCatalog := preload(
 	"res://scripts/battle/battle_arena_visual_catalog.gd"
 )
+const BattleRangedProjectileAssetCatalog := preload(
+	"res://scripts/battle/battle_ranged_projectile_asset_catalog.gd"
+)
+const BattleRangedProjectilePresentationModel := preload(
+	"res://scripts/battle/battle_ranged_projectile_presentation_model.gd"
+)
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
@@ -611,6 +617,12 @@ static func state_signature(state: Dictionary) -> String:
 
 static func validation_errors() -> Array[String]:
 	var errors: Array[String] = BattleArenaVisualCatalog.validation_errors()
+	errors.append_array(
+		BattleRangedProjectileAssetCatalog.validation_errors()
+	)
+	errors.append_array(
+		BattleRangedProjectilePresentationModel.validation_errors()
+	)
 	var form_id := default_form_id()
 	if form_id == "":
 		errors.append("验收场没有可用宠物模板")
@@ -681,10 +693,13 @@ static func validation_errors() -> Array[String]:
 	var status_ids: Array[String] = []
 	var event_sides := {}
 	var saw_burst := false
+	var ranged_event_for_regression := {}
 	for event in first_events:
 		var event_type := str(event.get("type", ""))
 		status_ids.append(str(event.get("statusId", "")))
 		if event_type == "multi_attack":
+			if ranged_event_for_regression.is_empty():
+				ranged_event_for_regression = event.duplicate(true)
 			var attacker := BattleModel.actor_by_id(
 				first,
 				str(event.get("attackerId", ""))
@@ -705,6 +720,53 @@ static func validation_errors() -> Array[String]:
 			errors.append("战术AI首回合缺少控制技能：%s" % status_id)
 	if event_sides.size() != 2:
 		errors.append("双方弓手没有都生成群攻事件")
+	if ranged_event_for_regression.is_empty():
+		errors.append("没有可用于致死箭矢回归的群攻事件")
+	else:
+		var lethal_state := first.duplicate(true)
+		var lethal_target_ids: Array[String] = []
+		for value in ranged_event_for_regression.get("targetIds", []):
+			var target_id := str(value)
+			if target_id != "" and not lethal_target_ids.has(target_id):
+				lethal_target_ids.append(target_id)
+		var lethal_actors: Array = lethal_state.get("actors", [])
+		for actor_index in range(lethal_actors.size()):
+			var lethal_actor := lethal_actors[actor_index] as Dictionary
+			if not lethal_target_ids.has(str(lethal_actor.get("id", ""))):
+				continue
+			lethal_actor["hp"] = 1
+			lethal_actor["ridePetHp"] = 0
+			lethal_actor["ridePetKnocked"] = true
+			lethal_actors[actor_index] = lethal_actor
+		lethal_state["actors"] = lethal_actors
+		var lethal_event := ranged_event_for_regression.duplicate(true)
+		lethal_event["forceDodge"] = false
+		lethal_event["forceCritical"] = false
+		# Deliberately inject a malformed launch permission. The ranged apply
+		# path must still defeat in-slot and ignore melee launch semantics.
+		lethal_event["canLaunch"] = true
+		lethal_state = BattleModel.apply_battle_event(
+			lethal_state,
+			lethal_event
+		)
+		if bool(lethal_state.get("lastLaunch", false)):
+			errors.append("致死箭矢错误触发了击飞")
+		for lethal_target_id in lethal_target_ids:
+			var defeated_target := BattleModel.actor_by_id(
+				lethal_state,
+				lethal_target_id
+			)
+			if int(defeated_target.get("hp", 1)) > 0:
+				errors.append("致死箭矢回归没有击倒目标：%s" % lethal_target_id)
+			elif (
+				str(defeated_target.get("actionState", ""))
+				!= "down"
+				or bool(defeated_target.get("launched", false))
+			):
+				errors.append(
+					"致死箭矢没有原地倒下：%s=%s"
+					% [lethal_target_id, str(defeated_target)]
+				)
 	if not saw_burst:
 		errors.append("战术AI没有生成宠物高伤害爆发")
 	var wounded_state := first.duplicate(true)

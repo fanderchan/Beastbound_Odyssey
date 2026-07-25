@@ -29,6 +29,11 @@ func run() -> void:
 		errors.append("验收场控制面板没有打开")
 	if not host.battle_active or not bool(host.battle_state.get("reviewLab", false)):
 		errors.append("验收场没有进入隔离战斗")
+	if absf(lab.current_speed_scale() - 1.0) > 0.001:
+		errors.append(
+			"GM随机观战默认速度不是1.0x：%.2f"
+			% lab.current_speed_scale()
+		)
 	if lab.form_option_count() != PetBattleReviewModel.pet_options().size():
 		errors.append("宠物选择目录没有完整载入")
 	if (host.battle_state.get("actors", []) as Array).size() != 20:

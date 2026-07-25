@@ -12,6 +12,15 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
+const BattleRangedProjectileAssetCatalog := preload(
+	"res://scripts/battle/battle_ranged_projectile_asset_catalog.gd"
+)
+const BattleRangedProjectilePresentationModel := preload(
+	"res://scripts/battle/battle_ranged_projectile_presentation_model.gd"
+)
+const BattleRangedProjectileRenderer := preload(
+	"res://scripts/battle/battle_ranged_projectile_renderer.gd"
+)
 const BattleArenaVisualCatalog := preload(
 	"res://scripts/battle/battle_arena_visual_catalog.gd"
 )
@@ -9409,6 +9418,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	if bool(next_battle_state.get("reviewLab", false)):
 		MountedBattlePresentationModel.warm_battle_state(next_battle_state)
+		BattleRangedProjectileAssetCatalog.warm_all()
 	BattleArenaVisualCatalog.warm_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
 
@@ -12198,6 +12208,16 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 		"damageRevealProgress": reveal_progress,
 		"launchStartProgress": launch_start,
 	}
+	if _battle_ranged_projectile_enabled(event):
+		timeline["projectileReleaseProgress"] = (
+			BattleRangedProjectilePresentationModel.RELEASE_PROGRESS
+		)
+		timeline["projectileFlightEndProgress"] = (
+			BattleRangedProjectilePresentationModel.FLIGHT_END_PROGRESS
+		)
+		timeline["dodgeMotionStartProgress"] = (
+			BattleRangedProjectilePresentationModel.DODGE_START_PROGRESS
+		)
 	if str(event.get("type", "")) == "combo_attack":
 		var participant_ids: Array = event.get(
 			"participantIds",
@@ -12220,6 +12240,8 @@ func _battle_event_timeline_for_applied_event(event: Dictionary) -> Dictionary:
 			event.get("serverLaunched", battle_state.get("lastLaunch", false))
 		)
 	)
+	if _battle_ranged_projectile_enabled(event):
+		launched = false
 	if launched:
 		timeline["launchSoundProgress"] = clampf(
 			launch_start
@@ -12301,6 +12323,8 @@ func _battle_event_duration(event: Dictionary) -> float:
 	var timeline = event.get("timeline", {})
 	if timeline is Dictionary and (timeline as Dictionary).has("durationSeconds"):
 		return maxf(0.12, float((timeline as Dictionary).get("durationSeconds", 0.46)))
+	if _battle_ranged_projectile_enabled(event):
+		return BattleRangedProjectilePresentationModel.event_duration_seconds()
 	if event.has("duration"):
 		return maxf(0.12, float(event.get("duration", 0.46)))
 	match str(event.get("type", "")):
@@ -12373,6 +12397,8 @@ func _battle_event_result_reveal_progress(event: Dictionary) -> float:
 	var timeline = event.get("timeline", {})
 	if timeline is Dictionary and (timeline as Dictionary).has("damageRevealProgress"):
 		return clampf(float((timeline as Dictionary).get("damageRevealProgress", 0.0)), 0.0, 1.0)
+	if _battle_ranged_projectile_enabled(event):
+		return BattleRangedProjectilePresentationModel.RESULT_REVEAL_PROGRESS
 	var event_type := str(event.get("type", ""))
 	if event_type == "combo_attack":
 		var participant_ids: Array = event.get("participantIds", [str(event.get("attackerId", ""))])
@@ -12386,6 +12412,13 @@ func _battle_event_result_reveal_progress(event: Dictionary) -> float:
 	if event_type == "attack" or event_type == "skill_attack" or event_type == "counter_attack":
 		return 0.50
 	return 0.0
+
+
+func _battle_ranged_projectile_enabled(event: Dictionary) -> bool:
+	return BattleRangedProjectilePresentationModel.is_review_ranged_arrow_event(
+		event,
+		battle_state
+	)
 
 
 func _battle_current_event_result_revealed() -> bool:
@@ -14640,6 +14673,7 @@ func _draw_battle_scene() -> void:
 			_draw_battle_actor(actor)
 	for launched_actor in launched_draw_queue:
 		_draw_battle_actor(launched_actor)
+	_draw_battle_ranged_projectiles()
 	_draw_battle_float_texts()
 	if _battle_should_draw_formation_grid():
 		_draw_battle_formation_slot_anchors()
@@ -14804,6 +14838,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			4.0 * visual_scale,
 			true
 		)
+	_draw_battle_ranged_bow_overlay(actor, pos, visual_scale, alpha)
 	_draw_battle_melee_impact_effect(actor, pos, visual_scale)
 	if (BattleModel.is_actor_guarding(battle_state, actor_id) or state == BattleVisualPresentationModel.STATE_GUARD_HIT) and int(actor.get("hp", 0)) > 0:
 		_draw_battle_guard_effect(actor, pos, visual_scale, state)
@@ -14864,7 +14899,7 @@ func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: Stri
 				reveal_progress
 			)
 		if state == "down":
-			var is_current_target := not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
+			var is_current_target := _battle_current_event_targets_actor(actor_id)
 			if is_current_target and _battle_last_event_is_nonlaunch_counter_ko(battle_current_event):
 				progress = BattleVisualPresentationModel.counter_ko_down_progress(
 					_battle_current_event_progress(),
@@ -14928,6 +14963,10 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
 		return false
 	var state := str(actor.get("actionState", "idle")).strip_edges().to_lower()
+	if _battle_actor_is_current_ranged_attacker(str(actor.get("id", ""))):
+		# The bow overlay owns the ranged action. Keep the integrated rider on
+		# its stable idle frame instead of reusing the old melee punch/lunge.
+		state = "idle"
 	var texture: Texture2D
 	var horizontal_scale := 1.0
 	if MountedCharacterAssetCatalog.supports_battle_combination(character_id, form_id):
@@ -14960,7 +14999,7 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 					reveal_progress
 				)
 			if state == "down":
-				var is_current_target := not battle_current_event.is_empty() and actor_id == str(battle_current_event.get("targetId", ""))
+				var is_current_target := _battle_current_event_targets_actor(actor_id)
 				if is_current_target and _battle_last_event_is_nonlaunch_counter_ko(battle_current_event):
 					progress = BattleVisualPresentationModel.counter_ko_down_progress(
 						_battle_current_event_progress(),
@@ -15019,6 +15058,41 @@ func _draw_formal_battle_mount_actor(actor: Dictionary, pos: Vector2, visual_sca
 	draw_texture_rect(texture, texture_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
+
+
+func _battle_actor_is_current_ranged_attacker(actor_id: String) -> bool:
+	return BattleRangedProjectileRenderer.is_current_attacker(
+		self,
+		actor_id
+	)
+
+
+func _battle_current_event_targets_actor(actor_id: String) -> bool:
+	if actor_id == "" or battle_current_event.is_empty():
+		return false
+	if actor_id == str(battle_current_event.get("targetId", "")):
+		return true
+	var target_ids = battle_current_event.get("targetIds", [])
+	return target_ids is Array and (target_ids as Array).has(actor_id)
+
+
+func _draw_battle_ranged_bow_overlay(
+	actor: Dictionary,
+	pos: Vector2,
+	visual_scale: float,
+	alpha: float
+) -> void:
+	BattleRangedProjectileRenderer.draw_bow_overlay(
+		self,
+		actor,
+		pos,
+		visual_scale,
+		alpha
+	)
+
+
+func _draw_battle_ranged_projectiles() -> void:
+	BattleRangedProjectileRenderer.draw_projectiles(self)
 
 
 func _battle_ellipse_points(center: Vector2, radius: Vector2, rotation: float = 0.0, segments: int = 24) -> PackedVector2Array:
@@ -15235,7 +15309,23 @@ func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
 			var rested_attacker := actor.duplicate(true)
 			rested_attacker["actionState"] = "idle"
 			return rested_attacker
-	if actor_id != str(battle_current_event.get("targetId", "")):
+	if not _battle_current_event_targets_actor(actor_id):
+		return actor
+	if (
+		_battle_ranged_projectile_enabled(battle_current_event)
+		and battle_current_event.get("dodgePerTarget", {}) is Dictionary
+		and bool(
+			(
+				battle_current_event.get("dodgePerTarget", {})
+				as Dictionary
+			).get(actor_id, false)
+		)
+		and BattleRangedProjectilePresentationModel.dodge_motion_started(
+			event_progress
+		)
+	):
+		# A dodging target moves before contact so the arrow visibly crosses the
+		# original occupied space and then continues into the ground.
 		return actor
 	if not _battle_current_event_result_revealed() and _battle_event_delays_result(battle_current_event):
 		var snapshot = battle_current_event_actor_snapshots.get(actor_id, {})
@@ -15436,7 +15526,7 @@ func _battle_actor_melee_impact_strength(actor_id: String) -> float:
 	if bool(battle_current_event.get("dodged", false)):
 		return 0.0
 	var event_type := str(battle_current_event.get("type", ""))
-	if not ["attack", "skill_attack", "combo_attack", "counter_attack", "multi_attack"].has(event_type):
+	if not ["attack", "skill_attack", "combo_attack", "counter_attack"].has(event_type):
 		return 0.0
 	return BattleVisualPresentationModel.melee_impact_strength(
 		_battle_current_event_progress(),

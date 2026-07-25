@@ -37,7 +37,7 @@ var mount_form_id: String = ""
 var placement: String = PetBattleReviewModel.PLACEMENT_RANDOM_ALL
 var pool_id: String = PetBattleReviewModel.POOL_FORMAL
 var seed_value: int = DEFAULT_SEED
-var speed_scale: float = 1.25
+var speed_scale: float = 1.0
 var paused: bool = false
 var collapsed: bool = false
 var completed_brawls: int = 0
@@ -137,7 +137,7 @@ func open(
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed)
 	placement = PetBattleReviewModel.PLACEMENT_RANDOM_ALL
 	pool_id = PetBattleReviewModel.POOL_FORMAL
-	speed_scale = 1.25
+	speed_scale = 1.0
 	paused = false
 	collapsed = start_collapsed
 	completed_brawls = 0
@@ -224,6 +224,10 @@ func current_seed() -> int:
 
 func current_mode() -> String:
 	return mode
+
+
+func current_speed_scale() -> float:
+	return speed_scale
 
 
 func current_mount_form_id() -> String:

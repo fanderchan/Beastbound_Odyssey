@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "fx",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/battle/ranged_bow_v1/source/raw/arrow_ground_2x2.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 130,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 256,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "bottom",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 6,
+  "min_component_area": 1,
+  "edge_touch_margin": 2,
+  "frame_labels": [
+    "arrow_ground-1",
+    "arrow_ground-2",
+    "arrow_ground-3",
+    "arrow_ground-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 5,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        226,
+        130,
+        515,
+        556
+      ],
+      "edge_touch": false,
+      "output_size": [
+        148,
+        218
+      ],
+      "paste_position": [
+        54,
+        23
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "all",
+      "component_count": 7,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        90,
+        136,
+        436,
+        565
+      ],
+      "edge_touch": false,
+      "output_size": [
+        177,
+        220
+      ],
+      "paste_position": [
+        39,
+        21
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 21,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        221,
+        82,
+        523,
+        521
+      ],
+      "edge_touch": false,
+      "output_size": [
+        154,
+        225
+      ],
+      "paste_position": [
+        51,
+        16
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "all",
+      "component_count": 4,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        154,
+        103,
+        436,
+        524
+      ],
+      "edge_touch": false,
+      "output_size": [
+        144,
+        216
+      ],
+      "paste_position": [
+        56,
+        25
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

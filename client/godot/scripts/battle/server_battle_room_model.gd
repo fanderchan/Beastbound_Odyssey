@@ -1304,6 +1304,8 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"sequence": sequence,
 			"actionId": str(server_event.get("actionId", "")),
 			"skillName": BattleActionCatalog.label_for(str(server_event.get("actionId", "")), "群体攻击"),
+			"movementStyle": "ranged_multi",
+			"canLaunch": false,
 			"serverResolved": true,
 			"dodged": bool(server_event.get("dodged", false)),
 			"critical": bool(server_event.get("critical", false)),

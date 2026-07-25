@@ -2876,7 +2876,10 @@ static func _apply_server_resolved_multi_damage_event(state: Dictionary, event: 
 		if facts.get("statusesAfter", null) is Dictionary:
 			target["statuses"] = (facts.get("statusesAfter", {}) as Dictionary).duplicate(true)
 			target["poisoned"] = BattleStatusModel.has_status(target, STATUS_POISON)
-		var launched := bool(facts.get("launched", false)) and not dodged
+		# Equipment multi-attacks are arrows. Even a lethal overkill is a
+		# non-launch defeat, matching the authoritative server's canLaunch=false
+		# rule and preventing malformed replay facts from creating a melee launch.
+		var launched := false
 		target["launched"] = launched
 		target["revivable"] = not launched
 		target["serverDefeated"] = bool(facts.get("defeated", hp_after <= 0))
