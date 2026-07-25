@@ -102,7 +102,7 @@
     }
   },
   "worldVisual": {
-    "status": "self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_runtime_disabled",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -120,13 +120,13 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "self_review_passed_owner_pending"
+        "status": "owner_approved_visual_only"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "self_review_passed_owner_pending"
+        "status": "owner_approved_visual_only"
       }
     },
     "runtimeLayeredComposition": false,
@@ -156,7 +156,7 @@
     "reviewGates": {
       "selfReview": "passed",
       "independentBlindSemanticAudit": "pending",
-      "ownerReview": "pending"
+      "ownerReview": "approved"
     }
   },
   "supportedMountedCharacterIds": [
@@ -235,11 +235,13 @@
     "worldCycleGif": "qa/world/true8-world-cycle.gif",
     "worldCycleGifSha256": "0d2be29108afa309f3ab67cd188f25ff00638c5d3b8f7e1951ed82fec65e716e",
     "worldQc": "qa/world/world-qc.json",
-    "worldQcSha256": "c894aefd2a72a3ef7c2ed710cbaf358fe80eb854cb4454a29413cc4cd42f912f"
+    "worldQcSha256": "c894aefd2a72a3ef7c2ed710cbaf358fe80eb854cb4454a29413cc4cd42f912f",
+    "worldOwnerDecision": "qa/world/owner-decision.json",
+    "worldOwnerDecisionSha256": "76098cac2175425f0f3070d5676aceed0b1dfda33022e81436ebd0f23ab3fd6d"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。主审通过，独立语义复核与 owner 连续视频验收仍待定，runtime 保持关闭。",
+  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",

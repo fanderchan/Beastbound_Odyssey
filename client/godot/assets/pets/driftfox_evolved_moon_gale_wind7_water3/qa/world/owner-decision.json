@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_world_visual_owner_decision",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "subject": "standalone_pet",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "standalone_pet_world_true8_visual_only",
+  "visualApproved": true,
+  "independentSemanticAuditStatus": "pending",
+  "petBundleReleaseApproved": false,
+  "mountedBattleReleaseApproved": false,
+  "evolutionRouteReleaseApproved": false,
+  "runtimeEnabled": false,
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase343_moon_gale_world/main-client-1x/Beastbound_Phase343_Moon_Gale_World_1x.mp4",
+    "mainSceneVideoSha256": "2f1c0ff82cf5feb334149cc3444820d2f5ba0929f2b87b500594d6bbf1cad19b",
+    "width": 1280,
+    "height": 720,
+    "fps": 60,
+    "durationSeconds": 17.25,
+    "speedScale": 1.0,
+    "fullDecodePassed": true
+  },
+  "notes": [
+    "项目所有者在查看 Phase343 的 1x 实机连续成片后明确回复“认可，继续”。",
+    "本决定只批准月岚风狐独立宠物的世界真八方向视觉，不批准整宠战斗包、骑乘战斗包、进化演出或正式路线开放。",
+    "独立方向语义复核仍待完成；宠物目录 runtimeEnabled 与进化路线门禁继续保持关闭。"
+  ]
+}
