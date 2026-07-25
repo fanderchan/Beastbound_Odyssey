@@ -188,7 +188,7 @@
     "mounted160ContactSheetSha256": "dd37a24037149112fe359985271266c6771a3df6b07a5cad3cc72950fbd1cea4"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated mounted world true-eight and mounted battle two-view actions are complete. The 180-frame battle candidate preserves the adult novice hunter seat behind the shoulder bastions without crystal-rider intersections; owner review remains pending and runtime stays disabled.",
+  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 对 12 动作、180 帧整体骑乘战斗补齐第二遍运行时语义自审：当前 PNG/import/Godot 实载、源账本、生成来源与安装清单均通过一致性门禁，真实 Main.tscn 以 1.00x 覆盖 14 段动作因果；没有修改像素或玩法代码。项目所有者尚未观看本轮成片，ownerReviewStatus 继续 pending，runtime 继续关闭。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -202,7 +202,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "independent_semantic_self_review_passed_owner_pending",
     "kind": "mounted",
     "views": [
       "front_3quarter_sw",
@@ -257,8 +257,25 @@
     "contactSheetSha256": "aed3935da5ccfa636c4222c59b015f9b86eb87d4eace4b3aacc834eee98272f9",
     "qcSummary": "qa/battle/qc-summary.json",
     "qcSummarySha256": "10fb881d1c0cf980d8c2e81e291dee685545850085682f7ed07f611ab528dfc8",
-    "reviewVideo": ".run/evidence/phase340_crystal_wuli_mounted/Beastbound_Phase340_Crystal_Wuli_Mounted_1x.mp4",
-    "reviewVideoSha256": "1eae905e5fd429be27134183515ba5b9e2a3ce16154fb8a49cb2711960cfbd0e",
-    "reviewVideoSpeedScale": 1.0
+    "reviewVideo": ".run/evidence/phase352_crystal_wuli_mounted_battle/Beastbound_Phase352_Crystal_Wuli_Mounted_Semantic_1x.mp4",
+    "reviewVideoSha256": "b195b5a3bd0ebf54967f7c00e591e2faa2cbb60b9387afd946bf14a8f1bd2f85",
+    "reviewVideoSpeedScale": 1.0,
+    "reviewVideoFrameRate": 60,
+    "reviewVideoDurationSeconds": 39.533333,
+    "priorReviewVideo": ".run/evidence/phase340_crystal_wuli_mounted/Beastbound_Phase340_Crystal_Wuli_Mounted_1x.mp4",
+    "priorReviewVideoSha256": "1eae905e5fd429be27134183515ba5b9e2a3ce16154fb8a49cb2711960cfbd0e",
+    "semanticReview": {
+      "status": "passed_owner_pending",
+      "reviewer": "codex_self_review_not_project_owner",
+      "report": "qa/battle/semantic-review-v2.json",
+      "reportSha256": "6923857e32a44ed92eac4e1888dd53de7ad52b2d75168a4c1165ff44a112de0d",
+      "runtimeParitySha256": "ede0aa3ca1250be7cf1d076e6c8c878bbc199807aea8e42b7f66a8b12451f3c3",
+      "structureAuditSha256": "b6aec937cd780f4b6cbfccfaef2d46a6f745dfa6a4e9d92538e47197b5d49efb",
+      "sourceSetSha256": "873e552e6a7b6da18a18e8fa8b94a62d9bc18fcdd5d016a02b750bf773b77ef6",
+      "checkedFrames": 180,
+      "runtimeCanonicalRgbaMatchCount": 180,
+      "eventDrivenStepCount": 12,
+      "reviewStepCount": 14
+    }
   }
 }

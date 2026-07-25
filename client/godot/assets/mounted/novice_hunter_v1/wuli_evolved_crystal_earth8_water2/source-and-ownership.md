@@ -38,3 +38,17 @@
 - 当前状态：工程自检候选完成，项目所有者验收仍为 `pending`，`runtimeEnabled=false`；在项目所有者确认 1× 动态证据前不进入玩家运行时。
 - 替换路径：从本目录身份锁、生成合同与完整本地生产归档重新生成，再依次通过安装审计、Godot 资产检查、1× 动态复核和 owner gate。
 <!-- phase340-crystal-mounted-battle:end -->
+
+<!-- phase352-crystal-mounted-battle-semantic-review:start -->
+## Phase352 骑乘战斗第二遍运行时语义复核
+
+- 本阶段没有修改任何动作像素、玩法代码、数值、服务端、玩家档案、路线门禁或运行时开关。
+- 当前双视角 12 动作、180 张运行 PNG 与 Godot 实载 canonical RGBA `180/180` 一致，也与 `source/battle/source-ledger.json` 的逐帧 RGBA `180/180` 一致。
+- 24 组动作的 prompt、pipeline 与 QA 来源文件哈希 `72/72` 一致；lean 归档的 2 份代表性无损源文件及其 decoded RGBA `2/2` 一致；当前安装清单 `307/307` 一致。
+- 当前 180 帧包含 164 张唯一 RGBA。16 组完全重复全部是两个视角各 8 组 `down-1..8` 与 `revive-8..1` 的既定精确反向帧；意外重复为 0，跨视角水平镜像对为 0。
+- 真实 `res://scenes/Main.tscn` 以 `1.00x`、1280×720、60 FPS 连续复核 14 段：行进、攻击、技能、防御承压、受击、反击、致死反击负伤归位、三骑合击、回避、回避反击、直飞、弹飞、倒地与复起。
+- 自审确认成年人物比例、肩堡后方坐点、人物/坐骑整体连续、普通攻击与技能区分、防御与受击区分、可见回避后撤、击飞与非击飞倒地边界、倒地到复起连续性；没有观察到人物掉骑、运行时分层或晶体穿入人物。
+- 跟踪报告：`qa/battle/semantic-review-v2.json`（SHA-256 `6923857e32a44ed92eac4e1888dd53de7ad52b2d75168a4c1165ff44a112de0d`）。
+- 1× 成片：`.run/evidence/phase352_crystal_wuli_mounted_battle/Beastbound_Phase352_Crystal_Wuli_Mounted_Semantic_1x.mp4`（SHA-256 `b195b5a3bd0ebf54967f7c00e591e2faa2cbb60b9387afd946bf14a8f1bd2f85`）。
+- 当前状态只是 Codex 独立语义自审通过；项目所有者尚未观看本轮成片，`ownerReviewStatus=pending`、各动作 `owner_review_pending`、`runtimeEnabled=false` 均保持不变。
+<!-- phase352-crystal-mounted-battle-semantic-review:end -->

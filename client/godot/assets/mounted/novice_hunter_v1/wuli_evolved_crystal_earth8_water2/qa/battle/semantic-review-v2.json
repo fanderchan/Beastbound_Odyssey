@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "phase": 352,
+  "reviewDate": "2026-07-26",
+  "characterId": "novice_hunter_v1",
+  "mountFormId": "wuli_evolved_crystal_earth8_water2",
+  "kind": "mounted_integrated_whole_frame",
+  "status": "independent_semantic_self_review_passed_owner_pending",
+  "reviewer": "codex_self_review_not_project_owner",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "pixelChanges": 0,
+  "productCodeChanges": 0,
+  "scope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "frameCount": 180,
+    "runtimeFrameSize": [
+      256,
+      256
+    ]
+  },
+  "assetIntegrity": {
+    "bundleDigest": "3844e961e828f2b07ecd500e5f2a6378b0ca0181bfa23fce2e36e24a7ea7196c",
+    "sourceLedgerSha256": "443b011293592ba9be452111f28e1a2b908960cab231431ec85afda387c2ec26",
+    "installManifestSha256": "eaa0ad8022aa3a400252a34e2b5460d99e9f42f6a398e652a15b82707a9f73b5",
+    "sourceSetSha256": "873e552e6a7b6da18a18e8fa8b94a62d9bc18fcdd5d016a02b750bf773b77ef6",
+    "decodedRgbaSetSha256": "b8ce1b32ec271bc190891303624f71822c29d6e4c3a32a84b74c970a333a899f",
+    "checkedFrames": 180,
+    "importFreshCount": 180,
+    "runtimeCanonicalRgbaMatchCount": 180,
+    "ledgerRgbaMatchCount": 180,
+    "runtimeFrameSizeMatchCount": 180,
+    "uniqueDecodedRgbaFrameCount": 164,
+    "minimumEdgeMargin": 4,
+    "sourceProvenanceFileHashCount": 72,
+    "sourceProvenanceFileHashMatchCount": 72,
+    "representativeRawCount": 2,
+    "representativeRawFileHashMatchCount": 2,
+    "representativeRawRgbaHashMatchCount": 2,
+    "installManifestFileCount": 307,
+    "installManifestFileHashMatchCount": 307,
+    "intentionalDownReviveReverseDuplicatePairCount": 16,
+    "unexpectedDuplicatePairCount": 0,
+    "mirroredCrossViewPairCount": 0,
+    "downReviveReverseExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "runtimeReview": {
+    "scene": "res://scenes/Main.tscn",
+    "speedScale": 1.0,
+    "speedFilters": [],
+    "resolution": [
+      1280,
+      720
+    ],
+    "frameRate": 60,
+    "videoFrameCount": 2372,
+    "durationSeconds": 39.533333,
+    "videoCodec": "h264",
+    "audioCodec": "aac",
+    "audioSampleRate": 48000,
+    "audioChannels": 2,
+    "audioMeanDb": -26.9,
+    "audioMaxDb": -3.8,
+    "fullDecodeErrors": 0,
+    "movieMakerAverageCpuRenderMsPerFrame": 0.07,
+    "productionModels": [
+      "BattleModel",
+      "PetBattleReviewModel",
+      "MountedCharacterAssetCatalog",
+      "MountedBattlePresentationModel"
+    ],
+    "eventDrivenStepCount": 12,
+    "visualOnlyCatalogStepIds": [
+      "mounted_walk",
+      "mounted_revive"
+    ],
+    "stepIds": [
+      "mounted_walk",
+      "mounted_attack",
+      "mounted_skill",
+      "mounted_defend_hit",
+      "mounted_hurt",
+      "mounted_counter",
+      "mounted_counter_ko",
+      "mounted_combo",
+      "mounted_dodge",
+      "mounted_dodge_counter",
+      "mounted_knockaway_straight",
+      "mounted_knockaway_bounce",
+      "mounted_down",
+      "mounted_revive"
+    ],
+    "verifiedOutcomes": {
+      "mounted_counter_ko": {
+        "actionState": "down",
+        "hp": 0,
+        "launched": false
+      },
+      "mounted_dodge": {
+        "visibleRetreat": true,
+        "damageApplied": false
+      },
+      "mounted_dodge_counter": {
+        "visibleRetreat": true,
+        "counterFollowup": true
+      },
+      "mounted_knockaway_straight": {
+        "actionState": "launched",
+        "launchMode": "straight"
+      },
+      "mounted_knockaway_bounce": {
+        "actionState": "launched",
+        "launchMode": "bounce"
+      },
+      "mounted_down": {
+        "actionState": "down",
+        "launched": false
+      }
+    },
+    "captureOnlyUiTreatment": [
+      "hide_top_status_panel",
+      "hide_battle_command_panel",
+      "hide_battle_timer_panel"
+    ]
+  },
+  "semanticFindings": {
+    "integratedRiderMountContinuity": "passed",
+    "adultRiderScale": "passed",
+    "seatBehindShoulderBastions": "passed",
+    "crystalRiderPenetration": "not_observed",
+    "attackSkillReadability": "passed",
+    "defendHurtSeparation": "passed",
+    "dodgeRetreatReadability": "passed",
+    "counterAndWoundedReturnCausality": "passed",
+    "straightAndBounceLaunchReadability": "passed",
+    "downReviveContinuity": "passed",
+    "unexpectedClipping": "not_observed",
+    "runtimeLayerSeparation": "not_observed"
+  },
+  "evidence": {
+    "trackedContactSheet": "qa/battle/contact-sheet.png",
+    "trackedContactSheetSha256": "aed3935da5ccfa636c4222c59b015f9b86eb87d4eace4b3aacc834eee98272f9",
+    "trackedQcSummary": "qa/battle/qc-summary.json",
+    "trackedQcSummarySha256": "10fb881d1c0cf980d8c2e81e291dee685545850085682f7ed07f611ab528dfc8",
+    "runtimeParity": ".run/evidence/phase352_crystal_wuli_mounted_battle/runtime-parity.json",
+    "runtimeParitySha256": "ede0aa3ca1250be7cf1d076e6c8c878bbc199807aea8e42b7f66a8b12451f3c3",
+    "structureAudit": ".run/evidence/phase352_crystal_wuli_mounted_battle/image-structure-audit.json",
+    "structureAuditSha256": "b6aec937cd780f4b6cbfccfaef2d46a6f745dfa6a4e9d92538e47197b5d49efb",
+    "reviewVideo": ".run/evidence/phase352_crystal_wuli_mounted_battle/Beastbound_Phase352_Crystal_Wuli_Mounted_Semantic_1x.mp4",
+    "reviewVideoSha256": "b195b5a3bd0ebf54967f7c00e591e2faa2cbb60b9387afd946bf14a8f1bd2f85",
+    "movieLog": ".run/evidence/phase352_crystal_wuli_mounted_battle/godot-movie.log",
+    "movieLogSha256": "69ccebc393874c5eae0c38aee55c878a594e9066602420c66466879f4ce94038",
+    "timelineContact": ".run/evidence/phase352_crystal_wuli_mounted_battle/timeline-contact-7x6.png",
+    "timelineContactSha256": "5de920f3fd8fd4234ed3e6c3b0c95e1c37265c765ef3ffeedd2827ab1d879849",
+    "actionMidpointContact": ".run/evidence/phase352_crystal_wuli_mounted_battle/action-midpoint-contact-7x2.png",
+    "actionMidpointContactSha256": "ec3657b80db9aa61afe8357b4a0d8cb998e711e51b39a00200f1e22548103334"
+  },
+  "remainingGates": [
+    "project_owner_mounted_battle_visual_review",
+    "mounted_world_independent_direction_semantic_audit",
+    "route_asset_gate_and_runtime_enablement_discussion",
+    "two_reject_two_allow_end_to_end_acceptance"
+  ]
+}
