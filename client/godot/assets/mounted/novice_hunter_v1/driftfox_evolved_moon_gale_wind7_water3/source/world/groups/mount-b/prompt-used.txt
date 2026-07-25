@@ -1,0 +1,31 @@
+Use case: stylized-concept
+Asset type: production integrated mounted true-eight world locomotion sprite sheet for Beastbound Odyssey
+Input images: Image 1 is the approved whole-frame novice hunter riding 月岚风狐 key-pose board; Image 2 is the exact adult novice hunter identity; Image 3 is the exact 月岚风狐 identity; Image 4 is only a proven mounted eight-direction screen-vector, adult-rider scale, seat-depth and five-frame row-layout reference. Do not copy Image 4's boar, crystal armor, colors or pose details.
+
+Primary request: Illustrate the exact same adult novice hunter riding the exact same 月岚风狐 as one strict 4-row by 5-column world-sprite board. Generate rider, fox, seat contact, hands, legs and occlusion together as one coherent whole subject in every cell. Never paste, layer, mask, mirror, patch or composite a separate rider over a fox.
+
+Each row is one independently authored visual direction. Column 1 is a calm mounted idle pose; columns 2-5 are four sequential frames of one complete mounted walking gait in that exact direction.
+
+Row contract from top to bottom:
+1. north: rider and fox both face and travel toward the top of the screen away from the viewer; strict rear axis.
+2. northeast: rider and fox both face and travel upper-right away from the viewer; backs visible and both tails trail lower-left.
+3. east: rider and fox both face and travel right; fox muzzle on screen-right and both tails on screen-left.
+4. southeast: rider and fox both face and travel lower-right toward the viewer; fox muzzle lower-right and both tails trail upper-left.
+
+Board contract: exactly 4 rows and 5 columns on one perfectly flat solid #FF00FF chroma-key background. No labels, arrows, lines, boxes, borders, dividers, floor, shadow, glow, dust, scenery, text, logo or watermark. Keep every complete integrated rider-plus-fox subject centered within its own cell's central 60-68% safe area with generous magenta padding. Nothing crosses a cell boundary. Same full-subject scale and same paw/bottom baseline throughout all twenty cells.
+
+Fox identity: large adult deer/small-horse-scale rideable 月岚风狐 with deep chest, long broad back, stable shoulders and hips, four weight-bearing legs, pearl silver-white coat, moon-blue-gray shade, deep-teal accents, moon-white mane, forehead crescent, side wind crescents and exactly two large crescent-forming physical tails. Each ear has exactly two small attached fur vanes.
+
+Tail hard gate: exactly two and only two tails in every cell. Both roots, bodies and tips remain separately traceable with open negative space. Never merge, hide, duplicate, split or pass a tail through the rider or fox.
+
+Approved refinement: shoulder/back mist-gale fur fins are shortened about twenty percent and lie close to the body. They are small attached fur tufts, never wings, feathers, ribbons or detached magic. Keep the central back seating channel clear.
+
+Rider identity: exact adult novice hunter with normal adult head/body ratio, brown hair and bone-leaf pin, ochre sleeveless fur-trimmed tunic, dark teal cross-body strap and pouch, red sash, wrist wraps, bare arms and two complete brown fur-trimmed boots. Never turn him into a child, doll, mascot or miniature.
+
+Seat/contact: pelvis rests low just behind the fox shoulders in compressed back fur; thighs straddle the ribcage, knees bend naturally, both complete boots hang on opposite sides with plausible near/far occlusion, and both hands hold one short plain hide grip. Rider and mount share one exact direction and motion axis. No floating pelvis, standing pose, neck seat, tail seat, missing or duplicated limb, merged boots, pasted waist or body intersection.
+
+Walk timing: idle, then four distinct quadruped gait phases with alternating legs, real weight transfer, restrained vertical motion and natural rider follow-through at pelvis, torso and hands. The seat remains attached without scale pumping or sliding. Twin tails follow the gait without changing count.
+
+Style: original collectible high-definition hand-painted 2.5D MMORPG sprite, crisp dark plum-blue outline, warm skin and leather, layered moonlit fur, orthographic/isometric world camera, nostalgic Chinese pet-RPG warmth with modern HD polish, readable around 130-175 px.
+
+Avoid: runtime/offline layering look, mirrored directions, opposite-facing rider, child rider, tiny rider, separate saddle, bridle, armor, weapon, wings, third tail, nine tails, detached VFX, realistic horse tack, photographic realism, plastic 3D, pixel art or third-party game art.

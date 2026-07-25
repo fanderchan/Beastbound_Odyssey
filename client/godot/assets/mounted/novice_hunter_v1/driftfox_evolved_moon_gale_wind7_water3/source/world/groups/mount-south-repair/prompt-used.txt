@@ -1,0 +1,31 @@
+Use case: stylized-concept
+Asset type: dedicated semantic repair board for integrated mounted world locomotion sprites
+Input images: Image 1 is the approved whole-frame novice hunter riding 月岚风狐 identity board; Image 2 is the exact adult novice hunter identity; Image 3 is the exact 月岚风狐 identity; Image 4 is only a proven strict-south mounted screen-vector and adult seat-scale reference. Do not copy Image 4's boar, crystal armor, colors or markings.
+
+Primary request: Produce one strict 2-row by 3-column board containing six independently illustrated whole-frame poses of the exact adult novice hunter riding the exact 月岚风狐. Generate rider, fox, seat, hands, legs and occlusion together in every cell; never layer or paste them.
+
+Reading order:
+1. row 1 column 1: strict-south mounted idle;
+2. row 1 column 2: strict-south walk frame 1;
+3. row 1 column 3: strict-south walk frame 2;
+4. row 2 column 1: strict-south walk frame 3;
+5. row 2 column 2: strict-south walk frame 4;
+6. row 2 column 3: second strict-south idle verification hold, not used by runtime.
+
+Direction hard gate: all six cells remain a strict straight-on front view. Rider and fox both face the viewer and travel vertically toward the bottom of the screen. Rider chest, fox forehead, muzzle, chest and forelegs stay centered on one vertical axis. Do not turn even slightly southwest or southeast; do not expose a side profile.
+
+Twin-tail hard gate: exactly two physical tails in every cell. They fan visibly to opposite sides behind the hindquarters, one tail on screen-left and one on screen-right, with both separate roots, bodies and tips traceable. Do not stack tails behind the torso, hide one behind a leg or rider, merge them, split a tip, or add another tail.
+
+Fox identity: large adult deer/small-horse-scale rideable 月岚风狐, deep chest, long stable back, pearl silver-white coat, moon-blue-gray shade, deep-teal accents, moon-white mane, crescent forehead/side markings, long ears, exactly two tails. Shortened shoulder/back fur tufts lie flush to the body and never become wings.
+
+Rider identity and scale: exact adult novice hunter with normal adult proportions, brown hair and bone-leaf pin, ochre fur-trimmed sleeveless tunic, dark teal strap/pouch, red sash, wrist wraps and two complete brown fur-trimmed boots. Never a child, doll or miniature.
+
+Seat/contact: pelvis rests low behind the shoulders, thighs straddle the chest, both knees bend, both complete boots hang on opposite sides, and both hands hold one short hide grip. No floating seat, missing limb, merged boots, neck seat, pasted waist or body intersection.
+
+Board contract: exactly 2 rows and 3 columns on a perfectly flat solid #FF00FF chroma-key background. No labels, arrows, lines, boxes, borders, floor, shadow, scenery, VFX, text or watermark. Keep each complete whole subject centered with generous padding, identical scale and stable paw baseline.
+
+Walk cycle: four distinct front-view quadruped gait phases with near/far legs visibly alternating, restrained vertical motion and natural rider follow-through while the seat remains attached.
+
+Style: same collectible high-definition hand-painted 2.5D Beastbound world sprite as the inputs, dark plum-blue outline, warm leather, layered moonlit fur, readable at 130-175 px.
+
+Avoid: three-quarter view, side view, mirrored art, one tail, three/nine tails, wings, separate saddle or bridle, weapon, detached effects, realistic 3D, pixel art or third-party game art.

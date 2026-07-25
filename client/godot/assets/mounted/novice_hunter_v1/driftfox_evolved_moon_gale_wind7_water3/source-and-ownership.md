@@ -12,3 +12,14 @@
 - 透明关键姿势板 SHA-256：`6596f82ff5bda5e5af8b50f85a75b42b060fd5b39f2ce70eeab004e17a6db5f5`。精确提示词、原图 SHA、无损归档、处理参数和联系表证据均在本目录或 `.run/art_batch_phase320/driftfox_mounted/evolved/` 留痕。
 - 石器时代 8.0 只作为成熟 2.5D 骑乘构图质量参考，不复制其人物、宠物、鞍具、贴图或动画。
 - 当前关键姿势工程自评通过，项目所有者视觉验收为 `pending`；不得宣称正式批准、真八向或完整骑乘包。
+
+<!-- phase343-moon-gale-world:start -->
+## Phase343 世界八方向候选
+
+- 范围：40 帧见习猎人骑月岚风狐 integrated whole-frame world true8 候选；每方向 1 idle + 4 walk，源帧 512×512，运行帧 256×256。
+- 生成方式：Codex 内置 `image_gen`，只使用 Beastbound 自有身份参考；骑乘每帧均一次生成完整人宠主体。
+- 后处理：仅色键、切格、共享缩放、底部居中锚定、透明清理与确定性 512→256 派生；不镜像、不分层拼接。
+- 失败留痕：方向漂移、单尾/并尾及翼状毛鳍版本均保留在 `source/world/`，但没有进入运行候选。
+- 当前状态：`self_review_passed_owner_pending`；独立语义复核与 owner 连续视频验收 pending，`runtimeEnabled=false`。
+- 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
+<!-- phase343-moon-gale-world:end -->

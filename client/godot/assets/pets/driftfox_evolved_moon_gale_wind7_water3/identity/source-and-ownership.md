@@ -14,3 +14,14 @@
 - 项目归属：这是为 Beastbound Odyssey 本仓库专门制作的原创输出，按项目资产管理；实际使用仍遵守生成服务适用条款。
 - 可替换路径：以本目录身份锁和普通风狐同源板重建，先验证每视角严格两尾与开放月牙负形，再做版式修正；随后重新通过 key-pose、真八向、战斗、整体骑乘和 owner review 门禁。
 - 发布状态：`identity_locked_self_review_passed_owner_review_pending`。没有登记为运行时素材，也不代表世界、战斗或骑乘美术完成。
+
+<!-- phase343-moon-gale-world:start -->
+## Phase343 世界八方向候选
+
+- 范围：40 帧月岚风狐独立 world true8 候选；每方向 1 idle + 4 walk，源帧 512×512，运行帧 256×256。
+- 生成方式：Codex 内置 `image_gen`，只使用 Beastbound 自有身份参考；宠物每帧均为独立完整主体。
+- 后处理：仅色键、切格、共享缩放、底部居中锚定、透明清理与确定性 512→256 派生；不镜像、不分层拼接。
+- 失败留痕：方向漂移、单尾/并尾及翼状毛鳍版本均保留在 `source/world/`，但没有进入运行候选。
+- 当前状态：`self_review_passed_owner_pending`；独立语义复核与 owner 连续视频验收 pending，`runtimeEnabled=false`。
+- 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
+<!-- phase343-moon-gale-world:end -->

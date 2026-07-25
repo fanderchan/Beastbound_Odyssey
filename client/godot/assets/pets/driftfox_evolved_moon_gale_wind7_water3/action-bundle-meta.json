@@ -3,7 +3,7 @@
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "displayName": "月岚风狐",
   "artStatus": "in_production",
-  "productionScope": "formal_battle_two_view_runtime_motion_scale_followup_owner_review_pending",
+  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -102,7 +102,7 @@
     }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -120,14 +120,43 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "not_produced"
+        "status": "self_review_passed_owner_pending"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "not_produced"
+        "status": "self_review_passed_owner_pending"
       }
+    },
+    "runtimeLayeredComposition": false,
+    "runtimeBodyLayerCount": 0,
+    "integratedWholeFrame": false,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 40,
+    "sourceFrameCountArchived": 51,
+    "unselectedProcessedSourceFrameCountArchived": 11,
+    "explicitRejectedProcessedSourceFrameCount": 10,
+    "rawOnlyRejectedCellCount": 5,
+    "sourceLedger": "source/world/source-ledger.json",
+    "generationBrief": "source/world/generation-brief.md",
+    "contactSheet": "qa/world/true8-world-contact-8x5.png",
+    "cycleGif": "qa/world/true8-world-cycle.gif",
+    "qcSummary": "qa/world/world-qc.json",
+    "contactSheetSha256": "d9a821b38f6cf5e1a3d2374c138fa69761e8f7e35a8dcf28488c907f096078f9",
+    "cycleGifSha256": "0d2be29108afa309f3ab67cd188f25ff00638c5d3b8f7e1951ed82fec65e716e",
+    "qcSummarySha256": "c894aefd2a72a3ef7c2ed710cbaf358fe80eb854cb4454a29413cc4cd42f912f",
+    "reviewGates": {
+      "selfReview": "passed",
+      "independentBlindSemanticAudit": "pending",
+      "ownerReview": "pending"
     }
   },
   "supportedMountedCharacterIds": [
@@ -150,7 +179,9 @@
       "mismatchCount": 48,
       "blocksFresh512CanonicalClaim": true,
       "blocksReviewedRuntimeToRuntimeOverlay": false
-    }
+    },
+    "worldSourceLedger": "source/world/source-ledger.json",
+    "worldGenerationBrief": "source/world/generation-brief.md"
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
@@ -198,11 +229,17 @@
     "runtimeMotionScaleFollowupProvenance": "source/battle/runtime-motion-scale-followup-v1-provenance.json",
     "runtimeMotionScaleFollowupProvenanceSha256": "70100b0a268a97e32f2204c9368c6cebce6ff8081660a818f5d2ccf3175f31ed",
     "runtimeMotionScaleFollowupFrameLedger": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
-    "runtimeMotionScaleFollowupFrameLedgerSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90"
+    "runtimeMotionScaleFollowupFrameLedgerSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "d9a821b38f6cf5e1a3d2374c138fa69761e8f7e35a8dcf28488c907f096078f9",
+    "worldCycleGif": "qa/world/true8-world-cycle.gif",
+    "worldCycleGifSha256": "0d2be29108afa309f3ab67cd188f25ff00638c5d3b8f7e1951ed82fec65e716e",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "c894aefd2a72a3ef7c2ed710cbaf358fe80eb854cb4454a29413cc4cd42f912f"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. World and mounted production remain out of scope; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。",
+  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。主审通过，独立语义复核与 owner 连续视频验收仍待定，runtime 保持关闭。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",

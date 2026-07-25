@@ -1,0 +1,23 @@
+Use case: stylized-concept
+Asset type: dedicated semantic repair board for production world locomotion sprites
+Input images: Image 1 is the exact approved 月岚风狐 identity; Image 2 is the already accepted north/northeast/east/southeast locomotion board for exact current identity, palette, scale and gait language; Image 3 is only a proven eight-direction screen-vector reference and must not contribute boar anatomy, armor, color or markings.
+
+Primary request: Produce one strict 2-row by 5-column board of the exact same 月岚风狐. This is a targeted replacement for two rejected direction rows; do not redesign the fox.
+
+Row 1, south: column 1 calm idle, columns 2-5 one four-step walk cycle. Every cell is a strict straight-on front view travelling vertically toward the bottom of the screen and viewer. The face, chest and two forelegs remain centered on a vertical axis. Do not turn left or right in any walk frame.
+
+South twin-tail override: in every cell, the two tails must fan visibly to opposite sides behind the hindquarters, one physical tail clearly visible on screen-left and one clearly visible on screen-right. Both separate roots, bodies and tips must be traceable. Preserve a clear gap between them. Do not stack either tail directly behind the torso, merge them, hide one, or show only one overhead plume.
+
+Row 2, northwest: column 1 calm idle, columns 2-5 one four-step walk cycle. Every cell is a rear three-quarter view travelling upper-left away from the viewer. The back and rump are visible, the muzzle/ear axis points upper-left, and the two tails trail lower-right. Do not turn into strict north.
+
+Northwest twin-tail override: in every cell, one tail rides higher and one lower, both beginning at the same hindquarter region and trailing lower-right with a large open crescent-shaped negative space. Both roots, bodies and tips remain separately visible. Never merge them into a single hanging plume.
+
+Board contract: exactly 2 rows and 5 columns on a perfectly flat solid #FF00FF chroma-key background. No labels, arrows, lines, boxes, borders, dividers, floor, shadow, glow, dust, scenery, text or watermark. Each full body stays inside its own cell with generous padding, identical scale and stable feet baseline.
+
+Exact identity: adult long-backed pearl silver-white wind fox, moon-blue-gray shadows, deep-teal lower legs/ear/tail tips, deep-teal eyes, moon-white neck mane, forehead and side crescent markings, four weight-bearing legs, exactly two tails. Shoulder/back mist-fur tufts remain shortened and flush to the body, never wings.
+
+Gait: four distinct alternating quadruped leg phases, real weight transfer and restrained tail follow-through; not copied poses with vertical bobbing.
+
+Style: same collectible high-definition hand-painted 2.5D Beastbound sprite as the inputs, crisp dark plum-blue outline, orthographic/isometric world camera, readable at 120-160 px.
+
+Avoid: one tail, three tails, nine tails, split tail tips, opposite direction, mirrored reuse, wings, rider, saddle, VFX, scene background, grid graphics, third-party or famous fox designs.

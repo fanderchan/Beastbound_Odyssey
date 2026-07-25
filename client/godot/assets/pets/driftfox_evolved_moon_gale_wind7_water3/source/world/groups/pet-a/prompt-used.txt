@@ -1,0 +1,25 @@
+Use case: stylized-concept
+Asset type: production true-eight world locomotion sprite sheet for Beastbound Odyssey
+Input images: Image 1 is the exact approved 月岚风狐 identity; Image 2 is only a proven eight-direction screen-vector and five-frame row layout reference. Do not copy Image 2's boar anatomy, armor, colors, pose details, or markings.
+
+Primary request: Illustrate the exact same 月岚风狐 from Image 1 as one strict 4-row by 5-column world-sprite board. Each row is one independently authored visual direction. Column 1 is a calm idle pose; columns 2-5 are four sequential frames of one complete walking gait in that exact direction.
+
+Row contract from top to bottom:
+1. south: strict front view, fox travels toward the bottom of the screen and viewer; face and chest visible, body axis vertical.
+2. southwest: front three-quarter view travelling lower-left; muzzle points lower-left and both tails trail upper-right.
+3. west: strict side view travelling left; muzzle on screen-left and both tails on screen-right.
+4. northwest: rear three-quarter view travelling upper-left away from the viewer; back and rump visible, muzzle points upper-left and both tails trail lower-right.
+
+Board contract: exactly 4 rows and 5 columns on one perfectly flat solid #FF00FF chroma-key background. No labels, arrows, lines, boxes, borders, dividers, floor, shadow, glow, dust, scenery, text, logo or watermark. Keep every complete body centered within its own cell's central 60-68% safe area with generous magenta padding. Nothing crosses a cell boundary. Same body scale and same feet/bottom baseline throughout the twenty cells.
+
+Exact identity lock: advanced adult long-backed wind fox; deep stable chest and hips; mature narrow fox muzzle; four long weight-bearing legs; large deep-teal eyes; thick moon-white neck mane; long ears swept upward and backward, with exactly two small fur vanes attached to each ear. Pearl silver-white coat with moon-blue-gray shadows, restrained pale-cyan forehead crescent and side wind crescents, dark teal to mist-teal ear tips, lower legs and tail tips.
+
+Tail hard gate: exactly two and only two large physical fur tails from the same hindquarter region in every cell. One upper tail curves high and backward; one lower tail curls below it. Both roots, bodies and tips remain separately traceable with open crescent-shaped negative space. Never merge them, hide one, add a third or ninth tail, or split a tail tip so it reads as another tail.
+
+Approved refinement: shorten the shoulder/back mist-gale fur fins by about twenty percent compared with Image 1. They must stay as small body-attached fur tufts lying close along the shoulder and spine, never protruding sideways like wings, never becoming feathers, ribbons, detached wind or magic effects.
+
+Walk timing: idle, then four distinct natural quadruped gait phases with alternating near/far forelegs and hindlegs, clear weight transfer, small head/chest bob and restrained twin-tail follow-through. Do not make four copies with only vertical bobbing. Keep the same creature, palette, markings, tail count, anatomy and direction across all five cells of each row.
+
+Style: original collectible high-definition hand-painted 2.5D MMORPG sprite, crisp dark plum-blue outline, layered soft fur, orthographic/isometric world camera, nostalgic Chinese pet-RPG warmth with modern HD polish, readable around 120-160 px.
+
+Avoid: mirrored or reused directions, opposite-facing frames, chibi puppy proportions, fox redesign, wings, horns, armor, jewelry, clothes, rider, saddle, weapon, detached VFX, perspective scene, photographic realism, plastic 3D render, pixel art, famous multi-tail fox likeness or third-party game art.

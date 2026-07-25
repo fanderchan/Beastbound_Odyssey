@@ -1,0 +1,29 @@
+Use case: stylized-concept
+Asset type: dedicated strict-front semantic repair board for production world locomotion sprites
+Input images: Image 1 is the exact approved 月岚风狐 identity; Image 2 proves the correct current standalone identity, palette and gait rendering; Image 3 proves the required strict-front two-tail projection only. Do not include Image 3's rider.
+
+Primary request: Produce one strict 2-row by 3-column board containing six independently illustrated standalone poses of the exact 月岚风狐, with no rider.
+
+Reading order:
+1. row 1 column 1: strict-south idle;
+2. row 1 column 2: strict-south walk frame 1;
+3. row 1 column 3: strict-south walk frame 2;
+4. row 2 column 1: strict-south walk frame 3;
+5. row 2 column 2: strict-south walk frame 4;
+6. row 2 column 3: second strict-south idle verification hold, not used by runtime.
+
+Direction hard gate: every cell is a strict straight-on front view. The fox faces the viewer and travels vertically toward the bottom of the screen. Forehead, muzzle, chest and paired forelegs remain centered on one vertical axis. Never turn toward southwest or southeast; show no side profile.
+
+Twin-tail hard gate: exactly two physical tails fan behind the hindquarters in every cell, one tail clearly on screen-left and one clearly on screen-right. Both separate roots, bodies and tips are traceable with a large clean gap between them. Never merge, overlap, hide, stack behind the torso, split tips or add another tail.
+
+Critical silhouette correction: no lateral shoulder fins, no wing-like shoulder tufts and no long fur blades beside the chest. In this strict-front row the outline from neck mane through shoulders to forelegs must be smooth and compact. Only the two real tails may extend widely to the left and right. Small ear-attached fur vanes remain attached to the ears.
+
+Exact identity: adult long-backed pearl silver-white 月岚风狐, moon-blue-gray shadows, deep-teal lower legs/ear/tail tips and eyes, thick moon-white neck mane, pale-cyan forehead crescent, four weight-bearing legs, mature narrow muzzle and exactly two tails.
+
+Walk cycle: four distinct front-view quadruped gait phases with alternating forelegs and hindlegs, real weight transfer, restrained head/chest bob and tail follow-through. Keep body scale and tail count stable.
+
+Board contract: exactly 2 rows and 3 columns on a perfectly flat solid #FF00FF chroma-key background. No labels, arrows, lines, boxes, borders, floor, shadow, VFX, scenery, text or watermark. Keep each complete body centered with generous padding, identical scale and stable feet baseline.
+
+Style: same collectible high-definition hand-painted 2.5D Beastbound world sprite as the inputs, crisp dark plum-blue outline, orthographic/isometric camera, readable at 120-160 px.
+
+Avoid: rider, saddle, wings, shoulder blades, one tail, three/nine tails, third-party art, plastic 3D, pixel art or famous fox designs.

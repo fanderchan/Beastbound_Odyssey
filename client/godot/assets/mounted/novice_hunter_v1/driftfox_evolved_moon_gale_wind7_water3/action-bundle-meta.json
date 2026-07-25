@@ -3,7 +3,7 @@
   "mountFormId": "driftfox_evolved_moon_gale_wind7_water3",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_key_pose_gate",
+  "productionScope": "mounted_key_pose_and_world_true8_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -103,7 +103,7 @@
     }
   },
   "worldVisual": {
-    "status": "not_produced",
+    "status": "self_review_passed_owner_pending",
     "strategy": "ai_generated_integrated_independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
@@ -123,14 +123,41 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "not_produced"
+        "status": "self_review_passed_owner_pending"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "not_produced"
+        "status": "self_review_passed_owner_pending"
       }
+    },
+    "integratedWholeFrame": true,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 40,
+    "sourceFrameCountArchived": 46,
+    "unselectedProcessedSourceFrameCountArchived": 6,
+    "explicitRejectedProcessedSourceFrameCount": 5,
+    "rawOnlyRejectedCellCount": 0,
+    "sourceLedger": "source/world/source-ledger.json",
+    "generationBrief": "source/world/generation-brief.md",
+    "contactSheet": "qa/world/true8-world-contact-8x5.png",
+    "cycleGif": "qa/world/true8-world-cycle.gif",
+    "qcSummary": "qa/world/world-qc.json",
+    "contactSheetSha256": "f4886be4443adf53e064d4fe082a7af3f999c37925b3b117166f2a85ec6bae21",
+    "cycleGifSha256": "c69781830489bf894f53ceb4502d4e6f3c3d9e2c9f085d61a27c0bb038247614",
+    "qcSummarySha256": "4969fb52015e1c67b8d711f35f9f07cd9a940dedd3f246365eea393b65d4c2f5",
+    "reviewGates": {
+      "selfReview": "passed",
+      "independentBlindSemanticAudit": "pending",
+      "ownerReview": "pending"
     }
   },
   "sourceArchive": {
@@ -138,13 +165,21 @@
     "raw": "source/mounted-keypose-raw.webp",
     "sourceMetadata": "source/mounted-keypose-source-meta.json",
     "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
-    "prompt": "prompts/generation-contract.md"
+    "prompt": "prompts/generation-contract.md",
+    "worldSourceLedger": "source/world/source-ledger.json",
+    "worldGenerationBrief": "source/world/generation-brief.md"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/driftfox_mounted/evolved/mounted-build-v1/contact-sheet.png",
-    "contactSheetSha256": "8f5ba02ae12e93e2626d30b980bc57a09e39248c5f3369a8f871b7f683a69ff8"
+    "contactSheetSha256": "8f5ba02ae12e93e2626d30b980bc57a09e39248c5f3369a8f871b7f683a69ff8",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "f4886be4443adf53e064d4fe082a7af3f999c37925b3b117166f2a85ec6bae21",
+    "worldCycleGif": "qa/world/true8-world-cycle.gif",
+    "worldCycleGifSha256": "c69781830489bf894f53ceb4502d4e6f3c3d9e2c9f085d61a27c0bb038247614",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "4969fb52015e1c67b8d711f35f9f07cd9a940dedd3f246365eea393b65d4c2f5"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Integrated novice_hunter_v1 riding 月岚风狐 front/back mounted key poses only. Identity/anatomy/seat/direction self-review passed; true-eight world and mounted battle action matrices are intentionally not produced."
+  "notes": "The initial checkpoint covered only integrated novice_hunter_v1 riding 月岚风狐 front/back key poses; identity, anatomy, seat and direction self-review passed. At that checkpoint, true-eight world and mounted battle action matrices were not produced. Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。主审通过，独立语义复核与 owner 连续视频验收仍待定，runtime 保持关闭。"
 }
