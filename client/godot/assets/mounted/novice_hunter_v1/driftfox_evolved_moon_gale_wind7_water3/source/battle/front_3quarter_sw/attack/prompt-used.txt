@@ -1,0 +1,21 @@
+Use case: stylized-concept
+Asset type: production integrated mounted battle animation sheet for Beastbound Odyssey
+Input images: Image 1 is the exact approved integrated novice_hunter_v1 riding 月岚风狐 identity board; Image 2 is the exact standalone 月岚风狐 front_3quarter_sw action reference and is motion/pose guidance only. Do not copy its checkerboard, labels or missing-rider presentation.
+
+Primary request: Draw one coherent 8-frame attack animation of the exact same adult novice hunter riding the exact same 月岚风狐. Rider, fox, seat contact, hands, legs, grip, occlusion and both tails must be newly illustrated together as one integrated whole-frame subject in every cell. Never paste or layer a separate rider over a fox.
+
+View hard gate: keep front_3quarter_sw in every frame. The fox head stays on screen-left, both tails trail screen-right, and fox plus rider face lower-left toward the viewer. Never turn to a side view, front-on view, back view or the opposite direction.
+
+Animation: exactly eight chronological phases of a committed physical moon-fox attack: alert start, hind-leg load, shoulders lower, fast forward lunge, clear bite-and-foreclaw contact silhouette, brief compressed follow-through, controlled pullback and ready recovery. The rider leans low and grips securely while remaining seated; the fox attacks with its own muzzle and forequarters. No weapon, projectile, slash arc, impact burst, dust cloud or detached effect.
+
+Exact identity: pearl silver-white adult long-backed moon-gale fox, deep stable chest and hips, four long weight-bearing legs, narrow mature fox muzzle, deep teal eyes, thick moon-white neck mane, long ears with exactly two attached mist-fin fur vanes per ear, restrained pale-cyan crescent forehead and body markings, dark teal-to-mist-blue lower legs and tail tips. Exactly two and only two large physical fur tails; both separate roots, bodies and tips remain traceable with an open crescent negative space. No wing-like side fins, extra tail or merged tail.
+
+Rider identity and scale: the same believable adult novice hunter, normal adult head/body ratio, brown hair with bone-leaf pin, ochre sleeveless fur-trimmed tunic, dark teal cross-body strap and pouch, red sash, wrist wraps, bare arms and two complete brown fur-trimmed boots. He remains full adult scale, seated low just behind the shoulders with thighs naturally straddling the ribcage and both hands on the short plain hide grip. No child, chibi, doll, floating pelvis, missing limb, merged boot or body intersection.
+
+Grid and containment: strict landscape 2-row by 4-column sheet, exactly 8 equal invisible cells, row-major playback. The full integrated subject stays centered in the central 60%-70% of every cell with one shared body scale, a stable bottom anchor appropriate to the action and generous margin on every side. Nothing crosses a cell edge. Do not draw visible boxes, dividers, borders or labels.
+
+Style: original collectible high-definition hand-painted 2.5D game sprite, crisp dark plum-blue silhouette, restrained moon-cyan accents, nostalgic Chinese pet-RPG warmth with modern HD polish, orthographic/isometric sprite camera, coherent soft lighting.
+
+Background: perfectly flat solid exact #FF00FF only, with no shadows, gradients, texture, floor plane, reflections or lighting variation. Do not use #FF00FF inside the subject.
+
+Avoid: checkerboard, white grid, text, labels, UI, logo, watermark, scenery, ground shadow, weapon, saddle, bridle, armor, duplicated limb, missing rider, opposite-facing rider, tail-body intersection, famous-game resemblance or a different fox/rider design.

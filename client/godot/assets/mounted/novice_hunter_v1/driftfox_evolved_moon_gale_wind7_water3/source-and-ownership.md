@@ -20,6 +20,21 @@
 - 生成方式：Codex 内置 `image_gen`，只使用 Beastbound 自有身份参考；骑乘每帧均一次生成完整人宠主体。
 - 后处理：仅色键、切格、共享缩放、底部居中锚定、透明清理与确定性 512→256 派生；不镜像、不分层拼接。
 - 失败留痕：方向漂移、单尾/并尾及翼状毛鳍版本均保留在 `source/world/`，但没有进入运行候选。
-- 当前状态：`self_review_passed_owner_pending`；独立语义复核与 owner 连续视频验收 pending，`runtimeEnabled=false`。
+- 当前状态：项目所有者已在 Phase343 连续 1× 成片后批准世界真八方向 `visual_only`；独立语义复核仍 pending，`runtimeEnabled=false`。
 - 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
 <!-- phase343-moon-gale-world:end -->
+
+<!-- phase344-moon-gale-mounted-battle:start -->
+## Phase344 骑乘战斗双视角候选
+
+- 范围：完成 `front_3quarter_sw` 与 `back_3quarter_ne` 两个独立视角的 12 组动作，共 180 帧；包含 `idle / walk / attack / skill / hurt / defend / dodge / counter / stagger / knockaway / down / revive`。
+- 生成器：OpenAI 内置 `image_gen`；输入只使用 Beastbound 自有的月岚风狐、成年见习猎人及其已冻结骑乘身份参考。
+- 主体规则：每帧都是见习猎人与月岚风狐的一体化完整主体，没有离线或运行时人物/宠物分层拼接，也没有用镜像冒充另一视角。
+- 身份门槛：人物保持成人比例与稳定低位落座；月岚风狐始终维持珍珠银白主色、长耳附着毛鳍、长背四足和恰好两条可分别追踪的实体尾巴。
+- 动作连续性：`down-8` 与 `revive-1` 在源帧和运行帧均为完全相同的 RGBA；起身序列由最终倒地姿势确定性反向派生，避免倒地瞬间换模。
+- 取舍记录：生产中淘汰了技能特效脱离主体、受击/踉跄动作过弱、主体触边，以及反面反击跨格等候选；拒绝稿与最终逐字提示词均保留在完整本地归档。
+- 归档：仓库采用 lean 归档，运行帧、代表性无损源文件、逐动作提示词/处理/QC 元数据和逐文件账本保存在本目录；完整本地生产归档位于 `.run/art_batch_phase344/moon_gale_mounted/`。
+- 证据：`qa/battle/contact-sheet.png`（SHA-256 `473096a570312306fa47aebb3d92025ac39f7e01d3229f0155323ce42edec0e1`）；`qa/battle/qc-summary.json`（SHA-256 `83f8a56d69ac25743cf41a377e029e140586431173e76c8b08d2b0b52d83b9f2`）；`source/battle/source-ledger.json`（SHA-256 `c9a986ef1bd1b179aefbf12648ec1b8c7cebc5275e8f812242525efec9b7cb26`）。
+- 状态边界：Phase343 世界真八方向已获 `visual_only` 批准；本次战斗包仍为工程自检候选，项目所有者验收 `pending`、`runtimeEnabled=false`，不会进入普通玩家运行路径。
+- 替换路径：从身份锁、逐动作生成合同与完整本地生产归档重新生成，再依次通过安装审计、Godot 180 帧加载、1× 动态复核和 owner gate。
+<!-- phase344-moon-gale-mounted-battle:end -->

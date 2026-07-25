@@ -3,7 +3,7 @@
   "mountFormId": "driftfox_evolved_moon_gale_wind7_water3",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_key_pose_and_world_true8_owner_review_pending",
+  "productionScope": "mounted_world_true8_owner_approved_visual_only_and_formal_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -33,73 +33,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -167,7 +167,8 @@
     "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
     "prompt": "prompts/generation-contract.md",
     "worldSourceLedger": "source/world/source-ledger.json",
-    "worldGenerationBrief": "source/world/generation-brief.md"
+    "worldGenerationBrief": "source/world/generation-brief.md",
+    "battleSourceLedger": "source/battle/source-ledger.json"
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/driftfox_mounted/evolved/mounted-build-v1/contact-sheet.png",
@@ -179,9 +180,83 @@
     "worldQc": "qa/world/world-qc.json",
     "worldQcSha256": "4969fb52015e1c67b8d711f35f9f07cd9a940dedd3f246365eea393b65d4c2f5",
     "worldOwnerDecision": "qa/world/owner-decision.json",
-    "worldOwnerDecisionSha256": "9a7739c009f30fa75d03148a50dbe1f87b0658355a3d816a5cf060ef660aea19"
+    "worldOwnerDecisionSha256": "9a7739c009f30fa75d03148a50dbe1f87b0658355a3d816a5cf060ef660aea19",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleQc": "qa/battle/qc-summary.json"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "The initial checkpoint covered only integrated novice_hunter_v1 riding 月岚风狐 front/back key poses; identity, anatomy, seat and direction self-review passed. At that checkpoint, true-eight world and mounted battle action matrices were not produced. Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准完整人宠骑乘世界真八方向视觉；该批准不包含 mounted battle、整宠包、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。"
+  "notes": "完整人宠骑乘世界真八方向视觉已获项目所有者批准，但 runtime 仍关闭；本阶段新增双视角 12 动作、180 帧正式战斗候选，保持整骑同帧、无运行时分层、无战斗视角镜像，战斗视觉仍待项目所有者审阅，未修改玩法规则或运行时路由。",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "70bcdd1eb626cfa4744fd74986902e932b4c71399d1897bd79cf4e72cc184315",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "473096a570312306fa47aebb3d92025ac39f7e01d3229f0155323ce42edec0e1",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "qcSummarySha256": "83f8a56d69ac25743cf41a377e029e140586431173e76c8b08d2b0b52d83b9f2",
+    "reviewVideo": ".run/evidence/phase344_moon_gale_mounted/Beastbound_Phase344_Moon_Gale_Mounted_1x.mp4",
+    "reviewVideoSha256": "dc6eac7415bb98dba17093e35c9a65b3902cb3b33e69cc78d0ebc71366cf48d8",
+    "reviewVideoSpeedScale": 1.0
+  }
 }

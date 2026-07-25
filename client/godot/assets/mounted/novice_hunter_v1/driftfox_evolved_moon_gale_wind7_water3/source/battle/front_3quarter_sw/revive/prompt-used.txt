@@ -1,0 +1,10 @@
+DERIVED ACTION RECORD — no image-generation call was made for this action.
+
+Asset: novice_hunter_v1 riding driftfox_evolved_moon_gale_wind7_water3
+View: front_3quarter_sw
+Action: revive
+Frame count: 8
+
+The accepted front_3quarter_sw down sheet was first repacked into an exact 2x4 grid without creative edits. The eight complete authored cells were then reordered in exact reverse order by reverse_exact_grid.py. No cell pixels, pose, anatomy, palette, rider contact, scale, lighting or direction were edited. The resulting revive sequence is therefore a deterministic physical recovery, and down-8 is byte-identical to revive-1 at both 512px source and 256px runtime levels.
+
+Runtime remains disabled. Owner visual review remains pending.
