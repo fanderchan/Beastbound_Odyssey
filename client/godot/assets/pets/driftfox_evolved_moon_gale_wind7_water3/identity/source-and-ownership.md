@@ -38,3 +38,14 @@
 - 当前状态：`self_review_passed_owner_pending`。项目所有者已说明正在休息、无法验收，因此没有代替所有者批准；`runtimeEnabled=false`，也没有修改正式成功回调、进化消耗或路线门禁。
 - 替换路径：从本目录逐字 prompt、两张 raw、pipeline、512px 源帧和身份锁重建，再复跑接触表、Godot 加载、真实 1× 成片与 owner review。
 <!-- phase345-moon-gale-evolution:end -->
+
+<!-- phase346-moon-gale-standalone-battle-semantic-review:start -->
+## Phase346 独立宠物战斗语义复核
+
+- 复核对象：当前两套独立斜向、12 动作、180 张 256×256 运行帧；本阶段没有改动任何动作像素。
+- 当前像素证明：显式重导入后逐帧比较源 PNG、Godot import `source_md5` 与 `Texture2D.get_image()`；`180/180` import 新鲜且 canonical RGBA 相同，当前 source-set SHA-256 为 `44c6d77803ea700036fb88028cd893089a67513efc59ffaa1e8203233b19b015`。
+- 语义结论：两视角全序列均保持同一只成年银白月蓝风狐和上下双尾；普通攻击、贴体月牙风技能、受击、防御、后撤回避、反击、受创失衡、连续翻滚击飞、螺旋眼昏厥与逐步复起可区分，`down-8 == revive-1` 两视角继续逐 RGBA 相同。
+- 真实客户端证据：真实 `Main.tscn` 动作导演以 1280×720、60 FPS、有声、`1.00x` 连续覆盖 14 个场景；2477 帧、41.283333 秒，全片解码通过。证据位于 `.run/evidence/phase346_moon_gale_standalone_battle/`。
+- 当前状态：第二遍运行时语义自审通过，但项目所有者正在休息，未观看本次成片，故 battle 仍为 `owner_pending/runtimeEnabled=false`。
+- 保留债务：历史 48 帧的 512px canonical 与当前 lean ledger RGBA 不一致没有被本轮消除；Phase346 只证明当前 256px runtime 的真实加载与语义，不能声称重新建立了新鲜 512px canonical。
+<!-- phase346-moon-gale-standalone-battle-semantic-review:end -->

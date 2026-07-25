@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "phase": 346,
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "displayName": "月岚风狐",
+  "reviewType": "second_pass_current_runtime_semantic_audit",
+  "reviewerType": "codex_self_review_not_project_owner",
+  "status": "passed_self_review_owner_pending",
+  "independentSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "approvalScope": "semantic_self_review_only",
+  "pixelChangesInThisPhase": 0,
+  "scope": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "runtimeFrameCount": 180,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "runtimeBundleDigest": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f"
+  },
+  "currentRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase346_moon_gale_standalone_battle/runtime-parity.json",
+    "reportSha256": "37d9ded8ab0491307d4777d3c09025cb91bb4572b2956223af1c96d064248e67",
+    "checkedFrames": 180,
+    "importFreshCount": 180,
+    "canonicalRgbaMatchCount": 180,
+    "sourceSetSha256": "44c6d77803ea700036fb88028cd893089a67513efc59ffaa1e8203233b19b015",
+    "errors": []
+  },
+  "staticEvidence": {
+    "fullContactSheet": "qa/battle/contact-sheet.png",
+    "fullContactSheetSha256": "0a7a6cd3c194cbeab7f82ee29706d02fcbd653d79a231c84ed8276a0fee41a01",
+    "frontDownReviveContact": "qa/battle/continuity/front_3quarter_sw-down-revive-contact.png",
+    "frontDownReviveContactSha256": "a1b2f6ffd448b3d02d53ecedec6b03fd71f721e07f83b876bb126d888ceb9640",
+    "backDownReviveContact": "qa/battle/continuity/back_3quarter_ne-down-revive-contact.png",
+    "backDownReviveContactSha256": "3d976bf1a2d630ac5e9663164430b5d20e53ab19ffebcc5719cef962cce57d8b",
+    "minimumRuntimeEdgeMargin": 11,
+    "down8Revive1ExactRgba": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    }
+  },
+  "realMainSceneEvidence": {
+    "video": ".run/evidence/phase346_moon_gale_standalone_battle/Beastbound_Phase346_Moon_Gale_Standalone_Battle_1x.mp4",
+    "videoSha256": "4cda9076605f80eb2b514425004ccf02e3ac7bf2aa95a0a93ec9d27aa6ea8c7b",
+    "width": 1280,
+    "height": 720,
+    "videoFps": 60,
+    "videoFrameCount": 2477,
+    "durationSeconds": 41.283333,
+    "speedScale": 1.0,
+    "speedFilters": [],
+    "audio": {
+      "codec": "aac",
+      "sampleRate": 48000,
+      "channels": 2,
+      "meanVolumeDb": -25.6,
+      "maxVolumeDb": -3.9
+    },
+    "fullDecodePassed": true,
+    "movieMakerAverageCpuRenderMsPerFrame": 0.06,
+    "actionSequenceContact": ".run/evidence/phase346_moon_gale_standalone_battle/action-sequence-contact-14x3.png",
+    "actionSequenceContactSha256": "099ef9b54b591de6b9677353a48cc5270727d396158ae501b0b20f50c1b809b6",
+    "midpointContact": ".run/evidence/phase346_moon_gale_standalone_battle/action-midpoint-contact-4x4.png",
+    "midpointContactSha256": "c60d123e93e6caa31fff01d0f1ccc16e3b889810a94a691396d73caea1b2a8a5",
+    "directorSteps": [
+      "attack",
+      "defend_hit",
+      "hurt",
+      "counter",
+      "counter_ko",
+      "counter_launch",
+      "skill",
+      "combo",
+      "knockaway_straight",
+      "knockaway_bounce",
+      "dodge",
+      "dodge_counter",
+      "down",
+      "revive"
+    ]
+  },
+  "semanticResults": {
+    "identity": {
+      "status": "passed",
+      "notes": "两视角 180 帧均保持成年银白月蓝风狐、月白颈鬃、深青眼、新月纹与同一尾根发出的上下双尾；技能白蓝风弧没有被误判为第三尾，颈背毛流没有长成翅膀。"
+    },
+    "idle": {
+      "status": "passed",
+      "notes": "警戒站姿和轻微呼吸/尾部随动稳定，没有体量泵动。"
+    },
+    "walk": {
+      "status": "passed",
+      "notes": "四足步态与双尾随动连续，循环首尾没有换视角、缩放跳变或脚底断层。"
+    },
+    "attack": {
+      "status": "passed",
+      "notes": "压低重心后低位扑击、达到接触峰值并回收；普通攻击与技能轮廓可区分。"
+    },
+    "skill": {
+      "status": "passed",
+      "notes": "双尾开合与贴体月牙风弧形成专属技能语言，起手、爆发和回收完整；风弧不脱体遮蔽主体。"
+    },
+    "hurt": {
+      "status": "passed",
+      "notes": "短促受力、后坐与恢复清楚，不会误读为防御、回避或倒地。"
+    },
+    "defend": {
+      "status": "passed",
+      "notes": "压低身体并以前肢承压，末帧保持防御姿态；与 hurt 的冲击恢复语义不同。"
+    },
+    "dodge": {
+      "status": "passed",
+      "notes": "先缩身再后撤/侧移，实机事件同时显示回避并回到记录点；没有命中反馈，也没有把回避画成攻击。"
+    },
+    "counter": {
+      "status": "passed",
+      "notes": "受力后快速压身、突进、接触和回撤，实机普通反击、致死反击与高伤反击链均保持因果连续。"
+    },
+    "stagger": {
+      "status": "passed",
+      "notes": "受创失衡逐步压低重心，作为负伤归位阶段使用；没有中途站直，也没有提前进入完全昏厥。"
+    },
+    "knockaway": {
+      "status": "passed",
+      "notes": "连续翻滚姿态由场内轨迹承载直飞/弹飞，动作中途不站起；致死箭矢仍由全局合同禁止误触发击飞。"
+    },
+    "down": {
+      "status": "passed",
+      "notes": "单调进入完全伏地和螺旋眼昏厥，没有血迹、死亡或微笑睡眠语义。"
+    },
+    "revive": {
+      "status": "passed",
+      "notes": "首帧与 down-8 两视角逐 RGBA 相同，随后抬头、撑起前肢、恢复后肢并站稳，没有瞬间换模。"
+    },
+    "battleFacingAndScale": {
+      "status": "passed",
+      "notes": "敌我使用独立正背斜向源资产，经既有展示映射朝向战场中心；运行帧最小安全边 11px，实机 10V10 未见裁切或异常缩放。"
+    }
+  },
+  "targetedValidation": {
+    "petBattleCatalog": "passed 1/1 form, 180/180 frames",
+    "petActionAssetCheck": "passed, errors=[]",
+    "petBattleReviewLabCheck": "passed with Godot parse 2/2, errors=[]",
+    "jsonAndHashCrossCheck": "passed"
+  },
+  "residualRisks": [
+    "项目所有者尚未观看 Phase346 1x 成片，因此 battle ownerReviewStatus 继续 pending。",
+    "历史 48 帧的 512px canonical 与当前 lean ledger RGBA 不一致债务仍未解决；本次只证明当前 256px runtime 语义、导入新鲜度和实际加载像素，不能声称重建了新鲜 512px canonical。",
+    "runtimeEnabled、整宠批准、进化成功路径和两条进化路线均继续关闭。"
+  ]
+}

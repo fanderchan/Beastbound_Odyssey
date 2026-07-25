@@ -232,6 +232,12 @@
     "runtimeMotionScaleFollowupProvenanceSha256": "70100b0a268a97e32f2204c9368c6cebce6ff8081660a818f5d2ccf3175f31ed",
     "runtimeMotionScaleFollowupFrameLedger": "source/battle/runtime-motion-scale-followup-v1-frame-ledger.json",
     "runtimeMotionScaleFollowupFrameLedgerSha256": "40264a220d7cb2caaaa1f278c15a11141acd5bd3d7d7788d0ac3ff9d7e49ed90",
+    "battleSemanticReview": "qa/battle/semantic-review-v2.json",
+    "battleSemanticReviewSha256": "a99e842b4e974904a678e3b7d0289679d002d8369285b2f72d2b0c0396636cc1",
+    "battleRuntimeParity": ".run/evidence/phase346_moon_gale_standalone_battle/runtime-parity.json",
+    "battleRuntimeParitySha256": "37d9ded8ab0491307d4777d3c09025cb91bb4572b2956223af1c96d064248e67",
+    "battleRealMainVideo": ".run/evidence/phase346_moon_gale_standalone_battle/Beastbound_Phase346_Moon_Gale_Standalone_Battle_1x.mp4",
+    "battleRealMainVideoSha256": "4cda9076605f80eb2b514425004ccf02e3ac7bf2aa95a0a93ec9d27aa6ea8c7b",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
     "worldContactSheetSha256": "d9a821b38f6cf5e1a3d2374c138fa69761e8f7e35a8dcf28488c907f096078f9",
     "worldCycleGif": "qa/world/true8-world-cycle.gif",
@@ -253,7 +259,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。Phase345 新增高地风狐到月岚风狐的 12 帧正面进化候选、512/256 双层归档和真实 Main.tscn 1x 成片；当前仅自审通过，项目所有者因休息未验收，进化视觉和所有路线门禁继续 pending/disabled。",
+  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放，独立语义复核仍待完成且 runtime 保持关闭。Phase345 新增高地风狐到月岚风狐的 12 帧正面进化候选、512/256 双层归档和真实 Main.tscn 1x 成片；当前仅自审通过，项目所有者因休息未验收，进化视觉和所有路线门禁继续 pending/disabled。Phase346 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG 与 Godot 实际加载像素一致，14 个真实 Main 动作导演场景以 1x 完成；双尾身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。该结论不消除历史 512px canonical 债务，也不代替项目所有者验收，runtime 与路线继续关闭。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -267,7 +273,7 @@
     }
   },
   "battleVisual": {
-    "status": "runtime_motion_scale_followup_static_self_review_passed_owner_pending",
+    "status": "independent_semantic_self_review_passed_owner_pending",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -327,6 +333,35 @@
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
       "back_3quarter_ne": true
+    },
+    "semanticReview": {
+      "status": "passed_self_review_owner_pending",
+      "independentSemanticAuditStatus": "passed",
+      "review": "qa/battle/semantic-review-v2.json",
+      "reviewSha256": "a99e842b4e974904a678e3b7d0289679d002d8369285b2f72d2b0c0396636cc1",
+      "currentRuntimeParity": {
+        "status": "passed",
+        "checkedFrames": 180,
+        "importFreshCount": 180,
+        "canonicalRgbaMatchCount": 180,
+        "sourceSetSha256": "44c6d77803ea700036fb88028cd893089a67513efc59ffaa1e8203233b19b015"
+      },
+      "realMainSceneReview": {
+        "video": ".run/evidence/phase346_moon_gale_standalone_battle/Beastbound_Phase346_Moon_Gale_Standalone_Battle_1x.mp4",
+        "videoSha256": "4cda9076605f80eb2b514425004ccf02e3ac7bf2aa95a0a93ec9d27aa6ea8c7b",
+        "width": 1280,
+        "height": 720,
+        "videoFps": 60,
+        "videoFrameCount": 2477,
+        "durationSeconds": 41.283333,
+        "speedScale": 1.0,
+        "directorStepCount": 14,
+        "audioPresent": true,
+        "fullDecodePassed": true
+      },
+      "historical512CanonicalDebt": "unresolved",
+      "ownerReview": "pending",
+      "runtimeEnabled": false
     },
     "qualityRepairs": [
       {
