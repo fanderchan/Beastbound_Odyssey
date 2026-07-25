@@ -40,7 +40,7 @@ The `--xxx-preview` entries below are local previews for one feature area. They 
 
 ## Current Slice
 
-Phase 62 contains a minimal isometric exploration, encounter loop, GM 10v10 test map, hang-up walking prototype, encounter stones, hang-up stop settings, 10v10 formation, local battle-command, battle auto-battle settings, training partners, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
+The client contains a minimal isometric exploration, encounter loop, GM 10v10 spectator map, hang-up walking, encounter stones, 10v10 formation, local/server battle commands, auto-battle settings, real-player parties, target selection, speed order, combos, capture, spirits, controlled-pet commands, battle items, and item counts, with:
 
 - Mouse click-to-pathfind on PC.
 - Touch tap-to-pathfind on mobile.
@@ -69,11 +69,8 @@ Phase 62 contains a minimal isometric exploration, encounter loop, GM 10v10 test
 - The `内挂设置` panel has a `挂机` tab whose first version only contains `低血停止`.
 - `低血停止` defaults to `0%`: if the player fell to 0 HP during battle, hang-up stops after returning to the map, while the world profile keeps at least 1 HP.
 - Hang-up low-HP stopping checks only the player, not the pet, and can be set to `不停止`.
-- The world action bar has a `伙伴` panel for adding, removing, filling, or clearing up to four training partners.
-- Training partners clone the current player and active pet when added, then persist and grow independently.
-- Grass encounters with training partners become 10v10 training battles: 5 humans plus 5 pets against 10 wild enemies.
-- Training partner humans and pets use default attack AI against enemy slots from front 1-5, then back 1-5.
-- Victory rewards grant EXP to training partner humans and pets with a simple stat-growth rule.
+- The `队伍` panel supports real-player parties; solo encounters remain available.
+- Legacy fictional training-partner save rows are retained only for compatibility and are hidden, immutable, and excluded from battle/EXP settlement.
 - `--full-client-preview --gm-10v10-map` starts the full client on `GM练级测试场`, where grass encounters always contain 10 wild enemies.
 - Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
 - 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.
@@ -124,7 +121,7 @@ Open the auto-battle settings preview directly from this directory:
 godot --path . --scene res://scenes/Main.tscn -- --auto-battle-settings-preview
 ```
 
-Open the training-partner grass demo directly from this directory:
+Open the retired training-partner compatibility preview (it redirects to real-player party UI):
 
 ```sh
 godot --path . --scene res://scenes/Main.tscn -- --training-partner-demo

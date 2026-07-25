@@ -7,8 +7,10 @@ const PLAYER_STAT_KEYS: Array[String] = ["hp", "maxHp", "attack", "defense", "qu
 const PET_STAT_KEYS: Array[String] = ["hp", "maxHp", "attack", "defense", "quick"]
 
 
-static func clamp_partner_count(value) -> int:
-	return clampi(int(value), 0, MAX_PARTNERS)
+static func runtime_partners(_value) -> Array[Dictionary]:
+	# Keep normalize_partners available for legacy save/schema inspection, but
+	# never materialize those fictional snapshots in current gameplay.
+	return []
 
 
 static func partner_id_for_index(index: int) -> String:
@@ -16,14 +18,14 @@ static func partner_id_for_index(index: int) -> String:
 
 
 static func partner_name_for_index(index: int) -> String:
-	return "陪练伙伴%d" % [index + 1]
+	return "旧版伙伴%d" % [index + 1]
 
 
 static func partner_pet_name_for_index(index: int, pet_name: String = "") -> String:
 	var source_name := pet_name.strip_edges()
 	if source_name == "":
 		source_name = "布伊"
-	return "陪练%s%d" % [source_name, index + 1]
+	return "旧版%s%d" % [source_name, index + 1]
 
 
 static func slot_number_for_index(index: int) -> int:
@@ -78,17 +80,5 @@ static func normalize_partner(value: Dictionary, index: int) -> Dictionary:
 	return entry
 
 
-static func summary_lines(partners: Array[Dictionary]) -> Array[String]:
-	if partners.is_empty():
-		return ["当前没有陪练伙伴。"]
-	var lines: Array[String] = []
-	for index in range(partners.size()):
-		var partner := normalize_partner(partners[index], index)
-		var pet := partner.get("pet", {}) as Dictionary
-		lines.append("%s Lv%d / %s Lv%d" % [
-			str(partner.get("name", partner_name_for_index(index))),
-			int(partner.get("level", 1)),
-			str(pet.get("name", "陪练宠物")),
-			int(pet.get("level", 1)),
-		])
-	return lines
+static func summary_lines(_partners: Array[Dictionary]) -> Array[String]:
+	return ["虚构练级伙伴已退役，请邀请真人玩家组队。"]

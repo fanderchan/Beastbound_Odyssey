@@ -87,7 +87,8 @@ test("shared public-profile v2 vectors match exactly, remain idempotent, and exp
     assert.equal(
       Boolean(vector.internalProfile.trainingPartners?.[0]?.pet),
       true,
-      `${label}: training-partner pet coverage is missing`,
+      `${label}: retired training-partner input coverage is missing`,
     );
+    assert.deepEqual(actual.trainingPartners, [], `${label}: retired training partners reached the public DTO`);
   }
 });

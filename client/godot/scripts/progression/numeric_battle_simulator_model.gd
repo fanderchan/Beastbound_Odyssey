@@ -279,7 +279,7 @@ static func _player_actor_for(index: int, level: int, party_size: int) -> Dictio
 	var stats := _player_stats_for_level(level, index)
 	var slot_number := ALLY_BACK_SLOTS[clampi(index, 0, ALLY_BACK_SLOTS.size() - 1)]
 	var actor_id := BattleModel.PLAYER_ACTOR_ID if index == 0 else "ally_partner_%d" % index
-	var label := "数值猎人" if index == 0 else "陪练伙伴%d" % index
+	var label := "数值猎人" if index == 0 else "模拟队员%d" % index
 	return {
 		"id": actor_id,
 		"name": label,

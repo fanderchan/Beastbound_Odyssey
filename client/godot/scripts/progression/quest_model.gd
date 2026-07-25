@@ -87,9 +87,9 @@ const OBJECTIVE_TEMPLATES := {
 		"summary": "在战斗中释放指定精灵，可用 eventType 限定效果。",
 	},
 	"training_partner_count": {
-		"label": "陪练伙伴",
+		"label": "旧版伙伴（已退役）",
 		"eventTypes": ["training_partner_set_count"],
-		"summary": "队伍中加入指定数量的陪练伙伴。",
+		"summary": "只用于读取旧任务档案；当前运行时不会创建虚构队友。",
 	},
 	"ride_pet": {
 		"label": "骑乘宠物",

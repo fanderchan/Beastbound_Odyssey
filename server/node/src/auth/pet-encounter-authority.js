@@ -726,11 +726,7 @@ function partyEncounterCharacterCount(participants) {
   const active = Array.isArray(participants)
     ? participants.slice(0, 5).filter((participant) => participant && String(participant.accountId || "").trim() !== "")
     : [];
-  const partnerCount = active.reduce((sum, participant) => {
-    const snapshot = objectOrEmpty(participant.teamSnapshot);
-    return sum + arrayOfObjects(snapshot.trainingPartners).length;
-  }, 0);
-  return active.length + Math.min(partnerCount, Math.max(0, 4 - Math.max(0, active.length - 1)));
+  return active.length;
 }
 
 function deterministicFloat(seed, label) {

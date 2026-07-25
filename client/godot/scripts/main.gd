@@ -4895,7 +4895,7 @@ func _run_chat_panel_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase77：聊天系统频道与世界日志分离。")
 	_append_chat_message(CHAT_CHANNEL_NEARBY, "附近频道测试消息。", "见习猎人")
-	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "陪练伙伴1")
+	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "真人队友")
 	_open_chat_panel()
 	if status_label != null:
 		_update_hud_text()
@@ -4966,10 +4966,9 @@ func _run_training_partner_demo() -> void:
 	world_log_history.clear()
 	world_log_message = ""
 	_load_map("firebud_village_gate", "from_training_yard")
-	player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
-	battle_auto_attack_enabled = true
-	_set_world_log_message("已加入4个陪练伙伴。进入草丛遇敌后，可点战斗里的自动观察练级。")
-	_open_training_partner_panel()
+	player_profile = PlayerProgressModel.default_profile()
+	_set_world_log_message("虚构练级伙伴已退役；已打开真人组队界面。单人也可直接进入危险草丛战斗。")
+	_open_party_panel("players")
 	if status_label != null:
 		_update_hud_text()
 
@@ -8489,10 +8488,8 @@ func _update_world_hud_if_needed(delta: float, force: bool = false) -> void:
 
 func _world_hud_signature() -> String:
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
-	var partners = player_profile.get("trainingPartners", [])
-	var partner_count := (partners as Array).size() if partners is Array else 0
 	var party_other_count := _current_party_other_members_for_battle().size()
-	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%d|%s|%s|%s" % [
+	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%s|%s|%s" % [
 		current_map_id,
 		_movement_status_name(),
 		str(battle_active),
@@ -8501,7 +8498,6 @@ func _world_hud_signature() -> String:
 		str(has_target_cell),
 		player_cell.x,
 		player_cell.y,
-		partner_count,
 		party_other_count,
 		_task_tracker_signature_for_hud(),
 		str(_world_menu_is_open()),
@@ -10100,7 +10096,7 @@ func _replace_chat_channel_messages(channel: String, server_messages) -> void:
 func _chat_message_from_server(message: Dictionary, channel: String) -> Dictionary:
 	return _panel_flow()._chat_message_from_server(message, channel)
 
-func _open_party_panel(mode: String = "partners") -> void:
+func _open_party_panel(mode: String = "players") -> void:
 	_panel_flow()._open_party_panel(mode)
 
 func _close_party_panel(update_layout: bool = true) -> void:
@@ -13592,13 +13588,6 @@ func _current_task_guidance_uncached() -> Dictionary:
 		"actionText": action_text,
 		"rewardText": QuestModel.reward_text(quest),
 	}
-
-
-func _training_partner_count() -> int:
-	var partners = player_profile.get("trainingPartners", [])
-	if not (partners is Array):
-		return 0
-	return (partners as Array).size()
 
 
 func _toggle_pet_ring() -> void:

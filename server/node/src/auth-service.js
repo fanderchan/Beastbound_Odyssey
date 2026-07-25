@@ -500,7 +500,6 @@ const BATTLE_CAPTURE_TOOL_POISON_WULI_NET = "capture_poison_wuli_net";
 const TAME_ELIGIBLE_EGG_ITEM_IDS = new Set(["novice_battle_pet_egg", "novice_tiger_egg"]);
 const BATTLE_PARTY_PVE_PLAYER_SLOTS = [3, 4, 2, 5, 1];
 const BATTLE_PARTY_PVE_PARTNER_SLOTS = [1, 2, 4, 5];
-const TRAINING_PARTNER_MAX_COUNT = BATTLE_PARTY_PVE_PARTNER_SLOTS.length;
 const BATTLE_RIDE_PET_EXP_RATE = 0.6;
 const BATTLE_PARTY_EXP_BONUS_RATES = Object.freeze({
   2: 0.10,
@@ -1462,7 +1461,7 @@ function createAuthService(options = {}) {
       account: publicAccount(resolved.account),
       profileBinding: binding,
       profileSummary: profileSummaryForAccount(resolved.account, data),
-      profile: profileDoc && profileDoc.profile ? clone(profileDoc.profile) : null,
+      profile: profileDoc && profileDoc.profile ? profileForCurrentQuestRead(profileDoc.profile) : null,
     });
   }
 
@@ -1656,7 +1655,7 @@ function createAuthService(options = {}) {
         account: publicAccount(resolved.account),
         profileBinding: binding,
         profileSummary: profileSummaryForAccount(resolved.account, data),
-        profile: clone(profileDoc.profile),
+        profile: profileForCurrentQuestRead(profileDoc.profile),
       })),
     };
   }
@@ -9824,56 +9823,10 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
 }
 
 function trainingPartnerSnapshotsFromProfile(profile) {
-  const partners = profile && Array.isArray(profile.trainingPartners) ? profile.trainingPartners : [];
-  return partners
-    .map((partner, index) => trainingPartnerSnapshotFromProfilePartner(partner, index))
-    .filter((partner) => String(partner.partnerId || "").trim() !== "" && Number(partner.hp || 0) > 0);
-}
-
-function trainingPartnerSnapshotFromProfilePartner(partner, index = 0) {
-  if (!partner || typeof partner !== "object" || Array.isArray(partner)) {
-    return {};
-  }
-  const maxHp = positiveNumber(partner.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
-  const pet = partner.pet && typeof partner.pet === "object" && !Array.isArray(partner.pet)
-    ? trainingPartnerPetSnapshotFromProfilePet(partner.pet, index)
-    : null;
-  return {
-    kind: BATTLE_ACTOR_KIND_PLAYER,
-    partnerId: String(partner.partnerId || partner.id || `training_partner_${index + 1}`),
-    name: String(partner.name || partner.displayName || `伙伴${index + 1}`),
-    level: positiveNumber(partner.level, 1),
-    hp: clampNumber(partner.hp, 1, maxHp, maxHp),
-    maxHp,
-    attack: positiveNumber(partner.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
-    defense: positiveNumber(partner.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
-    quick: positiveNumber(partner.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
-    pet,
-    schemaVersion: 1,
-  };
-}
-
-function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
-  const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
-  const activeSkillIds = petActiveSkillIdsForSource(pet);
-  return {
-    kind: BATTLE_ACTOR_KIND_PET,
-    petId: String(pet.petId || pet.instanceId || pet.id || `training_partner_pet_${index + 1}`),
-    name: String(pet.name || pet.displayName || "伙伴宠物"),
-    formId: String(pet.formId || pet.templateId || pet.speciesId || ""),
-    speciesId: String(pet.speciesId || pet.templateId || pet.formId || ""),
-    level: positiveNumber(pet.level, 1),
-    hp: clampNumber(pet.hp, 1, maxHp, maxHp),
-    maxHp,
-    attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
-    defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
-    quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
-    activeSkillIds,
-    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
-    forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
-    passiveSkillIds: petPassiveSkillIdsForSource(pet),
-    schemaVersion: 1,
-  };
+  // Historical profile rows keep their legacy field for non-destructive
+  // compatibility, but fictional partner snapshots are retired from battles.
+  void profile;
+  return [];
 }
 
 function petBattleStateIsAvailable(pet, activePetInstanceId = "") {
@@ -14970,14 +14923,7 @@ function battleQuestPartyMemberCountForAccount(room, accountId) {
     .filter((participant) => participant && String(participant.accountId || "") !== "")
     .filter((participant) => String(participant.accountId || "") !== String(accountId || ""))
     .length;
-  const selfParticipant = participants.find((participant) => participant && String(participant.accountId || "") === String(accountId || "")) || null;
-  const snapshot = selfParticipant && selfParticipant.teamSnapshot && typeof selfParticipant.teamSnapshot === "object" && !Array.isArray(selfParticipant.teamSnapshot)
-    ? selfParticipant.teamSnapshot
-    : {};
-  const trainingPartners = Array.isArray(snapshot.trainingPartners)
-    ? snapshot.trainingPartners.filter((partner) => partner && typeof partner === "object" && !Array.isArray(partner))
-    : [];
-  return Math.max(0, humanMemberCount + trainingPartners.length);
+  return Math.max(0, humanMemberCount);
 }
 
 function battleSpiritQuestEventsForProfile(room, battle, accountId, encounterGroupId, interactionId) {
@@ -15260,6 +15206,14 @@ function ensureActiveQuestForProfile(profile) {
   }
   profile.questStates = states;
   return questId;
+}
+
+function profileForCurrentQuestRead(profile) {
+  const result = clone(profile);
+  if (String(result.activeQuestId || "").trim() === "quest_training_partner_intro") {
+    ensureActiveQuestForProfile(result);
+  }
+  return result;
 }
 
 function firstAvailableUnfinishedQuestIdForProfile(profile, statesValue = null) {
@@ -18151,190 +18105,15 @@ function profileStoragePetCount(profile) {
   return instances.filter((pet) => pet && String(pet.state || BATTLE_PET_STATE_STANDBY) === BATTLE_PET_STATE_STORAGE).length;
 }
 
-function trainingPartnerSlotNumberForIndex(index) {
-  const safeIndex = clampInt(index, 0, TRAINING_PARTNER_MAX_COUNT - 1, 0);
-  return BATTLE_PARTY_PVE_PARTNER_SLOTS[safeIndex] || BATTLE_PARTY_PVE_PARTNER_SLOTS[0];
-}
-
-function trainingPartnerIdForIndex(index) {
-  return `training_partner_${index + 1}`;
-}
-
-function trainingPartnerPetIdForIndex(index) {
-  return `training_partner_pet_${index + 1}`;
-}
-
-function trainingPartnerNameForIndex(index) {
-  return `陪练伙伴${index + 1}`;
-}
-
-function trainingPartnerPetNameForIndex(index, petName = "") {
-  const sourceName = String(petName || "").trim() || "布伊";
-  return `陪练${sourceName}${index + 1}`;
-}
-
-function normalizeTrainingPartnerProfilePet(pet, index = 0, fallbackLevel = 1) {
-  const safeIndex = clampInt(index, 0, TRAINING_PARTNER_MAX_COUNT - 1, 0);
-  const source = objectOrEmpty(pet);
-  const entry = clone(source);
-  const level = Math.max(1, Math.trunc(Number(source.level || fallbackLevel || 1)));
-  const maxHp = Math.max(1, Math.trunc(Number(source.maxHp || source.hp || DEFAULT_PET_BATTLE_STATS.maxHp)));
-  const formId = String(source.formId || source.templateId || source.speciesId || "bui_normal_red_fire10").trim() || "bui_normal_red_fire10";
-  const petId = String(source.petId || source.instanceId || source.id || trainingPartnerPetIdForIndex(safeIndex)).trim() || trainingPartnerPetIdForIndex(safeIndex);
-  entry.petId = petId;
-  entry.instanceId = String(source.instanceId || petId).trim() || petId;
-  entry.formId = formId;
-  entry.templateId = String(source.templateId || formId).trim() || formId;
-  entry.speciesId = String(source.speciesId || formId).trim() || formId;
-  entry.name = String(source.name || source.displayName || trainingPartnerPetNameForIndex(safeIndex)).trim() || trainingPartnerPetNameForIndex(safeIndex);
-  entry.state = String(source.state || source.status || source.battleState || BATTLE_PET_STATE_BATTLE).trim() || BATTLE_PET_STATE_BATTLE;
-  entry.level = level;
-  entry.exp = Math.max(0, Math.trunc(Number(source.exp || 0)));
-  entry.nextExp = Math.max(1, Math.trunc(Number(source.nextExp || battleExpToNextLevel(level))));
-  entry.hp = clampInt(source.hp, 1, maxHp, maxHp);
-  entry.maxHp = maxHp;
-  entry.attack = Math.max(1, Math.trunc(Number(source.attack || DEFAULT_PET_BATTLE_STATS.attack)));
-  entry.defense = Math.max(1, Math.trunc(Number(source.defense || DEFAULT_PET_BATTLE_STATS.defense)));
-  entry.quick = Math.max(1, Math.trunc(Number(source.quick || DEFAULT_PET_BATTLE_STATS.quick)));
-  entry.activeSkillIds = stringArray(source.activeSkillIds);
-  entry.petSkillSlots = stringArray(source.petSkillSlots);
-  entry.passiveSkillIds = stringArray(source.passiveSkillIds);
-  entry.schemaVersion = 1;
-  return entry;
-}
-
-function normalizeTrainingPartnerProfilePartner(partner, index = 0) {
-  const safeIndex = clampInt(index, 0, TRAINING_PARTNER_MAX_COUNT - 1, 0);
-  const source = objectOrEmpty(partner);
-  const entry = clone(source);
-  const level = Math.max(1, Math.trunc(Number(source.level || 1)));
-  const maxHp = Math.max(1, Math.trunc(Number(source.maxHp || source.hp || DEFAULT_PLAYER_BATTLE_STATS.maxHp)));
-  entry.partnerId = String(source.partnerId || source.id || trainingPartnerIdForIndex(safeIndex)).trim() || trainingPartnerIdForIndex(safeIndex);
-  entry.name = String(source.name || source.displayName || trainingPartnerNameForIndex(safeIndex)).trim() || trainingPartnerNameForIndex(safeIndex);
-  entry.level = level;
-  entry.exp = Math.max(0, Math.trunc(Number(source.exp || 0)));
-  entry.nextExp = Math.max(1, Math.trunc(Number(source.nextExp || battleExpToNextLevel(level))));
-  entry.hp = clampInt(source.hp, 1, maxHp, maxHp);
-  entry.maxHp = maxHp;
-  entry.attack = Math.max(1, Math.trunc(Number(source.attack || DEFAULT_PLAYER_BATTLE_STATS.attack)));
-  entry.defense = Math.max(1, Math.trunc(Number(source.defense || DEFAULT_PLAYER_BATTLE_STATS.defense)));
-  entry.quick = Math.max(1, Math.trunc(Number(source.quick || DEFAULT_PLAYER_BATTLE_STATS.quick)));
-  entry.slotNumber = trainingPartnerSlotNumberForIndex(safeIndex);
-  entry.pet = normalizeTrainingPartnerProfilePet(source.pet, safeIndex, level);
-  entry.schemaVersion = 1;
-  return entry;
-}
-
-function trainingPartnersFromProfile(profile) {
-  const source = Array.isArray(profile && profile.trainingPartners) ? profile.trainingPartners : [];
-  const partners = [];
-  for (const partner of source) {
-    if (!partner || typeof partner !== "object" || Array.isArray(partner)) {
-      continue;
-    }
-    if (partners.length >= TRAINING_PARTNER_MAX_COUNT) {
-      break;
-    }
-    partners.push(normalizeTrainingPartnerProfilePartner(partner, partners.length));
-  }
-  return partners;
-}
-
-function trainingPartnerSourcePetFromProfile(profile) {
-  const instances = Array.isArray(profile && profile.petInstances) ? profile.petInstances : (Array.isArray(profile && profile.pets) ? profile.pets : []);
-  const activePetInstanceId = String(profile && profile.activePetInstanceId || "").trim();
-  const active = activePetInstanceId
-    ? instances.find((pet) => pet && typeof pet === "object" && !Array.isArray(pet) && profilePetIdentityValues(pet).includes(activePetInstanceId))
-    : null;
-  if (active) {
-    return active;
-  }
-  return instances.find((pet) => pet && typeof pet === "object" && !Array.isArray(pet) && petIsActiveBattlePet(pet, activePetInstanceId)) || null;
-}
-
-function playerStatsForTrainingPartner(profile) {
-  const player = objectOrEmpty(profile && profile.player);
-  const baseStats = playerBaseStatsFromPlayer(player);
-  return {
-    level: Math.max(1, Math.trunc(Number(player.level || 1))),
-    maxHp: Math.max(1, Math.trunc(Number(player.maxHp || baseStats.maxHp || DEFAULT_PLAYER_BATTLE_STATS.maxHp))),
-    attack: Math.max(1, Math.trunc(Number(player.attack || baseStats.attack || DEFAULT_PLAYER_BATTLE_STATS.attack))),
-    defense: Math.max(1, Math.trunc(Number(player.defense || baseStats.defense || DEFAULT_PLAYER_BATTLE_STATS.defense))),
-    quick: Math.max(1, Math.trunc(Number(player.quick || baseStats.quick || DEFAULT_PLAYER_BATTLE_STATS.quick))),
-  };
-}
-
-function createTrainingPartnerFromProfile(profile, index = 0) {
-  const stats = playerStatsForTrainingPartner(profile);
-  const sourcePet = trainingPartnerSourcePetFromProfile(profile);
-  const petLevel = Math.max(1, Math.trunc(Number(sourcePet && sourcePet.level || stats.level)));
-  const petMaxHp = Math.max(1, Math.trunc(Number(sourcePet && (sourcePet.maxHp || sourcePet.hp) || DEFAULT_PET_BATTLE_STATS.maxHp)));
-  const formId = String(sourcePet && (sourcePet.formId || sourcePet.templateId || sourcePet.speciesId) || "bui_normal_red_fire10").trim() || "bui_normal_red_fire10";
-  return normalizeTrainingPartnerProfilePartner({
-    partnerId: trainingPartnerIdForIndex(index),
-    name: trainingPartnerNameForIndex(index),
-    level: stats.level,
-    exp: 0,
-    nextExp: battleExpToNextLevel(stats.level),
-    hp: stats.maxHp,
-    maxHp: stats.maxHp,
-    attack: stats.attack,
-    defense: stats.defense,
-    quick: stats.quick,
-    slotNumber: trainingPartnerSlotNumberForIndex(index),
-    pet: {
-      petId: trainingPartnerPetIdForIndex(index),
-      instanceId: trainingPartnerPetIdForIndex(index),
-      formId,
-      templateId: String(sourcePet && sourcePet.templateId || formId).trim() || formId,
-      speciesId: String(sourcePet && sourcePet.speciesId || formId).trim() || formId,
-      name: trainingPartnerPetNameForIndex(index, sourcePet && sourcePet.name),
-      state: BATTLE_PET_STATE_BATTLE,
-      level: petLevel,
-      exp: 0,
-      nextExp: battleExpToNextLevel(petLevel),
-      hp: petMaxHp,
-      maxHp: petMaxHp,
-      attack: Math.max(1, Math.trunc(Number(sourcePet && sourcePet.attack || DEFAULT_PET_BATTLE_STATS.attack))),
-      defense: Math.max(1, Math.trunc(Number(sourcePet && sourcePet.defense || DEFAULT_PET_BATTLE_STATS.defense))),
-      quick: Math.max(1, Math.trunc(Number(sourcePet && sourcePet.quick || DEFAULT_PET_BATTLE_STATS.quick))),
-      activeSkillIds: stringArray(sourcePet && sourcePet.activeSkillIds),
-      petSkillSlots: stringArray(sourcePet && sourcePet.petSkillSlots),
-      passiveSkillIds: stringArray(sourcePet && sourcePet.passiveSkillIds),
-    },
-  }, index);
-}
-
 function applyTrainingPartnerSetCountAction(profile, params) {
-  const source = objectOrEmpty(params);
-  const hasCount = (
-    Object.prototype.hasOwnProperty.call(source, "count") ||
-    Object.prototype.hasOwnProperty.call(source, "targetCount") ||
-    Object.prototype.hasOwnProperty.call(source, "trainingPartnerCount") ||
-    Object.prototype.hasOwnProperty.call(source, "amount")
-  );
-  if (!hasCount) {
-    return {ok: false, code: "training_partner_count_missing", message: "请选择伙伴数量。"};
-  }
-  const requestedCount = source.count ?? source.targetCount ?? source.trainingPartnerCount ?? source.amount;
-  const targetCount = clampInt(requestedCount, 0, TRAINING_PARTNER_MAX_COUNT, 0);
-  const partners = trainingPartnersFromProfile(profile);
-  const previousCount = partners.length;
-  while (partners.length > targetCount) {
-    partners.pop();
-  }
-  while (partners.length < targetCount) {
-    partners.push(createTrainingPartnerFromProfile(profile, partners.length));
-  }
-  profile.trainingPartners = partners;
+  // Keep this legacy action ID recognizable so older clients get an explicit,
+  // safe response without mutating a historical profile field.
+  void profile;
+  void params;
   return {
-    ok: true,
-    message: `队伍伙伴 ${targetCount}/${TRAINING_PARTNER_MAX_COUNT}。`,
-    count: targetCount,
-    previousCount,
-    availableSlots: TRAINING_PARTNER_MAX_COUNT,
-    amount: targetCount,
-    changedCount: Math.abs(targetCount - previousCount),
+    ok: false,
+    code: "training_partners_retired",
+    message: "虚构练级伙伴已退役，请邀请真人玩家组队。",
   };
 }
 
@@ -22018,7 +21797,7 @@ function battleTrainingPartnerHealEvent(room, battle, command, actor, round, seq
       targetReaction: "heal",
       observer: "watch_target",
     },
-    message: `${actor.displayName || "陪练伙伴"} 使用${spiritName}，${target.displayName || "伙伴"} 回复 ${healed} 点生命。`,
+    message: `${actor.displayName || "队友"} 使用${spiritName}，${target.displayName || "队友"} 回复 ${healed} 点生命。`,
     schemaVersion: 1,
   };
 }

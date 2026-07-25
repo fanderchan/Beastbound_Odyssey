@@ -36,7 +36,7 @@ static func build_report(battle_report: Dictionary = {}) -> Dictionary:
 		"summary": summary,
 		"notes": [
 			"净收入 = 石币期望 + 可卖物品期望回收 - 人物村医费 - 野外低血补给储备 - 人物装备修理费。",
-			"第一版只算人物自身经济，不把陪练伙伴和其他玩家的装备/治疗消耗计入主角成本。",
+			"第一版只算人物自身经济，不把其他队友的装备/治疗消耗计入主角成本。",
 			"任务戒指、材料等当前不可卖物品按0石币计，但仍在 itemAverages 中保留。",
 		],
 	}

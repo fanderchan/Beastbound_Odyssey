@@ -270,7 +270,7 @@ test("a solo authority-v1 battle pet receives deterministic server growth withou
   assert.equal(validatePetGrowth(internalPet, loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
 });
 
-test("authority-v1, legacy, riding, and partner pets share one successful battle EXP settlement", () => {
+test("battle EXP settlement keeps legacy partners inert across legacy, riding, and authority-v1 pets", () => {
   const store = createMemoryAuthStore();
   const bootstrap = createAuthService({store});
   const leader = bootstrap.register({
@@ -290,9 +290,9 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
     level: 1,
     hp: 120,
     maxHp: 120,
-    attack: 24,
+    attack: 999,
     defense: 8,
-    quick: 1,
+    quick: 999,
     comboRateOverride: 0,
   }, {
     petId: "preflight_legacy_pet",
@@ -440,23 +440,26 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
   const recipients = storedRoom.battle.expCredits.flatMap((credit) => credit.recipients || []);
   assert.deepEqual(
     Array.from(new Set(recipients.map((entry) => entry.type))).sort(),
-    ["pet", "player", "ride_pet", "training_partner_pet", "training_partner_player"].sort(),
+    ["pet", "player", "ride_pet"].sort(),
   );
   const writebacks = storedRoom.battle.profileWriteback.profiles;
   assert.equal(writebacks.length, 2);
   for (const writeback of writebacks) {
     assert.equal(Boolean(writeback.exp.failed), false);
     assert.equal(String(writeback.exp.code || ""), "");
-    assert.equal(writeback.exp.amount > 0, true);
-    assert.equal(writeback.exp.baseAmount > 0, true);
-    assert.equal(writeback.exp.killCount > 0, true);
+    assert.equal(writeback.exp.amount >= 0, true);
+    assert.equal(writeback.exp.baseAmount >= 0, true);
+    assert.equal(writeback.exp.killCount >= 0, true);
     assert.equal(Boolean(writeback.exp.player), true);
   }
   const leaderWriteback = writebacks.find((entry) => entry.accountId === leader.account.accountId);
   const memberWriteback = writebacks.find((entry) => entry.accountId === member.account.accountId);
+  assert.equal(leaderWriteback.exp.amount > 0, true);
+  assert.equal(leaderWriteback.exp.baseAmount > 0, true);
+  assert.equal(leaderWriteback.exp.killCount > 0, true);
   assert.equal(leaderWriteback.exp.pets.length, 1);
   assert.equal(leaderWriteback.exp.ridePets.length, 1);
-  assert.equal(leaderWriteback.exp.trainingPartners.length, 1);
+  assert.equal(leaderWriteback.exp.trainingPartners.length, 0);
   assert.equal(memberWriteback.exp.pets.length, 1);
   assert.equal(firstPrivatePath(storedRoom.battle.profileWriteback), "");
   assert.equal(JSON.stringify(storedRoom.battle.profileWriteback).includes(PRIVATE_SEED), false);
@@ -466,12 +469,13 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
   assert.equal(Boolean(record), true);
   assert.equal(record.expSummaries.length, 2);
   for (const expSummary of record.expSummaries) {
-    assert.equal(expSummary.amount > 0, true);
-    assert.equal(expSummary.baseAmount > 0, true);
-    assert.equal(expSummary.killCount > 0, true);
+    assert.equal(expSummary.amount >= 0, true);
+    assert.equal(expSummary.baseAmount >= 0, true);
+    assert.equal(expSummary.killCount >= 0, true);
     assert.equal(expSummary.failed, false);
     assert.equal(expSummary.code, "");
   }
+  assert.equal(record.expSummaries.some((entry) => entry.amount > 0 && entry.killCount > 0), true);
 
   const leaderAfter = internalProfileForAccount(service, leader.account.accountId);
   const memberAfter = internalProfileForAccount(service, member.account.accountId);
@@ -480,8 +484,10 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
   const leaderRidePet = leaderAfter.petInstances.find((pet) => pet.instanceId === "preflight_ride_pet");
   assert.equal(leaderBattlePet.level > 1 || Number(leaderBattlePet.exp || 0) > 0, true);
   assert.equal(leaderRidePet.level > 1 || Number(leaderRidePet.exp || 0) > 0, true);
-  assert.equal(leaderAfter.trainingPartners[0].level > 1 || Number(leaderAfter.trainingPartners[0].exp || 0) > 0, true);
-  assert.equal(leaderAfter.trainingPartners[0].pet.level > 1 || Number(leaderAfter.trainingPartners[0].pet.exp || 0) > 0, true);
+  assert.equal(leaderAfter.trainingPartners[0].level, 1);
+  assert.equal(Number(leaderAfter.trainingPartners[0].exp || 0), 0);
+  assert.equal(leaderAfter.trainingPartners[0].pet.level, 1);
+  assert.equal(Number(leaderAfter.trainingPartners[0].pet.exp || 0), 0);
   assert.equal(memberAfter.petInstances[0].petGrowth.private.privateSeed, PRIVATE_SEED);
   assert.equal(validatePetGrowth(memberAfter.petInstances[0], loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
 });
