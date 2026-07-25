@@ -3,7 +3,7 @@
   "formId": "wuli_evolved_crystal_earth8_water2",
   "displayName": "晶甲乌力",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
+  "productionScope": "identity_world_true8_formal_two_view_battle_and_front_evolution_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -199,11 +199,19 @@
     "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
     "battleDownReviveKoSemanticsBeforeAfterSha256": "8e3f789621849f7c71aefbbcf782e9aeb3762df8641c4f5e038ca338be8cb6fb",
     "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
-    "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32"
+    "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32",
+    "evolutionContactSheet": "qa/evolution/contact-sheet.png",
+    "evolutionContactSheetSha256": "bf99de23c80223dc302b22ab83a4cb3e23380f876b0b0c654fb77491621eff06",
+    "evolutionQc": "qa/evolution/qc-summary.json",
+    "evolutionQcSha256": "8c5b1485678b97781c3040a9160709319e10434dd9e67de904d157ab61aa6630",
+    "evolutionGif": "qa/evolution/evolution.gif",
+    "evolutionGifSha256": "89c7d8d84696d500d631d48bc57236290e057c261bce5317fd5825797b12da46",
+    "evolutionRealMainVideo": ".run/evidence/phase341_crystal_wuli_evolution/Beastbound_Phase341_Crystal_Wuli_Evolution_1x.mp4",
+    "evolutionRealMainVideoSha256": "5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
+  "notes": "正式双视角 battle180 和高防乌力→晶甲乌力正面进化12帧候选已完成，均等待所有者审美验收；世界与骑乘制作状态单独追踪。进化路线与美术运行开关保持关闭。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -215,6 +223,38 @@
       "flipH": true,
       "facing": "northwest"
     }
+  },
+  "evolutionVisual": {
+    "status": "owner_review_pending",
+    "animationId": "wuli_crystal_evolution_front_v1",
+    "sourceFormId": "wuli_normal_tough_earth10",
+    "targetFormId": "wuli_evolved_crystal_earth8_water2",
+    "view": "front_3quarter_sw",
+    "frameCount": 12,
+    "fps": 12,
+    "loop": false,
+    "runtimeRoot": "views/front_3quarter_sw/evolution",
+    "sourceRoot": "source/evolution/frames",
+    "sourceLedger": "source/evolution/source-ledger.json",
+    "pipelineMetadata": "source/evolution/pipeline-meta.json",
+    "contactSheet": "qa/evolution/contact-sheet.png",
+    "qcSummary": "qa/evolution/qc-summary.json",
+    "animationGif": "qa/evolution/evolution.gif",
+    "realMainSceneReview": {
+      "video": ".run/evidence/phase341_crystal_wuli_evolution/Beastbound_Phase341_Crystal_Wuli_Evolution_1x.mp4",
+      "videoSha256": "5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "evolutionFps": 12,
+      "speedScale": 1.0,
+      "cycleCount": 2,
+      "audioPresent": true,
+      "fullDecodePassed": true
+    },
+    "runtimeBundleDigest": "bc7a51868b2b9753e7fd6a42bf8bec2be569a2d6248948dc0ba8f21d50f5c8cb",
+    "runtimeEnabled": false,
+    "ownerReview": "pending"
   },
   "battleVisual": {
     "status": "owner_review_pending",

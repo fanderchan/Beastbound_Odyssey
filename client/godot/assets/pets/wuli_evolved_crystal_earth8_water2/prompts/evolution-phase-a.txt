@@ -1,0 +1,19 @@
+Use case: stylized-concept
+Asset type: production 2D creature evolution animation sprite sheet for Beastbound Odyssey
+Primary request: Generate the FIRST HALF of a physical evolution animation from the high-defense Wuli in Image 1 into the crystal-armored Wuli in Image 2.
+Input images: Image 1 is the exact source-creature identity; Image 2 is the exact final evolved identity and material endpoint; Image 3 is layout-only.
+Style/medium: match the clean high-definition hand-painted 2D game sprite style, crisp dark outlines, compact readable silhouette, polished but not painterly or photorealistic.
+View: one fixed front three-quarter view matching the lower-right creature view in the identity boards, facing screen-left with a little front visible. Keep the same camera and facing in all cells.
+Sheet: exactly 2 rows by 3 columns, exactly 6 equal invisible square cells. Read left-to-right across row 1, then left-to-right across row 2.
+Frame 1: the exact high-defense Wuli source identity, low sturdy stance, brown fur, broad pig snout, two small tusks, amber eyes, four short legs, curled tufted tail, heavy rounded brown rock plates.
+Frame 2: it lowers its center of gravity and braces; faint cyan light appears only in the seams of the existing brown rock plates.
+Frame 3: cyan veins brighten from inside; the brown forehead plate and back plates begin to split physically, with tiny attached crystal tips growing from the cracks.
+Frame 4: compact translucent gray-white crystals grow over the original armor; shoulder stones thicken; the creature remains clearly the same Wuli.
+Frame 5: the forehead crystal shield and two shoulder bastions are half-grown; some original brown rock remains visible between the new crystal layers.
+Frame 6: about seventy percent transformed, with recognizable layered crystal armor and cyan water-light veins, but still smaller and less complete than the final Image 2 creature so the second sheet can finish the transformation.
+Motion: one continuous physical growth sequence, no crossfade, no double exposure, no duplicate creature, no teleport, no detached shards, no explosion cloud. Changes must advance monotonically from cell to cell.
+Identity invariants: same exact creature in every cell; preserve snout, nostrils, tusks, ears, four legs, hoof count, curled tail, fur color, low body plan and proportions. Never become a rhinoceros, turtle, dinosaur, robot, or another animal.
+Composition: entire full body visible, centered inside each cell, same body scale and stable feet/bottom anchor in every frame, subject inside central 60 to 70 percent safe area, generous margin on every side. No body part, tail, armor tip, glow, spark or effect may cross a cell edge.
+Background: perfectly flat solid #FF00FF in every cell, no gradients, no shadows, no floor, no texture.
+Layout guide: use Image 3 only to understand rows, columns, equal invisible slots, centering and safe padding. Do not reproduce it: no boxes, borders, guide lines, safe-area rectangles, center marks, labels or guide background.
+Avoid: text, numbers, captions, UI, watermark, panel borders, white grid lines, magenta inside the creature, motion blur, floating effects, cast shadows, cropped limbs, scale pumping.

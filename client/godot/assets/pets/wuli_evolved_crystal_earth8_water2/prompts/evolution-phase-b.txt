@@ -1,0 +1,18 @@
+Use case: stylized-concept
+Asset type: production 2D creature evolution animation sprite sheet for Beastbound Odyssey
+Primary request: Generate the SECOND HALF of the same continuous high-defense Wuli to crystal-armored Wuli evolution. Image 1 is the exact frame immediately before this sheet. Images 2 and 3 are the exact final evolved identity and final ready-pose endpoint.
+Style/medium: exactly match the clean high-definition hand-painted 2D game sprite style and crisp dark outlines of the references.
+View: fixed front three-quarter view facing screen-left with a little front visible, identical camera and body angle in all cells.
+Sheet: exactly 2 rows by 3 columns, exactly 6 equal invisible square cells. Read left-to-right across row 1, then left-to-right across row 2.
+Frame 7: continue directly from Image 1 with the same amber-eyed creature and the same partly brown, partly crystal armor; the remaining brown seams glow cyan.
+Frame 8: the remaining brown forehead and back-plate gaps physically crystallize; shoulder crystal bastions lock into the final layered structure.
+Frame 9: a controlled cyan pulse travels through every crystal vein from tail to shoulders to forehead; the eyes begin changing from amber to cyan.
+Frame 10: the final crystal forehead shield, shoulder bastions and layered back armor are complete; eyes are now cyan; the creature braces proudly at the peak of the pulse.
+Frame 11: the bright cyan pulse recedes to the normal thin water-blue veins; the Wuli lowers gently back toward its ready stance.
+Frame 12: exact final evolved crystal Wuli identity and ready pose matching Images 2 and 3: cyan eyes, translucent gray-white faceted crystal armor, wide forehead crystal shield, two heavy shoulder bastions, layered back plates, crystal tail tip, brown fur, pig snout, two tusks, four short legs, low sturdy stance.
+Motion: continuous physical completion and settle, no crossfade, no double exposure, no duplicate creature, no teleport, no explosion. Progress must be monotonic through frame 10 and then settle without losing final armor.
+Identity invariants: same exact Wuli as Image 1 in every cell; preserve snout, nostrils, tusks, ears, four legs, hoof count, curled tail, fur color, low body plan and proportions. The final frame must clearly be the exact creature from Images 2 and 3, not a sibling variant.
+Composition: full body fully visible and centered, same body scale, stable feet/bottom anchor, subject inside central 60 to 70 percent safe area, generous magenta margin on every side. No body part, armor tip, glow or effect may cross a cell edge.
+Background: perfectly flat solid #FF00FF in every cell, no gradients, no shadows, no floor, no texture.
+Layout guide: use Image 4 only for rows, columns, equal invisible slots, centering and safe padding. Do not reproduce it: no boxes, borders, guide lines, safe-area rectangles, center marks, labels or guide background.
+Avoid: text, numbers, captions, UI, watermark, panel borders, white grid lines, magenta inside the creature, detached shards, floating sparks, motion blur, cast shadows, cropped limbs, scale pumping, new horns, new limbs, different animal anatomy.

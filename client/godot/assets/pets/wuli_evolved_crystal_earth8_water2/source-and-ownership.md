@@ -25,3 +25,16 @@
 - 当前状态：`self_review_passed_owner_pending`；项目所有者验收仍 pending，`runtimeEnabled=false`。
 - 替换路径：从归档身份/方向参考与生成记录重生成全部独立方向，再通过运行时精确帧、盲审、Godot 与 owner gate。
 <!-- phase326-crystal-world:end -->
+
+<!-- phase341-crystal-evolution:start -->
+## Phase341 高防乌力→晶甲乌力进化候选
+
+- 范围：`front_3quarter_sw` 12 帧、12 FPS、单次播放的实体长甲进化演出；不参与战斗或服务端结算。
+- 生成器：Codex 内置 `image_gen`；没有使用 CLI/API 降级路径。输入只使用 Beastbound 自有高防乌力、晶甲乌力身份板、晶甲乌力正式正面 idle 与纯几何 2×3 布局参考。
+- 原始生成：`source/evolution/raw/phase-a-raw.png` 与 `phase-b-raw.png`；逐字提示词为 `prompts/evolution-phase-a.txt`、`prompts/evolution-phase-b.txt`。
+- 确定性处理：两个 2×3 原始 sheet 仅按时间垂直拼为 4×3，再由 `tools/build_pet_art_bundle.py` 做色键、切格、共同比例、脚底锚定和统一 512→256 派生。没有程序绘制主体、跨淡化或拼贴两个宠物图层。
+- 完整归档：12 张 512px 源帧、12 张 256px 运行帧、逐帧 RGBA SHA-256、原始 sheet、prompt、pipeline metadata、接触表与 GIF 均已入库；本地完整生产档位于 `.run/art_batch_phase341/crystal_wuli_evolution/`。
+- 自审：同一低重心乌力血统、岩甲裂开和晶甲实体生长、额盾/肩堡/背甲、琥珀眼转水蓝眼及收光落稳均可逐帧辨认；无跨格、残留洋红或缩放泵动。
+- 真实客户端证据：通过临时、未跟踪的 QA capture 脚本实例化真实 `Main.tscn`，在 Apple M5 Metal 下录制 1280×720、60 FPS、有声 MP4；两次 12 帧序列均严格按 12 FPS 播放，每张保持 5 个视频帧，日志为 `speed=1.00x`。证据位于 `.run/evidence/phase341_crystal_wuli_evolution/`，MP4 SHA-256 为 `5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276`。
+- 当前状态：自审与真实客户端候选演出证据已完成，仍为 `owner_review_pending`。`runtimeEnabled=false`，没有修改进化成功逻辑、消耗数值或正式路线门禁。
+<!-- phase341-crystal-evolution:end -->

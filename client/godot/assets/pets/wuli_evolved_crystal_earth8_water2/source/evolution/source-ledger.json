@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "animationId": "wuli_crystal_evolution_front_v1",
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "sourceFormId": "wuli_normal_tough_earth10",
+  "view": "front_3quarter_sw",
+  "generator": {
+    "name": "Codex built-in image_gen",
+    "cliFallbackUsed": false,
+    "generatedAt": "2026-07-26",
+    "sourceInputs": [
+      "client/godot/assets/pets/wuli_normal_tough_earth10/identity/identity-board-transparent.png",
+      "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/identity/identity-board-transparent.png",
+      "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/views/front_3quarter_sw/idle/idle-1.png"
+    ],
+    "externalAssets": []
+  },
+  "rawSheets": [
+    {
+      "phase": "frames_1_to_6",
+      "generatedImagePath": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/exec-a2621301-fe47-4fb0-8799-ce339bbd1608.png",
+      "archivePath": "source/evolution/raw/phase-a-raw.png",
+      "promptPath": "prompts/evolution-phase-a.txt",
+      "sha256": "3a0dea3cea6fd8d5699af5ce22dc3c793bb4002a472bba532a38802fe0e08991",
+      "promptSha256": "8dfbac43c46add9e2e431f52923979f3295ae709861c522df336ee3e4545bc33"
+    },
+    {
+      "phase": "frames_7_to_12",
+      "generatedImagePath": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/exec-c8f24e85-4d3f-4d85-affd-0cf92d175ea9.png",
+      "archivePath": "source/evolution/raw/phase-b-raw.png",
+      "promptPath": "prompts/evolution-phase-b.txt",
+      "sha256": "24c0027e60d9576b30900a1c535f467b2d353d1946262dad866bb83bc8b677cb",
+      "promptSha256": "25504ce54eec218139b9e3433b6d005a35907b9a6c714118e668b0bab199743d"
+    }
+  ],
+  "deterministicBuild": {
+    "tool": "tools/build_pet_art_bundle.py",
+    "pipelineMetadata": "source/evolution/pipeline-meta.json",
+    "pipelineMetadataSha256": "1519dc50c8624b618304978e47e65c05a07708fc19e97f272a67487c00a3e954",
+    "compositeMethod": "lossless vertical stack of phase A then phase B into a 4x3 grid",
+    "compositeSha256": "5154004201a93fbbea5e2e7d8939b88aa3d9433e4095f1369929a2699bba2604",
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "sharedScale": 0.787530196,
+    "anchor": "feet",
+    "runtimeBundleDigest": "bc7a51868b2b9753e7fd6a42bf8bec2be569a2d6248948dc0ba8f21d50f5c8cb"
+  },
+  "frameRgbaSha256": [
+    {"slot": "evolution-1", "source": "48f446a3f6509bf235169b91776ec7eb0f8f8eb5a6e5e047f4e4ed241e8b0ed7", "runtime": "e3d5bb4f72b15e3ee72b4c611a41c855691bd87b062b2dcd60b1c27c18e9dbc9"},
+    {"slot": "evolution-2", "source": "67e4eadaa39202073071aa5bc5afe9e8fea16e0d29dfa4d4706e9dd1bf09175b", "runtime": "569a2d66f67a7ea5426e03c86789efb9021afa296a195c9138bd61d34fa72fde"},
+    {"slot": "evolution-3", "source": "622ccddd86863738d19d45ab37792e62624d63e78f6f78c788043bf5bc561c51", "runtime": "6232281d5fa04abcbe765fe2ab5b4b1af7ac5353648c59fd3de28f34df89eb8b"},
+    {"slot": "evolution-4", "source": "0abfd786ac2bc115586736dd2b1e21d38493b5005f8aaa8505f18114a676fb85", "runtime": "2f1f79c2428bb70e5ab6968776c5af320f66015a6370cc17909090f5573d76e6"},
+    {"slot": "evolution-5", "source": "1b0945b88fc985b0180e28d884da2867a8dc7910df641b7d802c1ec905c6585a", "runtime": "8d336a441c35d790509d4599bb03501cf8b40d2561a02a1192d769db3f1b2360"},
+    {"slot": "evolution-6", "source": "c0fbf1fd5bbcaf9bc09a710bd7fad8d53744faa2a625865fafb91b8fd9e5f7c5", "runtime": "0b1b535a4f86e28285ac7facc7e69b65de342d32a4c242cb32bf5b1febd8e02a"},
+    {"slot": "evolution-7", "source": "046e5a1368ff575929d65dcfc6bb571b1e0449b98b460f438099e43250871b1f", "runtime": "9e7c132ce8bcde1703515799bf8901d9b1784f35a402f673affa4a800d874619"},
+    {"slot": "evolution-8", "source": "0297ad8a862a797e23e02d9e45e09e8978350a958689a0de0f4a5c6d94b5422c", "runtime": "2eed04e540a493087e22485013bc75690831729efdf6da28e267ad2b91ba58c9"},
+    {"slot": "evolution-9", "source": "e8d35e5ad1e94443fbcdd777725cf16a357ce27a5bf2ce3df47afc248d8cee66", "runtime": "0e583889655739492baa51aafc5ac49002e7d630a8d5344ab7d69d0f016c81ad"},
+    {"slot": "evolution-10", "source": "ad7c468ba73639e69418b803f5541f58edb5e4911a868b829a10eabc4711a5cd", "runtime": "16b7f2170d1acc9106f8fcef3fe8bbe5972e3f3c3ff226c6c688ea7614914e99"},
+    {"slot": "evolution-11", "source": "fae73a2f8a40c968e29a406e207f1be7924fd8e7cb2c7795258bcf39260cea9e", "runtime": "c7cfb012de1a17520be5231e28b0349cbbbcd41b8cd7cd48b260e8055d04e0a3"},
+    {"slot": "evolution-12", "source": "95db96c0ba6175104ee67ec365a7a52990393fb4ca3c4e7332de7083cb9c59d1", "runtime": "efc706ce624c5692b6bf41c04ef8020b1c5432b25249316026e3716f477b4b2e"}
+  ],
+  "ownership": {
+    "project": "Beastbound Odyssey",
+    "intent": "original project asset produced for this repository",
+    "stoneAgeAssetsCopied": false,
+    "replacementPath": "regenerate from the archived prompts and Beastbound-owned source and target identity references"
+  },
+  "localFullArchive": ".run/art_batch_phase341/crystal_wuli_evolution/",
+  "status": "owner_review_pending"
+}
