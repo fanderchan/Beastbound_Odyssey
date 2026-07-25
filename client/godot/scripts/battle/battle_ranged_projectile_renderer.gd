@@ -17,6 +17,9 @@ const PetActionAssetCatalog := preload(
 	"res://scripts/pet/pet_action_asset_catalog.gd"
 )
 
+const GROUND_ARROW_SIZE := 82.0
+const GROUND_ARROW_CONTACT_UV := Vector2(0.25, 0.88)
+
 
 static func is_current_attacker(host, actor_id: String) -> bool:
 	return (
@@ -26,6 +29,64 @@ static func is_current_attacker(host, actor_id: String) -> bool:
 		)
 		and actor_id
 		== str(host.battle_current_event.get("attackerId", ""))
+	)
+
+
+static func is_current_dodge_target(host, actor_id: String) -> bool:
+	if (
+		actor_id == ""
+		or not host._battle_ranged_projectile_enabled(
+			host.battle_current_event
+		)
+	):
+		return false
+	var target_ids := _current_event_target_ids(host)
+	var target_ordinal := target_ids.find(actor_id)
+	if target_ordinal < 0:
+		return false
+	var dodge_map := _current_event_dodge_map(host)
+	return bool(
+		dodge_map.get(
+			actor_id,
+			bool(host.battle_current_event.get("dodged", false))
+			if target_ordinal == 0
+			else false
+		)
+	)
+
+
+static func dodge_actor_offset(
+	host,
+	actor: Dictionary,
+	visual_scale: float
+) -> Vector2:
+	var actor_id := str(actor.get("id", ""))
+	if not is_current_dodge_target(host, actor_id):
+		return Vector2.ZERO
+	var attacker := BattleModel.actor_by_id(
+		host.battle_state,
+		str(host.battle_current_event.get("attackerId", ""))
+	)
+	if attacker.is_empty():
+		return Vector2.ZERO
+	var attacker_pos: Vector2 = host._battle_slot_world_position(
+		str(attacker.get("slotId", ""))
+	)
+	attacker_pos += host._battle_actor_counter_anchor_offset(
+		attacker,
+		attacker_pos,
+		visual_scale
+	)
+	var target_ground: Vector2 = host._battle_slot_world_position(
+		str(actor.get("slotId", ""))
+	)
+	return (
+		BattleRangedProjectilePresentationModel.dodge_retreat_offset(
+			attacker_pos,
+			target_ground,
+			host._battle_current_event_progress(),
+			visual_scale
+		)
 	)
 
 
@@ -87,7 +148,38 @@ static func draw_bow_overlay(
 	host.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+static func draw_ground_projectiles(host) -> void:
+	if (
+		BattleRangedProjectilePresentationModel.ground_frame_index(
+			host._battle_current_event_progress()
+		) < 0
+	):
+		return
+	_draw_projectiles(host, true)
+
+
+static func draw_air_projectiles(host) -> void:
+	var progress: float = host._battle_current_event_progress()
+	if (
+		not BattleRangedProjectilePresentationModel.projectile_visible(
+			progress
+		)
+		and BattleRangedProjectilePresentationModel.hit_frame_index(
+			progress
+		) < 0
+	):
+		return
+	_draw_projectiles(host, false)
+
+
 static func draw_projectiles(host) -> void:
+	# Compatibility for any external review harness that still calls the old
+	# single-layer entrypoint.
+	draw_ground_projectiles(host)
+	draw_air_projectiles(host)
+
+
+static func _draw_projectiles(host, ground_layer: bool) -> void:
 	if (
 		not host._battle_ranged_projectile_enabled(
 			host.battle_current_event
@@ -120,18 +212,13 @@ static func draw_projectiles(host) -> void:
 		visual_scale
 	)
 	var progress: float = host._battle_current_event_progress()
-	var target_ids := _current_event_target_ids(host)
-	var dodge_map := (
-		host.battle_current_event.get(
-			"dodgePerTarget",
-			{}
-		) as Dictionary
-		if host.battle_current_event.get(
-			"dodgePerTarget",
-			{}
-		) is Dictionary
-		else {}
+	var projectile_in_flight := (
+		BattleRangedProjectilePresentationModel.projectile_visible(
+			progress
+		)
 	)
+	var target_ids := _current_event_target_ids(host)
+	var dodge_map := _current_event_dodge_map(host)
 	for target_ordinal in range(target_ids.size()):
 		var target_id := target_ids[target_ordinal]
 		var target := BattleModel.actor_by_id(
@@ -153,25 +240,44 @@ static func draw_projectiles(host) -> void:
 				else false
 			)
 		)
+		if ground_layer and not dodged:
+			continue
+		if not ground_layer and not projectile_in_flight and dodged:
+			continue
+		var target_ground: Vector2 = host._battle_slot_world_position(
+			str(target.get("slotId", ""))
+		)
+		if ground_layer:
+			var miss_ground := (
+				BattleRangedProjectilePresentationModel.miss_ground_position(
+					start,
+					target_ground,
+					target_ordinal,
+					visual_scale
+				)
+			)
+			_draw_ground_arrow(
+				host,
+				miss_ground,
+				target_ground - start,
+				progress,
+				visual_scale
+			)
+			continue
 		var aim := _actor_aim_position(
 			host,
 			target,
 			visual_scale
 		)
-		var target_ground: Vector2 = host._battle_slot_world_position(
-			str(target.get("slotId", ""))
-		)
-		var miss_ground := (
-			BattleRangedProjectilePresentationModel.miss_ground_position(
-				start,
-				target_ground,
-				target_ordinal,
-				visual_scale
+		if projectile_in_flight:
+			var miss_ground := (
+				BattleRangedProjectilePresentationModel.miss_ground_position(
+					start,
+					target_ground,
+					target_ordinal,
+					visual_scale
+				)
 			)
-		)
-		if BattleRangedProjectilePresentationModel.projectile_visible(
-			progress
-		):
 			_draw_arrow_in_flight(
 				host,
 				start,
@@ -182,20 +288,17 @@ static func draw_projectiles(host) -> void:
 				visual_scale
 			)
 			continue
-		if dodged:
-			_draw_ground_arrow(
-				host,
-				miss_ground,
-				progress,
-				visual_scale
-			)
-		else:
-			_draw_hit_effect(
-				host,
-				aim,
-				progress,
-				visual_scale
-			)
+		_draw_hit_effect(
+			host,
+			aim,
+			progress,
+			visual_scale
+		)
+
+
+static func _current_event_dodge_map(host) -> Dictionary:
+	var value = host.battle_current_event.get("dodgePerTarget", {})
+	return value as Dictionary if value is Dictionary else {}
 
 
 static func _current_event_target_ids(host) -> Array[String]:
@@ -516,6 +619,7 @@ static func _draw_hit_effect(
 static func _draw_ground_arrow(
 	host,
 	ground: Vector2,
+	incoming_direction: Vector2,
 	event_progress: float,
 	visual_scale: float
 ) -> void:
@@ -532,12 +636,29 @@ static func _draw_ground_arrow(
 	)
 	if texture == null:
 		return
-	var size := 92.0 * visual_scale
+	var size := GROUND_ARROW_SIZE * visual_scale
+	var direction := incoming_direction.normalized()
+	if direction.length() <= 0.001:
+		direction = Vector2.LEFT
+	host.draw_circle(
+		ground + Vector2(0.0, 1.5 * visual_scale),
+		5.0 * visual_scale,
+		Color(0.18, 0.10, 0.05, 0.42)
+	)
+	host.draw_set_transform(
+		ground,
+		0.0,
+		Vector2(-1.0 if direction.x > 0.0 else 1.0, 1.0)
+	)
 	host.draw_texture_rect(
 		texture,
 		Rect2(
-			ground + Vector2(-size * 0.5, -size),
+			Vector2(
+				-size * GROUND_ARROW_CONTACT_UV.x,
+				-size * GROUND_ARROW_CONTACT_UV.y
+			),
 			Vector2(size, size)
 		),
 		false
 	)
+	host.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

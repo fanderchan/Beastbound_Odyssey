@@ -14664,6 +14664,7 @@ func _draw_battle_scene() -> void:
 		_draw_battle_floor_noise(rect)
 	if _battle_should_draw_formation_grid():
 		_draw_battle_formation_grid(rect)
+	_draw_battle_ranged_ground_projectiles()
 	var launched_draw_queue: Array[Dictionary] = []
 	for value in _battle_actors_sorted_by_depth():
 		var actor := value as Dictionary
@@ -14673,7 +14674,7 @@ func _draw_battle_scene() -> void:
 			_draw_battle_actor(actor)
 	for launched_actor in launched_draw_queue:
 		_draw_battle_actor(launched_actor)
-	_draw_battle_ranged_projectiles()
+	_draw_battle_ranged_air_projectiles()
 	_draw_battle_float_texts()
 	if _battle_should_draw_formation_grid():
 		_draw_battle_formation_slot_anchors()
@@ -14782,7 +14783,24 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		# 骑乘整图在 10V10 下仍约 120px 高；人物默认血条位置会压进骑手身体。
 		hp_offset = -166.0 * visual_scale
 		name_offset = -188.0 * visual_scale
-	pos += _battle_actor_state_offset(state, side, visual_scale)
+	var state_offset := _battle_actor_state_offset(
+		state,
+		side,
+		visual_scale
+	)
+	if (
+		state == "dodge"
+		and BattleRangedProjectileRenderer.is_current_dodge_target(
+			self,
+			actor_id
+		)
+	):
+		state_offset = BattleRangedProjectileRenderer.dodge_actor_offset(
+			self,
+			actor,
+			visual_scale
+		)
+	pos += state_offset
 	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
 	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else 1.0)
@@ -15091,8 +15109,12 @@ func _draw_battle_ranged_bow_overlay(
 	)
 
 
-func _draw_battle_ranged_projectiles() -> void:
-	BattleRangedProjectileRenderer.draw_projectiles(self)
+func _draw_battle_ranged_ground_projectiles() -> void:
+	BattleRangedProjectileRenderer.draw_ground_projectiles(self)
+
+
+func _draw_battle_ranged_air_projectiles() -> void:
+	BattleRangedProjectileRenderer.draw_air_projectiles(self)
 
 
 func _battle_ellipse_points(center: Vector2, radius: Vector2, rotation: float = 0.0, segments: int = 24) -> PackedVector2Array:
@@ -15324,8 +15346,8 @@ func _battle_actor_for_visual_draw(actor: Dictionary) -> Dictionary:
 			event_progress
 		)
 	):
-		# A dodging target moves before contact so the arrow visibly crosses the
-		# original occupied space and then continues into the ground.
+		# A dodging target retreats before contact so the arrow visibly crosses
+		# the original occupied space and plants in front of the target.
 		return actor
 	if not _battle_current_event_result_revealed() and _battle_event_delays_result(battle_current_event):
 		var snapshot = battle_current_event_actor_snapshots.get(actor_id, {})
