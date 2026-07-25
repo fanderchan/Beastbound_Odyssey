@@ -52,3 +52,16 @@
 - 1× 成片：`.run/evidence/phase352_crystal_wuli_mounted_battle/Beastbound_Phase352_Crystal_Wuli_Mounted_Semantic_1x.mp4`（SHA-256 `b195b5a3bd0ebf54967f7c00e591e2faa2cbb60b9387afd946bf14a8f1bd2f85`）。
 - 当前状态只是 Codex 独立语义自审通过；项目所有者尚未观看本轮成片，`ownerReviewStatus=pending`、各动作 `owner_review_pending`、`runtimeEnabled=false` 均保持不变。
 <!-- phase352-crystal-mounted-battle-semantic-review:end -->
+
+<!-- phase353-crystal-mounted-world-semantic-review:start -->
+## Phase353 完整骑乘世界真八向第二遍去标签审核
+
+- 本阶段没有修改任何世界图片、战斗图片、玩法代码、数值、服务端、玩家档案、路线门禁或运行时开关。
+- 将八个世界方向随机编码为 A–H，只展示每组 `idle + walk 1..4`；在读取映射前先冻结方向、身份、比例、坐点和步态判断，揭示后 `8/8` 命中。
+- 当前 40 张世界 PNG 与 Godot 实载 canonical RGBA `40/40` 一致；当前文件/decoded RGBA 与冻结 QC、运行/源帧来源账本及 Phase326 方向清单均 `40/40` 一致。
+- 40 帧 decoded RGBA 全部唯一，完全重复为 0，跨方向水平镜像对为 0，最小安全边为 14px，透明 RGB 泄漏像素为 0。
+- 自审确认成人骑手比例、肩堡后方坐点、人物/坐骑同帧共同起伏、晶甲身份和八向四足步态连续；没有观察到异常小人、坐骑骤缩、坐点漂移、晶体穿人或分层滑动。
+- 跟踪报告：`qa/world/independent-semantic-audit-v1.json`（SHA-256 `e22a0e23a010b6e23c18f07080dcd3ec2fc5980d7956f44514e2f7b42b0dcfde`）。
+- 因 40 张当前文件逐一吻合 Phase326 冻结清单，继续复用当时同屏展示人物、独立宠物与完整骑乘三包的 1280×720 动态证据；本阶段已重新完成全片解码。
+- 当前状态只是 Codex 第二遍技术盲审通过；项目所有者尚未验收，`ownerReviewStatus=pending`、世界动作 `owner_review_pending`、`runtimeEnabled=false` 均保持不变。
+<!-- phase353-crystal-mounted-world-semantic-review:end -->

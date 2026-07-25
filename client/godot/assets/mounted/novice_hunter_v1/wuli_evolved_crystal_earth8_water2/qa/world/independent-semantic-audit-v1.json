@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "phase": 353,
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "characterId": "novice_hunter_v1",
+  "displayName": "见习猎人骑晶甲乌力",
+  "reviewType": "second_pass_label_blind_mounted_world_direction_semantic_audit",
+  "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+  "status": "passed_owner_review_pending_runtime_disabled",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "approvalScope": "technical_mounted_world_direction_semantic_audit_only",
+  "pixelChangesInThisPhase": 0,
+  "productCodeChangesInThisPhase": 0,
+  "scope": {
+    "kind": "integrated_mounted_world",
+    "characterId": "novice_hunter_v1",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": 1,
+      "walk": 4
+    },
+    "runtimeFrameCount": 40,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeMirroring": false
+  },
+  "labelBlindReview": {
+    "mappingReadBeforePredictionsFrozen": false,
+    "board": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/blind-contact-8x5.png",
+    "boardSha256": "957782f2be7fbd6350a4ae25bea5c11d304be93f6da433827aabdd395dadbafb",
+    "mapping": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/blind-code-mapping.json",
+    "mappingSha256": "d9102f09ef3d8a507565e2dce1de11ab2765da3ffde131c079803067776b1306",
+    "predictionsBeforeReveal": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/blind-predictions-before-reveal.json",
+    "predictionsBeforeRevealSha256": "88971309a54704b591d5cd79cb6ec7df4156471870932f84e5006fdb8fc38ec4",
+    "predictedDirections": {
+      "A": "northwest",
+      "B": "north",
+      "C": "northeast",
+      "D": "south",
+      "E": "southwest",
+      "F": "southeast",
+      "G": "east",
+      "H": "west"
+    },
+    "revealedDirections": {
+      "A": "northwest",
+      "B": "north",
+      "C": "northeast",
+      "D": "south",
+      "E": "southwest",
+      "F": "southeast",
+      "G": "east",
+      "H": "west"
+    },
+    "correctDirectionCount": 8,
+    "expectedDirectionCount": 8,
+    "accuracy": 1.0
+  },
+  "currentRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/runtime-parity.json",
+    "reportSha256": "fe8fa0c2197b7e117e33a39bd8021eff6d052db0d19bc17014bdda111f376c72",
+    "checkedFrames": 40,
+    "importFreshCount": 40,
+    "canonicalRgbaMatchCount": 40,
+    "sourceSetSha256": "557ceeb91a1aee0c9d670589d4d9950d9193dce3c707029eebd65173199aa570",
+    "errors": []
+  },
+  "currentImageStructure": {
+    "status": "passed",
+    "report": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/image-structure-audit.json",
+    "reportSha256": "8ec62e6215980f33c9b6a8341deee8924089e23d458a4bc87a61fa0bb017f0dc",
+    "checkedFrames": 40,
+    "uniqueDecodedRgbaFrameCount": 40,
+    "trackedQcFileSha256MatchCount": 40,
+    "trackedQcRgbaSha256MatchCount": 40,
+    "trackedLedgerRuntimeFileSha256MatchCount": 40,
+    "trackedLedgerRuntimeRgbaSha256MatchCount": 40,
+    "trackedLedgerSourceFileSha256MatchCount": 40,
+    "trackedLedgerSourceRgbaSha256MatchCount": 40,
+    "trackedPhase326ApprovalFileSha256MatchCount": 40,
+    "runtimeFrameSizeMatchCount": 40,
+    "reviewEvidenceSha256MatchCount": 3,
+    "reviewEvidenceExpectedCount": 3,
+    "minimumEdgeMargin": 14,
+    "transparentRgbLeakPixelCount": 0,
+    "duplicatePairCount": 0,
+    "mirroredCrossDirectionPairCount": 0,
+    "ownerRuntimeGatePreserved": true,
+    "currentDecodedRgbaSetSha256": "2f1724ac4ab7eede4b2af2b05e80b46dcebc51321b72fd1fd2faed84c9974024"
+  },
+  "semanticResults": {
+    "directionReadability": {
+      "status": "passed",
+      "notes": "隐藏目录方向名后，严格正背、两个纯侧向和四个斜向均可由骑手胸背、晶甲乌力头部运动轴、肩堡遮挡与前后足透视共同辨认；揭示映射后 8/8 与目录合同一致。"
+    },
+    "integratedWholeFrame": {
+      "status": "passed",
+      "notes": "40 帧均为人物与坐骑同一透明整图；骑手髋部、双腿和坐点随坐骑步态共同起伏，没有分层滑动、运动轴分离或运行时叠层。"
+    },
+    "scaleAndSeat": {
+      "status": "passed",
+      "notes": "八方向保持同一 256px 画布、统一脚底基准和成年骑手比例；坐点持续位于双肩晶堡之后，没有异常小人、坐骑骤缩、人物浮起或坐点漂移。"
+    },
+    "identity": {
+      "status": "passed",
+      "notes": "八向持续保持见习猎人的发型、橙褐服装和成人身体比例，以及晶甲乌力的巨型额盾、双肩晶堡、分层背甲、青蓝裂隙、蓝眼和尾端晶芽。"
+    },
+    "motionContinuity": {
+      "status": "passed",
+      "notes": "每个方向的 idle 与 walk 1..4 朝向一致，骑手坐姿、四足交替和身体起伏连续；没有跨方向误帧、跳尺、脚底断层或晶体穿入人物。"
+    },
+    "independentAuthorship": {
+      "status": "passed",
+      "notes": "40 帧 decoded RGBA 全部唯一，完全重复为 0，跨方向水平镜像对为 0；运行合同继续禁止镜像和人物/坐骑分层。"
+    }
+  },
+  "existingPhase326Evidence": {
+    "semanticDirectionApproval": "client/godot/data/world_semantic_direction_approval_crystal_wuli_v1.json",
+    "semanticDirectionApprovalSha256": "a2f9e80841ffa3c547691afb53220d51dd82fb6b6c5f25cdca0b2c71aad475ed",
+    "phase326ApprovalManifestFrameMatchCount": 40,
+    "phase326ApprovalManifestExpectedFrameCount": 40,
+    "sharedThreeBundleReviewVideo": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.mp4",
+    "sharedThreeBundleReviewVideoSha256": "c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b",
+    "reviewVideoWidth": 1280,
+    "reviewVideoHeight": 720,
+    "reviewVideoFps": 30,
+    "reviewVideoDurationSeconds": 14.433333,
+    "reviewVideoDecodeStatus": "passed",
+    "ownerReviewAtPhase326": "pending",
+    "note": "该动态证据同屏展示人物、独立宠物与完整骑乘三包；当前 mounted 40 帧逐一吻合 Phase326 冻结清单，因此继续复用。它不是项目所有者批准，本阶段也不把 pending 改成 approved。"
+  },
+  "targetedValidation": {
+    "worldRuntimeParity": "passed 40/40 import fresh and canonical RGBA match",
+    "worldImageStructure": "passed 40/40 tracked QC, runtime ledger and source ledger hashes; 40 unique; 0 duplicate; 0 mirrored cross-direction pair",
+    "phase326FrozenApprovalParity": "passed 40/40 file hashes and sizes",
+    "phase326ReviewEvidenceIntegrity": "passed 3/3 tracked evidence hashes and full video decode",
+    "labelBlindDirectionReview": "passed 8/8",
+    "mountedActionAssetWorldOnly": "passed worldDirections=8 worldFrameCount=40 bodyLayerCount=1 requireBattle=false errors=[]",
+    "characterMountArtCheck": "passed with Godot parse 2/2, errors=[]",
+    "ownerRuntimeGate": "passed owner pending and runtime disabled across metadata, QC, ledger and approval manifest",
+    "pixelMutationAudit": "passed, 0 world frame files changed"
+  },
+  "residualRisks": [
+    "本阶段只补完整人物骑乘 world true8 的第二层技术盲审，不代替项目所有者对造型、比例、坐点和步态的审美验收。",
+    "晶甲乌力独立世界与完整骑乘世界仍为 owner pending；Phase352 骑乘战斗成片也仍待项目所有者本人验收。",
+    "runtimeEnabled、整宠 formal、两条路线 asset gate 和全局进化开关继续关闭；P1.3e 尚未完成。"
+  ]
+}

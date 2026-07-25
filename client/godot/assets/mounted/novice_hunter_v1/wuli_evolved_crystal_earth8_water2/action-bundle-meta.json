@@ -152,6 +152,11 @@
     "contactSheetSha256": "a9f8bd999d43b4e28658e25ab1f07f29ecc8b42b6cf0c72261f2c8031b61e6fb",
     "cycleGifSha256": "0f242c6d254ac30ac2d9448c5d4b6df597091f8f30cc674ba18329261a909014",
     "qcSummarySha256": "2daddf6388fe700c73b76060afb44442f2659a1e50480094e59e5257db68c7e6",
+    "independentSemanticAudit": "qa/world/independent-semantic-audit-v1.json",
+    "independentSemanticAuditSha256": "e22a0e23a010b6e23c18f07080dcd3ec2fc5980d7956f44514e2f7b42b0dcfde",
+    "runtimeParityReport": ".run/evidence/phase353_crystal_wuli_mounted_world_blind/runtime-parity.json",
+    "runtimeParityReportSha256": "fe8fa0c2197b7e117e33a39bd8021eff6d052db0d19bc17014bdda111f376c72",
+    "runtimeParitySourceSetSha256": "557ceeb91a1aee0c9d670589d4d9950d9193dce3c707029eebd65173199aa570",
     "reviewEvidence": {
       "evidenceIndex": {
         "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json",
@@ -188,7 +193,7 @@
     "mounted160ContactSheetSha256": "dd37a24037149112fe359985271266c6771a3df6b07a5cad3cc72950fbd1cea4"
   },
   "ownerReviewStatus": "pending",
-  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 对 12 动作、180 帧整体骑乘战斗补齐第二遍运行时语义自审：当前 PNG/import/Godot 实载、源账本、生成来源与安装清单均通过一致性门禁，真实 Main.tscn 以 1.00x 覆盖 14 段动作因果；没有修改像素或玩法代码。项目所有者尚未观看本轮成片，ownerReviewStatus 继续 pending，runtime 继续关闭。",
+  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 对 12 动作、180 帧整体骑乘战斗补齐第二遍运行时语义自审：当前 PNG/import/Godot 实载、源账本、生成来源与安装清单均通过一致性门禁，真实 Main.tscn 以 1.00x 覆盖 14 段动作因果。Phase353 对完整骑乘世界真八向补齐第二遍去标签审核：先冻结方向判断再揭示映射，8/8 命中；40/40 当前 PNG、Godot 实载、冻结 QC、来源账本和 Phase326 清单一致，图片改动为 0。两阶段均未修改玩法代码，项目所有者尚未观看本轮结果，ownerReviewStatus 继续 pending，runtime 继续关闭。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
