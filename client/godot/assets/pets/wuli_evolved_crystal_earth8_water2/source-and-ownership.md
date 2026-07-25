@@ -39,3 +39,16 @@
 - 所有者决定：项目所有者查看 Phase341 的 1280×720、1× 实机成片后确认“看起来很好”并同意继续；单项决定记录为 `qa/evolution/owner-decision.json`。
 - 当前状态：进化视觉单项为 `ownerReview=approved`，但批准范围仅限这段 12 帧动画。整只宠物动作包、骑乘包和进化路线不随之批准；`evolutionVisual.runtimeEnabled=false`、宠物目录 `runtimeEnabled=false`、路线资产门禁与全局进化开关继续关闭。
 <!-- phase341-crystal-evolution:end -->
+
+<!-- phase350-crystal-wuli-standalone-battle-semantic-review:start -->
+## Phase350 独立宠物战斗语义复核
+
+- 复核对象：当前两套独立斜向、12 动作、180 张 256×256 运行帧；本阶段没有改动任何动作 PNG。
+- 当前像素证明：显式重导入后逐帧比较源 PNG、Godot import `source_md5` 与 `Texture2D.get_image()`；`180/180` import 新鲜且 canonical RGBA 相同，当前 source-set SHA-256 为 `13c1b7ffd961c1e446d2c8816200fcc056b47fa3e3654df771cbc20924092485`。
+- 账本校正：审计发现提交 `051efeb3b` / `574151a11` 的两次倒地/复活修复已更新运行帧、动作 QA、包 digest 与修复 manifest，却漏同步 21 条 `runtimeFrameRgbaSha256` 和 4 条 `qcSha256`。当前 12 个 KO 表情帧逐一吻合 v2 `afterSha256`，其余 9 个重排帧逐一吻合 v1 `installedSha256`；Phase350 只把运行帧账本从 `159/180` 校正到 `180/180`，并令 prompt/pipeline/QC 来源文件哈希 `72/72`，运行像素改动为 0。
+- 结构结论：32/32 修复链终态文件 SHA 吻合，8 组完全重复都来自 manifest 明确记录的倒地稳定保持、倒地到复起交接或复起停留，意外重复为 0；跨视角水平镜像对为 0，两视角 `down-8 == revive-1`。初始 `install-manifest.json` 在原安装提交 `8dc6853dd` 上仍为 `307/307`，明确只作为后续 repair manifest 之前的历史快照。
+- 语义结论：低重心乌力血统、冰蓝额晶、肩背晶甲和水晶尾锤在两视角全序列稳定；普通顶撞、晶甲蓄力技能、受击、防御、后撤回避、反击、受创失衡、连续翻滚击飞、失焦/螺旋眼昏厥与逐步复起可区分。
+- 真实客户端证据：真实 `Main.tscn` 动作导演以 Forward Mobile、1280×720、60 FPS、有声、`1.00x` 连续覆盖 14 个场景；2477 帧、41.283333 秒，全片解码通过。证据位于 `.run/evidence/phase350_crystal_wuli_standalone_battle/`。
+- 当前状态：第二遍运行时语义自审通过，但项目所有者正在休息、未观看本次成片，故 battle 仍为 `owner_pending/runtimeEnabled=false`。
+- 保留债务：战斗包采用 lean archive，仓库没有完整 512px 源帧；本轮只证明当前 256px runtime、既有修复链和逐帧账本，不声称补齐完整源帧归档，也不扩大 Phase341 已批准的进化视觉范围。
+<!-- phase350-crystal-wuli-standalone-battle-semantic-review:end -->

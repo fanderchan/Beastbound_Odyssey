@@ -200,6 +200,14 @@
     "battleDownReviveKoSemanticsBeforeAfterSha256": "8e3f789621849f7c71aefbbcf782e9aeb3762df8641c4f5e038ca338be8cb6fb",
     "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
     "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32",
+    "battleSemanticReview": "qa/battle/semantic-review-v2.json",
+    "battleSemanticReviewSha256": "c5d98fe26f2bae8108d5777818429bb46d66b7e364d581c1da3694a08e0175bd",
+    "battleRuntimeParity": ".run/evidence/phase350_crystal_wuli_standalone_battle/runtime-parity.json",
+    "battleRuntimeParitySha256": "1298d0f129a98ab42bad452dee3a5ec81767339c66e31343858a14af07799ce2",
+    "battleImageStructureAudit": ".run/evidence/phase350_crystal_wuli_standalone_battle/image-structure-audit.json",
+    "battleImageStructureAuditSha256": "ad1ac11e91c0d2c62e9e4df5b88e6fcbff0600d553d8f60a8bf1145486121d1f",
+    "battleRealMainVideo": ".run/evidence/phase350_crystal_wuli_standalone_battle/Beastbound_Phase350_Crystal_Wuli_Standalone_Battle_1x.mp4",
+    "battleRealMainVideoSha256": "ccd0a39ddfc69563bbb2e15207d2cfe698c4518436af7e4a6474b43323d32250",
     "evolutionContactSheet": "qa/evolution/contact-sheet.png",
     "evolutionContactSheetSha256": "bf99de23c80223dc302b22ab83a4cb3e23380f876b0b0c654fb77491621eff06",
     "evolutionQc": "qa/evolution/qc-summary.json",
@@ -211,7 +219,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；高防乌力→晶甲乌力正面进化12帧视觉已单项批准。该单项批准不代表整只宠物、骑乘包或进化路线开放，所有正式运行开关继续关闭。世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。",
+  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；高防乌力→晶甲乌力正面进化12帧视觉已单项批准。该单项批准不代表整只宠物、骑乘包或进化路线开放，所有正式运行开关继续关闭。世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。Phase350 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG、Godot 实载和逐帧来源账本一致，14 个真实 Main 动作导演场景以 1x 完成；晶甲身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。本阶段只修正两次既有 KO 修复遗漏的 21 条运行帧 RGBA 与 4 条动作 QC 账本指纹，不改动作像素；初始 install manifest 保持为 307/307 可验证的历史安装快照，当前状态由来源账本和两份 repair manifest 证明。lean 512px 源归档债务、owner 验收和所有运行门禁继续保留。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -277,7 +285,7 @@
     "ownerReview": "approved"
   },
   "battleVisual": {
-    "status": "owner_review_pending",
+    "status": "independent_semantic_self_review_passed_owner_pending",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -327,6 +335,7 @@
     "sourceFramesTracked": false,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
+    "sourceLedgerSha256": "5d4ecd66597a26b3646855c761efc4bdb7ffc10703cd3aec9e6ee96b91c8fa05",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
@@ -336,6 +345,44 @@
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
       "back_3quarter_ne": true
+    },
+    "semanticReview": {
+      "status": "passed_self_review_owner_pending",
+      "independentSemanticAuditStatus": "passed",
+      "review": "qa/battle/semantic-review-v2.json",
+      "reviewSha256": "c5d98fe26f2bae8108d5777818429bb46d66b7e364d581c1da3694a08e0175bd",
+      "currentRuntimeParity": {
+        "status": "passed",
+        "checkedFrames": 180,
+        "importFreshCount": 180,
+        "canonicalRgbaMatchCount": 180,
+        "sourceSetSha256": "13c1b7ffd961c1e446d2c8816200fcc056b47fa3e3654df771cbc20924092485"
+      },
+      "sourceLedgerReconciliation": {
+        "status": "passed",
+        "staleRuntimeRgbaEntriesCorrected": 21,
+        "staleQcSha256EntriesCorrected": 4,
+        "ledgerRgbaSha256MatchCount": 180,
+        "repairChainCurrentFileShaMatchCount": 32,
+        "sourceProvenanceFileHashMatchCount": 72,
+        "runtimePixelChanges": 0
+      },
+      "realMainSceneReview": {
+        "video": ".run/evidence/phase350_crystal_wuli_standalone_battle/Beastbound_Phase350_Crystal_Wuli_Standalone_Battle_1x.mp4",
+        "videoSha256": "ccd0a39ddfc69563bbb2e15207d2cfe698c4518436af7e4a6474b43323d32250",
+        "width": 1280,
+        "height": 720,
+        "videoFps": 60,
+        "videoFrameCount": 2477,
+        "durationSeconds": 41.283333,
+        "speedScale": 1.0,
+        "directorStepCount": 14,
+        "audioPresent": true,
+        "fullDecodePassed": true
+      },
+      "lean512SourceArchiveDebt": "unresolved",
+      "ownerReview": "pending",
+      "runtimeEnabled": false
     },
     "qualityRepairs": [
       {
