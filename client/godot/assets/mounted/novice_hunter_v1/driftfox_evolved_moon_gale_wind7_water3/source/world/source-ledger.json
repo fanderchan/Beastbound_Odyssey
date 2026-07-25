@@ -4,11 +4,19 @@
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "kind": "mounted",
   "characterId": "novice_hunter_v1",
-  "status": "self_review_passed_owner_pending",
+  "status": "self_and_blind_semantic_review_passed_owner_approved_visual_only_runtime_disabled",
   "runtimeEnabled": false,
   "selfReviewStatus": "passed",
-  "ownerReviewStatus": "pending",
-  "independentBlindSemanticAuditStatus": "pending",
+  "ownerReviewStatus": "approved_visual_only",
+  "independentBlindSemanticAuditStatus": "passed",
+  "lastAuditPhase": 349,
+  "independentSemanticAudit": {
+    "path": "qa/world/independent-semantic-audit-v1.json",
+    "sha256": "3a4658a4349728d64efeed63eef1df9b699ff0252684c7263791f06ed81fd5f5",
+    "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+    "labelBlindDirectionAccuracy": "8/8",
+    "pixelChanges": 0
+  },
   "generator": "Codex built-in image_gen",
   "ownership": "project-owned original generated Beastbound artwork",
   "archiveMode": "full_world_source_groups",
@@ -662,12 +670,12 @@
     }
   ],
   "generationBrief": "source/world/generation-brief.md",
-  "generationBriefSha256": "75606102cf9710a1ae7530db29fcb2f46468861b6cc172948f02cdfe79edc255",
+  "generationBriefSha256": "af20506e013c00b5e6f3b42209c2568493c8df740cffe28184c615c5a9e60e9d",
   "archiveFiles": [
     {
       "path": "source/world/generation-brief.md",
-      "bytes": 1880,
-      "sha256": "75606102cf9710a1ae7530db29fcb2f46468861b6cc172948f02cdfe79edc255"
+      "bytes": 3378,
+      "sha256": "af20506e013c00b5e6f3b42209c2568493c8df740cffe28184c615c5a9e60e9d"
     },
     {
       "path": "source/world/groups/mount-a/pipeline-meta.json",

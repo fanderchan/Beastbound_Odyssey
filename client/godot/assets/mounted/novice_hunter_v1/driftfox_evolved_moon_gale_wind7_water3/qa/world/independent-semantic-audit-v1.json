@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "phase": 349,
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "characterId": "novice_hunter_v1",
+  "displayName": "见习猎人骑月岚风狐",
+  "reviewType": "second_pass_label_blind_mounted_world_direction_semantic_audit",
+  "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+  "status": "passed_owner_visual_already_approved_runtime_disabled",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "approved_visual_only",
+  "runtimeEnabled": false,
+  "approvalScope": "technical_mounted_world_direction_semantic_audit_only",
+  "pixelChangesInThisPhase": 0,
+  "scope": {
+    "kind": "integrated_mounted_world",
+    "characterId": "novice_hunter_v1",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": 1,
+      "walk": 4
+    },
+    "runtimeFrameCount": 40,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeMirroring": false
+  },
+  "labelBlindReview": {
+    "mappingReadBeforePredictionsFrozen": false,
+    "board": ".run/evidence/phase349_moon_gale_mounted_world_blind/blind-contact-8x5.png",
+    "boardSha256": "7c414ce3f55f9d3d17aa4bc72b6f8df124945ed75344851103bf1de3561c2f69",
+    "mapping": ".run/evidence/phase349_moon_gale_mounted_world_blind/blind-code-mapping.json",
+    "mappingSha256": "83a44e62bbd5788b02523153d65d690e7da7162f9ba06de1f3aa9ecd9bf55b8c",
+    "predictionsBeforeReveal": ".run/evidence/phase349_moon_gale_mounted_world_blind/blind-predictions-before-reveal.json",
+    "predictionsBeforeRevealSha256": "28648e47ef51ea9f86d491d4a19353950654063a118885b946160c9a9be5483f",
+    "predictedDirections": {
+      "A": "west",
+      "B": "southwest",
+      "C": "northwest",
+      "D": "east",
+      "E": "northeast",
+      "F": "south",
+      "G": "north",
+      "H": "southeast"
+    },
+    "revealedDirections": {
+      "A": "west",
+      "B": "southwest",
+      "C": "northwest",
+      "D": "east",
+      "E": "northeast",
+      "F": "south",
+      "G": "north",
+      "H": "southeast"
+    },
+    "correctDirectionCount": 8,
+    "expectedDirectionCount": 8,
+    "accuracy": 1.0
+  },
+  "currentRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase349_moon_gale_mounted_world_blind/runtime-parity.json",
+    "reportSha256": "a97d29424735df5e46df48ce5718ffdb13211ef1e9c3917e5a99243d9bf7d6d9",
+    "checkedFrames": 40,
+    "importFreshCount": 40,
+    "canonicalRgbaMatchCount": 40,
+    "sourceSetSha256": "c6f8fb69bfb560fc249a47020867eaac2c3571a795f0e156d1e039bf1ead9054",
+    "errors": []
+  },
+  "currentImageStructure": {
+    "status": "passed",
+    "report": ".run/evidence/phase349_moon_gale_mounted_world_blind/image-structure-audit.json",
+    "reportSha256": "ac170042e3ba8fcc2dadec74d7f9bf2dee49b9cf7a345d2473ec62b8c5b11b99",
+    "checkedFrames": 40,
+    "uniqueDecodedRgbaFrameCount": 40,
+    "trackedQcFileSha256MatchCount": 40,
+    "trackedQcRgbaSha256MatchCount": 40,
+    "sourceLedgerFileSha256MatchCount": 40,
+    "sourceLedgerDecodedRgbaSha256MatchCount": 40,
+    "minimumEdgeMargin": 14,
+    "duplicatePairCount": 0,
+    "mirroredCrossDirectionPairCount": 0,
+    "currentDecodedRgbaSetSha256": "bffde1694378a8d6519759d3441e3d96ee572b453adad0376f1de796043e9b47"
+  },
+  "semanticResults": {
+    "directionReadability": {
+      "status": "passed",
+      "notes": "隐藏目录方向名后，严格正背、两个纯侧向和四个斜向均可由骑手胸背、坐骑头部与完整主体朝向共同辨认；揭示映射后 8/8 与目录合同一致。"
+    },
+    "integratedWholeFrame": {
+      "status": "passed",
+      "notes": "40 帧均为人物与坐骑同一透明整图；骑手髋部、双腿和坐垫随坐骑步态共同起伏，没有分层滑动、运动轴分离或运行时叠层。"
+    },
+    "scaleAndSeat": {
+      "status": "passed",
+      "notes": "八方向保持同一 256px 画布、统一脚底基准和成年骑手比例；可见宽度变化符合侧向、斜向、正背透视及双尾展开，没有异常小人、坐骑骤缩或坐点漂移。"
+    },
+    "identity": {
+      "status": "passed",
+      "notes": "八向持续保持见习猎人的发型、橙褐服装和成人身体比例，以及月岚风狐的银白月蓝体态、紫蓝耳尖、月纹、四足与恰好两条实体尾巴。"
+    },
+    "motionContinuity": {
+      "status": "passed",
+      "notes": "每个方向的 idle 与 walk 1..4 朝向一致，骑手坐姿、四足交替、身体起伏和双尾随动连续；没有跨方向误帧、跳尺或脚底断层。"
+    },
+    "independentAuthorship": {
+      "status": "passed",
+      "notes": "40 帧 decoded RGBA 全部唯一，完全重复为 0，跨方向水平镜像对为 0；运行合同继续禁止镜像和人物/坐骑分层。"
+    }
+  },
+  "existingOwnerDecision": {
+    "decision": "approved",
+    "scope": "integrated_mounted_world_true8_visual_only",
+    "decisionRecord": "qa/world/owner-decision.json",
+    "decisionRecordSha256": "9a7739c009f30fa75d03148a50dbe1f87b0658355a3d816a5cf060ef660aea19",
+    "acceptedMainSceneVideo": ".run/evidence/phase343_moon_gale_world/main-client-1x/Beastbound_Phase343_Moon_Gale_World_1x.mp4",
+    "acceptedMainSceneVideoSha256": "2f1c0ff82cf5feb334149cc3444820d2f5ba0929f2b87b500594d6bbf1cad19b",
+    "note": "owner-decision.json 是批准当时的不可改历史快照；其中独立审计为 pending 是当时事实，本阶段不重写所有者决定。"
+  },
+  "targetedValidation": {
+    "godotExplicitReimport": "passed",
+    "worldRuntimeParity": "passed 40/40 import fresh and canonical RGBA match",
+    "worldImageStructure": "passed 40/40 tracked QC hashes, 40 unique, 0 duplicate, 0 mirrored cross-direction pair",
+    "worldSourceLedgerParity": "passed 40/40 runtime file and decoded RGBA hashes match",
+    "labelBlindDirectionReview": "passed 8/8",
+    "mountedActionAssetWorldOnly": "passed worldDirections=8 worldFrameCount=40 bodyLayerCount=1 requireBattle=false errors=[]",
+    "pixelMutationAudit": "passed, 0 world frame files changed"
+  },
+  "residualRisks": [
+    "本阶段只补齐完整人物骑乘 world true8 的技术盲审；没有扩大 Phase343 的 visual-only 项目所有者批准。",
+    "Phase348 骑乘战斗成片与 Phase345 进化演出仍待项目所有者本人观看并决定，不能由本技术审计代替。",
+    "runtimeEnabled、进化成功路径、两条路线 asset gate 和全局进化开关继续关闭；P1.3e 尚未完成。"
+  ]
+}

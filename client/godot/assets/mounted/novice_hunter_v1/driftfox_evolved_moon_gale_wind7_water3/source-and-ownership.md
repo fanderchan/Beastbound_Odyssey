@@ -20,7 +20,7 @@
 - 生成方式：Codex 内置 `image_gen`，只使用 Beastbound 自有身份参考；骑乘每帧均一次生成完整人宠主体。
 - 后处理：仅色键、切格、共享缩放、底部居中锚定、透明清理与确定性 512→256 派生；不镜像、不分层拼接。
 - 失败留痕：方向漂移、单尾/并尾及翼状毛鳍版本均保留在 `source/world/`，但没有进入运行候选。
-- 当前状态：项目所有者已在 Phase343 连续 1× 成片后批准世界真八方向 `visual_only`；独立语义复核仍 pending，`runtimeEnabled=false`。
+- 当前状态：项目所有者已在 Phase343 连续 1× 成片后批准世界真八方向 `visual_only`；Phase349 去标签第二遍语义复核也已通过，`runtimeEnabled=false`。
 - 替换路径：从归档身份板、逐组 prompt、raw、pipeline 与 512px 源帧重生成，再重过语义、运行时和 owner 门禁。
 <!-- phase343-moon-gale-world:end -->
 
@@ -51,3 +51,14 @@
 - 跟踪报告：`qa/battle/semantic-review-v2.json`，SHA-256 为 `d73a3e3ad987b50bed5afc65032dceef5936475deeee36ca14feecb6a5df7fc2`。
 - 当前状态仅提升为 `independent_semantic_self_review_passed_owner_pending`；项目所有者尚未观看本次成片，`ownerReviewStatus=pending`、`runtimeEnabled=false` 均保持不变。
 <!-- phase348-moon-gale-mounted-battle-semantic-review:end -->
+
+<!-- phase349-moon-gale-mounted-world-independent-semantic-audit:start -->
+## Phase349 人物骑乘世界真八向去标签语义复核
+
+- 复核对象：Phase343 已获 `visual_only` 批准的见习猎人骑月岚风狐完整整图 world true8，共 40 张 256×256 运行帧；本阶段没有修改任何世界帧像素。
+- 盲审方法：随机打乱八个方向，只显示 A–H 与每条 `idle + walk 1..4`；在读取编码映射前冻结方向、比例、坐点和身份观察，揭示后 `8/8` 全部命中。
+- 当前像素证明：显式重导入后，源 PNG、import `source_md5` 与 Godot 实载 canonical RGBA `40/40` 一致；与 Phase343 冻结 QC 和源账本的文件/像素哈希也均为 `40/40` 一致。
+- 结构证明：40 张 decoded RGBA 全部唯一，完全重复 `0`、跨方向水平镜像对 `0`、最小安全边 `14px`；所有帧均为完整人物骑乘单层整图。
+- 语义结论：成人骑手比例、低位坐点、人物/坐骑共同起伏、月岚风狐两条实体尾巴及八向步态连续性均通过；未见异常小人、坐骑骤缩、人物滑层或方向错配。
+- 审批边界：这是 Codex 第二遍去标签技术盲审，不是新的项目所有者决定；已有 owner 决定仍只批准完整人物骑乘 world true8 视觉，骑乘战斗、进化、整宠与路线没有新增批准，`runtimeEnabled=false`。
+<!-- phase349-moon-gale-mounted-world-independent-semantic-audit:end -->

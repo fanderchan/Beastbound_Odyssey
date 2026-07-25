@@ -1,11 +1,12 @@
 {
   "schemaVersion": 2,
   "phase": 343,
-  "status": "self_review_passed_owner_pending",
+  "status": "self_and_blind_semantic_review_passed_owner_approved_visual_only_runtime_disabled",
   "contractValidation": "passed",
   "selfReviewStatus": "passed",
-  "independentBlindSemanticAuditStatus": "pending",
-  "ownerReviewStatus": "pending",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "approved_visual_only",
+  "lastAuditPhase": 349,
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "kind": "mounted",
   "characterId": "novice_hunter_v1",
@@ -24,6 +25,31 @@
   "contactSheetSha256": "f4886be4443adf53e064d4fe082a7af3f999c37925b3b117166f2a85ec6bae21",
   "cycleGif": "qa/world/true8-world-cycle.gif",
   "cycleGifSha256": "c69781830489bf894f53ceb4502d4e6f3c3d9e2c9f085d61a27c0bb038247614",
+  "independentSemanticAudit": {
+    "path": "qa/world/independent-semantic-audit-v1.json",
+    "sha256": "3a4658a4349728d64efeed63eef1df9b699ff0252684c7263791f06ed81fd5f5",
+    "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+    "labelBlindDirectionAccuracy": "8/8",
+    "currentRuntimeParity": {
+      "report": ".run/evidence/phase349_moon_gale_mounted_world_blind/runtime-parity.json",
+      "sha256": "a97d29424735df5e46df48ce5718ffdb13211ef1e9c3917e5a99243d9bf7d6d9",
+      "checkedFrames": 40,
+      "importFreshCount": 40,
+      "canonicalRgbaMatchCount": 40,
+      "sourceSetSha256": "c6f8fb69bfb560fc249a47020867eaac2c3571a795f0e156d1e039bf1ead9054"
+    },
+    "imageStructure": {
+      "report": ".run/evidence/phase349_moon_gale_mounted_world_blind/image-structure-audit.json",
+      "sha256": "ac170042e3ba8fcc2dadec74d7f9bf2dee49b9cf7a345d2473ec62b8c5b11b99",
+      "uniqueDecodedRgbaFrameCount": 40,
+      "sourceLedgerFileSha256MatchCount": 40,
+      "sourceLedgerDecodedRgbaSha256MatchCount": 40,
+      "minimumEdgeMargin": 14,
+      "duplicatePairCount": 0,
+      "mirroredCrossDirectionPairCount": 0
+    },
+    "pixelChanges": 0
+  },
   "errors": [],
   "frames": [
     {
