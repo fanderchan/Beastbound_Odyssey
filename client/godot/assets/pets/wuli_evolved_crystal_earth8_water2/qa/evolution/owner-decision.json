@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_animation_owner_decision",
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "animationId": "wuli_crystal_evolution_front_v1",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "evolution_visual_only",
+  "visualApproved": true,
+  "petBundleReleaseApproved": false,
+  "evolutionRouteReleaseApproved": false,
+  "routeRuntimeEnabled": false,
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase341_crystal_wuli_evolution/Beastbound_Phase341_Crystal_Wuli_Evolution_1x.mp4",
+    "mainSceneVideoSha256": "5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276",
+    "width": 1280,
+    "height": 720,
+    "speedScale": 1.0,
+    "evolutionFps": 12,
+    "fullDecodePassed": true
+  },
+  "notes": [
+    "项目所有者在查看 Phase341 的 1x 实机成片后确认看起来很好并同意继续。",
+    "本决定只批准高防乌力到晶甲乌力的 12 帧进化视觉，不批准整只宠物动作包、骑乘包或正式进化路线开放。",
+    "evolutionVisual.runtimeEnabled、宠物目录 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持关闭。"
+  ]
+}

@@ -31,7 +31,9 @@ const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_man
 const PetPaidResetClientModel := preload("res://scripts/progression/pet_paid_reset_client_model.gd")
 const PetPaidResetPanel := preload("res://scripts/ui/pet_paid_reset_panel.gd")
 const PetEvolutionClientModel := preload("res://scripts/progression/pet_evolution_client_model.gd")
+const PetEvolutionPresentationModel := preload("res://scripts/progression/pet_evolution_presentation_model.gd")
 const PetEvolutionPanel := preload("res://scripts/ui/pet_evolution_panel.gd")
+const PetEvolutionSequencePlayer := preload("res://scripts/ui/pet_evolution_sequence_player.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const BankProfileModel := preload("res://scripts/progression/bank_profile_model.gd")
 const BackpackModel := preload("res://scripts/progression/backpack_model.gd")
@@ -309,6 +311,7 @@ var _pet_evolution_quote_pending: bool = false
 var _pet_evolution_quote_generation: int = 0
 var _pet_evolution_status_message: String = ""
 var _pet_evolution_pending_operations: Dictionary = {}
+var _pet_evolution_sequence_player
 var _pet_growth_radar_row: HBoxContainer
 var _pet_level_one_radar: Control
 var _pet_level_one_radar_title: Label
@@ -5863,6 +5866,8 @@ func _build_hud() -> void:
 	hud_root.theme = _build_theme()
 	hud_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas_layer.add_child(hud_root)
+	_pet_evolution_sequence_player = PetEvolutionSequencePlayer.new()
+	_pet_evolution_sequence_player.mount(hud_root, Callable(host, "_audio_play_cue"))
 
 	top_panel = _panel_container("TopPanel")
 	var top_row = HBoxContainer.new()
@@ -24884,6 +24889,9 @@ func _request_pet_evolution_quote(force: bool = false) -> void:
 		else:
 			_pet_evolution_quote = normalized
 			_pet_evolution_status_message = ""
+			if _pet_evolution_sequence_player != null:
+				var target := normalized.get("result", {}) as Dictionary
+				_pet_evolution_sequence_player.warm_target_form(str(target.get("targetFormId", "")))
 	else:
 		_pet_evolution_quote.clear()
 		if _handle_session_invalid_response(parsed):
@@ -24949,8 +24957,10 @@ func _on_pet_evolution_confirm_requested(quote_value: Dictionary) -> void:
 		_pet_paid_reset_quote_generation += 1
 		if _pet_paid_reset_panel != null:
 			_pet_paid_reset_panel.reset_confirmation()
-		if _apply_server_profile_payload(parsed):
+		var profile_applied := _apply_server_profile_payload(parsed)
+		if profile_applied:
 			var result := parsed.get("petEvolution", {}) as Dictionary if parsed.get("petEvolution", {}) is Dictionary else {}
+			await _present_pet_evolution_outcome(parsed, quote, operation_id, true)
 			_set_world_log_message(str(result.get("message", "%s 已完成进化。" % str(pet.get("sourceFormName", "宠物")))))
 		else:
 			_set_world_log_message("宠物进化已提交，但档案刷新失败；正在重新拉取。")
@@ -24970,6 +24980,25 @@ func _on_pet_evolution_confirm_requested(quote_value: Dictionary) -> void:
 	_refresh_pet_evolution_panel()
 	if ["revision_conflict", "pet_evolution_catalog_conflict"].has(code):
 		_request_pet_evolution_quote(true)
+
+
+func _present_pet_evolution_outcome(
+	parsed: Dictionary,
+	quote: Dictionary,
+	operation_id: String,
+	profile_applied: bool,
+	timing_scale: float = 1.0
+) -> Dictionary:
+	var request := PetEvolutionPresentationModel.request_for_outcome(
+		parsed,
+		profile_applied,
+		quote,
+		operation_id
+	)
+	if request.is_empty() or _pet_evolution_sequence_player == null:
+		return {"ok": false, "reason": "not_eligible"}
+	return await _pet_evolution_sequence_player.play_request(request, timing_scale)
+
 
 func _refresh_pet_panel() -> void:
 	if pet_panel == null or pet_list_container == null or pet_detail_label == null:

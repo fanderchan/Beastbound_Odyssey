@@ -36,5 +36,6 @@
 - 完整归档：12 张 512px 源帧、12 张 256px 运行帧、逐帧 RGBA SHA-256、原始 sheet、prompt、pipeline metadata、接触表与 GIF 均已入库；本地完整生产档位于 `.run/art_batch_phase341/crystal_wuli_evolution/`。
 - 自审：同一低重心乌力血统、岩甲裂开和晶甲实体生长、额盾/肩堡/背甲、琥珀眼转水蓝眼及收光落稳均可逐帧辨认；无跨格、残留洋红或缩放泵动。
 - 真实客户端证据：通过临时、未跟踪的 QA capture 脚本实例化真实 `Main.tscn`，在 Apple M5 Metal 下录制 1280×720、60 FPS、有声 MP4；两次 12 帧序列均严格按 12 FPS 播放，每张保持 5 个视频帧，日志为 `speed=1.00x`。证据位于 `.run/evidence/phase341_crystal_wuli_evolution/`，MP4 SHA-256 为 `5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276`。
-- 当前状态：自审与真实客户端候选演出证据已完成，仍为 `owner_review_pending`。`runtimeEnabled=false`，没有修改进化成功逻辑、消耗数值或正式路线门禁。
+- 所有者决定：项目所有者查看 Phase341 的 1280×720、1× 实机成片后确认“看起来很好”并同意继续；单项决定记录为 `qa/evolution/owner-decision.json`。
+- 当前状态：进化视觉单项为 `ownerReview=approved`，但批准范围仅限这段 12 帧动画。整只宠物动作包、骑乘包和进化路线不随之批准；`evolutionVisual.runtimeEnabled=false`、宠物目录 `runtimeEnabled=false`、路线资产门禁与全局进化开关继续关闭。
 <!-- phase341-crystal-evolution:end -->

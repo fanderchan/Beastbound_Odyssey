@@ -1,6 +1,8 @@
 extends RefCounted
 
 const PetEvolutionClientModel := preload("res://scripts/progression/pet_evolution_client_model.gd")
+const PetEvolutionPresentationModel := preload("res://scripts/progression/pet_evolution_presentation_model.gd")
+const PetEvolutionVisualCatalog := preload("res://scripts/pet/pet_evolution_visual_catalog.gd")
 const PetEvolutionPanel := preload("res://scripts/ui/pet_evolution_panel.gd")
 const GmPetEvolutionQaClientModel := preload("res://scripts/progression/gm_pet_evolution_qa_client_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
@@ -9,6 +11,7 @@ const PlayerProgressModel := preload("res://scripts/progression/player_progress_
 static func run(host) -> void:
 	host.profile_save_enabled = false
 	var contract := PetEvolutionClientModel.contract_check()
+	var presentation_contract := PetEvolutionPresentationModel.contract_check()
 	var gm_contract := GmPetEvolutionQaClientModel.contract_check()
 	var quote := contract.get("fixture", {}) as Dictionary
 	var instance_id := str((quote.get("pet", {}) as Dictionary).get("instanceId", ""))
@@ -76,13 +79,103 @@ static func run(host) -> void:
 	)
 	hidden_parent.queue_free()
 
+	var target_form_id := "wuli_evolved_crystal_earth8_water2"
+	var normal_visual_access_blocked := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
+	var visual_errors := PetEvolutionVisualCatalog.validation_errors_for_form(target_form_id)
+	var qa_preview_enabled := PetEvolutionVisualCatalog.enable_qa_preview_form(target_form_id)
+	var visual_descriptor := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id)
+	var visual_warmed := PetEvolutionVisualCatalog.warm_target_form(target_form_id)
+	var visual_contract_ok := (
+		normal_visual_access_blocked
+		and visual_errors.is_empty()
+		and qa_preview_enabled
+		and not visual_descriptor.is_empty()
+		and int(visual_descriptor.get("frameCount", 0)) == 12
+		and is_equal_approx(float(visual_descriptor.get("fps", 0.0)), 12.0)
+		and not bool(visual_descriptor.get("loop", true))
+		and visual_warmed
+	)
+
+	var presentation_fixture := presentation_contract.get("fixture", {}) as Dictionary
+	var presentation_operation_id := str(presentation_contract.get("operationId", ""))
+	var sequence_before: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var below_p90_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		{"ok": false, "code": "pet_evolution_power_below_p90"},
+		quote,
+		"bbo_contract_evolution_reject_p90",
+		true,
+		0.01
+	)
+	var insufficient_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		{"ok": false, "code": "pet_evolution_assets_insufficient"},
+		quote,
+		"bbo_contract_evolution_reject_assets",
+		true,
+		0.01
+	)
+	var unapplied_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		presentation_fixture,
+		quote,
+		"bbo_contract_evolution_unapplied",
+		false,
+		0.01
+	)
+	var sequence_after_rejections: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var first_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		presentation_fixture,
+		quote,
+		presentation_operation_id,
+		true,
+		0.02
+	)
+	var first_success_snapshot: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var duplicate_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		presentation_fixture,
+		quote,
+		presentation_operation_id,
+		true,
+		0.02
+	)
+	var second_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		presentation_fixture,
+		quote,
+		"bbo_contract_evolution_presentation_002",
+		true,
+		0.02
+	)
+	var sequence_after_successes: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var expected_frames: Array[int] = []
+	for frame_index in range(12):
+		expected_frames.append(frame_index)
+	var presentation_runtime_ok: bool = (
+		not bool(below_p90_result.get("ok", false))
+		and not bool(insufficient_result.get("ok", false))
+		and not bool(unapplied_result.get("ok", false))
+		and int(sequence_after_rejections.get("playedCount", -1)) == int(sequence_before.get("playedCount", -2))
+		and bool(first_success.get("ok", false))
+		and int(first_success.get("frameCount", 0)) == 12
+		and is_equal_approx(float(first_success.get("fps", 0.0)), 12.0)
+		and int(first_success_snapshot.get("completedCount", 0)) == int(sequence_before.get("completedCount", 0)) + 1
+		and not bool(duplicate_success.get("ok", false))
+		and str(duplicate_success.get("reason", "")) == "duplicate"
+		and bool(second_success.get("ok", false))
+		and int(sequence_after_successes.get("completedCount", 0)) == int(sequence_before.get("completedCount", 0)) + 2
+		and int(sequence_after_successes.get("playedCount", 0)) == int(sequence_before.get("playedCount", 0)) + 2
+		and sequence_after_successes.get("frameHistory", []) == expected_frames
+		and str(sequence_after_successes.get("level", "")) == "晶甲乌力 · Lv1"
+	)
+	PetEvolutionVisualCatalog.disable_qa_preview_form(target_form_id)
+
 	var private_quote := quote.duplicate(true)
 	private_quote["privateSeed"] = "must-not-render"
 	var altered_result := quote.duplicate(true)
 	(altered_result.get("result", {}) as Dictionary)["preservedHistoryStages"] = [1]
-	var strict_contract_ok := (
+	var strict_contract_ok: bool = (
 		bool(contract.get("ok", false))
+		and bool(presentation_contract.get("ok", false))
 		and bool(gm_contract.get("ok", false))
+		and visual_contract_ok
+		and presentation_runtime_ok
 		and not PetEvolutionClientModel.runtime_enabled()
 		and not PetEvolutionClientModel.is_local_candidate(selected)
 		and PetEvolutionClientModel.normalized_quote(private_quote).is_empty()
@@ -112,10 +205,16 @@ static func run(host) -> void:
 		and initial_screenshot_ok
 		and armed_screenshot_ok
 	) else "failed"
-	print("pet evolution UI check ready: status=%s contract=%s gm_contract=%s ui=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
+	print("pet evolution UI check ready: status=%s contract=%s presentation_contract=%s gm_contract=%s visual=%s presentation_runtime=%s rejected_count=%d completed_count=%d played_count=%d ui=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
 		status,
 		str(strict_contract_ok),
+		str(bool(presentation_contract.get("ok", false))),
 		str(bool(gm_contract.get("ok", false))),
+		str(visual_contract_ok),
+		str(presentation_runtime_ok),
+		int(sequence_after_rejections.get("playedCount", -1)),
+		int(sequence_after_successes.get("completedCount", -1)),
+		int(sequence_after_successes.get("playedCount", -1)),
 		str(ui_ok),
 		str(first_click_did_not_submit),
 		str(second_click_submitted_once),
