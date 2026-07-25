@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "phase": 351,
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "displayName": "晶甲乌力",
+  "reviewType": "second_pass_label_blind_world_direction_semantic_audit",
+  "reviewerType": "codex_second_pass_label_blind_not_project_owner",
+  "status": "passed_owner_review_pending_runtime_disabled",
+  "independentBlindSemanticAuditStatus": "passed",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "approvalScope": "technical_world_direction_semantic_audit_only",
+  "pixelChangesInThisPhase": 0,
+  "scope": {
+    "kind": "standalone_pet_world",
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": 1,
+      "walk": 4
+    },
+    "runtimeFrameCount": 40,
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "runtimeMirroring": false
+  },
+  "labelBlindReview": {
+    "mappingReadBeforePredictionsFrozen": false,
+    "board": ".run/evidence/phase351_crystal_wuli_world_blind/blind-contact-8x5.png",
+    "boardSha256": "23f9811d142c5d5ef4fcdf442efde67005b7bea4846e8c645559868a5fdc5770",
+    "mapping": ".run/evidence/phase351_crystal_wuli_world_blind/blind-code-mapping.json",
+    "mappingSha256": "9d88e4d5947de3204760f6e85f274bb070636d6983cc4fa133539a5f34a7a20b",
+    "predictionsBeforeReveal": ".run/evidence/phase351_crystal_wuli_world_blind/blind-predictions-before-reveal.json",
+    "predictionsBeforeRevealSha256": "92cc39873d0588a7f911e886afa851439dbac59baec6ba5e3b9cbd484ff8c699",
+    "predictedDirections": {
+      "A": "west",
+      "B": "northwest",
+      "C": "southeast",
+      "D": "southwest",
+      "E": "south",
+      "F": "north",
+      "G": "east",
+      "H": "northeast"
+    },
+    "revealedDirections": {
+      "A": "west",
+      "B": "northwest",
+      "C": "southeast",
+      "D": "southwest",
+      "E": "south",
+      "F": "north",
+      "G": "east",
+      "H": "northeast"
+    },
+    "correctDirectionCount": 8,
+    "expectedDirectionCount": 8,
+    "accuracy": 1.0
+  },
+  "currentRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase351_crystal_wuli_world_blind/runtime-parity.json",
+    "reportSha256": "a37025454d50fcc36b44c6620ae53b5dcf4b4a9d77490d914f92ad82360c8dc4",
+    "checkedFrames": 40,
+    "importFreshCount": 40,
+    "canonicalRgbaMatchCount": 40,
+    "sourceSetSha256": "9be353662a83f84d805ac5b5bdcfffe047b08d4658b99c2f72cc49b3ae3860a4",
+    "errors": []
+  },
+  "currentImageStructure": {
+    "status": "passed",
+    "report": ".run/evidence/phase351_crystal_wuli_world_blind/image-structure-audit.json",
+    "reportSha256": "74ab0c0821ed6bcfe875481f53e7b3080aa0202b4103772e27d03afafcd33fb3",
+    "checkedFrames": 40,
+    "uniqueDecodedRgbaFrameCount": 40,
+    "trackedQcFileSha256MatchCount": 40,
+    "trackedQcRgbaSha256MatchCount": 40,
+    "trackedLedgerRuntimeFileSha256MatchCount": 40,
+    "trackedLedgerRuntimeRgbaSha256MatchCount": 40,
+    "trackedLedgerSourceFileSha256MatchCount": 40,
+    "trackedLedgerSourceRgbaSha256MatchCount": 40,
+    "trackedPhase326ApprovalFileSha256MatchCount": 40,
+    "runtimeFrameSizeMatchCount": 40,
+    "reviewEvidenceSha256MatchCount": 3,
+    "reviewEvidenceExpectedCount": 3,
+    "minimumEdgeMargin": 14,
+    "transparentRgbLeakPixelCount": 0,
+    "duplicatePairCount": 0,
+    "mirroredCrossDirectionPairCount": 0,
+    "ownerRuntimeGatePreserved": true,
+    "currentDecodedRgbaSetSha256": "b7edbbbfb416d2f4378277d3999ad2eb29c2f3b4edcbe756cb85676b97750c49"
+  },
+  "semanticResults": {
+    "directionReadability": {
+      "status": "passed",
+      "notes": "去除目录方向名后，正面、背面、两个纯侧向、两个前斜向和两个后斜向均可只凭主体朝向区分；揭示映射后 8/8 与目录合同一致。"
+    },
+    "identity": {
+      "status": "passed",
+      "notes": "八向 40 帧均保持低重心野猪体型、巨型额盾、双肩晶堡、分层背甲、青蓝裂隙、蓝眼和尾端晶芽，没有换种、幼化或局部晶甲退化。"
+    },
+    "scaleAndFooting": {
+      "status": "passed",
+      "notes": "八方向保持同一 256px 画布、稳定体量和连续脚底基准；可见宽度变化符合正背、斜向与纯侧透视，没有异常缩小、跳尺或裁边。"
+    },
+    "motionContinuity": {
+      "status": "passed",
+      "notes": "每个方向的 idle 与 walk 1..4 朝向一致，四肢前后交替和身体轻微起伏连续，没有跨方向误帧、静止复制或脚底断层。"
+    },
+    "independentAuthorship": {
+      "status": "passed",
+      "notes": "40 帧 decoded RGBA 全部唯一，完全重复为 0，跨方向水平镜像对为 0；运行合同继续禁止镜像。"
+    }
+  },
+  "existingPhase326Evidence": {
+    "semanticDirectionApproval": "client/godot/data/world_semantic_direction_approval_crystal_wuli_v1.json",
+    "semanticDirectionApprovalSha256": "a2f9e80841ffa3c547691afb53220d51dd82fb6b6c5f25cdca0b2c71aad475ed",
+    "phase326ApprovalManifestFrameMatchCount": 40,
+    "phase326ApprovalManifestExpectedFrameCount": 40,
+    "reviewVideo": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/wuli_evolved_crystal_earth8_water2/review.mp4",
+    "reviewVideoSha256": "c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b",
+    "reviewVideoWidth": 1280,
+    "reviewVideoHeight": 720,
+    "reviewVideoFps": 30,
+    "reviewVideoDurationSeconds": 14.433333,
+    "reviewVideoDecodeStatus": "passed",
+    "ownerReviewAtPhase326": "pending",
+    "note": "当前 40 张文件逐一吻合 Phase326 冻结清单，因此复用该动态证据；它不是项目所有者批准，本阶段也不把 pending 改成 approved。"
+  },
+  "targetedValidation": {
+    "godotExplicitReimport": "passed",
+    "worldRuntimeParity": "passed 40/40 import fresh and canonical RGBA match",
+    "worldImageStructure": "passed 40/40 tracked QC, runtime ledger and source ledger hashes; 40 unique; 0 duplicate; 0 mirrored cross-direction pair",
+    "phase326FrozenApprovalParity": "passed 40/40 file hashes and sizes",
+    "phase326ReviewEvidenceIntegrity": "passed 3/3 tracked evidence hashes and full video decode",
+    "labelBlindDirectionReview": "passed 8/8",
+    "petActionAssetCheck": "passed worldDirections=8 worldFrameCount=40 runtimeMirroring=false errors=[]",
+    "ownerRuntimeGate": "passed owner pending and runtime disabled across metadata, QC, ledger and approval manifest",
+    "pixelMutationAudit": "passed, 0 world frame files changed"
+  },
+  "residualRisks": [
+    "本阶段只补独立宠物 world true8 的第二层技术盲审，不代替项目所有者对造型、比例和步态的审美验收。",
+    "晶甲乌力独立世界与整体骑乘世界仍为 owner pending；Phase340 骑乘战斗成片也仍待项目所有者本人验收。",
+    "runtimeEnabled、整宠 formal、两条路线 asset gate 和全局进化开关继续关闭；P1.3e 尚未完成。"
+  ]
+}

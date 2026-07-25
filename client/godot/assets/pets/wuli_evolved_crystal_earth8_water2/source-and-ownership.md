@@ -52,3 +52,15 @@
 - 当前状态：第二遍运行时语义自审通过，但项目所有者正在休息、未观看本次成片，故 battle 仍为 `owner_pending/runtimeEnabled=false`。
 - 保留债务：战斗包采用 lean archive，仓库没有完整 512px 源帧；本轮只证明当前 256px runtime、既有修复链和逐帧账本，不声称补齐完整源帧归档，也不扩大 Phase341 已批准的进化视觉范围。
 <!-- phase350-crystal-wuli-standalone-battle-semantic-review:end -->
+
+<!-- phase351-crystal-wuli-world-independent-semantic-audit:start -->
+## Phase351 世界真八向去标签语义复核
+
+- 复核对象：当前独立宠物八方向各 `idle 1 + walk 4`，共 40 张 256×256 运行帧；本阶段没有改动任何世界 PNG。
+- 去标签审核：用系统随机顺序把八方向编码为 A–H，只显示五帧序列；读取映射前冻结方向与身份判断，揭示后 `8/8` 命中。
+- 当前像素证明：40/40 当前 PNG 与冻结 QC、运行帧来源账本、512px 入选源帧账本和 Phase326 方向批准清单一致；40 张 decoded RGBA 全部唯一，完全重复 0、跨方向镜像 0、最小安全边 14px。
+- Godot 实载：显式刷新 import 后，40/40 import 新鲜，当前 PNG 与 `Texture2D.get_image()` canonical RGBA 一致；source-set SHA-256 为 `9be353662a83f84d805ac5b5bdcfffe047b08d4658b99c2f72cc49b3ae3860a4`。
+- 跟踪证据：`qa/world/independent-semantic-audit-v1.json`（SHA-256 `d134f2c73e20de1e2a7d8f4e215198a086c35e3ca187a21a26bd40d501b6b0d6`）；临时盲审与运行报告位于 `.run/evidence/phase351_crystal_wuli_world_blind/`。
+- 动态证据：因当前 40 张文件逐一吻合 Phase326 冻结批准清单，继续复用当时 1280×720、30 FPS、14.433333 秒的 Godot 审片录像（SHA-256 `c42f95b68e11ffad2496373f5e53ab50d37ff1af5b2bcde43a5b4bf6a349628b`）；本轮已再次完整解码通过。
+- 审批边界：这是 Codex 第二遍技术盲审，不是项目所有者批准。项目所有者尚未验收独立世界与完整骑乘世界，`ownerReview=pending`、`runtimeEnabled=false` 均保持不变。
+<!-- phase351-crystal-wuli-world-independent-semantic-audit:end -->

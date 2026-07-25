@@ -151,6 +151,11 @@
     "contactSheetSha256": "59f9164e10ec451741d6e6c7055dd583bcf06e03dba61150e51e5b0b9c9d715c",
     "cycleGifSha256": "ec6d1c75099b4ac27b8f79abe6d8c57bb8a98149eca14186fb27e3635f47b6ba",
     "qcSummarySha256": "b975433fa4e18b18c38414bcdf0f366f81ef6fb591aa9bee7347229a2b4f28c5",
+    "independentSemanticAudit": "qa/world/independent-semantic-audit-v1.json",
+    "independentSemanticAuditSha256": "d134f2c73e20de1e2a7d8f4e215198a086c35e3ca187a21a26bd40d501b6b0d6",
+    "runtimeParityReport": ".run/evidence/phase351_crystal_wuli_world_blind/runtime-parity.json",
+    "runtimeParityReportSha256": "a37025454d50fcc36b44c6620ae53b5dcf4b4a9d77490d914f92ad82360c8dc4",
+    "runtimeParitySourceSetSha256": "9be353662a83f84d805ac5b5bdcfffe047b08d4658b99c2f72cc49b3ae3860a4",
     "reviewEvidence": {
       "evidenceIndex": {
         "path": ".run/evidence/phase326_crystal_wuli_world/candidate/phase326-crystal-wuli-world-v3/evidence-index.json",
@@ -219,7 +224,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；高防乌力→晶甲乌力正面进化12帧视觉已单项批准。该单项批准不代表整只宠物、骑乘包或进化路线开放，所有正式运行开关继续关闭。世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。Phase350 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG、Godot 实载和逐帧来源账本一致，14 个真实 Main 动作导演场景以 1x 完成；晶甲身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。本阶段只修正两次既有 KO 修复遗漏的 21 条运行帧 RGBA 与 4 条动作 QC 账本指纹，不改动作像素；初始 install manifest 保持为 307/307 可验证的历史安装快照，当前状态由来源账本和两份 repair manifest 证明。lean 512px 源归档债务、owner 验收和所有运行门禁继续保留。",
+  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；高防乌力→晶甲乌力正面进化12帧视觉已单项批准。该单项批准不代表整只宠物、骑乘包或进化路线开放，所有正式运行开关继续关闭。世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。Phase350 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG、Godot 实载和逐帧来源账本一致，14 个真实 Main 动作导演场景以 1x 完成；晶甲身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。本阶段只修正两次既有 KO 修复遗漏的 21 条运行帧 RGBA 与 4 条动作 QC 账本指纹，不改动作像素；初始 install manifest 保持为 307/307 可验证的历史安装快照，当前状态由来源账本和两份 repair manifest 证明。Phase351 对当前独立宠物世界真八向做第二遍去标签审核：随机编码后先冻结方向判断再揭示映射，8/8 命中；40/40 当前 PNG、Godot 实载、冻结 QC、来源账本和 Phase326 方向批准清单一致，图片改动为 0。该技术审核不代替项目所有者验收，世界与整宠仍为 owner pending/runtime disabled。lean 512px 战斗源归档债务、owner 验收和所有运行门禁继续保留。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
