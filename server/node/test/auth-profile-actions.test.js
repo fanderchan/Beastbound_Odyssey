@@ -344,20 +344,24 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   assert.equal(renamed.ok, true);
   assert.equal(renamed.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
 
-  const beforeRetiredAction = service.snapshot();
   const trained = service.profileAction(token, {"action": "training_partner_set_count", "payload": {"count": 2}});
-  assert.equal(trained.ok, false);
-  assert.equal(trained.code, "training_partners_retired");
-  assert.equal(trained.result.code, "training_partners_retired");
-  const afterRetiredAction = service.snapshot();
-  assert.equal(
-    afterRetiredAction.profileBindings[registered.account.accountId].profileRevision,
-    beforeRetiredAction.profileBindings[registered.account.accountId].profileRevision,
-  );
-  assert.deepEqual(
-    afterRetiredAction.profiles[registered.profileBinding.playerId].profile.trainingPartners || [],
-    [],
-  );
+  assert.equal(trained.ok, true);
+  assert.equal(trained.result.count, 2);
+  assert.equal(trained.profile.trainingPartners.length, 2);
+  assert.equal(trained.profile.trainingPartners[0].partnerId, "training_partner_1");
+  assert.equal(trained.profile.trainingPartners[0].name, "陪练伙伴1");
+  assert.equal(trained.profile.trainingPartners[0].pet.name, "陪练服务布伊1");
+  assert.equal(trained.profile.trainingPartners[0].pet.attack, 30);
+
+  const cappedTraining = service.profileAction(token, {"action": "training_partner_set_count", "payload": {"count": 99}});
+  assert.equal(cappedTraining.ok, true);
+  assert.equal(cappedTraining.result.count, 4);
+  assert.equal(cappedTraining.profile.trainingPartners.length, 4);
+
+  const shrunkTraining = service.profileAction(token, {"action": "training_partner_set_count", "payload": {"count": 1}});
+  assert.equal(shrunkTraining.ok, true);
+  assert.equal(shrunkTraining.profile.trainingPartners.length, 1);
+  assert.equal(shrunkTraining.profile.trainingPartners[0].partnerId, "training_partner_1");
 
   const recordPoint = service.profileAction(token, {
     "action": "record_point_save",
@@ -1037,7 +1041,7 @@ test("bank tab unlock rejects conflicting, overflowing, and malformed raw banks"
   }
 });
 
-test("retired training partner action preserves legacy data and cannot advance a quest", () => {
+test("training partner action advances the partner tutorial quest server-side", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "partnerquest", "password": "test1234", "displayName": "陪练任务"});
   const token = registered.session.token;
@@ -1053,57 +1057,29 @@ test("retired training partner action preserves legacy data and cannot advance a
     "quick": 42,
   });
   profile.stoneCoins = 40;
-  profile.trainingPartners = [{
-    partnerId: "legacy_partner_1",
-    name: "旧档伙伴",
-    level: 1,
-    hp: 120,
-    maxHp: 120,
-    attack: 18,
-    defense: 6,
-    quick: 70,
-    pet: {
-      petId: "legacy_partner_pet_1",
-      name: "旧档伙伴宠",
-      level: 1,
-      hp: 90,
-      maxHp: 90,
-      attack: 14,
-      defense: 8,
-      quick: 68,
-    },
-  }];
-  const quests = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../client/godot/data/quests.json"), "utf8")).quests;
-  profile.questStates = {};
-  for (const quest of quests) {
-    if (quest.id === "quest_training_partner_intro") {
-      break;
-    }
-    profile.questStates[quest.id] = {id: quest.id, status: "claimed", progress: 1};
-  }
   profile.activeQuestId = "quest_training_partner_intro";
-  profile.questStates.quest_training_partner_intro = {id: "quest_training_partner_intro", status: "active", progress: 0};
-  const saved = service.saveProfile(token, {"expectedRevision": 0, profile});
-  assert.equal(saved.ok, true);
-  const pulled = service.getProfile(token);
-  assert.equal(pulled.ok, true);
-  assert.equal(pulled.profile.activeQuestId, "quest_group_brawl");
-  assert.deepEqual(pulled.profile.trainingPartners, []);
-  const before = service.snapshot();
+  profile.questStates = {
+    "quest_first_victory": {"id": "quest_first_victory", "status": "claimed", "progress": 1},
+    "quest_buy_spirit_armor": {"id": "quest_buy_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_spirit_armor": {"id": "quest_equip_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_use_moist_spirit": {"id": "quest_use_moist_spirit", "status": "claimed", "progress": 1},
+    "quest_buy_poison_spirit_armor": {"id": "quest_buy_poison_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_equip_poison_spirit_armor": {"id": "quest_equip_poison_spirit_armor", "status": "claimed", "progress": 1},
+    "quest_training_partner_intro": {"id": "quest_training_partner_intro", "status": "active", "progress": 0},
+  };
+  assert.equal(service.saveProfile(token, {"expectedRevision": 0, profile}).ok, true);
+
   const trained = service.profileAction(token, {"action": "training_partner_set_count", "payload": {"count": 1}});
-  assert.equal(trained.ok, false);
-  assert.equal(trained.code, "training_partners_retired");
-  const after = service.snapshot();
-  assert.equal(
-    after.profileBindings[registered.account.accountId].profileRevision,
-    before.profileBindings[registered.account.accountId].profileRevision,
-  );
-  const internalProfile = after.profiles[registered.profileBinding.playerId].profile;
-  assert.equal(internalProfile.trainingPartners.length, 1);
-  assert.equal(internalProfile.trainingPartners[0].partnerId, "legacy_partner_1");
-  assert.equal(internalProfile.stoneCoins, 40);
-  assert.equal(internalProfile.activeQuestId, "quest_training_partner_intro");
-  assert.equal(internalProfile.questStates.quest_training_partner_intro.status, "active");
+  assert.equal(trained.ok, true);
+  assert.equal(trained.result.count, 1);
+  assert.equal(trained.profile.trainingPartners.length, 1);
+  assert.equal(trained.profile.stoneCoins, 50);
+  assert.equal(trained.profile.activeQuestId, "quest_group_brawl");
+  assert.equal(trained.profile.questStates.quest_training_partner_intro.status, "claimed");
+  assert.equal(trained.profile.questStates.quest_training_partner_intro.progress, 1);
+  assert.equal(trained.profile.questStates.quest_group_brawl.status, "active");
+  assert.ok(trained.questMessages.some((message) => String(message).includes("完成任务「[1] 陪练伙伴」")));
+  assert.ok(trained.logLines.some((message) => String(message).includes("完成任务「[1] 陪练伙伴」")));
 });
 
 test("server shop transactions validate price, currency, backpack, and buy quests", () => {

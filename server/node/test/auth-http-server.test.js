@@ -838,10 +838,10 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
       "payload": {"count": 2},
     }),
   });
-  assert.equal(partners.ok, false);
-  assert.equal(partners.code, "training_partners_retired");
-  assert.equal(partners.result.code, "training_partners_retired");
-  assert.deepEqual(service.getProfile(registered.session.token).profile.trainingPartners || [], []);
+  assert.equal(partners.ok, true);
+  assert.equal(partners.result.count, 2);
+  assert.equal(partners.profile.trainingPartners.length, 2);
+  assert.equal(partners.profile.trainingPartners[0].pet.name, "陪练接口布伊1");
 
   const invalid = await fetchJson(`${base}/profile/action`, {
     "method": "POST",

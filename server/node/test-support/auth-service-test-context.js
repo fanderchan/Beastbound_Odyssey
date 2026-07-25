@@ -180,7 +180,15 @@ function fixtureEncounterCharacterCount(participants) {
   const active = Array.isArray(participants)
     ? participants.slice(0, 5).filter((participant) => participant && String(participant.accountId || "") !== "")
     : [];
-  return active.length;
+  const usedSlots = new Set([3, 4, 2, 5, 1].slice(0, active.length));
+  const partnerCount = active.reduce((sum, participant) => {
+    const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object"
+      ? participant.teamSnapshot
+      : {};
+    return sum + (Array.isArray(snapshot.trainingPartners) ? snapshot.trainingPartners.length : 0);
+  }, 0);
+  const availablePartnerSlots = [1, 2, 4, 5].filter((slot) => !usedSlots.has(slot)).length;
+  return active.length + Math.min(partnerCount, availablePartnerSlots);
 }
 
 function internalProfileForAccount(service, accountId) {

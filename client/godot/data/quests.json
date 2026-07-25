@@ -697,22 +697,21 @@
         "stoneCoins": 5,
         "items": []
       },
-      "nextQuestId": "quest_group_brawl"
+      "nextQuestId": "quest_training_partner_intro"
     },
     {
       "id": "quest_training_partner_intro",
-      "title": "旧版队伍教学",
-      "runtimeEnabled": false,
+      "title": "陪练伙伴",
       "requiredLevel": 1,
       "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
-      "summary": "旧版任务已停用，历史进度会自动衔接到危险草丛。",
+      "summary": "打开底部队伍，在伙伴页加入一名陪练伙伴，再去村外草丛挑战更多野生宠物。",
       "objective": {
         "type": "training_partner_count",
         "count": 1,
-        "text": "旧版任务已停用"
+        "text": "在底部“队伍”的伙伴页加入1名陪练伙伴"
       },
       "rewards": {
         "stoneCoins": 10,
@@ -722,19 +721,19 @@
     },
     {
       "id": "quest_group_brawl",
-      "title": "危险草丛",
+      "title": "群殴",
       "requiredLevel": 1,
       "recommendedLevel": 1,
       "giverId": "village_guard",
       "turnInId": "village_guard",
       "autoClaimOnReady": true,
-      "summary": "可以独自挑战，也可以邀请真人玩家组队，去写着“怪多，危险”的草丛赢下一场战斗。",
+      "summary": "组上至少一名玩家或陪练伙伴，去写着“怪多，危险”的草丛赢下一场战斗。",
       "objective": {
         "type": "battle_victory",
         "encounterGroupId": "firebud_grass_danger",
-        "minPartyMemberCount": 0,
+        "minPartyMemberCount": 1,
         "count": 1,
-        "text": "在危险草丛赢一场"
+        "text": "组上至少1名伙伴，在危险草丛赢一场"
       },
       "rewards": {
         "stoneCoins": 20,

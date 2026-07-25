@@ -614,7 +614,7 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   });
 });
 
-test("publicProfile sanitizes pet containers and hides retired training partner snapshots", () => {
+test("publicProfile sanitizes current, legacy, dropped, and future nested pet containers", () => {
   const source = {
     schemaVersion: 1,
     player: {name: "成长边界测试", level: 42},
@@ -688,7 +688,7 @@ test("publicProfile sanitizes pet containers and hides retired training partner 
     },
   });
   assert.equal(actual.pets[0].instanceId, "pet_legacy");
-  assert.deepEqual(actual.trainingPartners, []);
+  assert.equal(actual.trainingPartners[0].pet.instanceId, "pet_partner_snapshot");
   assert.equal(actual.groundPetDrops[0].pet.instanceId, "pet_drop");
   assert.equal(Object.hasOwn(actual, "petRecoveryShelter"), false);
   assert.equal(JSON.stringify(actual).includes("DO_NOT_EXPOSE_SHELTER_SEED"), false);
@@ -715,6 +715,7 @@ test("publicProfile sanitizes pet containers and hides retired training partner 
   for (const pet of [
     ...actual.petInstances,
     ...actual.pets,
+    actual.trainingPartners[0].pet,
     actual.groundPetDrops[0].pet,
     actual.futureFeature.roster.reserve,
     actual.futureFeature.roster.partialReserve,

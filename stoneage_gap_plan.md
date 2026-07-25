@@ -389,8 +389,7 @@
           - [ ] **P0.6d-2c-12c 装备归属 registry 增量索引**：profile、邮箱、市场、银行与消费墓碑的装备所有权改为随 touched container 增量维护，正常资产写不再重扫全部容器。
           - [ ] **P0.6d-2c-12d 通用 planner touched-set 与组合容量门槛**：消除 profile/market 等剩余全对象 diff，并在 200 档案、120 挂单、正式邮箱档位、20k 回执、100k 墓碑下证明未触碰集合零枚举；周期 checkpoint 扫描必须单独计量。
         - [ ] **P0.6d-2c-13 复杂装备 legacy 真实 MySQL 收口门槛**：补装备领取与 legacy 上架/转寄的双向真实交错、重复 listing/envelope identity 的全资产回滚，以及装备转寄 COMMIT 模糊后跨 Node 原 operation 精确重放。
-- [x] **P0.7 退役虚构训练伙伴并保留真实快照伙伴边界**
-  - 证据（2026-07-25）：正常队伍 UI、GM 目录、任务链、本地/服务端战斗快照和经验结算均不再创建或展示虚构人物/宠物；旧私有 `trainingPartners` 行原样保留但公共投影、运行时人数和战斗结果恒为零，旧 action 明确返回 `training_partners_retired`。危险草丛可单人完成，4 名真实 `teamSnapshot` 队友加各自出战宠仍组成 10 人友方阵容，GM 随机 10V10 保持可用；未来真实快照必须有来源账号/revision、采集与过期时间、人物+宠物公开战斗事实、PvP 禁用和零资产复制。Node 定向 `285/285`、旧伙伴经验惰性 `1/1`，Godot parse + 12 项组合门禁 `13/13`；真实 Metal 1280×720 队伍截图只含真人入口，面板静置 `process_total=0.03..0.04ms`、真实移动 `0.04ms`（采样峰值 `0.06ms`）。未连接真实 MySQL。完整合同见 `docs/phase_340_training_partner_retirement.md`。
+- [ ] **P0.7 退役虚构训练伙伴并保留真实快照伙伴边界**
 
 ### P1
 

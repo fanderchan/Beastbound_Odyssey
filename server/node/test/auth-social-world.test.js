@@ -2425,7 +2425,7 @@ test("sending a nearby message completes the chat tutorial with an authoritative
 
   const sent = service.sendChatMessage(player.session.token, {"channel": "nearby", "text": "大家好"});
   assert.equal(sent.ok, true);
-  assert.equal(sent.profile.activeQuestId, "quest_group_brawl");
+  assert.equal(sent.profile.activeQuestId, "quest_training_partner_intro");
   assert.equal(sent.profile.stoneCoins, 5);
   assert.equal(sent.questMessages.length > 0, true);
 });

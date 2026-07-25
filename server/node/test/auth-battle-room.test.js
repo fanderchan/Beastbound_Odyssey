@@ -952,11 +952,7 @@ test("party pve encounters create one shared server room and wait for all player
   const memberPlayer = actors.find((actor) => actor.username === "pvemember" && actor.kind === "player");
   assert.equal(memberPlayer.ridePetInstanceId, "member_ride_pet");
   assert.equal(memberPlayer.ridePetHp, 160);
-  assert.equal(actors.some((actor) => actor.displayName === "队长伙伴"), false);
-  assert.deepEqual(
-    encounter.room.participants.find((participant) => participant.username === "pveleader").teamSnapshot.trainingPartners,
-    [],
-  );
+  assert.equal(actors.some((actor) => actor.displayName === "队长伙伴"), true);
   assert.equal(encounter.room.battle.requiredActorIds.length, 4);
 
   const leaderPlayer = actors.find((actor) => actor.username === "pveleader" && actor.kind === "player");
@@ -992,7 +988,7 @@ test("party pve encounters create one shared server room and wait for all player
   assert.equal(resolved.room.battle.round, 2);
 });
 
-test("party pve ignores preserved legacy training partners and still resolves solo commands", () => {
+test("party pve training partners heal their low hp partner pair before attacking", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "pvehealpartner", "password": "test1234", "displayName": "陪练治疗号"});
   assert.equal(solo.ok, true);
@@ -1079,10 +1075,7 @@ test("party pve ignores preserved legacy training partners and still resolves so
   const lowPartner = actors.find((actor) => actor.displayName === "低血伙伴" && actor.kind === "player");
   const petGuardPartner = actors.find((actor) => actor.displayName === "护宠伙伴" && actor.kind === "player");
   const lowPartnerPet = actors.find((actor) => actor.displayName === "低血伙伴宠" && actor.kind === "pet");
-  assert.equal(Boolean(soloPlayer && soloPet), true);
-  assert.equal(Boolean(lowPartner || petGuardPartner || lowPartnerPet), false);
-  assert.deepEqual(encounter.room.participants[0].teamSnapshot.trainingPartners, []);
-  assert.equal(encounter.room.participants[0].teamSnapshot.trainingPartnerCount, 0);
+  assert.equal(Boolean(soloPlayer && soloPet && lowPartner && petGuardPartner && lowPartnerPet), true);
 
   assert.equal(service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
@@ -1095,12 +1088,38 @@ test("party pve ignores preserved legacy training partners and still resolves so
     "actionId": "pet_defend",
   });
   assert.equal(resolved.ok, true);
-  assert.equal(resolved.turn.kind, "battle_event_list");
-  assert.equal(resolved.turn.events.some((event) => event.actionKind === "training_partner_heal"), false);
-  const internalProfile = service.snapshot().profiles[solo.profileBinding.playerId].profile;
-  assert.equal(internalProfile.trainingPartners.length, 2);
-  assert.equal(internalProfile.trainingPartners[0].partnerId, "heal_partner_1");
-  assert.deepEqual(service.getProfile(solo.session.token).profile.trainingPartners, []);
+
+  const healEvents = resolved.turn.events.filter((event) => event.eventType === "spirit_heal" && event.actionKind === "training_partner_heal");
+  assert.equal(healEvents.length, 2);
+  const selfHeal = healEvents.find((event) => event.actorId === lowPartner.actorId && event.targetActorId === lowPartner.actorId);
+  assert.equal(Boolean(selfHeal), true);
+  assert.equal(selfHeal.spiritId, "spirit_moist_1");
+  assert.equal(selfHeal.hpBefore, 39);
+  assert.equal(selfHeal.heal, 25);
+  assert.equal(selfHeal.healed, 25);
+  assert.equal(selfHeal.hpAfter, 64);
+
+  const petHeal = healEvents.find((event) => event.actorId === petGuardPartner.actorId && event.targetActorId === lowPartnerPet.actorId);
+  assert.equal(Boolean(petHeal), true);
+  assert.equal(petHeal.hpBefore, 47);
+  assert.equal(petHeal.heal, 30);
+  assert.equal(petHeal.healed, 30);
+  assert.equal(petHeal.hpAfter, 77);
+
+  const updatedLowPartner = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartner.actorId);
+  const updatedLowPartnerPet = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartnerPet.actorId);
+  const damageAfterSelfHeal = resolved.turn.events
+    .filter((event) => Number(event.sequence || 0) > Number(selfHeal.sequence || 0))
+    .filter((event) => event.targetActorId === lowPartner.actorId)
+    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
+  const damageAfterPetHeal = resolved.turn.events
+    .filter((event) => Number(event.sequence || 0) > Number(petHeal.sequence || 0))
+    .filter((event) => event.targetActorId === lowPartnerPet.actorId)
+    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
+  assert.equal(updatedLowPartner.hp, Math.max(0, selfHeal.hpAfter - damageAfterSelfHeal));
+  assert.equal(updatedLowPartnerPet.hp, Math.max(0, petHeal.hpAfter - damageAfterPetHeal));
+  assert.equal(resolved.turn.events.some((event) => event.actorId === lowPartner.actorId && event.eventType === "basic_attack"), false);
+  assert.equal(resolved.turn.events.some((event) => event.actorId === petGuardPartner.actorId && event.eventType === "basic_attack"), false);
 });
 
 test("party pve encounters skip offline party members", () => {
@@ -1187,8 +1206,8 @@ test("party pve encounters skip offline party members", () => {
   assert.deepEqual(encounter.room.participants.map((player) => player.username), ["pveofflinea"]);
   assert.deepEqual(encounter.room.battle.requiredAccountIds, [leader.account.accountId]);
   assert.equal(encounter.room.battle.actors.some((actor) => actor.username === "pveofflineb"), false);
-  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "离线替补伙伴"), false);
-  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "替补伙伴布伊"), false);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "离线替补伙伴"), true);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "替补伙伴布伊"), true);
   const partyState = service.getPartyState(leader.session.token);
   assert.equal(partyState.ok, true);
   assert.equal(partyState.party.memberCount, 2);
@@ -1320,7 +1339,7 @@ test("party pve waiting battle removes offline non-leader members and resolves r
   )), true);
 });
 
-test("party pve waiting battle removes an offline leader without materializing legacy partner actors", () => {
+test("party pve waiting battle removes offline leader with owned partner actors", () => {
   let nowMs = Date.parse("2026-02-03T01:15:00.000Z");
   const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
   const events = [];
@@ -1406,8 +1425,7 @@ test("party pve waiting battle removes an offline leader without materializing l
   const memberPlayer = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "player");
   const memberPet = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "pet");
   const enemy = actors.find((actor) => actor.side === "enemy");
-  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
-  assert.equal(Boolean(leaderPartner || leaderPartnerPet), false);
+  assert.equal(Boolean(leaderPlayer && leaderPet && leaderPartner && leaderPartnerPet && memberPlayer && memberPet && enemy), true);
   assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
     "round": 1,
     "actorId": memberPlayer.actorId,
@@ -1450,7 +1468,7 @@ test("party pve waiting battle removes an offline leader without materializing l
   const roomUpdate = events.find((event) => event.type === "battle.room_updated" && event.reason === "party_member_offline");
   assert.equal(Boolean(roomUpdate), true);
   assert.deepEqual(roomUpdate.removedAccountIds, [leader.account.accountId]);
-  for (const actor of [leaderPlayer, leaderPet]) {
+  for (const actor of [leaderPlayer, leaderPet, leaderPartner, leaderPartnerPet]) {
     assert.equal(roomUpdate.escapedActorIds.includes(actor.actorId), true);
   }
   assert.equal(roomUpdate.turn.kind, "battle_event_list");
@@ -3638,10 +3656,8 @@ test("party pve retargets defeated enemies and writes exp to participants", () =
     {maxHp: 95, attack: 12, defense: 7, quick: 100},
   );
   assert.equal(memberAfter.profile.petInstances.find((pet) => pet.instanceId === "exp_member_pet").level, 1);
-  assert.deepEqual(leaderAfter.profile.trainingPartners, []);
-  const internalLeaderProfile = service.snapshot().profiles[leader.profileBinding.playerId].profile;
-  assert.equal(internalLeaderProfile.trainingPartners[0].level, 1);
-  assert.equal(internalLeaderProfile.trainingPartners[0].pet.level, 1);
+  assert.equal(leaderAfter.profile.trainingPartners[0].level, 1);
+  assert.equal(leaderAfter.profile.trainingPartners[0].pet.level, 1);
 
   const storedRoom = service.snapshot().battleRooms[encounter.room.roomId];
   assert.equal(storedRoom.battle.expCredits.length, 2);

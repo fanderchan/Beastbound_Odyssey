@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"policyId": "local_qa_full_v4",
+	"policyId": "local_qa_full_v3",
 	"allowedUsernames": [
 		"auth1373"
 	],
@@ -43,6 +43,7 @@
 		"open_quest",
 		"open_auto_battle",
 		"open_auto_capture",
+		"open_partner",
 		"open_pet",
 		"open_stable",
 		"open_rebirth_preview",

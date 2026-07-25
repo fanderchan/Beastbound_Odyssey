@@ -2546,20 +2546,6 @@ test("only durable record point actions carry a matching row-local profile recov
     password: "test1234",
     displayName: "记录点范围猎人",
   });
-  assert.equal(seed.saveProfile(owner.session.token, {
-    expectedRevision: 0,
-    profile: battleProfile("记录点范围猎人", {level: 1, hp: 120, maxHp: 120}, {
-      petId: "record_scope_pet",
-      name: "范围布伊",
-      level: 1,
-      hp: 90,
-      maxHp: 90,
-      attack: 14,
-      defense: 8,
-      quick: 68,
-      isNew: true,
-    }),
-  }).ok, true);
   const saveOptions = [];
   const service = createAuthService({
     store: createAsyncWriteAuthStore({
@@ -2594,8 +2580,8 @@ test("only durable record point actions carry a matching row-local profile recov
   });
 
   const otherAction = await service.invokeDurable("profileAction", [owner.session.token, {
-    action: "pet_mark_seen",
-    payload: {instanceId: "record_scope_pet"},
+    action: "training_partner_set_count",
+    payload: {count: 1},
   }], {
     operationId: "bbo_record_scope_other_0002",
     requestHash: "b".repeat(64),

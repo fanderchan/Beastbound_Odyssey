@@ -334,13 +334,40 @@
             }
           }
         ],
-        "trainingPartners": [],
+        "trainingPartners": [
+          {
+            "partnerId": "partner_vector_1",
+            "name": "向量伙伴",
+            "level": 20,
+            "pet": {
+              "instanceId": "pet_vector_partner",
+              "petId": "pet_vector_partner",
+              "templateId": "blue_man_dragon_water10",
+              "formId": "blue_man_dragon_water10",
+              "name": "陪练快照宠",
+              "state": "battle",
+              "growthSpeciesProfileId": "blue_man_dragon_v1",
+              "level": 20,
+              "hp": 150,
+              "maxHp": 180,
+              "attack": 70,
+              "defense": 44,
+              "quick": 55,
+              "growthAuthority": {
+                "schemaVersion": 1,
+                "source": "server",
+                "modelVersion": "legacy_species_linear_v0",
+                "settledLevel": 20
+              },
+              "growthModelVersion": "legacy_species_linear_v0"
+            }
+          }
+        ],
         "unrelatedScorecard": {
           "qualityScore": 88,
           "growthBonus": 3,
           "label": "非宠物同名字段保留"
-        },
-        "boundStoneCoins": 0
+        }
       }
     }
   ]

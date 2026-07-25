@@ -185,7 +185,7 @@ static func _module_definitions() -> Array[Dictionary]:
 		_module("autoCaptureSettings", ["autoCaptureSettings"], "player_auto_capture_settings", ["playerId"], "document", "client_preference", "latest_revision_wins", "自动捉宠策略。"),
 		_module("hangSettings", ["hangSettings"], "player_hang_settings", ["playerId"], "document", "client_preference", "latest_revision_wins", "挂机设置、低血停止和补给策略。"),
 		_module("hangSession", ["hangSession"], "player_hang_sessions", ["playerId"], "document", "runtime_session", "server_can_discard_stale", "当前挂机会话、回补状态和统计。"),
-		_module("trainingPartners", ["trainingPartners"], "player_training_partners", ["playerId", "partnerId"], "partner_rows", "party_transaction", "server_wins_after_cutover", "已退役虚构伙伴的只读兼容档案；运行时不创建、不参战。"),
+		_module("trainingPartners", ["trainingPartners"], "player_training_partners", ["playerId", "partnerId"], "partner_rows", "party_transaction", "server_wins_after_cutover", "陪练伙伴和其成长状态。"),
 		_module("serverSync", [PROFILE_KEY], "player_sync_state", ["playerId"], "document", "client_sync_metadata", "server_revision_wins", "本地 revision、dirtyModules 和上次服务端 revision。"),
 	]
 

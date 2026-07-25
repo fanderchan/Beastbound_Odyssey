@@ -35,10 +35,10 @@ const policy = loadLocalQaGmPolicy();
 const scriptPath = path.resolve(__dirname, "../scripts/local-qa-gm-account.js");
 
 test("shared local QA policy is exact, explicit and fails closed on drift", () => {
-  assert.equal(policy.policyId, "local_qa_full_v4");
+  assert.equal(policy.policyId, "local_qa_full_v3");
   assert.deepEqual(policy.allowedUsernames, ["auth1373"]);
   assert.equal(policy.serverCommandIds.length, 12);
-  assert.equal(policy.clientCommandIds.length, 30);
+  assert.equal(policy.clientCommandIds.length, 31);
   assert.equal(policy.serverAuthoritativeClientCommandIds.length, 9);
   assert.equal(policy.serverCommandIds.includes("*"), false);
   assert.equal(policy.clientCommandIds.includes("*"), false);

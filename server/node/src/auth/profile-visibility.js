@@ -960,13 +960,7 @@ function publicProfile(profile, options = {}) {
       result[key] = publicEquipmentInstances(value, options);
       continue;
     }
-    if (key === "trainingPartners") {
-      // Preserve legacy rows internally without exposing fictional assets to
-      // current clients.
-      result[key] = [];
-      continue;
-    }
-    if (key === "groundPetDrops" && Array.isArray(value)) {
+    if ((key === "trainingPartners" || key === "groundPetDrops") && Array.isArray(value)) {
       result[key] = value.map((entry) => {
         if (!isObjectRecord(entry)) {
           return cloneProfileValue(entry, "", options);

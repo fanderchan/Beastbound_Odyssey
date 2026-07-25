@@ -158,7 +158,6 @@ const ERROR_CODE_PREFIX_MESSAGES := [
 	["quest_", "任务状态暂时无法更新。"],
 	["shop_", "商店交易失败，请检查物品和货币。"],
 	["trade_", "交易失败，请检查双方距离、物品和石币。"],
-	["training_partners_retired", "虚构练级伙伴已退役，请邀请真人玩家组队。"],
 	["training_partner_", "队伍伙伴设置失败，请检查数量。"],
 ]
 
