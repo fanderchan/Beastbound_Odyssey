@@ -165,6 +165,8 @@ def _write_full_source_contract(root: Path, form_id: str) -> None:
             "schemaVersion": 1,
             "archiveMode": "full",
             "formId": form_id,
+            "kind": "pet",
+            "characterId": None,
             "actions": actions,
         },
     )

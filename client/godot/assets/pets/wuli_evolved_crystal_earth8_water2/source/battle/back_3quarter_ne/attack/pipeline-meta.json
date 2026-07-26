@@ -170,10 +170,20 @@
         203,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 16,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "c7d8ea0dc8c163371db2fc5982f496740a997088e488606d7514315134544833",
-      "runtimeRgbaSha256": "55add9373a26943455227dc656e96163b97275014c446e19bbed350c498d9856"
+      "runtimeRgbaSha256": "57cbad3415bd8e9fa8a0a8c68bbe2973a6c6f92878269ae83f2886980a8aeffd",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-1",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-1",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-2",
@@ -271,10 +281,20 @@
         206,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 21,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "bb9cce744a21e44f707fe70a6a2abb8aaeefb9495f2165c269f555f371bddb0f",
-      "runtimeRgbaSha256": "ffb242d4aafd72655716abf1bf4f30c1d87ed768bda78da92ce58570c5484e77"
+      "runtimeRgbaSha256": "43f3cb4af142da2923d0e454cefa41ff26d3121238aaba69f8f633f696456c87",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-2",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-2",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-3",
@@ -372,10 +392,20 @@
         211,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 14,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "c3090335bd7d04fdf1e8c45a3e66188b81d04c772e79920ec37b1f5ac7a9915e",
-      "runtimeRgbaSha256": "cf890e54424d96b8d0016d0381d818a590220b5e45b28eff295865de52c81ae8"
+      "runtimeRgbaSha256": "f6d836c683155f9102561c3854488a8fb643df3a77b62bce05503e08bcdecc67",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-3",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-3",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-4",
@@ -473,10 +503,20 @@
         215,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 19,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "c25bc3fc6f2bac2ed954e85532e8616419ae6be8783aa120c4ee528fa71cdaae",
-      "runtimeRgbaSha256": "2686df73224b670d243e4d9068082c3071b3763757e9e04bd2f38a329bc2e616"
+      "runtimeRgbaSha256": "8864a6b5131331c977eaf5853ebbd6cbff7af894e7c8e69e7f82af5fda605658",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-4",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-4",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-5",
@@ -574,10 +614,20 @@
         214,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 20,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "8d3c3e0c230639984010916c373834b1e76459fdde3a7dfff1a745e466dba968",
-      "runtimeRgbaSha256": "57230a5c66060f50c25424b62bd318842d7e0ab0bd1d7462a8b27d01b4f40cae"
+      "runtimeRgbaSha256": "20009b4edbce7cb015f4ce11a89d37b53410649429af9092c1fcff51c7ecb2c5",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-5",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-5",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-6",
@@ -675,10 +725,20 @@
         204,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 22,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "0319ac768fcbed2a6d5cb0bce56b7fd580a062b4e0e3c93ef9ff9694c7d0f49d",
-      "runtimeRgbaSha256": "2d469469a7843341f68f05c80e50e461b87466fcc52fd62c808ea5bb21f669e2"
+      "runtimeRgbaSha256": "7ef8fd2b17624ca8a0ff8bf5dfa5fb87be9311a8dd73909eb632ea906923db84",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-6",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-6",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-7",
@@ -776,10 +836,20 @@
         207,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 20,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "564abeacbf8b182d016f68caa9d126dd28f4dff571f42dcefe031921114b609c",
-      "runtimeRgbaSha256": "da2c2a17514a96ac3525ae8124314b1fcd42fdae3b47d195abfd29cd0893d56a"
+      "runtimeRgbaSha256": "084fa1907afb475b23eb3865c5ea1126f69b873820e0a764d0978ca1b40f39a4",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-7",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-7",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "attack-8",
@@ -877,10 +947,20 @@
         203,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 24,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "24e146d9cfa3f8714249b3167a3e65031223c64a31a5879917d8d8127b9d8a16",
-      "runtimeRgbaSha256": "35b9b6ce8fc187e58b607871388db0f85762446eab40f039f159c9862c833aaa"
+      "runtimeRgbaSha256": "f98bca99499cbb86d1e9fa4442bb1a5dacbd2845f8ddd6ca4c40c4a201143716",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/attack/attack-8",
+        "originalSourceSlot": "back_3quarter_ne/attack/attack-8",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
   ],
   "originalGeneratedSize": [
@@ -899,5 +979,18 @@
         "metadataSha256": "5e09d5136772639ad31672cf61ea67d2eaf84232e0ec5e3872ede72aa73f0c58"
       }
     ]
+  },
+  "canonicalSourceClosure": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "sourceFrameCount": 8,
+    "derivedRuntimeFrameCount": 8,
+    "minimumSourceEdgeMarginAtAlpha8": 30,
+    "minimumRuntimeEdgeMarginAtAlpha8": 15,
+    "historicalRepairReplay": false,
+    "mirroring": false,
+    "upscaledFromRuntime": false
   }
 }

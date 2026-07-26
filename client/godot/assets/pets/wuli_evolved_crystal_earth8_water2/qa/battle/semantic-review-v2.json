@@ -71,12 +71,12 @@
   },
   "currentRuntimeParity": {
     "status": "passed",
-    "report": ".run/evidence/phase350_crystal_wuli_standalone_battle/runtime-parity.json",
-    "reportSha256": "1298d0f129a98ab42bad452dee3a5ec81767339c66e31343858a14af07799ce2",
+    "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+    "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
     "checkedFrames": 180,
     "importFreshCount": 180,
     "canonicalRgbaMatchCount": 180,
-    "sourceSetSha256": "13c1b7ffd961c1e446d2c8816200fcc056b47fa3e3654df771cbc20924092485",
+    "sourceSetSha256": "eaddb2c08ecb4f5c5983d6cd3976116ff44c8af49715710c12870ce3f34c22c8",
     "errors": []
   },
   "imageStructureAudit": {
@@ -151,7 +151,43 @@
       "dodge_counter",
       "down",
       "revive"
-    ]
+    ],
+    "fullSourceClosureReview": {
+      "status": "self_review_passed_owner_pending",
+      "scene": "res://scenes/Main.tscn",
+      "combinedReview": true,
+      "chapter": "crystal_standalone",
+      "video": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+      "videoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "videoFrameCount": 2269,
+      "durationSeconds": 37.816667,
+      "speedScale": 1.0,
+      "speedFilters": [],
+      "selectedStepCount": 5,
+      "selectedSteps": [
+        "attack",
+        "skill",
+        "dodge",
+        "down",
+        "revive"
+      ],
+      "firstStepSecond": 2.617,
+      "lastStepSecond": 13.617,
+      "audioPresent": true,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "fullDecodePassed": true,
+      "visualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+      "visualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9",
+      "unexpectedScaleOrIdentityDrift": false,
+      "downReviveContinuityPreserved": true,
+      "runtimeSpeedupUsed": false,
+      "ownerReview": "pending",
+      "runtimeEnabled": false
+    }
   },
   "semanticResults": {
     "identity": {
@@ -217,11 +253,69 @@
     "petBattleReviewLabCheck": "passed with Godot parse 2/2, errors=[]",
     "runtimeParity": "passed 180/180",
     "imageStructureAndLedger": "passed 180/180 with 0 unexpected duplicate and 0 mirrored cross-view pair",
-    "videoProbeAndFullDecode": "passed"
+    "videoProbeAndFullDecode": "passed",
+    "fullSourceArchive": "passed 180 source / 180 runtime / 180 canonical derived; 24 lossless raw archives; upscaledFromRuntime=false",
+    "phase358RuntimeParity": "passed 180/180",
+    "phase358VideoProbeAndFullDecode": "passed"
   },
   "residualRisks": [
     "项目所有者尚未观看 Phase350 1x 成片，因此 battle ownerReviewStatus 继续 pending。",
-    "战斗包采用 lean archive，完整 512px 源帧不在仓库；本次只校正当前 256px runtime 的逐帧账本指纹，不能声称补齐了完整源帧归档。",
+    "完整 512px 战斗母版与无损原始动作表已在 Phase358 归档并进入持续同源审计，不再保留 lean archive 债务。",
     "晶甲乌力世界真八向、整体骑乘战斗、整宠批准、两拒两放和路线资产门禁仍需各自验收；runtimeEnabled 与全局进化开放继续关闭。"
-  ]
+  ],
+  "fullSourceClosureValidation": {
+    "status": "passed_owner_pending",
+    "manifest": "source/battle/full-source-closure-v1.json",
+    "manifestSha256": "a670be2fd7bd18e5a6c7ac6670873dda4702f5c7263ec2c4402c0def67e342ae",
+    "formal512FrameCount": 180,
+    "derived256FrameCount": 180,
+    "rawLosslessArchiveCount": 24,
+    "upscaledFromRuntime": false,
+    "currentRuntimeParity": {
+      "status": "passed",
+      "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+      "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+      "checkedFrames": 180,
+      "importFreshCount": 180,
+      "canonicalRgbaMatchCount": 180,
+      "sourceSetSha256": "eaddb2c08ecb4f5c5983d6cd3976116ff44c8af49715710c12870ce3f34c22c8",
+      "errors": []
+    },
+    "realMainSceneReview": {
+      "status": "self_review_passed_owner_pending",
+      "scene": "res://scenes/Main.tscn",
+      "combinedReview": true,
+      "chapter": "crystal_standalone",
+      "video": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+      "videoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "videoFrameCount": 2269,
+      "durationSeconds": 37.816667,
+      "speedScale": 1.0,
+      "speedFilters": [],
+      "selectedStepCount": 5,
+      "selectedSteps": [
+        "attack",
+        "skill",
+        "dodge",
+        "down",
+        "revive"
+      ],
+      "firstStepSecond": 2.617,
+      "lastStepSecond": 13.617,
+      "audioPresent": true,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "fullDecodePassed": true,
+      "visualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+      "visualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9",
+      "unexpectedScaleOrIdentityDrift": false,
+      "downReviveContinuityPreserved": true,
+      "runtimeSpeedupUsed": false,
+      "ownerReview": "pending",
+      "runtimeEnabled": false
+    }
+  }
 }

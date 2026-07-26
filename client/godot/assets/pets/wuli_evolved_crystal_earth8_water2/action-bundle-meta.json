@@ -188,15 +188,29 @@
     "qualityRepairManifests": [
       "source/battle/quality-repair-down-revive-sequence-v1-manifest.json",
       "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
-    ]
+    ],
+    "battleArchiveMode": "full",
+    "battleSourceFramesTracked": true,
+    "battleSourceFrameCount": 180,
+    "battleRawArchivesTracked": 24,
+    "battleSourceLedger": "source/battle/source-ledger.json",
+    "battleSourceLedgerSha256": "cd0535b2be2b4c33b2f07b933ffaab869ebafe7f3187f773dd39590431a62deb",
+    "historical512SourceDebt": {
+      "status": "resolved_phase358_full_archive",
+      "resolution": "installed every original lossless raw sheet and 512px formal source frame; all 256px runtime frames are canonical derivations",
+      "historicalRepairReplayAt512": true,
+      "upscaledFromRuntime": false,
+      "resolvedBy": "source/battle/full-source-closure-v1.json",
+      "resolvedBySha256": "a670be2fd7bd18e5a6c7ac6670873dda4702f5c7263ec2c4402c0def67e342ae"
+    }
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
     "identityBoardSha256": "8ecf812e960c8c2dd1ba4200613cb2327495ab5d2e462b8e8be6ac39a7421ccb",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "5a75e2797930fe8699a690eedd30ada0af0813706e3341066339d8d0f041ea08",
+    "battleContactSheetSha256": "b39731e7c074a1cab413961a173e3c44ef2709aab44d18fb162582dd5577f744",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "4059c83e2b1b6b5d07aeec0e0fcfb5cfaa2920adb7d257c89b8b517d8c900135",
+    "battleQcSha256": "32fd30c78ebef85b75706c1b43cfc0090ab186ceb73a8865bfa20c122dae0d3c",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "bd8e1514b5204a77cf0746b23a7fd67f38219c800b207a0f946daa188552dbcd",
     "battleDownReviveSequenceBeforeAfter": "qa/battle/repairs/down-revive-sequence-v1-before-after.png",
@@ -206,7 +220,7 @@
     "battleDownReviveKoSemanticsFaceZoom": "qa/battle/repairs/down-revive-ko-semantics-v2-face-zoom.png",
     "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32",
     "battleSemanticReview": "qa/battle/semantic-review-v2.json",
-    "battleSemanticReviewSha256": "c5d98fe26f2bae8108d5777818429bb46d66b7e364d581c1da3694a08e0175bd",
+    "battleSemanticReviewSha256": "8b88f31751e76b7e2c1c9b144fa95aaa6106b600e36c6863493b890836b696ce",
     "battleRuntimeParity": ".run/evidence/phase350_crystal_wuli_standalone_battle/runtime-parity.json",
     "battleRuntimeParitySha256": "1298d0f129a98ab42bad452dee3a5ec81767339c66e31343858a14af07799ce2",
     "battleImageStructureAudit": ".run/evidence/phase350_crystal_wuli_standalone_battle/image-structure-audit.json",
@@ -220,7 +234,15 @@
     "evolutionGif": "qa/evolution/evolution.gif",
     "evolutionGifSha256": "89c7d8d84696d500d631d48bc57236290e057c261bce5317fd5825797b12da46",
     "evolutionRealMainVideo": ".run/evidence/phase341_crystal_wuli_evolution/Beastbound_Phase341_Crystal_Wuli_Evolution_1x.mp4",
-    "evolutionRealMainVideoSha256": "5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276"
+    "evolutionRealMainVideoSha256": "5199e8f84d1f75ace6d26d9bfe7b9b02a45be69f41517ff5d9f4d0e1da84e276",
+    "battleFullSourceClosure": "source/battle/full-source-closure-v1.json",
+    "battleFullSourceClosureSha256": "a670be2fd7bd18e5a6c7ac6670873dda4702f5c7263ec2c4402c0def67e342ae",
+    "battleFullSourceClosureRuntimeParity": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+    "battleFullSourceClosureRuntimeParitySha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+    "battleFullSourceClosureRealMainVideo": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+    "battleFullSourceClosureRealMainVideoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+    "battleFullSourceClosureVisualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+    "battleFullSourceClosureVisualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
@@ -249,9 +271,18 @@
     "presentationCopy": {
       "intro": "地脉正在回应……",
       "stages": [
-        {"label": "岩甲共鸣", "endFrame": 4},
-        {"label": "晶甲生长", "endFrame": 9},
-        {"label": "晶核定型", "endFrame": 12}
+        {
+          "label": "岩甲共鸣",
+          "endFrame": 4
+        },
+        {
+          "label": "晶甲生长",
+          "endFrame": 9
+        },
+        {
+          "label": "晶核定型",
+          "endFrame": 12
+        }
       ]
     },
     "runtimeRoot": "views/front_3quarter_sw/evolution",
@@ -343,18 +374,18 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
-    "archiveMode": "lean",
-    "sourceFramesTracked": false,
+    "bundleDigest": "c1e8ab8538fb363a233b9f4b26568868e28dce7777fa6faf5d2b116a9a2651dd",
+    "archiveMode": "full",
+    "sourceFramesTracked": true,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
-    "sourceLedgerSha256": "5d4ecd66597a26b3646855c761efc4bdb7ffc10703cd3aec9e6ee96b91c8fa05",
+    "sourceLedgerSha256": "cd0535b2be2b4c33b2f07b933ffaab869ebafe7f3187f773dd39590431a62deb",
     "runtimeRoot": "views",
     "contactSheet": "qa/battle/contact-sheet.png",
     "qcSummary": "qa/battle/qc-summary.json",
     "runtimeFrameCount": 180,
     "runtimeBundleDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
-    "minimumBattleRuntimeEdgeMargin": 13,
+    "minimumBattleRuntimeEdgeMargin": 14,
     "downReviveExactRgba": {
       "front_3quarter_sw": true,
       "back_3quarter_ne": true
@@ -363,13 +394,16 @@
       "status": "passed_self_review_owner_pending",
       "independentSemanticAuditStatus": "passed",
       "review": "qa/battle/semantic-review-v2.json",
-      "reviewSha256": "c5d98fe26f2bae8108d5777818429bb46d66b7e364d581c1da3694a08e0175bd",
+      "reviewSha256": "8b88f31751e76b7e2c1c9b144fa95aaa6106b600e36c6863493b890836b696ce",
       "currentRuntimeParity": {
         "status": "passed",
+        "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+        "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
         "checkedFrames": 180,
         "importFreshCount": 180,
         "canonicalRgbaMatchCount": 180,
-        "sourceSetSha256": "13c1b7ffd961c1e446d2c8816200fcc056b47fa3e3654df771cbc20924092485"
+        "sourceSetSha256": "eaddb2c08ecb4f5c5983d6cd3976116ff44c8af49715710c12870ce3f34c22c8",
+        "errors": []
       },
       "sourceLedgerReconciliation": {
         "status": "passed",
@@ -393,9 +427,59 @@
         "audioPresent": true,
         "fullDecodePassed": true
       },
-      "lean512SourceArchiveDebt": "unresolved",
+      "lean512SourceArchiveDebt": "resolved_phase358_full_archive",
       "ownerReview": "pending",
-      "runtimeEnabled": false
+      "runtimeEnabled": false,
+      "full512SourceArchive": "resolved_phase358_full_archive",
+      "fullSourceClosureValidation": {
+        "status": "passed_owner_pending",
+        "currentRuntimeParity": {
+          "status": "passed",
+          "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+          "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+          "checkedFrames": 180,
+          "importFreshCount": 180,
+          "canonicalRgbaMatchCount": 180,
+          "sourceSetSha256": "eaddb2c08ecb4f5c5983d6cd3976116ff44c8af49715710c12870ce3f34c22c8",
+          "errors": []
+        },
+        "realMainSceneReview": {
+          "status": "self_review_passed_owner_pending",
+          "scene": "res://scenes/Main.tscn",
+          "combinedReview": true,
+          "chapter": "crystal_standalone",
+          "video": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+          "videoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+          "width": 1280,
+          "height": 720,
+          "videoFps": 60,
+          "videoFrameCount": 2269,
+          "durationSeconds": 37.816667,
+          "speedScale": 1.0,
+          "speedFilters": [],
+          "selectedStepCount": 5,
+          "selectedSteps": [
+            "attack",
+            "skill",
+            "dodge",
+            "down",
+            "revive"
+          ],
+          "firstStepSecond": 2.617,
+          "lastStepSecond": 13.617,
+          "audioPresent": true,
+          "audioSampleRate": 48000,
+          "audioChannels": 2,
+          "fullDecodePassed": true,
+          "visualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+          "visualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9",
+          "unexpectedScaleOrIdentityDrift": false,
+          "downReviveContinuityPreserved": true,
+          "runtimeSpeedupUsed": false,
+          "ownerReview": "pending",
+          "runtimeEnabled": false
+        }
+      }
     },
     "qualityRepairs": [
       {
@@ -405,7 +489,10 @@
           "revive"
         ],
         "runtimeFrameCount": 32,
-        "ownerVisualGate": "self_review_passed_owner_pending"
+        "ownerVisualGate": "self_review_passed_owner_pending",
+        "canonicalizedIntoTracked512Source": true,
+        "canonicalizedBy": "source/battle/full-source-closure-v1.json",
+        "upscaledFromRuntime": false
       },
       {
         "id": "down-revive-ko-semantics-v2",
@@ -416,8 +503,74 @@
         "runtimeFrameCount": 12,
         "alphaExact": true,
         "bodyLightingOutlineExactOutsideFaceMasks": true,
-        "ownerVisualGate": "self_review_passed_owner_pending"
+        "ownerVisualGate": "self_review_passed_owner_pending",
+        "canonicalizedIntoTracked512Source": true,
+        "canonicalizedBy": "source/battle/full-source-closure-v1.json",
+        "upscaledFromRuntime": false
       }
-    ]
+    ],
+    "contactSheetSha256": "b39731e7c074a1cab413961a173e3c44ef2709aab44d18fb162582dd5577f744",
+    "qcSummarySha256": "32fd30c78ebef85b75706c1b43cfc0090ab186ceb73a8865bfa20c122dae0d3c",
+    "fullSourceClosure": {
+      "id": "evolved-battle-full-source-closure-v1",
+      "status": "passed_full_archive_runtime_and_visual_validated_owner_pending",
+      "formal512FrameCount": 180,
+      "derived256FrameCount": 180,
+      "rawLosslessArchiveCount": 24,
+      "sourceRuntimeDerivationExact": true,
+      "historicalRepairReplayAt512": true,
+      "changed512DestinationFrameCount": 21,
+      "upscaledFromRuntime": false,
+      "manifest": "source/battle/full-source-closure-v1.json",
+      "manifestSha256": "a670be2fd7bd18e5a6c7ac6670873dda4702f5c7263ec2c4402c0def67e342ae",
+      "ownerReview": "pending",
+      "runtimeEnabled": false,
+      "godotRuntimeParity": {
+        "status": "passed",
+        "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+        "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+        "checkedFrames": 180,
+        "importFreshCount": 180,
+        "canonicalRgbaMatchCount": 180,
+        "sourceSetSha256": "eaddb2c08ecb4f5c5983d6cd3976116ff44c8af49715710c12870ce3f34c22c8",
+        "errors": []
+      },
+      "realMainSceneReview": {
+        "status": "self_review_passed_owner_pending",
+        "scene": "res://scenes/Main.tscn",
+        "combinedReview": true,
+        "chapter": "crystal_standalone",
+        "video": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+        "videoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+        "width": 1280,
+        "height": 720,
+        "videoFps": 60,
+        "videoFrameCount": 2269,
+        "durationSeconds": 37.816667,
+        "speedScale": 1.0,
+        "speedFilters": [],
+        "selectedStepCount": 5,
+        "selectedSteps": [
+          "attack",
+          "skill",
+          "dodge",
+          "down",
+          "revive"
+        ],
+        "firstStepSecond": 2.617,
+        "lastStepSecond": 13.617,
+        "audioPresent": true,
+        "audioSampleRate": 48000,
+        "audioChannels": 2,
+        "fullDecodePassed": true,
+        "visualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+        "visualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9",
+        "unexpectedScaleOrIdentityDrift": false,
+        "downReviveContinuityPreserved": true,
+        "runtimeSpeedupUsed": false,
+        "ownerReview": "pending",
+        "runtimeEnabled": false
+      }
+    }
   }
 }

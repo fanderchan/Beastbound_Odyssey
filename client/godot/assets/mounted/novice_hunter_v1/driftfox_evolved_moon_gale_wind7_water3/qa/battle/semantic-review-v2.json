@@ -161,12 +161,73 @@
     "contactActions01To07": ".run/evidence/phase348_moon_gale_mounted_battle/contact-actions-01-07.png",
     "contactActions01To07Sha256": "82e96291d3509e7cb8a6f151490cde5343494c4801fe7f7184d161381b28dcb2",
     "contactActions08To14": ".run/evidence/phase348_moon_gale_mounted_battle/contact-actions-08-14.png",
-    "contactActions08To14Sha256": "b6527c71882a8ac64e1f1fb2cb67ce386fc484a81dcec8d62af5637c829e2ebf"
+    "contactActions08To14Sha256": "b6527c71882a8ac64e1f1fb2cb67ce386fc484a81dcec8d62af5637c829e2ebf",
+    "fullSourceClosureRuntimeParity": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+    "fullSourceClosureRuntimeParitySha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+    "fullSourceClosureReviewVideo": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+    "fullSourceClosureReviewVideoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+    "fullSourceClosureVisualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+    "fullSourceClosureVisualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9"
   },
   "remainingGates": [
     "project_owner_mounted_battle_visual_review",
     "mounted_world_independent_direction_semantic_audit",
     "route_asset_gate_and_runtime_enablement_discussion",
     "two_reject_two_allow_end_to_end_acceptance"
-  ]
+  ],
+  "fullSourceClosureValidation": {
+    "status": "passed_owner_pending",
+    "manifest": "source/battle/full-source-closure-v1.json",
+    "manifestSha256": "f994f5c20eea4bcd4206727207a81f38b72ce723e9bbc87bb42c854c9be171cb",
+    "formal512FrameCount": 180,
+    "derived256FrameCount": 180,
+    "rawLosslessArchiveCount": 24,
+    "upscaledFromRuntime": false,
+    "currentRuntimeParity": {
+      "status": "passed",
+      "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
+      "reportSha256": "90f59d8e4dade55e0c6535b13b40460d1073b4908fa9e5d867aee7f9a701cc1f",
+      "checkedFrames": 180,
+      "importFreshCount": 180,
+      "canonicalRgbaMatchCount": 180,
+      "sourceSetSha256": "7aa0a91a66479fac1eb07100e75de823f2cb9bfdcf48eb9ce948c1b8a7e1e89a",
+      "errors": []
+    },
+    "realMainSceneReview": {
+      "status": "self_review_passed_owner_pending",
+      "scene": "res://scenes/Main.tscn",
+      "combinedReview": true,
+      "chapter": "moon_mounted",
+      "video": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+      "videoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "videoFrameCount": 2269,
+      "durationSeconds": 37.816667,
+      "speedScale": 1.0,
+      "speedFilters": [],
+      "selectedStepCount": 5,
+      "selectedSteps": [
+        "mounted_attack",
+        "mounted_skill",
+        "mounted_dodge",
+        "mounted_down",
+        "mounted_revive"
+      ],
+      "firstStepSecond": 27.567,
+      "lastStepSecond": 36.1,
+      "audioPresent": true,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "fullDecodePassed": true,
+      "visualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
+      "visualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9",
+      "unexpectedScaleOrIdentityDrift": false,
+      "downReviveContinuityPreserved": true,
+      "runtimeSpeedupUsed": false,
+      "ownerReview": "pending",
+      "runtimeEnabled": false
+    }
+  }
 }

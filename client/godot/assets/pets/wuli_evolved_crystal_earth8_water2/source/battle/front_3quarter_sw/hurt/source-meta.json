@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedSha256": "c715092558cb6c9207659d750ccc94c33bbd3d0018497d8242aa999781855495",
+  "originalGeneratedDecodedRgbaSha256": "2104ea09ec192d53f0b37980ee41017f55d7db3195979e9baf383479edb427e2",
+  "rawArchive": "raw-sheet-lossless.png",
+  "rawArchiveSha256": "c715092558cb6c9207659d750ccc94c33bbd3d0018497d8242aa999781855495",
+  "rawDecodedRgbaSha256": "2104ea09ec192d53f0b37980ee41017f55d7db3195979e9baf383479edb427e2",
+  "prompt": "prompt-used.txt",
+  "promptSha256": "cabd4d7f148d3cb226132c6bc5604f7abf55166ef23e58b9455e460dfa2a80dd",
+  "pipelineMetadata": "pipeline-meta.json",
+  "pipelineSha256": "84f3411a00a7ef758443357d2dec750918d3855f3cb54038722d5d5641fc5b63",
+  "qc": "qa.json",
+  "qcSha256": "16c746dde70dadbe005b0f7b6c1267bce6223a418b11425306980ad2e9299ca8",
+  "canonicalSourceClosure": {
+    "status": "passed",
+    "originalRawArchivePreserved": true,
+    "formal512FrameCount": 6,
+    "derived256FrameCount": 6,
+    "upscaledFromRuntime": false
+  }
+}

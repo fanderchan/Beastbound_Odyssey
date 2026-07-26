@@ -167,10 +167,20 @@
         211,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 16,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "9ae9a353442836fa91e57fac5f82bac1fb0d85155c1a307bdbf64eb5bc03e038",
-      "runtimeRgbaSha256": "ec47cbcbe21b40cec0551b3e260214655a5ba9efbaa89e5f3eb663c4fc1e4515"
+      "runtimeRgbaSha256": "453f93c5a8c160fb926b43510ccdff65dc80b2c564c8aaf5fc3b44ffeee30186",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-1",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-1",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "idle-2",
@@ -268,10 +278,20 @@
         207,
         242
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 14,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "cf74a56667e2ced5399ef09036b93c3927212bdc2f47c98793325fb33b437af8",
-      "runtimeRgbaSha256": "d922d03797be6714a510b264167c795ccd8b2c4be25b53dc9ac6ad800afabaa2"
+      "runtimeRgbaSha256": "4202d12f15130272a851e0e28cd1aa995032dc28bd13fbbd98476e748f7dd8df",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-2",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-2",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "idle-3",
@@ -369,10 +389,20 @@
         205,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 18,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "4331fb96a8004719fadfdff3137c8f3fb0f17b999e35de27680a17f66800fe91",
-      "runtimeRgbaSha256": "d3d251eecedbc10ab9b80b91a926b769b719c561570f18722dadd6b38ee75d5c"
+      "runtimeRgbaSha256": "eb11ea5fc9f3ada6361519d2e0868df0c1d3d833041ce48a67666a2930856b7c",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-3",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-3",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "idle-4",
@@ -470,10 +500,20 @@
         216,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 27,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "284e0e81263c82721599280feaef335b34e5f6db5fa91914d7b6ad88a2bdb298",
-      "runtimeRgbaSha256": "37be8d8cd0ded15c32b31366a47d071402d983b00d199c6cbb2abe40f0380b85"
+      "runtimeRgbaSha256": "90d12852e930d3163a5d78822e481dc5f16a0ab3d10250de81015e7ea139a928",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-4",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-4",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "idle-5",
@@ -571,10 +611,20 @@
         212,
         242
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 15,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "d191a91c834051e54fc850763ce251fdeaab1d5a4d5f90cc5fbe3978bf27a825",
-      "runtimeRgbaSha256": "5c120beb3e10f938143ec929e0336e906e89697616a2e8074e2ce2be77f5b0dc"
+      "runtimeRgbaSha256": "6ceb6c0895d6913bb8aff57f4fe3b69acfe1c9d311231d686de04bf34e024762",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-5",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-5",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "idle-6",
@@ -672,10 +722,20 @@
         207,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 13,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "af84bb3aabe80e0635422a0516d3e9d896dd67ddd8279088318fe196ea710805",
-      "runtimeRgbaSha256": "fc8164f198aed45fc6ad22e7fa091f452b7ae554baaa5d4273f9b96d873a7057"
+      "runtimeRgbaSha256": "573841fed3105b8e4ad9eb3db9a9df10c682d6971f81e755aad979170bdc42c3",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "back_3quarter_ne/idle/idle-6",
+        "originalSourceSlot": "back_3quarter_ne/idle/idle-6",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
   ],
   "originalGeneratedSize": [
@@ -694,5 +754,18 @@
         "metadataSha256": "47595ea55119bb237b7f35a115738207da6c0d1c2929802a9757061d1fe2ce56"
       }
     ]
+  },
+  "canonicalSourceClosure": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "sourceFrameCount": 6,
+    "derivedRuntimeFrameCount": 6,
+    "minimumSourceEdgeMarginAtAlpha8": 30,
+    "minimumRuntimeEdgeMarginAtAlpha8": 14,
+    "historicalRepairReplay": false,
+    "mirroring": false,
+    "upscaledFromRuntime": false
   }
 }

@@ -136,6 +136,10 @@ def _audit_tracked_source_derivation(
     asset_root: Path,
     metadata: dict[str, Any],
     errors: list[str],
+    *,
+    kind: str = "pet",
+    form_id: str | None = None,
+    character_id: str | None = None,
 ) -> tuple[int, int]:
     battle_visual = metadata.get("battleVisual")
     if not isinstance(battle_visual, dict):
@@ -162,8 +166,19 @@ def _audit_tracked_source_derivation(
         return 0, 0
     if ledger.get("archiveMode") != "full":
         errors.append("完整源归档的 source ledger archiveMode 必须为 full")
-    if ledger.get("formId") != metadata.get("formId"):
+    identity_key = "formId" if kind == "pet" else "mountFormId"
+    expected_form_id = (
+        form_id
+        if form_id is not None
+        else metadata.get(identity_key)
+    )
+    if ledger.get("formId") != expected_form_id:
         errors.append("完整源归档的 source ledger formId 与 metadata 不一致")
+    if ledger.get("kind") != kind:
+        errors.append("完整源归档的 source ledger kind 与 bundle 不一致")
+    expected_character_id = character_id if kind == "mounted" else None
+    if ledger.get("characterId") != expected_character_id:
+        errors.append("完整源归档的 source ledger characterId 与 bundle 不一致")
     ledger_actions = ledger.get("actions")
     if not isinstance(ledger_actions, dict):
         errors.append("完整源归档的 source ledger actions 缺失")
@@ -363,6 +378,8 @@ def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
         asset_root,
         metadata,
         errors,
+        kind="pet",
+        form_id=form_id,
     )
 
     valid_frames = 0

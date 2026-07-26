@@ -20,6 +20,7 @@ from typing import Any, Iterable
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from audit_pet_battle_catalog import _audit_tracked_source_derivation
 from sprite_alpha_despill import magenta_edge_metrics
 
 
@@ -769,6 +770,31 @@ def _audit_bundle(
         cache=cache,
         expected_pngs=expected_pngs,
     )
+    source_errors: list[str] = []
+    tracked_source_count, canonical_derived_count = (
+        _audit_tracked_source_derivation(
+            spec.root,
+            metadata,
+            source_errors,
+            kind=spec.kind,
+            form_id=form_id,
+            character_id=(
+                default_character_id if spec.kind == "mounted" else None
+            ),
+        )
+    )
+    result["battle"]["trackedSourceFrameCount"] = tracked_source_count
+    result["battle"][
+        "canonicalDerivedRuntimeFrameCount"
+    ] = canonical_derived_count
+    for message in source_errors:
+        _add_asset_issue(
+            form_result,
+            result,
+            "invalid_full_source_archive",
+            message,
+            _repo_relative(spec.root, repo_root),
+        )
     _audit_orphans(
         spec,
         expected_pngs,

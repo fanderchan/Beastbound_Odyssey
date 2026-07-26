@@ -170,10 +170,20 @@
         210,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 19,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "44c43e4d86d7ce0978f228d5bfaf7876dbef21ba21b17f514455066c2c1d285d",
-      "runtimeRgbaSha256": "10d520a4a7ca5068d6d48090b855a23c803c3a70a095a669a3c37756e5024656"
+      "runtimeRgbaSha256": "54f3882bfbc4dd26926c886fe5d1c4337bc1eefe66bbbff5d5ba8c96927479a1",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-1",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-1",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-2",
@@ -271,10 +281,20 @@
         214,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 17,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "ed550a3d4b33f862e4f8b1892ad1880e2f0a9cc612e885661116bbaec9981d5d",
-      "runtimeRgbaSha256": "92330f0f3f0eca892fe981701c20866e5c2860f54f4e998a7916368311542021"
+      "runtimeRgbaSha256": "f7591e4e6c1fe99f7bf3373172e347efd58192ca6456860aa52af82004ca2ec3",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-2",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-2",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-3",
@@ -372,10 +392,20 @@
         210,
         239
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 20,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "cd74e044777bc0487bb222c55438af061317dd31e1304e75cca04edc33b9ab82",
-      "runtimeRgbaSha256": "2d0bc88e780b8b750888fbc202cf0548405a86b3f9f4b20aba074efbf2ae2e7b"
+      "runtimeRgbaSha256": "eaa517624f6258f6127d02d260a47e844123f4f99de6a2b4f19ea99aaf56b6df",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-3",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-3",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-4",
@@ -473,10 +503,20 @@
         214,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 15,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "fe5b667bc331372d54c1103266b4adcc90e9e418ab145bdb12698df1c08738d3",
-      "runtimeRgbaSha256": "40eaf98befa9375e24e51b2bdd1a4bee7f04607e278d7cd57abd2c2d4e9241cf"
+      "runtimeRgbaSha256": "494480f31127ac4ad42666b30d7260d743eb3dcc299366c00ef5baf016500e97",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-4",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-4",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-5",
@@ -574,10 +614,20 @@
         199,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 22,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "b8084efb063e542035f73c9bbc5e9911cb25e9eedbb4adf377823f5fffc21fef",
-      "runtimeRgbaSha256": "e3a25f9584adc8a7840f8f01de1b6dcc75fef306b96d09caa55a287045a0409c"
+      "runtimeRgbaSha256": "fe0e100c65ae68356d1671906e6dfa0295abe7dd48d1ee777edf91fe9687ac5b",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-5",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-5",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-6",
@@ -675,10 +725,20 @@
         200,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 20,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "fa6c478604a7394e99a901fa637d0ca224e1f42c7b0aae21c74583704b19b2c5",
-      "runtimeRgbaSha256": "f3e81a804a47ee40ee3d174d3ece7096e8ea5f88c96f311561132dfa42a94913"
+      "runtimeRgbaSha256": "a579e1d9f7fe89ea57fc7da6270a7b1aa00395a51ba41df76473458eb550c10c",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-6",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-6",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-7",
@@ -776,10 +836,20 @@
         204,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 27,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "d1eae5b9984c1061546bf1d9761577065c8ca08c9cd77f1069936c0f7dccc270",
-      "runtimeRgbaSha256": "0b3026882174aaa64c437d072a46ef7b6141e100a049bc30de333fc9a094cfcc"
+      "runtimeRgbaSha256": "0820e3cbce0012e74f084eedbe390ea8eb41287852f51c0810f648462cc83e58",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-7",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-7",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "dodge-8",
@@ -877,10 +947,20 @@
         205,
         240
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 30,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "72c88e309c3390eca46feebc55d79ea7949cd439a35aa320e9cc794fa3172404",
-      "runtimeRgbaSha256": "4600c066e436f01111b100bf8d8200b0a64a8eba04bb383e01287a5d6220ae3d"
+      "runtimeRgbaSha256": "3a5c952d5e742cc50e04d5cb8eb3f49f988f235de2c7407181750731911fceed",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/dodge/dodge-8",
+        "originalSourceSlot": "front_3quarter_sw/dodge/dodge-8",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
   ],
   "originalGeneratedSize": [
@@ -899,5 +979,18 @@
         "metadataSha256": "d02f9c1d988e5c40ce8a86c79ed356be59c7002bd885bf394915eb1f56c67d80"
       }
     ]
+  },
+  "canonicalSourceClosure": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "sourceFrameCount": 8,
+    "derivedRuntimeFrameCount": 8,
+    "minimumSourceEdgeMarginAtAlpha8": 30,
+    "minimumRuntimeEdgeMarginAtAlpha8": 16,
+    "historicalRepairReplay": false,
+    "mirroring": false,
+    "upscaledFromRuntime": false
   }
 }

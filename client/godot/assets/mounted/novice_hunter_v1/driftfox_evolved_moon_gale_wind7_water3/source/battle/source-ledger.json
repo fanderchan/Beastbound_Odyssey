@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "archiveMode": "lean",
+  "archiveMode": "full",
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "kind": "mounted",
   "characterId": "novice_hunter_v1",
@@ -9,7 +9,7 @@
   "ownership": "project-owned original generated Beastbound artwork",
   "replacementPath": "regenerate from archived prompts, representative raw sheets and the complete local .run production archive",
   "fullSourceValidationRequiredBeforeInstall": true,
-  "repositoryPolicy": "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and duplicate clean/raw intermediates remain in the local production archive.",
+  "repositoryPolicy": "Every validated 512px source frame, lossless raw sheet, prompt, pipeline record, QC record, and derived runtime frame is tracked in the repository.",
   "actions": {
     "front_3quarter_sw": {
       "idle": {
@@ -37,7 +37,7 @@
           "700428428c2a518bc5410a17b5deb7a4d0cfe3c3fa34d0028f8d60f10bc46142"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": true
       },
       "walk": {
         "originalGeneratedSha256": "f90c898f3e47b6f532b7b89fa9d2cbf399386536bccd12de4d747aa3e60c4df8",
@@ -67,8 +67,8 @@
           "0ffbd61d70c0cc8c03c53defd6df6cf03536e2814dceae5a2cfb9680b1ecc06b",
           "79ef10698e892de4953050ad504378f5a198453c0d6a6aa75f061be8c3c51c85"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "attack": {
         "originalGeneratedSha256": "6299ada09ede36530c0065921b5a1dcc103fac5fcee9c3adfc6912731d1b8ce3",
@@ -98,8 +98,8 @@
           "d96d73b0cd9d4853225287d5fe7404f50c102eed65b0c3ddec07d17e8ba418d0",
           "e4470e89016454b970a9fb03b1cc65c0c97a2ab99766168179bc528b9f4828fc"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "skill": {
         "originalGeneratedSha256": "57be51bdd164e6e2898277ec26b0899eba1758d64c823645083349e6e8492c7b",
@@ -129,8 +129,8 @@
           "b1279c58d74e8ae8bb9fc40de1d05f025a895d45c7db5e44e62786ffb009c2dd",
           "ec4bd1a5bb7d51fd02c8174fc5ec84793872fe57e7cedca82fe5fe18aa37834e"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "hurt": {
         "originalGeneratedSha256": "4fa0b4d7119e5e63d3d52eb7984d983db3bb02d29dbabdad9b2471aa3cbc2462",
@@ -156,8 +156,8 @@
           "5d64e7c253e5f9bb3483adcfc330c51204dcab6562cb36fb6b66bf20733a711a",
           "0f8e65b95280f68698fae2b89a8b1f87acaaf10d1a87bf56a0f95677dd83998f"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "defend": {
         "originalGeneratedSha256": "04d805e6f9031314d08a161cf414d3846d81acd88379c9f9bb68a9ec0ceef402",
@@ -183,8 +183,8 @@
           "7d7a8500e529a55f393702b403efd57d81574bf0d45c3023a92d330ebfdc39e5",
           "f9cd0eab20724c7fb21348fc2855a9b65a5968abfa8d38580c0fb9ffcd9f1156"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "dodge": {
         "originalGeneratedSha256": "df086c31897e8713fe07768841de11a1c5e4f76b7c6799232e3ac33afd710c92",
@@ -214,8 +214,8 @@
           "ed4265313a0ed35d2a34be9c381975382964dcfb6f82cc4c4c4434848ca05218",
           "e54971e19cca17c57756f1951619edee8bc66703dec8ee84b5d884f226119d6d"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "counter": {
         "originalGeneratedSha256": "49752fd2fe2a51452f0c4bce98e8a53e95b7225c071d0d538aa592938aa2d543",
@@ -245,8 +245,8 @@
           "c014b975b36f117176f2327a74b945c7958f71c5b31a7d66afc0b178c622f542",
           "c2c9a6b1ee7354a99d99de049e9c291667d9acedc6fb0838ee1723bbd91849f4"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "stagger": {
         "originalGeneratedSha256": "aaae77304541897a76147058f641508390f7ad4b785368a4dda933ff9a160c90",
@@ -276,8 +276,8 @@
           "b598b396fe0467e5a449c50393de9d0ac2b5ac1c0112893c0dc14bbe9c306847",
           "3e1cf6718543384eab60c732f964a5710066ddec58acc8c0b64e304aa4a02be4"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "knockaway": {
         "originalGeneratedSha256": "a14b654fdabbce2b29e72f6a6ea1cc65a293ec8cf947adfecff6498ece102cdd",
@@ -307,8 +307,8 @@
           "b00fcb41792ca4985efa07b1eff335f49eeaf9481251629e0bdce07f47266619",
           "03380ff1703f8bc33fbcd8d5ef5c43f53b5db22531127241dffb67368a77491d"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "down": {
         "originalGeneratedSha256": "af55878efd9d595260e9379d7d1e25d68348c50e59ca072cefb2fe62daf9681f",
@@ -338,8 +338,8 @@
           "722f787663ace253ef644478854d360c0cc88296568ee0a05c33984c8c20b95e",
           "563a1039eb4b9eebcfa3d6d0b272e1963ebeef0bbb2ef9e8626822e8ad1a0015"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "revive": {
         "originalGeneratedSha256": "af55878efd9d595260e9379d7d1e25d68348c50e59ca072cefb2fe62daf9681f",
@@ -369,8 +369,8 @@
           "a98b724e7b97b74cedbd4ba9ba3e090fa2c5346b206a7be8852c0fae35a20ea7",
           "0bef0e31b7137824abbcc1858b5c611ea1487ef53c05433f612049c0d59d5701"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       }
     },
     "back_3quarter_ne": {
@@ -399,7 +399,7 @@
           "cede76a155dc5873613a848266929284de99136469ed3aa2c7a236b5be592bc8"
         ],
         "representativeRawTracked": true,
-        "sourceFramesTracked": false
+        "sourceFramesTracked": true
       },
       "walk": {
         "originalGeneratedSha256": "0886bc58ab069a31afadc2e529586a5753cdccdd063a924cd0e494a971c9202c",
@@ -429,8 +429,8 @@
           "c4866bf64558065adeb4b3d2145eedd1c63fd561cc2dc84ab162772a4a122083",
           "5dc3cbaaedd29c168f9e39ac7aaca0e845d79eea8be04958a907f2739c3999ed"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "attack": {
         "originalGeneratedSha256": "463a2e5fa82b7a5144b8f901cf0227c5fc435fd407ce807f793445992770d73d",
@@ -460,8 +460,8 @@
           "aab09ef17a3641c29410f8ab5f621355c3b19759f58835f1bd774bb4112be391",
           "828a8e2849fe615e9f6fa547eea88ba3aad0f6f7c8bfec2d5b95785c0b810eef"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "skill": {
         "originalGeneratedSha256": "29cc8eb0feb9a06335e235240b310ed4a20c7351e9cb2ca28258c962b769bf27",
@@ -491,8 +491,8 @@
           "c62047358103f62473379d6139ba88a87da468535d1d83775f7675c9342e491c",
           "3f44de2b1fcc242b7085e28ea213fb4c3c497838bdba20338c6eabc110467b1c"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "hurt": {
         "originalGeneratedSha256": "1b13f9d2872a9df92b0da0c76a78d3d78b00bfb9171d9e2705da1fa54d829c4c",
@@ -518,8 +518,8 @@
           "244e6508eb8becfa43585a7b996451fd8fe96d1acb95fbf37573357b576dc3b7",
           "4f03b7e84870dfc71e69da007eab2d2b165d9590b0581aeaefe486b701c8e4eb"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "defend": {
         "originalGeneratedSha256": "d770ba9e7f3cefcecedf14fb6ed34586d99bb1d1dfb1dbb3fba5386cef9c81cb",
@@ -545,8 +545,8 @@
           "391e621c409467ca267f2a099831e41bbab5bad85e971a96e3ec1cbda2885d8f",
           "c07a311476554b6ecb9ae0009d1e3bc9af01ac9fa0ca6f341490d78ac480cb77"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "dodge": {
         "originalGeneratedSha256": "8808e9cf72e3e339a18c71108aad95909ffe26f1fe760b2491a6a6242e5cbea2",
@@ -576,8 +576,8 @@
           "bcf49ea19d976123f3250387af26c69335ac9476baa9dbd2ead753eb0f0d5160",
           "26eee9c885e6088e6ed97bd7747be06de022e95bf6ab24dc66b0f6fb26858a74"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "counter": {
         "originalGeneratedSha256": "dbc0fb1fa9958b3d3dc6f989479404cc233259d13ed77bd85f11c77e3dbf112a",
@@ -607,8 +607,8 @@
           "79438d254d235867fdb9fb6f5b32ac774232ca6a0fd14f22eaec9c9999d16434",
           "0b0c2c43ffe2a4bfbbd92e2585d2ca47d6a9441e5d07169c3a7707150474ea26"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "stagger": {
         "originalGeneratedSha256": "44c8f908b39a0a79b3ae20082b7b475b7d98b847f2a1c4fb9a9b89ad095db9f7",
@@ -638,8 +638,8 @@
           "b1e7c9d9b289f8de74a0eb5b71dd3d3395b03b2cf6cd09399a41363c92008a78",
           "2687362c6745eeeac354889e4a5eed693e7cc717b6c2600aebb1a1fa69afe738"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "knockaway": {
         "originalGeneratedSha256": "c6c17ee017ca85f31c46885996eb8f2729d23584c00cec1be1a4af1a75418016",
@@ -669,8 +669,8 @@
           "18aa2d828578b15545f3e2346c94e01f62a7bc2332ce31e7159481a51d4e735c",
           "5fdca2b963e174208cbe2b6f92e380207f6ec04f15945e83601fe2fd3f5298b0"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "down": {
         "originalGeneratedSha256": "cb6c46172b788594fcf2d863f30d4557571d264be88dd21cdc297d29586318d8",
@@ -700,8 +700,8 @@
           "320391ec2f70427fe58b6d9475e5c5c5b9dde8888e52956f15ae90c3d8284979",
           "36836808298f03485f0f47ea9de735fd7aab231e7ecfce6777bc1c506c6788eb"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       },
       "revive": {
         "originalGeneratedSha256": "cb6c46172b788594fcf2d863f30d4557571d264be88dd21cdc297d29586318d8",
@@ -731,8 +731,8 @@
           "18e9fce01787758b238d12d19851c32ae239d72aab4746400c960c2d420f4b48",
           "90d955466d4566acfd4cb84e1ef6e706c7b5a58d261172d70464f9a984780654"
         ],
-        "representativeRawTracked": false,
-        "sourceFramesTracked": false
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true
       }
     }
   }

@@ -672,8 +672,8 @@ def _validate_action(
     source_images: list[Image.Image] = []
     runtime_images: list[Image.Image] = []
     hashes: dict[str, str] = {}
-    seen_source: set[str] = set()
-    seen_runtime: set[str] = set()
+    seen_source: dict[str, str] = {}
+    seen_runtime: dict[str, str] = {}
     for index, (slot, metadata) in enumerate(zip(slots, frame_meta, strict=True), start=1):
         if not isinstance(metadata, dict) or metadata.get("slot") != slot:
             raise BattleBundleError(f"{view}/{action} pipeline slot metadata mismatch at {index}")
@@ -689,10 +689,30 @@ def _validate_action(
             raise BattleBundleError(f"{view}/{action}/{slot} source hash does not match pipeline")
         if runtime_digest != _require_sha(metadata.get("runtimeRgbaSha256"), f"{view}/{action}/{slot} runtime hash"):
             raise BattleBundleError(f"{view}/{action}/{slot} runtime hash does not match pipeline")
-        if source_digest in seen_source or runtime_digest in seen_runtime:
-            raise BattleBundleError(f"{view}/{action} contains duplicate frame content at {slot}")
-        seen_source.add(source_digest)
-        seen_runtime.add(runtime_digest)
+        prior_source_slot = seen_source.get(source_digest)
+        prior_runtime_slot = seen_runtime.get(runtime_digest)
+        intentional_duplicate = metadata.get("intentionalDuplicateOf")
+        has_duplicate = prior_source_slot is not None or prior_runtime_slot is not None
+        if has_duplicate:
+            expected_prior_slot = f"{action}-{index - 1}"
+            if (
+                action not in {"down", "revive"}
+                or index <= 1
+                or prior_source_slot != expected_prior_slot
+                or prior_runtime_slot != expected_prior_slot
+                or intentional_duplicate != expected_prior_slot
+                or metadata.get("intentionalDuplicateReason") != "authored_temporal_hold"
+            ):
+                raise BattleBundleError(
+                    f"{view}/{action} contains duplicate frame content at {slot}"
+                )
+        elif intentional_duplicate is not None:
+            raise BattleBundleError(
+                f"{view}/{action}/{slot} declares an intentional duplicate without "
+                "matching the immediately preceding source/runtime frame"
+            )
+        seen_source[source_digest] = slot
+        seen_runtime[runtime_digest] = slot
         source_mode_name = "sourceResampleMode"
         runtime_mode_name = "runtimeResampleMode"
         source_mode_present = source_mode_name in metadata

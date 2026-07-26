@@ -901,6 +901,57 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.BattleBundleError, "duplicate frame content"):
                 MODULE.install_bundle(_options(staging, root / "asset-root"))
 
+    def test_explicit_adjacent_down_hold_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            action_root = staging / "views/front_3quarter_sw/down"
+            source = action_root / "source-frames/down-7.png"
+            runtime = action_root / "runtime-frames/down-7.png"
+            (action_root / "source-frames/down-8.png").write_bytes(source.read_bytes())
+            (action_root / "runtime-frames/down-8.png").write_bytes(runtime.read_bytes())
+            pipeline_path = action_root / "pipeline-meta.json"
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][7]["intentionalDuplicateOf"] = "down-7"
+            pipeline["frames"][7]["intentionalDuplicateReason"] = "authored_temporal_hold"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+
+            for view in MODULE.FORMAL_VIEWS:
+                down_root = staging / "views" / view / "down"
+                revive_root = staging / "views" / view / "revive"
+                (revive_root / "source-frames/revive-1.png").write_bytes(
+                    (down_root / "source-frames/down-8.png").read_bytes()
+                )
+                (revive_root / "runtime-frames/revive-1.png").write_bytes(
+                    (down_root / "runtime-frames/down-8.png").read_bytes()
+                )
+                _refresh_action_integrity(revive_root)
+
+            summary = MODULE.install_bundle(
+                _options(staging, root / "asset-root")
+            )
+            self.assertTrue(summary["changed"])
+            self.assertEqual(summary["frameCount"], 180)
+
+    def test_duplicate_marker_without_matching_hold_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            action_root = staging / "views/front_3quarter_sw/down"
+            pipeline_path = action_root / "pipeline-meta.json"
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["intentionalDuplicateOf"] = "down-1"
+            pipeline["frames"][1]["intentionalDuplicateReason"] = "authored_temporal_hold"
+            _write_json(pipeline_path, pipeline)
+            _refresh_action_integrity(action_root)
+
+            with self.assertRaisesRegex(
+                MODULE.BattleBundleError,
+                "declares an intentional duplicate",
+            ):
+                MODULE.install_bundle(_options(staging, root / "asset-root"))
+
     def test_exact_mirrored_battle_view_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

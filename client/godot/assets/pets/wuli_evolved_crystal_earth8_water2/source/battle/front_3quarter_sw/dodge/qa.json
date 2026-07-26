@@ -110,5 +110,14 @@
       "residualMagentaPixels": 0,
       "transparentRgbLeakPixels": 0
     }
-  ]
+  ],
+  "canonicalSourceClosure": {
+    "status": "passed",
+    "sourceFrameCount": 8,
+    "derivedRuntimeFrameCount": 8,
+    "minimumSourceEdgeMarginAtAlpha8": 30,
+    "minimumRuntimeEdgeMarginAtAlpha8": 16,
+    "sourceRuntimeDerivationExact": true,
+    "upscaledFromRuntime": false
+  }
 }

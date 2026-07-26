@@ -170,10 +170,20 @@
         213,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 18,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "f43f30f37dc69960a1f9ffc64c48372455223d3f7b8188dc084b29c05ec40bc6",
-      "runtimeRgbaSha256": "3c50321e07cf5db711015acab5b01580fc4cd5ef3a3f1b356394a896a740f138"
+      "runtimeRgbaSha256": "20f439714f43f5ac435a1ff8296dee7327828c37819a8a6c7fa6cf550c8070da",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-1",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-1",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-2",
@@ -271,10 +281,20 @@
         215,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 22,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "3887230437ca222ae7fa9c059bad40de941a5c9cbf2ad190123e34b69fb1828b",
-      "runtimeRgbaSha256": "bd2b322883bc7c63111a757d53a385607274e7c96a84da9401c8fcf9ce66545a"
+      "runtimeRgbaSha256": "d4509a232d9d0f2a491735667b2118fe1147d2bdfd0b4ec429c132e6e07a0417",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-2",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-2",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-3",
@@ -372,10 +392,20 @@
         215,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 22,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "02b09c237d41f6fe827c7e4e6e7065328048bbf88672fc12e1f66ad835459fef",
-      "runtimeRgbaSha256": "910cdcb97188db5c9c51e8c243110759eb665b9b46d24fae0b12c2cc3c259bcd"
+      "runtimeRgbaSha256": "6af96dc47bbe6dda597efc29614915a081680d446cf65ed2d1d3e5e77bdfa285",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-3",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-3",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-4",
@@ -473,10 +503,20 @@
         215,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 22,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "8758b149edc9d0c3c66fd96b3f91d7a5ac6115e039f46f121bab38c098874069",
-      "runtimeRgbaSha256": "43f450a99a11250959f2a2804e8a060be8ac5e869bafe5150e5f141765c04aea"
+      "runtimeRgbaSha256": "b04cb85fae79a805bf6be61e64c1ec6f38e6adf57a0f56e3022d2a31c851a18c",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-4",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-4",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-5",
@@ -574,10 +614,20 @@
         213,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 23,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "5e498d716168b5d3363e209152ac1d8584e861cfdd52c632112541340be02781",
-      "runtimeRgbaSha256": "da489dc4ed7932eee5f4d721796f3081a683d401252b62259b0e75580439a62a"
+      "runtimeRgbaSha256": "47bd4f3d8f1048e7e91f8b34e9ac25bd5ded74927d632dfd041d83311af30ba0",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-5",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-5",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-6",
@@ -675,10 +725,20 @@
         213,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 23,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "9e66b532f134c31fdf365b8001f43f0096cb67da39a780df90302262d9d3960a",
-      "runtimeRgbaSha256": "979fa6ff276bbd5b76d01019454fb2c6ee90207913473c2fe3a93788b1781eb2"
+      "runtimeRgbaSha256": "9dc5467f9068a7f9c2646cca8df3067c999c0e719452865787fc4ef12c31394e",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-6",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-6",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-7",
@@ -776,10 +836,20 @@
         211,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 20,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "c9c8e24f614d2cc5b298de15d1fe6e510aa33cbcecb5c0d3a06feda7a1452c01",
-      "runtimeRgbaSha256": "11f96f1f92fe8bcd5b2e2c4f9a1df90fdbb0b34d661f73766c9a88e7a7aecdce"
+      "runtimeRgbaSha256": "fc95a12632dcf675807f77caf585376254d03955dbccd33adb21710df2a4eb08",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-7",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-7",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "walk-8",
@@ -877,10 +947,20 @@
         213,
         241
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 23,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "990052ec1511694031efdbc735c4373f81399a047391143f42192261c04449ad",
-      "runtimeRgbaSha256": "18c08d22dff3c18b3baacd16822a8be23a7d0e3ae46c72b97277bd24019c95b9"
+      "runtimeRgbaSha256": "5d7fab741f3ca5e33e676ab04ef2ab8163fae5803304c77eb8ad55626cf0328d",
+      "canonicalSourceClosure": {
+        "schemaVersion": 1,
+        "status": "preserved_original_512",
+        "destinationSlot": "front_3quarter_sw/walk/walk-8",
+        "originalSourceSlot": "front_3quarter_sw/walk/walk-8",
+        "sequenceReassigned": false,
+        "localKoEyeRepair": false,
+        "upscaledFromRuntime": false,
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
   ],
   "originalGeneratedSize": [
@@ -899,5 +979,18 @@
         "metadataSha256": "0b713280bab87931c20f7924a276584974452af07745e3038bc290c2b50b42f7"
       }
     ]
+  },
+  "canonicalSourceClosure": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "sourceFrameCount": 8,
+    "derivedRuntimeFrameCount": 8,
+    "minimumSourceEdgeMarginAtAlpha8": 30,
+    "minimumRuntimeEdgeMarginAtAlpha8": 15,
+    "historicalRepairReplay": false,
+    "mirroring": false,
+    "upscaledFromRuntime": false
   }
 }

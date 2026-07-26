@@ -9,7 +9,14 @@
   "prompt": "prompt-used.txt",
   "promptSha256": "e4e13960b2534ec424c8afb66738d12f8c6ea3a0e21590f20de529f6ac3432ee",
   "pipelineMetadata": "pipeline-meta.json",
-  "pipelineSha256": "6c65fe772aea4c2716c9bf5c04da5c272fd45044892b51470ba6f0bae233c359",
+  "pipelineSha256": "64155b23078bbbbfe286c95af1deda21785cd042717bb17f4f6707ea0bbaac71",
   "qc": "qa.json",
-  "qcSha256": "7ec412c93d6e27b3765a7b6729476f56e946f543c6f871af1aadaa99c0c3becc"
+  "qcSha256": "36de440f157db62943cb0fb74b02a992329bd0632e38006a3efaf9cb4071b6c3",
+  "canonicalSourceClosure": {
+    "status": "passed",
+    "originalRawArchivePreserved": true,
+    "formal512FrameCount": 6,
+    "derived256FrameCount": 6,
+    "upscaledFromRuntime": false
+  }
 }

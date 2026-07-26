@@ -29,6 +29,10 @@ DIRECTIONS = (
     "southeast",
 )
 VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+
+from build_pet_art_bundle import derive_runtime_frame, rgba_hash  # noqa: E402
+from install_pet_battle_bundle import ACTION_SPECS  # noqa: E402
 
 
 def _read_fixture() -> dict[str, Any]:
@@ -139,6 +143,144 @@ def _materialize_all(repo_root: Path, catalog: dict[str, Any]) -> None:
     _materialize_bundle(repo_root, catalog, "mounted", 1)
 
 
+def _materialize_full_source_battle(
+    repo_root: Path,
+    catalog: dict[str, Any],
+    kind: str,
+) -> None:
+    form = catalog["forms"][0]
+    bundle = form[kind]
+    root = repo_root / bundle["root"]
+    metadata_path = repo_root / bundle["metadataPath"]
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["actions"] = {
+        action: {
+            "frameCount": frame_count,
+            "fps": fps,
+            "loop": loop,
+        }
+        for action, (frame_count, fps, loop) in ACTION_SPECS.items()
+    }
+    metadata["battleVisual"] = {
+        "archiveMode": "full",
+        "sourceFramesTracked": True,
+        "sourceLedger": "source/battle/source-ledger.json",
+    }
+    _write_json(metadata_path, metadata)
+
+    actions: dict[str, dict[str, object]] = {}
+    down_holds: dict[str, Image.Image] = {}
+    for view_index, view in enumerate(VIEWS):
+        view_actions: dict[str, object] = {}
+        for action_index, (action, (frame_count, _fps, _loop)) in enumerate(
+            ACTION_SPECS.items()
+        ):
+            source_hashes: list[str] = []
+            runtime_hashes: list[str] = []
+            frame_records: list[dict[str, object]] = []
+            for index in range(1, frame_count + 1):
+                if action == "revive" and index == 1:
+                    source = down_holds[view].copy()
+                else:
+                    source = Image.new(
+                        "RGBA",
+                        (512, 512),
+                        (0, 0, 0, 0),
+                    )
+                    draw = ImageDraw.Draw(source)
+                    left = 104 + view_index * 18 + action_index
+                    top = 116 + index
+                    draw.rounded_rectangle(
+                        (left, top, left + 250, top + 252),
+                        radius=38,
+                        fill=(
+                            35 + action_index * 7,
+                            85 + index * 3,
+                            120 + view_index * 40,
+                            255,
+                        ),
+                    )
+                    draw.rectangle(
+                        (
+                            left + 24 + index,
+                            top + 31,
+                            left + 42 + index,
+                            top + 49,
+                        ),
+                        fill=(238, 190, 72, 255),
+                    )
+                if action == "down" and index == frame_count:
+                    down_holds[view] = source.copy()
+                runtime, _cleaned = derive_runtime_frame(
+                    source,
+                    (255, 0, 255),
+                    30.0,
+                    96,
+                )
+                source_path = (
+                    root
+                    / "source/battle"
+                    / view
+                    / action
+                    / "source-frames"
+                    / f"{action}-{index}.png"
+                )
+                runtime_path = (
+                    root
+                    / "views"
+                    / view
+                    / action
+                    / f"{action}-{index}.png"
+                )
+                source_path.parent.mkdir(parents=True, exist_ok=True)
+                runtime_path.parent.mkdir(parents=True, exist_ok=True)
+                source.save(source_path)
+                runtime.save(runtime_path)
+                source_digest = rgba_hash(source)
+                runtime_digest = rgba_hash(runtime)
+                source_hashes.append(source_digest)
+                runtime_hashes.append(runtime_digest)
+                frame_records.append(
+                    {
+                        "slot": f"{action}-{index}",
+                        "sourceRgbaSha256": source_digest,
+                        "runtimeRgbaSha256": runtime_digest,
+                    }
+                )
+            _write_json(
+                root
+                / "source/battle"
+                / view
+                / action
+                / "pipeline-meta.json",
+                {
+                    "key": "#FF00FF",
+                    "residualMagentaDistance": 30.0,
+                    "fringeCleanupAlpha": 96,
+                    "frames": frame_records,
+                },
+            )
+            view_actions[action] = {
+                "sourceFramesTracked": True,
+                "sourceFrameRgbaSha256": source_hashes,
+                "runtimeFrameRgbaSha256": runtime_hashes,
+            }
+        actions[view] = view_actions
+    _write_json(
+        root / "source/battle/source-ledger.json",
+        {
+            "schemaVersion": 1,
+            "archiveMode": "full",
+            "formId": form["formId"],
+            "kind": kind,
+            "characterId": (
+                catalog["defaultCharacterId"] if kind == "mounted" else None
+            ),
+            "actions": actions,
+        },
+    )
+
+
 def _run(repo_root: Path, catalog: dict[str, Any]) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     catalog_path = repo_root / "pet_art_catalog.json"
     report_path = repo_root / "report.json"
@@ -187,6 +329,48 @@ class PetArtBatchAuditTest(unittest.TestCase):
             self.assertEqual(report["forms"][0]["pet"]["expectedPngCount"], 64)
             self.assertEqual(report["forms"][0]["mounted"]["validatedPngCount"], 64)
             self.assertTrue((root / "report.md").is_file())
+
+    def test_mounted_full_source_derivation_is_audited(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            _materialize_full_source_battle(root, catalog, "mounted")
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            mounted = report["forms"][0]["mounted"]["battle"]
+            self.assertEqual(mounted["trackedSourceFrameCount"], 180)
+            self.assertEqual(
+                mounted["canonicalDerivedRuntimeFrameCount"],
+                180,
+            )
+
+    def test_mounted_runtime_overlay_breaks_full_source_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            _materialize_full_source_battle(root, catalog, "mounted")
+            mounted_root = root / catalog["forms"][0]["mounted"]["root"]
+            runtime = (
+                mounted_root
+                / "views/front_3quarter_sw/attack/attack-2.png"
+            )
+            with Image.open(runtime) as opened:
+                changed = opened.convert("RGBA").copy()
+            ImageDraw.Draw(changed).rectangle(
+                (90, 90, 96, 96),
+                fill=(255, 255, 255, 255),
+            )
+            changed.save(runtime)
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn(
+                "invalid_full_source_archive",
+                _issue_codes(report),
+            )
 
     def test_horizontal_mirror_fake_direction_blocks_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
