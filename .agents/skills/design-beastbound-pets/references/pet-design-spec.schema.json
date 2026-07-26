@@ -187,7 +187,6 @@
             "runtimeMirroring",
             "battleViews",
             "battleScenarios",
-            "mounted",
             "reviewScenes",
             "ownerReviewRequired",
             "ownerReviewStatus",
@@ -196,10 +195,10 @@
           "properties": {
             "deliveryScope": {"const": "full_release"},
             "identityLockRequired": {"const": true},
-            "rideable": {"const": true},
+            "rideable": {"type": "boolean"},
             "worldSubjectSets": {
               "type": "array",
-              "minItems": 3,
+              "minItems": 1,
               "maxItems": 3,
               "uniqueItems": true,
               "items": {"enum": ["character", "pet", "mounted_character_pet"]}
@@ -259,7 +258,43 @@
               "uniqueItems": true,
               "items": {"type": "string", "minLength": 1}
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"rideable": {"const": true}},
+                "required": ["rideable"]
+              },
+              "then": {
+                "required": ["mounted"],
+                "properties": {
+                  "worldSubjectSets": {
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "allOf": [
+                      {"contains": {"const": "character"}},
+                      {"contains": {"const": "pet"}},
+                      {"contains": {"const": "mounted_character_pet"}}
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {"rideable": {"const": false}},
+                "required": ["rideable"]
+              },
+              "then": {
+                "properties": {
+                  "worldSubjectSets": {
+                    "const": ["pet"]
+                  }
+                },
+                "not": {"required": ["mounted"]}
+              }
+            }
+          ]
         }
       },
       "allOf": [
@@ -355,12 +390,55 @@
           "progression": {
             "properties": {
               "paidResetPolicy": {
-                "properties": {"allowed": {"const": false}},
-                "required": ["allowed"],
-                "not": {
-                  "properties": {"ineligibleReason": {"const": "terminal_evolution"}},
-                  "required": ["ineligibleReason"]
-                }
+                "properties": {
+                  "allowed": {"const": false},
+                  "ineligibleReason": {"const": "terminal_fusion"}
+                },
+                "required": ["allowed", "ineligibleReason"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "acquisition": {
+            "properties": {"sourceType": {"const": "fusion"}},
+            "required": ["sourceType"]
+          }
+        },
+        "required": ["acquisition"]
+      },
+      "then": {
+        "properties": {
+          "presentation": {
+            "properties": {
+              "artProduction": {
+                "properties": {"rideable": {"const": false}}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "acquisition": {
+            "properties": {"sourceType": {"not": {"const": "fusion"}}},
+            "required": ["sourceType"]
+          }
+        },
+        "required": ["acquisition"]
+      },
+      "then": {
+        "properties": {
+          "presentation": {
+            "properties": {
+              "artProduction": {
+                "properties": {"rideable": {"const": true}}
               }
             }
           }

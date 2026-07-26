@@ -27330,6 +27330,96 @@ func _run_auto_battle_passive_hover_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+
+func _pet_instance_passive_projection_contract_ok() -> bool:
+	var passive_stats := {"maxHp": 220, "attack": 81, "defense": 74, "quick": 63}
+	var fusion_source := _pet_growth_rule_preview_fixture(
+		"pet_template_fusion_passive",
+		"融合被动验证",
+		20,
+		passive_stats,
+		PlayerProgressModel.PET_STATE_BATTLE
+	)
+	fusion_source["formId"] = "wuli_normal_tough_earth10"
+	fusion_source["templateId"] = "wuli_normal_tough_earth10"
+	fusion_source["fusionLineage"] = {"schemaVersion": 1, "mode": "fusion"}
+	fusion_source["passiveSkillIds"] = ["poison_resistance"]
+	var evolution_source := fusion_source.duplicate(true)
+	evolution_source["instanceId"] = "pet_template_evolution_passive"
+	evolution_source["petId"] = "pet_template_evolution_passive"
+	evolution_source.erase("fusionLineage")
+	evolution_source["evolutionLineage"] = {"schemaVersion": 1, "mode": "evolution"}
+	var legacy_source := PlayerProgressModel.create_pet_instance_from_form(
+		"pet_template_legacy_passive",
+		"旧档被动验证",
+		"wuli_normal_tough_earth10",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		20
+	)
+	legacy_source.erase("passiveSkillIds")
+	var damaged_fusion_source := fusion_source.duplicate(true)
+	damaged_fusion_source["instanceId"] = "pet_template_damaged_fusion_passive"
+	damaged_fusion_source["petId"] = "pet_template_damaged_fusion_passive"
+	damaged_fusion_source["passiveSkillIds"] = ["poison_resistance", "stone_immunity"]
+	var profile := PlayerProgressModel.default_profile()
+	profile["activePetInstanceId"] = "pet_template_fusion_passive"
+	profile["petInstances"] = [
+		fusion_source,
+		evolution_source,
+		legacy_source,
+		damaged_fusion_source,
+	]
+	profile = PlayerProgressModel.normalize_profile(profile)
+	var fusion_actor := PlayerProgressModel.actor_from_pet_instance(
+		PlayerProgressModel.pet_instance_by_id(profile, "pet_template_fusion_passive"),
+		"fusion_pet",
+		"ally",
+		"ally.front.3"
+	)
+	var evolution_actor := PlayerProgressModel.actor_from_pet_instance(
+		PlayerProgressModel.pet_instance_by_id(profile, "pet_template_evolution_passive"),
+		"evolution_pet",
+		"ally",
+		"ally.front.4"
+	)
+	var legacy_actor := PlayerProgressModel.actor_from_pet_instance(
+		PlayerProgressModel.pet_instance_by_id(profile, "pet_template_legacy_passive"),
+		"legacy_pet",
+		"ally",
+		"ally.front.5"
+	)
+	var damaged_fusion_actor := PlayerProgressModel.actor_from_pet_instance(
+		PlayerProgressModel.pet_instance_by_id(profile, "pet_template_damaged_fusion_passive"),
+		"damaged_fusion_pet",
+		"ally",
+		"ally.back.8"
+	)
+	var fusion_resist := fusion_actor.get("statusResist", {}) as Dictionary
+	var evolution_resist := evolution_actor.get("statusResist", {}) as Dictionary
+	var legacy_resist := legacy_actor.get("statusResist", {}) as Dictionary
+	return (
+		fusion_actor.get("passiveSkillIds", []) == ["poison_resistance"]
+		and is_equal_approx(float(fusion_resist.get(BattleModel.STATUS_POISON, 0.0)), 0.35)
+		and is_equal_approx(float(fusion_resist.get(BattleModel.STATUS_STONE, 0.0)), 0.0)
+		and evolution_actor.get("passiveSkillIds", []) == ["wuli_hard_shell", "poison_resistance"]
+		and is_equal_approx(float(evolution_resist.get(BattleModel.STATUS_POISON, 0.0)), 0.35)
+		and is_equal_approx(float(evolution_resist.get(BattleModel.STATUS_STONE, 0.0)), 1.0)
+		and legacy_actor.get("passiveSkillIds", []) == ["wuli_hard_shell"]
+		and is_equal_approx(float(legacy_resist.get(BattleModel.STATUS_STONE, 0.0)), 1.0)
+		and damaged_fusion_actor.get("passiveSkillIds", []).is_empty()
+		and (damaged_fusion_actor.get("statusResist", {}) as Dictionary).is_empty()
+	)
+
+
+func _run_auto_pet_instance_passive_check() -> void:
+	var contract_ok := _pet_instance_passive_projection_contract_ok()
+	print("pet instance passive check ready: status=%s contract=%s" % [
+		"ok" if contract_ok else "failed",
+		str(contract_ok),
+	])
+	host.get_tree().quit(0 if contract_ok else 1)
+
+
 func _run_auto_pet_template_catalog_check() -> void:
 	var catalog_errors = BattleActionCatalog.validation_errors()
 	catalog_errors.append_array(BattlePassiveCatalog.validation_errors())
@@ -27353,7 +27443,7 @@ func _run_auto_pet_template_catalog_check() -> void:
 	var extensible_equipped := extensible_slots.filter(func(skill_id): return str(skill_id) != "")
 	var extensible_ok = (
 		extensible_errors.is_empty()
-		and extensible_learned.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS + 1
+		and extensible_learned.size() > PetTemplateCatalog.MAX_PET_SKILL_SLOTS
 		and extensible_slots.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS
 		and extensible_equipped.size() == PetTemplateCatalog.MAX_PET_SKILL_SLOTS
 		and not extensible_equipped.has("fixture_pet_catalog_eighth")

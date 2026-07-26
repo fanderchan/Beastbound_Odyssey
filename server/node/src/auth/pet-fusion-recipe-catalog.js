@@ -100,6 +100,12 @@ function createPetFusionRecipeCatalog(input = {}) {
   if (text(document.disabledMessage) === "") {
     errors.push("catalog.disabledMessage must be non-empty");
   }
+  if (!Array.isArray(document.geneProfiles)) {
+    errors.push("catalog.geneProfiles must be an array");
+  }
+  if (!Array.isArray(document.recipes)) {
+    errors.push("catalog.recipes must be an array");
+  }
   const rules = normalizeRules(document.rules, errors);
 
   const formsById = uniqueIndex(

@@ -39,6 +39,97 @@ def _read_fixture() -> dict[str, Any]:
     return json.loads(CATALOG_FIXTURE.read_text(encoding="utf-8"))
 
 
+def _fusion_catalog_fixture(target_form_id: str = "fixture_pet") -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "catalogId": "pet_fusion_recipes_v1",
+        "runtimeEnabled": False,
+        "disabledMessage": "测试夹具保持生产关闭。",
+        "rules": {
+            "roleIds": ["core", "resonance_one", "resonance_two"],
+            "requiredGrowthModelVersion": "pet_growth_authority_v1",
+            "requiredRebirthCount": 1,
+            "minimumLevel": 131,
+            "maximumLevel": 140,
+            "baseActiveSkillIds": ["pet_attack", "pet_defend"],
+            "specialActiveInheritanceChance": 0.5,
+            "passiveSourceWeights": {
+                "core": 0.4,
+                "resonance_one": 0.3,
+                "resonance_two": 0.3,
+            },
+            "resultPassiveSkillCount": 1,
+            "materialNumericInheritance": False,
+            "resultRideable": False,
+        },
+        "geneProfiles": [
+            {
+                "geneProfileId": "fixture_core_gene_v1",
+                "lineageId": "fixture_core",
+                "formId": "fixture_core_form",
+                "growthProfileId": "fixture_core_growth_v1",
+                "materialClass": "ordinary",
+                "specialActiveSkillId": "fixture_core_active",
+                "passiveSkillId": "fixture_core_passive",
+            },
+            {
+                "geneProfileId": "fixture_resonance_gene_v1",
+                "lineageId": "fixture_resonance",
+                "formId": "fixture_resonance_form",
+                "growthProfileId": "fixture_resonance_growth_v1",
+                "materialClass": "ordinary",
+                "specialActiveSkillId": "fixture_resonance_active",
+                "passiveSkillId": "fixture_resonance_passive",
+            },
+            {
+                "geneProfileId": "fixture_resonance_two_gene_v1",
+                "lineageId": "fixture_resonance_two",
+                "formId": "fixture_resonance_two_form",
+                "growthProfileId": "fixture_resonance_two_growth_v1",
+                "materialClass": "ordinary",
+                "specialActiveSkillId": "fixture_resonance_two_active",
+                "passiveSkillId": "fixture_resonance_two_passive",
+            },
+        ],
+        "recipes": [
+            {
+                "recipeId": "fixture_fusion_recipe_v1",
+                "targetFormId": target_form_id,
+                "targetGrowthProfileId": f"{target_form_id}_growth_v1",
+                "roleGeneRules": {
+                    "core": {
+                        "allowedLineageIds": ["fixture_core"],
+                        "allowedGeneProfileIds": ["fixture_core_gene_v1"],
+                    },
+                    "resonance_one": {
+                        "allowedLineageIds": ["fixture_resonance"],
+                        "allowedGeneProfileIds": ["fixture_resonance_gene_v1"],
+                    },
+                    "resonance_two": {
+                        "allowedLineageIds": ["*"],
+                        "allowedGeneProfileIds": ["*"],
+                    },
+                },
+                "result": {
+                    "level": 1,
+                    "rebirthCount": 1,
+                    "terminalPathId": "fusion_terminal_v1",
+                    "paidResetAllowed": False,
+                    "newInstanceRequired": True,
+                    "numericSource": "target_profile_only_v1",
+                    "rideable": False,
+                    "bindingPolicy": "bound_if_any_material_bound",
+                    "resultStatePolicy": "replace_active_else_core_state",
+                },
+                "assetGate": {
+                    "status": "formal",
+                    "replacementPath": f"client/godot/assets/pets/{target_form_id}",
+                },
+            }
+        ],
+    }
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -281,24 +372,33 @@ def _materialize_full_source_battle(
     )
 
 
-def _run(repo_root: Path, catalog: dict[str, Any]) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+def _run(
+    repo_root: Path,
+    catalog: dict[str, Any],
+    fusion_catalog: dict[str, Any] | None = None,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     catalog_path = repo_root / "pet_art_catalog.json"
+    fusion_catalog_path = repo_root / "pet_fusion_recipes.json"
     report_path = repo_root / "report.json"
     markdown_path = repo_root / "report.md"
     _write_json(catalog_path, catalog)
+    command = [
+        sys.executable,
+        str(AUDITOR),
+        "--repo-root",
+        str(repo_root),
+        "--catalog",
+        str(catalog_path),
+        "--json-out",
+        str(report_path),
+        "--markdown-out",
+        str(markdown_path),
+    ]
+    if fusion_catalog is not None:
+        _write_json(fusion_catalog_path, fusion_catalog)
+        command.extend(["--fusion-catalog", str(fusion_catalog_path)])
     completed = subprocess.run(
-        [
-            sys.executable,
-            str(AUDITOR),
-            "--repo-root",
-            str(repo_root),
-            "--catalog",
-            str(catalog_path),
-            "--json-out",
-            str(report_path),
-            "--markdown-out",
-            str(markdown_path),
-        ],
+        command,
         check=False,
         capture_output=True,
         text=True,
@@ -329,6 +429,137 @@ class PetArtBatchAuditTest(unittest.TestCase):
             self.assertEqual(report["forms"][0]["pet"]["expectedPngCount"], 64)
             self.assertEqual(report["forms"][0]["mounted"]["validatedPngCount"], 64)
             self.assertTrue((root / "report.md").is_file())
+
+    def test_nonrideable_pet_only_fixture_passes_without_mounted_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form["supportedCharacterIds"] = []
+            form.pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+
+            completed, report = _run(root, catalog, _fusion_catalog_fixture())
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(report["status"], "ok")
+            self.assertEqual(report["summary"]["errors"], 0)
+            self.assertEqual(report["forms"][0]["pet"]["validatedPngCount"], 64)
+            self.assertEqual(report["forms"][0]["mounted"], {})
+
+    def test_nonrideable_form_rejects_mounted_registration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form["supportedCharacterIds"] = []
+            _materialize_all(root, catalog)
+
+            completed, report = _run(root, catalog, _fusion_catalog_fixture())
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("nonrideable_mounted_bundle", _issue_codes(report))
+
+    def test_missing_rideable_target_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0].pop("rideableTarget")
+            _materialize_all(root, catalog)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("missing_form_field", _issue_codes(report))
+            self.assertIn("invalid_rideable_target", _issue_codes(report))
+
+    def test_nonboolean_rideable_target_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0]["rideableTarget"] = "false"
+            _materialize_all(root, catalog)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_rideable_target", _issue_codes(report))
+
+    def test_nonarray_supported_characters_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0]["supportedCharacterIds"] = "novice_hunter_v1"
+            _materialize_all(root, catalog)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_supported_characters", _issue_codes(report))
+
+    def test_missing_supported_characters_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0].pop("supportedCharacterIds")
+            _materialize_all(root, catalog)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("missing_form_field", _issue_codes(report))
+            self.assertIn("invalid_supported_characters", _issue_codes(report))
+
+    def test_nonrideable_form_rejects_supported_characters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form.pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("nonrideable_supported_character", _issue_codes(report))
+
+    def test_rideable_form_rejects_missing_mounted_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0].pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_bundle", _issue_codes(report))
+
+    def test_nonfusion_form_cannot_disguise_itself_as_nonrideable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form["supportedCharacterIds"] = []
+            form.pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture("another_fusion_target"),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("nonrideable_not_fusion_target", _issue_codes(report))
 
     def test_registered_evolution_frames_are_runtime_assets_not_orphans(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

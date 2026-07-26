@@ -455,6 +455,116 @@
       "stoneAgeReference": "PETSKILL_ChargeAttack"
     },
     {
+      "id": "pet_gene_emberhorn_red_heavy_charge",
+      "owner": "pet_skill",
+      "preferredSlot": 3,
+      "label": "赤角重冲",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 28,
+        "canDodge": true,
+        "canCritical": false,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BeastboundOriginal_FusionBloodlineCharge"
+    },
+    {
+      "id": "pet_gene_emberhorn_ash_sure_charge",
+      "owner": "pet_skill",
+      "preferredSlot": 3,
+      "label": "灰烬追角",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 6,
+        "canDodge": false,
+        "canCritical": false,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BeastboundOriginal_FusionBloodlineCharge"
+    },
+    {
+      "id": "pet_gene_emberhorn_gale_rending_charge",
+      "owner": "pet_skill",
+      "preferredSlot": 3,
+      "label": "岚角裂风",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 10,
+        "canDodge": true,
+        "canCritical": true,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BeastboundOriginal_FusionBloodlineCharge"
+    },
+    {
+      "id": "pet_gene_mossback_marsh_sure_crush",
+      "owner": "pet_skill",
+      "preferredSlot": 3,
+      "label": "湿甲稳压",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 2,
+        "canDodge": false,
+        "canCritical": true,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BeastboundOriginal_FusionBloodlineCrush"
+    },
+    {
+      "id": "pet_gene_mossback_sunbaked_heavy_crush",
+      "owner": "pet_skill",
+      "preferredSlot": 3,
+      "label": "晒甲重压",
+      "command": "pet_skill",
+      "target": {
+        "isAll": false,
+        "canTargetAlly": false,
+        "canTargetEnemy": true,
+        "requiresSelection": true,
+        "selfOnly": false
+      },
+      "effect": {
+        "type": "damage",
+        "amountBonus": 20,
+        "canDodge": true,
+        "canCritical": false,
+        "canCounter": false
+      },
+      "stoneAgeReference": "BeastboundOriginal_FusionBloodlineCrush"
+    },
+    {
       "id": "item_meat_small",
       "owner": "item",
       "label": "肉",

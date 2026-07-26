@@ -52,6 +52,59 @@
       "label": "迅捷本能",
       "description": "行动判断时更容易抢先出手。",
       "effect": {}
+    },
+    {
+      "id": "emberhorn_red_burning_mind",
+      "label": "灼心",
+      "description": "赤角血脉使其更不容易陷入混乱。",
+      "effect": {
+        "statusResist": {
+          "confusion": 0.25
+        }
+      }
+    },
+    {
+      "id": "emberhorn_ash_cinder_breath",
+      "label": "烬息",
+      "description": "灰烬血脉使其更不容易受到中毒影响。",
+      "effect": {
+        "statusResist": {
+          "poison": 0.25
+        }
+      }
+    },
+    {
+      "id": "emberhorn_gale_wakeful_instinct",
+      "label": "醒风",
+      "description": "岚角血脉使其更不容易陷入睡眠。",
+      "effect": {
+        "statusResist": {
+          "sleep": 0.25
+        }
+      }
+    },
+    {
+      "id": "mossback_marsh_adaptive_shell",
+      "label": "沼生甲",
+      "description": "湿地苔背血脉对中毒、睡眠、混乱和石化都提供少量抗性。",
+      "effect": {
+        "statusResist": {
+          "poison": 0.12,
+          "sleep": 0.12,
+          "confusion": 0.12,
+          "stone": 0.12
+        }
+      }
+    },
+    {
+      "id": "mossback_sunbaked_grounded_shell",
+      "label": "地脉甲",
+      "description": "晒甲苔背血脉显著降低石化命中的概率，但不会形成免疫。",
+      "effect": {
+        "statusResist": {
+          "stone": 0.35
+        }
+      }
     }
   ]
 }

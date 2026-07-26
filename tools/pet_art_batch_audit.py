@@ -25,6 +25,8 @@ from sprite_alpha_despill import magenta_edge_metrics
 
 
 SCHEMA_VERSION = 1
+FUSION_CATALOG_ID = "pet_fusion_recipes_v1"
+DEFAULT_FUSION_CATALOG_PATH = Path("client/godot/data/pet_fusion_recipes.json")
 CANONICAL_DIRECTIONS = (
     "south",
     "southwest",
@@ -51,7 +53,6 @@ REQUIRED_FORM_FIELDS = (
     "supportedCharacterIds",
     "identityBrief",
     "pet",
-    "mounted",
 )
 REQUIRED_BUNDLE_FIELDS = ("root", "metadataPath", "identityPath", "ownershipPath", "promptPath")
 FRAME_SIZE = (256, 256)
@@ -98,6 +99,111 @@ def _is_non_empty(value: Any) -> bool:
 
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _declared_fusion_target_form_ids(
+    fusion_catalog_path: Path,
+) -> tuple[set[str], list[dict[str, str]]]:
+    try:
+        document = _load_json(fusion_catalog_path)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        return set(), [
+            _issue(
+                "fusion_catalog_read_failed",
+                f"无法读取共享融合配方目录：{error}",
+                str(fusion_catalog_path),
+            )
+        ]
+    if not isinstance(document, dict):
+        return set(), [
+            _issue(
+                "invalid_fusion_catalog",
+                "共享融合配方目录必须是 JSON 对象",
+                str(fusion_catalog_path),
+            )
+        ]
+    if (
+        document.get("schemaVersion") != 1
+        or document.get("catalogId") != FUSION_CATALOG_ID
+    ):
+        return set(), [
+            _issue(
+                "invalid_fusion_catalog_identity",
+                f"共享融合配方目录必须为 schemaVersion=1 / catalogId={FUSION_CATALOG_ID}",
+                str(fusion_catalog_path),
+            )
+        ]
+    if not isinstance(document.get("runtimeEnabled"), bool):
+        return set(), [
+            _issue(
+                "invalid_fusion_runtime_enabled",
+                "共享融合配方目录 runtimeEnabled 必须是布尔值",
+                str(fusion_catalog_path),
+            )
+        ]
+    recipes = document.get("recipes")
+    if not isinstance(recipes, list):
+        return set(), [
+            _issue(
+                "invalid_fusion_recipes",
+                "共享融合配方目录 recipes 必须是数组",
+                str(fusion_catalog_path),
+            )
+        ]
+
+    target_form_ids: set[str] = set()
+    errors: list[dict[str, str]] = []
+    for index, value in enumerate(recipes):
+        label = f"recipes[{index}]"
+        if not isinstance(value, dict):
+            errors.append(
+                _issue(
+                    "invalid_fusion_recipe",
+                    f"{label} 必须是对象",
+                    str(fusion_catalog_path),
+                )
+            )
+            continue
+        result = value.get("result")
+        asset_gate = value.get("assetGate")
+        recipe_id = value.get("recipeId")
+        target_form_id = value.get("targetFormId")
+        if (
+            not isinstance(recipe_id, str)
+            or not recipe_id.strip()
+            or not isinstance(target_form_id, str)
+            or not target_form_id.strip()
+            or not isinstance(value.get("targetGrowthProfileId"), str)
+            or not value.get("targetGrowthProfileId", "").strip()
+            or not isinstance(value.get("roleGeneRules"), dict)
+            or not isinstance(result, dict)
+            or result.get("rideable") is not False
+            or result.get("terminalPathId") != "fusion_terminal_v1"
+            or not isinstance(asset_gate, dict)
+            or asset_gate.get("status") != "formal"
+            or not isinstance(asset_gate.get("replacementPath"), str)
+            or not asset_gate.get("replacementPath", "").strip()
+        ):
+            errors.append(
+                _issue(
+                    "invalid_fusion_recipe",
+                    f"{label} 不是明确的不可骑终局正式配方",
+                    str(fusion_catalog_path),
+                )
+            )
+            continue
+        normalized_target = target_form_id.strip()
+        if normalized_target in target_form_ids:
+            errors.append(
+                _issue(
+                    "duplicate_fusion_target",
+                    f"共享融合配方重复登记 targetFormId：{normalized_target}",
+                    str(fusion_catalog_path),
+                )
+            )
+            continue
+        target_form_ids.add(normalized_target)
+    return target_form_ids, errors
 
 
 def _validate_repo_relative_path(
@@ -186,6 +292,7 @@ def _validate_form_schema(
     form_result: dict[str, Any],
     *,
     default_character_id: str,
+    fusion_target_form_ids: set[str],
     repo_root: Path,
 ) -> tuple[BundleSpec | None, BundleSpec | None]:
     if not isinstance(form_value, dict):
@@ -213,13 +320,36 @@ def _validate_form_schema(
         supported = []
     elif len(set(supported)) != len(supported):
         _add_schema_error(form_result, "duplicate_supported_character", "supportedCharacterIds 不能重复")
-    if bool(form.get("rideableTarget", False)) and not supported:
+    rideable_target = (
+        form["rideableTarget"]
+        if isinstance(form.get("rideableTarget"), bool)
+        else True
+    )
+    if rideable_target and not supported:
         _add_schema_error(form_result, "missing_supported_character", "可骑目标至少需要一个 supportedCharacterIds")
-    if bool(form.get("rideableTarget", False)) and default_character_id not in supported:
+    if rideable_target and default_character_id not in supported:
         _add_schema_error(
             form_result,
             "missing_default_character",
             f"可骑目标必须支持默认人物：{default_character_id}",
+        )
+    if not rideable_target and supported:
+        _add_schema_error(
+            form_result,
+            "nonrideable_supported_character",
+            "不可骑目标的 supportedCharacterIds 必须为空",
+        )
+    if not rideable_target and "mounted" in form:
+        _add_schema_error(
+            form_result,
+            "nonrideable_mounted_bundle",
+            "不可骑目标不能登记 mounted 资产包",
+        )
+    if not rideable_target and str(form.get("formId", "")).strip() not in fusion_target_form_ids:
+        _add_schema_error(
+            form_result,
+            "nonrideable_not_fusion_target",
+            "不可骑目标必须匹配共享融合配方明确登记的 targetFormId",
         )
     if form.get("status") == "planned" and form.get("runtimeEnabled") is True:
         _add_schema_error(form_result, "planned_runtime_enabled", "planned form 不能直接 runtimeEnabled=true")
@@ -227,7 +357,8 @@ def _validate_form_schema(
         _add_schema_error(form_result, "approved_runtime_disabled", "approved form 必须 runtimeEnabled=true")
 
     specs: list[BundleSpec | None] = []
-    for kind in ("pet", "mounted"):
+    bundle_kinds = ("pet", "mounted") if rideable_target else ("pet",)
+    for kind in bundle_kinds:
         bundle = form.get(kind)
         if not isinstance(bundle, dict):
             _add_schema_error(form_result, "invalid_bundle", f"{kind} 必须是对象")
@@ -272,7 +403,7 @@ def _validate_form_schema(
                 character_id=default_character_id if kind == "mounted" else "",
             )
         )
-    return specs[0], specs[1]
+    return specs[0], specs[1] if len(specs) > 1 else None
 
 
 def _bundle_result(spec: BundleSpec, repo_root: Path) -> dict[str, Any]:
@@ -951,7 +1082,11 @@ def _validate_catalog_header(catalog: Any) -> list[dict[str, str]]:
     return errors
 
 
-def audit_catalog(catalog_path: Path, repo_root: Path) -> dict[str, Any]:
+def audit_catalog(
+    catalog_path: Path,
+    repo_root: Path,
+    fusion_catalog_path: Path | None = None,
+) -> dict[str, Any]:
     try:
         catalog = _load_json(catalog_path)
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -970,6 +1105,20 @@ def audit_catalog(catalog_path: Path, repo_root: Path) -> dict[str, Any]:
     default_character_id = str(catalog_dict.get("defaultCharacterId", "")).strip()
     required_actions_value = catalog_dict.get("requiredBattleActions", [])
     required_actions = [str(value).strip() for value in required_actions_value] if isinstance(required_actions_value, list) else []
+    fusion_target_form_ids: set[str] = set()
+    if any(
+        isinstance(form, dict) and form.get("rideableTarget") is False
+        for form in forms
+    ):
+        resolved_fusion_catalog_path = (
+            fusion_catalog_path
+            if fusion_catalog_path is not None
+            else repo_root / DEFAULT_FUSION_CATALOG_PATH
+        )
+        fusion_target_form_ids, fusion_errors = _declared_fusion_target_form_ids(
+            resolved_fusion_catalog_path.resolve(strict=False)
+        )
+        catalog_errors.extend(fusion_errors)
     form_results = [_new_form_result(value, index) for index, value in enumerate(forms)]
     specs: list[tuple[BundleSpec | None, BundleSpec | None]] = []
     for form, form_result in zip(forms, form_results, strict=True):
@@ -978,6 +1127,7 @@ def audit_catalog(catalog_path: Path, repo_root: Path) -> dict[str, Any]:
                 form,
                 form_result,
                 default_character_id=default_character_id,
+                fusion_target_form_ids=fusion_target_form_ids,
                 repo_root=repo_root,
             )
         )
@@ -1148,6 +1298,12 @@ def _parse_args() -> argparse.Namespace:
         default=Path(__file__).resolve().parents[1],
         help="repository root used to resolve catalog paths",
     )
+    parser.add_argument(
+        "--fusion-catalog",
+        type=Path,
+        default=DEFAULT_FUSION_CATALOG_PATH,
+        help="shared pet fusion recipe catalog used to authorize nonrideable targets",
+    )
     parser.add_argument("--json-out", type=Path, help="write the full JSON report")
     parser.add_argument("--markdown-out", type=Path, help="write the compact Markdown report")
     return parser.parse_args()
@@ -1158,7 +1314,16 @@ def main() -> int:
     repo_root = args.repo_root.resolve()
     catalog_path = args.catalog if args.catalog.is_absolute() else (repo_root / args.catalog)
     catalog_path = catalog_path.resolve(strict=False)
-    report = audit_catalog(catalog_path, repo_root)
+    fusion_catalog_path = (
+        args.fusion_catalog
+        if args.fusion_catalog.is_absolute()
+        else repo_root / args.fusion_catalog
+    )
+    report = audit_catalog(
+        catalog_path,
+        repo_root,
+        fusion_catalog_path.resolve(strict=False),
+    )
     rendered_json = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.json_out:
         output = args.json_out if args.json_out.is_absolute() else (repo_root / args.json_out)

@@ -1,11 +1,41 @@
 extends SceneTree
 
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
+const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const PetFusionClientModel := preload("res://scripts/progression/pet_fusion_client_model.gd")
 const PetFusionRecipeCatalogModel := preload(
 	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
 )
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
+
+const FUSION_GENE_REACTION_FIELDS := {
+	"pet_gene_emberhorn_red_heavy_charge": {
+		"canDodge": true,
+		"canCritical": false,
+		"canCounter": false,
+	},
+	"pet_gene_emberhorn_ash_sure_charge": {
+		"canDodge": false,
+		"canCritical": false,
+		"canCounter": false,
+	},
+	"pet_gene_emberhorn_gale_rending_charge": {
+		"canDodge": true,
+		"canCritical": true,
+		"canCounter": false,
+	},
+	"pet_gene_mossback_marsh_sure_crush": {
+		"canDodge": false,
+		"canCritical": true,
+		"canCounter": false,
+	},
+	"pet_gene_mossback_sunbaked_heavy_crush": {
+		"canDodge": true,
+		"canCritical": false,
+		"canCounter": false,
+	},
+}
 
 
 func _initialize() -> void:
@@ -31,11 +61,43 @@ func _initialize() -> void:
 	_expect(
 		not bool(production_contract.get("runtimeEnabled", true))
 			and not bool(production_contract.get("available", true))
-			and int(production_contract.get("geneProfileCount", -1)) == 0
+			and int(production_contract.get("geneProfileCount", -1)) == 5
 			and int(production_contract.get("recipeCount", -1)) == 0,
-		"生产融合目录必须保持关闭、零基因档、零配方",
+		"生产融合目录必须保持关闭、五个已审计血脉基因档、零配方",
 		errors
 	)
+	var bloodline_reaction_fields_ok := true
+	var bloodline_reaction_sequence := 100
+	for skill_id_value in FUSION_GENE_REACTION_FIELDS:
+		var skill_id := str(skill_id_value)
+		var expected := FUSION_GENE_REACTION_FIELDS.get(skill_id, {}) as Dictionary
+		var event := BattleModel._make_skill_event(
+			{},
+			"qa_fusion_gene_actor",
+			"qa_fusion_gene_target",
+			bloodline_reaction_sequence,
+			skill_id
+		)
+		bloodline_reaction_sequence += 1
+		var event_ok := (
+			str(event.get("type", "")) == "skill_attack"
+			and str(event.get("skillId", "")) == skill_id
+			and event.has("canDodge")
+			and event.has("canCritical")
+			and event.has("canCounter")
+			and bool(event.get("canDodge", false))
+				== bool(expected.get("canDodge", false))
+			and bool(event.get("canCritical", false))
+				== bool(expected.get("canCritical", false))
+			and bool(event.get("canCounter", false))
+				== bool(expected.get("canCounter", false))
+		)
+		bloodline_reaction_fields_ok = bloodline_reaction_fields_ok and event_ok
+		_expect(
+			event_ok,
+			"融合血脉技能本地事件反应字段错误：%s" % skill_id,
+			errors
+		)
 	var snapshot := BalanceCatalogModel.balance_snapshot_summary()
 	var snapshot_paths = snapshot.get("sourcePaths", [])
 	_expect(
@@ -71,6 +133,139 @@ func _initialize() -> void:
 			and PetFusionRecipeCatalogModel.runtime_available(fixture_catalog),
 		"未来正式融合配方夹具未通过严格校验：%s" % " | ".join(fixture_errors),
 		errors
+	)
+	var disabled_fixture_catalog := fixture_catalog.duplicate(true)
+	disabled_fixture_catalog["runtimeEnabled"] = false
+	var nonrideable_art_form := {
+		"formId": "form_fusion_target",
+		"rideableTarget": false,
+		"supportedCharacterIds": [],
+	}
+	var valid_nonrideable_art_errors := PetArtCatalog.capability_validation_errors(
+		nonrideable_art_form,
+		"novice_hunter_v1",
+		disabled_fixture_catalog
+	)
+	_expect(
+		valid_nonrideable_art_errors.is_empty(),
+		"关闭态共享配方的不可骑目标未通过美术能力门禁：%s"
+			% " | ".join(valid_nonrideable_art_errors),
+		errors
+	)
+	var empty_recipe_catalog := disabled_fixture_catalog.duplicate(true)
+	empty_recipe_catalog["recipes"] = []
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			nonrideable_art_form,
+			"novice_hunter_v1",
+			empty_recipe_catalog
+		).is_empty(),
+		"没有共享融合配方的普通形态伪装成不可骑目标",
+		errors
+	)
+	var ordinary_nonrideable_art := nonrideable_art_form.duplicate(true)
+	ordinary_nonrideable_art["formId"] = "form_ordinary"
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			ordinary_nonrideable_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"非融合目标错误通过不可骑美术能力门禁",
+		errors
+	)
+	var missing_rideable_art := nonrideable_art_form.duplicate(true)
+	missing_rideable_art.erase("rideableTarget")
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			missing_rideable_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"缺失 rideableTarget 的美术目录项没有失败关闭",
+		errors
+	)
+	var invalid_rideable_art := nonrideable_art_form.duplicate(true)
+	invalid_rideable_art["rideableTarget"] = "false"
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			invalid_rideable_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"非布尔 rideableTarget 的美术目录项没有失败关闭",
+		errors
+	)
+	var missing_supported_art := nonrideable_art_form.duplicate(true)
+	missing_supported_art.erase("supportedCharacterIds")
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			missing_supported_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"缺失 supportedCharacterIds 的美术目录项没有失败关闭",
+		errors
+	)
+	var invalid_supported_art := nonrideable_art_form.duplicate(true)
+	invalid_supported_art["supportedCharacterIds"] = "novice_hunter_v1"
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			invalid_supported_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"非数组 supportedCharacterIds 的美术目录项没有失败关闭",
+		errors
+	)
+	var nonrideable_with_character := nonrideable_art_form.duplicate(true)
+	nonrideable_with_character["supportedCharacterIds"] = ["novice_hunter_v1"]
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			nonrideable_with_character,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"不可骑目标错误登记了整图骑乘人物",
+		errors
+	)
+	var nonrideable_with_mounted := nonrideable_art_form.duplicate(true)
+	nonrideable_with_mounted["mounted"] = {}
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			nonrideable_with_mounted,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"不可骑目标错误登记了 mounted 资产包",
+		errors
+	)
+	var rideable_without_mounted := {
+		"formId": "form_ordinary",
+		"rideableTarget": true,
+		"supportedCharacterIds": ["novice_hunter_v1"],
+	}
+	_expect(
+		not PetArtCatalog.capability_validation_errors(
+			rideable_without_mounted,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty(),
+		"可骑目标缺失 mounted 资产包仍通过门禁",
+		errors
+	)
+	var art_capability_gate_ok := (
+		valid_nonrideable_art_errors.is_empty()
+		and not PetArtCatalog.capability_validation_errors(
+			ordinary_nonrideable_art,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty()
+		and not PetArtCatalog.capability_validation_errors(
+			rideable_without_mounted,
+			"novice_hunter_v1",
+			disabled_fixture_catalog
+		).is_empty()
 	)
 	var training_gene_catalog := fixture_catalog.duplicate(true)
 	var training_genes := training_gene_catalog.get("geneProfiles", []) as Array
@@ -336,6 +531,7 @@ func _initialize() -> void:
 				and not bool(production_contract.get("available", true))
 			),
 			"catalogStrict": fixture_errors.is_empty(),
+			"artCapabilityGateStrict": art_capability_gate_ok,
 			"digestIncludesFusion": (
 				snapshot_paths is Array
 				and (snapshot_paths as Array).has(BalanceCatalogModel.PET_FUSION_RECIPES_PATH)
@@ -348,6 +544,7 @@ func _initialize() -> void:
 				ordinary_active_result,
 				fixture_catalog
 			).is_empty(),
+			"bloodlineReactionFields": bloodline_reaction_fields_ok,
 			"duplicateActiveDeduplicatedWithoutReroll": not PetFusionClientModel.normalized_fusion_result(
 				duplicate_active_result,
 				duplicate_active_catalog

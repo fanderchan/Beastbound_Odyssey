@@ -4,9 +4,13 @@ const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_
 const PetEvolutionReleaseAttestationModel := preload(
 	"res://scripts/progression/pet_evolution_release_attestation_model.gd"
 )
+const PetFusionRecipeCatalogModel := preload(
+	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
+)
 
 const DATA_PATH := "res://data/pet_art_catalog.json"
 const PET_TEMPLATE_PATH := "res://data/pet_templates.json"
+const PET_FUSION_RECIPE_PATH := "res://data/pet_fusion_recipes.json"
 const STATUS_PLANNED := "planned"
 const STATUS_IN_PRODUCTION := "in_production"
 const STATUS_OWNER_REVIEW_PENDING := "owner_review_pending"
@@ -113,6 +117,7 @@ static func validation_errors() -> Array[String]:
 	if default_character == "":
 		errors.append("宠物美术目录缺少默认人物 ID")
 	var template_form_ids := _template_form_ids(errors)
+	var fusion_document := _read_json_dictionary(PET_FUSION_RECIPE_PATH)
 	var seen_ids: Dictionary = {}
 	for record in all_form_records():
 		var form_id := str(record.get("formId", "")).strip_edges()
@@ -154,19 +159,72 @@ static func validation_errors() -> Array[String]:
 					or not (release_summary.get("formIds", []) as Array).has(form_id)
 				):
 					errors.append("进化宠正式发布证明无效：%s" % form_id)
-		if not bool(record.get("rideableTarget", false)):
-			errors.append("全宠可骑目标缺失：%s" % form_id)
-		var supported_characters := _string_array(record.get("supportedCharacterIds", []))
-		if not supported_characters.has(default_character):
-			errors.append("宠物未登记默认人物整图骑乘组合：%s" % form_id)
+		errors.append_array(
+			capability_validation_errors(record, default_character, fusion_document)
+		)
+		var rideable_target := _rideable_target_for_validation(record)
 		for key in ["displayName", "lineId", "subtypeId", "productionGroup", "artSkeletonId", "identityBrief"]:
 			if str(record.get(key, "")).strip_edges() == "":
 				errors.append("宠物美术目录缺少 %s：%s" % [key, form_id])
 		_validate_bundle_record(record.get("pet", {}), "pet", form_id, errors)
-		_validate_bundle_record(record.get("mounted", {}), "mounted", form_id, errors)
+		if rideable_target:
+			_validate_bundle_record(record.get("mounted", {}), "mounted", form_id, errors)
 	for template_form_id in template_form_ids.keys():
 		if not seen_ids.has(template_form_id):
 			errors.append("宠物美术目录漏登记模板形态：%s" % str(template_form_id))
+	return errors
+
+
+static func capability_validation_errors(
+	record: Dictionary,
+	default_character: String,
+	fusion_document
+) -> Array[String]:
+	var errors: Array[String] = []
+	var form_id := str(record.get("formId", "")).strip_edges()
+	var rideable_target := _rideable_target_for_validation(record)
+	if not record.has("rideableTarget"):
+		errors.append("宠物美术目录必须显式登记 rideableTarget：%s" % form_id)
+	elif typeof(record.get("rideableTarget")) != TYPE_BOOL:
+		errors.append("宠物美术目录 rideableTarget 必须是布尔值：%s" % form_id)
+
+	var supported_characters: Array[String] = []
+	if not record.has("supportedCharacterIds"):
+		errors.append("宠物美术目录必须显式登记 supportedCharacterIds：%s" % form_id)
+	elif not (record.get("supportedCharacterIds") is Array):
+		errors.append("宠物美术目录 supportedCharacterIds 必须是数组：%s" % form_id)
+	else:
+		var seen_characters: Dictionary = {}
+		for value in record.get("supportedCharacterIds") as Array:
+			if typeof(value) != TYPE_STRING or str(value).strip_edges() == "":
+				errors.append(
+					"宠物美术目录 supportedCharacterIds 只能包含非空字符串：%s" % form_id
+				)
+				continue
+			var character_id := str(value).strip_edges()
+			if seen_characters.has(character_id):
+				errors.append(
+					"宠物美术目录 supportedCharacterIds 不能重复：%s=%s"
+					% [form_id, character_id]
+				)
+				continue
+			seen_characters[character_id] = true
+			supported_characters.append(character_id)
+
+	if rideable_target:
+		if not supported_characters.has(default_character):
+			errors.append("可骑宠物未登记默认人物整图骑乘组合：%s" % form_id)
+		if not record.has("mounted"):
+			errors.append("可骑宠物必须登记 mounted 资产包：%s" % form_id)
+	else:
+		if not supported_characters.is_empty():
+			errors.append("不可骑宠物不能登记整图骑乘人物：%s" % form_id)
+		if record.has("mounted"):
+			errors.append("不可骑宠物不能登记 mounted 资产包：%s" % form_id)
+		if not _declared_fusion_target_form_ids(fusion_document).has(form_id):
+			errors.append(
+				"不可骑宠物必须是共享融合配方明确登记的 targetFormId：%s" % form_id
+			)
 	return errors
 
 
@@ -206,6 +264,60 @@ static func _template_form_ids(errors: Array[String]) -> Dictionary:
 			if form_id != "":
 				ids[form_id] = true
 	return ids
+
+
+static func _read_json_dictionary(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return (parsed as Dictionary).duplicate(true) if parsed is Dictionary else {}
+
+
+static func _declared_fusion_target_form_ids(document) -> Dictionary:
+	var ids: Dictionary = {}
+	if not (document is Dictionary):
+		return ids
+	var fusion_document := document as Dictionary
+	if (
+		int(fusion_document.get("schemaVersion", 0)) != 1
+		or str(fusion_document.get("catalogId", ""))
+			!= PetFusionRecipeCatalogModel.CATALOG_ID
+		or typeof(fusion_document.get("runtimeEnabled", null)) != TYPE_BOOL
+	):
+		return ids
+	var recipes = fusion_document.get("recipes", null)
+	if not (recipes is Array):
+		return ids
+	for value in recipes as Array:
+		if not (value is Dictionary):
+			continue
+		var recipe := value as Dictionary
+		var result = recipe.get("result", null)
+		var asset_gate = recipe.get("assetGate", null)
+		var recipe_id := str(recipe.get("recipeId", "")).strip_edges()
+		var target_form_id := str(recipe.get("targetFormId", "")).strip_edges()
+		if (
+			recipe_id == ""
+			or target_form_id == ""
+			or str(recipe.get("targetGrowthProfileId", "")).strip_edges() == ""
+			or not (recipe.get("roleGeneRules", null) is Dictionary)
+			or not (result is Dictionary)
+			or typeof((result as Dictionary).get("rideable", null)) != TYPE_BOOL
+			or bool((result as Dictionary).get("rideable", true))
+			or str((result as Dictionary).get("terminalPathId", ""))
+				!= "fusion_terminal_v1"
+			or not (asset_gate is Dictionary)
+			or str((asset_gate as Dictionary).get("status", "")) != "formal"
+			or str((asset_gate as Dictionary).get("replacementPath", "")).strip_edges() == ""
+		):
+			continue
+		ids[target_form_id] = true
+	return ids
+
+
+static func _rideable_target_for_validation(record: Dictionary) -> bool:
+	var value = record.get("rideableTarget", null)
+	return value if typeof(value) == TYPE_BOOL else true
 
 
 static func _validate_bundle_record(value, kind: String, form_id: String, errors: Array[String]) -> void:

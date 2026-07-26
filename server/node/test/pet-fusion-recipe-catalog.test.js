@@ -3,6 +3,9 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+const battleActionsDocument = require("../../../client/godot/data/battle_actions.json");
+const skillTrainingDocument = require("../../../client/godot/data/pet_skill_training.json");
+
 const {
   PET_FUSION_CATALOG_ID,
   PET_FUSION_ROLE_IDS,
@@ -20,7 +23,7 @@ const {
   testFusionDocuments,
 } = require("../test-support/pet-fusion-fixture");
 
-test("production fusion catalog is strict, empty, frozen, and runtime disabled", () => {
+test("production fusion catalog stages approved bloodline genes while recipes stay closed", () => {
   const catalog = loadPetFusionRecipeCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
@@ -37,11 +40,133 @@ test("production fusion catalog is strict, empty, frozen, and runtime disabled",
   });
   assert.equal(catalog.rules.materialNumericInheritance, false);
   assert.equal(catalog.rules.resultRideable, false);
-  assert.deepEqual(catalog.geneProfiles, []);
+  assert.deepEqual(
+    catalog.geneProfiles.map((profile) => ({
+      geneProfileId: profile.geneProfileId,
+      formId: profile.formId,
+      specialActiveSkillId: profile.specialActiveSkillId,
+      passiveSkillId: profile.passiveSkillId,
+    })),
+    [
+      {
+        geneProfileId: "fusion_gene_emberhorn_red_v1",
+        formId: "emberhorn_red_fire8_earth2",
+        specialActiveSkillId: "pet_gene_emberhorn_red_heavy_charge",
+        passiveSkillId: "emberhorn_red_burning_mind",
+      },
+      {
+        geneProfileId: "fusion_gene_emberhorn_ash_v1",
+        formId: "emberhorn_ash_fire6_wind4",
+        specialActiveSkillId: "pet_gene_emberhorn_ash_sure_charge",
+        passiveSkillId: "emberhorn_ash_cinder_breath",
+      },
+      {
+        geneProfileId: "fusion_gene_emberhorn_gale_v1",
+        formId: "emberhorn_gale_fire5_wind5",
+        specialActiveSkillId: "pet_gene_emberhorn_gale_rending_charge",
+        passiveSkillId: "emberhorn_gale_wakeful_instinct",
+      },
+      {
+        geneProfileId: "fusion_gene_mossback_marsh_v1",
+        formId: "mossback_marsh_earth7_water3",
+        specialActiveSkillId: "pet_gene_mossback_marsh_sure_crush",
+        passiveSkillId: "mossback_marsh_adaptive_shell",
+      },
+      {
+        geneProfileId: "fusion_gene_mossback_sunbaked_v1",
+        formId: "mossback_sunbaked_earth6_fire4",
+        specialActiveSkillId: "pet_gene_mossback_sunbaked_heavy_crush",
+        passiveSkillId: "mossback_sunbaked_grounded_shell",
+      },
+    ],
+  );
+  assert.deepEqual(
+    catalog.geneProfiles.map((profile) => profile.lineageId),
+    ["emberhorn", "emberhorn", "emberhorn", "mossback", "mossback"],
+  );
   assert.deepEqual(catalog.recipes, []);
   assert.deepEqual(catalog.targetFormIds, []);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.rules), true);
+  assert.equal(Object.isFrozen(catalog.geneProfiles[0]), true);
+});
+
+test("staged fusion bloodline actives are distinct single-target non-training damage contracts", () => {
+  const catalog = loadPetFusionRecipeCatalog();
+  const actionsById = Object.fromEntries(
+    battleActionsDocument.actions.map((action) => [action.id, action]),
+  );
+  const trainableSkillIds = new Set(
+    skillTrainingDocument.skills.map((entry) => entry.skillId),
+  );
+  const expectedEffects = {
+    pet_gene_emberhorn_red_heavy_charge: {
+      amountBonus: 28,
+      canDodge: true,
+      canCritical: false,
+      canCounter: false,
+    },
+    pet_gene_emberhorn_ash_sure_charge: {
+      amountBonus: 6,
+      canDodge: false,
+      canCritical: false,
+      canCounter: false,
+    },
+    pet_gene_emberhorn_gale_rending_charge: {
+      amountBonus: 10,
+      canDodge: true,
+      canCritical: true,
+      canCounter: false,
+    },
+    pet_gene_mossback_marsh_sure_crush: {
+      amountBonus: 2,
+      canDodge: false,
+      canCritical: true,
+      canCounter: false,
+    },
+    pet_gene_mossback_sunbaked_heavy_crush: {
+      amountBonus: 20,
+      canDodge: true,
+      canCritical: false,
+      canCounter: false,
+    },
+  };
+
+  for (const profile of catalog.geneProfiles) {
+    const skillId = profile.specialActiveSkillId;
+    const action = actionsById[skillId];
+    assert.ok(action, `missing action ${skillId}`);
+    assert.equal(action.owner, "pet_skill");
+    assert.equal(action.command, "pet_skill");
+    assert.deepEqual(action.target, {
+      isAll: false,
+      canTargetAlly: false,
+      canTargetEnemy: true,
+      requiresSelection: true,
+      selfOnly: false,
+    });
+    assert.deepEqual(action.effect, {
+      type: "damage",
+      ...expectedEffects[skillId],
+    });
+    assert.equal(trainableSkillIds.has(skillId), false);
+  }
+});
+
+test("fusion catalog collection fields fail closed when they are not arrays", async (t) => {
+  for (const field of ["geneProfiles", "recipes"]) {
+    await t.test(field, () => {
+      const documents = testFusionDocuments();
+      documents.document[field] = {};
+      assert.throws(
+        () => createPetFusionRecipeCatalog({
+          ...documents,
+          allowTestOnlyRecipes: true,
+        }),
+        (error) => catalogErrorIncludes(error, `catalog.${field} must be an array`),
+      );
+    });
+  }
 });
 
 test("test-only recipe supports explicit core/resonance sets and wildcard resonance two", () => {

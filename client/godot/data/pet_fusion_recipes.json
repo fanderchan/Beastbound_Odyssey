@@ -27,6 +27,52 @@
     "materialNumericInheritance": false,
     "resultRideable": false
   },
-  "geneProfiles": [],
+  "geneProfiles": [
+    {
+      "geneProfileId": "fusion_gene_emberhorn_red_v1",
+      "lineageId": "emberhorn",
+      "formId": "emberhorn_red_fire8_earth2",
+      "growthProfileId": "emberhorn_red_fire8_earth2_v1",
+      "materialClass": "ordinary",
+      "specialActiveSkillId": "pet_gene_emberhorn_red_heavy_charge",
+      "passiveSkillId": "emberhorn_red_burning_mind"
+    },
+    {
+      "geneProfileId": "fusion_gene_emberhorn_ash_v1",
+      "lineageId": "emberhorn",
+      "formId": "emberhorn_ash_fire6_wind4",
+      "growthProfileId": "emberhorn_ash_fire6_wind4_v1",
+      "materialClass": "ordinary",
+      "specialActiveSkillId": "pet_gene_emberhorn_ash_sure_charge",
+      "passiveSkillId": "emberhorn_ash_cinder_breath"
+    },
+    {
+      "geneProfileId": "fusion_gene_emberhorn_gale_v1",
+      "lineageId": "emberhorn",
+      "formId": "emberhorn_gale_fire5_wind5",
+      "growthProfileId": "emberhorn_gale_fire5_wind5_v1",
+      "materialClass": "ordinary",
+      "specialActiveSkillId": "pet_gene_emberhorn_gale_rending_charge",
+      "passiveSkillId": "emberhorn_gale_wakeful_instinct"
+    },
+    {
+      "geneProfileId": "fusion_gene_mossback_marsh_v1",
+      "lineageId": "mossback",
+      "formId": "mossback_marsh_earth7_water3",
+      "growthProfileId": "mossback_marsh_earth7_water3_v1",
+      "materialClass": "ordinary",
+      "specialActiveSkillId": "pet_gene_mossback_marsh_sure_crush",
+      "passiveSkillId": "mossback_marsh_adaptive_shell"
+    },
+    {
+      "geneProfileId": "fusion_gene_mossback_sunbaked_v1",
+      "lineageId": "mossback",
+      "formId": "mossback_sunbaked_earth6_fire4",
+      "growthProfileId": "mossback_sunbaked_earth6_fire4_v1",
+      "materialClass": "ordinary",
+      "specialActiveSkillId": "pet_gene_mossback_sunbaked_heavy_crush",
+      "passiveSkillId": "mossback_sunbaked_grounded_shell"
+    }
+  ],
   "recipes": []
 }

@@ -29,19 +29,21 @@ Create one reusable identity board before generating action rows. Lock:
 - role-shaped attack body part and skill silhouette;
 - forbidden drift and known generation risks.
 
-Approve a small key-pose gate before producing dozens of frames: standalone pet front/back/world cardinal poses and one supported mounted character-pet front/back pose. Do not expand a failed identity, scale, seat, direction, or anatomy.
+Approve a small key-pose gate before producing dozens of frames: standalone pet front/back/world cardinal poses, plus one supported mounted character-pet front/back pose when the contract is rideable. A first-release fusion target with `rideable=false` must omit the mounted set instead of producing an unused or fictional rider composition. Do not expand a failed identity, scale, seat, direction, or anatomy.
 
 ## World movement matrix: true eight means true eight
 
 The PC world path uses the existing Godot runtime names `south`, `southwest`, `west`, `northwest`, `north`, `northeast`, `east`, and `southeast` as eight independently authored visual directions. These names are the canonical asset-directory contract; do not introduce underscore aliases. Different filenames or logical inputs backed by mirrored pixels are not true eight.
 
-For a formally supported pet, prove all three visual subjects:
+For a formally supported rideable pet, prove all three visual subjects:
 
 1. standalone character — may reuse an already approved character pack;
 2. standalone pet — required for following, roaming and world display;
 3. each declared character-riding-pet combination — required as a separate AI-generated whole subject.
 
 Minimum per subject and direction is `idle 1 + walk 4`, therefore 40 frames per subject. More frames are allowed when they improve motion. The four walk frames must show a real gait, stable ground line and stable body scale; four copies with vertical bobbing do not pass.
+
+A non-rideable first-release fusion target proves only the standalone pet subject. It still requires all eight independently authored world directions and the complete standalone battle matrix; it does not require a character or mounted bundle and must fail closed if any riding path tries to treat it as supported.
 
 Do not accept direction semantics from directory names, arrows, prompts, or a generator's claim. Before installation, build a review row for every canonical direction that places `idle-1` beside `walk-1..4`, and inspect the actual screen-facing/travel vector across all five frames. A direction fails if idle and walk disagree, if any frame turns into its opposite or neighboring diagonal, or if rider and mount do not share the same axis. A safe byte-preserving slot swap is allowed only when both existing sources are independently verified as the exact opposite pair; otherwise regenerate the affected source frames without mirroring.
 
@@ -62,7 +64,7 @@ The current fixed 10V10 battlefield renders two formal diagonals, not all eight 
 - enemy upper-left / screen-left formation: `front_3quarter_sw`, facing the ally;
 - ally lower-right / screen-right formation: `back_3quarter_ne`, facing the enemy.
 
-Produce both views for required pet and mounted battle actions. Do not multiply every battle row into eight unused directions unless the battle camera/facing contract changes.
+Produce both views for required standalone-pet battle actions, and for mounted battle actions only when the design contract is rideable. Do not multiply every battle row into eight unused directions unless the battle camera/facing contract changes.
 
 ### Final-facing contract: inspect rendered geometry, not the filename
 
@@ -73,13 +75,13 @@ The two source-view names describe authored camera views, not their final on-boa
 | `enemy` | `front_3quarter_sw` | `true` | southeast, toward arena centre |
 | `ally` | `back_3quarter_ne` | `true` | northwest, toward arena centre |
 
-Standalone pets and integrated mounted whole-frame actors must use the same mapping. Mounted rendering delegates to the pet battle-facing contract; bundle metadata may describe the mapping but must not override it. If generated frames only look correct with `flipH=false`, normalize or regenerate that pack instead of creating a private exception.
+Standalone pets always use this mapping. Integrated mounted whole-frame actors use the same mapping when the design is rideable; mounted rendering delegates to the pet battle-facing contract and bundle metadata may describe the mapping but must not override it. If generated frames only look correct with `flipH=false`, normalize or regenerate that pack instead of creating a private exception.
 
 This is a mandatory visual and automated gate:
 
 - assert both source view and applied flip for `enemy` and `ally`;
-- render both formations together, with same-side pet and mounted actors visible at once;
-- reject outward-facing silhouettes, a mounted/pet disagreement, or a pass inferred from separate source contact sheets;
+- render both formations together; rideable contracts also show same-side pet and mounted actors at once;
+- reject outward-facing silhouettes and any pass inferred from separate source contact sheets; rideable contracts additionally reject mounted/pet disagreement;
 - inspect at least idle, approach/contact, return/down and one counter/knock-away moment on both sides.
 
 A complete 12-action/180-frame bundle still fails when this final-facing gate fails.
@@ -120,7 +122,7 @@ The body still owns the unconscious expression: unfocused or spiral eyes when vi
 
 ## Supported mounted combinations
 
-Every pet is designed as rideable, but runtime visual support is explicit rather than magical. The design contract lists at least one supported character appearance for a non-deferred pet art plan. Each supported character-pet pair needs:
+Ordinary pets, evolution targets and other rideable designs keep explicit runtime support rather than magical compatibility. Their design contract lists at least one supported character appearance for a non-deferred pet art plan. The first fusion release is the explicit exception: fusion targets declare `rideable=false`, list only the standalone `pet` world subject and omit the mounted contract entirely. Each supported rideable character-pet pair needs:
 
 - the true-eight integrated world pack;
 - the two-view mounted battle action pack;
@@ -134,8 +136,8 @@ Do not claim every character appearance is supported because one protagonist com
 2. Write the identity lock and full subject/direction/action matrix.
 3. Approve cardinal and formal battle key poses at actual relative scale, then prove both teams face inward after the runtime view/flip mapping is applied.
 4. Generate standalone pet true-eight idle/walk and its contact sheet/video.
-5. Generate each supported mounted combination as true-eight whole-frame art and review seat, anatomy and gait.
-6. Generate both battle views for core pet and mounted actions from the same identity board.
+5. For rideable contracts, generate each supported mounted combination as true-eight whole-frame art and review seat, anatomy and gait; skip this step for non-rideable fusion targets.
+6. Generate both battle views for the core pet, plus mounted actions only for rideable contracts, from the same identity board.
 7. Normalize frames deterministically through the one shared runtime-derivation implementation; preserve prompt, raw source, processed frames, parameters and ownership metadata.
 8. Integrate through focused catalogs/models and manifest paths; do not scatter hardcoded texture paths through `main.gd`.
 9. Run deterministic checks, then real `Main.tscn` screenshot/video review.
@@ -164,8 +166,8 @@ Per-frame 512px splits and duplicate raw/clean/input intermediates may stay in t
 
 Use the isolated pet battle review lab and formal runtime path. At minimum record or inspect:
 
-- true-eight standalone character, pet and mounted world loops;
-- 10 riding characters plus 10 battle pets in the fixed formation;
+- true-eight standalone pet world loops, plus character and mounted loops only for rideable contracts;
+- 10 battle pets in the fixed formation; rideable contracts additionally include 10 riding characters;
 - attack, skill attack, defend-hit, hurt/recovery and combo;
 - dodge, dodge-to-counter, ordinary counter;
 - counter kill with wounded return then down;
@@ -174,7 +176,7 @@ Use the isolated pet battle review lab and formal runtime path. At minimum recor
 
 Use fixed seeds/director scenes for rare combinations, then one natural randomized 10V10 run. Director clips must drive real battle events and rendering, not a separate fake animation player.
 
-The true-eight world evidence must show each direction twice: a readable idle hold followed by at least one complete four-frame walk cycle. Show standalone character, standalone pet, and integrated mounted whole-frame art together. A combined contact sheet is only an index and cross-direction consistency overview; shrinking many subjects into one image can hide facing, rider-seat contact, anatomy, alpha-edge and gait defects, so it never proves visual acceptance by itself. Direction approval must also inspect every `idle-1 + walk-1..4` source row at 1:1 pixels or a readable zoom and then watch the continuous per-form real-client video. The review scene must validate all three 40-frame collections before recording and exit non-zero on a missing/unreadable frame or an empty column; a visually blank but successfully encoded video is a failed gate. After an independent visual direction audit passes, freeze the exact reviewed paths and hashes in a semantic-direction approval manifest. Hash validation prevents later drift but never performs or replaces the visual judgment, and owner review remains pending until the project owner accepts the result.
+The true-eight world evidence must show each direction twice: a readable idle hold followed by at least one complete four-frame walk cycle. Show every subject declared by the design contract together; for a non-rideable fusion target that means the standalone pet only. A combined contact sheet is only an index and cross-direction consistency overview; shrinking many subjects into one image can hide facing, anatomy, alpha-edge and gait defects, so it never proves visual acceptance by itself. Direction approval must also inspect every `idle-1 + walk-1..4` source row at 1:1 pixels or a readable zoom and then watch the continuous per-form real-client video. The review scene must validate every declared 40-frame collection before recording and exit non-zero on a missing/unreadable frame or an empty column; a visually blank but successfully encoded video is a failed gate. After an independent visual direction audit passes, freeze the exact reviewed paths and hashes in a semantic-direction approval manifest. Hash validation prevents later drift but never performs or replaces the visual judgment, and owner review remains pending until the project owner accepts the result.
 
 ## Acceptance gates
 
@@ -186,10 +188,10 @@ The true-eight world evidence must show each direction twice: a readable idle ho
 - Both formal views satisfy exact decoded-RGBA `down-8 == revive-1` continuity in runtime, and full-source validation proves the same handoff before lean archival.
 - Transparent frames with no exact chroma eligibility mask receive no global color cleanup; runtime hashes come only from the shared canonical derivation.
 - At 1280×720, events remain readable with the message/log panel ignored.
-- Both teams face the arena centre in the same real-client frame; mounted actors and their same-side battle pets use identical final-facing mappings during idle, contact, return and down states.
+- Both teams face the arena centre in the same real-client frame; rideable contracts additionally prove mounted actors and their same-side battle pets use identical final-facing mappings during idle, contact, return and down states.
 - No unit leaves a stale shadow/marker, crosses the wrong facing, slides home, or overlaps its target beyond the authored contact distance.
 - The MP4 comes from the real Godot Metal path, has verified metadata and decodes fully.
-- Asset checks, catalog/manifest checks, relevant Godot action/mount/battle checks and `git diff --check` pass.
+- Asset checks, catalog/manifest checks, relevant Godot pet-action/battle checks, mounted checks only for rideable contracts, and `git diff --check` pass.
 - Source, ownership, prompt, replacement path and QA evidence are recorded.
 - The project owner reviews representative screenshots/video when style, scale, motion, impact or sound cannot be proven by code.
 

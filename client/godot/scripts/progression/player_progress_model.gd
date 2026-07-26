@@ -7274,6 +7274,7 @@ static func actor_from_pet_instance(instance: Dictionary, actor_id: String, side
 	actor["nextExp"] = int(instance.get("nextExp", exp_to_next_level(int(instance.get("level", 1)))))
 	actor["activeSkillIds"] = _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
 	actor["petSkillSlots"] = pet_skill_slots_for_instance(instance)
+	actor["passiveSkillIds"] = _effective_pet_passive_skill_ids(instance, actor.get("passiveSkillIds", []))
 	actor["petBattleState"] = PET_STATE_BATTLE
 	for key in PET_INDIVIDUAL_FIELD_KEYS:
 		if instance.has(key):
@@ -8279,9 +8280,10 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	instance["source"] = str(instance.get("source", ""))
 	instance["captureOverflowPending"] = bool(instance.get("captureOverflowPending", false))
 	instance["tameEligible"] = bool(instance.get("tameEligible", false))
-	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements", "passiveSkillIds"]:
+	for key in ["lineId", "lineName", "subtypeId", "subtypeName", "formName", "growthProfileId", "elements"]:
 		if template.has(key):
 			instance[key] = template.get(key)
+	instance["passiveSkillIds"] = _effective_pet_passive_skill_ids(instance, template.get("passiveSkillIds", []))
 	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
 	var learned: Array[String] = []
 	for skill_id in _valid_unique_pet_skill_ids(template.get("activeSkillIds", [])):
@@ -8629,6 +8631,45 @@ static func _valid_unique_pet_skill_ids(value) -> Array[String]:
 		if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
 			continue
 		result.append(skill_id)
+	return result
+
+
+static func _effective_pet_passive_skill_ids(instance: Dictionary, template_passive_ids) -> Array[String]:
+	if instance.has("fusionLineage"):
+		return _strict_fusion_passive_skill_ids(instance.get("passiveSkillIds", []))
+	var result := _unique_pet_passive_skill_ids(template_passive_ids)
+	for passive_id in _unique_pet_passive_skill_ids(instance.get("passiveSkillIds", [])):
+		if not result.has(passive_id):
+			result.append(passive_id)
+	return result
+
+
+static func _strict_fusion_passive_skill_ids(value) -> Array[String]:
+	if not (value is Array):
+		return []
+	var raw_ids := value as Array
+	if raw_ids.size() > 1:
+		return []
+	if raw_ids.is_empty():
+		return []
+	var raw_id = raw_ids[0]
+	if not (raw_id is String):
+		return []
+	var passive_id := str(raw_id)
+	if passive_id == "" or passive_id != passive_id.strip_edges():
+		return []
+	return [passive_id]
+
+
+static func _unique_pet_passive_skill_ids(value) -> Array[String]:
+	var result: Array[String] = []
+	if not (value is Array):
+		return result
+	for raw_id in value as Array:
+		var passive_id := str(raw_id).strip_edges()
+		if passive_id == "" or result.has(passive_id):
+			continue
+		result.append(passive_id)
 	return result
 
 

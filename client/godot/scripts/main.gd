@@ -869,6 +869,7 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_pet_instance_passive_check: bool = false
 var auto_pet_action_asset_check: bool = false
 var auto_pet_action_asset_form_id: String = ""
 var auto_mounted_action_asset_check: bool = false
@@ -1713,6 +1714,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_pet_instance_passive_check:
+		call_deferred("_run_auto_pet_instance_passive_check")
 	elif auto_pet_action_asset_check:
 		call_deferred("_run_auto_pet_action_asset_check")
 	elif auto_mounted_action_asset_check:
@@ -2464,6 +2467,8 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-pet-instance-passive-check":
+			auto_pet_instance_passive_check = true
 		elif arg == "--auto-pet-action-asset-check":
 			auto_pet_action_asset_check = true
 		elif arg.begins_with("--auto-pet-action-asset-form="):
@@ -5983,6 +5988,10 @@ func _run_auto_battle_passive_hover_check() -> void:
 
 func _run_auto_pet_template_catalog_check() -> void:
 	await _auto_checks()._run_auto_pet_template_catalog_check()
+
+
+func _run_auto_pet_instance_passive_check() -> void:
+	await _auto_checks()._run_auto_pet_instance_passive_check()
 
 
 func _run_auto_pet_action_asset_check() -> void:

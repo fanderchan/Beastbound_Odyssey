@@ -287,8 +287,8 @@ if (acquisitionSourceType === "evolution") {
   if (paidResetPolicy.allowed !== false) {
     errors.push("融合终局 progression.paidResetPolicy.allowed 必须为 false");
   }
-  if (paidResetPolicy.allowed === false && paidResetPolicy.ineligibleReason === "terminal_evolution") {
-    errors.push("融合终局不能借用 terminal_evolution；融合合同必须显式声明自己的稳定不可重置原因");
+  if (paidResetPolicy.ineligibleReason !== "terminal_fusion") {
+    errors.push("融合终局 progression.paidResetPolicy.ineligibleReason 必须为 terminal_fusion");
   }
 } else if (paidResetPolicy.allowed !== true) {
   errors.push(`${acquisitionSourceType || "当前来源"} 普通形态 progression.paidResetPolicy.allowed 必须为 true；该字段仅允许其普通1转、未选终局实例报价`);
@@ -308,10 +308,32 @@ if (artStatus !== "deferred") {
   const art = requireObject(presentation.artProduction, "presentation.artProduction");
   if (art.deliveryScope !== "full_release") errors.push("presentation.artProduction.deliveryScope 必须为 full_release");
   if (art.identityLockRequired !== true) errors.push("presentation.artProduction.identityLockRequired 必须为 true");
-  if (art.rideable !== true) errors.push("presentation.artProduction.rideable 必须为 true");
-  const subjectSets = requireStringArray(art.worldSubjectSets, "presentation.artProduction.worldSubjectSets", 3);
-  for (const subject of ["character", "pet", "mounted_character_pet"]) {
-    if (!subjectSets.includes(subject)) errors.push(`presentation.artProduction.worldSubjectSets 必须包含 ${subject}`);
+  if (typeof art.rideable !== "boolean") {
+    errors.push("presentation.artProduction.rideable 必须是布尔值");
+  } else if (acquisitionSourceType === "fusion" && art.rideable !== false) {
+    errors.push("首版融合宠 presentation.artProduction.rideable 必须为 false");
+  } else if (acquisitionSourceType !== "fusion" && art.rideable !== true) {
+    errors.push("非融合宠 presentation.artProduction.rideable 必须为 true");
+  }
+  const subjectSets = requireStringArray(
+    art.worldSubjectSets,
+    "presentation.artProduction.worldSubjectSets",
+    art.rideable === false ? 1 : 3,
+  );
+  if (art.rideable === false) {
+    if (subjectSets.length !== 1 || subjectSets[0] !== "pet") {
+      errors.push("不可骑融合宠 presentation.artProduction.worldSubjectSets 必须精确等于 pet");
+    }
+    if (Object.hasOwn(art, "mounted")) {
+      errors.push("不可骑融合宠 presentation.artProduction 不允许 mounted 字段");
+    }
+  } else {
+    if (subjectSets.length !== 3) {
+      errors.push("可骑宠 presentation.artProduction.worldSubjectSets 必须精确包含三类主体");
+    }
+    for (const subject of ["character", "pet", "mounted_character_pet"]) {
+      if (!subjectSets.includes(subject)) errors.push(`presentation.artProduction.worldSubjectSets 必须包含 ${subject}`);
+    }
   }
   const expectedDirections = ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"];
   const directions = requireStringArray(art.worldDirections, "presentation.artProduction.worldDirections", 8);
@@ -332,11 +354,13 @@ if (artStatus !== "deferred") {
   for (const scenario of requiredBattleScenarios) {
     if (!battleScenarios.includes(scenario)) errors.push(`presentation.artProduction.battleScenarios 必须包含 ${scenario}`);
   }
-  const mounted = requireObject(art.mounted, "presentation.artProduction.mounted");
-  if (mounted.composition !== "ai_integrated_whole_frame") errors.push("presentation.artProduction.mounted.composition 必须为 ai_integrated_whole_frame");
-  if (mounted.runtimeLayeredComposition !== false) errors.push("presentation.artProduction.mounted.runtimeLayeredComposition 必须为 false");
-  if (mounted.runtimeMirroring !== false) errors.push("presentation.artProduction.mounted.runtimeMirroring 必须为 false");
-  requireStringArray(mounted.supportedCharacterIds, "presentation.artProduction.mounted.supportedCharacterIds", 1);
+  if (art.rideable !== false) {
+    const mounted = requireObject(art.mounted, "presentation.artProduction.mounted");
+    if (mounted.composition !== "ai_integrated_whole_frame") errors.push("presentation.artProduction.mounted.composition 必须为 ai_integrated_whole_frame");
+    if (mounted.runtimeLayeredComposition !== false) errors.push("presentation.artProduction.mounted.runtimeLayeredComposition 必须为 false");
+    if (mounted.runtimeMirroring !== false) errors.push("presentation.artProduction.mounted.runtimeMirroring 必须为 false");
+    requireStringArray(mounted.supportedCharacterIds, "presentation.artProduction.mounted.supportedCharacterIds", 1);
+  }
   const requiredReviewScenes = ["true8_world", "formation_10v10", "attack", "skill_attack", "defend_hit", "hurt_recovery", "dodge", "dodge_counter", "counter", "counter_ko_return_down", "counter_knockaway", "combo", "down_revive"];
   const reviewScenes = requireStringArray(art.reviewScenes, "presentation.artProduction.reviewScenes", requiredReviewScenes.length);
   for (const scene of requiredReviewScenes) {

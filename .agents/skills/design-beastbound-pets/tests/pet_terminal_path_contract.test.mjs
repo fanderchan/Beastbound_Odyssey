@@ -37,6 +37,17 @@ function validateSpec(mutate = () => {}) {
   }
 }
 
+function configureNonrideableFusion(spec) {
+  spec.acquisition.sourceType = "fusion";
+  spec.progression.paidResetPolicy = {
+    allowed: false,
+    ineligibleReason: "terminal_fusion",
+  };
+  spec.presentation.artProduction.rideable = false;
+  spec.presentation.artProduction.worldSubjectSets = ["pet"];
+  delete spec.presentation.artProduction.mounted;
+}
+
 test("schema exposes separate allowed and ineligible paid-reset policy branches", () => {
   const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
   assert.deepEqual(
@@ -51,6 +62,7 @@ test("schema exposes separate allowed and ineligible paid-reset policy branches"
   assert.equal(schema.$defs.paidResetIneligiblePolicy.properties.allowed.const, false);
   assert.equal(schema.$defs.paidResetIneligiblePolicy.additionalProperties, false);
   assert.match(JSON.stringify(schema.allOf), /terminal_evolution/);
+  assert.match(JSON.stringify(schema.allOf), /terminal_fusion/);
 });
 
 test("ordinary form policy validates and only describes the stage-one quote window", () => {
@@ -149,24 +161,54 @@ test("fusion target is terminal and chooses a fusion-specific ineligibility reas
   assert.ok(allowed.result.errors.some((message) => message.includes("融合终局") && message.includes("allowed")));
 
   const wrongReason = validateSpec((spec) => {
-    spec.acquisition.sourceType = "fusion";
+    configureNonrideableFusion(spec);
     spec.progression.paidResetPolicy = {
       allowed: false,
       ineligibleReason: "terminal_evolution",
     };
   });
   assert.equal(wrongReason.status, 1);
-  assert.ok(wrongReason.result.errors.some((message) => message.includes("不能借用 terminal_evolution")));
+  assert.ok(wrongReason.result.errors.some((message) => message.includes("必须为 terminal_fusion")));
 
   const explicitFusionContract = validateSpec((spec) => {
-    spec.acquisition.sourceType = "fusion";
-    spec.progression.paidResetPolicy = {
-      allowed: false,
-      ineligibleReason: "terminal_fusion",
-    };
+    configureNonrideableFusion(spec);
   });
   assert.equal(explicitFusionContract.status, 0);
   assert.equal(explicitFusionContract.result.ok, true);
+});
+
+test("formal first-release fusion art accepts pet-only nonrideable scope", () => {
+  const checked = validateSpec((spec) => {
+    configureNonrideableFusion(spec);
+  });
+  assert.equal(checked.status, 0);
+  assert.equal(checked.result.ok, true);
+});
+
+test("formal first-release fusion art rejects mounted scope", () => {
+  const checked = validateSpec((spec) => {
+    configureNonrideableFusion(spec);
+    spec.presentation.artProduction.mounted = structuredClone(
+      example.presentation.artProduction.mounted,
+    );
+  });
+  assert.equal(checked.status, 1);
+  assert.equal(checked.result.ok, false);
+  assert.ok(checked.result.errors.some((message) => message.includes("不允许 mounted")));
+});
+
+test("rideable formal art still requires the exact three subjects and mounted contract", () => {
+  const extraSubject = validateSpec((spec) => {
+    spec.presentation.artProduction.worldSubjectSets.push("unsupported_subject");
+  });
+  assert.equal(extraSubject.status, 1);
+  assert.ok(extraSubject.result.errors.some((message) => message.includes("精确包含三类主体")));
+
+  const missingMounted = validateSpec((spec) => {
+    delete spec.presentation.artProduction.mounted;
+  });
+  assert.equal(missingMounted.status, 1);
+  assert.ok(missingMounted.result.errors.some((message) => message.includes("mounted 必须是对象")));
 });
 
 test("repository inspector verifies terminal evolution policies and the stage-one runtime gate", () => {

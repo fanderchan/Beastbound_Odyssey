@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p1_4b_fusion_candidate_growth_profiles_v1",
+  "status": "owner_review_pending",
+  "runtimeEnabled": false,
+  "runtimeImportPolicy": "forbidden_until_owner_approval_and_formal_recipe_release",
+  "modelVersion": "pet_growth_authority_v1",
+  "seedFormat": "audit:<profileId>:<six-digit sample number starting at 000001>",
+  "profiles": [
+    {
+      "profileId": "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+      "displayName": "曜冠角兽候选成长档",
+      "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+      "formName": "曜冠角兽",
+      "familyRole": "fusion_fast_single_target_breaker",
+      "runtimeEnabled": false,
+      "reviewStatus": "owner_review_pending",
+      "sourceNotes": [
+        "P1.4b 数值候选，只供离线成长审计。",
+        "三只融合材料的 Lv1 四维、隐藏成长、培养加成、等级和战力均不影响成品数值。",
+        "项目所有者确认身份、美术、成本和正式配方前，禁止导入生产成长目录。"
+      ],
+      "outputBase": {
+        "maxHp": 172,
+        "attack": 31,
+        "defense": 11,
+        "quick": 90
+      },
+      "outputGrowth": {
+        "maxHp": 8.8,
+        "attack": 3.1,
+        "defense": 1.15,
+        "quick": 2.75
+      },
+      "individualRules": {
+        "initialOutputSpread": {
+          "maxHp": [-13, 13],
+          "attack": [-4, 4],
+          "defense": [-2, 2],
+          "quick": [-11, 11]
+        },
+        "growthOutputSpread": {
+          "maxHp": [-1, 1],
+          "attack": [-0.32, 0.32],
+          "defense": [-0.14, 0.14],
+          "quick": [-0.32, 0.32]
+        },
+        "distribution": "weighted_center",
+        "rareExtremeRate": 0.02
+      },
+      "targetAudit": {
+        "sampleCount": 10000,
+        "levelMin": 1,
+        "levelMax": 140,
+        "lv140PowerBand": [1320, 1580],
+        "threeStatGrowthBand": [6.3, 7.8],
+        "hpGrowthBand": [7.7, 9.9],
+        "lv20DecisionIntent": "玩家可从成品自身的早期攻击与敏捷成长迹象筛选破阵潜力，但不能从三只材料的品质预知结果。"
+      }
+    },
+    {
+      "profileId": "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+      "displayName": "苔垒角兽候选成长档",
+      "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+      "formName": "苔垒角兽",
+      "familyRole": "fusion_durable_single_target_breaker",
+      "runtimeEnabled": false,
+      "reviewStatus": "owner_review_pending",
+      "sourceNotes": [
+        "P1.4b 数值候选，只供离线成长审计。",
+        "三只融合材料的 Lv1 四维、隐藏成长、培养加成、等级和战力均不影响成品数值。",
+        "项目所有者确认身份、美术、成本和正式配方前，禁止导入生产成长目录。"
+      ],
+      "outputBase": {
+        "maxHp": 205,
+        "attack": 27,
+        "defense": 25,
+        "quick": 52
+      },
+      "outputGrowth": {
+        "maxHp": 12,
+        "attack": 2.7,
+        "defense": 2.15,
+        "quick": 1.45
+      },
+      "individualRules": {
+        "initialOutputSpread": {
+          "maxHp": [-15, 15],
+          "attack": [-3, 3],
+          "defense": [-4, 4],
+          "quick": [-7, 7]
+        },
+        "growthOutputSpread": {
+          "maxHp": [-1.3, 1.3],
+          "attack": [-0.26, 0.26],
+          "defense": [-0.3, 0.3],
+          "quick": [-0.18, 0.18]
+        },
+        "distribution": "weighted_center",
+        "rareExtremeRate": 0.02
+      },
+      "targetAudit": {
+        "sampleCount": 10000,
+        "levelMin": 1,
+        "levelMax": 140,
+        "lv140PowerBand": [1290, 1590],
+        "threeStatGrowthBand": [5.5, 7],
+        "hpGrowthBand": [10.6, 13.4],
+        "lv20DecisionIntent": "玩家可从成品自身的生命与防御成长迹象判断攻坚潜力，但不能从三只材料的品质预知结果。"
+      }
+    }
+  ]
+}

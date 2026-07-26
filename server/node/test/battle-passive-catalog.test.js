@@ -23,17 +23,22 @@ function documentWith(entries) {
   return {schemaVersion: 1, passives: entries};
 }
 
-test("default server catalog strictly loads all five shared passive definitions", () => {
+test("default server catalog strictly loads all ten shared passive definitions", () => {
   const catalog = loadBattlePassiveCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.passiveCount, 5);
+  assert.equal(catalog.passiveCount, 10);
   assert.deepEqual(catalog.passiveIds, [
     "bui_resistant_skin",
     "wuli_hard_shell",
     "stone_immunity",
     "poison_resistance",
     "quick_instinct",
+    "emberhorn_red_burning_mind",
+    "emberhorn_ash_cinder_breath",
+    "emberhorn_gale_wakeful_instinct",
+    "mossback_marsh_adaptive_shell",
+    "mossback_sunbaked_grounded_shell",
   ]);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.passiveById("wuli_hard_shell")), true);
@@ -63,6 +68,32 @@ test("shared passive rules produce the same current resistance and immunity fact
     statusResist: {poison: 0.5},
   });
   assert.equal(poison.actor.statusResist.poison, 0.5);
+
+  const emberhorn = catalog.applyActorPassives({
+    passiveSkillIds: [
+      "emberhorn_red_burning_mind",
+      "emberhorn_ash_cinder_breath",
+      "emberhorn_gale_wakeful_instinct",
+    ],
+  });
+  assert.deepEqual(emberhorn.actor.statusResist, {
+    confusion: 0.25,
+    poison: 0.25,
+    sleep: 0.25,
+  });
+
+  const mossback = catalog.applyActorPassives({
+    passiveSkillIds: [
+      "mossback_marsh_adaptive_shell",
+      "mossback_sunbaked_grounded_shell",
+    ],
+  });
+  assert.deepEqual(mossback.actor.statusResist, {
+    poison: 0.12,
+    sleep: 0.12,
+    confusion: 0.12,
+    stone: 0.35,
+  });
 });
 
 test("quick instinct remains an explicit no-op until a product formula is approved", () => {

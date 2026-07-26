@@ -1267,6 +1267,9 @@ static func _make_skill_event(state: Dictionary, attacker_id: String, target_id:
 		"skillId": skill_id,
 		"skillName": BattleActionCatalog.label_for(skill_id, "宠物技能"),
 		"movementStyle": "melee",
+		"canDodge": BattleActionCatalog.effect_allows_dodge(skill_id, true),
+		"canCritical": BattleActionCatalog.effect_allows_critical(skill_id, true),
+		"canCounter": BattleActionCatalog.effect_allows_counter(skill_id, false),
 		"canLaunch": true,
 	}
 
