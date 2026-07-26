@@ -149,7 +149,7 @@ Movie Maker：平均 CPU render 0.23 ms/frame
 
 ## 当前结论
 
-本阶段完成的是月岚风狐正式成功链的隔离接入与双路线技术证明，不是项目所有者视觉批准或正式开放：
+本阶段提交时完成的是月岚风狐正式成功链的隔离接入与双路线技术证明，当时尚未获得项目所有者视觉批准，也没有正式开放：
 
 ```text
 moonGaleEvolution.runtimeIntegrationReview=self_review_passed_owner_pending
@@ -162,4 +162,4 @@ petEvolution.runtimeEnabled=false
 P1.3e=not_complete
 ```
 
-项目所有者需要先观看本阶段 1× 成片；只有明确认可后，才能另开切片处理 owner decision 与后续整包/路线开放验收。
+项目所有者随后已观看本阶段 1× 成片并回复“没啥问题，继续”。该后续决定只登记为 `evolution_visual_only` 单项批准，整宠、独立/骑乘战斗包、路线和全局运行门禁仍保持关闭；落账与复验见 Phase356。

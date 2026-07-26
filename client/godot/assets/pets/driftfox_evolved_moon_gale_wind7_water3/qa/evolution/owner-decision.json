@@ -3,18 +3,18 @@
   "decisionType": "beastbound_pet_animation_owner_decision",
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "animationId": "driftfox_moon_gale_evolution_front_v1",
-  "decision": "pending",
-  "ownerReviewStatus": "pending",
-  "ownerId": null,
-  "reviewedAt": null,
-  "scope": "evolution_visual_candidate",
-  "visualApproved": false,
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "evolution_visual_only",
+  "visualApproved": true,
   "petBundleReleaseApproved": false,
   "evolutionRouteReleaseApproved": false,
   "routeRuntimeEnabled": false,
-  "preparedEvidence": {
-    "mainSceneVideo": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
-    "mainSceneVideoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633",
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase355_moon_gale_evolution_runtime/Beastbound_Phase355_Moon_Gale_Evolution_Runtime_1x.mp4",
+    "mainSceneVideoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139",
     "width": 1280,
     "height": 720,
     "speedScale": 1.0,
@@ -22,8 +22,8 @@
     "fullDecodePassed": true
   },
   "notes": [
-    "项目所有者已说明当前睡觉、无法检查核对；因此本记录只表示候选已完成自审，不代表所有者批准。",
-    "本候选只覆盖高地风狐到月岚风狐的 12 帧进化视觉，不批准整只宠物动作包、骑乘战斗包、正式成功路径或进化路线开放。",
+    "项目所有者查看 Phase355 的 1x 权威成功演出成片后回复“没啥问题，继续”，据此批准当前高地风狐到月岚风狐的进化视觉及该成片中的成功演出呈现。",
+    "本决定范围仍严格限定为 evolution_visual_only，不批准独立战斗包、骑乘战斗包、整只宠物 bundle 或正式进化路线开放。",
     "evolutionVisual.runtimeEnabled、宠物目录 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持关闭。"
   ]
 }

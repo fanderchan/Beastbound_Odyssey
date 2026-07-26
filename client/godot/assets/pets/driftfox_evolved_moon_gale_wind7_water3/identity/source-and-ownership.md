@@ -61,12 +61,12 @@
 <!-- phase347-moon-gale-world-independent-semantic-audit:end -->
 
 <!-- phase355-moon-gale-evolution-runtime:start -->
-## Phase355 进化成功演出运行接入自审
+## Phase355 进化成功演出运行接入与后续单项批准
 
 - 接入范围：复用 Phase342 已建立的服务端权威成功回调、公开结果校验和全屏播放器，只把月岚风狐接入同一套目标形态驱动链路；没有修改进化数值、P90、材料、石币、成长、技能、档案协议或数据库。
 - 专属文案：`岚月正在回应……`，随后依次显示 `岚月风染`、`双尾分化`、`月岚定型`；阶段边界与 12 帧动画一起由本动作元数据提供，不再复用晶甲乌力文案。
 - 双路线证明：客户端实跑乌力/风狐各一次 P90 拒绝且完整播放器快照不变、各一次成功且播放 12 帧；服务端 memory-store 逐路线证明低档报价与 durable 事务均拒绝且零变更，高档成功后保留实例 ID 并成为目标形态 Lv1。
 - 真实客户端证据：隔离 QA 脚本实例化真实 `Main.tscn`，先展示高地风狐一转 Lv140 确认页，再模拟权威月岚风狐 Lv1 档案已应用后调用正式结果链。成片为 1280×720、60 FPS、436 帧、7.266667 秒、有声、全程 `1.00x`，核心 12 张动画帧各保持 5 个视频帧；证据位于 `.run/evidence/phase355_moon_gale_evolution_runtime/`。
 - 终局展示：成片结尾刷新同一实例的月岚风狐 Lv1 档案，并选中 `2转/进化/融合` 标签；0转、1转历史标签保留，符合进化与普通二转/融合处于同一终局层级的现行规则。
-- 审批边界：本记录仅为 `self_review_passed_owner_pending`。项目所有者尚未查看 Phase355 成片，故 `ownerReview=pending`、视觉/整包/路线/全局 `runtimeEnabled=false`，两条路线 `assetGate=deferred`，P1.3e 仍未完成。
+- 后续审批：项目所有者查看 Phase355 的 1× 成片后回复“没啥问题，继续”，现仅把进化视觉及该成片中的成功演出呈现登记为 `evolution_visual_only` 单项批准。独立/骑乘战斗包、整宠 bundle 和路线开放均未获批准；视觉、整包、路线和全局 `runtimeEnabled=false`，两条路线 `assetGate=deferred`，P1.3e 仍未完成。
 <!-- phase355-moon-gale-evolution-runtime:end -->

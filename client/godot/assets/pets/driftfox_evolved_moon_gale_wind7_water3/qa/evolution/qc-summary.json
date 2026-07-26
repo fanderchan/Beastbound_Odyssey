@@ -24,7 +24,7 @@
   "animationGif": "qa/evolution/evolution.gif",
   "animationGifSha256": "71d5a3be27bed6fa1f50bdeab7ad3bfb7e73528b428e08a23ee55baf43a6f6fd",
   "ownerDecision": "qa/evolution/owner-decision.json",
-  "ownerDecisionSha256": "1a25641f4a418da32c99ce1a2586aa69c0eaf8a09c693a0848bd7f17425bd48d",
+  "ownerDecisionSha256": "bffafb87c8ee6125cdbd8b691b1f857dbc1912fe344b5759fb8db3da7bbac09c",
   "realMainSceneReview": {
     "scene": "res://scenes/Main.tscn",
     "renderer": "Metal 4.0 Forward Mobile",
@@ -77,6 +77,6 @@
   },
   "runtimeEnabled": false,
   "selfReview": "passed",
-  "ownerReview": "pending",
-  "approvalScope": "none"
+  "ownerReview": "approved",
+  "approvalScope": "evolution_visual_only"
 }

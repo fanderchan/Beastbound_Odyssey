@@ -262,13 +262,15 @@
     "evolutionContactSheet": "qa/evolution/contact-sheet.png",
     "evolutionContactSheetSha256": "c2eec3fe70c0c177adc173f586637f575b07d27a9c15d506a4d36911daadf0af",
     "evolutionQc": "qa/evolution/qc-summary.json",
-    "evolutionQcSha256": "08eab34bf04d4dbbaea7319985a7e6eff8bf3580700f1ec0c75f9e9c83ba88cc",
+    "evolutionQcSha256": "9478fd1a57ca285ba2c12759406c2caf478210fe2d9a147b140d96ecfc927169",
     "evolutionGif": "qa/evolution/evolution.gif",
     "evolutionGifSha256": "71d5a3be27bed6fa1f50bdeab7ad3bfb7e73528b428e08a23ee55baf43a6f6fd",
     "evolutionOwnerDecision": "qa/evolution/owner-decision.json",
-    "evolutionOwnerDecisionSha256": "1a25641f4a418da32c99ce1a2586aa69c0eaf8a09c693a0848bd7f17425bd48d",
+    "evolutionOwnerDecisionSha256": "bffafb87c8ee6125cdbd8b691b1f857dbc1912fe344b5759fb8db3da7bbac09c",
     "evolutionRealMainVideo": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
-    "evolutionRealMainVideoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633"
+    "evolutionRealMainVideoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633",
+    "evolutionRuntimeIntegrationVideo": ".run/evidence/phase355_moon_gale_evolution_runtime/Beastbound_Phase355_Moon_Gale_Evolution_Runtime_1x.mp4",
+    "evolutionRuntimeIntegrationVideoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
@@ -4913,7 +4915,7 @@
     }
   },
   "evolutionVisual": {
-    "status": "owner_review_pending",
+    "status": "approved",
     "animationId": "driftfox_moon_gale_evolution_front_v1",
     "sourceFormId": "driftfox_highland_wind9_earth1",
     "targetFormId": "driftfox_evolved_moon_gale_wind7_water3",
@@ -4937,7 +4939,7 @@
     "qcSummary": "qa/evolution/qc-summary.json",
     "animationGif": "qa/evolution/evolution.gif",
     "ownerDecision": "qa/evolution/owner-decision.json",
-    "ownerDecisionSha256": "1a25641f4a418da32c99ce1a2586aa69c0eaf8a09c693a0848bd7f17425bd48d",
+    "ownerDecisionSha256": "bffafb87c8ee6125cdbd8b691b1f857dbc1912fe344b5759fb8db3da7bbac09c",
     "realMainSceneReview": {
       "video": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
       "videoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633",
@@ -4952,7 +4954,8 @@
       "fullDecodePassed": true
     },
     "runtimeIntegrationReview": {
-      "reviewState": "self_review_passed_owner_pending",
+      "reviewState": "owner_review_approved",
+      "approvalScope": "evolution_visual_only",
       "video": ".run/evidence/phase355_moon_gale_evolution_runtime/Beastbound_Phase355_Moon_Gale_Evolution_Runtime_1x.mp4",
       "videoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139",
       "width": 1280,
@@ -4971,6 +4974,6 @@
     },
     "runtimeBundleDigest": "daba0e310c76c165ccac511d15366b3db40a792c80b52cbbd44dee7402549187",
     "runtimeEnabled": false,
-    "ownerReview": "pending"
+    "ownerReview": "approved"
   }
 }
