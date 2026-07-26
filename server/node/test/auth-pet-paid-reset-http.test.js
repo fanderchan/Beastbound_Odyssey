@@ -49,6 +49,7 @@ test("HTTP paid reset requires one operation key, rejects client pricing, and re
     {headers: authorization},
   );
   assert.equal(quote.ok, true);
+  assert.equal(quote.paidResetQuote.schemaVersion, 1);
   assert.equal(quote.paidResetQuote.profileRevision, account.profileRevision);
   assert.equal(quote.paidResetQuote.configRevision, 0);
   assert.equal(quote.paidResetQuote.payment.amount, 300);
@@ -122,4 +123,44 @@ test("HTTP paid reset requires one operation key, rejects client pricing, and re
   assert.equal(replay.profileBinding.profileRevision, first.profileBinding.profileRevision);
   assert.equal(replay.profile.boundDiamonds, 0);
   assert.equal(replay.profile.diamonds, 50);
+});
+
+test("HTTP paid reset rejects an ordinary two-rebirth terminal pet without a receipt or debit", async (t) => {
+  const seed = createAuthService({store: createMemoryAuthStore(), now: () => NOW_MS});
+  const account = seedPaidResetAccount(seed, {username: "prs_http_terminal"});
+  const data = seed.snapshot();
+  const binding = data.profileBindings[account.account.accountId];
+  data.profiles[binding.playerId].profile.petInstances[0].petCultivation.rebirthCount = 2;
+  const store = createMemoryAuthStore(data);
+  const service = createAuthService({store, now: () => NOW_MS});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await service.waitForDurableIdle();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const authorization = {authorization: `Bearer ${account.session.token}`};
+  const before = structuredClone(service.snapshot());
+
+  const quote = await fetchJson(
+    `${base}/pets/paid-reset/quote?instanceId=${encodeURIComponent(account.fixture.pet.instanceId)}`,
+    {headers: authorization},
+  );
+  assert.equal(quote.ok, false);
+  assert.equal(quote.code, "pet_paid_reset_terminal_stage");
+  assert.equal(quote.message, "宠物已进入2转、进化或融合终局，不能付费重置。");
+
+  const result = await fetchJson(`${base}/pets/paid-reset`, {
+    method: "POST",
+    headers: {
+      ...authorization,
+      "Idempotency-Key": "paid_reset_http_terminal_0001",
+    },
+    body: JSON.stringify(requestFor(account)),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "pet_paid_reset_terminal_stage");
+  assert.deepEqual(service.snapshot(), before);
 });

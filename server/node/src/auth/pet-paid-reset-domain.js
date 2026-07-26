@@ -13,6 +13,10 @@ const {
   inspectPetPaidResetEligibility,
   preflightPetPaidReset,
 } = require("./pet-paid-reset");
+const {
+  inspectPetTerminalPath,
+  petPaidResetTerminalStageFailure,
+} = require("./pet-terminal-path");
 
 const REQUEST_KEYS = new Set([
   "instanceId",
@@ -54,6 +58,7 @@ function createPetPaidResetDomain(ctx) {
     now,
     ok,
     persistProfileForAccount,
+    petEvolutionRouteCatalog,
     petPaidResetPolicyCatalog,
     petRebirthGrowthCycle,
     petRequiredByActiveQuest,
@@ -132,6 +137,14 @@ function createPetPaidResetDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    if (terminalPath.terminal) {
+      const terminalFailure = petPaidResetTerminalStageFailure();
+      return fail(terminalFailure.code, terminalFailure.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
     const formId = String(pet.formId || pet.templateId || pet.speciesId || "").trim();
     const quoted = resolvePetPaidResetQuote(
       petPaidResetPolicyCatalog,
@@ -147,6 +160,7 @@ function createPetPaidResetDomain(ctx) {
     const inspected = inspectPetPaidResetEligibility(pet, {
       quote: quoted.quote,
       growthCycle: petRebirthGrowthCycle,
+      evolutionRouteCatalog: petEvolutionRouteCatalog,
     });
     if (!inspected.ok) {
       return fail(inspected.code, inspected.message, {
@@ -246,6 +260,14 @@ function createPetPaidResetDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    if (terminalPath.terminal) {
+      const terminalFailure = petPaidResetTerminalStageFailure();
+      return fail(terminalFailure.code, terminalFailure.message, {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+      });
+    }
 
     const formId = String(pet.formId || pet.templateId || pet.speciesId || "").trim();
     const quoted = resolvePetPaidResetQuote(
@@ -269,6 +291,7 @@ function createPetPaidResetDomain(ctx) {
       operationId: operation.operationId,
       quote: quoted.quote,
       growthCycle: petRebirthGrowthCycle,
+      evolutionRouteCatalog: petEvolutionRouteCatalog,
     });
     if (!preflight.ok) {
       return fail(preflight.code, preflight.message, {
@@ -292,6 +315,7 @@ function createPetPaidResetDomain(ctx) {
       quote: quoted.quote,
       paymentPlan,
       growthCycle: petRebirthGrowthCycle,
+      evolutionRouteCatalog: petEvolutionRouteCatalog,
       expToNextLevel,
     });
     if (!resetResult.ok) {

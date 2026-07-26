@@ -24,7 +24,7 @@
 | Capture formula | `client/godot/data/balance/capture_formula.json` |
 | Capture tools | `client/godot/data/capture_tools.json` |
 | Encounter zones and wild pools | `client/godot/data/*_map.json` |
-| All-form paid rebirth-reset defaults, wallet policies, and immutable reset contract | `client/godot/data/balance/pet_paid_reset_policy.json` |
+| All-form paid rebirth-reset eligibility, eligible-form price/wallet defaults, and immutable reset contract | `client/godot/data/balance/pet_paid_reset_policy.json` |
 | Strict paid-reset catalog, GM overrides, and pure debit planning | `server/node/src/auth/pet-paid-reset-policy-catalog.js`, `gm-pet-paid-reset-config.js`, `pet-paid-reset-payment.js` |
 | Region grouping and advertised encounter groups | `client/godot/data/map_regions.json` |
 | Level-route intent | `client/godot/data/balance/progression_zones.json` |
@@ -111,14 +111,20 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - Use a focused authoritative server transaction with stable receipt and replay protection.
 - Update item/reward/route catalogs as applicable.
 - Preserve instance history, consume materials atomically, and add persistence tests.
+- Resolve `0 rebirth -> 1 rebirth -> [normal 2 rebirth / evolution / fusion]` as one mutually exclusive terminal path. Evolution targets keep 0/1 pages only as instance history and have no legal current-form 0-rebirth state.
+- Paid reset is available only before a terminal choice, to an authority-v1 ordinary instance at exactly one rebirth. Normal 2 rebirth, evolution, and fusion are terminal and cannot reset.
+- An evolution target's explicit paid-reset policy is `allowed=false` with `ineligibleReason=terminal_evolution` and no pricing/reset-operation fields. A future fusion target also uses `allowed=false`, but its fusion contract must choose its own stable reason and consequences explicitly.
+- Preserve terminal power semantics across transactions and persistence: normal 2 rebirth keeps the same individual's Lv1/hidden quality plus cumulative bonus; evolution preserves the one-rebirth cultivation bonus and stage history while freshly rolling target-form Lv1 4V/hidden growth; fusion accepts only three ordinary authority-v1, exactly-one-rebirth, pre-terminal materials, ignores their numeric quality and build allocation, generates from fusion-only rules, and inherits only allowlisted skills.
+- Fusion material consumption is an intentional sink for poorly rolled ordinary authority-v1, exactly-one-rebirth, pre-terminal embryos. Require exactly three such instances; reject 0-rebirth pets, normal 2-rebirth terminals, evolution results, and prior fusion results before any consumption. Recipe eligibility may select an output identity, but material strength must never become an undocumented weight, pity modifier, or hidden quality bonus.
 - Pause for unresolved paid value, refund, destructive material, or migration rules.
 
 ### Any new pet form
 
 - Add exactly one `formPolicies[]` entry to `pet_paid_reset_policy.json`; the strict server catalog rejects missing, duplicate, or unknown forms.
-- Select a default price tier by acquisition/replacement value. Do not calculate price from the individual pet's public or hidden quality, reset count, or recharge history.
-- Use `bound_first_split` for ordinary/noncommercial system consumption unless the product calls for a stricter rule. Reserve `unbound_only` for explicit commercial-value policy.
-- Keep fixed-per-operation pricing, unlimited reset eligibility, full Lv1/0 reset, successful unbinding, and technical-rollback-only refund semantics invariant. GM may override currency, amount, and wallet policy, not these rules.
+- Declare a policy per form instead of assuming every instance can reset. An ordinary form's `allowed=true` means its authority-v1 one-rebirth, pre-terminal instances may be quoted; 0-rebirth and normal 2-rebirth instances remain ineligible. Evolution and future fusion targets use `allowed=false`.
+- For an ordinary `allowed=true` form, select a default price tier by acquisition/replacement value. Do not calculate price from the individual pet's public or hidden quality, reset count, or recharge history.
+- For `allowed=true`, use `bound_first_split` for ordinary/noncommercial system consumption unless the product calls for a stricter rule; reserve `unbound_only` for explicit commercial-value policy. Keep fixed-per-operation pricing, repeated eligibility after retraining to one rebirth, full Lv1/0 reset, successful unbinding, and technical-rollback-only refund semantics invariant.
+- For `allowed=false`, store only the stable ineligibility reason and omit price tier, wallet, unlimited, unbinding, and refund fields. GM price overrides cannot make an ineligible form eligible.
 
 ## Current gaps
 
@@ -132,13 +138,13 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 - Lv20 retention rules have a bounded no-mutation preview, but the product decision now keeps trained-pet judgment in the owned-pet panel. This preview is not permission for capture automation to train, move, discard, or consume a pet; its legacy settings placement should be relocated rather than expanded.
 - Auto-capture filter schema v2 stores one 0..100 minimum Lv1 percentile per public stat. Only a capture confirmed as the same frozen authority-v1 Lv1 individual is evaluated; Lv2+, missing, or inconsistent facts default to retain/manual review. Schema-v1 raw stat ranges migrate disabled because they cannot be translated across species. Current results never auto-release the pet.
 - Encounter pools live in map files; there is no standalone `encounter_tables.json` source.
-- Current taxonomy allows one family passive and subtype default active skills. Fusion inheritance needs a new per-instance authoritative contract.
+- Current taxonomy allows one family passive and subtype default active skills. Fusion is confirmed to inherit only allowlisted skills and never material numeric quality, but its per-instance authoritative skill selection, conflict resolution, storage, and replay contract still need implementation.
 - Distinct pet actions currently require globally unique preferred slots; all seven slots are occupied, so expand the catalog/slot contract before adding new active skill IDs.
 - Server passive semantics are incomplete relative to client presentation for some effects; verify handlers before reuse.
 - Online party encounter requests now carry only zone/interaction intent plus a server-issued one-time permit under protocol v3; client pet/count/stat/capture/EXP facts are ignored. Encounter-time candidates use independent CSPRNG identities and capture secrets that never enter public rooms, events, records, or profiles.
 - A full five-pet party plus twenty-pet stable is rejected before the capture roll and tool spend; an internal out-of-band race falls back to temporary overflow storage rather than deleting the claimed pet. Player-facing recovery/audit for historical overflow and a safe server-authoritative auto-discard policy remain P1.1 work.
-- Formal evolution and fusion runtime data/contracts are roadmap work, not established sources of truth.
-- P1.2c-3 now provides the dedicated authoritative paid-reset transaction for legal authority-v1 one/two-rebirth owned pets: server-resolved quote, atomic bound/unbound debit, full Lv1/0 reset, successful unbinding, permanent count, private bounded audit, operation receipt, row-local profile write, and exact ambiguous-COMMIT recovery. It fails closed for legacy/damaged/zero-rebirth state and never rerolls Lv1 facts, hidden innate growth, enhancement, or skills. Player-safe quote display, double confirmation, client wiring, and GM audit inspection remain P1.2c-4; do not claim a usable player UI exists yet.
+- Evolution is a terminal-path transition after one rebirth: its target's 0/1 pages are historical only and the current evolved form cannot legally reset to Lv1/0. Fusion is likewise a confirmed non-resettable terminal: it consumes exactly three ordinary authority-v1, exactly-one-rebirth, pre-terminal materials, its final numeric quality ignores all three, and only allowlisted skills may transfer. P1.4 still needs the concrete authoritative fusion transaction, a fusion-specific stable paid-reset ineligibility reason, exact skill-pool/selection/conflict rules, persistence, and replay evidence; those implementation details must not reopen the settled material eligibility, reset eligibility, or numeric-inheritance rules.
+- P1.2c-3 provides the dedicated authoritative paid-reset transaction for eligible authority-v1 owned pets at exactly one rebirth before a terminal choice: server-resolved quote, atomic bound/unbound debit, full Lv1/0 reset, successful unbinding, permanent count, private bounded audit, operation receipt, row-local profile write, and exact ambiguous-COMMIT recovery. It fails closed for normal 2 rebirth, evolution, fusion, legacy/damaged/zero-rebirth state and never rerolls Lv1 facts, hidden innate growth, enhancement, or skills. Player-safe quote display, double confirmation, client wiring, and GM audit inspection remain separate acceptance work; do not claim a usable player UI without its own evidence.
 
 Do not hide these gaps with fallback data in a new pet. Either close the relevant gap in the same slice or mark the feature deferred and avoid claiming completion.
 

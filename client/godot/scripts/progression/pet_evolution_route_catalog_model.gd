@@ -35,12 +35,15 @@ static func validation_errors(
 		errors.append("进化路线关闭时必须有安全提示")
 	if _dict(data.get("qualityProjection", {})) != _dict(balance.get("qualityProjection", {})):
 		errors.append("进化路线必须保持二代4V/隐藏成长重抽与源宠履历合同")
+	var reset_policy_document := _dict(paid_reset_policy)
+	if int(reset_policy_document.get("schemaVersion", 0)) != 2 or str(reset_policy_document.get("policyId", "")) != "pet_paid_reset_policy_v2":
+		errors.append("进化路线必须引用pet_paid_reset_policy_v2终局重置合同")
 
 	var lines := _index(pet_templates, "lines", "lineId", "宠物族系", errors)
 	var subtypes := _index(pet_templates, "subtypes", "subtypeId", "宠物亚种", errors)
 	var forms := _index(pet_templates, "forms", "formId", "宠物形态", errors)
 	var profiles := _index(growth_profiles, "profiles", "profileId", "成长档", errors)
-	var reset_forms := _index(paid_reset_policy, "formPolicies", "formId", "重置策略", errors)
+	var reset_forms := _index(reset_policy_document, "formPolicies", "formId", "重置策略", errors)
 	var items := _index(bag_items, "items", "id", "背包物品", errors)
 	var rewards := _index(battle_rewards, "rewardTables", "id", "战斗奖励", errors)
 	var quest_index := _index(quests, "quests", "id", "任务", errors)
@@ -102,6 +105,9 @@ static func validation_errors(
 		)
 	if shared_source_ids.size() != 1 or lineage_source_ids.size() != EXPECTED_ROUTE_COUNT:
 		errors.append("两条路线必须共用一个刷楼核心，并各用不同族系材料")
+	for target_form_id in used_targets:
+		if used_sources.has(target_form_id):
+			errors.append("进化终局目标不能再次作为进化来源：%s" % str(target_form_id))
 	return errors
 
 
@@ -244,7 +250,18 @@ static func _validate_route(route: Dictionary, index: int, runtime_enabled: bool
 
 	var result := _dict(route.get("result", {}))
 	var terminal := _dict(balance.get("terminalPath", {}))
-	if int(result.get("level", 0)) != int(terminal.get("resultLevel", 0)) or int(result.get("rebirthCount", 0)) != int(terminal.get("resultRebirthCount", 0)) or result.get("normalSecondRebirthAllowed", null) != false or result.get("fusionMaterialAllowed", null) != false or not is_equal_approx(float(result.get("successRate", 0.0)), 1.0) or result.get("failureConsumes", null) != false:
+	if (
+		int(result.get("level", 0)) != int(terminal.get("resultLevel", 0))
+		or int(result.get("rebirthCount", 0)) != int(terminal.get("resultRebirthCount", 0))
+		or str(result.get("terminalPathId", "")) != str(terminal.get("pathId", ""))
+		or result.get("normalSecondRebirthAllowed", null) != terminal.get("normalSecondRebirthAllowed", null)
+		or result.get("fusionMaterialAllowed", null) != terminal.get("fusionMaterialAllowed", null)
+		or result.get("paidResetAllowed", null) != terminal.get("paidResetAllowed", null)
+		or not is_equal_approx(float(result.get("successRate", 0.0)), float(terminal.get("successRate", 0.0)))
+		or result.get("failureConsumes", null) != terminal.get("failureConsumes", null)
+		or result.get("preserveInstanceIdentity", null) != true
+		or result.get("preserveBindingAndLock", null) != true
+	):
 		errors.append("%s 结果违反一转终局、必成和失败零消耗合同" % label)
 	var skills := _dict(route.get("skills", {}))
 	var subtype := _dict(subtypes.get(str(target_form.get("subtypeId", "")), {}))
@@ -258,9 +275,18 @@ static func _validate_route(route: Dictionary, index: int, runtime_enabled: bool
 	var passive_id := str(skills.get("passiveSkillId", ""))
 	if not passives.has(passive_id) or str(line.get("passiveSkillId", "")) != passive_id or skills.get("preserveLearnedAndInherited", null) != true:
 		errors.append("%s 必须保留族系被动和已学/遗传技能" % label)
-	var reset_policy := _dict(reset_forms.get(target_form_id, {}))
-	if str(route.get("paidResetPriceTierId", "")) != "diamond_evolution" or str(reset_policy.get("priceTierId", "")) != "diamond_evolution":
-		errors.append("%s 目标形态必须使用进化宠重置价格档" % label)
+	if route.has("paidResetPriceTierId"):
+		errors.append("%s 进化终局不能保留付费重置价格档字段" % label)
+	var source_reset_policy := _dict(reset_forms.get(source_form_id, {}))
+	if source_reset_policy.get("resetAllowed", null) != true or str(source_reset_policy.get("priceTierId", "")) == "":
+		errors.append("%s 来源形态在选择终局路线前必须仍可付费重置" % label)
+	var target_reset_policy := _dict(reset_forms.get(target_form_id, {}))
+	if (
+		target_reset_policy.get("resetAllowed", null) != false
+		or str(target_reset_policy.get("ineligibleReason", "")) != "terminal_evolution"
+		or target_reset_policy.has("priceTierId")
+	):
+		errors.append("%s 目标形态必须以terminal_evolution原因禁止付费重置" % label)
 	var asset_gate := _dict(route.get("assetGate", {}))
 	if not ["deferred", "formal"].has(str(asset_gate.get("status", ""))) or asset_gate.get("formalAssetRequiredBeforeRuntime", null) != true or not (asset_gate.get("requiredAnimations", []) is Array) or (asset_gate.get("requiredAnimations", []) as Array).size() < 8:
 		errors.append("%s 正式资产门禁不完整" % label)

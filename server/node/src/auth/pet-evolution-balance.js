@@ -233,8 +233,12 @@ function createPetEvolutionBalance(document, {rebirthBalance = loadPetRebirthBal
   if (terminal.resultLevel !== 1 || terminal.resultRebirthCount !== 1) {
     errors.push("terminalPath must return one-rebirth evolution to Lv1");
   }
-  if (terminal.normalSecondRebirthAllowed !== false || terminal.fusionMaterialAllowed !== false) {
-    errors.push("terminalPath must forbid second rebirth and fusion-material reuse");
+  if (
+    terminal.normalSecondRebirthAllowed !== false
+    || terminal.fusionMaterialAllowed !== false
+    || terminal.paidResetAllowed !== false
+  ) {
+    errors.push("terminalPath must forbid second rebirth, fusion-material reuse, and paid reset");
   }
   if (terminal.successRate !== 1 || terminal.failureConsumes !== false) {
     errors.push("terminalPath must be guaranteed and non-consuming on failure");

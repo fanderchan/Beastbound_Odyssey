@@ -22,10 +22,12 @@ test("evolution balance locks a harder quest-unlocked floor-material terminal pa
   assert.equal(balance.acquisition.requiresTeamPve, true);
   assert.equal(balance.terminalPath.normalSecondRebirthAllowed, false);
   assert.equal(balance.terminalPath.fusionMaterialAllowed, false);
+  assert.equal(balance.terminalPath.paidResetAllowed, false);
   assert.equal(balance.terminalPath.successRate, 1);
   assert.equal(balance.qualityProjection.rerollAllowed, true);
   assert.equal(balance.qualityProjection.sourceQualityTransfer, false);
   assert.equal(balance.qualityProjection.preserveSourceStageSnapshots, true);
+  assert.equal(balance.preserve.includes("paid_reset_history"), true);
   assert.equal(effort.repeatableRatio, 1.5);
   assert.equal(effort.firstEvolutionRatio, 1.7);
   assert.equal(Object.isFrozen(balance), true);
@@ -68,14 +70,23 @@ test("repeatable evolution may not become easier than the approved 1.5x floor", 
   );
 });
 
-test("evolution cannot stack ordinary second rebirth or raw-stat inflation", () => {
+test("evolution is a terminal choice that cannot stack second rebirth, fusion, paid reset, or raw-stat inflation", () => {
+  for (const field of ["normalSecondRebirthAllowed", "fusionMaterialAllowed", "paidResetAllowed"]) {
+    const source = structuredClone(loadPetEvolutionBalance());
+    source.terminalPath[field] = true;
+    assert.throws(
+      () => createPetEvolutionBalance(source),
+      (error) => error instanceof PetEvolutionBalanceError
+        && error.errors.some((entry) => entry.includes("second rebirth"))
+        && error.errors.some((entry) => entry.includes("fusion-material reuse"))
+        && error.errors.some((entry) => entry.includes("paid reset")),
+    );
+  }
   const source = structuredClone(loadPetEvolutionBalance());
-  source.terminalPath.normalSecondRebirthAllowed = true;
   source.powerBudget.rawStatInflationBeyondBandAllowed = true;
   assert.throws(
     () => createPetEvolutionBalance(source),
     (error) => error instanceof PetEvolutionBalanceError
-      && error.errors.some((entry) => entry.includes("second rebirth"))
       && error.errors.some((entry) => entry.includes("raw-stat inflation")),
   );
 });

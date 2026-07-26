@@ -78,6 +78,8 @@ const ERROR_CODE_MESSAGES := {
 	"pet_paid_reset_cultivation_invalid": "这只宠物当前没有可重置的转生培养记录。",
 	"pet_paid_reset_growth_unsupported": "这只宠物仍使用旧成长档，请联系 GM 处理。",
 	"pet_paid_reset_audit_invalid": "这只宠物的重置记录异常，请联系 GM 处理。",
+	"pet_paid_reset_terminal_stage": "宠物已进入2转、进化或融合终局，不能付费重置。",
+	"pet_rebirth_terminal_stage": "宠物已进入2转、进化或融合终局，不能再进行普通转生。",
 	"pet_evolution_disabled": "宠物进化尚未正式开放。",
 	"pet_evolution_asset_gate": "该进化形态的正式资源尚未完成，当前不会消耗宠物或材料。",
 	"pet_evolution_license_required": "尚未完成该族系的一次性进化资格任务。",

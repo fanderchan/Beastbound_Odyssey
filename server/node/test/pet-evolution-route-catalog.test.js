@@ -7,6 +7,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const source = require("../../../client/godot/data/pet_evolution_routes.json");
+const {createPetPaidResetPolicyCatalog} = require("../src/auth/pet-paid-reset-policy-catalog");
 const {
   EXPECTED_ROUTE_COUNT,
   PetEvolutionRouteCatalogError,
@@ -24,12 +25,12 @@ function withRouteDocument(document, callback) {
   }
 }
 
-function expectInvalid(mutator, pattern) {
+function expectInvalid(mutator, pattern, options = {}) {
   const document = structuredClone(source);
   mutator(document);
   withRouteDocument(document, (routePath) => {
     assert.throws(
-      () => loadPetEvolutionRouteCatalog({routePath}),
+      () => loadPetEvolutionRouteCatalog({routePath, ...options}),
       (error) => (
         error instanceof PetEvolutionRouteCatalogError
         && error.code === "pet_evolution_route_catalog_invalid"
@@ -41,6 +42,7 @@ function expectInvalid(mutator, pattern) {
 
 test("two evolution routes form a gated, deterministic and cross-catalog complete acquisition contract", () => {
   const catalog = loadPetEvolutionRouteCatalog();
+  const paidResetCatalog = createPetPaidResetPolicyCatalog();
   assert.equal(catalog.catalogId, "pet_evolution_routes_v2");
   assert.equal(catalog.runtimeEnabled, false);
   assert.equal(catalog.routes.length, EXPECTED_ROUTE_COUNT);
@@ -49,6 +51,11 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
   assert.equal(catalog.materialEncounters.filter((entry) => entry.kind === "shared_floor_core").length, 1);
   assert.equal(catalog.materialEncounters.filter((entry) => entry.kind === "lineage_material").length, 2);
   assert.equal(catalog.materialEncounters.every((entry) => entry.minPlayerCount === 2), true);
+  assert.equal(paidResetCatalog.priceTiersById.diamond_evolution.amount, 650);
+  assert.equal(
+    paidResetCatalog.formPolicies.some((entry) => entry.priceTierId === "diamond_evolution"),
+    false,
+  );
 
   for (const route of catalog.routes) {
     assert.equal(route.eligibility.requiredRebirthCount, 1);
@@ -67,7 +74,18 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
     assert.equal(route.result.failureConsumes, false);
     assert.equal(route.result.normalSecondRebirthAllowed, false);
     assert.equal(route.result.fusionMaterialAllowed, false);
-    assert.equal(route.paidResetPriceTierId, "diamond_evolution");
+    assert.equal(route.result.paidResetAllowed, false);
+    assert.equal(Object.hasOwn(route, "paidResetPriceTierId"), false);
+    assert.equal(paidResetCatalog.formPoliciesById[route.sourceFormId].resetAllowed, true);
+    assert.deepEqual(
+      paidResetCatalog.formPoliciesById[route.targetFormId],
+      {
+        formId: route.targetFormId,
+        acquisitionTier: "evolution",
+        resetAllowed: false,
+        ineligibleReason: "terminal_evolution",
+      },
+    );
     assert.equal(route.assetGate.status, "deferred");
     assert.equal(route.projectedBasePower.source, route.projectedBasePower.target);
     assert.equal(route.projectedBasePower.intrinsicUplift.min >= 1.484, true);
@@ -117,4 +135,62 @@ test("route catalog rejects binding and independent-quality contract drift", () 
   expectInvalid((document) => {
     document.qualityProjection.rerollAllowed = false;
   }, /qualityProjection must exactly match/);
+});
+
+test("route catalog locks terminal evolution against reset-price drift and later terminal reuse", () => {
+  expectInvalid((document) => {
+    document.routes[0].result.paidResetAllowed = true;
+  }, /terminal evolution contract/);
+
+  expectInvalid((document) => {
+    document.routes[0].paidResetPriceTierId = "diamond_evolution";
+  }, /paidResetPriceTierId must be omitted/);
+
+  const paidResetCatalog = structuredClone(createPetPaidResetPolicyCatalog());
+  const targetFormId = source.routes[0].targetFormId;
+  paidResetCatalog.formPoliciesById[targetFormId] = {
+    formId: targetFormId,
+    acquisitionTier: "evolution",
+    resetAllowed: true,
+    priceTierId: "diamond_evolution",
+  };
+  expectInvalid(
+    () => {},
+    /ineligible for paid reset as terminal_evolution/,
+    {paidResetCatalog},
+  );
+
+  const blockedSourceCatalog = structuredClone(createPetPaidResetPolicyCatalog());
+  const sourceFormId = source.routes[0].sourceFormId;
+  blockedSourceCatalog.formPoliciesById[sourceFormId] = {
+    formId: sourceFormId,
+    acquisitionTier: "common_wild",
+    resetAllowed: false,
+    ineligibleReason: "terminal_evolution",
+  };
+  expectInvalid(
+    () => {},
+    /source form must remain eligible for paid reset/,
+    {paidResetCatalog: blockedSourceCatalog},
+  );
+
+  const wrongReasonCatalog = structuredClone(createPetPaidResetPolicyCatalog());
+  wrongReasonCatalog.formPoliciesById[targetFormId].ineligibleReason = "manual_disable";
+  expectInvalid(
+    () => {},
+    /ineligible for paid reset as terminal_evolution/,
+    {paidResetCatalog: wrongReasonCatalog},
+  );
+
+  const pricedTerminalCatalog = structuredClone(createPetPaidResetPolicyCatalog());
+  pricedTerminalCatalog.formPoliciesById[targetFormId].priceTierId = "diamond_evolution";
+  expectInvalid(
+    () => {},
+    /ineligible for paid reset as terminal_evolution/,
+    {paidResetCatalog: pricedTerminalCatalog},
+  );
+
+  expectInvalid((document) => {
+    document.routes[0].targetFormId = document.routes[0].sourceFormId;
+  }, /terminal evolution target forms cannot be reused/);
 });

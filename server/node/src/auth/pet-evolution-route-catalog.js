@@ -83,6 +83,13 @@ function normalizePetEvolutionRouteCatalog(input) {
   if (!isDeepStrictEqual(document.qualityProjection, input.evolutionBalance.qualityProjection)) {
     errors.push("catalog.qualityProjection must exactly match pet evolution balance");
   }
+  if (
+    !input.paidResetCatalog
+    || input.paidResetCatalog.schemaVersion !== 2
+    || input.paidResetCatalog.policyId !== "pet_paid_reset_policy_v2"
+  ) {
+    errors.push("catalog must use the pet_paid_reset_policy_v2 terminal-reset contract");
+  }
 
   const linesById = uniqueIndex(input.templates.lines, "lineId", "pet lines", errors);
   const subtypesById = uniqueIndex(input.templates.subtypes, "subtypeId", "pet subtypes", errors);
@@ -162,6 +169,9 @@ function normalizePetEvolutionRouteCatalog(input) {
   if (sharedCoreIds.size !== 1) errors.push("all evolution routes must share one floor-core source");
   if (document.runtimeEnabled && routes.some((route) => route.assetGate.status !== "formal")) {
     errors.push("runtime cannot be enabled while any route still has deferred assets");
+  }
+  if ([...targetForms].some((formId) => sourceForms.has(formId))) {
+    errors.push("terminal evolution target forms cannot be reused as evolution source forms");
   }
 
   if (errors.length > 0) throw new PetEvolutionRouteCatalogError(errors);
@@ -398,6 +408,7 @@ function normalizeRoute(rawValue, index, deps, errors) {
     || text(result.terminalPathId) !== terminal.pathId
     || result.normalSecondRebirthAllowed !== terminal.normalSecondRebirthAllowed
     || result.fusionMaterialAllowed !== terminal.fusionMaterialAllowed
+    || result.paidResetAllowed !== terminal.paidResetAllowed
     || Number(result.successRate) !== terminal.successRate
     || result.failureConsumes !== terminal.failureConsumes
     || result.preserveInstanceIdentity !== true
@@ -426,10 +437,22 @@ function normalizeRoute(rawValue, index, deps, errors) {
   ) errors.push(`${label}.effort does not match deterministic costs or the global effort budget`);
   if (deterministicVictories !== 20) errors.push(`${label} must require exactly 20 deterministic team victories in v1`);
 
-  const paidResetPriceTierId = identifier(raw.paidResetPriceTierId, `${label}.paidResetPriceTierId`, errors);
-  const resetPolicy = deps.paidResetCatalog.formPoliciesById[targetFormId];
-  if (!resetPolicy || resetPolicy.priceTierId !== paidResetPriceTierId || paidResetPriceTierId !== "diamond_evolution") {
-    errors.push(`${label} target form must use the diamond_evolution paid-reset tier`);
+  if (Object.hasOwn(raw, "paidResetPriceTierId")) {
+    errors.push(`${label}.paidResetPriceTierId must be omitted for terminal evolution`);
+  }
+  const resetPoliciesById = record(deps.paidResetCatalog && deps.paidResetCatalog.formPoliciesById);
+  const sourceResetPolicy = resetPoliciesById[sourceFormId];
+  if (!sourceResetPolicy || sourceResetPolicy.resetAllowed !== true || !text(sourceResetPolicy.priceTierId)) {
+    errors.push(`${label} source form must remain eligible for paid reset before choosing a terminal path`);
+  }
+  const targetResetPolicy = resetPoliciesById[targetFormId];
+  if (
+    !targetResetPolicy
+    || targetResetPolicy.resetAllowed !== false
+    || targetResetPolicy.ineligibleReason !== "terminal_evolution"
+    || Object.hasOwn(targetResetPolicy, "priceTierId")
+  ) {
+    errors.push(`${label} target form must be ineligible for paid reset as terminal_evolution`);
   }
   const assetGate = record(raw.assetGate);
   if (
@@ -461,7 +484,6 @@ function normalizeRoute(rawValue, index, deps, errors) {
     result: structuredClone(result),
     skills: {defaultActionIds, passiveSkillId, preserveLearnedAndInherited: true},
     effort: structuredClone(effort),
-    paidResetPriceTierId,
     assetGate: structuredClone(assetGate),
     presentation: structuredClone(record(raw.presentation)),
     sharedCoreSourceId,

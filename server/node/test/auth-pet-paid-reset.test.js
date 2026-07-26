@@ -41,6 +41,7 @@ test("authoritative paid reset atomically debits, resets, unbinds and exposes on
     instanceId: account.fixture.pet.instanceId,
   });
   assert.equal(quote.ok, true);
+  assert.equal(quote.paidResetQuote.schemaVersion, 1);
   assert.equal(quote.paidResetQuote.profileRevision, account.profileRevision);
   assert.equal(quote.paidResetQuote.configRevision, 0);
   assert.deepEqual(quote.paidResetQuote.pet, {
@@ -48,7 +49,7 @@ test("authoritative paid reset atomically debits, resets, unbinds and exposes on
     formId: "rebirth_starter_four_spirit_cub",
     formName: "四灵幼兽",
     level: 88,
-    rebirthCount: 2,
+    rebirthCount: 1,
     enhanceLevel: 3,
     binding: "bound",
     paidResetCount: 0,
@@ -79,7 +80,7 @@ test("authoritative paid reset atomically debits, resets, unbinds and exposes on
   assert.equal(result.durableCommit.replayed, false);
   assert.equal(result.paidReset.beforeLevel, 88);
   assert.equal(result.paidReset.afterLevel, 1);
-  assert.equal(result.paidReset.beforeRebirthCount, 2);
+  assert.equal(result.paidReset.beforeRebirthCount, 1);
   assert.equal(result.paidReset.afterRebirthCount, 0);
   assert.equal(result.paidReset.paidResetCount, 1);
   assert.equal(result.paidReset.payment.currencyId, "diamonds");
@@ -108,6 +109,90 @@ test("authoritative paid reset atomically debits, resets, unbinds and exposes on
   assert.equal(internal.boundDiamonds, 0);
   assert.equal(internal.diamonds, 50);
   assert.equal(result.profileBinding.profileRevision, account.profileRevision + 1);
+});
+
+test("terminal stage evidence blocks quote and execute before payment or revision changes", async (t) => {
+  const cases = [
+    {
+      id: "two_rebirth",
+      username: "tr_two",
+      name: "ordinary two-rebirth stage",
+      mutate(pet) {
+        pet.petCultivation.rebirthCount = 2;
+      },
+    },
+    {
+      id: "empty_lineage",
+      username: "tr_empty",
+      name: "owned empty lineage",
+      mutate(pet) {
+        pet.evolutionLineage = null;
+      },
+    },
+    {
+      id: "damaged_lineage",
+      username: "tr_damage",
+      name: "damaged lineage",
+      mutate(pet) {
+        pet.evolutionLineage = "damaged";
+      },
+    },
+    {
+      id: "fusion_lineage",
+      username: "tr_fusion",
+      name: "future fusion lineage",
+      mutate(pet) {
+        pet.fusionLineage = {
+          schemaVersion: 1,
+          mode: "fusion",
+          sourceFormIds: ["rebirth_starter_four_spirit_cub", "future_fusion_partner"],
+        };
+      },
+    },
+    {
+      id: "target_form",
+      username: "tr_target",
+      name: "terminal target form without lineage",
+      mutate(pet) {
+        delete pet.evolutionLineage;
+        pet.formId = "wuli_evolved_crystal_earth8_water2";
+        pet.templateId = "wuli_evolved_crystal_earth8_water2";
+        pet.speciesId = "wuli_evolved_crystal_earth8_water2";
+      },
+    },
+  ];
+  for (const fixture of cases) {
+    await t.test(fixture.name, async () => {
+      const seeded = createAuthService({store: createMemoryAuthStore(), now: () => NOW_MS});
+      const account = seedPaidResetAccount(seeded, {
+        username: fixture.username,
+      });
+      const data = seeded.snapshot();
+      const binding = data.profileBindings[account.account.accountId];
+      const pet = data.profiles[binding.playerId].profile.petInstances[0];
+      fixture.mutate(pet);
+      const service = createAuthService({
+        store: createMemoryAuthStore(data),
+        now: () => NOW_MS,
+      });
+      const before = structuredClone(service.snapshot());
+      const quote = service.getPetPaidResetQuote(account.session.token, {
+        instanceId: account.fixture.pet.instanceId,
+      });
+      assert.equal(quote.ok, false);
+      assert.equal(quote.code, "pet_paid_reset_terminal_stage");
+      assert.equal(quote.message, "宠物已进入2转、进化或融合终局，不能付费重置。");
+      assert.deepEqual(service.snapshot(), before);
+
+      const result = await invokeReset(service, account, {
+        operationId: `paid_reset_terminal_${fixture.id}_0001`,
+        requestHash: "9".repeat(64),
+      });
+      assert.equal(result.ok, false);
+      assert.equal(result.code, "pet_paid_reset_terminal_stage");
+      assert.deepEqual(service.snapshot(), before);
+    });
+  }
 });
 
 test("same paid-reset operation replays once and conflicts cannot debit or reset again", async () => {

@@ -126,6 +126,9 @@ const captureFormulaDocument = readJson("client/godot/data/balance/capture_formu
 const captureToolDocument = readJson("client/godot/data/capture_tools.json");
 const trainingDocument = readJson("client/godot/data/pet_skill_training.json");
 const regionDocument = readJson("client/godot/data/map_regions.json");
+const paidResetPolicyDocument = readJson("client/godot/data/balance/pet_paid_reset_policy.json");
+const evolutionRouteDocument = readJson("client/godot/data/pet_evolution_routes.json");
+const evolutionBalanceDocument = readJson("client/godot/data/balance/pet_evolution_balance.json");
 
 const lines = rows(petDocument, "lines");
 const subtypes = rows(petDocument, "subtypes");
@@ -136,6 +139,8 @@ const growthProfiles = rows(growthDocument, "profiles");
 const captureTools = rows(captureToolDocument, "tools");
 const trainingSkills = rows(trainingDocument, "skills");
 const trainers = rows(trainingDocument, "trainers");
+const rawPaidResetFormPolicies = rows(paidResetPolicyDocument, "formPolicies");
+const evolutionRoutes = rows(evolutionRouteDocument, "routes");
 
 const lineById = indexRows(lines, "lineId", "lines", issues);
 const subtypeById = indexRows(subtypes, "subtypeId", "subtypes", issues);
@@ -143,6 +148,12 @@ const formById = indexRows(forms, "formId", "forms", issues);
 const actionById = indexRows(actions, "id", "actions", issues);
 const passiveById = indexRows(passives, "id", "passives", issues);
 const growthById = indexRows(growthProfiles, "profileId", "growthProfiles", issues);
+const rawPaidResetPolicyByFormId = indexRows(
+  rawPaidResetFormPolicies,
+  "formId",
+  "paidResetPolicy.formPolicies",
+  issues,
+);
 let paidResetPolicyCatalog = null;
 try {
   paidResetPolicyCatalog = createPetPaidResetPolicyCatalog();
@@ -230,6 +241,100 @@ for (const form of forms) {
   } else if (!growthProfileId) {
     issues.warnings.push(`形态 ${form.formId} 尚未接入 growthSpeciesProfileId，仍可能走通用成长`);
   }
+}
+
+for (const form of forms) {
+  const formId = String(form.formId || "").trim();
+  if (formId && !rawPaidResetPolicyByFormId.has(formId)) {
+    issues.errors.push(`形态 ${formId} 缺少显式付费重置资格 policy`);
+  }
+}
+for (const formId of rawPaidResetPolicyByFormId.keys()) {
+  if (!formById.has(formId)) {
+    issues.errors.push(`付费重置资格 policy 引用不存在的形态 ${formId}`);
+  }
+}
+
+const evolutionTargetFormIds = new Set();
+const terminalEvolutionPolicyFields = new Set([
+  "formId",
+  "acquisitionTier",
+  "resetAllowed",
+  "ineligibleReason",
+]);
+for (const [index, route] of evolutionRoutes.entries()) {
+  if (!route || typeof route !== "object" || Array.isArray(route)) {
+    issues.errors.push(`evolutionRoutes[${index}] 不是对象`);
+    continue;
+  }
+  const routeId = String(route.routeId || `#${index}`).trim();
+  const targetFormId = String(route.targetFormId || "").trim();
+  if (!targetFormId) {
+    issues.errors.push(`进化路线 ${routeId} 缺少 targetFormId`);
+    continue;
+  }
+  if (evolutionTargetFormIds.has(targetFormId)) {
+    issues.errors.push(`进化目标形态重复: ${targetFormId}`);
+  }
+  evolutionTargetFormIds.add(targetFormId);
+  if (!formById.has(targetFormId)) {
+    issues.errors.push(`进化路线 ${routeId} 引用不存在的目标形态 ${targetFormId}`);
+  }
+  const result = route.result && typeof route.result === "object" && !Array.isArray(route.result)
+    ? route.result
+    : {};
+  if (
+    result.terminalPathId !== "evolution_terminal_v1"
+    || result.normalSecondRebirthAllowed !== false
+    || result.paidResetAllowed !== false
+  ) {
+    issues.errors.push(`进化路线 ${routeId} 未声明互斥终局或仍允许普通二转/付费重置`);
+  }
+  const policy = rawPaidResetPolicyByFormId.get(targetFormId);
+  if (!policy) {
+    issues.errors.push(`进化目标 ${targetFormId} 缺少显式付费重置资格 policy`);
+    continue;
+  }
+  if (
+    policy.acquisitionTier !== "evolution"
+    || policy.resetAllowed !== false
+    || policy.ineligibleReason !== "terminal_evolution"
+  ) {
+    issues.errors.push(`进化目标 ${targetFormId} 必须声明 resetAllowed=false、ineligibleReason=terminal_evolution`);
+  }
+  for (const key of Object.keys(policy)) {
+    if (!terminalEvolutionPolicyFields.has(key)) {
+      issues.errors.push(`进化目标 ${targetFormId} 的不可重置 policy 不允许字段 ${key}`);
+    }
+  }
+}
+for (const policy of rawPaidResetFormPolicies) {
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) continue;
+  const formId = String(policy.formId || "").trim();
+  if (policy.acquisitionTier === "evolution" && formId && !evolutionTargetFormIds.has(formId)) {
+    issues.errors.push(`形态 ${formId} 标记为 evolution，但不是任何进化路线的 targetFormId`);
+  }
+}
+
+const evolutionQualityProjection = evolutionBalanceDocument.qualityProjection
+  && typeof evolutionBalanceDocument.qualityProjection === "object"
+  && !Array.isArray(evolutionBalanceDocument.qualityProjection)
+  ? evolutionBalanceDocument.qualityProjection
+  : {};
+const evolutionPowerBudget = evolutionBalanceDocument.powerBudget
+  && typeof evolutionBalanceDocument.powerBudget === "object"
+  && !Array.isArray(evolutionBalanceDocument.powerBudget)
+  ? evolutionBalanceDocument.powerBudget
+  : {};
+const evolutionPowerDataContractValid = (
+  evolutionQualityProjection.lv1FourV === "fresh_target_species_roll_v1"
+  && evolutionQualityProjection.hiddenGrowth === "fresh_target_species_roll_v1"
+  && evolutionQualityProjection.sourceQualityTransfer === false
+  && evolutionQualityProjection.preserveSourceStageSnapshots === true
+  && evolutionPowerBudget.preserveStageOneRebirthBonus === true
+);
+if (!evolutionPowerDataContractValid) {
+  issues.errors.push("进化品质合同必须保留一转培养/转生加成，同时按目标物种重掷Lv1 4V与隐藏成长");
 }
 
 const dataDir = path.join(repoRoot, "client/godot/data");
@@ -361,6 +466,8 @@ const petCaptureCandidateAuthorityText = readText("server/node/src/auth/pet-capt
 const wildCaptureGrowthSelectionText = readText("server/node/src/auth/wild-capture-growth-selection.js");
 const newPetFactoryText = readText("server/node/src/auth/new-pet-factory.js");
 const petRebirthGrowthCycleText = readText("server/node/src/auth/pet-rebirth-growth-cycle.js");
+const petGrowthRuntimeText = readText("server/node/src/auth/pet-growth-runtime.js");
+const petEvolutionText = readText("server/node/src/auth/pet-evolution.js");
 const battlePassiveCatalogText = readText("server/node/src/auth/battle-passive-catalog.js");
 const profileVisibilityText = readText("server/node/src/auth/profile-visibility.js");
 const protocolText = readText("server/node/src/protocol.js");
@@ -371,6 +478,8 @@ const autoCaptureSettingsText = readText("server/node/src/auth/auto-capture-sett
 const petAutoCaptureFilterText = readText("server/node/src/auth/pet-auto-capture-filter.js");
 const petLevelOnePercentileText = readText("server/node/src/auth/pet-level-one-percentile.js");
 const petPaidResetPolicyCatalogText = readText("server/node/src/auth/pet-paid-reset-policy-catalog.js");
+const petPaidResetText = readText("server/node/src/auth/pet-paid-reset.js");
+const petTerminalPathText = readText("server/node/src/auth/pet-terminal-path.js");
 const gmPetPaidResetConfigText = readText("server/node/src/auth/gm-pet-paid-reset-config.js");
 const clientAutoCaptureFilterText = readText("client/godot/scripts/progression/auto_capture_filter_model.gd");
 const protocolVersion = Number(protocolText.match(/const PROTOCOL_VERSION = (\d+)/)?.[1] || 0);
@@ -439,8 +548,15 @@ const serverAuthority = {
     && authServiceText.includes("petRebirthGrowthCycle.preflight")
     && authServiceText.includes("petRebirthGrowthCycle.restart")
     && petRebirthGrowthCycleText.includes("restartPetGrowthCycle"),
+  normalSecondRebirthSourceQualityWired: petRebirthGrowthCycleText.includes("const nextGrowthBonus = nextPetCultivation.rebirthGrowthBonus")
+    && petGrowthRuntimeText.includes("const privateSeed = privateState.privateSeed")
+    && petGrowthRuntimeText.includes("const privateRoll = privateState.privateRoll"),
+  evolutionSourceBonusTargetRerollWired: evolutionPowerDataContractValid
+    && petEvolutionText.includes("rebirthGrowthBonus: cloneStatMap(current.rebirthGrowthBonus)")
+    && petEvolutionText.includes("nextPet.petGrowth.private.privateSeed === inspected.pet.petGrowth.private.privateSeed")
+    && petEvolutionText.includes("isDeepStrictEqual(nextPet.petGrowth.private.privateRoll, inspected.pet.petGrowth.private.privateRoll)"),
   publicProfileBoundaryWired: authServiceText.includes("projectPublicServiceResult")
-    && authServiceText.includes("publicProfile(result.profile)")
+    && authServiceText.includes("result.profile = publicProfile(result.profile")
     && profileVisibilityText.includes("function publicProfile"),
   publicGrowthProtocolBoundary: protocolVersion >= 2
     && minimumProtocolVersion === protocolVersion
@@ -455,6 +571,11 @@ const serverAuthority = {
     && gmPetPaidResetConfigText.includes("gm_pet_paid_reset_config")
     && gmPetPaidResetConfigText.includes("buildUpdatedPetPaidResetConfig")
     && petPaidResetPolicyCatalogText.includes("expectedRevision"),
+  paidResetStageOneOnlyWired: petPaidResetText.includes("source.rebirthCount !== 1")
+    && petPaidResetText.includes("inspectPetTerminalPath")
+    && petTerminalPathText.includes("Math.trunc(rebirthCount) >= 2")
+    && petTerminalPathText.includes('"evolution"')
+    && petTerminalPathText.includes('"fusion"'),
 };
 if (!serverAuthority.loadsSpeciesGrowthProfiles) issues.warnings.push("Node 当前未加载 pet_growth_species_profiles.json；物种成长尚非完整服务端事实");
 if (!serverAuthority.observedGrowthScreeningContract) issues.warnings.push("Node 尚未建立 Lv20 公开成长证据筛选合同；不能为新宠开放按成长自动处理");
@@ -473,11 +594,14 @@ if (!serverAuthority.wildCaptureGrowthLevelBiasWired) issues.warnings.push("Node
 if (!serverAuthority.levelOnePercentileFilterWired) issues.warnings.push("Lv1 捕后筛选尚未统一为全物种公开分位，或仍可能读取隐藏成长/误筛 Lv2+");
 if (!serverAuthority.captureActorCandidateFactsUnified) issues.warnings.push("可捕捉野怪的战斗固有属性尚未与冻结宠物个体统一，捕前捕后可能不一致");
 if (!serverAuthority.petRebirthGrowthCycleWired) issues.warnings.push("Node authority-v1 宠物转生尚未接入严格成长周期重启与材料预检");
+if (!serverAuthority.normalSecondRebirthSourceQualityWired) issues.errors.push("普通2转尚未证明保留一转胚子的个体品质与累计培养/转生加成");
+if (!serverAuthority.evolutionSourceBonusTargetRerollWired) issues.errors.push("进化尚未证明保留一转培养/转生加成并重掷目标形态4V与隐藏成长");
 if (!serverAuthority.publicProfileBoundaryWired) issues.warnings.push("Node 完整档案响应尚未统一经过公开宠物投影");
 if (!serverAuthority.publicGrowthProtocolBoundary) issues.warnings.push("宠物公开成长契约要求客户端与服务端锁定在同一份 v2+ 协议边界");
 if (!serverAuthority.clientServerPetNoReroll) issues.warnings.push("Godot 联网宠物仍缺少明确的无重掷 normalize 路径");
-if (!serverAuthority.paidResetCatalogWired) issues.errors.push("全形态付费重置价格目录尚未严格接入服务端");
+if (!serverAuthority.paidResetCatalogWired) issues.errors.push("全形态显式付费重置 policy 尚未严格接入服务端");
 if (!serverAuthority.paidResetGmConfigWired) issues.errors.push("付费重置价格目录尚未接入带 revision 的 GM 配置域");
+if (!serverAuthority.paidResetStageOneOnlyWired) issues.errors.push("付费重置尚未严格限制为普通1转且未选择2转/进化/融合终局的实例");
 
 function resolvedForm(formId) {
   const form = formById.get(formId);
@@ -486,7 +610,10 @@ function resolvedForm(formId) {
   const subtype = subtypeById.get(String(form.subtypeId || "")) || null;
   const activeSkillIds = subtype && Array.isArray(subtype.activeSkillIds) ? subtype.activeSkillIds.map(String) : [];
   const passiveSkillId = line ? String(line.passiveSkillId || "") : "";
-  const paidResetQuote = paidResetPolicyCatalog
+  const paidResetFormPolicy = paidResetPolicyCatalog
+    ? paidResetPolicyCatalog.formPoliciesById[formId] || null
+    : null;
+  const paidResetQuote = paidResetFormPolicy && paidResetFormPolicy.resetAllowed === true
     ? resolvePetPaidResetQuote(paidResetPolicyCatalog, {}, formId)
     : null;
   return {
@@ -502,7 +629,14 @@ function resolvedForm(formId) {
     growthProfile: compactGrowthProfile(growthById.get(String(form.growthSpeciesProfileId || ""))),
     placements: placementsByFormId.get(formId) || [],
     captureChance: captureChanceTable(form, captureFormula, captureTools),
-    paidResetPolicy: paidResetQuote && paidResetQuote.ok ? paidResetQuote.quote : null,
+    paidResetPolicy: paidResetFormPolicy && paidResetFormPolicy.resetAllowed === false
+      ? {
+          resetAllowed: false,
+          ineligibleReason: paidResetFormPolicy.ineligibleReason,
+        }
+      : paidResetQuote && paidResetQuote.ok
+        ? paidResetQuote.quote
+        : null,
     serverAuthority,
   };
 }
@@ -522,7 +656,14 @@ const summary = {
     encounterGroups: encounterGroupIds.size,
     mapDocuments: mapDocuments.length,
     paidResetFormPolicies: paidResetPolicyCatalog ? paidResetPolicyCatalog.formPolicies.length : 0,
+    paidResetStageOneQuoteForms: paidResetPolicyCatalog
+      ? paidResetPolicyCatalog.formPolicies.filter((policy) => policy.resetAllowed === true).length
+      : 0,
+    paidResetTerminalFormPolicies: paidResetPolicyCatalog
+      ? paidResetPolicyCatalog.formPolicies.filter((policy) => policy.resetAllowed === false).length
+      : 0,
     paidResetPriceTiers: paidResetPolicyCatalog ? paidResetPolicyCatalog.priceTiers.length : 0,
+    evolutionTargetForms: evolutionTargetFormIds.size,
   },
   petSkillSlotContract: {
     maxInstanceSlots: Math.trunc(number(actionDocument.maxPetSkillSlots, 7)),
@@ -538,6 +679,32 @@ const summary = {
     note: "未检测到时，当前以 growthSpeciesLevel1Stats/initialStats 的 Lv1 血攻防敏代用；不要擅自声称已有独立 4V 公式。",
   },
   wildCaptureGrowthPolicy: wildCaptureGrowthPolicy || null,
+  terminalPowerContract: {
+    normalSecondRebirth: {
+      sourceStrengthRelated: true,
+      preserveStageOneIndividualQuality: true,
+      preserveCumulativeCultivationBonus: true,
+      runtimeWired: serverAuthority.normalSecondRebirthSourceQualityWired,
+    },
+    evolution: {
+      sourceStrengthRelated: true,
+      preserveStageOneCultivationBonus: true,
+      targetLv1FourV: "fresh_target_species_roll_v1",
+      targetHiddenGrowth: "fresh_target_species_roll_v1",
+      sourceBaseQualityTransfer: false,
+      runtimeWired: serverAuthority.evolutionSourceBonusTargetRerollWired,
+    },
+    fusion: {
+      sourceStrengthRelated: false,
+      materialCount: 3,
+      materialEligibility: "ordinary_authority_v1_exactly_one_rebirth_pre_terminal",
+      materialNumericInfluence: "none",
+      resultNumericSource: "fusion_rules_only",
+      skillInheritance: "contract_allowlist_only",
+      economyIntent: "low_value_rebirth_pet_sink",
+      runtimeStatus: "design_contract_only",
+    },
+  },
   serverAuthority,
   issues,
 };
@@ -578,9 +745,14 @@ if (requestedFormId) {
       console.log(`  - ${toolId}: 满血 ${(chances.fullHp.chance * 100).toFixed(1)}% (~${chances.fullHp.expectedAttempts}次), 半血 ${(chances.halfHp.chance * 100).toFixed(1)}% (~${chances.halfHp.expectedAttempts}次), 残血 ${(chances.nearZeroHp.chance * 100).toFixed(1)}% (~${chances.nearZeroHp.expectedAttempts}次)`);
     }
     if (detail.paidResetPolicy) {
-      console.log(`付费重置: tier=${detail.paidResetPolicy.priceTierId}, ${detail.paidResetPolicy.amount} ${detail.paidResetPolicy.currencyId}, wallet=${detail.paidResetPolicy.walletPolicy.walletPolicyId}`);
+      if (detail.paidResetPolicy.resetAllowed === false) {
+        console.log("付费重置: 进化终局，不可付费重置");
+      } else {
+        console.log(`付费重置形态报价（仅普通1转且未选终局的实例可用）: tier=${detail.paidResetPolicy.priceTierId}, ${detail.paidResetPolicy.amount} ${detail.paidResetPolicy.currencyId}, wallet=${detail.paidResetPolicy.walletPolicy.walletPolicyId}`);
+      }
     }
-    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, lv1Percentiles=${serverAuthority.levelOnePercentileFilterWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
+    console.log(`终局数值: 普通2转继承一转胚子=${serverAuthority.normalSecondRebirthSourceQualityWired}, 进化保留一转加成并重掷目标4V/成长=${serverAuthority.evolutionSourceBonusTargetRerollWired}, 融合仅三只普通authority-v1恰好1转未选终局材料/数值无关/仅技能白名单继承=设计合同（运行时待融合功能实现）`);
+    console.log(`服务端: growthProfiles=${serverAuthority.loadsSpeciesGrowthProfiles}, growthPreview=${serverAuthority.observedGrowthRulePreviewContract}, petExpDispatcher=${serverAuthority.petExpDispatcherWired}, petExpV1=${serverAuthority.petExpAuthorityV1Enabled}, captureCandidates=${serverAuthority.petCaptureCandidatesWired}, levelBias=${serverAuthority.wildCaptureGrowthLevelBiasWired}, lv1Percentiles=${serverAuthority.levelOnePercentileFilterWired}, actorSamePet=${serverAuthority.captureActorCandidateFactsUnified}, paidResetStageOneOnly=${serverAuthority.paidResetStageOneOnlyWired}, passives=${serverAuthority.loadsPassiveCatalog}, clientEncounterPayload=${serverAuthority.acceptsClientEncounterZonePayload}`);
   }
 } else if (jsonOutput) {
   console.log(JSON.stringify(summary, null, 2));
@@ -588,7 +760,8 @@ if (requestedFormId) {
   console.log("Beastbound pet catalog audit");
   console.log(JSON.stringify(summary.counts));
   console.log(`独立4V字段/公式: ${summary.formalLv14VContract.present ? "有" : "无（authority-v1 初始四维为正式代理）"}`);
-  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/Lv1分位/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录/重置价格/GM价格: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.levelOnePercentileFilterWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}/${serverAuthority.paidResetCatalogWired}/${serverAuthority.paidResetGmConfigWired}`);
+  console.log(`终局数值: 普通2转继承一转胚子=${serverAuthority.normalSecondRebirthSourceQualityWired}, 进化保留一转加成并重掷目标4V/成长=${serverAuthority.evolutionSourceBonusTargetRerollWired}, 融合仅三只普通authority-v1恰好1转未选终局材料/数值无关/仅技能白名单继承=设计合同`);
+  console.log(`服务端成长档/成长预览/EXP/v1/新宠factory/捕捉候选/等级分布/Lv1分位/战宠同体/转生周期/公开档/协议v2+/客户端不重掷/被动目录/重置价格/GM价格/仅普通1转重置: ${serverAuthority.loadsSpeciesGrowthProfiles}/${serverAuthority.observedGrowthRulePreviewContract}/${serverAuthority.petExpDispatcherWired}/${serverAuthority.petExpAuthorityV1Enabled}/${serverAuthority.newLevelOneFactoryWired}/${serverAuthority.petCaptureCandidatesWired}/${serverAuthority.wildCaptureGrowthLevelBiasWired}/${serverAuthority.levelOnePercentileFilterWired}/${serverAuthority.captureActorCandidateFactsUnified}/${serverAuthority.petRebirthGrowthCycleWired}/${serverAuthority.publicProfileBoundaryWired}/${serverAuthority.publicGrowthProtocolBoundary}/${serverAuthority.clientServerPetNoReroll}/${serverAuthority.loadsPassiveCatalog}/${serverAuthority.paidResetCatalogWired}/${serverAuthority.paidResetGmConfigWired}/${serverAuthority.paidResetStageOneOnlyWired}`);
   console.log(`errors=${issues.errors.length} warnings=${issues.warnings.length}`);
   for (const error of issues.errors) console.log(`ERROR ${error}`);
   for (const warning of issues.warnings) console.log(`WARN  ${warning}`);

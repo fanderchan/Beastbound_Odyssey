@@ -67,6 +67,59 @@ function authorityPetAtLevel(catalog, profileId, instanceId, level, privateSeed,
   return {growthProfile, pet: settled};
 }
 
+function oneRebirthLegacyPet(instanceId, formId = "wuli_normal_orange_fire10") {
+  return {
+    "instanceId": instanceId,
+    "petId": instanceId,
+    formId,
+    "templateId": formId,
+    "name": "一转待培养宠",
+    "state": "battle",
+    "level": 140,
+    "hp": 680,
+    "maxHp": 680,
+    "attack": 132,
+    "defense": 88,
+    "quick": 96,
+    "initialStats": {"maxHp": 90, "attack": 12, "defense": 6, "quick": 50},
+    "petCultivation": {
+      "schemaVersion": 1,
+      "rebirthCount": 1,
+      "enhanceLevel": 0,
+      "rebirthGrowthBonus": {"maxHp": 0.4, "attack": 0.1, "defense": 0.1, "quick": 0.1},
+      "history": [],
+    },
+  };
+}
+
+function stageTwoRebirthMm(instanceId) {
+  return {
+    "instanceId": instanceId,
+    "petId": instanceId,
+    "formId": "pet_rebirth_mm_stage2",
+    "templateId": "pet_rebirth_mm_stage2",
+    "name": "满石2转小MM",
+    "state": "standby",
+    "level": 79,
+    "hp": 90,
+    "maxHp": 90,
+    "attack": 12,
+    "defense": 12,
+    "quick": 42,
+    "petRebirthHelper": {
+      "stage": 2,
+      "stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50},
+    },
+  };
+}
+
+const REBIRTH_TERMINAL_PATH_ROUTE_CATALOG = Object.freeze({
+  routes: Object.freeze([
+    Object.freeze({"targetFormId": "wuli_evolved_crystal_earth8_water2"}),
+    Object.freeze({"targetFormId": "driftfox_evolved_moon_gale_wind7_water3"}),
+  ]),
+});
+
 test("profiles sync with revision conflict protection", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "syncuser", "password": "test1234", "displayName": "同步猎人"});
@@ -683,6 +736,114 @@ test("pet rebirth consumes the exact MM confirmed by the player", () => {
   const internalTarget = internalProfileForAccount(service, registered.account.accountId).petInstances
     .find((pet) => pet.instanceId === target.instanceId);
   assert.equal(internalTarget.petCultivation.history.at(-1).helperInstanceId, helperB.instanceId);
+});
+
+test("pet rebirth rejects rebirth, evolution, and fusion terminal evidence before selecting or consuming the MM", () => {
+  const cases = [
+    {
+      id: "evolution_lineage_valid",
+      formId: "wuli_evolved_crystal_earth8_water2",
+      lineage: {
+        schemaVersion: 1,
+        mode: "evolution",
+        routeId: "wuli_crystal_evolution_v1",
+        sourceFormId: "wuli_normal_tough_earth10",
+        targetFormId: "wuli_evolved_crystal_earth8_water2",
+        terminalStage: 2,
+        stageSnapshots: [],
+      },
+    },
+    {id: "evolution_lineage_null", lineage: null},
+    {id: "evolution_lineage_empty", lineage: {}},
+    {id: "evolution_lineage_damaged", lineage: "damaged"},
+    {id: "evolution_target_form_without_lineage", targetFormOnly: true},
+    {
+      id: "fusion_lineage_valid",
+      fusionLineage: {
+        schemaVersion: 1,
+        mode: "fusion",
+        sourceFormIds: ["wuli_normal_orange_fire10", "moonwolf_normal_gale_wind10"],
+      },
+    },
+    {id: "fusion_lineage_null", fusionLineage: null},
+    {id: "fusion_lineage_damaged", fusionLineage: "damaged"},
+    {id: "ordinary_second_rebirth", rebirthCount: 2},
+  ];
+  for (const [index, fixture] of cases.entries()) {
+    const service = createAuthService({
+      "store": createMemoryAuthStore(),
+      "petEvolutionRouteCatalog": REBIRTH_TERMINAL_PATH_ROUTE_CATALOG,
+    });
+    const registered = service.register({
+      "username": `termrebirth${index}`,
+      "password": "test1234",
+      "displayName": `终局互斥${index}`,
+    });
+    assert.equal(registered.ok, true);
+    const target = oneRebirthLegacyPet(
+      `terminal_rebirth_target_${index}`,
+      fixture.formId || (fixture.targetFormOnly ? "wuli_evolved_crystal_earth8_water2" : "wuli_normal_orange_fire10"),
+    );
+    if (Object.hasOwn(fixture, "fusionLineage")) {
+      target.fusionLineage = fixture.fusionLineage;
+    } else if (fixture.rebirthCount !== undefined) {
+      target.petCultivation.rebirthCount = fixture.rebirthCount;
+    } else if (!fixture.targetFormOnly) {
+      target.evolutionLineage = fixture.lineage;
+    }
+    const helper = stageTwoRebirthMm(`terminal_rebirth_helper_${index}`);
+    const profile = battleProfile(`终局互斥${index}`, {"level": 140, "hp": 900, "maxHp": 900}, null);
+    profile.activePetInstanceId = target.instanceId;
+    profile.petInstances = [target, helper];
+    const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
+    assert.equal(saved.ok, true, fixture.id);
+    const before = structuredClone(internalProfileForAccount(service, registered.account.accountId));
+
+    const rejected = service.profileAction(registered.session.token, {
+      "action": "pet_cultivation_apply",
+      "payload": {
+        "instanceId": target.instanceId,
+        "helperInstanceId": helper.instanceId,
+      },
+    });
+    assert.equal(rejected.ok, false, fixture.id);
+    assert.equal(rejected.code, "pet_rebirth_terminal_stage", fixture.id);
+    assert.equal(rejected.message, "宠物已进入2转、进化或融合终局，不能再进行普通转生。", fixture.id);
+    assert.equal(rejected.profileSummary.profileRevision, saved.profileSummary.profileRevision, fixture.id);
+    assert.deepEqual(internalProfileForAccount(service, registered.account.accountId), before, fixture.id);
+  }
+});
+
+test("ordinary one-rebirth pet can still consume stage-two MM and finish second rebirth", () => {
+  const service = createAuthService({
+    "store": createMemoryAuthStore(),
+    "petEvolutionRouteCatalog": REBIRTH_TERMINAL_PATH_ROUTE_CATALOG,
+  });
+  const registered = service.register({"username": "normalstage2rebirth", "password": "test1234", "displayName": "普通二转"});
+  assert.equal(registered.ok, true);
+  const target = oneRebirthLegacyPet("normal_stage2_target");
+  const helper = stageTwoRebirthMm("normal_stage2_helper");
+  const profile = battleProfile("普通二转", {"level": 140, "hp": 900, "maxHp": 900}, null);
+  profile.activePetInstanceId = target.instanceId;
+  profile.petInstances = [target, helper];
+  const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
+  assert.equal(saved.ok, true);
+
+  const reborn = service.profileAction(registered.session.token, {
+    "action": "pet_cultivation_apply",
+    "payload": {
+      "instanceId": target.instanceId,
+      "helperInstanceId": helper.instanceId,
+    },
+  });
+  assert.equal(reborn.ok, true, JSON.stringify(reborn));
+  assert.equal(reborn.profileSummary.profileRevision, saved.profileSummary.profileRevision + 1);
+  assert.equal(reborn.profile.petInstances.some((pet) => pet.instanceId === helper.instanceId), false);
+  const rebornTarget = internalProfileForAccount(service, registered.account.accountId).petInstances
+    .find((pet) => pet.instanceId === target.instanceId);
+  assert.equal(rebornTarget.level, 1);
+  assert.equal(rebornTarget.petCultivation.rebirthCount, 2);
+  assert.equal(rebornTarget.petCultivation.history.at(-1).helperInstanceId, helper.instanceId);
 });
 
 test("pet rebirth MM guide requires Lv80 and never reopens a completed guide", () => {

@@ -17,8 +17,24 @@ const QA_MANIFESTS_PROFILE_KEY = "gmQaPetSampleManifests";
 const QA_SAMPLE_MARKER_KEY = "qaSample";
 const QA_SAMPLE_SOURCE = "gm_paid_reset_qa_manifest";
 const QA_SAMPLE_PLANS = Object.freeze([
-  Object.freeze({slotId: "paid_reset_stage1", stage: 1, targetLevel: 80, name: "重置验收·一转四灵"}),
-  Object.freeze({slotId: "paid_reset_stage2", stage: 2, targetLevel: 88, name: "重置验收·二转四灵"}),
+  Object.freeze({
+    slotId: "paid_reset_stage1",
+    stage: 1,
+    targetLevel: 80,
+    expectedEligible: true,
+    expectedEligibilityCode: "ok",
+    expectedRebirthCount: 1,
+    name: "重置验收·一转四灵",
+  }),
+  Object.freeze({
+    slotId: "paid_reset_stage2",
+    stage: 2,
+    targetLevel: 88,
+    expectedEligible: false,
+    expectedEligibilityCode: "pet_paid_reset_terminal_stage",
+    expectedRebirthCount: 2,
+    name: "重置拒绝·二转四灵",
+  }),
 ]);
 const QA_FORM_ID = "rebirth_starter_four_spirit_cub";
 const QA_GROWTH_PROFILE_ID = "rebirth_starter_four_spirit_cub_v1";
@@ -115,7 +131,12 @@ function createGmPetPaidResetQaDomain(ctx) {
       }
       const totalCapacity = BATTLE_PET_MAX_PER_PARTICIPANT + BATTLE_PET_STORAGE_LIMIT;
       if (instances.length + expected.length > totalCapacity) {
-        return auditedFailure(data, access, "gm_pet_paid_reset_qa_capacity_full", "宠物空间不足；请至少留出2个位置后重试。");
+        return auditedFailure(
+          data,
+          access,
+          "gm_pet_paid_reset_qa_capacity_full",
+          `宠物空间不足；请至少留出${expected.length}个位置后重试。`,
+        );
       }
       let serial = nextProfilePetInstanceSerial(profile, instances);
       let partyCount = profilePartyVisiblePetCount(profile);
@@ -147,7 +168,7 @@ function createGmPetPaidResetQaDomain(ctx) {
           quote: manifest.quote,
           growthCycle: petRebirthGrowthCycle,
         });
-        if (!eligibility.ok) {
+        if (!sampleMatchesExpectation(pet, sample, eligibility)) {
           return auditedFailure(data, access, "gm_pet_paid_reset_qa_creation_failed", "重置验收宠物最终校验失败，档案未改变。");
         }
         instances.push(pet);
@@ -217,10 +238,11 @@ function createGmPetPaidResetQaDomain(ctx) {
         samplesCreated,
         sampleCount: expected.length,
         presentCount: sampleSummaries.filter((sample) => sample.present).length,
+        expectationMatchedCount: sampleSummaries.filter((sample) => sample.matchesExpectation).length,
         partyAdded,
         storageAdded,
         walletFieldsRaised: walletChanges,
-        primaryInstanceId: expected[1].instanceId,
+        primaryInstanceId: expected[0].instanceId,
         profileRevisionBefore: beforeRevision,
         profileRevisionAfter: afterRevision,
         wallets: qaWalletSummary(profile, {stoneCoinLimit: profileStoneCoinLimit}),
@@ -483,12 +505,17 @@ function summarizeSample(pet, sample, quote, growthCycle) {
       eligible: false,
       eligibilityCode: "sample_missing",
       eligibilityMessage: "样本已不存在；为避免重复发放，不会自动补回。",
+      expectedEligible: sample.expectedEligible,
+      expectedEligibilityCode: sample.expectedEligibilityCode,
+      expectedRebirthCount: sample.expectedRebirthCount,
+      matchesExpectation: false,
       paidResetCount: 0,
       audit: {totalCount: 0, archivedCount: 0, records: []},
     };
   }
   const eligibility = inspectPetPaidResetEligibility(pet, {quote, growthCycle});
   const audit = canonicalPaidResetState(pet);
+  const eligibilityCode = eligibility.ok ? "ok" : String(eligibility.code || "pet_paid_reset_failed");
   return {
     schemaVersion: 1,
     slotId: sample.slotId,
@@ -498,11 +525,29 @@ function summarizeSample(pet, sample, quote, growthCycle) {
     level: Number(pet.level || 0),
     rebirthCount: Number(pet.petCultivation && pet.petCultivation.rebirthCount || 0),
     eligible: eligibility.ok === true,
-    eligibilityCode: eligibility.ok ? "ok" : String(eligibility.code || "pet_paid_reset_failed"),
+    expectedEligible: sample.expectedEligible,
+    expectedEligibilityCode: sample.expectedEligibilityCode,
+    expectedRebirthCount: sample.expectedRebirthCount,
+    matchesExpectation: sampleMatchesExpectation(pet, sample, eligibility),
+    eligibilityCode,
     eligibilityMessage: eligibility.ok ? "可以按当前服务端报价重置。" : String(eligibility.message || "当前不能重置。"),
     paidResetCount: audit.ok ? audit.count : 0,
     audit: audit.ok ? safeAudit(audit.audit) : {totalCount: 0, archivedCount: 0, records: []},
   };
+}
+
+function sampleMatchesExpectation(pet, sample, eligibility) {
+  const cultivation = isRecord(pet && pet.petCultivation) ? pet.petCultivation : null;
+  const eligibilityCode = eligibility && eligibility.ok === true
+    ? "ok"
+    : String(eligibility && eligibility.code || "pet_paid_reset_failed");
+  return Boolean(
+    eligibility
+    && eligibility.ok === sample.expectedEligible
+    && eligibilityCode === sample.expectedEligibilityCode
+    && cultivation
+    && cultivation.rebirthCount === sample.expectedRebirthCount
+  );
 }
 
 function safeAudit(audit) {

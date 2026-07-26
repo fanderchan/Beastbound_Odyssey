@@ -29,7 +29,7 @@ function quote(catalog, formId, config = {}) {
   return result.quote;
 }
 
-test("paid reset catalog prices every current pet form and freezes universal reset rules", () => {
+test("paid reset catalog prices eligible forms and disables both terminal evolution forms", () => {
   const catalog = createPetPaidResetPolicyCatalog();
   assert.equal(catalog.formPolicies.length, 34);
   assert.equal(catalog.formPolicies.length, Object.keys(catalog.formPoliciesById).length);
@@ -41,13 +41,30 @@ test("paid reset catalog prices every current pet form and freezes universal res
     clearBindingOnSuccess: true,
     refundPolicy: "technical_transaction_rollback_only",
   });
+  const disabledForms = [];
   for (const formPolicy of catalog.formPolicies) {
+    if (!formPolicy.resetAllowed) {
+      disabledForms.push(formPolicy.formId);
+      assert.equal(formPolicy.acquisitionTier, "evolution");
+      assert.equal(formPolicy.ineligibleReason, "terminal_evolution");
+      assert.equal(Object.hasOwn(formPolicy, "priceTierId"), false);
+      const denied = resolvePetPaidResetQuote(catalog, {}, formPolicy.formId);
+      assert.equal(denied.ok, false);
+      assert.equal(denied.code, "pet_paid_reset_terminal_stage");
+      assert.equal(denied.message, "宠物已进入2转、进化或融合终局，不能付费重置。");
+      continue;
+    }
     const resolved = quote(catalog, formPolicy.formId);
     assert.equal(resolved.formId, formPolicy.formId);
+    assert.equal(resolved.resetAllowed, true);
     assert.equal(resolved.amount > 0, true);
     assert.equal(resolved.priceSource, "catalog_default");
     assert.equal(resolved.resetContract.unlimited, true);
   }
+  assert.deepEqual(disabledForms.sort(), [
+    "driftfox_evolved_moon_gale_wind7_water3",
+    "wuli_evolved_crystal_earth8_water2",
+  ]);
   assert.equal(quote(catalog, "bui_novice_sprout_earth5_wind5").amount, 50000);
   assert.equal(quote(catalog, "bui_normal_red_fire10").amount, 120000);
   assert.equal(quote(catalog, "blue_man_dragon_water10").amount, 300000);
@@ -60,7 +77,6 @@ test("paid reset catalog prices every current pet form and freezes universal res
     [150, 300, 450],
   );
   assert.equal(catalog.priceTiersById.diamond_commercial.walletPolicyId, "unbound_only");
-  assert.equal(catalog.priceTiersById.diamond_evolution.amount, 650);
   assert.equal(catalog.priceTiersById.diamond_fusion.amount, 900);
 });
 
@@ -105,6 +121,11 @@ test("GM tier and form overrides are revisioned, strict and form override wins",
         amount: 25,
         walletPolicyId: "unbound_only",
       },
+      wuli_evolved_crystal_earth8_water2: {
+        currencyId: "diamonds",
+        amount: 1,
+        walletPolicyId: "unbound_only",
+      },
     },
   }, catalog, {username: "gm_price", nowMs: Date.parse("2026-07-17T12:00:00.000Z")});
   assert.equal(updated.ok, true);
@@ -118,6 +139,31 @@ test("GM tier and form overrides are revisioned, strict and form override wins",
       priceSource: quote(catalog, "bui_normal_red_fire10", updated.config).priceSource,
     },
     {amount: 25, currencyId: "diamonds", priceSource: "form_override"},
+  );
+  const terminal = resolvePetPaidResetQuote(
+    catalog,
+    updated.config,
+    "wuli_evolved_crystal_earth8_water2",
+  );
+  assert.equal(terminal.ok, false);
+  assert.equal(terminal.code, "pet_paid_reset_terminal_stage");
+  const terminalProjection = publicPetPaidResetConfig(catalog, updated.config).resolvedForms
+    .find((entry) => entry.formId === "wuli_evolved_crystal_earth8_water2");
+  assert.deepEqual(
+    {
+      resetAllowed: terminalProjection.resetAllowed,
+      reason: terminalProjection.ineligibleReason,
+      hasPriceTier: Object.hasOwn(terminalProjection, "priceTierId"),
+      hasAmount: Object.hasOwn(terminalProjection, "amount"),
+      hasCurrency: Object.hasOwn(terminalProjection, "currencyId"),
+    },
+    {
+      resetAllowed: false,
+      reason: "terminal_evolution",
+      hasPriceTier: false,
+      hasAmount: false,
+      hasCurrency: false,
+    },
   );
 
   const stale = buildUpdatedPetPaidResetConfig(updated.config, {
@@ -170,6 +216,7 @@ test("legacy empty config stays revision zero and malformed persisted config fai
   const publicResult = publicPetPaidResetConfig(catalog, {});
   assert.equal(publicResult.ok, true);
   assert.equal(publicResult.resolvedForms.length, 34);
+  assert.equal(publicResult.resolvedForms.filter((entry) => entry.resetAllowed === false).length, 2);
   assert.equal(Object.hasOwn(publicResult.defaults, "policyPath"), false);
 });
 

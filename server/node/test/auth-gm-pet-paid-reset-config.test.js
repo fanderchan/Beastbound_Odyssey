@@ -42,6 +42,13 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
   assert.equal(defaults.config.revision, 0);
   assert.equal(defaults.resolvedForms.length, 34);
   assert.equal(defaults.resolvedForms.find((entry) => entry.formId === "bui_normal_red_fire10").amount, 120000);
+  const defaultTerminal = defaults.resolvedForms
+    .find((entry) => entry.formId === "wuli_evolved_crystal_earth8_water2");
+  assert.equal(defaultTerminal.resetAllowed, false);
+  assert.equal(defaultTerminal.ineligibleReason, "terminal_evolution");
+  assert.equal(Object.hasOwn(defaultTerminal, "amount"), false);
+  assert.equal(Object.hasOwn(defaultTerminal, "currencyId"), false);
+  assert.equal(Object.hasOwn(defaultTerminal, "priceTierId"), false);
 
   const updated = service.updatePetPaidResetConfig(gm.session.token, {
     expectedRevision: 0,
@@ -58,6 +65,11 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
         amount: 80,
         walletPolicyId: "unbound_only",
       },
+      wuli_evolved_crystal_earth8_water2: {
+        currencyId: "diamonds",
+        amount: 1,
+        walletPolicyId: "unbound_only",
+      },
     },
   });
   assert.equal(updated.ok, true, updated.message);
@@ -70,6 +82,12 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
     {currencyId: dragon.currencyId, amount: dragon.amount, source: dragon.priceSource},
     {currencyId: "diamonds", amount: 80, source: "form_override"},
   );
+  const terminal = updated.resolvedForms
+    .find((entry) => entry.formId === "wuli_evolved_crystal_earth8_water2");
+  assert.equal(terminal.resetAllowed, false);
+  assert.equal(terminal.ineligibleReason, "terminal_evolution");
+  assert.equal(Object.hasOwn(terminal, "amount"), false);
+  assert.equal(Object.hasOwn(terminal, "priceSource"), false);
 
   const stale = service.updatePetPaidResetConfig(gm.session.token, {
     expectedRevision: 0,
@@ -103,6 +121,7 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
   ));
   assert.equal(updateAudit.details.tierOverrides.stone_standard.amount, 180000);
   assert.equal(updateAudit.details.formOverrides.blue_man_dragon_water10.amount, 80);
+  assert.equal(updateAudit.details.formOverrides.wuli_evolved_crystal_earth8_water2.amount, 1);
   assert.deepEqual(snapshot.profiles[snapshot.profileBindings[gm.account.accountId].playerId], profileBefore);
 
   const restarted = createAuthService({store, now: () => NOW_MS});

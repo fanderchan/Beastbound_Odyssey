@@ -55,7 +55,7 @@ Resolve every section below before implementation:
 5. **Growth and 4V**: visible Lv1 base/spread, hidden per-level distribution, role-shaped strengths/weaknesses, expected Lv20 observation quality, Lv140 band, and relation to normal two-rebirth/evolution/fusion power.
 6. **Active skills**: purpose, slot, target, effect, reliability, AI use, counterplay, 10v10 readability, client/server support, and training/inheritance policy.
 7. **Passive skill**: family identity, trigger, effect, cap, counters, element interaction, server authority, and inheritance conflict group.
-8. **Progression and economy**: rebirth/evolution/fusion eligibility, trading/binding/paid status, the exact paid-reset price tier and wallet policy, reset protection, auto-capture/discard safeguards, and material/value risk.
+8. **Progression and economy**: the explicit `0 rebirth -> 1 rebirth -> [normal 2 rebirth / evolution / fusion]` terminal-path choice, trading/binding/paid status, one paid-reset eligibility policy per form, price tier and wallet policy only when reset is allowed, reset protection, auto-capture/discard safeguards, and material/value risk.
 9. **Presentation**: player-facing Chinese name/description, what is visible at capture and while training, GM-only facts, art status, and—when visual production is in scope—the complete art-production handoff covering world, battle, riding, evidence, and owner review.
 10. **Evidence**: simulations, fixed seeds, catalog checks, server tests, UI/manual checks, and save compatibility.
 
@@ -78,10 +78,15 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - A catchable battle actor and its frozen candidate are the same individual: current-level max HP, attack, defense, quick, elements, and skills must match before the room becomes public. Battle damage may change current HP without changing those intrinsic facts.
 - Capture level conditions only the hidden-growth seed distribution, never Lv1 4V. Lv1 uses the species baseline distribution unchanged; higher levels suppress the upper tail within that species with a non-zero jackpot floor and a hard bounded-attempt limit. Do not apply this rule to existing pets, rewards, eggs, GM grants, rebirth, evolution, or fusion.
 - For authority-v1 rebirth, preflight both the target and the exact confirmed MM, preserve privateSeed/privateRoll/Lv1 facts, and restart one canonical Lv1 growth cycle with the cumulative rebirth bonus; never lower only the visible level or consume an automatically substituted helper.
+- Treat `0 rebirth -> 1 rebirth -> [normal 2 rebirth / evolution / fusion]` as one mutually exclusive terminal-path choice. A pet cannot finish normal 2 rebirth and then evolve or fuse, and an evolution/fusion result cannot return to the normal rebirth branch.
+- Evolution-target 0/1-rebirth pages may remain as read-only history for the same instance, but the current evolved form has no legal 0-rebirth state. Never interpret historical pages as permission to reset an evolved pet into that form at Lv1/0.
+- Keep the three terminal power relationships distinct. Normal 2 rebirth remains related to the one-rebirth embryo by preserving that individual's immutable quality and cumulative cultivation/rebirth bonus. Evolution preserves the current one-rebirth cultivation/rebirth bonus, but rerolls the target form's own Lv1 4V and hidden innate growth from the target species profile; it is neither fully source-independent nor a direct transfer of source base quality.
+- Fusion consumes exactly three ordinary authority-v1 pets that are at exactly one rebirth and have not selected any terminal path. A 0-rebirth pet, normal 2-rebirth pet, evolution result, or prior fusion result is never eligible material. Final numeric stats and growth must ignore the three eligible materials' individual 4V, hidden growth, cultivation strength, and build allocation. Generate the result only from the fusion product's own rules; permit only contract-allowlisted skill inheritance. This deliberately makes poorly rolled one-rebirth embryos useful consumable materials without letting three strong embryos buy a stronger numeric roll.
 - Keep normal two-rebirth, evolution, and fusion in comparable end-power bands. Let harder paths win through build choice, inheritance, appearance, or utility rather than uncontrolled raw-stat inflation.
-- Give every form exactly one server-validated paid-reset price policy. All legitimately owned pets may reset repeatedly; choose price by form/acquisition value, never by the individual pet's Lv1 4V, hidden growth, observed grade, prior reset count, or充值金额.
-- Paid reset pricing is fixed per operation and unlimited. Noncommercial tiers may use bound-first split payment; a commercial tier may require unbound currency. Only a fully committed technical failure rolls the whole operation back; a successful reset never refunds currency, MM, stones, or training time.
-- Adding a form requires adding its exact row to `pet_paid_reset_policy.json`; an unknown or missing form must fail closed. Select or explicitly introduce a price tier in the design contract instead of relying on a runtime fallback.
+- Give every form exactly one explicit, server-validated paid-reset policy, but keep form pricing separate from instance eligibility. For an ordinary form, `allowed=true` means only an authority-v1 instance currently at exactly one rebirth and not yet on a terminal path may receive a quote; it never makes 0-rebirth or normal 2-rebirth instances eligible.
+- Normal 2 rebirth, evolution, and fusion are all terminal outcomes and cannot be paid-reset. An evolution target must declare `allowed=false` and `ineligibleReason=terminal_evolution`; it must not carry price-tier, wallet, unlimited, unbinding, or refund fields. A future fusion target must also use `allowed=false`, while its fusion contract explicitly chooses its own stable ineligibility reason instead of borrowing `terminal_evolution`.
+- For an ordinary form's `allowed=true` one-rebirth window, choose price by form/acquisition value, never by the individual pet's Lv1 4V, hidden growth, observed grade, prior reset count, or充值金额. Pricing stays fixed per operation and unlimited while the instance remains eligible; noncommercial tiers may use bound-first split payment and a commercial tier may require unbound currency. Only a technical failure before authoritative commit rolls the whole operation back; a successful reset never refunds currency, MM, stones, or training time.
+- Adding a form requires adding its exact row to `pet_paid_reset_policy.json`; an unknown or missing form must fail closed. Select or explicitly introduce a price tier only for `allowed=true`; use the stable ineligibility reason for `allowed=false` instead of relying on a runtime fallback.
 - Protect locked, task, riding, cultivated, bound, paid, and inheritance-relevant pets from automatic discard or consumption.
 - Keep large simulations offline; never add population scans or JSON I/O to frame, draw, HUD, or movement hot paths.
 - Audit every species profile with `node tools/pet_level_one_percentile_audit.mjs` after changing `outputBase`, `initialOutputSpread`, `distribution`, or `rareExtremeRate`; the runtime CDF must continue matching at least 10,000 authority rolls per profile.
@@ -107,15 +112,16 @@ For Beastbound mounted art, the current product decision is AI-generated whole-f
 
 1. Add or reuse taxonomy before adding the form.
 2. Add the form and species growth profile together when the pet is intended for long-term cultivation.
-3. Add the form's exact paid-reset policy and verify the strict catalog still covers every form.
-4. Add encounter placement and capture behavior; calculate actual Lv1 appearance probability rather than quoting only pool weight.
-5. Reuse supported skills when they express the design. Add new action/passive IDs only with client/server execution, presentation, and fixed-seed tests.
-6. Keep form defaults separate from per-instance learned/inherited skill state.
-7. Trace every shared JSON consumer in Godot and Node before changing fields or IDs.
-8. Add migration or compatibility handling before changing persistent instance semantics.
-9. Keep wiring thin in `main.gd`, broad coordinators, `auth-service.js`, and `http-server.js`; place rules in focused models/domains.
-10. When visual production is in scope, approve the identity lock and a small key-pose gate before generating full matrices; integrate assets only after their contact sheets pass.
-11. Record art provenance and replacement paths, then run the isolated battle review lab before any second-pet batch expansion.
+3. Resolve the terminal power policy explicitly: normal 2 rebirth preserves source individual strength, evolution preserves the one-rebirth bonus while rerolling target-form 4V/growth, and fusion accepts only three ordinary authority-v1, exactly-one-rebirth, pre-terminal materials while ignoring their numeric quality and inheriting only allowlisted skills.
+4. Add the form's exact paid-reset policy and verify the strict catalog still covers every form. For an ordinary form, `allowed=true` opens quoting only to an eligible one-rebirth, non-terminal instance. Evolution targets use only `allowed=false` plus `terminal_evolution`; future fusion targets also use `allowed=false` and must declare their own approved stable reason in the fusion contract.
+5. Add encounter placement and capture behavior; calculate actual Lv1 appearance probability rather than quoting only pool weight.
+6. Reuse supported skills when they express the design. Add new action/passive IDs only with client/server execution, presentation, and fixed-seed tests.
+7. Keep form defaults separate from per-instance learned/inherited skill state.
+8. Trace every shared JSON consumer in Godot and Node before changing fields or IDs.
+9. Add migration or compatibility handling before changing persistent instance semantics.
+10. Keep wiring thin in `main.gd`, broad coordinators, `auth-service.js`, and `http-server.js`; place rules in focused models/domains.
+11. When visual production is in scope, approve the identity lock and a small key-pose gate before generating full matrices; integrate assets only after their contact sheets pass.
+12. Record art provenance and replacement paths, then run the isolated battle review lab before any second-pet batch expansion.
 
 ## Validate proportionally
 

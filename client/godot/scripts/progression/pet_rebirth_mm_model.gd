@@ -2,6 +2,7 @@ extends RefCounted
 
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetTerminalPathModel := preload("res://scripts/progression/pet_terminal_path_model.gd")
 
 const SCHEMA_VERSION := 1
 const STAGE_ONE := 1
@@ -30,6 +31,7 @@ const HELPER_NAME_BY_STAGE := {
 	STAGE_ONE: "1转小MM",
 	STAGE_TWO: "2转小MM",
 }
+const TERMINAL_STAGE_MESSAGE := "宠物已进入2转、进化或融合终局，不能再进行普通转生。"
 
 
 static func balance_version() -> String:
@@ -162,6 +164,8 @@ static func helper_record_lines(record: Dictionary) -> Array[String]:
 
 
 static func rebirth_bonus_preview(target_pet: Dictionary, helper_pet: Dictionary, roll_seed: String = "") -> Dictionary:
+	if PetTerminalPathModel.is_terminal(target_pet):
+		return _preview(false, TERMINAL_STAGE_MESSAGE, {}, {})
 	var helper_stage := helper_stage_for_pet(helper_pet)
 	var target_rebirth := _pet_rebirth_count(target_pet)
 	var expected_stage := target_rebirth + 1

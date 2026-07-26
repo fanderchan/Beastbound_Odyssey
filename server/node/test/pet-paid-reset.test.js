@@ -84,7 +84,7 @@ function cultivationRecord(stage) {
   };
 }
 
-function twoRebirthPet() {
+function oneRebirthPet() {
   const catalog = loadPetGrowthCatalog();
   const profile = catalog.requireProfileById("rebirth_starter_four_spirit_cub_v1");
   const cycle = createPetRebirthGrowthCycle({growthCatalog: catalog});
@@ -116,7 +116,6 @@ function twoRebirthPet() {
     passiveSkillIds: ["bui_resistant_skin"],
     learnedSkillIds: ["pet_bui_charge"],
     inheritedSkillIds: ["future_inherited_skill"],
-    evolutionLineage: {schemaVersion: 1, sourceFormId: "future_source"},
   }, profile, {
     privateSeed: PRIVATE_SEED,
     cultivation: {
@@ -129,12 +128,16 @@ function twoRebirthPet() {
   pet = cycle.restart(pet, cultivationRecord(1)).pet;
   pet.exp = 0;
   pet.nextExp = 100;
-  pet = settlePetGrowthToLevel(pet, profile, 140).pet;
-  pet = cycle.restart(pet, cultivationRecord(2)).pet;
-  pet.exp = 0;
-  pet.nextExp = 100;
   pet = settlePetGrowthToLevel(pet, profile, 88).pet;
   return {catalog, cycle, profile, pet};
+}
+
+function twoRebirthPet() {
+  const fixture = oneRebirthPet();
+  let pet = settlePetGrowthToLevel(fixture.pet, fixture.profile, 140).pet;
+  pet = fixture.cycle.restart(pet, cultivationRecord(2)).pet;
+  pet = settlePetGrowthToLevel(pet, fixture.profile, 88).pet;
+  return {...fixture, pet};
 }
 
 function paidResetInput(pet, operationId = "paid_reset_operation_0001") {
@@ -154,8 +157,8 @@ function paidResetInput(pet, operationId = "paid_reset_operation_0001") {
   };
 }
 
-test("paid reset returns a legal two-rebirth authority pet to Lv1/0 without rerolling identity", () => {
-  const fixture = twoRebirthPet();
+test("paid reset returns a legal one-rebirth authority pet to Lv1/0 without rerolling identity", () => {
+  const fixture = oneRebirthPet();
   const source = structuredClone(fixture.pet);
   const result = applyPetPaidReset(fixture.pet, paidResetInput(fixture));
 
@@ -183,8 +186,8 @@ test("paid reset returns a legal two-rebirth authority pet to Lv1/0 without rero
     {binding: "unbound", amount: 50},
   ]);
   assert.equal(result.publicResult.beforeLevel, 88);
-  assert.equal(result.publicResult.beforeRebirthCount, 2);
-  assert.equal(result.publicResult.clearedRebirthHistoryCount, 2);
+  assert.equal(result.publicResult.beforeRebirthCount, 1);
+  assert.equal(result.publicResult.clearedRebirthHistoryCount, 1);
   assert.equal(result.publicResult.payment.amount, 300);
 
   assert.equal(result.pet.petGrowth.private.privateSeed, source.petGrowth.private.privateSeed);
@@ -197,13 +200,46 @@ test("paid reset returns a legal two-rebirth authority pet to Lv1/0 without rero
   assert.deepEqual(result.pet.passiveSkillIds, source.passiveSkillIds);
   assert.deepEqual(result.pet.learnedSkillIds, source.learnedSkillIds);
   assert.deepEqual(result.pet.inheritedSkillIds, source.inheritedSkillIds);
-  assert.deepEqual(result.pet.evolutionLineage, source.evolutionLineage);
+  assert.equal(Object.hasOwn(result.pet, "evolutionLineage"), false);
+  assert.equal(Object.hasOwn(result.pet, "fusionLineage"), false);
   assert.equal(result.pet.favorite, true);
   assert.deepEqual(validatePetGrowth(result.pet, fixture.profile), {ok: true, code: "", errors: []});
 });
 
-test("paid reset fails closed for legacy, zero-rebirth, damaged and duplicate-operation pets", () => {
+test("paid reset rejects every owned evolution or fusion lineage field before changing the pet", () => {
+  const fixture = oneRebirthPet();
+  for (const lineageField of ["evolutionLineage", "fusionLineage"]) {
+    for (const lineage of [
+      undefined,
+      null,
+      {},
+      "damaged",
+      {schemaVersion: 1, mode: lineageField === "fusionLineage" ? "fusion" : "evolution"},
+    ]) {
+      const pet = structuredClone(fixture.pet);
+      pet[lineageField] = lineage;
+      const before = structuredClone(pet);
+      const result = applyPetPaidReset(pet, paidResetInput(fixture));
+      assert.equal(result.ok, false, lineageField);
+      assert.equal(result.code, "pet_paid_reset_terminal_stage", lineageField);
+      assert.equal(result.message, "宠物已进入2转、进化或融合终局，不能付费重置。", lineageField);
+      assert.deepEqual(pet, before, lineageField);
+    }
+  }
+});
+
+test("paid reset rejects an ordinary two-rebirth pet as a terminal stage", () => {
   const fixture = twoRebirthPet();
+  const before = structuredClone(fixture.pet);
+  const result = applyPetPaidReset(fixture.pet, paidResetInput(fixture));
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "pet_paid_reset_terminal_stage");
+  assert.equal(result.message, "宠物已进入2转、进化或融合终局，不能付费重置。");
+  assert.deepEqual(fixture.pet, before);
+});
+
+test("paid reset fails closed for legacy, zero-rebirth, damaged and duplicate-operation pets", () => {
+  const fixture = oneRebirthPet();
   const source = structuredClone(fixture.pet);
 
   const legacy = {
@@ -250,7 +286,7 @@ test("paid reset fails closed for legacy, zero-rebirth, damaged and duplicate-op
 });
 
 test("paid reset audit remains bounded while permanent count and archived count agree", () => {
-  const fixture = twoRebirthPet();
+  const fixture = oneRebirthPet();
   const first = applyPetPaidReset(fixture.pet, paidResetInput(fixture));
   assert.equal(first.ok, true);
   const prototype = first.pet.paidResetAudit.records[0];

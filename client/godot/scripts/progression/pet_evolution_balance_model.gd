@@ -120,8 +120,12 @@ static func validation_errors(document, rebirth_document) -> Array[String]:
 		errors.append("进化终局路径版本无效")
 	if int(terminal.get("resultLevel", 0)) != 1 or int(terminal.get("resultRebirthCount", 0)) != 1:
 		errors.append("进化结果必须是Lv1一转终局形态")
-	if terminal.get("normalSecondRebirthAllowed", null) != false or terminal.get("fusionMaterialAllowed", null) != false:
-		errors.append("进化终局不能叠加普通二转或作为融合材料")
+	if (
+		terminal.get("normalSecondRebirthAllowed", null) != false
+		or terminal.get("fusionMaterialAllowed", null) != false
+		or terminal.get("paidResetAllowed", null) != false
+	):
+		errors.append("进化终局不能叠加普通二转、作为融合材料或再次付费重置")
 	if not is_equal_approx(float(terminal.get("successRate", 0.0)), 1.0) or terminal.get("failureConsumes", null) != false:
 		errors.append("进化必须100%成功且失败零消耗")
 	if str(terminal.get("formTransition", "")) != "replace_form_preserve_instance":

@@ -7,6 +7,9 @@ const {
   BINDING_IDS,
   CURRENCY_IDS,
 } = require("./currency-wallet");
+const {
+  petPaidResetTerminalStageFailure,
+} = require("./pet-terminal-path");
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const DEFAULT_POLICY_PATH = path.join(
@@ -14,8 +17,8 @@ const DEFAULT_POLICY_PATH = path.join(
   "client/godot/data/balance/pet_paid_reset_policy.json",
 );
 const DEFAULT_TEMPLATE_PATH = path.join(REPO_ROOT, "client/godot/data/pet_templates.json");
-const PET_PAID_RESET_POLICY_SCHEMA_VERSION = 1;
-const PET_PAID_RESET_POLICY_ID = "pet_paid_reset_policy_v1";
+const PET_PAID_RESET_POLICY_SCHEMA_VERSION = 2;
+const PET_PAID_RESET_POLICY_ID = "pet_paid_reset_policy_v2";
 const PET_PAID_RESET_CONFIG_SCHEMA_VERSION = 1;
 const PET_PAID_RESET_MAX_PRICE = 10000000;
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]{1,79}$/;
@@ -258,6 +261,9 @@ function resolvePetPaidResetQuote(catalog, configValue, formIdValue) {
       message: "该宠物尚未配置重置价格，已安全阻止本次操作。",
     };
   }
+  if (formPolicy.resetAllowed !== true) {
+    return petPaidResetTerminalStageFailure();
+  }
   const configRead = readPetPaidResetConfig(configValue, catalog);
   if (!configRead.ok) {
     return configRead;
@@ -284,6 +290,7 @@ function resolvePetPaidResetQuote(catalog, configValue, formIdValue) {
       formId,
       formName: catalog.formNamesById[formId] || formId,
       acquisitionTier: formPolicy.acquisitionTier,
+      resetAllowed: true,
       priceTierId: formPolicy.priceTierId,
       priceSource: formOverride ? "form_override" : tierOverride ? "tier_override" : "catalog_default",
       currencyId: price.currencyId,
@@ -301,6 +308,19 @@ function publicPetPaidResetConfig(catalog, configValue) {
   }
   const resolvedForms = [];
   for (const formPolicy of catalog.formPolicies) {
+    if (formPolicy.resetAllowed !== true) {
+      resolvedForms.push({
+        schemaVersion: PET_PAID_RESET_POLICY_SCHEMA_VERSION,
+        policyId: catalog.policyId,
+        configRevision: configRead.config.revision,
+        formId: formPolicy.formId,
+        formName: catalog.formNamesById[formPolicy.formId] || formPolicy.formId,
+        acquisitionTier: formPolicy.acquisitionTier,
+        resetAllowed: false,
+        ineligibleReason: formPolicy.ineligibleReason,
+      });
+      continue;
+    }
     const resolved = resolvePetPaidResetQuote(catalog, configRead.config, formPolicy.formId);
     if (!resolved.ok) {
       return resolved;
@@ -368,7 +388,6 @@ function normalizePriceTier(value, index, walletPoliciesById) {
 function normalizeFormPolicy(value, index, priceTiersById, templateFormsById) {
   const pathLabel = `catalog.formPolicies[${index}]`;
   const policy = strictRecord(value, pathLabel);
-  exactFields(policy, ["formId", "acquisitionTier", "priceTierId"], pathLabel);
   const formId = strictIdentifier(policy.formId, `${pathLabel}.formId`, catalogError);
   const acquisitionTier = strictAllowedString(
     policy.acquisitionTier,
@@ -376,14 +395,36 @@ function normalizeFormPolicy(value, index, priceTiersById, templateFormsById) {
     ACQUISITION_TIERS,
     catalogError,
   );
-  const priceTierId = strictIdentifier(policy.priceTierId, `${pathLabel}.priceTierId`, catalogError);
   if (!Object.hasOwn(templateFormsById, formId)) {
     throw catalogError(`${pathLabel}.formId`, "价格目录引用了不存在的宠物形态。");
   }
-  if (!Object.hasOwn(priceTiersById, priceTierId)) {
-    throw catalogError(`${pathLabel}.priceTierId`, "宠物形态引用了不存在的价格档。");
+  if (policy.resetAllowed === true) {
+    exactFields(policy, ["formId", "acquisitionTier", "resetAllowed", "priceTierId"], pathLabel);
+    if (acquisitionTier === "evolution") {
+      throw catalogError(`${pathLabel}.resetAllowed`, "进化终局形态不能配置为允许付费重置。");
+    }
+    const priceTierId = strictIdentifier(policy.priceTierId, `${pathLabel}.priceTierId`, catalogError);
+    if (!Object.hasOwn(priceTiersById, priceTierId)) {
+      throw catalogError(`${pathLabel}.priceTierId`, "宠物形态引用了不存在的价格档。");
+    }
+    return {formId, acquisitionTier, resetAllowed: true, priceTierId};
   }
-  return {formId, acquisitionTier, priceTierId};
+  if (policy.resetAllowed === false) {
+    exactFields(policy, ["formId", "acquisitionTier", "resetAllowed", "ineligibleReason"], pathLabel);
+    if (acquisitionTier !== "evolution" || policy.ineligibleReason !== "terminal_evolution") {
+      throw catalogError(
+        `${pathLabel}.ineligibleReason`,
+        "当前只有进化终局形态可以禁止付费重置，且必须声明 terminal_evolution。",
+      );
+    }
+    return {
+      formId,
+      acquisitionTier,
+      resetAllowed: false,
+      ineligibleReason: "terminal_evolution",
+    };
+  }
+  throw catalogError(`${pathLabel}.resetAllowed`, "宠物形态必须明确声明是否允许付费重置。");
 }
 
 function normalizeTemplateForms(value) {

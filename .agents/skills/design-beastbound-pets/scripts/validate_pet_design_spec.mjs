@@ -34,6 +34,15 @@ function requireObject(value, key) {
   return value;
 }
 
+function requireExactObject(value, key, expectedKeys) {
+  const record = requireObject(value, key);
+  const expected = new Set(expectedKeys);
+  for (const actualKey of Object.keys(record)) {
+    if (!expected.has(actualKey)) errors.push(`${key} 不允许字段 ${actualKey}`);
+  }
+  return record;
+}
+
 function requireText(value, key) {
   if (!text(value)) errors.push(`${key} 不能为空`);
 }
@@ -173,19 +182,116 @@ if (object(skills.newPassiveSkill)) {
 
 const progression = requireObject(spec.progression, "progression");
 for (const key of ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy"]) requireText(progression[key], `progression.${key}`);
+const terminalPowerPolicy = requireExactObject(
+  progression.terminalPowerPolicy,
+  "progression.terminalPowerPolicy",
+  ["normalSecondRebirth", "evolution", "fusion"],
+);
+const normalSecondRebirthPower = requireExactObject(
+  terminalPowerPolicy.normalSecondRebirth,
+  "progression.terminalPowerPolicy.normalSecondRebirth",
+  ["preserveStageOneIndividualQuality", "preserveCumulativeCultivationBonus"],
+);
+if (normalSecondRebirthPower.preserveStageOneIndividualQuality !== true) {
+  errors.push("普通2转必须保留一转胚子的个体品质关系");
+}
+if (normalSecondRebirthPower.preserveCumulativeCultivationBonus !== true) {
+  errors.push("普通2转必须保留累计培养/转生加成");
+}
+const evolutionPower = requireExactObject(
+  terminalPowerPolicy.evolution,
+  "progression.terminalPowerPolicy.evolution",
+  ["preserveStageOneCultivationBonus", "targetLv1FourV", "targetHiddenGrowth", "sourceBaseQualityTransfer"],
+);
+if (evolutionPower.preserveStageOneCultivationBonus !== true) {
+  errors.push("进化必须保留当前一转培养/转生加成");
+}
+if (evolutionPower.targetLv1FourV !== "fresh_target_species_roll_v1") {
+  errors.push("进化目标Lv1 4V必须按目标物种重新生成");
+}
+if (evolutionPower.targetHiddenGrowth !== "fresh_target_species_roll_v1") {
+  errors.push("进化目标隐藏成长必须按目标物种重新生成");
+}
+if (evolutionPower.sourceBaseQualityTransfer !== false) {
+  errors.push("进化不能直接复制源形态基础4V或隐藏成长");
+}
+const fusionPower = requireExactObject(
+  terminalPowerPolicy.fusion,
+  "progression.terminalPowerPolicy.fusion",
+  ["materialCount", "materialEligibility", "materialNumericInfluence", "resultNumericSource", "skillInheritance", "consumesMaterials", "economyIntent"],
+);
+if (fusionPower.materialCount !== 3) errors.push("融合数值合同必须明确消耗三个材料宠");
+if (fusionPower.materialEligibility !== "ordinary_authority_v1_exactly_one_rebirth_pre_terminal") {
+  errors.push("融合材料只能是三只普通authority-v1、恰好1转且尚未选择2转/进化/融合终局的宠物");
+}
+if (fusionPower.materialNumericInfluence !== "none") {
+  errors.push("融合最终数值不能读取三个材料胚子的4V、成长、培养强弱或配点");
+}
+if (fusionPower.resultNumericSource !== "fusion_rules_only") {
+  errors.push("融合最终数值必须只由融合产物自身规则生成");
+}
+if (fusionPower.skillInheritance !== "contract_allowlist_only") {
+  errors.push("融合只能按合同白名单遗传技能");
+}
+if (fusionPower.consumesMaterials !== true || fusionPower.economyIntent !== "low_value_rebirth_pet_sink") {
+  errors.push("融合必须保留普通1转坏胚材料消耗出口的经济意图");
+}
 const paidResetPolicy = requireObject(progression.paidResetPolicy, "progression.paidResetPolicy");
-requireText(paidResetPolicy.priceTierId, "progression.paidResetPolicy.priceTierId");
-if (text(paidResetPolicy.priceTierId) && !/^[a-z][a-z0-9_]{1,79}$/.test(text(paidResetPolicy.priceTierId))) {
-  errors.push("progression.paidResetPolicy.priceTierId 只能使用稳定的小写标识");
+const paidResetAllowedKeys = new Set([
+  "allowed",
+  "priceTierId",
+  "walletPolicyId",
+  "fixedPerOperation",
+  "unlimited",
+  "clearBindingOnSuccess",
+  "refundPolicy",
+]);
+const paidResetIneligibleKeys = new Set(["allowed", "ineligibleReason"]);
+if (typeof paidResetPolicy.allowed !== "boolean") {
+  errors.push("progression.paidResetPolicy.allowed 必须是布尔值");
+} else if (paidResetPolicy.allowed) {
+  for (const key of Object.keys(paidResetPolicy)) {
+    if (!paidResetAllowedKeys.has(key)) errors.push(`progression.paidResetPolicy.allowed=true 不允许字段 ${key}`);
+  }
+  requireText(paidResetPolicy.priceTierId, "progression.paidResetPolicy.priceTierId");
+  if (text(paidResetPolicy.priceTierId) && !/^[a-z][a-z0-9_]{1,79}$/.test(text(paidResetPolicy.priceTierId))) {
+    errors.push("progression.paidResetPolicy.priceTierId 只能使用稳定的小写标识");
+  }
+  if (!["bound_first_split", "unbound_only"].includes(text(paidResetPolicy.walletPolicyId))) {
+    errors.push("progression.paidResetPolicy.walletPolicyId 不受支持");
+  }
+  for (const key of ["fixedPerOperation", "unlimited", "clearBindingOnSuccess"]) {
+    if (paidResetPolicy[key] !== true) errors.push(`progression.paidResetPolicy.${key} 必须为 true`);
+  }
+  if (paidResetPolicy.refundPolicy !== "technical_transaction_rollback_only") {
+    errors.push("progression.paidResetPolicy.refundPolicy 必须为 technical_transaction_rollback_only");
+  }
+} else {
+  for (const key of Object.keys(paidResetPolicy)) {
+    if (!paidResetIneligibleKeys.has(key)) errors.push(`progression.paidResetPolicy.allowed=false 不允许字段 ${key}`);
+  }
+  requireText(paidResetPolicy.ineligibleReason, "progression.paidResetPolicy.ineligibleReason");
+  if (text(paidResetPolicy.ineligibleReason) && !/^[a-z][a-z0-9_]{1,79}$/.test(text(paidResetPolicy.ineligibleReason))) {
+    errors.push("progression.paidResetPolicy.ineligibleReason 只能使用稳定的小写标识");
+  }
 }
-if (!["bound_first_split", "unbound_only"].includes(text(paidResetPolicy.walletPolicyId))) {
-  errors.push("progression.paidResetPolicy.walletPolicyId 不受支持");
-}
-for (const key of ["fixedPerOperation", "unlimited", "clearBindingOnSuccess"]) {
-  if (paidResetPolicy[key] !== true) errors.push(`progression.paidResetPolicy.${key} 必须为 true`);
-}
-if (paidResetPolicy.refundPolicy !== "technical_transaction_rollback_only") {
-  errors.push("progression.paidResetPolicy.refundPolicy 必须为 technical_transaction_rollback_only");
+const acquisitionSourceType = text(acquisition.sourceType);
+if (acquisitionSourceType === "evolution") {
+  if (paidResetPolicy.allowed !== false) {
+    errors.push("进化终局 progression.paidResetPolicy.allowed 必须为 false");
+  }
+  if (paidResetPolicy.ineligibleReason !== "terminal_evolution") {
+    errors.push("进化终局 progression.paidResetPolicy.ineligibleReason 必须为 terminal_evolution");
+  }
+} else if (acquisitionSourceType === "fusion") {
+  if (paidResetPolicy.allowed !== false) {
+    errors.push("融合终局 progression.paidResetPolicy.allowed 必须为 false");
+  }
+  if (paidResetPolicy.allowed === false && paidResetPolicy.ineligibleReason === "terminal_evolution") {
+    errors.push("融合终局不能借用 terminal_evolution；融合合同必须显式声明自己的稳定不可重置原因");
+  }
+} else if (paidResetPolicy.allowed !== true) {
+  errors.push(`${acquisitionSourceType || "当前来源"} 普通形态 progression.paidResetPolicy.allowed 必须为 true；该字段仅允许其普通1转、未选终局实例报价`);
 }
 const protections = requireStringArray(progression.autoDiscardProtection, "progression.autoDiscardProtection", 0);
 if (!protections.length) warnings.push("尚未声明自动丢弃保护条件");

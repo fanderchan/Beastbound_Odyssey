@@ -12,7 +12,7 @@ const {createPetRebirthGrowthCycle} = require("../src/auth/pet-rebirth-growth-cy
 const FORM_ID = "rebirth_starter_four_spirit_cub";
 const PROFILE_ID = "rebirth_starter_four_spirit_cub_v1";
 
-function createTwoRebirthAuthorityPet(options = {}) {
+function createOneRebirthAuthorityPet(options = {}) {
   const instanceId = String(options.instanceId || "paid_reset_fixture_pet");
   const privateSeed = String(options.privateSeed || `bps1_${"Q".repeat(43)}`);
   const catalog = loadPetGrowthCatalog();
@@ -56,10 +56,6 @@ function createTwoRebirthAuthorityPet(options = {}) {
   pet = cycle.restart(pet, cultivationRecord(instanceId, 1)).pet;
   pet.exp = 0;
   pet.nextExp = 100;
-  pet = settlePetGrowthToLevel(pet, profile, 140).pet;
-  pet = cycle.restart(pet, cultivationRecord(instanceId, 2)).pet;
-  pet.exp = 4321;
-  pet.nextExp = 8800;
   pet = settlePetGrowthToLevel(pet, profile, Math.max(1, Math.min(140, Number(options.level || 88)))).pet;
   pet.exp = 4321;
   pet.nextExp = 8800;
@@ -133,7 +129,7 @@ function seedPaidResetAccount(service, options = {}) {
     throw new Error(`paid reset fixture profile load failed: ${loaded.code}`);
   }
   const profile = structuredClone(loaded.profile);
-  const fixture = createTwoRebirthAuthorityPet(options.pet || {});
+  const fixture = createOneRebirthAuthorityPet(options.pet || {});
   profile.petInstances = [fixture.pet];
   profile.activePetInstanceId = fixture.pet.instanceId;
   profile.ridePetInstanceId = "";
@@ -158,6 +154,6 @@ function seedPaidResetAccount(service, options = {}) {
 module.exports = {
   FORM_ID,
   PROFILE_ID,
-  createTwoRebirthAuthorityPet,
+  createOneRebirthAuthorityPet,
   seedPaidResetAccount,
 };

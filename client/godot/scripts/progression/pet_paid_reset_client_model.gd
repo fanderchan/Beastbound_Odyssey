@@ -1,5 +1,7 @@
 extends RefCounted
 
+const PetTerminalPathModel := preload("res://scripts/progression/pet_terminal_path_model.gd")
+
 const AUTHORITY_MODEL := "pet_growth_authority_v1"
 const CLEAR_IDS := [
 	"level_and_exp",
@@ -57,8 +59,9 @@ static func is_local_candidate(instance: Dictionary) -> bool:
 	var rebirth_count := int(cultivation.get("rebirthCount", 0))
 	return (
 		str(instance.get("instanceId", "")).strip_edges() != ""
-		and [1, 2].has(rebirth_count)
+		and rebirth_count == 1
 		and str(instance.get("growthModelVersion", "")) == AUTHORITY_MODEL
+		and not PetTerminalPathModel.is_terminal(instance)
 	)
 
 
@@ -92,6 +95,8 @@ static func normalized_quote(value) -> Dictionary:
 
 
 static func quote_matches_instance(quote_value, instance: Dictionary) -> bool:
+	if not is_local_candidate(instance):
+		return false
 	var quote := normalized_quote(quote_value)
 	if quote.is_empty():
 		return false
@@ -184,7 +189,7 @@ static func contract_check() -> Dictionary:
 			"formId": "rebirth_starter_four_spirit_cub",
 			"formName": "四灵幼兽",
 			"level": 88,
-			"rebirthCount": 2,
+			"rebirthCount": 1,
 			"enhanceLevel": 3,
 			"binding": "bound",
 			"paidResetCount": 0,
@@ -205,7 +210,7 @@ static func contract_check() -> Dictionary:
 	return {
 		"ok": (
 			not view.is_empty()
-			and str(view.get("summary", "")).find("Lv88・2转 → Lv1・0转") >= 0
+				and str(view.get("summary", "")).find("Lv88・1转 → Lv1・0转") >= 0
 			and str(view.get("wallet", "")).find("绑定 250钻石 + 非绑定 50钻石") >= 0
 			and str(view.get("preserves", "")).find("天生隐藏成长") >= 0
 			and str(view.get("nonRefunded", "")).find("转生材料") >= 0
@@ -221,7 +226,7 @@ static func _valid_pet(pet: Dictionary) -> bool:
 		and str(pet.get("formId", "")).strip_edges() != ""
 		and str(pet.get("formName", "")).strip_edges() != ""
 		and _is_positive_integer(pet.get("level", null))
-		and _integer_in(pet.get("rebirthCount", null), [1, 2])
+			and _integer_equals(pet.get("rebirthCount", null), 1)
 		and _is_nonnegative_integer(pet.get("enhanceLevel", null))
 		and ["bound", "unbound"].has(str(pet.get("binding", "")))
 		and _is_nonnegative_integer(pet.get("paidResetCount", null))

@@ -1,6 +1,10 @@
 "use strict";
 
 const {isDeepStrictEqual} = require("node:util");
+const {
+  inspectPetTerminalPath,
+  petPaidResetTerminalStageFailure,
+} = require("./pet-terminal-path");
 
 const PET_PAID_RESET_SCHEMA_VERSION = 1;
 const PET_PAID_RESET_AUDIT_MAX_RECORDS = 50;
@@ -75,7 +79,12 @@ function applyPetPaidReset(petValue, options = {}) {
   ) {
     return failure("pet_paid_reset_context_invalid", "宠物重置校验信息不完整，本次操作未执行。");
   }
-  const preflight = preflightPetPaidReset(petValue, {operationId, quote, growthCycle});
+  const preflight = preflightPetPaidReset(petValue, {
+    operationId,
+    quote,
+    growthCycle,
+    evolutionRouteCatalog: options.evolutionRouteCatalog,
+  });
   if (!preflight.ok) {
     return preflight;
   }
@@ -190,6 +199,10 @@ function inspectPetPaidResetEligibility(petValue, options = {}) {
   if (!pet) {
     return failure("pet_paid_reset_pet_invalid", "宠物资料不完整，本次重置未执行。");
   }
+  const terminalPath = inspectPetTerminalPath(pet, options.evolutionRouteCatalog);
+  if (terminalPath.terminal) {
+    return petPaidResetTerminalStageFailure();
+  }
   const quote = recordOrNull(options.quote);
   const growthCycle = options.growthCycle;
   if (
@@ -240,8 +253,7 @@ function canonicalResettableCultivation(value) {
   if (
     source.schemaVersion !== 1
     || !Number.isSafeInteger(source.rebirthCount)
-    || source.rebirthCount < 1
-    || source.rebirthCount > 2
+    || source.rebirthCount !== 1
     || !Number.isSafeInteger(source.enhanceLevel)
     || source.enhanceLevel < 0
     || source.enhanceLevel > 100
@@ -426,7 +438,6 @@ function preservedIdentityFacts(pet) {
     passiveSkillIds: structuredClone(Array.isArray(pet.passiveSkillIds) ? pet.passiveSkillIds : []),
     learnedSkillIds: structuredClone(Array.isArray(pet.learnedSkillIds) ? pet.learnedSkillIds : []),
     inheritedSkillIds: structuredClone(Array.isArray(pet.inheritedSkillIds) ? pet.inheritedSkillIds : []),
-    evolutionLineage: structuredClone(recordOrNull(pet.evolutionLineage) || {}),
   };
 }
 
@@ -435,6 +446,8 @@ function validQuote(quote) {
   const walletPolicy = quote && recordOrNull(quote.walletPolicy);
   return Boolean(
     quote
+    && quote.schemaVersion === 2
+    && quote.resetAllowed === true
     && typeof quote.formId === "string"
     && quote.formId !== ""
     && typeof quote.policyId === "string"

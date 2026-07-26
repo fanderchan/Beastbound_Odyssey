@@ -8532,6 +8532,63 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	host.player_profile = claim_one.get("profile", host.player_profile)
 	var claim_two = PlayerProgressModel.claim_pet_rebirth_mm_stage2(host.player_profile)
 	var stage2_claim_ok = bool(claim_one.get("ok", false)) and not bool(claim_two.get("ok", false)) and PlayerProgressModel.pet_rebirth_mm_stage2_claimed(host.player_profile)
+	var terminal_guard_target := target_pet.duplicate(true)
+	terminal_guard_target["level"] = PetRebirthMmModel.full_preparation_level()
+	terminal_guard_target["petCultivation"] = {
+		"rebirthCount": 1,
+		"rebirthGrowthBonus": {"maxHp": 1.0, "attack": 0.2, "defense": 0.2, "quick": 0.2},
+	}
+	var terminal_guard_helper := {
+		"instanceId": "terminal_guard_mm2",
+		"formId": PetRebirthMmModel.helper_form_id_for_stage(PetRebirthMmModel.STAGE_TWO),
+		"name": PetRebirthMmModel.helper_name_for_stage(PetRebirthMmModel.STAGE_TWO),
+		"level": PetRebirthMmModel.HELPER_REQUIRED_LEVEL,
+		"initialStats": {"maxHp": 42, "attack": 7, "defense": 7, "quick": 7},
+		"maxHp": 410,
+		"attack": 88,
+		"defense": 82,
+		"quick": 90,
+		"petRebirthHelper": {
+			"stage": PetRebirthMmModel.STAGE_TWO,
+			"stonePoints": {"maxHp": 50, "attack": 50, "defense": 50, "quick": 50},
+		},
+	}
+	var ordinary_stage_two_preview := PetRebirthMmModel.rebirth_bonus_preview(
+		terminal_guard_target,
+		terminal_guard_helper,
+		"terminal_guard_ordinary"
+	)
+	var terminal_variants: Array[Dictionary] = []
+	var evolution_lineage_target := terminal_guard_target.duplicate(true)
+	evolution_lineage_target["evolutionLineage"] = {
+		"routeId": "wuli_crystal_evolution_v1",
+		"sourceFormId": "wuli_normal_tough_earth10",
+	}
+	terminal_variants.append(evolution_lineage_target)
+	var damaged_evolution_lineage_target := terminal_guard_target.duplicate(true)
+	damaged_evolution_lineage_target["evolutionLineage"] = "damaged"
+	terminal_variants.append(damaged_evolution_lineage_target)
+	var empty_evolution_lineage_target := terminal_guard_target.duplicate(true)
+	empty_evolution_lineage_target["evolutionLineage"] = {}
+	terminal_variants.append(empty_evolution_lineage_target)
+	var target_form_only := terminal_guard_target.duplicate(true)
+	target_form_only["formId"] = "wuli_evolved_crystal_earth8_water2"
+	terminal_variants.append(target_form_only)
+	var fusion_lineage_target := terminal_guard_target.duplicate(true)
+	fusion_lineage_target["fusionLineage"] = {}
+	terminal_variants.append(fusion_lineage_target)
+	var terminal_guard_ok := bool(ordinary_stage_two_preview.get("ok", false))
+	for terminal_target in terminal_variants:
+		var terminal_preview := PetRebirthMmModel.rebirth_bonus_preview(
+			terminal_target,
+			terminal_guard_helper,
+			"terminal_guard_denied"
+		)
+		terminal_guard_ok = (
+			terminal_guard_ok
+			and not bool(terminal_preview.get("ok", false))
+			and str(terminal_preview.get("message", "")) == PetRebirthMmModel.TERMINAL_STAGE_MESSAGE
+		)
 
 	var before_mm1_diamonds = PlayerProgressModel.diamonds(host.player_profile)
 	var buy_mm1_egg = PlayerProgressModel.buy_shop_item(host.player_profile, shop_id, PlayerProgressModel.ITEM_PET_REBIRTH_MM1_EGG, 1)
@@ -8692,14 +8749,15 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	var stage2_after_ok = host._compute_quest_marker_state_for_item(stage2_item) == QUEST_MARKER_NONE
 
 	var guide_marker_ok = low_level_gate_ok and guide_available_marker_ok and guide_claim_marker_ok and guide_feed_marker_ok and guide_repeat_marker_ok and guide_completed_level_gate_ok and guide_panel_ok
-	var status = "ok" if catalog_ok and buy_stone_ok and feed_ok and rebirth_ok and stage2_claim_ok and mm1_egg_ok and egg_ok and trial_reward_ok and guide_marker_ok and stage2_before_ok and stage2_after_ok else "failed"
-	print("pet rebirth mm check ready: status=%s catalog=%s buy_stone=%s feed=%s rebirth=%s stage2_claim=%s mm1_egg=%s egg=%s trial_reward=%s duplicate_trial=%s guide_marker=%s low_gate=%s guide_available=%s guide_claim=%s guide_panel=%s guide_feed=%s guide_repeat=%s completed_level_gate=%s stage2_before=%s stage2_after=%s attack_bonus=%.3f" % [
+	var status = "ok" if catalog_ok and buy_stone_ok and feed_ok and rebirth_ok and stage2_claim_ok and terminal_guard_ok and mm1_egg_ok and egg_ok and trial_reward_ok and guide_marker_ok and stage2_before_ok and stage2_after_ok else "failed"
+	print("pet rebirth mm check ready: status=%s catalog=%s buy_stone=%s feed=%s rebirth=%s stage2_claim=%s terminal_guard=%s mm1_egg=%s egg=%s trial_reward=%s duplicate_trial=%s guide_marker=%s low_gate=%s guide_available=%s guide_claim=%s guide_panel=%s guide_feed=%s guide_repeat=%s completed_level_gate=%s stage2_before=%s stage2_after=%s attack_bonus=%.3f" % [
 		status,
 		str(catalog_ok),
 		str(buy_stone_ok),
 		str(feed_ok),
 		str(rebirth_ok),
 		str(stage2_claim_ok),
+		str(terminal_guard_ok),
 		str(mm1_egg_ok),
 		str(egg_ok),
 		str(trial_reward_ok),
@@ -26280,7 +26338,7 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("当前 76 种正式物品") >= 0
 		and command_text.find("高价值 GM 测试资产") >= 0
 		and command_text.find("付费重置验收档与审计") >= 0
-		and command_text.find("1只一转 + 1只二转四灵幼兽") >= 0
+		and command_text.find("1只普通一转可重置样本 + 1只普通二转终局拒绝样本") >= 0
 		and command_text.find("绑定/非绑定钻石与石币") >= 0
 		and command_text.find("宠物进化验收档") >= 0
 		and command_text.find("乌力/风狐各1只未达P90与1只已达P90样本") >= 0

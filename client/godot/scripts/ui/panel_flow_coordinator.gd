@@ -22380,7 +22380,7 @@ func _prepare_current_gm_pet_paid_reset_qa() -> void:
 		if primary_instance_id == "" or primary_pet.is_empty():
 			qa_pet_paid_reset_status_state = {
 				"ok": false,
-				"message": "验收档已提交，但客户端尚未找到二转样本；请勿重复操作，正在重新拉取。",
+				"message": "验收档已提交，但客户端尚未找到一转可重置样本；请勿重复操作，正在重新拉取。",
 			}
 			_queue_server_profile_pull()
 		else:
@@ -22389,7 +22389,7 @@ func _prepare_current_gm_pet_paid_reset_qa() -> void:
 			qa_pet_growth_profile_id = str(primary_pet.get("growthSpeciesProfileId", "")).strip_edges()
 			pet_detail_mode = PET_DETAIL_MODE_GROWTH
 	if bool(qa_pet_paid_reset_status_state.get("ok", false)):
-		_set_world_log_message("宠物重置验收档已检查；二转样本已选中，可到宠物成长页查看报价。")
+		_set_world_log_message("宠物重置验收档已检查；主验收样本已选中，请查看资格与审计结果。")
 	else:
 		_set_world_log_message(str(qa_pet_paid_reset_status_state.get("message", "宠物重置验收档准备失败。")))
 	_refresh_qa_panel()

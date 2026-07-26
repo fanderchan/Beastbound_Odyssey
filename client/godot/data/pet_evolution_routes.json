@@ -103,6 +103,7 @@
         "terminalPathId": "evolution_terminal_v1",
         "normalSecondRebirthAllowed": false,
         "fusionMaterialAllowed": false,
+        "paidResetAllowed": false,
         "successRate": 1.0,
         "failureConsumes": false,
         "preserveInstanceIdentity": true,
@@ -120,7 +121,6 @@
         "normalizedRepeatableEffort": 150,
         "normalizedFirstUnlockEffort": 170
       },
-      "paidResetPriceTierId": "diamond_evolution",
       "assetGate": {
         "status": "deferred",
         "formalAssetRequiredBeforeRuntime": true,
@@ -170,6 +170,7 @@
         "terminalPathId": "evolution_terminal_v1",
         "normalSecondRebirthAllowed": false,
         "fusionMaterialAllowed": false,
+        "paidResetAllowed": false,
         "successRate": 1.0,
         "failureConsumes": false,
         "preserveInstanceIdentity": true,
@@ -187,7 +188,6 @@
         "normalizedRepeatableEffort": 150,
         "normalizedFirstUnlockEffort": 170
       },
-      "paidResetPriceTierId": "diamond_evolution",
       "assetGate": {
         "status": "deferred",
         "formalAssetRequiredBeforeRuntime": true,

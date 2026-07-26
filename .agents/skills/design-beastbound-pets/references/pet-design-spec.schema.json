@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://beastbound.local/schemas/pet-design-spec-v1.json",
   "title": "Beastbound Pet Design Contract",
+  "description": "0转到1转后只能在普通2转、进化、融合中选择一个终局。只有普通1转且尚未选择终局的实例可按其形态价格 policy 付费重置；三种终局各自遵守不同的品质传递合同。",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -148,24 +149,19 @@
     },
     "progression": {
       "type": "object",
-      "required": ["rebirth", "evolution", "fusion", "tradePolicy", "commercialPolicy", "paidResetPolicy", "autoDiscardProtection"],
+      "required": ["rebirth", "evolution", "fusion", "terminalPowerPolicy", "tradePolicy", "commercialPolicy", "paidResetPolicy", "autoDiscardProtection"],
       "properties": {
         "rebirth": {"type": "string"},
         "evolution": {"type": "string"},
         "fusion": {"type": "string"},
+        "terminalPowerPolicy": {"$ref": "#/$defs/terminalPowerPolicy"},
         "tradePolicy": {"type": "string"},
         "commercialPolicy": {"type": "string"},
         "paidResetPolicy": {
-          "type": "object",
-          "required": ["priceTierId", "walletPolicyId", "fixedPerOperation", "unlimited", "clearBindingOnSuccess", "refundPolicy"],
-          "properties": {
-            "priceTierId": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
-            "walletPolicyId": {"enum": ["bound_first_split", "unbound_only"]},
-            "fixedPerOperation": {"const": true},
-            "unlimited": {"const": true},
-            "clearBindingOnSuccess": {"const": true},
-            "refundPolicy": {"const": "technical_transaction_rollback_only"}
-          }
+          "oneOf": [
+            {"$ref": "#/$defs/paidResetAllowedPolicy"},
+            {"$ref": "#/$defs/paidResetIneligiblePolicy"}
+          ]
         },
         "autoDiscardProtection": {"type": "array", "items": {"type": "string"}}
       }
@@ -288,6 +284,90 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "acquisition": {
+            "properties": {"sourceType": {"const": "evolution"}},
+            "required": ["sourceType"]
+          }
+        },
+        "required": ["acquisition"]
+      },
+      "then": {
+        "properties": {
+          "progression": {
+            "properties": {
+              "paidResetPolicy": {
+                "properties": {
+                  "allowed": {"const": false},
+                  "ineligibleReason": {"const": "terminal_evolution"}
+                },
+                "required": ["allowed", "ineligibleReason"]
+              }
+            },
+            "required": ["paidResetPolicy"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "acquisition": {
+            "properties": {
+              "sourceType": {
+                "not": {"enum": ["evolution", "fusion"]}
+              }
+            },
+            "required": ["sourceType"]
+          }
+        },
+        "required": ["acquisition"]
+      },
+      "then": {
+        "properties": {
+          "progression": {
+            "properties": {
+              "paidResetPolicy": {
+                "properties": {"allowed": {"const": true}},
+                "required": ["allowed"]
+              }
+            },
+            "required": ["paidResetPolicy"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "acquisition": {
+            "properties": {"sourceType": {"const": "fusion"}},
+            "required": ["sourceType"]
+          }
+        },
+        "required": ["acquisition"]
+      },
+      "then": {
+        "properties": {
+          "progression": {
+            "properties": {
+              "paidResetPolicy": {
+                "properties": {"allowed": {"const": false}},
+                "required": ["allowed"],
+                "not": {
+                  "properties": {"ineligibleReason": {"const": "terminal_evolution"}},
+                  "required": ["ineligibleReason"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "range": {
       "type": "array",
@@ -313,6 +393,75 @@
         "attack": {"$ref": "#/$defs/range"},
         "defense": {"$ref": "#/$defs/range"},
         "quick": {"$ref": "#/$defs/range"}
+      }
+    },
+    "paidResetAllowedPolicy": {
+      "type": "object",
+      "description": "普通形态的报价配置；allowed=true 仅表示该形态的 authority-v1 普通1转、未选终局实例可以报价，不代表该形态的0转或普通2转实例可重置。",
+      "additionalProperties": false,
+      "required": ["allowed", "priceTierId", "walletPolicyId", "fixedPerOperation", "unlimited", "clearBindingOnSuccess", "refundPolicy"],
+      "properties": {
+        "allowed": {
+          "const": true,
+          "description": "仅开放普通1转、未选终局的实例资格；运行时仍必须验证实例阶段。"
+        },
+        "priceTierId": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "walletPolicyId": {"enum": ["bound_first_split", "unbound_only"]},
+        "fixedPerOperation": {"const": true},
+        "unlimited": {"const": true},
+        "clearBindingOnSuccess": {"const": true},
+        "refundPolicy": {"const": "technical_transaction_rollback_only"}
+      }
+    },
+    "paidResetIneligiblePolicy": {
+      "type": "object",
+      "description": "终局目标形态的不可重置配置，不得携带价格、钱包或重置操作字段。",
+      "additionalProperties": false,
+      "required": ["allowed", "ineligibleReason"],
+      "properties": {
+        "allowed": {"const": false},
+        "ineligibleReason": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"}
+      }
+    },
+    "terminalPowerPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalSecondRebirth", "evolution", "fusion"],
+      "properties": {
+        "normalSecondRebirth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["preserveStageOneIndividualQuality", "preserveCumulativeCultivationBonus"],
+          "properties": {
+            "preserveStageOneIndividualQuality": {"const": true},
+            "preserveCumulativeCultivationBonus": {"const": true}
+          }
+        },
+        "evolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["preserveStageOneCultivationBonus", "targetLv1FourV", "targetHiddenGrowth", "sourceBaseQualityTransfer"],
+          "properties": {
+            "preserveStageOneCultivationBonus": {"const": true},
+            "targetLv1FourV": {"const": "fresh_target_species_roll_v1"},
+            "targetHiddenGrowth": {"const": "fresh_target_species_roll_v1"},
+            "sourceBaseQualityTransfer": {"const": false}
+          }
+        },
+        "fusion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["materialCount", "materialEligibility", "materialNumericInfluence", "resultNumericSource", "skillInheritance", "consumesMaterials", "economyIntent"],
+          "properties": {
+            "materialCount": {"const": 3},
+            "materialEligibility": {"const": "ordinary_authority_v1_exactly_one_rebirth_pre_terminal"},
+            "materialNumericInfluence": {"const": "none"},
+            "resultNumericSource": {"const": "fusion_rules_only"},
+            "skillInheritance": {"const": "contract_allowlist_only"},
+            "consumesMaterials": {"const": true},
+            "economyIntent": {"const": "low_value_rebirth_pet_sink"}
+          }
+        }
       }
     }
   }

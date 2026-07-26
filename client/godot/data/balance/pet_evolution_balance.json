@@ -60,6 +60,7 @@
     "resultRebirthCount": 1,
     "normalSecondRebirthAllowed": false,
     "fusionMaterialAllowed": false,
+    "paidResetAllowed": false,
     "successRate": 1.0,
     "failureConsumes": false,
     "formTransition": "replace_form_preserve_instance"

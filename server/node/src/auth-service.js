@@ -257,6 +257,7 @@ const {
   loadPetRebirthBalance,
   petRebirthPoolInfo: balancePetRebirthPoolInfo,
 } = require("./auth/pet-rebirth-balance");
+const {inspectPetTerminalPath} = require("./auth/pet-terminal-path");
 const {publicPet, publicProfile} = require("./auth/profile-visibility");
 const {
   createFamilyManorDomain,
@@ -5454,6 +5455,7 @@ function createAuthService(options = {}) {
         newPetFactory,
         petExpSettlement,
         petRebirthGrowthCycle,
+        petEvolutionRouteCatalog,
       },
     ),
     bagItemById,
@@ -18413,7 +18415,13 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
     case "pet_rebirth_mm_guide_start":
       return applyPetRebirthMmGuideStartAction(profile, now);
     case "pet_cultivation_apply":
-      return applyPetCultivationAction(profile, params, now, options.petRebirthGrowthCycle);
+      return applyPetCultivationAction(
+        profile,
+        params,
+        now,
+        options.petRebirthGrowthCycle,
+        options.petEvolutionRouteCatalog,
+      );
     case "training_partner_set_count":
       return applyTrainingPartnerSetCountAction(profile, params);
     default:
@@ -19904,7 +19912,7 @@ function applyPetMarkSeenAction(profile, params) {
   return {ok: true, message: "", instanceId: petId};
 }
 
-function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle) {
+function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle, petEvolutionRouteCatalog) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const mode = String(params.mode || "").trim().toLowerCase();
   const pet = profilePetByInstanceId(profile, petId);
@@ -19918,6 +19926,15 @@ function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle) 
     return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能转强。`, instanceId: petId};
   }
   if (shouldUsePetRebirthMm(pet, mode)) {
+    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    if (terminalPath.terminal) {
+      return {
+        ok: false,
+        code: "pet_rebirth_terminal_stage",
+        message: "宠物已进入2转、进化或融合终局，不能再进行普通转生。",
+        instanceId: petId,
+      };
+    }
     return applyPetRebirthMmCultivationAction(profile, pet, params, now, petRebirthGrowthCycle);
   }
   return applyBasicPetCultivationAction(profile, pet, mode, now);

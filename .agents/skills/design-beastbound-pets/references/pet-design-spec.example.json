@@ -109,12 +109,34 @@
     }
   },
   "progression": {
-    "rebirth": "允许普通 0→1→2 转，目标与同档普通宠一致。",
-    "evolution": "本示例不配置进化路线。",
-    "fusion": "仅作为未来主动技能遗传候选，不在当前运行时实现。",
+    "rebirth": "允许 0转→1转；普通1转且尚未选择终局时可付费重置回Lv1/0转；之后在普通2转、进化、融合中三选一，本示例选择普通2转终局且不可再重置。",
+    "evolution": "本示例不选择进化终局。",
+    "fusion": "本示例不选择融合终局；融合只消耗三只普通authority-v1、恰好1转且尚未选终局的材料宠，融合终局必定不可重置，未来融合合同须明确其稳定不可重置原因与选技细则。",
+    "terminalPowerPolicy": {
+      "normalSecondRebirth": {
+        "preserveStageOneIndividualQuality": true,
+        "preserveCumulativeCultivationBonus": true
+      },
+      "evolution": {
+        "preserveStageOneCultivationBonus": true,
+        "targetLv1FourV": "fresh_target_species_roll_v1",
+        "targetHiddenGrowth": "fresh_target_species_roll_v1",
+        "sourceBaseQualityTransfer": false
+      },
+      "fusion": {
+        "materialCount": 3,
+        "materialEligibility": "ordinary_authority_v1_exactly_one_rebirth_pre_terminal",
+        "materialNumericInfluence": "none",
+        "resultNumericSource": "fusion_rules_only",
+        "skillInheritance": "contract_allowlist_only",
+        "consumesMaterials": true,
+        "economyIntent": "low_value_rebirth_pet_sink"
+      }
+    },
     "tradePolicy": "未绑定时允许交易；培养后按正式经济规则处理。",
     "commercialPolicy": "非商业宠。",
     "paidResetPolicy": {
+      "allowed": true,
       "priceTierId": "stone_rare",
       "walletPolicyId": "bound_first_split",
       "fixedPerOperation": true,
