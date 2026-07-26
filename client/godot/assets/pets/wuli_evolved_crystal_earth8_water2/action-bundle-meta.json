@@ -246,6 +246,14 @@
     "frameCount": 12,
     "fps": 12,
     "loop": false,
+    "presentationCopy": {
+      "intro": "地脉正在回应……",
+      "stages": [
+        {"label": "岩甲共鸣", "endFrame": 4},
+        {"label": "晶甲生长", "endFrame": 9},
+        {"label": "晶核定型", "endFrame": 12}
+      ]
+    },
     "runtimeRoot": "views/front_3quarter_sw/evolution",
     "sourceRoot": "source/evolution/frames",
     "sourceLedger": "source/evolution/source-ledger.json",

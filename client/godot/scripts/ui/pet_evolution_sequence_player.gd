@@ -20,6 +20,7 @@ var _active: bool = false
 var _completed_count: int = 0
 var _last_presentation_id: String = ""
 var _frame_history: Array[int] = []
+var _stage_history: Array[String] = []
 
 
 func mount(parent: Control, audio_cue: Callable = Callable()) -> void:
@@ -59,18 +60,21 @@ func play_request(request_value, timing_scale: float = 1.0) -> Dictionary:
 		or not is_equal_approx(float(descriptor.get("fps", 0.0)), PetEvolutionVisualCatalog.REQUIRED_FPS)
 	):
 		return {"ok": false, "reason": "visual_mismatch"}
+	var presentation_copy := descriptor.get("presentationCopy", {}) as Dictionary
+	var stages := presentation_copy.get("stages", []) as Array
 
 	_played_ids[presentation_id] = true
 	_active = true
 	_last_presentation_id = presentation_id
 	_frame_history.clear()
+	_stage_history.clear()
 	_source_label.text = "%s · 1转 Lv%d" % [
 		str(request.get("sourceFormName", "宠物")),
 		int(request.get("beforeLevel", 140)),
 	]
 	_target_label.text = str(request.get("targetFormName", "进化形态"))
 	_level_label.text = ""
-	_stage_label.text = "地脉正在回应……"
+	_stage_label.text = str(presentation_copy.get("intro", "进化能量正在回应……"))
 	_set_progress(0)
 	_root.modulate = Color(1, 1, 1, 0)
 	_root.visible = true
@@ -83,15 +87,13 @@ func play_request(request_value, timing_scale: float = 1.0) -> Dictionary:
 	for frame_index in range(frame_count):
 		_sprite.texture = PetEvolutionVisualCatalog.texture_for_frame(target_form_id, frame_index)
 		_frame_history.append(frame_index)
-		if frame_index <= 3:
-			_stage_label.text = "岩甲共鸣"
-			_set_progress(1)
-		elif frame_index <= 8:
-			_stage_label.text = "晶甲生长"
-			_set_progress(2)
-		else:
-			_stage_label.text = "晶核定型"
-			_set_progress(3)
+		var stage_index := _stage_index_for_frame(frame_index + 1, stages)
+		var stage := stages[stage_index] as Dictionary
+		var stage_text := str(stage.get("label", "进化中"))
+		_stage_label.text = stage_text
+		if _stage_history.is_empty() or _stage_history.back() != stage_text:
+			_stage_history.append(stage_text)
+		_set_progress(stage_index + 1)
 		if frame_index == 4:
 			_play_audio("combat.hit_skill")
 		elif frame_index == 8:
@@ -127,6 +129,7 @@ func snapshot() -> Dictionary:
 		"playedCount": _played_ids.size(),
 		"lastPresentationId": _last_presentation_id,
 		"frameHistory": _frame_history.duplicate(),
+		"stageHistory": _stage_history.duplicate(),
 		"stage": _stage_label.text if _stage_label != null else "",
 		"level": _level_label.text if _level_label != null else "",
 	}
@@ -259,6 +262,14 @@ func _set_progress(completed_segments: int) -> void:
 			if index < completed_segments
 			else Color(0.35, 0.43, 0.55, 0.52)
 		)
+
+
+func _stage_index_for_frame(frame_number: int, stages: Array) -> int:
+	for index in range(stages.size()):
+		var stage := stages[index] as Dictionary
+		if frame_number <= int(stage.get("endFrame", PetEvolutionVisualCatalog.REQUIRED_FRAME_COUNT)):
+			return index
+	return maxi(0, stages.size() - 1)
 
 
 func _fade_to(target_alpha: float, duration: float, timing_scale: float) -> void:

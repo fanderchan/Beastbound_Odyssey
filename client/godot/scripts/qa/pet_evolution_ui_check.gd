@@ -79,67 +79,108 @@ static func run(host) -> void:
 	)
 	hidden_parent.queue_free()
 
-	var target_form_id := "wuli_evolved_crystal_earth8_water2"
-	var normal_visual_access_blocked := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
-	var visual_errors := PetEvolutionVisualCatalog.validation_errors_for_form(target_form_id)
-	var qa_preview_enabled := PetEvolutionVisualCatalog.enable_qa_preview_form(target_form_id)
-	var visual_descriptor := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id)
-	var visual_warmed := PetEvolutionVisualCatalog.warm_target_form(target_form_id)
-	var visual_contract_ok := (
-		normal_visual_access_blocked
-		and visual_errors.is_empty()
-		and qa_preview_enabled
-		and not visual_descriptor.is_empty()
-		and int(visual_descriptor.get("frameCount", 0)) == 12
-		and is_equal_approx(float(visual_descriptor.get("fps", 0.0)), 12.0)
-		and not bool(visual_descriptor.get("loop", true))
-		and visual_warmed
-	)
+	var visual_contract_ok := true
+	var visual_cases := [
+		{
+			"sourceFormId": "wuli_normal_tough_earth10",
+			"targetFormId": "wuli_evolved_crystal_earth8_water2",
+			"animationId": "wuli_crystal_evolution_front_v1",
+			"stageLabels": ["岩甲共鸣", "晶甲生长", "晶核定型"],
+		},
+		{
+			"sourceFormId": "driftfox_highland_wind9_earth1",
+			"targetFormId": "driftfox_evolved_moon_gale_wind7_water3",
+			"animationId": "driftfox_moon_gale_evolution_front_v1",
+			"stageLabels": ["岚月风染", "双尾分化", "月岚定型"],
+		},
+	]
+	for visual_case in visual_cases:
+		var target_form_id := str(visual_case.get("targetFormId", ""))
+		var normal_visual_access_blocked := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
+		var visual_errors := PetEvolutionVisualCatalog.validation_errors_for_form(target_form_id)
+		var qa_preview_enabled := PetEvolutionVisualCatalog.enable_qa_preview_form(target_form_id)
+		var visual_descriptor := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id)
+		var visual_warmed := PetEvolutionVisualCatalog.warm_target_form(target_form_id)
+		var presentation_copy := visual_descriptor.get("presentationCopy", {}) as Dictionary
+		var stage_labels: Array[String] = []
+		for stage_value in presentation_copy.get("stages", []) as Array:
+			if stage_value is Dictionary:
+				stage_labels.append(str((stage_value as Dictionary).get("label", "")))
+		visual_contract_ok = (
+			visual_contract_ok
+			and normal_visual_access_blocked
+			and visual_errors.is_empty()
+			and qa_preview_enabled
+			and not visual_descriptor.is_empty()
+			and str(visual_descriptor.get("sourceFormId", "")) == str(visual_case.get("sourceFormId", ""))
+			and str(visual_descriptor.get("targetFormId", "")) == target_form_id
+			and str(visual_descriptor.get("animationId", "")) == str(visual_case.get("animationId", ""))
+			and int(visual_descriptor.get("frameCount", 0)) == 12
+			and is_equal_approx(float(visual_descriptor.get("fps", 0.0)), 12.0)
+			and not bool(visual_descriptor.get("loop", true))
+			and stage_labels == visual_case.get("stageLabels", [])
+			and visual_warmed
+		)
 
-	var presentation_fixture := presentation_contract.get("fixture", {}) as Dictionary
-	var presentation_operation_id := str(presentation_contract.get("operationId", ""))
+	var route_fixtures := presentation_contract.get("routeFixtures", {}) as Dictionary
+	var wuli_runtime_fixture := route_fixtures.get("wuli_crystal_evolution_v1", {}) as Dictionary
+	var moon_runtime_fixture := route_fixtures.get("driftfox_moon_gale_evolution_v1", {}) as Dictionary
+	var wuli_quote := wuli_runtime_fixture.get("quote", {}) as Dictionary
+	var moon_quote := moon_runtime_fixture.get("quote", {}) as Dictionary
+	var wuli_outcome := wuli_runtime_fixture.get("outcome", {}) as Dictionary
+	var moon_outcome := moon_runtime_fixture.get("outcome", {}) as Dictionary
+	var wuli_operation_id := str(wuli_runtime_fixture.get("operationId", ""))
+	var moon_operation_id := str(moon_runtime_fixture.get("operationId", ""))
 	var sequence_before: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
-	var below_p90_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
+	var wuli_rejected: Dictionary = await panel_flow._present_pet_evolution_outcome(
 		{"ok": false, "code": "pet_evolution_power_below_p90"},
-		quote,
-		"bbo_contract_evolution_reject_p90",
+		wuli_quote,
+		"bbo_contract_evolution_wuli_reject_p90",
 		true,
 		0.01
 	)
-	var insufficient_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
-		{"ok": false, "code": "pet_evolution_assets_insufficient"},
-		quote,
-		"bbo_contract_evolution_reject_assets",
+	var sequence_after_wuli_rejection: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var moon_rejected: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		{"ok": false, "code": "pet_evolution_power_below_p90"},
+		moon_quote,
+		"bbo_contract_evolution_fox_reject_p90",
 		true,
 		0.01
 	)
 	var unapplied_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
-		presentation_fixture,
-		quote,
+		moon_outcome,
+		moon_quote,
 		"bbo_contract_evolution_unapplied",
 		false,
 		0.01
 	)
+	var cross_route_result: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		moon_outcome,
+		wuli_quote,
+		"bbo_contract_evolution_cross_route",
+		true,
+		0.01
+	)
 	var sequence_after_rejections: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
-	var first_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
-		presentation_fixture,
-		quote,
-		presentation_operation_id,
+	var wuli_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		wuli_outcome,
+		wuli_quote,
+		wuli_operation_id,
 		true,
 		0.02
 	)
-	var first_success_snapshot: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
+	var wuli_success_snapshot: Dictionary = panel_flow._pet_evolution_sequence_player.snapshot()
 	var duplicate_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
-		presentation_fixture,
-		quote,
-		presentation_operation_id,
+		wuli_outcome,
+		wuli_quote,
+		wuli_operation_id,
 		true,
 		0.02
 	)
-	var second_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
-		presentation_fixture,
-		quote,
-		"bbo_contract_evolution_presentation_002",
+	var moon_success: Dictionary = await panel_flow._present_pet_evolution_outcome(
+		moon_outcome,
+		moon_quote,
+		moon_operation_id,
 		true,
 		0.02
 	)
@@ -147,24 +188,35 @@ static func run(host) -> void:
 	var expected_frames: Array[int] = []
 	for frame_index in range(12):
 		expected_frames.append(frame_index)
+	var rejected_route_count := int(not bool(wuli_rejected.get("ok", false))) + int(
+		not bool(moon_rejected.get("ok", false))
+	)
 	var presentation_runtime_ok: bool = (
-		not bool(below_p90_result.get("ok", false))
-		and not bool(insufficient_result.get("ok", false))
+		rejected_route_count == 2
+		and sequence_after_wuli_rejection == sequence_before
 		and not bool(unapplied_result.get("ok", false))
-		and int(sequence_after_rejections.get("playedCount", -1)) == int(sequence_before.get("playedCount", -2))
-		and bool(first_success.get("ok", false))
-		and int(first_success.get("frameCount", 0)) == 12
-		and is_equal_approx(float(first_success.get("fps", 0.0)), 12.0)
-		and int(first_success_snapshot.get("completedCount", 0)) == int(sequence_before.get("completedCount", 0)) + 1
+		and not bool(cross_route_result.get("ok", false))
+		and sequence_after_rejections == sequence_before
+		and bool(wuli_success.get("ok", false))
+		and int(wuli_success.get("frameCount", 0)) == 12
+		and is_equal_approx(float(wuli_success.get("fps", 0.0)), 12.0)
+		and int(wuli_success_snapshot.get("completedCount", 0)) == int(sequence_before.get("completedCount", 0)) + 1
+		and str(wuli_success_snapshot.get("level", "")) == "晶甲乌力 · Lv1"
+		and wuli_success_snapshot.get("stageHistory", []) == ["岩甲共鸣", "晶甲生长", "晶核定型"]
 		and not bool(duplicate_success.get("ok", false))
 		and str(duplicate_success.get("reason", "")) == "duplicate"
-		and bool(second_success.get("ok", false))
+		and bool(moon_success.get("ok", false))
+		and int(moon_success.get("frameCount", 0)) == 12
+		and is_equal_approx(float(moon_success.get("fps", 0.0)), 12.0)
 		and int(sequence_after_successes.get("completedCount", 0)) == int(sequence_before.get("completedCount", 0)) + 2
 		and int(sequence_after_successes.get("playedCount", 0)) == int(sequence_before.get("playedCount", 0)) + 2
 		and sequence_after_successes.get("frameHistory", []) == expected_frames
-		and str(sequence_after_successes.get("level", "")) == "晶甲乌力 · Lv1"
+		and sequence_after_successes.get("stageHistory", []) == ["岚月风染", "双尾分化", "月岚定型"]
+		and str(sequence_after_successes.get("lastPresentationId", "")) == moon_operation_id
+		and str(sequence_after_successes.get("level", "")) == "月岚风狐 · Lv1"
 	)
-	PetEvolutionVisualCatalog.disable_qa_preview_form(target_form_id)
+	for visual_case in visual_cases:
+		PetEvolutionVisualCatalog.disable_qa_preview_form(str(visual_case.get("targetFormId", "")))
 
 	var private_quote := quote.duplicate(true)
 	private_quote["privateSeed"] = "must-not-render"
@@ -205,16 +257,17 @@ static func run(host) -> void:
 		and initial_screenshot_ok
 		and armed_screenshot_ok
 	) else "failed"
-	print("pet evolution UI check ready: status=%s contract=%s presentation_contract=%s gm_contract=%s visual=%s presentation_runtime=%s rejected_count=%d completed_count=%d played_count=%d ui=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
+	print("pet evolution UI check ready: status=%s contract=%s presentation_contract=%s gm_contract=%s visuals=2/2 visual=%s presentation_runtime=%s rejected_routes=%d/2 completed_routes=%d/2 played_routes=%d/2 final_target=%s ui=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
 		status,
 		str(strict_contract_ok),
 		str(bool(presentation_contract.get("ok", false))),
 		str(bool(gm_contract.get("ok", false))),
 		str(visual_contract_ok),
 		str(presentation_runtime_ok),
-		int(sequence_after_rejections.get("playedCount", -1)),
+		rejected_route_count,
 		int(sequence_after_successes.get("completedCount", -1)),
 		int(sequence_after_successes.get("playedCount", -1)),
+		str(sequence_after_successes.get("level", "")),
 		str(ui_ok),
 		str(first_click_did_not_submit),
 		str(second_click_submitted_once),

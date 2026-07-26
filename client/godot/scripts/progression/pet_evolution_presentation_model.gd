@@ -33,8 +33,8 @@ static func request_for_outcome(
 		or str(outcome.get("instanceId", "")) != str(quote_pet.get("instanceId", ""))
 		or str(outcome.get("sourceFormId", "")) != str(quote_pet.get("sourceFormId", ""))
 		or str(outcome.get("targetFormId", "")) != str(quote_result.get("targetFormId", ""))
-		or str(outcome.get("sourceFormName", "")).strip_edges() == ""
-		or str(outcome.get("targetFormName", "")).strip_edges() == ""
+		or str(outcome.get("sourceFormName", "")) != str(quote_pet.get("sourceFormName", ""))
+		or str(outcome.get("targetFormName", "")) != str(quote_result.get("targetFormName", ""))
 		or int(outcome.get("beforeLevel", 0)) != PetEvolutionClientModel.REQUIRED_LEVEL
 		or int(outcome.get("afterLevel", 0)) != 1
 		or int(outcome.get("rebirthCount", 0)) != PetEvolutionClientModel.REQUIRED_REBIRTH_COUNT
@@ -57,9 +57,45 @@ static func request_for_outcome(
 
 
 static func contract_check() -> Dictionary:
-	var quote := (PetEvolutionClientModel.contract_check().get("fixture", {}) as Dictionary).duplicate(true)
-	var operation_id := "bbo_contract_evolution_presentation_001"
-	var success := _success_fixture(quote)
+	var wuli_quote := (PetEvolutionClientModel.contract_check().get("fixture", {}) as Dictionary).duplicate(true)
+	var moon_quote := _moon_gale_quote_fixture(wuli_quote)
+	var route_fixtures: Dictionary = {}
+	var route_contract_ok := true
+	for fixture in [
+		{
+			"routeId": "wuli_crystal_evolution_v1",
+			"quote": wuli_quote,
+			"operationId": "bbo_contract_evolution_presentation_wuli_001",
+			"expectedTargetFormId": "wuli_evolved_crystal_earth8_water2",
+		},
+		{
+			"routeId": "driftfox_moon_gale_evolution_v1",
+			"quote": moon_quote,
+			"operationId": "bbo_contract_evolution_presentation_fox_001",
+			"expectedTargetFormId": "driftfox_evolved_moon_gale_wind7_water3",
+		},
+	]:
+		var quote := fixture.get("quote", {}) as Dictionary
+		var operation_id := str(fixture.get("operationId", ""))
+		var success := _success_fixture(quote)
+		var request := request_for_outcome(success, true, quote, operation_id)
+		route_contract_ok = (
+			route_contract_ok
+			and not request.is_empty()
+			and str(request.get("routeId", "")) == str(fixture.get("routeId", ""))
+			and str(request.get("targetFormId", "")) == str(fixture.get("expectedTargetFormId", ""))
+			and int(request.get("afterLevel", 0)) == 1
+		)
+		route_fixtures[str(fixture.get("routeId", ""))] = {
+			"quote": quote.duplicate(true),
+			"outcome": success,
+			"operationId": operation_id,
+			"request": request,
+		}
+	var wuli_fixture := route_fixtures.get("wuli_crystal_evolution_v1", {}) as Dictionary
+	var moon_fixture := route_fixtures.get("driftfox_moon_gale_evolution_v1", {}) as Dictionary
+	var operation_id := str(wuli_fixture.get("operationId", ""))
+	var success := wuli_fixture.get("outcome", {}) as Dictionary
 	var below_p90 := {
 		"ok": false,
 		"code": "pet_evolution_power_below_p90",
@@ -74,22 +110,47 @@ static func contract_check() -> Dictionary:
 	}
 	var tampered := success.duplicate(true)
 	(tampered.get("petEvolution", {}) as Dictionary)["targetFormId"] = "tampered_target"
-	var success_request := request_for_outcome(success, true, quote, operation_id)
+	var tampered_label := success.duplicate(true)
+	(tampered_label.get("petEvolution", {}) as Dictionary)["targetFormName"] = "月岚风狐"
+	var success_request := wuli_fixture.get("request", {}) as Dictionary
+	var cross_route_outcome := moon_fixture.get("outcome", {}) as Dictionary
 	return {
 		"ok": (
-			request_for_outcome(below_p90, true, quote, operation_id).is_empty()
-			and request_for_outcome(insufficient, true, quote, operation_id).is_empty()
-			and request_for_outcome(unknown, true, quote, operation_id).is_empty()
-			and request_for_outcome(success, false, quote, operation_id).is_empty()
-			and request_for_outcome(tampered, true, quote, operation_id).is_empty()
-			and not success_request.is_empty()
-			and str(success_request.get("targetFormId", "")) == "wuli_evolved_crystal_earth8_water2"
-			and int(success_request.get("afterLevel", 0)) == 1
+			route_contract_ok
+			and request_for_outcome(below_p90, true, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(insufficient, true, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(unknown, true, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(success, false, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(tampered, true, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(tampered_label, true, wuli_quote, operation_id).is_empty()
+			and request_for_outcome(cross_route_outcome, true, wuli_quote, operation_id).is_empty()
 		),
 		"fixture": success,
 		"operationId": operation_id,
 		"request": success_request,
+		"routeFixtures": route_fixtures,
 	}
+
+
+static func _moon_gale_quote_fixture(base_quote: Dictionary) -> Dictionary:
+	var quote := base_quote.duplicate(true)
+	quote["routeId"] = "driftfox_moon_gale_evolution_v1"
+	var pet := quote.get("pet", {}) as Dictionary
+	pet["instanceId"] = "pet_evolution_ui_contract_fox"
+	pet["sourceFormId"] = "driftfox_highland_wind9_earth1"
+	pet["sourceFormName"] = "高地风狐"
+	pet["intrinsicCombatPower"] = 1492
+	pet["minimumIntrinsicCombatPower"] = 1437
+	var result := quote.get("result", {}) as Dictionary
+	result["targetFormId"] = "driftfox_evolved_moon_gale_wind7_water3"
+	result["targetFormName"] = "月岚风狐"
+	var cost := quote.get("cost", {}) as Dictionary
+	var items := cost.get("items", []) as Array
+	if items.size() >= 2 and items[1] is Dictionary:
+		var lineage_item := items[1] as Dictionary
+		lineage_item["itemId"] = "pet_evolution_driftfox_moon_plume"
+		lineage_item["label"] = "月岚尾羽"
+	return quote
 
 
 static func _success_fixture(quote: Dictionary) -> Dictionary:

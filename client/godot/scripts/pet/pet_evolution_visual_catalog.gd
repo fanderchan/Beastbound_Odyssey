@@ -5,6 +5,7 @@ const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const VIEW_FRONT := "front_3quarter_sw"
 const REQUIRED_FRAME_COUNT := 12
 const REQUIRED_FPS := 12.0
+const REQUIRED_STAGE_COUNT := 3
 const STATUS_OWNER_REVIEW_PENDING := "owner_review_pending"
 const STATUS_APPROVED := "approved"
 
@@ -58,6 +59,7 @@ static func descriptor_for_target(form_id: String) -> Dictionary:
 		"frameCount": int(visual.get("frameCount", 0)),
 		"fps": float(visual.get("fps", 0.0)),
 		"loop": false,
+		"presentationCopy": (visual.get("presentationCopy", {}) as Dictionary).duplicate(true),
 		"runtimeRoot": bundle_root.path_join(str(visual.get("runtimeRoot", ""))),
 	}
 
@@ -134,6 +136,7 @@ static func validation_errors_for_form(form_id: String) -> Array[String]:
 	var status := str(visual.get("status", ""))
 	if not [STATUS_OWNER_REVIEW_PENDING, STATUS_APPROVED].has(status):
 		errors.append("进化视觉状态无效：%s=%s" % [normalized, status])
+	_validate_presentation_copy(normalized, visual.get("presentationCopy", null), errors)
 	var runtime_root := str(visual.get("runtimeRoot", "")).strip_edges().replace("\\", "/")
 	if runtime_root == "" or runtime_root.begins_with("/") or runtime_root.begins_with("res://") or runtime_root.find("..") >= 0:
 		errors.append("进化视觉 runtimeRoot 必须是安全的包内相对路径：%s" % normalized)
@@ -143,6 +146,11 @@ static func validation_errors_for_form(form_id: String) -> Array[String]:
 			var frame_path := absolute_runtime_root.path_join("evolution-%d.png" % frame_number)
 			if not FileAccess.file_exists(frame_path):
 				errors.append("进化视觉缺少运行帧：%s" % frame_path)
+	if status == STATUS_OWNER_REVIEW_PENDING and (
+		str(visual.get("ownerReview", "")) != "pending"
+		or bool(visual.get("runtimeEnabled", false))
+	):
+		errors.append("待所有者验收的进化视觉必须保持 ownerReview=pending 且 runtimeEnabled=false：%s" % normalized)
 	if status == STATUS_APPROVED:
 		if str(visual.get("ownerReview", "")) != STATUS_APPROVED:
 			errors.append("已批准进化视觉必须同步 ownerReview=approved：%s" % normalized)
@@ -205,6 +213,55 @@ static func _validate_owner_decision(form_id: String, visual: Dictionary, errors
 		or bool(decision.get("routeRuntimeEnabled", true))
 	):
 		errors.append("进化视觉 ownerDecision 范围或结论无效：%s" % form_id)
+
+
+static func _validate_presentation_copy(form_id: String, value, errors: Array[String]) -> void:
+	if not (value is Dictionary):
+		errors.append("进化视觉缺少 presentationCopy：%s" % form_id)
+		return
+	var copy := value as Dictionary
+	if copy.size() != 2 or not copy.has("intro") or not copy.has("stages"):
+		errors.append("进化视觉 presentationCopy 只允许 intro/stages：%s" % form_id)
+		return
+	if str(copy.get("intro", "")).strip_edges() == "":
+		errors.append("进化视觉 presentationCopy.intro 不能为空：%s" % form_id)
+	var stages_value = copy.get("stages", null)
+	if not (stages_value is Array) or (stages_value as Array).size() != REQUIRED_STAGE_COUNT:
+		errors.append("进化视觉 presentationCopy.stages 必须恰好三段：%s" % form_id)
+		return
+	var previous_end := 0
+	for index in range(REQUIRED_STAGE_COUNT):
+		var stage_value = (stages_value as Array)[index]
+		if not (stage_value is Dictionary):
+			errors.append("进化视觉第%d段不是对象：%s" % [index + 1, form_id])
+			continue
+		var stage := stage_value as Dictionary
+		if stage.size() != 2 or not stage.has("label") or not stage.has("endFrame"):
+			errors.append("进化视觉第%d段只允许 label/endFrame：%s" % [index + 1, form_id])
+			continue
+		if str(stage.get("label", "")).strip_edges() == "":
+			errors.append("进化视觉第%d段 label 不能为空：%s" % [index + 1, form_id])
+		var end_value = stage.get("endFrame", null)
+		if not _is_integer_value(end_value):
+			errors.append("进化视觉第%d段 endFrame 必须是整数：%s" % [index + 1, form_id])
+			continue
+		var end_frame := int(end_value)
+		if end_frame <= previous_end or end_frame > REQUIRED_FRAME_COUNT:
+			errors.append("进化视觉第%d段 endFrame 顺序无效：%s" % [index + 1, form_id])
+		previous_end = end_frame
+	if previous_end != REQUIRED_FRAME_COUNT:
+		errors.append("进化视觉最后一段必须结束于第12帧：%s" % form_id)
+
+
+static func _is_integer_value(value) -> bool:
+	return (
+		(value is int)
+		or (
+			value is float
+			and is_finite(float(value))
+			and floorf(float(value)) == float(value)
+		)
+	)
 
 
 static func _bundle_root(form_id: String) -> String:

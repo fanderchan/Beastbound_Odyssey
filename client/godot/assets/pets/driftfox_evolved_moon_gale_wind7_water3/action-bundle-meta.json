@@ -4913,7 +4913,7 @@
     }
   },
   "evolutionVisual": {
-    "status": "self_review_passed_owner_pending",
+    "status": "owner_review_pending",
     "animationId": "driftfox_moon_gale_evolution_front_v1",
     "sourceFormId": "driftfox_highland_wind9_earth1",
     "targetFormId": "driftfox_evolved_moon_gale_wind7_water3",
@@ -4921,6 +4921,14 @@
     "frameCount": 12,
     "fps": 12,
     "loop": false,
+    "presentationCopy": {
+      "intro": "岚月正在回应……",
+      "stages": [
+        {"label": "岚月风染", "endFrame": 4},
+        {"label": "双尾分化", "endFrame": 8},
+        {"label": "月岚定型", "endFrame": 12}
+      ]
+    },
     "runtimeRoot": "views/front_3quarter_sw/evolution",
     "sourceRoot": "source/evolution/frames",
     "sourceLedger": "source/evolution/source-ledger.json",
@@ -4942,6 +4950,24 @@
       "cycleCount": 2,
       "audioPresent": true,
       "fullDecodePassed": true
+    },
+    "runtimeIntegrationReview": {
+      "reviewState": "self_review_passed_owner_pending",
+      "video": ".run/evidence/phase355_moon_gale_evolution_runtime/Beastbound_Phase355_Moon_Gale_Evolution_Runtime_1x.mp4",
+      "videoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139",
+      "width": 1280,
+      "height": 720,
+      "videoFps": 60,
+      "videoFrameCount": 436,
+      "durationSeconds": 7.266667,
+      "evolutionFps": 12,
+      "displayFramesPerEvolutionFrame": 5,
+      "speedScale": 1.0,
+      "profileAppliedBeforePlayback": true,
+      "targetLevelAfterPlayback": 1,
+      "audioPresent": true,
+      "fullDecodePassed": true,
+      "routeRuntimeEnabled": false
     },
     "runtimeBundleDigest": "daba0e310c76c165ccac511d15366b3db40a792c80b52cbbd44dee7402549187",
     "runtimeEnabled": false,

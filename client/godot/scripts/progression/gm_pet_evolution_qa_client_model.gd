@@ -21,6 +21,8 @@ static func status_state_from_parsed(parsed: Dictionary) -> Dictionary:
 		or not _valid_summary(summary)
 		or samples.size() != 4
 		or samples.any(func(sample) -> bool: return not _valid_sample(sample))
+		or not _valid_sample_matrix(samples)
+		or not _summary_matches_samples(summary, samples)
 		or materials.size() != 3
 		or materials.any(func(material) -> bool: return not _valid_material(material))
 		or not _valid_asset_gate(asset_gate)
@@ -108,17 +110,17 @@ static func status_text(state: Dictionary) -> String:
 static func contract_check() -> Dictionary:
 	var samples: Array[Dictionary] = []
 	for fixture in [
-		["wuli_low", "进化验收·乌力未达标", "高防乌力", "晶甲乌力", 1298, 1345, false],
-		["wuli_high", "进化验收·乌力达标", "高防乌力", "晶甲乌力", 1410, 1345, true],
-		["fox_low", "进化验收·风狐未达标", "高地风狐", "月岚风狐", 1389, 1437, false],
-		["fox_high", "进化验收·风狐达标", "高地风狐", "月岚风狐", 1492, 1437, true],
+		["evolution_wuli_below_p90", "进化验收·乌力未达标", "高防乌力", "晶甲乌力", 1298, 1345, false],
+		["evolution_wuli_above_p90", "进化验收·乌力达标", "高防乌力", "晶甲乌力", 1410, 1345, true],
+		["evolution_driftfox_below_p90", "进化验收·风狐未达标", "高地风狐", "月岚风狐", 1389, 1437, false],
+		["evolution_driftfox_above_p90", "进化验收·风狐达标", "高地风狐", "月岚风狐", 1492, 1437, true],
 	]:
 		var expected := bool(fixture[6])
 		samples.append({
 			"schemaVersion": 1,
 			"slotId": str(fixture[0]),
 			"instanceId": "pet_%s" % str(fixture[0]),
-			"routeId": "wuli_crystal_evolution_v1" if str(fixture[0]).begins_with("wuli") else "driftfox_moon_gale_evolution_v1",
+			"routeId": "wuli_crystal_evolution_v1" if str(fixture[0]).contains("_wuli_") else "driftfox_moon_gale_evolution_v1",
 			"sourceFormName": str(fixture[2]),
 			"targetFormName": str(fixture[3]),
 			"present": true,
@@ -151,7 +153,7 @@ static func contract_check() -> Dictionary:
 				"storageAdded": 0,
 				"abilitiesAdded": 2,
 				"materialItemsAdded": 40,
-				"primaryInstanceId": "pet_wuli_high",
+				"primaryInstanceId": "pet_evolution_wuli_above_p90",
 				"profileRevisionBefore": 9,
 				"profileRevisionAfter": 10,
 				"boundStoneCoins": 600000,
@@ -175,15 +177,56 @@ static func contract_check() -> Dictionary:
 	}
 	var state := status_state_from_parsed(parsed)
 	var text := status_text(state)
+	var tampered := parsed.duplicate(true)
+	var tampered_samples := (
+		((tampered.get("result", {}) as Dictionary).get("samples", []) as Array)
+	)
+	(tampered_samples[3] as Dictionary)["routeId"] = "wuli_crystal_evolution_v1"
+	var tampered_state := status_state_from_parsed(tampered)
+	var missing := parsed.duplicate(true)
+	var missing_result := missing.get("result", {}) as Dictionary
+	var missing_summary := missing_result.get("summary", {}) as Dictionary
+	var missing_samples := missing_result.get("samples", []) as Array
+	var missing_sample := missing_samples[0] as Dictionary
+	missing_sample["present"] = false
+	missing_sample["eligible"] = false
+	missing_sample["matchesExpectation"] = false
+	missing_sample["eligibilityCode"] = "sample_missing"
+	missing_sample["eligibilityMessage"] = "样本已不存在；为避免重复发放，不会自动补回。"
+	missing_sample["intrinsicCombatPower"] = 0
+	missing_summary["presentCount"] = 3
+	missing_summary["expectationMatchedCount"] = 3
+	var missing_state := status_state_from_parsed(missing)
+	var wrong_summary := parsed.duplicate(true)
+	((wrong_summary.get("result", {}) as Dictionary).get("summary", {}) as Dictionary)["presentCount"] = 0
+	var wrong_summary_state := status_state_from_parsed(wrong_summary)
+	var wrong_primary := parsed.duplicate(true)
+	((wrong_primary.get("result", {}) as Dictionary).get("summary", {}) as Dictionary)["primaryInstanceId"] = "pet_evolution_driftfox_above_p90"
+	var wrong_primary_state := status_state_from_parsed(wrong_primary)
+	var impossible_power := parsed.duplicate(true)
+	var impossible_samples := ((impossible_power.get("result", {}) as Dictionary).get("samples", []) as Array)
+	(impossible_samples[0] as Dictionary)["intrinsicCombatPower"] = 1500
+	var impossible_power_state := status_state_from_parsed(impossible_power)
+	var duplicate_gate := parsed.duplicate(true)
+	var duplicate_routes := (((duplicate_gate.get("result", {}) as Dictionary).get("assetGate", {}) as Dictionary).get("routes", []) as Array)
+	duplicate_routes[1] = (duplicate_routes[0] as Dictionary).duplicate(true)
+	var duplicate_gate_state := status_state_from_parsed(duplicate_gate)
 	return {
 		"ok": (
 			bool(state.get("ok", false))
-			and primary_instance_id(state) == "pet_wuli_high"
+			and primary_instance_id(state) == "pet_evolution_wuli_above_p90"
 			and text.find("成长战力 1410 / 1345") >= 0
 			and text.find("晶甲乌力 待正式资源") >= 0
+			and text.find("月岚风狐 待正式资源") >= 0
 			and text.find("未开放，不会消耗玩家资产") >= 0
 			and text.find("privateSeed") < 0
 			and text.find("operationId") < 0
+			and not bool(tampered_state.get("ok", false))
+			and bool(missing_state.get("ok", false))
+			and not bool(wrong_summary_state.get("ok", false))
+			and not bool(wrong_primary_state.get("ok", false))
+			and not bool(impossible_power_state.get("ok", false))
+			and not bool(duplicate_gate_state.get("ok", false))
 		),
 		"state": state,
 	}
@@ -237,6 +280,89 @@ static func _valid_sample(value) -> bool:
 	return str(sample.get("eligibilityCode", "")) == "sample_missing"
 
 
+static func _valid_sample_matrix(samples: Array) -> bool:
+	var expected_slots := {
+		"evolution_wuli_below_p90": {
+			"routeId": "wuli_crystal_evolution_v1",
+			"sourceFormName": "高防乌力",
+			"targetFormName": "晶甲乌力",
+			"expectedEligible": false,
+		},
+		"evolution_wuli_above_p90": {
+			"routeId": "wuli_crystal_evolution_v1",
+			"sourceFormName": "高防乌力",
+			"targetFormName": "晶甲乌力",
+			"expectedEligible": true,
+		},
+		"evolution_driftfox_below_p90": {
+			"routeId": "driftfox_moon_gale_evolution_v1",
+			"sourceFormName": "高地风狐",
+			"targetFormName": "月岚风狐",
+			"expectedEligible": false,
+		},
+		"evolution_driftfox_above_p90": {
+			"routeId": "driftfox_moon_gale_evolution_v1",
+			"sourceFormName": "高地风狐",
+			"targetFormName": "月岚风狐",
+			"expectedEligible": true,
+		},
+	}
+	for slot_id in expected_slots:
+		var slot_matches: Array = samples.filter(
+			func(sample) -> bool:
+				return sample is Dictionary and str((sample as Dictionary).get("slotId", "")) == slot_id
+		)
+		if slot_matches.size() != 1:
+			return false
+		var expected := expected_slots[slot_id] as Dictionary
+		var expected_eligible := bool(expected.get("expectedEligible", false))
+		var sample := slot_matches[0] as Dictionary
+		if (
+			str(sample.get("routeId", "")) != str(expected.get("routeId", ""))
+			or str(sample.get("sourceFormName", "")) != str(expected.get("sourceFormName", ""))
+			or str(sample.get("targetFormName", "")) != str(expected.get("targetFormName", ""))
+			or bool(sample.get("expectedEligible", not expected_eligible)) != expected_eligible
+		):
+			return false
+		if bool(sample.get("present", false)):
+			if (
+				bool(sample.get("eligible", not expected_eligible)) != expected_eligible
+				or not bool(sample.get("matchesExpectation", false))
+				or (
+					int(sample.get("intrinsicCombatPower", 0))
+					>= int(sample.get("minimumIntrinsicCombatPower", 0))
+				) != expected_eligible
+				or str(sample.get("eligibilityCode", "")) != (
+					"ok" if expected_eligible else "pet_evolution_power_below_p90"
+				)
+			):
+				return false
+		elif (
+			bool(sample.get("eligible", false))
+			or bool(sample.get("matchesExpectation", true))
+			or str(sample.get("eligibilityCode", "")) != "sample_missing"
+		):
+			return false
+	return true
+
+
+static func _summary_matches_samples(summary: Dictionary, samples: Array) -> bool:
+	var wuli_high := samples.filter(
+		func(sample) -> bool:
+			return sample is Dictionary and str((sample as Dictionary).get("slotId", "")) == "evolution_wuli_above_p90"
+	)
+	return (
+		wuli_high.size() == 1
+		and int(summary.get("presentCount", -1)) == samples.filter(
+			func(sample) -> bool: return bool((sample as Dictionary).get("present", false))
+		).size()
+		and int(summary.get("expectationMatchedCount", -1)) == samples.filter(
+			func(sample) -> bool: return bool((sample as Dictionary).get("matchesExpectation", false))
+		).size()
+		and str(summary.get("primaryInstanceId", "")) == str((wuli_high[0] as Dictionary).get("instanceId", ""))
+	)
+
+
 static func _valid_material(value) -> bool:
 	if not (value is Dictionary):
 		return false
@@ -259,19 +385,33 @@ static func _valid_asset_gate(value: Dictionary) -> bool:
 		or (value.get("routes", []) as Array).size() != 2
 	):
 		return false
-	if bool(value.get("productionOpen", false)) and not bool(value.get("runtimeEnabled", false)):
-		return false
+	var expected_routes := {
+		"wuli_crystal_evolution_v1": "晶甲乌力",
+		"driftfox_moon_gale_evolution_v1": "月岚风狐",
+	}
+	var seen_routes: Dictionary = {}
+	var all_formal := true
 	for raw_route in value.get("routes", []) as Array:
 		if not (raw_route is Dictionary):
 			return false
 		var route := raw_route as Dictionary
+		var route_id := str(route.get("routeId", ""))
+		var status := str(route.get("status", ""))
 		if (
-			str(route.get("routeId", "")).strip_edges() == ""
-			or str(route.get("targetFormName", "")).strip_edges() == ""
-			or not ["deferred", "formal"].has(str(route.get("status", "")))
+			not expected_routes.has(route_id)
+			or seen_routes.has(route_id)
+			or str(route.get("targetFormName", "")) != str(expected_routes[route_id])
+			or not ["deferred", "formal"].has(status)
 		):
 			return false
-	return true
+		seen_routes[route_id] = true
+		all_formal = all_formal and status == "formal"
+	return (
+		seen_routes.size() == expected_routes.size()
+		and bool(value.get("productionOpen", false)) == (
+			bool(value.get("runtimeEnabled", false)) and all_formal
+		)
+	)
 
 
 static func _is_nonnegative_integer(value) -> bool:

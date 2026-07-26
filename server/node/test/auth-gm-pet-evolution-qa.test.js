@@ -14,9 +14,28 @@ const {
   GM_PET_EVOLUTION_QA_MANIFEST_ID,
   QA_STONE_COIN_MINIMUM,
 } = require("../src/auth/gm-pet-evolution-qa");
+const {
+  createEnabledPetEvolutionRouteCatalog,
+} = require("../test-support/pet-evolution-fixture");
 
 const COMMAND_ID = "gm_pet_evolution_qa";
 const NOW_MS = Date.parse("2026-07-18T08:00:00.000Z");
+const ROUTE_CASES = Object.freeze([
+  Object.freeze({
+    routeId: "wuli_crystal_evolution_v1",
+    sourceFormId: "wuli_normal_tough_earth10",
+    sourceFormName: "高防乌力",
+    targetFormId: "wuli_evolved_crystal_earth8_water2",
+    targetFormName: "晶甲乌力",
+  }),
+  Object.freeze({
+    routeId: "driftfox_moon_gale_evolution_v1",
+    sourceFormId: "driftfox_highland_wind9_earth1",
+    sourceFormName: "高地风狐",
+    targetFormId: "driftfox_evolved_moon_gale_wind7_water3",
+    targetFormName: "月岚风狐",
+  }),
+]);
 
 function registerGm(service) {
   const registered = service.register({
@@ -74,6 +93,25 @@ test("GM evolution QA prepares both routes above and below P90 without opening p
     assert.equal(sample.requiredPercentile, 90);
     assert.equal(sample.eligible, sample.intrinsicCombatPower >= sample.minimumIntrinsicCombatPower);
   }
+  for (const routeCase of ROUTE_CASES) {
+    const routeSamples = first.result.samples.filter((sample) => sample.routeId === routeCase.routeId);
+    assert.equal(routeSamples.length, 2);
+    assert.equal(routeSamples.every((sample) => sample.sourceFormName === routeCase.sourceFormName), true);
+    assert.equal(routeSamples.every((sample) => sample.targetFormName === routeCase.targetFormName), true);
+    assert.deepEqual(
+      routeSamples.map((sample) => sample.expectedEligible).sort(),
+      [false, true],
+    );
+    assert.deepEqual(
+      routeSamples.map((sample) => sample.eligible).sort(),
+      [false, true],
+    );
+    assert.equal(
+      routeSamples.find((sample) => !sample.expectedEligible).eligibilityCode,
+      "pet_evolution_power_below_p90",
+    );
+    assert.equal(routeSamples.find((sample) => sample.expectedEligible).eligibilityCode, "ok");
+  }
   assert.equal(first.result.assetGate.runtimeEnabled, false);
   assert.equal(first.result.assetGate.productionOpen, false);
   assert.equal(first.result.assetGate.routes.every((route) => route.status === "deferred"), true);
@@ -117,6 +155,122 @@ test("GM evolution QA prepares both routes above and below P90 without opening p
   assert.equal(refreshed.result.summary.alreadyPrepared, true);
   assert.equal(refreshed.result.summary.expectationMatchedCount, 4);
   assert.equal(internalProfileForAccount(service, gm.account.accountId).petInstances.length, internal.petInstances.length);
+});
+
+test("GM evolution QA proves each route rejects below P90 and evolves its eligible sample", async () => {
+  const catalog = createEnabledPetEvolutionRouteCatalog();
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => NOW_MS,
+    petEvolutionRouteCatalog: catalog,
+  });
+  const gm = registerGm(service);
+  const prepared = await invokeQa(
+    service,
+    gm,
+    "gm_pet_evolution_qa_two_routes_prepare_0001",
+    "f".repeat(64),
+  );
+  assert.equal(prepared.ok, true, prepared.message);
+  assert.equal(prepared.result.assetGate.productionOpen, true);
+
+  for (const routeCase of ROUTE_CASES) {
+    const routeSamples = prepared.result.samples.filter((sample) => sample.routeId === routeCase.routeId);
+    const rejectedSample = routeSamples.find((sample) => sample.expectedEligible === false);
+    const acceptedSample = routeSamples.find((sample) => sample.expectedEligible === true);
+    assert.ok(rejectedSample);
+    assert.ok(acceptedSample);
+
+    const beforeRejectedQuote = structuredClone(service.snapshot());
+    const rejectedQuote = service.getPetEvolutionQuote(gm.session.token, {
+      instanceId: rejectedSample.instanceId,
+      routeId: routeCase.routeId,
+    });
+    assert.equal(rejectedQuote.ok, false);
+    assert.equal(rejectedQuote.code, "pet_evolution_power_below_p90");
+    assert.deepEqual(service.snapshot(), beforeRejectedQuote);
+
+    const currentProfile = service.getProfile(gm.session.token);
+    assert.equal(currentProfile.ok, true);
+    const beforeRejectedMutation = structuredClone(service.snapshot());
+    const rejectedMutation = await service.invokeDurable("evolvePet", [
+      gm.session.token,
+      {
+        instanceId: rejectedSample.instanceId,
+        routeId: routeCase.routeId,
+        expectedProfileRevision: currentProfile.profileSummary.profileRevision,
+        expectedCatalogId: catalog.catalogId,
+      },
+    ], {
+      actionId: "POST /pets/evolution",
+      operationId: `gm_pet_evolution_qa_${routeCase.routeId}_reject_0001`,
+      requestHash: routeCase.routeId === ROUTE_CASES[0].routeId
+        ? "3".repeat(64)
+        : "4".repeat(64),
+    });
+    assert.equal(rejectedMutation.ok, false);
+    assert.equal(rejectedMutation.code, "pet_evolution_power_below_p90");
+    assert.deepEqual(service.snapshot(), beforeRejectedMutation);
+
+    const acceptedQuote = service.getPetEvolutionQuote(gm.session.token, {
+      instanceId: acceptedSample.instanceId,
+      routeId: routeCase.routeId,
+    });
+    assert.equal(acceptedQuote.ok, true, acceptedQuote.message);
+    assert.equal(acceptedQuote.petEvolutionQuote.routeId, routeCase.routeId);
+    assert.equal(acceptedQuote.petEvolutionQuote.result.targetFormId, routeCase.targetFormId);
+    assert.equal(acceptedQuote.petEvolutionQuote.result.targetFormName, routeCase.targetFormName);
+
+    const evolved = await service.invokeDurable("evolvePet", [
+      gm.session.token,
+      {
+        instanceId: acceptedSample.instanceId,
+        routeId: routeCase.routeId,
+        expectedProfileRevision: acceptedQuote.petEvolutionQuote.profileRevision,
+        expectedCatalogId: catalog.catalogId,
+      },
+    ], {
+      actionId: "POST /pets/evolution",
+      operationId: `gm_pet_evolution_qa_${routeCase.routeId}_success_0001`,
+      requestHash: routeCase.routeId === ROUTE_CASES[0].routeId
+        ? "1".repeat(64)
+        : "2".repeat(64),
+    });
+    assert.equal(evolved.ok, true, evolved.message);
+    assert.equal(evolved.petEvolution.routeId, routeCase.routeId);
+    assert.equal(evolved.petEvolution.instanceId, acceptedSample.instanceId);
+    assert.equal(evolved.petEvolution.targetFormId, routeCase.targetFormId);
+    const evolvedPet = evolved.profile.petInstances.find(
+      (pet) => pet.instanceId === acceptedSample.instanceId,
+    );
+    assert.ok(evolvedPet);
+    assert.equal(evolvedPet.formId, routeCase.targetFormId);
+    assert.equal(evolvedPet.level, 1);
+    assert.equal(evolvedPet.petCultivation.rebirthCount, 1);
+  }
+
+  const finalProfile = internalProfileForAccount(service, gm.account.accountId);
+  assert.equal(finalProfile.petInstances.length, prepared.profile.petInstances.length);
+  for (const routeCase of ROUTE_CASES) {
+    assert.equal(
+      finalProfile.petInstances.filter((pet) => pet.formId === routeCase.targetFormId).length,
+      1,
+    );
+    const rejectedSample = prepared.result.samples.find(
+      (sample) => sample.routeId === routeCase.routeId && sample.expectedEligible === false,
+    );
+    const rejectedPet = finalProfile.petInstances.find(
+      (pet) => pet.instanceId === rejectedSample.instanceId,
+    );
+    assert.ok(rejectedPet);
+    assert.equal(rejectedPet.formId, routeCase.sourceFormId);
+    assert.equal(rejectedPet.level, 140);
+    assert.equal(rejectedPet.petCultivation.rebirthCount, 1);
+  }
+  for (const material of prepared.result.materials) {
+    assert.equal(itemCount(finalProfile, material.itemId), 0);
+  }
+  assert.equal(finalProfile.boundStoneCoins, 0);
 });
 
 test("HTTP GM evolution QA requires idempotency and returns only public pet data", async (t) => {
