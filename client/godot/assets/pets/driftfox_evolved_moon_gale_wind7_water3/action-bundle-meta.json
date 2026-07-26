@@ -3,7 +3,7 @@
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "displayName": "月岚风狐",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_formal_two_view_battle_and_front_evolution_owner_review_pending",
+  "productionScope": "scoped_standalone_world_battle_and_front_evolution_visuals_owner_approved_runtime_disabled_bundle_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -286,7 +286,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Standalone pet battle pack now covers two independently authored formal views, 12 actions, and 180 transparent runtime frames. That battle checkpoint did not claim world or mounted completion; owner visual review remains pending. 本批比例修复明确采用当前 256px runtime-to-runtime 等比几何 overlay；未声称重建 512px canonical，历史 source/ledger 不一致继续作为债务保留；KO、颜色语义和所有非目标帧保持原样，runtime 关闭且 owner review 待定。 月岚风狐补修技能、闪避、受创失衡与复活体量；复活首帧继续与倒地末帧逐字节一致，后续帧单调恢复到待机体量。仍为 256px runtime-to-runtime 等比几何修正，不改色、不镜像、不声称重建 512px canonical，runtime 关闭且 owner review 待定。 Phase343 补齐世界真八向候选：独立宠物与完整人宠骑乘各 40 帧；失败方向完整留痕，不镜像、不分层拼接。项目所有者已在 1x 连续成片后批准独立宠物世界真八方向视觉；该批准不包含 battle、mounted battle、进化演出或路线开放。Phase345 新增高地风狐到月岚风狐的 12 帧正面进化候选、512/256 双层归档和真实 Main.tscn 1x 成片；当前仅自审通过，项目所有者因休息未验收，进化视觉和所有路线门禁继续 pending/disabled。Phase346 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG 与 Godot 实际加载像素一致，14 个真实 Main 动作导演场景以 1x 完成；双尾身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。该结论不消除历史 512px canonical 债务，也不代替项目所有者验收，runtime 与路线继续关闭。Phase347 对独立宠物 world true8 做去标签第二遍技术盲审：方向预测 8/8；当前源图、import 与 Godot 实载 canonical RGBA 40/40 一致；40 帧全部唯一、完全重复 0、跨方向镜像对 0、最小安全边 14px。世界 visual_only 的既有 owner 批准保持原范围，runtime 与路线继续关闭。",
+  "notes": "月岚风狐独立宠物世界真八方向与正面进化 12 帧此前已获各自 visual_only 单项批准；Phase347 去标签复核方向 8/8，Phase357 已封口完整 180 张 512px 正式战斗源帧并证明 180/180 规范派生、未从运行帧反向放大。项目所有者查看 Phase360 的 1x 集中验收片后明确回复“通过”，现新增 standalone_pet_battle_visual_only 单项批准。以上批准不代表人物骑乘包、整只宠物 bundle 或正式进化路线开放；顶层 ownerReviewStatus、战斗/宠物 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持 pending/false/deferred。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -300,7 +300,10 @@
     }
   },
   "battleVisual": {
-    "status": "independent_semantic_self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_runtime_disabled",
+    "approvalScope": "standalone_pet_battle_visual_only",
+    "ownerDecision": "qa/battle/owner-decision.json",
+    "ownerDecisionSha256": "6d3a511fcb338a9c687e438cfa273715ab6f8b2a8650b81329a95bbda4eb4db0",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -362,7 +365,7 @@
       "back_3quarter_ne": true
     },
     "semanticReview": {
-      "status": "passed_self_review_owner_pending",
+      "status": "passed_owner_approved_visual_only",
       "independentSemanticAuditStatus": "passed",
       "review": "qa/battle/semantic-review-v2.json",
       "reviewSha256": "a99e842b4e974904a678e3b7d0289679d002d8369285b2f72d2b0c0396636cc1",
@@ -376,25 +379,34 @@
         "reportSha256": "ab0cd6dc53d1dd1bb21f4a25b8a2f7b2c7d089b1009daa3876e5795902f92e1a"
       },
       "realMainSceneReview": {
-        "status": "self_review_passed_owner_pending",
-        "video": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
-        "videoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
+        "status": "owner_approved_visual_only",
+        "scene": "res://scenes/Main.tscn",
+        "combinedReview": true,
+        "chapter": "moon_gale_standalone_battle",
+        "video": ".run/evidence/phase360_remaining_evolution_visual_review/Beastbound_Phase360_Remaining_Evolution_Visuals_1x.mp4",
+        "videoSha256": "cec2b87bf6e0baf5b47d81d5032e893bb06b5648192945d4c9f0834d1d64673a",
         "width": 1280,
         "height": 720,
         "videoFps": 60,
-        "videoFrameCount": 2477,
-        "durationSeconds": 41.283333,
+        "videoFrameCount": 3486,
+        "durationSeconds": 58.1,
+        "chapterStartSeconds": 16.816667,
+        "chapterDurationSeconds": 41.283333,
+        "chapterFrameCount": 2477,
         "speedScale": 1.0,
         "directorStepCount": 14,
         "audioPresent": true,
         "fullDecodePassed": true,
-        "contactSheet": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/video-action-contact-4x4.png",
-        "contactSheetSha256": "3d4eb80c58d710172495d6018f0edbb241d48612a88a5b77b85f9a89d035d751",
-        "ownerReview": "pending",
+        "visualReview": ".run/evidence/phase360_remaining_evolution_visual_review/visual-review.json",
+        "visualReviewSha256": "3f062fa3c2da089d8ffaedd8ed96d07cecac5b4d634a18d6b1166efb308ba798",
+        "ownerReview": "approved",
         "runtimeEnabled": false
       },
       "historical512CanonicalDebt": "resolved_phase357_full_archive",
-      "ownerReview": "pending",
+      "ownerReview": "approved",
+      "approvalScope": "standalone_pet_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "6d3a511fcb338a9c687e438cfa273715ab6f8b2a8650b81329a95bbda4eb4db0",
       "runtimeEnabled": false
     },
     "qualityRepairs": [
@@ -407,7 +419,7 @@
         "creativeGeneration": false,
         "claimsFresh512CanonicalDerivation": true,
         "existingColorAndKoSemanticsPreserved": true,
-        "ownerVisualGate": "self_review_passed_owner_pending",
+        "ownerVisualGate": "owner_approved_visual_only",
         "canonicalizedIntoTracked512Source": true,
         "formalWrites": true
       },
@@ -423,7 +435,7 @@
         "down8Revive1Exact": true,
         "repairManifest": "source/battle/runtime-motion-scale-followup-v1-manifest.json",
         "repairManifestSha256": "ee91f97af69e4834756f0a4c03c4d66281d0f73a5b19aaeeabcc3ca1a7f3ecc3",
-        "ownerVisualGate": "self_review_passed_owner_pending",
+        "ownerVisualGate": "owner_approved_visual_only",
         "canonicalizedIntoTracked512Source": true,
         "formalWrites": true
       }
@@ -4939,7 +4951,7 @@
     "minimumBattleSourceEdgeMarginAtAlpha8": 23,
     "canonicalSourceReconciliation": {
       "id": "canonical-source-reconciliation-v1",
-      "status": "passed_full_archive_runtime_validated_owner_pending",
+      "status": "passed_full_archive_runtime_validated_owner_approved_visual_only",
       "historicalAuditClassification": "hash-domain-mismatch-false-positive",
       "historicalAuditFramesChecked": 48,
       "historicalAuditCanonicalLedgerMatches": 48,
@@ -4954,7 +4966,10 @@
       "sourceLedgerSha256": "26af62344aa2bd1b93fb932fa011ae4db8e4ce91cb9aa863e878c81261018373",
       "manifest": "source/battle/canonical-source-reconciliation-v1.json",
       "manifestSha256": "6e0eead0c22dada57c50c95d4c2c4f568643e5f50aa823519489a837e591b091",
-      "ownerReview": "pending",
+      "ownerReview": "approved",
+      "approvalScope": "standalone_pet_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "6d3a511fcb338a9c687e438cfa273715ab6f8b2a8650b81329a95bbda4eb4db0",
       "runtimeEnabled": false,
       "godotRuntimeParity": {
         "status": "passed",
@@ -4966,21 +4981,27 @@
         "sourceSetSha256": "0c4a5e105f66b2aa712d1e52cbe12c4f4cb49a8444431e9275df3ff9c2dea07f"
       },
       "realMainSceneReview": {
-        "status": "self_review_passed_owner_pending",
-        "video": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
-        "videoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
+        "status": "owner_approved_visual_only",
+        "scene": "res://scenes/Main.tscn",
+        "combinedReview": true,
+        "chapter": "moon_gale_standalone_battle",
+        "video": ".run/evidence/phase360_remaining_evolution_visual_review/Beastbound_Phase360_Remaining_Evolution_Visuals_1x.mp4",
+        "videoSha256": "cec2b87bf6e0baf5b47d81d5032e893bb06b5648192945d4c9f0834d1d64673a",
         "width": 1280,
         "height": 720,
         "videoFps": 60,
-        "videoFrameCount": 2477,
-        "durationSeconds": 41.283333,
+        "videoFrameCount": 3486,
+        "durationSeconds": 58.1,
+        "chapterStartSeconds": 16.816667,
+        "chapterDurationSeconds": 41.283333,
+        "chapterFrameCount": 2477,
         "speedScale": 1.0,
         "directorStepCount": 14,
         "audioPresent": true,
         "fullDecodePassed": true,
-        "contactSheet": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/video-action-contact-4x4.png",
-        "contactSheetSha256": "3d4eb80c58d710172495d6018f0edbb241d48612a88a5b77b85f9a89d035d751",
-        "ownerReview": "pending",
+        "visualReview": ".run/evidence/phase360_remaining_evolution_visual_review/visual-review.json",
+        "visualReviewSha256": "3f062fa3c2da089d8ffaedd8ed96d07cecac5b4d634a18d6b1166efb308ba798",
+        "ownerReview": "approved",
         "runtimeEnabled": false
       }
     }

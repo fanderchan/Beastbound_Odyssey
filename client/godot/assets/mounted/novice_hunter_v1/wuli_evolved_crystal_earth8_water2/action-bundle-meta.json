@@ -3,7 +3,7 @@
   "mountFormId": "wuli_evolved_crystal_earth8_water2",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_world_true8_owner_pending_and_formal_battle_owner_approved_visual_only_runtime_disabled",
+  "productionScope": "scoped_mounted_world_true8_and_formal_battle_visuals_owner_approved_runtime_disabled_bundle_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -103,7 +103,10 @@
     }
   },
   "worldVisual": {
-    "status": "self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_independent_semantic_passed_runtime_disabled",
+    "approvalScope": "integrated_mounted_world_true8_visual_only",
+    "ownerDecision": "qa/world/owner-decision.json",
+    "ownerDecisionSha256": "3967254aafe4995b411c9c30989f1f601c09379d544b77b26e01ebebacea1d7a",
     "strategy": "ai_generated_integrated_independent_8",
     "runtimeMirroring": false,
     "runtimeLayeredComposition": false,
@@ -123,13 +126,13 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "owner_review_pending"
+        "status": "owner_approved_visual_only"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "owner_review_pending"
+        "status": "owner_approved_visual_only"
       }
     },
     "integratedWholeFrame": true,
@@ -174,7 +177,7 @@
     "reviewGates": {
       "selfReview": "passed",
       "independentBlindSemanticAudit": "passed",
-      "ownerReview": "pending"
+      "ownerReview": "approved"
     }
   },
   "sourceArchive": {
@@ -221,7 +224,7 @@
     "battleFullSourceClosureVisualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9"
   },
   "ownerReviewStatus": "pending",
-  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 战斗运行时语义自审、Phase353 世界去标签审核及 Phase358 完整高清源档门禁均通过；项目所有者已查看 Phase358 的 1x 合并实机成片，并只批准 integrated_mounted_battle_visual_only。骑乘世界真八向、整宠或 mounted bundle、独立宠物包和正式进化路线均未随之批准；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
+  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 战斗运行时语义自审、Phase353 世界去标签审核及 Phase358 完整高清源档门禁均通过；项目所有者此前只批准 integrated_mounted_battle_visual_only，查看 Phase360 的 1x 集中验收片后明确回复“通过”，现新增 integrated_mounted_world_true8_visual_only 单项批准。两项批准不代表整套 mounted bundle、独立宠物包或正式进化路线开放；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",

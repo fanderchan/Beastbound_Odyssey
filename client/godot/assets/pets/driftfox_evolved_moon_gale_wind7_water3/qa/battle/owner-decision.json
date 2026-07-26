@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_battle_visual_owner_decision",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "subject": "standalone_pet_battle",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "standalone_pet_battle_visual_only",
+  "battleVisualApproved": true,
+  "fullSourceArchiveAccepted": true,
+  "independentSemanticAuditStatus": "passed",
+  "petBundleReleaseApproved": false,
+  "battleRuntimeReleaseApproved": false,
+  "mountedBundleReleaseApproved": false,
+  "evolutionRouteReleaseApproved": false,
+  "runtimeEnabled": false,
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase360_remaining_evolution_visual_review/Beastbound_Phase360_Remaining_Evolution_Visuals_1x.mp4",
+    "mainSceneVideoSha256": "cec2b87bf6e0baf5b47d81d5032e893bb06b5648192945d4c9f0834d1d64673a",
+    "chapter": "moon_gale_standalone_battle",
+    "width": 1280,
+    "height": 720,
+    "fps": 60,
+    "frameCount": 3486,
+    "durationSeconds": 58.1,
+    "chapterStartSeconds": 16.816667,
+    "chapterDurationSeconds": 41.283333,
+    "chapterFrameCount": 2477,
+    "speedScale": 1.0,
+    "fullDecodePassed": true,
+    "selectedSteps": [
+      "attack",
+      "defend_hit",
+      "hurt",
+      "counter",
+      "counter_ko",
+      "counter_launch",
+      "skill",
+      "combo",
+      "knockaway_straight",
+      "knockaway_bounce",
+      "dodge",
+      "dodge_counter",
+      "down",
+      "revive"
+    ]
+  },
+  "acceptedSourceClosure": {
+    "manifest": "source/battle/canonical-source-reconciliation-v1.json",
+    "manifestSha256": "6e0eead0c22dada57c50c95d4c2c4f568643e5f50aa823519489a837e591b091",
+    "formal512FrameCount": 180,
+    "derived256FrameCount": 180,
+    "rawLosslessArchiveCount": 24,
+    "upscaledFromRuntime": false
+  },
+  "notes": [
+    "项目所有者查看 Phase360 的 1x 集中验收片后明确回复“通过”。",
+    "本决定只批准月岚风狐独立宠物战斗视觉及 Phase357 已封口的完整 512px 正式源档，不批准人物骑乘包、整只宠物 bundle 或正式进化路线开放。",
+    "战斗目录 runtimeEnabled、宠物目录 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持关闭。"
+  ]
+}

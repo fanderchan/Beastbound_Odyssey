@@ -3,7 +3,7 @@
   "formId": "wuli_evolved_crystal_earth8_water2",
   "displayName": "晶甲乌力",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_owner_pending_formal_two_view_battle_and_front_evolution_owner_approved_visual_only_runtime_disabled",
+  "productionScope": "scoped_world_true8_battle_and_front_evolution_visuals_owner_approved_runtime_disabled_bundle_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -102,7 +102,10 @@
     }
   },
   "worldVisual": {
-    "status": "self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_independent_semantic_passed_runtime_disabled",
+    "approvalScope": "standalone_pet_world_true8_visual_only",
+    "ownerDecision": "qa/world/owner-decision.json",
+    "ownerDecisionSha256": "bc1febd4be2567f6b513e6d1b4614adc5240976b1db80ad6216a96439a124771",
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -120,13 +123,13 @@
         "frameCount": 1,
         "fps": 4,
         "loop": true,
-        "status": "owner_review_pending"
+        "status": "owner_approved_visual_only"
       },
       "walk": {
         "frameCount": 4,
         "fps": 10,
         "loop": true,
-        "status": "owner_review_pending"
+        "status": "owner_approved_visual_only"
       }
     },
     "runtimeLayeredComposition": false,
@@ -173,7 +176,7 @@
     "reviewGates": {
       "selfReview": "passed",
       "independentBlindSemanticAudit": "passed",
-      "ownerReview": "pending"
+      "ownerReview": "approved"
     }
   },
   "supportedMountedCharacterIds": [
@@ -248,7 +251,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "晶甲乌力独立宠物双视角 battle180 与 Phase358 完整高清源档已获项目所有者 battle_visual_only 单项批准；高防乌力→晶甲乌力正面进化 12 帧视觉也已单项批准。Phase350/351 的运行时语义与世界去标签技术审核保持有效，Phase358 已把既有倒地/复起与 KO 眼修复重放到完整 512px 母版并证明 180/180 规范派生。以上批准都不代表独立世界真八向、人物骑乘包、整只宠物或正式进化路线开放；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
+  "notes": "晶甲乌力独立宠物双视角 battle180、Phase358 完整高清源档与高防乌力→晶甲乌力正面进化 12 帧此前已获各自 visual_only 单项批准。项目所有者查看 Phase360 的 1x 集中验收片后明确回复“通过”，现新增 standalone_pet_world_true8_visual_only 单项批准；Phase350/351 的运行时语义与世界去标签技术审核保持有效。以上批准不代表人物骑乘包、整只宠物 bundle 或正式进化路线开放；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",

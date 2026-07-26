@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_world_visual_owner_decision",
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "subject": "standalone_pet",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "standalone_pet_world_true8_visual_only",
+  "visualApproved": true,
+  "independentSemanticAuditStatus": "passed",
+  "petBundleReleaseApproved": false,
+  "mountedBundleReleaseApproved": false,
+  "evolutionRouteReleaseApproved": false,
+  "runtimeEnabled": false,
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase360_remaining_evolution_visual_review/Beastbound_Phase360_Remaining_Evolution_Visuals_1x.mp4",
+    "mainSceneVideoSha256": "cec2b87bf6e0baf5b47d81d5032e893bb06b5648192945d4c9f0834d1d64673a",
+    "chapter": "crystal_world",
+    "subjectPanel": "standalone_pet",
+    "width": 1280,
+    "height": 720,
+    "fps": 60,
+    "frameCount": 3486,
+    "durationSeconds": 58.1,
+    "chapterStartSeconds": 0.0,
+    "chapterDurationSeconds": 16.816667,
+    "chapterFrameCount": 1009,
+    "directionCount": 8,
+    "directionOrder": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "idleSecondsPerDirection": 0.6,
+    "walkSecondsPerDirection": 1.2,
+    "speedScale": 1.0,
+    "fullDecodePassed": true
+  },
+  "notes": [
+    "项目所有者查看 Phase360 的 1x 集中验收片后明确回复“通过”。",
+    "本决定只批准晶甲乌力独立宠物的世界真八方向视觉，不批准人物骑乘包、整只宠物 bundle 或正式进化路线开放。",
+    "宠物目录 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持关闭。"
+  ]
+}
