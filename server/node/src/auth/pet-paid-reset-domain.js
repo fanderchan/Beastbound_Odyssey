@@ -59,6 +59,7 @@ function createPetPaidResetDomain(ctx) {
     ok,
     persistProfileForAccount,
     petEvolutionRouteCatalog,
+    petFusionRecipeCatalog,
     petPaidResetPolicyCatalog,
     petRebirthGrowthCycle,
     petRequiredByActiveQuest,
@@ -137,7 +138,11 @@ function createPetPaidResetDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
-    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    const terminalPath = inspectPetTerminalPath(
+      pet,
+      petEvolutionRouteCatalog,
+      petFusionRecipeCatalog,
+    );
     if (terminalPath.terminal) {
       const terminalFailure = petPaidResetTerminalStageFailure();
       return fail(terminalFailure.code, terminalFailure.message, {
@@ -161,6 +166,7 @@ function createPetPaidResetDomain(ctx) {
       quote: quoted.quote,
       growthCycle: petRebirthGrowthCycle,
       evolutionRouteCatalog: petEvolutionRouteCatalog,
+      fusionCatalog: petFusionRecipeCatalog,
     });
     if (!inspected.ok) {
       return fail(inspected.code, inspected.message, {
@@ -260,7 +266,11 @@ function createPetPaidResetDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
-    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    const terminalPath = inspectPetTerminalPath(
+      pet,
+      petEvolutionRouteCatalog,
+      petFusionRecipeCatalog,
+    );
     if (terminalPath.terminal) {
       const terminalFailure = petPaidResetTerminalStageFailure();
       return fail(terminalFailure.code, terminalFailure.message, {
@@ -316,6 +326,7 @@ function createPetPaidResetDomain(ctx) {
       paymentPlan,
       growthCycle: petRebirthGrowthCycle,
       evolutionRouteCatalog: petEvolutionRouteCatalog,
+      fusionCatalog: petFusionRecipeCatalog,
       expToNextLevel,
     });
     if (!resetResult.ok) {

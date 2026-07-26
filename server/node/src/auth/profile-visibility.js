@@ -7,6 +7,13 @@ const {publicWalletFields} = require("./currency-wallet");
 
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const ELEMENT_KEYS = Object.freeze(["earth", "water", "fire", "wind"]);
+const PET_FUSION_ROLE_IDS = Object.freeze([
+  "core",
+  "resonance_one",
+  "resonance_two",
+]);
+const PET_FUSION_ROLE_ID_SET = new Set(PET_FUSION_ROLE_IDS);
+const PUBLIC_FUSION_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const UNSAFE_OBJECT_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const PRIVATE_PROFILE_FIELD_KEYS = new Set([
   "gmQaPetSampleManifests",
@@ -209,6 +216,7 @@ const PET_PUBLIC_FIELD_KEYS = Object.freeze([
   "petRebirthHelper",
   "combatPowerBreakdown",
   "evolutionLineage",
+  "fusionLineage",
 ]);
 
 const GROWTH_AUTHORITY_FIELD_KEYS = Object.freeze([
@@ -427,6 +435,162 @@ function publicEvolutionLineage(value) {
     result.stageSnapshots = Array.isArray(value.stageSnapshots)
       ? value.stageSnapshots.map(publicEvolutionStageSnapshot)
       : [];
+  }
+  return result;
+}
+
+function publicFusionIdentifier(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const normalized = value.trim();
+  return PUBLIC_FUSION_IDENTIFIER_PATTERN.test(normalized) ? normalized : "";
+}
+
+function publicFusionText(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const normalized = value.trim();
+  return normalized !== ""
+      && normalized.length <= 160
+      && !/[\u0000-\u001f\u007f]/.test(normalized)
+    ? normalized
+    : "";
+}
+
+function publicFusionRoleId(value) {
+  const normalized = publicFusionIdentifier(value);
+  return PET_FUSION_ROLE_ID_SET.has(normalized) ? normalized : "";
+}
+
+function publicFusionMaterial(value) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const roleId = publicFusionRoleId(value.roleId);
+  const instanceId = publicFusionIdentifier(value.instanceId);
+  const formId = publicFusionIdentifier(value.formId);
+  if (roleId === "" || instanceId === "" || formId === "") {
+    return {};
+  }
+  const result = {roleId, instanceId, formId};
+  const formName = publicFusionText(value.formName);
+  if (formName !== "") {
+    result.formName = formName;
+  }
+  return result;
+}
+
+function publicFusionMaterials(value) {
+  if (!Array.isArray(value) || value.length !== PET_FUSION_ROLE_IDS.length) {
+    return [];
+  }
+  const materialsByRole = new Map();
+  for (const entry of value) {
+    const material = publicFusionMaterial(entry);
+    if (
+      Object.keys(material).length === 0
+      || materialsByRole.has(material.roleId)
+    ) {
+      return [];
+    }
+    materialsByRole.set(material.roleId, material);
+  }
+  return PET_FUSION_ROLE_IDS.every((roleId) => materialsByRole.has(roleId))
+    ? PET_FUSION_ROLE_IDS.map((roleId) => materialsByRole.get(roleId))
+    : [];
+}
+
+function publicFusionActiveInheritance(value, options = {}) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  if (
+    options.requireSuccess === true
+    && value.inherited !== true
+    && value.success !== true
+  ) {
+    return {};
+  }
+  const roleId = publicFusionRoleId(value.roleId);
+  const skillId = publicFusionIdentifier(value.skillId);
+  return roleId !== "" && skillId !== "" ? {roleId, skillId, inherited: true} : {};
+}
+
+function publicFusionPassiveInheritance(value) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const roleId = publicFusionRoleId(
+    hasOwn(value, "roleId") ? value.roleId : value.sourceRoleId,
+  );
+  const skillId = publicFusionIdentifier(value.skillId);
+  return roleId !== "" && skillId !== "" ? {roleId, skillId} : {};
+}
+
+function publicFusionLineage(value) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+  const result = {};
+  if (value.schemaVersion === 1) {
+    result.schemaVersion = 1;
+  }
+  if (value.mode === "fusion") {
+    result.mode = "fusion";
+  }
+  for (const [outputKey, inputKeys] of Object.entries({
+    recipeId: ["recipeId"],
+    catalogId: ["catalogId", "recipeCatalogId"],
+    targetFormId: ["targetFormId", "resultFormId"],
+  })) {
+    const normalized = publicFusionIdentifier(
+      inputKeys.map((key) => value[key]).find((entry) => typeof entry === "string"),
+    );
+    if (normalized !== "") {
+      result[outputKey] = normalized;
+    }
+  }
+  const targetFormName = publicFusionText(
+    hasOwn(value, "targetFormName") ? value.targetFormName : value.resultFormName,
+  );
+  if (targetFormName !== "") {
+    result.targetFormName = targetFormName;
+  }
+  const completedAtSec = hasOwn(value, "completedAtSec")
+    ? value.completedAtSec
+    : value.fusedAtSec;
+  if (Number.isSafeInteger(completedAtSec) && completedAtSec >= 0) {
+    result.completedAtSec = completedAtSec;
+  }
+  if (Number.isSafeInteger(value.terminalStage) && value.terminalStage >= 2) {
+    result.terminalStage = value.terminalStage;
+  }
+
+  const sourceMaterials = hasOwn(value, "sourceMaterials")
+    ? value.sourceMaterials
+    : value.materials;
+  if (hasOwn(value, "sourceMaterials") || hasOwn(value, "materials")) {
+    result.sourceMaterials = publicFusionMaterials(sourceMaterials);
+  }
+
+  const inheritedActiveEntries = Array.isArray(value.activeInheritance)
+    ? value.activeInheritance
+      .map((entry) => publicFusionActiveInheritance(entry, {requireSuccess: true}))
+    : Array.isArray(value.inheritedActiveSkills)
+      ? value.inheritedActiveSkills.map(publicFusionActiveInheritance)
+      : [];
+  if (hasOwn(value, "activeInheritance") || hasOwn(value, "inheritedActiveSkills")) {
+    result.activeInheritance = inheritedActiveEntries
+      .filter((entry) => Object.keys(entry).length > 0);
+  }
+
+  const passiveInheritance = hasOwn(value, "passiveInheritance")
+    ? value.passiveInheritance
+    : value.inheritedPassive;
+  if (hasOwn(value, "passiveInheritance") || hasOwn(value, "inheritedPassive")) {
+    result.passiveInheritance = publicFusionPassiveInheritance(passiveInheritance);
   }
   return result;
 }
@@ -839,6 +1003,8 @@ function publicPet(pet) {
       result[key] = publicCombatPowerBreakdown(value);
     } else if (key === "evolutionLineage") {
       result[key] = publicEvolutionLineage(value);
+    } else if (key === "fusionLineage") {
+      result[key] = publicFusionLineage(value);
     }
   }
   const identity = firstNonEmptyString(pet.instanceId, pet.petId, pet.id);

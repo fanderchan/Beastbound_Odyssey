@@ -15,8 +15,19 @@ const {
   TARGET_FORM_ID,
   createDisabledPetEvolutionRouteCatalog,
   createEnabledPetEvolutionRouteCatalog,
+  createOneRebirthEvolutionPet,
   seedEvolutionAccount,
 } = require("../test-support/pet-evolution-fixture");
+const {
+  TARGET_FORM_ID: FUSION_TARGET_FORM_ID,
+  createEnabledTestFusionCatalog,
+} = require("../test-support/pet-fusion-fixture");
+const {
+  applyPetEvolution,
+  inspectCanonicalStageOneCultivation,
+  inspectPetEvolutionEligibility,
+  inspectPetEvolutionTerminalPath,
+} = require("../src/auth/pet-evolution");
 
 const NOW_MS = Date.parse("2026-07-18T04:00:00.000Z");
 const ACTION_ID = "POST /pets/evolution";
@@ -47,6 +58,65 @@ function itemCount(profile, itemId) {
     .filter((slot) => String(slot && slot.itemId || "") === itemId)
     .reduce((sum, slot) => sum + Math.max(0, Math.trunc(Number(slot.count || 0))), 0);
 }
+
+function mutateSeededEvolutionPet(service, account, mutate) {
+  const loaded = service.getProfile(account.session.token);
+  assert.equal(loaded.ok, true);
+  const profile = structuredClone(loaded.profile);
+  mutate(profile.petInstances[0]);
+  const saved = service.saveProfile(account.session.token, {
+    expectedRevision: loaded.profileSummary.profileRevision,
+    profile,
+  });
+  assert.equal(saved.ok, true, saved.message);
+  account.profileRevision = saved.profileSummary.profileRevision;
+}
+
+test("pure evolution guards reject every owned fusion marker and export the canonical one-rebirth audit", () => {
+  const fusionCatalog = createEnabledTestFusionCatalog();
+  const fixture = createOneRebirthEvolutionPet();
+  const canonical = inspectCanonicalStageOneCultivation(fixture.pet.petCultivation);
+  assert.equal(canonical.ok, true);
+  assert.notEqual(canonical.record, fixture.pet.petCultivation);
+  const damagedCultivation = structuredClone(fixture.pet.petCultivation);
+  damagedCultivation.history = [];
+  assert.deepEqual(inspectCanonicalStageOneCultivation(damagedCultivation), {
+    ok: false,
+    code: "pet_evolution_cultivation_invalid",
+    message: "宠物一转培养记录不完整，本次进化未执行。",
+  });
+
+  for (const fusionLineage of [
+    undefined,
+    null,
+    {},
+    "damaged",
+    {schemaVersion: 1, mode: "fusion", recipeId: "future_recipe"},
+  ]) {
+    const pet = structuredClone(fixture.pet);
+    pet.fusionLineage = fusionLineage;
+    const before = structuredClone(pet);
+    for (const result of [
+      inspectPetEvolutionEligibility(pet, {fusionCatalog}),
+      applyPetEvolution(pet, {fusionCatalog}),
+    ]) {
+      assert.equal(result.ok, false);
+      assert.equal(result.code, "pet_evolution_terminal_fusion");
+      assert.equal(result.message, "融合宠已进入终局，不能再进行进化。");
+    }
+    assert.deepEqual(pet, before);
+  }
+
+  const targetFormPet = structuredClone(fixture.pet);
+  targetFormPet.formId = FUSION_TARGET_FORM_ID;
+  targetFormPet.templateId = FUSION_TARGET_FORM_ID;
+  targetFormPet.speciesId = FUSION_TARGET_FORM_ID;
+  assert.equal(
+    inspectPetEvolutionTerminalPath(targetFormPet, {fusionCatalog}).code,
+    "pet_evolution_terminal_fusion",
+  );
+  assert.deepEqual(inspectPetEvolutionTerminalPath(fixture.pet, {fusionCatalog}), {ok: true});
+});
 
 test("authoritative evolution rerolls the target while preserving source 0/1 public history", async () => {
 	const catalog = createEnabledPetEvolutionRouteCatalog();
@@ -159,6 +229,64 @@ test("authoritative evolution rerolls the target while preserving source 0/1 pub
 	assert.equal(replayAfterRestart.durableCommit.replayed, true);
 	assert.equal(replayAfterRestart.profileBinding.profileRevision, result.profileBinding.profileRevision);
 	assert.deepEqual(internalProfileForAccount(restarted, account.account.accountId), afterFirst);
+});
+
+test("evolution quote and execution reject fusion lineage or fusion target-form evidence with zero mutation", async (t) => {
+  const evolutionCatalog = createEnabledPetEvolutionRouteCatalog();
+  const fusionCatalog = createEnabledTestFusionCatalog();
+  const cases = [
+    {
+      name: "valid fusion lineage",
+      mutate(pet) {
+        pet.fusionLineage = {schemaVersion: 1, mode: "fusion", recipeId: "future_recipe"};
+      },
+    },
+    {name: "null fusion lineage", mutate(pet) { pet.fusionLineage = null; }},
+    {name: "empty fusion lineage", mutate(pet) { pet.fusionLineage = {}; }},
+    {name: "damaged fusion lineage", mutate(pet) { pet.fusionLineage = "damaged"; }},
+    {
+      name: "fusion target form without lineage",
+      mutate(pet) {
+        pet.formId = FUSION_TARGET_FORM_ID;
+        pet.templateId = FUSION_TARGET_FORM_ID;
+        pet.speciesId = FUSION_TARGET_FORM_ID;
+        delete pet.fusionLineage;
+      },
+    },
+  ];
+  for (const [index, fixture] of cases.entries()) {
+    await t.test(fixture.name, async () => {
+      const service = createAuthService({
+        store: createMemoryAuthStore(),
+        now: () => NOW_MS,
+        petEvolutionRouteCatalog: evolutionCatalog,
+        petFusionRecipeCatalog: fusionCatalog,
+      });
+      const account = seedEvolutionAccount(service, {
+        username: `evofusionterminal${index}`,
+      });
+      mutateSeededEvolutionPet(service, account, fixture.mutate);
+      const before = structuredClone(service.snapshot());
+
+      const quote = service.getPetEvolutionQuote(account.session.token, {
+        instanceId: account.fixture.pet.instanceId,
+        routeId: ROUTE_ID,
+      });
+      assert.equal(quote.ok, false);
+      assert.equal(quote.code, "pet_evolution_terminal_fusion");
+      assert.equal(quote.message, "融合宠已进入终局，不能再进行进化。");
+      assert.deepEqual(service.snapshot(), before);
+
+      const executed = await invokeEvolution(service, account, evolutionCatalog, {
+        operationId: `pet_evolution_fusion_terminal_${index}_operation`,
+        requestHash: String(index + 1).repeat(64),
+      });
+      assert.equal(executed.ok, false);
+      assert.equal(executed.code, "pet_evolution_terminal_fusion");
+      assert.equal(executed.message, "融合宠已进入终局，不能再进行进化。");
+      assert.deepEqual(service.snapshot(), before);
+    });
+  }
 });
 
 test("evolution qualification, assets, protection and stale confirmations fail with zero mutation", async (t) => {

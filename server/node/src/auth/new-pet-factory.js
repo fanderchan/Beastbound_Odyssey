@@ -6,7 +6,10 @@ const {
 } = require("./pet-growth-catalog");
 const {initializePetGrowth} = require("./pet-growth-runtime");
 const {initializeNewLegacyPetPrivateState} = require("./pet-private-state");
-const {generatePetPrivateSeed} = require("./pet-private-seed");
+const {
+  generatePetPrivateSeed,
+  isValidPetPrivateSeed,
+} = require("./pet-private-seed");
 
 const ERROR_CONFIGURATION_INVALID = "new_pet_factory_configuration_invalid";
 const ERROR_INPUT_INVALID = "new_pet_factory_input_invalid";
@@ -117,6 +120,27 @@ function validateFinalizeOptions(options) {
   return [];
 }
 
+function validateExplicitSeedFinalizeOptions(options) {
+  if (!isObjectRecord(options)) {
+    return ["explicit-seed finalize options must be an object"];
+  }
+  if (
+    Object.keys(options).length !== 2
+    || !hasOwn(options, "purpose")
+    || !hasOwn(options, "privateSeed")
+  ) {
+    return ["explicit-seed finalize options must contain only purpose and privateSeed"];
+  }
+  const errors = [];
+  if (typeof options.purpose !== "string" || !PURPOSE_PATTERN.test(options.purpose)) {
+    errors.push("purpose must be a stable private-seed namespace");
+  }
+  if (!isValidPetPrivateSeed(options.privateSeed)) {
+    errors.push("privateSeed must be a valid private pet identity");
+  }
+  return errors;
+}
+
 function validateCandidate(candidate) {
   const errors = [];
   if (!isObjectRecord(candidate)) {
@@ -194,12 +218,7 @@ function createNewPetFactory(options = {}) {
   }
   const growthCatalog = options.growthCatalog;
 
-  function finalizeLevelOne(candidate, finalizeOptions = {}) {
-    const optionErrors = validateFinalizeOptions(finalizeOptions);
-    if (optionErrors.length > 0) {
-      throw new NewPetFactoryError(ERROR_INPUT_INVALID, optionErrors);
-    }
-
+  function prepareLevelOne(candidate) {
     let source;
     try {
       source = clone(candidate);
@@ -223,16 +242,10 @@ function createNewPetFactory(options = {}) {
     if (resolutionErrors.length > 0) {
       throw new NewPetFactoryError(ERROR_GROWTH_RESOLUTION_FAILED, resolutionErrors);
     }
+    return {resolution, source};
+  }
 
-    let privateSeed;
-    try {
-      privateSeed = generatePetPrivateSeed(finalizeOptions.purpose);
-    } catch (_error) {
-      throw new NewPetFactoryError(ERROR_GROWTH_INITIALIZATION_FAILED, [
-        "new-pet private identity could not be created",
-      ]);
-    }
-
+  function finalizePreparedLevelOne(source, resolution, purpose, privateSeed) {
     if (resolution.kind === PROFILE_RESOLUTION_AUTHORITY_V1) {
       source.growthSpeciesProfileId = resolution.profileId;
       try {
@@ -254,7 +267,7 @@ function createNewPetFactory(options = {}) {
     try {
       const pet = initializeNewLegacyPetPrivateState(
         source,
-        finalizeOptions.purpose,
+        purpose,
         {knownLevelOneStats: true},
       );
       return {
@@ -270,7 +283,46 @@ function createNewPetFactory(options = {}) {
     }
   }
 
-  return Object.freeze({finalizeLevelOne});
+  function finalizeLevelOne(candidate, finalizeOptions = {}) {
+    const optionErrors = validateFinalizeOptions(finalizeOptions);
+    if (optionErrors.length > 0) {
+      throw new NewPetFactoryError(ERROR_INPUT_INVALID, optionErrors);
+    }
+    const prepared = prepareLevelOne(candidate);
+    let privateSeed;
+    try {
+      privateSeed = generatePetPrivateSeed(finalizeOptions.purpose);
+    } catch (_error) {
+      throw new NewPetFactoryError(ERROR_GROWTH_INITIALIZATION_FAILED, [
+        "new-pet private identity could not be created",
+      ]);
+    }
+    return finalizePreparedLevelOne(
+      prepared.source,
+      prepared.resolution,
+      finalizeOptions.purpose,
+      privateSeed,
+    );
+  }
+
+  function finalizeLevelOneWithPrivateSeed(candidate, finalizeOptions = {}) {
+    const optionErrors = validateExplicitSeedFinalizeOptions(finalizeOptions);
+    if (optionErrors.length > 0) {
+      throw new NewPetFactoryError(ERROR_INPUT_INVALID, optionErrors);
+    }
+    const prepared = prepareLevelOne(candidate);
+    return finalizePreparedLevelOne(
+      prepared.source,
+      prepared.resolution,
+      finalizeOptions.purpose,
+      finalizeOptions.privateSeed,
+    );
+  }
+
+  return Object.freeze({
+    finalizeLevelOne,
+    finalizeLevelOneWithPrivateSeed,
+  });
 }
 
 module.exports = {

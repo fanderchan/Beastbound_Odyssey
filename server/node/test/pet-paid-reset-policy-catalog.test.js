@@ -80,6 +80,66 @@ test("paid reset catalog prices eligible forms and disables both terminal evolut
   assert.equal(catalog.priceTiersById.diamond_fusion.amount, 900);
 });
 
+test("paid reset catalog accepts fusion only as terminal_fusion and rejects resettable terminal forms", () => {
+  const fusionFormId = "future_fusion_terminal_form";
+  const {policy, templates} = loadedDocuments();
+  templates.forms.push({
+    formId: fusionFormId,
+    formName: "未来融合终局宠",
+  });
+  policy.formPolicies.push({
+    formId: fusionFormId,
+    acquisitionTier: "fusion",
+    resetAllowed: false,
+    ineligibleReason: "terminal_fusion",
+  });
+
+  const catalog = normalizePetPaidResetPolicyCatalog(policy, templates);
+  assert.deepEqual(catalog.formPoliciesById[fusionFormId], {
+    formId: fusionFormId,
+    acquisitionTier: "fusion",
+    resetAllowed: false,
+    ineligibleReason: "terminal_fusion",
+  });
+  const denied = resolvePetPaidResetQuote(catalog, {}, fusionFormId);
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "pet_paid_reset_terminal_stage");
+
+  const resettableFusion = structuredClone(policy);
+  resettableFusion.formPolicies[resettableFusion.formPolicies.length - 1] = {
+    formId: fusionFormId,
+    acquisitionTier: "fusion",
+    resetAllowed: true,
+    priceTierId: "diamond_fusion",
+  };
+  assert.throws(
+    () => normalizePetPaidResetPolicyCatalog(resettableFusion, templates),
+    (error) => error.code === "pet_paid_reset_catalog_invalid" && /不能配置为允许/.test(error.message),
+  );
+
+  const resettableEvolution = structuredClone(policy);
+  const evolutionIndex = resettableEvolution.formPolicies.findIndex(
+    (entry) => entry.acquisitionTier === "evolution",
+  );
+  resettableEvolution.formPolicies[evolutionIndex] = {
+    formId: resettableEvolution.formPolicies[evolutionIndex].formId,
+    acquisitionTier: "evolution",
+    resetAllowed: true,
+    priceTierId: "diamond_evolution",
+  };
+  assert.throws(
+    () => normalizePetPaidResetPolicyCatalog(resettableEvolution, templates),
+    (error) => error.code === "pet_paid_reset_catalog_invalid" && /不能配置为允许/.test(error.message),
+  );
+
+  const wrongFusionReason = structuredClone(policy);
+  wrongFusionReason.formPolicies[wrongFusionReason.formPolicies.length - 1].ineligibleReason = "terminal_evolution";
+  assert.throws(
+    () => normalizePetPaidResetPolicyCatalog(wrongFusionReason, templates),
+    (error) => error.code === "pet_paid_reset_catalog_invalid" && /终局原因/.test(error.message),
+  );
+});
+
 test("paid reset catalog fails closed for missing, duplicate and unknown form policies", () => {
   const {policy, templates} = loadedDocuments();
   const missing = structuredClone(policy);

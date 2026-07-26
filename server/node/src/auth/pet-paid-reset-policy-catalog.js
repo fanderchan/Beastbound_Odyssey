@@ -400,8 +400,8 @@ function normalizeFormPolicy(value, index, priceTiersById, templateFormsById) {
   }
   if (policy.resetAllowed === true) {
     exactFields(policy, ["formId", "acquisitionTier", "resetAllowed", "priceTierId"], pathLabel);
-    if (acquisitionTier === "evolution") {
-      throw catalogError(`${pathLabel}.resetAllowed`, "进化终局形态不能配置为允许付费重置。");
+    if (["evolution", "fusion"].includes(acquisitionTier)) {
+      throw catalogError(`${pathLabel}.resetAllowed`, "进化或融合终局形态不能配置为允许付费重置。");
     }
     const priceTierId = strictIdentifier(policy.priceTierId, `${pathLabel}.priceTierId`, catalogError);
     if (!Object.hasOwn(priceTiersById, priceTierId)) {
@@ -411,17 +411,22 @@ function normalizeFormPolicy(value, index, priceTiersById, templateFormsById) {
   }
   if (policy.resetAllowed === false) {
     exactFields(policy, ["formId", "acquisitionTier", "resetAllowed", "ineligibleReason"], pathLabel);
-    if (acquisitionTier !== "evolution" || policy.ineligibleReason !== "terminal_evolution") {
+    const terminalReason = acquisitionTier === "evolution"
+      ? "terminal_evolution"
+      : acquisitionTier === "fusion"
+        ? "terminal_fusion"
+        : "";
+    if (terminalReason === "" || policy.ineligibleReason !== terminalReason) {
       throw catalogError(
         `${pathLabel}.ineligibleReason`,
-        "当前只有进化终局形态可以禁止付费重置，且必须声明 terminal_evolution。",
+        "只有进化或融合终局形态可以禁止付费重置，且必须声明对应的终局原因。",
       );
     }
     return {
       formId,
       acquisitionTier,
       resetAllowed: false,
-      ineligibleReason: "terminal_evolution",
+      ineligibleReason: terminalReason,
     };
   }
   throw catalogError(`${pathLabel}.resetAllowed`, "宠物形态必须明确声明是否允许付费重置。");

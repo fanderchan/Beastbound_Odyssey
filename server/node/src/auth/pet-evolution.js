@@ -7,6 +7,7 @@ const {
   STAT_KEYS,
   buildPublicSnapshot,
 } = require("./pet-growth-authority");
+const {inspectPetTerminalPath} = require("./pet-terminal-path");
 
 const PET_EVOLUTION_SCHEMA_VERSION = 1;
 const PET_EVOLUTION_HISTORY_MAX_RECORDS = 20;
@@ -65,6 +66,10 @@ const OBSERVATION_BOOLEAN_KEYS = Object.freeze(["enabled", "hasRecord"]);
 
 function inspectPetEvolutionEligibility(petValue, options = {}) {
   const pet = recordOrNull(petValue);
+  const terminalPath = inspectPetEvolutionTerminalPath(pet, options);
+  if (!terminalPath.ok) {
+    return terminalPath;
+  }
   const route = recordOrNull(options.route);
   const growthCatalog = options.growthCatalog;
   const growthCycle = options.growthCycle;
@@ -93,7 +98,7 @@ function inspectPetEvolutionEligibility(petValue, options = {}) {
   if (pet.level !== Number(route.eligibility && route.eligibility.requiredLevel)) {
     return failure("pet_evolution_level_required", "进化要求宠物达到一转 Lv140。");
   }
-  const cultivation = canonicalStageOneCultivation(pet.petCultivation);
+  const cultivation = inspectCanonicalStageOneCultivation(pet.petCultivation);
   if (!cultivation.ok) {
     return cultivation;
   }
@@ -195,6 +200,10 @@ function inspectPetEvolutionEligibility(petValue, options = {}) {
 }
 
 function applyPetEvolution(petValue, options = {}) {
+  const terminalPath = inspectPetEvolutionTerminalPath(petValue, options);
+  if (!terminalPath.ok) {
+    return terminalPath;
+  }
   const operationId = String(options.operationId || "").trim();
   const recordedAt = canonicalIsoTimestamp(options.recordedAt);
   const route = recordOrNull(options.route);
@@ -486,7 +495,7 @@ function validPublicStageSnapshot(value) {
   );
 }
 
-function canonicalStageOneCultivation(value) {
+function inspectCanonicalStageOneCultivation(value) {
   const source = recordOrNull(value);
   if (
     !source
@@ -507,6 +516,14 @@ function canonicalStageOneCultivation(value) {
     return failure("pet_evolution_cultivation_invalid", "宠物一转培养记录不完整，本次进化未执行。");
   }
   return {ok: true, record: structuredClone(source)};
+}
+
+function inspectPetEvolutionTerminalPath(petValue, options = {}) {
+  const terminalPath = inspectPetTerminalPath(petValue, null, options.fusionCatalog);
+  if (terminalPath.terminal && terminalPath.branch === "fusion") {
+    return failure("pet_evolution_terminal_fusion", "融合宠已进入终局，不能再进行进化。");
+  }
+  return {ok: true};
 }
 
 function petIntrinsicCombatPower(stats) {
@@ -587,7 +604,9 @@ function failure(code, message, extra = {}) {
 module.exports = {
   PET_EVOLUTION_SCHEMA_VERSION,
   applyPetEvolution,
+  inspectCanonicalStageOneCultivation,
   inspectPetEvolutionEligibility,
+  inspectPetEvolutionTerminalPath,
   petIntrinsicCombatPower,
   validEvolutionLineage,
 };

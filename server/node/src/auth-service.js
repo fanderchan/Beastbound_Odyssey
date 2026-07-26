@@ -161,6 +161,7 @@ const {createGmPetPaidResetQaDomain} = require("./auth/gm-pet-paid-reset-qa");
 const {createGmPetEvolutionQaDomain} = require("./auth/gm-pet-evolution-qa");
 const {createPetPaidResetDomain} = require("./auth/pet-paid-reset-domain");
 const {createPetEvolutionDomain} = require("./auth/pet-evolution-domain");
+const {createPetFusionDomain} = require("./auth/pet-fusion-domain");
 const {createOfflineHangDomain} = require("./auth/offline-hang");
 const {
   createPresenceRevisionTracker,
@@ -177,6 +178,8 @@ const {
 const {loadPetGrowthCatalog} = require("./auth/pet-growth-catalog");
 const {createPetPaidResetPolicyCatalog} = require("./auth/pet-paid-reset-policy-catalog");
 const {loadPetEvolutionRouteCatalog} = require("./auth/pet-evolution-route-catalog");
+const {loadPetFusionRecipeCatalog} = require("./auth/pet-fusion-recipe-catalog");
+const {createPetFusionRandomAuthority} = require("./auth/pet-fusion-random-authority");
 const {loadPlayerLevelRuntime} = require("./auth/player-level-runtime");
 const {quantize: quantizePetGrowth} = require("./auth/pet-growth-authority");
 const {createNewPetFactory} = require("./auth/new-pet-factory");
@@ -332,6 +335,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "claimMailAttachments",
   "paidResetPet",
   "evolvePet",
+  "fusePets",
 ]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
@@ -607,6 +611,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "claimPetRecovery",
   "paidResetPet",
   "evolvePet",
+  "fusePets",
   "startHangSession",
   "startOfflineHang",
   "playerRebirth",
@@ -746,6 +751,12 @@ function createAuthService(options = {}) {
     paidResetCatalog: petPaidResetPolicyCatalog,
     encounterCatalog: petEncounterAuthority.catalog,
   });
+  const petFusionRecipeCatalog = options.petFusionRecipeCatalog
+    || loadPetFusionRecipeCatalog();
+  const petFusionRandomAuthority = options.petFusionRandomAuthority
+    || createPetFusionRandomAuthority({randomBytes});
+  const petFusionTargetTemplateForFormId = options.petFusionTargetTemplateForFormId
+    || petTemplateForFormId;
   const manualEncounterAccess = options.manualEncounterAccess || createManualEncounterAccess({
     catalog: petEncounterAuthority.catalog,
     rebirthTrials: rebirthTrialDocument(),
@@ -1678,6 +1689,12 @@ function createAuthService(options = {}) {
       return {
         handled: true,
         result: projectPublicServiceResult(petEvolution.quote(values[0], values[1])),
+      };
+    }
+    if (normalizedMethodName === "getPetFusionQuote") {
+      return {
+        handled: true,
+        result: projectPublicServiceResult(petFusion.quote(values[0], values[1])),
       };
     }
     if (normalizedMethodName === "listPetRecoveries") {
@@ -3981,7 +3998,8 @@ function createAuthService(options = {}) {
     }
     const rowLocalProfileMethod = methodName === "claimPetRecovery"
       || methodName === "paidResetPet"
-      || methodName === "evolvePet";
+      || methodName === "evolvePet"
+      || methodName === "fusePets";
     const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
     const action = methodName === "profileAction"
       ? normalizeProfileActionId(payload.action || payload.type || payload.kind || payload.command)
@@ -5456,6 +5474,7 @@ function createAuthService(options = {}) {
         petExpSettlement,
         petRebirthGrowthCycle,
         petEvolutionRouteCatalog,
+        petFusionRecipeCatalog,
       },
     ),
     bagItemById,
@@ -5549,6 +5568,7 @@ function createAuthService(options = {}) {
     normalizedQuestEventPayload,
     now,
     newPetFactory,
+    ensureActivePetAfterInstanceRemoval,
     objectOrEmpty,
     ok,
     offlinePartyPveBattleParticipantAccountIds: (serviceData, roomValue) => offlinePartyPveBattleParticipantAccountIds(serviceData, roomValue, {now, runtimeActiveSessionIds}),
@@ -5595,6 +5615,9 @@ function createAuthService(options = {}) {
     petExpSettlement,
     petEncounterAuthority,
     petEvolutionRouteCatalog,
+    petFusionRandomAuthority,
+    petFusionRecipeCatalog,
+    petFusionTargetTemplateForFormId,
     petGrowthCatalog,
     petPaidResetPolicyCatalog,
     petRebirthGrowthCycle,
@@ -5696,6 +5719,7 @@ function createAuthService(options = {}) {
   const gmPetEvolutionQa = createGmPetEvolutionQaDomain(domainContext);
   const petPaidReset = createPetPaidResetDomain(domainContext);
   const petEvolution = createPetEvolutionDomain(domainContext);
+  const petFusion = createPetFusionDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
 
   const serviceApi = {
@@ -5732,6 +5756,8 @@ function createAuthService(options = {}) {
     paidResetPet: petPaidReset.reset,
     getPetEvolutionQuote: petEvolution.quote,
     evolvePet: petEvolution.evolve,
+    getPetFusionQuote: petFusion.quote,
+    fusePets: petFusion.fuse,
     playerRebirth: profileActions.playerRebirth,
     questRecord: quest.questRecord,
     questClaim: quest.questClaim,
@@ -7610,7 +7636,7 @@ function publicBattleRoom(room, viewerAccountId = "", options = {}) {
     partyId: String(room.partyId || ""),
     participantAccountIds: Array.isArray(room.participantAccountIds) ? room.participantAccountIds.slice() : [],
     entry: room.entry && typeof room.entry === "object" ? clone(room.entry) : null,
-    participants: Array.isArray(room.participants) ? clone(room.participants) : [],
+    participants: publicBattleParticipants(room.participants),
     battle: publicBattleRoomBattle(room.battle || null, normalizedViewerAccountId, options),
     closeReason: String(room.closeReason || ""),
     closedByAccountId: String(room.closedByAccountId || ""),
@@ -7619,6 +7645,31 @@ function publicBattleRoom(room, viewerAccountId = "", options = {}) {
     updatedAt: room.updatedAt,
     schemaVersion: 1,
   };
+}
+
+function publicBattleParticipants(values) {
+  const participants = Array.isArray(values) ? clone(values) : [];
+  for (const participant of participants) {
+    const teamSnapshot = participant && participant.teamSnapshot;
+    if (!teamSnapshot || typeof teamSnapshot !== "object" || Array.isArray(teamSnapshot)) {
+      continue;
+    }
+    for (const pet of Array.isArray(teamSnapshot.battlePets) ? teamSnapshot.battlePets : []) {
+      stripBattlePetFusionInternals(pet);
+    }
+    for (const partner of Array.isArray(teamSnapshot.trainingPartners) ? teamSnapshot.trainingPartners : []) {
+      stripBattlePetFusionInternals(partner && partner.pet);
+    }
+  }
+  return participants;
+}
+
+function stripBattlePetFusionInternals(pet) {
+  if (!pet || typeof pet !== "object" || Array.isArray(pet)) {
+    return;
+  }
+  delete pet.fusionLineage;
+  delete pet.fusionPrivate;
 }
 
 function publicBattleRoomBattle(battle, viewerAccountId = "", options = {}) {
@@ -9820,6 +9871,7 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
     passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    ...battleFusionIdentityFields(pet),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
   };
@@ -9874,6 +9926,7 @@ function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
     passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    ...battleFusionIdentityFields(pet),
     schemaVersion: 1,
   };
 }
@@ -11074,6 +11127,7 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
     passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    ...battleFusionIdentityFields(pet),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
   };
@@ -11237,6 +11291,7 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
     passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    ...battleFusionIdentityFields(pet),
     schemaVersion: 1,
   };
 }
@@ -11283,6 +11338,7 @@ function partyPveEnemyActors(room) {
       activeSkillIds: stringArray(wildPet.activeSkillIds),
       petSkillSlots: stringArray(wildPet.petSkillSlots),
       passiveSkillIds: stringArray(wildPet.passiveSkillIds),
+      ...battleFusionIdentityFields(wildPet),
       comboRateOverride: battleComboRateOverrideValue(wildPet.comboRateOverride),
       catchable: Boolean(wildPet.catchable),
       captureDifficulty: Math.max(1, Math.trunc(Number(wildPet.captureDifficulty || 42))),
@@ -11351,6 +11407,7 @@ function normalizedServerWildPetEntry(value) {
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, value && value.petSkillSlots),
     passiveSkillIds: petPassiveSkillIdsForSource({...value, formId}),
+    ...battleFusionIdentityFields(value),
     comboRateOverride: battleComboRateOverrideValue(value && value.comboRateOverride),
     catchable: value && value.catchable === false ? false : capture.catchable !== false,
     captureDifficulty: Math.max(1, Math.trunc(Number(value && (value.captureDifficulty || value.difficulty) || capture.difficulty || 42))),
@@ -16852,12 +16909,32 @@ function petActiveSkillIdsForSource(source) {
 }
 
 function petPassiveSkillIdsForSource(source) {
+  if (petHasFusionIdentity(source)) {
+    return Array.isArray(source.passiveSkillIds)
+      ? source.passiveSkillIds.slice()
+      : [];
+  }
   const formId = String(source && (source.formId || source.templateId || source.speciesId) || "").trim();
   const template = petTemplateForFormId(formId);
   return uniqueStringArray([
     ...uniqueStringArray(template.passiveSkillIds),
     ...uniqueStringArray(source && source.passiveSkillIds),
   ]);
+}
+
+function petHasFusionIdentity(source) {
+  return Boolean(
+    source
+    && typeof source === "object"
+    && !Array.isArray(source)
+    && Object.prototype.hasOwnProperty.call(source, "fusionLineage"),
+  );
+}
+
+function battleFusionIdentityFields(source) {
+  return petHasFusionIdentity(source)
+    ? {fusionLineage: {mode: "fusion"}}
+    : {};
 }
 
 function petSkillSlotsForSkillIds(skillIds, rawSlots) {
@@ -18421,6 +18498,7 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
         now,
         options.petRebirthGrowthCycle,
         options.petEvolutionRouteCatalog,
+        options.petFusionRecipeCatalog,
       );
     case "training_partner_set_count":
       return applyTrainingPartnerSetCountAction(profile, params);
@@ -19912,7 +19990,14 @@ function applyPetMarkSeenAction(profile, params) {
   return {ok: true, message: "", instanceId: petId};
 }
 
-function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle, petEvolutionRouteCatalog) {
+function applyPetCultivationAction(
+  profile,
+  params,
+  now,
+  petRebirthGrowthCycle,
+  petEvolutionRouteCatalog,
+  petFusionRecipeCatalog,
+) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const mode = String(params.mode || "").trim().toLowerCase();
   const pet = profilePetByInstanceId(profile, petId);
@@ -19926,7 +20011,11 @@ function applyPetCultivationAction(profile, params, now, petRebirthGrowthCycle, 
     return {ok: false, code: "pet_required_by_quest", message: `${profilePetName(pet)} 是当前任务需要的宠物，不能转强。`, instanceId: petId};
   }
   if (shouldUsePetRebirthMm(pet, mode)) {
-    const terminalPath = inspectPetTerminalPath(pet, petEvolutionRouteCatalog);
+    const terminalPath = inspectPetTerminalPath(
+      pet,
+      petEvolutionRouteCatalog,
+      petFusionRecipeCatalog,
+    );
     if (terminalPath.terminal) {
       return {
         ok: false,

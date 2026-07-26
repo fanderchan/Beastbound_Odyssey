@@ -228,6 +228,35 @@ test("paid reset rejects every owned evolution or fusion lineage field before ch
   }
 });
 
+test("paid reset rejects fusion target forms from either catalog index without lineage", () => {
+  const fixture = oneRebirthPet();
+  for (const fusionCatalog of [
+    {
+      targetFormIds: ["future_fusion_target"],
+      recipes: [],
+    },
+    {
+      targetFormIds: [],
+      recipes: [{recipeId: "future_fusion_recipe", targetFormId: "future_fusion_target"}],
+    },
+  ]) {
+    const pet = structuredClone(fixture.pet);
+    pet.formId = "future_fusion_target";
+    pet.templateId = "future_fusion_target";
+    pet.speciesId = "future_fusion_target";
+    const before = structuredClone(pet);
+    const input = paidResetInput(fixture);
+    input.fusionCatalog = fusionCatalog;
+
+    const result = applyPetPaidReset(pet, input);
+
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "pet_paid_reset_terminal_stage");
+    assert.equal(result.message, "宠物已进入2转、进化或融合终局，不能付费重置。");
+    assert.deepEqual(pet, before);
+  }
+});
+
 test("paid reset rejects an ordinary two-rebirth pet as a terminal stage", () => {
   const fixture = twoRebirthPet();
   const before = structuredClone(fixture.pet);

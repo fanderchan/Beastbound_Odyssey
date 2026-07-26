@@ -91,6 +91,8 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "paidResetPet",
   "getPetEvolutionQuote",
   "evolvePet",
+  "getPetFusionQuote",
+  "fusePets",
   "offlineHangStatus",
   "startOfflineHang",
   "claimOfflineHang",
@@ -145,6 +147,7 @@ const PURE_HTTP_READ_SERVICE_METHODS = new Set([
   "getProfile",
   "getPetPaidResetQuote",
   "getPetEvolutionQuote",
+  "getPetFusionQuote",
   "listPetRecoveries",
   "getPartyState",
 ]);
@@ -161,6 +164,7 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/mail/send",
   "/pets/paid-reset",
   "/pets/evolution",
+  "/pets/fusion",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
 const IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN = /^\/pets\/recovery\/[^/]+\/claim$/;
@@ -458,6 +462,12 @@ function createHttpServer(options = {}) {
           routeId: url.searchParams.get("routeId") || "",
         }));
       }
+      if (req.method === "POST" && url.pathname === "/pets/fusion/quote") {
+        return sendResult(
+          res,
+          service.getPetFusionQuote(bearerToken(req), await readJson(req)),
+        );
+      }
       if (req.method === "GET" && url.pathname === "/hang/offline/status") {
         return sendResult(res, service.offlineHangStatus(bearerToken(req)));
       }
@@ -502,6 +512,9 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/pets/evolution") {
         return sendResult(res, service.evolvePet(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/pets/fusion") {
+        return sendResult(res, service.fusePets(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/shops/transaction") {
         return sendResult(res, service.shopTransaction(bearerToken(req), await readJson(req)));
@@ -894,6 +907,7 @@ async function sendResult(res, resultValue) {
     || result.code === "idempotency_key_conflict"
     || result.code === "pet_paid_reset_config_revision_conflict"
     || result.code === "pet_evolution_catalog_conflict"
+    || result.code === "pet_fusion_catalog_conflict"
   ) {
     status = 409;
   } else if (result.code === "protocol_version_mismatch" || result.code === "client_version_missing") {

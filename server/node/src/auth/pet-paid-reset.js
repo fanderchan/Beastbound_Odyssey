@@ -84,6 +84,7 @@ function applyPetPaidReset(petValue, options = {}) {
     quote,
     growthCycle,
     evolutionRouteCatalog: options.evolutionRouteCatalog,
+    fusionCatalog: options.fusionCatalog,
   });
   if (!preflight.ok) {
     return preflight;
@@ -199,7 +200,11 @@ function inspectPetPaidResetEligibility(petValue, options = {}) {
   if (!pet) {
     return failure("pet_paid_reset_pet_invalid", "宠物资料不完整，本次重置未执行。");
   }
-  const terminalPath = inspectPetTerminalPath(pet, options.evolutionRouteCatalog);
+  const terminalPath = inspectPetTerminalPath(
+    pet,
+    options.evolutionRouteCatalog,
+    options.fusionCatalog,
+  );
   if (terminalPath.terminal) {
     return petPaidResetTerminalStageFailure();
   }

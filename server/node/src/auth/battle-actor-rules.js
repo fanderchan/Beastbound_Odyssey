@@ -26,6 +26,30 @@ function templateElements(template) {
   }));
 }
 
+function isFusionActor(source) {
+  return isRecord(source)
+    && Object.prototype.hasOwnProperty.call(source, "fusionLineage");
+}
+
+function strictFusionPassiveSkillIds(source) {
+  const values = source && source.passiveSkillIds;
+  if (!Array.isArray(values) || values.length > 1) {
+    return [];
+  }
+  if (values.length === 0) {
+    return [];
+  }
+  const passiveId = values[0];
+  if (
+    typeof passiveId !== "string"
+    || passiveId === ""
+    || passiveId !== passiveId.trim()
+  ) {
+    return [];
+  }
+  return [passiveId];
+}
+
 function createBattleActorRules({passiveCatalog, templateResolver} = {}) {
   if (!passiveCatalog || typeof passiveCatalog.applyActorPassives !== "function") {
     throw new TypeError("battle actor rules require a passive catalog");
@@ -43,10 +67,12 @@ function createBattleActorRules({passiveCatalog, templateResolver} = {}) {
     const formId = String(source.formId || source.templateId || source.speciesId || "").trim();
     const templateValue = templateResolver(formId);
     const template = isRecord(templateValue) ? templateValue : {};
-    const passiveSkillIds = uniqueIds([
-      ...uniqueIds(template.passiveSkillIds),
-      ...uniqueIds(source.passiveSkillIds),
-    ]);
+    const passiveSkillIds = isFusionActor(source)
+      ? strictFusionPassiveSkillIds(source)
+      : uniqueIds([
+        ...uniqueIds(template.passiveSkillIds),
+        ...uniqueIds(source.passiveSkillIds),
+      ]);
     const authoritative = {
       ...source,
       formId,

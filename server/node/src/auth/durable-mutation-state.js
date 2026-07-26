@@ -33,6 +33,7 @@ const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "profileAction",
   "paidResetPet",
   "evolvePet",
+  "fusePets",
   "startHangSession",
   "stopHangSession",
   "startOfflineHang",

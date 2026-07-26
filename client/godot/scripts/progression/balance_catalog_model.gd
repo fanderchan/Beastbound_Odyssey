@@ -2,6 +2,7 @@ extends RefCounted
 
 const PetEvolutionBalanceModel := preload("res://scripts/progression/pet_evolution_balance_model.gd")
 const PetEvolutionRouteCatalogModel := preload("res://scripts/progression/pet_evolution_route_catalog_model.gd")
+const PetFusionRecipeCatalogModel := preload("res://scripts/progression/pet_fusion_recipe_catalog_model.gd")
 
 const BALANCE_DIR := "res://data/balance"
 const BALANCE_SETS_PATH := BALANCE_DIR + "/balance_sets.json"
@@ -12,8 +13,10 @@ const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_pro
 const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
 const PET_EVOLUTION_BALANCE_PATH := BALANCE_DIR + "/pet_evolution_balance.json"
 const PET_EVOLUTION_ROUTES_PATH := "res://data/pet_evolution_routes.json"
+const PET_FUSION_RECIPES_PATH := "res://data/pet_fusion_recipes.json"
 const PET_TEMPLATES_PATH := "res://data/pet_templates.json"
 const PET_PAID_RESET_POLICY_PATH := BALANCE_DIR + "/pet_paid_reset_policy.json"
+const PET_SKILL_TRAINING_PATH := "res://data/pet_skill_training.json"
 const BAG_ITEMS_PATH := "res://data/bag_items.json"
 const QUESTS_PATH := "res://data/quests.json"
 const BATTLE_ACTIONS_PATH := "res://data/battle_actions.json"
@@ -38,6 +41,7 @@ const CORE_NUMERIC_DIGEST_PATHS: Array[String] = [
 	PET_REBIRTH_BALANCE_PATH,
 	PET_EVOLUTION_BALANCE_PATH,
 	PET_EVOLUTION_ROUTES_PATH,
+	PET_FUSION_RECIPES_PATH,
 	COMBAT_FORMULAS_PATH,
 	CAPTURE_FORMULA_PATH,
 	REWARD_ECONOMY_PATH,
@@ -84,6 +88,10 @@ static func pet_evolution_balance() -> Dictionary:
 
 static func pet_evolution_routes() -> Dictionary:
 	return _data(PET_EVOLUTION_ROUTES_PATH)
+
+
+static func pet_fusion_recipes() -> Dictionary:
+	return _data(PET_FUSION_RECIPES_PATH)
 
 
 static func combat_formulas() -> Dictionary:
@@ -481,6 +489,7 @@ static func validation_errors() -> Array[String]:
 	_validate_pet_rebirth_balance(errors)
 	_validate_pet_evolution_balance(errors)
 	_validate_pet_evolution_routes(errors)
+	_validate_pet_fusion_recipes(errors)
 	_validate_combat_formulas(errors)
 	_validate_capture_formula(errors)
 	_validate_reward_economy(errors)
@@ -866,6 +875,18 @@ static func _validate_pet_evolution_routes(errors: Array[String]) -> void:
 			"gale_breath_cave_f4": _data(GALE_EVOLUTION_MAP_PATH),
 			"shadow_oath_cavern_f5": _data(SHADOW_EVOLUTION_MAP_PATH),
 		}
+	))
+
+
+static func _validate_pet_fusion_recipes(errors: Array[String]) -> void:
+	errors.append_array(PetFusionRecipeCatalogModel.validation_errors(
+		pet_fusion_recipes(),
+		_data(PET_TEMPLATES_PATH),
+		pet_growth_species_profiles(),
+		_data(PET_PAID_RESET_POLICY_PATH),
+		_data(BATTLE_ACTIONS_PATH),
+		_data(BATTLE_PASSIVES_PATH),
+		_data(PET_SKILL_TRAINING_PATH)
 	))
 
 

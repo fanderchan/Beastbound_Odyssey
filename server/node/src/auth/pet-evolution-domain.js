@@ -10,6 +10,7 @@ const {
 const {
   applyPetEvolution,
   inspectPetEvolutionEligibility,
+  inspectPetEvolutionTerminalPath,
 } = require("./pet-evolution");
 
 const QUOTE_REQUEST_KEYS = new Set(["instanceId", "petId", "routeId"]);
@@ -38,6 +39,7 @@ function createPetEvolutionDomain(ctx) {
     ok,
     persistProfileForAccount,
     petEvolutionRouteCatalog,
+    petFusionRecipeCatalog,
     petGrowthCatalog,
     petRebirthGrowthCycle,
     petRequiredByActiveQuest,
@@ -67,6 +69,12 @@ function createPetEvolutionDomain(ctx) {
     }
     const commonFailure = commonProfileFailure(data, resolved.account, context, request.instanceId);
     if (commonFailure) return fail(commonFailure.code, commonFailure.message, commonFailure.extra);
+    const terminalPath = inspectPetEvolutionTerminalPath(context.pet, {
+      fusionCatalog: petFusionRecipeCatalog,
+    });
+    if (!terminalPath.ok) {
+      return fail(terminalPath.code, terminalPath.message, context.publicExtra);
+    }
     const routeResolution = routeForPet(context.pet, request.routeId);
     if (!routeResolution.ok) return fail(routeResolution.code, routeResolution.message, context.publicExtra);
     const route = routeResolution.route;
@@ -74,6 +82,7 @@ function createPetEvolutionDomain(ctx) {
     if (routeFailure) return fail(routeFailure.code, routeFailure.message, context.publicExtra);
     const inspected = inspectPetEvolutionEligibility(context.pet, {
       route,
+      fusionCatalog: petFusionRecipeCatalog,
       growthCatalog: petGrowthCatalog,
       growthCycle: petRebirthGrowthCycle,
     });
@@ -125,6 +134,12 @@ function createPetEvolutionDomain(ctx) {
     }
     const commonFailure = commonProfileFailure(data, resolved.account, context, request.instanceId);
     if (commonFailure) return fail(commonFailure.code, commonFailure.message, commonFailure.extra);
+    const terminalPath = inspectPetEvolutionTerminalPath(context.pet, {
+      fusionCatalog: petFusionRecipeCatalog,
+    });
+    if (!terminalPath.ok) {
+      return fail(terminalPath.code, terminalPath.message, context.publicExtra);
+    }
 
     const profile = clone(context.profile);
     const pets = profilePetInstances(profile);
@@ -151,6 +166,7 @@ function createPetEvolutionDomain(ctx) {
       recordedAt: new Date(Number(now())).toISOString(),
       route,
       targetTemplate,
+      fusionCatalog: petFusionRecipeCatalog,
       growthCatalog: petGrowthCatalog,
       growthCycle: petRebirthGrowthCycle,
       newPetFactory,

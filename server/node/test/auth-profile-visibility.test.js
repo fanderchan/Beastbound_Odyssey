@@ -614,6 +614,239 @@ test("publicPet deep-clones visible pet facts and removes private growth state a
   });
 });
 
+test("publicPet exposes only the resolved fusion lineage and strips all fusion randomness", () => {
+  const source = canonicalPetFixture("pet_fusion_public");
+  delete source.evolutionLineage;
+  source.fusionLineage = {
+    schemaVersion: 1,
+    mode: "fusion",
+    recipeId: "wuli_driftfox_fusion_v1",
+    catalogId: "pet_fusion_recipes_v1",
+    targetFormId: "wuli_driftfox_fusion",
+    targetFormName: "岚脊乌力",
+    completedAtSec: 1785000000,
+    terminalStage: 2,
+    sourceMaterials: [
+      {
+        roleId: "core",
+        instanceId: "pet_core",
+        formId: "wuli_normal_orange_fire10",
+        formName: "橙乌力",
+        geneProfileId: "gene_wuli",
+        lineageId: "wuli",
+        privateSeed: "DO_NOT_EXPOSE_MATERIAL_SEED",
+      },
+      {
+        roleId: "resonance_one",
+        instanceId: "pet_resonance_one",
+        formId: "driftfox_wind7_water3",
+        formName: "岚狐",
+        geneProfileId: "gene_driftfox",
+        lineageId: "driftfox",
+      },
+      {
+        roleId: "resonance_two",
+        instanceId: "pet_resonance_two",
+        formId: "blue_man_dragon_water10",
+        formName: "蓝人龙",
+        geneProfileId: "gene_man_dragon",
+        lineageId: "man_dragon",
+      },
+    ],
+    activeInheritance: [
+      {
+        roleId: "core",
+        geneProfileId: "gene_wuli",
+        skillId: "pet_bui_charge",
+        inherited: true,
+        roll: 0.14,
+      },
+      {
+        roleId: "resonance_one",
+        geneProfileId: "gene_driftfox",
+        skillId: "pet_sleep_powder",
+        inherited: false,
+        roll: 0.91,
+      },
+      {
+        roleId: "resonance_two",
+        geneProfileId: "gene_man_dragon",
+        skillId: "pet_focus_bite",
+        inherited: true,
+        roll: 0.37,
+      },
+    ],
+    passiveInheritance: {
+      roleId: "resonance_one",
+      geneProfileId: "gene_driftfox",
+      skillId: "stone_immunity",
+      roll: 0.56,
+    },
+    privateRootSeed: "DO_NOT_EXPOSE_ROOT_SEED",
+    growthPrivateSeed: "DO_NOT_EXPOSE_GROWTH_SEED",
+    seedCommitment: "DO_NOT_EXPOSE_COMMITMENT",
+    activeRolls: {core: 0.14, resonance_one: 0.91, resonance_two: 0.37},
+    passiveSourceRoll: 0.56,
+    audit: {operationId: "DO_NOT_EXPOSE_AUDIT"},
+  };
+  source.fusionPrivate = {
+    privateRootSeed: "DO_NOT_EXPOSE_TOP_LEVEL_FUSION_PRIVATE",
+  };
+  const before = structuredClone(source);
+
+  const actual = publicPet(source);
+
+  assert.deepEqual(actual.fusionLineage, {
+    schemaVersion: 1,
+    mode: "fusion",
+    recipeId: "wuli_driftfox_fusion_v1",
+    catalogId: "pet_fusion_recipes_v1",
+    targetFormId: "wuli_driftfox_fusion",
+    targetFormName: "岚脊乌力",
+    completedAtSec: 1785000000,
+    terminalStage: 2,
+    sourceMaterials: [
+      {
+        roleId: "core",
+        instanceId: "pet_core",
+        formId: "wuli_normal_orange_fire10",
+        formName: "橙乌力",
+      },
+      {
+        roleId: "resonance_one",
+        instanceId: "pet_resonance_one",
+        formId: "driftfox_wind7_water3",
+        formName: "岚狐",
+      },
+      {
+        roleId: "resonance_two",
+        instanceId: "pet_resonance_two",
+        formId: "blue_man_dragon_water10",
+        formName: "蓝人龙",
+      },
+    ],
+    activeInheritance: [
+      {roleId: "core", skillId: "pet_bui_charge", inherited: true},
+      {roleId: "resonance_two", skillId: "pet_focus_bite", inherited: true},
+    ],
+    passiveInheritance: {
+      roleId: "resonance_one",
+      skillId: "stone_immunity",
+    },
+  });
+  assert.equal(Object.hasOwn(actual, "fusionPrivate"), false);
+  assert.equal(JSON.stringify(actual).includes("DO_NOT_EXPOSE"), false);
+  assert.equal(JSON.stringify(actual).includes("geneProfileId"), false);
+  assert.equal(JSON.stringify(actual).includes("pet_sleep_powder"), false);
+  assert.deepEqual(publicPet(actual), actual);
+  assert.deepEqual(source, before);
+});
+
+test("publicPet normalizes supported fusion lineage aliases and empties damaged values", () => {
+  const aliased = canonicalPetFixture("pet_fusion_alias");
+  delete aliased.evolutionLineage;
+  aliased.fusionLineage = {
+    schemaVersion: 1,
+    mode: "fusion",
+    recipeId: "same_line_fusion_v1",
+    recipeCatalogId: "pet_fusion_recipes_v1",
+    resultFormId: "same_line_fusion_form",
+    resultFormName: "三脉乌力",
+    fusedAtSec: 1785000100,
+    terminalStage: 2,
+    materials: [{
+      roleId: "core",
+      instanceId: "pet_alias_core",
+      formId: "wuli_normal_orange_fire10",
+      formName: "橙乌力",
+    }, {
+      roleId: "resonance_one",
+      instanceId: "pet_alias_resonance_one",
+      formId: "wuli_normal_tough_earth10",
+      formName: "土乌力",
+    }, {
+      roleId: "resonance_two",
+      instanceId: "pet_alias_resonance_two",
+      formId: "wuli_normal_red_fire10",
+      formName: "红乌力",
+    }],
+    inheritedActiveSkills: [{
+      roleId: "core",
+      skillId: "pet_bui_charge",
+    }],
+    inheritedPassive: {
+      sourceRoleId: "resonance_two",
+      skillId: "poison_resistance",
+    },
+  };
+  assert.deepEqual(publicPet(aliased).fusionLineage, {
+    schemaVersion: 1,
+    mode: "fusion",
+    recipeId: "same_line_fusion_v1",
+    catalogId: "pet_fusion_recipes_v1",
+    targetFormId: "same_line_fusion_form",
+    targetFormName: "三脉乌力",
+    completedAtSec: 1785000100,
+    terminalStage: 2,
+    sourceMaterials: [{
+      roleId: "core",
+      instanceId: "pet_alias_core",
+      formId: "wuli_normal_orange_fire10",
+      formName: "橙乌力",
+    }, {
+      roleId: "resonance_one",
+      instanceId: "pet_alias_resonance_one",
+      formId: "wuli_normal_tough_earth10",
+      formName: "土乌力",
+    }, {
+      roleId: "resonance_two",
+      instanceId: "pet_alias_resonance_two",
+      formId: "wuli_normal_red_fire10",
+      formName: "红乌力",
+    }],
+    activeInheritance: [{
+      roleId: "core",
+      skillId: "pet_bui_charge",
+      inherited: true,
+    }],
+    passiveInheritance: {
+      roleId: "resonance_two",
+      skillId: "poison_resistance",
+    },
+  });
+
+  const damaged = canonicalPetFixture("pet_fusion_damaged");
+  delete damaged.evolutionLineage;
+  damaged.fusionLineage = {
+    schemaVersion: "1",
+    mode: "fusion ",
+    recipeId: {privateRootSeed: "DO_NOT_EXPOSE_DAMAGED_RECIPE"},
+    catalogId: "\u0000private",
+    targetFormId: [],
+    targetFormName: " \u0007 ",
+    completedAtSec: "1785000100",
+    terminalStage: 1,
+    sourceMaterials: "damaged",
+    activeInheritance: [
+      {roleId: "core", skillId: "pet_bui_charge", inherited: false},
+      {roleId: "unknown", skillId: "private_skill", inherited: true},
+    ],
+    passiveInheritance: {
+      roleId: "unknown",
+      skillId: "private_passive",
+    },
+    privateRootSeed: "DO_NOT_EXPOSE_DAMAGED_ROOT",
+  };
+  const projected = publicPet(damaged);
+  assert.deepEqual(projected.fusionLineage, {
+    sourceMaterials: [],
+    activeInheritance: [],
+    passiveInheritance: {},
+  });
+  assert.equal(JSON.stringify(projected).includes("DO_NOT_EXPOSE"), false);
+  assert.deepEqual(publicPet(projected), projected);
+});
+
 test("publicProfile sanitizes current, legacy, dropped, and future nested pet containers", () => {
   const source = {
     schemaVersion: 1,

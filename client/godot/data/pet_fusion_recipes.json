@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "pet_fusion_recipes_v1",
+  "runtimeEnabled": false,
+  "disabledMessage": "宠物融合尚未开放；当前不会消耗任何宠物。",
+  "rules": {
+    "roleIds": [
+      "core",
+      "resonance_one",
+      "resonance_two"
+    ],
+    "requiredGrowthModelVersion": "pet_growth_authority_v1",
+    "requiredRebirthCount": 1,
+    "minimumLevel": 131,
+    "maximumLevel": 140,
+    "baseActiveSkillIds": [
+      "pet_attack",
+      "pet_defend"
+    ],
+    "specialActiveInheritanceChance": 0.5,
+    "passiveSourceWeights": {
+      "core": 0.4,
+      "resonance_one": 0.3,
+      "resonance_two": 0.3
+    },
+    "resultPassiveSkillCount": 1,
+    "materialNumericInheritance": false,
+    "resultRideable": false
+  },
+  "geneProfiles": [],
+  "recipes": []
+}

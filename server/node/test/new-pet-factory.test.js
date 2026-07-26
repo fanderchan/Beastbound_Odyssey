@@ -22,6 +22,8 @@ const {
 const {validatePetGrowth} = require("../src/auth/pet-growth-runtime");
 const {generatePetPrivateSeed, isValidPetPrivateSeed} = require("../src/auth/pet-private-seed");
 
+const EXPLICIT_PRIVATE_SEED = `bps1_${"A".repeat(43)}`;
+
 function levelOneCandidate(formId, overrides = {}) {
   return {
     instanceId: `pet_new_${formId}`,
@@ -169,6 +171,78 @@ test("unlinked Lv1 finalization gives the same single generated seed to the lega
   assert.deepEqual(result.pet.growthSpeciesLevel1Stats, result.pet.initialStats);
   assert.notEqual(result.pet.growthSpeciesLevel1Stats, result.pet.initialStats);
   assert.equal(Object.hasOwn(result.pet, "petGrowth"), false);
+});
+
+test("internal explicit-seed finalization reuses one validated identity without CSPRNG calls", (t) => {
+  const catalog = legacyOnlyCatalog();
+  const factory = createNewPetFactory({growthCatalog: catalog});
+  let randomCalls = 0;
+  t.mock.method(crypto, "randomBytes", () => {
+    randomCalls += 1;
+    throw new Error("explicit-seed finalization must not request entropy");
+  });
+
+  const linkedSource = levelOneCandidate("fixture_linked");
+  const linkedBefore = structuredClone(linkedSource);
+  const linked = factory.finalizeLevelOneWithPrivateSeed(linkedSource, {
+    purpose: "pet_fusion",
+    privateSeed: EXPLICIT_PRIVATE_SEED,
+  });
+  assert.equal(linked.growthKind, PROFILE_RESOLUTION_AUTHORITY_V1);
+  assert.equal(linked.pet.petGrowth.private.privateSeed, EXPLICIT_PRIVATE_SEED);
+  assert.deepEqual(linkedSource, linkedBefore);
+
+  const legacySource = levelOneCandidate("legacy_mount_fixture", {
+    hp: 120,
+    maxHp: 120,
+    attack: 12,
+    defense: 24,
+    quick: 55,
+  });
+  const legacyBefore = structuredClone(legacySource);
+  const legacy = factory.finalizeLevelOneWithPrivateSeed(legacySource, {
+    purpose: "pet_fusion",
+    privateSeed: EXPLICIT_PRIVATE_SEED,
+  });
+  assert.equal(legacy.growthKind, PROFILE_RESOLUTION_LEGACY_UNLINKED);
+  assert.equal(legacy.pet.individualSeed, EXPLICIT_PRIVATE_SEED);
+  assert.deepEqual(legacySource, legacyBefore);
+  assert.equal(randomCalls, 0);
+});
+
+test("explicit-seed entry rejects malformed or expanded options without weakening the public entry", (t) => {
+  const factory = createNewPetFactory({growthCatalog: loadPetGrowthCatalog()});
+  let randomCalls = 0;
+  t.mock.method(crypto, "randomBytes", () => {
+    randomCalls += 1;
+    return Buffer.alloc(32, 0x6e);
+  });
+  const candidate = levelOneCandidate("blue_man_dragon_water10");
+  const before = structuredClone(candidate);
+
+  for (const options of [
+    null,
+    {},
+    {purpose: "pet_fusion"},
+    {privateSeed: EXPLICIT_PRIVATE_SEED},
+    {purpose: "Pet Fusion", privateSeed: EXPLICIT_PRIVATE_SEED},
+    {purpose: "pet_fusion", privateSeed: "not-a-private-seed"},
+    {purpose: "pet_fusion", privateSeed: EXPLICIT_PRIVATE_SEED, extra: true},
+  ]) {
+    assert.throws(
+      () => factory.finalizeLevelOneWithPrivateSeed(candidate, options),
+      (error) => assertFactoryError(error, ERROR_INPUT_INVALID),
+    );
+  }
+  assert.throws(
+    () => factory.finalizeLevelOne(candidate, {
+      purpose: "pet_fusion",
+      privateSeed: EXPLICIT_PRIVATE_SEED,
+    }),
+    (error) => assertFactoryError(error, ERROR_INPUT_INVALID),
+  );
+  assert.deepEqual(candidate, before);
+  assert.equal(randomCalls, 0);
 });
 
 test("factory accepts only fresh exact-Lv1 candidates and never spends entropy on bad input", (t) => {

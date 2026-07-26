@@ -1,7 +1,9 @@
 extends RefCounted
 
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
+const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
+const PetFusionClientModel := preload("res://scripts/progression/pet_fusion_client_model.gd")
 
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
 const SOURCE_SERVER := "server"
@@ -94,6 +96,32 @@ const ERROR_CODE_MESSAGES := {
 	"pet_evolution_history_invalid": "这只宠物的成长履历无法安全保存，请联系 GM 处理。",
 	"pet_evolution_already_completed": "这只宠物已经完成进化。",
 	"pet_evolution_helper_ineligible": "转生 MM 不能进化。",
+	"pet_evolution_terminal_fusion": "融合宠已经进入终局，不能再进化。",
+	"pet_fusion_disabled": "宠物融合尚未正式开放。",
+	"pet_fusion_asset_gate": "该融合形态的正式资源尚未完成，当前不会消耗宠物。",
+	"pet_fusion_catalog_conflict": "融合规则已经变化，请刷新条件后重新确认。",
+	"pet_fusion_catalog_invalid": "融合规则配置异常，当前不会消耗宠物。",
+	"pet_fusion_recipe_missing": "当前没有可用的融合配方。",
+	"pet_fusion_request_invalid": "融合选择不完整，请重新选择三只材料宠。",
+	"pet_fusion_material_roles_invalid": "融合材料必须包含核心、共鸣一和共鸣二。",
+	"pet_fusion_material_duplicate": "三个融合位置必须选择三只不同的宠物。",
+	"pet_fusion_material_invalid": "所选融合材料资料不完整，请重新选择。",
+	"pet_fusion_material_conflict": "融合材料状态已经变化，请刷新后重试。",
+	"pet_fusion_material_level": "融合材料必须达到一转 Lv131-140。",
+	"pet_fusion_material_rebirth": "融合材料必须恰好完成一转且尚未进入终局。",
+	"pet_fusion_material_terminal": "已经进入终局的宠物不能作为融合材料。",
+	"pet_fusion_material_helper": "转生 MM 不能作为融合材料。",
+	"pet_fusion_material_cultivation_invalid": "融合材料的一转培养记录不完整，请联系 GM 处理。",
+	"pet_fusion_material_growth_unsupported": "融合材料的成长资料不完整，请联系 GM 处理。",
+	"pet_fusion_material_gene_missing": "这只宠物尚未登记可遗传的融合血脉。",
+	"pet_fusion_material_gene_mismatch": "这只宠物不符合当前融合位置的血脉要求。",
+	"pet_fusion_gene_profile_invalid": "融合血脉资料不完整，本次没有消耗宠物。",
+	"pet_fusion_context_invalid": "融合服务暂不可用，本次没有消耗宠物。",
+	"pet_fusion_random_context_invalid": "融合随机结果无法安全生成，本次没有消耗宠物。",
+	"pet_fusion_result_invalid": "融合结果校验失败，本次没有消耗宠物。",
+	"pet_fusion_target_invalid": "融合目标形态配置异常，本次没有消耗宠物。",
+	"pet_profile_pet_container_invalid": "宠物档案结构异常，请联系 GM 处理。",
+	"pet_profile_pet_container_conflict": "宠物档案存在冲突，请联系 GM 恢复后重试。",
 	"pet_locked": "宠物已锁定，请先解锁。",
 	"pet_riding": "宠物正在骑乘，请先取消骑乘。",
 	"pet_required_by_quest": "这只宠物正被当前任务需要，暂不能重置。",
@@ -1182,6 +1210,72 @@ static func pet_evolution_request(
 	return prepare_request_with_idempotency_key(spec, operation_id) if idempotency_key_is_valid(operation_id) else prepare_request_for_send(spec)
 
 
+static func pet_fusion_quote_request(
+	base_url: String,
+	session_token: String,
+	recipe_id: String,
+	material_instance_ids: Dictionary,
+	catalog_document: Dictionary = {}
+) -> Dictionary:
+	var catalog := (
+		BalanceCatalogModel.pet_fusion_recipes()
+		if catalog_document.is_empty()
+		else catalog_document
+	)
+	var payload := PetFusionClientModel.request_payload(
+		recipe_id,
+		material_instance_ids,
+		catalog
+	)
+	if payload.is_empty():
+		return {}
+	return {
+		"url": "%s/pets/fusion/quote" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(payload),
+		"idempotent": true,
+	}
+
+
+static func pet_fusion_request(
+	base_url: String,
+	session_token: String,
+	recipe_id: String,
+	material_instance_ids: Dictionary,
+	expected_profile_revision: int,
+	expected_catalog_id: String,
+	operation_id: String = "",
+	catalog_document: Dictionary = {}
+) -> Dictionary:
+	var catalog := (
+		BalanceCatalogModel.pet_fusion_recipes()
+		if catalog_document.is_empty()
+		else catalog_document
+	)
+	var payload := PetFusionClientModel.request_payload(
+		recipe_id,
+		material_instance_ids,
+		catalog,
+		expected_profile_revision,
+		expected_catalog_id
+	)
+	if payload.is_empty():
+		return {}
+	var spec := {
+		"url": "%s/pets/fusion" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify(payload),
+		"durableMutation": true,
+	}
+	return (
+		prepare_request_with_idempotency_key(spec, operation_id)
+		if idempotency_key_is_valid(operation_id)
+		else prepare_request_for_send(spec)
+	)
+
+
 static func gm_pet_evolution_qa_request(base_url: String, session_token: String, manifest_id: String) -> Dictionary:
 	return _durable_mutation_request({
 		"url": "%s/gm/pets/evolution/qa" % normalized_base_url(base_url),
@@ -1792,6 +1886,78 @@ static func parse_pet_evolution_response(response_code: int, body: PackedByteArr
 	return parsed
 
 
+static func parse_pet_fusion_quote_response(
+	response_code: int,
+	body: PackedByteArray,
+	catalog_document: Dictionary = {}
+) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物融合条件读取失败。")
+	if not bool(parsed.get("ok", false)):
+		parsed["profileBinding"] = {}
+		parsed["profileSummary"] = {}
+		parsed["petFusionQuote"] = {}
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	var catalog := (
+		BalanceCatalogModel.pet_fusion_recipes()
+		if catalog_document.is_empty()
+		else catalog_document
+	)
+	var quote := PetFusionClientModel.normalized_quote(
+		response.get("petFusionQuote", null),
+		catalog
+	)
+	if (
+		quote.is_empty()
+		or not (response.get("profileBinding", null) is Dictionary)
+		or not (response.get("profileSummary", null) is Dictionary)
+	):
+		return _pet_fusion_contract_failure("宠物融合条件返回格式不正确。")
+	parsed["profileBinding"] = (response.get("profileBinding", {}) as Dictionary).duplicate(true)
+	parsed["profileSummary"] = (response.get("profileSummary", {}) as Dictionary).duplicate(true)
+	parsed["petFusionQuote"] = quote
+	return parsed
+
+
+static func parse_pet_fusion_response(
+	response_code: int,
+	body: PackedByteArray,
+	catalog_document: Dictionary = {}
+) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "宠物融合失败。")
+	if not bool(parsed.get("ok", false)):
+		parsed["profile"] = null
+		parsed["profileBinding"] = {}
+		parsed["profileSummary"] = {}
+		parsed["petFusion"] = {}
+		parsed["logLines"] = []
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	var catalog := (
+		BalanceCatalogModel.pet_fusion_recipes()
+		if catalog_document.is_empty()
+		else catalog_document
+	)
+	var fusion_result := PetFusionClientModel.normalized_fusion_result(
+		response.get("petFusion", null),
+		catalog
+	)
+	if (
+		fusion_result.is_empty()
+		or not (response.get("profile", null) is Dictionary)
+		or not (response.get("profileBinding", null) is Dictionary)
+		or not (response.get("profileSummary", null) is Dictionary)
+		or not (response.get("logLines", null) is Array)
+	):
+		return _pet_fusion_contract_failure("宠物融合结果返回格式不正确。")
+	parsed["profile"] = (response.get("profile", {}) as Dictionary).duplicate(true)
+	parsed["profileBinding"] = (response.get("profileBinding", {}) as Dictionary).duplicate(true)
+	parsed["profileSummary"] = (response.get("profileSummary", {}) as Dictionary).duplicate(true)
+	parsed["petFusion"] = fusion_result
+	parsed["logLines"] = _string_array(response.get("logLines", []))
+	return parsed
+
+
 static func parse_gm_tools_response(response_code: int, body: PackedByteArray, now_sec: int = -1) -> Dictionary:
 	var parsed := _parse_server_json(response_code, body, "GM 授权状态读取失败。")
 	if not bool(parsed.get("ok", false)):
@@ -2023,6 +2189,20 @@ static func _parse_server_json(response_code: int, body: PackedByteArray, fallba
 		"ok": true,
 		"message": str(data.get("message", "")),
 		"response": data,
+	}
+
+
+static func _pet_fusion_contract_failure(message: String) -> Dictionary:
+	return {
+		"ok": false,
+		"message": player_message_for_code("bad_json", message),
+		"code": "bad_json",
+		"profile": null,
+		"profileBinding": {},
+		"profileSummary": {},
+		"petFusionQuote": {},
+		"petFusion": {},
+		"logLines": [],
 	}
 
 
