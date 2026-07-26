@@ -35,12 +35,27 @@ test("fusion inherits only explicit genes and emits a target-profile-only bluepr
 
   assert.equal(result.ok, true);
   assert.equal(result.blueprint.targetFormId, TARGET_FORM_ID);
-  assert.equal(result.blueprint.catalogId, "pet_fusion_recipes_v1");
+  assert.equal(result.blueprint.catalogId, "pet_fusion_recipes_v2");
   assert.equal(result.blueprint.targetGrowthProfileId, TARGET_GROWTH_PROFILE_ID);
   assert.equal(result.blueprint.numericSource, "target_profile_only_v1");
   assert.equal(result.blueprint.rideable, false);
   assert.equal(result.blueprint.bindingPolicy, "bound_if_any_material_bound");
   assert.equal(result.blueprint.resultStatePolicy, "replace_active_else_core_state");
+  assert.equal(result.blueprint.additionalCostPolicy, "materials_only");
+  assert.equal(
+    result.blueprint.resultBindingPolicy,
+    "bound_if_any_material_bound",
+  );
+  assert.equal(
+    result.blueprint.unboundResultTradePolicy,
+    "eligible_when_pet_trading_available",
+  );
+  assert.equal(result.blueprint.baseActiveSkillForgetPolicy, "forbidden");
+  assert.equal(
+    result.blueprint.inheritedSpecialActiveForgetPolicy,
+    "double_confirm_irreversible",
+  );
+  assert.equal(result.blueprint.postFusionTrainingPolicy, "empty_slots_only");
   assert.equal(result.blueprint.terminalStage, 2);
   assert.equal(result.blueprint.paidResetAllowed, false);
   assert.deepEqual(result.blueprint.activeSkillIds, [
@@ -70,7 +85,7 @@ test("fusion inherits only explicit genes and emits a target-profile-only bluepr
   ]);
   assert.equal(result.publicResult.inheritedPassiveSkillId, "wuli_hard_shell");
   assert.equal(result.publicResult.passiveSourceRoleId, "core");
-  assert.equal(result.blueprint.fusionLineage.catalogId, "pet_fusion_recipes_v1");
+  assert.equal(result.blueprint.fusionLineage.catalogId, "pet_fusion_recipes_v2");
 });
 
 test("fixed fusion root reproduces the complete blueprint and public result", () => {

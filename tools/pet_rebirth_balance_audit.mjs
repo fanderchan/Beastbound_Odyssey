@@ -13,10 +13,15 @@ const {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROFILE_PATH = path.join(ROOT, "client/godot/data/balance/pet_growth_species_profiles.json");
+const PAID_RESET_POLICY_PATH = path.join(
+  ROOT,
+  "client/godot/data/balance/pet_paid_reset_policy.json",
+);
 const REPORT_PATH = path.join(ROOT, ".run/pet_rebirth_balance_audit.json");
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const TARGET_LEVELS = Object.freeze([80, 110, 140]);
 const FULL_STONES = Object.freeze({maxHp: 50, attack: 50, defense: 50, quick: 50});
+const TERMINAL_RESET_REASONS = new Set(["terminal_evolution", "terminal_fusion"]);
 
 function argumentValue(flag, fallback) {
   const index = process.argv.indexOf(flag);
@@ -117,11 +122,23 @@ function summary(values) {
 
 const sampleCount = Math.max(10000, Math.trunc(finite(argumentValue("--samples", 10000), 10000)));
 const profileDocument = JSON.parse(fs.readFileSync(PROFILE_PATH, "utf8"));
+const paidResetDocument = JSON.parse(fs.readFileSync(PAID_RESET_POLICY_PATH, "utf8"));
 const allProfiles = Array.isArray(profileDocument.profiles) ? profileDocument.profiles : [];
+const terminalFormIds = new Set(
+  (Array.isArray(paidResetDocument.formPolicies) ? paidResetDocument.formPolicies : [])
+    .filter((policy) => (
+      policy
+      && policy.resetAllowed === false
+      && TERMINAL_RESET_REASONS.has(String(policy.ineligibleReason || ""))
+    ))
+    .map((policy) => String(policy.formId || ""))
+    .filter(Boolean),
+);
 const ordinaryProfiles = allProfiles.filter((profile) => (
   profile
   && typeof profile.profileId === "string"
   && !profile.profileId.startsWith("pet_rebirth_mm_")
+  && !terminalFormIds.has(String(profile.formId || ""))
   && profile.outputGrowth
 ));
 const helpers = Object.fromEntries([1, 2].map((stage) => {

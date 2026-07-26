@@ -105,15 +105,49 @@ static func run(host) -> void:
 		target_without_lineage = normal_stage_one.duplicate(true)
 		target_without_lineage["evolutionLineage"] = {}
 	var stale_target_quote := _quote_for_instance(quote, target_without_lineage)
-	var fusion_terminal := normal_stage_one.duplicate(true)
-	fusion_terminal["fusionLineage"] = {}
-	var fusion_terminal_ok := (
-		PetTerminalPathModel.is_terminal(fusion_terminal)
-		and not PetPaidResetClientModel.is_local_candidate(fusion_terminal)
-		and not PetPaidResetClientModel.quote_matches_instance(
-			_quote_for_instance(quote, fusion_terminal),
-			fusion_terminal
+	var fusion_lineage_terminals_ok := true
+	for lineage_value in [
+		{"schemaVersion": 1, "mode": "fusion"},
+		{},
+		"damaged-lineage",
+		null,
+	]:
+		var fusion_lineage_terminal := normal_stage_one.duplicate(true)
+		fusion_lineage_terminal["fusionLineage"] = lineage_value
+		fusion_lineage_terminals_ok = (
+			fusion_lineage_terminals_ok
+			and PetTerminalPathModel.is_fusion_terminal(fusion_lineage_terminal)
+			and PetTerminalPathModel.is_terminal(fusion_lineage_terminal)
+			and not PetPaidResetClientModel.is_local_candidate(fusion_lineage_terminal)
+			and not PetPaidResetClientModel.quote_matches_instance(
+				_quote_for_instance(quote, fusion_lineage_terminal),
+				fusion_lineage_terminal
+			)
 		)
+	var fusion_target_form_ids := PetTerminalPathModel.fusion_target_form_ids()
+	var fusion_target_without_lineage_ok := fusion_target_form_ids.size() >= 2
+	for target_form_id in fusion_target_form_ids:
+		for alias_key in ["formId", "templateId", "speciesId"]:
+			var fusion_target_terminal := normal_stage_one.duplicate(true)
+			fusion_target_terminal.erase("fusionLineage")
+			fusion_target_terminal["formId"] = ""
+			fusion_target_terminal["templateId"] = ""
+			fusion_target_terminal["speciesId"] = ""
+			fusion_target_terminal[alias_key] = target_form_id
+			var fusion_target_quote := _quote_for_instance(quote, fusion_target_terminal)
+			fusion_target_without_lineage_ok = (
+				fusion_target_without_lineage_ok
+				and PetTerminalPathModel.is_fusion_terminal(fusion_target_terminal)
+				and PetTerminalPathModel.is_terminal(fusion_target_terminal)
+				and not PetPaidResetClientModel.is_local_candidate(fusion_target_terminal)
+				and not PetPaidResetClientModel.quote_matches_instance(
+					fusion_target_quote,
+					fusion_target_terminal
+				)
+			)
+	var fusion_terminal_ok := (
+		fusion_lineage_terminals_ok
+		and fusion_target_without_lineage_ok
 	)
 	panel_flow._pet_paid_reset_panel.refresh(selected, quote, true, false, false)
 	await _scroll_reset_panel_into_view(host)
@@ -261,7 +295,7 @@ static func run(host) -> void:
 		and initial_screenshot_ok
 		and armed_screenshot_ok
 	) else "failed"
-	print("pet paid reset UI check ready: status=%s contract=%s gm_contract=%s ui=%s stage_contract=%s lineage_terminal=%s target_terminal=%s fusion_terminal=%s hidden_stage2=%s hidden_terminal=%s request_blocked=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
+	print("pet paid reset UI check ready: status=%s contract=%s gm_contract=%s ui=%s stage_contract=%s lineage_terminal=%s target_terminal=%s fusion_terminal=%s fusion_lineage_terminal=%s fusion_target_terminal=%s hidden_stage2=%s hidden_terminal=%s request_blocked=%s first_click=%s second_click=%s initial_shot=%s confirm_shot=%s initial_button=%s armed_button=%s" % [
 		status,
 		str(strict_contract_ok),
 		str(bool(gm_contract.get("ok", false))),
@@ -270,6 +304,8 @@ static func run(host) -> void:
 		str(lineage_terminals_ok),
 		str(target_without_lineage_ok),
 		str(fusion_terminal_ok),
+		str(fusion_lineage_terminals_ok),
+		str(fusion_target_without_lineage_ok),
 		str(hidden_stage_two_did_not_submit),
 		str(hidden_terminal_did_not_submit),
 		str(terminal_request_blocked),

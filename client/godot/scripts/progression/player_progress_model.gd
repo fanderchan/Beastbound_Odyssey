@@ -23,6 +23,9 @@ const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
 const PetRidePermitModel := preload("res://scripts/progression/pet_ride_permit_model.gd")
 const PetTamePermitModel := preload("res://scripts/progression/pet_tame_permit_model.gd")
+const PetFusionSkillPolicyModel := preload(
+	"res://scripts/progression/pet_fusion_skill_policy_model.gd"
+)
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerGrowthModel := preload("res://scripts/progression/player_growth_model.gd")
@@ -44,7 +47,7 @@ const PET_STATE_STORAGE := "storage"
 const PET_STATE_RIDING := "riding"
 const BATTLE_PLAYER_ACTOR_ID := "ally_player"
 const BATTLE_PET_ACTOR_ID := "ally_pet"
-const PET_BASE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
+const PET_BASE_SKILL_IDS: Array[String] = PetFusionSkillPolicyModel.BASE_ACTIVE_SKILL_IDS
 const PET_INDIVIDUAL_FIELD_KEYS: Array[String] = [
 	"growthTierId",
 	"growthTierLabel",
@@ -2627,6 +2630,19 @@ static func learn_pet_skill(profile: Dictionary, instance_id: String, skill_id: 
 		var empty_slot := _first_empty_pet_skill_slot(slots)
 		if empty_slot <= 0:
 			return {"ok": false, "profile": normalized, "message": "技能栏满，请先调整。"}
+		var training_policy := PetFusionSkillPolicyModel.slot_assignment_policy(
+			instance,
+			"",
+			normalized_skill_id,
+			_fusion_target_form_ids()
+		)
+		if not bool(training_policy.get("ok", false)):
+			return {
+				"ok": false,
+				"code": str(training_policy.get("code", "")),
+				"profile": normalized,
+				"message": str(training_policy.get("message", "不能学习该技能。")),
+			}
 		learned.append(normalized_skill_id)
 		slots[empty_slot - 1] = normalized_skill_id
 		var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
@@ -2688,6 +2704,19 @@ static func learn_pet_skill_to_slot(profile: Dictionary, instance_id: String, sk
 				"slot": safe_slot,
 				"previousSkillId": previous_skill_id,
 			}
+		var slot_policy := PetFusionSkillPolicyModel.slot_assignment_policy(
+			instance,
+			previous_skill_id,
+			normalized_skill_id,
+			_fusion_target_form_ids()
+		)
+		if not bool(slot_policy.get("ok", false)):
+			return {
+				"ok": false,
+				"code": str(slot_policy.get("code", "")),
+				"profile": normalized,
+				"message": str(slot_policy.get("message", "技能位不能这样调整。")),
+			}
 		var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
 		if previous_skill_id != "":
 			learned.erase(previous_skill_id)
@@ -2724,31 +2753,53 @@ static func learn_pet_skill_to_slot(profile: Dictionary, instance_id: String, sk
 	return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
 
 
-static func can_forget_pet_skill(profile: Dictionary, instance_id: String, skill_id: String) -> Dictionary:
+static func can_forget_pet_skill(
+	profile: Dictionary,
+	instance_id: String,
+	skill_id: String,
+	acknowledgement: String = ""
+) -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var normalized_skill_id := skill_id.strip_edges()
 	if normalized_skill_id == "":
-		return {"ok": false, "profile": normalized, "message": "请选择要遗忘的技能。"}
+		return {"ok": false, "code": "pet_skill_empty", "profile": normalized, "message": "请选择要遗忘的技能。"}
 	if PET_BASE_SKILL_IDS.has(normalized_skill_id):
-		return {"ok": false, "profile": normalized, "message": "攻击和防御不能遗忘。"}
+		return {
+			"ok": false,
+			"code": PetFusionSkillPolicyModel.CODE_BASE_SKILL,
+			"profile": normalized,
+			"message": "攻击和防御不能遗忘。",
+		}
 	var action := BattleActionCatalog.action_by_id(normalized_skill_id)
 	if action.is_empty() or str(action.get("owner", "")) != BattleActionCatalog.OWNER_PET_SKILL:
-		return {"ok": false, "profile": normalized, "message": "该技能不能遗忘。"}
+		return {"ok": false, "code": "pet_skill_invalid", "profile": normalized, "message": "该技能不能遗忘。"}
 	var instance := pet_instance_by_id(normalized, instance_id)
 	if instance.is_empty():
-		return {"ok": false, "profile": normalized, "message": "没有找到这只宠物。"}
+		return {"ok": false, "code": "pet_missing", "profile": normalized, "message": "没有找到这只宠物。"}
 	var learned := _valid_unique_pet_skill_ids(instance.get("activeSkillIds", []))
 	if not learned.has(normalized_skill_id):
 		return {
 			"ok": false,
+			"code": "pet_skill_not_learned",
 			"profile": normalized,
 			"message": "%s 没有学会%s。" % [
 				str(instance.get("name", "宠物")),
 				BattleActionCatalog.label_for(normalized_skill_id, normalized_skill_id),
 			],
 		}
+	var forget_policy := PetFusionSkillPolicyModel.forget_policy(
+		instance,
+		normalized_skill_id,
+		acknowledgement,
+		_fusion_target_form_ids()
+	)
+	if not bool(forget_policy.get("ok", false)):
+		var failure := forget_policy.duplicate(true)
+		failure["profile"] = normalized
+		return failure
 	return {
 		"ok": true,
+		"code": "",
 		"profile": normalized,
 		"message": "%s 可以遗忘%s。" % [
 			str(instance.get("name", "宠物")),
@@ -2757,9 +2808,14 @@ static func can_forget_pet_skill(profile: Dictionary, instance_id: String, skill
 	}
 
 
-static func forget_pet_skill(profile: Dictionary, instance_id: String, skill_id: String) -> Dictionary:
+static func forget_pet_skill(
+	profile: Dictionary,
+	instance_id: String,
+	skill_id: String,
+	acknowledgement: String = ""
+) -> Dictionary:
 	var normalized := normalize_profile(profile)
-	var check := can_forget_pet_skill(normalized, instance_id, skill_id)
+	var check := can_forget_pet_skill(normalized, instance_id, skill_id, acknowledgement)
 	if not bool(check.get("ok", false)):
 		return check
 	var normalized_skill_id := skill_id.strip_edges()
@@ -8227,6 +8283,16 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 	var form_id := str(instance.get("formId", instance.get("templateId", "")))
 	if instance_id == "" or form_id == "":
 		return {}
+	if (
+		not instance.has("fusionLineage")
+		and PetFusionSkillPolicyModel.is_fusion_instance(
+			instance,
+			_fusion_target_form_ids()
+		)
+	):
+		# Preserve fail-closed fusion identity before canonicalizing conflicting
+		# form aliases; otherwise a damaged alias could downgrade the pet.
+		instance["fusionLineage"] = null
 	var template := PetTemplateCatalog.runtime_template_for_form(form_id)
 	instance["instanceId"] = instance_id
 	instance["petId"] = instance_id
@@ -8285,15 +8351,15 @@ static func _normalize_pet_instance(value: Dictionary) -> Dictionary:
 			instance[key] = template.get(key)
 	instance["passiveSkillIds"] = _effective_pet_passive_skill_ids(instance, template.get("passiveSkillIds", []))
 	var forgotten := _valid_unique_pet_skill_ids(instance.get("forgottenSkillIds", []))
-	var learned: Array[String] = []
-	for skill_id in _valid_unique_pet_skill_ids(template.get("activeSkillIds", [])):
-		if not forgotten.has(skill_id):
-			learned.append(skill_id)
-	for skill_id in _valid_unique_pet_skill_ids(instance.get("activeSkillIds", [])):
-		if forgotten.has(skill_id):
-			continue
-		if not learned.has(skill_id):
-			learned.append(skill_id)
+	for base_skill_id in PET_BASE_SKILL_IDS:
+		forgotten.erase(base_skill_id)
+	var learned := PetFusionSkillPolicyModel.effective_active_skill_ids(
+		instance,
+		_valid_unique_pet_skill_ids(template.get("activeSkillIds", [])),
+		_valid_unique_pet_skill_ids(instance.get("activeSkillIds", [])),
+		forgotten,
+		_fusion_target_form_ids()
+	)
 	instance["activeSkillIds"] = learned
 	instance["forgottenSkillIds"] = forgotten
 	instance["petSkillSlots"] = PetTemplateCatalog.normalized_skill_slots(learned, instance.get("petSkillSlots", template.get("petSkillSlots", [])))
@@ -8635,13 +8701,17 @@ static func _valid_unique_pet_skill_ids(value) -> Array[String]:
 
 
 static func _effective_pet_passive_skill_ids(instance: Dictionary, template_passive_ids) -> Array[String]:
-	if instance.has("fusionLineage"):
+	if PetFusionSkillPolicyModel.is_fusion_instance(instance, _fusion_target_form_ids()):
 		return _strict_fusion_passive_skill_ids(instance.get("passiveSkillIds", []))
 	var result := _unique_pet_passive_skill_ids(template_passive_ids)
 	for passive_id in _unique_pet_passive_skill_ids(instance.get("passiveSkillIds", [])):
 		if not result.has(passive_id):
 			result.append(passive_id)
 	return result
+
+
+static func _fusion_target_form_ids() -> Array[String]:
+	return BalanceCatalogModel.terminal_fusion_form_ids()
 
 
 static func _strict_fusion_passive_skill_ids(value) -> Array[String]:

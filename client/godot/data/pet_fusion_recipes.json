@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "catalogId": "pet_fusion_recipes_v1",
+  "schemaVersion": 2,
+  "catalogId": "pet_fusion_recipes_v2",
   "runtimeEnabled": false,
   "disabledMessage": "宠物融合尚未开放；当前不会消耗任何宠物。",
   "rules": {
@@ -25,7 +25,13 @@
     },
     "resultPassiveSkillCount": 1,
     "materialNumericInheritance": false,
-    "resultRideable": false
+    "resultRideable": false,
+    "additionalCostPolicy": "materials_only",
+    "resultBindingPolicy": "bound_if_any_material_bound",
+    "unboundResultTradePolicy": "eligible_when_pet_trading_available",
+    "baseActiveSkillForgetPolicy": "forbidden",
+    "inheritedSpecialActiveForgetPolicy": "double_confirm_irreversible",
+    "postFusionTrainingPolicy": "empty_slots_only"
   },
   "geneProfiles": [
     {

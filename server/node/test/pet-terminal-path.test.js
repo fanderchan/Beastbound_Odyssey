@@ -32,6 +32,7 @@ test("fusion lineage ownership remains terminal even when its persisted payload 
 
 test("fusion catalog target forms remain terminal when lineage is missing", () => {
   const catalog = {
+    terminalTargetFormIds: ["fusion_target_terminal_policy"],
     targetFormIds: ["fusion_target_indexed"],
     recipes: [
       {recipeId: "recipe_one", targetFormId: "fusion_target_recipe"},
@@ -42,6 +43,10 @@ test("fusion catalog target forms remain terminal when lineage is missing", () =
   const before = structuredClone(catalog);
 
   assert.deepEqual(
+    inspectPetTerminalPath(pet("fusion_target_terminal_policy"), null, catalog),
+    {terminal: true, branch: "fusion", evidence: "target_form"},
+  );
+  assert.deepEqual(
     inspectPetTerminalPath(pet("fusion_target_indexed"), null, catalog),
     {terminal: true, branch: "fusion", evidence: "target_form"},
   );
@@ -49,6 +54,35 @@ test("fusion catalog target forms remain terminal when lineage is missing", () =
     inspectPetTerminalPath(pet("fusion_target_recipe"), null, catalog),
     {terminal: true, branch: "fusion", evidence: "target_form"},
   );
+  assert.deepEqual(catalog, before);
+});
+
+test("terminal fusion policy forms fail closed even before recipes are registered", () => {
+  const catalog = {
+    terminalTargetFormIds: [
+      "fusion_terminal_alpha",
+      "fusion_terminal_beta",
+      "fusion_terminal_alpha",
+      "",
+    ],
+    targetFormIds: [],
+    recipes: [],
+  };
+  const before = structuredClone(catalog);
+  for (const formId of ["fusion_terminal_alpha", "fusion_terminal_beta"]) {
+    for (const alias of ["formId", "templateId", "speciesId"]) {
+      const target = pet("ordinary_form");
+      target.formId = "";
+      target.templateId = "";
+      target.speciesId = "";
+      target[alias] = formId;
+      assert.deepEqual(
+        inspectPetTerminalPath(target, null, catalog),
+        {terminal: true, branch: "fusion", evidence: "target_form"},
+        `${formId}:${alias}`,
+      );
+    }
+  }
   assert.deepEqual(catalog, before);
 });
 

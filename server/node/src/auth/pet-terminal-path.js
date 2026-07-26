@@ -47,15 +47,17 @@ function fusionTargetFormIds(catalogValue) {
     return [];
   }
   const result = new Set();
-  const targetFormIds = Array.isArray(catalog.targetFormIds)
-    ? catalog.targetFormIds
-    : catalog.targetFormIds instanceof Set
-      ? Array.from(catalog.targetFormIds)
-      : [];
-  for (const value of targetFormIds) {
-    const formId = String(value || "").trim();
-    if (formId !== "") {
-      result.add(formId);
+  for (const source of [catalog.terminalTargetFormIds, catalog.targetFormIds]) {
+    const values = Array.isArray(source)
+      ? source
+      : source instanceof Set
+        ? Array.from(source)
+        : [];
+    for (const value of values) {
+      const formId = String(value || "").trim();
+      if (formId !== "") {
+        result.add(formId);
+      }
     }
   }
   const recipes = Array.isArray(catalog.recipes) ? catalog.recipes : [];

@@ -63,9 +63,9 @@ test("default pet growth catalog strictly links all current species profiles and
   const catalog = loadPetGrowthCatalog();
 
   assert.equal(catalog.schemaVersion, 1);
-  assert.equal(catalog.profileCount, 34);
-  assert.equal(catalog.formCount, 34);
-  assert.equal(catalog.profiledFormCount, 34);
+  assert.equal(catalog.profileCount, 36);
+  assert.equal(catalog.formCount, 36);
+  assert.equal(catalog.profiledFormCount, 36);
   assert.deepEqual(catalog.orphanProfileIds, []);
   assert.deepEqual(catalog.wildCaptureGrowthPolicy, DEFAULT_WILD_CAPTURE_GROWTH_POLICY);
   assert.equal(Object.isFrozen(catalog.wildCaptureGrowthPolicy), true);
@@ -83,6 +83,14 @@ test("default pet growth catalog strictly links all current species profiles and
   );
   assert.equal(catalog.profileIdForFormId("novice_tiger_mount"), "novice_tiger_mount_v1");
   assert.equal(catalog.profileIdForFormId("thunder_dragon_mount"), "thunder_dragon_mount_v1");
+  assert.equal(
+    catalog.profileIdForFormId("emberhorn_fusion_solar_crown_fire7_wind3"),
+    "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+  );
+  assert.equal(
+    catalog.profileIdForFormId("emberhorn_fusion_moss_rampart_fire4_earth6"),
+    "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+  );
   assert.equal(catalog.resolvePetProfile({formId: "wuli_normal_orange_fire10"}).kind, "legacy_existing");
   assert.equal(catalog.resolveNewPetProfile({formId: "wuli_normal_orange_fire10"}).kind, "authority_v1");
   assert.equal(catalog.resolvePetProfile({formId: "mossback_marsh_earth7_water3"}).kind, "legacy_existing");
@@ -94,6 +102,14 @@ test("default pet growth catalog strictly links all current species profiles and
     defense: 8,
     quick: 6,
   });
+  assert.deepEqual(
+    catalog.profileForFormId("emberhorn_fusion_solar_crown_fire7_wind3").outputBase,
+    {maxHp: 172, attack: 31, defense: 11, quick: 90},
+  );
+  assert.deepEqual(
+    catalog.profileForFormId("emberhorn_fusion_moss_rampart_fire4_earth6").outputBase,
+    {maxHp: 205, attack: 27, defense: 25, quick: 52},
+  );
 
   const trialLevel50Benchmarks = {
     rebirth_beast_earth_lv50: {maxHp: 520, attack: 76, defense: 92, quick: 48},
@@ -127,7 +143,7 @@ test("all production growth profiles carry a 10k monotonic Lv20 observation inte
   );
   const document = JSON.parse(fs.readFileSync(profilePath, "utf8"));
 
-  assert.equal(document.profiles.length, 34);
+  assert.equal(document.profiles.length, 36);
   for (const profile of document.profiles) {
     const observation = profile.growthObservation;
     assert.equal(observation.sampleCount, 10000, profile.profileId);

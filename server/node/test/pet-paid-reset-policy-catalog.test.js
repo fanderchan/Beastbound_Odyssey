@@ -29,9 +29,9 @@ function quote(catalog, formId, config = {}) {
   return result.quote;
 }
 
-test("paid reset catalog prices eligible forms and disables both terminal evolution forms", () => {
+test("paid reset catalog prices eligible forms and disables all terminal evolution and fusion forms", () => {
   const catalog = createPetPaidResetPolicyCatalog();
-  assert.equal(catalog.formPolicies.length, 34);
+  assert.equal(catalog.formPolicies.length, 36);
   assert.equal(catalog.formPolicies.length, Object.keys(catalog.formPoliciesById).length);
   assert.deepEqual(catalog.resetContract, {
     pricingMode: "fixed_per_operation",
@@ -45,8 +45,11 @@ test("paid reset catalog prices eligible forms and disables both terminal evolut
   for (const formPolicy of catalog.formPolicies) {
     if (!formPolicy.resetAllowed) {
       disabledForms.push(formPolicy.formId);
-      assert.equal(formPolicy.acquisitionTier, "evolution");
-      assert.equal(formPolicy.ineligibleReason, "terminal_evolution");
+      assert.equal(["evolution", "fusion"].includes(formPolicy.acquisitionTier), true);
+      assert.equal(
+        formPolicy.ineligibleReason,
+        formPolicy.acquisitionTier === "fusion" ? "terminal_fusion" : "terminal_evolution",
+      );
       assert.equal(Object.hasOwn(formPolicy, "priceTierId"), false);
       const denied = resolvePetPaidResetQuote(catalog, {}, formPolicy.formId);
       assert.equal(denied.ok, false);
@@ -63,8 +66,21 @@ test("paid reset catalog prices eligible forms and disables both terminal evolut
   }
   assert.deepEqual(disabledForms.sort(), [
     "driftfox_evolved_moon_gale_wind7_water3",
+    "emberhorn_fusion_moss_rampart_fire4_earth6",
+    "emberhorn_fusion_solar_crown_fire7_wind3",
     "wuli_evolved_crystal_earth8_water2",
   ]);
+  for (const fusionFormId of [
+    "emberhorn_fusion_solar_crown_fire7_wind3",
+    "emberhorn_fusion_moss_rampart_fire4_earth6",
+  ]) {
+    assert.deepEqual(catalog.formPoliciesById[fusionFormId], {
+      formId: fusionFormId,
+      acquisitionTier: "fusion",
+      resetAllowed: false,
+      ineligibleReason: "terminal_fusion",
+    });
+  }
   assert.equal(quote(catalog, "bui_novice_sprout_earth5_wind5").amount, 50000);
   assert.equal(quote(catalog, "bui_normal_red_fire10").amount, 120000);
   assert.equal(quote(catalog, "blue_man_dragon_water10").amount, 300000);
@@ -275,8 +291,8 @@ test("legacy empty config stays revision zero and malformed persisted config fai
   assert.equal(corrupt.code, "pet_paid_reset_config_invalid");
   const publicResult = publicPetPaidResetConfig(catalog, {});
   assert.equal(publicResult.ok, true);
-  assert.equal(publicResult.resolvedForms.length, 34);
-  assert.equal(publicResult.resolvedForms.filter((entry) => entry.resetAllowed === false).length, 2);
+  assert.equal(publicResult.resolvedForms.length, 36);
+  assert.equal(publicResult.resolvedForms.filter((entry) => entry.resetAllowed === false).length, 4);
   assert.equal(Object.hasOwn(publicResult.defaults, "policyPath"), false);
 });
 

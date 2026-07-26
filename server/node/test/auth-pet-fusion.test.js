@@ -161,6 +161,20 @@ function resultNumericFingerprint(pet) {
   };
 }
 
+function fusionEconomicFingerprint(profile) {
+  return {
+    stoneCoins: profile.stoneCoins,
+    boundStoneCoins: profile.boundStoneCoins,
+    diamonds: profile.diamonds,
+    boundDiamonds: profile.boundDiamonds,
+    backpackSlots: structuredClone(profile.backpackSlots),
+    backpackExtraSlots: profile.backpackExtraSlots,
+    captureTools: structuredClone(profile.captureTools),
+    equipmentInstances: structuredClone(profile.equipmentInstances),
+    equipmentSlotInstanceIds: structuredClone(profile.equipmentSlotInstanceIds),
+  };
+}
+
 test("fusion quote is read-only and authoritative fusion consumes three pets into one independent terminal result", async () => {
   const catalog = createEnabledTestFusionCatalog();
   const store = createMemoryAuthStore();
@@ -174,9 +188,16 @@ test("fusion quote is read-only and authoritative fusion consumes three pets int
       resonance_one: {level: 140},
     },
   });
+  saveInternalProfile(service, account, (profile) => {
+    profile.stoneCoins = 123456;
+    profile.boundStoneCoins = 6543;
+    profile.diamonds = 987;
+    profile.boundDiamonds = 321;
+  });
   const before = structuredClone(
     internalProfileForAccount(service, account.account.accountId),
   );
+  const beforeEconomy = fusionEconomicFingerprint(before);
   const sourceIds = before.petInstances.map((pet) => pet.instanceId);
   const sourcePrivateSeeds = before.petInstances.map(
     (pet) => pet.petGrowth.private.privateSeed,
@@ -216,6 +237,9 @@ test("fusion quote is read-only and authoritative fusion consumes three pets int
     numericSource: "target_profile_only_v1",
     materialNumericInheritance: false,
     rideable: false,
+    additionalCostPolicy: "materials_only",
+    resultBinding: "bound",
+    tradeEligibility: "not_eligible",
   });
   assert.deepEqual(
     internalProfileForAccount(service, account.account.accountId),
@@ -258,6 +282,9 @@ test("fusion quote is read-only and authoritative fusion consumes three pets int
   assert.equal(result.petFusion.inheritedPassiveSkillId, "wuli_hard_shell");
   assert.equal(result.petFusion.passiveSourceRoleId, "core");
   assert.equal(result.petFusion.materialNumericInheritance, false);
+  assert.equal(result.petFusion.additionalCostPolicy, "materials_only");
+  assert.equal(result.petFusion.resultBinding, "bound");
+  assert.equal(result.petFusion.tradeEligibility, "not_eligible");
 
   const publicPet = result.profile.petInstances[0];
   assert.equal(publicPet.instanceId, result.petFusion.resultInstanceId);
@@ -299,6 +326,7 @@ test("fusion quote is read-only and authoritative fusion consumes three pets int
   );
   assert.equal(internal.petInstances.length, 1);
   const fused = internal.petInstances[0];
+  assert.deepEqual(fusionEconomicFingerprint(internal), beforeEconomy);
   assert.equal(fused.fusionPrivate.privateRootSeed.startsWith("bpfr1_"), true);
   assert.equal(fused.fusionPrivate.growthPrivateSeed.startsWith("bps1_"), true);
   assert.equal(
@@ -360,6 +388,115 @@ test("fusion quote is read-only and authoritative fusion consumes three pets int
     resultNumericFingerprint(alternateFused),
     resultNumericFingerprint(fused),
   );
+});
+
+test("fusion binding prediction and result cover all roles plus legacy binding markers", async (t) => {
+  const cases = [
+    {
+      name: "all materials unbound",
+      seed: {},
+      expectedBinding: "unbound",
+      expectedTradeEligibility: "eligible_when_pet_trading_available",
+    },
+    {
+      name: "core canonical binding",
+      seed: {coreBinding: "bound"},
+      expectedBinding: "bound",
+      expectedTradeEligibility: "not_eligible",
+    },
+    {
+      name: "resonance one canonical binding",
+      seed: {
+        overridesByRole: {
+          resonance_one: {binding: "bound"},
+        },
+      },
+      expectedBinding: "bound",
+      expectedTradeEligibility: "not_eligible",
+    },
+    {
+      name: "resonance two canonical binding",
+      seed: {
+        overridesByRole: {
+          resonance_two: {binding: "bound"},
+        },
+      },
+      expectedBinding: "bound",
+      expectedTradeEligibility: "not_eligible",
+    },
+    {
+      name: "legacy bound marker",
+      seed: {
+        overridesByRole: {
+          resonance_one: {binding: "unbound", bound: true},
+        },
+      },
+      expectedBinding: "bound",
+      expectedTradeEligibility: "not_eligible",
+    },
+    {
+      name: "legacy binding lock marker",
+      seed: {
+        overridesByRole: {
+          resonance_two: {binding: "unbound", bindingLocked: true},
+        },
+      },
+      expectedBinding: "bound",
+      expectedTradeEligibility: "not_eligible",
+    },
+  ];
+
+  for (const [index, fixture] of cases.entries()) {
+    await t.test(fixture.name, async () => {
+      const catalog = createEnabledTestFusionCatalog();
+      const service = createFusionService({catalog});
+      const account = seedFusionAccount(service, {
+        catalog,
+        username: `fusion_binding_${index}`,
+        ...fixture.seed,
+      });
+      const quote = service.getPetFusionQuote(
+        account.session.token,
+        quoteRequest(account),
+      );
+      assert.equal(quote.ok, true, quote.message);
+      assert.equal(
+        quote.petFusionQuote.result.additionalCostPolicy,
+        "materials_only",
+      );
+      assert.equal(
+        quote.petFusionQuote.result.resultBinding,
+        fixture.expectedBinding,
+      );
+      assert.equal(
+        quote.petFusionQuote.result.tradeEligibility,
+        fixture.expectedTradeEligibility,
+      );
+
+      const result = await invokeFusion(service, account, catalog, {
+        operationId: `pet_fusion_binding_operation_${index}`,
+        requestHash: String(index + 1).repeat(64),
+      });
+      assert.equal(result.ok, true, result.message);
+      assert.equal(result.petFusion.additionalCostPolicy, "materials_only");
+      assert.equal(result.petFusion.resultBinding, fixture.expectedBinding);
+      assert.equal(
+        result.petFusion.tradeEligibility,
+        fixture.expectedTradeEligibility,
+      );
+      const internal = internalProfileForAccount(
+        service,
+        account.account.accountId,
+      );
+      assert.equal(internal.petInstances.length, 1);
+      assert.equal(internal.petInstances[0].binding, fixture.expectedBinding);
+      assert.equal(
+        internal.petInstances[0].bound,
+        fixture.expectedBinding === "bound",
+      );
+      assert.equal(internal.petInstances[0].bindingLocked, false);
+    });
+  }
 });
 
 test("fusion rejects tampered authority-v1 growth on quote and execute without persistence", async () => {

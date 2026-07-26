@@ -26,9 +26,22 @@ function templateElements(template) {
   }));
 }
 
-function isFusionActor(source) {
-  return isRecord(source)
-    && Object.prototype.hasOwnProperty.call(source, "fusionLineage");
+function normalizedIdSet(values) {
+  return new Set(uniqueIds(
+    values instanceof Set ? Array.from(values) : values,
+  ));
+}
+
+function isFusionActor(source, fusionTargetFormIds) {
+  if (!isRecord(source)) {
+    return false;
+  }
+  if (Object.prototype.hasOwnProperty.call(source, "fusionLineage")) {
+    return true;
+  }
+  return [source.formId, source.templateId, source.speciesId]
+    .map((value) => String(value || "").trim())
+    .some((formId) => formId !== "" && fusionTargetFormIds.has(formId));
 }
 
 function strictFusionPassiveSkillIds(source) {
@@ -50,13 +63,18 @@ function strictFusionPassiveSkillIds(source) {
   return [passiveId];
 }
 
-function createBattleActorRules({passiveCatalog, templateResolver} = {}) {
+function createBattleActorRules({
+  passiveCatalog,
+  templateResolver,
+  fusionTargetFormIds,
+} = {}) {
   if (!passiveCatalog || typeof passiveCatalog.applyActorPassives !== "function") {
     throw new TypeError("battle actor rules require a passive catalog");
   }
   if (typeof templateResolver !== "function") {
     throw new TypeError("battle actor rules require a pet template resolver");
   }
+  const terminalFusionTargetFormIds = normalizedIdSet(fusionTargetFormIds);
 
   function materializeActor(value) {
     const source = isRecord(value) ? structuredClone(value) : {};
@@ -67,7 +85,8 @@ function createBattleActorRules({passiveCatalog, templateResolver} = {}) {
     const formId = String(source.formId || source.templateId || source.speciesId || "").trim();
     const templateValue = templateResolver(formId);
     const template = isRecord(templateValue) ? templateValue : {};
-    const passiveSkillIds = isFusionActor(source)
+    const fusionActor = isFusionActor(source, terminalFusionTargetFormIds);
+    const passiveSkillIds = fusionActor
       ? strictFusionPassiveSkillIds(source)
       : uniqueIds([
         ...uniqueIds(template.passiveSkillIds),
@@ -82,6 +101,7 @@ function createBattleActorRules({passiveCatalog, templateResolver} = {}) {
       // 当前宠物抗性只由服务端模板和被动派生；不继承客户端/旧 actor 提交的结果字段。
       statusResist: {},
       statusImmune: {},
+      ...(fusionActor ? {fusionLineage: {mode: "fusion"}} : {}),
     };
     const applied = passiveCatalog.applyActorPassives(authoritative);
     return {

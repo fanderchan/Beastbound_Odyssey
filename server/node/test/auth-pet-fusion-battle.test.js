@@ -43,7 +43,7 @@ function assertFusionInstancePassiveOnly(actor, expectedPetId) {
   assert.equal(Object.hasOwn(actor, "fusionPrivate"), false);
 }
 
-test("duel snapshots and switch-pet keep strict fusion identity without stacking template passives", () => {
+test("duel snapshots and switch-pet recognize terminal fusion aliases without lineage or template passive stacking", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const challenger = service.register({
     username: "fusionbattlea",
@@ -64,7 +64,7 @@ test("duel snapshots and switch-pet keep strict fusion identity without stacking
     [
       {
         petId: "fusion_active_bui",
-        formId: "bui_normal_red_fire10",
+        formId: "emberhorn_fusion_solar_crown_fire7_wind3",
         name: "融合首发布伊",
         state: "battle",
         hp: 90,
@@ -88,16 +88,13 @@ test("duel snapshots and switch-pet keep strict fusion identity without stacking
   );
   Object.assign(challengerProfile.petInstances[0], {
     passiveSkillIds: ["poison_resistance"],
-    fusionLineage: {
-      mode: "fusion",
-      sourceMaterials: [{geneProfileId: "private_active_gene"}],
-    },
     fusionPrivate: {privateRootSeed: "private_active_battle_seed"},
   });
   Object.assign(challengerProfile.petInstances[1], {
+    templateId: "emberhorn_fusion_moss_rampart_fire4_earth6",
+    speciesId: "wuli_normal_tough_earth10",
     passiveSkillIds: ["poison_resistance"],
-    // 损坏/旧档的自有字段仍必须被视为融合身份，不能回退叠加乌力模板硬壳。
-    fusionLineage: null,
+    // 形态别名冲突也必须失败关闭为融合身份，不能回退叠加乌力模板硬壳。
     fusionPrivate: {privateRootSeed: "private_standby_battle_seed"},
   });
   saveBattleProfile(service, challenger, challengerProfile);
@@ -158,7 +155,6 @@ test("duel snapshots and switch-pet keep strict fusion identity without stacking
   const acceptedJson = JSON.stringify(accepted.room);
   assert.equal(acceptedJson.includes("fusionLineage"), false);
   assert.equal(acceptedJson.includes("fusionPrivate"), false);
-  assert.equal(acceptedJson.includes("private_active_gene"), false);
   assert.equal(acceptedJson.includes("private_active_battle_seed"), false);
   assert.equal(acceptedJson.includes("private_standby_battle_seed"), false);
 
@@ -252,7 +248,6 @@ test("duel snapshots and switch-pet keep strict fusion identity without stacking
   const switchedJson = JSON.stringify(switched);
   assert.equal(switchedJson.includes("fusionLineage"), false);
   assert.equal(switchedJson.includes("fusionPrivate"), false);
-  assert.equal(switchedJson.includes("private_active_gene"), false);
   assert.equal(switchedJson.includes("private_active_battle_seed"), false);
   assert.equal(switchedJson.includes("private_standby_battle_seed"), false);
 

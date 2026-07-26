@@ -8,6 +8,9 @@ const ROLE_IDS := PetFusionRecipeCatalogModel.ROLE_IDS
 const BASE_ACTIVE_SKILL_IDS := PetFusionRecipeCatalogModel.BASE_ACTIVE_SKILL_IDS
 const REQUEST_ID_MAX_LENGTH := 160
 const MAX_SAFE_INTEGER := 9007199254740991
+const RESULT_BINDING_BOUND := "bound"
+const RESULT_BINDING_UNBOUND := "unbound"
+const TRADE_ELIGIBILITY_NOT_ELIGIBLE := "not_eligible"
 
 
 static func request_payload(
@@ -85,6 +88,10 @@ static func normalized_quote(value, catalog_document) -> Dictionary:
 		not _integer_equals(quote.get("schemaVersion", null), 1)
 		or str(quote.get("catalogId", "")) != PetFusionRecipeCatalogModel.CATALOG_ID
 		or str(quote.get("catalogId", "")) != str(_dict(catalog_document).get("catalogId", ""))
+		or not _integer_equals(
+			_dict(catalog_document).get("schemaVersion", null),
+			PetFusionRecipeCatalogModel.CATALOG_SCHEMA_VERSION
+		)
 		or not _nonnegative_integer(quote.get("profileRevision", null))
 	):
 		return {}
@@ -102,7 +109,11 @@ static func normalized_quote(value, catalog_document) -> Dictionary:
 	var inheritance := _normalized_inheritance(quote.get("inheritance", null))
 	if inheritance.is_empty():
 		return {}
-	var result := _normalized_quote_result(quote.get("result", null), recipe)
+	var result := _normalized_quote_result(
+		quote.get("result", null),
+		recipe,
+		catalog_document
+	)
 	if result.is_empty():
 		return {}
 	var normalized := quote.duplicate(true)
@@ -136,6 +147,9 @@ static func normalized_fusion_result(value, catalog_document) -> Dictionary:
 			"numericSource",
 			"materialNumericInheritance",
 			"rideable",
+			"additionalCostPolicy",
+			"resultBinding",
+			"tradeEligibility",
 			"message",
 		]
 	):
@@ -144,6 +158,10 @@ static func normalized_fusion_result(value, catalog_document) -> Dictionary:
 		not _integer_equals(result.get("schemaVersion", null), 1)
 		or str(result.get("catalogId", "")) != PetFusionRecipeCatalogModel.CATALOG_ID
 		or str(result.get("catalogId", "")) != str(_dict(catalog_document).get("catalogId", ""))
+		or not _integer_equals(
+			_dict(catalog_document).get("schemaVersion", null),
+			PetFusionRecipeCatalogModel.CATALOG_SCHEMA_VERSION
+		)
 		or _request_id(result.get("resultInstanceId", null)) == ""
 		or not _nonempty_text(result.get("targetFormName", null))
 		or not _integer_equals(result.get("level", null), 1)
@@ -152,6 +170,7 @@ static func normalized_fusion_result(value, catalog_document) -> Dictionary:
 		or not _same_string_array(result.get("baseActiveSkillIds", null), BASE_ACTIVE_SKILL_IDS)
 		or result.get("materialNumericInheritance", null) != false
 		or result.get("rideable", null) != false
+		or not _result_policy_contract_valid(result, catalog_document)
 		or not _nonempty_text(result.get("message", null))
 	):
 		return {}
@@ -162,6 +181,8 @@ static func normalized_fusion_result(value, catalog_document) -> Dictionary:
 		recipe.is_empty()
 		or str(result.get("targetFormId", "")) != str(recipe.get("targetFormId", ""))
 		or str(result.get("numericSource", "")) != str(recipe_result.get("numericSource", ""))
+		or str(recipe_result.get("bindingPolicy", ""))
+			!= PetFusionRecipeCatalogModel.RESULT_BINDING_POLICY
 	):
 		return {}
 	var consumed := _normalized_consumed_materials(
@@ -355,7 +376,11 @@ static func _normalized_inheritance(value) -> Dictionary:
 	return inheritance.duplicate(true)
 
 
-static func _normalized_quote_result(value, recipe: Dictionary) -> Dictionary:
+static func _normalized_quote_result(
+	value,
+	recipe: Dictionary,
+	catalog_document
+) -> Dictionary:
 	if not (value is Dictionary):
 		return {}
 	var result := value as Dictionary
@@ -371,6 +396,9 @@ static func _normalized_quote_result(value, recipe: Dictionary) -> Dictionary:
 			"numericSource",
 			"materialNumericInheritance",
 			"rideable",
+			"additionalCostPolicy",
+			"resultBinding",
+			"tradeEligibility",
 		]
 	):
 		return {}
@@ -386,9 +414,41 @@ static func _normalized_quote_result(value, recipe: Dictionary) -> Dictionary:
 			!= str(recipe_result.get("numericSource", ""))
 		or result.get("materialNumericInheritance", null) != false
 		or result.get("rideable", null) != false
+		or str(recipe_result.get("bindingPolicy", ""))
+			!= PetFusionRecipeCatalogModel.RESULT_BINDING_POLICY
+		or not _result_policy_contract_valid(result, catalog_document)
 	):
 		return {}
 	return result.duplicate(true)
+
+
+static func _result_policy_contract_valid(
+	value: Dictionary,
+	catalog_document
+) -> bool:
+	var rules := _dict(_dict(catalog_document).get("rules", {}))
+	if (
+		str(rules.get("additionalCostPolicy", ""))
+			!= PetFusionRecipeCatalogModel.ADDITIONAL_COST_POLICY
+		or str(rules.get("resultBindingPolicy", ""))
+			!= PetFusionRecipeCatalogModel.RESULT_BINDING_POLICY
+		or str(rules.get("unboundResultTradePolicy", ""))
+			!= PetFusionRecipeCatalogModel.UNBOUND_RESULT_TRADE_POLICY
+		or str(value.get("additionalCostPolicy", ""))
+			!= PetFusionRecipeCatalogModel.ADDITIONAL_COST_POLICY
+	):
+		return false
+	var result_binding := str(value.get("resultBinding", ""))
+	var expected_trade_eligibility := ""
+	if result_binding == RESULT_BINDING_BOUND:
+		expected_trade_eligibility = TRADE_ELIGIBILITY_NOT_ELIGIBLE
+	elif result_binding == RESULT_BINDING_UNBOUND:
+		expected_trade_eligibility = (
+			PetFusionRecipeCatalogModel.UNBOUND_RESULT_TRADE_POLICY
+		)
+	else:
+		return false
+	return str(value.get("tradeEligibility", "")) == expected_trade_eligibility
 
 
 static func _normalized_consumed_materials(

@@ -7,6 +7,7 @@ const {
 } = require("./pet-fusion-random-authority");
 const {
   PET_FUSION_CATALOG_ID,
+  PET_FUSION_CATALOG_SCHEMA_VERSION,
   PET_FUSION_ROLE_IDS,
 } = require("./pet-fusion-recipe-catalog");
 const {inspectPetTerminalPath} = require("./pet-terminal-path");
@@ -220,6 +221,15 @@ function resolvePetFusion(materialsValue, options = {}) {
     rideable: false,
     bindingPolicy: inspected.recipe.result.bindingPolicy,
     resultStatePolicy: inspected.recipe.result.resultStatePolicy,
+    additionalCostPolicy: inspected.catalog.rules.additionalCostPolicy,
+    resultBindingPolicy: inspected.catalog.rules.resultBindingPolicy,
+    unboundResultTradePolicy: inspected.catalog.rules.unboundResultTradePolicy,
+    baseActiveSkillForgetPolicy:
+      inspected.catalog.rules.baseActiveSkillForgetPolicy,
+    inheritedSpecialActiveForgetPolicy:
+      inspected.catalog.rules.inheritedSpecialActiveForgetPolicy,
+    postFusionTrainingPolicy:
+      inspected.catalog.rules.postFusionTrainingPolicy,
     activeSkillIds,
     petSkillSlots: paddedSkillSlots(activeSkillIds),
     passiveSkillIds,
@@ -247,7 +257,7 @@ function resolvePetFusion(materialsValue, options = {}) {
 function resolveCatalogRecipe(options) {
   const catalog = objectRecord(options.catalog);
   if (
-    catalog.schemaVersion !== 1
+    catalog.schemaVersion !== PET_FUSION_CATALOG_SCHEMA_VERSION
     || catalog.catalogId !== PET_FUSION_CATALOG_ID
     || !objectRecordOrNull(catalog.rules)
     || !objectRecordOrNull(catalog.geneProfilesById)

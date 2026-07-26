@@ -94,6 +94,71 @@ static func pet_fusion_recipes() -> Dictionary:
 	return _data(PET_FUSION_RECIPES_PATH)
 
 
+static func terminal_fusion_form_ids() -> Array[String]:
+	return _terminal_form_ids_from_paid_reset_policy(["terminal_fusion"])
+
+
+static func pet_rebirth_evaluation_reference_profile_ids() -> Array[String]:
+	var terminal_form_ids := {}
+	for form_id in _terminal_form_ids_from_paid_reset_policy(
+		["terminal_evolution", "terminal_fusion"]
+	):
+		terminal_form_ids[form_id] = true
+	var terminal_profile_ids := {}
+	var form_values = _data(PET_TEMPLATES_PATH).get("forms", [])
+	if form_values is Array:
+		for form_value in form_values as Array:
+			if not (form_value is Dictionary):
+				continue
+			var form := form_value as Dictionary
+			if not terminal_form_ids.has(str(form.get("formId", ""))):
+				continue
+			var profile_id := str(
+				form.get("growthSpeciesProfileId", "")
+			).strip_edges()
+			if profile_id != "":
+				terminal_profile_ids[profile_id] = true
+	var result: Array[String] = []
+	for profile in pet_growth_species_profile_list():
+		var profile_id := str(profile.get("profileId", "")).strip_edges()
+		if (
+			profile_id != ""
+			and not profile_id.begins_with("pet_rebirth_mm_")
+			and not terminal_profile_ids.has(profile_id)
+		):
+			result.append(profile_id)
+	result.sort()
+	return result
+
+
+static func _terminal_form_ids_from_paid_reset_policy(
+	ineligible_reasons: Array[String]
+) -> Array[String]:
+	var result: Array[String] = []
+	var policy_values = _data(PET_PAID_RESET_POLICY_PATH).get(
+		"formPolicies",
+		[]
+	)
+	if not (policy_values is Array):
+		return result
+	for policy_value in policy_values as Array:
+		if not (policy_value is Dictionary):
+			continue
+		var policy := policy_value as Dictionary
+		var form_id := str(policy.get("formId", "")).strip_edges()
+		if (
+			policy.get("resetAllowed", null) == false
+			and ineligible_reasons.has(
+				str(policy.get("ineligibleReason", ""))
+			)
+			and form_id != ""
+			and not result.has(form_id)
+		):
+			result.append(form_id)
+	result.sort()
+	return result
+
+
 static func combat_formulas() -> Dictionary:
 	return _data(COMBAT_FORMULAS_PATH)
 
@@ -812,24 +877,9 @@ static func _validate_pet_rebirth_balance(errors: Array[String]) -> void:
 		errors.append("pet_rebirth_balance.evaluation.reference.stageRolls 无效")
 	if int(reference.get("samplesPerProfile", 0)) < 10000:
 		errors.append("pet_rebirth_balance.evaluation.reference.samplesPerProfile 不得低于10000")
-	var terminal_evolution_profile_ids := {}
-	var route_values = pet_evolution_routes().get("routes", [])
-	if route_values is Array:
-		for route_value in route_values as Array:
-			if not (route_value is Dictionary):
-				continue
-			var route := route_value as Dictionary
-			var result_value = route.get("result", {})
-			if not (result_value is Dictionary):
-				continue
-			var result := result_value as Dictionary
-			if result.get("normalSecondRebirthAllowed", null) == false:
-				terminal_evolution_profile_ids[str(route.get("targetGrowthProfileId", ""))] = true
-	var ordinary_profile_count := 0
-	for profile in pet_growth_species_profile_list():
-		var profile_id := str(profile.get("profileId", ""))
-		if not profile_id.begins_with("pet_rebirth_mm_") and not terminal_evolution_profile_ids.has(profile_id):
-			ordinary_profile_count += 1
+	var ordinary_profile_count := (
+		pet_rebirth_evaluation_reference_profile_ids().size()
+	)
 	if int(reference.get("profileCount", 0)) != ordinary_profile_count:
 		errors.append("pet_rebirth_balance.evaluation.reference.profileCount 与当前可转生非MM成长档数量不一致")
 	var stage_thresholds := evaluation.get("stageThresholds", {}) as Dictionary

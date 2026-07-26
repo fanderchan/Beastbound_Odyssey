@@ -133,6 +133,20 @@
       "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_focus_bite"]
     },
     {
+      "subtypeId": "emberhorn_fusion_solar_crown",
+      "subtypeName": "曜冠角兽",
+      "lineId": "emberhorn",
+      "battleRole": "fusion_fast_single_target_breaker",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
+      "subtypeId": "emberhorn_fusion_moss_rampart",
+      "subtypeName": "苔垒角兽",
+      "lineId": "emberhorn",
+      "battleRole": "fusion_durable_single_target_breaker",
+      "activeSkillIds": ["pet_attack", "pet_defend"]
+    },
+    {
       "subtypeId": "tidefin_mist",
       "subtypeName": "潮鳍兽",
       "lineId": "tidefin",
@@ -717,6 +731,54 @@
           "neededAnimations": ["idle", "walk", "charge", "hit", "capture"],
           "replacementPath": "client/godot/assets/pets/emberhorn/"
         }
+      }
+    },
+    {
+      "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+      "formName": "曜冠角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_fusion_solar_crown",
+      "elements": {
+        "fire": 7,
+        "water": 0,
+        "earth": 0,
+        "wind": 3
+      },
+      "growthProfileId": "agility_high",
+      "growthSpeciesProfileId": "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+      "baseStats": {
+        "maxHp": 172,
+        "attack": 31,
+        "defense": 11,
+        "agility": 90
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
+      }
+    },
+    {
+      "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+      "formName": "苔垒角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_fusion_moss_rampart",
+      "elements": {
+        "fire": 4,
+        "water": 0,
+        "earth": 6,
+        "wind": 0
+      },
+      "growthProfileId": "defense_high",
+      "growthSpeciesProfileId": "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+      "baseStats": {
+        "maxHp": 205,
+        "attack": 27,
+        "defense": 25,
+        "agility": 52
+      },
+      "capture": {
+        "catchable": false,
+        "difficulty": 99
       }
     },
     {

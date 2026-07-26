@@ -279,7 +279,8 @@ static func _declared_fusion_target_form_ids(document) -> Dictionary:
 		return ids
 	var fusion_document := document as Dictionary
 	if (
-		int(fusion_document.get("schemaVersion", 0)) != 1
+		int(fusion_document.get("schemaVersion", 0))
+			!= PetFusionRecipeCatalogModel.CATALOG_SCHEMA_VERSION
 		or str(fusion_document.get("catalogId", ""))
 			!= PetFusionRecipeCatalogModel.CATALOG_ID
 		or typeof(fusion_document.get("runtimeEnabled", null)) != TYPE_BOOL

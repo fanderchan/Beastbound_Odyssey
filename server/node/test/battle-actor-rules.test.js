@@ -6,7 +6,7 @@ const test = require("node:test");
 const {createBattleActorRules} = require("../src/auth/battle-actor-rules");
 const {loadBattlePassiveCatalog} = require("../src/auth/battle-passive-catalog");
 
-function rules() {
+function rules(options = {}) {
   const templates = {
     bui_fire: {
       lineId: "bui",
@@ -22,6 +22,7 @@ function rules() {
   return createBattleActorRules({
     passiveCatalog: loadBattlePassiveCatalog(),
     templateResolver: (formId) => templates[formId] || {},
+    fusionTargetFormIds: options.fusionTargetFormIds || [],
   });
 }
 
@@ -116,6 +117,7 @@ test("every own fusionLineage field is a fusion identity even when lineage data 
       passiveSkillIds: ["poison_resistance"],
     });
 
+    assert.deepEqual(result.actor.fusionLineage, {mode: "fusion"});
     assert.deepEqual(result.actor.passiveSkillIds, ["poison_resistance"]);
     assert.deepEqual(result.actor.statusResist, {poison: 0.35});
     assert.deepEqual(result.actor.statusImmune, {});
@@ -136,6 +138,55 @@ test("one unknown fusion passive stays diagnostic-only and never adds the templa
   assert.deepEqual(result.actor.statusResist, {});
   assert.deepEqual(result.actor.statusImmune, {});
   assert.deepEqual(result.unknownPassiveIds, ["unknown_fusion_passive"]);
+});
+
+test("any terminal fusion target alias marks the actor and blocks ordinary template passive injection", () => {
+  const fusionTargetFormIds = [
+    "fusion_target_form",
+    "fusion_target_template",
+    "fusion_target_species",
+  ];
+  for (const identity of [
+    {formId: "fusion_target_form"},
+    {formId: "wuli_earth", templateId: "fusion_target_template"},
+    {formId: "wuli_earth", speciesId: "fusion_target_species"},
+  ]) {
+    const result = rules({fusionTargetFormIds}).materializeActor({
+      actorId: "pet_fusion_target_without_lineage",
+      kind: "pet",
+      ...identity,
+      passiveSkillIds: ["poison_resistance"],
+    });
+
+    assert.deepEqual(result.actor.fusionLineage, {mode: "fusion"});
+    assert.deepEqual(result.actor.passiveSkillIds, ["poison_resistance"]);
+    assert.deepEqual(result.actor.statusResist, {poison: 0.35});
+    assert.deepEqual(result.actor.statusImmune, {});
+    assert.equal(result.actor.statusResist.stone, undefined);
+  }
+});
+
+test("terminal fusion target aliases fail closed on damaged instance passive lists", () => {
+  const actorRules = rules({fusionTargetFormIds: ["fusion_target"]});
+  for (const passiveSkillIds of [
+    ["poison_resistance", "stone_immunity"],
+    ["poison_resistance", "poison_resistance"],
+    [],
+    null,
+  ]) {
+    const result = actorRules.materializeActor({
+      actorId: "pet_fusion_target_damaged",
+      kind: "pet",
+      formId: "wuli_earth",
+      templateId: "fusion_target",
+      passiveSkillIds,
+    });
+
+    assert.deepEqual(result.actor.fusionLineage, {mode: "fusion"});
+    assert.deepEqual(result.actor.passiveSkillIds, []);
+    assert.deepEqual(result.actor.statusResist, {});
+    assert.deepEqual(result.actor.statusImmune, {});
+  }
 });
 
 test("non-pet actors remain untouched and actor diagnostics stay outside public facts", () => {

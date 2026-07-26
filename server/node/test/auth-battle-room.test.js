@@ -773,7 +773,7 @@ test("guarded targets cannot dodge and damage pet skills cannot create counters"
   assert.equal(skillResolved.turn.events.some((event) => event.eventType === "counter_attack" && event.counterSourceEventId === skillEvent.eventId), false);
 });
 
-test("duel battle rooms skip command turns for pets with no usable skills", () => {
+test("historical forgotten markers can never remove permanent pet attack and defend", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const challenger = service.register({"username": "emptypeta", "password": "test1234", "displayName": "空技宠甲"});
   const opponent = service.register({"username": "emptypetb", "password": "test1234", "displayName": "空技宠乙"});
@@ -814,8 +814,9 @@ test("duel battle rooms skip command turns for pets with no usable skills", () =
   const challengerPet = accept.room.battle.actors.find((actor) => actor.username === "emptypeta" && actor.kind === "pet");
   const opponentPlayer = accept.room.battle.actors.find((actor) => actor.username === "emptypetb" && actor.kind === "player");
   assert.equal(Boolean(challengerPlayer && challengerPet && opponentPlayer), true);
-  assert.deepEqual(challengerPet.activeSkillIds, []);
-  assert.equal(accept.room.battle.requiredActorIds.includes(challengerPet.actorId), false);
+  assert.deepEqual(challengerPet.activeSkillIds, ["pet_attack", "pet_defend"]);
+  assert.deepEqual(challengerPet.petSkillSlots.slice(0, 2), ["pet_attack", "pet_defend"]);
+  assert.equal(accept.room.battle.requiredActorIds.includes(challengerPet.actorId), true);
 
   const first = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
@@ -825,14 +826,14 @@ test("duel battle rooms skip command turns for pets with no usable skills", () =
   });
   assert.equal(first.ok, true);
   assert.equal(first.turn, null);
-  const blockedPet = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
+  const petCommand = service.submitBattleCommand(challenger.session.token, accept.room.roomId, {
     "round": 1,
     "actionId": "pet_attack",
     "actorId": challengerPet.actorId,
     "targetActorId": opponentPlayer.actorId,
   });
-  assert.equal(blockedPet.ok, false);
-  assert.equal(blockedPet.code, "battle_command_actor_missing");
+  assert.equal(petCommand.ok, true);
+  assert.equal(petCommand.turn, null);
   const second = service.submitBattleCommand(opponent.session.token, accept.room.roomId, {
     "round": 1,
     "actionId": "defend",
@@ -840,7 +841,7 @@ test("duel battle rooms skip command turns for pets with no usable skills", () =
   });
   assert.equal(second.ok, true);
   assert.equal(second.turn.kind, "battle_event_list");
-  assert.equal(second.turn.events.some((event) => event.actorId === challengerPet.actorId), false);
+  assert.equal(second.turn.events.some((event) => event.actorId === challengerPet.actorId), true);
 });
 
 test("party pve encounters create one shared server room and wait for all players", () => {

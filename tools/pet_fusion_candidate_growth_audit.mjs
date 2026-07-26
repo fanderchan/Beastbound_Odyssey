@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import {isDeepStrictEqual} from "node:util";
 import {fileURLToPath} from "node:url";
 
 import {simulateProfile} from "./pet_growth_population_audit.mjs";
@@ -44,6 +45,24 @@ const EXPECTED_PROFILE_IDENTITIES = new Map([
     "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
     "emberhorn_fusion_moss_rampart_fire4_earth6",
   ],
+]);
+const FROZEN_PRODUCTION_PROFILE_PATHS = Object.freeze([
+  "profileId",
+  "formId",
+  "formName",
+  "familyRole",
+  ...STAT_KEYS.map((key) => `outputBase.${key}`),
+  ...STAT_KEYS.map((key) => `outputGrowth.${key}`),
+  ...STAT_KEYS.map((key) => `individualRules.initialOutputSpread.${key}`),
+  ...STAT_KEYS.map((key) => `individualRules.growthOutputSpread.${key}`),
+  "individualRules.distribution",
+  "individualRules.rareExtremeRate",
+  "targetAudit.sampleCount",
+  "targetAudit.levelMin",
+  "targetAudit.levelMax",
+  "targetAudit.lv140PowerBand",
+  "targetAudit.threeStatGrowthBand",
+  "targetAudit.hpGrowthBand",
 ]);
 
 function repositoryRelative(filePath) {
@@ -108,6 +127,17 @@ function hasExactKeys(value, expectedKeys) {
   return isObjectRecord(value)
     && Object.keys(value).length === expectedKeys.length
     && expectedKeys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function valueAtPath(value, fieldPath) {
+  return fieldPath.split(".").reduce(
+    (current, key) => (isObjectRecord(current) ? current[key] : undefined),
+    value,
+  );
+}
+
+function describeValue(value) {
+  return value === undefined ? "<missing>" : JSON.stringify(value);
 }
 
 function validateStatMap(value, fieldPath, errors, {integer = false} = {}) {
@@ -298,42 +328,122 @@ function validateSimulation(profile, result) {
   return errors;
 }
 
-function verifyProductionIsolation(candidateDocument) {
-  const growthDocument = readJson(PRODUCTION_GROWTH_PATH);
-  const templateDocument = readJson(PRODUCTION_TEMPLATE_PATH);
-  const fusionDocument = readJson(PRODUCTION_FUSION_PATH);
-  const productionProfileIds = new Set(
-    (Array.isArray(growthDocument.profiles) ? growthDocument.profiles : [])
-      .map((profile) => String(profile.profileId || "")),
+export function verifyProductionPromotion(candidateDocument, documents = {}) {
+  const growthDocument = documents.growthDocument || readJson(PRODUCTION_GROWTH_PATH);
+  const templateDocument = documents.templateDocument || readJson(PRODUCTION_TEMPLATE_PATH);
+  const fusionDocument = documents.fusionDocument || readJson(PRODUCTION_FUSION_PATH);
+  const productionProfiles = Array.isArray(growthDocument.profiles) ? growthDocument.profiles : [];
+  const productionForms = Array.isArray(templateDocument.forms) ? templateDocument.forms : [];
+  const productionProfilesById = new Map(
+    productionProfiles.map((profile) => [String(profile.profileId || ""), profile]),
   );
-  const productionFormIds = new Set(
-    (Array.isArray(templateDocument.forms) ? templateDocument.forms : [])
-      .map((form) => String(form.formId || "")),
+  const productionFormsById = new Map(
+    productionForms.map((form) => [String(form.formId || ""), form]),
   );
-  const candidateCatalogErrors = [];
+  const promotionErrors = [];
+  const profileChecks = [];
   for (const profile of candidateDocument.profiles) {
-    if (productionProfileIds.has(profile.profileId)) {
-      candidateCatalogErrors.push(`${profile.profileId} is already present in the production growth catalog`);
+    const productionProfileCount = productionProfiles.filter(
+      (candidate) => candidate.profileId === profile.profileId,
+    ).length;
+    const productionFormCount = productionForms.filter(
+      (candidate) => candidate.formId === profile.formId,
+    ).length;
+    const productionProfile = productionProfilesById.get(profile.profileId);
+    const productionForm = productionFormsById.get(profile.formId);
+    const mismatches = [];
+    if (productionProfileCount !== 1) {
+      mismatches.push(`production profile occurrence count expected=1 actual=${productionProfileCount}`);
     }
-    if (productionFormIds.has(profile.formId)) {
-      candidateCatalogErrors.push(`${profile.formId} is already present in the production pet template catalog`);
+    if (!productionProfile) {
+      mismatches.push("production profile is missing");
+    } else {
+      for (const fieldPath of FROZEN_PRODUCTION_PROFILE_PATHS) {
+        const expected = valueAtPath(profile, fieldPath);
+        const actual = valueAtPath(productionProfile, fieldPath);
+        if (!isDeepStrictEqual(actual, expected)) {
+          mismatches.push(
+            `${fieldPath} expected=${describeValue(expected)} actual=${describeValue(actual)}`,
+          );
+        }
+      }
+      const expectedLv1MaxHpSpread = profile.individualRules.initialOutputSpread.maxHp;
+      const actualLv1MaxHpSpread = productionProfile.targetAudit?.lv1MaxHpSpread;
+      if (!isDeepStrictEqual(actualLv1MaxHpSpread, expectedLv1MaxHpSpread)) {
+        mismatches.push(
+          "targetAudit.lv1MaxHpSpread"
+          + ` expected=${describeValue(expectedLv1MaxHpSpread)}`
+          + ` actual=${describeValue(actualLv1MaxHpSpread)}`,
+        );
+      }
     }
+    if (productionFormCount !== 1) {
+      mismatches.push(`production form occurrence count expected=1 actual=${productionFormCount}`);
+    }
+    if (!productionForm) {
+      mismatches.push("production form is missing");
+    } else {
+      const expectedBaseStats = {
+        maxHp: profile.outputBase.maxHp,
+        attack: profile.outputBase.attack,
+        defense: profile.outputBase.defense,
+        agility: profile.outputBase.quick,
+      };
+      if (productionForm.growthSpeciesProfileId !== profile.profileId) {
+        mismatches.push(
+          "template.growthSpeciesProfileId"
+          + ` expected=${describeValue(profile.profileId)}`
+          + ` actual=${describeValue(productionForm.growthSpeciesProfileId)}`,
+        );
+      }
+      if (productionForm.formName !== profile.formName) {
+        mismatches.push(
+          "template.formName"
+          + ` expected=${describeValue(profile.formName)}`
+          + ` actual=${describeValue(productionForm.formName)}`,
+        );
+      }
+      if (!isDeepStrictEqual(productionForm.baseStats, expectedBaseStats)) {
+        mismatches.push(
+          "template.baseStats"
+          + ` expected=${describeValue(expectedBaseStats)}`
+          + ` actual=${describeValue(productionForm.baseStats)}`,
+        );
+      }
+    }
+    promotionErrors.push(
+      ...mismatches.map((error) => `${profile.profileId}: ${error}`),
+    );
+    profileChecks.push({
+      profileId: profile.profileId,
+      formId: profile.formId,
+      frozenProfileFieldCount: FROZEN_PRODUCTION_PROFILE_PATHS.length,
+      productionProfileCount,
+      productionFormCount,
+      productionProfilePresent: Boolean(productionProfile),
+      productionFormPresent: Boolean(productionForm),
+      matchesFrozenCandidate: mismatches.length === 0,
+      mismatches,
+    });
   }
   const fusionCatalogErrors = [];
   if (fusionDocument.runtimeEnabled !== false) {
-    fusionCatalogErrors.push("production fusion catalog runtimeEnabled must remain false for the P1.4b audit");
+    fusionCatalogErrors.push("production fusion catalog runtimeEnabled must remain false");
   }
   if (!Array.isArray(fusionDocument.recipes) || fusionDocument.recipes.length !== 0) {
-    fusionCatalogErrors.push("production fusion catalog recipes must remain an empty array for the P1.4b audit");
+    fusionCatalogErrors.push("production fusion catalog recipes must remain an empty array");
   }
-  const errors = [...candidateCatalogErrors, ...fusionCatalogErrors];
+  const errors = [...promotionErrors, ...fusionCatalogErrors];
   return {
-    growthProfileCount: productionProfileIds.size,
-    petFormCount: productionFormIds.size,
+    growthProfileCount: productionProfiles.length,
+    petFormCount: productionForms.length,
     fusionRuntimeEnabled: fusionDocument.runtimeEnabled,
     fusionRecipeCount: Array.isArray(fusionDocument.recipes) ? fusionDocument.recipes.length : null,
-    candidateProfilesAbsentFromProduction: candidateCatalogErrors.length === 0,
+    approvedProfileCount: candidateDocument.profiles.length,
+    promotedProfileCount: profileChecks.filter((check) => check.matchesFrozenCandidate).length,
+    productionProfilesMatchFrozenCandidates: promotionErrors.length === 0,
     fusionCatalogClosed: fusionCatalogErrors.length === 0,
+    profileChecks,
     errors,
   };
 }
@@ -346,9 +456,9 @@ async function main() {
     throw new TypeError(`candidate growth document invalid: ${documentErrors.join("; ")}`);
   }
 
-  const productionIsolation = verifyProductionIsolation(candidateDocument);
+  const productionPromotion = verifyProductionPromotion(candidateDocument);
   const reports = [];
-  const errors = [...productionIsolation.errors];
+  const errors = [...productionPromotion.errors];
   for (const profile of candidateDocument.profiles) {
     const result = simulateProfile(profile, options.samples);
     const profileErrors = validateSimulation(profile, result);
@@ -376,7 +486,7 @@ async function main() {
     seedFormat: candidateDocument.seedFormat,
     sampleCountPerProfile: options.samples,
     profileCount: reports.length,
-    productionIsolation,
+    productionPromotion,
     reports,
     errors,
   };

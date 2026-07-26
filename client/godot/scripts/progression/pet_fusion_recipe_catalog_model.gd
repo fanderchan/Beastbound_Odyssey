@@ -1,12 +1,18 @@
 extends RefCounted
 
-const CATALOG_ID := "pet_fusion_recipes_v1"
+const CATALOG_SCHEMA_VERSION := 2
+const CATALOG_ID := "pet_fusion_recipes_v2"
 const AUTHORITY_MODEL := "pet_growth_authority_v1"
 const ROLE_IDS: Array[String] = ["core", "resonance_one", "resonance_two"]
 const BASE_ACTIVE_SKILL_IDS: Array[String] = ["pet_attack", "pet_defend"]
+const ADDITIONAL_COST_POLICY := "materials_only"
+const RESULT_BINDING_POLICY := "bound_if_any_material_bound"
+const UNBOUND_RESULT_TRADE_POLICY := "eligible_when_pet_trading_available"
+const BASE_ACTIVE_SKILL_FORGET_POLICY := "forbidden"
+const INHERITED_SPECIAL_ACTIVE_FORGET_POLICY := "double_confirm_irreversible"
+const POST_FUSION_TRAINING_POLICY := "empty_slots_only"
 const BINDING_POLICIES: Array[String] = [
-	"bound_if_any_material_bound",
-	"always_bound",
+	RESULT_BINDING_POLICY,
 ]
 const RESULT_STATE_POLICIES: Array[String] = [
 	"replace_active_else_core_state",
@@ -50,8 +56,11 @@ static func validation_errors(
 		"pet_fusion_recipes",
 		errors
 	)
-	if not _integer_equals(data.get("schemaVersion", null), 1):
-		errors.append("pet_fusion_recipes.schemaVersion 当前必须为1")
+	if not _integer_equals(data.get("schemaVersion", null), CATALOG_SCHEMA_VERSION):
+		errors.append(
+			"pet_fusion_recipes.schemaVersion 当前必须为%d"
+			% CATALOG_SCHEMA_VERSION
+		)
 	if str(data.get("catalogId", "")) != CATALOG_ID:
 		errors.append("pet_fusion_recipes.catalogId 当前必须为%s" % CATALOG_ID)
 	if typeof(data.get("runtimeEnabled", null)) != TYPE_BOOL:
@@ -187,8 +196,16 @@ static func runtime_available(document) -> bool:
 		return false
 	var data := document as Dictionary
 	var recipes = data.get("recipes", [])
+	var rule_errors: Array[String] = []
+	_validate_rules(data.get("rules", null), rule_errors)
 	return (
-		data.get("runtimeEnabled", null) == true
+		_integer_equals(
+			data.get("schemaVersion", null),
+			CATALOG_SCHEMA_VERSION
+		)
+		and str(data.get("catalogId", "")) == CATALOG_ID
+		and rule_errors.is_empty()
+		and data.get("runtimeEnabled", null) == true
 		and recipes is Array
 		and not (recipes as Array).is_empty()
 	)
@@ -269,6 +286,12 @@ static func _validate_rules(value, errors: Array[String]) -> void:
 			"resultPassiveSkillCount",
 			"materialNumericInheritance",
 			"resultRideable",
+			"additionalCostPolicy",
+			"resultBindingPolicy",
+			"unboundResultTradePolicy",
+			"baseActiveSkillForgetPolicy",
+			"inheritedSpecialActiveForgetPolicy",
+			"postFusionTrainingPolicy",
 		],
 		"pet_fusion_recipes.rules",
 		errors
@@ -300,6 +323,32 @@ static func _validate_rules(value, errors: Array[String]) -> void:
 		errors.append("融合成品数值不得继承材料宠品质")
 	if rules.get("resultRideable", null) != false:
 		errors.append("第一版融合宠必须显式不可骑乘")
+	if str(rules.get("additionalCostPolicy", "")) != ADDITIONAL_COST_POLICY:
+		errors.append("融合额外成本策略必须为 materials_only")
+	if str(rules.get("resultBindingPolicy", "")) != RESULT_BINDING_POLICY:
+		errors.append("融合成品绑定策略必须为 bound_if_any_material_bound")
+	if (
+		str(rules.get("unboundResultTradePolicy", ""))
+		!= UNBOUND_RESULT_TRADE_POLICY
+	):
+		errors.append(
+			"未绑定融合成品交易策略必须为 eligible_when_pet_trading_available"
+		)
+	if (
+		str(rules.get("baseActiveSkillForgetPolicy", ""))
+		!= BASE_ACTIVE_SKILL_FORGET_POLICY
+	):
+		errors.append("融合宠攻击和防御必须永久禁止遗忘")
+	if (
+		str(rules.get("inheritedSpecialActiveForgetPolicy", ""))
+		!= INHERITED_SPECIAL_ACTIVE_FORGET_POLICY
+	):
+		errors.append("遗传特殊主动必须二次确认后不可逆遗忘")
+	if (
+		str(rules.get("postFusionTrainingPolicy", ""))
+		!= POST_FUSION_TRAINING_POLICY
+	):
+		errors.append("融合宠后续训练只能写入空技能格")
 	var weights_value = rules.get("passiveSourceWeights", null)
 	if not (weights_value is Dictionary):
 		errors.append("融合被动来源权重必须是对象")
@@ -619,8 +668,11 @@ static func _validate_recipe_result(value, recipe_label: String, errors: Array[S
 		errors.append("%s 数值必须只来自目标成长档" % label)
 	if result.get("rideable", null) != false:
 		errors.append("%s 第一版必须不可骑乘" % label)
-	if not BINDING_POLICIES.has(str(result.get("bindingPolicy", ""))):
-		errors.append("%s.bindingPolicy 无效" % label)
+	if str(result.get("bindingPolicy", "")) != RESULT_BINDING_POLICY:
+		errors.append(
+			"%s.bindingPolicy 必须为 bound_if_any_material_bound"
+			% label
+		)
 	if not RESULT_STATE_POLICIES.has(str(result.get("resultStatePolicy", ""))):
 		errors.append("%s.resultStatePolicy 无效" % label)
 	return result.duplicate(true)

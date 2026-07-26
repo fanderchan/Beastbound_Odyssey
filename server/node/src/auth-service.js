@@ -249,6 +249,10 @@ const {
   normalizePetSkillSlots,
 } = require("./auth/pet-skill-loadout");
 const {
+  validatePetSkillForget,
+  validatePetSkillSlotMutation,
+} = require("./auth/pet-fusion-skill-policy");
+const {
   createPetExpSettlement,
   publicPetExpSettlementFailure,
 } = require("./auth/pet-exp-settlement");
@@ -720,11 +724,20 @@ function createAuthService(options = {}) {
   const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
   const petGrowthCatalog = options.petGrowthCatalog || loadPetGrowthCatalog();
   const petPaidResetPolicyCatalog = options.petPaidResetPolicyCatalog || createPetPaidResetPolicyCatalog();
+  const petFusionRecipeCatalog = options.petFusionRecipeCatalog
+    || loadPetFusionRecipeCatalog();
+  const fusionTargetFormIds = petFusionSkillPolicyTargetFormIds({
+    petFusionRecipeCatalog,
+  });
+  const battleProjectionOptions = Object.freeze({
+    fusionTargetFormIds: new Set(fusionTargetFormIds),
+  });
   // P0.4 以严格目录启动，并在 actor 进入房间时一次性派生被动事实；缺档禁止静默退化。
   const battlePassiveCatalog = options.battlePassiveCatalog || loadBattlePassiveCatalog();
   const battleActorRules = options.battleActorRules || createBattleActorRules({
     passiveCatalog: battlePassiveCatalog,
     templateResolver: petTemplateForFormId,
+    fusionTargetFormIds,
   });
   const battleRandomAuthority = options.battleRandomAuthority || createBattleRandomAuthority();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
@@ -751,8 +764,6 @@ function createAuthService(options = {}) {
     paidResetCatalog: petPaidResetPolicyCatalog,
     encounterCatalog: petEncounterAuthority.catalog,
   });
-  const petFusionRecipeCatalog = options.petFusionRecipeCatalog
-    || loadPetFusionRecipeCatalog();
   const petFusionRandomAuthority = options.petFusionRandomAuthority
     || createPetFusionRandomAuthority({randomBytes});
   const petFusionTargetTemplateForFormId = options.petFusionTargetTemplateForFormId
@@ -1105,7 +1116,11 @@ function createAuthService(options = {}) {
     return {
       type: "party.update",
       targetAccountIds: refreshed.targetAccountIds,
-      party: refreshed.party ? publicParty(refreshed.party, data, {now, runtimeActiveSessionIds: activity}) : null,
+      party: refreshed.party ? publicParty(refreshed.party, data, {
+        now,
+        runtimeActiveSessionIds: activity,
+        ...battleProjectionOptions,
+      }) : null,
       partyId,
       removedAccountIds: refreshed.removedAccountIds,
     };
@@ -1361,7 +1376,11 @@ function createAuthService(options = {}) {
       emitServiceEvent({
         type: "party.update",
         targetAccountIds: partyRemoval.targetAccountIds,
-        party: partyRemoval.party ? publicParty(partyRemoval.party, data, {now, runtimeActiveSessionIds}) : null,
+        party: partyRemoval.party ? publicParty(partyRemoval.party, data, {
+          now,
+          runtimeActiveSessionIds,
+          ...battleProjectionOptions,
+        }) : null,
         partyId: partyRemoval.partyId,
         removedAccountIds: partyRemoval.removedAccountIds,
       });
@@ -2341,7 +2360,11 @@ function createAuthService(options = {}) {
     );
     return ok({
       players,
-      party: publicPartyForAccount(data, resolved.account.accountId, {now, runtimeActiveSessionIds}),
+      party: publicPartyForAccount(data, resolved.account.accountId, {
+        now,
+        runtimeActiveSessionIds,
+        ...battleProjectionOptions,
+      }),
       aoi: publicOnlineAoi(aoi),
     });
   }
@@ -2680,7 +2703,11 @@ function createAuthService(options = {}) {
     const response = {
       // 请求者必须始终拿到自己的精确权威格；地图/AOI 隐私只约束其他玩家看到的投影。
       position: publicOwnedPlayerPosition(position),
-      party: publicPartyForAccount(data, account.accountId, {now, runtimeActiveSessionIds}),
+      party: publicPartyForAccount(data, account.accountId, {
+        now,
+        runtimeActiveSessionIds,
+        ...battleProjectionOptions,
+      }),
       aoi: publicOnlineAoi(aoi),
       presenceRevision,
       authority: extra.authority || "client_snapshot",
@@ -5486,7 +5513,12 @@ function createAuthService(options = {}) {
     battleEquipmentCatalog,
     battleInviteIsExpired,
     battleBackpackEntryCheck,
-    battleParticipantSnapshot,
+    battleParticipantSnapshot: (serviceData, accountValue, side) => battleParticipantSnapshot(
+      serviceData,
+      accountValue,
+      side,
+      battleProjectionOptions,
+    ),
     battleRecordSummaryAgainst,
     battleRoomBattleStateForMutation: (roomValue, nowFn) => battleRoomBattleStateForMutation(
       roomValue,
@@ -5605,7 +5637,11 @@ function createAuthService(options = {}) {
     },
     resolveHangOrigin,
     partyForAccount,
-    partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {now, runtimeActiveSessionIds}),
+    partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {
+      now,
+      runtimeActiveSessionIds,
+      ...battleProjectionOptions,
+    }),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
     battleActorRules,
     battlePassiveCatalog,
@@ -5652,8 +5688,16 @@ function createAuthService(options = {}) {
     publicHangSession,
     publicIncomingPartyInvites,
     publicMail,
-    publicParty: (partyValue, serviceData) => publicParty(partyValue, serviceData, {now, runtimeActiveSessionIds}),
-    publicPartyForAccount: (serviceData, accountId) => publicPartyForAccount(serviceData, accountId, {now, runtimeActiveSessionIds}),
+    publicParty: (partyValue, serviceData) => publicParty(partyValue, serviceData, {
+      now,
+      runtimeActiveSessionIds,
+      ...battleProjectionOptions,
+    }),
+    publicPartyForAccount: (serviceData, accountId) => publicPartyForAccount(serviceData, accountId, {
+      now,
+      runtimeActiveSessionIds,
+      ...battleProjectionOptions,
+    }),
     publicPartyInvite,
     publicPlayerPosition,
     publicProfileActionResult,
@@ -7529,7 +7573,7 @@ function publicParty(party, data, options = {}) {
     if (!account) {
       continue;
     }
-    const participant = battleParticipantSnapshot(data, account, "ally");
+    const participant = battleParticipantSnapshot(data, account, "ally", options);
     members.push({
       accountId: account.accountId,
       username: account.username,
@@ -7881,13 +7925,13 @@ function publicBattleCommand(command) {
   };
 }
 
-function battleParticipantSnapshot(data, account, side) {
+function battleParticipantSnapshot(data, account, side, options = {}) {
   const summary = profileSummaryForAccount(account, data);
   const profileDoc = summary && summary.playerId ? data.profiles[summary.playerId] || null : null;
   const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" ? profileDoc.profile : {};
   const playerSnapshot = battlePlayerSnapshotFromProfile(profile, account);
-  const battlePets = battlePetSnapshotsFromProfile(profile).slice(0, BATTLE_PET_MAX_PER_PARTICIPANT);
-  const trainingPartners = trainingPartnerSnapshotsFromProfile(profile).slice(0, PARTY_MAX_MEMBERS - 1);
+  const battlePets = battlePetSnapshotsFromProfile(profile, options).slice(0, BATTLE_PET_MAX_PER_PARTICIPANT);
+  const trainingPartners = trainingPartnerSnapshotsFromProfile(profile, options).slice(0, PARTY_MAX_MEMBERS - 1);
   const position = data.playerPositions[account.accountId] || null;
   return {
     accountId: account.accountId,
@@ -9829,7 +9873,7 @@ function ridingPetSnapshotFromProfile(profile) {
   };
 }
 
-function battlePetSnapshotsFromProfile(profile) {
+function battlePetSnapshotsFromProfile(profile, options = {}) {
   const petInstances = Array.isArray(profile.petInstances) ? profile.petInstances : (Array.isArray(profile.pets) ? profile.pets : []);
   const activePetInstanceId = String(profile.activePetInstanceId || "").trim();
   const battlePets = petInstances
@@ -9842,12 +9886,12 @@ function battlePetSnapshotsFromProfile(profile) {
       return aActive - bActive || a.index - b.index;
     })
     .slice(0, BATTLE_PET_MAX_PER_PARTICIPANT)
-    .map((entry, index) => battlePetSnapshotFromProfilePet(entry.pet, activePetInstanceId, index))
+    .map((entry, index) => battlePetSnapshotFromProfilePet(entry.pet, activePetInstanceId, index, options))
     .filter((pet) => pet.petId !== "" && pet.hp > 0);
   return battlePets;
 }
 
-function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyIndex = 0) {
+function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyIndex = 0, options = {}) {
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
   const petId = String(pet.instanceId || pet.petId || pet.id || "").trim();
   const activeInBattle = petIsActiveBattlePet(pet, activePetInstanceId);
@@ -9870,27 +9914,27 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
-    passiveSkillIds: petPassiveSkillIdsForSource(pet),
-    ...battleFusionIdentityFields(pet),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(pet),
+    ...battleFusionIdentityFields(pet, options),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
   };
 }
 
-function trainingPartnerSnapshotsFromProfile(profile) {
+function trainingPartnerSnapshotsFromProfile(profile, options = {}) {
   const partners = profile && Array.isArray(profile.trainingPartners) ? profile.trainingPartners : [];
   return partners
-    .map((partner, index) => trainingPartnerSnapshotFromProfilePartner(partner, index))
+    .map((partner, index) => trainingPartnerSnapshotFromProfilePartner(partner, index, options))
     .filter((partner) => String(partner.partnerId || "").trim() !== "" && Number(partner.hp || 0) > 0);
 }
 
-function trainingPartnerSnapshotFromProfilePartner(partner, index = 0) {
+function trainingPartnerSnapshotFromProfilePartner(partner, index = 0, options = {}) {
   if (!partner || typeof partner !== "object" || Array.isArray(partner)) {
     return {};
   }
   const maxHp = positiveNumber(partner.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
   const pet = partner.pet && typeof partner.pet === "object" && !Array.isArray(partner.pet)
-    ? trainingPartnerPetSnapshotFromProfilePet(partner.pet, index)
+    ? trainingPartnerPetSnapshotFromProfilePet(partner.pet, index, options)
     : null;
   return {
     kind: BATTLE_ACTOR_KIND_PLAYER,
@@ -9907,7 +9951,7 @@ function trainingPartnerSnapshotFromProfilePartner(partner, index = 0) {
   };
 }
 
-function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
+function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0, options = {}) {
   const maxHp = positiveNumber(pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
   const activeSkillIds = petActiveSkillIdsForSource(pet);
   return {
@@ -9925,8 +9969,8 @@ function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0) {
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
-    passiveSkillIds: petPassiveSkillIdsForSource(pet),
-    ...battleFusionIdentityFields(pet),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(pet),
+    ...battleFusionIdentityFields(pet, options),
     schemaVersion: 1,
   };
 }
@@ -11126,7 +11170,7 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
-    passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(pet),
     ...battleFusionIdentityFields(pet),
     comboRateOverride: battleComboRateOverrideValue(pet.comboRateOverride),
     schemaVersion: 1,
@@ -11290,7 +11334,7 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
-    passiveSkillIds: petPassiveSkillIdsForSource(pet),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(pet),
     ...battleFusionIdentityFields(pet),
     schemaVersion: 1,
   };
@@ -11406,7 +11450,7 @@ function normalizedServerWildPetEntry(value) {
     ...(explicitExpReward > 0 ? {expReward: explicitExpReward} : {}),
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, value && value.petSkillSlots),
-    passiveSkillIds: petPassiveSkillIdsForSource({...value, formId}),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(value),
     ...battleFusionIdentityFields(value),
     comboRateOverride: battleComboRateOverrideValue(value && value.comboRateOverride),
     catchable: value && value.catchable === false ? false : capture.catchable !== false,
@@ -16901,38 +16945,44 @@ function petActiveSkillIdsForSource(source) {
   const configuredSkillIds = explicitSkillIds.length > 0 ? explicitSkillIds : templateSkillIds;
   const result = [];
   for (const skillId of [BATTLE_ACTION_PET_ATTACK, BATTLE_ACTION_PET_DEFEND, ...configuredSkillIds]) {
-    if (!forgotten.includes(skillId) && battlePetSkillActionById(skillId) && !result.includes(skillId)) {
+    const permanentBaseSkill = (
+      skillId === BATTLE_ACTION_PET_ATTACK
+      || skillId === BATTLE_ACTION_PET_DEFEND
+    );
+    if (
+      (permanentBaseSkill || !forgotten.includes(skillId))
+      && battlePetSkillActionById(skillId)
+      && !result.includes(skillId)
+    ) {
       result.push(skillId);
     }
   }
   return result;
 }
 
-function petPassiveSkillIdsForSource(source) {
-  if (petHasFusionIdentity(source)) {
-    return Array.isArray(source.passiveSkillIds)
-      ? source.passiveSkillIds.slice()
-      : [];
+function petInstancePassiveSkillIdsForBattleSource(source) {
+  return Array.isArray(source && source.passiveSkillIds)
+    ? source.passiveSkillIds.slice()
+    : [];
+}
+
+function petHasFusionIdentity(source, options = {}) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return false;
   }
-  const formId = String(source && (source.formId || source.templateId || source.speciesId) || "").trim();
-  const template = petTemplateForFormId(formId);
-  return uniqueStringArray([
-    ...uniqueStringArray(template.passiveSkillIds),
-    ...uniqueStringArray(source && source.passiveSkillIds),
-  ]);
+  if (Object.prototype.hasOwnProperty.call(source, "fusionLineage")) {
+    return true;
+  }
+  const targetFormIds = options.fusionTargetFormIds instanceof Set
+    ? options.fusionTargetFormIds
+    : new Set(Array.isArray(options.fusionTargetFormIds) ? options.fusionTargetFormIds : []);
+  return [source.formId, source.templateId, source.speciesId]
+    .map((value) => String(value || "").trim())
+    .some((formId) => formId !== "" && targetFormIds.has(formId));
 }
 
-function petHasFusionIdentity(source) {
-  return Boolean(
-    source
-    && typeof source === "object"
-    && !Array.isArray(source)
-    && Object.prototype.hasOwnProperty.call(source, "fusionLineage"),
-  );
-}
-
-function battleFusionIdentityFields(source) {
-  return petHasFusionIdentity(source)
+function battleFusionIdentityFields(source, options = {}) {
+  return petHasFusionIdentity(source, options)
     ? {fusionLineage: {mode: "fusion"}}
     : {};
 }
@@ -18458,11 +18508,11 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
     case "world_item_use":
       return applyWorldItemUseAction(profile, params, options);
     case "pet_skill_set_slot":
-      return applyPetSkillSetSlotAction(profile, params);
+      return applyPetSkillSetSlotAction(profile, params, options);
     case "pet_skill_move_slot":
       return applyPetSkillMoveSlotAction(profile, params);
     case "pet_skill_forget":
-      return applyPetSkillForgetAction(profile, params);
+      return applyPetSkillForgetAction(profile, params, options);
     case "pet_state_cycle":
       return applyPetStateCycleAction(profile, params);
     case "pet_stable_toggle":
@@ -19484,7 +19534,27 @@ function petSkillSlotsForPet(pet) {
   return petSkillSlotsForSkillIds(petActiveSkillIdsForSource(pet), pet && pet.petSkillSlots);
 }
 
-function applyPetSkillSetSlotAction(profile, params) {
+function petFusionSkillPolicyTargetFormIds(options = {}) {
+  const targetFormIds = new Set();
+  const fusionCatalog = options.petFusionRecipeCatalog;
+  for (const formIds of [
+    fusionCatalog && fusionCatalog.targetFormIds,
+    fusionCatalog && fusionCatalog.terminalTargetFormIds,
+  ]) {
+    const values = Array.isArray(formIds)
+      ? formIds
+      : formIds instanceof Set
+        ? Array.from(formIds)
+        : [];
+    for (const formIdValue of values) {
+      const formId = String(formIdValue || "").trim();
+      if (formId !== "") targetFormIds.add(formId);
+    }
+  }
+  return [...targetFormIds];
+}
+
+function applyPetSkillSetSlotAction(profile, params, options = {}) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const pet = profilePetByInstanceId(profile, petId);
   if (!pet) {
@@ -19507,6 +19577,15 @@ function applyPetSkillSetSlotAction(profile, params) {
   const previousSkillId = String(slots[slot - 1] || "");
   if (previousSkillId === skillId) {
     return {ok: true, message: `技${slot} 已经是${learningEmpty ? "空技能" : battleActionLabel(skillId, skillId)}。`, slot, instanceId: petId};
+  }
+  const slotPolicy = validatePetSkillSlotMutation({
+    pet,
+    previousSkillId,
+    nextSkillId: skillId,
+    fusionTargetFormIds: petFusionSkillPolicyTargetFormIds(options),
+  });
+  if (!slotPolicy.ok) {
+    return slotPolicy;
   }
   const learned = uniqueStringArray(pet.activeSkillIds);
   const alreadyLearned = !learningEmpty && learned.includes(skillId);
@@ -19571,18 +19650,31 @@ function applyPetSkillMoveSlotAction(profile, params) {
   return {ok: true, message: `${battleActionLabel(skillId, skillId)} 已移动到技${targetSlot}。`, slot: targetSlot, instanceId: petId};
 }
 
-function applyPetSkillForgetAction(profile, params) {
+function applyPetSkillForgetAction(profile, params, options = {}) {
   const petId = String(params.instanceId || params.petId || "").trim();
   const skillId = String(params.skillId || "").trim();
   if (!skillId) {
     return {ok: false, code: "pet_skill_empty", message: "请选择要遗忘的技能。"};
   }
-  if (skillId === BATTLE_ACTION_PET_ATTACK || skillId === BATTLE_ACTION_PET_DEFEND) {
-    return {ok: false, code: "pet_skill_base", message: "攻击和防御不能遗忘。"};
-  }
   const pet = profilePetByInstanceId(profile, petId);
   if (!pet) {
     return {ok: false, code: "pet_missing", message: "没有找到这只宠物。"};
+  }
+  if (!petActiveSkillIdsForSource(pet).includes(skillId)) {
+    return {
+      ok: false,
+      code: "pet_skill_not_learned",
+      message: `${profilePetName(pet)} 没有这个技能。`,
+    };
+  }
+  const forgetPolicy = validatePetSkillForget({
+    pet,
+    skillId,
+    acknowledgement: params.acknowledgement,
+    fusionTargetFormIds: petFusionSkillPolicyTargetFormIds(options),
+  });
+  if (!forgetPolicy.ok) {
+    return forgetPolicy;
   }
   pet.activeSkillIds = uniqueStringArray(pet.activeSkillIds).filter((value) => value !== skillId);
   pet.forgottenSkillIds = uniqueStringArray([...(Array.isArray(pet.forgottenSkillIds) ? pet.forgottenSkillIds : []), skillId]);

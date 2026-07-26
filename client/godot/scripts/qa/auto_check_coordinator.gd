@@ -72,6 +72,9 @@ const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth
 const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
 const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
 const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_screening_model.gd")
+const PetFusionSkillPolicyCheck := preload(
+	"res://scripts/progression/pet_fusion_skill_policy_check.gd"
+)
 const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
 const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
@@ -5515,6 +5518,49 @@ func _run_auto_balance_catalog_check() -> void:
 		and absf(float(attack_growth_range.get("min", 0.0)) + 0.12) <= 0.001
 		and absf(float(attack_growth_range.get("max", 0.0)) - 0.12) <= 0.001
 	)
+	var rebirth_reference_ids := (
+		BalanceCatalogModel.pet_rebirth_evaluation_reference_profile_ids()
+	)
+	var rebirth_reference := (
+		(
+			BalanceCatalogModel.pet_rebirth_balance().get(
+				"evaluation",
+				{}
+			) as Dictionary
+		).get("reference", {}) as Dictionary
+	)
+	var pet_rebirth_reference_ok := (
+		rebirth_reference_ids.size()
+			== int(rebirth_reference.get("profileCount", -1))
+		and rebirth_reference_ids.has("emberhorn_red_fire8_earth2_v1")
+		and not rebirth_reference_ids.has(
+			"wuli_evolved_crystal_earth8_water2_v1"
+		)
+		and not rebirth_reference_ids.has(
+			"driftfox_evolved_moon_gale_wind7_water3_v1"
+		)
+		and not rebirth_reference_ids.has(
+			"emberhorn_fusion_solar_crown_fire7_wind3_v1"
+		)
+		and not rebirth_reference_ids.has(
+			"emberhorn_fusion_moss_rampart_fire4_earth6_v1"
+		)
+	)
+	var terminal_fusion_form_ids := (
+		BalanceCatalogModel.terminal_fusion_form_ids()
+	)
+	var terminal_fusion_forms_ok := (
+		terminal_fusion_form_ids.size() == 2
+		and terminal_fusion_form_ids.has(
+			"emberhorn_fusion_solar_crown_fire7_wind3"
+		)
+		and terminal_fusion_form_ids.has(
+			"emberhorn_fusion_moss_rampart_fire4_earth6"
+		)
+		and not terminal_fusion_form_ids.has(
+			"wuli_evolved_crystal_earth8_water2"
+		)
+	)
 	var power_formula = BalanceCatalogModel.pet_power_formula()
 	var power_ok = (
 		str(power_formula.get("formula", "")) == "round(maxHp / 4 + attack + defense + quick)"
@@ -5536,13 +5582,16 @@ func _run_auto_balance_catalog_check() -> void:
 		BalanceCatalogModel.pet_rebirth_balance()
 	)
 	var evolution_ok := bool(evolution_contract.get("ok", false))
-	var status = "ok" if catalog_ok and level_ok and player_growth_ok and pet_growth_ok and power_ok and formula_ok and economy_ok and evolution_ok else "failed"
-	print("balance catalog check ready: status=%s catalog=%s level=%s player=%s pet=%s power=%s formula=%s economy=%s evolution=%s errors=%s" % [
+	var status = "ok" if catalog_ok and level_ok and player_growth_ok and pet_growth_ok and pet_rebirth_reference_ok and terminal_fusion_forms_ok and power_ok and formula_ok and economy_ok and evolution_ok else "failed"
+	print("balance catalog check ready: status=%s catalog=%s level=%s player=%s pet=%s rebirth_reference=%s rebirth_profiles=%d terminal_fusion_forms=%s power=%s formula=%s economy=%s evolution=%s errors=%s" % [
 		status,
 		str(catalog_ok),
 		str(level_ok),
 		str(player_growth_ok),
 		str(pet_growth_ok),
+		str(pet_rebirth_reference_ok),
+		rebirth_reference_ids.size(),
+		str(terminal_fusion_forms_ok),
 		str(power_ok),
 		str(formula_ok),
 		str(economy_ok),
@@ -5895,6 +5944,174 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and PetGrowthObservationModel.target_column_label(evolution_pet, 1) == "Lv140实绩"
 		and PetGrowthObservationModel.target_column_label(evolution_pet, 2) == "预测140"
 	)
+	var fusion_pet := server_pet.duplicate(true)
+	fusion_pet["fusionLineage"] = {
+		"schemaVersion": 1,
+		"mode": "fusion",
+		"recipeId": "qa_fusion_growth_v1",
+		"catalogId": "pet_fusion_recipes_v2",
+		"targetFormId": str(fusion_pet.get("formId", "")),
+		"terminalStage": 2,
+	}
+	var fusion_options := PetGrowthObservationModel.growth_stage_options(fusion_pet)
+	var fusion_stage_zero := PetGrowthObservationModel.evaluate_pet_for_stage(
+		fusion_pet,
+		0
+	)
+	var fusion_stage_one := PetGrowthObservationModel.evaluate_pet_for_stage(
+		fusion_pet,
+		1
+	)
+	var fusion_stage_two := PetGrowthObservationModel.evaluate_pet_for_stage(
+		fusion_pet,
+		2
+	)
+	var fusion_rows := PetGrowthObservationModel.attribute_table_rows_for_stage(
+		fusion_pet,
+		2,
+		140
+	)
+	var fusion_lines := "\n".join(
+		PetGrowthObservationModel.detail_lines_for_stage(fusion_pet, 2)
+	)
+	var damaged_fusion_pet := fusion_pet.duplicate(true)
+	damaged_fusion_pet["fusionLineage"] = {
+		"schemaVersion": 1,
+		"mode": "fusion ",
+		"terminalStage": 2,
+	}
+	var damaged_fusion_options := (
+		PetGrowthObservationModel.growth_stage_options(damaged_fusion_pet)
+	)
+	var damaged_fusion_rows := (
+		PetGrowthObservationModel.attribute_table_rows_for_stage(
+			damaged_fusion_pet,
+			2,
+			140
+		)
+	)
+	var target_only_fusion_pet := server_pet.duplicate(true)
+	target_only_fusion_pet["formId"] = (
+		"emberhorn_fusion_solar_crown_fire7_wind3"
+	)
+	target_only_fusion_pet["templateId"] = (
+		"emberhorn_fusion_solar_crown_fire7_wind3"
+	)
+	target_only_fusion_pet.erase("fusionLineage")
+	var target_only_fusion_options := (
+		PetGrowthObservationModel.growth_stage_options(
+			target_only_fusion_pet
+		)
+	)
+	var target_only_fusion_rows := (
+		PetGrowthObservationModel.attribute_table_rows_for_stage(
+			target_only_fusion_pet,
+			2,
+			140
+		)
+	)
+	var conflicting_form_fusion_pet := target_only_fusion_pet.duplicate(true)
+	conflicting_form_fusion_pet["formId"] = "emberhorn_red_fire8_earth2"
+	var expected_fusion_row_labels: Array[String] = [
+		"等级",
+		"生命",
+		"攻击",
+		"防御",
+		"敏捷",
+		"战力",
+	]
+	var fusion_rows_complete := fusion_rows.size() == expected_fusion_row_labels.size()
+	var damaged_fusion_rows_complete := (
+		damaged_fusion_rows.size() == expected_fusion_row_labels.size()
+	)
+	var target_only_fusion_rows_complete := (
+		target_only_fusion_rows.size() == expected_fusion_row_labels.size()
+	)
+	for index in range(expected_fusion_row_labels.size()):
+		if fusion_rows_complete:
+			var fusion_row := fusion_rows[index] as Dictionary
+			fusion_rows_complete = (
+				str(fusion_row.get("label", ""))
+					== expected_fusion_row_labels[index]
+				and fusion_row.has("initial")
+				and fusion_row.has("current")
+				and fusion_row.has("target")
+				and fusion_row.has("growth")
+				and fusion_row.has("grade")
+				and fusion_row.has("percentile")
+			)
+		if damaged_fusion_rows_complete:
+			var damaged_fusion_row := (
+				damaged_fusion_rows[index] as Dictionary
+			)
+			damaged_fusion_rows_complete = (
+				str(damaged_fusion_row.get("label", ""))
+					== expected_fusion_row_labels[index]
+				and damaged_fusion_row.has("initial")
+				and damaged_fusion_row.has("current")
+				and damaged_fusion_row.has("target")
+				and damaged_fusion_row.has("growth")
+				and damaged_fusion_row.has("grade")
+				and damaged_fusion_row.has("percentile")
+			)
+		if target_only_fusion_rows_complete:
+			var target_only_fusion_row := (
+				target_only_fusion_rows[index] as Dictionary
+			)
+			target_only_fusion_rows_complete = (
+				str(target_only_fusion_row.get("label", ""))
+					== expected_fusion_row_labels[index]
+				and target_only_fusion_row.has("initial")
+				and target_only_fusion_row.has("current")
+				and target_only_fusion_row.has("target")
+				and target_only_fusion_row.has("growth")
+				and target_only_fusion_row.has("grade")
+				and target_only_fusion_row.has("percentile")
+			)
+	var fusion_contract_ok := (
+		PetGrowthObservationModel.is_fusion_pet(fusion_pet)
+		and fusion_options.size() == 3
+		and not bool((fusion_options[0] as Dictionary).get("enabled", true))
+		and not bool((fusion_options[1] as Dictionary).get("enabled", true))
+		and bool((fusion_options[2] as Dictionary).get("enabled", false))
+		and str((fusion_options[2] as Dictionary).get("label", ""))
+			== "2转/进化/融合"
+		and not bool(fusion_stage_zero.get("enabled", true))
+		and not bool(fusion_stage_one.get("enabled", true))
+		and bool(fusion_stage_two.get("enabled", false))
+		and bool(fusion_stage_two.get("fusionCurrent", false))
+		and str(fusion_stage_two.get("stageLabel", "")) == "融合成长"
+		and fusion_rows_complete
+		and JSON.stringify(damaged_fusion_rows) == JSON.stringify(fusion_rows)
+		and JSON.stringify(target_only_fusion_rows) == JSON.stringify(fusion_rows)
+		and fusion_lines.contains("融合成长评价")
+		and fusion_lines.contains("三只材料宠")
+		and PetGrowthObservationModel.is_fusion_pet(damaged_fusion_pet)
+		and damaged_fusion_rows_complete
+		and not bool(
+			(damaged_fusion_options[0] as Dictionary).get("enabled", true)
+		)
+		and bool(
+			(damaged_fusion_options[2] as Dictionary).get("enabled", false)
+		)
+		and PetGrowthObservationModel.is_fusion_pet(target_only_fusion_pet)
+		and target_only_fusion_rows_complete
+		and not bool(
+			(target_only_fusion_options[0] as Dictionary).get(
+				"enabled",
+				true
+			)
+		)
+		and bool(
+			(target_only_fusion_options[2] as Dictionary).get(
+				"enabled",
+				false
+			)
+		)
+		and PetGrowthObservationModel.is_fusion_pet(
+			conflicting_form_fusion_pet
+		)
+	)
 	var evolution_profile := PlayerProgressModel.default_profile()
 	evolution_profile["petInstances"] = [evolution_pet]
 	evolution_profile["activePetInstanceId"] = str(evolution_pet.get("instanceId", ""))
@@ -5930,6 +6147,63 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and str(evolution_ui_snapshot.get("levelOneRadarTitle", "")).contains("进化前 Lv1 4V分位")
 		and str(evolution_ui_snapshot.get("growthRadarTitle", "")) == "进化前1转成长分位"
 	)
+	var fusion_profile := PlayerProgressModel.default_profile()
+	fusion_profile["petInstances"] = [fusion_pet]
+	fusion_profile["activePetInstanceId"] = str(
+		fusion_pet.get("instanceId", "")
+	)
+	host.player_profile = PlayerProgressModel.normalize_profile(fusion_profile)
+	host.pet_selected_instance_id = str(fusion_pet.get("instanceId", ""))
+	host.pet_growth_stage = 0
+	host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
+	host._refresh_pet_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var fusion_ui_text: String = (
+		host.pet_detail_label.text if host.pet_detail_label != null else ""
+	)
+	var fusion_ui_snapshot: Dictionary = (
+		host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	)
+	var fusion_table_text := ""
+	if host.pet_growth_table_grid != null:
+		for child in host.pet_growth_table_grid.get_children():
+			if child is Label:
+				fusion_table_text += " " + (child as Label).text
+	var fusion_stage_zero_button: Variant = (
+		host.pet_growth_stage_buttons.get(0, null)
+	)
+	var fusion_stage_one_button: Variant = (
+		host.pet_growth_stage_buttons.get(1, null)
+	)
+	var fusion_stage_two_button: Variant = (
+		host.pet_growth_stage_buttons.get(2, null)
+	)
+	var fusion_ui_ok: bool = (
+		host.pet_growth_stage == 2
+		and fusion_stage_zero_button is Button
+		and (fusion_stage_zero_button as Button).disabled
+		and not (fusion_stage_zero_button as Button).button_pressed
+		and fusion_stage_one_button is Button
+		and (fusion_stage_one_button as Button).disabled
+		and not (fusion_stage_one_button as Button).button_pressed
+		and fusion_stage_two_button is Button
+		and not (fusion_stage_two_button as Button).disabled
+		and (fusion_stage_two_button as Button).button_pressed
+		and (fusion_stage_two_button as Button).text == "2转/进化/融合"
+		and fusion_ui_text.contains("融合成长评价")
+		and fusion_ui_text.contains("三只材料宠")
+		and str(fusion_ui_snapshot.get("growthRadarTitle", ""))
+			== "融合成长分位"
+		and not bool(fusion_ui_snapshot.get("visible", true))
+		and fusion_table_text.contains("预测140")
+	)
+	host.player_profile = PlayerProgressModel.normalize_profile(evolution_profile)
+	host.pet_selected_instance_id = str(evolution_pet.get("instanceId", ""))
+	host.pet_growth_stage = 1
+	host._refresh_pet_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
 	var screening_contract := PetGrowthScreeningModel.contract_check()
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
@@ -5955,10 +6229,12 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and terminal_ui_ok
 		and evolution_contract_ok
 		and evolution_ui_ok
-		and bool(screening_contract.get("ok", false))
+		and fusion_contract_ok
+		and fusion_ui_ok
+			and bool(screening_contract.get("ok", false))
 		and screenshot_ok
 	) else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s evolution=%s evolution_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s history_stage=%s history_form=%s history_power=%d row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s evolution=%s evolution_ui=%s fusion=%s fusion_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s history_stage=%s history_form=%s history_power=%d row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
@@ -5968,6 +6244,8 @@ func _run_auto_pet_growth_observation_check() -> void:
 		str(terminal_ui_ok),
 		str(evolution_contract_ok),
 		str(evolution_ui_ok),
+		str(fusion_contract_ok),
+		str(fusion_ui_ok),
 		str(table_ok),
 		str(stage_tabs_ok),
 		str(host.pet_panel != null and host.pet_panel.visible),
@@ -27418,6 +27696,16 @@ func _run_auto_pet_instance_passive_check() -> void:
 		str(contract_ok),
 	])
 	host.get_tree().quit(0 if contract_ok else 1)
+
+
+func _run_auto_pet_fusion_skill_policy_check() -> void:
+	var result := PetFusionSkillPolicyCheck.run()
+	print("pet fusion skill policy check ready: status=%s cases=%d errors=%s" % [
+		"ok" if bool(result.get("ok", false)) else "failed",
+		int(result.get("cases", 0)),
+		str(result.get("errors", [])),
+	])
+	host.get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
 
 func _run_auto_pet_template_catalog_check() -> void:

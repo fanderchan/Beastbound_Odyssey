@@ -239,8 +239,8 @@ function testFusionDocuments() {
   ));
   return {
     document: {
-      schemaVersion: 1,
-      catalogId: "pet_fusion_recipes_v1",
+      schemaVersion: 2,
+      catalogId: "pet_fusion_recipes_v2",
       runtimeEnabled: false,
       disabledMessage: "测试目录保持关闭。",
       rules: {
@@ -259,6 +259,12 @@ function testFusionDocuments() {
         resultPassiveSkillCount: 1,
         materialNumericInheritance: false,
         resultRideable: false,
+        additionalCostPolicy: "materials_only",
+        resultBindingPolicy: "bound_if_any_material_bound",
+        unboundResultTradePolicy: "eligible_when_pet_trading_available",
+        baseActiveSkillForgetPolicy: "forbidden",
+        inheritedSpecialActiveForgetPolicy: "double_confirm_irreversible",
+        postFusionTrainingPolicy: "empty_slots_only",
       },
       geneProfiles: GENE_PROFILES.map((profile) => ({...profile})),
       recipes: [{

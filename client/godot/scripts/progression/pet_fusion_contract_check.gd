@@ -123,6 +123,30 @@ func _initialize() -> void:
 		"融合目录额外字段没有失败关闭",
 		errors
 	)
+	var invalid_rule_values := {
+		"additionalCostPolicy": "stone_coin_fee",
+		"resultBindingPolicy": "always_bound",
+		"unboundResultTradePolicy": "always_tradeable",
+		"baseActiveSkillForgetPolicy": "allowed",
+		"inheritedSpecialActiveForgetPolicy": "single_confirm",
+		"postFusionTrainingPolicy": "overwrite_allowed",
+	}
+	for raw_rule_key in invalid_rule_values:
+		var rule_key := str(raw_rule_key)
+		var invalid_rules_catalog := production_catalog.duplicate(true)
+		var invalid_rules := (
+			invalid_rules_catalog.get("rules", {}) as Dictionary
+		).duplicate(true)
+		invalid_rules[rule_key] = invalid_rule_values.get(rule_key)
+		invalid_rules_catalog["rules"] = invalid_rules
+		_expect(
+			not _catalog_errors(
+				invalid_rules_catalog,
+				production_dependencies
+			).is_empty(),
+			"融合目录错误策略没有失败关闭：%s" % rule_key,
+			errors
+		)
 
 	var fixture := _enabled_fixture()
 	var fixture_catalog := fixture.get("catalog", {}) as Dictionary
@@ -291,6 +315,25 @@ func _initialize() -> void:
 		"第一版可骑乘融合目标没有失败关闭",
 		errors
 	)
+	var mismatched_binding_catalog := fixture_catalog.duplicate(true)
+	var mismatched_binding_recipes := (
+		mismatched_binding_catalog.get("recipes", []) as Array
+	)
+	var mismatched_binding_recipe := (
+		mismatched_binding_recipes[0] as Dictionary
+	)
+	var mismatched_binding_recipe_result := (
+		mismatched_binding_recipe.get("result", {}) as Dictionary
+	)
+	mismatched_binding_recipe_result["bindingPolicy"] = "always_bound"
+	_expect(
+		not _catalog_errors(
+			mismatched_binding_catalog,
+			fixture_dependencies
+		).is_empty(),
+		"配方绑定策略与全局规则不一致仍通过目录门禁",
+		errors
+	)
 	var recursive_target_catalog := fixture_catalog.duplicate(true)
 	(recursive_target_catalog.get("geneProfiles", []) as Array).append({
 		"geneProfileId": "gene_fusion_target_forbidden_v1",
@@ -312,6 +355,24 @@ func _initialize() -> void:
 		"resonance_one": "pet_resonance_one_2",
 		"resonance_two": "pet_resonance_two_3",
 	}
+	var invalid_request_catalog := fixture_catalog.duplicate(true)
+	var invalid_request_rules := (
+		invalid_request_catalog.get("rules", {}) as Dictionary
+	).duplicate(true)
+	invalid_request_rules["additionalCostPolicy"] = "stone_coin_fee"
+	invalid_request_catalog["rules"] = invalid_request_rules
+	_expect(
+		not PetFusionRecipeCatalogModel.runtime_available(
+			invalid_request_catalog
+		)
+		and PetFusionClientModel.request_payload(
+			"fusion_recipe_fixture_v1",
+			material_ids,
+			invalid_request_catalog
+		).is_empty(),
+		"错误全局策略仍被当作可用运行目录构造融合请求",
+		errors
+	)
 	var quote_spec := ServerAuthClientModel.pet_fusion_quote_request(
 		"http://127.0.0.1:8787/",
 		"session_fixture",
@@ -423,6 +484,52 @@ func _initialize() -> void:
 		"合法融合报价没有通过严格响应解析",
 		errors
 	)
+	var bound_quote := quote.duplicate(true)
+	var bound_quote_result := (
+		bound_quote.get("result", {}) as Dictionary
+	).duplicate(true)
+	bound_quote_result["resultBinding"] = "bound"
+	bound_quote_result["tradeEligibility"] = "not_eligible"
+	bound_quote["result"] = bound_quote_result
+	_expect(
+		not PetFusionClientModel.normalized_quote(
+			bound_quote,
+			fixture_catalog
+		).is_empty(),
+		"绑定材料推导的绑定成品报价没有通过严格响应解析",
+		errors
+	)
+	var fee_quote := quote.duplicate(true)
+	var fee_quote_result := (
+		fee_quote.get("result", {}) as Dictionary
+	).duplicate(true)
+	fee_quote_result["additionalCostPolicy"] = "stone_coin_fee"
+	fee_quote["result"] = fee_quote_result
+	_expect(
+		PetFusionClientModel.normalized_quote(
+			fee_quote,
+			fixture_catalog
+		).is_empty(),
+		"带额外费用的融合报价没有失败关闭",
+		errors
+	)
+	var mismatched_trade_quote := quote.duplicate(true)
+	var mismatched_trade_quote_result := (
+		mismatched_trade_quote.get("result", {}) as Dictionary
+	).duplicate(true)
+	mismatched_trade_quote_result["resultBinding"] = "bound"
+	mismatched_trade_quote_result["tradeEligibility"] = (
+		"eligible_when_pet_trading_available"
+	)
+	mismatched_trade_quote["result"] = mismatched_trade_quote_result
+	_expect(
+		PetFusionClientModel.normalized_quote(
+			mismatched_trade_quote,
+			fixture_catalog
+		).is_empty(),
+		"绑定成品错误获得交易资格仍通过报价解析",
+		errors
+	)
 	var malformed_quote := quote.duplicate(true)
 	malformed_quote["privateSeed"] = "must_not_leak"
 	var parsed_malformed_quote := ServerAuthClientModel.parse_pet_fusion_quote_response(
@@ -470,8 +577,60 @@ func _initialize() -> void:
 				true
 			) == false
 			and (parsed_result.get("petFusion", {}) as Dictionary).get("rideable", true)
-				== false,
+				== false
+			and str(
+				(parsed_result.get("petFusion", {}) as Dictionary).get(
+					"additionalCostPolicy",
+					""
+				)
+			) == "materials_only"
+			and str(
+				(parsed_result.get("petFusion", {}) as Dictionary).get(
+					"resultBinding",
+					""
+				)
+			) == "unbound"
+			and str(
+				(parsed_result.get("petFusion", {}) as Dictionary).get(
+					"tradeEligibility",
+					""
+				)
+			) == "eligible_when_pet_trading_available",
 		"合法融合结果没有通过严格响应解析",
+		errors
+	)
+	var mismatched_trade_result := fusion_result.duplicate(true)
+	mismatched_trade_result["resultBinding"] = "bound"
+	mismatched_trade_result["tradeEligibility"] = (
+		"eligible_when_pet_trading_available"
+	)
+	_expect(
+		PetFusionClientModel.normalized_fusion_result(
+			mismatched_trade_result,
+			fixture_catalog
+		).is_empty(),
+		"绑定成品错误获得交易资格仍通过完成结果解析",
+		errors
+	)
+	var bound_fusion_result := fusion_result.duplicate(true)
+	bound_fusion_result["resultBinding"] = "bound"
+	bound_fusion_result["tradeEligibility"] = "not_eligible"
+	_expect(
+		not PetFusionClientModel.normalized_fusion_result(
+			bound_fusion_result,
+			fixture_catalog
+		).is_empty(),
+		"合法绑定融合完成结果没有通过严格解析",
+		errors
+	)
+	var fee_fusion_result := fusion_result.duplicate(true)
+	fee_fusion_result["additionalCostPolicy"] = "stone_coin_fee"
+	_expect(
+		PetFusionClientModel.normalized_fusion_result(
+			fee_fusion_result,
+			fixture_catalog
+		).is_empty(),
+		"带额外费用的融合完成结果没有失败关闭",
 		errors
 	)
 	var private_result := fusion_result.duplicate(true)
@@ -540,6 +699,28 @@ func _initialize() -> void:
 			"mutationDurable": not mutation_spec.is_empty(),
 			"quoteResponseStrict": bool(parsed_quote.get("ok", false)),
 			"mutationResponseStrict": bool(parsed_result.get("ok", false)),
+			"commercialPoliciesStrict": (
+				not PetFusionClientModel.normalized_quote(
+					bound_quote,
+					fixture_catalog
+				).is_empty()
+				and PetFusionClientModel.normalized_quote(
+					fee_quote,
+					fixture_catalog
+				).is_empty()
+				and PetFusionClientModel.normalized_fusion_result(
+					mismatched_trade_result,
+					fixture_catalog
+				).is_empty()
+				and not PetFusionClientModel.normalized_fusion_result(
+					bound_fusion_result,
+					fixture_catalog
+				).is_empty()
+				and PetFusionClientModel.normalized_fusion_result(
+					fee_fusion_result,
+					fixture_catalog
+				).is_empty()
+			),
 			"ordinaryTrainingActiveRejected": PetFusionClientModel.normalized_fusion_result(
 				ordinary_active_result,
 				fixture_catalog
@@ -571,7 +752,7 @@ static func _production_dependencies() -> Dictionary:
 
 static func _enabled_fixture() -> Dictionary:
 	var catalog := {
-		"schemaVersion": 1,
+		"schemaVersion": PetFusionRecipeCatalogModel.CATALOG_SCHEMA_VERSION,
 		"catalogId": PetFusionRecipeCatalogModel.CATALOG_ID,
 		"runtimeEnabled": true,
 		"disabledMessage": "夹具目录不可用。",
@@ -591,6 +772,12 @@ static func _enabled_fixture() -> Dictionary:
 			"resultPassiveSkillCount": 1,
 			"materialNumericInheritance": false,
 			"resultRideable": false,
+			"additionalCostPolicy": "materials_only",
+			"resultBindingPolicy": "bound_if_any_material_bound",
+			"unboundResultTradePolicy": "eligible_when_pet_trading_available",
+			"baseActiveSkillForgetPolicy": "forbidden",
+			"inheritedSpecialActiveForgetPolicy": "double_confirm_irreversible",
+			"postFusionTrainingPolicy": "empty_slots_only",
 		},
 		"geneProfiles": [
 			{
@@ -774,6 +961,9 @@ static func _quote_fixture() -> Dictionary:
 			"numericSource": "target_profile_only_v1",
 			"materialNumericInheritance": false,
 			"rideable": false,
+			"additionalCostPolicy": "materials_only",
+			"resultBinding": "unbound",
+			"tradeEligibility": "eligible_when_pet_trading_available",
 		},
 	}
 
@@ -819,6 +1009,9 @@ static func _fusion_result_fixture() -> Dictionary:
 		"numericSource": "target_profile_only_v1",
 		"materialNumericInheritance": false,
 		"rideable": false,
+		"additionalCostPolicy": "materials_only",
+		"resultBinding": "unbound",
+		"tradeEligibility": "eligible_when_pet_trading_available",
 		"message": "融合目标宠融合完成；三只材料宠已消耗，成品技能与独立成长已生成。",
 	}
 

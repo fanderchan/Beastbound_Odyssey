@@ -10,12 +10,13 @@ const {
   loadPetRebirthBalance,
   petRebirthPoolInfo,
 } = require("../server/node/src/auth/pet-rebirth-balance");
-const {
-  loadPetEvolutionRouteCatalog,
-} = require("../server/node/src/auth/pet-evolution-route-catalog");
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROFILE_PATH = path.join(ROOT, "client/godot/data/balance/pet_growth_species_profiles.json");
+const PAID_RESET_POLICY_PATH = path.join(
+  ROOT,
+  "client/godot/data/balance/pet_paid_reset_policy.json",
+);
 const REPORT_PATH = path.join(ROOT, ".run/pet_rebirth_evaluation_audit.json");
 const STAT_KEYS = Object.freeze(["maxHp", "attack", "defense", "quick"]);
 const THRESHOLD_KEYS = Object.freeze(["min", "p25", "p55", "p85", "p95", "max"]);
@@ -24,6 +25,7 @@ const DEFAULT_REFERENCE_LEVEL = 140;
 const DEFAULT_STONE_POINTS = 50;
 const DEFAULT_SAMPLE_COUNT = 10000;
 const STAGE_TWO_PERMUTATION = 7919;
+const TERMINAL_RESET_REASONS = new Set(["terminal_evolution", "terminal_fusion"]);
 
 function argumentValue(flag, fallback) {
   const index = process.argv.indexOf(flag);
@@ -173,16 +175,23 @@ const sampleCount = Math.max(
 const stonePoints = Object.freeze(Object.fromEntries(STAT_KEYS.map((key) => [key, stonePointsPerStat])));
 
 const profileDocument = JSON.parse(fs.readFileSync(PROFILE_PATH, "utf8"));
+const paidResetDocument = JSON.parse(fs.readFileSync(PAID_RESET_POLICY_PATH, "utf8"));
 const allProfiles = Array.isArray(profileDocument.profiles) ? profileDocument.profiles : [];
-const evolutionRouteCatalog = loadPetEvolutionRouteCatalog();
-const terminalEvolutionProfileIds = new Set(evolutionRouteCatalog.routes
-  .filter((route) => route.result.normalSecondRebirthAllowed === false)
-  .map((route) => route.targetGrowthProfileId));
+const terminalFormIds = new Set(
+  (Array.isArray(paidResetDocument.formPolicies) ? paidResetDocument.formPolicies : [])
+    .filter((policy) => (
+      policy
+      && policy.resetAllowed === false
+      && TERMINAL_RESET_REASONS.has(String(policy.ineligibleReason || ""))
+    ))
+    .map((policy) => String(policy.formId || ""))
+    .filter(Boolean),
+);
 const ordinaryProfiles = allProfiles.filter((profile) => (
   profile
   && typeof profile.profileId === "string"
   && !profile.profileId.startsWith("pet_rebirth_mm_")
-  && !terminalEvolutionProfileIds.has(profile.profileId)
+  && !terminalFormIds.has(String(profile.formId || ""))
   && profile.outputGrowth
 ));
 const helpers = Object.fromEntries([1, 2].map((stage) => [

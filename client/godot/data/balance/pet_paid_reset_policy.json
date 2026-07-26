@@ -96,6 +96,8 @@
     {"formId": "emberhorn_red_fire8_earth2", "acquisitionTier": "common_wild", "resetAllowed": true, "priceTierId": "stone_standard"},
     {"formId": "emberhorn_ash_fire6_wind4", "acquisitionTier": "rare_wild", "resetAllowed": true, "priceTierId": "stone_rare"},
     {"formId": "emberhorn_gale_fire5_wind5", "acquisitionTier": "rare_wild", "resetAllowed": true, "priceTierId": "stone_rare"},
+    {"formId": "emberhorn_fusion_solar_crown_fire7_wind3", "acquisitionTier": "fusion", "resetAllowed": false, "ineligibleReason": "terminal_fusion"},
+    {"formId": "emberhorn_fusion_moss_rampart_fire4_earth6", "acquisitionTier": "fusion", "resetAllowed": false, "ineligibleReason": "terminal_fusion"},
     {"formId": "tidefin_mist_water8_wind2", "acquisitionTier": "common_wild", "resetAllowed": true, "priceTierId": "stone_standard"},
     {"formId": "tidefin_sky_water5_wind5", "acquisitionTier": "rare_wild", "resetAllowed": true, "priceTierId": "stone_rare"},
     {"formId": "tidefin_reed_water6_earth4", "acquisitionTier": "common_wild", "resetAllowed": true, "priceTierId": "stone_standard"},

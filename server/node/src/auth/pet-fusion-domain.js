@@ -375,6 +375,10 @@ function createPetFusionDomain(ctx) {
     const targetTemplate = petFusionTargetTemplateForFormId(
       prepared.recipe.targetFormId,
     );
+    const resultBinding = resultPetBinding(
+      prepared,
+      prepared.recipe.result.bindingPolicy,
+    );
     return {
       schemaVersion: PET_FUSION_SCHEMA_VERSION,
       catalogId: String(petFusionRecipeCatalog.catalogId || ""),
@@ -423,6 +427,10 @@ function createPetFusionDomain(ctx) {
         numericSource: prepared.recipe.result.numericSource,
         materialNumericInheritance: false,
         rideable: false,
+        additionalCostPolicy:
+          petFusionRecipeCatalog.rules.additionalCostPolicy,
+        resultBinding,
+        tradeEligibility: resultTradeEligibility(resultBinding),
       },
     };
   }
@@ -467,6 +475,12 @@ function createPetFusionDomain(ctx) {
     }
     const state = resultPetState(profile, prepared, blueprint.resultStatePolicy);
     const binding = resultPetBinding(prepared, blueprint.bindingPolicy);
+    if (binding !== "bound" && binding !== "unbound") {
+      return failure(
+        "pet_fusion_result_invalid",
+        "融合绑定规则异常，本次操作未执行。",
+      );
+    }
     const targetName = String(targetTemplate.formName || "融合宠物");
     const candidate = fusionTargetCandidate({
       binding,
@@ -566,6 +580,9 @@ function createPetFusionDomain(ctx) {
       || pet.activeSkillIds[0] !== "pet_attack"
       || pet.activeSkillIds[1] !== "pet_defend"
       || pet.passiveSkillIds.length !== 1
+      || String(pet.binding || "") !== binding
+      || pet.bound !== (binding === "bound")
+      || pet.bindingLocked !== false
       || String(pet.petGrowth && pet.petGrowth.profileId || "")
         !== prepared.recipe.targetGrowthProfileId
       || sourcePrivateSeeds.has(String(
@@ -629,8 +646,17 @@ function createPetFusionDomain(ctx) {
   }
 
   function resultPetBinding(prepared, policy) {
-    if (policy === "always_bound") return "bound";
-    if (policy !== "bound_if_any_material_bound") return "unbound";
+    if (
+      policy !== "bound_if_any_material_bound"
+      || policy !== String(
+        petFusionRecipeCatalog
+        && petFusionRecipeCatalog.rules
+        && petFusionRecipeCatalog.rules.resultBindingPolicy
+        || "",
+      )
+    ) {
+      return "";
+    }
     return PET_FUSION_ROLE_IDS.some((roleId) => {
       const pet = prepared.materialsByRole[roleId];
       return String(pet.binding || "") === "bound"
@@ -639,12 +665,21 @@ function createPetFusionDomain(ctx) {
     }) ? "bound" : "unbound";
   }
 
+  function resultTradeEligibility(resultBinding) {
+    return resultBinding === "unbound"
+      ? String(petFusionRecipeCatalog.rules.unboundResultTradePolicy || "")
+      : "not_eligible";
+  }
+
   function publicFusionResult(prepared, resolvedFusion, pet) {
     const targetName = String(
       pet.formName
       || pet.name
       || prepared.recipe.targetFormId,
     );
+    const resultBinding = String(pet.binding || "") === "bound"
+      ? "bound"
+      : "unbound";
     return {
       schemaVersion: PET_FUSION_SCHEMA_VERSION,
       catalogId: String(petFusionRecipeCatalog.catalogId || ""),
@@ -678,6 +713,10 @@ function createPetFusionDomain(ctx) {
       numericSource: prepared.recipe.result.numericSource,
       materialNumericInheritance: false,
       rideable: false,
+      additionalCostPolicy:
+        petFusionRecipeCatalog.rules.additionalCostPolicy,
+      resultBinding,
+      tradeEligibility: resultTradeEligibility(resultBinding),
       message: `${targetName}融合完成；三只材料宠已消耗，成品技能与独立成长已生成。`,
     };
   }

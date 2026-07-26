@@ -4,6 +4,8 @@ const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_
 
 static var _evolution_target_form_ids: Dictionary = {}
 static var _evolution_targets_loaded := false
+static var _fusion_target_form_ids: Dictionary = {}
+static var _fusion_targets_loaded := false
 
 
 static func is_terminal(instance: Dictionary) -> bool:
@@ -12,7 +14,7 @@ static func is_terminal(instance: Dictionary) -> bool:
 		return true
 	return (
 		is_evolution_terminal(instance)
-		or instance.has("fusionLineage")
+		or is_fusion_terminal(instance)
 		or instance.has("terminalPathId")
 	)
 
@@ -30,9 +32,30 @@ static func is_evolution_terminal(instance: Dictionary) -> bool:
 	return false
 
 
+static func is_fusion_terminal(instance: Dictionary) -> bool:
+	# A target form remains terminal even if an old or damaged save is missing
+	# the lineage payload. The balance catalog owns this fail-closed form list.
+	if instance.has("fusionLineage"):
+		return true
+	var target_form_ids := _fusion_target_form_id_set()
+	for key in ["formId", "templateId", "speciesId"]:
+		var form_id := str(instance.get(key, "")).strip_edges()
+		if form_id != "" and target_form_ids.has(form_id):
+			return true
+	return false
+
+
 static func evolution_target_form_ids() -> Array[String]:
 	var result: Array[String] = []
 	for value in _evolution_target_form_id_set().keys():
+		result.append(str(value))
+	result.sort()
+	return result
+
+
+static func fusion_target_form_ids() -> Array[String]:
+	var result: Array[String] = []
+	for value in _fusion_target_form_id_set().keys():
 		result.append(str(value))
 	result.sort()
 	return result
@@ -53,3 +76,14 @@ static func _evolution_target_form_id_set() -> Dictionary:
 		if target_form_id != "":
 			_evolution_target_form_ids[target_form_id] = true
 	return _evolution_target_form_ids
+
+
+static func _fusion_target_form_id_set() -> Dictionary:
+	if _fusion_targets_loaded:
+		return _fusion_target_form_ids
+	_fusion_targets_loaded = true
+	for value in BalanceCatalogModel.terminal_fusion_form_ids():
+		var target_form_id := str(value).strip_edges()
+		if target_form_id != "":
+			_fusion_target_form_ids[target_form_id] = true
+	return _fusion_target_form_ids

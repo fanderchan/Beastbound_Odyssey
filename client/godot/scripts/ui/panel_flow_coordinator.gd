@@ -24560,6 +24560,10 @@ func _sync_pet_growth_stage_tabs(instance: Dictionary) -> void:
 			enabled_stages[int(entry.get("stage", 0))] = true
 	if not enabled_stages.has(pet_growth_stage):
 		pet_growth_stage = 0
+		for entry in options:
+			if bool(entry.get("enabled", false)):
+				pet_growth_stage = int(entry.get("stage", 0))
+				break
 	for entry in options:
 		var stage = int(entry.get("stage", 0))
 		var button = pet_growth_stage_buttons.get(stage, null)
@@ -25087,6 +25091,8 @@ func _refresh_pet_panel() -> void:
 						_pet_growth_radar_title.text = "进化前%d转成长分位" % pet_growth_stage
 					elif PetGrowthObservationModel.is_evolution_pet(selected) and pet_growth_stage == 2:
 						_pet_growth_radar_title.text = "进化后二代成长分位"
+					elif PetGrowthObservationModel.is_fusion_pet(selected) and pet_growth_stage == 2:
+						_pet_growth_radar_title.text = "融合成长分位"
 					elif pet_growth_stage == 0:
 						_pet_growth_radar_title.text = "实测成长分位"
 					else:

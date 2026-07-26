@@ -26,7 +26,7 @@ const {
 test("production fusion catalog stages approved bloodline genes while recipes stay closed", () => {
   const catalog = loadPetFusionRecipeCatalog();
 
-  assert.equal(catalog.schemaVersion, 1);
+  assert.equal(catalog.schemaVersion, 2);
   assert.equal(catalog.catalogId, PET_FUSION_CATALOG_ID);
   assert.equal(catalog.runtimeEnabled, false);
   assert.deepEqual(catalog.rules.roleIds, PET_FUSION_ROLE_IDS);
@@ -40,6 +40,21 @@ test("production fusion catalog stages approved bloodline genes while recipes st
   });
   assert.equal(catalog.rules.materialNumericInheritance, false);
   assert.equal(catalog.rules.resultRideable, false);
+  assert.equal(catalog.rules.additionalCostPolicy, "materials_only");
+  assert.equal(
+    catalog.rules.resultBindingPolicy,
+    "bound_if_any_material_bound",
+  );
+  assert.equal(
+    catalog.rules.unboundResultTradePolicy,
+    "eligible_when_pet_trading_available",
+  );
+  assert.equal(catalog.rules.baseActiveSkillForgetPolicy, "forbidden");
+  assert.equal(
+    catalog.rules.inheritedSpecialActiveForgetPolicy,
+    "double_confirm_irreversible",
+  );
+  assert.equal(catalog.rules.postFusionTrainingPolicy, "empty_slots_only");
   assert.deepEqual(
     catalog.geneProfiles.map((profile) => ({
       geneProfileId: profile.geneProfileId,
@@ -86,9 +101,14 @@ test("production fusion catalog stages approved bloodline genes while recipes st
   );
   assert.deepEqual(catalog.recipes, []);
   assert.deepEqual(catalog.targetFormIds, []);
+  assert.deepEqual(catalog.terminalTargetFormIds, [
+    "emberhorn_fusion_moss_rampart_fire4_earth6",
+    "emberhorn_fusion_solar_crown_fire7_wind3",
+  ]);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.rules), true);
   assert.equal(Object.isFrozen(catalog.geneProfiles[0]), true);
+  assert.equal(Object.isFrozen(catalog.terminalTargetFormIds), true);
 });
 
 test("staged fusion bloodline actives are distinct single-target non-training damage contracts", () => {
@@ -169,11 +189,62 @@ test("fusion catalog collection fields fail closed when they are not arrays", as
   }
 });
 
+test("legacy fusion catalog schema and identity fail closed", async (t) => {
+  await t.test("schemaVersion", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.schemaVersion = 1;
+        },
+      }),
+      (error) => catalogErrorIncludes(error, "catalog.schemaVersion must equal 2"),
+    );
+  });
+  await t.test("catalogId", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.catalogId = "pet_fusion_recipes_v1";
+        },
+      }),
+      (error) => catalogErrorIncludes(
+        error,
+        "catalog.catalogId must equal pet_fusion_recipes_v2",
+      ),
+    );
+  });
+});
+
+test("fusion catalog v2 global policies are exact and cannot silently drift", async (t) => {
+  const invalidPolicies = [
+    ["additionalCostPolicy", "stone_coins"],
+    ["resultBindingPolicy", "always_bound"],
+    ["unboundResultTradePolicy", "tradeable_now"],
+    ["baseActiveSkillForgetPolicy", "allowed"],
+    ["inheritedSpecialActiveForgetPolicy", "single_confirm"],
+    ["postFusionTrainingPolicy", "replace_any_slot"],
+  ];
+  for (const [field, invalidValue] of invalidPolicies) {
+    await t.test(field, () => {
+      assert.throws(
+        () => createTestFusionCatalog({
+          mutate(documents) {
+            documents.document.rules[field] = invalidValue;
+          },
+        }),
+        (error) => catalogErrorIncludes(error, `catalog.rules.${field} must equal`),
+      );
+    });
+  }
+});
+
 test("test-only recipe supports explicit core/resonance sets and wildcard resonance two", () => {
   const catalog = createTestFusionCatalog();
   const recipe = catalog.recipesById[RECIPE_ID];
 
   assert.equal(catalog.runtimeEnabled, false);
+  assert.deepEqual(catalog.terminalTargetFormIds, [TARGET_FORM_ID]);
+  assert.equal(Object.isFrozen(catalog.terminalTargetFormIds), true);
   assert.equal(recipe.targetFormId, TARGET_FORM_ID);
   assert.deepEqual(recipe.roleGeneRules.core, {
     allowedLineageIds: ["test_line_alpha"],
@@ -276,6 +347,59 @@ test("enabled or resettable fusion targets fail closed", async (t) => {
   });
 });
 
+test("terminal fusion target index validates template and growth registration without recipes", async (t) => {
+  await t.test("missing template", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.recipes = [];
+          documents.templatesDocument.forms = documents.templatesDocument.forms
+            .filter((form) => form.formId !== TARGET_FORM_ID);
+        },
+      }),
+      (error) => catalogErrorIncludes(
+        error,
+        `terminal fusion target form ${TARGET_FORM_ID} is missing from pet templates`,
+      ),
+    );
+  });
+
+  await t.test("missing growth profile", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.recipes = [];
+          documents.growthProfilesDocument.profiles = documents.growthProfilesDocument.profiles
+            .filter((profile) => profile.profileId !== TARGET_GROWTH_PROFILE_ID);
+        },
+      }),
+      (error) => catalogErrorIncludes(
+        error,
+        `terminal fusion target form ${TARGET_FORM_ID}`
+        + " must reference a known pet growth profile",
+      ),
+    );
+  });
+
+  await t.test("growth profile belongs to another form", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.recipes = [];
+          const targetGrowthProfile = documents.growthProfilesDocument.profiles
+            .find((profile) => profile.profileId === TARGET_GROWTH_PROFILE_ID);
+          targetGrowthProfile.formId = "test_form_alpha_a";
+        },
+      }),
+      (error) => catalogErrorIncludes(
+        error,
+        `terminal fusion target growth profile ${TARGET_GROWTH_PROFILE_ID}`
+        + ` must belong to form ${TARGET_FORM_ID}`,
+      ),
+    );
+  });
+});
+
 test("ordinary trainer skills cannot masquerade as explicit fusion genes", () => {
   assert.throws(
     () => createTestFusionCatalog({
@@ -370,7 +494,24 @@ test("fusion result policies are explicit and never defaulted", async (t) => {
           documents.document.recipes[0].result.bindingPolicy = "unbound";
         },
       }),
-      (error) => catalogErrorIncludes(error, "bindingPolicy must equal one of"),
+      (error) => catalogErrorIncludes(
+        error,
+        "bindingPolicy must equal bound_if_any_material_bound",
+      ),
+    );
+  });
+
+  await t.test("legacy always-bound policy", () => {
+    assert.throws(
+      () => createTestFusionCatalog({
+        mutate(documents) {
+          documents.document.recipes[0].result.bindingPolicy = "always_bound";
+        },
+      }),
+      (error) => catalogErrorIncludes(
+        error,
+        "bindingPolicy must equal bound_if_any_material_bound",
+      ),
     );
   });
 

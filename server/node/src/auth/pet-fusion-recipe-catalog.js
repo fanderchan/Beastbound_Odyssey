@@ -23,7 +23,8 @@ const DEFAULT_PAID_RESET_PATH = path.join(
   "pet_paid_reset_policy.json",
 );
 
-const PET_FUSION_CATALOG_ID = "pet_fusion_recipes_v1";
+const PET_FUSION_CATALOG_SCHEMA_VERSION = 2;
+const PET_FUSION_CATALOG_ID = "pet_fusion_recipes_v2";
 const PET_FUSION_ROLE_IDS = Object.freeze([
   "core",
   "resonance_one",
@@ -42,9 +43,14 @@ const PET_FUSION_PASSIVE_SOURCE_WEIGHTS = Object.freeze({
 const PET_FUSION_REQUIRED_REBIRTH_COUNT = 1;
 const PET_FUSION_MINIMUM_LEVEL = 131;
 const PET_FUSION_MAXIMUM_LEVEL = 140;
+const PET_FUSION_ADDITIONAL_COST_POLICY = "materials_only";
+const PET_FUSION_RESULT_BINDING_POLICY = "bound_if_any_material_bound";
+const PET_FUSION_UNBOUND_RESULT_TRADE_POLICY = "eligible_when_pet_trading_available";
+const PET_FUSION_BASE_ACTIVE_SKILL_FORGET_POLICY = "forbidden";
+const PET_FUSION_INHERITED_SPECIAL_ACTIVE_FORGET_POLICY = "double_confirm_irreversible";
+const PET_FUSION_POST_FUSION_TRAINING_POLICY = "empty_slots_only";
 const PET_FUSION_BINDING_POLICIES = Object.freeze([
-  "bound_if_any_material_bound",
-  "always_bound",
+  PET_FUSION_RESULT_BINDING_POLICY,
 ]);
 const PET_FUSION_RESULT_STATE_POLICIES = Object.freeze([
   "replace_active_else_core_state",
@@ -90,7 +96,9 @@ function createPetFusionRecipeCatalog(input = {}) {
     "geneProfiles",
     "recipes",
   ], "catalog", errors);
-  if (document.schemaVersion !== 1) errors.push("catalog.schemaVersion must equal 1");
+  if (document.schemaVersion !== PET_FUSION_CATALOG_SCHEMA_VERSION) {
+    errors.push(`catalog.schemaVersion must equal ${PET_FUSION_CATALOG_SCHEMA_VERSION}`);
+  }
   if (document.catalogId !== PET_FUSION_CATALOG_ID) {
     errors.push(`catalog.catalogId must equal ${PET_FUSION_CATALOG_ID}`);
   }
@@ -139,6 +147,11 @@ function createPetFusionRecipeCatalog(input = {}) {
     "pet paid reset policies",
     errors,
   );
+  const terminalTargetFormIds = deepFreeze(collectTerminalFusionTargetFormIds({
+    paidResetPoliciesByFormId,
+    formsById,
+    growthProfilesById,
+  }, errors));
 
   const geneProfiles = [];
   const geneProfilesById = Object.create(null);
@@ -227,7 +240,7 @@ function createPetFusionRecipeCatalog(input = {}) {
   }
 
   return deepFreeze({
-    schemaVersion: 1,
+    schemaVersion: PET_FUSION_CATALOG_SCHEMA_VERSION,
     catalogId: PET_FUSION_CATALOG_ID,
     runtimeEnabled: document.runtimeEnabled === true,
     disabledMessage: text(document.disabledMessage),
@@ -238,6 +251,7 @@ function createPetFusionRecipeCatalog(input = {}) {
     recipes,
     recipesById,
     targetFormIds: Array.from(targetFormIds).sort(),
+    terminalTargetFormIds,
     catalogPath: String(input.catalogPath || ""),
   });
 }
@@ -256,6 +270,12 @@ function normalizeRules(value, errors) {
     "resultPassiveSkillCount",
     "materialNumericInheritance",
     "resultRideable",
+    "additionalCostPolicy",
+    "resultBindingPolicy",
+    "unboundResultTradePolicy",
+    "baseActiveSkillForgetPolicy",
+    "inheritedSpecialActiveForgetPolicy",
+    "postFusionTrainingPolicy",
   ], "catalog.rules", errors);
   if (!sameStringArray(raw.roleIds, PET_FUSION_ROLE_IDS)) {
     errors.push("catalog.rules.roleIds must equal core/resonance_one/resonance_two");
@@ -291,6 +311,43 @@ function normalizeRules(value, errors) {
   if (raw.resultRideable !== false) {
     errors.push("catalog.rules.resultRideable must be false");
   }
+  if (raw.additionalCostPolicy !== PET_FUSION_ADDITIONAL_COST_POLICY) {
+    errors.push(
+      `catalog.rules.additionalCostPolicy must equal ${PET_FUSION_ADDITIONAL_COST_POLICY}`,
+    );
+  }
+  if (raw.resultBindingPolicy !== PET_FUSION_RESULT_BINDING_POLICY) {
+    errors.push(
+      `catalog.rules.resultBindingPolicy must equal ${PET_FUSION_RESULT_BINDING_POLICY}`,
+    );
+  }
+  if (raw.unboundResultTradePolicy !== PET_FUSION_UNBOUND_RESULT_TRADE_POLICY) {
+    errors.push(
+      "catalog.rules.unboundResultTradePolicy must equal "
+      + PET_FUSION_UNBOUND_RESULT_TRADE_POLICY,
+    );
+  }
+  if (raw.baseActiveSkillForgetPolicy !== PET_FUSION_BASE_ACTIVE_SKILL_FORGET_POLICY) {
+    errors.push(
+      "catalog.rules.baseActiveSkillForgetPolicy must equal "
+      + PET_FUSION_BASE_ACTIVE_SKILL_FORGET_POLICY,
+    );
+  }
+  if (
+    raw.inheritedSpecialActiveForgetPolicy
+    !== PET_FUSION_INHERITED_SPECIAL_ACTIVE_FORGET_POLICY
+  ) {
+    errors.push(
+      "catalog.rules.inheritedSpecialActiveForgetPolicy must equal "
+      + PET_FUSION_INHERITED_SPECIAL_ACTIVE_FORGET_POLICY,
+    );
+  }
+  if (raw.postFusionTrainingPolicy !== PET_FUSION_POST_FUSION_TRAINING_POLICY) {
+    errors.push(
+      "catalog.rules.postFusionTrainingPolicy must equal "
+      + PET_FUSION_POST_FUSION_TRAINING_POLICY,
+    );
+  }
   return {
     roleIds: [...PET_FUSION_ROLE_IDS],
     requiredGrowthModelVersion: PET_GROWTH_MODEL_VERSION,
@@ -303,6 +360,13 @@ function normalizeRules(value, errors) {
     resultPassiveSkillCount: 1,
     materialNumericInheritance: false,
     resultRideable: false,
+    additionalCostPolicy: PET_FUSION_ADDITIONAL_COST_POLICY,
+    resultBindingPolicy: PET_FUSION_RESULT_BINDING_POLICY,
+    unboundResultTradePolicy: PET_FUSION_UNBOUND_RESULT_TRADE_POLICY,
+    baseActiveSkillForgetPolicy: PET_FUSION_BASE_ACTIVE_SKILL_FORGET_POLICY,
+    inheritedSpecialActiveForgetPolicy:
+      PET_FUSION_INHERITED_SPECIAL_ACTIVE_FORGET_POLICY,
+    postFusionTrainingPolicy: PET_FUSION_POST_FUSION_TRAINING_POLICY,
   };
 }
 
@@ -563,9 +627,9 @@ function normalizeRecipeResult(value, recipeLabel, errors) {
     errors.push(`${label}.numericSource must equal target_profile_only_v1`);
   }
   if (raw.rideable !== false) errors.push(`${label}.rideable must be false`);
-  if (!PET_FUSION_BINDING_POLICIES.includes(raw.bindingPolicy)) {
+  if (raw.bindingPolicy !== PET_FUSION_RESULT_BINDING_POLICY) {
     errors.push(
-      `${label}.bindingPolicy must equal one of ${PET_FUSION_BINDING_POLICIES.join(",")}`,
+      `${label}.bindingPolicy must equal ${PET_FUSION_RESULT_BINDING_POLICY}`,
     );
   }
   if (!PET_FUSION_RESULT_STATE_POLICIES.includes(raw.resultStatePolicy)) {
@@ -614,6 +678,39 @@ function uniqueIndex(values, key, label, errors) {
     result[id] = value;
   }
   return result;
+}
+
+function collectTerminalFusionTargetFormIds(refs, errors) {
+  const result = [];
+  for (const [formId, resetPolicy] of Object.entries(refs.paidResetPoliciesByFormId)) {
+    if (
+      resetPolicy.resetAllowed !== false
+      || text(resetPolicy.ineligibleReason) !== "terminal_fusion"
+    ) {
+      continue;
+    }
+    result.push(formId);
+    const targetForm = refs.formsById[formId];
+    if (!targetForm) {
+      errors.push(`terminal fusion target form ${formId} is missing from pet templates`);
+      continue;
+    }
+    const growthProfileId = text(targetForm.growthSpeciesProfileId);
+    const growthProfile = refs.growthProfilesById[growthProfileId];
+    if (!growthProfile) {
+      errors.push(
+        `terminal fusion target form ${formId} must reference a known pet growth profile`,
+      );
+      continue;
+    }
+    if (text(growthProfile.formId) !== formId) {
+      errors.push(
+        `terminal fusion target growth profile ${growthProfileId}`
+        + ` must belong to form ${formId}`,
+      );
+    }
+  }
+  return result.sort();
 }
 
 function skillTrainingSkillIds(documentValue) {
@@ -708,16 +805,23 @@ function deepFreeze(value, visited = new WeakSet()) {
 
 module.exports = {
   DEFAULT_CATALOG_PATH,
+  PET_FUSION_ADDITIONAL_COST_POLICY,
   PET_FUSION_BASE_ACTIVE_SKILL_IDS,
+  PET_FUSION_BASE_ACTIVE_SKILL_FORGET_POLICY,
   PET_FUSION_BINDING_POLICIES,
   PET_FUSION_CATALOG_ID,
+  PET_FUSION_CATALOG_SCHEMA_VERSION,
+  PET_FUSION_INHERITED_SPECIAL_ACTIVE_FORGET_POLICY,
   PET_FUSION_MAXIMUM_LEVEL,
   PET_FUSION_MINIMUM_LEVEL,
   PET_FUSION_PASSIVE_SOURCE_WEIGHTS,
+  PET_FUSION_POST_FUSION_TRAINING_POLICY,
   PET_FUSION_REQUIRED_REBIRTH_COUNT,
+  PET_FUSION_RESULT_BINDING_POLICY,
   PET_FUSION_RESULT_STATE_POLICIES,
   PET_FUSION_ROLE_IDS,
   PET_FUSION_SPECIAL_ACTIVE_CHANCE,
+  PET_FUSION_UNBOUND_RESULT_TRADE_POLICY,
   PetFusionRecipeCatalogError,
   createPetFusionRecipeCatalog,
   loadPetFusionRecipeCatalog,

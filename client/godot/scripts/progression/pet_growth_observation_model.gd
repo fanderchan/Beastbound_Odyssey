@@ -126,6 +126,28 @@ static func evaluate_pet(instance: Dictionary) -> Dictionary:
 
 static func evaluate_pet_for_stage(instance: Dictionary, stage: int = 0) -> Dictionary:
 	var safe_stage := clampi(stage, 0, 2)
+	if is_fusion_pet(instance):
+		if safe_stage != 2:
+			return {
+				"schemaVersion": 1,
+				"profileId": str(
+					instance.get("growthSpeciesProfileId", "")
+				).strip_edges(),
+				"level": clampi(int(instance.get("level", 1)), 1, 140),
+				"observedLevels": 0,
+				"stage": safe_stage,
+				"stageLabel": str(
+					REBIRTH_STAGE_LABELS.get(
+						safe_stage,
+						"%d转成长" % safe_stage
+					)
+				),
+				"enabled": false,
+				"hasRecord": false,
+				"overallGrade": "不适用",
+				"fusionTerminal": true,
+			}
+		return _evaluate_fusion_current(instance)
 	if is_evolution_pet(instance):
 		if safe_stage <= 1:
 			return _evaluate_evolution_history(instance, safe_stage)
@@ -182,6 +204,16 @@ static func _evaluate_evolution_current(instance: Dictionary) -> Dictionary:
 	evaluated["stageLabel"] = "进化成长"
 	evaluated["enabled"] = true
 	evaluated["evolutionCurrent"] = true
+	return evaluated
+
+
+static func _evaluate_fusion_current(instance: Dictionary) -> Dictionary:
+	var evaluated := _evaluate_current_growth(instance).duplicate(true)
+	evaluated["stage"] = 2
+	evaluated["stageLabel"] = "融合成长"
+	evaluated["enabled"] = true
+	evaluated["fusionCurrent"] = true
+	evaluated["fusionTerminal"] = true
 	return evaluated
 
 
@@ -376,6 +408,19 @@ static func detail_lines_for_stage(instance: Dictionary, stage: int = 0) -> Arra
 			return lines
 		_append_growth_detail_lines(lines, data)
 		return lines
+	if bool(data.get("fusionCurrent", false)):
+		lines.append("融合成长评价：%s" % str(data.get("overallGrade", "未观察")))
+		lines.append("评价对象：融合成品独立抽取的4V与成长。")
+		lines.append("三只材料宠的4V、隐藏成长和培养强度均不参与成品数值。")
+		if observed_levels <= 0:
+			lines.append("升到 Lv2 后开始按融合成品的实际成长记录评级。")
+			return lines
+		_append_growth_detail_lines(lines, data)
+		return lines
+	if bool(data.get("fusionTerminal", false)):
+		lines.append("%s：不适用" % str(data.get("stageLabel", "成长履历")))
+		lines.append("融合宠是新生成的终局实例，不继承三只材料宠的成长履历。")
+		return lines
 	lines.append("%s评价：%s" % [
 		str(data.get("stageLabel", REBIRTH_STAGE_LABELS.get(safe_stage, "成长"))),
 		str(data.get("overallGrade", "未观察")),
@@ -466,18 +511,26 @@ static func attribute_table_rows(instance: Dictionary, target_level: int = 140) 
 
 static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0, target_level: int = 140) -> Array[Dictionary]:
 	var safe_stage := clampi(stage, 0, 2)
+	if is_fusion_pet(instance):
+		if safe_stage != 2:
+			return []
+		return _current_attribute_table_rows(instance, target_level)
 	if is_evolution_pet(instance):
 		if safe_stage <= 1:
 			return _evolution_history_attribute_rows(instance, safe_stage)
-		var current_instance := instance.duplicate(true)
-		current_instance.erase("evolutionLineage")
-		return attribute_table_rows_for_stage(current_instance, 0, target_level)
+		return _current_attribute_table_rows(instance, target_level)
 	if _is_server_growth_pet(instance):
 		if safe_stage <= 0:
 			return _server_observation_attribute_rows(instance, target_level)
 		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
 	if safe_stage > 0:
 		return _rebirth_attribute_table_rows(instance, safe_stage, target_level)
+	return _current_attribute_table_rows(instance, target_level)
+
+
+static func _current_attribute_table_rows(instance: Dictionary, target_level: int = 140) -> Array[Dictionary]:
+	if _is_server_growth_pet(instance):
+		return _server_observation_attribute_rows(instance, target_level)
 	var profile_id := str(instance.get("growthSpeciesProfileId", "")).strip_edges()
 	var profile := BalanceCatalogModel.pet_growth_species_profile(profile_id)
 	if profile.is_empty():
@@ -488,7 +541,7 @@ static func attribute_table_rows_for_stage(instance: Dictionary, stage: int = 0,
 	var level1_stats := _level1_stats_for_instance(instance, profile, roll_dict)
 	var current_stats := _stats_for_profile_roll_level(profile, roll_dict, safe_level)
 	var target_stats := _stats_for_profile_roll_level(profile, roll_dict, safe_target)
-	var data := evaluate_pet_for_stage(instance, 0)
+	var data := _evaluate_current_growth(instance)
 	var averages := data.get("statAverages", {}) as Dictionary
 	var percentiles := data.get("statPercentiles", {}) as Dictionary
 	var grades := data.get("statGrades", {}) as Dictionary
@@ -726,7 +779,9 @@ static func growth_stage_options(instance: Dictionary) -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
 	for stage in [0, 1, 2]:
 		var enabled := int(stage) == 0 or rebirth_count >= int(stage)
-		if is_evolution_pet(instance):
+		if is_fusion_pet(instance):
+			enabled = int(stage) == 2
+		elif is_evolution_pet(instance):
 			enabled = int(stage) == 2 or not _evolution_history_snapshot(instance, int(stage)).is_empty()
 		options.append({
 			"stage": int(stage),
@@ -738,6 +793,17 @@ static func growth_stage_options(instance: Dictionary) -> Array[Dictionary]:
 
 static func is_evolution_pet(instance: Dictionary) -> bool:
 	return not _evolution_lineage(instance).is_empty()
+
+
+static func is_fusion_pet(instance: Dictionary) -> bool:
+	if instance.has("fusionLineage"):
+		return true
+	var terminal_form_ids := BalanceCatalogModel.terminal_fusion_form_ids()
+	for key in ["formId", "templateId", "speciesId"]:
+		var form_id := str(instance.get(key, "")).strip_edges()
+		if form_id != "" and terminal_form_ids.has(form_id):
+			return true
+	return false
 
 
 static func is_evolution_history_stage(instance: Dictionary, stage: int) -> bool:
