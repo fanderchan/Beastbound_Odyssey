@@ -26342,7 +26342,7 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("绑定/非绑定钻石与石币") >= 0
 		and command_text.find("宠物进化验收档") >= 0
 		and command_text.find("乌力/风狐各1只未达P90与1只已达P90样本") >= 0
-		and command_text.find("正式美术完成前玩家进化入口仍保持关闭") >= 0
+		and command_text.find("生产门禁状态以服务器权威结果为准") >= 0
 		and qa_profile_entry != null
 		and qa_profile_entry.text.find("补齐核心测试档") >= 0
 		and qa_profile_entry.disabled

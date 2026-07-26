@@ -15,6 +15,7 @@ const {
   QA_STONE_COIN_MINIMUM,
 } = require("../src/auth/gm-pet-evolution-qa");
 const {
+  createDisabledPetEvolutionRouteCatalog,
   createEnabledPetEvolutionRouteCatalog,
 } = require("../test-support/pet-evolution-fixture");
 
@@ -70,7 +71,7 @@ function itemCount(profile, itemId) {
     .reduce((sum, slot) => sum + Math.max(0, Math.trunc(Number(slot.count || 0))), 0);
 }
 
-test("GM evolution QA prepares both routes above and below P90 without opening production", async () => {
+test("GM evolution QA prepares both routes above and below P90 against the production-open source", async () => {
   const service = createAuthService({store: createMemoryAuthStore(), now: () => NOW_MS});
   const gm = registerGm(service);
   const first = await invokeQa(
@@ -112,9 +113,9 @@ test("GM evolution QA prepares both routes above and below P90 without opening p
     );
     assert.equal(routeSamples.find((sample) => sample.expectedEligible).eligibilityCode, "ok");
   }
-  assert.equal(first.result.assetGate.runtimeEnabled, false);
-  assert.equal(first.result.assetGate.productionOpen, false);
-  assert.equal(first.result.assetGate.routes.every((route) => route.status === "deferred"), true);
+  assert.equal(first.result.assetGate.runtimeEnabled, true);
+  assert.equal(first.result.assetGate.productionOpen, true);
+  assert.equal(first.result.assetGate.routes.every((route) => route.status === "formal"), true);
   assert.equal(first.result.summary.boundStoneCoins, QA_STONE_COIN_MINIMUM);
   assert.equal(first.result.materials.length, 3);
   assert.equal(first.result.materials.every((item) => item.available >= item.required), true);
@@ -157,20 +158,51 @@ test("GM evolution QA prepares both routes above and below P90 without opening p
   assert.equal(internalProfileForAccount(service, gm.account.accountId).petInstances.length, internal.petInstances.length);
 });
 
-test("GM evolution QA proves each route rejects below P90 and evolves its eligible sample", async () => {
-  const catalog = createEnabledPetEvolutionRouteCatalog();
+test("GM evolution QA keeps an explicit disabled fixture visibly closed", async () => {
   const service = createAuthService({
     store: createMemoryAuthStore(),
     now: () => NOW_MS,
-    petEvolutionRouteCatalog: catalog,
+    petEvolutionRouteCatalog: createDisabledPetEvolutionRouteCatalog(),
   });
   const gm = registerGm(service);
   const prepared = await invokeQa(
     service,
     gm,
-    "gm_pet_evolution_qa_two_routes_prepare_0001",
-    "f".repeat(64),
+    "gm_pet_evolution_qa_disabled_fixture_0001",
+    "a".repeat(64),
   );
+  assert.equal(prepared.ok, true, prepared.message);
+  assert.equal(prepared.result.assetGate.runtimeEnabled, false);
+  assert.equal(prepared.result.assetGate.productionOpen, false);
+  assert.equal(prepared.result.assetGate.routes.every((route) => route.status === "deferred"), true);
+});
+
+test("local HTTP QA backend proves two rejected and two successful production evolutions", async (t) => {
+  const catalog = createEnabledPetEvolutionRouteCatalog();
+  const store = createMemoryAuthStore();
+  const service = createAuthService({
+    store,
+    now: () => NOW_MS,
+    petEvolutionRouteCatalog: catalog,
+  });
+  const gm = registerGm(service);
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await service.waitForDurableIdle();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const authorization = {authorization: `Bearer ${gm.session.token}`};
+  const prepared = await fetchJson(`${base}/gm/pets/evolution/qa`, {
+    method: "POST",
+    headers: {
+      ...authorization,
+      "Idempotency-Key": "gm_pet_evolution_qa_two_routes_prepare_0001",
+    },
+    body: JSON.stringify({manifestId: GM_PET_EVOLUTION_QA_MANIFEST_ID}),
+  });
   assert.equal(prepared.ok, true, prepared.message);
   assert.equal(prepared.result.assetGate.productionOpen, true);
 
@@ -182,10 +214,10 @@ test("GM evolution QA proves each route rejects below P90 and evolves its eligib
     assert.ok(acceptedSample);
 
     const beforeRejectedQuote = structuredClone(service.snapshot());
-    const rejectedQuote = service.getPetEvolutionQuote(gm.session.token, {
-      instanceId: rejectedSample.instanceId,
-      routeId: routeCase.routeId,
-    });
+    const rejectedQuote = await fetchJson(
+      `${base}/pets/evolution/quote?instanceId=${encodeURIComponent(rejectedSample.instanceId)}&routeId=${encodeURIComponent(routeCase.routeId)}`,
+      {headers: authorization},
+    );
     assert.equal(rejectedQuote.ok, false);
     assert.equal(rejectedQuote.code, "pet_evolution_power_below_p90");
     assert.deepEqual(service.snapshot(), beforeRejectedQuote);
@@ -193,48 +225,44 @@ test("GM evolution QA proves each route rejects below P90 and evolves its eligib
     const currentProfile = service.getProfile(gm.session.token);
     assert.equal(currentProfile.ok, true);
     const beforeRejectedMutation = structuredClone(service.snapshot());
-    const rejectedMutation = await service.invokeDurable("evolvePet", [
-      gm.session.token,
-      {
+    const rejectedMutation = await fetchJson(`${base}/pets/evolution`, {
+      method: "POST",
+      headers: {
+        ...authorization,
+        "Idempotency-Key": `gm_pet_evolution_qa_${routeCase.routeId}_reject_0001`,
+      },
+      body: JSON.stringify({
         instanceId: rejectedSample.instanceId,
         routeId: routeCase.routeId,
         expectedProfileRevision: currentProfile.profileSummary.profileRevision,
         expectedCatalogId: catalog.catalogId,
-      },
-    ], {
-      actionId: "POST /pets/evolution",
-      operationId: `gm_pet_evolution_qa_${routeCase.routeId}_reject_0001`,
-      requestHash: routeCase.routeId === ROUTE_CASES[0].routeId
-        ? "3".repeat(64)
-        : "4".repeat(64),
+      }),
     });
     assert.equal(rejectedMutation.ok, false);
     assert.equal(rejectedMutation.code, "pet_evolution_power_below_p90");
     assert.deepEqual(service.snapshot(), beforeRejectedMutation);
 
-    const acceptedQuote = service.getPetEvolutionQuote(gm.session.token, {
-      instanceId: acceptedSample.instanceId,
-      routeId: routeCase.routeId,
-    });
+    const acceptedQuote = await fetchJson(
+      `${base}/pets/evolution/quote?instanceId=${encodeURIComponent(acceptedSample.instanceId)}&routeId=${encodeURIComponent(routeCase.routeId)}`,
+      {headers: authorization},
+    );
     assert.equal(acceptedQuote.ok, true, acceptedQuote.message);
     assert.equal(acceptedQuote.petEvolutionQuote.routeId, routeCase.routeId);
     assert.equal(acceptedQuote.petEvolutionQuote.result.targetFormId, routeCase.targetFormId);
     assert.equal(acceptedQuote.petEvolutionQuote.result.targetFormName, routeCase.targetFormName);
 
-    const evolved = await service.invokeDurable("evolvePet", [
-      gm.session.token,
-      {
+    const evolved = await fetchJson(`${base}/pets/evolution`, {
+      method: "POST",
+      headers: {
+        ...authorization,
+        "Idempotency-Key": `gm_pet_evolution_qa_${routeCase.routeId}_success_0001`,
+      },
+      body: JSON.stringify({
         instanceId: acceptedSample.instanceId,
         routeId: routeCase.routeId,
         expectedProfileRevision: acceptedQuote.petEvolutionQuote.profileRevision,
         expectedCatalogId: catalog.catalogId,
-      },
-    ], {
-      actionId: "POST /pets/evolution",
-      operationId: `gm_pet_evolution_qa_${routeCase.routeId}_success_0001`,
-      requestHash: routeCase.routeId === ROUTE_CASES[0].routeId
-        ? "1".repeat(64)
-        : "2".repeat(64),
+      }),
     });
     assert.equal(evolved.ok, true, evolved.message);
     assert.equal(evolved.petEvolution.routeId, routeCase.routeId);

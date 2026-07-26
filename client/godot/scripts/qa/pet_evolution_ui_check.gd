@@ -96,7 +96,7 @@ static func run(host) -> void:
 	]
 	for visual_case in visual_cases:
 		var target_form_id := str(visual_case.get("targetFormId", ""))
-		var normal_visual_access_blocked := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
+		var normal_visual_access_allowed := not PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
 		var visual_errors := PetEvolutionVisualCatalog.validation_errors_for_form(target_form_id)
 		var qa_preview_enabled := PetEvolutionVisualCatalog.enable_qa_preview_form(target_form_id)
 		var visual_descriptor := PetEvolutionVisualCatalog.descriptor_for_target(target_form_id)
@@ -108,7 +108,7 @@ static func run(host) -> void:
 				stage_labels.append(str((stage_value as Dictionary).get("label", "")))
 		visual_contract_ok = (
 			visual_contract_ok
-			and normal_visual_access_blocked
+			and normal_visual_access_allowed
 			and visual_errors.is_empty()
 			and qa_preview_enabled
 			and not visual_descriptor.is_empty()
@@ -216,7 +216,12 @@ static func run(host) -> void:
 		and str(sequence_after_successes.get("level", "")) == "月岚风狐 · Lv1"
 	)
 	for visual_case in visual_cases:
-		PetEvolutionVisualCatalog.disable_qa_preview_form(str(visual_case.get("targetFormId", "")))
+		var target_form_id := str(visual_case.get("targetFormId", ""))
+		PetEvolutionVisualCatalog.disable_qa_preview_form(target_form_id)
+		visual_contract_ok = (
+			visual_contract_ok
+			and not PetEvolutionVisualCatalog.descriptor_for_target(target_form_id).is_empty()
+		)
 
 	var private_quote := quote.duplicate(true)
 	private_quote["privateSeed"] = "must-not-render"
@@ -228,8 +233,8 @@ static func run(host) -> void:
 		and bool(gm_contract.get("ok", false))
 		and visual_contract_ok
 		and presentation_runtime_ok
-		and not PetEvolutionClientModel.runtime_enabled()
-		and not PetEvolutionClientModel.is_local_candidate(selected)
+		and PetEvolutionClientModel.runtime_enabled()
+		and PetEvolutionClientModel.is_local_candidate(selected)
 		and PetEvolutionClientModel.normalized_quote(private_quote).is_empty()
 		and PetEvolutionClientModel.normalized_quote(altered_result).is_empty()
 	)

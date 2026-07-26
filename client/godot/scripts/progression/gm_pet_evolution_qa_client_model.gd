@@ -51,7 +51,7 @@ static func status_text(state: Dictionary) -> String:
 		"再次执行只补足验收下限并刷新判断；不会重抽、覆盖或补发已经删除的样本。",
 	]
 	if state.is_empty():
-		lines.append("准备后自动选中达标乌力；正式美术完成前玩家进化入口仍保持关闭。")
+		lines.append("准备后自动选中达标乌力；生产门禁状态以服务器权威结果为准。")
 		return "\n".join(lines)
 	if bool(state.get("pending", false)):
 		lines.append("正在由服务器生成并持久化4只代表样本，请稍候……")
@@ -166,11 +166,11 @@ static func contract_check() -> Dictionary:
 			],
 			"assetGate": {
 				"schemaVersion": 1,
-				"runtimeEnabled": false,
-				"productionOpen": false,
+				"runtimeEnabled": true,
+				"productionOpen": true,
 				"routes": [
-					{"routeId": "wuli_crystal_evolution_v1", "targetFormName": "晶甲乌力", "status": "deferred"},
-					{"routeId": "driftfox_moon_gale_evolution_v1", "targetFormName": "月岚风狐", "status": "deferred"},
+					{"routeId": "wuli_crystal_evolution_v1", "targetFormName": "晶甲乌力", "status": "formal"},
+					{"routeId": "driftfox_moon_gale_evolution_v1", "targetFormName": "月岚风狐", "status": "formal"},
 				],
 			},
 		},
@@ -211,14 +211,24 @@ static func contract_check() -> Dictionary:
 	var duplicate_routes := (((duplicate_gate.get("result", {}) as Dictionary).get("assetGate", {}) as Dictionary).get("routes", []) as Array)
 	duplicate_routes[1] = (duplicate_routes[0] as Dictionary).duplicate(true)
 	var duplicate_gate_state := status_state_from_parsed(duplicate_gate)
+	var disabled_gate := parsed.duplicate(true)
+	var disabled_asset_gate := (
+		(disabled_gate.get("result", {}) as Dictionary).get("assetGate", {}) as Dictionary
+	)
+	disabled_asset_gate["runtimeEnabled"] = false
+	disabled_asset_gate["productionOpen"] = false
+	for route_value in disabled_asset_gate.get("routes", []) as Array:
+		(route_value as Dictionary)["status"] = "deferred"
+	var disabled_gate_state := status_state_from_parsed(disabled_gate)
+	var disabled_gate_text := status_text(disabled_gate_state)
 	return {
 		"ok": (
 			bool(state.get("ok", false))
 			and primary_instance_id(state) == "pet_evolution_wuli_above_p90"
 			and text.find("成长战力 1410 / 1345") >= 0
-			and text.find("晶甲乌力 待正式资源") >= 0
-			and text.find("月岚风狐 待正式资源") >= 0
-			and text.find("未开放，不会消耗玩家资产") >= 0
+			and text.find("晶甲乌力 正式") >= 0
+			and text.find("月岚风狐 正式") >= 0
+			and text.find("已开放") >= 0
 			and text.find("privateSeed") < 0
 			and text.find("operationId") < 0
 			and not bool(tampered_state.get("ok", false))
@@ -227,6 +237,8 @@ static func contract_check() -> Dictionary:
 			and not bool(wrong_primary_state.get("ok", false))
 			and not bool(impossible_power_state.get("ok", false))
 			and not bool(duplicate_gate_state.get("ok", false))
+			and bool(disabled_gate_state.get("ok", false))
+			and disabled_gate_text.find("未开放，不会消耗玩家资产") >= 0
 		),
 		"state": state,
 	}

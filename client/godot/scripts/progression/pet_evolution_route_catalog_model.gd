@@ -1,5 +1,8 @@
 extends RefCounted
 
+const PetEvolutionReleaseAttestationModel := preload(
+	"res://scripts/progression/pet_evolution_release_attestation_model.gd"
+)
 const STAT_KEYS: Array[String] = ["maxHp", "attack", "defense", "quick"]
 const STAT_WEIGHTS := {"maxHp": 0.25, "attack": 1.0, "defense": 1.0, "quick": 1.0}
 const EXPECTED_ROUTE_COUNT := 2
@@ -33,6 +36,18 @@ static func validation_errors(
 	var runtime_enabled := bool(data.get("runtimeEnabled", false))
 	if str(data.get("disabledMessage", "")).strip_edges() == "":
 		errors.append("进化路线关闭时必须有安全提示")
+	var release_attestation := _dict(data.get("releaseAttestation", {}))
+	var release_attestation_sha := str(release_attestation.get("sha256", "")).strip_edges().to_lower()
+	if (
+		str(release_attestation.get("path", ""))
+		!= PetEvolutionReleaseAttestationModel.REPO_DATA_PATH
+		or release_attestation_sha.length() != 64
+	):
+		errors.append("进化路线必须绑定冻结的P1.3e发布证明")
+	else:
+		errors.append_array(
+			PetEvolutionReleaseAttestationModel.validation_errors(release_attestation_sha)
+		)
 	if _dict(data.get("qualityProjection", {})) != _dict(balance.get("qualityProjection", {})):
 		errors.append("进化路线必须保持二代4V/隐藏成长重抽与源宠履历合同")
 	var reset_policy_document := _dict(paid_reset_policy)
@@ -118,6 +133,9 @@ static func contract_check(document, evolution_balance, pet_templates, growth_pr
 		"errors": errors,
 		"routeCount": (_dict(document).get("routes", []) as Array).size() if _dict(document).get("routes", []) is Array else 0,
 		"runtimeEnabled": bool(_dict(document).get("runtimeEnabled", false)),
+		"releaseAttestation": PetEvolutionReleaseAttestationModel.release_summary(
+			str(_dict(_dict(document).get("releaseAttestation", {})).get("sha256", ""))
+		),
 	}
 
 

@@ -57,7 +57,7 @@ test("quest catalog gives every formal quest explicit pickup and recommended lev
   );
 });
 
-test("disabled evolution license quests cannot be claimed before the route gate opens", () => {
+test("production evolution license quests can be claimed after the attested route gate opens", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const player = service.register({"username": "evolutionquestgate", "password": "test1234", "displayName": "进化任务门禁"});
   assert.equal(player.ok, true);
@@ -74,11 +74,10 @@ test("disabled evolution license quests cannot be claimed before the route gate 
   assert.equal(service.saveProfile(player.session.token, {"expectedRevision": 0, profile}).ok, true);
 
   const claim = service.questClaim(player.session.token, {"questId": "quest_wuli_evolution_license"});
-  assert.equal(claim.ok, false);
-  assert.equal(claim.code, "quest_unavailable");
+  assert.equal(claim.ok, true);
   const after = service.getProfile(player.session.token);
-  assert.equal(after.profile.unlockedAbilities.includes("pet_evolution_wuli_license"), false);
-  assert.equal(after.profile.questStates.quest_wuli_evolution_license.status, "ready");
+  assert.equal(after.profile.unlockedAbilities.includes("pet_evolution_wuli_license"), true);
+  assert.equal(after.profile.questStates.quest_wuli_evolution_license.status, "claimed");
 });
 
 test("quest record endpoint advances and auto-claims talk quests server-side", () => {

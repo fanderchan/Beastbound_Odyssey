@@ -40,11 +40,13 @@ function expectInvalid(mutator, pattern, options = {}) {
   });
 }
 
-test("two evolution routes form a gated, deterministic and cross-catalog complete acquisition contract", () => {
+test("two evolution routes form an owner-attested, production-open and cross-catalog complete acquisition contract", () => {
   const catalog = loadPetEvolutionRouteCatalog();
   const paidResetCatalog = createPetPaidResetPolicyCatalog();
   assert.equal(catalog.catalogId, "pet_evolution_routes_v2");
-  assert.equal(catalog.runtimeEnabled, false);
+  assert.equal(catalog.runtimeEnabled, true);
+  assert.equal(catalog.releaseAttestation.releaseApproved, true);
+  assert.equal(catalog.releaseAttestation.ownerReviewStatus, "approved");
   assert.equal(catalog.routes.length, EXPECTED_ROUTE_COUNT);
   assert.equal(catalog.materialEncounters.length, 3);
   assert.equal(catalog.manualEncounterRules.length, 3);
@@ -86,7 +88,7 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
         ineligibleReason: "terminal_evolution",
       },
     );
-    assert.equal(route.assetGate.status, "deferred");
+    assert.equal(route.assetGate.status, "formal");
     assert.equal(route.projectedBasePower.source, route.projectedBasePower.target);
     assert.equal(route.projectedBasePower.intrinsicUplift.min >= 1.484, true);
     assert.equal(route.projectedBasePower.intrinsicUplift.max <= 2.036, true);
@@ -109,13 +111,17 @@ test("two evolution routes form a gated, deterministic and cross-catalog complet
   );
 });
 
-test("route catalog fails closed for a third route, premature runtime enablement and cost drift", () => {
+test("route catalog fails closed for a third route, attestation or asset drift and cost drift", () => {
   expectInvalid((document) => {
     document.routes.push(structuredClone(document.routes[0]));
   }, /exactly 2 routes|duplicate route/);
 
   expectInvalid((document) => {
-    document.runtimeEnabled = true;
+    document.releaseAttestation.sha256 = "0".repeat(64);
+  }, /release attestation|SHA-256|P1.3e/);
+
+  expectInvalid((document) => {
+    document.routes[0].assetGate.status = "deferred";
   }, /runtime gate|deferred assets|cannot run/);
 
   expectInvalid((document) => {

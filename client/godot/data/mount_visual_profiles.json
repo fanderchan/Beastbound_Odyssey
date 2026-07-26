@@ -17,6 +17,38 @@
         "size": [170, 28],
         "alpha": 0.25
       }
+    },
+    "wuli_evolved_crystal_earth8_water2": {
+      "characterId": "novice_hunter_v1",
+      "mountedBundleId": "mounted_action_novice_hunter_v1_wuli_evolved_crystal_v1",
+      "worldVisualStrategy": "ai_generated_integrated_independent_8",
+      "worldPresentationScale": 0.36,
+      "battlePresentationScale": 0.88,
+      "battleDirections": {
+        "ally": "northwest",
+        "enemy": "southeast"
+      },
+      "shadow": {
+        "offset": [0, 4],
+        "size": [170, 28],
+        "alpha": 0.25
+      }
+    },
+    "driftfox_evolved_moon_gale_wind7_water3": {
+      "characterId": "novice_hunter_v1",
+      "mountedBundleId": "mounted_action_novice_hunter_v1_driftfox_evolved_moon_gale_v1",
+      "worldVisualStrategy": "ai_generated_integrated_independent_8",
+      "worldPresentationScale": 0.36,
+      "battlePresentationScale": 0.88,
+      "battleDirections": {
+        "ally": "northwest",
+        "enemy": "southeast"
+      },
+      "shadow": {
+        "offset": [0, 4],
+        "size": [170, 28],
+        "alpha": 0.25
+      }
     }
   }
 }

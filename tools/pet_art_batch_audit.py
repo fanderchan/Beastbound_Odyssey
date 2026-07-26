@@ -289,6 +289,7 @@ def _bundle_result(spec: BundleSpec, repo_root: Path) -> dict[str, Any]:
         "orphanPngs": [],
         "world": {"directions": {}, "idleUniqueCount": 0, "mirrorPairs": []},
         "battle": {"views": {}, "actions": {}},
+        "evolution": {"expected": 0, "validated": 0, "view": "", "runtimeRoot": ""},
         "errors": [],
         "pending": [],
         "warnings": [],
@@ -647,6 +648,108 @@ def _audit_battle(
         bundle_result["battle"]["views"][view] = view_result
 
 
+def _audit_evolution(
+    spec: BundleSpec,
+    metadata: dict[str, Any],
+    *,
+    form_result: dict[str, Any],
+    bundle_result: dict[str, Any],
+    repo_root: Path,
+    cache: dict[Path, dict[str, Any] | None],
+    expected_pngs: set[Path],
+) -> None:
+    value = metadata.get("evolutionVisual")
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_metadata",
+            "metadata.evolutionVisual 必须是对象",
+        )
+        return
+    view = str(value.get("view", "")).strip()
+    frame_count = value.get("frameCount")
+    runtime_root_value = value.get("runtimeRoot")
+    if view not in BATTLE_VIEWS:
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_view",
+            f"evolutionVisual.view 必须属于 {list(BATTLE_VIEWS)}",
+        )
+    if (
+        not isinstance(frame_count, int)
+        or isinstance(frame_count, bool)
+        or frame_count <= 0
+    ):
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_frame_count",
+            "evolutionVisual.frameCount 必须为正整数",
+        )
+        return
+    if (
+        not isinstance(runtime_root_value, str)
+        or not runtime_root_value.strip()
+    ):
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_runtime_root",
+            "evolutionVisual.runtimeRoot 必须是非空 bundle-relative 路径",
+        )
+        return
+    runtime_root_text = runtime_root_value.strip()
+    pure_root = PurePosixPath(runtime_root_text)
+    if (
+        pure_root.is_absolute()
+        or runtime_root_text.startswith(("/", "\\"))
+        or ".." in pure_root.parts
+    ):
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_runtime_root",
+            "evolutionVisual.runtimeRoot 不是安全的 bundle-relative 路径",
+            runtime_root_text,
+        )
+        return
+    runtime_root = (spec.root / Path(*pure_root.parts)).resolve(strict=False)
+    try:
+        runtime_root.relative_to(spec.root.resolve(strict=False))
+    except ValueError:
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            "invalid_evolution_runtime_root",
+            "evolutionVisual.runtimeRoot 越出 bundle 根目录",
+            runtime_root_text,
+        )
+        return
+    bundle_result["evolution"] = {
+        "expected": frame_count,
+        "validated": 0,
+        "view": view,
+        "runtimeRoot": runtime_root_text,
+    }
+    for index in range(1, frame_count + 1):
+        path = runtime_root / f"evolution-{index}.png"
+        expected_pngs.add(path)
+        bundle_result["expectedPngCount"] += 1
+        metrics = _validate_png(
+            path,
+            form_result=form_result,
+            bundle_result=bundle_result,
+            repo_root=repo_root,
+            cache=cache,
+        )
+        if metrics is not None:
+            bundle_result["evolution"]["validated"] += 1
+
+
 def _audit_orphans(
     spec: BundleSpec,
     expected_pngs: set[Path],
@@ -770,6 +873,16 @@ def _audit_bundle(
         cache=cache,
         expected_pngs=expected_pngs,
     )
+    if spec.kind == "pet":
+        _audit_evolution(
+            spec,
+            metadata,
+            form_result=form_result,
+            bundle_result=result,
+            repo_root=repo_root,
+            cache=cache,
+            expected_pngs=expected_pngs,
+        )
     source_errors: list[str] = []
     tracked_source_count, canonical_derived_count = (
         _audit_tracked_source_derivation(

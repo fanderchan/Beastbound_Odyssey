@@ -147,8 +147,12 @@
       "subtypeId": "wuli_evolved_crystal_guardian",
       "productionGroup": "G04",
       "artSkeletonId": "wuli_crystal_guardian_v1",
-      "status": "in_production",
-      "runtimeEnabled": false,
+      "status": "approved",
+      "runtimeEnabled": true,
+      "releaseAttestation": {
+        "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+        "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+      },
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "成年低重心守卫乌力，半透明岩晶重甲、水蓝脉络、宽额晶盾与稳定四足；轮廓和材质必须显著高于普通乌力。",
@@ -222,8 +226,12 @@
       "subtypeId": "driftfox_evolved_moon_gale",
       "productionGroup": "G07",
       "artSkeletonId": "driftfox_moon_gale_v1",
-      "status": "in_production",
-      "runtimeEnabled": false,
+      "status": "approved",
+      "runtimeEnabled": true,
+      "releaseAttestation": {
+        "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+        "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+      },
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "进化长耳风狐，银青双尾形成月牙轮廓，颈背雾岚流带和月纹额饰；高难获取感来自新轮廓，不只加光。",

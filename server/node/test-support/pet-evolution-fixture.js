@@ -17,16 +17,24 @@ const CORE_ITEM_ID = "pet_evolution_resonance_core";
 const LINEAGE_ITEM_ID = "pet_evolution_wuli_crystal_scale";
 
 function createEnabledPetEvolutionRouteCatalog() {
+  return loadPetEvolutionRouteCatalog();
+}
+
+function createDisabledPetEvolutionRouteCatalog() {
   const source = loadPetEvolutionRouteCatalog();
   const routes = source.routes.map((route) => ({
     ...structuredClone(route),
-    assetGate: {...structuredClone(route.assetGate), status: "formal"},
+    assetGate: {...structuredClone(route.assetGate), status: "deferred"},
   }));
   const catalog = {
     ...structuredClone(source),
-    runtimeEnabled: true,
+    runtimeEnabled: false,
     routes,
     routesById: Object.fromEntries(routes.map((route) => [route.routeId, route])),
+    manualEncounterRules: source.manualEncounterRules.map((rule) => ({
+      ...structuredClone(rule),
+      runtimeEnabled: false,
+    })),
   };
   return deepFreeze(catalog);
 }
@@ -182,6 +190,7 @@ module.exports = {
   SOURCE_FORM_ID,
   SOURCE_PROFILE_ID,
   TARGET_FORM_ID,
+  createDisabledPetEvolutionRouteCatalog,
   createEnabledPetEvolutionRouteCatalog,
   createOneRebirthEvolutionPet,
   seedEvolutionAccount,

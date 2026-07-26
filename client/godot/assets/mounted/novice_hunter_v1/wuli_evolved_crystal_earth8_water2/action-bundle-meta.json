@@ -2,9 +2,15 @@
   "schemaVersion": 1,
   "mountFormId": "wuli_evolved_crystal_earth8_water2",
   "characterId": "novice_hunter_v1",
-  "artStatus": "in_production",
-  "productionScope": "scoped_mounted_world_true8_and_formal_battle_visuals_owner_approved_runtime_disabled_bundle_pending",
-  "runtimeEnabled": false,
+  "bundleId": "mounted_action_novice_hunter_v1_wuli_evolved_crystal_v1",
+  "groundAnchorY": 244,
+  "artStatus": "approved",
+  "productionScope": "formal_integrated_mounted_world_and_battle_release_approved",
+  "runtimeEnabled": true,
+  "releaseAttestation": {
+    "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+    "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+  },
   "runtimeFrameSize": [
     256,
     256
@@ -14,7 +20,7 @@
     "back_3quarter_ne"
   ],
   "identity": {
-    "status": "self_review_passed_owner_pending",
+    "status": "approved",
     "sourceFrameSize": [
       512,
       512
@@ -33,77 +39,78 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     }
   },
   "worldVisual": {
-    "status": "owner_approved_visual_only_independent_semantic_passed_runtime_disabled",
+    "status": "approved",
+    "runtimeEnabled": true,
     "approvalScope": "integrated_mounted_world_true8_visual_only",
     "ownerDecision": "qa/world/owner-decision.json",
     "ownerDecisionSha256": "3967254aafe4995b411c9c30989f1f601c09379d544b77b26e01ebebacea1d7a",
@@ -223,8 +230,9 @@
     "battleFullSourceClosureVisualReview": ".run/evidence/phase358_evolved_battle_full_source_closure/visual-review.json",
     "battleFullSourceClosureVisualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9"
   },
-  "ownerReviewStatus": "pending",
-  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 战斗运行时语义自审、Phase353 世界去标签审核及 Phase358 完整高清源档门禁均通过；项目所有者此前只批准 integrated_mounted_battle_visual_only，查看 Phase360 的 1x 集中验收片后明确回复“通过”，现新增 integrated_mounted_world_true8_visual_only 单项批准。两项批准不代表整套 mounted bundle、独立宠物包或正式进化路线开放；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
+  "keyPoseReviewStatus": "approved",
+  "ownerReviewStatus": "approved",
+  "notes": "人物骑晶甲乌力的世界真八方向、双视角十二动作战斗整图及完整512px来源均已通过技术门禁和项目所有者视觉批准。项目所有者于2026-07-26进一步批准P1.3e正式开放，本整包现由冻结发布证明启用；历史visual-only决定保持原范围，不被改写。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -238,7 +246,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_approved_visual_only_runtime_disabled",
+    "status": "approved",
     "approvalScope": "integrated_mounted_battle_visual_only",
     "ownerDecision": "qa/battle/owner-decision.json",
     "ownerDecisionSha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73",
@@ -285,7 +293,7 @@
     "runtimeMirroring": false,
     "integratedWholeFrame": true,
     "runtimeLayeredComposition": false,
-    "runtimeEnabled": false,
+    "runtimeEnabled": true,
     "bundleDigest": "3844e961e828f2b07ecd500e5f2a6378b0ca0181bfa23fce2e36e24a7ea7196c",
     "archiveMode": "full",
     "sourceFramesTracked": true,

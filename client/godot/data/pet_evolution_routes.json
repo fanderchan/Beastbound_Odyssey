@@ -2,8 +2,12 @@
   "schemaVersion": 1,
   "catalogId": "pet_evolution_routes_v2",
   "balanceVersion": "pet_evolution_balance_v2",
-  "runtimeEnabled": false,
-  "disabledMessage": "宠物进化正在完成最终安全验证，当前不会消耗宠物或材料。",
+  "runtimeEnabled": true,
+  "disabledMessage": "宠物进化暂时不可用，请稍后再试；不会消耗宠物或材料。",
+  "releaseAttestation": {
+    "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+    "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+  },
   "qualityProjection": {
     "lv1FourV": "fresh_target_species_roll_v1",
     "hiddenGrowth": "fresh_target_species_roll_v1",
@@ -122,11 +126,11 @@
         "normalizedFirstUnlockEffort": 170
       },
       "assetGate": {
-        "status": "deferred",
+        "status": "formal",
         "formalAssetRequiredBeforeRuntime": true,
         "placeholderAllowedForQa": true,
-        "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal/",
-        "requiredAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"]
+        "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/",
+        "requiredAnimations": ["idle", "walk", "attack", "skill", "hurt", "defend", "dodge", "counter", "stagger", "knockaway", "down", "revive", "evolution"]
       },
       "presentation": {
         "name": "晶甲乌力",
@@ -189,11 +193,11 @@
         "normalizedFirstUnlockEffort": 170
       },
       "assetGate": {
-        "status": "deferred",
+        "status": "formal",
         "formalAssetRequiredBeforeRuntime": true,
         "placeholderAllowedForQa": true,
-        "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale/",
-        "requiredAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"]
+        "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/",
+        "requiredAnimations": ["idle", "walk", "attack", "skill", "hurt", "defend", "dodge", "counter", "stagger", "knockaway", "down", "revive", "evolution"]
       },
       "presentation": {
         "name": "月岚风狐",

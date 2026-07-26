@@ -8,6 +8,11 @@ const {loadPetEvolutionBalance} = require("./pet-evolution-balance");
 const {loadPetGrowthCatalog} = require("./pet-growth-catalog");
 const {createPetPaidResetPolicyCatalog} = require("./pet-paid-reset-policy-catalog");
 const {loadPetEncounterCatalog} = require("./pet-encounter-authority");
+const {
+  DEFAULT_ATTESTATION_PATH,
+  DEFAULT_ATTESTATION_REPO_PATH,
+  loadPetEvolutionReleaseAttestation,
+} = require("./pet-evolution-release-attestation");
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const DATA_DIR = path.join(REPO_ROOT, "client/godot/data");
@@ -32,6 +37,19 @@ function loadPetEvolutionRouteCatalog(options = {}) {
   const routePath = path.resolve(String(options.routePath || DEFAULT_ROUTE_PATH));
   const dataDir = path.resolve(String(options.dataDir || DATA_DIR));
   const document = readJson(routePath);
+  const releaseAttestationReference = record(document.releaseAttestation);
+  let releaseAttestation = options.releaseAttestation || null;
+  let releaseAttestationError = "";
+  if (!releaseAttestation) {
+    try {
+      releaseAttestation = loadPetEvolutionReleaseAttestation({
+        attestationPath: DEFAULT_ATTESTATION_PATH,
+        expectedSha256: text(releaseAttestationReference.sha256),
+      });
+    } catch (error) {
+      releaseAttestationError = String(error && error.message || error);
+    }
+  }
   const templates = readJson(path.join(dataDir, "pet_templates.json"));
   const growthDocument = readJson(path.join(dataDir, "balance", "pet_growth_species_profiles.json"));
   const items = readJson(path.join(dataDir, "bag_items.json"));
@@ -58,6 +76,8 @@ function loadPetEvolutionRouteCatalog(options = {}) {
     growthCatalog,
     paidResetCatalog,
     encounterCatalog,
+    releaseAttestation,
+    releaseAttestationError,
     routePath,
   });
 }
@@ -71,6 +91,7 @@ function normalizePetEvolutionRouteCatalog(input) {
     "balanceVersion",
     "runtimeEnabled",
     "disabledMessage",
+    "releaseAttestation",
     "qualityProjection",
     "materialEncounters",
     "routes",
@@ -80,6 +101,15 @@ function normalizePetEvolutionRouteCatalog(input) {
   if (document.balanceVersion !== input.evolutionBalance.balanceVersion) errors.push("catalog.balanceVersion does not match pet evolution balance");
   if (typeof document.runtimeEnabled !== "boolean") errors.push("catalog.runtimeEnabled must be boolean");
   if (!text(document.disabledMessage)) errors.push("catalog.disabledMessage must be non-empty");
+  const releaseAttestationReference = record(document.releaseAttestation);
+  exactKeys(releaseAttestationReference, ["path", "sha256"], "catalog.releaseAttestation", errors);
+  if (text(releaseAttestationReference.path) !== DEFAULT_ATTESTATION_REPO_PATH) {
+    errors.push("catalog.releaseAttestation.path must use the frozen P1.3e attestation");
+  }
+  if (!/^[a-f0-9]{64}$/.test(text(releaseAttestationReference.sha256).toLowerCase())) {
+    errors.push("catalog.releaseAttestation.sha256 must be a lowercase SHA-256");
+  }
+  if (input.releaseAttestationError) errors.push(input.releaseAttestationError);
   if (!isDeepStrictEqual(document.qualityProjection, input.evolutionBalance.qualityProjection)) {
     errors.push("catalog.qualityProjection must exactly match pet evolution balance");
   }
@@ -170,6 +200,22 @@ function normalizePetEvolutionRouteCatalog(input) {
   if (document.runtimeEnabled && routes.some((route) => route.assetGate.status !== "formal")) {
     errors.push("runtime cannot be enabled while any route still has deferred assets");
   }
+  const releaseAttestation = record(input.releaseAttestation);
+  if (
+    document.runtimeEnabled
+    && (
+      releaseAttestation.releaseApproved !== true
+      || releaseAttestation.runtimeEnabled !== true
+      || releaseAttestation.ownerReviewStatus !== "approved"
+      || releaseAttestation.routeCatalogId !== document.catalogId
+      || !isDeepStrictEqual(releaseAttestation.routeIds, routes.map((route) => route.routeId))
+      || !isDeepStrictEqual(releaseAttestation.formIds, routes.map((route) => route.targetFormId))
+      || releaseAttestation.attestationRepoPath !== text(releaseAttestationReference.path)
+      || releaseAttestation.attestationSha256 !== text(releaseAttestationReference.sha256).toLowerCase()
+    )
+  ) {
+    errors.push("runtime cannot be enabled without the exact owner-approved P1.3e release attestation");
+  }
   if ([...targetForms].some((formId) => sourceForms.has(formId))) {
     errors.push("terminal evolution target forms cannot be reused as evolution source forms");
   }
@@ -195,6 +241,7 @@ function normalizePetEvolutionRouteCatalog(input) {
     balanceVersion: document.balanceVersion,
     runtimeEnabled: document.runtimeEnabled,
     disabledMessage: text(document.disabledMessage),
+    releaseAttestation: structuredClone(releaseAttestation),
     qualityProjection: structuredClone(document.qualityProjection),
     materialEncounters: encounters,
     materialEncountersById: encountersById,

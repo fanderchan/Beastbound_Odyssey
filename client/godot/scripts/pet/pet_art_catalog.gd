@@ -1,6 +1,9 @@
 extends RefCounted
 
 const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
+const PetEvolutionReleaseAttestationModel := preload(
+	"res://scripts/progression/pet_evolution_release_attestation_model.gd"
+)
 
 const DATA_PATH := "res://data/pet_art_catalog.json"
 const PET_TEMPLATE_PATH := "res://data/pet_templates.json"
@@ -128,6 +131,29 @@ static func validation_errors() -> Array[String]:
 			errors.append("planned 宠物不能直接启用运行资产：%s" % form_id)
 		if status == STATUS_APPROVED and not bool(record.get("runtimeEnabled", false)):
 			errors.append("approved 宠物必须启用运行资产：%s" % form_id)
+		if record.has("releaseAttestation"):
+			var release_reference := (
+				record.get("releaseAttestation", {}) as Dictionary
+				if record.get("releaseAttestation", {}) is Dictionary
+				else {}
+			)
+			var release_sha := str(release_reference.get("sha256", "")).strip_edges().to_lower()
+			if (
+				str(release_reference.get("path", ""))
+				!= PetEvolutionReleaseAttestationModel.REPO_DATA_PATH
+				or status != STATUS_APPROVED
+				or not bool(record.get("runtimeEnabled", false))
+			):
+				errors.append("进化宠美术目录未绑定已开放的正式发布证明：%s" % form_id)
+			else:
+				var release_summary := (
+					PetEvolutionReleaseAttestationModel.release_summary(release_sha)
+				)
+				if (
+					not bool(release_summary.get("ok", false))
+					or not (release_summary.get("formIds", []) as Array).has(form_id)
+				):
+					errors.append("进化宠正式发布证明无效：%s" % form_id)
 		if not bool(record.get("rideableTarget", false)):
 			errors.append("全宠可骑目标缺失：%s" % form_id)
 		var supported_characters := _string_array(record.get("supportedCharacterIds", []))

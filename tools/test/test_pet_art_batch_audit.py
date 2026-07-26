@@ -330,6 +330,38 @@ class PetArtBatchAuditTest(unittest.TestCase):
             self.assertEqual(report["forms"][0]["mounted"]["validatedPngCount"], 64)
             self.assertTrue((root / "report.md").is_file())
 
+    def test_registered_evolution_frames_are_runtime_assets_not_orphans(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_bundle = catalog["forms"][0]["pet"]
+            pet_root = root / pet_bundle["root"]
+            metadata_path = root / pet_bundle["metadataPath"]
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["evolutionVisual"] = {
+                "view": "front_3quarter_sw",
+                "frameCount": 12,
+                "runtimeRoot": "views/front_3quarter_sw/evolution",
+            }
+            _write_json(metadata_path, metadata)
+            for index in range(1, 13):
+                frame_path = (
+                    pet_root
+                    / "views/front_3quarter_sw/evolution"
+                    / f"evolution-{index}.png"
+                )
+                frame_path.parent.mkdir(parents=True, exist_ok=True)
+                _battle_frame(0, index, 0).save(frame_path)
+
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            pet = report["forms"][0]["pet"]
+            self.assertEqual(pet["evolution"]["expected"], 12)
+            self.assertEqual(pet["evolution"]["validated"], 12)
+            self.assertEqual(pet["orphanPngs"], [])
+
     def test_mounted_full_source_derivation_is_audited(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

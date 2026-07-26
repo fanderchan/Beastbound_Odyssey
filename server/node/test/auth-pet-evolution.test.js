@@ -13,6 +13,7 @@ const {
   ROUTE_ID,
   SOURCE_FORM_ID,
   TARGET_FORM_ID,
+  createDisabledPetEvolutionRouteCatalog,
   createEnabledPetEvolutionRouteCatalog,
   seedEvolutionAccount,
 } = require("../test-support/pet-evolution-fixture");
@@ -231,9 +232,28 @@ test("evolution qualification, assets, protection and stale confirmations fail w
   }
 });
 
-test("production evolution catalog remains closed until formal assets are installed", () => {
+test("production evolution catalog opens after formal assets and owner release attestation", () => {
   const service = createAuthService({store: createMemoryAuthStore(), now: () => NOW_MS});
   const account = seedEvolutionAccount(service, {username: "evolutionassetgate"});
+  const before = structuredClone(service.snapshot());
+  const result = service.getPetEvolutionQuote(account.session.token, {
+    instanceId: account.fixture.pet.instanceId,
+    routeId: ROUTE_ID,
+  });
+  assert.equal(result.ok, true, result.message);
+  assert.equal(result.petEvolutionQuote.routeId, ROUTE_ID);
+  assert.equal(result.petEvolutionQuote.result.targetFormId, TARGET_FORM_ID);
+  assert.deepEqual(service.snapshot(), before);
+});
+
+test("an explicit disabled evolution fixture still fails closed without mutation", () => {
+  const catalog = createDisabledPetEvolutionRouteCatalog();
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    now: () => NOW_MS,
+    petEvolutionRouteCatalog: catalog,
+  });
+  const account = seedEvolutionAccount(service, {username: "evodisabled"});
   const before = structuredClone(service.snapshot());
   const result = service.getPetEvolutionQuote(account.session.token, {
     instanceId: account.fixture.pet.instanceId,

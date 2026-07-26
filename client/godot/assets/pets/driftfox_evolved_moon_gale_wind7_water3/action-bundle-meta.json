@@ -2,9 +2,13 @@
   "schemaVersion": 1,
   "formId": "driftfox_evolved_moon_gale_wind7_water3",
   "displayName": "月岚风狐",
-  "artStatus": "in_production",
-  "productionScope": "scoped_standalone_world_battle_and_front_evolution_visuals_owner_approved_runtime_disabled_bundle_pending",
-  "runtimeEnabled": false,
+  "artStatus": "approved",
+  "productionScope": "formal_world_battle_evolution_and_mounted_release_approved",
+  "runtimeEnabled": true,
+  "releaseAttestation": {
+    "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+    "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+  },
   "runtimeFrameSize": [
     256,
     256
@@ -14,7 +18,7 @@
     "back_3quarter_ne"
   ],
   "identity": {
-    "status": "self_review_passed_owner_pending",
+    "status": "approved",
     "sourceFrameSize": [
       512,
       512
@@ -32,77 +36,78 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "owner_review_pending"
+      "status": "approved"
     }
   },
   "worldVisual": {
-    "status": "owner_approved_visual_only_independent_semantic_passed_runtime_disabled",
+    "status": "approved",
+    "runtimeEnabled": true,
     "strategy": "independent_8",
     "runtimeMirroring": false,
     "directions": [
@@ -284,9 +289,9 @@
     "battlePreCanonicalQc": "qa/battle/history/precanonical-runtime-qc-summary-v1.json",
     "battlePreCanonicalQcSha256": "4d5879efcc107be677450e0f7fdfa0f9d8706d7ab69ccf58118881761f0f1d7d"
   },
-  "keyPoseReviewStatus": "owner_review_pending",
-  "ownerReviewStatus": "pending",
-  "notes": "月岚风狐独立宠物世界真八方向与正面进化 12 帧此前已获各自 visual_only 单项批准；Phase347 去标签复核方向 8/8，Phase357 已封口完整 180 张 512px 正式战斗源帧并证明 180/180 规范派生、未从运行帧反向放大。项目所有者查看 Phase360 的 1x 集中验收片后明确回复“通过”，现新增 standalone_pet_battle_visual_only 单项批准。以上批准不代表人物骑乘包、整只宠物 bundle 或正式进化路线开放；顶层 ownerReviewStatus、战斗/宠物 runtimeEnabled、路线 assetGate 与全局进化 runtimeEnabled 继续保持 pending/false/deferred。",
+  "keyPoseReviewStatus": "approved",
+  "ownerReviewStatus": "approved",
+  "notes": "月岚风狐独立世界、独立战斗、进化演出与成年见习猎人骑乘世界/战斗五项视觉均已获项目所有者单项批准；Phase357/358完整512px源档与规范派生封口有效。项目所有者于2026-07-26进一步批准P1.3e正式开放，整包与两条生产路线现由冻结发布证明共同启用；历史visual-only决定保持原范围，不被改写。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -300,7 +305,7 @@
     }
   },
   "battleVisual": {
-    "status": "owner_approved_visual_only_runtime_disabled",
+    "status": "approved",
     "approvalScope": "standalone_pet_battle_visual_only",
     "ownerDecision": "qa/battle/owner-decision.json",
     "ownerDecisionSha256": "6d3a511fcb338a9c687e438cfa273715ab6f8b2a8650b81329a95bbda4eb4db0",
@@ -347,7 +352,7 @@
     "runtimeMirroring": false,
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
-    "runtimeEnabled": false,
+    "runtimeEnabled": true,
     "bundleDigest": "9d5230b9390d779404eda6b9deea300584e1af7bd08a6cbdd35246912e569074",
     "archiveMode": "full",
     "sourceFramesTracked": true,
@@ -5074,7 +5079,7 @@
       "routeRuntimeEnabled": false
     },
     "runtimeBundleDigest": "daba0e310c76c165ccac511d15366b3db40a792c80b52cbbd44dee7402549187",
-    "runtimeEnabled": false,
+    "runtimeEnabled": true,
     "ownerReview": "approved"
   }
 }

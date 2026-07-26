@@ -1036,7 +1036,7 @@
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "optional": true,
-      "runtimeEnabled": false,
+      "runtimeEnabled": true,
       "autoClaimOnReady": true,
       "summary": "与队友击败岩脉进化守卫，证明你能承担乌力族系的终局培养。",
       "objective": {
@@ -1064,7 +1064,7 @@
       "giverId": "firebud_rebirth_mentor",
       "turnInId": "firebud_rebirth_mentor",
       "optional": true,
-      "runtimeEnabled": false,
+      "runtimeEnabled": true,
       "autoClaimOnReady": true,
       "summary": "与队友击败岚息进化守卫，证明你能驾驭风狐族系的终局速度。",
       "objective": {

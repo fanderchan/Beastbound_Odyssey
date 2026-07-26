@@ -98,23 +98,26 @@ test("manual encounter rules exactly cover rebirth, MM and the gated evolution m
       && rule.minAttemptLevel === cave.minAttemptLevel
     )), true);
   }
-  assert.equal(access.rules.filter((rule) => rule.kind === "evolution_material").every((rule) => rule.runtimeEnabled === false), true);
+  assert.equal(access.rules.filter((rule) => rule.kind === "evolution_material").every((rule) => rule.runtimeEnabled === true), true);
 });
 
-test("evolution material encounters stay closed until the route gate opens, then enforce real-player party, level and reward capacity", () => {
-  const access = createAccess();
-  const disabledRule = access.rules.find((entry) => entry.groupId === "shadow_oath_evolution_floor_core");
+test("evolution material encounters preserve a disabled fallback, while production enforces real-player party, level and reward capacity", () => {
+  const disabledRoutes = {
+    ...evolutionRoutes,
+    manualEncounterRules: evolutionRoutes.manualEncounterRules.map((rule) => ({
+      ...rule,
+      runtimeEnabled: false,
+    })),
+  };
+  const disabled = createAccess({evolutionRoutes: disabledRoutes});
+  const disabledRule = disabled.rules.find((entry) => entry.groupId === "shadow_oath_evolution_floor_core");
   const leader = participant("进化队长", profile(), "leader");
-  let checked = access.authorize({...requestFor(disabledRule), participants: [leader]});
+  let checked = disabled.authorize({...requestFor(disabledRule), participants: [leader]});
   assert.equal(checked.ok, false);
   assert.equal(checked.code, "manual_evolution_route_disabled");
-  assert.match(checked.message, /最终安全验证/);
+  assert.match(checked.message, /暂时不可用/);
 
-  const enabledRoutes = {
-    ...evolutionRoutes,
-    manualEncounterRules: evolutionRoutes.manualEncounterRules.map((rule) => ({...rule, runtimeEnabled: true})),
-  };
-  const enabled = createAccess({evolutionRoutes: enabledRoutes});
+  const enabled = createAccess();
   const coreRule = enabled.rules.find((entry) => entry.groupId === "shadow_oath_evolution_floor_core");
   const member = participant("进化队员", profile(), "member");
   checked = enabled.authorize({...requestFor(coreRule), participants: [leader]});

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_evolution_runtime_release_owner_decision",
+  "decisionId": "pet_evolution_p1_3e_runtime_release_20260726",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "approvedAtUtc": "2026-07-26T09:20:50Z",
+  "roadmapItem": "P1.3e",
+  "routeCatalogId": "pet_evolution_routes_v2",
+  "routeIds": [
+    "wuli_crystal_evolution_v1",
+    "driftfox_moon_gale_evolution_v1"
+  ],
+  "targetFormIds": [
+    "wuli_evolved_crystal_earth8_water2",
+    "driftfox_evolved_moon_gale_wind7_water3"
+  ],
+  "approvedScope": [
+    "standalone_pet_world_runtime",
+    "standalone_pet_battle_runtime",
+    "integrated_mounted_world_runtime",
+    "integrated_mounted_battle_runtime",
+    "evolution_success_visual_runtime",
+    "license_quests",
+    "material_encounters",
+    "authoritative_player_evolution_routes"
+  ],
+  "excludedScope": [
+    "pet_fusion_runtime",
+    "normal_second_rebirth_rule_changes",
+    "paid_reset_rule_changes",
+    "protocol_or_database_migration"
+  ],
+  "ownerInstruction": "完成P1.3e发布与验收1-6；下一次对话再进入融合宠大系统开发。"
+}

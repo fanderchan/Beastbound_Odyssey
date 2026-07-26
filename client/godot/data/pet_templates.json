@@ -434,10 +434,10 @@
       "visual": {
         "placeholderPalette": "wuli_tough",
         "artPlan": {
-          "source": "original_asset_needed",
+          "source": "project_original_ai_assisted_formal_release",
           "silhouette": "低重心厚甲乌力，半透明岩晶外壳带少量水蓝脉络",
-          "neededAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"],
-          "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal/"
+          "neededAnimations": ["idle", "walk", "attack", "skill", "hurt", "defend", "dodge", "counter", "stagger", "knockaway", "down", "revive", "evolution"],
+          "replacementPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/"
         }
       }
     },
@@ -607,10 +607,10 @@
       "visual": {
         "placeholderPalette": "f1_driftfox_highland",
         "artPlan": {
-          "source": "original_asset_needed",
+          "source": "project_original_ai_assisted_formal_release",
           "silhouette": "轻型长耳风狐，双尾形成月牙与雾岚流带",
-          "neededAnimations": ["idle", "walk", "attack", "defend", "skill", "hit", "defeat", "evolution"],
-          "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale/"
+          "neededAnimations": ["idle", "walk", "attack", "skill", "hurt", "defend", "dodge", "counter", "stagger", "knockaway", "down", "revive", "evolution"],
+          "replacementPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/"
         }
       }
     },

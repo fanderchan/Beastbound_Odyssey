@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_pet_evolution_runtime_release_attestation",
+  "attestationId": "pet_evolution_p1_3e_runtime_release_v1",
+  "status": "approved",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "approvedAtUtc": "2026-07-26T09:20:50Z",
+  "ownerDecision": {
+    "path": "client/godot/data/pet_evolution_runtime_release_owner_decision_v1.json",
+    "sha256": "725d166395e0b5342c0807dad0263d48fad45b0ccf3bd1b84b46c97c4c3daeaf"
+  },
+  "routeCatalogId": "pet_evolution_routes_v2",
+  "routeIds": [
+    "wuli_crystal_evolution_v1",
+    "driftfox_moon_gale_evolution_v1"
+  ],
+  "forms": [
+    {
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "petMetadataPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/action-bundle-meta.json",
+      "mountedMetadataPath": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/action-bundle-meta.json",
+      "visualEvidence": [
+        {
+          "scope": "standalone_pet_world_true8_visual_only",
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/qa/world/owner-decision.json",
+          "sha256": "bc1febd4be2567f6b513e6d1b4614adc5240976b1db80ad6216a96439a124771"
+        },
+        {
+          "scope": "standalone_pet_battle_visual_only",
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/qa/battle/owner-decision.json",
+          "sha256": "fbaa1954b1d9d167fc0d62cf90e90faedd1367664370f1b4e89956f312e3279c"
+        },
+        {
+          "scope": "evolution_visual_only",
+          "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/qa/evolution/owner-decision.json",
+          "sha256": "03d340915025ed5bbedce42e9b780b0a9133e452b83b729acf601dab4af91ac1"
+        },
+        {
+          "scope": "integrated_mounted_world_true8_visual_only",
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/qa/world/owner-decision.json",
+          "sha256": "3967254aafe4995b411c9c30989f1f601c09379d544b77b26e01ebebacea1d7a"
+        },
+        {
+          "scope": "integrated_mounted_battle_visual_only",
+          "path": "client/godot/assets/mounted/novice_hunter_v1/wuli_evolved_crystal_earth8_water2/qa/battle/owner-decision.json",
+          "sha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73"
+        }
+      ]
+    },
+    {
+      "formId": "driftfox_evolved_moon_gale_wind7_water3",
+      "petMetadataPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/action-bundle-meta.json",
+      "mountedMetadataPath": "client/godot/assets/mounted/novice_hunter_v1/driftfox_evolved_moon_gale_wind7_water3/action-bundle-meta.json",
+      "visualEvidence": [
+        {
+          "scope": "standalone_pet_world_true8_visual_only",
+          "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/qa/world/owner-decision.json",
+          "sha256": "76098cac2175425f0f3070d5676aceed0b1dfda33022e81436ebd0f23ab3fd6d"
+        },
+        {
+          "scope": "standalone_pet_battle_visual_only",
+          "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/qa/battle/owner-decision.json",
+          "sha256": "6d3a511fcb338a9c687e438cfa273715ab6f8b2a8650b81329a95bbda4eb4db0"
+        },
+        {
+          "scope": "evolution_visual_only",
+          "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/qa/evolution/owner-decision.json",
+          "sha256": "bffafb87c8ee6125cdbd8b691b1f857dbc1912fe344b5759fb8db3da7bbac09c"
+        },
+        {
+          "scope": "integrated_mounted_world_true8_visual_only",
+          "path": "client/godot/assets/mounted/novice_hunter_v1/driftfox_evolved_moon_gale_wind7_water3/qa/world/owner-decision.json",
+          "sha256": "9a7739c009f30fa75d03148a50dbe1f87b0658355a3d816a5cf060ef660aea19"
+        },
+        {
+          "scope": "integrated_mounted_battle_visual_only",
+          "path": "client/godot/assets/mounted/novice_hunter_v1/driftfox_evolved_moon_gale_wind7_water3/qa/battle/owner-decision.json",
+          "sha256": "5b3a68bd6f75ab325b591c58f4586999ff3000f7b567ba2ed98f803e90cf4ccb"
+        }
+      ]
+    }
+  ],
+  "validationEvidence": [
+    {
+      "kind": "two_reject_two_allow_authoritative_transaction",
+      "status": "passed",
+      "path": "docs/phase_355_moon_gale_evolution_runtime_presentation.md",
+      "sha256": "b927258e7e5b20bb458bfb93faed640c8d4fe39e0eeeb9cca3cb627007bf395a"
+    },
+    {
+      "kind": "full_512_source_and_runtime_derivation_closure",
+      "status": "passed",
+      "path": "docs/phase_358_evolved_battle_full_source_closure.md",
+      "sha256": "6be15682001ddda6df9317de222f9a67b5073648890d680d09dc3190b7a1456a"
+    },
+    {
+      "kind": "all_remaining_visual_owner_approvals",
+      "status": "passed",
+      "path": "docs/phase_361_remaining_evolution_visual_owner_approval.md",
+      "sha256": "1fe5ad57d93717a7978707df35aea149a58d21b1de4e0d0facf209decd2f0744"
+    }
+  ],
+  "expectedBundleLifecycle": {
+    "artStatus": "approved",
+    "ownerReviewStatus": "approved",
+    "runtimeEnabled": true,
+    "petWorldRuntimeEnabled": true,
+    "petBattleRuntimeEnabled": true,
+    "evolutionVisualRuntimeEnabled": true,
+    "mountedWorldRuntimeEnabled": true,
+    "mountedBattleRuntimeEnabled": true
+  }
+}
