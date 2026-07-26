@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_mounted_battle_visual_owner_decision",
+  "mountFormId": "driftfox_evolved_moon_gale_wind7_water3",
+  "characterId": "novice_hunter_v1",
+  "subject": "integrated_mounted_battle_whole_frame",
+  "decision": "approved",
+  "ownerReviewStatus": "approved",
+  "ownerId": "project-owner:fander",
+  "approvedAt": "2026-07-26",
+  "scope": "integrated_mounted_battle_visual_only",
+  "battleVisualApproved": true,
+  "fullSourceArchiveAccepted": true,
+  "independentSemanticAuditStatus": "passed",
+  "petBundleReleaseApproved": false,
+  "mountedBundleReleaseApproved": false,
+  "mountedBattleRuntimeReleaseApproved": false,
+  "evolutionRouteReleaseApproved": false,
+  "runtimeEnabled": false,
+  "acceptedEvidence": {
+    "mainSceneVideo": ".run/evidence/phase358_evolved_battle_full_source_closure/Beastbound_Phase358_Evolved_Full_Source_Closure_1x.mp4",
+    "mainSceneVideoSha256": "8810a2ec5a3c771bb4634e3c72b483be50dae0f0aaab5df222810fd30aad8b25",
+    "chapter": "moon_mounted",
+    "width": 1280,
+    "height": 720,
+    "fps": 60,
+    "durationSeconds": 37.816667,
+    "speedScale": 1.0,
+    "fullDecodePassed": true,
+    "selectedSteps": [
+      "mounted_attack",
+      "mounted_skill",
+      "mounted_dodge",
+      "mounted_down",
+      "mounted_revive"
+    ]
+  },
+  "acceptedSourceClosure": {
+    "manifest": "source/battle/full-source-closure-v1.json",
+    "manifestSha256": "f994f5c20eea4bcd4206727207a81f38b72ce723e9bbc87bb42c854c9be171cb",
+    "formal512FrameCount": 180,
+    "derived256FrameCount": 180,
+    "rawLosslessArchiveCount": 24,
+    "upscaledFromRuntime": false
+  },
+  "notes": [
+    "项目所有者在查看 Phase358 的 1x 合并实机成片后回复“没问题啊。”。",
+    "本决定只批准成年见习猎人骑月岚风狐的一体整图战斗视觉及其 Phase358 高清源档封口，不扩大既有世界真八向批准，也不批准整宠或 mounted bundle、月岚独立宠物战斗包或正式进化路线开放。",
+    "骑乘战斗视觉、组合目录、路线资产门禁与全局进化 runtimeEnabled 继续保持关闭。"
+  ]
+}

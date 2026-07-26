@@ -3,7 +3,7 @@
   "formId": "wuli_evolved_crystal_earth8_water2",
   "displayName": "晶甲乌力",
   "artStatus": "in_production",
-  "productionScope": "identity_world_true8_formal_two_view_battle_and_front_evolution_owner_review_pending",
+  "productionScope": "identity_world_true8_owner_pending_formal_two_view_battle_and_front_evolution_owner_approved_visual_only_runtime_disabled",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -221,6 +221,8 @@
     "battleDownReviveKoSemanticsFaceZoomSha256": "62690bd0e54413b53841666e678a1cee48925b15ca4fb60bc1f0a09b8e0f0c32",
     "battleSemanticReview": "qa/battle/semantic-review-v2.json",
     "battleSemanticReviewSha256": "8b88f31751e76b7e2c1c9b144fa95aaa6106b600e36c6863493b890836b696ce",
+    "battleOwnerDecision": "qa/battle/owner-decision.json",
+    "battleOwnerDecisionSha256": "fbaa1954b1d9d167fc0d62cf90e90faedd1367664370f1b4e89956f312e3279c",
     "battleRuntimeParity": ".run/evidence/phase350_crystal_wuli_standalone_battle/runtime-parity.json",
     "battleRuntimeParitySha256": "1298d0f129a98ab42bad452dee3a5ec81767339c66e31343858a14af07799ce2",
     "battleImageStructureAudit": ".run/evidence/phase350_crystal_wuli_standalone_battle/image-structure-audit.json",
@@ -246,7 +248,7 @@
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "正式双视角 battle180 已完成并等待所有者审美验收；高防乌力→晶甲乌力正面进化12帧视觉已单项批准。该单项批准不代表整只宠物、骑乘包或进化路线开放，所有正式运行开关继续关闭。世界与骑乘制作状态单独追踪。Down/Revive 已仅用现有独立姿势重排为单调倒地、稳定保持和单调复起，禁止倒地中途复起。Down/Revive KO 语义已逐帧复审：倒地从清醒进入失焦/螺旋并稳定瘫软，复起从螺旋、失焦回到清醒；只改批准的面部 RGB 区域，alpha、世界与骑乘资产不变。Phase350 对当前独立宠物 battle180 做第二遍运行时语义复核：180/180 当前源 PNG、Godot 实载和逐帧来源账本一致，14 个真实 Main 动作导演场景以 1x 完成；晶甲身份、攻击/技能差异、防御/受击、回避/反击、击飞、昏厥/复起均自审通过。本阶段只修正两次既有 KO 修复遗漏的 21 条运行帧 RGBA 与 4 条动作 QC 账本指纹，不改动作像素；初始 install manifest 保持为 307/307 可验证的历史安装快照，当前状态由来源账本和两份 repair manifest 证明。Phase351 对当前独立宠物世界真八向做第二遍去标签审核：随机编码后先冻结方向判断再揭示映射，8/8 命中；40/40 当前 PNG、Godot 实载、冻结 QC、来源账本和 Phase326 方向批准清单一致，图片改动为 0。该技术审核不代替项目所有者验收，世界与整宠仍为 owner pending/runtime disabled。lean 512px 战斗源归档债务、owner 验收和所有运行门禁继续保留。",
+  "notes": "晶甲乌力独立宠物双视角 battle180 与 Phase358 完整高清源档已获项目所有者 battle_visual_only 单项批准；高防乌力→晶甲乌力正面进化 12 帧视觉也已单项批准。Phase350/351 的运行时语义与世界去标签技术审核保持有效，Phase358 已把既有倒地/复起与 KO 眼修复重放到完整 512px 母版并证明 180/180 规范派生。以上批准都不代表独立世界真八向、人物骑乘包、整只宠物或正式进化路线开放；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -329,7 +331,10 @@
     "ownerReview": "approved"
   },
   "battleVisual": {
-    "status": "independent_semantic_self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_runtime_disabled",
+    "approvalScope": "standalone_pet_battle_visual_only",
+    "ownerDecision": "qa/battle/owner-decision.json",
+    "ownerDecisionSha256": "fbaa1954b1d9d167fc0d62cf90e90faedd1367664370f1b4e89956f312e3279c",
     "kind": "pet",
     "views": [
       "front_3quarter_sw",
@@ -391,7 +396,7 @@
       "back_3quarter_ne": true
     },
     "semanticReview": {
-      "status": "passed_self_review_owner_pending",
+      "status": "passed_owner_approved_visual_only",
       "independentSemanticAuditStatus": "passed",
       "review": "qa/battle/semantic-review-v2.json",
       "reviewSha256": "8b88f31751e76b7e2c1c9b144fa95aaa6106b600e36c6863493b890836b696ce",
@@ -428,11 +433,14 @@
         "fullDecodePassed": true
       },
       "lean512SourceArchiveDebt": "resolved_phase358_full_archive",
-      "ownerReview": "pending",
+      "ownerReview": "approved",
+      "approvalScope": "standalone_pet_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "fbaa1954b1d9d167fc0d62cf90e90faedd1367664370f1b4e89956f312e3279c",
       "runtimeEnabled": false,
       "full512SourceArchive": "resolved_phase358_full_archive",
       "fullSourceClosureValidation": {
-        "status": "passed_owner_pending",
+        "status": "passed_owner_approved_visual_only",
         "currentRuntimeParity": {
           "status": "passed",
           "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
@@ -444,7 +452,7 @@
           "errors": []
         },
         "realMainSceneReview": {
-          "status": "self_review_passed_owner_pending",
+          "status": "owner_approved_visual_only",
           "scene": "res://scenes/Main.tscn",
           "combinedReview": true,
           "chapter": "crystal_standalone",
@@ -476,7 +484,7 @@
           "unexpectedScaleOrIdentityDrift": false,
           "downReviveContinuityPreserved": true,
           "runtimeSpeedupUsed": false,
-          "ownerReview": "pending",
+          "ownerReview": "approved",
           "runtimeEnabled": false
         }
       }
@@ -489,7 +497,7 @@
           "revive"
         ],
         "runtimeFrameCount": 32,
-        "ownerVisualGate": "self_review_passed_owner_pending",
+        "ownerVisualGate": "owner_approved_visual_only",
         "canonicalizedIntoTracked512Source": true,
         "canonicalizedBy": "source/battle/full-source-closure-v1.json",
         "upscaledFromRuntime": false
@@ -503,7 +511,7 @@
         "runtimeFrameCount": 12,
         "alphaExact": true,
         "bodyLightingOutlineExactOutsideFaceMasks": true,
-        "ownerVisualGate": "self_review_passed_owner_pending",
+        "ownerVisualGate": "owner_approved_visual_only",
         "canonicalizedIntoTracked512Source": true,
         "canonicalizedBy": "source/battle/full-source-closure-v1.json",
         "upscaledFromRuntime": false
@@ -513,7 +521,7 @@
     "qcSummarySha256": "32fd30c78ebef85b75706c1b43cfc0090ab186ceb73a8865bfa20c122dae0d3c",
     "fullSourceClosure": {
       "id": "evolved-battle-full-source-closure-v1",
-      "status": "passed_full_archive_runtime_and_visual_validated_owner_pending",
+      "status": "passed_full_archive_runtime_and_visual_validated_owner_approved_visual_only",
       "formal512FrameCount": 180,
       "derived256FrameCount": 180,
       "rawLosslessArchiveCount": 24,
@@ -523,7 +531,10 @@
       "upscaledFromRuntime": false,
       "manifest": "source/battle/full-source-closure-v1.json",
       "manifestSha256": "a670be2fd7bd18e5a6c7ac6670873dda4702f5c7263ec2c4402c0def67e342ae",
-      "ownerReview": "pending",
+      "ownerReview": "approved",
+      "approvalScope": "standalone_pet_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "fbaa1954b1d9d167fc0d62cf90e90faedd1367664370f1b4e89956f312e3279c",
       "runtimeEnabled": false,
       "godotRuntimeParity": {
         "status": "passed",
@@ -536,7 +547,7 @@
         "errors": []
       },
       "realMainSceneReview": {
-        "status": "self_review_passed_owner_pending",
+        "status": "owner_approved_visual_only",
         "scene": "res://scenes/Main.tscn",
         "combinedReview": true,
         "chapter": "crystal_standalone",
@@ -568,7 +579,7 @@
         "unexpectedScaleOrIdentityDrift": false,
         "downReviveContinuityPreserved": true,
         "runtimeSpeedupUsed": false,
-        "ownerReview": "pending",
+        "ownerReview": "approved",
         "runtimeEnabled": false
       }
     }

@@ -3,7 +3,7 @@
   "mountFormId": "wuli_evolved_crystal_earth8_water2",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_world_true8_and_formal_battle_owner_review_pending",
+  "productionScope": "mounted_world_true8_owner_pending_and_formal_battle_owner_approved_visual_only_runtime_disabled",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -209,6 +209,8 @@
     "battleContactSheetSha256": "aed3935da5ccfa636c4222c59b015f9b86eb87d4eace4b3aacc834eee98272f9",
     "battleQc": "qa/battle/qc-summary.json",
     "battleQcSha256": "10fb881d1c0cf980d8c2e81e291dee685545850085682f7ed07f611ab528dfc8",
+    "battleOwnerDecision": "qa/battle/owner-decision.json",
+    "battleOwnerDecisionSha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73",
     "battleFullSourceClosure": "source/battle/full-source-closure-v1.json",
     "battleFullSourceClosureSha256": "068526a4fb78fa7a750ab9ef3ed4dbaa8082785dd14fda7a1459172dc6ebe866",
     "battleFullSourceClosureRuntimeParity": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
@@ -219,7 +221,7 @@
     "battleFullSourceClosureVisualReviewSha256": "4c0cb431d0b02afbed05c853f29dd22378ae34136c8c28fa8e94203f4a04ffc9"
   },
   "ownerReviewStatus": "pending",
-  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 对 12 动作、180 帧整体骑乘战斗补齐第二遍运行时语义自审：当前 PNG/import/Godot 实载、源账本、生成来源与安装清单均通过一致性门禁，真实 Main.tscn 以 1.00x 覆盖 14 段动作因果。Phase353 对完整骑乘世界真八向补齐第二遍去标签审核：先冻结方向判断再揭示映射，8/8 命中；40/40 当前 PNG、Godot 实载、冻结 QC、来源账本和 Phase326 清单一致，图片改动为 0。两阶段均未修改玩法代码，项目所有者尚未观看本轮结果，ownerReviewStatus 继续 pending，runtime 继续关闭。",
+  "notes": "人物骑晶甲乌力的世界真八方向与双视角战斗候选均已齐套。Phase352 战斗运行时语义自审、Phase353 世界去标签审核及 Phase358 完整高清源档门禁均通过；项目所有者已查看 Phase358 的 1x 合并实机成片，并只批准 integrated_mounted_battle_visual_only。骑乘世界真八向、整宠或 mounted bundle、独立宠物包和正式进化路线均未随之批准；顶层 ownerReviewStatus 与全部 runtimeEnabled 继续保持 pending/false。",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -233,7 +235,10 @@
     }
   },
   "battleVisual": {
-    "status": "independent_semantic_self_review_passed_owner_pending",
+    "status": "owner_approved_visual_only_runtime_disabled",
+    "approvalScope": "integrated_mounted_battle_visual_only",
+    "ownerDecision": "qa/battle/owner-decision.json",
+    "ownerDecisionSha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73",
     "kind": "mounted",
     "views": [
       "front_3quarter_sw",
@@ -296,7 +301,11 @@
     "priorReviewVideo": ".run/evidence/phase340_crystal_wuli_mounted/Beastbound_Phase340_Crystal_Wuli_Mounted_1x.mp4",
     "priorReviewVideoSha256": "1eae905e5fd429be27134183515ba5b9e2a3ce16154fb8a49cb2711960cfbd0e",
     "semanticReview": {
-      "status": "passed_owner_pending",
+      "status": "passed_owner_approved_visual_only",
+      "ownerReview": "approved",
+      "approvalScope": "integrated_mounted_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73",
       "reviewer": "codex_self_review_not_project_owner",
       "report": "qa/battle/semantic-review-v2.json",
       "reportSha256": "c893eeee0a84d0daf737dbb9a3b48f79aafa7c527d3b4016bbbe3b8ba9de14f7",
@@ -309,7 +318,7 @@
       "reviewStepCount": 14,
       "full512SourceArchive": "resolved_phase358_full_archive",
       "fullSourceClosureValidation": {
-        "status": "passed_owner_pending",
+        "status": "passed_owner_approved_visual_only",
         "currentRuntimeParity": {
           "status": "passed",
           "report": ".run/evidence/phase358_evolved_battle_full_source_closure/runtime-parity.json",
@@ -321,7 +330,7 @@
           "errors": []
         },
         "realMainSceneReview": {
-          "status": "self_review_passed_owner_pending",
+          "status": "owner_approved_visual_only",
           "scene": "res://scenes/Main.tscn",
           "combinedReview": true,
           "chapter": "crystal_mounted",
@@ -353,7 +362,7 @@
           "unexpectedScaleOrIdentityDrift": false,
           "downReviveContinuityPreserved": true,
           "runtimeSpeedupUsed": false,
-          "ownerReview": "pending",
+          "ownerReview": "approved",
           "runtimeEnabled": false
         }
       }
@@ -367,7 +376,7 @@
     "sourceLedgerSha256": "e0685e82b9aa4bb9c3a16609689e3e241e60c1c60a65d30bc5a43568d770a317",
     "fullSourceClosure": {
       "id": "evolved-battle-full-source-closure-v1",
-      "status": "passed_full_archive_runtime_and_visual_validated_owner_pending",
+      "status": "passed_full_archive_runtime_and_visual_validated_owner_approved_visual_only",
       "formal512FrameCount": 180,
       "derived256FrameCount": 180,
       "rawLosslessArchiveCount": 24,
@@ -377,7 +386,10 @@
       "upscaledFromRuntime": false,
       "manifest": "source/battle/full-source-closure-v1.json",
       "manifestSha256": "068526a4fb78fa7a750ab9ef3ed4dbaa8082785dd14fda7a1459172dc6ebe866",
-      "ownerReview": "pending",
+      "ownerReview": "approved",
+      "approvalScope": "integrated_mounted_battle_visual_only",
+      "ownerDecision": "qa/battle/owner-decision.json",
+      "ownerDecisionSha256": "df52d898da7a1dffe6117cecdeedf3283eeef8cc1ecd485b833c4a683180df73",
       "runtimeEnabled": false,
       "godotRuntimeParity": {
         "status": "passed",
@@ -390,7 +402,7 @@
         "errors": []
       },
       "realMainSceneReview": {
-        "status": "self_review_passed_owner_pending",
+        "status": "owner_approved_visual_only",
         "scene": "res://scenes/Main.tscn",
         "combinedReview": true,
         "chapter": "crystal_mounted",
@@ -422,7 +434,7 @@
         "unexpectedScaleOrIdentityDrift": false,
         "downReviveContinuityPreserved": true,
         "runtimeSpeedupUsed": false,
-        "ownerReview": "pending",
+        "ownerReview": "approved",
         "runtimeEnabled": false
       }
     }
