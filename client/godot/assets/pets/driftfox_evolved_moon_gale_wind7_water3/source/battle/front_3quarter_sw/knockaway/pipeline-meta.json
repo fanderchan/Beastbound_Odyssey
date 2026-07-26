@@ -164,12 +164,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.038031,
       "sourceOutputSize": [
-        199,
-        220
+        266,
+        295
       ],
       "sourcePastePosition": [
-        191,
-        268
+        160,
+        191
       ],
       "resizedVisibleBbox": [
         2,
@@ -178,9 +178,9 @@
         218
       ],
       "sourceVisibleBbox": [
-        193,
-        270,
-        388,
+        160,
+        191,
+        426,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -191,15 +191,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 15,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        96,
-        134,
-        195,
+        80,
+        95,
+        214,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 1,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "8e9914040d5eaa3298f258d11646bb4d6e659af1bfa8111298587ea1a1cee3ef",
-      "runtimeRgbaSha256": "9ad391728518fef35f37df9009d526a59c93d4a855fc645526e777d9c70407b0"
+      "sourceRgbaSha256": "f05b54c88dd94963887230a47cd1f7dc2564b232862147613ab97805a2ec2d93",
+      "runtimeRgbaSha256": "b4cb1bd2a57841265daa5acd19ae39fb7429309728347383c0ca341d2ce91518",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "8e9914040d5eaa3298f258d11646bb4d6e659af1bfa8111298587ea1a1cee3ef",
+        "formal512RgbaSha256": "f05b54c88dd94963887230a47cd1f7dc2564b232862147613ab97805a2ec2d93",
+        "derived256RgbaSha256": "b4cb1bd2a57841265daa5acd19ae39fb7429309728347383c0ca341d2ce91518",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            193,
+            270,
+            388,
+            486
+          ],
+          "sourceCropSize": [
+            195,
+            216
+          ],
+          "outputCropSize": [
+            266,
+            295
+          ],
+          "pastePosition": [
+            160,
+            191
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-2",
@@ -289,12 +326,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.011186,
       "sourceOutputSize": [
-        224,
-        226
+        300,
+        303
       ],
       "sourcePastePosition": [
-        214,
-        262
+        178,
+        183
       ],
       "resizedVisibleBbox": [
         2,
@@ -303,9 +340,9 @@
         224
       ],
       "sourceVisibleBbox": [
-        216,
-        264,
-        436,
+        178,
+        183,
+        478,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -316,15 +353,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 20,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        108,
-        132,
-        218,
+        89,
+        91,
+        240,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 3,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "137ab9957bc7b55cb863303e57e27ce089fb87727faa036305a9a39e539499e2",
-      "runtimeRgbaSha256": "d43d175d18d35a6023a9fc6e4d89fe2ca92338a36ecc099f1bde686ff071513d"
+      "sourceRgbaSha256": "f6ee6c9a8513166706044eed506ecb2bb9023c6cb1c0454bc434f46c657c8d3b",
+      "runtimeRgbaSha256": "4704eb84e988bbc1ef54ba420d52e7acb75b8f0806b89cd964c6859d6b150aa6",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "137ab9957bc7b55cb863303e57e27ce089fb87727faa036305a9a39e539499e2",
+        "formal512RgbaSha256": "f6ee6c9a8513166706044eed506ecb2bb9023c6cb1c0454bc434f46c657c8d3b",
+        "derived256RgbaSha256": "4704eb84e988bbc1ef54ba420d52e7acb75b8f0806b89cd964c6859d6b150aa6",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            216,
+            264,
+            436,
+            486
+          ],
+          "sourceCropSize": [
+            220,
+            222
+          ],
+          "outputCropSize": [
+            300,
+            303
+          ],
+          "pastePosition": [
+            178,
+            183
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-3",
@@ -414,12 +488,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.091723,
       "sourceOutputSize": [
-        249,
-        217
+        335,
+        291
       ],
       "sourcePastePosition": [
-        191,
-        271
+        150,
+        195
       ],
       "resizedVisibleBbox": [
         2,
@@ -428,9 +502,9 @@
         215
       ],
       "sourceVisibleBbox": [
-        193,
-        273,
-        438,
+        150,
+        195,
+        485,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -441,15 +515,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 25,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        96,
-        136,
-        220,
+        74,
+        97,
+        243,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 5,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "aa5701fd9713b5ed10a1dad06e564852779c8515262a656a21da3a27600fb295",
-      "runtimeRgbaSha256": "f93dd08e3a63a9fd2ffda6418413b271931f448fc5963f2d35e735fe82093855"
+      "sourceRgbaSha256": "e1af1973e598db837d498a7c4bfc233bc8995c54b857306bf4797c10cf9bc2ba",
+      "runtimeRgbaSha256": "ca998ac79e76ec7303f4b58a05c9097e5b3b9331ca082ea14380dba8c34c861e",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "aa5701fd9713b5ed10a1dad06e564852779c8515262a656a21da3a27600fb295",
+        "formal512RgbaSha256": "e1af1973e598db837d498a7c4bfc233bc8995c54b857306bf4797c10cf9bc2ba",
+        "derived256RgbaSha256": "ca998ac79e76ec7303f4b58a05c9097e5b3b9331ca082ea14380dba8c34c861e",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            193,
+            273,
+            438,
+            486
+          ],
+          "sourceCropSize": [
+            245,
+            213
+          ],
+          "outputCropSize": [
+            335,
+            291
+          ],
+          "pastePosition": [
+            150,
+            195
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-4",
@@ -539,12 +650,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.01566,
       "sourceOutputSize": [
-        225,
-        221
+        302,
+        296
       ],
       "sourcePastePosition": [
-        188,
-        267
+        152,
+        190
       ],
       "resizedVisibleBbox": [
         2,
@@ -553,9 +664,9 @@
         219
       ],
       "sourceVisibleBbox": [
+        152,
         190,
-        269,
-        411,
+        454,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -566,15 +677,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 21,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        95,
-        134,
-        206,
+        76,
+        94,
+        227,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "835ed9cb673a694eefccbf19141cff54c6f2f49b3bb56370ba490cdf33a93bde",
-      "runtimeRgbaSha256": "1e0472811de7737f31f23e4282ec7fe61f98ae9dd52328076319f34a32696669"
+      "sourceRgbaSha256": "08c6775eff67052bc1bed1949d9d62d34a861f2dd009435da35e096fa7bbd283",
+      "runtimeRgbaSha256": "e6bb9a3f7424ca0594d8ecfb1bc8521d3186323236ed70a84e7a7791f6550487",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "835ed9cb673a694eefccbf19141cff54c6f2f49b3bb56370ba490cdf33a93bde",
+        "formal512RgbaSha256": "08c6775eff67052bc1bed1949d9d62d34a861f2dd009435da35e096fa7bbd283",
+        "derived256RgbaSha256": "e6bb9a3f7424ca0594d8ecfb1bc8521d3186323236ed70a84e7a7791f6550487",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            190,
+            269,
+            411,
+            486
+          ],
+          "sourceCropSize": [
+            221,
+            217
+          ],
+          "outputCropSize": [
+            302,
+            296
+          ],
+          "pastePosition": [
+            152,
+            190
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-5",
@@ -664,12 +812,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.011186,
       "sourceOutputSize": [
-        231,
-        209
+        310,
+        280
       ],
       "sourcePastePosition": [
-        155,
-        279
+        118,
+        206
       ],
       "resizedVisibleBbox": [
         2,
@@ -678,9 +826,9 @@
         207
       ],
       "sourceVisibleBbox": [
-        157,
-        281,
-        384,
+        118,
+        206,
+        428,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -691,15 +839,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 14,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        78,
-        140,
-        193,
+        59,
+        103,
+        215,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "d8dc3f2472ee912380a11be6b0a73bf0433da7e918aa25d5d43170c400f84ed4",
-      "runtimeRgbaSha256": "0ce017b39e9c1ad8600c0cebf0968c76e0c13b909fd544ca0a944e8c700424f8"
+      "sourceRgbaSha256": "ae04abb44be29da9730bcceeb868c16f4ef28c10bf75bb1cf5d84cf4d36b3013",
+      "runtimeRgbaSha256": "53ac826d72f84ec079ede1f0326f53f1b9859f87cc7ea885c6876b3f6644ce34",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "d8dc3f2472ee912380a11be6b0a73bf0433da7e918aa25d5d43170c400f84ed4",
+        "formal512RgbaSha256": "ae04abb44be29da9730bcceeb868c16f4ef28c10bf75bb1cf5d84cf4d36b3013",
+        "derived256RgbaSha256": "53ac826d72f84ec079ede1f0326f53f1b9859f87cc7ea885c6876b3f6644ce34",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            157,
+            281,
+            384,
+            486
+          ],
+          "sourceCropSize": [
+            227,
+            205
+          ],
+          "outputCropSize": [
+            310,
+            280
+          ],
+          "pastePosition": [
+            118,
+            206
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-6",
@@ -789,12 +974,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.024609,
       "sourceOutputSize": [
-        223,
-        208
+        299,
+        279
       ],
       "sourcePastePosition": [
-        111,
-        280
+        75,
+        207
       ],
       "resizedVisibleBbox": [
         2,
@@ -803,12 +988,12 @@
         206
       ],
       "sourceVisibleBbox": [
-        113,
-        282,
-        332,
-        486
+        75,
+        207,
+        374,
+        485
       ],
-      "sourceBaselineExclusive": 486,
+      "sourceBaselineExclusive": 485,
       "actualScale": [
         1.0045045,
         1.00483092
@@ -816,15 +1001,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 29,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        56,
-        141,
-        167,
+        37,
+        103,
+        188,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "d3ebfcad6a38743df27fc4db08e020ccaa9b55e19c4e5285d8d6d67aeb086c74",
-      "runtimeRgbaSha256": "62869c94e7027ba1b9e9aeda4dbcdcee4b9261f684c98d33a45d88ea255dc9ec"
+      "sourceRgbaSha256": "7851a2ac24827e357142f8a5f8264608edbbb968f71b1e0d0dd862a072d7fd58",
+      "runtimeRgbaSha256": "2a4c269f39bc1147278a83bba0f6679695aa8858b0909288fe3f37b527a9c682",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "d3ebfcad6a38743df27fc4db08e020ccaa9b55e19c4e5285d8d6d67aeb086c74",
+        "formal512RgbaSha256": "7851a2ac24827e357142f8a5f8264608edbbb968f71b1e0d0dd862a072d7fd58",
+        "derived256RgbaSha256": "2a4c269f39bc1147278a83bba0f6679695aa8858b0909288fe3f37b527a9c682",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            113,
+            282,
+            332,
+            486
+          ],
+          "sourceCropSize": [
+            219,
+            204
+          ],
+          "outputCropSize": [
+            299,
+            279
+          ],
+          "pastePosition": [
+            75,
+            207
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-7",
@@ -914,12 +1136,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.073826,
       "sourceOutputSize": [
-        245,
-        209
+        329,
+        280
       ],
       "sourcePastePosition": [
-        77,
-        279
+        37,
+        206
       ],
       "resizedVisibleBbox": [
         2,
@@ -928,9 +1150,9 @@
         207
       ],
       "sourceVisibleBbox": [
-        79,
-        281,
-        320,
+        37,
+        206,
+        366,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -941,15 +1163,52 @@
       "sourceLowAlphaMagentaPixelsCleared": 33,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        39,
-        140,
-        160,
+        18,
+        103,
+        183,
         243
       ],
       "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "a82915752fa4945741c41e09e8d2ec3c0556513b480d06b584cee0112f52d8e6",
-      "runtimeRgbaSha256": "8bee27eebdd234b43e7aecc5d12a2fa7c1d371fd3ddd9078d624374a3d4078d3"
+      "sourceRgbaSha256": "eb2518f9e9ef1bdbbff9f45fc0c55eedb436eba018d93ea51f6a4d77269daeed",
+      "runtimeRgbaSha256": "7246a9728865af3ebf6821f8d9a341a268c51d3082a616b1f40637aa67022769",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "a82915752fa4945741c41e09e8d2ec3c0556513b480d06b584cee0112f52d8e6",
+        "formal512RgbaSha256": "eb2518f9e9ef1bdbbff9f45fc0c55eedb436eba018d93ea51f6a4d77269daeed",
+        "derived256RgbaSha256": "7246a9728865af3ebf6821f8d9a341a268c51d3082a616b1f40637aa67022769",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            79,
+            281,
+            320,
+            486
+          ],
+          "sourceCropSize": [
+            241,
+            205
+          ],
+          "outputCropSize": [
+            329,
+            280
+          ],
+          "pastePosition": [
+            37,
+            206
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "knockaway-8",
@@ -1039,12 +1298,12 @@
       "residualMagentaPixelsBeforeResize": 0,
       "dimensionDriftFromMedian": 0.123043,
       "sourceOutputSize": [
-        256,
-        187
+        344,
+        250
       ],
       "sourcePastePosition": [
-        68,
-        301
+        26,
+        236
       ],
       "resizedVisibleBbox": [
         2,
@@ -1053,9 +1312,9 @@
         185
       ],
       "sourceVisibleBbox": [
-        70,
-        303,
-        322,
+        26,
+        236,
+        370,
         486
       ],
       "sourceBaselineExclusive": 486,
@@ -1066,15 +1325,64 @@
       "sourceLowAlphaMagentaPixelsCleared": 27,
       "residualMagentaPixelsSource": 0,
       "runtimeVisibleBbox": [
-        35,
-        151,
-        161,
+        13,
+        118,
+        186,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 5,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
-      "sourceRgbaSha256": "7240a417924ce4b07ecede6f9bf5ea9b2e64dad6c9fca9ba18cfee8a508007a7",
-      "runtimeRgbaSha256": "860e6a53e02df53a852a5495549fbceac6538ad37b4680f3337f181b34cba5a6"
+      "sourceRgbaSha256": "8abf61fc166d163bb256a4ea1171c3edf5223f2ce77917bc4e6aa4e946421ead",
+      "runtimeRgbaSha256": "9123f963414c8f0248348f45713079b81dbbe5b954362bcd50b228e14e3ba610",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "transformed_from_original_512",
+        "original512RgbaSha256": "7240a417924ce4b07ecede6f9bf5ea9b2e64dad6c9fca9ba18cfee8a508007a7",
+        "formal512RgbaSha256": "8abf61fc166d163bb256a4ea1171c3edf5223f2ce77917bc4e6aa4e946421ead",
+        "derived256RgbaSha256": "9123f963414c8f0248348f45713079b81dbbe5b954362bcd50b228e14e3ba610",
+        "transform": {
+          "repair": "runtime-proportion-red-flag-repair-v1",
+          "factor": 1.3653846143846151,
+          "translationX": 2,
+          "translationCalibrationSourcePixels": 0,
+          "translationSourcePixels": [
+            2,
+            0
+          ],
+          "sourceBbox": [
+            70,
+            303,
+            322,
+            486
+          ],
+          "sourceCropSize": [
+            252,
+            183
+          ],
+          "outputCropSize": [
+            344,
+            250
+          ],
+          "pastePosition": [
+            26,
+            236
+          ],
+          "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
-  ]
+  ],
+  "canonicalSourceReconciliation": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "preservedFrameCount": 0,
+    "transformedFrameCount": 8,
+    "minimumSourceEdgeMarginAtAlpha8": 26,
+    "minimumRuntimeEdgeMarginAtAlpha8": 12,
+    "mirroring": false,
+    "upscaledFromRuntime": false
+  }
 }

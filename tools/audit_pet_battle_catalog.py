@@ -10,17 +10,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
+from build_pet_art_bundle import (
+    PREMULTIPLIED_LANCZOS,
+    PREMULTIPLIED_RESAMPLE_MODES,
+    derive_runtime_frame,
+    rgba_hash,
+)
 from install_pet_battle_bundle import (
     ACTION_SPECS,
     BattleBundleError,
     CANONICAL_BATTLE_VIEW_MAPPING,
     FORMAL_VIEWS,
     RUNTIME_FRAME_SIZE,
+    SOURCE_FRAME_SIZE,
     validate_down_revive_continuity,
 )
 
@@ -71,6 +79,242 @@ def _audit_mapping(metadata: dict[str, Any], errors: list[str]) -> None:
         errors.append("battleVisual.battleViewMapping 缺失或不是统一契约")
 
 
+def _load_rgba_frame(
+    path: Path,
+    size: int,
+    label: str,
+    errors: list[str],
+) -> Image.Image | None:
+    if not path.is_file():
+        errors.append(f"缺少{label}：{path}")
+        return None
+    try:
+        with Image.open(path) as opened:
+            opened.load()
+            if opened.format != "PNG" or opened.mode != "RGBA":
+                errors.append(
+                    f"{label}必须是显式 RGBA PNG：{path} "
+                    f"format={opened.format} mode={opened.mode}"
+                )
+                return None
+            if opened.size != (size, size):
+                errors.append(
+                    f"{label}尺寸错误：{path}={opened.width}x{opened.height}，"
+                    f"应为 {size}x{size}"
+                )
+                return None
+            return opened.copy()
+    except (OSError, UnidentifiedImageError) as exc:
+        errors.append(f"{label}不可解码：{path}: {exc}")
+        return None
+
+
+def _parse_key(value: Any) -> tuple[int, int, int] | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip().lstrip("#")
+    if not re.fullmatch(r"[0-9A-Fa-f]{6}", text):
+        return None
+    return tuple(int(text[index : index + 2], 16) for index in (0, 2, 4))
+
+
+def _safe_asset_path(asset_root: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    candidate = (asset_root / relative).resolve()
+    try:
+        candidate.relative_to(asset_root.resolve())
+    except ValueError:
+        return None
+    return candidate
+
+
+def _audit_tracked_source_derivation(
+    asset_root: Path,
+    metadata: dict[str, Any],
+    errors: list[str],
+) -> tuple[int, int]:
+    battle_visual = metadata.get("battleVisual")
+    if not isinstance(battle_visual, dict):
+        return 0, 0
+    archive_mode = battle_visual.get("archiveMode")
+    tracks_source = battle_visual.get("sourceFramesTracked") is True
+    if archive_mode == "full" and not tracks_source:
+        errors.append("battleVisual.archiveMode=full 时 sourceFramesTracked 必须为 true")
+        return 0, 0
+    if tracks_source and archive_mode != "full":
+        errors.append("sourceFramesTracked=true 时 battleVisual.archiveMode 必须为 full")
+        return 0, 0
+    if not tracks_source:
+        return 0, 0
+
+    ledger_path = _safe_asset_path(asset_root, battle_visual.get("sourceLedger"))
+    if ledger_path is None:
+        errors.append("完整源归档缺少安全的 battleVisual.sourceLedger 路径")
+        return 0, 0
+    try:
+        ledger = _read_json(ledger_path)
+    except RuntimeError as exc:
+        errors.append(str(exc))
+        return 0, 0
+    if ledger.get("archiveMode") != "full":
+        errors.append("完整源归档的 source ledger archiveMode 必须为 full")
+    if ledger.get("formId") != metadata.get("formId"):
+        errors.append("完整源归档的 source ledger formId 与 metadata 不一致")
+    ledger_actions = ledger.get("actions")
+    if not isinstance(ledger_actions, dict):
+        errors.append("完整源归档的 source ledger actions 缺失")
+        return 0, 0
+
+    tracked_count = 0
+    derived_count = 0
+    source_continuity: dict[str, dict[str, list[Image.Image]]] = {
+        view: {"down": [], "revive": []} for view in FORMAL_VIEWS
+    }
+    for view in FORMAL_VIEWS:
+        view_ledger = ledger_actions.get(view)
+        if not isinstance(view_ledger, dict):
+            errors.append(f"完整源归档账本缺少视角：{view}")
+            continue
+        for action, (frame_count, _fps, _loop) in ACTION_SPECS.items():
+            action_ledger = view_ledger.get(action)
+            if not isinstance(action_ledger, dict):
+                errors.append(f"完整源归档账本缺少动作：{view}/{action}")
+                continue
+            if action_ledger.get("sourceFramesTracked") is not True:
+                errors.append(f"完整源归档账本未标记 512 母版受追踪：{view}/{action}")
+            source_hashes = action_ledger.get("sourceFrameRgbaSha256")
+            runtime_hashes = action_ledger.get("runtimeFrameRgbaSha256")
+            if (
+                not isinstance(source_hashes, list)
+                or len(source_hashes) != frame_count
+                or not isinstance(runtime_hashes, list)
+                or len(runtime_hashes) != frame_count
+            ):
+                errors.append(f"完整源归档账本逐帧哈希数量错误：{view}/{action}")
+                continue
+
+            pipeline_path = (
+                asset_root
+                / "source"
+                / "battle"
+                / view
+                / action
+                / "pipeline-meta.json"
+            )
+            try:
+                pipeline = _read_json(pipeline_path)
+            except RuntimeError as exc:
+                errors.append(str(exc))
+                continue
+            frame_metadata = pipeline.get("frames")
+            key = _parse_key(pipeline.get("key"))
+            residual = pipeline.get("residualMagentaDistance")
+            fringe = pipeline.get("fringeCleanupAlpha")
+            if (
+                not isinstance(frame_metadata, list)
+                or len(frame_metadata) != frame_count
+                or key is None
+                or not isinstance(residual, (int, float))
+                or not isinstance(fringe, int)
+            ):
+                errors.append(f"完整源归档 pipeline 合同错误：{view}/{action}")
+                continue
+
+            for index in range(1, frame_count + 1):
+                source_path = (
+                    asset_root
+                    / "source"
+                    / "battle"
+                    / view
+                    / action
+                    / "source-frames"
+                    / f"{action}-{index}.png"
+                )
+                runtime_path = (
+                    asset_root
+                    / "views"
+                    / view
+                    / action
+                    / f"{action}-{index}.png"
+                )
+                source = _load_rgba_frame(
+                    source_path,
+                    SOURCE_FRAME_SIZE,
+                    "512 母版帧",
+                    errors,
+                )
+                runtime = _load_rgba_frame(
+                    runtime_path,
+                    RUNTIME_FRAME_SIZE,
+                    "256 运行帧",
+                    errors,
+                )
+                if source is None or runtime is None:
+                    continue
+                tracked_count += 1
+                source_digest = rgba_hash(source)
+                runtime_digest = rgba_hash(runtime)
+                frame_record = frame_metadata[index - 1]
+                if not isinstance(frame_record, dict):
+                    errors.append(f"完整源归档逐帧 pipeline 记录错误：{view}/{action}-{index}")
+                    continue
+                if source_hashes[index - 1] != source_digest:
+                    errors.append(f"512 母版帧与 source ledger 不一致：{view}/{action}-{index}")
+                if runtime_hashes[index - 1] != runtime_digest:
+                    errors.append(f"256 运行帧与 source ledger 不一致：{view}/{action}-{index}")
+                if frame_record.get("sourceRgbaSha256") != source_digest:
+                    errors.append(f"512 母版帧与 pipeline 不一致：{view}/{action}-{index}")
+                if frame_record.get("runtimeRgbaSha256") != runtime_digest:
+                    errors.append(f"256 运行帧与 pipeline 不一致：{view}/{action}-{index}")
+
+                resample_mode = frame_record.get(
+                    "runtimeResampleMode",
+                    PREMULTIPLIED_LANCZOS,
+                )
+                if resample_mode not in PREMULTIPLIED_RESAMPLE_MODES:
+                    errors.append(
+                        f"完整源归档运行重采样模式不受支持："
+                        f"{view}/{action}-{index}={resample_mode!r}"
+                    )
+                    continue
+                derived, _cleaned = derive_runtime_frame(
+                    source,
+                    key,
+                    float(residual),
+                    fringe,
+                    resample_mode=resample_mode,
+                )
+                if rgba_hash(derived) != runtime_digest:
+                    errors.append(
+                        "正式 256 运行帧不是已归档 512 母版的规范派生："
+                        f"{view}/{action}-{index}"
+                    )
+                    continue
+                derived_count += 1
+                if (action == "down" and index == frame_count) or (
+                    action == "revive" and index == 1
+                ):
+                    source_continuity[view][action].append(source)
+
+    if all(
+        source_continuity[view][action]
+        for view in FORMAL_VIEWS
+        for action in ("down", "revive")
+    ):
+        try:
+            validate_down_revive_continuity(
+                source_continuity,
+                frame_kind="source",
+            )
+        except BattleBundleError as exc:
+            errors.append(str(exc))
+    return tracked_count, derived_count
+
+
 def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
     form_id = str(form.get("formId", "")).strip()
     display_name = str(form.get("displayName", form_id)).strip()
@@ -115,6 +359,11 @@ def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
                 f"metadata formId 不匹配：{metadata.get('formId')!r} != {form_id!r}"
             )
         _audit_mapping(metadata, errors)
+    tracked_source_count, canonical_derived_count = _audit_tracked_source_derivation(
+        asset_root,
+        metadata,
+        errors,
+    )
 
     valid_frames = 0
     view_counts: dict[str, int] = {}
@@ -165,6 +414,8 @@ def audit_form(repo_root: Path, form: dict[str, Any]) -> dict[str, Any]:
         "complete": not errors,
         "battleFrameCount": valid_frames,
         "expectedBattleFrameCount": expected_total,
+        "trackedSourceFrameCount": tracked_source_count,
+        "canonicalDerivedRuntimeFrameCount": canonical_derived_count,
         "viewFrameCounts": view_counts,
         "actionFrameCounts": action_counts,
         "errors": errors,

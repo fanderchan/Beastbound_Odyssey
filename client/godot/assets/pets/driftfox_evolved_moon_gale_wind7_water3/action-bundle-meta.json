@@ -174,31 +174,35 @@
     "pipelineMetadata": "source/identity-board-pipeline-meta.json",
     "prompt": "prompts/identity-board-v1.txt",
     "battleSourceLedger": "source/battle/source-ledger.json",
-    "battleSourceLedgerSha256": "7a636c389b2a544920bd673123cc53182d44b0f2b8a204886fc6782932c4a428",
+    "battleSourceLedgerSha256": "26af62344aa2bd1b93fb932fa011ae4db8e4ce91cb9aa863e878c81261018373",
     "historical512SourceDebt": {
-      "status": "unresolved",
-      "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
-      "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
-      "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
-      "framesChecked": 48,
-      "mismatchCount": 48,
-      "blocksFresh512CanonicalClaim": true,
-      "blocksReviewedRuntimeToRuntimeOverlay": false
+      "status": "resolved",
+      "historicalAuditClassification": "hash-domain-mismatch-false-positive",
+      "historicalAuditFramesChecked": 48,
+      "historicalAuditCanonicalLedgerMatches": 48,
+      "actualDebtClass": "110-runtime-frames-adjusted-without-corresponding-512-master",
+      "resolution": "110 accepted transforms replayed from verified original 512 sources; all 180 formal 512 masters and 24 raw sheets tracked",
+      "upscaledFromRuntime": false,
+      "resolvedBy": "source/battle/canonical-source-reconciliation-v1.json",
+      "resolvedBySha256": "6e0eead0c22dada57c50c95d4c2c4f568643e5f50aa823519489a837e591b091"
     },
     "worldSourceLedger": "source/world/source-ledger.json",
     "worldSourceLedgerSha256": "f8a1e42966154aea0bca9bd74ea10abbe28f1bfe6920a6b281b806290f03878a",
     "worldGenerationBrief": "source/world/generation-brief.md",
     "worldGenerationBriefSha256": "addb44c0bfa5459eecbcd19848f52631b9b320f56567c098ec368e9d7246d42a",
     "evolutionSourceLedger": "source/evolution/source-ledger.json",
-    "evolutionSourceLedgerSha256": "fcf1c7edb6c82dd03c403c4cde1796dc6c762121f51839911ec4f4945e5b6b3d"
+    "evolutionSourceLedgerSha256": "fcf1c7edb6c82dd03c403c4cde1796dc6c762121f51839911ec4f4945e5b6b3d",
+    "battleArchiveMode": "full",
+    "battleSourceFramesTracked": true,
+    "battleRawArchivesTracked": 24
   },
   "evidence": {
     "identityBoard": "identity/identity-board-transparent.png",
     "identityBoardSha256": "21a6b80b9ac2895e89cbd44936a8b3aab8bc7dbf29ee78940e58ba6967d6f871",
     "battleContactSheet": "qa/battle/contact-sheet.png",
-    "battleContactSheetSha256": "0a7a6cd3c194cbeab7f82ee29706d02fcbd653d79a231c84ed8276a0fee41a01",
+    "battleContactSheetSha256": "98cc45832128971fb21ff42280a98bef7a64c99b51d2b3e05332993dbea14ba4",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "4d5879efcc107be677450e0f7fdfa0f9d8706d7ab69ccf58118881761f0f1d7d",
+    "battleQcSha256": "2d2922b9f3ae9919e79357b605580fd968b2d77a93251617070dd11032bd3bc1",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "179a8e52d1c3d9afff4a08b82b63be1e61da46aa2a000493f44470e37208e57c",
     "runtimeProportionRepairBeforeAfter": "qa/battle/runtime-proportion-red-flag-repair-v1-before-after.png",
@@ -243,8 +247,8 @@
     "battleSemanticReviewSha256": "a99e842b4e974904a678e3b7d0289679d002d8369285b2f72d2b0c0396636cc1",
     "battleRuntimeParity": ".run/evidence/phase346_moon_gale_standalone_battle/runtime-parity.json",
     "battleRuntimeParitySha256": "37d9ded8ab0491307d4777d3c09025cb91bb4572b2956223af1c96d064248e67",
-    "battleRealMainVideo": ".run/evidence/phase346_moon_gale_standalone_battle/Beastbound_Phase346_Moon_Gale_Standalone_Battle_1x.mp4",
-    "battleRealMainVideoSha256": "4cda9076605f80eb2b514425004ccf02e3ac7bf2aa95a0a93ec9d27aa6ea8c7b",
+    "battleRealMainVideo": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
+    "battleRealMainVideoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
     "worldContactSheetSha256": "d9a821b38f6cf5e1a3d2374c138fa69761e8f7e35a8dcf28488c907f096078f9",
     "worldCycleGif": "qa/world/true8-world-cycle.gif",
@@ -270,7 +274,15 @@
     "evolutionRealMainVideo": ".run/evidence/phase345_moon_gale_evolution/Beastbound_Phase345_Moon_Gale_Evolution_1x.mp4",
     "evolutionRealMainVideoSha256": "2e371c0105d330202430e4162af2c4b925cd49969e1c6ac281cac347c4f2f633",
     "evolutionRuntimeIntegrationVideo": ".run/evidence/phase355_moon_gale_evolution_runtime/Beastbound_Phase355_Moon_Gale_Evolution_Runtime_1x.mp4",
-    "evolutionRuntimeIntegrationVideoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139"
+    "evolutionRuntimeIntegrationVideoSha256": "8aed5d5e89ee0429eee306ac295d45d3e599ed7270605c444074b07f7fcb7139",
+    "canonicalSourceReconciliation": "source/battle/canonical-source-reconciliation-v1.json",
+    "canonicalSourceReconciliationSha256": "6e0eead0c22dada57c50c95d4c2c4f568643e5f50aa823519489a837e591b091",
+    "battlePreCanonicalRealMainVideo": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
+    "battlePreCanonicalRealMainVideoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
+    "canonicalRuntimeParity": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/runtime-parity.json",
+    "canonicalRuntimeParitySha256": "ab0cd6dc53d1dd1bb21f4a25b8a2f7b2c7d089b1009daa3876e5795902f92e1a",
+    "battlePreCanonicalQc": "qa/battle/history/precanonical-runtime-qc-summary-v1.json",
+    "battlePreCanonicalQcSha256": "4d5879efcc107be677450e0f7fdfa0f9d8706d7ab69ccf58118881761f0f1d7d"
   },
   "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
@@ -333,9 +345,9 @@
     "integratedWholeFrame": false,
     "runtimeLayeredComposition": false,
     "runtimeEnabled": false,
-    "bundleDigest": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f",
-    "archiveMode": "lean",
-    "sourceFramesTracked": false,
+    "bundleDigest": "9d5230b9390d779404eda6b9deea300584e1af7bd08a6cbdd35246912e569074",
+    "archiveMode": "full",
+    "sourceFramesTracked": true,
     "sourceRoot": "source/battle",
     "sourceLedger": "source/battle/source-ledger.json",
     "runtimeRoot": "views",
@@ -359,11 +371,14 @@
         "checkedFrames": 180,
         "importFreshCount": 180,
         "canonicalRgbaMatchCount": 180,
-        "sourceSetSha256": "44c6d77803ea700036fb88028cd893089a67513efc59ffaa1e8203233b19b015"
+        "sourceSetSha256": "0c4a5e105f66b2aa712d1e52cbe12c4f4cb49a8444431e9275df3ff9c2dea07f",
+        "report": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/runtime-parity.json",
+        "reportSha256": "ab0cd6dc53d1dd1bb21f4a25b8a2f7b2c7d089b1009daa3876e5795902f92e1a"
       },
       "realMainSceneReview": {
-        "video": ".run/evidence/phase346_moon_gale_standalone_battle/Beastbound_Phase346_Moon_Gale_Standalone_Battle_1x.mp4",
-        "videoSha256": "4cda9076605f80eb2b514425004ccf02e3ac7bf2aa95a0a93ec9d27aa6ea8c7b",
+        "status": "self_review_passed_owner_pending",
+        "video": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
+        "videoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
         "width": 1280,
         "height": 720,
         "videoFps": 60,
@@ -372,9 +387,13 @@
         "speedScale": 1.0,
         "directorStepCount": 14,
         "audioPresent": true,
-        "fullDecodePassed": true
+        "fullDecodePassed": true,
+        "contactSheet": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/video-action-contact-4x4.png",
+        "contactSheetSha256": "3d4eb80c58d710172495d6018f0edbb241d48612a88a5b77b85f9a89d035d751",
+        "ownerReview": "pending",
+        "runtimeEnabled": false
       },
-      "historical512CanonicalDebt": "unresolved",
+      "historical512CanonicalDebt": "resolved_phase357_full_archive",
       "ownerReview": "pending",
       "runtimeEnabled": false
     },
@@ -386,9 +405,11 @@
         "preserveFrameCount": 132,
         "protectedKoDownReviveFrameCount": 32,
         "creativeGeneration": false,
-        "claimsFresh512CanonicalDerivation": false,
+        "claimsFresh512CanonicalDerivation": true,
         "existingColorAndKoSemanticsPreserved": true,
-        "ownerVisualGate": "self_review_passed_owner_pending"
+        "ownerVisualGate": "self_review_passed_owner_pending",
+        "canonicalizedIntoTracked512Source": true,
+        "formalWrites": true
       },
       {
         "id": "runtime-motion-scale-followup-v1",
@@ -397,12 +418,14 @@
         "preserveFrameCount": 118,
         "protectedDownAndReviveFirstFrameCount": 18,
         "creativeGeneration": false,
-        "claimsFresh512CanonicalDerivation": false,
+        "claimsFresh512CanonicalDerivation": true,
         "existingColorAndFacingSemanticsPreserved": true,
         "down8Revive1Exact": true,
         "repairManifest": "source/battle/runtime-motion-scale-followup-v1-manifest.json",
         "repairManifestSha256": "ee91f97af69e4834756f0a4c03c4d66281d0f73a5b19aaeeabcc3ca1a7f3ecc3",
-        "ownerVisualGate": "self_review_passed_owner_pending"
+        "ownerVisualGate": "self_review_passed_owner_pending",
+        "canonicalizedIntoTracked512Source": true,
+        "formalWrites": true
       }
     ],
     "runtimeProportionRepair": {
@@ -643,17 +666,14 @@
         }
       ],
       "sourceProvenanceDebt": {
-        "status": "unresolved",
-        "debtClass": "historical-512-source-to-current-lean-ledger-rgba-mismatch",
-        "auditPath": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
-        "auditSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
-        "framesChecked": 48,
-        "mismatchCount": 48,
-        "blocksFresh512CanonicalClaim": true,
-        "blocksReviewedRuntimeToRuntimeOverlay": false
+        "status": "resolved",
+        "historicalAuditClassification": "hash-domain-mismatch-false-positive",
+        "actualDebtClass": "runtime-only-proportion-overlay-not-canonicalized-to-512",
+        "resolution": "replayed the accepted geometry on the original verified 512 sources and installed a full tracked 512-to-256 archive",
+        "upscaledFromRuntime": false
       },
-      "claimsFresh512CanonicalDerivation": false,
-      "formalWrites": false
+      "claimsFresh512CanonicalDerivation": true,
+      "formalWrites": true
     },
     "runtimeMotionScaleFollowup": {
       "id": "runtime-motion-scale-followup-v1",
@@ -4911,7 +4931,58 @@
           "down8Revive1EncodedExact": true,
           "down8Revive1DecodedRgbaExact": true
         }
-      ]
+      ],
+      "canonicalizedIntoTracked512Source": true,
+      "claimsFresh512CanonicalDerivation": true,
+      "formalWrites": true
+    },
+    "minimumBattleSourceEdgeMarginAtAlpha8": 23,
+    "canonicalSourceReconciliation": {
+      "id": "canonical-source-reconciliation-v1",
+      "status": "passed_full_archive_runtime_validated_owner_pending",
+      "historicalAuditClassification": "hash-domain-mismatch-false-positive",
+      "historicalAuditFramesChecked": 48,
+      "historicalAuditCanonicalLedgerMatches": 48,
+      "original512LedgerMatchCount": 180,
+      "preserved512FrameCount": 70,
+      "transformed512FrameCount": 110,
+      "formal512FrameCount": 180,
+      "derived256FrameCount": 180,
+      "sourceRuntimeDerivationExact": true,
+      "upscaledFromRuntime": false,
+      "sourceLedger": "source/battle/source-ledger.json",
+      "sourceLedgerSha256": "26af62344aa2bd1b93fb932fa011ae4db8e4ce91cb9aa863e878c81261018373",
+      "manifest": "source/battle/canonical-source-reconciliation-v1.json",
+      "manifestSha256": "6e0eead0c22dada57c50c95d4c2c4f568643e5f50aa823519489a837e591b091",
+      "ownerReview": "pending",
+      "runtimeEnabled": false,
+      "godotRuntimeParity": {
+        "status": "passed",
+        "report": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/runtime-parity.json",
+        "reportSha256": "ab0cd6dc53d1dd1bb21f4a25b8a2f7b2c7d089b1009daa3876e5795902f92e1a",
+        "checkedFrames": 180,
+        "importFreshCount": 180,
+        "canonicalRgbaMatchCount": 180,
+        "sourceSetSha256": "0c4a5e105f66b2aa712d1e52cbe12c4f4cb49a8444431e9275df3ff9c2dea07f"
+      },
+      "realMainSceneReview": {
+        "status": "self_review_passed_owner_pending",
+        "video": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
+        "videoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
+        "width": 1280,
+        "height": 720,
+        "videoFps": 60,
+        "videoFrameCount": 2477,
+        "durationSeconds": 41.283333,
+        "speedScale": 1.0,
+        "directorStepCount": 14,
+        "audioPresent": true,
+        "fullDecodePassed": true,
+        "contactSheet": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/video-action-contact-4x4.png",
+        "contactSheetSha256": "3d4eb80c58d710172495d6018f0edbb241d48612a88a5b77b85f9a89d035d751",
+        "ownerReview": "pending",
+        "runtimeEnabled": false
+      }
     }
   },
   "evolutionVisual": {
@@ -4926,9 +4997,18 @@
     "presentationCopy": {
       "intro": "岚月正在回应……",
       "stages": [
-        {"label": "岚月风染", "endFrame": 4},
-        {"label": "双尾分化", "endFrame": 8},
-        {"label": "月岚定型", "endFrame": 12}
+        {
+          "label": "岚月风染",
+          "endFrame": 4
+        },
+        {
+          "label": "双尾分化",
+          "endFrame": 8
+        },
+        {
+          "label": "月岚定型",
+          "endFrame": 12
+        }
       ]
     },
     "runtimeRoot": "views/front_3quarter_sw/evolution",

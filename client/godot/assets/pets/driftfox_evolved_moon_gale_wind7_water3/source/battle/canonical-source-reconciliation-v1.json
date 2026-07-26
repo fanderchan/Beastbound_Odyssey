@@ -1,0 +1,5281 @@
+{
+  "schemaVersion": 1,
+  "id": "canonical-source-reconciliation-v1",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "status": "full_archive_installed_and_runtime_validated_owner_pending",
+  "historicalAuditRootCause": {
+    "classification": "hash-domain-mismatch-false-positive",
+    "historicalReport": ".run/blue_pet_battle_pack/proportion_red_flags_fb547f22_current_v1/builds/final_runtime_v1/reports/source-ledger-parity.json",
+    "historicalReportSha256": "3b8340854af2dd96394880db76905fdfc81f543a67959bf542e652f592c078aa",
+    "framesChecked": 48,
+    "canonicalLedgerMatches": 48,
+    "rawPixelMatchesHistoricalAudit": 48,
+    "explanation": "The ledger used tools/build_pet_art_bundle.py::rgba_hash, which hashes a size/mode domain prefix plus RGBA bytes. The temporary audit hashed only RGBA bytes. The same pixels were compared under different hash domains."
+  },
+  "canonicalReconciliation": {
+    "baseSourceFrameCount": 180,
+    "baseSourceLedgerMatchCount": 180,
+    "preservedSourceFrameCount": 70,
+    "transformedSourceFrameCount": 110,
+    "derivedRuntimeFrameCount": 180,
+    "currentRuntimeExactMatchCount": 23,
+    "currentRuntimeChangedCount": 157,
+    "minimumSourceEdgeMargin": 21,
+    "minimumSourceEdgeMarginAtAlpha8": 23,
+    "minimumRuntimeEdgeMargin": 11,
+    "minimumRuntimeEdgeMarginAtAlpha8": 11,
+    "maximumMeanAbsoluteRgbaErrorVsCurrent": 10.287861,
+    "minimumAlphaIoUVsCurrent": 0.81096459,
+    "sourceDownReviveSeams": [
+      {
+        "view": "front_3quarter_sw",
+        "exactCanonicalRgba": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "exactCanonicalRgba": true
+      }
+    ],
+    "runtimeDownReviveSeams": [
+      {
+        "view": "front_3quarter_sw",
+        "exactCanonicalRgba": true
+      },
+      {
+        "view": "back_3quarter_ne",
+        "exactCanonicalRgba": true
+      }
+    ],
+    "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+  },
+  "formalStaging": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/formal-staging",
+  "formalStagingManifestSha256": "5974c1c1467a8c4ffff48fb7d4a62afe2c9f6b4d144a254bddff951774e75f69",
+  "frameTransforms": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 1,
+      "original512RgbaSha256": "2c204d1e0a53fdbd85a96c11b89e30356bdc7712f8b3cf971efa026a8f83c7b5",
+      "formal512RgbaSha256": "2c204d1e0a53fdbd85a96c11b89e30356bdc7712f8b3cf971efa026a8f83c7b5",
+      "derived256RgbaSha256": "d4103976cd256858bcf2148d26c789e60c33810ace0ffe57c43ea806ef64a652",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 2,
+      "original512RgbaSha256": "94fbd639a6da4d196c7d1fd527ec227a762af38f867bb80219046bb86dcc9710",
+      "formal512RgbaSha256": "94fbd639a6da4d196c7d1fd527ec227a762af38f867bb80219046bb86dcc9710",
+      "derived256RgbaSha256": "feec71df563f20852edbdbbe93c6186a3ce0d0a71387bbad586c0d29b2f67177",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 3,
+      "original512RgbaSha256": "42d04cefc8772fc77cf0726bda1b78a12e739bf8033e6811b3e336fd51e27248",
+      "formal512RgbaSha256": "42d04cefc8772fc77cf0726bda1b78a12e739bf8033e6811b3e336fd51e27248",
+      "derived256RgbaSha256": "59c428ccd77c6ceccd5696270bcb37dddad7de573be5e377abc4459f9a346c59",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 4,
+      "original512RgbaSha256": "401e61d1b44319f3178eaeb95776743855440b537e53a588c4bd20712eb9aaac",
+      "formal512RgbaSha256": "401e61d1b44319f3178eaeb95776743855440b537e53a588c4bd20712eb9aaac",
+      "derived256RgbaSha256": "c29583ded3524b6774e2f509558c288ac3bdb28fad051ec426796fd465cf8bea",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 5,
+      "original512RgbaSha256": "6bbebf89e1202d4312361803f4271747f486527bf755ca832421d92fee667a6c",
+      "formal512RgbaSha256": "6bbebf89e1202d4312361803f4271747f486527bf755ca832421d92fee667a6c",
+      "derived256RgbaSha256": "6358e457e5e8fb8d3f28fd73e20769d0c37d386b55d3639348c4881b7b18d8e5",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frame": 6,
+      "original512RgbaSha256": "6fc9c242f3a30092040a55456ab0ec5392056927ce950e5d03d3d2a8f403c3a3",
+      "formal512RgbaSha256": "6fc9c242f3a30092040a55456ab0ec5392056927ce950e5d03d3d2a8f403c3a3",
+      "derived256RgbaSha256": "a7e53507f7df1ae0d6bd6a2c3c24f7a6226e77ddcb6b705fa517657e994ba22c",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 1,
+      "original512RgbaSha256": "e64520c8d40f3f206abdf8aa7a77622638584618554220af3f47f9dc41d0ba57",
+      "formal512RgbaSha256": "e64520c8d40f3f206abdf8aa7a77622638584618554220af3f47f9dc41d0ba57",
+      "derived256RgbaSha256": "64c7d28c70d6da48d0888e97cd73536c93ce6e774120bc800557e6e2f1b0afa4",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 2,
+      "original512RgbaSha256": "6a86e7a630d324b586449ee621b70d5df0a9574e8c384d50d8096ef0614dcc5d",
+      "formal512RgbaSha256": "6a86e7a630d324b586449ee621b70d5df0a9574e8c384d50d8096ef0614dcc5d",
+      "derived256RgbaSha256": "c2e2332a0982e7996157f05b658f02ec26ad251ca216f4e154588559753305f1",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 3,
+      "original512RgbaSha256": "bba1c273ccc781a7cffd76d752bd4d7d6d8bf9925796f3ca0901bb5f5d181105",
+      "formal512RgbaSha256": "bba1c273ccc781a7cffd76d752bd4d7d6d8bf9925796f3ca0901bb5f5d181105",
+      "derived256RgbaSha256": "af8b09073d3ce35d48dd99a85a7a09a07b88a44425707a4b5a176e8b06c7bbc4",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 4,
+      "original512RgbaSha256": "4ad1df1e109039dc266c96e9fec9314f2087a07792e13435d4b3e914a24f5cc9",
+      "formal512RgbaSha256": "4ad1df1e109039dc266c96e9fec9314f2087a07792e13435d4b3e914a24f5cc9",
+      "derived256RgbaSha256": "a7b85436b16baafbd41d812b07ac988b1fbce8ad673de9f9c7d19e1abe1f889f",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 5,
+      "original512RgbaSha256": "66579f7b312e65591cf63566384b114524e73232152888fd126f781bad90e7e7",
+      "formal512RgbaSha256": "66579f7b312e65591cf63566384b114524e73232152888fd126f781bad90e7e7",
+      "derived256RgbaSha256": "4bc8aa2216539446f3476f2d854824f289efe05fc50072a3c83572ba92858ae7",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 6,
+      "original512RgbaSha256": "b2a36417d2b42921502f0ddb61497b2870aabfddc41dde821e55b7b754e9d1c7",
+      "formal512RgbaSha256": "b2a36417d2b42921502f0ddb61497b2870aabfddc41dde821e55b7b754e9d1c7",
+      "derived256RgbaSha256": "90607e6a6d808873732b90156185cd4001ec293f2cab012f870471741663fc72",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 7,
+      "original512RgbaSha256": "f773aef19fcbc540fb098b11ef8a1936dc539601c0d5784beef99b29021643b9",
+      "formal512RgbaSha256": "f773aef19fcbc540fb098b11ef8a1936dc539601c0d5784beef99b29021643b9",
+      "derived256RgbaSha256": "7960c867bb1fb88ad3403a7ce5facbb424ec44d566d9979607923ec7412e72dc",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frame": 8,
+      "original512RgbaSha256": "115687e516013c1f0d9b4b7a67afcca3d61c70f4df43d49095beb30e69631df6",
+      "formal512RgbaSha256": "115687e516013c1f0d9b4b7a67afcca3d61c70f4df43d49095beb30e69631df6",
+      "derived256RgbaSha256": "c16ff9c241304dcd42e00e4fe73bb9b6fcd8e2d919f00666f5314f082f064853",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 1,
+      "original512RgbaSha256": "3e2a1b35849259b5a493db9e96763c137e39f55d6332754910ba7e2095714797",
+      "formal512RgbaSha256": "fb908b6790092c506bc3ea91da9b742ca63017ff5dbe072351540f8400570935",
+      "derived256RgbaSha256": "e6df63b42c7042b8531a6e59ab0c7757b9fe34d56a9d5d36c336ae2b9c039094",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          206,
+          313,
+          382,
+          487
+        ],
+        "sourceCropSize": [
+          176,
+          174
+        ],
+        "outputCropSize": [
+          313,
+          310
+        ],
+        "pastePosition": [
+          99,
+          177
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 2,
+      "original512RgbaSha256": "47917a2b57b782aa824ec9c566642265983d74970b60f5ee24915f4617a21491",
+      "formal512RgbaSha256": "248e646c67fbaef1f950783f52f7ee0b85aee7798280d8d273e3b87d06971ef7",
+      "derived256RgbaSha256": "1842f574a22aa640557835fa11357121c170a3ffbe00ce55f17c341ef4a4a872",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          199,
+          320,
+          373,
+          488
+        ],
+        "sourceCropSize": [
+          174,
+          168
+        ],
+        "outputCropSize": [
+          310,
+          299
+        ],
+        "pastePosition": [
+          92,
+          189
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 3,
+      "original512RgbaSha256": "db5b0991b7360f7461d2f6a2d710ff5fd4a15a6f7b1d2d3ef308472162e3079d",
+      "formal512RgbaSha256": "a4520b40768a7f6a57eba50e833b8cf1e97ea42ef38faaffd961216938e2ac56",
+      "derived256RgbaSha256": "749d3e2b869ab9550dbe0bf35c8dfa46b0d8449dd2b1aa41168bb509364e97c7",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          228,
+          325,
+          445,
+          487
+        ],
+        "sourceCropSize": [
+          217,
+          162
+        ],
+        "outputCropSize": [
+          386,
+          288
+        ],
+        "pastePosition": [
+          105,
+          199
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 4,
+      "original512RgbaSha256": "3d339fa71fb8da50a6bd312f9026ef69291a2f1277eeb6ca5cf5a40c160a8b93",
+      "formal512RgbaSha256": "c5bfa98d361f40aa5f8505439e35556598046f206f5b7baab06cecb139c95820",
+      "derived256RgbaSha256": "e1baa4f743807509f2acba6cc6a50efb3ae3b09c253f7aa25b22a13a7e16bf73",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          217,
+          329,
+          407,
+          487
+        ],
+        "sourceCropSize": [
+          190,
+          158
+        ],
+        "outputCropSize": [
+          338,
+          281
+        ],
+        "pastePosition": [
+          104,
+          206
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 5,
+      "original512RgbaSha256": "79a6ee918aa96ceede333eac29a6ff5ce89f12aa109d5926845adbe75e4d52b2",
+      "formal512RgbaSha256": "3d1878932fb7665bcdfc684a1eab30675658ecd6f064758601ea34644ba2b9e9",
+      "derived256RgbaSha256": "13d8c0b31707349f31302fe222ac66bcafd38356da1661d73aadefd0ce6c2f08",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          188,
+          333,
+          381,
+          488
+        ],
+        "sourceCropSize": [
+          193,
+          155
+        ],
+        "outputCropSize": [
+          344,
+          276
+        ],
+        "pastePosition": [
+          73,
+          212
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 6,
+      "original512RgbaSha256": "f4d64ad20d8fd9adf292cec812b49fb76d7554b2a9a692831527878a5f357434",
+      "formal512RgbaSha256": "e2bb1b61603063e8bba88929214f5684e2921d1ce8e755260d4a31710d542c16",
+      "derived256RgbaSha256": "17448916ea34028bc7b6f229289d7511355db983bab81f288faaeb803f95869a",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          202,
+          321,
+          371,
+          488
+        ],
+        "sourceCropSize": [
+          169,
+          167
+        ],
+        "outputCropSize": [
+          301,
+          297
+        ],
+        "pastePosition": [
+          97,
+          191
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 7,
+      "original512RgbaSha256": "c2ba23ed26ba0c03d6fafe1b4303bbec9c2ce6b5a698e26018380792990db937",
+      "formal512RgbaSha256": "ff497bbccc174b0814c3e77556f18689fd189e76acaa6232538da34232eaa646",
+      "derived256RgbaSha256": "caa83ee88f5811292f5bc4674eea18e17ce05e882f78b1731550b9ec74f259a2",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          212,
+          311,
+          380,
+          487
+        ],
+        "sourceCropSize": [
+          168,
+          176
+        ],
+        "outputCropSize": [
+          299,
+          313
+        ],
+        "pastePosition": [
+          107,
+          174
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frame": 8,
+      "original512RgbaSha256": "43924f7d23feaeff57bae563d7b2f361a351e368ad1657d2bfdcb4e757685269",
+      "formal512RgbaSha256": "208a1f18fb383bb3b5256a45dd1fab4a72b64edd32d562717a1f85ff29bae3db",
+      "derived256RgbaSha256": "47cb3dd087b5d1a0194c3cfa12c53d616a7204f43189b04e29951e93cda946e7",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.7808,
+        "translationX": -39,
+        "translationCalibrationSourcePixels": -1,
+        "translationSourcePixels": [
+          -39,
+          0
+        ],
+        "sourceBbox": [
+          210,
+          313,
+          379,
+          487
+        ],
+        "sourceCropSize": [
+          169,
+          174
+        ],
+        "outputCropSize": [
+          301,
+          310
+        ],
+        "pastePosition": [
+          105,
+          177
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 1,
+      "original512RgbaSha256": "08f1135a5d49c2fb196786c6b7f66308ee378ca2d0d66eed3bfb4351b2c9cbc1",
+      "formal512RgbaSha256": "5b5a8b8b97b8bcf773a57ac0687f01fc115cdd6c97ef51560f76186d5a924ece",
+      "derived256RgbaSha256": "58e068d1bb85d982d37e30890b291478911ab22fdfd7b9b4d9e73f171c2c330d",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          198,
+          280,
+          398,
+          487
+        ],
+        "sourceCropSize": [
+          200,
+          207
+        ],
+        "outputCropSize": [
+          320,
+          331
+        ],
+        "pastePosition": [
+          112,
+          156
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 2,
+      "original512RgbaSha256": "66c7161b4c2df315d5bee33abdda6354d533f727e8ac6ea9ea5b854eda788154",
+      "formal512RgbaSha256": "bb4588373535d2864ef04c22461e7a8f0b620a8e79f7bb56a230107f630ef271",
+      "derived256RgbaSha256": "58538454caae9dc07e792baffeefb869ce79d63e05b5891a4c8d0f0db3efb87b",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          192,
+          305,
+          381,
+          487
+        ],
+        "sourceCropSize": [
+          189,
+          182
+        ],
+        "outputCropSize": [
+          302,
+          291
+        ],
+        "pastePosition": [
+          110,
+          196
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 3,
+      "original512RgbaSha256": "185bb7897348ec7cbe0acc93c54c5e2aa6c1a09baf7d0896695b6f2f18cade97",
+      "formal512RgbaSha256": "23732de4fb49987a684399ac0c01d4db30045f8660bc29676395ec20e3cbcdcf",
+      "derived256RgbaSha256": "3957a8641a0c203d3b6e4e6cbfb5d2f2c490c7b382f1e5f404ab8192769ada3a",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          196,
+          294,
+          380,
+          487
+        ],
+        "sourceCropSize": [
+          184,
+          193
+        ],
+        "outputCropSize": [
+          294,
+          309
+        ],
+        "pastePosition": [
+          115,
+          178
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 4,
+      "original512RgbaSha256": "aa7ec7d1a67217b8a08974b656ee2a98efc120c126c0d76983be391bd358554b",
+      "formal512RgbaSha256": "c1c3dbc1f90dd40d383de07877bb11079a7d29d27f466cefa4f733ce2f583732",
+      "derived256RgbaSha256": "42c772edf3e3bb6d03ea0f0fdb571fbfa9f0e4c0362566be2d9ad55dc6e1ab43",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          175,
+          295,
+          398,
+          487
+        ],
+        "sourceCropSize": [
+          223,
+          192
+        ],
+        "outputCropSize": [
+          357,
+          307
+        ],
+        "pastePosition": [
+          82,
+          180
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 5,
+      "original512RgbaSha256": "02b0ba76e998f6b620d8d3b3b24eb481fafd5ba9c521bb619c81a480c5e50d89",
+      "formal512RgbaSha256": "ce1b179d83ab400a48c00aa88fad5b528477ca793c227300e0410aa6a19c005b",
+      "derived256RgbaSha256": "7622b945892fd7f29feb3e47d9adf1554f11a7247fb72dfddcfd3e855acf241d",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          166,
+          302,
+          380,
+          487
+        ],
+        "sourceCropSize": [
+          214,
+          185
+        ],
+        "outputCropSize": [
+          342,
+          296
+        ],
+        "pastePosition": [
+          76,
+          191
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 6,
+      "original512RgbaSha256": "9cd5355e5e3f9cac25e09e800c14b863d4258eac2438b2355c219a075804b0a5",
+      "formal512RgbaSha256": "3d0a39a47842d1ec9f8022d74b56a6e81618d96b461bb31164c47f5007cbd883",
+      "derived256RgbaSha256": "b43c0a64e366e153b990e5339fa84ff4eed6792b993c5213b24358b66ae9ea70",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          226,
+          301,
+          445,
+          487
+        ],
+        "sourceCropSize": [
+          219,
+          186
+        ],
+        "outputCropSize": [
+          350,
+          298
+        ],
+        "pastePosition": [
+          134,
+          189
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 7,
+      "original512RgbaSha256": "4aebabfb2f17123cf9cf39924ceb7e87b59d29a8a61e3cd77381390bee88d579",
+      "formal512RgbaSha256": "a69d73544ba5139e2475cc202457f23bece8a8aa4cc06965861fe087595c3d9d",
+      "derived256RgbaSha256": "624d4177ea5664aa9d9b5e5679f37596ce7a29773ffd44d89bbd3754ec8815b5",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          216,
+          302,
+          398,
+          487
+        ],
+        "sourceCropSize": [
+          182,
+          185
+        ],
+        "outputCropSize": [
+          291,
+          296
+        ],
+        "pastePosition": [
+          136,
+          191
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frame": 8,
+      "original512RgbaSha256": "5110c0afef9444f630c2907e0a895ef6033dd75fe288a0d1e58242b6685b047f",
+      "formal512RgbaSha256": "a06340842d63c8b6f1d8f2b8e11290f0805171a8c9315eea30a31892fd11a19a",
+      "derived256RgbaSha256": "718f02e3e712828985f5e36628f32848892edefed8d024efcc1c6589026046e7",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.6,
+        "translationX": -26,
+        "preservation": null,
+        "translationSourcePixels": [
+          -26,
+          0
+        ],
+        "sourceBbox": [
+          197,
+          281,
+          397,
+          487
+        ],
+        "sourceCropSize": [
+          200,
+          206
+        ],
+        "outputCropSize": [
+          320,
+          330
+        ],
+        "pastePosition": [
+          111,
+          157
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 1,
+      "original512RgbaSha256": "4e37121b01847ae4318c63a7f5ddb6a184304072925ad6be083603bf65a4acb7",
+      "formal512RgbaSha256": "4e37121b01847ae4318c63a7f5ddb6a184304072925ad6be083603bf65a4acb7",
+      "derived256RgbaSha256": "600cb4e56475249f7adfc2330f810851f3f496efb6d07691bbda4ab2dd147b44",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 2,
+      "original512RgbaSha256": "f47c2e421cc0ea1ee83e347781cd84a49e75f6304588a3d252d11ce7ffaacdfe",
+      "formal512RgbaSha256": "f47c2e421cc0ea1ee83e347781cd84a49e75f6304588a3d252d11ce7ffaacdfe",
+      "derived256RgbaSha256": "bec010e3fb589b6ccbfb293d95a0a975f1912c8d5b93a70151fc72b2cb9ce14a",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 3,
+      "original512RgbaSha256": "f24db29e27d2a25dbfc3b8d0efc59a95abf382ed37160b98e10e06fca3b00d7d",
+      "formal512RgbaSha256": "f24db29e27d2a25dbfc3b8d0efc59a95abf382ed37160b98e10e06fca3b00d7d",
+      "derived256RgbaSha256": "7536f0abf6d4c8bf4c2bdecc237d12c5bff3427d89fc3b80db03b204271ff03f",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 4,
+      "original512RgbaSha256": "f0f07f0ffcc5b4053d3acdab43c48018ffe2b7aee7f0ca1466e4c1ab2465c311",
+      "formal512RgbaSha256": "f0f07f0ffcc5b4053d3acdab43c48018ffe2b7aee7f0ca1466e4c1ab2465c311",
+      "derived256RgbaSha256": "4bc745326333019ff1305df9285c6f827fbc4432979f9b2a244dfe2fb00c9360",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 5,
+      "original512RgbaSha256": "1c2bf77aa6492abe6b6b3293908661cd55803045a688e9f05332d1b7f1f609f0",
+      "formal512RgbaSha256": "1c2bf77aa6492abe6b6b3293908661cd55803045a688e9f05332d1b7f1f609f0",
+      "derived256RgbaSha256": "429580a0d154bfeef954e64cb3f01802807ddb2ea32e73edc16973d5fcf4b53a",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frame": 6,
+      "original512RgbaSha256": "b8600666ed7420e3bb205321258d6dc469ab3a391a73a6ab34398d4ad21344d7",
+      "formal512RgbaSha256": "b8600666ed7420e3bb205321258d6dc469ab3a391a73a6ab34398d4ad21344d7",
+      "derived256RgbaSha256": "3d4b5f6580b6fc03c3280caa1162b0e6b38c974d4a8d4da6c819c81a0e2a5458",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 1,
+      "original512RgbaSha256": "b16855fd4c67ed734481e34394532b0f2f7ed6c08367700457e7769eb7289a46",
+      "formal512RgbaSha256": "b16855fd4c67ed734481e34394532b0f2f7ed6c08367700457e7769eb7289a46",
+      "derived256RgbaSha256": "1c436b74b6e332aa4a19817056dba4a7ce031121bf08f6d964c1f8b2f7870582",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 2,
+      "original512RgbaSha256": "2956d222c1a49fdc4d6d7aad6c8f0cf3baef51a9c6aac0d01bb5b5fe25bc2d9e",
+      "formal512RgbaSha256": "2956d222c1a49fdc4d6d7aad6c8f0cf3baef51a9c6aac0d01bb5b5fe25bc2d9e",
+      "derived256RgbaSha256": "0e4cf4d5aacbb104c34984f4763e3ef60269024909a6e7e92b5a05e732d059e9",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 3,
+      "original512RgbaSha256": "38710e563ee04bf1923330da32ba2d0aa62ccd4887489dc12d1637048588a743",
+      "formal512RgbaSha256": "38710e563ee04bf1923330da32ba2d0aa62ccd4887489dc12d1637048588a743",
+      "derived256RgbaSha256": "852cc2aea6b566bcfa8d296a50f4e402a77b165e2957574d394be93893f0ca11",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 4,
+      "original512RgbaSha256": "18c87ca525f4b559386e17df3379f4a328f2293c65151ef8f1f5f179432acbc9",
+      "formal512RgbaSha256": "18c87ca525f4b559386e17df3379f4a328f2293c65151ef8f1f5f179432acbc9",
+      "derived256RgbaSha256": "9fa3d0e59b5ca74826db1765222835152c5f64bd070e9734d38c7d9e181ba534",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 5,
+      "original512RgbaSha256": "f5e69c2dd7230ed66e1c0c49ef2ddf5f83db32f41c207f8dca4242a52f714614",
+      "formal512RgbaSha256": "f5e69c2dd7230ed66e1c0c49ef2ddf5f83db32f41c207f8dca4242a52f714614",
+      "derived256RgbaSha256": "0c670274314df0a8ec14c681c52b8c949bc02a7558ffdea064b143a36ef4365b",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frame": 6,
+      "original512RgbaSha256": "a423b924bb9f4126ee53f9621b9a7cfb8e4ba3edbc0c819565e1f22d7534fa01",
+      "formal512RgbaSha256": "a423b924bb9f4126ee53f9621b9a7cfb8e4ba3edbc0c819565e1f22d7534fa01",
+      "derived256RgbaSha256": "64e53c41a72a84e457158c527e7ae3ec050e6268ab3e5a98c511cf09a7306d3a",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 1,
+      "original512RgbaSha256": "1ef9efa7f84ecb011c3f9a0c3edb8665a25ddbc450dc740fc71c29cb81189924",
+      "formal512RgbaSha256": "c50287f752abe410fa69d481a22987967347b1707abe03c22b672101e5cf28e5",
+      "derived256RgbaSha256": "aa9d0635b64b1e8ff3c8529e2d0e2a838f243a3c4ffec19e2314436986fa5f4f",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          186,
+          289,
+          396,
+          487
+        ],
+        "sourceCropSize": [
+          210,
+          198
+        ],
+        "outputCropSize": [
+          307,
+          290
+        ],
+        "pastePosition": [
+          122,
+          197
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 2,
+      "original512RgbaSha256": "0e7fd2997080612bdad2da1b8c4f97f28388502b34f4c28f8b575a409a1e2a2c",
+      "formal512RgbaSha256": "fe8626c97ee766363f038f6bcd115e54d205479783d58d9b3d5384e0a5533ae5",
+      "derived256RgbaSha256": "bf604be1c054dfe2f0dacfa962d46bb86bf4318d5bfda4e34fccbba39adf3493",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          175,
+          306,
+          392,
+          486
+        ],
+        "sourceCropSize": [
+          217,
+          180
+        ],
+        "outputCropSize": [
+          318,
+          263
+        ],
+        "pastePosition": [
+          108,
+          223
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 3,
+      "original512RgbaSha256": "2dcb83a341995645e03a96ed50c94324d584a9ccd91b17dd7c951647a95c457a",
+      "formal512RgbaSha256": "edc4b501f927a9c5906eccad0abe046c31a6728aa3ba10a6c62e7f39474b42c0",
+      "derived256RgbaSha256": "2dd6a43b0d9ce1f302a9f9878e20aab862fc6ed85eb3d84ce9a11c0640c98b73",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          204,
+          288,
+          444,
+          487
+        ],
+        "sourceCropSize": [
+          240,
+          199
+        ],
+        "outputCropSize": [
+          351,
+          291
+        ],
+        "pastePosition": [
+          132,
+          196
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 4,
+      "original512RgbaSha256": "43666ecdb5d5095b387a2ad6869cabe16f27841ceb2e67c3a16ebba72d1b8ee7",
+      "formal512RgbaSha256": "2570dc2d66d025cea50201ba76153717f99f1d98ce635fc45709e6abfe841bbb",
+      "derived256RgbaSha256": "4af4962bb62450b7b911ea15dd320a1f386b0d8c3b43e194f03ef7e5e1cf3d7a",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          91,
+          302,
+          303,
+          487
+        ],
+        "sourceCropSize": [
+          212,
+          185
+        ],
+        "outputCropSize": [
+          310,
+          271
+        ],
+        "pastePosition": [
+          26,
+          216
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 5,
+      "original512RgbaSha256": "8e740b2efc24cc00e99d153db0daac6ce7de7bcf69032b259df170097dc3dc7a",
+      "formal512RgbaSha256": "39d2071643515039cebdb540944a6ea975d1af89bc728c6d82c71398dfd3ff24",
+      "derived256RgbaSha256": "1573fe46ce911d58101a0fdfff5431019366ac3d261381c1e8dbc9b15564bf4b",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          164,
+          321,
+          407,
+          486
+        ],
+        "sourceCropSize": [
+          243,
+          165
+        ],
+        "outputCropSize": [
+          356,
+          241
+        ],
+        "pastePosition": [
+          92,
+          245
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 6,
+      "original512RgbaSha256": "49261834df6480687a4b262c3867d02f122a5b47e387fd7d9c46c7b55b3d6fb3",
+      "formal512RgbaSha256": "006087d4f365989251a4e034194b8fa135fc803e08980323392456229fbfbce2",
+      "derived256RgbaSha256": "8f14c919d12427cfc8ea02c0703f9c98645187f71e4697de40bc1d1bce7a71f2",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          154,
+          333,
+          372,
+          487
+        ],
+        "sourceCropSize": [
+          218,
+          154
+        ],
+        "outputCropSize": [
+          319,
+          225
+        ],
+        "pastePosition": [
+          88,
+          262
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 7,
+      "original512RgbaSha256": "96732d24a0b9feb5471442d92de34f7e1caf3b2774fa70d95500575a7639144c",
+      "formal512RgbaSha256": "5d7c3994b341885e8e9b2169d1e672c630759436412a4a55928431c6bf6fc3db",
+      "derived256RgbaSha256": "11b801f5dad7693e5e3dd5d74fbfa384d348eec324e17223007d995e078d4c78",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          174,
+          306,
+          392,
+          486
+        ],
+        "sourceCropSize": [
+          218,
+          180
+        ],
+        "outputCropSize": [
+          319,
+          263
+        ],
+        "pastePosition": [
+          108,
+          223
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frame": 8,
+      "original512RgbaSha256": "d621f0674473732969d31a28f4f1f36fa627cea429cefe298e0b0fcf2fd86177",
+      "formal512RgbaSha256": "e62abbe6f99baa3e810c116d46d19ffe0ebe2162a4fcb8b81c748bcb72392f6e",
+      "derived256RgbaSha256": "9c930f1314d06641a5b68b86924fdf16406ae4f446d45c75afef9576273a2514",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4633027512935777,
+        "translationX": -16,
+        "preservation": null,
+        "translationSourcePixels": [
+          -16,
+          0
+        ],
+        "sourceBbox": [
+          193,
+          298,
+          389,
+          486
+        ],
+        "sourceCropSize": [
+          196,
+          188
+        ],
+        "outputCropSize": [
+          287,
+          275
+        ],
+        "pastePosition": [
+          132,
+          211
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 1,
+      "original512RgbaSha256": "1bed83717d44523485868f313872b9d5cd7d9909666cb4b22278faf25fcca171",
+      "formal512RgbaSha256": "508a000ab65326e22d84e06da290ee15a307fbe22453b7e00580a834cbb4f430",
+      "derived256RgbaSha256": "0f0a3f3d1ca119a5502a7fa3ce36368a863ef4ac01ec2fa1506673a9ddb7193f",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          197,
+          293,
+          399,
+          488
+        ],
+        "sourceCropSize": [
+          202,
+          195
+        ],
+        "outputCropSize": [
+          322,
+          311
+        ],
+        "pastePosition": [
+          115,
+          177
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 2,
+      "original512RgbaSha256": "049760d147a7f3bfb0b8b65e38baf4a95d46095b76062128510c52b8e94c18b7",
+      "formal512RgbaSha256": "44fe227e677a883b2221c1ccb2cfb93f65ad44f2dced1726ea6bacc1fd524f9b",
+      "derived256RgbaSha256": "42c8d720b326f62b5ded70d3fbd94ca0955549f8b9deaa8bcc62f2a41dfe973b",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          297,
+          388,
+          487
+        ],
+        "sourceCropSize": [
+          203,
+          190
+        ],
+        "outputCropSize": [
+          324,
+          303
+        ],
+        "pastePosition": [
+          102,
+          184
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 3,
+      "original512RgbaSha256": "5adf16f5d3dd0c4ee0f9b2129f7b03828743f0377689a02a87b4514a9beb1155",
+      "formal512RgbaSha256": "f9b85ff45422b6ccb6844b9371026a4d64e20ec31020cda156089aeccf162b36",
+      "derived256RgbaSha256": "3a5fd7ffd4e4cc09f885377913af12aac2c998fc67144495bd1848af211e67a5",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          212,
+          291,
+          441,
+          487
+        ],
+        "sourceCropSize": [
+          229,
+          196
+        ],
+        "outputCropSize": [
+          365,
+          312
+        ],
+        "pastePosition": [
+          122,
+          175
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 4,
+      "original512RgbaSha256": "dd91feed94946ee030d26488cdc92941c0240c40c10c482081edfbc59652910f",
+      "formal512RgbaSha256": "119801ee8cb6266c7b1431af25dc9a80589d0dbbb9c1bf6f0bc7b2ae09a6974e",
+      "derived256RgbaSha256": "a3c03c56ea0d761de9756b2fff4db8ac0c4ccbac7ddbbb33d8370cfbe08dbe88",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          189,
+          305,
+          400,
+          487
+        ],
+        "sourceCropSize": [
+          211,
+          182
+        ],
+        "outputCropSize": [
+          336,
+          290
+        ],
+        "pastePosition": [
+          104,
+          197
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 5,
+      "original512RgbaSha256": "bab3d8e9d4906a9325a49f785edec62a7202986dbddd8fe51e38c65fd9e7876a",
+      "formal512RgbaSha256": "80a2d13ef74d9157d0e11e3dabc0fbad45dee317ad41dbb12226d91cf4d947bf",
+      "derived256RgbaSha256": "f63434398c67f6ee37783c2ed0a85e2218252d1967c4328436b8ea7154e8b358",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          222,
+          325,
+          445,
+          487
+        ],
+        "sourceCropSize": [
+          223,
+          162
+        ],
+        "outputCropSize": [
+          355,
+          258
+        ],
+        "pastePosition": [
+          134,
+          229
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 6,
+      "original512RgbaSha256": "2c8e98901ac226ac7981c5ac69505c0e4786160189477de867844eda6ce27817",
+      "formal512RgbaSha256": "c901d849c01621e5790b84f4ad9bd5e407cff8109a251dbb6e785a893d27c5c7",
+      "derived256RgbaSha256": "20cd07fec0c5483386ff3536d8aeb9583c093a6127b40b02ac3a2b5a94bc5d0a",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          204,
+          293,
+          396,
+          487
+        ],
+        "sourceCropSize": [
+          192,
+          194
+        ],
+        "outputCropSize": [
+          306,
+          309
+        ],
+        "pastePosition": [
+          125,
+          178
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 7,
+      "original512RgbaSha256": "2ca8ec61df64e252b4a73ceecd2eb3fdd64c02471bbcd9430054951150c37d12",
+      "formal512RgbaSha256": "9911dea1e9e6565c2c2069af85d2ddabde381f5d0370a55e303335a0127e7c95",
+      "derived256RgbaSha256": "d9648f048250f6465671b0e7c16b7d9a382a98d02b1627167497743ebf6d50bc",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          163,
+          315,
+          374,
+          487
+        ],
+        "sourceCropSize": [
+          211,
+          172
+        ],
+        "outputCropSize": [
+          336,
+          274
+        ],
+        "pastePosition": [
+          78,
+          213
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frame": 8,
+      "original512RgbaSha256": "161cfd01e0f769f918bbf4b2c8d169ca0b56baf6bb0ce92a502100341066a6b3",
+      "formal512RgbaSha256": "acb52881a78c85f11684772abd416e0680de5c627340d454e46bbf7f4ecf756f",
+      "derived256RgbaSha256": "8127465b9738e22972444d739cbe2909a305635fa607728aa6fc363e2ff74fff",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.594,
+        "translationX": -22,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -22,
+          0
+        ],
+        "sourceBbox": [
+          190,
+          300,
+          388,
+          488
+        ],
+        "sourceCropSize": [
+          198,
+          188
+        ],
+        "outputCropSize": [
+          316,
+          300
+        ],
+        "pastePosition": [
+          109,
+          188
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 1,
+      "original512RgbaSha256": "6c56133ff335eb025453dfc2330368f03a9dfea8d43df09516e3770554036359",
+      "formal512RgbaSha256": "9be48495651de050fbc11ac608a82df1cbaccf92f47af813c0089210899661d3",
+      "derived256RgbaSha256": "b27185c6ca39a9768e300e2bb95418c2c1874ff1c6d9649aba1abc48380fdde6",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          184,
+          268,
+          387,
+          487
+        ],
+        "sourceCropSize": [
+          203,
+          219
+        ],
+        "outputCropSize": [
+          260,
+          280
+        ],
+        "pastePosition": [
+          156,
+          207
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 2,
+      "original512RgbaSha256": "818bde13502469eafe092310edc37050f71011cfbeeedaac6a680d85f6d375b4",
+      "formal512RgbaSha256": "5014c0bf190e837bb9445cfc4c09c4b49031c99ab7e509eb2bdbaba207d89a6b",
+      "derived256RgbaSha256": "fef6bef913cecaa34b018773256088883d786ef8349259624a660cde2b44e18f",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          169,
+          269,
+          392,
+          488
+        ],
+        "sourceCropSize": [
+          223,
+          219
+        ],
+        "outputCropSize": [
+          285,
+          280
+        ],
+        "pastePosition": [
+          138,
+          208
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 3,
+      "original512RgbaSha256": "cecf0fbf880bfaf598ec264702b10edfa451f9bd4dd044c7f202da443fb81402",
+      "formal512RgbaSha256": "cc4847d7ee023a3b28276104b992fca4d65d104d3d1ba0e26d6e65bab5f8d376",
+      "derived256RgbaSha256": "2294eb3c2c89c0d39433a5a661743b9ba26b1f689ccc5142e8686f04c36dcf43",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          269,
+          413,
+          487
+        ],
+        "sourceCropSize": [
+          228,
+          218
+        ],
+        "outputCropSize": [
+          292,
+          279
+        ],
+        "pastePosition": [
+          153,
+          208
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 4,
+      "original512RgbaSha256": "e4aa5cc306eea1d4a5887d702eaa15c88ad9bb83be97151d8e25621a5e22ec18",
+      "formal512RgbaSha256": "9e8c839c812acbad1b8f9ba3eec52c896267f73fb1cd84ac9dcc4018ee2a9a03",
+      "derived256RgbaSha256": "7a945170bc5b3cbefdf9e652c7b3cf5fa37c8c69647c347ce98bc5af427ef4f2",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          207,
+          264,
+          425,
+          487
+        ],
+        "sourceCropSize": [
+          218,
+          223
+        ],
+        "outputCropSize": [
+          279,
+          285
+        ],
+        "pastePosition": [
+          176,
+          202
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 5,
+      "original512RgbaSha256": "f598668218306a6ec2cbff7111a5ddbfe17c383e524b79f434863aa4e0ad434b",
+      "formal512RgbaSha256": "5cde75949d05c4e93e6403150285dd3a7adc784bea6fe8240e39aeceb6dd009f",
+      "derived256RgbaSha256": "29dc11fd0bbbea870616f689b5e3954ee8ab287fc589d94c7cb6cdff065ddf32",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          217,
+          254,
+          436,
+          487
+        ],
+        "sourceCropSize": [
+          219,
+          233
+        ],
+        "outputCropSize": [
+          280,
+          298
+        ],
+        "pastePosition": [
+          186,
+          189
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 6,
+      "original512RgbaSha256": "871fda84fbd4df97abdc3b23bc5472946688e89a6922c5b594a8343ef4953ad1",
+      "formal512RgbaSha256": "0362e4b38851dc7b138c35b011af638db876861951ececc67e7bc48417672adf",
+      "derived256RgbaSha256": "acda545aa18641f571b110f3c9074d38ff4c5172681b71c2f12459c1e42c53bd",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          219,
+          258,
+          442,
+          487
+        ],
+        "sourceCropSize": [
+          223,
+          229
+        ],
+        "outputCropSize": [
+          285,
+          293
+        ],
+        "pastePosition": [
+          188,
+          194
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 7,
+      "original512RgbaSha256": "5a6fc9fc1eefe53fdf0d6ac6db2eac098015e82d7b940b5a3f8dc6382f15d1c9",
+      "formal512RgbaSha256": "7bcf57a09d053998bb04e2770b30f1acfb8a4b6b5059e6cff9ace72cc733ebed",
+      "derived256RgbaSha256": "d6dcedddb556c2b2bf3f96313a9e3a5071c0827a7bdfc53af914520e424bbae1",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          212,
+          254,
+          442,
+          487
+        ],
+        "sourceCropSize": [
+          230,
+          233
+        ],
+        "outputCropSize": [
+          294,
+          298
+        ],
+        "pastePosition": [
+          180,
+          189
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "frame": 8,
+      "original512RgbaSha256": "b0a78d8e03b6c0af0f447f3d69f032f38e2d0ce89dbdb579a25a01595739a080",
+      "formal512RgbaSha256": "2d76c2cef2553a755a24ede12e860830382e0f55b00d7ff40149efa6f2baa374",
+      "derived256RgbaSha256": "cfc663b3905704902140a0f09da7e778bc4145b39778c24b394cd06b9159def6",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          213,
+          250,
+          446,
+          487
+        ],
+        "sourceCropSize": [
+          233,
+          237
+        ],
+        "outputCropSize": [
+          298,
+          303
+        ],
+        "pastePosition": [
+          180,
+          184
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 1,
+      "original512RgbaSha256": "8e9914040d5eaa3298f258d11646bb4d6e659af1bfa8111298587ea1a1cee3ef",
+      "formal512RgbaSha256": "f05b54c88dd94963887230a47cd1f7dc2564b232862147613ab97805a2ec2d93",
+      "derived256RgbaSha256": "b4cb1bd2a57841265daa5acd19ae39fb7429309728347383c0ca341d2ce91518",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          193,
+          270,
+          388,
+          486
+        ],
+        "sourceCropSize": [
+          195,
+          216
+        ],
+        "outputCropSize": [
+          266,
+          295
+        ],
+        "pastePosition": [
+          160,
+          191
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 2,
+      "original512RgbaSha256": "137ab9957bc7b55cb863303e57e27ce089fb87727faa036305a9a39e539499e2",
+      "formal512RgbaSha256": "f6ee6c9a8513166706044eed506ecb2bb9023c6cb1c0454bc434f46c657c8d3b",
+      "derived256RgbaSha256": "4704eb84e988bbc1ef54ba420d52e7acb75b8f0806b89cd964c6859d6b150aa6",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          216,
+          264,
+          436,
+          486
+        ],
+        "sourceCropSize": [
+          220,
+          222
+        ],
+        "outputCropSize": [
+          300,
+          303
+        ],
+        "pastePosition": [
+          178,
+          183
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 3,
+      "original512RgbaSha256": "aa5701fd9713b5ed10a1dad06e564852779c8515262a656a21da3a27600fb295",
+      "formal512RgbaSha256": "e1af1973e598db837d498a7c4bfc233bc8995c54b857306bf4797c10cf9bc2ba",
+      "derived256RgbaSha256": "ca998ac79e76ec7303f4b58a05c9097e5b3b9331ca082ea14380dba8c34c861e",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          193,
+          273,
+          438,
+          486
+        ],
+        "sourceCropSize": [
+          245,
+          213
+        ],
+        "outputCropSize": [
+          335,
+          291
+        ],
+        "pastePosition": [
+          150,
+          195
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 4,
+      "original512RgbaSha256": "835ed9cb673a694eefccbf19141cff54c6f2f49b3bb56370ba490cdf33a93bde",
+      "formal512RgbaSha256": "08c6775eff67052bc1bed1949d9d62d34a861f2dd009435da35e096fa7bbd283",
+      "derived256RgbaSha256": "e6bb9a3f7424ca0594d8ecfb1bc8521d3186323236ed70a84e7a7791f6550487",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          190,
+          269,
+          411,
+          486
+        ],
+        "sourceCropSize": [
+          221,
+          217
+        ],
+        "outputCropSize": [
+          302,
+          296
+        ],
+        "pastePosition": [
+          152,
+          190
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 5,
+      "original512RgbaSha256": "d8dc3f2472ee912380a11be6b0a73bf0433da7e918aa25d5d43170c400f84ed4",
+      "formal512RgbaSha256": "ae04abb44be29da9730bcceeb868c16f4ef28c10bf75bb1cf5d84cf4d36b3013",
+      "derived256RgbaSha256": "53ac826d72f84ec079ede1f0326f53f1b9859f87cc7ea885c6876b3f6644ce34",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          157,
+          281,
+          384,
+          486
+        ],
+        "sourceCropSize": [
+          227,
+          205
+        ],
+        "outputCropSize": [
+          310,
+          280
+        ],
+        "pastePosition": [
+          118,
+          206
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 6,
+      "original512RgbaSha256": "d3ebfcad6a38743df27fc4db08e020ccaa9b55e19c4e5285d8d6d67aeb086c74",
+      "formal512RgbaSha256": "7851a2ac24827e357142f8a5f8264608edbbb968f71b1e0d0dd862a072d7fd58",
+      "derived256RgbaSha256": "2a4c269f39bc1147278a83bba0f6679695aa8858b0909288fe3f37b527a9c682",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          113,
+          282,
+          332,
+          486
+        ],
+        "sourceCropSize": [
+          219,
+          204
+        ],
+        "outputCropSize": [
+          299,
+          279
+        ],
+        "pastePosition": [
+          75,
+          207
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 7,
+      "original512RgbaSha256": "a82915752fa4945741c41e09e8d2ec3c0556513b480d06b584cee0112f52d8e6",
+      "formal512RgbaSha256": "eb2518f9e9ef1bdbbff9f45fc0c55eedb436eba018d93ea51f6a4d77269daeed",
+      "derived256RgbaSha256": "7246a9728865af3ebf6821f8d9a341a268c51d3082a616b1f40637aa67022769",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          79,
+          281,
+          320,
+          486
+        ],
+        "sourceCropSize": [
+          241,
+          205
+        ],
+        "outputCropSize": [
+          329,
+          280
+        ],
+        "pastePosition": [
+          37,
+          206
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frame": 8,
+      "original512RgbaSha256": "7240a417924ce4b07ecede6f9bf5ea9b2e64dad6c9fca9ba18cfee8a508007a7",
+      "formal512RgbaSha256": "8abf61fc166d163bb256a4ea1171c3edf5223f2ce77917bc4e6aa4e946421ead",
+      "derived256RgbaSha256": "9123f963414c8f0248348f45713079b81dbbe5b954362bcd50b228e14e3ba610",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.3653846143846151,
+        "translationX": 2,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          2,
+          0
+        ],
+        "sourceBbox": [
+          70,
+          303,
+          322,
+          486
+        ],
+        "sourceCropSize": [
+          252,
+          183
+        ],
+        "outputCropSize": [
+          344,
+          250
+        ],
+        "pastePosition": [
+          26,
+          236
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 1,
+      "original512RgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
+      "formal512RgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
+      "derived256RgbaSha256": "5304d55fda357fb22d27f839a453a0f689bd277f569c5a4e5fe1ca7abea18a75",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 2,
+      "original512RgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
+      "formal512RgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
+      "derived256RgbaSha256": "b65da71ee3b301931a4165fb74feb331e49dd698b0d26680208c358f60a7be68",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 3,
+      "original512RgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
+      "formal512RgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
+      "derived256RgbaSha256": "984c8d8f3c7d66cd59e79bb4af1c4cc150d44a4a9761b76c508ddbffe1086932",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 4,
+      "original512RgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
+      "formal512RgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
+      "derived256RgbaSha256": "1819c8dbb92a16227dcc55b0aa68ff43b5cbcfbe6cb6758a8e07b9f36ed541ed",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 5,
+      "original512RgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
+      "formal512RgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
+      "derived256RgbaSha256": "141646362a334a46bed6cafadcca183d274355eb21acc96e6bfa312b4fb905fd",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 6,
+      "original512RgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
+      "formal512RgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
+      "derived256RgbaSha256": "a8498c118d294b1e0ede0645ef2056ff253278c55dd1b17339f00e65a572df28",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 7,
+      "original512RgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
+      "formal512RgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
+      "derived256RgbaSha256": "6fb00e48ab86dc19f410eee132d9adec050da49a224680c6d1d55bc1e140ca7f",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frame": 8,
+      "original512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+      "formal512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+      "derived256RgbaSha256": "a2e35eebaf6408e6dd6382a46f47c9cae505c6c24af61036adea665a1ac61ac1",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 1,
+      "original512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+      "formal512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+      "derived256RgbaSha256": "a2e35eebaf6408e6dd6382a46f47c9cae505c6c24af61036adea665a1ac61ac1",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.0,
+        "translationX": 0,
+        "preservation": "byte-exact protected down8/revive1 seam",
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 2,
+      "original512RgbaSha256": "660eb54a9dae71834478f8e7695b7aa77041bdd3d2ce76ab9ee584154d1417e4",
+      "formal512RgbaSha256": "7d3cd994a452856dd0276974b9b9032de9a10c044e6c93ca7225f475a19e3524",
+      "derived256RgbaSha256": "f0ad6001efe127273e332b7e07602bdf1ce33bdd7d0166599501265e13f6a4bf",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.08,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          144,
+          311,
+          369,
+          486
+        ],
+        "sourceCropSize": [
+          225,
+          175
+        ],
+        "outputCropSize": [
+          243,
+          189
+        ],
+        "pastePosition": [
+          135,
+          297
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 3,
+      "original512RgbaSha256": "3fcf68bae3ebf4d14d476f754293a70c1dccad38c77a4dd10c9bafb2e14d4fc8",
+      "formal512RgbaSha256": "b2b525b1ae3ed4edc8a77394f4a8ea35d761ec9ed063a6e8e7938c754d685817",
+      "derived256RgbaSha256": "047f58a7d84946562ff038d108f03b7972525aa522c7b563a778b748823c0d10",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.16,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          168,
+          303,
+          400,
+          486
+        ],
+        "sourceCropSize": [
+          232,
+          183
+        ],
+        "outputCropSize": [
+          269,
+          212
+        ],
+        "pastePosition": [
+          150,
+          274
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 4,
+      "original512RgbaSha256": "7cf8700827139059e91af32a2646b8ba309a92ea05c9c396226ba63c3b1b0e31",
+      "formal512RgbaSha256": "c3f2cbf2ef93426db1d954d42a569271213b648f673fd264c5d6993888293f90",
+      "derived256RgbaSha256": "29d9e7f212d4fa86b3ada3691940d44a335bfc455504f22afc1baa22bf9b30f6",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.25,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          205,
+          286,
+          443,
+          486
+        ],
+        "sourceCropSize": [
+          238,
+          200
+        ],
+        "outputCropSize": [
+          298,
+          250
+        ],
+        "pastePosition": [
+          175,
+          236
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 5,
+      "original512RgbaSha256": "f731b0bf79268be71fb560c533bfcc5537c0fce5f029eb3d90ff70c265ea3020",
+      "formal512RgbaSha256": "a4a25ff6a14983f397707285bd2d131099cd3e340def57d27b90a78b62cdf1ca",
+      "derived256RgbaSha256": "bc1027ad5be6dfc55a566df91d75de8fae037e66e0d2f8b2feb8056da9f2acd0",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.34,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          201,
+          290,
+          418,
+          486
+        ],
+        "sourceCropSize": [
+          217,
+          196
+        ],
+        "outputCropSize": [
+          291,
+          263
+        ],
+        "pastePosition": [
+          164,
+          223
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 6,
+      "original512RgbaSha256": "bbb5c2ed927906cf358c747c94d31ea0f6e243935d7bd8f1e2805dab76eccddc",
+      "formal512RgbaSha256": "8d07cbf52af18fc830f0e4722e968c0d8268dc7d42eeb8404e7f7066e3e6197d",
+      "derived256RgbaSha256": "d0e4095cc9b756e93ec464c02f01780db4e11eb42160c80ddadbcfec43879055",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.43,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          195,
+          285,
+          418,
+          486
+        ],
+        "sourceCropSize": [
+          223,
+          201
+        ],
+        "outputCropSize": [
+          319,
+          287
+        ],
+        "pastePosition": [
+          147,
+          199
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 7,
+      "original512RgbaSha256": "f91c4d9e5482d52154648d9e2e6fc7279a962901f43b84621e04e6841507093a",
+      "formal512RgbaSha256": "54a913bc9ea10a8baa2eb2bc6fcc665ed6e9a6132f809df7266572d8925fa6a5",
+      "derived256RgbaSha256": "3fe5ec8ed52ee4be181e80bf49cea1cf730e662346d8b60ef560d921ae887284",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.52,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          198,
+          267,
+          416,
+          486
+        ],
+        "sourceCropSize": [
+          218,
+          219
+        ],
+        "outputCropSize": [
+          331,
+          333
+        ],
+        "pastePosition": [
+          142,
+          153
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frame": 8,
+      "original512RgbaSha256": "321ec230c8b6faf0a9862acb8831a51f311fce59f5d7b77a427d0da8fe038a30",
+      "formal512RgbaSha256": "11582d4c980a7c14e04ad2e82ab6f0b45696c846713d1e14dd898ab827b66617",
+      "derived256RgbaSha256": "11802dde8a59d51e9252a248b579fa7121070d11c803b7eadb5c68ba29a3bb92",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.59,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          183,
+          264,
+          399,
+          486
+        ],
+        "sourceCropSize": [
+          216,
+          222
+        ],
+        "outputCropSize": [
+          343,
+          353
+        ],
+        "pastePosition": [
+          120,
+          133
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 1,
+      "original512RgbaSha256": "67bf9b8be20aa7de672de611022aad0602acb94db031142944bd63647e4edbf8",
+      "formal512RgbaSha256": "67bf9b8be20aa7de672de611022aad0602acb94db031142944bd63647e4edbf8",
+      "derived256RgbaSha256": "b42607badfd0dcfc28a282820e6609256c1caea59883cfd498b499975be9e86a",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 2,
+      "original512RgbaSha256": "61d8d4f19c2e6498dff2f79096226083172c96ce051c7b59b9de0ed57049c690",
+      "formal512RgbaSha256": "61d8d4f19c2e6498dff2f79096226083172c96ce051c7b59b9de0ed57049c690",
+      "derived256RgbaSha256": "c739a88c38f8e9ede6c1bae7ed0f146e62f6084e57ef6f60a91d31750a42a2f9",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 3,
+      "original512RgbaSha256": "5a2d21aa461c42fc5feea1575bae11181011b55c580ad02fd49251e673e7ba4d",
+      "formal512RgbaSha256": "5a2d21aa461c42fc5feea1575bae11181011b55c580ad02fd49251e673e7ba4d",
+      "derived256RgbaSha256": "916e6071843b69a064b271250ad85c87d43da08475413eb8e9951cf054f1e501",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 4,
+      "original512RgbaSha256": "e7e14d604c0c790934839733747fd22fbe513cb11f57c57a4add110319bd8bbe",
+      "formal512RgbaSha256": "e7e14d604c0c790934839733747fd22fbe513cb11f57c57a4add110319bd8bbe",
+      "derived256RgbaSha256": "32cc5825867dac3dcd66e30b2780d476cac1a698d92a4fcca822f6aad7fd113e",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 5,
+      "original512RgbaSha256": "81d115b44bf026af48564b994eb9df08b3d8c90a994a74ca4718e57825aaa668",
+      "formal512RgbaSha256": "81d115b44bf026af48564b994eb9df08b3d8c90a994a74ca4718e57825aaa668",
+      "derived256RgbaSha256": "25eec9601a2371ef0fcba711911b01bec8174077ece10cd4e6fcadb230454f85",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frame": 6,
+      "original512RgbaSha256": "e8eb95d41c491d0e43f35e0365230e25d55a165d076b5ee9b5ec6c5083789cfb",
+      "formal512RgbaSha256": "e8eb95d41c491d0e43f35e0365230e25d55a165d076b5ee9b5ec6c5083789cfb",
+      "derived256RgbaSha256": "dbe128c51b4534fdf84d0f86d6d0a1221452cc44c4e60ce3ddfb20274bd91dc6",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 1,
+      "original512RgbaSha256": "e5af44032e0d0baab9c37506b7b62fc366b100c5fc1cb70c4235151712a3f02f",
+      "formal512RgbaSha256": "e5af44032e0d0baab9c37506b7b62fc366b100c5fc1cb70c4235151712a3f02f",
+      "derived256RgbaSha256": "7d9e3f7bfbc13395105ba387df3dbf2ee57b2c57e8e49b6b33de9a325f43d2ce",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 2,
+      "original512RgbaSha256": "847ff6a1fca70c5d3b2844a61ad5a101c75ad46e1a0c7aec4da25a3a4ee688d4",
+      "formal512RgbaSha256": "847ff6a1fca70c5d3b2844a61ad5a101c75ad46e1a0c7aec4da25a3a4ee688d4",
+      "derived256RgbaSha256": "3203b80ff703d1c50a3d585ff035307950641df30216c97339e7cad90791bc8b",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 3,
+      "original512RgbaSha256": "c3660620aabd1b2fedbabafcae81adf452c83c5ecb821a4572861b2472c7d215",
+      "formal512RgbaSha256": "c3660620aabd1b2fedbabafcae81adf452c83c5ecb821a4572861b2472c7d215",
+      "derived256RgbaSha256": "44bd6f6e94354279128272409d52fdea847cf8cb8c94bfbb0770dd98044b7d0f",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 4,
+      "original512RgbaSha256": "c0b301158257212d0126fe4fa809353eb1a6a9a7052544315fd1420896f86e76",
+      "formal512RgbaSha256": "c0b301158257212d0126fe4fa809353eb1a6a9a7052544315fd1420896f86e76",
+      "derived256RgbaSha256": "c73fbba7e3961d43b0e19da7fc449d373ea6ec34ee37ca4a35b168f3b366e0ef",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 5,
+      "original512RgbaSha256": "8b6f12296f7e9fc7d5bd233886d8f83bb5301b2502647513f7669c8e4d143282",
+      "formal512RgbaSha256": "8b6f12296f7e9fc7d5bd233886d8f83bb5301b2502647513f7669c8e4d143282",
+      "derived256RgbaSha256": "a21fb3a4c4c27aa78a51ba9c5a991c84eb93ba22faa4bba56d41903b6212a87c",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 6,
+      "original512RgbaSha256": "fd55282c36343846db198772078a157412d7248e492b3ce5e1f6856e2c56493c",
+      "formal512RgbaSha256": "fd55282c36343846db198772078a157412d7248e492b3ce5e1f6856e2c56493c",
+      "derived256RgbaSha256": "55ca765c20d542721b4f7584a61987d6324235639b78f8b33a4670ba5678cb4c",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 7,
+      "original512RgbaSha256": "b033d16075e1740be61f2b9456abcbd0a4dbd5995fdb53a08c2bfa4f81fe8dbb",
+      "formal512RgbaSha256": "b033d16075e1740be61f2b9456abcbd0a4dbd5995fdb53a08c2bfa4f81fe8dbb",
+      "derived256RgbaSha256": "1375e7c4bb1d32d75d213a040e02f84b63130b0127aba605be159247d57dc74d",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frame": 8,
+      "original512RgbaSha256": "582c2dac7e8a3096d533443b195f71db87f69441a33740b45e5f5af21cb0678e",
+      "formal512RgbaSha256": "582c2dac7e8a3096d533443b195f71db87f69441a33740b45e5f5af21cb0678e",
+      "derived256RgbaSha256": "914e044d042a28d2e191f9df708e53abab121088103d9e25a4fa131c30bed530",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 1,
+      "original512RgbaSha256": "0dd4a62e0a71f52dcb5ff761092d3a2afbd4cdca03fafad0f276ff6c0d4ab1c3",
+      "formal512RgbaSha256": "99bec2992266e322b9517d112e26bd555caf9b9a7756a80ef2e9b9ed9dec98e6",
+      "derived256RgbaSha256": "c614a4fa118f243888115dfc663ee3a0e88e5debd73f58f7218171e691864ae9",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          285,
+          379,
+          486
+        ],
+        "sourceCropSize": [
+          194,
+          201
+        ],
+        "outputCropSize": [
+          296,
+          307
+        ],
+        "pastePosition": [
+          120,
+          179
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 2,
+      "original512RgbaSha256": "47de348e0fb8654505f2886e825a059317d1f002485db26d01cf67f0b927a230",
+      "formal512RgbaSha256": "eb1897567f354772f8ea7d3cfdf3f4cc3c4b32a99e23ccbd20bf55501cd41d00",
+      "derived256RgbaSha256": "622a97bb0cf1ffa13137452ebba4dcb2fe670adcc124285da663d58507b675c3",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          223,
+          304,
+          428,
+          486
+        ],
+        "sourceCropSize": [
+          205,
+          182
+        ],
+        "outputCropSize": [
+          313,
+          278
+        ],
+        "pastePosition": [
+          155,
+          208
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 3,
+      "original512RgbaSha256": "b5d376b3d452c80c030ca07cd000c436e6288b2e243ef3c476c3555087142b5f",
+      "formal512RgbaSha256": "e05607f8aa5de485d6e2c6d8c444329f1d014174d626cac6be6e09ae1c7a57fa",
+      "derived256RgbaSha256": "15e36d002d421d51596ff2d14c1760fafc902cb519e069b17207fd2aebba0b18",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          110,
+          322,
+          374,
+          487
+        ],
+        "sourceCropSize": [
+          264,
+          165
+        ],
+        "outputCropSize": [
+          403,
+          252
+        ],
+        "pastePosition": [
+          26,
+          235
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 4,
+      "original512RgbaSha256": "c3ab7259cbc05c8d1192063e13625c6e99d6c9716800140d42342e4803137ba5",
+      "formal512RgbaSha256": "dbe5f9312065d955aeba05cdb3585d59bdacad110cc06965126f2c56f4ff8768",
+      "derived256RgbaSha256": "ca0a1bd557d806af2cbf781ca1176217867ea45a9a286dd78188fc3b81abb683",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          222,
+          314,
+          430,
+          486
+        ],
+        "sourceCropSize": [
+          208,
+          172
+        ],
+        "outputCropSize": [
+          317,
+          262
+        ],
+        "pastePosition": [
+          154,
+          224
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 5,
+      "original512RgbaSha256": "21f3e019fd9eba547183ba815008783033165903973ae2527962dff72b56d772",
+      "formal512RgbaSha256": "157ba66a497e5b69f214e8c0c4082ccccb988423505c1f77ed0cd96a86eee98e",
+      "derived256RgbaSha256": "7f27d5a94ed5d6392fe662750bc8d666dcd67f1a56639cde8b599ec91cbb866d",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          230,
+          322,
+          443,
+          486
+        ],
+        "sourceCropSize": [
+          213,
+          164
+        ],
+        "outputCropSize": [
+          325,
+          250
+        ],
+        "pastePosition": [
+          160,
+          236
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 6,
+      "original512RgbaSha256": "adf36c3acb19a48c33d02c49f5b0b2b32979a77c5057e630cd9c7ef657891af9",
+      "formal512RgbaSha256": "7a3b18bceafe65ab16d4fccac5ff0b4ca182e59cd4064b3c9190f6c0b4f1af37",
+      "derived256RgbaSha256": "c3b3b17eb75a85bcc4b2bd8c63499e1c4a5e641fcd97205dd25591bd82505e4a",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          127,
+          314,
+          338,
+          487
+        ],
+        "sourceCropSize": [
+          211,
+          173
+        ],
+        "outputCropSize": [
+          322,
+          264
+        ],
+        "pastePosition": [
+          58,
+          223
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 7,
+      "original512RgbaSha256": "e01dcb6c65362a4911c71680256258c9603e3553b36938d92da58daaf05cc604",
+      "formal512RgbaSha256": "2d29ff7dc4bcdaf64271494c30e2bd37904fb0601f2e4af0808cfa1558273fde",
+      "derived256RgbaSha256": "3427bbb22822b6837b51b3f8698c350a0641e8a2b0c9da92b92894ca089cb50c",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          163,
+          282,
+          349,
+          487
+        ],
+        "sourceCropSize": [
+          186,
+          205
+        ],
+        "outputCropSize": [
+          284,
+          313
+        ],
+        "pastePosition": [
+          100,
+          174
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frame": 8,
+      "original512RgbaSha256": "14b0883e5cb2a0e741dc423ac2b25c96ce9f7efa78fb24c8090f5b979df95ce2",
+      "formal512RgbaSha256": "f5007ede7914721d6217e0374e448be8808983f12a7daefebc1789b01410e051",
+      "derived256RgbaSha256": "d48b60990f162a65b45ffb11d0953211f185f9721c7d28b718a1a09e6e0bd4cd",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.5257352931176467,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          164,
+          286,
+          351,
+          486
+        ],
+        "sourceCropSize": [
+          187,
+          200
+        ],
+        "outputCropSize": [
+          285,
+          305
+        ],
+        "pastePosition": [
+          101,
+          181
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 1,
+      "original512RgbaSha256": "c33b699b23443e43f7205a3cca2ab881bea51484fe34df25cb6df32da166fd27",
+      "formal512RgbaSha256": "a8546e9998c280e5bef7e0a690c6c5d68216ff0589e7a5013287c16dca0e46f1",
+      "derived256RgbaSha256": "de9b87122251477f65caa4cc9a3d2e4ef892f8d105d7ffddabe075126c56f5f9",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          155,
+          263,
+          392,
+          488
+        ],
+        "sourceCropSize": [
+          237,
+          225
+        ],
+        "outputCropSize": [
+          335,
+          318
+        ],
+        "pastePosition": [
+          96,
+          170
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 2,
+      "original512RgbaSha256": "382b2c2e8da3a3aafb643afc97bac633f76be1a23ea994526874dfda42cb1960",
+      "formal512RgbaSha256": "ff214e7e9ec31c0d49c3ca955fdbbc586a7b1931badf4fd0a7777788cd9462dd",
+      "derived256RgbaSha256": "cd19c16107064276492dfad4a808b2a191636d5606cc2e83c7e85f757ca17ddd",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          191,
+          309,
+          430,
+          488
+        ],
+        "sourceCropSize": [
+          239,
+          179
+        ],
+        "outputCropSize": [
+          338,
+          253
+        ],
+        "pastePosition": [
+          132,
+          235
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 3,
+      "original512RgbaSha256": "4c85c4422827287bfd2954b4dfa52bb666a1cf33f0d996a43dd56a84cb4f1c84",
+      "formal512RgbaSha256": "fa0b3a5bb0c0ce354f221c73a15a82893bdfa090219131c0768a0d6d2b0c7cee",
+      "derived256RgbaSha256": "9a584d1681b6b8ce13a0a2ac1e4daff35fcc2922fb938afb14a2a1cff06f5964",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          159,
+          301,
+          412,
+          488
+        ],
+        "sourceCropSize": [
+          253,
+          187
+        ],
+        "outputCropSize": [
+          357,
+          264
+        ],
+        "pastePosition": [
+          97,
+          224
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 4,
+      "original512RgbaSha256": "f1fb884eecca18c2a0d6fdfa51be07055c51da24e0fc3777938710259bcf6c64",
+      "formal512RgbaSha256": "397715377bd738550295f7425176e1df7e870aa8f581b6bc959e65d23cac02b0",
+      "derived256RgbaSha256": "841467fdc58509a3ef7ed14bb1e399b7ebe08d0de2536ae59e180f6d92d37fc6",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          184,
+          285,
+          444,
+          487
+        ],
+        "sourceCropSize": [
+          260,
+          202
+        ],
+        "outputCropSize": [
+          367,
+          285
+        ],
+        "pastePosition": [
+          120,
+          202
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 5,
+      "original512RgbaSha256": "3e5b6e819ab1460263e7aae880ea71c3d7536cc8de73ba31eb698d76fd4ac4e8",
+      "formal512RgbaSha256": "143370924252fb934aa51486c0aad42a6c7c81afb17abf4854f73651b56a6aed",
+      "derived256RgbaSha256": "8067eee32d4fa41a16384d7a26fd4042a6cd78ac5804705e9e2aacd43bf8ac33",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          90,
+          291,
+          355,
+          488
+        ],
+        "sourceCropSize": [
+          265,
+          197
+        ],
+        "outputCropSize": [
+          374,
+          278
+        ],
+        "pastePosition": [
+          26,
+          210
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 6,
+      "original512RgbaSha256": "cdce0c0f015ccadfb21c24022583764cf2ae74ca224b7bce1204e3ba013ea7d1",
+      "formal512RgbaSha256": "34b2ce8e7830cf993eaf969c7e68dea305f053e17ea1abe41322b5a46a0d3ef3",
+      "derived256RgbaSha256": "ae9afaa6928acc12298e4b4da7b318dfca0cfa3322be192a4839a1bf8cae9ca3",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          177,
+          297,
+          434,
+          487
+        ],
+        "sourceCropSize": [
+          257,
+          190
+        ],
+        "outputCropSize": [
+          363,
+          268
+        ],
+        "pastePosition": [
+          114,
+          219
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 7,
+      "original512RgbaSha256": "dd1d5b82f3cdcb646fc431180a81a94a200a0517d5a00e1866727e46ff9d8010",
+      "formal512RgbaSha256": "08c73c4afe04306ee3e8d7c1aaefaf9092e435bf32d7cd94fda74ca4450a124c",
+      "derived256RgbaSha256": "a698c7e3de0460d8129581d9e6382e39a9ad9bf8d24a0b4756a540b55ce54abb",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          143,
+          291,
+          371,
+          488
+        ],
+        "sourceCropSize": [
+          228,
+          197
+        ],
+        "outputCropSize": [
+          322,
+          278
+        ],
+        "pastePosition": [
+          86,
+          210
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frame": 8,
+      "original512RgbaSha256": "386bcc251db19a18c35f4b2d9b69a6e8eb53ba0a9dda9d6d41f3272dede6b442",
+      "formal512RgbaSha256": "969024fc08ac4e95e0edb845c8912d1918cb93ef7b918b9657aa6d37c263d160",
+      "derived256RgbaSha256": "49612bdd2034d3ff9e0aead194978bc732f845342ad2608fd4c94e2070d5ca2d",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.4128787868787878,
+        "translationX": -10,
+        "preservation": null,
+        "translationSourcePixels": [
+          -10,
+          0
+        ],
+        "sourceBbox": [
+          141,
+          265,
+          379,
+          488
+        ],
+        "sourceCropSize": [
+          238,
+          223
+        ],
+        "outputCropSize": [
+          336,
+          315
+        ],
+        "pastePosition": [
+          82,
+          173
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 1,
+      "original512RgbaSha256": "0ad41df450a8843987536c9f39e2b25e52a27203882a215dab813ddd5490efb9",
+      "formal512RgbaSha256": "0ad41df450a8843987536c9f39e2b25e52a27203882a215dab813ddd5490efb9",
+      "derived256RgbaSha256": "67d3f0c05106dc9147a30238014883d11e1b6734fd089982497f5183756bb726",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 2,
+      "original512RgbaSha256": "ba3a41f1e341e63beac86fa9b6a2cbb4464d599dc090ec1f1a0aecb09b18c479",
+      "formal512RgbaSha256": "ba3a41f1e341e63beac86fa9b6a2cbb4464d599dc090ec1f1a0aecb09b18c479",
+      "derived256RgbaSha256": "caa534d53b7b5b5686157b67b11fc90c210c90ae1c82c9bdae1904510663cea2",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 3,
+      "original512RgbaSha256": "27bff57d792374c4cf0dee4ea926b721080e16a9da713a1a30232fcffdefcf3a",
+      "formal512RgbaSha256": "27bff57d792374c4cf0dee4ea926b721080e16a9da713a1a30232fcffdefcf3a",
+      "derived256RgbaSha256": "3ed766240204a2ae6eab76e4d8cd2588c92e0bca759ac0fa5e2adf0c72cb13a9",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 4,
+      "original512RgbaSha256": "56381a1257b0fa6cd48cb17190efa73cf202f7f8af2979b9211608085b3e7dbe",
+      "formal512RgbaSha256": "56381a1257b0fa6cd48cb17190efa73cf202f7f8af2979b9211608085b3e7dbe",
+      "derived256RgbaSha256": "56dd87df96902ff99e7a23f2cad40baf70bb72b8e1bf6d19ce5b55d5c8316ccf",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 5,
+      "original512RgbaSha256": "da4d47f6d74f5f40098694c406e8e2bdff2bb3f4ebfe9bbcb9d2f97e864343f7",
+      "formal512RgbaSha256": "da4d47f6d74f5f40098694c406e8e2bdff2bb3f4ebfe9bbcb9d2f97e864343f7",
+      "derived256RgbaSha256": "00acc8680a24754fbc82b6451b9e30d4d050c72866d94af82077252d927cf4f9",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frame": 6,
+      "original512RgbaSha256": "1d4ea80fea385db1e574e2bc683c716295c2d613d13f38b782d5f8263ccf4af8",
+      "formal512RgbaSha256": "1d4ea80fea385db1e574e2bc683c716295c2d613d13f38b782d5f8263ccf4af8",
+      "derived256RgbaSha256": "7af7cc6553ac76d54a96c152cfeec7d2b5877ea7e04b80e02c5dd1c3ffbb2324",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 1,
+      "original512RgbaSha256": "71a400a627ed9ac62e9a799a113643c83901c983c84d5f1af7a9c74a7c87d0b0",
+      "formal512RgbaSha256": "71a400a627ed9ac62e9a799a113643c83901c983c84d5f1af7a9c74a7c87d0b0",
+      "derived256RgbaSha256": "0d53985ab237aee61d13fafce21c4b04eeaf1a52bb83b75c6b99622f825282a8",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 2,
+      "original512RgbaSha256": "bba4cfed69b1dc1b8296f1c909070311ee888015a503fba94df6c9f39e93504d",
+      "formal512RgbaSha256": "bba4cfed69b1dc1b8296f1c909070311ee888015a503fba94df6c9f39e93504d",
+      "derived256RgbaSha256": "bdbe0a31e8d929a717e595056071b1ee7e633506016a9df2f387b0657308ed6d",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 3,
+      "original512RgbaSha256": "d462d31e67e5ed6ee202685d516a00ef1fb535c820ffb472f1612ce1b239badb",
+      "formal512RgbaSha256": "d462d31e67e5ed6ee202685d516a00ef1fb535c820ffb472f1612ce1b239badb",
+      "derived256RgbaSha256": "2536cb25331f39a787351ef86561a9dd414b1b475475ea503acbc4ee48cb52b8",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 4,
+      "original512RgbaSha256": "3b06b2ba63a0a292d77cf1d47f8ca86f3676a9bffb9f39310eff65ce5792e7cf",
+      "formal512RgbaSha256": "3b06b2ba63a0a292d77cf1d47f8ca86f3676a9bffb9f39310eff65ce5792e7cf",
+      "derived256RgbaSha256": "285cf08f518b6def16dae8dd3f0bce27953a01874a70ba1a6b0a22b7b9d51e41",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 5,
+      "original512RgbaSha256": "2217b2722e8bfa3f4667c4f88c45eca76071df0078e25ce1528551496beb50ca",
+      "formal512RgbaSha256": "2217b2722e8bfa3f4667c4f88c45eca76071df0078e25ce1528551496beb50ca",
+      "derived256RgbaSha256": "7ba569c90d4427707902cc453501edd7a1eb3b4f95b23cb82aa79a60a169849b",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frame": 6,
+      "original512RgbaSha256": "6b422c2bc1595fe602de51bc800dd81755c7bbab0e8718c9a8f9cc1bae5c11ee",
+      "formal512RgbaSha256": "6b422c2bc1595fe602de51bc800dd81755c7bbab0e8718c9a8f9cc1bae5c11ee",
+      "derived256RgbaSha256": "292bceb8afac07956cdc27bb0188ef6d9913c117c01ab8950c80835e2a5b648e",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 1,
+      "original512RgbaSha256": "1d38e51d78e152067fb47b2a085a87b1686bfbc0cbb5dee97005ace6b6b71ca4",
+      "formal512RgbaSha256": "94d8c1bc6aefa61786e1a4e1445c39e75d2a00fc8adcb140fdbccfdb51a8f16d",
+      "derived256RgbaSha256": "feaba23e4a987a55e303731f1b877ec8fe747a191f7d8c0d699634c3436e7cbc",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          144,
+          229,
+          427,
+          488
+        ],
+        "sourceCropSize": [
+          283,
+          259
+        ],
+        "outputCropSize": [
+          357,
+          326
+        ],
+        "pastePosition": [
+          107,
+          162
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 2,
+      "original512RgbaSha256": "2b5dfd5774e5b9f8abd6ae80417fc8f8ea3425480c462b1c2be5d4e224cd6d7e",
+      "formal512RgbaSha256": "9edb1a2384b47374e3e3c2ab7b9d0d7a92ca4c867086863d9ddc900c55b208d2",
+      "derived256RgbaSha256": "0310e82753b4740c1cb2d2f11cf92fc3d8b64080120c56d3278c8fd91d5abdd3",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          128,
+          278,
+          401,
+          488
+        ],
+        "sourceCropSize": [
+          273,
+          210
+        ],
+        "outputCropSize": [
+          344,
+          265
+        ],
+        "pastePosition": [
+          92,
+          223
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 3,
+      "original512RgbaSha256": "1947b1ab032b597d289f6ca49f713067603577317158421a1bcb35f63ce998c9",
+      "formal512RgbaSha256": "8e6f3f3ced9fc47cb1a0e551439e8397b10b84c3a1622dbff31d61110e3585e5",
+      "derived256RgbaSha256": "a9040bb0de1a6be6cb6de47b0b428617b26f63062697fc7821ba815080c4214a",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          65,
+          242,
+          364,
+          488
+        ],
+        "sourceCropSize": [
+          299,
+          246
+        ],
+        "outputCropSize": [
+          377,
+          310
+        ],
+        "pastePosition": [
+          26,
+          178
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 4,
+      "original512RgbaSha256": "37d37414faa8791ba0ebc09e9672eec6024192a5385b4eecd3d4186cc28ec087",
+      "formal512RgbaSha256": "0f37242c58f0f87bbf780d3a5c69e23afe45d0df2a836a47ae6c90a0a1033cf9",
+      "derived256RgbaSha256": "7f8c99fbfe3ca9bed4c10e666429c5ab66a72d1dfd8f0e82459e85d02a82f3e6",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          166,
+          247,
+          439,
+          488
+        ],
+        "sourceCropSize": [
+          273,
+          241
+        ],
+        "outputCropSize": [
+          344,
+          304
+        ],
+        "pastePosition": [
+          130,
+          184
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 5,
+      "original512RgbaSha256": "c30febe3e3b310a404661ade599dfb74380d8a96b916e8af9e34739a6c508e44",
+      "formal512RgbaSha256": "4407e7cf0dd0e6897a2acca5463cb413926f4fbfadaa924997e8d52190877149",
+      "derived256RgbaSha256": "25c95990787b131bdb76feb31bee33a1e48929122486c0b9f475ff005d335b49",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          101,
+          263,
+          419,
+          488
+        ],
+        "sourceCropSize": [
+          318,
+          225
+        ],
+        "outputCropSize": [
+          401,
+          284
+        ],
+        "pastePosition": [
+          60,
+          204
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 6,
+      "original512RgbaSha256": "9b52e49671efcae76ebf09d6388389cc825f478098c0bc6894f11df77cfbe59a",
+      "formal512RgbaSha256": "50a22368e4e382ba15caade5682d282cf34f079c59a0e4ae6926a9a64b35ba78",
+      "derived256RgbaSha256": "cec346646971917c7106a9cc8c46cdef59459a9c7f37e0083a64c0a94d0027bd",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          143,
+          296,
+          405,
+          488
+        ],
+        "sourceCropSize": [
+          262,
+          192
+        ],
+        "outputCropSize": [
+          330,
+          242
+        ],
+        "pastePosition": [
+          109,
+          246
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 7,
+      "original512RgbaSha256": "552162f4b62ec79a610393ed056b74bd317851845faea7bb3f7182f0f6b9c3c4",
+      "formal512RgbaSha256": "c41082fccd43a89c8d630c4370d461850c1dd5f6c53f18d81eb1f73366e171d0",
+      "derived256RgbaSha256": "9b508c30670ef9b89441b957e47b6306b9ea5b931c58c9a8dda0b179b4807c1f",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          137,
+          251,
+          387,
+          488
+        ],
+        "sourceCropSize": [
+          250,
+          237
+        ],
+        "outputCropSize": [
+          315,
+          299
+        ],
+        "pastePosition": [
+          104,
+          189
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frame": 8,
+      "original512RgbaSha256": "7489ad95d3bd531d1d701857fc0d67727811dd99f3ceb4b86852ff0822b1fe56",
+      "formal512RgbaSha256": "f507f415c23818a883bff06cc7e0421f74b5bc44862b69c72967c6a41d74abe4",
+      "derived256RgbaSha256": "6ed1776e79182d5149c67d9ecb712154bad6c9b07a16b9d51a1c1c31099007bb",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.26,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          156,
+          239,
+          399,
+          488
+        ],
+        "sourceCropSize": [
+          243,
+          249
+        ],
+        "outputCropSize": [
+          306,
+          314
+        ],
+        "pastePosition": [
+          124,
+          174
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 1,
+      "original512RgbaSha256": "f8025fed03cd6c9e48a0ae9cb690a5490b1e1842dfa9aace294936c36cb8abf2",
+      "formal512RgbaSha256": "edbd76725abc36118f7fdd36612ca94096d3242c4a9c108fc6a66efe50c0e800",
+      "derived256RgbaSha256": "7081b8ba0ce60c3eaaca808cfa8e0ee14a3dae8e1f0ce1189029b67fd76a2334",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          186,
+          295,
+          390,
+          486
+        ],
+        "sourceCropSize": [
+          204,
+          191
+        ],
+        "outputCropSize": [
+          336,
+          315
+        ],
+        "pastePosition": [
+          82,
+          171
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 2,
+      "original512RgbaSha256": "3c6a590a8bfe45b13a6bbfd9aa8b74b48f30450fcbc3c2aa6832f10e07569b2d",
+      "formal512RgbaSha256": "f294eb764b37eb0672b585829d6c5bbf13be1786fdec3532c502c11b1a2d207a",
+      "derived256RgbaSha256": "d202ed6b2ec0d9c0ce4a6fe1e38f07fa153f28e88a81ffe47796086f3ed88c1e",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          206,
+          302,
+          410,
+          487
+        ],
+        "sourceCropSize": [
+          204,
+          185
+        ],
+        "outputCropSize": [
+          336,
+          305
+        ],
+        "pastePosition": [
+          102,
+          182
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 3,
+      "original512RgbaSha256": "be891369e5088d45107c9969c34960645e055bf57cab39b062087836c83dd8d1",
+      "formal512RgbaSha256": "b7d7546705e92a46c1745e63cb9cbf828fdf461cf8f5634ca6b7d651427cd87b",
+      "derived256RgbaSha256": "0a4ed26dca6c261f0a0c986eaf7d6f8aca7abf76a9ba11cd788e4067ce447749",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          175,
+          329,
+          402,
+          487
+        ],
+        "sourceCropSize": [
+          227,
+          158
+        ],
+        "outputCropSize": [
+          374,
+          260
+        ],
+        "pastePosition": [
+          64,
+          227
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 4,
+      "original512RgbaSha256": "4cdf8cc198dab022b5a2492c7a9f56b6456e3290682ef2546504e4749d631084",
+      "formal512RgbaSha256": "4adc197ffe74ad0c9f489bbfb22b309fe31d3a156e232231cae340efb92327ef",
+      "derived256RgbaSha256": "0b072d315628eeae961deee094170371ba2ba5fd1dcc38fdbac48659f34c04f6",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          211,
+          343,
+          433,
+          487
+        ],
+        "sourceCropSize": [
+          222,
+          144
+        ],
+        "outputCropSize": [
+          366,
+          237
+        ],
+        "pastePosition": [
+          101,
+          250
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 5,
+      "original512RgbaSha256": "23f1b1e2ebfd840224a825e558bc7ad879c0d544a182ec133b523ea040fb78a5",
+      "formal512RgbaSha256": "9b49996504267c4549e10ac26cc081343a6b9e0dd0d92067502e890cdec6cdb2",
+      "derived256RgbaSha256": "adc2e4ef3e2553204eb8957f57dea42448655a1c84f4683ac6589cf2eddcd01c",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          203,
+          357,
+          445,
+          486
+        ],
+        "sourceCropSize": [
+          242,
+          129
+        ],
+        "outputCropSize": [
+          399,
+          213
+        ],
+        "pastePosition": [
+          86,
+          273
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 6,
+      "original512RgbaSha256": "33d1827bc5b26bbde745d790e7df33da36f2423ea7e2e6ff17ea2b255611205f",
+      "formal512RgbaSha256": "dfe1b4336f613a87dbb279ecb094a04d21983db63bd870e8fe6794fc3312f651",
+      "derived256RgbaSha256": "cfb30eab395ebd8349822ac3a4b71068490bc3937619338f0e5b69cbe7586626",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          168,
+          326,
+          376,
+          486
+        ],
+        "sourceCropSize": [
+          208,
+          160
+        ],
+        "outputCropSize": [
+          343,
+          264
+        ],
+        "pastePosition": [
+          62,
+          222
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 7,
+      "original512RgbaSha256": "aabc28b390d34bcf138997581d5d63042b077b154e5ec11a76896dabaed9f4a7",
+      "formal512RgbaSha256": "c0fa8c2df3f8c5895a2bb46c181ddb1f496a7fa56b6339c13c3f001d8e6b859e",
+      "derived256RgbaSha256": "c50d3ed61fc4711360ea4d2573a5b7c9e2a29a20bcd01d469de68e76e4026fec",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          172,
+          302,
+          360,
+          487
+        ],
+        "sourceCropSize": [
+          188,
+          185
+        ],
+        "outputCropSize": [
+          310,
+          305
+        ],
+        "pastePosition": [
+          73,
+          182
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frame": 8,
+      "original512RgbaSha256": "1252c8090a60ee99ca9488d2b7a5a412415ef09125f11ce2ae17e62a64c269bf",
+      "formal512RgbaSha256": "16221eda02f1460ad6fc4a4c176dea99e5a082c731472850d58143862d470cb2",
+      "derived256RgbaSha256": "99eb595eba300defbdf7d0a5e00e53c05aa06e4b5ac5e43680f5e63b5d383991",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.6477,
+        "translationX": -38,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -38,
+          0
+        ],
+        "sourceBbox": [
+          183,
+          303,
+          375,
+          486
+        ],
+        "sourceCropSize": [
+          192,
+          183
+        ],
+        "outputCropSize": [
+          316,
+          302
+        ],
+        "pastePosition": [
+          83,
+          184
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 1,
+      "original512RgbaSha256": "803418643e65cf8dc91993d679b4c554cd301727604b2c35a2e027dfb57db58a",
+      "formal512RgbaSha256": "c43beb6b5bd17b5a31795f17337e493e2387672d5099e1a89b712e47035178c4",
+      "derived256RgbaSha256": "094e20677aef518c72c9e3a99b3fedf6b5fa61cab172c80877c766ff9bb119f8",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          178,
+          233,
+          431,
+          487
+        ],
+        "sourceCropSize": [
+          253,
+          254
+        ],
+        "outputCropSize": [
+          299,
+          300
+        ],
+        "pastePosition": [
+          155,
+          187
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 2,
+      "original512RgbaSha256": "a2d8cf3beec19751d7bca220d748ecde8613fc79c72edbb5f96dc6dc7ddfccce",
+      "formal512RgbaSha256": "e8381b45beab3f11caf72ca4503d38e9cfb1fbc63acaa4741727e4ccfc3086de",
+      "derived256RgbaSha256": "02df43aca3fe11bf5e430a121fbc39ae67a89d644136a94915030fff8ae01250",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          170,
+          234,
+          435,
+          488
+        ],
+        "sourceCropSize": [
+          265,
+          254
+        ],
+        "outputCropSize": [
+          313,
+          300
+        ],
+        "pastePosition": [
+          146,
+          188
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 3,
+      "original512RgbaSha256": "72c35cdaec05d4a10ea58ec56ff5351638590cf44c2c9e9e211c6f8ba9c8023a",
+      "formal512RgbaSha256": "63f02dc5b444a965dca9d5bedcec41d8e45690b842b0d70635eb8142def97255",
+      "derived256RgbaSha256": "079219a42d0b8c467e99635cd59332a87ef279168c909fbed017b1e8d21d25ad",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          227,
+          443,
+          488
+        ],
+        "sourceCropSize": [
+          258,
+          261
+        ],
+        "outputCropSize": [
+          304,
+          308
+        ],
+        "pastePosition": [
+          162,
+          180
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 4,
+      "original512RgbaSha256": "693e693d6d3230bb9e9a411f182455f318c37fd63a328ddca5d4c41d511c8d22",
+      "formal512RgbaSha256": "b3e3761097cbbc03da62073464d477a2eb311581c79ccd3f4411c345eb77a20e",
+      "derived256RgbaSha256": "23fa2b7119e0194121df1ff482c62b7faabd1880c16d82ffdbab846733b10941",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          184,
+          226,
+          445,
+          488
+        ],
+        "sourceCropSize": [
+          261,
+          262
+        ],
+        "outputCropSize": [
+          308,
+          309
+        ],
+        "pastePosition": [
+          160,
+          179
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 5,
+      "original512RgbaSha256": "4541bd49bc5717844896c839cc81e0bcc1a521b5fae060ddfe32b6a4566543f4",
+      "formal512RgbaSha256": "9ca7590c783cadec7c7de667f069036c5747e67b5bd2e4a6e774210e92403cab",
+      "derived256RgbaSha256": "999d7b54d8050709597034d25bb74a552f511d801de98283efee32c170fea34a",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          182,
+          230,
+          441,
+          488
+        ],
+        "sourceCropSize": [
+          259,
+          258
+        ],
+        "outputCropSize": [
+          306,
+          304
+        ],
+        "pastePosition": [
+          158,
+          184
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 6,
+      "original512RgbaSha256": "fdd60d8964dc83ba4e4292c01968d78222b303f80ff1791d4178392ea5ace801",
+      "formal512RgbaSha256": "b10368ea8844db2220272bcc51d0ab8fa93b5d5f098fdb0446446cac41d7aec7",
+      "derived256RgbaSha256": "dcd8fffcbf58042b68c5ed9b1e4de5ecb6ef19d52566b98d8832b344591d425e",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          226,
+          436,
+          486
+        ],
+        "sourceCropSize": [
+          251,
+          260
+        ],
+        "outputCropSize": [
+          296,
+          307
+        ],
+        "pastePosition": [
+          162,
+          179
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 7,
+      "original512RgbaSha256": "e3a5f660ddea47ecc48b0813c7a092e1096e9150ecf28f7ae02dfd6b59eb495b",
+      "formal512RgbaSha256": "a2997864d26bef143f6ff1cef54c29d937fc3f41b38cc8e3bc3c4d0ca3a0a3d1",
+      "derived256RgbaSha256": "0b29810ebf36eca3ad092bc0f10c5555387e6010f213902119ce434a543bd05f",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          186,
+          231,
+          444,
+          488
+        ],
+        "sourceCropSize": [
+          258,
+          257
+        ],
+        "outputCropSize": [
+          304,
+          303
+        ],
+        "pastePosition": [
+          163,
+          185
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger",
+      "frame": 8,
+      "original512RgbaSha256": "cf0993e134c6a750eee8a15c746d4f07f76cf3b6d29719f14bb5373aa3d570ee",
+      "formal512RgbaSha256": "67463759b6a32532d8061d5d342672d375096f762db6458cb841e9de7d2a226b",
+      "derived256RgbaSha256": "0d31ddaa4d9d1055c42d2225d4a62e203b20d22f8fbc018a9361d6e4d2ab7ce2",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          185,
+          234,
+          439,
+          487
+        ],
+        "sourceCropSize": [
+          254,
+          253
+        ],
+        "outputCropSize": [
+          300,
+          299
+        ],
+        "pastePosition": [
+          162,
+          188
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 1,
+      "original512RgbaSha256": "dbdbb7e2276d9df842ec1a66b007286836fa6c1f7a1471972e201bea478c3b8b",
+      "formal512RgbaSha256": "517e944ab19e2d27a0932c3a295b2275bac4a0b97db69c4a6519c1d2709c1968",
+      "derived256RgbaSha256": "a76118a2c78699fb2ae40c331590dd27fd7adbde5389d2b567d4d45044587ac3",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          159,
+          334,
+          378,
+          487
+        ],
+        "sourceCropSize": [
+          219,
+          153
+        ],
+        "outputCropSize": [
+          324,
+          227
+        ],
+        "pastePosition": [
+          92,
+          260
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 2,
+      "original512RgbaSha256": "984ba74f7f1b806a4d0cb57bdd82c15a75a5427257876defb1a50856f427461f",
+      "formal512RgbaSha256": "ed763329f534579348d1c9fb5d0f4cae7f5db8efcaa5c227151960c24b5dab58",
+      "derived256RgbaSha256": "5f194309a67c8dc9c16ad3a3557762ae99a4d4057a899e1ce6154fe91744ecc0",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          179,
+          330,
+          374,
+          486
+        ],
+        "sourceCropSize": [
+          195,
+          156
+        ],
+        "outputCropSize": [
+          289,
+          231
+        ],
+        "pastePosition": [
+          118,
+          255
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 3,
+      "original512RgbaSha256": "c3572243caa079efda4d3e1520283d82583e90d05903df9dae14c8281eb5e493",
+      "formal512RgbaSha256": "0e317f84ae51ed2ecfc1e2d3d78677bc6f8422fcbd9068460b067a1c9db9aed3",
+      "derived256RgbaSha256": "faa0acc127f6ac51ea488e1ed3bf291e1edde56873d5d1d5c4e90f1dbc752718",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          175,
+          343,
+          365,
+          487
+        ],
+        "sourceCropSize": [
+          190,
+          144
+        ],
+        "outputCropSize": [
+          281,
+          213
+        ],
+        "pastePosition": [
+          116,
+          274
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 4,
+      "original512RgbaSha256": "e5e555852f3af763318dcb4a62f3ea61638784585dcf2b2b37b333c804c111e3",
+      "formal512RgbaSha256": "b3a7249ed5d8b1217411662f7238348e8348debdecd53ad0eed813934fc6d6ce",
+      "derived256RgbaSha256": "451c008825c73f3ecd7e34f9014859ac3a5396b0b76022a2418f0dbd3e80d31d",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          212,
+          311,
+          412,
+          487
+        ],
+        "sourceCropSize": [
+          200,
+          176
+        ],
+        "outputCropSize": [
+          296,
+          261
+        ],
+        "pastePosition": [
+          150,
+          226
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 5,
+      "original512RgbaSha256": "e2e8d67913b824f42c5c7812ab009653fb181e8d976b8a33baf367b1a32e6fff",
+      "formal512RgbaSha256": "93f33d43cfb449173c54314ce518dd054b8ee3030e8859911f442362b5ba2436",
+      "derived256RgbaSha256": "35d7c9d6b8022e17db1d46a160eb3be5b3b995219d93e7f5d23589012f31c79a",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          213,
+          320,
+          444,
+          487
+        ],
+        "sourceCropSize": [
+          231,
+          167
+        ],
+        "outputCropSize": [
+          342,
+          247
+        ],
+        "pastePosition": [
+          144,
+          240
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 6,
+      "original512RgbaSha256": "11e0f908042cf2026151f9f2249d6cfcf2c62d8c6a746f011e459e99ff0e5631",
+      "formal512RgbaSha256": "9d9422c89319e8faa9e1da8f716b2fc5b06cbac9427d8a7fa5255f4fac249352",
+      "derived256RgbaSha256": "45e4ae6a828966e59cd7d0697fd5fee9f12e4cbac0f552fd71461558edd6b417",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          216,
+          323,
+          442,
+          486
+        ],
+        "sourceCropSize": [
+          226,
+          163
+        ],
+        "outputCropSize": [
+          335,
+          241
+        ],
+        "pastePosition": [
+          148,
+          245
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 7,
+      "original512RgbaSha256": "5a114a721ac86a0bf3bd8d097d3ea2e3471e5bd7c57ca4eac665d42e196d32e0",
+      "formal512RgbaSha256": "3a2e35016f55f62a3ef9700ea50016248a8bc3c887e215d4fe153c1e2ab0b3d6",
+      "derived256RgbaSha256": "6d5f0c0d4064f71e281e31ccaae06089c5b3c70efda3603a4f189bb07ed5c1cf",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          89,
+          281,
+          296,
+          487
+        ],
+        "sourceCropSize": [
+          207,
+          206
+        ],
+        "outputCropSize": [
+          307,
+          305
+        ],
+        "pastePosition": [
+          25,
+          182
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frame": 8,
+      "original512RgbaSha256": "cea44bdd758b148e962cd0b2e3d14e8a47357b85ea3f14e565460eb31d7dbab7",
+      "formal512RgbaSha256": "175f31b7ddbcae32a8b91f96282f7f9b27ee73e7272863c2bacc76a7fac2ba36",
+      "derived256RgbaSha256": "a8d28640d8bcc047607e5ae20890d4ef77ba5280d055434bd88cbe41774f4420",
+      "transform": {
+        "repair": "runtime-proportion-red-flag-repair-v1",
+        "factor": 1.4813084102149532,
+        "translationX": -14,
+        "translationCalibrationSourcePixels": 0,
+        "translationSourcePixels": [
+          -14,
+          0
+        ],
+        "sourceBbox": [
+          156,
+          334,
+          378,
+          487
+        ],
+        "sourceCropSize": [
+          222,
+          153
+        ],
+        "outputCropSize": [
+          329,
+          227
+        ],
+        "pastePosition": [
+          88,
+          260
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 1,
+      "original512RgbaSha256": "5596ea355c0296dbef72a9f194c8416feff58aca9e9f35d6cb981f742d69cd47",
+      "formal512RgbaSha256": "5596ea355c0296dbef72a9f194c8416feff58aca9e9f35d6cb981f742d69cd47",
+      "derived256RgbaSha256": "14d656faeac4d1a65838c8eb345f4377a2cc63b7f3051ddcc4d1c4d35ffd280b",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 2,
+      "original512RgbaSha256": "18b39f867834e30435c90673206abe00df343b6cbc80165ee90d56196eeb6f56",
+      "formal512RgbaSha256": "18b39f867834e30435c90673206abe00df343b6cbc80165ee90d56196eeb6f56",
+      "derived256RgbaSha256": "0ca16cd2b1216980c00323bd6d5d790db090ff67cca6c310b97ffefe3a0ed509",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 3,
+      "original512RgbaSha256": "855a8f0063bf7976b939ad6162bf0548f1e35dbcb257fdb35aa3960a218b68b8",
+      "formal512RgbaSha256": "855a8f0063bf7976b939ad6162bf0548f1e35dbcb257fdb35aa3960a218b68b8",
+      "derived256RgbaSha256": "b0c3f241e0c2087d4a9a9aa3a9d9658be068efd7580db272e85ab51860f52d24",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 4,
+      "original512RgbaSha256": "e5038f5896b3480a4eb112dec97ec15122c53dcca9557d2a4f34e699dbc0989d",
+      "formal512RgbaSha256": "e5038f5896b3480a4eb112dec97ec15122c53dcca9557d2a4f34e699dbc0989d",
+      "derived256RgbaSha256": "a11eceb7180187bcd875d0850d08a7e2367c2289cd5405724a54cbd8259df7f9",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 5,
+      "original512RgbaSha256": "08e124c7dc205f44c5ef0b5e533d5648bdaad9a7e3eaff16109170a802fdc6e7",
+      "formal512RgbaSha256": "08e124c7dc205f44c5ef0b5e533d5648bdaad9a7e3eaff16109170a802fdc6e7",
+      "derived256RgbaSha256": "7b3173e93ad124ef094768b0586ac75fbc0f99b4d155f1d073cb05a0c3b87dce",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 6,
+      "original512RgbaSha256": "6e0e87700cd33b77651aaf4979eb75cfb48b6f68eeed8552b176058e9746eb89",
+      "formal512RgbaSha256": "6e0e87700cd33b77651aaf4979eb75cfb48b6f68eeed8552b176058e9746eb89",
+      "derived256RgbaSha256": "de2965f66a8f65a09fa6757b7ca64cd237e37bddf6833a99cf0f631240a9199c",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 7,
+      "original512RgbaSha256": "2aafb76cba2b109b8cb2648a467b11b502b5b6ae579019a0b7b83817f0feab23",
+      "formal512RgbaSha256": "2aafb76cba2b109b8cb2648a467b11b502b5b6ae579019a0b7b83817f0feab23",
+      "derived256RgbaSha256": "ac7fbc25829cd2efda2350d14dc4334c2fe89e21697b7df972968411e3b216cd",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frame": 8,
+      "original512RgbaSha256": "2f4c294e40cedf9d8d8e3d5afc196d9509f85857db5c1739ac8d238d80c8f520",
+      "formal512RgbaSha256": "2f4c294e40cedf9d8d8e3d5afc196d9509f85857db5c1739ac8d238d80c8f520",
+      "derived256RgbaSha256": "2ca5d6a7ababc2b4497918e9ecb819a647f973b744e9918a5650f81c4076773b",
+      "transform": {
+        "repair": "preserve-authoritative-512-source",
+        "factor": 1.0,
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 1,
+      "original512RgbaSha256": "2f4c294e40cedf9d8d8e3d5afc196d9509f85857db5c1739ac8d238d80c8f520",
+      "formal512RgbaSha256": "2f4c294e40cedf9d8d8e3d5afc196d9509f85857db5c1739ac8d238d80c8f520",
+      "derived256RgbaSha256": "2ca5d6a7ababc2b4497918e9ecb819a647f973b744e9918a5650f81c4076773b",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.0,
+        "translationX": 0,
+        "preservation": "byte-exact protected down8/revive1 seam",
+        "translationSourcePixels": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 2,
+      "original512RgbaSha256": "2e1b85c0fe42ed83824411af9e067c76cb0541beb0238c2c6143b1831fa666e0",
+      "formal512RgbaSha256": "e6761c34f4f512812848399bba73ad2ab966e9cad3902dc50fd44627b5350989",
+      "derived256RgbaSha256": "6448a6bf12b64e315136bf3cf1101e0db57b3fa2179148b4f1e99a29f812e623",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.09,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          217,
+          323,
+          442,
+          486
+        ],
+        "sourceCropSize": [
+          225,
+          163
+        ],
+        "outputCropSize": [
+          245,
+          178
+        ],
+        "pastePosition": [
+          207,
+          308
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 3,
+      "original512RgbaSha256": "078b0270311287b964aba131cfaef249401b9a3b588ae6e4ba654d1a173e2d23",
+      "formal512RgbaSha256": "10156bef0e89411ac8a033ef6516f494c0e66557e859a21633af1889a848512c",
+      "derived256RgbaSha256": "d92cc391ec085581fa0b5a12a16be5139265840e69a28099c424c3e12f3225dd",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.18,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          196,
+          290,
+          417,
+          486
+        ],
+        "sourceCropSize": [
+          221,
+          196
+        ],
+        "outputCropSize": [
+          261,
+          231
+        ],
+        "pastePosition": [
+          176,
+          255
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 4,
+      "original512RgbaSha256": "cbf68283b822e7cc40b7f94061b9f0de25b3d51e2d84d4149a81edaeff5bd661",
+      "formal512RgbaSha256": "6e6f79bcc7f802170ae4aaa2b5ff0cc59f4baad896db5dfc2a1af996ff5c78fa",
+      "derived256RgbaSha256": "88ab02d4a37b09daf1997e724bc92a54b62f0b4a9b68a21f6d8432da60c9fd03",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.28,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          194,
+          282,
+          403,
+          486
+        ],
+        "sourceCropSize": [
+          209,
+          204
+        ],
+        "outputCropSize": [
+          268,
+          261
+        ],
+        "pastePosition": [
+          164,
+          225
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 5,
+      "original512RgbaSha256": "d378d399398615c7fbefd0fc797ce2a6b876798dc357a4a457f76fe7b7f262b7",
+      "formal512RgbaSha256": "79872195fa0df9c8418b39328a0784a0ccc6aaf06cc4655febda93cfcd3188ee",
+      "derived256RgbaSha256": "8b553d8c6f120c5442b4b2eb6d5839de8d96ec56a72540cc573faab37a90632c",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.38,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          186,
+          281,
+          397,
+          486
+        ],
+        "sourceCropSize": [
+          211,
+          205
+        ],
+        "outputCropSize": [
+          291,
+          283
+        ],
+        "pastePosition": [
+          146,
+          203
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 6,
+      "original512RgbaSha256": "71efa7fae01d255a53002eb2b454311447a0885f38fa21e1bde4c93e055c0d95",
+      "formal512RgbaSha256": "950d2539ab723b92444639621e3fb970111633aced99f0c2223088826a28e085",
+      "derived256RgbaSha256": "df26be0b61ab6d6ca9074f57f1e1e938a82fff06fe39e2ef0909608d48487034",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.48,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          190,
+          279,
+          401,
+          486
+        ],
+        "sourceCropSize": [
+          211,
+          207
+        ],
+        "outputCropSize": [
+          312,
+          306
+        ],
+        "pastePosition": [
+          140,
+          180
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 7,
+      "original512RgbaSha256": "0f42a9e8199a6b38e92d2e8df09500fb5ba6990bf817b3d65fadf886620e317d",
+      "formal512RgbaSha256": "fdec6023e1d34c45d3ec2600c6d70a9d8cb5b23b5647fc242dc3195dc8af0e13",
+      "derived256RgbaSha256": "2d460ba164401cfcc048384a6976d8157c98cf2d069dccc996dc6a1709891a63",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.57,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          177,
+          273,
+          392,
+          486
+        ],
+        "sourceCropSize": [
+          215,
+          213
+        ],
+        "outputCropSize": [
+          338,
+          334
+        ],
+        "pastePosition": [
+          116,
+          152
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frame": 8,
+      "original512RgbaSha256": "9822e99571d2508a9b8bff1d7e991bd88e89af1b95ba1075cb80ab2808b39e72",
+      "formal512RgbaSha256": "c8312a8337f49f49531c5501f0dd9cc08bc0e3aa75c3096b6ed59b7873dbcfa4",
+      "derived256RgbaSha256": "73c24f41cf777f84c40a339f36c56ca89bba09dddf2147cef372b9a4a3d81c26",
+      "transform": {
+        "repair": "runtime-motion-scale-followup-v1",
+        "factor": 1.64,
+        "translationX": 0,
+        "preservation": null,
+        "translationSourcePixels": [
+          0,
+          0
+        ],
+        "sourceBbox": [
+          181,
+          267,
+          396,
+          486
+        ],
+        "sourceCropSize": [
+          215,
+          219
+        ],
+        "outputCropSize": [
+          353,
+          359
+        ],
+        "pastePosition": [
+          112,
+          127
+        ],
+        "resampler": "tools/build_pet_art_bundle.py::resize_rgba_premultiplied"
+      }
+    }
+  ],
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "installedBundleDigest": "9d5230b9390d779404eda6b9deea300584e1af7bd08a6cbdd35246912e569074",
+  "installedSourceLedgerSha256": "26af62344aa2bd1b93fb932fa011ae4db8e4ce91cb9aa863e878c81261018373",
+  "installedManifestSha256": "e6cd2aca08e6028bc0546c33acc46950343545a4d59d32d519f5c6e1fe806cdd",
+  "godotRuntimeParity": {
+    "status": "passed",
+    "report": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/runtime-parity.json",
+    "reportSha256": "ab0cd6dc53d1dd1bb21f4a25b8a2f7b2c7d089b1009daa3876e5795902f92e1a",
+    "checkedFrames": 180,
+    "importFreshCount": 180,
+    "canonicalRgbaMatchCount": 180,
+    "sourceSetSha256": "0c4a5e105f66b2aa712d1e52cbe12c4f4cb49a8444431e9275df3ff9c2dea07f"
+  },
+  "realMainSceneReview": {
+    "status": "self_review_passed_owner_pending",
+    "video": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/Beastbound_Phase357_Moon_Gale_Canonical_Source_1x.mp4",
+    "videoSha256": "abfcfae6e0cc97aa3e7c65e5815fe7f780f5de16a2fa0d6133da527615acb9d7",
+    "width": 1280,
+    "height": 720,
+    "videoFps": 60,
+    "videoFrameCount": 2477,
+    "durationSeconds": 41.283333,
+    "speedScale": 1.0,
+    "directorStepCount": 14,
+    "audioPresent": true,
+    "fullDecodePassed": true,
+    "contactSheet": ".run/evidence/phase357_moon_gale_canonical_source_reconciliation/video-action-contact-4x4.png",
+    "contactSheetSha256": "3d4eb80c58d710172495d6018f0edbb241d48612a88a5b77b85f9a89d035d751",
+    "ownerReview": "pending",
+    "runtimeEnabled": false
+  }
+}

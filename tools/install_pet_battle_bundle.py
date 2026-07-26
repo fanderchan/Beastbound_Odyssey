@@ -901,7 +901,14 @@ def _copies_for_archive_mode(validated: ValidatedBundle, archive_mode: str) -> l
     return selected
 
 
-def _lean_source_ledger(staging: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+def _source_ledger(
+    staging: Path,
+    manifest: dict[str, Any],
+    archive_mode: str,
+) -> dict[str, Any]:
+    if archive_mode not in ARCHIVE_MODES:
+        raise BattleBundleError(f"archive mode must be one of {ARCHIVE_MODES}")
+    tracks_full_source = archive_mode == "full"
     actions: dict[str, dict[str, Any]] = {}
     for view in FORMAL_VIEWS:
         view_actions: dict[str, Any] = {}
@@ -924,13 +931,13 @@ def _lean_source_ledger(staging: Path, manifest: dict[str, Any]) -> dict[str, An
                 "qcSha256": source_meta["qcSha256"],
                 "sourceFrameRgbaSha256": [frame["sourceRgbaSha256"] for frame in frame_meta],
                 "runtimeFrameRgbaSha256": [frame["runtimeRgbaSha256"] for frame in frame_meta],
-                "representativeRawTracked": action == "idle",
-                "sourceFramesTracked": False,
+                "representativeRawTracked": tracks_full_source or action == "idle",
+                "sourceFramesTracked": tracks_full_source,
             }
         actions[view] = view_actions
     return {
         "schemaVersion": 1,
-        "archiveMode": "lean",
+        "archiveMode": archive_mode,
         "formId": manifest["formId"],
         "kind": manifest["kind"],
         "characterId": manifest.get("characterId"),
@@ -940,8 +947,15 @@ def _lean_source_ledger(staging: Path, manifest: dict[str, Any]) -> dict[str, An
         "replacementPath": manifest["provenance"]["replacementPath"],
         "fullSourceValidationRequiredBeforeInstall": True,
         "repositoryPolicy": (
-            "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and "
-            "duplicate clean/raw intermediates remain in the local production archive."
+            (
+                "Every validated 512px source frame, lossless raw sheet, prompt, pipeline record, "
+                "QC record, and derived runtime frame is tracked in the repository."
+            )
+            if tracks_full_source
+            else (
+                "Runtime frames and compact provenance are tracked. Reproducible 512px frame splits and "
+                "duplicate clean/raw intermediates remain in the durable production archive."
+            )
         ),
         "actions": actions,
     }
@@ -991,7 +1005,7 @@ def _build_target_metadata(
         "archiveMode": options.archive_mode,
         "sourceFramesTracked": options.archive_mode == "full",
         "sourceRoot": "source/battle",
-        "sourceLedger": "source/battle/source-ledger.json" if options.archive_mode == "lean" else "",
+        "sourceLedger": "source/battle/source-ledger.json",
         "runtimeRoot": "views",
         "contactSheet": "qa/battle/contact-sheet.png",
         "qcSummary": "qa/battle/qc-summary.json",
@@ -1078,10 +1092,10 @@ def install_bundle(
 ) -> dict[str, Any]:
     validated = validate_bundle(options)
     selected_copies = _copies_for_archive_mode(validated, options.archive_mode)
-    source_ledger = (
-        _lean_source_ledger(options.staging.resolve(), validated.manifest)
-        if options.archive_mode == "lean"
-        else None
+    source_ledger = _source_ledger(
+        options.staging.resolve(),
+        validated.manifest,
+        options.archive_mode,
     )
     installed_hashes = {
         str(entry.destination_relative): entry.sha256 for entry in selected_copies
@@ -1089,10 +1103,9 @@ def install_bundle(
     installed_hashes.update(
         {str(entry.destination_relative): entry.sha256 for entry in validated.generated}
     )
-    if source_ledger is not None:
-        installed_hashes["source/battle/source-ledger.json"] = sha256_bytes(
-            _pretty_json_bytes(source_ledger)
-        )
+    installed_hashes["source/battle/source-ledger.json"] = sha256_bytes(
+        _pretty_json_bytes(source_ledger)
+    )
     destination = options.destination.resolve()
     staging = options.staging.resolve()
     if destination == staging or destination in staging.parents or staging in destination.parents:
@@ -1164,11 +1177,10 @@ def install_bundle(
             target.write_bytes(entry.payload)
             if sha256_file(target) != entry.sha256:
                 raise BattleBundleError(f"generated file verification failed: {entry.destination_relative}")
-        if source_ledger is not None:
-            ledger_path = replacement / "source/battle/source-ledger.json"
-            _write_json(ledger_path, source_ledger)
-            if sha256_file(ledger_path) != installed_hashes[str(ledger_path.relative_to(replacement))]:
-                raise BattleBundleError("copy verification failed: source/battle/source-ledger.json")
+        ledger_path = replacement / "source/battle/source-ledger.json"
+        _write_json(ledger_path, source_ledger)
+        if sha256_file(ledger_path) != installed_hashes[str(ledger_path.relative_to(replacement))]:
+            raise BattleBundleError("copy verification failed: source/battle/source-ledger.json")
         _write_json(replacement / "action-bundle-meta.json", expected_metadata)
         install_manifest = {
             "schemaVersion": 1,
@@ -1201,7 +1213,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--archive-mode",
         choices=ARCHIVE_MODES,
-        default="lean",
+        default="full",
         help=(
             "lean validates the complete source bundle but tracks only runtime art and compact provenance; "
             "full also installs every 512px frame and raw sheet"

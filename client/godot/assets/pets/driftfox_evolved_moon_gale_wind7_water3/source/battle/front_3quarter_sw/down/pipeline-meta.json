@@ -194,10 +194,26 @@
         207,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 5,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
-      "runtimeRgbaSha256": "9990aeb4fa0f94e41a362e695e27638f8aed7724426542e9901b3900c520277e"
+      "runtimeRgbaSha256": "5304d55fda357fb22d27f839a453a0f689bd277f569c5a4e5fe1ca7abea18a75",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
+        "formal512RgbaSha256": "8344a16ddb17673d853c601d9bab917d0b620c6f86ba35ae0b0c78b2b1f9ecd0",
+        "derived256RgbaSha256": "5304d55fda357fb22d27f839a453a0f689bd277f569c5a4e5fe1ca7abea18a75",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-2",
@@ -319,10 +335,26 @@
         201,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 6,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
-      "runtimeRgbaSha256": "d42afeb31967f2b3462a76d8093d7d3fb7dfc233e276e9a4e1c70056d7368bd5"
+      "runtimeRgbaSha256": "b65da71ee3b301931a4165fb74feb331e49dd698b0d26680208c358f60a7be68",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
+        "formal512RgbaSha256": "4e7799238f3ccdf366dd533f01deaeae64291e6914870bc6bd0ce48c86cbe7ab",
+        "derived256RgbaSha256": "b65da71ee3b301931a4165fb74feb331e49dd698b0d26680208c358f60a7be68",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-3",
@@ -444,10 +476,26 @@
         203,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 3,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
-      "runtimeRgbaSha256": "984c8d8f3c7d66cd59e79bb4af1c4cc150d44a4a9761b76c508ddbffe1086932"
+      "runtimeRgbaSha256": "984c8d8f3c7d66cd59e79bb4af1c4cc150d44a4a9761b76c508ddbffe1086932",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
+        "formal512RgbaSha256": "078dfc6f5f6181ee6160f750ba06e2d5da9f181d8567f5e6ccf7b7b882555f86",
+        "derived256RgbaSha256": "984c8d8f3c7d66cd59e79bb4af1c4cc150d44a4a9761b76c508ddbffe1086932",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-4",
@@ -569,10 +617,26 @@
         209,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 4,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
-      "runtimeRgbaSha256": "c3f1c81e4fb34a6847bffc43097eab6c205ac564bcac229be8efddbd8ea3a7c3"
+      "runtimeRgbaSha256": "1819c8dbb92a16227dcc55b0aa68ff43b5cbcfbe6cb6758a8e07b9f36ed541ed",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
+        "formal512RgbaSha256": "e358c23e2ee32a178b0418ca53bcb5f5b98b4cda6da9c7a605dcd1e8ed79f7ff",
+        "derived256RgbaSha256": "1819c8dbb92a16227dcc55b0aa68ff43b5cbcfbe6cb6758a8e07b9f36ed541ed",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-5",
@@ -694,10 +758,26 @@
         208,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
-      "runtimeRgbaSha256": "141646362a334a46bed6cafadcca183d274355eb21acc96e6bfa312b4fb905fd"
+      "runtimeRgbaSha256": "141646362a334a46bed6cafadcca183d274355eb21acc96e6bfa312b4fb905fd",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
+        "formal512RgbaSha256": "76191266145628a16871b91e7b4ab74c040ab3a5061145dad14cc069a369b354",
+        "derived256RgbaSha256": "141646362a334a46bed6cafadcca183d274355eb21acc96e6bfa312b4fb905fd",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-6",
@@ -819,10 +899,26 @@
         215,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
-      "runtimeRgbaSha256": "7a808bba0a6964177e918a3ddf9f0bd9078951ba40b25b4bf75e5ec1a436afd9"
+      "runtimeRgbaSha256": "a8498c118d294b1e0ede0645ef2056ff253278c55dd1b17339f00e65a572df28",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
+        "formal512RgbaSha256": "79ccd7f427dac303a5bfc33d42ed99af4ac877bdf45b9e660e290f2aec9bb334",
+        "derived256RgbaSha256": "a8498c118d294b1e0ede0645ef2056ff253278c55dd1b17339f00e65a572df28",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-7",
@@ -944,10 +1040,26 @@
         217,
         243
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
-      "runtimeRgbaSha256": "6fb00e48ab86dc19f410eee132d9adec050da49a224680c6d1d55bc1e140ca7f"
+      "runtimeRgbaSha256": "6fb00e48ab86dc19f410eee132d9adec050da49a224680c6d1d55bc1e140ca7f",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
+        "formal512RgbaSha256": "d35ff7dfb9a2eddf533b07c32dbec85f16d01c2f1f39d1e55b814bb361ba968c",
+        "derived256RgbaSha256": "6fb00e48ab86dc19f410eee132d9adec050da49a224680c6d1d55bc1e140ca7f",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     },
     {
       "slot": "down-8",
@@ -1069,10 +1181,38 @@
         222,
         244
       ],
-      "runtimeLowAlphaMagentaPixelsCleared": 2,
+      "runtimeLowAlphaMagentaPixelsCleared": 0,
       "residualMagentaPixelsRuntime": 0,
       "sourceRgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
-      "runtimeRgbaSha256": "6436c6910de97cf1445ca79dcc8b795e407f52d5b0151c68d659a2bb8f29c028"
+      "runtimeRgbaSha256": "a2e35eebaf6408e6dd6382a46f47c9cae505c6c24af61036adea665a1ac61ac1",
+      "canonicalSourceReconciliation": {
+        "schemaVersion": 1,
+        "status": "preserved",
+        "original512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+        "formal512RgbaSha256": "0b582cd3633757d8d22dc5d09c2ec45843bca34d0597f3480d0f6e9bd6217149",
+        "derived256RgbaSha256": "a2e35eebaf6408e6dd6382a46f47c9cae505c6c24af61036adea665a1ac61ac1",
+        "transform": {
+          "repair": "preserve-authoritative-512-source",
+          "factor": 1.0,
+          "translationSourcePixels": [
+            0,
+            0
+          ]
+        },
+        "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame"
+      }
     }
-  ]
+  ],
+  "canonicalSourceReconciliation": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "sourceAuthority": "tracked_512px_rgba",
+    "runtimeAuthority": "deterministic_512_to_256_derivation",
+    "preservedFrameCount": 8,
+    "transformedFrameCount": 0,
+    "minimumSourceEdgeMarginAtAlpha8": 26,
+    "minimumRuntimeEdgeMarginAtAlpha8": 12,
+    "mirroring": false,
+    "upscaledFromRuntime": false
+  }
 }

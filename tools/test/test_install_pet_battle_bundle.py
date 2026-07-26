@@ -600,6 +600,54 @@ class InstallPetBattleBundleTest(unittest.TestCase):
                 metadata["battleVisual"]["battleViewMapping"],
                 EXPECTED_BATTLE_VIEW_MAPPING,
             )
+            self.assertEqual(metadata["battleVisual"]["archiveMode"], "full")
+            self.assertTrue(metadata["battleVisual"]["sourceFramesTracked"])
+            self.assertEqual(
+                metadata["battleVisual"]["sourceLedger"],
+                "source/battle/source-ledger.json",
+            )
+            self.assertEqual(
+                len(
+                    list(
+                        (destination / "source/battle").glob(
+                            "*/*/raw-sheet-lossless.*"
+                        )
+                    )
+                ),
+                24,
+            )
+            ledger = json.loads(
+                (destination / "source/battle/source-ledger.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(ledger["archiveMode"], "full")
+            self.assertTrue(
+                ledger["actions"]["front_3quarter_sw"]["attack"][
+                    "sourceFramesTracked"
+                ]
+            )
+            self.assertTrue(
+                ledger["actions"]["back_3quarter_ne"]["attack"][
+                    "representativeRawTracked"
+                ]
+            )
+
+    def test_cli_defaults_to_full_archive(self) -> None:
+        parsed = MODULE.parse_args(
+            [
+                "--staging",
+                "staging",
+                "--destination",
+                "destination",
+                "--form",
+                "fixture_pet_v1",
+                "--kind",
+                "pet",
+            ]
+        )
+
+        self.assertEqual(parsed.archive_mode, "full")
 
     def test_action_evidence_is_relocated_and_qc_paths_match_installed_layout(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

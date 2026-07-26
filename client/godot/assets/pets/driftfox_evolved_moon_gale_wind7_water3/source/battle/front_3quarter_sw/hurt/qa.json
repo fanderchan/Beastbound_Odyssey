@@ -9,5 +9,13 @@
   "duplicateFrames": [],
   "edgeTouchFrames": [],
   "identityDriftFrames": [],
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "canonicalSourceReconciliation": {
+    "status": "passed",
+    "sourceFrameCount": 6,
+    "derivedRuntimeFrameCount": 6,
+    "minimumSourceEdgeMarginAtAlpha8": 26,
+    "minimumRuntimeEdgeMarginAtAlpha8": 12,
+    "sourceRuntimeDerivationExact": true
+  }
 }
