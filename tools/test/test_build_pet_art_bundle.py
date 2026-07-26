@@ -102,6 +102,10 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             metadata = builder.build_bundle(self.options(input_path, output_dir, case))
 
             self.assertEqual(metadata["tool"], builder.TOOL_NAME)
+            self.assertEqual(
+                metadata["replayContractVersion"],
+                builder.REPLAY_CONTRACT_VERSION,
+            )
             self.assertEqual(metadata["slots"], ["frame-1", "frame-2", "frame-3", "frame-4"])
             self.assertGreater(metadata["sharedScale"], 0)
             self.assertEqual(len(metadata["frames"]), 4)
@@ -109,6 +113,36 @@ class PetArtBundleBuilderTests(unittest.TestCase):
             self.assertTrue((output_dir / "contact-sheet.png").is_file())
             self.assertTrue((output_dir / "sheet-transparent.png").is_file())
             self.assertTrue((output_dir / "sheet-runtime-transparent.png").is_file())
+            replay_options = builder.options_from_metadata(
+                metadata,
+                input_path=input_path,
+                output_dir=root / "replay",
+            )
+            self.assertEqual(replay_options.slots, tuple(metadata["slots"]))
+            self.assertTrue(replay_options.make_gif)
+            self.assertTrue(replay_options.make_contact_sheet)
+            malformed = dict(metadata)
+            malformed["safeMargin"] = True
+            with self.assertRaisesRegex(
+                builder.BundleBuildError,
+                "safeMargin must be int",
+            ):
+                builder.options_from_metadata(
+                    malformed,
+                    input_path=input_path,
+                    output_dir=root / "replay-malformed",
+                )
+            legacy = dict(metadata)
+            legacy.pop("replayContractVersion")
+            with self.assertRaisesRegex(
+                builder.BundleBuildError,
+                "replayContractVersion",
+            ):
+                builder.options_from_metadata(
+                    legacy,
+                    input_path=input_path,
+                    output_dir=root / "replay-legacy",
+                )
 
             for slot in metadata["slots"]:
                 with Image.open(output_dir / "source-frames" / f"{slot}.png") as source:

@@ -13,7 +13,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
@@ -21,12 +23,65 @@ from typing import Any, Iterable
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from audit_pet_battle_catalog import _audit_tracked_source_derivation
+import finalize_pet_identity_gate as identity_gate
 from sprite_alpha_despill import magenta_edge_metrics
 
 
 SCHEMA_VERSION = 1
-FUSION_CATALOG_ID = "pet_fusion_recipes_v1"
+FUSION_CATALOG_SCHEMA_VERSION = 2
+FUSION_CATALOG_ID = "pet_fusion_recipes_v2"
 DEFAULT_FUSION_CATALOG_PATH = Path("client/godot/data/pet_fusion_recipes.json")
+FUSION_ROLE_IDS = ("core", "resonance_one", "resonance_two")
+FUSION_CATALOG_KEYS = {
+    "schemaVersion",
+    "catalogId",
+    "runtimeEnabled",
+    "disabledMessage",
+    "rules",
+    "geneProfiles",
+    "recipes",
+}
+FUSION_RULE_KEYS = {
+    "roleIds",
+    "requiredGrowthModelVersion",
+    "requiredRebirthCount",
+    "minimumLevel",
+    "maximumLevel",
+    "baseActiveSkillIds",
+    "specialActiveInheritanceChance",
+    "passiveSourceWeights",
+    "resultPassiveSkillCount",
+    "materialNumericInheritance",
+    "resultRideable",
+    "additionalCostPolicy",
+    "resultBindingPolicy",
+    "unboundResultTradePolicy",
+    "baseActiveSkillForgetPolicy",
+    "inheritedSpecialActiveForgetPolicy",
+    "postFusionTrainingPolicy",
+}
+FUSION_RECIPE_KEYS = {
+    "recipeId",
+    "targetFormId",
+    "targetGrowthProfileId",
+    "roleGeneRules",
+    "result",
+    "assetGate",
+}
+FUSION_ROLE_RULE_KEYS = {"allowedLineageIds", "allowedGeneProfileIds"}
+FUSION_RESULT = {
+    "level": 1,
+    "rebirthCount": 1,
+    "terminalPathId": "fusion_terminal_v1",
+    "paidResetAllowed": False,
+    "newInstanceRequired": True,
+    "numericSource": "target_profile_only_v1",
+    "rideable": False,
+    "bindingPolicy": "bound_if_any_material_bound",
+    "resultStatePolicy": "replace_active_else_core_state",
+}
+FUSION_ASSET_GATE_KEYS = {"status", "replacementPath"}
+IDENTIFIER_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,95}$")
 CANONICAL_DIRECTIONS = (
     "south",
     "southwest",
@@ -101,109 +156,262 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _catalog_exact_keys(
+    value: Any,
+    expected: set[str],
+    *,
+    label: str,
+    path: Path,
+    errors: list[dict[str, str]],
+) -> bool:
+    if not isinstance(value, dict):
+        errors.append(
+            _issue(
+                "invalid_fusion_catalog_contract",
+                f"{label} 必须是对象",
+                str(path),
+            )
+        )
+        return False
+    actual = set(value)
+    if actual != expected:
+        errors.append(
+            _issue(
+                "invalid_fusion_catalog_contract",
+                f"{label} 必须且只能包含 {sorted(expected)}，实际 {sorted(actual)}",
+                str(path),
+            )
+        )
+        return False
+    return True
+
+
+def _catalog_identifier(value: Any) -> str:
+    normalized = value.strip() if isinstance(value, str) else ""
+    return normalized if IDENTIFIER_PATTERN.fullmatch(normalized) else ""
+
+
+def _catalog_identifier_set(
+    value: Any,
+    *,
+    label: str,
+    path: Path,
+    errors: list[dict[str, str]],
+) -> list[str]:
+    if not isinstance(value, list) or not value:
+        errors.append(
+            _issue(
+                "invalid_fusion_catalog_contract",
+                f"{label} 必须是非空数组",
+                str(path),
+            )
+        )
+        return []
+    normalized: list[str] = []
+    for index, entry in enumerate(value):
+        item = entry.strip() if isinstance(entry, str) else ""
+        if item != "*" and not IDENTIFIER_PATTERN.fullmatch(item):
+            errors.append(
+                _issue(
+                    "invalid_fusion_catalog_contract",
+                    f"{label}[{index}] 必须是稳定标识或 *",
+                    str(path),
+                )
+            )
+            continue
+        if item in normalized:
+            errors.append(
+                _issue(
+                    "invalid_fusion_catalog_contract",
+                    f"{label} 重复登记 {item}",
+                    str(path),
+                )
+            )
+            continue
+        normalized.append(item)
+    if "*" in normalized and normalized != ["*"]:
+        errors.append(
+            _issue(
+                "invalid_fusion_catalog_contract",
+                f"{label} 使用 * 时不得混入其他值",
+                str(path),
+            )
+        )
+    return normalized
+
+
 def _declared_fusion_target_form_ids(
     fusion_catalog_path: Path,
-) -> tuple[set[str], list[dict[str, str]]]:
+) -> tuple[dict[str, str], list[dict[str, str]]]:
     try:
         document = _load_json(fusion_catalog_path)
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        return set(), [
-            _issue(
-                "fusion_catalog_read_failed",
-                f"无法读取共享融合配方目录：{error}",
-                str(fusion_catalog_path),
-            )
-        ]
+        return {}, [_issue(
+            "fusion_catalog_read_failed",
+            f"无法读取共享融合配方目录：{error}",
+            str(fusion_catalog_path),
+        )]
     if not isinstance(document, dict):
-        return set(), [
-            _issue(
-                "invalid_fusion_catalog",
-                "共享融合配方目录必须是 JSON 对象",
-                str(fusion_catalog_path),
-            )
-        ]
+        return {}, [_issue(
+            "invalid_fusion_catalog",
+            "共享融合配方目录必须是 JSON 对象",
+            str(fusion_catalog_path),
+        )]
+
+    errors: list[dict[str, str]] = []
+    def add(code: str, message: str) -> None:
+        errors.append(_issue(code, message, str(fusion_catalog_path)))
+
+    _catalog_exact_keys(
+        document,
+        FUSION_CATALOG_KEYS,
+        label="catalog",
+        path=fusion_catalog_path,
+        errors=errors,
+    )
     if (
-        document.get("schemaVersion") != 1
+        document.get("schemaVersion") != FUSION_CATALOG_SCHEMA_VERSION
         or document.get("catalogId") != FUSION_CATALOG_ID
     ):
-        return set(), [
-            _issue(
-                "invalid_fusion_catalog_identity",
-                f"共享融合配方目录必须为 schemaVersion=1 / catalogId={FUSION_CATALOG_ID}",
-                str(fusion_catalog_path),
-            )
-        ]
-    if not isinstance(document.get("runtimeEnabled"), bool):
-        return set(), [
-            _issue(
-                "invalid_fusion_runtime_enabled",
-                "共享融合配方目录 runtimeEnabled 必须是布尔值",
-                str(fusion_catalog_path),
-            )
-        ]
+        add(
+            "invalid_fusion_catalog_identity",
+            "共享融合配方目录必须为 "
+            f"schemaVersion={FUSION_CATALOG_SCHEMA_VERSION} / "
+            f"catalogId={FUSION_CATALOG_ID}",
+        )
+    if type(document.get("runtimeEnabled")) is not bool:
+        add("invalid_fusion_runtime_enabled", "runtimeEnabled 必须是布尔值")
+    if not isinstance(document.get("disabledMessage"), str) or not document["disabledMessage"].strip():
+        add("invalid_fusion_catalog_contract", "disabledMessage 必须是非空字符串")
+
+    rules = document.get("rules")
+    if _catalog_exact_keys(
+        rules,
+        FUSION_RULE_KEYS,
+        label="catalog.rules",
+        path=fusion_catalog_path,
+        errors=errors,
+    ):
+        assert isinstance(rules, dict)
+        if rules.get("roleIds") != list(FUSION_ROLE_IDS):
+            add("invalid_fusion_catalog_contract", "rules.roleIds 必须严格为三种材料角色")
+        if rules.get("resultRideable") is not False:
+            add("invalid_fusion_catalog_contract", "rules.resultRideable 必须为 false")
+    if not isinstance(document.get("geneProfiles"), list):
+        add("invalid_fusion_catalog_contract", "geneProfiles 必须是数组")
     recipes = document.get("recipes")
     if not isinstance(recipes, list):
-        return set(), [
-            _issue(
-                "invalid_fusion_recipes",
-                "共享融合配方目录 recipes 必须是数组",
-                str(fusion_catalog_path),
-            )
-        ]
+        add("invalid_fusion_recipes", "recipes 必须是数组")
+        recipes = []
+    if document.get("runtimeEnabled") is True and not recipes:
+        add("invalid_fusion_catalog_contract", "已启用目录必须至少有一条正式配方")
 
-    target_form_ids: set[str] = set()
-    errors: list[dict[str, str]] = []
-    for index, value in enumerate(recipes):
-        label = f"recipes[{index}]"
-        if not isinstance(value, dict):
-            errors.append(
-                _issue(
-                    "invalid_fusion_recipe",
-                    f"{label} 必须是对象",
-                    str(fusion_catalog_path),
-                )
-            )
-            continue
-        result = value.get("result")
-        asset_gate = value.get("assetGate")
-        recipe_id = value.get("recipeId")
-        target_form_id = value.get("targetFormId")
-        if (
-            not isinstance(recipe_id, str)
-            or not recipe_id.strip()
-            or not isinstance(target_form_id, str)
-            or not target_form_id.strip()
-            or not isinstance(value.get("targetGrowthProfileId"), str)
-            or not value.get("targetGrowthProfileId", "").strip()
-            or not isinstance(value.get("roleGeneRules"), dict)
-            or not isinstance(result, dict)
-            or result.get("rideable") is not False
-            or result.get("terminalPathId") != "fusion_terminal_v1"
-            or not isinstance(asset_gate, dict)
-            or asset_gate.get("status") != "formal"
-            or not isinstance(asset_gate.get("replacementPath"), str)
-            or not asset_gate.get("replacementPath", "").strip()
+    targets: dict[str, str] = {}
+    recipe_ids: set[str] = set()
+    for index, recipe in enumerate(recipes):
+        label = f"catalog.recipes[{index}]"
+        before = len(errors)
+        if not _catalog_exact_keys(
+            recipe,
+            FUSION_RECIPE_KEYS,
+            label=label,
+            path=fusion_catalog_path,
+            errors=errors,
         ):
-            errors.append(
-                _issue(
-                    "invalid_fusion_recipe",
-                    f"{label} 不是明确的不可骑终局正式配方",
-                    str(fusion_catalog_path),
-                )
-            )
             continue
-        normalized_target = target_form_id.strip()
-        if normalized_target in target_form_ids:
-            errors.append(
-                _issue(
-                    "duplicate_fusion_target",
-                    f"共享融合配方重复登记 targetFormId：{normalized_target}",
-                    str(fusion_catalog_path),
+        assert isinstance(recipe, dict)
+        identifiers = {
+            key: _catalog_identifier(recipe.get(key))
+            for key in ("recipeId", "targetFormId", "targetGrowthProfileId")
+        }
+        for key, value in identifiers.items():
+            if not value:
+                add("invalid_fusion_recipe", f"{label}.{key} 必须是稳定 snake_case 标识")
+
+        role_rules = recipe.get("roleGeneRules")
+        if _catalog_exact_keys(
+            role_rules,
+            set(FUSION_ROLE_IDS),
+            label=f"{label}.roleGeneRules",
+            path=fusion_catalog_path,
+            errors=errors,
+        ):
+            assert isinstance(role_rules, dict)
+            for role_id in FUSION_ROLE_IDS:
+                role_rule = role_rules.get(role_id)
+                if not _catalog_exact_keys(
+                    role_rule,
+                    FUSION_ROLE_RULE_KEYS,
+                    label=f"{label}.roleGeneRules.{role_id}",
+                    path=fusion_catalog_path,
+                    errors=errors,
+                ):
+                    continue
+                assert isinstance(role_rule, dict)
+                lineage_ids = _catalog_identifier_set(
+                    role_rule.get("allowedLineageIds"),
+                    label=f"{label}.roleGeneRules.{role_id}.allowedLineageIds",
+                    path=fusion_catalog_path,
+                    errors=errors,
                 )
-            )
-            continue
-        target_form_ids.add(normalized_target)
-    return target_form_ids, errors
+                gene_ids = _catalog_identifier_set(
+                    role_rule.get("allowedGeneProfileIds"),
+                    label=f"{label}.roleGeneRules.{role_id}.allowedGeneProfileIds",
+                    path=fusion_catalog_path,
+                    errors=errors,
+                )
+                lineage_wildcard = lineage_ids == ["*"]
+                gene_wildcard = gene_ids == ["*"]
+                if (lineage_wildcard or gene_wildcard) and role_id != "resonance_two":
+                    add("invalid_fusion_recipe", f"{label}.{role_id} 不能使用通配符")
+                if lineage_wildcard != gene_wildcard:
+                    add("invalid_fusion_recipe", f"{label}.{role_id} 谱系/基因通配必须成对")
+
+        result = recipe.get("result")
+        if not _catalog_exact_keys(
+            result,
+            set(FUSION_RESULT),
+            label=f"{label}.result",
+            path=fusion_catalog_path,
+            errors=errors,
+        ) or result != FUSION_RESULT:
+            add("invalid_fusion_recipe", f"{label}.result 不符合不可骑融合终局合同")
+
+        asset_gate = recipe.get("assetGate")
+        replacement_path = ""
+        if _catalog_exact_keys(
+            asset_gate,
+            FUSION_ASSET_GATE_KEYS,
+            label=f"{label}.assetGate",
+            path=fusion_catalog_path,
+            errors=errors,
+        ):
+            assert isinstance(asset_gate, dict)
+            replacement_path = asset_gate.get("replacementPath", "")
+            replacement_path = replacement_path.strip() if isinstance(replacement_path, str) else ""
+            pure = PurePosixPath(replacement_path)
+            if asset_gate.get("status") != "formal" or not replacement_path:
+                add("invalid_fusion_recipe", f"{label}.assetGate 必须是 formal 且路径非空")
+            elif (
+                replacement_path.startswith(("/", "\\", "res://"))
+                or pure.is_absolute()
+                or ".." in pure.parts
+            ):
+                add("invalid_fusion_recipe", f"{label}.assetGate 路径不安全")
+
+        recipe_id = identifiers["recipeId"]
+        target_form_id = identifiers["targetFormId"]
+        if recipe_id and recipe_id in recipe_ids:
+            add("duplicate_fusion_recipe", f"重复 recipeId：{recipe_id}")
+        if target_form_id and target_form_id in targets:
+            add("duplicate_fusion_target", f"重复 targetFormId：{target_form_id}")
+        if len(errors) == before:
+            recipe_ids.add(recipe_id)
+            targets[target_form_id] = replacement_path
+
+    # The authority rejects an invalid document as a unit; never authorize the
+    # valid-looking subset of a malformed v2 catalog.
+    return ({}, errors) if errors else (targets, [])
 
 
 def _validate_repo_relative_path(
@@ -292,7 +500,7 @@ def _validate_form_schema(
     form_result: dict[str, Any],
     *,
     default_character_id: str,
-    fusion_target_form_ids: set[str],
+    fusion_target_roots: dict[str, str],
     repo_root: Path,
 ) -> tuple[BundleSpec | None, BundleSpec | None]:
     if not isinstance(form_value, dict):
@@ -345,7 +553,8 @@ def _validate_form_schema(
             "nonrideable_mounted_bundle",
             "不可骑目标不能登记 mounted 资产包",
         )
-    if not rideable_target and str(form.get("formId", "")).strip() not in fusion_target_form_ids:
+    form_id = str(form.get("formId", "")).strip()
+    if not rideable_target and form_id not in fusion_target_roots:
         _add_schema_error(
             form_result,
             "nonrideable_not_fusion_target",
@@ -380,6 +589,19 @@ def _validate_form_schema(
             continue
         root = paths["root"]
         assert root is not None
+        if (
+            kind == "pet"
+            and not rideable_target
+            and form_id in fusion_target_roots
+            and _repo_relative(root, repo_root) != fusion_target_roots[form_id]
+        ):
+            _add_schema_error(
+                form_result,
+                "fusion_asset_root_mismatch",
+                "不可骑融合目标 pet.root 必须与正式配方 "
+                "assetGate.replacementPath 完全一致",
+                _repo_relative(root, repo_root),
+            )
         for field in ("metadataPath", "identityPath", "ownershipPath", "promptPath"):
             path = paths[field]
             assert path is not None
@@ -467,6 +689,299 @@ def _check_reference_files(
                 f"缺少 {label} 证据",
                 _repo_relative(path, repo_root),
             )
+
+
+class IdentityGateAuditError(RuntimeError):
+    def __init__(self, code: str, message: str, path: Path | None = None):
+        super().__init__(message)
+        self.code = code
+        self.path = path
+
+
+def _identity_gate_claimed(
+    spec: BundleSpec,
+    metadata: dict[str, Any],
+) -> bool:
+    if spec.kind != "pet":
+        return False
+    evidence = metadata.get("evidence")
+    gate = evidence.get("identityGateAudit") if isinstance(evidence, dict) else None
+    if (
+        metadata.get("productionScope") == "identity_key_pose_gate"
+        or isinstance(gate, dict)
+    ):
+        return True
+    source_meta_path = spec.root / "source/identity-board-source-meta.json"
+    if not source_meta_path.is_file():
+        return False
+    try:
+        value = _load_json(source_meta_path)
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return False
+    return isinstance(value, dict) and value.get("schemaVersion") == 2
+
+
+def _identity_load_json(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = _load_json(path)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_json",
+            f"{label} 无法解析：{error}",
+            path,
+        ) from error
+    if not isinstance(value, dict):
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_json",
+            f"{label} 必须是 JSON 对象",
+            path,
+        )
+    return value
+
+
+def _audit_identity_gate_chain(
+    spec: BundleSpec,
+    *,
+    form: dict[str, Any],
+    metadata: dict[str, Any],
+    repo_root: Path,
+) -> None:
+    form_id = str(form.get("formId", "")).strip()
+    root = spec.root.resolve()
+    raw_path = root / "source/identity-board-raw.png"
+    archive_path = root / "source/identity-board-raw.webp"
+    source_meta_path = root / "source/identity-board-source-meta.json"
+    pipeline_path = root / "source/identity-board-pipeline-meta.json"
+    qc_path = root / "qa/identity-key-pose-qc.json"
+    board_path = root / "identity/identity-board-transparent.png"
+    pose_paths = {
+        pose: root / f"identity/{pose}.png"
+        for pose in identity_gate.IDENTITY_POSES
+    }
+    required_paths = (
+        raw_path,
+        archive_path,
+        source_meta_path,
+        pipeline_path,
+        qc_path,
+        board_path,
+        *pose_paths.values(),
+    )
+    for path in required_paths:
+        if path.is_symlink() or not path.is_file():
+            raise IdentityGateAuditError(
+                "missing_identity_gate_chain_file",
+                "schema-2 身份门证据链缺少普通文件",
+                path,
+            )
+
+    previous_root = identity_gate.REPO_ROOT
+    identity_gate.REPO_ROOT = repo_root.resolve()
+    try:
+        raw_audit = identity_gate.inspect_raw_source_png(raw_path)
+        board_audit = identity_gate.inspect_transparent_png(
+            board_path,
+            identity_gate.IDENTITY_BOARD_SIZE,
+            "transparent identity board",
+        )
+        board_audit["path"] = board_path.relative_to(root).as_posix()
+        pose_audits: dict[str, dict[str, Any]] = {}
+        for pose, path in pose_paths.items():
+            audit = identity_gate.inspect_transparent_png(
+                path,
+                identity_gate.IDENTITY_POSE_SIZE,
+                f"identity pose {pose}",
+                safe_margin=identity_gate.MIN_SOURCE_SAFE_MARGIN,
+            )
+            audit["path"] = path.relative_to(root).as_posix()
+            pose_audits[pose] = audit
+        if len({
+            pose_audits[pose]["canonicalRgbaSha256"]
+            for pose in identity_gate.IDENTITY_POSES
+        }) != len(identity_gate.IDENTITY_POSES):
+            raise identity_gate.FinalizeError(
+                "identity poses must have unique decoded RGBA content"
+            )
+        identity_gate.inspect_identity_board_composition(board_path, pose_paths)
+        qc_audit = identity_gate.inspect_self_review_evidence(
+            qc_path,
+            form_id,
+            root,
+            board_audit,
+            pose_audits,
+        )
+        with tempfile.TemporaryDirectory(
+            prefix="beastbound-identity-audit-"
+        ) as directory:
+            pipeline_audit = identity_gate.inspect_pipeline_replay(
+                pipeline_path,
+                root,
+                raw_path,
+                board_path,
+                pose_paths,
+                Path(directory),
+            )
+        pipeline_audit["path"] = pipeline_path.relative_to(root).as_posix()
+
+        archive_decoded = identity_gate.decoded_rgba_sha256(archive_path)
+        archive_canonical = identity_gate.canonical_rgba_sha256(archive_path)
+        if (
+            archive_decoded != raw_audit["decodedRgbaPixelSha256"]
+            or archive_canonical != raw_audit["canonicalRgbaSha256"]
+        ):
+            raise identity_gate.FinalizeError(
+                "lossless WebP archive does not preserve raw RGBA pixels"
+            )
+        source_meta = _identity_load_json(
+            source_meta_path,
+            "身份门来源账本",
+        )
+        expected_source_meta = {
+            "schemaVersion": 2,
+            "asset": f"{form_id}_identity_board",
+            "generatorRecord": spec.ownership_path.relative_to(root).as_posix(),
+            "originalGeneratedFilename": raw_path.name,
+            "originalPngSize": raw_audit["pixelSize"],
+            "originalPngSha256": raw_audit["fileSha256"],
+            "decodedRgbaPixelSha256": raw_audit["decodedRgbaPixelSha256"],
+            "canonicalRgbaSha256": raw_audit["canonicalRgbaSha256"],
+            "archive": {
+                "path": archive_path.relative_to(root).as_posix(),
+                "format": "webp",
+                "lossless": True,
+                "sha256": identity_gate.sha256_file(archive_path),
+                "decodedRgbaPixelSha256": archive_decoded,
+                "canonicalRgbaSha256": archive_canonical,
+            },
+            "prompt": spec.prompt_path.relative_to(root).as_posix(),
+            "promptSha256": identity_gate.sha256_file(spec.prompt_path),
+            "identityLock": spec.identity_path.relative_to(root).as_posix(),
+            "identityLockSha256": identity_gate.sha256_file(spec.identity_path),
+            "ownership": spec.ownership_path.relative_to(root).as_posix(),
+            "ownershipSha256": identity_gate.sha256_file(spec.ownership_path),
+            "pipelineMetadata": pipeline_path.relative_to(root).as_posix(),
+            "pipelineMetadataSha256": identity_gate.sha256_file(pipeline_path),
+            "selfReview": qc_audit,
+            "outputs": {
+                "transparentBoard": board_path.relative_to(root).as_posix(),
+                "transparentBoardSha256": board_audit["fileSha256"],
+                "transparentBoardAudit": board_audit,
+                "poses": pose_audits,
+            },
+        }
+        if source_meta != expected_source_meta:
+            raise IdentityGateAuditError(
+                "invalid_identity_gate_source_meta",
+                "schema-2 身份门来源账本与当前来源/流水线/QC/图像哈希链不一致",
+                source_meta_path,
+            )
+
+        expected_metadata = {
+            "schemaVersion": 1,
+            "formId": form_id,
+            "displayName": form.get("displayName"),
+            "artStatus": "in_production",
+            "productionScope": "identity_key_pose_gate",
+            "runtimeEnabled": False,
+            "rideableTarget": form.get("rideableTarget"),
+            "runtimeFrameSize": [
+                identity_gate.RUNTIME_FRAME_SIZE,
+                identity_gate.RUNTIME_FRAME_SIZE,
+            ],
+            "views": list(BATTLE_VIEWS),
+            "identity": {
+                "status": "self_review_passed_owner_pending",
+                "sourceFrameSize": list(identity_gate.IDENTITY_POSE_SIZE),
+                "board": board_path.relative_to(root).as_posix(),
+                "poses": {
+                    pose: path.relative_to(root).as_posix()
+                    for pose, path in pose_paths.items()
+                },
+            },
+            "actions": identity_gate.action_metadata(),
+            "worldVisual": {
+                "status": "not_produced",
+                "strategy": "independent_8",
+                "runtimeMirroring": False,
+                "directions": list(CANONICAL_DIRECTIONS),
+                "actions": {
+                    "idle": {
+                        "frameCount": 1,
+                        "fps": 4,
+                        "loop": True,
+                        "status": "not_produced",
+                    },
+                    "walk": {
+                        "frameCount": 4,
+                        "fps": 10,
+                        "loop": True,
+                        "status": "not_produced",
+                    },
+                },
+            },
+            "supportedMountedCharacterIds": form.get(
+                "supportedCharacterIds",
+                [],
+            ),
+            "sourceArchive": {
+                "policy": "tracked_lossless_webp_with_original_sha256",
+                "raw": archive_path.relative_to(root).as_posix(),
+                "sourceMetadata": source_meta_path.relative_to(root).as_posix(),
+                "pipelineMetadata": pipeline_path.relative_to(root).as_posix(),
+                "prompt": spec.prompt_path.relative_to(root).as_posix(),
+            },
+            "evidence": {
+                "identityBoard": board_path.relative_to(root).as_posix(),
+                "identityBoardSha256": board_audit["fileSha256"],
+                "identityGateAudit": {
+                    "schemaVersion": 1,
+                    "status": "self_review_passed_owner_review_pending",
+                    "pipelineMetadata": pipeline_audit,
+                    "selfReview": qc_audit,
+                    "transparentBoard": board_audit,
+                    "poses": pose_audits,
+                },
+            },
+            "keyPoseReviewStatus": "owner_review_pending",
+            "ownerReviewStatus": "pending",
+            "notes": (
+                "Identity and four key poses only. World and battle animation "
+                "matrices are intentionally not produced in this gate."
+            ),
+        }
+        if metadata != expected_metadata:
+            raise IdentityGateAuditError(
+                "invalid_identity_gate_action_meta",
+                "身份门动作元数据与重算后的 schema-2 证据链不一致",
+                spec.metadata_path,
+            )
+    except IdentityGateAuditError:
+        raise
+    except (identity_gate.FinalizeError, OSError, ValueError) as error:
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_chain",
+            str(error),
+            root,
+        ) from error
+    finally:
+        identity_gate.REPO_ROOT = previous_root
+
+
+def _add_identity_gate_error(
+    form_result: dict[str, Any],
+    bundle_result: dict[str, Any],
+    error: IdentityGateAuditError,
+    repo_root: Path,
+) -> None:
+    entry = _issue(
+        error.code,
+        str(error),
+        _repo_relative(error.path, repo_root) if error.path is not None else "",
+    )
+    # A bundle declaring a passed schema-2 identity gate makes an integrity
+    # claim, so drift blocks even while the runtime form remains disabled.
+    form_result["errors"].append(entry)
+    bundle_result["errors"].append(entry.copy())
 
 
 def _possible_magenta_fringe_pixels(image: Image.Image) -> int:
@@ -929,6 +1444,47 @@ def _audit_bundle(
     metadata = _read_metadata(spec, form_result, result, repo_root)
     if metadata is None:
         return result
+    if _identity_gate_claimed(spec, metadata):
+        catalog_status_mismatch = form.get("status") != "in_production"
+        if catalog_status_mismatch:
+            _add_identity_gate_error(
+                form_result,
+                result,
+                IdentityGateAuditError(
+                    "identity_gate_catalog_status_mismatch",
+                    "声明 schema-2 身份门的 form 必须保持 status=in_production",
+                    spec.metadata_path,
+                ),
+                repo_root,
+            )
+        try:
+            _audit_identity_gate_chain(
+                spec,
+                form=form,
+                metadata=metadata,
+                repo_root=repo_root,
+            )
+            result["identityGate"] = {
+                "declared": True,
+                "schemaVersion": 2,
+                "status": (
+                    "failed"
+                    if catalog_status_mismatch
+                    else "verified"
+                ),
+            }
+        except IdentityGateAuditError as error:
+            result["identityGate"] = {
+                "declared": True,
+                "schemaVersion": 2,
+                "status": "failed",
+            }
+            _add_identity_gate_error(
+                form_result,
+                result,
+                error,
+                repo_root,
+            )
     runtime_size = metadata.get("runtimeFrameSize")
     if runtime_size != [FRAME_SIZE[0], FRAME_SIZE[1]]:
         _add_asset_issue(
@@ -1105,17 +1661,25 @@ def audit_catalog(
     default_character_id = str(catalog_dict.get("defaultCharacterId", "")).strip()
     required_actions_value = catalog_dict.get("requiredBattleActions", [])
     required_actions = [str(value).strip() for value in required_actions_value] if isinstance(required_actions_value, list) else []
-    fusion_target_form_ids: set[str] = set()
-    if any(
-        isinstance(form, dict) and form.get("rideableTarget") is False
+    art_catalog_nonrideable_form_ids = sorted(
+        str(form.get("formId", "")).strip()
         for form in forms
-    ):
+        if (
+            isinstance(form, dict)
+            and form.get("rideableTarget") is False
+            and str(form.get("formId", "")).strip()
+        )
+    )
+    fusion_target_roots: dict[str, str] = {}
+    fusion_catalog_checked = bool(art_catalog_nonrideable_form_ids)
+    resolved_fusion_catalog_path: Path | None = None
+    if fusion_catalog_checked:
         resolved_fusion_catalog_path = (
             fusion_catalog_path
             if fusion_catalog_path is not None
             else repo_root / DEFAULT_FUSION_CATALOG_PATH
         )
-        fusion_target_form_ids, fusion_errors = _declared_fusion_target_form_ids(
+        fusion_target_roots, fusion_errors = _declared_fusion_target_form_ids(
             resolved_fusion_catalog_path.resolve(strict=False)
         )
         catalog_errors.extend(fusion_errors)
@@ -1127,7 +1691,7 @@ def audit_catalog(
                 form,
                 form_result,
                 default_character_id=default_character_id,
-                fusion_target_form_ids=fusion_target_form_ids,
+                fusion_target_roots=fusion_target_roots,
                 repo_root=repo_root,
             )
         )
@@ -1213,6 +1777,28 @@ def audit_catalog(
             "warnings": warning_count,
         },
         "catalogErrors": catalog_errors,
+        "fusionAuthorization": {
+            "catalogChecked": fusion_catalog_checked,
+            "catalogPath": (
+                _repo_relative(
+                    resolved_fusion_catalog_path.resolve(strict=False),
+                    repo_root,
+                )
+                if resolved_fusion_catalog_path is not None
+                else ""
+            ),
+            "artCatalogNonrideableFormIds": art_catalog_nonrideable_form_ids,
+            "formalRecipeTargetFormIds": sorted(fusion_target_roots),
+            "matchedFormIds": sorted(
+                set(art_catalog_nonrideable_form_ids)
+                & set(fusion_target_roots)
+            ),
+            "reason": (
+                "strict_v2_catalog_checked"
+                if fusion_catalog_checked
+                else "art_catalog_has_no_nonrideable_fusion_forms"
+            ),
+        },
         "forms": form_results,
     }
 
@@ -1229,11 +1815,25 @@ def _markdown_issues(entries: list[dict[str, str]], limit: int = 24) -> list[str
 
 def render_markdown(report: dict[str, Any]) -> str:
     summary = report.get("summary", {})
+    fusion_authorization = report.get("fusionAuthorization", {})
+    if fusion_authorization.get("catalogChecked"):
+        fusion_line = (
+            "- 融合不可骑授权：已严格检查 v2 目录；"
+            f"art forms={len(fusion_authorization.get('artCatalogNonrideableFormIds', []))} "
+            f"formal targets={len(fusion_authorization.get('formalRecipeTargetFormIds', []))} "
+            f"matched={len(fusion_authorization.get('matchedFormIds', []))}"
+        )
+    else:
+        fusion_line = (
+            "- 融合不可骑授权：未检查；当前 art catalog "
+            "没有登记不可骑融合 form，不能把本报告表述为融合目标美术已覆盖。"
+        )
     lines = [
         "# 宠物美术批量静态审计",
         "",
         f"- 状态：`{report.get('status', 'failed')}`",
         f"- Catalog：`{report.get('catalogPath', '')}`",
+        fusion_line,
         (
             "- 汇总：forms={forms} runtime={runtimeEnabled} ok={ok} pending={pending} "
             "failed={failed} errors={errors} pendingIssues={pendingIssues} warnings={warnings}"

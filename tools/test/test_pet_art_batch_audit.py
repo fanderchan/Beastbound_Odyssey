@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from PIL import Image, ImageDraw, ImageOps
 
@@ -32,6 +33,7 @@ VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from build_pet_art_bundle import derive_runtime_frame, rgba_hash  # noqa: E402
+import finalize_pet_identity_gate as identity_finalizer  # noqa: E402
 from install_pet_battle_bundle import ACTION_SPECS  # noqa: E402
 
 
@@ -41,8 +43,8 @@ def _read_fixture() -> dict[str, Any]:
 
 def _fusion_catalog_fixture(target_form_id: str = "fixture_pet") -> dict[str, Any]:
     return {
-        "schemaVersion": 1,
-        "catalogId": "pet_fusion_recipes_v1",
+        "schemaVersion": 2,
+        "catalogId": "pet_fusion_recipes_v2",
         "runtimeEnabled": False,
         "disabledMessage": "测试夹具保持生产关闭。",
         "rules": {
@@ -61,6 +63,12 @@ def _fusion_catalog_fixture(target_form_id: str = "fixture_pet") -> dict[str, An
             "resultPassiveSkillCount": 1,
             "materialNumericInheritance": False,
             "resultRideable": False,
+            "additionalCostPolicy": "materials_only",
+            "resultBindingPolicy": "bound_if_any_material_bound",
+            "unboundResultTradePolicy": "eligible_when_pet_trading_available",
+            "baseActiveSkillForgetPolicy": "forbidden",
+            "inheritedSpecialActiveForgetPolicy": "double_confirm_irreversible",
+            "postFusionTrainingPolicy": "empty_slots_only",
         },
         "geneProfiles": [
             {
@@ -123,11 +131,17 @@ def _fusion_catalog_fixture(target_form_id: str = "fixture_pet") -> dict[str, An
                 },
                 "assetGate": {
                     "status": "formal",
-                    "replacementPath": f"client/godot/assets/pets/{target_form_id}",
+                    "replacementPath": f"fixture_assets/pets/{target_form_id}",
                 },
             }
         ],
     }
+
+
+def _closed_fusion_catalog_fixture() -> dict[str, Any]:
+    document = _fusion_catalog_fixture()
+    document["recipes"] = []
+    return document
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -232,6 +246,151 @@ def _materialize_bundle(repo_root: Path, catalog: dict[str, Any], kind: str, bun
 def _materialize_all(repo_root: Path, catalog: dict[str, Any]) -> None:
     _materialize_bundle(repo_root, catalog, "pet", 0)
     _materialize_bundle(repo_root, catalog, "mounted", 1)
+
+
+def _build_schema2_identity_gate(
+    repo_root: Path,
+    catalog: dict[str, Any],
+) -> Path:
+    form = catalog["forms"][0]
+    form["status"] = "in_production"
+    form["runtimeEnabled"] = False
+    form["rideableTarget"] = False
+    form["supportedCharacterIds"] = []
+    form.pop("mounted", None)
+    _materialize_bundle(repo_root, catalog, "pet", 0)
+
+    root = repo_root / form["pet"]["root"]
+    identity = root / "identity"
+    source = root / "source"
+    qa = root / "qa"
+    source.mkdir(parents=True, exist_ok=True)
+    qa.mkdir(parents=True, exist_ok=True)
+    raw_path = source / "identity-board-raw.png"
+    raw = Image.new("RGB", (1024, 1024), (255, 0, 255))
+    draw = ImageDraw.Draw(raw)
+    pose_specs = {
+        "front_3quarter_sw": ((92, 92, 382, 452), (180, 91, 40)),
+        "back_3quarter_ne": ((104, 86, 404, 448), (44, 101, 174)),
+        "south": ((112, 98, 396, 456), (61, 142, 75)),
+        "west": ((88, 106, 408, 446), (130, 72, 164)),
+    }
+    for index, (_pose, (box, color)) in enumerate(pose_specs.items()):
+        offset_x = (index % 2) * 512
+        offset_y = (index // 2) * 512
+        shifted = tuple(
+            value + (offset_x if coordinate % 2 == 0 else offset_y)
+            for coordinate, value in enumerate(box)
+        )
+        draw.rounded_rectangle(shifted, radius=24, fill=color)
+        draw.rectangle(
+            (
+                shifted[0] + 20 + index * 8,
+                shifted[1] + 32,
+                shifted[0] + 42 + index * 8,
+                shifted[1] + 54,
+            ),
+            fill=(238, 190, 72),
+        )
+    raw.save(raw_path)
+
+    build_root = repo_root / "identity-builder-output"
+    built = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools/build_pet_art_bundle.py"),
+            "--input",
+            str(raw_path),
+            "--output-dir",
+            str(build_root),
+            "--rows",
+            "2",
+            "--cols",
+            "2",
+            "--slots",
+            *identity_finalizer.IDENTITY_POSES,
+            "--anchor",
+            "feet",
+            "--alpha-threshold",
+            "8",
+            "--safe-margin",
+            "4",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if built.returncode != 0:
+        raise AssertionError(built.stderr or built.stdout)
+    pose_paths = {
+        pose: identity / f"{pose}.png"
+        for pose in identity_finalizer.IDENTITY_POSES
+    }
+    for pose, path in pose_paths.items():
+        path.write_bytes(
+            (build_root / f"source-frames/{pose}.png").read_bytes()
+        )
+    board_path = identity / "identity-board-transparent.png"
+    board_path.write_bytes(
+        (build_root / "sheet-transparent.png").read_bytes()
+    )
+    pipeline_path = source / "identity-board-pipeline-meta.json"
+    pipeline_path.write_bytes(
+        (build_root / "pipeline-meta.json").read_bytes()
+    )
+    pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+    pipeline["input"] = (
+        f"{form['pet']['root']}/source/identity-board-raw.png"
+    )
+    _write_json(pipeline_path, pipeline)
+
+    contact_path = qa / "identity-key-pose-contact-sheet.png"
+    contact_path.write_bytes(board_path.read_bytes())
+    _write_json(
+        qa / "identity-key-pose-qc.json",
+        {
+            "schemaVersion": 1,
+            "formId": form["formId"],
+            "reviewScope": "identity_key_pose_gate",
+            "selfReviewStatus": "passed",
+            "ownerReviewStatus": "pending",
+            "runtimeEnabled": False,
+            "errors": [],
+            "identityBoard": {
+                "path": "identity/identity-board-transparent.png",
+                "fileSha256": identity_finalizer.sha256_file(board_path),
+                "canonicalRgbaSha256": (
+                    identity_finalizer.canonical_rgba_sha256(board_path)
+                ),
+            },
+            "poses": {
+                pose: {
+                    "path": f"identity/{pose}.png",
+                    "fileSha256": identity_finalizer.sha256_file(path),
+                    "canonicalRgbaSha256": (
+                        identity_finalizer.canonical_rgba_sha256(path)
+                    ),
+                }
+                for pose, path in pose_paths.items()
+            },
+            "contactSheet": {
+                "path": "qa/identity-key-pose-contact-sheet.png",
+                "fileSha256": identity_finalizer.sha256_file(contact_path),
+            },
+        },
+    )
+    (root / "action-bundle-meta.json").unlink()
+    with mock.patch.object(identity_finalizer, "REPO_ROOT", repo_root):
+        identity_finalizer.finalize_form(form, force=False)
+    return root
+
+
+def _materialize_schema2_identity_gate(
+    repo_root: Path,
+    catalog: dict[str, Any],
+) -> Path:
+    return _build_schema2_identity_gate(repo_root, catalog)
 
 
 def _materialize_full_source_battle(
@@ -447,6 +606,287 @@ class PetArtBatchAuditTest(unittest.TestCase):
             self.assertEqual(report["summary"]["errors"], 0)
             self.assertEqual(report["forms"][0]["pet"]["validatedPngCount"], 64)
             self.assertEqual(report["forms"][0]["mounted"], {})
+            self.assertEqual(
+                report["fusionAuthorization"]["matchedFormIds"],
+                ["fixture_pet"],
+            )
+
+    def test_closed_zero_recipe_v2_is_valid_but_authorizes_no_art_form(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form["supportedCharacterIds"] = []
+            form.pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _closed_fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(report["catalogErrors"], [])
+            self.assertIn("nonrideable_not_fusion_target", _issue_codes(report))
+            self.assertTrue(
+                report["fusionAuthorization"]["catalogChecked"],
+            )
+            self.assertEqual(
+                report["fusionAuthorization"]["formalRecipeTargetFormIds"],
+                [],
+            )
+
+    def test_malformed_v2_recipe_never_authorizes_nonrideable_art(self) -> None:
+        mutations = (
+            "missing_role",
+            "missing_result_field",
+            "nonformal_asset",
+            "extra_role_field",
+            "wrong_global_rule",
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                catalog = _read_fixture()
+                form = catalog["forms"][0]
+                form["rideableTarget"] = False
+                form["supportedCharacterIds"] = []
+                form.pop("mounted")
+                _materialize_bundle(root, catalog, "pet", 0)
+                fusion = _fusion_catalog_fixture()
+                recipe = fusion["recipes"][0]
+                if mutation == "missing_role":
+                    recipe["roleGeneRules"].pop("resonance_two")
+                elif mutation == "missing_result_field":
+                    recipe["result"].pop("numericSource")
+                elif mutation == "nonformal_asset":
+                    recipe["assetGate"]["status"] = "deferred"
+                elif mutation == "extra_role_field":
+                    recipe["roleGeneRules"]["core"]["weight"] = 1
+                else:
+                    fusion["rules"]["resultRideable"] = True
+
+                completed, report = _run(root, catalog, fusion)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertTrue(report["catalogErrors"])
+                self.assertEqual(
+                    report["fusionAuthorization"]["formalRecipeTargetFormIds"],
+                    [],
+                )
+                self.assertIn(
+                    "nonrideable_not_fusion_target",
+                    _issue_codes(report),
+                )
+
+    def test_report_does_not_claim_fusion_coverage_without_art_forms(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _closed_fusion_catalog_fixture(),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            authorization = report["fusionAuthorization"]
+            self.assertFalse(authorization["catalogChecked"])
+            self.assertEqual(authorization["artCatalogNonrideableFormIds"], [])
+            self.assertEqual(authorization["formalRecipeTargetFormIds"], [])
+            markdown = (root / "report.md").read_text(encoding="utf-8")
+            self.assertIn("不能把本报告表述为融合目标美术已覆盖", markdown)
+
+    def test_legacy_v1_fusion_catalog_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            form = catalog["forms"][0]
+            form["rideableTarget"] = False
+            form["supportedCharacterIds"] = []
+            form.pop("mounted")
+            _materialize_bundle(root, catalog, "pet", 0)
+            legacy = _fusion_catalog_fixture()
+            legacy["schemaVersion"] = 1
+            legacy["catalogId"] = "pet_fusion_recipes_v1"
+
+            completed, report = _run(root, catalog, legacy)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_fusion_catalog_identity", _issue_codes(report))
+
+    def test_schema2_identity_gate_chain_is_recomputed_and_verified(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            _materialize_schema2_identity_gate(root, catalog)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(report["summary"]["errors"], 0)
+            self.assertEqual(
+                report["forms"][0]["pet"]["identityGate"],
+                {
+                    "declared": True,
+                    "schemaVersion": 2,
+                    "status": "verified",
+                },
+            )
+
+    def test_schema2_identity_gate_detects_action_meta_hash_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            metadata_path = pet_root / "action-bundle-meta.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["evidence"]["identityBoardSha256"] = "0" * 64
+            _write_json(metadata_path, metadata)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_action_meta",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_detects_source_meta_hash_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            source_meta_path = (
+                pet_root / "source/identity-board-source-meta.json"
+            )
+            source_meta = json.loads(
+                source_meta_path.read_text(encoding="utf-8")
+            )
+            source_meta["promptSha256"] = "0" * 64
+            _write_json(source_meta_path, source_meta)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_source_meta",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_detects_pipeline_pose_hash_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            pipeline_path = (
+                pet_root / "source/identity-board-pipeline-meta.json"
+            )
+            pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+            pipeline["frames"][1]["sourceRgbaSha256"] = "0" * 64
+            _write_json(pipeline_path, pipeline)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_chain",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_detects_qc_hash_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            qc_path = pet_root / "qa/identity-key-pose-qc.json"
+            qc = json.loads(qc_path.read_text(encoding="utf-8"))
+            qc["poses"]["south"]["fileSha256"] = "0" * 64
+            _write_json(qc_path, qc)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_chain",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_detects_pose_and_board_content_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            pose_path = pet_root / "identity/west.png"
+            with Image.open(pose_path) as opened:
+                pose = opened.convert("RGBA")
+            pose.putpixel((256, 256), (21, 32, 43, 255))
+            pose.save(pose_path)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_chain",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_cannot_be_skipped_by_catalog_status_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            catalog["forms"][0]["status"] = "owner_review_pending"
+            pose_path = pet_root / "identity/west.png"
+            with Image.open(pose_path) as opened:
+                pose = opened.convert("RGBA")
+            pose.putpixel((256, 256), (21, 32, 43, 255))
+            pose.save(pose_path)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            codes = _issue_codes(report)
+            self.assertIn("identity_gate_catalog_status_mismatch", codes)
+            self.assertIn("invalid_identity_gate_chain", codes)
+            self.assertEqual(
+                report["forms"][0]["pet"]["identityGate"]["status"],
+                "failed",
+            )
 
     def test_nonrideable_form_rejects_mounted_registration(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

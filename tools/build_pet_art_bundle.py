@@ -45,6 +45,7 @@ from sprite_alpha_despill import (
 
 TOOL_NAME = "build_pet_art_bundle.py"
 SCHEMA_VERSION = 1
+REPLAY_CONTRACT_VERSION = 1
 SOURCE_FRAME_SIZE = 512
 RUNTIME_FRAME_SIZE = 256
 RESAMPLE_GUARD = 2
@@ -152,6 +153,171 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _metadata_value(
+    metadata: dict[str, object],
+    key: str,
+    expected_type: type,
+) -> object:
+    if key not in metadata:
+        raise BundleBuildError(f"pipeline metadata is missing {key}")
+    value = metadata[key]
+    if type(value) is not expected_type:
+        raise BundleBuildError(
+            f"pipeline metadata {key} must be {expected_type.__name__}"
+        )
+    return value
+
+
+def _metadata_number(
+    metadata: dict[str, object],
+    key: str,
+) -> float:
+    if key not in metadata:
+        raise BundleBuildError(f"pipeline metadata is missing {key}")
+    value = metadata[key]
+    if type(value) not in {int, float} or not math.isfinite(float(value)):
+        raise BundleBuildError(
+            f"pipeline metadata {key} must be a finite number"
+        )
+    return float(value)
+
+
+def options_from_metadata(
+    metadata: dict[str, object],
+    *,
+    input_path: Path,
+    output_dir: Path,
+    force: bool = False,
+) -> BuildOptions:
+    """Reconstruct every build option from a current pipeline manifest.
+
+    This is intentionally stricter than the CLI parser.  It is used by
+    provenance gates that must replay an existing bundle without silently
+    substituting defaults when a field is absent or has a JSON type that only
+    happens to compare equal in Python (for example ``true`` and ``1``).
+    ``input_path`` and ``output_dir`` are supplied by the caller so a replay
+    never follows untrusted output paths from metadata.
+    """
+
+    if not isinstance(metadata, dict):
+        raise BundleBuildError("pipeline metadata must be an object")
+    if _metadata_value(metadata, "schemaVersion", int) != SCHEMA_VERSION:
+        raise BundleBuildError(
+            f"pipeline metadata schemaVersion must be {SCHEMA_VERSION}"
+        )
+    if _metadata_value(metadata, "tool", str) != TOOL_NAME:
+        raise BundleBuildError(
+            f"pipeline metadata tool must be {TOOL_NAME}"
+        )
+    if (
+        _metadata_value(metadata, "replayContractVersion", int)
+        != REPLAY_CONTRACT_VERSION
+    ):
+        raise BundleBuildError(
+            "pipeline metadata replayContractVersion must be "
+            f"{REPLAY_CONTRACT_VERSION}"
+        )
+
+    slots_value = _metadata_value(metadata, "slots", list)
+    if not all(type(slot) is str for slot in slots_value):
+        raise BundleBuildError("pipeline metadata slots must contain strings")
+    outputs = _metadata_value(metadata, "outputs", dict)
+    make_gif = _metadata_value(metadata, "makeGif", bool)
+    make_contact_sheet = _metadata_value(
+        metadata,
+        "makeContactSheet",
+        bool,
+    )
+    expected_outputs = {
+        "sourceFrames": "source-frames",
+        "runtimeFrames": "runtime-frames",
+        "transparentSheet": "sheet-transparent.png",
+        "runtimeTransparentSheet": "sheet-runtime-transparent.png",
+    }
+    if make_gif:
+        expected_outputs["gif"] = "animation.gif"
+    if make_contact_sheet:
+        expected_outputs["contactSheet"] = "contact-sheet.png"
+    if outputs != expected_outputs:
+        raise BundleBuildError(
+            "pipeline metadata outputs do not match the canonical builder "
+            "mapping"
+        )
+
+    key_text = _metadata_value(metadata, "key", str)
+    try:
+        key = parse_hex_color(key_text)
+    except argparse.ArgumentTypeError as exc:
+        raise BundleBuildError(
+            "pipeline metadata key must be a six-digit hexadecimal color"
+        ) from exc
+
+    options = BuildOptions(
+        input_path=input_path,
+        output_dir=output_dir,
+        rows=int(_metadata_value(metadata, "rows", int)),
+        cols=int(_metadata_value(metadata, "cols", int)),
+        slots=tuple(slots_value),
+        row_start=int(_metadata_value(metadata, "rowStart", int)),
+        row_count=int(_metadata_value(metadata, "rowCount", int)),
+        grid_mode=str(_metadata_value(metadata, "gridMode", str)),
+        grid_search_ratio=_metadata_number(metadata, "gridSearchRatio"),
+        grid_min_gutter=int(
+            _metadata_value(metadata, "gridMinimumGutter", int)
+        ),
+        key=key,
+        transparent_distance=_metadata_number(
+            metadata,
+            "transparentDistance",
+        ),
+        opaque_distance=_metadata_number(metadata, "opaqueDistance"),
+        alpha_threshold=int(
+            _metadata_value(metadata, "alphaThreshold", int)
+        ),
+        component_mode=str(
+            _metadata_value(metadata, "componentMode", str)
+        ),
+        min_component_area=int(
+            _metadata_value(metadata, "minComponentArea", int)
+        ),
+        max_detached_component_ratio=_metadata_number(
+            metadata,
+            "maxDetachedComponentRatio",
+        ),
+        component_padding=int(
+            _metadata_value(metadata, "componentPadding", int)
+        ),
+        fit_scale=_metadata_number(metadata, "fitScale"),
+        anchor=str(_metadata_value(metadata, "anchor", str)),
+        foot_band_ratio=_metadata_number(metadata, "footBandRatio"),
+        safe_margin=int(_metadata_value(metadata, "safeMargin", int)),
+        source_edge_margin=int(
+            _metadata_value(metadata, "sourceEdgeMargin", int)
+        ),
+        max_dimension_drift=_metadata_number(
+            metadata,
+            "maxDimensionDrift",
+        ),
+        residual_magenta_distance=_metadata_number(
+            metadata,
+            "residualMagentaDistance",
+        ),
+        fringe_cleanup_alpha=int(
+            _metadata_value(metadata, "fringeCleanupAlpha", int)
+        ),
+        allow_upscale=_metadata_value(metadata, "allowUpscale", bool),
+        make_gif=make_gif,
+        make_contact_sheet=make_contact_sheet,
+        duration_ms=int(_metadata_value(metadata, "durationMs", int)),
+        contact_columns=int(
+            _metadata_value(metadata, "contactColumns", int)
+        ),
+        force=force,
+    )
+    validate_options(options)
+    return options
 
 
 def rgba_hash(image: Image.Image) -> str:
@@ -1231,6 +1397,7 @@ def write_bundle(
         metadata: dict[str, object] = {
             "schemaVersion": SCHEMA_VERSION,
             "tool": TOOL_NAME,
+            "replayContractVersion": REPLAY_CONTRACT_VERSION,
             "input": str(options.input_path),
             "inputSha256": sha256_file(options.input_path),
             "inputSize": list(input_sheet.size),
@@ -1282,6 +1449,10 @@ def write_bundle(
             "maxDimensionDrift": options.max_dimension_drift,
             "residualMagentaDistance": options.residual_magenta_distance,
             "fringeCleanupAlpha": options.fringe_cleanup_alpha,
+            "makeGif": options.make_gif,
+            "makeContactSheet": options.make_contact_sheet,
+            "durationMs": options.duration_ms,
+            "contactColumns": options.contact_columns,
             "outputs": {
                 "sourceFrames": "source-frames",
                 "runtimeFrames": "runtime-frames",
