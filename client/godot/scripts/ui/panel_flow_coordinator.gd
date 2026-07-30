@@ -67,6 +67,11 @@ const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
+const BackpackAwakenedPresenter := preload("res://scripts/ui/backpack_awakened_presenter.gd")
+const BackpackAwakenedPanelView := preload("res://scripts/ui/backpack_awakened_panel.gd")
+const BackpackAwakenedVisualSkin := preload(
+	"res://scripts/ui/backpack_awakened_visual_skin.gd"
+)
 const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
 const EquipmentEscrowClientModel := preload("res://scripts/progression/equipment_escrow_client_model.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
@@ -160,6 +165,9 @@ var backpack_discard_confirm_title_label: Label
 var backpack_discard_confirm_body_label: Label
 var backpack_discard_request: Dictionary = {}
 var backpack_discard_drop_zone: ItemDropZone
+var backpack_awakened_panel
+var backpack_awakened_selected_key: String = ""
+var backpack_awakened_selected_equipment_slot: String = ""
 var bank_active_tab_index: int = 0
 var bank_selected_slot_data: Dictionary = {}
 var bank_tab_buttons: Array[Button] = []
@@ -6196,6 +6204,9 @@ func _build_hud() -> void:
 	hud_root.add_child(player_rebirth_preview_panel)
 
 	backpack_panel = _panel_container("BackpackPanel")
+	# The awakened backpack owns its full 1280x720 frame. The legacy panel
+	# padding would enlarge that canvas to 1308x740 and push it out of view.
+	backpack_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	backpack_panel.visible = false
 	backpack_panel.z_index = 24
 	var backpack_column = VBoxContainer.new()
@@ -6203,6 +6214,35 @@ func _build_hud() -> void:
 	backpack_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	backpack_column.add_theme_constant_override("separation", 8)
 	backpack_panel.add_child(backpack_column)
+	backpack_column.visible = false
+	backpack_awakened_panel = BackpackAwakenedPanelView.new()
+	backpack_awakened_panel.name = "BackpackAwakenedPanel"
+	backpack_awakened_panel.close_requested.connect(_close_backpack_panel)
+	backpack_awakened_panel.filter_requested.connect(_on_backpack_awakened_filter_requested)
+	backpack_awakened_panel.entry_selected.connect(_on_backpack_awakened_entry_selected)
+	backpack_awakened_panel.equipment_slot_selected.connect(
+		_on_backpack_awakened_equipment_slot_selected
+	)
+	backpack_awakened_panel.equip_requested.connect(_on_backpack_awakened_equip_requested)
+	backpack_awakened_panel.use_requested.connect(_on_backpack_awakened_use_requested)
+	backpack_awakened_panel.discard_requested.connect(_on_backpack_awakened_discard_requested)
+	backpack_awakened_panel.unequip_requested.connect(_on_backpack_awakened_unequip_requested)
+	backpack_awakened_panel.unlock_requested.connect(_open_backpack_unlock_dialog)
+	backpack_awakened_panel.split_requested.connect(_on_backpack_awakened_split_requested)
+	backpack_awakened_panel.use_target_requested.connect(
+		_on_backpack_awakened_use_target_requested
+	)
+	backpack_awakened_panel.use_target_cancel_requested.connect(
+		_on_backpack_awakened_use_target_cancel_requested
+	)
+	backpack_awakened_panel.slot_dropped.connect(_on_item_slot_dropped)
+	backpack_awakened_panel.slot_context_requested.connect(
+		_on_item_slot_context_requested
+	)
+	backpack_awakened_panel.slot_drag_started.connect(_on_item_slot_drag_started)
+	backpack_awakened_panel.slot_drag_ended.connect(_on_item_slot_drag_ended)
+	backpack_awakened_panel.synthesis_requested.connect(_open_equipment_synthesis_panel)
+	backpack_panel.add_child(backpack_awakened_panel)
 
 	var backpack_header = HBoxContainer.new()
 	backpack_header.add_theme_constant_override("separation", 10)
@@ -11354,21 +11394,31 @@ func _panel_container(node_name: String) -> PanelContainer:
 
 func _build_item_stack_split_panel(parent: Control) -> void:
 	item_stack_split_panel = _panel_container("ItemStackSplitPanel")
+	item_stack_split_panel.add_theme_stylebox_override(
+		"panel",
+		BackpackAwakenedVisualSkin.detail_panel_style()
+	)
 	item_stack_split_panel.visible = false
 	item_stack_split_panel.z_index = 49
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	column.add_theme_constant_override("separation", 8)
 	item_stack_split_panel.add_child(column)
 	item_stack_split_title_label = Label.new()
 	item_stack_split_title_label.text = "选择数量"
-	item_stack_split_title_label.add_theme_font_size_override("font_size", 20)
+	BackpackAwakenedVisualSkin.apply_title(
+		item_stack_split_title_label,
+		22
+	)
 	column.add_child(item_stack_split_title_label)
 	item_stack_split_summary_label = Label.new()
 	item_stack_split_summary_label.text = ""
 	item_stack_split_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	item_stack_split_summary_label.add_theme_font_size_override("font_size", 15)
+	BackpackAwakenedVisualSkin.apply_body(
+		item_stack_split_summary_label,
+		15
+	)
 	item_stack_split_summary_label.custom_minimum_size = Vector2(0, 42)
 	column.add_child(item_stack_split_summary_label)
 	var quick_row := HBoxContainer.new()
@@ -11384,6 +11434,7 @@ func _build_item_stack_split_panel(parent: Control) -> void:
 		button.text = str(option.get("label", ""))
 		button.custom_minimum_size = Vector2(0, 38)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		BackpackAwakenedVisualSkin.apply_action_button(button)
 		var mode := str(option.get("mode", "one"))
 		button.pressed.connect(func() -> void:
 			_set_item_stack_split_quick_quantity(mode)
@@ -11398,6 +11449,20 @@ func _build_item_stack_split_panel(parent: Control) -> void:
 	item_stack_split_quantity_spinbox.custom_minimum_size = Vector2(0, 44)
 	item_stack_split_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(item_stack_split_quantity_spinbox)
+	var quantity_input := item_stack_split_quantity_spinbox.get_line_edit()
+	quantity_input.add_theme_font_override(
+		"font",
+		BackpackAwakenedVisualSkin.body_font()
+	)
+	quantity_input.add_theme_font_size_override("font_size", 16)
+	quantity_input.add_theme_color_override(
+		"font_color",
+		BackpackAwakenedVisualSkin.CREAM_TEXT
+	)
+	quantity_input.add_theme_stylebox_override(
+		"normal",
+		BackpackAwakenedVisualSkin.dark_panel_style(1.0, 6)
+	)
 	var action_row := HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 8)
 	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -11406,12 +11471,16 @@ func _build_item_stack_split_panel(parent: Control) -> void:
 	item_stack_split_confirm_button.text = "确定"
 	item_stack_split_confirm_button.custom_minimum_size = Vector2(0, 44)
 	item_stack_split_confirm_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	BackpackAwakenedVisualSkin.apply_action_button(
+		item_stack_split_confirm_button
+	)
 	item_stack_split_confirm_button.pressed.connect(_confirm_item_stack_split_request)
 	action_row.add_child(item_stack_split_confirm_button)
 	var cancel_button := Button.new()
 	cancel_button.text = "取消"
 	cancel_button.custom_minimum_size = Vector2(0, 44)
 	cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	BackpackAwakenedVisualSkin.apply_action_button(cancel_button)
 	cancel_button.pressed.connect(_close_item_stack_split_panel)
 	action_row.add_child(cancel_button)
 	parent.add_child(item_stack_split_panel)
@@ -11875,12 +11944,23 @@ func _split_backpack_stack(source_slot_index: int, quantity: int) -> void:
 	var result := BackpackModel.split_stack(_backpack_mutation_slots(), source_slot_index, quantity)
 	_finish_backpack_mutation(result, "拆分物品失败。")
 
-func _discard_backpack_stack(source_slot_index: int, quantity: int) -> void:
+func _discard_backpack_stack(
+	source_slot_index: int,
+	quantity: int,
+	equipment_instance_ids: Array[String] = []
+) -> void:
 	if _is_server_account_session():
-		var parsed = await _submit_server_profile_action("backpack_discard_item", {
+		var payload := {
 			"sourceSlotIndex": source_slot_index,
 			"quantity": quantity,
-		}, "丢弃物品失败。")
+		}
+		if not equipment_instance_ids.is_empty():
+			payload["equipmentInstanceIds"] = equipment_instance_ids.duplicate()
+		var parsed = await _submit_server_profile_action(
+			"backpack_discard_item",
+			payload,
+			"丢弃物品失败。"
+		)
 		_finish_server_backpack_action(parsed, "丢弃物品失败。")
 		return
 	if _local_profile_mutation_blocked_for_server_only("丢弃物品"):
@@ -11901,6 +11981,9 @@ func _open_backpack_discard_confirm(slot_data: Dictionary, quantity: int, screen
 		"itemId": item_id,
 		"quantity": count,
 	}
+	var equipment_instance_id := str(slot_data.get("equipmentInstanceId", "")).strip_edges()
+	if equipment_instance_id != "":
+		backpack_discard_request["equipmentInstanceIds"] = [equipment_instance_id]
 	_close_item_slot_context_panel(false)
 	_close_item_slot_detail_panel(false)
 	_close_item_stack_split_panel(false)
@@ -11934,7 +12017,16 @@ func _confirm_backpack_discard_request() -> void:
 		return
 	var request := backpack_discard_request.duplicate(true)
 	_close_backpack_discard_confirm_panel(false)
-	_discard_backpack_stack(int(request.get("sourceSlotIndex", -1)), int(request.get("quantity", 0)))
+	var instance_ids: Array[String] = []
+	for instance_id_value in request.get("equipmentInstanceIds", []):
+		var instance_id := str(instance_id_value).strip_edges()
+		if instance_id != "":
+			instance_ids.append(instance_id)
+	_discard_backpack_stack(
+		int(request.get("sourceSlotIndex", -1)),
+		int(request.get("quantity", 0)),
+		instance_ids
+	)
 
 func _begin_bank_drag_transfer_from_slots(mode: String, source_data: Dictionary, target_data: Dictionary = {}) -> void:
 	if bank_request_pending:
@@ -12037,9 +12129,26 @@ func _begin_item_stack_split_request(request: Dictionary, max_quantity: int, sum
 		item_stack_split_quantity_spinbox.set_block_signals(false)
 	if item_stack_split_panel != null:
 		var viewport_size: Vector2 = host.get_viewport_rect().size
-		var panel_size := Vector2(minf(420.0, viewport_size.x - 32.0), 238.0)
-		item_stack_split_panel.size = panel_size
-		item_stack_split_panel.position = Vector2((viewport_size.x - panel_size.x) * 0.5, (viewport_size.y - panel_size.y) * 0.5)
+		var panel_size := Vector2(
+			minf(420.0, viewport_size.x - 32.0),
+			246.0
+		)
+		var panel_position := Vector2(
+			(viewport_size.x - panel_size.x) * 0.5,
+			(viewport_size.y - panel_size.y) * 0.5
+		)
+		item_stack_split_panel.anchor_left = 0.0
+		item_stack_split_panel.anchor_top = 0.0
+		item_stack_split_panel.anchor_right = 0.0
+		item_stack_split_panel.anchor_bottom = 0.0
+		item_stack_split_panel.offset_left = panel_position.x
+		item_stack_split_panel.offset_top = panel_position.y
+		item_stack_split_panel.offset_right = (
+			panel_position.x + panel_size.x
+		)
+		item_stack_split_panel.offset_bottom = (
+			panel_position.y + panel_size.y
+		)
 		item_stack_split_panel.visible = true
 		item_stack_split_panel.move_to_front()
 
@@ -13809,6 +13918,8 @@ func _open_backpack_panel() -> void:
 	_close_item_slot_context_panel(false)
 	_close_item_slot_detail_panel(false)
 	_close_backpack_discard_confirm_panel(false)
+	backpack_awakened_selected_key = ""
+	backpack_awakened_selected_equipment_slot = ""
 	backpack_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_save_profile_after_exp_pill_starter_update()
@@ -13818,6 +13929,8 @@ func _open_backpack_panel() -> void:
 
 func _close_backpack_panel() -> void:
 	backpack_pending_use_item_id = ""
+	backpack_awakened_selected_key = ""
+	backpack_awakened_selected_equipment_slot = ""
 	if backpack_discard_drop_zone != null:
 		backpack_discard_drop_zone.visible = false
 	_close_item_slot_context_panel(false)
@@ -15039,6 +15152,7 @@ func _refresh_backpack_panel() -> void:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_backpack_currency_label()
+	_refresh_backpack_awakened_panel()
 	var slots = _backpack_slots_for_ui()
 	var visible_indices = _backpack_visible_slot_indices(slots)
 	if visible_indices.is_empty():
@@ -15143,6 +15257,308 @@ func _refresh_backpack_panel() -> void:
 				backpack_target_scroll.visible = false
 		else:
 			_refresh_backpack_target_buttons(selected_item_id)
+
+func _refresh_backpack_awakened_panel() -> void:
+	if backpack_awakened_panel == null:
+		return
+	var state := BackpackAwakenedPresenter.view_state(
+		player_profile,
+		backpack_filter,
+		backpack_awakened_selected_key
+	)
+	var backpack_slots := _backpack_slots_for_ui()
+	var used_slots := 0
+	for slot_value in backpack_slots:
+		if not (slot_value is Dictionary):
+			continue
+		var slot := slot_value as Dictionary
+		if str(slot.get("itemId", "")) != "" and int(slot.get("count", 0)) > 0:
+			used_slots += 1
+	var player_value = player_profile.get("player", {})
+	var player_data := player_value as Dictionary if player_value is Dictionary else {}
+	state["currencies"] = {
+		"stoneCoins": _profile_stone_coins_for_ui(),
+		"diamonds": _profile_diamonds_for_ui(),
+	}
+	state["playerName"] = _local_player_name()
+	state["playerLevel"] = maxi(1, int(player_data.get("level", 1)))
+	state["rebirthCount"] = _player_rebirth_for_ui()
+	state["capacityUsed"] = used_slots
+	state["capacityTotal"] = _backpack_unlocked_slot_count_for_ui()
+	state["slotLimit"] = BackpackModel.SLOT_LIMIT
+	state["closeOverlay"] = backpack_awakened_selected_key == ""
+	state["synthesisAvailable"] = true
+	state["repairAvailable"] = false
+	var decorated_rows: Array[Dictionary] = []
+	for row_value in state.get("backpackRows", []):
+		if not (row_value is Dictionary):
+			continue
+		var row := (row_value as Dictionary).duplicate(true)
+		var slot_index := int(row.get("slotIndex", -1))
+		var item_id := str(row.get("itemId", ""))
+		var is_equipment_instance := EquipmentModel.is_equipment(item_id)
+		row["context"] = "backpack"
+		row["label"] = _item_drag_label(
+			item_id,
+			maxi(1, int(row.get("count", 1)))
+		)
+		row["dragEnabled"] = (
+			item_id != ""
+			and not is_equipment_instance
+		)
+		row["dropEnabled"] = true
+		row["accepts"] = ["backpack", "shop_buy", "bank_storage"]
+		if str(row.get("kind", "")) == BackpackAwakenedPresenter.KIND_EMPTY:
+			row["canSelect"] = true
+		row["canUse"] = false
+		row["useLabel"] = "使用"
+		if (
+			not is_equipment_instance
+			and slot_index >= 0
+			and slot_index < backpack_slots.size()
+			and backpack_slots[slot_index] is Dictionary
+		):
+			var slot := backpack_slots[slot_index] as Dictionary
+			var action_state := BackpackPanelPresenter.selected_item_actions(
+				slot,
+				backpack_slots,
+				{}
+			)
+			row["canUse"] = (
+				bool(action_state.get("useButtonVisible", false))
+				and not bool(action_state.get("useButtonDisabled", true))
+			)
+			row["useLabel"] = str(action_state.get("useButtonText", "使用"))
+		decorated_rows.append(row)
+	var unlocked_count := _backpack_unlocked_slot_count_for_ui()
+	for slot_index in range(unlocked_count, BackpackModel.SLOT_LIMIT):
+		var unlock_cost := _backpack_locked_slot_cost(slot_index)
+		decorated_rows.append({
+			"kind": "locked",
+			"locked": true,
+			"slotIndex": slot_index,
+			"itemId": "",
+			"itemLabel": "扩展格",
+			"stateSummary": "%d钻石" % unlock_cost if unlock_cost > 0 else "未解锁",
+			"count": 0,
+			"canSelect": true,
+			"context": "backpack",
+			"dragEnabled": false,
+			"dropEnabled": false,
+			"accepts": [],
+		})
+	state["backpackRows"] = decorated_rows
+	state["pendingUse"] = _backpack_awakened_pending_use_state()
+	backpack_awakened_panel.apply_view_state(state)
+
+
+func _backpack_awakened_pending_use_state() -> Dictionary:
+	var item_id: String = str(backpack_pending_use_item_id).strip_edges()
+	if (
+		item_id == ""
+		or PlayerProgressModel.backpack_item_count(player_profile, item_id) <= 0
+	):
+		return {}
+	var targets: Array[Dictionary] = []
+	if BackpackModel.item_can_world_player_exp(item_id):
+		var player_value = player_profile.get("player", {})
+		var player := (
+			player_value as Dictionary
+			if player_value is Dictionary
+			else {}
+		)
+		var level := maxi(1, int(player.get("level", 1)))
+		targets.append({
+			"targetType": "player",
+			"targetId": "",
+			"label": str(player.get("name", "见习猎人")),
+			"summary": "Lv%d  经验 %d/%d" % [
+				level,
+				maxi(0, int(player.get("exp", 0))),
+				maxi(
+					1,
+					int(player.get(
+						"nextExp",
+						PlayerProgressModel.exp_to_next_level(level)
+					))
+				),
+			],
+			"disabled": level >= PlayerProgressModel.MAX_PLAYER_LEVEL,
+		})
+	for pet in PlayerProgressModel.party_pet_instances(player_profile):
+		var instance_id := str(pet.get("instanceId", "")).strip_edges()
+		if instance_id == "":
+			continue
+		var disabled := false
+		var summary := ""
+		if BackpackModel.item_can_world_pet_exp(item_id):
+			var pet_level := maxi(1, int(pet.get("level", 1)))
+			summary = "Lv%d  经验 %d/%d" % [
+				pet_level,
+				maxi(0, int(pet.get("exp", 0))),
+				maxi(
+					1,
+					int(pet.get(
+						"nextExp",
+						PlayerProgressModel.exp_to_next_level(pet_level)
+					))
+				),
+			]
+			disabled = pet_level >= PlayerProgressModel.MAX_PET_LEVEL
+		elif BackpackModel.item_can_world_mm_stone(item_id):
+			var stat_key := PetRebirthMmModel.normalized_stat_key(
+				BackpackModel.world_mm_stone_stat_for(item_id)
+			)
+			var stage := PetRebirthMmModel.helper_stage_for_pet(pet)
+			var helper := PetRebirthMmModel.normalized_helper_record(
+				pet.get("petRebirthHelper", {}),
+				stage
+			)
+			var points := PetRebirthMmModel.normalized_stone_points(
+				helper.get("stonePoints", {})
+			)
+			var current_points := int(points.get(stat_key, 0)) if stat_key != "" else 0
+			summary = "%s石 %d/%d" % [
+				PetRebirthMmModel.stat_label(stat_key),
+				current_points,
+				PetRebirthMmModel.STONE_CAPACITY,
+			]
+			disabled = (
+				stage <= 0
+				or int(pet.get("level", 1)) >= 74
+				or stat_key == ""
+				or current_points >= PetRebirthMmModel.STONE_CAPACITY
+			)
+		else:
+			var max_hp := maxi(1, int(pet.get("maxHp", 1)))
+			var hp := clampi(int(pet.get("hp", max_hp)), 0, max_hp)
+			summary = "生命 %d/%d" % [hp, max_hp]
+			disabled = (
+				not BackpackModel.item_can_world_pet_heal(item_id)
+				or (
+					hp >= max_hp
+					and not BackpackModel.world_pet_heal_allows_full_hp_use(
+						item_id
+					)
+				)
+			)
+		targets.append({
+			"targetType": "pet",
+			"targetId": instance_id,
+			"label": str(pet.get("name", "宠物")),
+			"summary": summary,
+			"disabled": disabled,
+		})
+	return {
+		"visible": true,
+		"itemId": item_id,
+		"itemLabel": BackpackModel.label_for(item_id, "物品"),
+		"summary": "请选择本次使用目标",
+		"targets": targets,
+	}
+
+
+func _on_backpack_awakened_filter_requested(filter_id: String) -> void:
+	backpack_awakened_selected_key = ""
+	_set_backpack_filter(filter_id)
+
+func _on_backpack_awakened_entry_selected(selection_key: String) -> void:
+	backpack_awakened_selected_key = selection_key
+	_refresh_backpack_awakened_panel()
+
+func _on_backpack_awakened_equipment_slot_selected(slot_id: String) -> void:
+	if EquipmentModel.slot_ids().has(slot_id):
+		backpack_awakened_selected_equipment_slot = slot_id
+		equipment_selected_slot_id = slot_id
+
+func _on_backpack_awakened_equip_requested(item_id: String, instance_id: String) -> void:
+	backpack_awakened_selected_key = ""
+	await _equip_selected_backpack_item(item_id, instance_id)
+
+func _on_backpack_awakened_use_requested(slot_index: int) -> void:
+	if slot_index < 0 or slot_index >= BackpackModel.SLOT_LIMIT:
+		return
+	backpack_selected_slot_index = slot_index
+	backpack_awakened_selected_key = ""
+	_on_backpack_use_pressed()
+
+
+func _on_backpack_awakened_split_requested(
+	slot_index: int,
+	item_id: String,
+	count: int
+) -> void:
+	var slots := _backpack_slots_for_ui()
+	if (
+		slot_index < 0
+		or slot_index >= slots.size()
+		or not (slots[slot_index] is Dictionary)
+	):
+		return
+	var slot := slots[slot_index] as Dictionary
+	if (
+		str(slot.get("itemId", "")) != item_id
+		or int(slot.get("count", 0)) != count
+		or count <= 1
+	):
+		return
+	_begin_backpack_split_stack({
+		"context": "backpack",
+		"slotIndex": slot_index,
+		"itemId": item_id,
+		"count": count,
+	})
+
+
+func _on_backpack_awakened_use_target_requested(
+	item_id: String,
+	target_type: String,
+	target_id: String
+) -> void:
+	if item_id == "" or item_id != backpack_pending_use_item_id:
+		return
+	if target_type == "player":
+		if BackpackModel.item_can_world_player_exp(item_id):
+			await _use_backpack_player_exp_item(item_id)
+		return
+	if target_type != "pet" or target_id == "":
+		return
+	await _use_backpack_item_on_pet(item_id, target_id)
+
+
+func _on_backpack_awakened_use_target_cancel_requested() -> void:
+	backpack_pending_use_item_id = ""
+	_refresh_backpack_panel()
+
+
+func _on_backpack_awakened_discard_requested(
+	slot_index: int,
+	item_id: String,
+	instance_id: String
+) -> void:
+	var slots := _backpack_slots_for_ui()
+	if slot_index < 0 or slot_index >= slots.size() or not (slots[slot_index] is Dictionary):
+		return
+	var slot := slots[slot_index] as Dictionary
+	if str(slot.get("itemId", "")) != item_id or int(slot.get("count", 0)) <= 0:
+		return
+	var discard_data := {
+		"context": "backpack",
+		"slotIndex": slot_index,
+		"itemId": item_id,
+		"count": 1 if instance_id != "" else int(slot.get("count", 0)),
+	}
+	if instance_id != "":
+		discard_data["equipmentInstanceId"] = instance_id
+	backpack_awakened_selected_key = ""
+	_open_backpack_discard_confirm(discard_data, int(discard_data.get("count", 0)))
+
+func _on_backpack_awakened_unequip_requested(slot_id: String) -> void:
+	if not EquipmentModel.slot_ids().has(slot_id):
+		return
+	equipment_selected_slot_id = slot_id
+	backpack_awakened_selected_equipment_slot = slot_id
+	await _on_equipment_unequip_pressed()
 
 func _refresh_backpack_currency_label() -> void:
 	if backpack_currency_label == null:
@@ -15276,9 +15692,38 @@ func _open_backpack_unlock_dialog(slot_index: int) -> void:
 		],
 	}
 	host._update_dialog_text()
+	_apply_backpack_awakened_unlock_dialog_skin()
 	dialog_panel.move_to_front()
 	dialog_panel.visible = true
 	host._layout_hud()
+	var viewport_size: Vector2 = host.get_viewport_rect().size
+	var panel_size := Vector2(
+		minf(520.0, viewport_size.x - 32.0),
+		minf(238.0, viewport_size.y - 32.0)
+	)
+	dialog_panel.size = panel_size
+	dialog_panel.position = (viewport_size - panel_size) * 0.5
+
+
+func _apply_backpack_awakened_unlock_dialog_skin() -> void:
+	if dialog_panel != null:
+		dialog_panel.add_theme_stylebox_override(
+			"panel",
+			BackpackAwakenedVisualSkin.detail_panel_style()
+		)
+	if dialog_name_label != null:
+		BackpackAwakenedVisualSkin.apply_title(dialog_name_label, 22)
+	if dialog_body_label != null:
+		BackpackAwakenedVisualSkin.apply_body(dialog_body_label, 16)
+	if dialog_option_button != null:
+		BackpackAwakenedVisualSkin.apply_action_button(
+			dialog_option_button
+		)
+	if dialog_close_button != null:
+		dialog_close_button.text = "取消"
+		BackpackAwakenedVisualSkin.apply_action_button(
+			dialog_close_button
+		)
 
 func _unlock_backpack_slot_from_dialog() -> void:
 	if active_dialog_interaction.is_empty():
@@ -15798,15 +16243,15 @@ func _on_backpack_use_pressed() -> void:
 func _on_backpack_equip_pressed() -> void:
 	_equip_selected_backpack_item(_selected_backpack_item_id())
 
-func _equip_selected_backpack_item(item_id: String) -> void:
+func _equip_selected_backpack_item(item_id: String, instance_id: String = "") -> void:
 	if item_id == "" or not EquipmentModel.is_equipment(item_id) or equipment_action_request_pending:
 		return
 	if _is_server_account_session():
-		await _submit_server_equipment_equip(item_id)
+		await _submit_server_equipment_equip(item_id, instance_id)
 		return
 	if _local_profile_mutation_blocked_for_server_only("装备更换"):
 		return
-	var result = PlayerProgressModel.equip_item(player_profile, item_id)
+	var result = PlayerProgressModel.equip_item(player_profile, item_id, instance_id)
 	player_profile = result.get("profile", player_profile)
 	var log_lines: Array[String] = [str(result.get("message", ""))]
 	if bool(result.get("ok", false)):
@@ -15825,10 +16270,10 @@ func _equip_selected_backpack_item(item_id: String) -> void:
 	if status_label != null:
 		host._update_hud_text()
 
-func _submit_server_equipment_equip(item_id: String) -> void:
+func _submit_server_equipment_equip(item_id: String, instance_id: String = "") -> void:
 	if item_id == "" or not EquipmentModel.is_equipment(item_id) or not _is_server_account_session():
 		return
-	var parsed = await _request_server_equipment_equip(item_id, true)
+	var parsed = await _request_server_equipment_equip(item_id, true, instance_id)
 	var log_lines: Array[String] = _string_array_values(parsed.get("logLines", []))
 	_set_world_log_message("\n".join(log_lines))
 	backpack_pending_use_item_id = ""
@@ -15837,7 +16282,11 @@ func _submit_server_equipment_equip(item_id: String) -> void:
 	if status_label != null:
 		host._update_hud_text()
 
-func _request_server_equipment_equip(item_id: String, refresh_backpack_before: bool = true) -> Dictionary:
+func _request_server_equipment_equip(
+	item_id: String,
+	refresh_backpack_before: bool = true,
+	instance_id: String = ""
+) -> Dictionary:
 	if item_id == "" or not EquipmentModel.is_equipment(item_id) or not _is_server_account_session():
 		return {"ok": false, "message": "请先登录服务器。", "logLines": ["请先登录服务器。"]}
 	equipment_action_request_pending = true
@@ -15846,7 +16295,8 @@ func _request_server_equipment_equip(item_id: String, refresh_backpack_before: b
 	var response = await host._auto_http_request_spec(ServerAuthClientModel.equipment_equip_request(
 		_server_profile_base_url(),
 		_server_profile_token(),
-		item_id
+		item_id,
+		instance_id
 	))
 	equipment_action_request_pending = false
 	if not _is_server_account_session():
@@ -16259,6 +16709,15 @@ func _show_backpack_pet_heal_popup(instance_id: String, healed_amount: int) -> v
 	_spawn_backpack_heal_popup(target_button, healed_amount)
 
 func _backpack_target_button_for_pet(instance_id: String):
+	if (
+		backpack_awakened_panel != null
+		and backpack_awakened_panel.has_method("target_button_for_pet")
+	):
+		var awakened_target = (
+			backpack_awakened_panel.target_button_for_pet(instance_id)
+		)
+		if awakened_target != null:
+			return awakened_target
 	if backpack_target_container == null:
 		return null
 	for child in backpack_target_container.get_children():

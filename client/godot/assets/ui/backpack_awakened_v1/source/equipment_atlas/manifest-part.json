@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "atlasId": "backpack_awakened_equipment_atlas_v1",
+  "runtimePath": "res://assets/ui/backpack_awakened_v1/runtime/items/equipment_atlas.png",
+  "sourcePath": "source/equipment_atlas/equipment_atlas_source.png",
+  "sha256": "96e788518cf55dcf09247771b6c9fdb898a6230449e3e28f9caf9acbd99d7789",
+  "atlasSize": {
+    "width": 1254,
+    "height": 1254
+  },
+  "grid": {
+    "columns": 6,
+    "rows": 6,
+    "cellWidth": 209,
+    "cellHeight": 209
+  },
+  "coordinateConvention": "row and column are zero-based",
+  "items": {
+    "accessory_firebud_charm": {
+      "index": 0,
+      "row": 0,
+      "column": 0
+    },
+    "accessory_wind_ring": {
+      "index": 1,
+      "row": 0,
+      "column": 1
+    },
+    "helm_leather_cap": {
+      "index": 2,
+      "row": 0,
+      "column": 2
+    },
+    "weapon_training_spear": {
+      "index": 3,
+      "row": 0,
+      "column": 3
+    },
+    "armor_moist_cloth": {
+      "index": 4,
+      "row": 0,
+      "column": 4
+    },
+    "weapon_stone_dagger": {
+      "index": 5,
+      "row": 0,
+      "column": 5
+    },
+    "gloves_hide": {
+      "index": 6,
+      "row": 1,
+      "column": 0
+    },
+    "boots_grass": {
+      "index": 7,
+      "row": 1,
+      "column": 1
+    },
+    "helm_dew_band": {
+      "index": 8,
+      "row": 1,
+      "column": 2
+    },
+    "weapon_blessed_club": {
+      "index": 9,
+      "row": 1,
+      "column": 3
+    },
+    "armor_toxin_wrap": {
+      "index": 10,
+      "row": 1,
+      "column": 4
+    },
+    "boots_mist_sandals": {
+      "index": 11,
+      "row": 1,
+      "column": 5
+    },
+    "weapon_wooden_club": {
+      "index": 12,
+      "row": 2,
+      "column": 0
+    },
+    "weapon_stone_axe": {
+      "index": 13,
+      "row": 2,
+      "column": 1
+    },
+    "weapon_bone_blade": {
+      "index": 14,
+      "row": 2,
+      "column": 2
+    },
+    "weapon_rebirth_bone_axe": {
+      "index": 15,
+      "row": 2,
+      "column": 3
+    },
+    "weapon_hardwood_club": {
+      "index": 16,
+      "row": 2,
+      "column": 4
+    },
+    "armor_hide_vest": {
+      "index": 17,
+      "row": 2,
+      "column": 5
+    },
+    "armor_stitched_hide_vest": {
+      "index": 18,
+      "row": 3,
+      "column": 0
+    },
+    "armor_grace_cloth_3": {
+      "index": 19,
+      "row": 3,
+      "column": 1
+    },
+    "accessory_moist_charm_3": {
+      "index": 20,
+      "row": 3,
+      "column": 2
+    },
+    "armor_grace_cloth_5": {
+      "index": 21,
+      "row": 3,
+      "column": 3
+    },
+    "accessory_moist_charm_5": {
+      "index": 22,
+      "row": 3,
+      "column": 4
+    },
+    "weapon_flame_trial_spear": {
+      "index": 23,
+      "row": 3,
+      "column": 5
+    },
+    "boots_gale_trial": {
+      "index": 24,
+      "row": 4,
+      "column": 0
+    },
+    "accessory_four_spirit_charm": {
+      "index": 25,
+      "row": 4,
+      "column": 1
+    },
+    "weapon_shadow_group_bow": {
+      "index": 26,
+      "row": 4,
+      "column": 2
+    },
+    "item_player_exp_pill_lv131": {
+      "index": 27,
+      "row": 4,
+      "column": 3
+    },
+    "item_exp_pill_lv1": {
+      "index": 28,
+      "row": 4,
+      "column": 4
+    },
+    "item_exp_pill_lv131": {
+      "index": 29,
+      "row": 4,
+      "column": 5
+    },
+    "item_exp_pill_lv140": {
+      "index": 30,
+      "row": 5,
+      "column": 0
+    }
+  },
+  "emptyCells": [
+    {
+      "row": 5,
+      "column": 1
+    },
+    {
+      "row": 5,
+      "column": 2
+    },
+    {
+      "row": 5,
+      "column": 3
+    },
+    {
+      "row": 5,
+      "column": 4
+    },
+    {
+      "row": 5,
+      "column": 5
+    }
+  ],
+  "provenance": {
+    "generator": "OpenAI built-in image_gen",
+    "generatedAt": "2026-07-30",
+    "commercialReferencePixelsCopied": false
+  }
+}

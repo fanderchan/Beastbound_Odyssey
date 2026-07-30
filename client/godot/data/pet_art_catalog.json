@@ -92,7 +92,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "现有沙黄色圆耳嫩芽幼兽身份锁；世界真八向与宠物双视角基础包已接入，技能、回避反击、复活和骑乘战斗仍需补全。",
-      "pet": {"root": "client/godot/assets/pets/novice_sprout_bui", "metadataPath": "client/godot/assets/pets/novice_sprout_bui/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/novice_sprout_bui/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/novice_sprout_bui/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/novice_sprout_bui/prompts/action-generation-log.md"},
+      "pet": {"root": "client/godot/assets/pets/novice_sprout_bui", "metadataPath": "client/godot/assets/pets/novice_sprout_bui/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/novice_sprout_bui/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/novice_sprout_bui/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/novice_sprout_bui/prompts/action-generation-log.md", "portraitPath": "client/godot/assets/pets/novice_sprout_bui/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/prompts/generation-contract.md"}
     },
     {
@@ -355,7 +355,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "小型仪式辅助兽：圆润双足石灵、木纹面具脸、短手与悬浮石环背架；可放大承载骑手，避免做成人类小女孩。",
-      "pet": {"root": "client/godot/assets/pets/pet_rebirth_mm_stage1", "metadataPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/prompts/identity-board-v1.txt"},
+      "pet": {"root": "client/godot/assets/pets/pet_rebirth_mm_stage1", "metadataPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/prompts/identity-board-v1.txt", "portraitPath": "client/godot/assets/pets/pet_rebirth_mm_stage1/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage1", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage1/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage1/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage1/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage1/prompts/generation-contract.md"}
     },
     {
@@ -370,7 +370,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "二阶段仪式石灵，面具角冠、双层悬浮石环和金青符纹更完整；同一身份成长而非换成另一种生物。",
-      "pet": {"root": "client/godot/assets/pets/pet_rebirth_mm_stage2", "metadataPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/prompts/identity-board-v1.txt"},
+      "pet": {"root": "client/godot/assets/pets/pet_rebirth_mm_stage2", "metadataPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/prompts/identity-board-v1.txt", "portraitPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage2", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage2/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage2/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage2/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/pet_rebirth_mm_stage2/prompts/generation-contract.md"}
     },
     {
@@ -505,7 +505,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "人物五转罕见强宠：乳白金幼兽，四元素纹以额、肩、尾四处有秩序分布，虹彩晶角和环形尾冠；必须显著珍贵而不杂乱。",
-      "pet": {"root": "client/godot/assets/pets/rebirth_starter_four_spirit_cub", "metadataPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/prompts/identity-board-v1.txt"},
+      "pet": {"root": "client/godot/assets/pets/rebirth_starter_four_spirit_cub", "metadataPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/prompts/identity-board-v1.txt", "portraitPath": "client/godot/assets/pets/rebirth_starter_four_spirit_cub/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/rebirth_starter_four_spirit_cub", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/rebirth_starter_four_spirit_cub/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/rebirth_starter_four_spirit_cub/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/rebirth_starter_four_spirit_cub/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/rebirth_starter_four_spirit_cub/prompts/generation-contract.md"}
     },
     {
@@ -535,7 +535,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "传统新手路径坐骑：橙金幼虎、圆耳、奶油口鼻、深褐条纹、宽背和大掌；比例亲和可靠，不复用芽耳布伊。",
-      "pet": {"root": "client/godot/assets/pets/novice_tiger_mount", "metadataPath": "client/godot/assets/pets/novice_tiger_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/novice_tiger_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/novice_tiger_mount/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/novice_tiger_mount/prompts/identity-board-v1.txt"},
+      "pet": {"root": "client/godot/assets/pets/novice_tiger_mount", "metadataPath": "client/godot/assets/pets/novice_tiger_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/novice_tiger_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/novice_tiger_mount/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/novice_tiger_mount/prompts/identity-board-v1.txt", "portraitPath": "client/godot/assets/pets/novice_tiger_mount/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/prompts/generation-contract.md"}
     },
     {
@@ -550,7 +550,7 @@
       "rideableTarget": true,
       "supportedCharacterIds": ["novice_hunter_v1"],
       "identityBrief": "大型厚重四足雷龙坐骑，宽胸、短颈龙首、后掠雷角、蓝灰鳞片和金色导电背板；体型威严但保持清楚可爱眼神。",
-      "pet": {"root": "client/godot/assets/pets/thunder_dragon_mount", "metadataPath": "client/godot/assets/pets/thunder_dragon_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/thunder_dragon_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/thunder_dragon_mount/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/thunder_dragon_mount/prompts/identity-board-v1.txt"},
+      "pet": {"root": "client/godot/assets/pets/thunder_dragon_mount", "metadataPath": "client/godot/assets/pets/thunder_dragon_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/thunder_dragon_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/thunder_dragon_mount/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/thunder_dragon_mount/prompts/identity-board-v1.txt", "portraitPath": "client/godot/assets/pets/thunder_dragon_mount/portrait/default.png"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/prompts/generation-contract.md"}
     },
     {

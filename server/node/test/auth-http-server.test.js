@@ -36,6 +36,9 @@ const {
 const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 const {encodeMailInboxCursor} = require("../src/auth/mail-inbox-pagination");
+const PET_PAID_RESET_FORM_POLICY_COUNT = require(
+  "../../../client/godot/data/balance/pet_paid_reset_policy.json",
+).formPolicies.length;
 
 const strictPetEncounterCatalog = loadPetEncounterCatalog();
 
@@ -659,7 +662,7 @@ test("HTTP GM paid pet reset config publishes exact catalog and revision-safe ov
   const initial = await fetchJson(`${base}/gm/pets/paid-reset/config`, {headers});
   assert.equal(initial.ok, true);
   assert.equal(initial.config.revision, 0);
-  assert.equal(initial.resolvedForms.length, 34);
+  assert.equal(initial.resolvedForms.length, PET_PAID_RESET_FORM_POLICY_COUNT);
 
   const updated = await fetchJson(`${base}/gm/pets/paid-reset/config`, {
     method: "PUT",

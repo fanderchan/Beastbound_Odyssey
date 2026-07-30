@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "atlasId": "backpack_awakened_material_atlas_v1",
+  "runtimePath": "res://assets/ui/backpack_awakened_v1/runtime/items/material_atlas.png",
+  "sourcePath": "source/material_atlas/material_atlas_source.png",
+  "sha256": "b95d36b70bcb188596e1118f092a98f4fbf12e7d3609d43b16903ed0d522239c",
+  "atlasSize": {
+    "width": 1000,
+    "height": 800
+  },
+  "grid": {
+    "columns": 5,
+    "rows": 4,
+    "cellWidth": 200,
+    "cellHeight": 200
+  },
+  "coordinateConvention": "row and column are zero-based",
+  "items": [
+    {
+      "itemId": "pet_evolution_resonance_core",
+      "index": 0,
+      "row": 0,
+      "column": 0
+    },
+    {
+      "itemId": "pet_evolution_wuli_crystal_scale",
+      "index": 1,
+      "row": 0,
+      "column": 1
+    },
+    {
+      "itemId": "pet_evolution_driftfox_moon_plume",
+      "index": 2,
+      "row": 0,
+      "column": 2
+    },
+    {
+      "itemId": "equip_frag_wood_basic",
+      "index": 3,
+      "row": 0,
+      "column": 3
+    },
+    {
+      "itemId": "equip_frag_hide_basic",
+      "index": 4,
+      "row": 0,
+      "column": 4
+    },
+    {
+      "itemId": "ring_earth_trial",
+      "index": 5,
+      "row": 1,
+      "column": 0
+    },
+    {
+      "itemId": "ring_water_trial",
+      "index": 6,
+      "row": 1,
+      "column": 1
+    },
+    {
+      "itemId": "ring_fire_trial",
+      "index": 7,
+      "row": 1,
+      "column": 2
+    },
+    {
+      "itemId": "ring_wind_trial",
+      "index": 8,
+      "row": 1,
+      "column": 3
+    },
+    {
+      "itemId": "quest_welfare_token",
+      "index": 9,
+      "row": 1,
+      "column": 4
+    },
+    {
+      "itemId": "quest_field_note",
+      "index": 10,
+      "row": 2,
+      "column": 0
+    }
+  ],
+  "emptyCells": [
+    {
+      "index": 11,
+      "row": 2,
+      "column": 1
+    },
+    {
+      "index": 12,
+      "row": 2,
+      "column": 2
+    },
+    {
+      "index": 13,
+      "row": 2,
+      "column": 3
+    },
+    {
+      "index": 14,
+      "row": 2,
+      "column": 4
+    },
+    {
+      "index": 15,
+      "row": 3,
+      "column": 0
+    },
+    {
+      "index": 16,
+      "row": 3,
+      "column": 1
+    },
+    {
+      "index": 17,
+      "row": 3,
+      "column": 2
+    },
+    {
+      "index": 18,
+      "row": 3,
+      "column": 3
+    },
+    {
+      "index": 19,
+      "row": 3,
+      "column": 4
+    }
+  ],
+  "excludedItemClasses": [
+    "pet_egg",
+    "pet_certificate",
+    "equipment"
+  ],
+  "provenance": {
+    "generator": "OpenAI built-in image_gen",
+    "generatedAt": "2026-07-31",
+    "commercialReferencePixelsCopied": false
+  }
+}

@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `pet_rebirth_mm_stage2`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_cilb4EArcx9Xs7h0ejFwO6Sw`
+- generation attestation: `client/godot/assets/pets/pet_rebirth_mm_stage2/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/pet_rebirth_mm_stage2/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `8ce464ae6e244f6975b1f7c99c46721752da1594990f16b6cdc4362176c05833`
+- exact ImageGen request prompt: `client/godot/assets/pets/pet_rebirth_mm_stage2/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `a5928c24a416ec9907a6ba957af98c5f893236077bbb90bddc1eddaa9593419b`
+- selected prompt documentation: `.run/pet-portrait-generation/pet_rebirth_mm_stage2/prompt-v5.txt`
+- selected prompt documentation SHA-256: `ebaf7aa4a79226f568f7f43122442037300ea4ef77e2c2feea3f828be5f18bef`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `0`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `53d28a1c6608819f8ca6f1548580ae82ae707cdbb366038b237f0ca812637328`
+- raw lossless source SHA-256: `d9e5a955eea5498e1b79daa2cdd31294a29457636815978a68740330fd239e7a`
+- transparent 1024 master SHA-256: `97c1a0751f0f88b7aab9ceaebe04c766fa4952c6b4241411cd46d28773cf6a1d`
+- shared 512 runtime SHA-256: `6df3724f2d8b80f0488cbd09b6f49f4bc49a8d6b4cda814e8e875db874923ec6`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

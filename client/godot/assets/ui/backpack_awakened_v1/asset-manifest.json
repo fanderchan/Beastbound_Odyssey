@@ -1,0 +1,376 @@
+{
+  "schemaVersion": 2,
+  "assetPackId": "backpack_awakened_v1",
+  "generatedAt": "2026-07-31",
+  "target": {
+    "client": "Beastbound Odyssey Godot PC",
+    "canvasWidth": 1280,
+    "canvasHeight": 720
+  },
+  "ownership": "original_beastbound_generation_and_packaged_project_owned_components",
+  "reviewState": "owner_review_pending",
+  "referencePolicy": {
+    "stoneageAwakeningScreenshots": "layout_hierarchy_and_material_language_only",
+    "commercialReferencePixelsCopied": false,
+    "runtimeImportsIncluded": false
+  },
+  "sourceRecords": [
+    {
+      "assetGroup": "backdrop",
+      "sourceType": "original_imagegen",
+      "generator": "OpenAI built-in image_gen",
+      "promptRecord": {
+        "path": "source/generation-prompts.md",
+        "sha256": "7810ab8531f186ff9510861d09f380b0d757bd62cf6fffda9fb9f13018740763"
+      },
+      "processing": "Generated output proportionally normalized to the exact 1280x720 runtime canvas; no commercial raster was used as an image input.",
+      "sourceRetention": "The durable prompt and generated runtime derivative are retained in this package; the generator output location is recorded in the prompt ledger."
+    },
+    {
+      "assetGroup": "common_and_slots",
+      "sourceType": "project_owned_packaged_component",
+      "packagedFiles": [
+        {
+          "path": "runtime/common/button_normal.png",
+          "sha256": "886965ff781104d22b8b22ece3ec00830d446e024c020ce1c1cfbf898fb5a623"
+        },
+        {
+          "path": "runtime/common/button_selected.png",
+          "sha256": "cea96cf14464ece2320e1f0f5b632d693a15dd6cd5938d95060169f7d37a7129"
+        },
+        {
+          "path": "runtime/common/close_icon.png",
+          "sha256": "1e329c1dcaadf2faa9beb9fae5932848a730989745f4c9a323290104ff03cd02"
+        },
+        {
+          "path": "runtime/common/tab_normal.png",
+          "sha256": "9cc63beae3fe7f0cac92074446af05f3db7f278ec8c3e47ad482cd3f7ad90823"
+        },
+        {
+          "path": "runtime/common/tab_selected.png",
+          "sha256": "03e6582cdc6930d450d76add306f47840c5d6c702a8fee260c8699399faa36b7"
+        },
+        {
+          "path": "runtime/slots/item_normal.png",
+          "sha256": "44f8eb08af0badfa54082a022daf3cc676dcf9a2ecf183738ea8debcd0eaed21"
+        },
+        {
+          "path": "runtime/slots/item_selected.png",
+          "sha256": "9c6aa3b10a6cf92c844d28d7d2f41394d3e5e0c312856c9ad75fdd3305189a7c"
+        }
+      ],
+      "processing": "Original project-owned Beastbound UI components are retained directly in this self-contained package. No external asset pack is required to reproduce or ship the backpack.",
+      "replacementPath": "Create and approve an original Beastbound replacement, place the final component at the same packaged runtime path, update this record and the runtime asset hash, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "assetGroup": "character_identity",
+      "sourceType": "project_owned_copy",
+      "originAssetPack": "novice_hunter_identity",
+      "originFiles": [
+        {
+          "path": "../../characters/novice_hunter/identity/processed/identity-1.png",
+          "copiedAs": "runtime/character/novice_hunter_inventory.png",
+          "width": 512,
+          "height": 512,
+          "mode": "RGBA",
+          "sha256": "540ad5a6048367d14ce29d0ef1b609906802c96a77c0e5666d7a3900b0a5e0da"
+        }
+      ],
+      "processing": "Byte-identical package-local copy of the approved Beastbound novice-hunter identity art, retained so exported PCK builds include the backpack character surface without relying on an external runtime lookup."
+    },
+    {
+      "assetGroup": "equipment_atlas",
+      "sourceType": "original_imagegen",
+      "generator": "OpenAI built-in image_gen",
+      "sourceFile": {
+        "path": "source/equipment_atlas/equipment_atlas_source.png",
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGB",
+        "sha256": "96e788518cf55dcf09247771b6c9fdb898a6230449e3e28f9caf9acbd99d7789"
+      },
+      "promptRecord": {
+        "path": "source/equipment_atlas/prompt.md",
+        "sha256": "1624668ed4fb0b74753343bf6000c221d0046eb489fb1a27239a926a1ba22a1d"
+      },
+      "mappingRecord": {
+        "path": "source/equipment_atlas/manifest-part.json",
+        "sha256": "1f2a598560389fd0433a0cf1a39228487d96cf9d0d01f99192603da248d99076"
+      },
+      "processing": "Source image retained byte-identically as the runtime atlas."
+    },
+    {
+      "assetGroup": "consumable_atlas",
+      "sourceType": "original_imagegen",
+      "generator": "OpenAI built-in image_gen",
+      "sourceFile": {
+        "path": "source/consumable_atlas/consumable_atlas_raw.png",
+        "width": 1163,
+        "height": 1353,
+        "mode": "RGB",
+        "sha256": "a37218836154673bc0fe40548e44abc3939d5db0378c9881d2c932e382a525a4"
+      },
+      "promptRecord": {
+        "path": "source/consumable_atlas/prompt.md",
+        "sha256": "c13281afa2ab3bebeb45bbe638a71c2672a1e158cc0330d9c8214c701658442e"
+      },
+      "mappingRecord": {
+        "path": "source/consumable_atlas/manifest-part.json",
+        "sha256": "58eab9e46aad173e75e108daeb17c854db71ef5cee21f98ddb8e03b453f01744"
+      },
+      "processing": "Proportionally normalized from 1163x1353 to 1158x1351 so the 6x7 runtime grid has exact 193x193 cells; item order was preserved."
+    },
+    {
+      "assetGroup": "material_atlas",
+      "sourceType": "original_imagegen",
+      "generator": "OpenAI built-in image_gen",
+      "sourceFile": {
+        "path": "source/material_atlas/material_atlas_source.png",
+        "width": 1000,
+        "height": 800,
+        "mode": "RGB",
+        "sha256": "b95d36b70bcb188596e1118f092a98f4fbf12e7d3609d43b16903ed0d522239c"
+      },
+      "promptRecord": {
+        "path": "source/material_atlas/prompt.md",
+        "sha256": "e523c8ae87896a780152c9336ffe8d60ca359eb6ac585223b6ecb8b94d446121"
+      },
+      "mappingRecord": {
+        "path": "source/material_atlas/manifest-part.json",
+        "sha256": "f322ccc69ab982c32834f42280fd89fb053101be445778f9da1c374a7d0f611a"
+      },
+      "processing": "Selected revised image retained byte-identically as the runtime atlas after the documented no-letter quest-token correction."
+    },
+    {
+      "assetGroup": "currency_atlas",
+      "sourceType": "original_imagegen",
+      "generator": "OpenAI built-in image_gen",
+      "sourceFile": {
+        "path": "source/currency_atlas/source.png",
+        "width": 1774,
+        "height": 887,
+        "mode": "RGB",
+        "sha256": "aa65aecc3d07ae5d234f7a3108b94d3697d6336276a1ac005c80b40df69929a5"
+      },
+      "promptRecord": {
+        "path": "source/currency_atlas/prompt.md",
+        "sha256": "9c4355b8fcc259874ad82f11906ab595c9f71a2563f6a30688a798e1b7d9fdf2"
+      },
+      "mappingRecord": {
+        "path": "source/currency_atlas/manifest-part.json",
+        "sha256": "385011706b98b0635fecc0308deef94c79fef76c2676bc1204b653e7c37caf12"
+      },
+      "processing": "Flat chroma key removed with soft matte, despill, and one-pixel edge contraction, then normalized to an exact 1024x512 transparent atlas."
+    },
+    {
+      "assetGroup": "pet_item_atlas",
+      "sourceType": "original_imagegen_using_project_owned_identity_references",
+      "generator": "OpenAI built-in image_gen",
+      "sourceFile": {
+        "path": "source/pet_item_atlas/pet_item_atlas_chromakey_source.png",
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGB",
+        "sha256": "d99e2dcf84d665ebad3bbf3b6b7836a24560e2bfdcef5eb983d723c8f06db8a8"
+      },
+      "promptRecord": {
+        "path": "source/pet_item_atlas/prompt.md",
+        "sha256": "139263cf6a84a735bc6f0beba7defb294d0cbe5100ae1c6a0b3ce1c2c77360dc"
+      },
+      "mappingRecord": {
+        "path": "source/pet_item_atlas/manifest-part.json",
+        "sha256": "4702354b7c8329144c3a408c12b1891473b9af020aca69f00364b5aeb1b56514"
+      },
+      "processing": "Project-owned formal pet portraits supplied identity traits only; newly drawn eggs and certificates were chroma-keyed to alpha with soft matte and despill.",
+      "commercialReferencePixelsCopied": false
+    }
+  ],
+  "runtimeAssets": [
+    {
+      "path": "runtime/backpack_backdrop_1280x720.png",
+      "assetGroup": "backdrop",
+      "width": 1280,
+      "height": 720,
+      "mode": "RGB",
+      "sha256": "4e81d1365d39e9d406e59e5709062a71d8ea09ed0cecdbb79330133e0e72c776",
+      "runtimePurpose": "Full-screen carved-wood and volcanic-stone background plate for the 1280x720 backpack/equipment panel.",
+      "replacementPath": "Regenerate from source/generation-prompts.md, normalize to 1280x720, replace this file, update its SHA256, then rerun backpack visual QA and owner-review capture."
+    },
+    {
+      "path": "runtime/character/novice_hunter_inventory.png",
+      "assetGroup": "character_identity",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "540ad5a6048367d14ce29d0ef1b609906802c96a77c0e5666d7a3900b0a5e0da",
+      "runtimePurpose": "Package-local novice-hunter character showcase rendered in the backpack equipment pane; the copy guarantees inclusion in exported PCK builds.",
+      "replacementPath": "Approve the replacement in assets/characters/novice_hunter/identity first, copy the accepted processed identity image byte-identically to this runtime path, update both source and runtime hashes, then run export/PCK and backpack visual QA."
+    },
+    {
+      "path": "runtime/common/button_normal.png",
+      "assetGroup": "common",
+      "width": 430,
+      "height": 160,
+      "mode": "RGBA",
+      "sha256": "886965ff781104d22b8b22ece3ec00830d446e024c020ce1c1cfbf898fb5a623",
+      "runtimePurpose": "Normal-state carved button surface for backpack actions.",
+      "replacementPath": "Replace with an approved original Beastbound component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/common/button_selected.png",
+      "assetGroup": "common",
+      "width": 430,
+      "height": 160,
+      "mode": "RGBA",
+      "sha256": "cea96cf14464ece2320e1f0f5b632d693a15dd6cd5938d95060169f7d37a7129",
+      "runtimePurpose": "Selected or emphasized carved button surface for backpack actions.",
+      "replacementPath": "Replace with an approved original Beastbound component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/common/close_icon.png",
+      "assetGroup": "common",
+      "width": 321,
+      "height": 326,
+      "mode": "RGBA",
+      "sha256": "1e329c1dcaadf2faa9beb9fae5932848a730989745f4c9a323290104ff03cd02",
+      "runtimePurpose": "Top-right close affordance for the blocking backpack panel.",
+      "replacementPath": "Replace with an approved original Beastbound component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/common/tab_normal.png",
+      "assetGroup": "common",
+      "width": 560,
+      "height": 170,
+      "mode": "RGBA",
+      "sha256": "9cc63beae3fe7f0cac92074446af05f3db7f278ec8c3e47ad482cd3f7ad90823",
+      "runtimePurpose": "Unselected category-tab surface for the inventory filter row.",
+      "replacementPath": "Replace with an approved original Beastbound component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/common/tab_selected.png",
+      "assetGroup": "common",
+      "width": 560,
+      "height": 170,
+      "mode": "RGBA",
+      "sha256": "03e6582cdc6930d450d76add306f47840c5d6c702a8fee260c8699399faa36b7",
+      "runtimePurpose": "Selected category-tab surface for the active inventory filter.",
+      "replacementPath": "Replace with an approved original Beastbound component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/common/currency_atlas.png",
+      "assetGroup": "currency_atlas",
+      "width": 1024,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "e84c19cfb98bd700234ef639dd85c44c1c0b38633b1ce2ecb12eb67971853228",
+      "grid": {
+        "coordinateBase": 0,
+        "columns": 2,
+        "rows": 1,
+        "cellWidth": 512,
+        "cellHeight": 512,
+        "occupiedCells": 2,
+        "reservedEmptyCells": 0
+      },
+      "runtimePurpose": "Header icons for stone coins and diamonds, mapped left-to-right by source/currency_atlas/manifest-part.json.",
+      "replacementPath": "Regenerate or revise under source/currency_atlas/, rebuild the transparent 2x1 runtime atlas without changing semantic order, update mapping and hashes, then run icon-catalog and visual QA."
+    },
+    {
+      "path": "runtime/slots/item_normal.png",
+      "assetGroup": "slots",
+      "width": 300,
+      "height": 290,
+      "mode": "RGBA",
+      "sha256": "44f8eb08af0badfa54082a022daf3cc676dcf9a2ecf183738ea8debcd0eaed21",
+      "runtimePurpose": "Normal inventory-card and equipment-slot frame.",
+      "replacementPath": "Replace with an approved original Beastbound slot component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/slots/item_selected.png",
+      "assetGroup": "slots",
+      "width": 300,
+      "height": 290,
+      "mode": "RGBA",
+      "sha256": "9c6aa3b10a6cf92c844d28d7d2f41394d3e5e0c312856c9ad75fdd3305189a7c",
+      "runtimePurpose": "Selected inventory-card and equipment-slot frame.",
+      "replacementPath": "Replace with an approved original Beastbound slot component at this packaged path, update the source/runtime hash records, then rerun manifest, visual, export, and owner-review checks."
+    },
+    {
+      "path": "runtime/items/equipment_atlas.png",
+      "assetGroup": "equipment_atlas",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "sha256": "96e788518cf55dcf09247771b6c9fdb898a6230449e3e28f9caf9acbd99d7789",
+      "grid": {
+        "coordinateBase": 0,
+        "columns": 6,
+        "rows": 6,
+        "cellWidth": 209,
+        "cellHeight": 209,
+        "occupiedCells": 31,
+        "reservedEmptyCells": 5
+      },
+      "runtimePurpose": "Equipment and experience-pill icons resolved by stable item ID for equipment slots, inventory cards, details, and comparison overlays.",
+      "replacementPath": "Revise source/equipment_atlas/, preserve the stable item-ID mapping or migrate it explicitly, rebuild this 6x6 atlas, update source/equipment_atlas/manifest-part.json and all hashes, then run exact-instance and visual QA."
+    },
+    {
+      "path": "runtime/items/consumable_atlas.png",
+      "assetGroup": "consumable_atlas",
+      "width": 1158,
+      "height": 1351,
+      "mode": "RGB",
+      "sha256": "815d9cc6ed3d7a8431d75f30150450b497fcf838085d91eec68c15b21dde1383",
+      "grid": {
+        "coordinateBase": 0,
+        "columns": 6,
+        "rows": 7,
+        "cellWidth": 193,
+        "cellHeight": 193,
+        "mappedCells": 37,
+        "locallyRenderedCells": 32,
+        "externallyProvidedCells": 5
+      },
+      "runtimePurpose": "Consumable, capture, encounter, quest, ration, pet-salve, and MM growth-stone icons resolved by stable item ID.",
+      "replacementPath": "Revise source/consumable_atlas/, normalize to exact 193x193 cells, preserve row-major semantics and externally provided experience-pill reservations, update mapping and hashes, then run icon-catalog and visual QA."
+    },
+    {
+      "path": "runtime/items/material_atlas.png",
+      "assetGroup": "material_atlas",
+      "width": 1000,
+      "height": 800,
+      "mode": "RGB",
+      "sha256": "b95d36b70bcb188596e1118f092a98f4fbf12e7d3609d43b16903ed0d522239c",
+      "grid": {
+        "coordinateBase": 0,
+        "columns": 5,
+        "rows": 4,
+        "cellWidth": 200,
+        "cellHeight": 200,
+        "occupiedCells": 11,
+        "reservedEmptyCells": 9
+      },
+      "runtimePurpose": "Evolution materials, crafting fragments, elemental trial rings, and quest-item icons resolved by stable item ID.",
+      "replacementPath": "Revise source/material_atlas/, preserve the stable mapping and empty-cell contract, rebuild this 5x4 atlas, update mapping and hashes, then run icon-catalog and visual QA."
+    },
+    {
+      "path": "runtime/items/pet_item_atlas.png",
+      "assetGroup": "pet_item_atlas",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "sha256": "0a536f9aef789333b28b0084fc378374769cf4128511ed618f2bc9bb4dd314fe",
+      "grid": {
+        "coordinateBase": 0,
+        "columns": 3,
+        "rows": 3,
+        "cellWidth": 418,
+        "cellHeight": 418,
+        "occupiedCells": 8,
+        "reservedEmptyCells": 1
+      },
+      "runtimePurpose": "Fallback item art for pet eggs, taming certificates, and riding certificates when a formal shared pet portrait is not the selected consumer surface.",
+      "replacementPath": "Revise source/pet_item_atlas/ using only approved project-owned identity references, rebuild transparent 3x3 art with cell 9 empty, update mapping and hashes, then run portrait-consumer, icon-catalog, and visual QA."
+    }
+  ]
+}

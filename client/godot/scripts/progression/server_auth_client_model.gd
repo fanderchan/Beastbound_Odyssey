@@ -703,14 +703,18 @@ static func trade_cancel_request(base_url: String, session_token: String, trade_
 	}
 
 
-static func equipment_equip_request(base_url: String, session_token: String, item_id: String) -> Dictionary:
+static func equipment_equip_request(base_url: String, session_token: String, item_id: String, instance_id: String = "") -> Dictionary:
+	var payload := {
+		"itemId": item_id,
+	}
+	var normalized_instance_id := instance_id.strip_edges()
+	if normalized_instance_id != "":
+		payload["equipmentInstanceId"] = normalized_instance_id
 	return _durable_mutation_request({
 		"url": "%s/equipment/equip" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
-		"body": JSON.stringify({
-			"itemId": item_id,
-		}),
+		"body": JSON.stringify(payload),
 	})
 
 

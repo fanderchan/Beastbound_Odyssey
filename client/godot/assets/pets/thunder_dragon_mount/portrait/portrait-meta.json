@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "thunder_dragon_mount",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/thunder_dragon_mount"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_bjdbiqU4izLtiDzC2I8zyX6j",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/thunder_dragon_mount/raw.png",
+      "sha256": "e8809f20f5659cd5fa4a157f2490da53dc600f67e00998ed0a14f52f50af1f53",
+      "rgbaSha256": "0a41788cc97fcc59379f91fa8a9d45baf59faabf19ee7ad64e41e7a84667a458",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/generation-attestation.json",
+      "sha256": "eeb42f80c377dc1bdae8c428a9109f13e563852f003c193b0d67ef65a6a344ce",
+      "schemaVersion": 3,
+      "generationId": "call_bjdbiqU4izLtiDzC2I8zyX6j"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "86d78ec2185f305ce6b7d05e39baa2bf4311418b74c19816dfc402ca408fea4e",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 216,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/thunder_dragon_mount/identity/front_3quarter_sw.png",
+    "sha256": "86d78ec2185f305ce6b7d05e39baa2bf4311418b74c19816dfc402ca408fea4e",
+    "rgbaSha256": "0994abcc6440aa868efa9d4429623af98e49d49b99ae2f5326e21461b9156ad7",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/thunder_dragon_mount/prompts/portrait-v1.txt",
+    "sha256": "506864657eb0ebb31e50a1b2a5c71812eca34be1c58b7f3d61843c493961dfa6",
+    "sourceSha256": "506864657eb0ebb31e50a1b2a5c71812eca34be1c58b7f3d61843c493961dfa6",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/thunder_dragon_mount/prompt.txt",
+    "selectionDocumentationSha256": "84a30cd37c4204bc73a4070d64e03eb19d90f93db0fe845bd9ebcda473376aba",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/thunder_dragon_mount/portrait/source-and-ownership.md",
+    "sha256": "9846e469bf56427e218a65f9c4daabf820dbbd105ecd5add857e9809a3994fbd"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F015ED",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        10.198,
+        9.644,
+        12.083,
+        7.071
+      ],
+      "candidatePixels": 1109466,
+      "eligiblePixels": 1992,
+      "transparentPixels": 1107474,
+      "partialAlphaPixels": 1981,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 1821,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "c59dc68eb0f49d975eb454cf96f91c65272dbf78f696c227417251b05864b8c8",
+        "afterRgbaSha256": "97f33fdaaebe3b7a674efb43e8d8385583b9374e18bb9352dd1732869ce8aaf3",
+        "helperMetrics": {
+          "edgePixelCount": 8873,
+          "strongMagentaEdgePixelsBefore": 1821,
+          "strongMagentaEdgePixelsAfter": 82,
+          "strongMagentaEdgeRatioAfter": 0.009242,
+          "despilledPixels": 1821,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 216,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-original-generated.png",
+      "sha256": "e8809f20f5659cd5fa4a157f2490da53dc600f67e00998ed0a14f52f50af1f53",
+      "rgbaSha256": "0a41788cc97fcc59379f91fa8a9d45baf59faabf19ee7ad64e41e7a84667a458",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "cac7377a46ab3de0606093df8fc36dc716f8cff83e87f5278935cf753cc80ab8",
+      "rgbaSha256": "0a41788cc97fcc59379f91fa8a9d45baf59faabf19ee7ad64e41e7a84667a458",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-master-1024.png",
+      "sha256": "097e8779854ac42499a592983c04caf0691b64a1b298b819b6045e51ecbd848c",
+      "rgbaSha256": "e24b09cf03303dddc0cb650297137fff0662eeb90ce25d8fcebfb4dc615f2f8e",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/portrait/default.png",
+      "sha256": "e539c4f48cda86f5bc3cae3b6ec1a41cf01155cb60d51604bb267ac236cefd3d",
+      "rgbaSha256": "99dfac8f283bc6399870a3046f0f673f58e7ca380c4ca640f6cda4764ccd0a35",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "80a4911c70773c13eb2c829dea80b92c70a77ad4aa1ce7c9c63315e0adcd7f27",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 1992
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/source/portrait/headshot-alpha-mask.png",
+      "sha256": "137b24c3cccde8ae0a3bc59ff25de3b715c19b2da5fc92c128a96aab474ce46c",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 465042
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.29662,
+      "transparentCoverage": 0.70338,
+      "visiblePixelCount": 311029,
+      "visibleBbox": [
+        180,
+        158,
+        880,
+        866
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 180,
+        "top": 158,
+        "right": 144,
+        "bottom": 158
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.298206,
+      "transparentCoverage": 0.701794,
+      "visiblePixelCount": 78173,
+      "visibleBbox": [
+        90,
+        79,
+        440,
+        433
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 90,
+        "top": 79,
+        "right": 72,
+        "bottom": 79
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/thunder_dragon_mount/qa/portrait/contact-sheet.png",
+      "sha256": "5fe86d530db301c8862f4b6d591d5b84a19a8abd8361c5a1d68e484496745392",
+      "rgbaSha256": "65a90414b16b8a2e99ccf5769230aefd8072cdba1c21a399cc3599955c360c00",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

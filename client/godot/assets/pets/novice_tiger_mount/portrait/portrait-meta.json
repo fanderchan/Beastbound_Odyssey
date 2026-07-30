@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "novice_tiger_mount",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "releaseGate": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/novice_tiger_mount"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_Lxrw2LkPu7ge8chVN9OcWMGG",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/novice_tiger_mount/raw.png",
+      "sha256": "fa1668710f35897a2560f3cf55096c455129b4b0bd59da4b2dc9b4237d8099ba",
+      "rgbaSha256": "d1aa3379ec709c935158e01d726c9e26171c02d935161273b6d334a29afa34dd",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/generation-attestation.json",
+      "sha256": "26ad6e47abf750c3b7ad16cc44cf406f0dbd6aa8f68fb6e5a3c57e6152885fef",
+      "schemaVersion": 3,
+      "generationId": "call_Lxrw2LkPu7ge8chVN9OcWMGG"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/novice_tiger_mount/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "07c7a90bc4d921b8b50ccfc0559f0194b78b67e927027076d0d1c9ba925fec65",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 275,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/novice_tiger_mount/identity/front_3quarter_sw.png",
+    "sha256": "07c7a90bc4d921b8b50ccfc0559f0194b78b67e927027076d0d1c9ba925fec65",
+    "rgbaSha256": "405d0f1c4ef5f5825d846ad558298325e5f5d72b63f0137ed01f83c3176b60c7",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/novice_tiger_mount/prompts/portrait-v1.txt",
+    "sha256": "a316f3a9bf29b8925191b67f00be4b869cbb6de8547341d12c5c4ba2c6b8855a",
+    "sourceSha256": "a316f3a9bf29b8925191b67f00be4b869cbb6de8547341d12c5c4ba2c6b8855a",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/novice_tiger_mount/prompt.txt",
+    "selectionDocumentationSha256": "73c868e5b697b5fad457d92e04a882dcab54490ce8ab182247f64c649e478c93",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/novice_tiger_mount/portrait/source-and-ownership.md",
+    "sha256": "8b5f26623bc535d1cf8cbbc710079d9cdee060136601957c948e91551474b848"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#14F115",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        1.414,
+        4.123,
+        1.732,
+        3.162
+      ],
+      "candidatePixels": 1133837,
+      "eligiblePixels": 2114,
+      "transparentPixels": 1131723,
+      "partialAlphaPixels": 2113,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "b21b2dd895d735a541b644c4d02cd12954b2845bc1294972cc1dd9a4ff27a095",
+        "afterRgbaSha256": "b21b2dd895d735a541b644c4d02cd12954b2845bc1294972cc1dd9a4ff27a095",
+        "helperMetrics": {
+          "edgePixelCount": 7746,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 275,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-original-generated.png",
+      "sha256": "fa1668710f35897a2560f3cf55096c455129b4b0bd59da4b2dc9b4237d8099ba",
+      "rgbaSha256": "d1aa3379ec709c935158e01d726c9e26171c02d935161273b6d334a29afa34dd",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "6c6268b700ab4a6209964d9df835cb1709619f97d9d36c1ffa0808e8ede3ed76",
+      "rgbaSha256": "d1aa3379ec709c935158e01d726c9e26171c02d935161273b6d334a29afa34dd",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-master-1024.png",
+      "sha256": "889716c86705e8e0b255a2dc9d5211f043661bcb7ff217bf9379bec35156904c",
+      "rgbaSha256": "f4dcc179e64c4e3f0c4b21748a7b7983e124bf9dbd4cfce77a943cb469fce720",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/portrait/default.png",
+      "sha256": "756cad92e6118940391580a609a1bfb7caa15e3fc9c8c71d53a99a429b0d3916",
+      "rgbaSha256": "be6dd4bf3c6f5e57680b20f2c5902e93720d35b2df15962374ad52898b5a9180",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "edf2b0b16ff18455dad2cb5072bb67a263eb2cd1a5fdf4c831d9220970a170c6",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2114
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-alpha-mask.png",
+      "sha256": "ab1a5828625b7937c5df84d3c779af7e6d8bc8a16e30809b82e8c58caf5f8c13",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 440793
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.281074,
+      "transparentCoverage": 0.718926,
+      "visiblePixelCount": 294727,
+      "visibleBbox": [
+        231,
+        164,
+        829,
+        817
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 231,
+        "top": 164,
+        "right": 195,
+        "bottom": 207
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.282402,
+      "transparentCoverage": 0.717598,
+      "visiblePixelCount": 74030,
+      "visibleBbox": [
+        115,
+        82,
+        415,
+        409
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 115,
+        "top": 82,
+        "right": 97,
+        "bottom": 103
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/novice_tiger_mount/qa/portrait/contact-sheet.png",
+      "sha256": "cc8cd29f7d16942cd023a3004b65ab860424b5dc5433975e740be05d0cc5e950",
+      "rgbaSha256": "47e35d79381378f48dc58a88b39909aeef85072f77f58935b6e9ed1e7655dd9b",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

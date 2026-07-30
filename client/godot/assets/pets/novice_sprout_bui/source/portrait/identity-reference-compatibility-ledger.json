@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_reference_compatibility_v1",
+  "evidenceScope": "current_canonical_identity_snapshot_only",
+  "formId": "bui_novice_sprout_earth5_wind5",
+  "petRoot": "client/godot/assets/pets/novice_sprout_bui",
+  "reference": {
+    "role": "front_3quarter_sw",
+    "path": "identity/front_3quarter_sw.png",
+    "format": "PNG",
+    "mode": "RGBA",
+    "pixelSize": [
+      512,
+      512
+    ],
+    "fileSha256": "cd594922ce2ba05fa1f893522195daaad722326326ce76d475d1845ecb70add4",
+    "canonicalRgbaSha256": "a40106fbbd289377f85cae145f16489b51381698e809318690031a8ee0b5dc10"
+  },
+  "authorityBindings": {
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "catalogFormIdentitySliceSha256": "bc8ec7fb9b834e4a80a36a839a8bcff7d1eac4b2de7de848eec495ff5416ea50",
+    "bundleMetadataPath": "action-bundle-meta.json",
+    "bundleMetadataSha256": "f77fb79d2d24a6f85a57f23c5a65875b4511b90b1e3254c0da16ebe5edeb6ae1",
+    "metadataBindingMode": "legacy_metadata_view_pose",
+    "identityLock": {
+      "path": "identity/identity-lock.md",
+      "fileSha256": "044eb10bd8f5b9f3e425b41ca93de411396d7d749125c043e76fb289facf0401"
+    },
+    "ownership": {
+      "path": "identity/source-and-ownership.md",
+      "fileSha256": "ad79d386e7171206102eb046054cc7e18c29660b6b2c6c673d9a87655dd87d0a"
+    },
+    "prompt": {
+      "path": "prompts/action-generation-log.md",
+      "fileSha256": "93138011d1fc8209caf7809935977b6e7166a5b1fdc97c215f1372aa0e9a2b69"
+    },
+    "pipelineMetadata": {
+      "path": "identity/identity-board-pipeline-meta.json",
+      "fileSha256": "7867b8d20781a47b6a86de897aa71553d7798ce210d6c48574b0e5dafbf13108"
+    }
+  },
+  "claims": {
+    "currentReferencePixelsFrozen": true,
+    "historicalPipelineReferenceHashRecorded": false,
+    "historicalPipelineReplayVerified": false,
+    "ownerApprovalGrantedByLedger": false
+  }
+}

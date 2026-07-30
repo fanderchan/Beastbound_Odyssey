@@ -2314,7 +2314,7 @@ static func can_equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	}
 
 
-static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
+static func equip_item(profile: Dictionary, item_id: String, instance_id: String = "") -> Dictionary:
 	var normalized := normalize_profile(profile)
 	var item_label := EquipmentModel.label_for(item_id, BackpackModel.label_for(item_id))
 	if not EquipmentModel.is_equipment(item_id):
@@ -2346,8 +2346,33 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	var slots := equipment_slots(normalized)
 	var instances := equipment_instances(normalized)
 	var slot_instance_ids := equipment_slot_instance_ids(normalized)
+	var previous_item_id := str(slots.get(slot_id, ""))
+	var previous_instance_id := str(slot_instance_ids.get(slot_id, ""))
+	var requested_instance_id := instance_id.strip_edges()
+	if previous_item_id == item_id and (requested_instance_id == "" or requested_instance_id == previous_instance_id):
+		return {
+			"ok": false,
+			"profile": normalized,
+			"message": "%s 已经装备。" % item_label,
+		}
 	var backpack_instance_ids := _equipment_instance_ids_for_location(instances, "backpack", item_id)
-	var backpack_instance_id := backpack_instance_ids[0] if not backpack_instance_ids.is_empty() else ""
+	var backpack_instance_id := ""
+	if requested_instance_id != "":
+		var requested_record = instances.get(requested_instance_id, {})
+		if not (
+			requested_record is Dictionary
+			and str((requested_record as Dictionary).get("itemId", "")) == item_id
+			and str((requested_record as Dictionary).get("location", "")) == "backpack"
+			and backpack_instance_ids.has(requested_instance_id)
+		):
+			return {
+				"ok": false,
+				"profile": normalized,
+				"message": "选择的装备实例不在背包中。",
+			}
+		backpack_instance_id = requested_instance_id
+	elif not backpack_instance_ids.is_empty():
+		backpack_instance_id = backpack_instance_ids[0]
 	if backpack_instance_id == "":
 		var created := _create_equipment_instance_record(
 			instances,
@@ -2360,14 +2385,6 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 		instances = created.get("instances", instances)
 		backpack_instance_id = str(created.get("instanceId", ""))
 		normalized[NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY] = int(created.get("nextSerial", int(normalized.get(NEXT_EQUIPMENT_INSTANCE_SERIAL_KEY, 1))))
-	var previous_item_id := str(slots.get(slot_id, ""))
-	var previous_instance_id := str(slot_instance_ids.get(slot_id, ""))
-	if previous_item_id == item_id:
-		return {
-			"ok": false,
-			"profile": normalized,
-			"message": "%s 已经装备。" % item_label,
-		}
 	if slot_id == EquipmentModel.SLOT_EXP_PILL and previous_item_id != "" and _exp_pill_charge_has_progress(slots, normalized.get(EQUIPMENT_EXP_PILL_CHARGE_KEY, {})):
 		return {
 			"ok": false,
@@ -2433,7 +2450,9 @@ static func equip_item(profile: Dictionary, item_id: String) -> Dictionary:
 	normalized[EQUIPMENT_SLOTS_VERSION_KEY] = EQUIPMENT_SLOTS_VERSION
 	normalized = normalize_profile(normalized)
 	var message := "装备%s。" % item_label
-	if previous_item_id != "" and previous_item_id != item_id:
+	if previous_item_id == item_id and previous_instance_id != "":
+		message = "更换%s。" % item_label
+	elif previous_item_id != "":
 		message = "装备%s，换下%s。" % [item_label, EquipmentModel.label_for(previous_item_id, BackpackModel.label_for(previous_item_id))]
 	return {
 		"ok": true,

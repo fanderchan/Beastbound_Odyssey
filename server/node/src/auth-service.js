@@ -9029,7 +9029,12 @@ function equipItemToProfile(profile, itemId, options = {}) {
 
   const slots = equipmentSlotsFromProfile(profile);
   const previousItemId = String(slots[slotId] || "").trim();
-  if (previousItemId === normalizedItemId) {
+  const currentInstanceId = String(objectOrEmpty(profile.equipmentSlotInstanceIds)[slotId] || "").trim();
+  const requestedInstanceId = String(options.instanceId || "").trim();
+  if (
+    previousItemId === normalizedItemId
+    && (!requestedInstanceId || requestedInstanceId === currentInstanceId)
+  ) {
     return {ok: false, code: "equipment_already_equipped", message: `${itemLabel} 已经装备。`};
   }
   if (slotId === "exp_pill" && previousItemId && equipmentExpPillChargeHasProgress(slots, profile.equipmentExpPillCharge)) {
@@ -9122,9 +9127,13 @@ function equipItemToProfile(profile, itemId, options = {}) {
   profile.equipmentSlotsVersion = EQUIPMENT_SLOTS_VERSION;
   synchronizeProfileEquipmentStats(profile);
 
-  const message = previousItemId && previousItemId !== normalizedItemId
-    ? `装备${itemLabel}，换下${equipmentItemLabel(previousItemId)}。`
-    : `装备${itemLabel}。`;
+  const message = previousItemId === normalizedItemId && previousInstanceId
+    ? `更换${itemLabel}。`
+    : (
+      previousItemId
+        ? `装备${itemLabel}，换下${equipmentItemLabel(previousItemId)}。`
+        : `装备${itemLabel}。`
+    );
   return {
     ok: true,
     message,

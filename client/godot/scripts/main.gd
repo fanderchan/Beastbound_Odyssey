@@ -106,6 +106,9 @@ const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd
 const MountedActionAssetCheck := preload("res://scripts/qa/mounted_action_asset_check.gd")
 const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_check.gd")
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
+const BackpackAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/backpack_awakened_owner_review_capture.gd"
+)
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
 const PetBattleReviewLabCheck := preload("res://scripts/qa/pet_battle_review_lab_check.gd")
@@ -1034,6 +1037,7 @@ var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
+var backpack_awakened_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1959,6 +1963,8 @@ func _ready() -> void:
 		call_deferred("_run_equipment_compare_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
+	elif backpack_awakened_owner_review_capture:
+		call_deferred("_run_backpack_awakened_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2196,6 +2202,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized.begins_with("--map-perf-probe-map=")
 		or normalized == MapVisualReviewCapture.CAPTURE_FLAG
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
+		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2800,6 +2807,8 @@ func _apply_preview_window_args() -> void:
 			equipment_compare_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
+		elif arg == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG:
+			backpack_awakened_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -4032,6 +4041,10 @@ func _run_pet_management_preview() -> void:
 	pet_selected_instance_id = "pet_bui_speed"
 	_open_pet_panel()
 	_select_pet_instance("pet_bui_speed")
+
+
+func _run_backpack_awakened_owner_review_capture() -> void:
+	await BackpackAwakenedOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:

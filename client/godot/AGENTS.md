@@ -38,6 +38,7 @@ These rules apply under `client/godot/` together with the repository root `AGENT
 ## UI And Input
 
 - Build and accept the 1280x720 PC window first. Keep future mobile compatibility at the contract level; portrait and touch-only behavior are non-blocking unless explicitly requested.
+- Before starting a new player-facing UI or a major UI restyle, remind the project owner to provide one or more reference screenshots when none are attached. Treat supplied references as layout, hierarchy, material, and interaction direction; keep Beastbound art and data contracts original.
 - Chinese player-facing labels must be concise and game-like. Keep QA instructions, raw flags, traces, and smoke results out of normal HUD/panels.
 - Register new blocking/world-menu panels with `PanelRegistry`; do not add parallel hard-coded panel arrays to `_is_ui_point` or `_world_menu_is_open`.
 - Main interactions must work with left click and explicit buttons. Preserve Phase201 right-click boundaries: world/player facing, item auxiliary menu, and battle target details only; right click must not move or submit commands.

@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `novice_tiger_mount`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_Lxrw2LkPu7ge8chVN9OcWMGG`
+- generation attestation: `client/godot/assets/pets/novice_tiger_mount/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/novice_tiger_mount/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `07c7a90bc4d921b8b50ccfc0559f0194b78b67e927027076d0d1c9ba925fec65`
+- exact ImageGen request prompt: `client/godot/assets/pets/novice_tiger_mount/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `a316f3a9bf29b8925191b67f00be4b869cbb6de8547341d12c5c4ba2c6b8855a`
+- selected prompt documentation: `.run/pet-portrait-generation/novice_tiger_mount/prompt.txt`
+- selected prompt documentation SHA-256: `73c868e5b697b5fad457d92e04a882dcab54490ce8ab182247f64c649e478c93`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `0`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `fa1668710f35897a2560f3cf55096c455129b4b0bd59da4b2dc9b4237d8099ba`
+- raw lossless source SHA-256: `6c6268b700ab4a6209964d9df835cb1709619f97d9d36c1ffa0808e8ede3ed76`
+- transparent 1024 master SHA-256: `889716c86705e8e0b255a2dc9d5211f043661bcb7ff217bf9379bec35156904c`
+- shared 512 runtime SHA-256: `756cad92e6118940391580a609a1bfb7caa15e3fc9c8c71d53a99a429b0d3916`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval
