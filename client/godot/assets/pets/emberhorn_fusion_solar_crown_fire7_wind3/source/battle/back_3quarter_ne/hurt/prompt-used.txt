@@ -1,0 +1,15 @@
+Use case: stylized-concept
+Create a production sprite sheet on one flat chroma canvas. The sheet geometry is mandatory: EXACTLY 4 COLUMNS and EXACTLY 3 ROWS, twelve equal invisible cells, exactly one creature in each cell, EXACTLY 12 CREATURES TOTAL. Do not create 6 columns, 2 rows, 3 rows of 6, extra poses, or repeated inset figures.
+
+Input image: Image 1 is the frozen identity board for 曜冠角兽 / Solar Crown Emberhorn. Preserve this exact creature.
+
+Row-major slot contract:
+- cells 1-6 (row 1 columns 1-4, then row 2 columns 1-2): six sequential HURT/FLINCH frames in front_3quarter_sw view, facing lower-left toward viewer.
+- cells 7-12 (row 2 columns 3-4, then row 3 columns 1-4): the same six hurt semantics independently authored in back_3quarter_ne view, facing upper-right away from viewer.
+For each six-frame sequence: 1 normal ready; 2 hit recognition with ears back; 3 head and shoulders recoil; 4 deepest grounded flinch with one forehoof briefly unweighted; 5 regains footing; 6 guarded ready. This is a normal grounded hit reaction, never launch, knockaway, down, defeat, or death.
+
+Identity lock in every cell: mature stocky four-legged creature; exactly one segmented black-gold forehead horn with amber tip; orange-red forequarters, cream muzzle/chest/belly, purple-black body and four complete cloven-hoof legs; double crown mane with gold tips and restrained teal slivers; fixed gold shoulder labyrinth, three hip flame marks, ankle bands and one leaf-armored tail. No saddle.
+
+Style: polished original hand-painted clean-HD 2.5D Chinese pet MMORPG battle sprite art matching Image 1. Consistent scale and camera. One full creature centered per equal cell, all anatomy inside, at least 8% empty padding, no overlap, no copy-paste or mirroring.
+
+Entire background and every gap: perfectly flat uniform exact #FF00FF. No visible grid lines, borders, floor, shadows, gradients, textures, VFX, impact burst, blood, debris, target, attacker, projectile, text, labels, numbers, watermark, rider, harness, extra/missing anatomy, or #FF00FF inside creature.

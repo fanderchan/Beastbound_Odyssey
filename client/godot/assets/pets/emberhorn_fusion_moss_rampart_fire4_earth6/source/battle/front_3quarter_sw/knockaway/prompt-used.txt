@@ -1,0 +1,7 @@
+Create one production-ready 4 columns × 4 rows animation sprite sheet for the approved Beastbound Odyssey fusion pet “苔垒角兽 / Moss Rampart Emberhorn”, matching the attached identity board exactly. Preserve the compact low quadruped, burnt-orange fur, cream muzzle/chest, broad dark feet, large dark horn with amber veins, short ears/tail, and heavy layered stone-and-moss carapace. Keep anatomy, shell plate layout, face, palette and painterly 2.5D game-sprite style consistent.
+
+ACTION: KNOCKAWAY / LAUNCHED REACTION, 8 frames per battle view. The creature is the victim: begin braced, an unseen force lifts the entire heavy body backward, all four feet clearly leave the ground in middle frames, the stone shell rotates with the airborne arc, then it lands hard and regains a low unstable stance. It must be unmistakably airborne and distinct from grounded stagger, dodge, hurt and down. No attacker, weapon, projectile, blood, impact source or detached effects.
+
+GRID CONTRACT: exactly 4 columns × 4 rows, 16 equal cells. Rows 1–2 contain the complete 8-frame front_3quarter_sw knockaway. Rows 3–4 contain the complete 8-frame back_3quarter_ne knockaway with the same timing, clearly showing back/shell/rear flank. Exactly one complete creature per cell, consistent scale, generous gutters; airborne poses stay fully inside cells and never clip.
+
+Perfectly flat solid chroma magenta #FF00FF background only. No gradient, borders, grid lines, labels, text, arrows, UI, scenery or shadows outside the creature. High-resolution clean keyframes for alpha extraction.

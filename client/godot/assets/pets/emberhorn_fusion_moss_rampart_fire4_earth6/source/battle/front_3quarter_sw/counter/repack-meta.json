@@ -1,0 +1,466 @@
+{
+  "schemaVersion": 1,
+  "input": "raw-sheet-lossless.png",
+  "output": "pipeline-input-lossless.png",
+  "rows": 4,
+  "cols": 4,
+  "key": "#FF00FF",
+  "sharedScale": 0.8477083333333334,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        49,
+        102,
+        331,
+        312
+      ],
+      "sourceArea": 34732,
+      "outputSize": [
+        244,
+        183
+      ],
+      "pastePosition": [
+        34,
+        105
+      ],
+      "cellMargins": [
+        34,
+        105,
+        35,
+        25
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        347,
+        126,
+        624,
+        312
+      ],
+      "sourceArea": 30528,
+      "outputSize": [
+        240,
+        163
+      ],
+      "pastePosition": [
+        349,
+        125
+      ],
+      "cellMargins": [
+        36,
+        125,
+        37,
+        25
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        665,
+        149,
+        907,
+        310
+      ],
+      "sourceArea": 24182,
+      "outputSize": [
+        210,
+        142
+      ],
+      "pastePosition": [
+        677,
+        146
+      ],
+      "cellMargins": [
+        51,
+        146,
+        52,
+        25
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        0,
+        3
+      ],
+      "sourceBbox": [
+        954,
+        142,
+        1226,
+        310
+      ],
+      "sourceArea": 28634,
+      "outputSize": [
+        236,
+        148
+      ],
+      "pastePosition": [
+        977,
+        140
+      ],
+      "cellMargins": [
+        38,
+        140,
+        39,
+        25
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        32,
+        419,
+        298,
+        612
+      ],
+      "sourceArea": 30892,
+      "outputSize": [
+        231,
+        169
+      ],
+      "pastePosition": [
+        41,
+        432
+      ],
+      "cellMargins": [
+        41,
+        119,
+        41,
+        25
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        350,
+        421,
+        607,
+        614
+      ],
+      "sourceArea": 28896,
+      "outputSize": [
+        223,
+        169
+      ],
+      "pastePosition": [
+        358,
+        432
+      ],
+      "cellMargins": [
+        45,
+        119,
+        45,
+        25
+      ]
+    },
+    {
+      "index": 7,
+      "grid": [
+        1,
+        2
+      ],
+      "sourceBbox": [
+        673,
+        418,
+        919,
+        614
+      ],
+      "sourceArea": 29703,
+      "outputSize": [
+        214,
+        171
+      ],
+      "pastePosition": [
+        675,
+        430
+      ],
+      "cellMargins": [
+        49,
+        117,
+        50,
+        25
+      ]
+    },
+    {
+      "index": 8,
+      "grid": [
+        1,
+        3
+      ],
+      "sourceBbox": [
+        978,
+        417,
+        1216,
+        617
+      ],
+      "sourceArea": 29204,
+      "outputSize": [
+        207,
+        175
+      ],
+      "pastePosition": [
+        992,
+        426
+      ],
+      "cellMargins": [
+        53,
+        113,
+        53,
+        25
+      ]
+    },
+    {
+      "index": 9,
+      "grid": [
+        2,
+        0
+      ],
+      "sourceBbox": [
+        31,
+        694,
+        269,
+        915
+      ],
+      "sourceArea": 27777,
+      "outputSize": [
+        207,
+        192
+      ],
+      "pastePosition": [
+        53,
+        722
+      ],
+      "cellMargins": [
+        53,
+        96,
+        53,
+        25
+      ]
+    },
+    {
+      "index": 10,
+      "grid": [
+        2,
+        1
+      ],
+      "sourceBbox": [
+        331,
+        739,
+        581,
+        914
+      ],
+      "sourceArea": 25819,
+      "outputSize": [
+        217,
+        153
+      ],
+      "pastePosition": [
+        361,
+        761
+      ],
+      "cellMargins": [
+        48,
+        135,
+        48,
+        25
+      ]
+    },
+    {
+      "index": 11,
+      "grid": [
+        2,
+        2
+      ],
+      "sourceBbox": [
+        645,
+        745,
+        899,
+        906
+      ],
+      "sourceArea": 24297,
+      "outputSize": [
+        220,
+        142
+      ],
+      "pastePosition": [
+        672,
+        772
+      ],
+      "cellMargins": [
+        46,
+        146,
+        47,
+        25
+      ]
+    },
+    {
+      "index": 12,
+      "grid": [
+        2,
+        3
+      ],
+      "sourceBbox": [
+        947,
+        729,
+        1224,
+        911
+      ],
+      "sourceArea": 29453,
+      "outputSize": [
+        240,
+        159
+      ],
+      "pastePosition": [
+        975,
+        755
+      ],
+      "cellMargins": [
+        36,
+        129,
+        37,
+        25
+      ]
+    },
+    {
+      "index": 13,
+      "grid": [
+        3,
+        0
+      ],
+      "sourceBbox": [
+        59,
+        992,
+        304,
+        1194
+      ],
+      "sourceArea": 28512,
+      "outputSize": [
+        213,
+        176
+      ],
+      "pastePosition": [
+        50,
+        1051
+      ],
+      "cellMargins": [
+        50,
+        112,
+        50,
+        25
+      ]
+    },
+    {
+      "index": 14,
+      "grid": [
+        3,
+        1
+      ],
+      "sourceBbox": [
+        368,
+        1000,
+        619,
+        1192
+      ],
+      "sourceArea": 27616,
+      "outputSize": [
+        218,
+        168
+      ],
+      "pastePosition": [
+        360,
+        1059
+      ],
+      "cellMargins": [
+        47,
+        120,
+        48,
+        25
+      ]
+    },
+    {
+      "index": 15,
+      "grid": [
+        3,
+        2
+      ],
+      "sourceBbox": [
+        686,
+        995,
+        931,
+        1192
+      ],
+      "sourceArea": 27570,
+      "outputSize": [
+        213,
+        172
+      ],
+      "pastePosition": [
+        676,
+        1055
+      ],
+      "cellMargins": [
+        50,
+        116,
+        50,
+        25
+      ]
+    },
+    {
+      "index": 16,
+      "grid": [
+        3,
+        3
+      ],
+      "sourceBbox": [
+        985,
+        994,
+        1228,
+        1194
+      ],
+      "sourceArea": 27944,
+      "outputSize": [
+        211,
+        175
+      ],
+      "pastePosition": [
+        990,
+        1052
+      ],
+      "cellMargins": [
+        51,
+        113,
+        51,
+        25
+      ]
+    }
+  ],
+  "tool": "repack_chroma_sprite_grid.py",
+  "inputSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+  "inputDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+  "outputSha256": "840eed9c200fd22cd9494ccc46c9d7ef43f1438b578e07dbd805c758b8650f15",
+  "outputDecodedRgbaSha256": "32e42d5bab81d81e9b369f13b0de2efbf09ff96a0e0c5ad44eb9fe6f6ac637a9"
+}

@@ -1,0 +1,1003 @@
+{
+  "schemaVersion": 1,
+  "archiveMode": "full",
+  "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+  "kind": "pet",
+  "characterId": null,
+  "generator": "OpenAI built-in image generation",
+  "sourceOrigin": "approved identity lock plus exact archived prompts; untouched generated sheets are safely repacked before deterministic splitting",
+  "ownership": "project-owned original generated artwork",
+  "replacementPath": "regenerate from the tracked identity lock and exact prompt, then replay repack_chroma_sprite_grid.py and build_pet_art_bundle.py",
+  "fullSourceValidationRequiredBeforeInstall": true,
+  "repositoryPolicy": "Every validated 512px source frame, lossless raw sheet, prompt, pipeline record, QC record, and derived runtime frame is tracked in the repository.",
+  "actions": {
+    "front_3quarter_sw": {
+      "idle": {
+        "originalGeneratedSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+        "originalGeneratedDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+        "rawArchiveSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+        "rawDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+        "promptSha256": "f311f8972a80d8d56049cc0c1c86f396989879a323302c940b828849a39ee2c5",
+        "pipelineSha256": "9221f1fa925fe55bde8fa45410510705a4cf89ab0712816a3190985960296e0f",
+        "qcSha256": "34bb86d8e8aa6f4919972cc346281c2502f1378f1a0062af04cfb3c8f0de27ad",
+        "sourceFrameRgbaSha256": [
+          "7b5b5ae2834650c94209981024125270c2f59a774c0a64bd6519db5ff77051e7",
+          "3dcd8c7baed63756fdfba4133e0557edba8489139892a3046db23eb4c123b519",
+          "fc2d44f1f68f3e89f328690b6816498b416d507f428a1874648058f024ce9964",
+          "a56ac73d2112bc96b1bff7516b8c445c82a5840822ade4532dee72c7c7f5c0f7",
+          "036d6cc04c30f115ee853236ef8836721e26dcec3ecea7026dffc7dab9e8d1fb",
+          "8844d6688461619d877c68ca8d68fd32dc64b1cd35908b77556394fc5efb27b9"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "3c257ea7520048e6188082e83ee50d0464741f575550a8e6e7e2afd6e49b5aa7",
+          "cb874a6925dc57562a2ec0d0388338c5bb171d030e607dc57bca290dcf7125e5",
+          "314dcd1aa1a5779f9b8a162a6c49a1626ba9f0267c4209862350db81c42f617d",
+          "55f6c0e8aad18506887217d88f94419d4264b0466334ae6dd9a7ebaa95dd08fb",
+          "4f2f7df5e363a1ca4a3696677d3cf51feb55526411017f2248116fbaad922315",
+          "a020366ea569142bce641a996897a1bf97bb2120af78186c011feb9e6a02a0e8"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+          "inputDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+          "outputArchiveSha256": "275650d4043831f75f9eaf4b29e8bdab0890976461d8d2f835faca7b457f840e",
+          "outputDecodedRgbaSha256": "117d0ea34fca897b808d0d7097150204a152c6f54e1f83856ddc7cf1294d765d",
+          "metadataSha256": "cecaed77eef9bcf49bf14c86f9de40c5d9bfbd84690c892cec51b6249503cd43",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "walk": {
+        "originalGeneratedSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+        "originalGeneratedDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+        "rawArchiveSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+        "rawDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+        "promptSha256": "7dd10d6dee535c62546efc0aa530150cbb29d33be81f3265e091234232a5b144",
+        "pipelineSha256": "a759f92dc4c3c9ef2c4b6a44eabe321fc789404ba9a3af1e26b7b39e1d7c173a",
+        "qcSha256": "f9a3fb3847bcbeddc512838c581377482f70d1fb0d10f59923127c5ae5ee30e0",
+        "sourceFrameRgbaSha256": [
+          "77686705f0f53c2b48211a0f2b43f460d1b7a2fefc4f9189ddfabe06ddc7f7c1",
+          "ec592931344f0ed2b972ab2fba38347361f4432c3af8905dd58f38dc699c8495",
+          "199b4b1fd654876d9a8259bbe06d444350b2c0b1812e8365217ac46a4dec5711",
+          "5a7b65f3ba2a1de0643c4f465c6776a5146762953087f067014c400f9b186e28",
+          "d519ea9666b464687a065f5b33778cbc0fb677bc946910a4ed8d5e4803b4db58",
+          "48364d6b8cc515de084580da162ae9e414b07bf25a18a2a0c83b1ddededf915a",
+          "ace893ac62914998e10c54e29bae3294de5e0612d9f473429519cc4df9477bb4",
+          "602c6ed4f7cd974365d4502eef358261504056b93667b6ee6bcae6723e724cf4"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "017c70fc4a65404d697cb9db038a50275a8821c4c0185a9fd5361c89dde6f1a9",
+          "8856abf646d4e8dcca4e44398b650dfd580268aac0d623ecc58ad168697343a2",
+          "d4e09c26bf371677de4c0ff13f9d3d17ab235e58b290199e63f5774506228023",
+          "140f07d00deb315b701b4cce68886e4441810696ca4256cc492574db77f4a8fa",
+          "d951193b8ff79e299f6512c53dac2e5370bcf47109a7e7437c3a2c8d52b3754f",
+          "afcc2ea2c6e67e961cc2b2e3e86791bb4e33d3066db30a9e96bb9c1583444046",
+          "40c06373d15e721b5d5e58d6dbe3f91745de5248e5ab0e33b49851f8eea490f3",
+          "0a030c60de5c70008ff3d8539e2f29cd333baa68061027146aef801f05bff0af"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+          "inputDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+          "outputArchiveSha256": "588b4319bc07c9a301c48a0f9a7da325e1c46a8c42553d1f0c7ecb1883985bce",
+          "outputDecodedRgbaSha256": "e6aa1c1c1a11b054c635ee926afa4aac1df95cd501e1d182a06640feab20cc61",
+          "metadataSha256": "820df4a7d4b1a0babd590c2203e1e1276bc77fb4e656d7262f29a5e336c1fb00",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "attack": {
+        "originalGeneratedSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+        "originalGeneratedDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+        "rawArchiveSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+        "rawDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+        "promptSha256": "629575859e18d6514dcf72029d5615cbc696d29f9c1642b124b2104ee8124f18",
+        "pipelineSha256": "cee4925836114503ae6b6c69dbe55e9317a43ef08837cc99d59a489c50703dcc",
+        "qcSha256": "2a6162e2d93c8ecee9d2723296392cd4084f585829f71388fab9a862e49ea32d",
+        "sourceFrameRgbaSha256": [
+          "1c43a27ac3df4cae78a9262c3a104b6a230c0b41620e5c5b4e1afe59a7c78e33",
+          "f7ea86a25c38e69fa2153bbf575cddbcbf9d3b11d1c1c703be3f1e3c228a94dd",
+          "fcda64c6ce776101a615fec4e9a31d2cec46028cfb4d87b0f3f1d560c81e4713",
+          "eaf6755a9e41d6d76031870e57356183e25194adbcd2ce8e02b54a32f4645c0e",
+          "34ed45dc18075e4f2b190fe6958a381d763dfc4d410d2983c01dd61ea00cf8b3",
+          "b7ea9ab9dc133042dac2c15f0095b74f2e6f9dc5e2f1171420317928f4de14bb",
+          "45f8f5043a0ff341c04a2421c456e41ced622321ef1a0a6c495fc144b13a2c4f",
+          "c46e7b5390653a6bd48b80d15fc069fb6317baef3203a555bdcb345a2eea2044"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "9d536da9edd3c4e29ffc7b384b2274adeb6210884adb2f5dcac94156804c8f6b",
+          "987bd0e051962db1b3831325b14098c710ce2cdd9017cb97e0938ae32d022e13",
+          "7922742f82ae27edf4268b1bd906303765ad8c7a2d77494ded0c14030777914d",
+          "38bf5ebda7bced025c0d41374c0e6fc47492a0f5331931ad8e17fc83a5ab75ac",
+          "86e11f5bdcc3cb9915c705f6bdc31a1132590f991283ec39f360028150ec3b09",
+          "b8ccfcbf3892c072b5dbd244f2a8f23d073c193ecd9cbadb5dd7f0deb6ecca8a",
+          "19798ea7e10c57e8be05dd7713a232ea02e2c0217de6b72df987e1fd62395d46",
+          "4228592a7158c01e4cb4ad654c36a6ce663242610baa042f2a8906c0b735e580"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+          "inputDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+          "outputArchiveSha256": "eee606c8d3a29b6a1a017f9e7c5713c0cf53f08d7a92f67b3d77251bcd14910a",
+          "outputDecodedRgbaSha256": "735f66bcf4613922ff19acd7eee98366293c485f143b4108498280647c0e0538",
+          "metadataSha256": "654c1d8c88d2f619b1568520659fb20a6519b768bcdbcfe36b4d114af5fcea1f",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "skill": {
+        "originalGeneratedSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+        "originalGeneratedDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+        "rawArchiveSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+        "rawDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+        "promptSha256": "8e7f4561415ac1a8a35dca55d54cefbe8e6b50997aa5834b794c9bf50a54a402",
+        "pipelineSha256": "f0b3835233f9b76b458933c20cf90ed7fcb402581f72fd0c74a033630abb05a1",
+        "qcSha256": "9334b95cfe9368ddada0fd116206195f53686b5e7db5f28e708910974e7aeb37",
+        "sourceFrameRgbaSha256": [
+          "c1e883c7ea54d2f81bdce6140e00f8aceca7ce0f9a7dd56e09fff4c7a4d68cc6",
+          "8671ca31dbf4f007ad7f4a94cd01c9572c92aa9f6fd42911e14d68cd97df15c1",
+          "8ab192095afc0cd8564b714eee35ac90377cb670000d9ae8153455c34c861a54",
+          "19be4246f446c65d82753aee6c163391395cbb1eec9ed3cfda19a7982324b05a",
+          "cd8f552c752a7ebeeab562f9fe581dd7b779bab31c20d4411bb539a65a71c8ca",
+          "64adc135f82d9b584582101c76983e16ec939aee7ac39994a82e1e67948fa1bb",
+          "b3636f7f09be4dc04b209b9e0e95c1592760fc8c966ac8b5b6c42100d7697881",
+          "1d47dcc55d81972b269456c41cb8c066460b06f4f329465b7aa9444c34beda3f"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "b7d0c15912b5e2653ceae852a6a6777812719df6a5467aff1e9edc77dc6a88ef",
+          "25180d054843f54949c642aec24d27192cdb80e2538c34413f9ba10bedc8f2df",
+          "7f11dc7ed751266b0edf1fe2ab0ed147066314d96a1b5128f043d6b54ceaee83",
+          "4e3d5195c611459965a15b8000bee3219487683fdeeb59f672bbc528d980c9b3",
+          "342fe88d2a9f1a6e456c029f63df7c13b86bc56ac72e58d692420be49422742e",
+          "1ece35c62bf5fce50db4a10e561b36ef916ad244cf93ef266d4e56f455b24343",
+          "df7d956c2219941d40da212420ced5bfbcd508acef1e734bf07b7810233a834b",
+          "b2ad0690e019ae945c8627bb275c4ef992003516b316ea7de29258ebd7ded80f"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+          "inputDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+          "outputArchiveSha256": "ff66d41d75a1cc4b35c1e11d2db6ef054f399383f2cb14657af8dc81244edf3d",
+          "outputDecodedRgbaSha256": "6311b17fcbab12b71eee4f0081e918d75f646cea9cf9b2ed885ecbde52770514",
+          "metadataSha256": "237433cffb3800ebf8157e341c7830154c8f936e68954cb6683a26fea134ec97",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "hurt": {
+        "originalGeneratedSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+        "originalGeneratedDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+        "rawArchiveSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+        "rawDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+        "promptSha256": "571d22e99e0562e17f18a9319f55f8414f45a20e123b786eb77b8ce39abf9c60",
+        "pipelineSha256": "7dbea984a721f8757e89aaf3014e1ab0bff2de563dd2db9ed95059f9c75bbfe0",
+        "qcSha256": "0047fc7f8d5e85ef073baeebcbda555dcfaacc31a0e611fa9d928d28ae6d72a0",
+        "sourceFrameRgbaSha256": [
+          "68edbe6fda06a1fc6b07b8f4f6c26a954ae935e6d8652741b4e85e4bc9a58bf9",
+          "80f64f6eeb7ac3654d6a11ac9499efc9cc8ceaca8729eee8ffbab1e0bf3961a8",
+          "ee4bf8f182605cc24b06e092b56a5fbeaf23252152eeae3242a200af2090a759",
+          "d379381cf4bad57e1d754525af8eb2263a1069593418ea95eacb07629a806785",
+          "a5abcc95285dfeec882a8a8da405a43db1f6e5d849b79265f72992bef4e68485",
+          "36ffb20eb08d2ed395d8aaee2831bac59b04ca6e07ad470422ac57aa6c75e027"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "2bd6109e5a9bb93af8324421b279b77993a3165cfbdb960b2c147a1aec25b91f",
+          "b6c4a2922e88395296447427360b92bf17e6223aaa44fa24140189d67fd71f4a",
+          "635154f5bce408567c8b4c3f58f459c2d891e8d46bc6e26afdc8b84951349c01",
+          "e2fec4b34d46be50a39344944d42c4b86d39ab66a019300a0ffe4d8d333f332a",
+          "eaba154293cf0ce869b625fc52b7521709843bf7c71f164f2669db97beb6ebdd",
+          "d0d9ab9101ed6a2f7687bdf8d4989df7299a8f78f89735f34147cc70c3e4f070"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+          "inputDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+          "outputArchiveSha256": "042a345b8dc3a537c462e64169c61487b5d6c6fa424ad750cda188ceddc4840f",
+          "outputDecodedRgbaSha256": "ce4d0a75d692930513d28ed857e9d51556a11fb9e6eb18157ce935f8e71fe4e7",
+          "metadataSha256": "30b6eb995cab58f53c8101646766b0ad9a932d1954fdfe536cab3a9d5ccfa0b3",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "defend": {
+        "originalGeneratedSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+        "originalGeneratedDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+        "rawArchiveSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+        "rawDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+        "promptSha256": "e7d55cf51ef91ac5be015f8ab8ee6c9873337591ed70f7ef4bb6fe74843d1c0c",
+        "pipelineSha256": "87cf47ce6b4bff54e8d4432e7040e3f942c715820ea14c9ebfa4775b19160e3f",
+        "qcSha256": "3a713d10b58ddc440f80be4fb5b27984c65c41409d59baf0fc093a9eef07151f",
+        "sourceFrameRgbaSha256": [
+          "3973b7639f10364faf497be1e2fa7632f7adc1d510f6209d6a6db55977e6f0f6",
+          "7754099a4f689c6e981aeb9093146170bd671dac68092decb25bf6368a0343ca",
+          "90ff01dfec4f01cf405487acb622be84dc88f8b477b93870a6348b5772251a01",
+          "55331c5de03994fbe7622b5292ecbe2f5dfd75779b376783a865f9db94c1292a",
+          "741c41ba22b83d0ce385e3f32e906113312886882e4c31dd6e46257525c7ff97",
+          "889ae778ce93b3020a73efa15541c3d499e65f454ff696ba903c645d5b6a5afe"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "679add5b626db4f08100e8c9749b8d4d325c4ea9f1c925a8362a97c9b039c00a",
+          "15b377d3bae9c863836f3fca2a023b4738c61dc5e3a668a0367be2f83ed385fc",
+          "9302ea47dba552eb4cf6ead34f642859320c2e236fef4d792604ffb73a59a122",
+          "c22a629d12b22073fe71163ca768c10916d3de263f00997d679b29af24157587",
+          "31923c1fff1dcb4b3a0e1dd773ae350e4e5f7278aa8a7e5ab20176ee7f26178e",
+          "7d6900de965438fa29f72db22f70c4c0ed7109a99330962cdcdbf22e73fdb741"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+          "inputDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+          "outputArchiveSha256": "9f33d22c0d7b3769f7490adb752b82e620765afe0b66eb4c2c20cd179901411d",
+          "outputDecodedRgbaSha256": "e3c9a8368136e7e7c2dc0495cea53be65ae50a39a0b4fb17af7f3fb7ea06fc2c",
+          "metadataSha256": "8b99045d8856c018de0a68cc07056f9e78b25940198280f4d8555cab526e6cd6",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "dodge": {
+        "originalGeneratedSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+        "originalGeneratedDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+        "rawArchiveSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+        "rawDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+        "promptSha256": "d597456891b4e495e8713bf795f7e2850bbfd9da3f6ef17b64e34224d68f279c",
+        "pipelineSha256": "132b521173aceb7c0a682b759bf30c3edde13af6d46d22cfc3afd79d51c4a80f",
+        "qcSha256": "7cfcce40a5a005f85098e6a468e43dc44415ac793edde3a37631b4c7cf1328fe",
+        "sourceFrameRgbaSha256": [
+          "07e464de21eb3a65a71cec27345c90ced2f0cab8fbff5f4d3c640802f10aa1a3",
+          "cffc3d5ee4cce040188f62cf3c11d42697bb9d7648e0da73ec153e9215d584fa",
+          "2dde65d18670afac60ce31a5f3bc9d9937af9697bb73f5e21529aa936af682df",
+          "4605b8944ce802b0e2199ec676660cd3d69d88b4781232eb4d0146f64c86f111",
+          "41cf7c2be9bbbdc7fdb1cd391aec96f9e5d9c500017875c0edf79ad472b104cc",
+          "5f88af9a18588abf208ac8a8c76be06f36cb07c464a30f8b8da44c64a9117b07",
+          "e6c83f89d2eb3148a80694a2ee7e5384e2b9850e8aa9ae794dfc8568eb0392f8",
+          "c3876a76860a5843a16711c698ec929a83ea8d136014163dd3b03b004b496f2f"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "f9327ecc2a06c1d9b9256df5e072c015d9c9a11eea9f0f8a36d45dc823ff7a14",
+          "caf67af4fb60cbe7eb5285b58f560163e889d96ca3c8bb32c869445a3026478f",
+          "c8d97d2e64609569c3217d5244d3d771c62e85293505ebe2cc69f9da0aad58ee",
+          "c667a519e691774f98fddfad5c607d1cbdb48bc0b77d83b841e0456f352dae7d",
+          "32e598cdcaae148b242b724c1ab1848a0a54dd319bdab4ebc054c717148df1e4",
+          "a60b9c0770c65b19d7b49dbfac2e81e3aacb5b06702913d0d661b248cc43eb90",
+          "247048f5084e08b68a5a3691a913db48a01e743ced03d28653fdfd83b1c78289",
+          "fde0a7cad916f1f808d46580af2b80be9bfea6831fb5c122ff963133a191afcb"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+          "inputDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+          "outputArchiveSha256": "384555ab22cd65a142994842e772091167d152d1e986ee26538078285c052f1d",
+          "outputDecodedRgbaSha256": "81821f517cefcf00b33b5ead9f546eeecdd814105fe26d1ade9f8b872289def1",
+          "metadataSha256": "da723d32e99187dc495fb39ef77c313dccf3623cb85dd0047ed997535c3f8733",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "counter": {
+        "originalGeneratedSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+        "originalGeneratedDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+        "rawArchiveSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+        "rawDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+        "promptSha256": "f73062ac4facf8800e33fce8c48cb3e04474413c124164e02c95a7fb9b5ca612",
+        "pipelineSha256": "ff338d0291fd3c7a667bab1be869674f1bacf8f3f890814d643dd6f80fb5260a",
+        "qcSha256": "f94a21c6f76d6cf5ccf9fc30f7e9fcede439a299cb7321807912ff34078ced35",
+        "sourceFrameRgbaSha256": [
+          "06387a634ecf1ed9d9f39e54929f0cdc8b3bcf7f7eecb3f810f3823d01ea1e3b",
+          "3bd45d826503c7af0879d2d744db9a1344c9e3bbbb6c2f1ee1924b4f67a2984b",
+          "44ada465f0b2d4163172403bd47f5a1b11a8242f050e23d50e64d9e3d7eaceba",
+          "877d22413e1d4bc16c637d9cbccb470e08821880c4100130b562de5ed93aed73",
+          "25d20977ebc67f928cb7b15ad2b0e79be045be0aa53276ec2dc7585104804f8a",
+          "a73d8dd5de40849bfd12ac2bc7e4b14ca99235c4571cc8d2c0e402a0d57e6c51",
+          "757ea4062218790d5e87a35e8fe2080601b1c50b2288ce73b24bbbb1611ea42f",
+          "4a6a19dd308e3132e02d224fe2fdb837abd744f5547d39c4edf73fb74e6504a8"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "10d82a9c986d6d99996028871fd1dd05c372bfe50897126ac76433cddcb340c1",
+          "2c24afdaef5640272421598674a3d37b1a0c4cbe5cee17b77650fa335c73f617",
+          "5846d73c8716d60b590685b1cc6c7c05abad4b99e6d6d54525437a1d64d9ed71",
+          "c9f185795d7e59d8c14064e406f10982a8a699c780913c4e63eb6ba5999c2064",
+          "f5f3810620fe6c1cf773fd627cc817b67bae03652cdbf261ca8d0eb7b5cef72c",
+          "cd4947b08b8f082eaa31a3ce23ec69e1fb04bb6e1a4fd5f168860e182d715b78",
+          "bece28166c36ba1f7e91ff1dfbcbb457c034afbb9822b2d43ff978a0b16a6447",
+          "ec6a866cbd60276962e97895a3c239f1cfa0696857561310483ab8f3baab59c7"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+          "inputDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+          "outputArchiveSha256": "840eed9c200fd22cd9494ccc46c9d7ef43f1438b578e07dbd805c758b8650f15",
+          "outputDecodedRgbaSha256": "32e42d5bab81d81e9b369f13b0de2efbf09ff96a0e0c5ad44eb9fe6f6ac637a9",
+          "metadataSha256": "a009299ff60a3e994135f2b62b23be5c93c21f42ebd805752088cd92ba9c255b",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "stagger": {
+        "originalGeneratedSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+        "originalGeneratedDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+        "rawArchiveSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+        "rawDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+        "promptSha256": "7e9aba0212c12963c63cffcfdd6dcdfef22a3e1bcf7fbe6a9224230f19dcbcb9",
+        "pipelineSha256": "733639684e9ba2c26f3871b5c2b1d5d12c6441384274bcea4b6fc889e6aa0dbb",
+        "qcSha256": "77110b4cbfd656e114ff93a08344d037bf20520d90a31eb4af8a5cd8b2f5f9a0",
+        "sourceFrameRgbaSha256": [
+          "c40091a1d587cf8c14646fa230bae9ee7decbff0f3a345deed47e306af0aa4a1",
+          "2a3e719d147d5ee33a2bc5acbdc80184b5a1643c0db439f2427992dcba398b39",
+          "3d967ce5d544a603e4ea66d5345e168985ffca2a96550aecbc902f624b0b4c86",
+          "e70e710e0189f7e16e61bd686cac0f3cacf7d3f9dcfadf680a69dc9d7e86dd9d",
+          "561fe99725a4fb70ca3ae175570117460fb3e946e1dc893fcb7adf5ea2ebbacd",
+          "2d10b9a3107b3efc330f0c80df3577ae9ae140f81c6a03c9524f90993e78a7e4",
+          "43cc636b49f880ce090ceaf7754fff79ef612baf33e9ab2e1aaad1683f04cbd0",
+          "f610daf390399b53566e7d711d15698995d69945e95e6d8833a153a4b1f603e0"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "652898b7e712b32c8c632851c4b6414687a39bebbef587f3fd6e01db9eb7662f",
+          "ea8ba76ea4da7c92b615644b98b31f349a820bbd67b9f9ef2190756655eb3440",
+          "58e37131f9c851d24d0d400f573144c3dbae417cbd33b119c81eee57a95e5fef",
+          "8093b9609c526789234d41d555b0f51bbe4b5343efdd0ee858c78a5b8fa6f989",
+          "f7109a196584f318a771813c753bee98065efe024624a962ff208c96259dc236",
+          "e83bcd536d343f51a606d593ae29b06bdbaf4d3b56a9383452c8ea0708de632a",
+          "d58cad4885d2aba32dc714e2f10419fb5ead64ecc0f264afe4f7da70d48a76c1",
+          "7cee7fef72c201dae94e2e119be1dcfd69663d35f23722933e60b25f0b727473"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+          "inputDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+          "outputArchiveSha256": "93d3ee3f86e2f416fd801a356e3f4932482fefb432b198ff3716ce7997468e64",
+          "outputDecodedRgbaSha256": "7364db446e98883fa2bc3093da269b381945509a824912b61512ffc13081b371",
+          "metadataSha256": "770f44d77e2a81b2fab44533ba496a0fa83479d4773255b0b0d1ef99f120d460",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "knockaway": {
+        "originalGeneratedSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+        "originalGeneratedDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+        "rawArchiveSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+        "rawDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+        "promptSha256": "1f34a0fc1ffc88d6883c944545e3a0fd30a4ed16ba28f240bf6a278f0147052d",
+        "pipelineSha256": "a1994b7906bfab9a8dba406c4fa234c73aac2b7efabb2b4f9e24ba7d7867839c",
+        "qcSha256": "228a0332287e511251ca2991b7a2a36a76097907eee24da933456fb7fc377f4a",
+        "sourceFrameRgbaSha256": [
+          "b1fa0733dd940947be95f6d46464425113ddf00bacfe29f9bed458422de3ecfa",
+          "414d3544a5aa086d765d92c7825e5e6ab379dd380fe5b1906e4e1a11be7db690",
+          "ed1c8ad5957602dd88e49674c16425b94fe4e07c0eae432b9061a5826cad3ccc",
+          "dbf063fdf783611bd7e6c7726b386c74b52ce354d7141029cd51dda7aae17c9d",
+          "5ccf2f80c677d4ae969cbff0edbd4bdd1b7233dad5bc9f7970ff96df1f43e9ac",
+          "ecd03c6973fb57dbcca07998592eff27f0a53c25055ffe5538fddac725a91360",
+          "1787e87b0476347b2aa3f626c180cc9eee38c8157867b8ce0437cfcdc668d67d",
+          "4611e597c5ba2e5372e2c4afa070ebe7e837eea3ce0bab83507e3087565f065e"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "bb4eb1592c1bdb2a17b4c18739ebea294c78f9f3814a8a25e66f23282f2c4b8a",
+          "49005c594e19848ab40b2442478e8b52d9344b7921989934eedf40b55dcd0495",
+          "056c8aab8f253e463178c1649d789924b184a17ef84f4fc72d2f047860fde606",
+          "3d3ed2802d2c00c1d5692a7aadc9d841921bfb217ad775524edfc9a752b11294",
+          "a1ab4010cdcd8ab9dbf7c9bd813b5f44342b706e33ab86ca98365fd7f277184c",
+          "ca1afc360b3ee66b359d935b7cbc927571dee3b44d320d68b33ed0ee4aed512d",
+          "71ace4533024c7d6d6c72cd26bb9a295623a35b14614b9874e1f8e1ecb1bef9c",
+          "f746acd61127eab4e08a57c81ccc22a8b137ad6c20ae4c3218653fdde905c56e"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+          "inputDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+          "outputArchiveSha256": "987d9ce28ef480e9adf1ba5546bf651b4b1574461eb7ee1a2264eac228b502c4",
+          "outputDecodedRgbaSha256": "ac6fa77f74e4ac4bfdcf6b14c727767c0d95ee148fb284cb483895fa57edf469",
+          "metadataSha256": "f4c324d468d492fe4898f1e92dc63863accb433ea7788cc7c11bc1f9c00ad584",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "down": {
+        "originalGeneratedSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+        "originalGeneratedDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+        "rawArchiveSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+        "rawDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+        "promptSha256": "90238bf38125159b7e3487470b1553a7213fd57da91f06acd46eb26cf7a6cab9",
+        "pipelineSha256": "913552cfb75968379876c096877171fa99388b31e6d8eeefe482191f42c912ed",
+        "qcSha256": "fb5bfbc6b5f98cb9b4ffee44b985520011a653206f9ef692d7840a50c7ac6f2a",
+        "sourceFrameRgbaSha256": [
+          "46ad52d34bdd9707f494a53f1ccd35bbdf44fe121fd61e4f8089a3c126003a04",
+          "fbd665d69c85ef8ef5cff734520426347e2acd28a0c4ad24f63766b751da532f",
+          "cf51a63a025ccdfd5f45077b07c10555785936a410353509bf16fa3a7a4e44cc",
+          "27a8c2a0f83de9734613ccb91a58fb240c0fcf7b427f5250ce28aadd4255dfa5",
+          "279973e1a7f9eab964258da4178bfcd78f766007fab545a0c298aa75f526565d",
+          "7f910a1c7b839bab890d0e9f4dd0168272ce80d7fcf5335033d714a1c0025ec2",
+          "7fbd2bcad265c0a65ddf491d79c018e647062560e5502d5943dde3bfd89feca5",
+          "6257db7df76261f2f3fa4aeb93d177676e7ee3b3a046e13d10527a2863bb2554"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0b5a7da38f602fdcfb85c3b229132c2c383fec2be045bb464660804e6716a73d",
+          "c268489a2ef4cd295c987a902dad3f27bf213f7a13492747d7308cc389d0e229",
+          "95146ab1b807800823250ba3a7317e33d8af20b6a1dcae37554c32ee1ec87937",
+          "8595ee80426f7aff2963a3ebd64d319efb4a163e0ecedadf9692826d741844af",
+          "10fbf4cefde7174b92411de69f82552caac59b1c68d7407c29e8177d4e12f15a",
+          "30848c3a336e7b7f65d428d38da0958a55747e688990893adff4bcdcb4afed80",
+          "989fa611854413167fa1957307e7ed10e230e2a63a3e02d6bdecbed548f807a4",
+          "c539a8cb615b96e5d58d0cde73f9195256d94da3947e655cbae6ee546099aad0"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+          "inputDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+          "outputArchiveSha256": "adcd8fe77e40b90d60e74c409a721462130ac58da04ab77fc21b4482d0afe0ac",
+          "outputDecodedRgbaSha256": "ae8690087f9dfd343cfa13635789e7a6931d7e689e57c59499db40629acb8898",
+          "metadataSha256": "386ebff33b21444c731b8c782198ee76d35c0b08315970fef6643b06384243fe",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "revive": {
+        "originalGeneratedSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+        "originalGeneratedDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+        "rawArchiveSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+        "rawDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+        "promptSha256": "65fe7b1ae882c11f8f6d0ab4ba06674ae298db9ee9a5cba119f8da902126bc17",
+        "pipelineSha256": "cb58d73c570c90c30ac725e883188f090a05e11a4320c04c4cfb9d09654e00cc",
+        "qcSha256": "7451a8862800e5e13d5f1d56d667d3e2784de8244c63bec4666e10052f868e55",
+        "sourceFrameRgbaSha256": [
+          "6257db7df76261f2f3fa4aeb93d177676e7ee3b3a046e13d10527a2863bb2554",
+          "bcb8b7b97f82052f1c4af18dd17384274c97aaccff26c45619b4421832442d8b",
+          "437114540fc41ff2a0c7ac35b35fc08a315c72bbe64f5f351edbc142d163a1c3",
+          "e0f15c962b69f35e4ec781b5bbae90cddb53a7d2c9a9369190ad2081e70c18e7",
+          "02e689a2fc4937032f3212b9b0f1fc2055ab48c1cd41dd11d2ce9ff9c75f7109",
+          "78e64c3f9237749efbe33e119a28d299528615a7424fe3fd8b00929aee2b8aca",
+          "ac3a458e2cf278ca8e5a318a31e0014bb0407800808acb96ca4c985fa93a908d",
+          "19091755c4a3066843dc4b9a1873a2367883216077382ba983b339e9faa1e0ca"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "c539a8cb615b96e5d58d0cde73f9195256d94da3947e655cbae6ee546099aad0",
+          "68ee8c6d9fdaa1a0bca08c891419b218326c1648999e09af32c219ef47082e2c",
+          "fdeaddeb8f170a5f76c3a13010a9c5a423e906018f050dda8f140ad6ebcecc65",
+          "6f528b6479989d6ac6e0f069d2124305e3322ab0a036754001798feaab6fce4c",
+          "40dc9ebb3638c9e5e11c863fd807b4bf5210de3ffa9f1dafbb72682260aa8f1d",
+          "78d71c335925c2eeb27433524b243bc7a81e8e4b87cb8f63a46d3123428736b9",
+          "6cb3c54c4822270a76bc0dcad38209b928afd9501ca05d10a6e34ecbe8ff51bf",
+          "9c3f2201f85708c95f1b32d4f9be48a2e46578692f3cbc0350d2630741a6f798"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+          "inputDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+          "outputArchiveSha256": "2ce5c69f71f179f1db1d07213633845c80fcf67b8c305ba35730544364f6329b",
+          "outputDecodedRgbaSha256": "488c036c13a89ab4ea0264ff06b045fb2c0b1579950f04461ac0e4753a759cea",
+          "metadataSha256": "aee405d6483214af8fe8691e49b8eff66e5330589807686030937cd8a69ca89b",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      }
+    },
+    "back_3quarter_ne": {
+      "idle": {
+        "originalGeneratedSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+        "originalGeneratedDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+        "rawArchiveSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+        "rawDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+        "promptSha256": "f311f8972a80d8d56049cc0c1c86f396989879a323302c940b828849a39ee2c5",
+        "pipelineSha256": "f8a61d8bf2036ce7bd979c3a281c3df57fa30b8a2d4267b86d1268eee773ef3d",
+        "qcSha256": "1f6fb24e967a8e33d3c2d45e099e332096f3acfb47b5c95f281ab7cf8a92e86f",
+        "sourceFrameRgbaSha256": [
+          "5088c76e4fd156fccd6b923cc86f5dda68eb3c8565fbad551d34ff5c451be851",
+          "7941656ba6f314d5eddf99f4dce3a9c529d7cb2f38f63d459b5bb2957ff91101",
+          "ed9b45d150bb5c41f6444e3ea34cef7cff1440237ec41a189d5f0d9b047d2b5e",
+          "ab0d7645f89678b9d679598a59c90c85667e74d8e7793890f6160b1cb8bb7c8d",
+          "b3e5035d01a6d361a36759e8b9cd62142b3e123a2c3c0d99d7af9f536ed5f35e",
+          "aea37074b04230a47ae695efc1c1432fb869d4f55823b607460ebcba54a7b868"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "e82f4000dc8f6a309b3bd436ad6953c7a9ddaf306ab22702bfaad13f00272f81",
+          "9cca25dceca896cda20e7dd270118448d5f52d2178469de7cd3452b319c90e8e",
+          "a5460c069b4bfbf1892280196269699c4c264da35fd06ab88f4ec5703b4b39c4",
+          "34bf3e52d63321b63416910193f989d7592184f2776f64ba9e1e0c4f60341d16",
+          "8fd567156da54cb091696c0dfd38e3cb6cbb50325254370f17fc278143c16b81",
+          "c8901bcce484765024f947bf1fe5d6a1e192222efe5de70f6aeaed6109b653ef"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "fccd42e9033020727ff42251d71e84709a38a7ca890d7337b435c8a6e231a31c",
+          "inputDecodedRgbaSha256": "e97c8e94b7fcc672c9bc3a29a3d74e97fd8eaa5454261e8aa7758b0c8780ef9f",
+          "outputArchiveSha256": "275650d4043831f75f9eaf4b29e8bdab0890976461d8d2f835faca7b457f840e",
+          "outputDecodedRgbaSha256": "117d0ea34fca897b808d0d7097150204a152c6f54e1f83856ddc7cf1294d765d",
+          "metadataSha256": "cecaed77eef9bcf49bf14c86f9de40c5d9bfbd84690c892cec51b6249503cd43",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "walk": {
+        "originalGeneratedSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+        "originalGeneratedDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+        "rawArchiveSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+        "rawDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+        "promptSha256": "7dd10d6dee535c62546efc0aa530150cbb29d33be81f3265e091234232a5b144",
+        "pipelineSha256": "3eadfe67e50be48279a20cab37512dce99e30d19999b1b64278a821ff6b37bf9",
+        "qcSha256": "3b8dd9ff4ee36f21313493c0f767b53be8cdcda5150eed8a44e314a7f8f9ad43",
+        "sourceFrameRgbaSha256": [
+          "f47c69bb6e4be2df4bf19602f91aeae76f0065a647ad6427a92707aedf8040d2",
+          "2b05048d50d431cc9426f61e5996ad0dc2d82b994f4a5766c2e324dde4dc3a7f",
+          "858f30298a09c668a4510fc5068bc813357978623dc96b7111aee5356b0ed155",
+          "520d42a1385da7f7ad6b8e67cc73e2c010c6b7b6a8432caffeebb73546bfa241",
+          "f485248eb1699fd2afac6669b89d0d7105edfbcbf0cd376399336818121a54c8",
+          "a2da2b38e6ee6f9221159285bd18f35dceed57cffb1b98bd2b8cf0eadada61ff",
+          "311d06e34448d0f11af45adaea0c206f2dac8958bfb5ab78e8ea223725e2da01",
+          "994031da20d47abb4182d96aa1ede8c3949779cbc444d0f7dab3d0747ba249ef"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "48c01212a62c67f329b87d3b7daaca4392a37b08b35898e0bf095416790bee79",
+          "b4720d3c751d61f78af228274662efb1c44fbf78836cbe8bb60f552024b6e6d2",
+          "04cd6dc10c473c90524dd35f1179fa2f6e96a6efb04cad3a7ea7f85413a58d2f",
+          "5013b0400e260114a3b8752e3799db4a717e3cd36579ea67152a1856007da116",
+          "23bee19434760fed8f17abc5a326fe22db75d17c51f87bc84dbcec0f9df22c4f",
+          "808c7b0b561f614129215c0ded8778d53a89abb0fd70d009ae18f9e6ecef3aad",
+          "7e3f06f92dd0dd5d0093ff1345ed131635b56a01ea73d75573104a5cfd8f774c",
+          "c414837db4245b20ef622f72cbff32db1397f5d3b59f9fb4004fb760019284ab"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "1ac5b1a9a8b2daba7acd0af37d203fcce873f2cde79e0dd8128aaf03450d8abe",
+          "inputDecodedRgbaSha256": "1ba8c2787eed000fb7c53ace830b581c5e581fe4172652b92e97424367aef8c9",
+          "outputArchiveSha256": "588b4319bc07c9a301c48a0f9a7da325e1c46a8c42553d1f0c7ecb1883985bce",
+          "outputDecodedRgbaSha256": "e6aa1c1c1a11b054c635ee926afa4aac1df95cd501e1d182a06640feab20cc61",
+          "metadataSha256": "820df4a7d4b1a0babd590c2203e1e1276bc77fb4e656d7262f29a5e336c1fb00",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "attack": {
+        "originalGeneratedSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+        "originalGeneratedDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+        "rawArchiveSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+        "rawDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+        "promptSha256": "629575859e18d6514dcf72029d5615cbc696d29f9c1642b124b2104ee8124f18",
+        "pipelineSha256": "c4e2ff7880bb81944fdbd787b95295521b73c6640dad42fc86d49248841de777",
+        "qcSha256": "0e655bc9a4b3097a310e7339fcd399d5c50312b0015feda1a9b36fa916270846",
+        "sourceFrameRgbaSha256": [
+          "11d32ac3cbfdfa42ad6017f69ddd0fdffa9b24a16fce176fc96ec1cd41440763",
+          "7448087a6a3bfbafff0c4f6b0453a7f0a3c26b43a6245a620f8c539e97ccfec5",
+          "63bb7b17ce4370e0bc564e4fa23965e33dc5853f4119fe2b636df18c603b0b3b",
+          "8bd433576e2f34dc2ee7a7a0f3de2ee3a9fb499059fef16e42e1087b890e6068",
+          "09ab1677b5114cce7dfa58e982e6e5719a56b52615f0c17543dcd719a413ff3b",
+          "1b2735f962e78d3621ec13bf76e0b8b9d3550ab4ce64878961c35b4f5af04b5c",
+          "ca14a60ee94d44f80148cfd1af78f527a4c77d69df86904b0d30a12dff78fddc",
+          "3f163e2033e6ade3751ddc841407d959fad822fac3dbfe4be974d062853ca236"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "834cf1d66c57feec51fc7d3f0b98ecb803f83ac8f261c265c0b4e92c848fe96a",
+          "dd531d851b5b1a795b7f38114756f691c4e4f384ba80575ea0014c6ba172343d",
+          "91961346730b28bf0eb93ac8d645c1a88747be918753bdd1719f4a484efc9802",
+          "317cd26314e77d937a823726f2c3c724d3d328994da5be382a5c677e348614b7",
+          "ecb8671f09cf5bdd787dd295d58963ddcee3f021f5ba84d855781c2f66f5fff5",
+          "68ffc7bbce14b7d192e8741e75b8af1a1a53b4b0849734b7810e505b346f1aef",
+          "aad591be6fbadd5ddd6d8f4aeab2264390566bfd332e7da441a0885811b376ef",
+          "c0e028995a97cf18a890f5ab524f20bd95d2e2576c1e47a0b2c197991efacbeb"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "767215103176379d94119143bc3593692edc61fa55f9691c805845f0aca8fe82",
+          "inputDecodedRgbaSha256": "4b5ed096d6b22b2a4faa7899294076361e10fde805ce4744db52f9d8d1fe609c",
+          "outputArchiveSha256": "eee606c8d3a29b6a1a017f9e7c5713c0cf53f08d7a92f67b3d77251bcd14910a",
+          "outputDecodedRgbaSha256": "735f66bcf4613922ff19acd7eee98366293c485f143b4108498280647c0e0538",
+          "metadataSha256": "654c1d8c88d2f619b1568520659fb20a6519b768bcdbcfe36b4d114af5fcea1f",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "skill": {
+        "originalGeneratedSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+        "originalGeneratedDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+        "rawArchiveSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+        "rawDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+        "promptSha256": "8e7f4561415ac1a8a35dca55d54cefbe8e6b50997aa5834b794c9bf50a54a402",
+        "pipelineSha256": "7d88d6e6f6e3042a822ad7066b95b3cb250daf85f59e4e3a09898c22c9fc8e41",
+        "qcSha256": "1cd4f5b1e1c868eec5b4cc9201214b7b6ce065d5dd011eae9d03576634b3633c",
+        "sourceFrameRgbaSha256": [
+          "6f605b49563287ef3e2311995eaa37e3d487e3dd920c6dfd77b59ae49a8821c2",
+          "b383aba8450a2e927a9927e5aaef923285b0716aab426d123ba82b7ce3407c38",
+          "92dffe902083e0688c7234810705ef546e7d712440275151024e93941ad16eb3",
+          "6eeca1ecd662d29071fa3f0f7f119df08dda15df134dfd4992a6363791079440",
+          "b69134ec255f9fd2c050cdc9166946d1f9f6bc74a0a241684d57b186de4f16bd",
+          "1020c82d38a397690361e00cf95689ffc635d4a313f7dc7d7f18e9ab749a83b4",
+          "0df36557616ab24459d92c8a7da6351745d57908d7d46c4587f90f7ac26b972c",
+          "b33a32ce893f5546ec2455e0cddb4641c6009c2cda953056f87410e3cd00fa56"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "81b645842c7e5bf88c6b2527309fe96e96c12c4969f405753c34fe1b381e10eb",
+          "3d8f81bd1eb35cc5051d9dd813bfdf7a40dacb1c8fbb99f4383b6bb3b6cc4c5f",
+          "5738b21e23ccfab1910835a242553a551d8fb9089669895ca24e9d788530c187",
+          "af47703ad4127893a18585fa056e8a65139ddea89993d261b104f93b11d5e7d3",
+          "240754a1c2509d64eef7328dda61effdd5db77cd8db53f07bf059384b2a3c7f0",
+          "ee89f6f43de4d29b45087de3e5681f4ce1e68c53ca993aeee422abcba149c8e9",
+          "2ab3f867f3622630a8a413e84091ab228d3424d47025baa96263794d1db24273",
+          "5e1b517293e3e98a321bb5b7831606b002793eb3a02891d7a2b8d7eb25cf2f0c"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "d630701f38b0902efccc32a657a30f9c2580a5958f2a80eaf561a1bf71c96dd4",
+          "inputDecodedRgbaSha256": "da2cb156576db7402024d6ba4148db7e8f385dcacd0ce9069c48fbe885995f25",
+          "outputArchiveSha256": "ff66d41d75a1cc4b35c1e11d2db6ef054f399383f2cb14657af8dc81244edf3d",
+          "outputDecodedRgbaSha256": "6311b17fcbab12b71eee4f0081e918d75f646cea9cf9b2ed885ecbde52770514",
+          "metadataSha256": "237433cffb3800ebf8157e341c7830154c8f936e68954cb6683a26fea134ec97",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "hurt": {
+        "originalGeneratedSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+        "originalGeneratedDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+        "rawArchiveSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+        "rawDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+        "promptSha256": "571d22e99e0562e17f18a9319f55f8414f45a20e123b786eb77b8ce39abf9c60",
+        "pipelineSha256": "0644528d290de8a493859730706d2898855c135fef824d60b57a395821de9485",
+        "qcSha256": "911ab9e8a37ac51789a19bfb20998ec93fd0224982a32df5a29a36460e4741cb",
+        "sourceFrameRgbaSha256": [
+          "33f7b13b29377dfbc2d3553161216212a138212bdb727ae028a3c0d4b605d458",
+          "b8af9acd1dab8f76a85e71c701a46009a3d5409d0424830f755aa52f2be17ebd",
+          "8680d4844f0011df9521f9afb8fe3aec98b507a8104004822ac836d04d207e6e",
+          "8bf33e521551842dd76756e98d89759ed698e1c0ca67b1c959fd306f4940837d",
+          "f3c151350aa33c34c057f8b59222b902f7253eace20075eee8bc50f3a6ae9eeb",
+          "fd2edb9a4ddb8ea4523ef9c91a0582338526065ba0996f4ea7f1ac761f4686d5"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "697834b018421d135c04f8996ad94d533b1642a845a857ea915140f0859b3be6",
+          "968d1a159b477d00ebb8ea74b0903cb9102957af179a95b1494116f23596d258",
+          "ce15ba2b87e048f71c60c7f61a2b2a89f1f825cde81813cd23b9427ff1e5da19",
+          "67d83cd513409565fbe78e872dfa4c70af4e6b07b6b23d1312a706c1eacae5d1",
+          "45a45581f50e9446747a9d00749d6cde3138ab85d83abbe0b03b17fe97058bb1",
+          "744b7eda22bd89ef8211fd0438d4e846c7e7bae8eedaab9ec990255c9b545f01"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "fd716b914dd71fec8f9f4dca9aa3eed87dac2c2846272a954f1aced50f9cc6b4",
+          "inputDecodedRgbaSha256": "921a621982f9eef2328aba986d803dea44a4dc16ba9d29f879282aab20aca732",
+          "outputArchiveSha256": "042a345b8dc3a537c462e64169c61487b5d6c6fa424ad750cda188ceddc4840f",
+          "outputDecodedRgbaSha256": "ce4d0a75d692930513d28ed857e9d51556a11fb9e6eb18157ce935f8e71fe4e7",
+          "metadataSha256": "30b6eb995cab58f53c8101646766b0ad9a932d1954fdfe536cab3a9d5ccfa0b3",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "defend": {
+        "originalGeneratedSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+        "originalGeneratedDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+        "rawArchiveSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+        "rawDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+        "promptSha256": "e7d55cf51ef91ac5be015f8ab8ee6c9873337591ed70f7ef4bb6fe74843d1c0c",
+        "pipelineSha256": "6241d682ec41a5dfd93154541ae3d0f010d46d9b238d0027d43c6d26dd5a6168",
+        "qcSha256": "99edb1e90322446b4bfe3ca29bc45d7d41f879798272f2a64ebe1967e88cba1d",
+        "sourceFrameRgbaSha256": [
+          "af62598ed2564686e382d69462e4614041868013723e57ea81b7ee65a30af3fa",
+          "e085d4ecfeb2f4fafe4d0c1de064717d763058420c146b6ec642c98bdd4f544f",
+          "8a96af6db88972fda607e4847af8acd2d02d31dba0679a1654eaad0c936533ad",
+          "3a93c4af3a6a59a730465739f99704d41cdb5705fbcf68a8cc3a8a9bdefd4fc2",
+          "7bf7f9f603fec047c258c0882acccb50788d2b872b94b2947c330fd2a49d12f9",
+          "76d5b2f96d5db5e525cdf6d734fb495e172c9aa0e9941a5195abe9cdb80eac4a"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "dd29e4b840fe9011663c10b1b78248c8ee6ffd0e1d82ec0829e1278a4823f553",
+          "1d3fbe7821befe28e263393d4895afa16e3295f4143871c640d47500711f7145",
+          "e1d9a6539ac3e7581843d0e9730a4814ac41d2e4ffcd06a6a57df551c22d0adc",
+          "5fb7903d6be4c742e084b7cbe62c66950af30fede27a7402e7735e9e7b528b05",
+          "fdcdb002e79eeedb5ede9b5a52542284d8529109809e34377a9a44b0202f3fb8",
+          "635451afa8a0ad1f8747cd79005f7afa61eb662e8a8265580e7247a5aba59529"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "d2715a8385d82a1fb8dbaa9c879c0f9cfa49812f96bd7de51b4846e5e5b48aaa",
+          "inputDecodedRgbaSha256": "6badd8fe38093f556cfa9844d23be860a683c68d3eed888e9ca998f50a0ed2cc",
+          "outputArchiveSha256": "9f33d22c0d7b3769f7490adb752b82e620765afe0b66eb4c2c20cd179901411d",
+          "outputDecodedRgbaSha256": "e3c9a8368136e7e7c2dc0495cea53be65ae50a39a0b4fb17af7f3fb7ea06fc2c",
+          "metadataSha256": "8b99045d8856c018de0a68cc07056f9e78b25940198280f4d8555cab526e6cd6",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "dodge": {
+        "originalGeneratedSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+        "originalGeneratedDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+        "rawArchiveSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+        "rawDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+        "promptSha256": "d597456891b4e495e8713bf795f7e2850bbfd9da3f6ef17b64e34224d68f279c",
+        "pipelineSha256": "834a717cdaae367305803abf4184fc5efe911379f5c605096777c73c2f7bfb55",
+        "qcSha256": "b3fe5c5aa7520d95500bb8f9079e98047492fafac26dd787a8006d4ce43160c7",
+        "sourceFrameRgbaSha256": [
+          "06e8055be5d3873bb7bdbc30cff410b2521dd877b7cd4a68e14fc1f224e9e8e1",
+          "4d01256e522525f9a6c348dc26905c64e3d7ac003e86bda5de9a4fd2cc4dca04",
+          "be4dad6432ff23713fa113ddc32d1000d326cfced2381428d4142d189ef86499",
+          "a606c296213d1815ec07363ac241f25d06ea6a9991e26edee99741364ca4ad2b",
+          "6cb9f25cbec52ce47defcec4680bba32d5a1ebe8111d26904a9bf32fe2b1f520",
+          "0808a2ad520a03913d7a9dda3805c2960ea76567bf0077fef2ce38d3e186c900",
+          "6d1a91d7f490d0f6f68d16a065677c03f31b2722ac2cde97e9fbe97f8a9b38b3",
+          "bd66490e77448372fc11c89e8680a0e6a0e146b84064ec8f9c51776ac8d85e1c"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "7032c7461709b0f06fd1a36be7a98746c02394d0ab2b59514a65794e350f9c51",
+          "2f7ee17310f076d53b2881743d8aa976d1c939244b1caa0e4a78f3dd71a61a27",
+          "3f53e41fe64b9181edf7e78d9279b96fcc7501e847025aa8c695484bd8910b89",
+          "10043dcece32e65e93963433fc3004ea529bdfe58cc36090d8c4bfb22e5111b2",
+          "47b267d9623591c7ee0c40119f3405b5db6fc6fae6d4a744b99a167090a3cc1a",
+          "b23eeb53e21a448c0d21139cc8a1c471b9c6b4544664401f3d785c095191bd24",
+          "3e39b4c22ae51901c6b48084c433ca2c89ddafe6a9a1f9e5c26a1561fead7cb2",
+          "79c236697e603116743cc92f4c6784750b2b39a793a0888bd04f8269d0f31d75"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "1a78a271cd8d38f0b92f4a80062efa934d0a03e2bb37673ebc67f35281f91ce7",
+          "inputDecodedRgbaSha256": "199d5f681ae696f9d6b9e3d0fcca023fcb139b3def0f3cb533bfa703dceaf121",
+          "outputArchiveSha256": "384555ab22cd65a142994842e772091167d152d1e986ee26538078285c052f1d",
+          "outputDecodedRgbaSha256": "81821f517cefcf00b33b5ead9f546eeecdd814105fe26d1ade9f8b872289def1",
+          "metadataSha256": "da723d32e99187dc495fb39ef77c313dccf3623cb85dd0047ed997535c3f8733",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "counter": {
+        "originalGeneratedSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+        "originalGeneratedDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+        "rawArchiveSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+        "rawDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+        "promptSha256": "f73062ac4facf8800e33fce8c48cb3e04474413c124164e02c95a7fb9b5ca612",
+        "pipelineSha256": "98049deb025b98422a01dbe96e00c514783791e3a1bf5b42635945b78c82fd9e",
+        "qcSha256": "61fd0e8e8e9b069ed9679f4f9072a0d1baff099889d2a38149271c24977bcfb3",
+        "sourceFrameRgbaSha256": [
+          "73feff8a44eb68dbab0a6b205aa42a371d9962761f48dbf833317391b0d78681",
+          "70738b02fa4259bccb23e1611d51969ac064ef78fdb1c29966a37e4d3b81d08a",
+          "117513ac25c0eb3a75342903e25c6b63226349161d04d53039c6bb8c8755d9fe",
+          "f84a59281061ddecd726d8083b022c4299594f5eee22a9c6cea01e9e858d1f64",
+          "8ca45758c29543b2ac859fb9532aefc4d21e0a8dd58fff093b6821d593e8b1a6",
+          "7e487be807eaa44609a90d1a64df1c3946f7e2a373917f2208e7f42b69888991",
+          "b3166818106364a61bee115993dc5551537460930a671a456f332aca895ed25c",
+          "ea35cc4b11192cf68b455c244f194a5d22939d7a1d2390e09cc1f04779eccd6b"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0de25dea33dff6f727b2de82bfe38a1f7438c1b2d60fc8c9f67f1c06010b22a8",
+          "61b32b035b19c42308026791db9c30e35419a22b1c1cfee71a52930770da61dc",
+          "6b10ccc1cc1ddcdcf79f03ba84ea6d3248bf1d24b13147e8c2b3b5da3c6547ad",
+          "509fdc81275808594b3c5b168ade4b1d802987ad0f0479ddf8f905496b4d1874",
+          "24b9e6d51d3ac3ab25fd3c9679564b6bdf14d5b27bbb76cdb89f8c1978517d5a",
+          "4b086e112d156feb147fa55d551acc20e5b3a2c16e49e2e026ba5a4b8f33af07",
+          "dde4b1e6c9aa24b7377ba1b4d1185e837d46e47ea37e3fb2eeb2df815d798b8b",
+          "99bfb2f4e93ebcead643a3b16c3c6f2327f165de196ef2bde7fe2341344905bd"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "f235f9d2a545697060bad727c1bc80f28d4e2d028e4008d017166a4d2b505022",
+          "inputDecodedRgbaSha256": "d8fde1dbdf8a25dbbde9b11885b89cdfc404f51a0a5930eda4c7f4f426768b22",
+          "outputArchiveSha256": "840eed9c200fd22cd9494ccc46c9d7ef43f1438b578e07dbd805c758b8650f15",
+          "outputDecodedRgbaSha256": "32e42d5bab81d81e9b369f13b0de2efbf09ff96a0e0c5ad44eb9fe6f6ac637a9",
+          "metadataSha256": "a009299ff60a3e994135f2b62b23be5c93c21f42ebd805752088cd92ba9c255b",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "stagger": {
+        "originalGeneratedSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+        "originalGeneratedDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+        "rawArchiveSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+        "rawDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+        "promptSha256": "7e9aba0212c12963c63cffcfdd6dcdfef22a3e1bcf7fbe6a9224230f19dcbcb9",
+        "pipelineSha256": "86264ca80368b0afe588798a50ded75e8bdac42497796a15b3ae1835d32ca095",
+        "qcSha256": "1b93bab56fce252ac70c97c794c8ba5afc6358777f5dc2d485467ec37649e394",
+        "sourceFrameRgbaSha256": [
+          "827d778fb9d711616777a67055c31b5431a6820f749472461ff6d9607e16b9e0",
+          "96be210ae3192502f2251c0e7bfb69009fadd1deee3f02bec326a745cf4be7ad",
+          "78e48db331e2a81d8d54a17b51f0e920906f56a7bbb43b826385eac03c0775d4",
+          "08dc862342a74bb2ded699f187e55cc4cd6056d9a2192085dd7129b294e7e259",
+          "c7ec213b28e912613f2df22af0c53d1d3cdbf4ab68cba8b78d063ffa1cf9e501",
+          "2848364c48ce2f7461799639110a372b28327e9efd786def1d660d6d3ddf7250",
+          "3b81b3760c280679d46933ac7aba4289876dad145b142fc1a0493f65c6bef35f",
+          "c49bce2696581e572fe4352e68df2b822b642df6832078b7f583acd5d729889f"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "dfa831a28ec9ddae741b099f2d76160a04ec6dc3d485cb4a1547afa6ed237dcb",
+          "e572aa2347b7b349d3f7e082f3db497444e9ef60885d7ab46a12f7055bf8ce80",
+          "4429cba725a88a5e82e5684c9b4d0639c3298f26707ffdff11888f93244cce0a",
+          "0beb4f5d6d339c2d1217150713521aeae083660fbf5f52d7756cbb10daf7d965",
+          "c1bb411072c3ecae9820c450a07f997cf4d38aef1cd95123796b3891b66afb4c",
+          "eaeec4d8e58087aff896ea87921d56aa6ec1970f896adfbc46cb06e26cc419b6",
+          "f0a531aae4e83cb266a750b231af0c3801e0a5a77dd880f92ec2b2c692613de3",
+          "6628e4e5040bbfa2723dd7e59bb8187a39102bd3456e2daf3277c4164f24bb1f"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "4ffa8826d6dba9c9e4cd769349266d364fa91b07c871e515b34a7dcf1a5cf6d7",
+          "inputDecodedRgbaSha256": "a4e0f9d8bc814155c6c60ba6c80d51333b43143b41e5c8b41536a4e8e9a71c6c",
+          "outputArchiveSha256": "93d3ee3f86e2f416fd801a356e3f4932482fefb432b198ff3716ce7997468e64",
+          "outputDecodedRgbaSha256": "7364db446e98883fa2bc3093da269b381945509a824912b61512ffc13081b371",
+          "metadataSha256": "770f44d77e2a81b2fab44533ba496a0fa83479d4773255b0b0d1ef99f120d460",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "knockaway": {
+        "originalGeneratedSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+        "originalGeneratedDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+        "rawArchiveSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+        "rawDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+        "promptSha256": "1f34a0fc1ffc88d6883c944545e3a0fd30a4ed16ba28f240bf6a278f0147052d",
+        "pipelineSha256": "77f5399a299ed37b8c966678a33bba2d256190f257ea2c97a3c1757924caea3e",
+        "qcSha256": "d6c3cb80457cc98f77755c6403e5a518b0a65104b9f875e0bcad8264681e55f8",
+        "sourceFrameRgbaSha256": [
+          "806a2f773a8255ff8b077eba1a739668e2ee1e3569741c5f308157f7c2f539d6",
+          "36e940126ac648e9b05c937cba2d14934bc29295c8114195eff0a769e7ac09d1",
+          "bc9921edf5e8db62ebb4cf8f6ea1c085c39e3847ae89a52c3d37d1d4585257fd",
+          "61aa3033ddad611620d52bc847d6bb6efed4d930f77c54e52b0ec000a21efdb9",
+          "87365b056cf66ae7ce1afb16169e9e411d377547f2a2bdb074d4308220cdb0d2",
+          "c0c94e94126caef6eeeb4f87b87cac6ed1d18533e2c1ca149d52a40a234aa080",
+          "fd1f59ca469bfb2de85b8f7b899542f443e342365086362298c2ee938d9b6a3a",
+          "da67c79b6dc08c88468ee78930527c0d8099d06c768d8b0f4658f9eefd26a4f3"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "bd0d10ad9d15fea3e406a6e3eb29c3f49a111b115f7e85b4c84ed112625917c5",
+          "161510c5a12f39966eb9a311284e4da2e360c6eb42e83977a5f7407cff4eedcb",
+          "1ac92245e851a1d6c86bfc43cd96ba0245e96800c3a6803d2490626ddba6a62b",
+          "94e73727555fc46ac2dc6301cce87ae3e66d3181aaaedde2009032cb00afdc01",
+          "fe0d99bca05d861630cea4793a6a4095df17e50a435d442fce85112235fecfb6",
+          "95ba0d1c21db1bfe84b5e6d2f8a224dd5354a89ad4b630199aab90243fefe9cf",
+          "29eaf19eaa78dfb96e36417bacab77d50768a873e58f0a52f8055be16174aa93",
+          "3876cbb9b0ca9b94da2700558e974b4ad8c2a05db130532d7a0d8bf7a071a863"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "8ac7be217355e02b5f4a387188e2f2abdc3d7b75e8e7d8118ef04f47a49a9ef2",
+          "inputDecodedRgbaSha256": "e8d1d8ca6125b3361691da958aebde0ded893cdc27af0e6ff6718653a121d6a6",
+          "outputArchiveSha256": "987d9ce28ef480e9adf1ba5546bf651b4b1574461eb7ee1a2264eac228b502c4",
+          "outputDecodedRgbaSha256": "ac6fa77f74e4ac4bfdcf6b14c727767c0d95ee148fb284cb483895fa57edf469",
+          "metadataSha256": "f4c324d468d492fe4898f1e92dc63863accb433ea7788cc7c11bc1f9c00ad584",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "down": {
+        "originalGeneratedSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+        "originalGeneratedDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+        "rawArchiveSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+        "rawDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+        "promptSha256": "90238bf38125159b7e3487470b1553a7213fd57da91f06acd46eb26cf7a6cab9",
+        "pipelineSha256": "18b8347f7d9204f6280ef6916fa599eabbf1018b872b03584a14322c93741df4",
+        "qcSha256": "a856215d61b659e75e5a509d61a188fb87ba58671fd3c9165407a595ee13bf98",
+        "sourceFrameRgbaSha256": [
+          "b681fc0e177f2c37685482a9217b4ccb5bc2287f40323e9c84320b4426d381a5",
+          "b4b8473367793c8b96121f8ecd6129d58d848d8a6300ad82238eae6af61ce336",
+          "8a67c943c8449420a762be65fe2544ea11673eea991726ade501e39abd41194a",
+          "c08b5516e048c9d6d217819bafa278bf5d09b2e3f212d69ea133b62a7274dfa6",
+          "681b2dd77a6fcc8520542d2190525097b743c93825c67fb92523cac13cd30aee",
+          "e82c2dfef7cae466eee329cf37f2b97418770b0443797a0d0085147f74c1403f",
+          "c9074c4f467d616c1847b202f2e86a70f33720f52dd0fb459f1fbc0aaa528eee",
+          "057675ec9a73e9c1d6981495ab23e865ee2f1a3f9ff7e5c3c31165fa5115f294"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "d3f2699486d9cdfcece0c6cb58be3c8f96a321719a67dd0de68b7f9c4d23a6fd",
+          "a1237d9919f98396a1027d3b9d94303740b3e2454286b850a65d71e2414550b9",
+          "70ddfee002cb7f42ff1cb386a98ad0d45b2f6f1ab2965c7d8e1038ae3647ff5c",
+          "84dc4bf1b743614623136fa8f711132dc68c25c9e10a656485bf3888642bf0ce",
+          "94b4d856a2841ce26b8d481bda60281d53a106e31bbf49c977a26104987ddd3a",
+          "aaefacfcedaf678f5dd6f827fa0bc4190b5d5d9d9b2e7cb84d7b9aad92b26c81",
+          "415d325fd73c7208f272ac7152d74db7ed905be1b4192722eed422db96ea7c4a",
+          "0b8cf303015e23e3d27c24c6c40c269b6f778ab3b26ac7473513a1cbfca3e05d"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "e9ed13e1575856b113f26d6bc06eee77101c848036afe54b135cf58d3598c67a",
+          "inputDecodedRgbaSha256": "fe19e01102a07b2b3181c3ebf8eb8e36758b31b60d5b88b0e75d6ccc1e4e8dc0",
+          "outputArchiveSha256": "adcd8fe77e40b90d60e74c409a721462130ac58da04ab77fc21b4482d0afe0ac",
+          "outputDecodedRgbaSha256": "ae8690087f9dfd343cfa13635789e7a6931d7e689e57c59499db40629acb8898",
+          "metadataSha256": "386ebff33b21444c731b8c782198ee76d35c0b08315970fef6643b06384243fe",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      },
+      "revive": {
+        "originalGeneratedSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+        "originalGeneratedDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+        "rawArchiveSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+        "rawDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+        "promptSha256": "65fe7b1ae882c11f8f6d0ab4ba06674ae298db9ee9a5cba119f8da902126bc17",
+        "pipelineSha256": "ecf75bc965454a8d61c27a82a61c79488b4821503b776e036b1ccb1ea221afb3",
+        "qcSha256": "c111d1ee8c9ca1ab9dd9fa46910b7d9c303eeb7ea42634ca6e7843c9bbb75af2",
+        "sourceFrameRgbaSha256": [
+          "057675ec9a73e9c1d6981495ab23e865ee2f1a3f9ff7e5c3c31165fa5115f294",
+          "6c226b4a14b271ceb653b69b6da4a77d35cf8d31843e02ca23a5a7bd5452cc68",
+          "d6f06aad5c477cf2d6b5b42cb3daf97fade7ea30ecf4aa2b619656103100167c",
+          "16f32a83ec19b3a75402ccaa1a0d3a52198ca02098c0a61cea52c47d2bb0d006",
+          "e943af7d047eff98bf9f6d669575a052656c9a801cc88429afe1e6f92b05e80a",
+          "34f73144ca903d2be4c79b601d46e41b78af23acf63cd7490de3182bf8547a34",
+          "2b7b20792d377223e7f5ebe639f98659095b62bf6aaba0ffcd74eebb61be734a",
+          "3cc70cbe2a0ed4fe25cd8901b9d2dbdd022669e4763b89dfb6a72ddd5b937d78"
+        ],
+        "runtimeFrameRgbaSha256": [
+          "0b8cf303015e23e3d27c24c6c40c269b6f778ab3b26ac7473513a1cbfca3e05d",
+          "c5dab62a2e674e46eefd35a6d26afe7931a0be660cd14b180d4e6c5b230ba7eb",
+          "08eb548ea9f02ab63a4850761338317ede068f67ab35b6fe8e3859c38e98cfb4",
+          "cbf9bd1f921aa6d65f48daeb74360c24a75349aeb30f8b1f59277311bc5a5c19",
+          "587bec7b241bfa2f9412ba2bece2f23bedd660aaf3584bb32788a994b4a249a3",
+          "ec46e3cc715909b35de0f64b9b18d3df3ddd9a400023b1d583fe6ef123dca872",
+          "47454e5d007c89788756ab7a2100bb1c199f5d63c20b7c282ec5892d733fc1ad",
+          "ae93e9e001ca9815901bc029f0eea968da528e684e52fb7ed8d9de56ef318732"
+        ],
+        "representativeRawTracked": true,
+        "sourceFramesTracked": true,
+        "preprocessing": {
+          "schemaVersion": 1,
+          "tool": "repack_chroma_sprite_grid.py",
+          "inputSha256": "50b15ca5842169c37573952c513019ef92f6c5abb1176e13b79bcb17ff70f136",
+          "inputDecodedRgbaSha256": "bbe3d901c52c278132b6ff5e11badf9235a1931d550d8dfb9be31766b25f6d41",
+          "outputArchiveSha256": "2ce5c69f71f179f1db1d07213633845c80fcf67b8c305ba35730544364f6329b",
+          "outputDecodedRgbaSha256": "488c036c13a89ab4ea0264ff06b045fb2c0b1579950f04461ac0e4753a759cea",
+          "metadataSha256": "aee405d6483214af8fe8691e49b8eff66e5330589807686030937cd8a69ca89b",
+          "outputArchiveTracked": true,
+          "metadataTracked": true
+        }
+      }
+    }
+  }
+}

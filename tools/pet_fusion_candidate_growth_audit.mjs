@@ -46,6 +46,22 @@ const EXPECTED_PROFILE_IDENTITIES = new Map([
     "emberhorn_fusion_moss_rampart_fire4_earth6",
   ],
 ]);
+const EXPECTED_FUSION_RECIPES = new Map([
+  [
+    "emberhorn_solar_crown_fusion_v1",
+    {
+      targetFormId: "emberhorn_fusion_solar_crown_fire7_wind3",
+      targetGrowthProfileId: "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+    },
+  ],
+  [
+    "emberhorn_moss_rampart_fusion_v1",
+    {
+      targetFormId: "emberhorn_fusion_moss_rampart_fire4_earth6",
+      targetGrowthProfileId: "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+    },
+  ],
+]);
 const FROZEN_PRODUCTION_PROFILE_PATHS = Object.freeze([
   "profileId",
   "formId",
@@ -138,6 +154,93 @@ function valueAtPath(value, fieldPath) {
 
 function describeValue(value) {
   return value === undefined ? "<missing>" : JSON.stringify(value);
+}
+
+function validateClosedProductionFusionCatalog(fusionDocument) {
+  const errors = [];
+  const recipeChecks = [];
+  if (!isObjectRecord(fusionDocument)) {
+    return {
+      errors: ["production fusion catalog must be an object"],
+      recipeChecks,
+    };
+  }
+  if (fusionDocument.runtimeEnabled !== false) {
+    errors.push("production fusion catalog runtimeEnabled must remain false");
+  }
+  if (!Array.isArray(fusionDocument.recipes)) {
+    errors.push(
+      `production fusion catalog recipes must contain exactly ${EXPECTED_FUSION_RECIPES.size}`
+      + " frozen formal recipes",
+    );
+    return {errors, recipeChecks};
+  }
+  if (fusionDocument.recipes.length !== EXPECTED_FUSION_RECIPES.size) {
+    errors.push(
+      `production fusion catalog recipes must contain exactly ${EXPECTED_FUSION_RECIPES.size}`
+      + ` frozen formal recipes; actual=${fusionDocument.recipes.length}`,
+    );
+  }
+
+  const recipeIdCounts = new Map();
+  for (const [index, recipe] of fusionDocument.recipes.entries()) {
+    const fieldPath = `production fusion catalog recipes[${index}]`;
+    const mismatches = [];
+    if (!isObjectRecord(recipe)) {
+      errors.push(`${fieldPath} must be an object`);
+      recipeChecks.push({
+        index,
+        recipeId: null,
+        matchesFrozenRecipe: false,
+        mismatches: [`${fieldPath} must be an object`],
+      });
+      continue;
+    }
+
+    const recipeId = typeof recipe.recipeId === "string" ? recipe.recipeId : "";
+    if (!recipeId) {
+      mismatches.push("recipeId must be a non-empty string");
+    } else {
+      recipeIdCounts.set(recipeId, (recipeIdCounts.get(recipeId) || 0) + 1);
+      const expected = EXPECTED_FUSION_RECIPES.get(recipeId);
+      if (!expected) {
+        mismatches.push(`recipeId is not a frozen formal recipe: ${recipeId}`);
+      } else {
+        for (const key of ["targetFormId", "targetGrowthProfileId"]) {
+          if (recipe[key] !== expected[key]) {
+            mismatches.push(
+              `${key} expected=${describeValue(expected[key])}`
+              + ` actual=${describeValue(recipe[key])}`,
+            );
+          }
+        }
+      }
+    }
+    if (recipe.assetGate?.status !== "formal") {
+      mismatches.push(
+        "assetGate.status expected=\"formal\""
+        + ` actual=${describeValue(recipe.assetGate?.status)}`,
+      );
+    }
+    errors.push(...mismatches.map((error) => `${fieldPath}: ${error}`));
+    recipeChecks.push({
+      index,
+      recipeId: recipeId || null,
+      matchesFrozenRecipe: mismatches.length === 0,
+      mismatches,
+    });
+  }
+
+  for (const recipeId of EXPECTED_FUSION_RECIPES.keys()) {
+    const occurrenceCount = recipeIdCounts.get(recipeId) || 0;
+    if (occurrenceCount !== 1) {
+      errors.push(
+        `production fusion catalog recipe ${recipeId}`
+        + ` occurrence count expected=1 actual=${occurrenceCount}`,
+      );
+    }
+  }
+  return {errors, recipeChecks};
 }
 
 function validateStatMap(value, fieldPath, errors, {integer = false} = {}) {
@@ -426,23 +529,23 @@ export function verifyProductionPromotion(candidateDocument, documents = {}) {
       mismatches,
     });
   }
-  const fusionCatalogErrors = [];
-  if (fusionDocument.runtimeEnabled !== false) {
-    fusionCatalogErrors.push("production fusion catalog runtimeEnabled must remain false");
-  }
-  if (!Array.isArray(fusionDocument.recipes) || fusionDocument.recipes.length !== 0) {
-    fusionCatalogErrors.push("production fusion catalog recipes must remain an empty array");
-  }
+  const fusionCatalogCheck = validateClosedProductionFusionCatalog(fusionDocument);
+  const fusionCatalogErrors = fusionCatalogCheck.errors;
   const errors = [...promotionErrors, ...fusionCatalogErrors];
   return {
     growthProfileCount: productionProfiles.length,
     petFormCount: productionForms.length,
-    fusionRuntimeEnabled: fusionDocument.runtimeEnabled,
-    fusionRecipeCount: Array.isArray(fusionDocument.recipes) ? fusionDocument.recipes.length : null,
+    fusionRuntimeEnabled: isObjectRecord(fusionDocument)
+      ? fusionDocument.runtimeEnabled
+      : null,
+    fusionRecipeCount: isObjectRecord(fusionDocument) && Array.isArray(fusionDocument.recipes)
+      ? fusionDocument.recipes.length
+      : null,
     approvedProfileCount: candidateDocument.profiles.length,
     promotedProfileCount: profileChecks.filter((check) => check.matchesFrozenCandidate).length,
     productionProfilesMatchFrozenCandidates: promotionErrors.length === 0,
     fusionCatalogClosed: fusionCatalogErrors.length === 0,
+    fusionRecipeChecks: fusionCatalogCheck.recipeChecks,
     profileChecks,
     errors,
   };

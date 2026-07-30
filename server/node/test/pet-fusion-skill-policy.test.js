@@ -426,10 +426,10 @@ test("damaged fusion lineage blocks every skill mutation including empty-slot tr
   );
 });
 
-test("paid-reset terminal fusion target without lineage fails closed when recipes are empty", () => {
+test("registered terminal fusion target without lineage still fails closed", () => {
   const recipeCatalog = loadPetFusionRecipeCatalog();
   const targetFormId = "emberhorn_fusion_solar_crown_fire7_wind3";
-  assert.deepEqual(recipeCatalog.targetFormIds, []);
+  assert.equal(recipeCatalog.targetFormIds.includes(targetFormId), true);
   assert.equal(recipeCatalog.terminalTargetFormIds.includes(targetFormId), true);
   const service = createAuthService({petFusionRecipeCatalog: recipeCatalog});
   const registered = service.register({

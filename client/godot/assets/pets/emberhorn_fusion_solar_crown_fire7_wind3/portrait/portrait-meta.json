@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "releaseGate": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_2jWxHZyjDbMLLnfSZGZFWNt1",
+    "originalInput": {
+      "path": ".run/pet-portrait-samples/emberhorn_fusion_solar_crown_fire7_wind3/raw.png",
+      "sha256": "a944a4df208b3bcb4e42cfdfad642b11b4576b91087415149524ebd88ccd1056",
+      "rgbaSha256": "82fd5c187849dd4ffc8a3068607490ad525998990243fb81781d03054ea7c329",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/generation-attestation.json",
+      "sha256": "f50e4a15a4fa3c8e660e4e775fb20c6c74ef5130ad84b2ca124a9f1e965c747d",
+      "schemaVersion": 3,
+      "generationId": "call_2jWxHZyjDbMLLnfSZGZFWNt1"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "05c6e8f82df83320c1b46b002eb46cd3be69408c84a75246a7948c80b75fd9c4",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 521,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/identity/front_3quarter_sw.png",
+    "sha256": "05c6e8f82df83320c1b46b002eb46cd3be69408c84a75246a7948c80b75fd9c4",
+    "rgbaSha256": "ff158cb13cd0ab70d19c6e0aa6ad83f1325ad8f0d6aff01d48ba385778715f7c",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/prompts/portrait-v1.txt",
+    "sha256": "6d19e5a33bdbeda3484844e63281421c0fa14ac7f07e3c6e050804991588b58e",
+    "sourceSha256": "6d19e5a33bdbeda3484844e63281421c0fa14ac7f07e3c6e050804991588b58e",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-samples/emberhorn_fusion_solar_crown_fire7_wind3/prompt.txt",
+    "selectionDocumentationSha256": "a4c5ff5007c17c865630cfd7841d03f8b8b4eef11ff02a2c400055f8e14d05ce",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/source-and-ownership.md",
+    "sha256": "96ec3d88182d5377599949c1177cde9d2577792fc7c34ca05d44847faefcaacd"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#20DE22",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        5.477,
+        1.732,
+        3.742,
+        3.317
+      ],
+      "candidatePixels": 1126269,
+      "eligiblePixels": 3414,
+      "transparentPixels": 1122855,
+      "partialAlphaPixels": 3400,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "61268deb12066f94eddf65ed588c93d70497d48130923fb9ed19ca92fba114ea",
+        "afterRgbaSha256": "61268deb12066f94eddf65ed588c93d70497d48130923fb9ed19ca92fba114ea",
+        "helperMetrics": {
+          "edgePixelCount": 9535,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 521,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-original-generated.png",
+      "sha256": "a944a4df208b3bcb4e42cfdfad642b11b4576b91087415149524ebd88ccd1056",
+      "rgbaSha256": "82fd5c187849dd4ffc8a3068607490ad525998990243fb81781d03054ea7c329",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "6dca359f1f1b864976d8a8001637669b3598716f06a2d6d63930a2989e69c6e7",
+      "rgbaSha256": "82fd5c187849dd4ffc8a3068607490ad525998990243fb81781d03054ea7c329",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-master-1024.png",
+      "sha256": "73d53655c7ee0c811d99510142c990b042d75eb06c1f959a5e94302d4d9e3d2f",
+      "rgbaSha256": "58ab49b21222d0a14fc0db546518b6f9ef63835fa57dcb1a511d592d03422637",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/default.png",
+      "sha256": "94f268b58859fff9ff89dee21de7f611c01e279a0dd2d3c2c1c22321d60d8b59",
+      "rgbaSha256": "b3411eb2b15295d3047b08e9dc4d450dcdd519acb64700cf88a07c9564d80c99",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "66e697b2065853e350480d09d05a49481f3ed23c13944d099d145790373e0abc",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 3414
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-alpha-mask.png",
+      "sha256": "0f59a6feac6b9ea66d88342e5acce29ed1cbecdd52355d1f973873d00691de41",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 449661
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.287007,
+      "transparentCoverage": 0.712993,
+      "visiblePixelCount": 300949,
+      "visibleBbox": [
+        263,
+        186,
+        845,
+        908
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 263,
+        "top": 186,
+        "right": 179,
+        "bottom": 116
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.288342,
+      "transparentCoverage": 0.711658,
+      "visiblePixelCount": 75587,
+      "visibleBbox": [
+        132,
+        93,
+        423,
+        454
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 132,
+        "top": 93,
+        "right": 89,
+        "bottom": 58
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/qa/portrait/contact-sheet.png",
+      "sha256": "f9431df8db58f76b9a9a8637749b0211564a8bc0cef3bae67b3f1409503da1b9",
+      "rgbaSha256": "88373f0e3349e2030a9a4bd0c6eca134554f6730b0bbcbce1e40d254832e9a4e",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

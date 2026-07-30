@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "decisionType": "beastbound_pet_fusion_full_nonrideable_visual_owner_decision",
+  "decisionId": "pet_fusion_p1_4e_full_nonrideable_visual_20260730",
+  "roadmapItem": "P1.4e",
+  "decision": "approved",
+  "reviewer": "project-owner:fander",
+  "reviewedOn": "2026-07-30",
+  "recordedDecisionText": "通过啊",
+  "approvedScopes": [
+    "standalone_pet_identity_visual_only",
+    "standalone_pet_world_true8_visual_only",
+    "standalone_pet_battle_two_view_visual_only",
+    "revive_sequence_visual_only"
+  ],
+  "excludedScopes": [
+    "dedicated_pet_portrait",
+    "production_art_catalog_registration",
+    "formal_fusion_recipe_registration",
+    "player_fusion_entry",
+    "fusion_runtime_release",
+    "mounted_pet_art"
+  ],
+  "evidence": {
+    "mergedReviewVideo": {
+      "path": ".run/evidence/phase371_fusion_owner_review/fusion-pets-owner-review-1x.mp4",
+      "sha256": "5b18f43d1eaa0dd9ba239cbba9c1d69559285b03d6e285bc6dbf337aa94c706d",
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "playbackSpeed": 1.0,
+      "videoFrameCount": 3312
+    },
+    "phaseRecord": {
+      "path": "docs/phase_372_fusion_pet_full_bundle_owner_approval.md",
+      "sha256": "99f364fcb025c124ef1d6df26df306a6146e0186524e81e1f2a2f6895204cc7e"
+    },
+    "forms": [
+      {
+        "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+        "battleBundleDigest": "5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc",
+        "worldEvidenceIndex": {
+          "path": ".run/evidence/p1_4e_fusion_full_pack/world-review/p1-4e-solar-world-final/evidence-index.json",
+          "sha256": "bcc3248294e6fd8249b07ca2b04a5f4b9c67ef98565be01750ae6c1f71aae571"
+        },
+        "battleReviewVideo": {
+          "path": ".run/evidence/phase371_fusion_owner_review/solar-battle-revive-fix-v1/review.mp4",
+          "sha256": "c0ea90703062ae9172dadd9d97aa9d015f00cb9cb0e92f065124f33890f39bf8"
+        }
+      },
+      {
+        "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+        "battleBundleDigest": "27c3a0784ab6a2e55a3f3acc6624a722a8b4240bbb04bcd0ffbc53a52d524107",
+        "worldEvidenceIndex": {
+          "path": ".run/evidence/p1_4e_fusion_full_pack/world-review/p1-4e-moss-world-final/evidence-index.json",
+          "sha256": "28eac45aaa1a9145d7597422f06bb35d9e5966a8a05bc63f75ca4f9e00ab6062"
+        },
+        "battleReviewVideo": {
+          "path": ".run/evidence/phase371_fusion_owner_review/moss-battle-revive-fix-v1/review.mp4",
+          "sha256": "db12103d76d14cce6ec7a4d9490552a9a0971e834972d72d23bb5ef61f0b21cb"
+        }
+      }
+    ]
+  },
+  "releaseApproved": false,
+  "runtimeEnabled": false
+}

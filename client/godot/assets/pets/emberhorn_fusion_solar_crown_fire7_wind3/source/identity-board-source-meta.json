@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 2,
+  "asset": "emberhorn_fusion_solar_crown_fire7_wind3_identity_board",
+  "generatorRecord": "identity/source-and-ownership.md",
+  "originalGeneratedFilename": "identity-board-raw.png",
+  "originalPngSize": [
+    3072,
+    3072
+  ],
+  "originalPngSha256": "5317b61e4c8914975d51c51112a34b213703b168b836b4cd7e6e5fe8936e0345",
+  "decodedRgbaPixelSha256": "3d2ebcb7eef393f7060d750e3feba0bedbcd95e601472ddc944bbb3081e606df",
+  "canonicalRgbaSha256": "44cb5ca6c235f6db4dad70889aa17ba48d95034d262bf21e2d1b36742c4d398b",
+  "archive": {
+    "path": "source/identity-board-raw.webp",
+    "format": "webp",
+    "lossless": true,
+    "sha256": "2b8abc1af962965df7318f8ba5d0cbfa736a6a57a570cbeea3506ccacd8c4866",
+    "decodedRgbaPixelSha256": "3d2ebcb7eef393f7060d750e3feba0bedbcd95e601472ddc944bbb3081e606df",
+    "canonicalRgbaSha256": "44cb5ca6c235f6db4dad70889aa17ba48d95034d262bf21e2d1b36742c4d398b"
+  },
+  "prompt": "prompts/identity.txt",
+  "promptSha256": "bf17c530f74d831113c74292e1ea771cd741e11febeac189fba15bd1b64e6912",
+  "identityLock": "identity/identity-lock.md",
+  "identityLockSha256": "d32f46503ed7bd7278d3be87cb41f801c6f666703ebe668cf5a7e0ff1ec8d609",
+  "ownership": "identity/source-and-ownership.md",
+  "ownershipSha256": "863d1cf2337ce16641bd11379ae81c49a01f50872d29e0c84392aa33779d66ef",
+  "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+  "pipelineMetadataSha256": "8d827774f046148b0d4a5fd76200dcc4781b11e9fc7663a2a3f4d42962bb2738",
+  "selfReview": {
+    "path": "qa/identity-key-pose-qc.json",
+    "sha256": "4e42ebfac0c6f920fcaea4188f5c542015bddbf690b5c07f9f3240478e716f2b",
+    "status": "passed",
+    "contactSheet": {
+      "path": "qa/identity-key-pose-contact-sheet.png",
+      "fileSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+      "pixelSize": [
+        1024,
+        1024
+      ]
+    }
+  },
+  "outputs": {
+    "transparentBoard": "identity/identity-board-transparent.png",
+    "transparentBoardSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+    "transparentBoardAudit": {
+      "format": "PNG",
+      "mode": "RGBA",
+      "pixelSize": [
+        1024,
+        1024
+      ],
+      "fileSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+      "decodedRgbaPixelSha256": "02405a73b5d1a0da58391889ca14aa661c9787ad287476f860c759c207725c38",
+      "canonicalRgbaSha256": "d0e9dea8d6e2fb3f31409ad812601813f5af0af7d09d9d68b708df6474c21546",
+      "transparentPixelCount": 935152,
+      "partialAlphaPixelCount": 10187,
+      "opaquePixelCount": 103237,
+      "alphaPositivePixelCount": 113424,
+      "visiblePixelCount": 112472,
+      "transparentRgbLeakPixelCount": 0,
+      "visibleAlphaThreshold": 8,
+      "visibleBbox": [
+        157,
+        260,
+        951,
+        1002
+      ],
+      "safeMargin": 0,
+      "path": "identity/identity-board-transparent.png"
+    },
+    "poses": {
+      "front_3quarter_sw": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "pixelSize": [
+          512,
+          512
+        ],
+        "fileSha256": "05c6e8f82df83320c1b46b002eb46cd3be69408c84a75246a7948c80b75fd9c4",
+        "decodedRgbaPixelSha256": "9c1618aec91c3b7d823024ccaa2a9a6e9489950d00f0a7ad64ef090f7ae6b953",
+        "canonicalRgbaSha256": "ff158cb13cd0ab70d19c6e0aa6ad83f1325ad8f0d6aff01d48ba385778715f7c",
+        "transparentPixelCount": 228261,
+        "partialAlphaPixelCount": 2835,
+        "opaquePixelCount": 31048,
+        "alphaPositivePixelCount": 33883,
+        "visiblePixelCount": 33597,
+        "transparentRgbLeakPixelCount": 0,
+        "visibleAlphaThreshold": 8,
+        "visibleBbox": [
+          157,
+          260,
+          407,
+          490
+        ],
+        "safeMargin": 4,
+        "path": "identity/front_3quarter_sw.png"
+      },
+      "back_3quarter_ne": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "pixelSize": [
+          512,
+          512
+        ],
+        "fileSha256": "98c6631d2026a29e50e8a259ef3108ea1af222fc4ffbf429945a1bb960ab17d2",
+        "decodedRgbaPixelSha256": "2019ac981ca2b44dcf4b4bbd512cdf9a20620cdea5815b4de18af87bfff74b5c",
+        "canonicalRgbaSha256": "76a4c517e9cd8678f3c3fbd1aff53c184d195a7f4aa2742c704aae8788e52bd4",
+        "transparentPixelCount": 237528,
+        "partialAlphaPixelCount": 2515,
+        "opaquePixelCount": 22101,
+        "alphaPositivePixelCount": 24616,
+        "visiblePixelCount": 24395,
+        "transparentRgbLeakPixelCount": 0,
+        "visibleAlphaThreshold": 8,
+        "visibleBbox": [
+          165,
+          263,
+          400,
+          490
+        ],
+        "safeMargin": 4,
+        "path": "identity/back_3quarter_ne.png"
+      },
+      "south": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "pixelSize": [
+          512,
+          512
+        ],
+        "fileSha256": "4d75989f600fc834d10dbe460ed7658c8e0abb13df8d7165071cc8fd368dd82c",
+        "decodedRgbaPixelSha256": "c849371b773f03de02b17fee8f75ca56b900150febd5cfb023486fc0024cad1b",
+        "canonicalRgbaSha256": "dac3cb62381f4a79c781a2d78599c7673a11411d8afef31a9ee5f8b6413465fa",
+        "transparentPixelCount": 234291,
+        "partialAlphaPixelCount": 2174,
+        "opaquePixelCount": 25679,
+        "alphaPositivePixelCount": 27853,
+        "visiblePixelCount": 27658,
+        "transparentRgbLeakPixelCount": 0,
+        "visibleAlphaThreshold": 8,
+        "visibleBbox": [
+          186,
+          233,
+          358,
+          490
+        ],
+        "safeMargin": 4,
+        "path": "identity/south.png"
+      },
+      "west": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "pixelSize": [
+          512,
+          512
+        ],
+        "fileSha256": "1890518e145017b1ea8392458df00507905edd8fa4f55a8fd1d736bdb6404b96",
+        "decodedRgbaPixelSha256": "e4344a99ac07c646d70bd6c7e409b274537629b4ed820bea7f0bb2b3b1f4b63d",
+        "canonicalRgbaSha256": "d76a28ccdeaf824d69b40a2fbc2758079c2a3f6c62a62e9a49b3a9583e18cb99",
+        "transparentPixelCount": 235072,
+        "partialAlphaPixelCount": 2663,
+        "opaquePixelCount": 24409,
+        "alphaPositivePixelCount": 27072,
+        "visiblePixelCount": 26822,
+        "transparentRgbLeakPixelCount": 0,
+        "visibleAlphaThreshold": 8,
+        "visibleBbox": [
+          129,
+          306,
+          439,
+          490
+        ],
+        "safeMargin": 4,
+        "path": "identity/west.png"
+      }
+    }
+  }
+}

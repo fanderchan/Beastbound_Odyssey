@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `emberhorn_fusion_moss_rampart_fire4_earth6`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_PPRtkgA2KYdVM7pMNVrrzNH3`
+- generation attestation: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `a556b4b3990849105b24ab2ce15d8678d7ff9d0f13bb7e6d04fc54a63f31684b`
+- exact ImageGen request prompt: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `8d15c4dd975db7e7b48871bb0521552c024510989884ca47266cd0482d1bec53`
+- selected prompt documentation: `.run/pet-portrait-samples/emberhorn_fusion_moss_rampart_fire4_earth6/prompt.txt`
+- selected prompt documentation SHA-256: `3be8374e0daf0b9614daf98677295901ea6bb714470ede7b80bed2d1a7fee146`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `2385`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `aff4ada2def78f008c61246054399f6efecd34694175e3a9c3c9e1b5582b8dbf`
+- raw lossless source SHA-256: `3c4e1d883ec0205335f8443d1d55bcac71cbd57e7222b2e8d196d4ab885d0ca1`
+- transparent 1024 master SHA-256: `7a6e08f23722aa8b1f65320f354d35d5ca67df8f971b30f5c5b73f0a34ba5083`
+- shared 512 runtime SHA-256: `45f1d3c4f4581667aaf803807af9d5cc137a44b8e9a06a7285f90c5e9256eb4d`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

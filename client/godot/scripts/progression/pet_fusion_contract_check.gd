@@ -62,8 +62,12 @@ func _initialize() -> void:
 		not bool(production_contract.get("runtimeEnabled", true))
 			and not bool(production_contract.get("available", true))
 			and int(production_contract.get("geneProfileCount", -1)) == 5
-			and int(production_contract.get("recipeCount", -1)) == 0,
-		"生产融合目录必须保持关闭、五个已审计血脉基因档、零配方",
+			and int(production_contract.get("recipeCount", -1)) == 2
+			and production_contract.get("targetFormIds", []) == [
+				"emberhorn_fusion_moss_rampart_fire4_earth6",
+				"emberhorn_fusion_solar_crown_fire7_wind3",
+			],
+		"生产融合目录必须保持关闭，并精确登记五个血脉基因档与两条正式配方",
 		errors
 	)
 	var bloodline_reaction_fields_ok := true
@@ -111,6 +115,7 @@ func _initialize() -> void:
 
 	var enabled_empty := production_catalog.duplicate(true)
 	enabled_empty["runtimeEnabled"] = true
+	enabled_empty["recipes"] = []
 	_expect(
 		not _catalog_errors(enabled_empty, production_dependencies).is_empty(),
 		"空配方目录被错误开启",

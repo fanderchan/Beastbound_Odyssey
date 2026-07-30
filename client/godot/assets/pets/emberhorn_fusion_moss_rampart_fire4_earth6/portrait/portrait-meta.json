@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "releaseGate": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_PPRtkgA2KYdVM7pMNVrrzNH3",
+    "originalInput": {
+      "path": ".run/pet-portrait-samples/emberhorn_fusion_moss_rampart_fire4_earth6/raw.png",
+      "sha256": "aff4ada2def78f008c61246054399f6efecd34694175e3a9c3c9e1b5582b8dbf",
+      "rgbaSha256": "df8221350669b5fc8198df41da5c03d04c9aee9b4fa4c4ffed191a045ec0af94",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/generation-attestation.json",
+      "sha256": "f88991ce97b233fdf702bf04db28754f1605fa249487c6214bccce453e214385",
+      "schemaVersion": 3,
+      "generationId": "call_PPRtkgA2KYdVM7pMNVrrzNH3"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "a556b4b3990849105b24ab2ce15d8678d7ff9d0f13bb7e6d04fc54a63f31684b",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 521,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/identity/front_3quarter_sw.png",
+    "sha256": "a556b4b3990849105b24ab2ce15d8678d7ff9d0f13bb7e6d04fc54a63f31684b",
+    "rgbaSha256": "94a0c0102706294e66602e856e1579e16aa39fe910627613f4fc7c199933ea6f",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/prompts/portrait-v1.txt",
+    "sha256": "8d15c4dd975db7e7b48871bb0521552c024510989884ca47266cd0482d1bec53",
+    "sourceSha256": "8d15c4dd975db7e7b48871bb0521552c024510989884ca47266cd0482d1bec53",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-samples/emberhorn_fusion_moss_rampart_fire4_earth6/prompt.txt",
+    "selectionDocumentationSha256": "3be8374e0daf0b9614daf98677295901ea6bb714470ede7b80bed2d1a7fee146",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/source-and-ownership.md",
+    "sha256": "80b40ec53286ca9907425b55f0b1ad26d15c25ab4175f66ba0792cb04c8da5f9"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F014EE",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        9.11,
+        9.644,
+        13.342,
+        7.071
+      ],
+      "candidatePixels": 989730,
+      "eligiblePixels": 2409,
+      "transparentPixels": 987321,
+      "partialAlphaPixels": 2396,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 2385,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "1a27f41625a6776b8b215bfbcb0f92ce8564f431f40979a205e5c5ef31d33267",
+        "afterRgbaSha256": "9990339fa1b2791cd3fd67d26876bf0854f6827f2bebe4113f1e32eb68414feb",
+        "helperMetrics": {
+          "edgePixelCount": 9912,
+          "strongMagentaEdgePixelsBefore": 2385,
+          "strongMagentaEdgePixelsAfter": 54,
+          "strongMagentaEdgeRatioAfter": 0.005448,
+          "despilledPixels": 2385,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 521,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-original-generated.png",
+      "sha256": "aff4ada2def78f008c61246054399f6efecd34694175e3a9c3c9e1b5582b8dbf",
+      "rgbaSha256": "df8221350669b5fc8198df41da5c03d04c9aee9b4fa4c4ffed191a045ec0af94",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "3c4e1d883ec0205335f8443d1d55bcac71cbd57e7222b2e8d196d4ab885d0ca1",
+      "rgbaSha256": "df8221350669b5fc8198df41da5c03d04c9aee9b4fa4c4ffed191a045ec0af94",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-master-1024.png",
+      "sha256": "7a6e08f23722aa8b1f65320f354d35d5ca67df8f971b30f5c5b73f0a34ba5083",
+      "rgbaSha256": "dd12f72930ed90bb9c8c7b4e263b4967e0428277886a788aa70c5f2ea2938a84",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/default.png",
+      "sha256": "45f1d3c4f4581667aaf803807af9d5cc137a44b8e9a06a7285f90c5e9256eb4d",
+      "rgbaSha256": "1eff01fc47c4cdbf4f6c6a018e09dc214e1edf0ce88f14f3206940d7533d8105",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "f3648cdec351a0a357f31f4ca072338b912c750ad9a27f39e7dd0741f0f5d18d",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2409
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-alpha-mask.png",
+      "sha256": "6bcc5252e387dd4021f610b17ca1d453e16f81514dea5cf20365a1cade21a795",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 585195
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.373206,
+      "transparentCoverage": 0.626794,
+      "visiblePixelCount": 391335,
+      "visibleBbox": [
+        185,
+        143,
+        936,
+        900
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 185,
+        "top": 143,
+        "right": 88,
+        "bottom": 124
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.37495,
+      "transparentCoverage": 0.62505,
+      "visiblePixelCount": 98291,
+      "visibleBbox": [
+        92,
+        71,
+        469,
+        451
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 92,
+        "top": 71,
+        "right": 43,
+        "bottom": 61
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/qa/portrait/contact-sheet.png",
+      "sha256": "0e8cbc3d6f637aef4e380b3d00880bb4247e251a04fc1bc46b5ec72a7fa1b5c1",
+      "rgbaSha256": "1a398cb49b21f36e242784ae330d8dbbbc7f2fe60cfbe683def151ae0b0721f5",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

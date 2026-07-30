@@ -23,7 +23,7 @@ const {
   testFusionDocuments,
 } = require("../test-support/pet-fusion-fixture");
 
-test("production fusion catalog stages approved bloodline genes while recipes stay closed", () => {
+test("production fusion catalog registers two formal recipes while runtime stays closed", () => {
   const catalog = loadPetFusionRecipeCatalog();
 
   assert.equal(catalog.schemaVersion, 2);
@@ -99,8 +99,123 @@ test("production fusion catalog stages approved bloodline genes while recipes st
     catalog.geneProfiles.map((profile) => profile.lineageId),
     ["emberhorn", "emberhorn", "emberhorn", "mossback", "mossback"],
   );
-  assert.deepEqual(catalog.recipes, []);
-  assert.deepEqual(catalog.targetFormIds, []);
+  assert.deepEqual(
+    catalog.recipes.map((recipe) => ({
+      recipeId: recipe.recipeId,
+      targetFormId: recipe.targetFormId,
+      targetGrowthProfileId: recipe.targetGrowthProfileId,
+      roleGeneRules: recipe.roleGeneRules,
+      result: recipe.result,
+      assetGate: recipe.assetGate,
+    })),
+    [
+      {
+        recipeId: "emberhorn_solar_crown_fusion_v1",
+        targetFormId: "emberhorn_fusion_solar_crown_fire7_wind3",
+        targetGrowthProfileId:
+          "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+        roleGeneRules: {
+          core: {
+            allowedLineageIds: ["emberhorn"],
+            allowedGeneProfileIds: [
+              "fusion_gene_emberhorn_red_v1",
+              "fusion_gene_emberhorn_ash_v1",
+              "fusion_gene_emberhorn_gale_v1",
+            ],
+          },
+          resonance_one: {
+            allowedLineageIds: ["emberhorn"],
+            allowedGeneProfileIds: [
+              "fusion_gene_emberhorn_red_v1",
+              "fusion_gene_emberhorn_ash_v1",
+              "fusion_gene_emberhorn_gale_v1",
+            ],
+          },
+          resonance_two: {
+            allowedLineageIds: ["emberhorn", "mossback"],
+            allowedGeneProfileIds: [
+              "fusion_gene_emberhorn_red_v1",
+              "fusion_gene_emberhorn_ash_v1",
+              "fusion_gene_emberhorn_gale_v1",
+              "fusion_gene_mossback_marsh_v1",
+              "fusion_gene_mossback_sunbaked_v1",
+            ],
+          },
+        },
+        result: {
+          level: 1,
+          rebirthCount: 1,
+          terminalPathId: "fusion_terminal_v1",
+          paidResetAllowed: false,
+          newInstanceRequired: true,
+          numericSource: "target_profile_only_v1",
+          rideable: false,
+          bindingPolicy: "bound_if_any_material_bound",
+          resultStatePolicy: "replace_active_else_core_state",
+        },
+        assetGate: {
+          status: "formal",
+          replacementPath:
+            "client/godot/assets/pets/"
+            + "emberhorn_fusion_solar_crown_fire7_wind3",
+        },
+      },
+      {
+        recipeId: "emberhorn_moss_rampart_fusion_v1",
+        targetFormId: "emberhorn_fusion_moss_rampart_fire4_earth6",
+        targetGrowthProfileId:
+          "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+        roleGeneRules: {
+          core: {
+            allowedLineageIds: ["emberhorn"],
+            allowedGeneProfileIds: [
+              "fusion_gene_emberhorn_red_v1",
+              "fusion_gene_emberhorn_ash_v1",
+              "fusion_gene_emberhorn_gale_v1",
+            ],
+          },
+          resonance_one: {
+            allowedLineageIds: ["mossback"],
+            allowedGeneProfileIds: [
+              "fusion_gene_mossback_marsh_v1",
+              "fusion_gene_mossback_sunbaked_v1",
+            ],
+          },
+          resonance_two: {
+            allowedLineageIds: ["emberhorn", "mossback"],
+            allowedGeneProfileIds: [
+              "fusion_gene_emberhorn_red_v1",
+              "fusion_gene_emberhorn_ash_v1",
+              "fusion_gene_emberhorn_gale_v1",
+              "fusion_gene_mossback_marsh_v1",
+              "fusion_gene_mossback_sunbaked_v1",
+            ],
+          },
+        },
+        result: {
+          level: 1,
+          rebirthCount: 1,
+          terminalPathId: "fusion_terminal_v1",
+          paidResetAllowed: false,
+          newInstanceRequired: true,
+          numericSource: "target_profile_only_v1",
+          rideable: false,
+          bindingPolicy: "bound_if_any_material_bound",
+          resultStatePolicy: "replace_active_else_core_state",
+        },
+        assetGate: {
+          status: "formal",
+          replacementPath:
+            "client/godot/assets/pets/"
+            + "emberhorn_fusion_moss_rampart_fire4_earth6",
+        },
+      },
+    ],
+  );
+  assert.deepEqual(catalog.targetFormIds, [
+    "emberhorn_fusion_moss_rampart_fire4_earth6",
+    "emberhorn_fusion_solar_crown_fire7_wind3",
+  ]);
   assert.deepEqual(catalog.terminalTargetFormIds, [
     "emberhorn_fusion_moss_rampart_fire4_earth6",
     "emberhorn_fusion_solar_crown_fire7_wind3",
@@ -108,6 +223,7 @@ test("production fusion catalog stages approved bloodline genes while recipes st
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.rules), true);
   assert.equal(Object.isFrozen(catalog.geneProfiles[0]), true);
+  assert.equal(Object.isFrozen(catalog.recipes[0]), true);
   assert.equal(Object.isFrozen(catalog.terminalTargetFormIds), true);
 });
 

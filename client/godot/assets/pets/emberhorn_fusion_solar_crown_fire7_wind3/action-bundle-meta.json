@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+  "displayName": "曜冠角兽",
+  "artStatus": "in_production",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "runtimeEnabled": false,
+  "rideableTarget": false,
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "board": "identity/identity-board-transparent.png",
+    "poses": {
+      "front_3quarter_sw": "identity/front_3quarter_sw.png",
+      "back_3quarter_ne": "identity/back_3quarter_ne.png",
+      "south": "identity/south.png",
+      "west": "identity/west.png"
+    }
+  },
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
+  },
+  "worldVisual": {
+    "status": "owner_review_pending",
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "runtimeMountedComposition": false,
+    "totalFrameCount": 40,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "owner_review_pending"
+      }
+    }
+  },
+  "supportedMountedCharacterIds": [],
+  "sourceArchive": {
+    "policy": "tracked_lossless_webp_with_original_sha256",
+    "raw": "source/identity-board-raw.webp",
+    "sourceMetadata": "source/identity-board-source-meta.json",
+    "pipelineMetadata": "source/identity-board-pipeline-meta.json",
+    "prompt": "prompts/identity.txt"
+  },
+  "evidence": {
+    "identityBoard": "identity/identity-board-transparent.png",
+    "identityBoardSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+    "identityGateAudit": {
+      "schemaVersion": 1,
+      "status": "self_review_passed_owner_review_pending",
+      "pipelineMetadata": {
+        "sha256": "8d827774f046148b0d4a5fd76200dcc4781b11e9fc7663a2a3f4d42962bb2738",
+        "input": "source/identity-board-raw.png",
+        "frameCount": 4,
+        "tool": "build_pet_art_bundle.py",
+        "schemaVersion": 1,
+        "replayContractVersion": 1,
+        "slots": [
+          "front_3quarter_sw",
+          "back_3quarter_ne",
+          "south",
+          "west"
+        ],
+        "sourceFrameSize": 512,
+        "runtimeFrameSize": 256,
+        "safeMargin": 10,
+        "effectiveSourceMargin": 20,
+        "metadataReplaySha256": "0a8de7215e58d5a1ae7b423139e5575a352dadd13aa250e1f8a388f50deca994",
+        "sources": {
+          "front_3quarter_sw": {
+            "path": "source-frames/front_3quarter_sw.png",
+            "canonicalRgbaSha256": "ff158cb13cd0ab70d19c6e0aa6ad83f1325ad8f0d6aff01d48ba385778715f7c"
+          },
+          "back_3quarter_ne": {
+            "path": "source-frames/back_3quarter_ne.png",
+            "canonicalRgbaSha256": "76a4c517e9cd8678f3c3fbd1aff53c184d195a7f4aa2742c704aae8788e52bd4"
+          },
+          "south": {
+            "path": "source-frames/south.png",
+            "canonicalRgbaSha256": "dac3cb62381f4a79c781a2d78599c7673a11411d8afef31a9ee5f8b6413465fa"
+          },
+          "west": {
+            "path": "source-frames/west.png",
+            "canonicalRgbaSha256": "d76a28ccdeaf824d69b40a2fbc2758079c2a3f6c62a62e9a49b3a9583e18cb99"
+          }
+        },
+        "runtimes": {
+          "front_3quarter_sw": {
+            "path": "runtime-frames/front_3quarter_sw.png",
+            "canonicalRgbaSha256": "7b39ce8007b586cddced8460c981e948533a74e1de4c3376717b07091ebe8e7e"
+          },
+          "back_3quarter_ne": {
+            "path": "runtime-frames/back_3quarter_ne.png",
+            "canonicalRgbaSha256": "37f59fd79e1cdc4388b35c4e63a43bde9038a90771a4dbbfde150ffd56c9db01"
+          },
+          "south": {
+            "path": "runtime-frames/south.png",
+            "canonicalRgbaSha256": "850947d2dd4d67a890afd3483581daf63272fb0ea489756220a0fe04aeb12859"
+          },
+          "west": {
+            "path": "runtime-frames/west.png",
+            "canonicalRgbaSha256": "10f608d8cc21902a8bbcbf7851b44d419867c53f2956d5304079263fbfdee1fc"
+          }
+        },
+        "transparentSheetCanonicalRgbaSha256": "d0e9dea8d6e2fb3f31409ad812601813f5af0af7d09d9d68b708df6474c21546",
+        "runtimeSheetCanonicalRgbaSha256": "42991147344fc93db21ecd3bbf51cefa7d3fa3d972d89ed6baa38bf54f3b976b",
+        "path": "source/identity-board-pipeline-meta.json"
+      },
+      "selfReview": {
+        "path": "qa/identity-key-pose-qc.json",
+        "sha256": "4e42ebfac0c6f920fcaea4188f5c542015bddbf690b5c07f9f3240478e716f2b",
+        "status": "passed",
+        "contactSheet": {
+          "path": "qa/identity-key-pose-contact-sheet.png",
+          "fileSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+          "pixelSize": [
+            1024,
+            1024
+          ]
+        }
+      },
+      "transparentBoard": {
+        "format": "PNG",
+        "mode": "RGBA",
+        "pixelSize": [
+          1024,
+          1024
+        ],
+        "fileSha256": "fe85847a43e98d60b1fed16117ae144f7a47bed624070490baa76e342fdbcd6c",
+        "decodedRgbaPixelSha256": "02405a73b5d1a0da58391889ca14aa661c9787ad287476f860c759c207725c38",
+        "canonicalRgbaSha256": "d0e9dea8d6e2fb3f31409ad812601813f5af0af7d09d9d68b708df6474c21546",
+        "transparentPixelCount": 935152,
+        "partialAlphaPixelCount": 10187,
+        "opaquePixelCount": 103237,
+        "alphaPositivePixelCount": 113424,
+        "visiblePixelCount": 112472,
+        "transparentRgbLeakPixelCount": 0,
+        "visibleAlphaThreshold": 8,
+        "visibleBbox": [
+          157,
+          260,
+          951,
+          1002
+        ],
+        "safeMargin": 0,
+        "path": "identity/identity-board-transparent.png"
+      },
+      "poses": {
+        "front_3quarter_sw": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "pixelSize": [
+            512,
+            512
+          ],
+          "fileSha256": "05c6e8f82df83320c1b46b002eb46cd3be69408c84a75246a7948c80b75fd9c4",
+          "decodedRgbaPixelSha256": "9c1618aec91c3b7d823024ccaa2a9a6e9489950d00f0a7ad64ef090f7ae6b953",
+          "canonicalRgbaSha256": "ff158cb13cd0ab70d19c6e0aa6ad83f1325ad8f0d6aff01d48ba385778715f7c",
+          "transparentPixelCount": 228261,
+          "partialAlphaPixelCount": 2835,
+          "opaquePixelCount": 31048,
+          "alphaPositivePixelCount": 33883,
+          "visiblePixelCount": 33597,
+          "transparentRgbLeakPixelCount": 0,
+          "visibleAlphaThreshold": 8,
+          "visibleBbox": [
+            157,
+            260,
+            407,
+            490
+          ],
+          "safeMargin": 4,
+          "path": "identity/front_3quarter_sw.png"
+        },
+        "back_3quarter_ne": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "pixelSize": [
+            512,
+            512
+          ],
+          "fileSha256": "98c6631d2026a29e50e8a259ef3108ea1af222fc4ffbf429945a1bb960ab17d2",
+          "decodedRgbaPixelSha256": "2019ac981ca2b44dcf4b4bbd512cdf9a20620cdea5815b4de18af87bfff74b5c",
+          "canonicalRgbaSha256": "76a4c517e9cd8678f3c3fbd1aff53c184d195a7f4aa2742c704aae8788e52bd4",
+          "transparentPixelCount": 237528,
+          "partialAlphaPixelCount": 2515,
+          "opaquePixelCount": 22101,
+          "alphaPositivePixelCount": 24616,
+          "visiblePixelCount": 24395,
+          "transparentRgbLeakPixelCount": 0,
+          "visibleAlphaThreshold": 8,
+          "visibleBbox": [
+            165,
+            263,
+            400,
+            490
+          ],
+          "safeMargin": 4,
+          "path": "identity/back_3quarter_ne.png"
+        },
+        "south": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "pixelSize": [
+            512,
+            512
+          ],
+          "fileSha256": "4d75989f600fc834d10dbe460ed7658c8e0abb13df8d7165071cc8fd368dd82c",
+          "decodedRgbaPixelSha256": "c849371b773f03de02b17fee8f75ca56b900150febd5cfb023486fc0024cad1b",
+          "canonicalRgbaSha256": "dac3cb62381f4a79c781a2d78599c7673a11411d8afef31a9ee5f8b6413465fa",
+          "transparentPixelCount": 234291,
+          "partialAlphaPixelCount": 2174,
+          "opaquePixelCount": 25679,
+          "alphaPositivePixelCount": 27853,
+          "visiblePixelCount": 27658,
+          "transparentRgbLeakPixelCount": 0,
+          "visibleAlphaThreshold": 8,
+          "visibleBbox": [
+            186,
+            233,
+            358,
+            490
+          ],
+          "safeMargin": 4,
+          "path": "identity/south.png"
+        },
+        "west": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "pixelSize": [
+            512,
+            512
+          ],
+          "fileSha256": "1890518e145017b1ea8392458df00507905edd8fa4f55a8fd1d736bdb6404b96",
+          "decodedRgbaPixelSha256": "e4344a99ac07c646d70bd6c7e409b274537629b4ed820bea7f0bb2b3b1f4b63d",
+          "canonicalRgbaSha256": "d76a28ccdeaf824d69b40a2fbc2758079c2a3f6c62a62e9a49b3a9583e18cb99",
+          "transparentPixelCount": 235072,
+          "partialAlphaPixelCount": 2663,
+          "opaquePixelCount": 24409,
+          "alphaPositivePixelCount": 27072,
+          "visiblePixelCount": 26822,
+          "transparentRgbLeakPixelCount": 0,
+          "visibleAlphaThreshold": 8,
+          "visibleBbox": [
+            129,
+            306,
+            439,
+            490
+          ],
+          "safeMargin": 4,
+          "path": "identity/west.png"
+        }
+      }
+    }
+  },
+  "keyPoseReviewStatus": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "notes": "Identity, true-eight-direction world art, and the complete two-view battle matrix are installed for isolated owner review. This metadata does not grant runtime or release approval.",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "pet",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": false,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc",
+    "archiveMode": "full",
+    "sourceFramesTracked": true,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
+  }
+}

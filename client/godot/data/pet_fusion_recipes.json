@@ -80,5 +80,115 @@
       "passiveSkillId": "mossback_sunbaked_grounded_shell"
     }
   ],
-  "recipes": []
+  "recipes": [
+    {
+      "recipeId": "emberhorn_solar_crown_fusion_v1",
+      "targetFormId": "emberhorn_fusion_solar_crown_fire7_wind3",
+      "targetGrowthProfileId": "emberhorn_fusion_solar_crown_fire7_wind3_v1",
+      "roleGeneRules": {
+        "core": {
+          "allowedLineageIds": [
+            "emberhorn"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_emberhorn_red_v1",
+            "fusion_gene_emberhorn_ash_v1",
+            "fusion_gene_emberhorn_gale_v1"
+          ]
+        },
+        "resonance_one": {
+          "allowedLineageIds": [
+            "emberhorn"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_emberhorn_red_v1",
+            "fusion_gene_emberhorn_ash_v1",
+            "fusion_gene_emberhorn_gale_v1"
+          ]
+        },
+        "resonance_two": {
+          "allowedLineageIds": [
+            "emberhorn",
+            "mossback"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_emberhorn_red_v1",
+            "fusion_gene_emberhorn_ash_v1",
+            "fusion_gene_emberhorn_gale_v1",
+            "fusion_gene_mossback_marsh_v1",
+            "fusion_gene_mossback_sunbaked_v1"
+          ]
+        }
+      },
+      "result": {
+        "level": 1,
+        "rebirthCount": 1,
+        "terminalPathId": "fusion_terminal_v1",
+        "paidResetAllowed": false,
+        "newInstanceRequired": true,
+        "numericSource": "target_profile_only_v1",
+        "rideable": false,
+        "bindingPolicy": "bound_if_any_material_bound",
+        "resultStatePolicy": "replace_active_else_core_state"
+      },
+      "assetGate": {
+        "status": "formal",
+        "replacementPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3"
+      }
+    },
+    {
+      "recipeId": "emberhorn_moss_rampart_fusion_v1",
+      "targetFormId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+      "targetGrowthProfileId": "emberhorn_fusion_moss_rampart_fire4_earth6_v1",
+      "roleGeneRules": {
+        "core": {
+          "allowedLineageIds": [
+            "emberhorn"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_emberhorn_red_v1",
+            "fusion_gene_emberhorn_ash_v1",
+            "fusion_gene_emberhorn_gale_v1"
+          ]
+        },
+        "resonance_one": {
+          "allowedLineageIds": [
+            "mossback"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_mossback_marsh_v1",
+            "fusion_gene_mossback_sunbaked_v1"
+          ]
+        },
+        "resonance_two": {
+          "allowedLineageIds": [
+            "emberhorn",
+            "mossback"
+          ],
+          "allowedGeneProfileIds": [
+            "fusion_gene_emberhorn_red_v1",
+            "fusion_gene_emberhorn_ash_v1",
+            "fusion_gene_emberhorn_gale_v1",
+            "fusion_gene_mossback_marsh_v1",
+            "fusion_gene_mossback_sunbaked_v1"
+          ]
+        }
+      },
+      "result": {
+        "level": 1,
+        "rebirthCount": 1,
+        "terminalPathId": "fusion_terminal_v1",
+        "paidResetAllowed": false,
+        "newInstanceRequired": true,
+        "numericSource": "target_profile_only_v1",
+        "rideable": false,
+        "bindingPolicy": "bound_if_any_material_bound",
+        "resultStatePolicy": "replace_active_else_core_state"
+      },
+      "assetGate": {
+        "status": "formal",
+        "replacementPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6"
+      }
+    }
+  ]
 }

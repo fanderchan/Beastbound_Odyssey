@@ -256,6 +256,17 @@ static func contract_check(
 	var data := _dict(document)
 	var genes = data.get("geneProfiles", [])
 	var recipes = data.get("recipes", [])
+	var target_form_ids: Array[String] = []
+	if recipes is Array:
+		for raw_recipe in recipes as Array:
+			if not (raw_recipe is Dictionary):
+				continue
+			var target_form_id := str(
+				(raw_recipe as Dictionary).get("targetFormId", "")
+			).strip_edges()
+			if target_form_id != "" and not target_form_ids.has(target_form_id):
+				target_form_ids.append(target_form_id)
+	target_form_ids.sort()
 	return {
 		"ok": errors.is_empty(),
 		"errors": errors,
@@ -264,6 +275,7 @@ static func contract_check(
 		"available": errors.is_empty() and runtime_available(data),
 		"geneProfileCount": (genes as Array).size() if genes is Array else 0,
 		"recipeCount": (recipes as Array).size() if recipes is Array else 0,
+		"targetFormIds": target_form_ids,
 	}
 
 

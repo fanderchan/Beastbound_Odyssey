@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+  "reviewScope": "identity_key_pose_gate",
+  "selfReviewStatus": "passed",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "errors": [],
+  "identityBoard": {
+    "path": "identity/identity-board-transparent.png",
+    "fileSha256": "d4ca016de12be9030b8b844f09ef41da5bd8324446ec665b9698499ee33adb01",
+    "canonicalRgbaSha256": "374535ea937eb0bd83d6c8820f8dd9daa28c2bb14d48a965fdd3902db35b5f56"
+  },
+  "poses": {
+    "front_3quarter_sw": {
+      "path": "identity/front_3quarter_sw.png",
+      "fileSha256": "a556b4b3990849105b24ab2ce15d8678d7ff9d0f13bb7e6d04fc54a63f31684b",
+      "canonicalRgbaSha256": "94a0c0102706294e66602e856e1579e16aa39fe910627613f4fc7c199933ea6f"
+    },
+    "back_3quarter_ne": {
+      "path": "identity/back_3quarter_ne.png",
+      "fileSha256": "adf397e7f313758de39a00188d7ba696e79d29b84a7406c6686d139571bb2b2a",
+      "canonicalRgbaSha256": "dc70bc071a19176a0d515bb5997672aa9a64e32ad48a540026069a8e764bffd1"
+    },
+    "south": {
+      "path": "identity/south.png",
+      "fileSha256": "6b4031a3d5f98db6e2c22b6503d91af70009ec10f786875627b286b0b4415234",
+      "canonicalRgbaSha256": "6b0844f7b5ac052b4e151973ae43126bfb7884c239fddf4490b1ea45f95a9dca"
+    },
+    "west": {
+      "path": "identity/west.png",
+      "fileSha256": "9b68e4d0bf05f7fe284126bc8fbf59971e6904c5d115560a66d567276aa7d1f5",
+      "canonicalRgbaSha256": "a40202d2f07ff46e629a586ceb1572884c97183256350f1135ef3906d292d228"
+    }
+  },
+  "contactSheet": {
+    "path": "qa/identity-key-pose-contact-sheet.png",
+    "fileSha256": "d4ca016de12be9030b8b844f09ef41da5bd8324446ec665b9698499ee33adb01"
+  }
+}

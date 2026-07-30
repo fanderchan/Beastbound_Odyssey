@@ -1,0 +1,8 @@
+曜冠角兽四张独立身份姿势的完整原始提示词保存在：
+
+- `.run/p1_4e_fusion_full_pack/solar_crown/identity/independent/front_3quarter_sw/prompt-used.txt` (`ba2958175e787dc4a7c36e7eea8cbf9eb493ba44b06a14c3dcb0068b63cd0982`)
+- `.run/p1_4e_fusion_full_pack/solar_crown/identity/independent/back_3quarter_ne/prompt-used.txt` (`aad95a9001ad49ebeba644b40ce31970ab0eeb89b1d8395a15378d9794fd237e`)
+- `.run/p1_4e_fusion_full_pack/solar_crown/identity/independent/south/prompt-used.txt` (`3e2aef41f545925475c7c8cd0186ef07db1d2957191db4f4386942ae2ffda4e5`)
+- `.run/p1_4e_fusion_full_pack/solar_crown/identity/independent/west/prompt-used.txt` (`244cbc50f8b35b44aa817686b32792c90cce01f2e85fd6cadf122d46dea60877`)
+
+该清单只绑定提示词来源；完整文本不在这里重复，避免出现两个会漂移的副本。

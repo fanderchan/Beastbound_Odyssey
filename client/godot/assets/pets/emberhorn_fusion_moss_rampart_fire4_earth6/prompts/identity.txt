@@ -1,0 +1,8 @@
+苔垒角兽四张独立身份姿势的完整原始提示词保存在：
+
+- `.run/p1_4e_fusion_full_pack/moss_rampart/identity/prompts/front_3quarter_sw.prompt.txt` (`093ece1ef75689c9400fe783b933ef7faa0959458d842d0005c62d4db76f2dc4`)
+- `.run/p1_4e_fusion_full_pack/moss_rampart/identity/prompts/back_3quarter_ne.prompt.txt` (`945e978a8bdbafd912170698d2a3c22ed8eead25cd2010ddc19c43c4076e04b3`)
+- `.run/p1_4e_fusion_full_pack/moss_rampart/identity/prompts/south.prompt.txt` (`692d610ea9bebc0a5c5e48072fbf73185df39d29f6690e32f7575dd7c2c848c7`)
+- `.run/p1_4e_fusion_full_pack/moss_rampart/identity/prompts/west.prompt.txt` (`6b69c9b6a63d1ca55421993aac7a682934094d776f75aa3a38ae1c8cc096ddb4`)
+
+该清单只绑定提示词来源；完整文本不在这里重复，避免出现两个会漂移的副本。

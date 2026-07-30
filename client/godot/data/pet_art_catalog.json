@@ -552,6 +552,34 @@
       "identityBrief": "大型厚重四足雷龙坐骑，宽胸、短颈龙首、后掠雷角、蓝灰鳞片和金色导电背板；体型威严但保持清楚可爱眼神。",
       "pet": {"root": "client/godot/assets/pets/thunder_dragon_mount", "metadataPath": "client/godot/assets/pets/thunder_dragon_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/thunder_dragon_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/thunder_dragon_mount/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/thunder_dragon_mount/prompts/identity-board-v1.txt"},
       "mounted": {"root": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount", "metadataPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/action-bundle-meta.json", "identityPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/identity/identity-lock.md", "ownershipPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/source-and-ownership.md", "promptPath": "client/godot/assets/mounted/novice_hunter_v1/thunder_dragon_mount/prompts/generation-contract.md"}
+    },
+    {
+      "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+      "displayName": "曜冠角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_fusion_solar_crown",
+      "productionGroup": "G16",
+      "artSkeletonId": "emberhorn_solar_crown_v1",
+      "status": "in_production",
+      "runtimeEnabled": false,
+      "rideableTarget": false,
+      "supportedCharacterIds": [],
+      "identityBrief": "成熟四足高速冲锋角兽，单根盾基前向长角、强肩窄腰、连续双层冠鬃和宽菱形尾簇；深炭紫、暗铜、暖奶油与旧金黑曜角层，背部结构覆盖原鞍位。",
+      "pet": {"root": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3", "portraitPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/default.png", "metadataPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/prompts/identity.txt"}
+    },
+    {
+      "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+      "displayName": "苔垒角兽",
+      "lineId": "emberhorn",
+      "subtypeId": "emberhorn_fusion_moss_rampart",
+      "productionGroup": "G17",
+      "artSkeletonId": "emberhorn_moss_rampart_v1",
+      "status": "in_production",
+      "runtimeEnabled": false,
+      "rideableTarget": false,
+      "supportedCharacterIds": [],
+      "identityBrief": "炽角楔头、单角和冲锋轴结合低矮分段有机甲垒、克制苔藓与守势重量；仍保持四足攻坚轮廓，背甲完整覆盖原鞍位。",
+      "pet": {"root": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6", "portraitPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/default.png", "metadataPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/action-bundle-meta.json", "identityPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/identity/identity-lock.md", "ownershipPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/identity/source-and-ownership.md", "promptPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/prompts/identity.txt"}
     }
   ]
 }
