@@ -69,3 +69,55 @@
   视频解码通过。
 
 final result: engineering_passed; owner_review_pending
+
+---
+
+# Phase 378 Design QA：固定四角色槽与登录后角色入口
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 画面没有槽位越界、文字裁切、假加号、程序员字段或
+  输入穿透；四张角色卡、返回、创建弹窗与进入按钮均可通过左键完成。
+- 本轮按参考图的信息层级重建，但背景、人物、独立头像、槽框和图标均为
+  Beastbound 原创 ImageGen 美术；不复制参考角色、像素或商标。
+- 工程 Design QA 已通过；正式素材 `ownerReviewStatus` 仍为
+  `owner_review_pending`，等待项目所有者观看最终视频。
+
+## Comparison target
+
+- 参考图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-adee60c3-7c14-489d-8417-9fa7a5c0347d.png`；
+- 实机主画面：`.run/character_entry/character_entry_final_1280x720.png`；
+- 创建弹窗：`.run/character_entry/character_entry_create_final.png`；
+- 同屏比较：`.run/character_entry/character_entry_reference_comparison.png`；
+- 视口：参考与实机均按 `1280×720` 判断；实机来自真实 `Main.tscn`。
+
+## Required fidelity surfaces
+
+- Layout：左侧原创完整人物，右侧固定四槽纵排，左上返回，右下进入；树冠、篝火
+  和海岸背景提供与参考一致的视觉重心，但不照搬其资产。
+- Material：暖砂岩、深木、金色高光和半透明暗槽与近期宠物／背包 UI 统一。
+- Cards：选中卡 `420×132`，空卡 `420×132`；空槽加号为正式绘制图标，不是字符。
+- Portrait：角色卡使用独立绘制大头照，不从全身像裁切。
+- Controls：主角色、副角色、空槽、创建弹窗、输入、取消、恢复主角色均由真实跨帧
+  鼠标／键盘事件驱动；右键不是必需输入。
+- Safety：玩家界面不显示 `playerId`、slot index、epoch、raw code、QA 说明或后端状态。
+
+## Interaction and evidence
+
+- 角色流自动检查覆盖固定四槽、选择、创建、取消、返回与状态隔离；
+- 隔离 QA 后端真实 HTTP 链路覆盖 register、entry、create、select 与 profile sync；
+- 预览 CPU render 平均 `0.16ms/frame`；
+- idle／真实跨帧 movement 探针均为 `60 FPS`、`process_total=0.04ms`，移动检查
+  `status=ok`；
+- 最终视频：
+  `.run/evidence/phase378_character_entry_owner_review/phase378-character-entry-final-v2/character-entry-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase378_character_entry_owner_review/phase378-character-entry-final-v2/contact-sheet.png`；
+- 视频为 `17.966667s / 539` 帧、`1280×720 / 30 FPS / 1.00×`、H.264/AAC，
+  完整音视频解码通过；共展示主角色、切换副角色、打开创建、输入名字、取消和恢复
+  主角色六个连续状态。
+
+final result: passed

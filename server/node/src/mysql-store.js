@@ -126,6 +126,7 @@ const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
 const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
 const MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED = "mysql_mail_storage_runtime_state_changed";
 const MYSQL_SHARED_ASSET_FULL_RELOAD_REQUIRED = "mysql_shared_asset_full_reload_required";
+const ACCOUNT_CHARACTER_SLOT_COUNT = 4;
 const MYSQL_ENTITY_STATE_PRESENT = Symbol("beastbound.mysqlEntityStatePresent");
 const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
 const MYSQL_STORE_REVISION_PRESENT = Symbol("beastbound.mysqlStoreRevisionPresent");
@@ -250,6 +251,18 @@ function createMysqlAuthStore(options = {}) {
         updated_at VARCHAR(40) NOT NULL,
         document_json JSON NOT NULL,
         UNIQUE KEY uq_profile_bindings_player_id (player_id)
+      );
+      CREATE TABLE IF NOT EXISTS account_character_slots (
+        account_id VARCHAR(80) NOT NULL,
+        slot_index TINYINT UNSIGNED NOT NULL,
+        player_id VARCHAR(80) NOT NULL,
+        created_at VARCHAR(40) NOT NULL,
+        updated_at VARCHAR(40) NOT NULL,
+        last_selected_at VARCHAR(40) NULL,
+        document_json JSON NOT NULL,
+        PRIMARY KEY (account_id, slot_index),
+        UNIQUE KEY uq_account_character_slots_player_id (player_id),
+        CONSTRAINT chk_account_character_slots_slot_index CHECK (slot_index BETWEEN 0 AND 3)
       );
       CREATE TABLE IF NOT EXISTS profiles (
         player_id VARCHAR(80) PRIMARY KEY,
@@ -497,6 +510,7 @@ function createMysqlAuthStore(options = {}) {
   function loadAuthoritySnapshot() {
     ensureSchema();
     const loaded = canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
+      includeAccountCharacterSlots: ensureSchemaEnabled,
       includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
       includeMutationReceipts: ensureSchemaEnabled,
       includeStoreRevision: ensureSchemaEnabled,
@@ -517,8 +531,17 @@ function createMysqlAuthStore(options = {}) {
     // request COMMIT cannot advance the store baseline before the exact
     // post-COMMIT merge runs.
     lastPersistentData = canonicalizeMysqlMailAuthorityBaseline(
-      mysqlPersistentData(loaded),
+      mysqlPersistentData(loaded, {bridgeLegacyCharacterSlots: false}),
     );
+    if (
+      Object.hasOwn(loaded, "accountCharacterSlots")
+      || Object.keys(objectOrEmpty(loaded.profileBindings)).length > 0
+    ) {
+      loaded.accountCharacterSlots = accountCharacterSlotsWithLegacyBindingBridge(
+        loaded.accountCharacterSlots,
+        loaded.profileBindings,
+      );
+    }
     return loaded;
   }
 
@@ -647,10 +670,12 @@ function createMysqlAuthStore(options = {}) {
       if (readOnly) {
         throw new Error("Read-only MySQL auth store cannot save.");
       }
-      const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
+      const data = mysqlPersistentData(nextData, {
+        fallbackAccountCharacterSlots: lastPersistentData.accountCharacterSlots,
+      });
       const statements = buildSaveStatementsFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         ...mailStoragePlanningOptions(),
@@ -680,10 +705,12 @@ function createMysqlAuthStore(options = {}) {
       if (readOnly) {
         throw new Error("Read-only MySQL auth store cannot save.");
       }
-      const data = mysqlPersistentData(nextData);
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
+      const data = mysqlPersistentData(nextData, {
+        fallbackAccountCharacterSlots: lastPersistentData.accountCharacterSlots,
+      });
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
@@ -723,10 +750,13 @@ function createMysqlAuthStore(options = {}) {
       // The durable coordinator transfers this isolated snapshot and does not
       // mutate nested values until settlement. Keep a separate root so its
       // post-COMMIT ledger replacement cannot alter this write.
-      const data = mysqlPersistentData(nextData, {ownedRoot: true});
       if (lastPersistentData === null) {
         loadAuthoritySnapshot();
       }
+      const data = mysqlPersistentData(nextData, {
+        ownedRoot: true,
+        fallbackAccountCharacterSlots: lastPersistentData.accountCharacterSlots,
+      });
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
@@ -1537,6 +1567,7 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
     accounts: [],
     sessions: [],
     profileBindings: [],
+    accountCharacterSlots: [],
     profiles: [],
     mutationReceipts: [],
     mailMessages: [],
@@ -1576,6 +1607,11 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
   appendObjectEntityDiff(groups.accounts, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
   appendObjectEntityDiff(groups.sessions, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
   appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
+  appendAccountCharacterSlotDiff(
+    groups.accountCharacterSlots,
+    previous.accountCharacterSlots,
+    data.accountCharacterSlots,
+  );
   appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
   appendMutationReceiptDeltaOrDiff(
     groups.mutationReceipts,
@@ -1636,6 +1672,7 @@ function mysqlSaveStatementsFromGroups(groups, options = {}) {
       groups.accounts,
       groups.sessions,
       groups.profileBindings,
+      groups.accountCharacterSlots,
       groups.profiles,
       groups.marketListings,
       forwardMailStatements,
@@ -1668,6 +1705,7 @@ function mysqlSaveStatementsFromGroups(groups, options = {}) {
     groups.accounts,
     groups.sessions,
     groups.profileBindings,
+    groups.accountCharacterSlots,
     groups.profiles,
     groups.mutationReceipts,
     mailStatements,
@@ -3952,6 +3990,8 @@ function certifiedMutationReceiptDeletes(delta) {
 }
 
 function loadPersistentData(config, database, options = {}) {
+  const includeAccountCharacterSlots = options.includeAccountCharacterSlots === true
+    || mysqlTableExists(config, database, "account_character_slots");
   const includeConsumedEquipmentEnvelopes = options.includeConsumedEquipmentEnvelopes === true
     || mysqlTableExists(config, database, "consumed_equipment_envelopes");
   const includeMutationReceipts = options.includeMutationReceipts === true
@@ -3969,6 +4009,7 @@ function loadPersistentData(config, database, options = {}) {
       config,
       database,
       loadPersistentDataSql({
+        includeAccountCharacterSlots,
         includeConsumedEquipmentEnvelopes,
         includeMutationReceipts,
         includeStoreRevision,
@@ -4293,6 +4334,11 @@ function loadPersistentDataSql(options = {}) {
     "SELECT 'auth_events', event_id, CAST(document_json AS CHAR) FROM auth_events ORDER BY event_id",
     "SELECT 'service_events', CAST(event_seq AS CHAR), CAST(document_json AS CHAR) FROM service_events ORDER BY event_seq",
   ];
+  if (options.includeAccountCharacterSlots === true) {
+    statements.splice(6, 0,
+      "SELECT 'account_character_slots', CONCAT(account_id, '/', slot_index), CAST(JSON_OBJECT('schemaVersion', 1, 'accountId', account_id, 'slotIndex', slot_index, 'playerId', player_id, 'createdAt', created_at, 'updatedAt', updated_at, 'lastSelectedAt', last_selected_at) AS CHAR) FROM account_character_slots ORDER BY account_id, slot_index",
+    );
+  }
   if (options.includeConsumedEquipmentEnvelopes === true) {
     statements.splice(7, 0,
       "SELECT 'consumed_equipment_envelopes', envelope_id, CAST(JSON_OBJECT('schemaVersion', 1, 'envelopeId', envelope_id) AS CHAR) FROM consumed_equipment_envelopes ORDER BY envelope_id",
@@ -4518,7 +4564,11 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
     }
     return;
   }
-  if (options.strictRowIdentity === true || bucket === "mutation_receipts") {
+  if (
+    options.strictRowIdentity === true
+    || bucket === "mutation_receipts"
+    || bucket === "account_character_slots"
+  ) {
     assertPersistentRowIdentity(bucket, rowKey, persistentDocumentIdentity(bucket, document));
   }
   switch (bucket) {
@@ -4531,6 +4581,18 @@ function appendLoadedEntity(data, bucket, rowKey, document, options = {}) {
     case "profile_bindings":
       data.profileBindings[String(document.accountId || rowKey || "")] = document;
       break;
+    case "account_character_slots": {
+      const slot = canonicalAccountCharacterSlot(document);
+      const accountId = slot.accountId;
+      if (!Array.isArray(data.accountCharacterSlots[accountId])) {
+        data.accountCharacterSlots[accountId] = emptyAccountCharacterSlotList();
+      }
+      if (data.accountCharacterSlots[accountId][slot.slotIndex] !== null) {
+        throw new Error(`MySQL角色槽位重复：${accountCharacterSlotSqlIdentity(slot)}`);
+      }
+      data.accountCharacterSlots[accountId][slot.slotIndex] = slot;
+      break;
+    }
     case "profiles":
       data.profiles[String(document.playerId || rowKey || "")] = document;
       break;
@@ -4639,6 +4701,9 @@ function persistentDocumentIdentity(bucket, document) {
   if (bucket === "gm_command_grants") {
     return `${String(document.accountId || "")}/${String(document.commandId || "")}`;
   }
+  if (bucket === "account_character_slots") {
+    return accountCharacterSlotSqlIdentity(document);
+  }
   const field = fieldByBucket[bucket];
   return field ? document[field] : "";
 }
@@ -4651,8 +4716,172 @@ function assertPersistentRowIdentity(bucket, rowKey, documentIdentity) {
   }
 }
 
+function emptyAccountCharacterSlotList() {
+  return Array.from({length: ACCOUNT_CHARACTER_SLOT_COUNT}, () => null);
+}
+
+function accountCharacterSlotSqlIdentity(slot) {
+  const accountId = String(slot && slot.accountId || "");
+  const slotIndex = Number(slot && slot.slotIndex);
+  return `${accountId}/${Number.isInteger(slotIndex) ? slotIndex : ""}`;
+}
+
+function accountCharacterSlotEntityKey(slot) {
+  const accountId = String(slot && slot.accountId || "");
+  const slotIndex = Number(slot && slot.slotIndex);
+  return `${accountId}\u0000${Number.isInteger(slotIndex) ? slotIndex : ""}`;
+}
+
+function canonicalAccountCharacterSlot(value, expectedAccountId = "", expectedSlotIndex = null) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("账号角色槽位必须是对象。");
+  }
+  const accountId = String(value.accountId || "");
+  const slotIndex = Number(value.slotIndex);
+  const playerId = String(value.playerId || "");
+  const createdAt = value.createdAt;
+  const updatedAt = value.updatedAt;
+  const lastSelectedAt = value.lastSelectedAt;
+  if (
+    value.schemaVersion !== 1
+    || accountId === ""
+    || accountId !== accountId.trim()
+    || accountId.includes("\u0000")
+    || accountId.length > 80
+    || !Number.isInteger(slotIndex)
+    || slotIndex < 0
+    || slotIndex >= ACCOUNT_CHARACTER_SLOT_COUNT
+    || playerId === ""
+    || playerId !== playerId.trim()
+    || playerId.includes("\u0000")
+    || playerId.length > 80
+    || typeof createdAt !== "string"
+    || typeof updatedAt !== "string"
+    || (lastSelectedAt !== null && typeof lastSelectedAt !== "string")
+    || (expectedAccountId !== "" && accountId !== expectedAccountId)
+    || (expectedSlotIndex !== null && slotIndex !== expectedSlotIndex)
+  ) {
+    throw new Error("账号角色槽位格式或身份不一致。");
+  }
+  return {
+    ...value,
+    schemaVersion: 1,
+    accountId,
+    slotIndex,
+    playerId,
+    createdAt,
+    updatedAt,
+    lastSelectedAt,
+  };
+}
+
+function canonicalAccountCharacterSlots(value) {
+  if (value === undefined) {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("账号角色槽位根必须是对象。");
+  }
+  const result = {};
+  const playerOwners = new Map();
+  for (const accountId of Object.keys(value).sort()) {
+    if (
+      accountId === ""
+      || accountId !== accountId.trim()
+      || accountId.includes("\u0000")
+      || accountId.length > 80
+    ) {
+      throw new Error("账号角色槽位账号身份非法。");
+    }
+    const rawSlots = value[accountId];
+    if (!Array.isArray(rawSlots) || rawSlots.length !== ACCOUNT_CHARACTER_SLOT_COUNT) {
+      throw new Error("每个账号必须持有固定4个角色槽位。");
+    }
+    const slots = emptyAccountCharacterSlotList();
+    for (let slotIndex = 0; slotIndex < ACCOUNT_CHARACTER_SLOT_COUNT; slotIndex += 1) {
+      const rawSlot = rawSlots[slotIndex];
+      if (rawSlot === null || rawSlot === undefined) {
+        continue;
+      }
+      const slot = canonicalAccountCharacterSlot(rawSlot, accountId, slotIndex);
+      if (playerOwners.has(slot.playerId)) {
+        throw new Error(`角色不能重复占用账号槽位：${slot.playerId}`);
+      }
+      playerOwners.set(slot.playerId, accountCharacterSlotEntityKey(slot));
+      slots[slotIndex] = slot;
+    }
+    result[accountId] = slots;
+  }
+  return result;
+}
+
+function legacyCharacterSlotFromProfileBinding(binding) {
+  const accountId = String(binding && binding.accountId || "");
+  const playerId = String(binding && binding.playerId || "");
+  const createdAt = typeof (binding && binding.createdAt) === "string"
+    ? binding.createdAt
+    : String(binding && binding.updatedAt || "");
+  const updatedAt = typeof (binding && binding.updatedAt) === "string"
+    ? binding.updatedAt
+    : createdAt;
+  return canonicalAccountCharacterSlot({
+    accountId,
+    slotIndex: 0,
+    playerId,
+    createdAt,
+    updatedAt,
+    lastSelectedAt: null,
+    schemaVersion: 1,
+  }, accountId, 0);
+}
+
+function accountCharacterSlotsWithLegacyBindingBridge(value, profileBindingsValue) {
+  const result = canonicalAccountCharacterSlots(value);
+  const boundPlayers = new Set();
+  for (const slots of Object.values(result)) {
+    for (const slot of slots) {
+      if (slot !== null) {
+        boundPlayers.add(slot.playerId);
+      }
+    }
+  }
+  for (const binding of Object.values(objectOrEmpty(profileBindingsValue))) {
+    const accountId = String(binding && binding.accountId || "");
+    const playerId = String(binding && binding.playerId || "");
+    if (accountId === "" || playerId === "") {
+      continue;
+    }
+    const existingSlots = result[accountId] || emptyAccountCharacterSlotList();
+    const occupiedSlots = existingSlots.filter((slot) => slot !== null);
+    if (occupiedSlots.length === 0) {
+      if (boundPlayers.has(playerId)) {
+        throw new Error(`旧角色绑定与已有槽位重复：${playerId}`);
+      }
+      const legacySlot = legacyCharacterSlotFromProfileBinding(binding);
+      existingSlots[0] = legacySlot;
+      result[accountId] = existingSlots;
+      boundPlayers.add(playerId);
+      continue;
+    }
+    if (!occupiedSlots.some((slot) => slot.playerId === playerId)) {
+      throw new Error(`当前角色绑定不属于账号角色槽位：${accountId}`);
+    }
+  }
+  return result;
+}
+
 function mysqlPersistentData(nextData, options = {}) {
   const data = options.ownedRoot === true ? {...(nextData || {})} : cloneAuthorityRoot(nextData || {});
+  const hasExplicitCharacterSlots = Object.hasOwn(data, "accountCharacterSlots");
+  const characterSlotsSource = hasExplicitCharacterSlots
+    ? data.accountCharacterSlots
+    : options.fallbackAccountCharacterSlots;
+  data.accountCharacterSlots = options.bridgeLegacyCharacterSlots === false
+    ? canonicalAccountCharacterSlots(characterSlotsSource)
+    : accountCharacterSlotsWithLegacyBindingBridge(
+      characterSlotsSource,
+      data.profileBindings,
+    );
   data.playerPositions = {};
   data.partyInvites = {};
   data.battleInvites = {};
@@ -4997,6 +5226,9 @@ function canonicalizeLoadedAuthorityCollections(data) {
   if (Object.hasOwn(data, "mutationReceipts")) {
     data.mutationReceipts = canonicalDurableMutationReceipts(data.mutationReceipts);
   }
+  if (Object.hasOwn(data, "accountCharacterSlots")) {
+    data.accountCharacterSlots = canonicalAccountCharacterSlots(data.accountCharacterSlots);
+  }
   return data;
 }
 
@@ -5006,6 +5238,7 @@ function emptyPersistentData() {
     accounts: {},
     sessions: {},
     profileBindings: {},
+    accountCharacterSlots: {},
     profiles: {},
     mutationReceipts: {},
     mailMessages: {},
@@ -5065,6 +5298,50 @@ function mysqlAuthStoreRootContract() {
       "profile",
     ]),
   });
+}
+
+function accountCharacterSlotEntityMap(value) {
+  const result = {};
+  const rosters = canonicalAccountCharacterSlots(value);
+  for (const slots of Object.values(rosters)) {
+    for (const slot of slots) {
+      if (slot !== null) {
+        result[accountCharacterSlotEntityKey(slot)] = slot;
+      }
+    }
+  }
+  return result;
+}
+
+function appendAccountCharacterSlotDiff(statements, previousValue, nextValue) {
+  const previous = accountCharacterSlotEntityMap(previousValue);
+  const next = accountCharacterSlotEntityMap(nextValue);
+  const deletes = [];
+  const updates = [];
+  const inserts = [];
+  for (const key of Object.keys(previous).sort()) {
+    const before = previous[key];
+    const after = next[key] || null;
+    if (after === null || before.playerId !== after.playerId) {
+      deletes.push(deleteAccountCharacterSlotStatement(before));
+    }
+  }
+  for (const key of Object.keys(next).sort()) {
+    const after = next[key];
+    const before = previous[key] || null;
+    if (before === null || before.playerId !== after.playerId) {
+      inserts.push(insertAccountCharacterSlotStatement(after));
+    } else if (entityChanged(before, after)) {
+      if (before.createdAt !== after.createdAt) {
+        throw new Error(`账号角色槽位创建时间不可改写：${accountCharacterSlotSqlIdentity(after)}`);
+      }
+      updates.push(updateAccountCharacterSlotStatement(after));
+    }
+  }
+  // Delete every released player identity before inserting replacements or
+  // swaps. New rows stay strict INSERTs so uq_account_character_slots_player_id
+  // can never redirect an upsert to a different account/slot.
+  statements.push(...deletes, ...updates, ...inserts);
 }
 
 function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn, options = {}) {
@@ -6724,6 +7001,18 @@ function insertSessionStatement(session) {
 
 function insertProfileBindingStatement(binding) {
   return `INSERT INTO profile_bindings (account_id, player_id, profile_revision, updated_at, document_json) VALUES (${sqlString(binding.accountId)}, ${sqlString(binding.playerId)}, ${Number(binding.profileRevision || 0)}, ${sqlString(binding.updatedAt || binding.createdAt)}, ${sqlJson(binding)})`;
+}
+
+function insertAccountCharacterSlotStatement(slot) {
+  return `INSERT INTO account_character_slots (account_id, slot_index, player_id, created_at, updated_at, last_selected_at, document_json) VALUES (${sqlString(slot.accountId)}, ${Number(slot.slotIndex)}, ${sqlString(slot.playerId)}, ${sqlString(slot.createdAt)}, ${sqlString(slot.updatedAt)}, ${sqlNullable(slot.lastSelectedAt)}, ${sqlJson(slot)})`;
+}
+
+function updateAccountCharacterSlotStatement(slot) {
+  return `UPDATE account_character_slots SET updated_at = ${sqlString(slot.updatedAt)}, last_selected_at = ${sqlNullable(slot.lastSelectedAt)}, document_json = ${sqlJson(slot)} WHERE account_id = ${sqlString(slot.accountId)} AND slot_index = ${Number(slot.slotIndex)} AND player_id = ${sqlString(slot.playerId)}`;
+}
+
+function deleteAccountCharacterSlotStatement(slot) {
+  return `DELETE FROM account_character_slots WHERE account_id = ${sqlString(slot.accountId)} AND slot_index = ${Number(slot.slotIndex)} AND player_id = ${sqlString(slot.playerId)}`;
 }
 
 function insertProfileStatement(profile) {

@@ -70,6 +70,9 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "refreshSession",
   "logout",
   "getSession",
+  "listCharacters",
+  "createCharacter",
+  "selectCharacter",
   "getProfile",
   "listPetRecoveries",
   "grantGmPet",
@@ -156,6 +159,7 @@ const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
   "listInbox",
 ]);
 const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
+  "/characters",
   "/bank/deposit",
   "/bank/withdraw",
   "/market/list",
@@ -348,6 +352,15 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "GET" && url.pathname === "/auth/session") {
         return sendResult(res, service.getSession(bearerToken(req)));
+      }
+      if (req.method === "GET" && url.pathname === "/characters") {
+        return sendResult(res, service.listCharacters(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/characters") {
+        return sendResult(res, service.createCharacter(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/characters/select") {
+        return sendResult(res, service.selectCharacter(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/events/latest") {
         const session = await Promise.resolve(

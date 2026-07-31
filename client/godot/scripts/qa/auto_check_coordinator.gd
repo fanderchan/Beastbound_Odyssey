@@ -19147,6 +19147,52 @@ func _run_auto_auth_server_client_check() -> void:
 		and int(refresh_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and refresh_headers.has("Authorization: Bearer token_test")
 	)
+	var characters_spec := ServerAuthClientModel.characters_request(
+		"http://127.0.0.1:8787/",
+		"token_test"
+	)
+	var character_create_spec := ServerAuthClientModel.character_create_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		2,
+		"  山岚  "
+	)
+	var character_select_spec := ServerAuthClientModel.character_select_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		"player_second"
+	)
+	var character_create_body_value = JSON.parse_string(str(character_create_spec.get("body", "")))
+	var character_create_body: Dictionary = (
+		character_create_body_value as Dictionary
+		if character_create_body_value is Dictionary
+		else {}
+	)
+	var character_select_body_value = JSON.parse_string(str(character_select_spec.get("body", "")))
+	var character_select_body: Dictionary = (
+		character_select_body_value as Dictionary
+		if character_select_body_value is Dictionary
+		else {}
+	)
+	var character_request_contract_ok: bool = (
+		str(characters_spec.get("url", "")) == "http://127.0.0.1:8787/characters"
+		and int(characters_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and host._packed_string_array(characters_spec.get("headers", [])).has("Authorization: Bearer token_test")
+		and str(character_create_spec.get("url", "")) == "http://127.0.0.1:8787/characters"
+		and int(character_create_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and bool(character_create_spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_is_idempotent(character_create_spec)
+		and ServerAuthClientModel.idempotency_key_is_valid(
+			ServerAuthClientModel.request_idempotency_key(character_create_spec)
+		)
+		and int(character_create_body.get("slotIndex", -1)) == 2
+		and str(character_create_body.get("displayName", "")) == "山岚"
+		and str(character_select_spec.get("url", "")) == "http://127.0.0.1:8787/characters/select"
+		and int(character_select_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and not bool(character_select_spec.get("durableMutation", false))
+		and not ServerAuthClientModel.request_is_idempotent(character_select_spec)
+		and str(character_select_body.get("playerId", "")) == "player_second"
+	)
 	var success_body = JSON.stringify({
 		"ok": true,
 		"account": {
@@ -19161,8 +19207,28 @@ func _run_auto_auth_server_client_check() -> void:
 			"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
 			"token": "token_test",
 			"expiresAt": "2099-01-01T00:00:00.000Z",
+			"playerId": "player_test",
+			"slotIndex": 0,
+			"selectionEpoch": 1,
 			"passwordUpgradeRequired": true,
 			"passwordPolicyMessage": "当前密码策略已升级，请在账号设置中改为至少8位密码。",
+		},
+		"selectionRequired": false,
+		"characters": [{
+			"playerId": "player_test",
+			"slotIndex": 0,
+			"occupied": true,
+			"displayName": "远程猎人",
+			"level": 7,
+			"selected": true,
+		}],
+		"selectedCharacter": {
+			"playerId": "player_test",
+			"slotIndex": 0,
+			"occupied": true,
+			"displayName": "远程猎人",
+			"level": 7,
+			"selected": true,
 		},
 		"profileBinding": {"playerId": "player_test"},
 		"profileSummary": {
@@ -19195,7 +19261,10 @@ func _run_auto_auth_server_client_check() -> void:
 		bool(parsed.get("ok", false))
 		and str(parsed_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
 		and str(parsed_session.get("username", "")) == "remoteuser"
-		and str(parsed_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/player_profile.json"
+		and str(parsed_session.get("playerId", "")) == "player_test"
+		and int(parsed_session.get("characterSlotIndex", -1)) == 0
+		and int(parsed_session.get("selectionEpoch", 0)) == 1
+		and str(parsed_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/characters/player_test/player_profile.json"
 		and str(parsed_session.get("serverSessionToken", "")) == "token_test"
 		and bool(parsed_session.get("passwordUpgradeRequired", false))
 		and str(parsed_session.get("passwordPolicyMessage", "")).find("至少8位") >= 0
@@ -19204,6 +19273,84 @@ func _run_auto_auth_server_client_check() -> void:
 		and str(runtime_position.get("mapId", "")) == "firebud_training_yard"
 		and int(runtime_position.get("cellX", -1)) == 16
 		and str(runtime_position.get("authority", "")) == "battle_position_restore"
+	)
+	var parsed_characters := ServerAuthClientModel.parse_characters_response(
+		200,
+		success_body
+	)
+	var parsed_character_create := ServerAuthClientModel.parse_character_create_response(
+		200,
+		JSON.stringify({
+			"ok": true,
+			"selectionRequired": false,
+			"characters": [
+				{"playerId": "player_test", "slotIndex": 0, "occupied": true},
+				{"playerId": "player_second", "slotIndex": 2, "occupied": true},
+			],
+			"character": {
+				"playerId": "player_second",
+				"slotIndex": 2,
+				"occupied": true,
+				"displayName": "山岚",
+			},
+		}).to_utf8_buffer()
+	)
+	var parsed_character_select := ServerAuthClientModel.parse_character_select_response(
+		200,
+		JSON.stringify({
+			"ok": true,
+			"account": {
+				"accountId": "acc_test",
+				"username": "remoteuser",
+				"displayName": "远程猎人",
+				"role": AccountAuthModel.ROLE_PLAYER,
+			},
+			"session": {
+				"sessionId": "sess_second",
+				"username": "remoteuser",
+				"effectiveRole": AccountAuthModel.EFFECTIVE_ROLE_PLAYER,
+				"token": "token_second",
+				"expiresAt": "2099-01-01T00:00:00.000Z",
+				"playerId": "player_second",
+				"slotIndex": 2,
+				"selectionEpoch": 2,
+			},
+			"selectionRequired": false,
+			"characters": [
+				{"playerId": "player_test", "slotIndex": 0, "occupied": true},
+				{"playerId": "player_second", "slotIndex": 2, "occupied": true, "selected": true},
+			],
+			"selectedCharacter": {
+				"playerId": "player_second",
+				"slotIndex": 2,
+				"occupied": true,
+				"displayName": "山岚",
+				"selected": true,
+			},
+			"profileBinding": {"playerId": "player_second"},
+			"profileSummary": {"playerId": "player_second", "profileRevision": 0},
+		}).to_utf8_buffer(),
+		parsed_session
+	)
+	var selected_character_session: Dictionary = (
+		parsed_character_select.get("session", {}) as Dictionary
+		if parsed_character_select.get("session", {}) is Dictionary
+		else {}
+	)
+	var character_parse_contract_ok: bool = (
+		bool(parsed_characters.get("ok", false))
+		and (parsed_characters.get("characters", []) as Array).size() == 1
+		and str((parsed_characters.get("selectedCharacter", {}) as Dictionary).get("playerId", "")) == "player_test"
+		and bool(parsed_character_create.get("ok", false))
+		and str((parsed_character_create.get("character", {}) as Dictionary).get("playerId", "")) == "player_second"
+		and bool(parsed_character_select.get("ok", false))
+		and str(selected_character_session.get("serverSessionToken", "")) == "token_second"
+		and str(selected_character_session.get("playerId", "")) == "player_second"
+		and int(selected_character_session.get("characterSlotIndex", -1)) == 2
+		and int(selected_character_session.get("selectionEpoch", 0)) == 2
+		and str(selected_character_session.get("displayName", "")) == "山岚"
+		and str(selected_character_session.get("profileSavePath", "")) == "user://server_accounts/remoteuser/characters/player_second/player_profile.json"
+		and str(selected_character_session.get("profileSavePath", "")) != str(parsed_session.get("profileSavePath", ""))
 	)
 	var profile_body = JSON.stringify({
 		"ok": true,
@@ -20812,6 +20959,7 @@ func _run_auto_auth_server_client_check() -> void:
 		and host.server_event_state == "off"
 	)
 	var status = "ok" if request_ok and refresh_request_ok and protocol_header_ok and parse_ok and error_ok and protocol_mismatch_ok and ui_server_ok and ui_server_only_ok else "failed"
+	status = "ok" if status == "ok" and character_request_contract_ok and character_parse_contract_ok else "failed"
 	status = "ok" if status == "ok" and profile_request_ok and profile_parse_ok and upload_request_ok and upload_parse_ok else "failed"
 	status = "ok" if status == "ok" and profile_action_request_ok and profile_action_parse_ok else "failed"
 	status = "ok" if status == "ok" and gm_command_request_ok and gm_command_parse_ok else "failed"
@@ -20829,10 +20977,11 @@ func _run_auto_auth_server_client_check() -> void:
 	status = "ok" if status == "ok" and weak_position_queue_ok and event_cooldown_ok else "failed"
 	status = "ok" if status == "ok" and code_message_parse_ok else "failed"
 	status = "ok" if status == "ok" and session_replaced_event_ok else "failed"
-	print("auth server client check ready: status=%s request=%s refresh=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s gm_command=%s shop=%s shop_parts=%s/%s/%s shop_apply=%s/%s/%d/%d equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
+	print("auth server client check ready: status=%s request=%s refresh=%s characters=%s protocol=%s profile_request=%s upload_request=%s profile_action=%s gm_command=%s shop=%s shop_parts=%s/%s/%s shop_apply=%s/%s/%d/%d equipment=%s unequip=%s enhance=%s repair=%s synthesis=%s rebirth=%s quest=%s parse=%s profile_parse=%s upload_parse=%s search=%s mail_send=%s mail_inbox=%s mail_read=%s mail_claim=%s online=%s position=%s movement=%s event=%s party=%s battle=%s battle_lock=%s encounter_route=%s guardian_route=%s local_battle_block=%s party_pve=%s party_pve_run=%s chat=%s retry=%s network=%s reconnect_ui=%s weak_queue=%s event_cooldown=%s code_map=%s replaced_event=%s error=%s ui_server=%s ui_server_only=%s" % [
 		status,
 		str(request_ok),
 		str(refresh_request_ok),
+		str(character_request_contract_ok and character_parse_contract_ok),
 		str(protocol_header_ok and protocol_mismatch_ok),
 		str(profile_request_ok),
 		str(upload_request_ok),
@@ -21160,7 +21309,26 @@ func _run_auto_startup_login_check() -> void:
 		host._apply_startup_auth_login()
 	var expected_username = AccountAuthModel.normalized_username(host.startup_auth_username)
 	var frames = 0
-	while frames < 480 and (host.auth_request_pending or not host.account_authenticated):
+	while frames < 480 and (
+		host.auth_request_pending
+		or host.character_entry_panel == null
+		or not host.character_entry_panel.visible
+		or bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var character_entry_ok: bool = (
+		not host.account_authenticated
+		and host.character_entry_panel != null
+		and host.character_entry_panel.visible
+		and str(host.character_entry_panel.selected_player_id()).strip_edges() != ""
+		and host._character_entry() != null
+		and host._character_entry().has_pending_session()
+	)
+	if character_entry_ok:
+		host._character_entry().enter_selected_character()
+	frames = 0
+	while frames < 480 and not host.account_authenticated:
 		frames += 1
 		await host.get_tree().process_frame
 	var auth_ok = (
@@ -21183,10 +21351,11 @@ func _run_auto_startup_login_check() -> void:
 	)
 	var auth_panel_hidden_ok = host.auth_panel == null or not host.auth_panel.visible
 	var world_ok = host.world_log_message.find("已进入游戏") >= 0 or host.account_authenticated
-	var status = "ok" if auth_ok and sync_ok and auth_panel_hidden_ok and world_ok else "failed"
-	print("startup login args check ready: status=%s username=%s auth=%s sync=%s panel_hidden=%s world=%s state=%s revision=%d" % [
+	var status = "ok" if character_entry_ok and auth_ok and sync_ok and auth_panel_hidden_ok and world_ok else "failed"
+	print("startup login args check ready: status=%s username=%s character_entry=%s auth=%s sync=%s panel_hidden=%s world=%s state=%s revision=%d" % [
 		status,
 		expected_username,
+		str(character_entry_ok),
 		str(auth_ok),
 		str(sync_ok),
 		str(auth_panel_hidden_ok),
@@ -21195,6 +21364,150 @@ func _run_auto_startup_login_check() -> void:
 		host.server_profile_sync_expected_revision,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_character_entry_live_check() -> void:
+	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
+	var username: String = str(host._live_check_username("char"))
+	var register_response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.register_request(
+			base_url,
+			username,
+			"test1234",
+			"角色联调"
+		)
+	)
+	var parsed_register := ServerAuthClientModel.parse_auth_response(
+		int(register_response.get("responseCode", 0)),
+		register_response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	var register_ok: bool = bool(parsed_register.get("ok", false))
+	if register_ok:
+		var pending_session := (
+			(parsed_register.get("session", {}) as Dictionary).duplicate(true)
+			if parsed_register.get("session", {}) is Dictionary
+			else {}
+		)
+		pending_session["serverBaseUrl"] = base_url
+		parsed_register["session"] = pending_session
+		host._begin_character_entry_from_auth(parsed_register)
+
+	var frames := 0
+	while frames < 480 and (
+		host.character_entry_panel == null
+		or not host.character_entry_panel.visible
+		or bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var initial_snapshot: Dictionary = (
+		host.character_entry_panel.snapshot()
+		if host.character_entry_panel != null
+		else {}
+	)
+	var initial_occupied := _character_entry_occupied_count(initial_snapshot)
+	var initial_player_id := str(initial_snapshot.get("selectedPlayerId", "")).strip_edges()
+	var entry_ok: bool = (
+		register_ok
+		and not host.account_authenticated
+		and host.character_entry_panel != null
+		and host.character_entry_panel.visible
+		and not bool(initial_snapshot.get("loading", true))
+		and int(initial_snapshot.get("slotCount", 0)) == 4
+		and initial_occupied == 1
+		and initial_player_id != ""
+		and host._character_entry() != null
+		and host._character_entry().has_pending_session()
+	)
+
+	if entry_ok:
+		host.character_entry_panel.set_loading(true, "正在创建角色…")
+		host.character_entry_panel.create_character_requested.emit({
+			"slotIndex": 1,
+			"displayName": "第二猎人",
+		})
+	frames = 0
+	while frames < 480 and (
+		host.character_entry_panel != null
+		and bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var created_snapshot: Dictionary = (
+		host.character_entry_panel.snapshot()
+		if host.character_entry_panel != null
+		else {}
+	)
+	var created_player_id := str(created_snapshot.get("selectedPlayerId", "")).strip_edges()
+	var create_ok: bool = (
+		entry_ok
+		and not host.account_authenticated
+		and host.character_entry_panel.visible
+		and not bool(created_snapshot.get("loading", true))
+		and _character_entry_occupied_count(created_snapshot) == 2
+		and created_player_id != ""
+		and created_player_id != initial_player_id
+	)
+
+	if create_ok:
+		host.character_entry_panel.set_loading(true, "正在进入世界…")
+		host.character_entry_panel.select_character_requested.emit(created_player_id)
+	frames = 0
+	while frames < 600 and (
+		not host.account_authenticated
+		or host.server_profile_sync_state == "loading"
+		or host.server_profile_sync_state == "uploading"
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var selected_token := str(
+		host.current_account_session.get("serverSessionToken", "")
+	).strip_edges()
+	var selected_path := str(
+		host.current_account_session.get("profileSavePath", "")
+	)
+	var select_ok: bool = (
+		create_ok
+		and host.account_authenticated
+		and str(host.current_account_session.get("username", "")) == username
+		and str(host.current_account_session.get("playerId", "")) == created_player_id
+		and int(host.current_account_session.get("characterSlotIndex", -1)) == 1
+		and selected_token != ""
+		and selected_path.find("/characters/%s/" % created_player_id) >= 0
+		and host.server_profile_sync_state == "ready"
+		and (host.character_entry_panel == null or not host.character_entry_panel.visible)
+	)
+	if selected_token != "":
+		await host._auto_http_request_spec(
+			ServerAuthClientModel.logout_request(base_url, selected_token)
+		)
+	var status := "ok" if entry_ok and create_ok and select_ok else "failed"
+	print("character entry live check ready: status=%s username=%s register=%s entry=%s create=%s select=%s initial=%d created=%d slot=%d sync=%s" % [
+		status,
+		username,
+		str(register_ok),
+		str(entry_ok),
+		str(create_ok),
+		str(select_ok),
+		initial_occupied,
+		_character_entry_occupied_count(created_snapshot),
+		int(host.current_account_session.get("characterSlotIndex", -1)),
+		host.server_profile_sync_state,
+	])
+	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _character_entry_occupied_count(snapshot: Dictionary) -> int:
+	var count := 0
+	var cards = snapshot.get("cards", [])
+	if cards is Array:
+		for value in cards as Array:
+			if value is Dictionary and bool((value as Dictionary).get("occupied", false)):
+				count += 1
+	return count
 
 func _run_auto_server_mail_live_check() -> void:
 	host.profile_save_enabled = false

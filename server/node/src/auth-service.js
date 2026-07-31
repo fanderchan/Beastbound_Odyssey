@@ -59,6 +59,11 @@ const {
   durableMutationAccountId,
   durableMutationToken,
 } = require("./auth/durable-mutation-state");
+const {
+  CHARACTER_SLOT_LIMIT,
+  createAccountCharactersDomain,
+  selectedCharacterForSession,
+} = require("./auth/account-characters");
 const {createProfileActionsDomain} = require("./auth/profile-actions");
 const {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
@@ -324,9 +329,13 @@ const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "claimMailAttachments",
   "markMailRead",
 ]);
+const ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS = new Set([
+  "createCharacter",
+]);
 const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "bankDeposit",
   "bankWithdraw",
+  "createCharacter",
   "createMarketListing",
   "buyMarketListing",
   "cancelMarketListing",
@@ -1103,6 +1112,70 @@ function createAuthService(options = {}) {
     return resolved;
   }
 
+  function rotateCharacterSession(data, resolved, selection) {
+    const sessionResult = createSessionForAccount(
+      data,
+      resolved.account,
+      now,
+      randomBytes,
+      selection,
+    );
+    const replacement = revokeOtherSessionsForAccount(
+      data,
+      resolved.account.accountId,
+      sessionResult.session.sessionId,
+      now,
+      null,
+      {
+        code: "character_session_rotated",
+        reason: "character_selected",
+        message: "角色已切换，请使用新会话重新连接。",
+      },
+    );
+    const replacedSessionIds = replacement.revokedSessions.map((session) => session.sessionId);
+    const positions = authorityRootRecordForMutation(data, "playerPositions");
+    const previousPosition = positions[resolved.account.accountId] || null;
+    delete positions[resolved.account.accountId];
+    removeRuntimeSessionsAfterCommit(replacedSessionIds);
+    resetRuntimeMovementAuthorityAfterCommit(resolved.account.accountId, "character_selected");
+    markRuntimeSession(sessionResult.session);
+    recordAuthEvent(
+      data,
+      "character_selected",
+      resolved.account.username,
+      true,
+      `slot=${selection.slotIndex}`,
+      now,
+    );
+    const replacementEvent = sessionReplacementEvent(
+      resolved.account,
+      sessionResult.session,
+      replacement.revokedSessions,
+      {
+        code: "character_session_rotated",
+        reason: "character_selected",
+        message: "角色已切换，请使用新会话重新连接。",
+      },
+    );
+    if (replacementEvent) {
+      emitServiceEvent(replacementEvent);
+    }
+    if (previousPosition) {
+      emitOnlinePresenceRemovalEvent(
+        data,
+        resolved.account,
+        previousPosition,
+        "character_selected",
+      );
+    }
+    return {
+      ok: true,
+      session: sessionResult.session,
+      token: sessionResult.token,
+      replacedSessionIds,
+    };
+  }
+
   function partyPresenceUpdateEventForAccount(data, accountId, activity = runtimeActiveSessionIds) {
     const accountParty = partyForAccount(data, accountId);
     if (!accountParty) {
@@ -1191,9 +1264,29 @@ function createAuthService(options = {}) {
       schemaVersion: 1,
     });
     ensureProfileForAccount(data, account, now);
+    const characterState = accountCharacters.autoSelectionForAccount(data, account);
+    if (!characterState.ok) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return characterState;
+    }
     recordAuthEvent(data, "register", username, true, "", now);
-    const sessionResult = createSessionForAccount(data, account, now, randomBytes);
+    const sessionResult = createSessionForAccount(
+      data,
+      account,
+      now,
+      randomBytes,
+      characterState.selection,
+    );
     markRuntimeSession(sessionResult.session);
+    const characterPayload = accountCharacters.payloadForAccount(
+      data,
+      account,
+      sessionResult.session,
+    );
+    if (!characterPayload.ok) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return characterPayload;
+    }
     save(data);
     recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, true, now);
     return ok({
@@ -1202,6 +1295,9 @@ function createAuthService(options = {}) {
       profileBinding: data.profileBindings[accountId],
       profileSummary: profileSummaryForAccount(account, data),
       runtimePosition: publicRuntimePositionForAccount(data, accountId),
+      selectionRequired: characterPayload.selectionRequired,
+      characters: characterPayload.characters,
+      selectedCharacter: characterPayload.selectedCharacter,
     });
   }
 
@@ -1261,7 +1357,24 @@ function createAuthService(options = {}) {
 
   function completeLogin(data, account, username, authGate) {
     const ensured = ensureProfileForAccount(data, account, now);
-    const sessionResult = createSessionForAccount(data, account, now, randomBytes);
+    const characterState = accountCharacters.autoSelectionForAccount(data, account);
+    if (!characterState.ok) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return characterState;
+    }
+    const sessionResult = createSessionForAccount(
+      data,
+      account,
+      now,
+      randomBytes,
+      characterState.selection,
+    );
+    let previousUnselectedPosition = null;
+    if (!characterState.selection) {
+      const positions = authorityRootRecordForMutation(data, "playerPositions");
+      previousUnselectedPosition = positions[account.accountId] || null;
+      delete positions[account.accountId];
+    }
     const replacement = revokeOtherSessionsForAccount(data, account.accountId, sessionResult.session.sessionId, now, null);
     const replacedSessionIds = replacement.revokedSessions.map((session) => session.sessionId);
     removeRuntimeSessionsAfterCommit(replacedSessionIds);
@@ -1277,9 +1390,26 @@ function createAuthService(options = {}) {
       projectedRuntimeActivityForSessionTransition(replacedSessionIds, sessionResult.session),
     );
     const replacementEvent = sessionReplacementEvent(account, sessionResult.session, replacement.revokedSessions);
+    const characterPayload = accountCharacters.payloadForAccount(
+      data,
+      account,
+      sessionResult.session,
+    );
+    if (!characterPayload.ok) {
+      recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
+      return characterPayload;
+    }
     save(data);
     if (replacementEvent) {
       emitServiceEvent(replacementEvent);
+    }
+    if (previousUnselectedPosition) {
+      emitOnlinePresenceRemovalEvent(
+        data,
+        account,
+        previousUnselectedPosition,
+        "character_selection_required",
+      );
     }
     if (partyPresenceEvent) {
       emitServiceEvent(partyPresenceEvent);
@@ -1288,9 +1418,18 @@ function createAuthService(options = {}) {
     return ok({
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token, {now}),
-      profileBinding: ensured.binding,
-      profileSummary: profileSummaryForAccount(account, data),
-      runtimePosition: publicRuntimePositionForAccount(data, account.accountId),
+      profileBinding: characterPayload.selectionRequired
+        ? null
+        : data.profileBindings[account.accountId],
+      profileSummary: characterPayload.selectionRequired
+        ? null
+        : profileSummaryForAccount(account, data),
+      runtimePosition: characterPayload.selectionRequired
+        ? null
+        : publicRuntimePositionForAccount(data, account.accountId),
+      selectionRequired: characterPayload.selectionRequired,
+      characters: characterPayload.characters,
+      selectedCharacter: characterPayload.selectedCharacter,
     });
   }
 
@@ -1307,11 +1446,37 @@ function createAuthService(options = {}) {
     const resolved = resolveServiceSession(data, token, {
       allowExpired: true,
       refreshGraceMs: SESSION_REFRESH_GRACE_MS,
+      allowUnselectedCharacter: true,
     });
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const sessionResult = createSessionForAccount(data, resolved.account, now, randomBytes);
+    const characterState = accountCharacters.ensureForAccount(data, resolved.account);
+    if (!characterState.ok) {
+      return characterState;
+    }
+    const currentSelection = selectedCharacterForSession(data, resolved.session, {
+      allowLegacySingle: true,
+    });
+    const sessionResult = createSessionForAccount(
+      data,
+      resolved.account,
+      now,
+      randomBytes,
+      currentSelection.ok
+        ? {
+          playerId: currentSelection.session.playerId,
+          slotIndex: currentSelection.session.slotIndex,
+          selectionEpoch: currentSelection.session.selectionEpoch,
+        }
+        : null,
+    );
+    let previousUnselectedPosition = null;
+    if (!currentSelection.ok) {
+      const positions = authorityRootRecordForMutation(data, "playerPositions");
+      previousUnselectedPosition = positions[resolved.account.accountId] || null;
+      delete positions[resolved.account.accountId];
+    }
     const replacement = revokeOtherSessionsForAccount(data, resolved.account.accountId, sessionResult.session.sessionId, now, null);
     // Refresh keeps the direct old-token compatibility code, but the immutable
     // replacement snapshot above must still target its already-open event
@@ -1338,9 +1503,25 @@ function createAuthService(options = {}) {
       projectedRuntimeActivityForSessionTransition(replacedSessionIds, sessionResult.session),
     );
     const replacementEvent = sessionReplacementEvent(resolved.account, sessionResult.session, replacement.revokedSessions);
+    const characterPayload = accountCharacters.payloadForAccount(
+      data,
+      resolved.account,
+      sessionResult.session,
+    );
+    if (!characterPayload.ok) {
+      return characterPayload;
+    }
     save(data);
     if (replacementEvent) {
       emitServiceEvent(replacementEvent);
+    }
+    if (previousUnselectedPosition) {
+      emitOnlinePresenceRemovalEvent(
+        data,
+        resolved.account,
+        previousUnselectedPosition,
+        "character_selection_required",
+      );
     }
     if (partyPresenceEvent) {
       emitServiceEvent(partyPresenceEvent);
@@ -1348,15 +1529,22 @@ function createAuthService(options = {}) {
     return ok({
       account: publicAccount(resolved.account),
       session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token, {now}),
-      profileBinding: ensured.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
+      profileBinding: characterPayload.selectionRequired ? null : ensured.binding,
+      profileSummary: characterPayload.selectionRequired
+        ? null
+        : profileSummaryForAccount(resolved.account, data),
+      runtimePosition: characterPayload.selectionRequired
+        ? null
+        : publicRuntimePositionForAccount(data, resolved.account.accountId),
+      selectionRequired: characterPayload.selectionRequired,
+      characters: characterPayload.characters,
+      selectedCharacter: characterPayload.selectedCharacter,
     });
   }
 
   function logout(token) {
     const data = load();
-    const resolved = resolveServiceSession(data, token);
+    const resolved = resolveServiceSession(data, token, {allowUnselectedCharacter: true});
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
@@ -1390,13 +1578,21 @@ function createAuthService(options = {}) {
 
   function getSession(token) {
     const data = load();
-    const resolved = resolveServiceSession(data, token);
+    const resolved = resolveServiceSession(data, token, {allowUnselectedCharacter: true});
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
     const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const characterPayload = accountCharacters.payloadForAccount(
+      data,
+      resolved.account,
+      resolved.session,
+    );
+    if (!characterPayload.ok) {
+      return characterPayload;
+    }
     const partyPresenceEvent = partyPresenceUpdateEventForAccount(data, resolved.account.accountId);
-    if (ensured.created || partyPresenceEvent) {
+    if (ensured.created || characterPayload.created || partyPresenceEvent) {
       save(data);
     }
     if (partyPresenceEvent) {
@@ -1405,10 +1601,19 @@ function createAuthService(options = {}) {
     return ok({
       account: publicAccount(resolved.account),
       session: publicSession(resolved.session, resolved.account, data, "", {"recovered": resolved.recovered, now}),
-      profileBinding: ensured.binding,
-      profileSummary: profileSummaryForAccount(resolved.account, data),
-      recovery: sessionRecoveryPayload(data, resolved.account, resolved.recovered),
-      runtimePosition: publicRuntimePositionForAccount(data, resolved.account.accountId),
+      profileBinding: characterPayload.selectionRequired ? null : ensured.binding,
+      profileSummary: characterPayload.selectionRequired
+        ? null
+        : profileSummaryForAccount(resolved.account, data),
+      recovery: characterPayload.selectionRequired
+        ? null
+        : sessionRecoveryPayload(data, resolved.account, resolved.recovered),
+      runtimePosition: characterPayload.selectionRequired
+        ? null
+        : publicRuntimePositionForAccount(data, resolved.account.accountId),
+      selectionRequired: characterPayload.selectionRequired,
+      characters: characterPayload.characters,
+      selectedCharacter: characterPayload.selectedCharacter,
     });
   }
 
@@ -1432,6 +1637,9 @@ function createAuthService(options = {}) {
       session: {
         sessionId: String(resolved.session.sessionId || ""),
         accountId: String(resolved.session.accountId || ""),
+        playerId: String(resolved.session.playerId || ""),
+        slotIndex: Number(resolved.session.slotIndex),
+        selectionEpoch: Number(resolved.session.selectionEpoch),
         expiresAt: String(resolved.session.expiresAt || ""),
         schemaVersion: 1,
       },
@@ -4535,14 +4743,83 @@ function createAuthService(options = {}) {
     return error;
   }
 
-  function durableReceiptReplayDecision(published, args, receipt, requestHash, actionId) {
-    const currentSession = resolveServiceSession(published, durableMutationToken(args));
+  function durableMutationCharacterScope(methodName, data, args) {
+    // Character creation owns an empty account slot, not any currently
+    // selected profile. Keep its receipt account-scoped so the exact create
+    // result remains replayable before or after the next character selection.
+    if (ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS.has(String(methodName || ""))) {
+      return {scopeKind: "account", playerId: "", selectionEpoch: 0};
+    }
+    const session = sessionByToken(data, durableMutationToken(args));
+    if (!session) {
+      return {scopeKind: "", playerId: "", selectionEpoch: 0};
+    }
+    const selection = selectedCharacterForSession(data, session, {
+      allowLegacySingle: true,
+    });
+    if (!selection.ok) {
+      return {scopeKind: "", playerId: "", selectionEpoch: 0};
+    }
+    return {
+      scopeKind: "character",
+      playerId: String(selection.session.playerId || ""),
+      selectionEpoch: Math.max(0, Math.trunc(Number(selection.session.selectionEpoch || 0))),
+    };
+  }
+
+  function durableReceiptReplayDecision(
+    published,
+    args,
+    receipt,
+    requestHash,
+    actionId,
+    methodName,
+  ) {
+    const currentSession = resolveServiceSession(
+      published,
+      durableMutationToken(args),
+      {allowUnselectedCharacter: true},
+    );
     if (!currentSession.ok) {
       return fail(currentSession.code, currentSession.message);
     }
+    const currentPlayerId = String(currentSession.session.playerId || "");
+    const currentSelectionEpoch = Math.max(
+      0,
+      Math.trunc(Number(currentSession.session.selectionEpoch || 0)),
+    );
+    const receiptPlayerId = String(receipt && receipt.playerId || "");
+    const receiptSelectionEpoch = Math.max(
+      0,
+      Math.trunc(Number(receipt && receipt.selectionEpoch || 0)),
+    );
+    const occupiedCharacterCount = Array.isArray(
+      published.accountCharacterSlots
+      && published.accountCharacterSlots[currentSession.account.accountId],
+    )
+      ? published.accountCharacterSlots[currentSession.account.accountId].filter(Boolean).length
+      : 0;
+    const receiptScopeKind = String(receipt && receipt.scopeKind || "");
+    const accountScopeAllowed = (
+      receiptScopeKind === "account"
+      && ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS.has(String(methodName || ""))
+    );
+    const characterScopeMatches = (
+      receiptScopeKind === "character"
+      && receiptPlayerId !== ""
+      && receiptPlayerId === currentPlayerId
+      && receiptSelectionEpoch === currentSelectionEpoch
+    );
+    const legacyScopeAllowed = (
+      receiptScopeKind === ""
+      && receiptPlayerId === ""
+      && receiptSelectionEpoch === 0
+      && occupiedCharacterCount <= 1
+    );
     if (
       String(receipt && receipt.accountId || "") === ""
       || String(receipt.accountId) !== String(currentSession.account.accountId || "")
+      || (!accountScopeAllowed && !characterScopeMatches && !legacyScopeAllowed)
       || String(receipt.requestHash || "") !== requestHash
       || String(receipt.actionId || "") !== actionId
     ) {
@@ -4639,7 +4916,14 @@ function createAuthService(options = {}) {
       handled: true,
       receipt,
       authorityRefreshed,
-      result: durableReceiptReplayDecision(authority, args, receipt, requestHash, actionId),
+      result: durableReceiptReplayDecision(
+        authority,
+        args,
+        receipt,
+        requestHash,
+        actionId,
+        options.methodName,
+      ),
     };
   }
 
@@ -4694,6 +4978,7 @@ function createAuthService(options = {}) {
           receiptOperationId,
           requestHash,
           actionId,
+          {methodName},
         );
       } catch (cause) {
         throw durableReceiptOutcomeUnknownFailure(cause);
@@ -4728,6 +5013,7 @@ function createAuthService(options = {}) {
         receiptOperationId,
         requestHash,
         actionId,
+        {methodName},
       );
       if (decision.handled) {
         return decision.result;
@@ -4736,7 +5022,14 @@ function createAuthService(options = {}) {
       existingReceipt = activeDurableReceipt(published, receiptOperationId, now());
     }
     if (existingReceipt) {
-      return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
+      return durableReceiptReplayDecision(
+        published,
+        args,
+        existingReceipt,
+        requestHash,
+        actionId,
+        methodName,
+      );
     }
     // Shared market/mail state must be refreshed before the remote receipt
     // precheck. This closes the window where another Node commits after a
@@ -4747,7 +5040,14 @@ function createAuthService(options = {}) {
       ? null
       : activeDurableReceipt(published, receiptOperationId, now());
     if (existingReceipt) {
-      return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
+      return durableReceiptReplayDecision(
+        published,
+        args,
+        existingReceipt,
+        requestHash,
+        actionId,
+        methodName,
+      );
     }
     let receiptCheckedAfterSharedRefresh = false;
     if (
@@ -4762,6 +5062,7 @@ function createAuthService(options = {}) {
         receiptOperationId,
         requestHash,
         actionId,
+        {methodName},
       );
       if (decision.handled) {
         return decision.result;
@@ -4769,7 +5070,14 @@ function createAuthService(options = {}) {
       published = load();
       existingReceipt = activeDurableReceipt(published, receiptOperationId, now());
       if (existingReceipt) {
-        return durableReceiptReplayDecision(published, args, existingReceipt, requestHash, actionId);
+        return durableReceiptReplayDecision(
+          published,
+          args,
+          existingReceipt,
+          requestHash,
+          actionId,
+          methodName,
+        );
       }
     }
     // Persistent mutations are serialized and comparison completes before the
@@ -4824,7 +5132,7 @@ function createAuthService(options = {}) {
         receiptOperationId,
         requestHash,
         actionId,
-        {abortIfAuthorityRefreshed: true},
+        {abortIfAuthorityRefreshed: true, methodName},
       );
       if (decision.handled) {
         return decision.result;
@@ -4893,6 +5201,7 @@ function createAuthService(options = {}) {
     if (businessPersistentChanged && result && result.ok && receiptOperationId !== "") {
       const receiptNowMs = Number(now());
       const committedAt = new Date(receiptNowMs).toISOString();
+      const characterScope = durableMutationCharacterScope(methodName, before, args);
       response = durableCommitResult(result, {
         operationId: receiptOperationId,
         actionId,
@@ -4905,6 +5214,11 @@ function createAuthService(options = {}) {
         requestHash,
         actionId,
         accountId: durableMutationAccountId(before, args, hashToken),
+        scopeKind: characterScope.scopeKind,
+        ...(characterScope.scopeKind === "character" ? {
+          playerId: characterScope.playerId,
+          selectionEpoch: characterScope.selectionEpoch,
+        } : {}),
         committedAt,
         expiresAt: new Date(receiptNowMs + DURABLE_RECEIPT_TTL_MS).toISOString(),
         response: clone(response),
@@ -5000,6 +5314,7 @@ function createAuthService(options = {}) {
             receiptOperationId,
             requestHash,
             actionId,
+            {methodName},
           );
         } catch (recoveryCause) {
           if (outcomeUnknown) {
@@ -5533,6 +5848,7 @@ function createAuthService(options = {}) {
     claimQuestByIdToProfile,
     clampInt,
     clone,
+    createDefaultServerProfile,
     cloneAuthorityRoot,
     createDefaultServerPet,
     closeBattleRoomWithResult: (serviceData, roomValue, result, nowFn) => closeBattleRoomWithResult(
@@ -5708,6 +6024,7 @@ function createAuthService(options = {}) {
     questRewardChoices,
     randomBytes,
     randomId,
+    readMailAttachmentState,
     recordGmCommandAudit,
     recordProfilePetCodexForm,
     recordBattleTrace,
@@ -5736,6 +6053,7 @@ function createAuthService(options = {}) {
       runtimeActiveSessionIds,
       serverStartedAtMs,
     }),
+    rotateCharacterSession,
     save,
     sessionHasConnectedEventStream: (sessionId) => runtimeActiveSessionIds.connectedSessionIds.has(String(sessionId || "")),
     nextProfilePetInstanceSerial,
@@ -5744,8 +6062,13 @@ function createAuthService(options = {}) {
     shopCurrencyLabel,
     submittedBattleCommandAccountIds,
     submittedBattleCommandActorIds,
+    storeAuthorityRootRecord,
     validateClientQuestEvent,
   };
+  const accountCharacters = createAccountCharactersDomain({
+    ...domainContext,
+    publicSession,
+  });
   const profileActions = createProfileActionsDomain(domainContext);
   const quest = createQuestDomain(domainContext);
   const mailChat = createMailChatDomain(domainContext);
@@ -5779,6 +6102,9 @@ function createAuthService(options = {}) {
     logout,
     getSession,
     getEventSession,
+    listCharacters: accountCharacters.listCharacters,
+    createCharacter: accountCharacters.createCharacter,
+    selectCharacter: accountCharacters.selectCharacter,
     getProfile,
     listPetRecoveries,
     claimPetRecovery,
@@ -6707,6 +7033,7 @@ function normalizeData(raw, options = {}) {
     schemaVersion: 1,
     accounts: freezeAuthorityRootIdentityRecordValues("accounts", objectOrEmpty(data.accounts)),
     sessions: freezeAuthorityRootIdentityRecordValues("sessions", objectOrEmpty(data.sessions)),
+    accountCharacterSlots: objectOrEmpty(data.accountCharacterSlots),
     profileBindings: freezeAuthorityRootIdentityRecordValues("profileBindings", objectOrEmpty(data.profileBindings)),
     profiles: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.profiles)),
     // Healthy mail roots become immutable touched-row views. Malformed legacy
@@ -6953,7 +7280,7 @@ function persistentDataForStore(data) {
   return cloneAuthorityRoot(persistent);
 }
 
-function createSessionForAccount(data, account, now, randomBytes) {
+function createSessionForAccount(data, account, now, randomBytes, selection = null) {
   const token = randomBytes(32).toString("base64url");
   const session = {
     sessionId: `sess_${crypto.randomUUID()}`,
@@ -6964,6 +7291,20 @@ function createSessionForAccount(data, account, now, randomBytes) {
     revokedAt: null,
     schemaVersion: 1,
   };
+  if (
+    selection
+    && typeof selection === "object"
+    && !Array.isArray(selection)
+    && String(selection.playerId || "") !== ""
+    && Number.isSafeInteger(selection.slotIndex)
+    && selection.slotIndex >= 0
+    && Number.isSafeInteger(selection.selectionEpoch)
+    && selection.selectionEpoch >= 1
+  ) {
+    session.playerId = String(selection.playerId);
+    session.slotIndex = selection.slotIndex;
+    session.selectionEpoch = selection.selectionEpoch;
+  }
   storeAuthorityRootRecord(data, "sessions", session.sessionId, session);
   return {session, token};
 }
@@ -7092,7 +7433,14 @@ function clearRuntimeSessionsForAccount(data, accountId, runtimeActiveSessionIds
   }
 }
 
-function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runtimeActiveSessionIds) {
+function revokeOtherSessionsForAccount(
+  data,
+  accountId,
+  keepSessionId,
+  now,
+  runtimeActiveSessionIds,
+  options = {},
+) {
   const normalizedAccountId = String(accountId || "");
   const normalizedKeepSessionId = String(keepSessionId || "");
   const revokedSessions = [];
@@ -7100,6 +7448,9 @@ function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runt
     return {revokedSessions};
   }
   const timestamp = isoNow(now);
+  const revokedCode = String(options.code || "").trim() || SESSION_REPLACED_CODE;
+  const revokedReason = String(options.reason || "").trim() || "replaced_by_login";
+  const revokedMessage = String(options.message || "").trim() || SESSION_REPLACED_MESSAGE;
   for (const session of Object.values(data.sessions)) {
     if (
       !session ||
@@ -7112,9 +7463,9 @@ function revokeOtherSessionsForAccount(data, accountId, keepSessionId, now, runt
     const revokedSession = {
       ...session,
       revokedAt: timestamp,
-      revokedCode: SESSION_REPLACED_CODE,
-      revokedReason: "replaced_by_login",
-      revokedMessage: SESSION_REPLACED_MESSAGE,
+      revokedCode,
+      revokedReason,
+      revokedMessage,
     };
     storeAuthorityRootRecord(data, "sessions", revokedSession.sessionId, revokedSession);
     if (runtimeActiveSessionIds && typeof runtimeActiveSessionIds.delete === "function" && session.sessionId) {
@@ -7198,16 +7549,19 @@ function finiteTimestamp(value) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function sessionReplacementEvent(account, replacementSession, revokedSessions) {
+function sessionReplacementEvent(account, replacementSession, revokedSessions, options = {}) {
   const sessions = Array.isArray(revokedSessions) ? revokedSessions.filter((session) => session && session.sessionId) : [];
   if (sessions.length <= 0) {
     return null;
   }
+  const code = String(options.code || "").trim() || SESSION_REPLACED_CODE;
+  const reason = String(options.reason || "").trim() || "replaced_by_login";
+  const message = String(options.message || "").trim() || SESSION_REPLACED_MESSAGE;
   return {
     type: "session.replaced",
-    code: SESSION_REPLACED_CODE,
-    reason: "replaced_by_login",
-    message: SESSION_REPLACED_MESSAGE,
+    code,
+    reason,
+    message,
     accountId: String(account && account.accountId || ""),
     username: String(account && account.username || ""),
     displayName: String(account && (account.displayName || account.username) || ""),
@@ -7312,15 +7666,31 @@ function resolveSession(data, token, now, options = {}) {
   if (!account) {
     return {"ok": false, "code": "account_missing", "message": "账号不存在。"};
   }
+  const characterSelection = selectedCharacterForSession(data, session, {
+    allowLegacySingle: true,
+  });
+  if (!characterSelection.ok) {
+    if (
+      options.allowUnselectedCharacter !== true
+      || characterSelection.code !== "character_selection_required"
+    ) {
+      return {
+        ok: false,
+        code: characterSelection.code,
+        message: characterSelection.message,
+      };
+    }
+  }
+  const resolvedSession = characterSelection.ok ? characterSelection.session : session;
   const runtimeActiveSessionIds = options.runtimeActiveSessionIds || null;
-  const hadRuntimeRecord = runtimeSessionWasRecorded(runtimeActiveSessionIds, session.sessionId);
+  const hadRuntimeRecord = runtimeSessionWasRecorded(runtimeActiveSessionIds, resolvedSession.sessionId);
   if (runtimeActiveSessionIds) {
-    markRuntimeSessionActive(runtimeActiveSessionIds, session.sessionId, nowMs);
+    markRuntimeSessionActive(runtimeActiveSessionIds, resolvedSession.sessionId, nowMs);
   }
   const serverStartedAtMs = Number(options.serverStartedAtMs || 0);
-  const createdAtMs = Date.parse(session.createdAt);
+  const createdAtMs = Date.parse(resolvedSession.createdAt);
   const recovered = Boolean(runtimeActiveSessionIds && !hadRuntimeRecord && Number.isFinite(createdAtMs) && createdAtMs < serverStartedAtMs);
-  return {"ok": true, session, account, recovered};
+  return {"ok": true, session: resolvedSession, account, recovered};
 }
 
 function publicAccount(account) {
@@ -7339,7 +7709,13 @@ function publicSession(session, account, data, token = "", options = {}) {
     username: account.username,
     effectiveRole: effectiveRoleIsGm(data, account, options.now) ? ROLE_GM : ROLE_PLAYER,
     expiresAt: session.expiresAt,
+    selectionRequired: String(session.playerId || "") === "",
   };
+  if (String(session.playerId || "") !== "") {
+    result.playerId = String(session.playerId);
+    result.slotIndex = Number(session.slotIndex);
+    result.selectionEpoch = Number(session.selectionEpoch);
+  }
   if (options.recovered) {
     result.recovered = true;
     result.requiresPositionResync = true;
@@ -11952,9 +12328,20 @@ function validateBattleCaptureCandidateAttempt(authority, room, targetActor, acc
 
 function battleCaptureCapacityCheck(data, room, battle, accountId) {
   const normalizedAccountId = String(accountId || "");
+  const expectedPlayerId = battleSettlementPlayerIdForAccount(room, normalizedAccountId);
   const binding = data && data.profileBindings ? data.profileBindings[normalizedAccountId] || null : null;
-  const profileDoc = binding && binding.playerId && data && data.profiles
-    ? data.profiles[binding.playerId] || null
+  if (
+    expectedPlayerId === ""
+    || !binding
+    || String(binding.playerId || "") !== expectedPlayerId
+  ) {
+    return fail(
+      "battle_capture_character_stale",
+      "参战角色已经变化，本次捕捉没有生效，请重新进入战斗。",
+    );
+  }
+  const profileDoc = data && data.profiles
+    ? data.profiles[expectedPlayerId] || null
     : null;
   const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
     ? profileDoc.profile
@@ -12014,11 +12401,19 @@ function battleClaimedCaptureRecoveryIds(room, battle, accountId) {
   return recoveryIds;
 }
 
-function battleCaptureProfileForAccount(data, accountId) {
+function battleCaptureProfileForAccount(data, room, accountId) {
   const normalizedAccountId = String(accountId || "");
+  const expectedPlayerId = battleSettlementPlayerIdForAccount(room, normalizedAccountId);
   const binding = data && data.profileBindings ? data.profileBindings[normalizedAccountId] || null : null;
-  const profileDoc = binding && binding.playerId && data && data.profiles
-    ? data.profiles[binding.playerId] || null
+  if (
+    expectedPlayerId === ""
+    || !binding
+    || String(binding.playerId || "") !== expectedPlayerId
+  ) {
+    return null;
+  }
+  const profileDoc = data && data.profiles
+    ? data.profiles[expectedPlayerId] || null
     : null;
   return profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
     ? profileDoc.profile
@@ -12026,7 +12421,7 @@ function battleCaptureProfileForAccount(data, accountId) {
 }
 
 function battleAutoCapturePreEvaluation(data, room, battle, accountId, targetActor, petAutoCaptureFilter) {
-  const profile = battleCaptureProfileForAccount(data, accountId);
+  const profile = battleCaptureProfileForAccount(data, room, accountId);
   if (!profile || !petAutoCaptureFilter || typeof petAutoCaptureFilter.evaluatePreCapture !== "function") {
     return {
       ok: false,
@@ -13658,6 +14053,16 @@ function battleSettlementParticipantByAccountId(room, accountId) {
   return departed && typeof departed === "object" && !Array.isArray(departed) ? departed : null;
 }
 
+function battleSettlementPlayerIdForAccount(room, accountId) {
+  const participant = battleSettlementParticipantByAccountId(room, accountId);
+  return String(
+    participant
+    && participant.profileSummary
+    && participant.profileSummary.playerId
+    || "",
+  );
+}
+
 function battleParticipantSideForAccount(room, accountId) {
   const participant = battleParticipantByAccountId(room, accountId);
   const side = String(participant && participant.side || "");
@@ -14232,6 +14637,18 @@ function preflightBattleCaptureShelterSettlement(data, room, battle) {
   }
   for (const claim of claims.values()) {
     const binding = data && data.profileBindings ? data.profileBindings[claim.accountId] || null : null;
+    const expectedPlayerId = battleSettlementPlayerIdForAccount(room, claim.accountId);
+    if (
+      expectedPlayerId === ""
+      || !binding
+      || String(binding.playerId || "") !== expectedPlayerId
+    ) {
+      return {
+        ok: false,
+        code: "battle_capture_settlement_character_stale",
+        details: {...claim, expectedPlayerId},
+      };
+    }
     const profileDoc = binding && binding.playerId && data && data.profiles
       ? data.profiles[binding.playerId] || null
       : null;
@@ -14409,9 +14826,15 @@ function battleRecordTrainingPartnerExpAmount(exp) {
 
 function battleRecordParticipant(data, room, accountId) {
   const account = accountById(data, accountId);
-  const participant = battleParticipantByAccountId(room, accountId);
+  const participant = battleSettlementParticipantByAccountId(room, accountId);
   return {
     accountId: String(accountId || ""),
+    playerId: String(
+      participant
+      && participant.profileSummary
+      && participant.profileSummary.playerId
+      || "",
+    ),
     username: String(account && account.username || participant && participant.username || ""),
     displayName: String(account && account.displayName || participant && participant.displayName || account && account.username || ""),
     role: String(participant && participant.role || ""),
@@ -14485,23 +14908,36 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
   const activeParticipantAccountIds = new Set(requiredBattleCommandAccountIds(room));
   for (const accountId of battleProfileWritebackAccountIds(room, battle)) {
     let binding = data.profileBindings[String(accountId || "")] || null;
-    if (!binding || !binding.playerId) {
-      writeback.skippedProfiles.push({accountId, reason: "profile_binding_missing"});
+    const expectedPlayerId = battleSettlementPlayerIdForAccount(room, accountId);
+    if (expectedPlayerId === "") {
+      writeback.skippedProfiles.push({
+        accountId,
+        reason: "battle_participant_player_missing",
+      });
       continue;
     }
-    const profileDoc = data.profiles[binding.playerId] || null;
+    if (!binding || String(binding.playerId || "") !== expectedPlayerId) {
+      writeback.skippedProfiles.push({
+        accountId,
+        playerId: String(binding && binding.playerId || ""),
+        expectedPlayerId,
+        reason: "character_selection_stale",
+      });
+      continue;
+    }
+    const profileDoc = data.profiles[expectedPlayerId] || null;
     const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
       ? clone(profileDoc.profile)
       : null;
     if (!profile) {
-      writeback.skippedProfiles.push({accountId, playerId: binding.playerId, reason: "profile_document_missing"});
+      writeback.skippedProfiles.push({accountId, playerId: expectedPlayerId, reason: "profile_document_missing"});
       continue;
     }
     const assetConflict = rawBackpackAssetConflict(profile);
     if (assetConflict) {
       writeback.skippedProfiles.push({
         accountId: String(accountId || ""),
-        playerId: String(binding.playerId || ""),
+        playerId: expectedPlayerId,
         reason: String(assetConflict.code || "profile_asset_state_conflict"),
       });
       continue;
@@ -14509,7 +14945,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     const accountActors = battle.actors.filter((actor) => actor && String(actor.accountId || "") === String(accountId || ""));
     const summary = {
       accountId: String(accountId || ""),
-      playerId: String(binding.playerId || ""),
+      playerId: expectedPlayerId,
       profileRevision: Number(binding.profileRevision || profileDoc.profileRevision || 0),
       playerHp: null,
       ridePetHp: null,
@@ -14546,7 +14982,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       if (String(playerActor.ridePetInstanceId || "").trim() !== "" && !rideApplied.found) {
         writeback.skippedProfiles.push({
           accountId: String(accountId || ""),
-          playerId: String(binding.playerId || ""),
+          playerId: expectedPlayerId,
           petId: String(playerActor.ridePetInstanceId || ""),
           reason: "ride_pet_instance_missing",
         });
@@ -14562,7 +14998,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       if (!equipmentWear.ok) {
         writeback.skippedProfiles.push({
           accountId: String(accountId || ""),
-          playerId: String(binding.playerId || ""),
+          playerId: expectedPlayerId,
           reason: String(equipmentWear.code || "equipment_wear_state_conflict"),
         });
       }
@@ -14588,7 +15024,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       if (!applied.found) {
         writeback.skippedProfiles.push({
           accountId: String(accountId || ""),
-          playerId: String(binding.playerId || ""),
+          playerId: expectedPlayerId,
           petId: String(petActor.petId || ""),
           reason: "pet_instance_missing",
         });
@@ -14612,7 +15048,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
       if (!applied.found) {
         writeback.skippedProfiles.push({
           accountId: String(accountId || ""),
-          playerId: String(binding.playerId || ""),
+          playerId: expectedPlayerId,
           petId,
           reason: "pet_instance_missing",
         });
@@ -14628,7 +15064,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     if (itemWriteback.skippedReason) {
       writeback.skippedProfiles.push({
         accountId: String(accountId || ""),
-        playerId: String(binding.playerId || ""),
+        playerId: expectedPlayerId,
         reason: String(itemWriteback.skippedReason),
       });
     }
@@ -14640,7 +15076,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     if (captureToolWriteback.skippedReason) {
       writeback.skippedProfiles.push({
         accountId: String(accountId || ""),
-        playerId: String(binding.playerId || ""),
+        playerId: expectedPlayerId,
         reason: String(captureToolWriteback.skippedReason),
       });
     }
@@ -14650,7 +15086,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     if (captureWriteback.skippedReason) {
       writeback.skippedProfiles.push({
         accountId: String(accountId || ""),
-        playerId: String(binding.playerId || ""),
+        playerId: expectedPlayerId,
         reason: String(captureWriteback.skippedReason),
       });
     }
@@ -14681,7 +15117,7 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
         const skippedReason = String(rewardWriteback.code || "battle_reward_equipment_state_conflict");
         writeback.skippedProfiles.push({
           accountId: String(accountId || ""),
-          playerId: String(binding.playerId || ""),
+          playerId: expectedPlayerId,
           reason: skippedReason,
         });
         summary.rewards = {
@@ -14740,9 +15176,9 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
     const nextRevision = Number(binding.profileRevision || profileDoc.profileRevision || 0) + 1;
     binding = {...binding, profileRevision: nextRevision, updatedAt};
     storeAuthorityRootRecord(data, "profileBindings", accountId, binding);
-    storeAuthorityRootRecord(data, "profiles", binding.playerId, {
+    storeAuthorityRootRecord(data, "profiles", expectedPlayerId, {
       ...profileDoc,
-      playerId: binding.playerId,
+      playerId: expectedPlayerId,
       accountId: String(accountId || ""),
       profileRevision: nextRevision,
       profile,
@@ -14787,8 +15223,16 @@ function battleProfileWritebackAccountIds(room, battle) {
 
 function preflightBattleRoomPetExpSettlements(data, room, battle, result, petExpSettlement) {
   for (const accountId of requiredBattleCommandAccountIds(room)) {
+    const expectedPlayerId = battleSettlementPlayerIdForAccount(room, accountId);
     const binding = data.profileBindings[String(accountId || "")] || null;
-    const profileDoc = binding && binding.playerId ? data.profiles[binding.playerId] || null : null;
+    if (
+      expectedPlayerId === ""
+      || !binding
+      || String(binding.playerId || "") !== expectedPlayerId
+    ) {
+      continue;
+    }
+    const profileDoc = data.profiles[expectedPlayerId] || null;
     const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
       ? clone(profileDoc.profile)
       : null;
@@ -22447,8 +22891,19 @@ function stageClaimedBattleCapture(data, room, battle, target, accountId, claime
   const normalizedAccountId = String(accountId || "");
   const account = accountById(data, normalizedAccountId);
   const binding = data && data.profileBindings ? data.profileBindings[normalizedAccountId] || null : null;
-  const profileDoc = binding && binding.playerId && data && data.profiles
-    ? data.profiles[binding.playerId] || null
+  const expectedPlayerId = battleSettlementPlayerIdForAccount(room, normalizedAccountId);
+  if (
+    expectedPlayerId === ""
+    || !binding
+    || String(binding.playerId || "") !== expectedPlayerId
+  ) {
+    return fail(
+      "battle_capture_character_stale",
+      "参战角色已经变化，本次捕捉没有生效，请重新进入战斗。",
+    );
+  }
+  const profileDoc = data && data.profiles
+    ? data.profiles[expectedPlayerId] || null
     : null;
   const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" && !Array.isArray(profileDoc.profile)
     ? clone(profileDoc.profile)
@@ -23247,7 +23702,13 @@ function accountRuntimeActivity(data, accountId, now, runtimeActiveSessionIds = 
   let online = false;
   let lastSeenMs = NaN;
   for (const session of runtimeSessionCandidates(data, runtimeActiveSessionIds)) {
-    if (!session || session.accountId !== accountId || session.revokedAt || Date.parse(session.expiresAt) <= nowMs) {
+    if (
+      !session
+      || session.accountId !== accountId
+      || session.revokedAt
+      || Date.parse(session.expiresAt) <= nowMs
+      || !sessionCharacterBindingIsCurrent(data, session)
+    ) {
       continue;
     }
     if (!runtimeActiveSessionIds) {
@@ -23284,6 +23745,7 @@ function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
       session &&
       !session.revokedAt &&
       Date.parse(session.expiresAt) > nowMs &&
+      sessionCharacterBindingIsCurrent(data, session) &&
       runtimeSessionIsActive(runtimeActiveSessionIds, session.sessionId, nowMs)
     ))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -23302,6 +23764,50 @@ function activeOnlinePlayers(data, now, runtimeActiveSessionIds = null) {
   }
   players.sort((a, b) => String(a.username).localeCompare(String(b.username)));
   return players;
+}
+
+function sessionCharacterBindingIsCurrent(data, session) {
+  const accountId = String(session && session.accountId || "");
+  const binding = data && data.profileBindings && data.profileBindings[accountId];
+  const bindingPlayerId = String(binding && binding.playerId || "");
+  if (accountId === "" || bindingPlayerId === "") {
+    return false;
+  }
+  const roster = data && data.accountCharacterSlots && data.accountCharacterSlots[accountId];
+  const playerId = String(session && session.playerId || "");
+  if (playerId === "") {
+    if (!Array.isArray(roster)) {
+      return true;
+    }
+    let onlySlot = null;
+    for (const slot of roster) {
+      if (!slot) {
+        continue;
+      }
+      if (onlySlot) {
+        return false;
+      }
+      onlySlot = slot;
+    }
+    return Boolean(onlySlot) && String(onlySlot.playerId || "") === bindingPlayerId;
+  }
+  const slotIndex = session && session.slotIndex;
+  const selectionEpoch = session && session.selectionEpoch;
+  if (
+    !Array.isArray(roster)
+    || !Number.isSafeInteger(slotIndex)
+    || slotIndex < 0
+    || slotIndex >= CHARACTER_SLOT_LIMIT
+    || !Number.isSafeInteger(selectionEpoch)
+    || selectionEpoch < 1
+  ) {
+    return false;
+  }
+  const slot = roster[slotIndex];
+  return Boolean(slot)
+    && String(slot.accountId || "") === accountId
+    && String(slot.playerId || "") === playerId
+    && bindingPlayerId === playerId;
 }
 
 function runtimeSessionCandidates(data, runtimeActiveSessionIds = null) {
@@ -24895,6 +25401,12 @@ module.exports = {
     normalizeBattleRecords,
     normalizeBattleTrace,
     normalizeServiceEvents,
+  }),
+  __battleCharacterAuthorityForTest: Object.freeze({
+    applyBattleRoomProfileWriteback,
+    battleCaptureCapacityCheck,
+    battleSettlementPlayerIdForAccount,
+    preflightBattleCaptureShelterSettlement,
   }),
   createAuthService,
   createMemoryAuthStore,

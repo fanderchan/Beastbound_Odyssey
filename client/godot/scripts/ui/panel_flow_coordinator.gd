@@ -9173,9 +9173,9 @@ func _on_auth_http_request_completed(result: int, response_code: int, _headers: 
 	var session = parsed.get("session", {}) as Dictionary
 	session["serverBaseUrl"] = ServerAuthClientModel.normalized_base_url(auth_server_url_input.text if auth_server_url_input != null else ServerAuthClientModel.DEFAULT_BASE_URL)
 	_remember_auth_session(session)
-	_apply_authenticated_session(session, false)
+	host._begin_character_entry_from_auth(parsed)
 	if auth_message_label != null:
-		auth_message_label.text = str(parsed.get("message", "已连接服务器。"))
+		auth_message_label.text = ""
 
 func _packed_string_array(value) -> PackedStringArray:
 	var result = PackedStringArray()
@@ -10834,6 +10834,7 @@ func _apply_auth_profile_metadata_fields(display_name: String) -> void:
 func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = false) -> void:
 	if session.is_empty():
 		return
+	host._reset_character_entry_flow()
 	var previous_server_token = _server_profile_token()
 	var next_server_token = str(session.get("serverSessionToken", "")).strip_edges()
 	if previous_server_token != next_server_token:
@@ -11107,6 +11108,7 @@ func _set_account_logout_buttons_disabled(disabled: bool) -> void:
 		account_logout_here_button.disabled = disabled
 
 func _switch_account_to_login(save_before_logout: bool = true) -> void:
+	host._reset_character_entry_flow()
 	if battle_active:
 		host._end_battle(false)
 	if profile_save_enabled:
@@ -11342,6 +11344,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
+		host.character_entry_panel,
 		account_panel,
 		qa_panel,
 		numeric_workbench_panel,
@@ -11380,6 +11383,7 @@ func _register_hud_panels() -> void:
 		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
+		host.character_entry_panel,
 		account_panel,
 		qa_panel,
 		numeric_workbench_panel,

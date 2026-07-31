@@ -780,7 +780,7 @@ function validateMutationReceiptParams(params, resource, key) {
   } catch {
     throw invalid("write_receipt_document_invalid", resource, key);
   }
-  const expectedFields = new Set([
+  const requiredFields = new Set([
     "schemaVersion",
     "operationId",
     "requestHash",
@@ -790,10 +790,41 @@ function validateMutationReceiptParams(params, resource, key) {
     "expiresAt",
     "response",
   ]);
+  const documentFields = Object.keys(document || {});
+  const hasScopeKind = Object.hasOwn(document || {}, "scopeKind");
+  const hasPlayerId = Object.hasOwn(document || {}, "playerId");
+  const hasSelectionEpoch = Object.hasOwn(document || {}, "selectionEpoch");
+  const allowedFields = new Set(requiredFields);
+  if (hasScopeKind) {
+    allowedFields.add("scopeKind");
+  }
+  if (hasScopeKind && document.scopeKind === "character" && hasPlayerId && hasSelectionEpoch) {
+    allowedFields.add("playerId");
+    allowedFields.add("selectionEpoch");
+  }
   if (
     !isRecord(document)
-    || Object.keys(document).length !== expectedFields.size
-    || Object.keys(document).some((field) => !expectedFields.has(field))
+    || hasPlayerId !== hasSelectionEpoch
+    || (
+      !hasScopeKind
+        ? hasPlayerId || hasSelectionEpoch
+        : (
+          document.scopeKind !== "account"
+          && document.scopeKind !== "character"
+        )
+    )
+    || (
+      hasScopeKind
+      && document.scopeKind === "account"
+      && (hasPlayerId || hasSelectionEpoch)
+    )
+    || (
+      hasScopeKind
+      && document.scopeKind === "character"
+      && (!hasPlayerId || !hasSelectionEpoch)
+    )
+    || documentFields.length !== allowedFields.size
+    || documentFields.some((field) => !allowedFields.has(field))
     || document.schemaVersion !== 1
     || document.operationId !== operationId
     || document.requestHash !== requestHash
@@ -801,6 +832,13 @@ function validateMutationReceiptParams(params, resource, key) {
     || document.accountId !== (accountId === null ? "" : accountId)
     || document.committedAt !== committedAt
     || document.expiresAt !== expiresAt
+    || (document.scopeKind === "character" && (
+      typeof document.playerId !== "string"
+      || document.playerId === ""
+      || document.playerId.trim() !== document.playerId
+      || !Number.isSafeInteger(document.selectionEpoch)
+      || document.selectionEpoch < 1
+    ))
     || !isRecord(document.response)
   ) {
     throw invalid("write_receipt_document_invalid", resource, key);

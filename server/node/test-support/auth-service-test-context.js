@@ -199,6 +199,18 @@ function internalProfileForAccount(service, accountId) {
   return profileDoc.profile;
 }
 
+function internalProfileForPlayer(service, accountId, playerId) {
+  const snapshot = service.snapshot();
+  const profileDoc = snapshot.profiles && snapshot.profiles[String(playerId || "")];
+  assert.equal(
+    String(profileDoc && profileDoc.accountId || ""),
+    String(accountId || ""),
+    `profile ${playerId} does not belong to account ${accountId}`,
+  );
+  assert.ok(profileDoc && profileDoc.profile, `missing internal profile for player ${playerId}`);
+  return profileDoc.profile;
+}
+
 function createCountingAuthStore(initialData = null) {
   const store = createMemoryAuthStore(initialData);
   const counts = {
@@ -556,6 +568,7 @@ module.exports = {
   createMysqlAuthStore,
   createCountingAuthStore,
   internalProfileForAccount,
+  internalProfileForPlayer,
   isValidPetPrivateSeed,
   testPasswordHash,
   withEnv,

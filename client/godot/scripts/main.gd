@@ -35,6 +35,9 @@ const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_pr
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const CharacterEntryCoordinator := preload(
+	"res://scripts/net/character_entry_coordinator.gd"
+)
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
@@ -80,6 +83,9 @@ const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
+const CharacterEntryFlowController := preload(
+	"res://scripts/ui/character_entry_flow_controller.gd"
+)
 const AudioSettingsPanel := preload("res://scripts/ui/audio_settings_panel.gd")
 const AudioMainRuntimeCheck := preload("res://scripts/qa/audio_main_runtime_check.gd")
 const AudioImpactReviewModelCheck := preload(
@@ -108,6 +114,9 @@ const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_ch
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const BackpackAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/backpack_awakened_owner_review_capture.gd"
+)
+const CharacterEntryOwnerReviewCapture := preload(
+	"res://scripts/qa/character_entry_owner_review_capture.gd"
 )
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
@@ -356,8 +365,10 @@ var auth_submit_button: Button
 var auth_http_request: HTTPRequest
 var profile_sync_http_request: HTTPRequest
 var server_sync_coordinator
+var character_entry_coordinator
 var panel_flow_coordinator
 var pet_battle_review_lab
+var character_entry_panel: Control
 var account_panel: PanelContainer
 var account_info_label: Label
 var account_switch_button: Button
@@ -903,6 +914,7 @@ var auto_facility_marker_check: bool = false
 var auto_qa_panel_check: bool = false
 var auto_auth_check: bool = false
 var auto_auth_server_client_check: bool = false
+var auto_character_entry_live_check: bool = false
 var auto_player_message_safety_check: bool = false
 var auto_auth_server_live_check: bool = false
 var auto_startup_login_check: bool = false
@@ -1038,6 +1050,7 @@ var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var backpack_awakened_owner_review_capture: bool = false
+var character_entry_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1303,6 +1316,17 @@ func _server_sync():
 	if server_sync_coordinator == null:
 		server_sync_coordinator = ServerSyncCoordinator.new(self)
 	return server_sync_coordinator
+
+
+func _character_entry():
+	if character_entry_panel == null:
+		return null
+	if character_entry_coordinator == null:
+		character_entry_coordinator = CharacterEntryCoordinator.new(
+			self,
+			character_entry_panel
+		)
+	return character_entry_coordinator
 
 
 func _server_battle():
@@ -1595,6 +1619,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_party_pve_sync_live_check")
 	elif auto_auth_server_client_check:
 		call_deferred("_run_auto_auth_server_client_check")
+	elif auto_character_entry_live_check:
+		call_deferred("_run_auto_character_entry_live_check")
 	elif auto_player_message_safety_check:
 		call_deferred("_run_auto_player_message_safety_check")
 	elif auto_server_profile_sync_check:
@@ -1965,6 +1991,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif backpack_awakened_owner_review_capture:
 		call_deferred("_run_backpack_awakened_owner_review_capture")
+	elif character_entry_owner_review_capture:
+		call_deferred("_run_character_entry_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2203,6 +2231,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == MapVisualReviewCapture.CAPTURE_FLAG
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
+		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2217,7 +2246,7 @@ func _apply_preview_window_args() -> void:
 			continue
 		if _dev_entrypoint_arg(arg):
 			profile_save_enabled = false
-			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check" and not arg.begins_with("--map-art-review-preview"):
+			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check" and arg != "--auto-character-entry-live-check" and not arg.begins_with("--map-art-review-preview"):
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
 			_apply_preview_window_size(Vector2i(1280, 720))
@@ -2542,6 +2571,9 @@ func _apply_preview_window_args() -> void:
 			auth_auto_bypass = false
 		elif arg == "--auto-auth-server-client-check":
 			auto_auth_server_client_check = true
+		elif arg == "--auto-character-entry-live-check":
+			auto_character_entry_live_check = true
+			auth_auto_bypass = false
 		elif arg == "--auto-player-message-safety-check":
 			auto_player_message_safety_check = true
 		elif arg == "--auto-auth-server-live-check":
@@ -2809,6 +2841,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG:
 			backpack_awakened_owner_review_capture = true
+		elif arg == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG:
+			character_entry_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -4045,6 +4079,10 @@ func _run_pet_management_preview() -> void:
 
 func _run_backpack_awakened_owner_review_capture() -> void:
 	await BackpackAwakenedOwnerReviewCapture.new(self).run()
+
+
+func _run_character_entry_owner_review_capture() -> void:
+	await CharacterEntryOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:
@@ -5479,6 +5517,10 @@ func _run_auto_auth_server_live_check() -> void:
 
 func _run_auto_startup_login_check() -> void:
 	await _auto_checks()._run_auto_startup_login_check()
+
+
+func _run_auto_character_entry_live_check() -> void:
+	await _auto_checks()._run_auto_character_entry_live_check()
 
 
 func _run_auto_server_mail_live_check() -> void:
@@ -8804,6 +8846,13 @@ func _build_camera() -> void:
 
 func _build_hud() -> void:
 	_panel_flow()._build_hud()
+	character_entry_panel = CharacterEntryFlowController.new()
+	character_entry_panel.visible = false
+	hud_root.add_child(character_entry_panel)
+	_character_entry()
+	# The first registry pass happens while the legacy HUD is being built.
+	# Re-register once the focused full-screen entry flow exists.
+	_panel_flow()._register_hud_panels()
 	npc_hover_identity_presenter = NpcHoverIdentityPresenter.new()
 	npc_hover_identity_presenter.build(hud_root)
 	npc_hover_identity_presenter.configure_map(map_data)
@@ -8857,6 +8906,20 @@ func _submit_server_auth_request(username: String, password: String) -> void:
 
 func _on_auth_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_panel_flow()._on_auth_http_request_completed(result, response_code, _headers, body)
+
+
+func _begin_character_entry_from_auth(parsed: Dictionary) -> void:
+	var coordinator = _character_entry()
+	if coordinator != null:
+		coordinator.begin_from_auth(parsed)
+
+
+func _reset_character_entry_flow() -> void:
+	if character_entry_coordinator != null:
+		character_entry_coordinator.reset()
+	elif character_entry_panel != null:
+		character_entry_panel.visible = false
+
 
 func _packed_string_array(value) -> PackedStringArray:
 	return _panel_flow()._packed_string_array(value)
@@ -14362,6 +14425,23 @@ func _layout_hud() -> void:
 				battle_round_panel.visible = false
 			if battle_timer_panel != null:
 				battle_timer_panel.visible = false
+
+	if character_entry_panel != null:
+		if character_entry_panel.visible:
+			top_panel.visible = false
+			side_panel.visible = false
+			action_bar.visible = false
+			battle_message_panel.visible = false
+			if auth_panel != null:
+				auth_panel.visible = false
+			if battle_round_panel != null:
+				battle_round_panel.visible = false
+			if battle_timer_panel != null:
+				battle_timer_panel.visible = false
+			if battle_command_panel != null:
+				battle_command_panel.visible = false
+			if battle_auto_stop_button != null:
+				battle_auto_stop_button.visible = false
 
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())

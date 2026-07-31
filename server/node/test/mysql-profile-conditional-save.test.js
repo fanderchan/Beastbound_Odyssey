@@ -708,11 +708,29 @@ function createLoaderFixture(tempDir, options = {}) {
     ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
     ["store_revision", "auth", String(revision)],
     ["profile_bindings", ACCOUNT_ID, JSON.stringify(before.profileBindings[ACCOUNT_ID])],
+    ["account_character_slots", `${ACCOUNT_ID}/0`, JSON.stringify({
+      schemaVersion: 1,
+      accountId: ACCOUNT_ID,
+      slotIndex: 0,
+      playerId: PLAYER_ID,
+      createdAt: UPDATED_AT_1,
+      updatedAt: UPDATED_AT_1,
+      lastSelectedAt: null,
+    })],
     ["profiles", PLAYER_ID, JSON.stringify(before.profiles[PLAYER_ID])],
   ];
   if (options.includeSecondProfile === true) {
     rows.push(
       ["profile_bindings", ACCOUNT_ID_B, JSON.stringify(before.profileBindings[ACCOUNT_ID_B])],
+      ["account_character_slots", `${ACCOUNT_ID_B}/0`, JSON.stringify({
+        schemaVersion: 1,
+        accountId: ACCOUNT_ID_B,
+        slotIndex: 0,
+        playerId: PLAYER_ID_B,
+        createdAt: UPDATED_AT_1,
+        updatedAt: UPDATED_AT_1,
+        lastSelectedAt: null,
+      })],
       ["profiles", PLAYER_ID_B, JSON.stringify(before.profiles[PLAYER_ID_B])],
     );
   }

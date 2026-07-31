@@ -2288,7 +2288,7 @@ test("mutating committed results cannot alter authority or later durable receipt
   assert.equal(saveCount, 1);
 });
 
-test("durable receipt follows its account across token rotation and rejects another account", async (t) => {
+test("character receipt follows a same-selection refresh but rejects another account or selection epoch", async (t) => {
   const base = createMemoryAuthStore();
   const owner = seedShopAccount(base, "durabletokenowner");
   const other = seedShopAccount(base, "durabletokenother");
@@ -2337,19 +2337,39 @@ test("durable receipt follows its account across token rotation and rejects anot
   assert.equal(foreignResult.durableCommit, undefined);
   assert.equal(saveCount, 1);
 
+  const refreshed = await fetchJson(`${harness.baseUrl}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${owner.session.token}`,
+      [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+      [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+    },
+  });
+  assert.equal(refreshed.ok, true);
+  assert.notEqual(refreshed.session.token, owner.session.token);
+  const savesAfterRefresh = saveCount;
+
+  const replay = await shopRequest(harness.baseUrl, refreshed.session.token, operationId);
+  assert.equal(replay.ok, true);
+  assert.equal(replay.durableCommit.replayed, true);
+  assert.equal(replay.profile.stoneCoins, 12);
+  assert.equal(profileItemCount(replay.profile, "item_meat_small"), 1);
+  assert.equal(saveCount, savesAfterRefresh);
+
   const login = await fetchJson(`${harness.baseUrl}/auth/login`, {
     method: "POST",
     body: JSON.stringify({username: "durabletokenowner", password: "test1234"}),
   });
   assert.equal(login.ok, true);
-  assert.notEqual(login.session.token, owner.session.token);
+  assert.notEqual(login.session.selectionEpoch, refreshed.session.selectionEpoch);
   const savesAfterLogin = saveCount;
-
-  const replay = await shopRequest(harness.baseUrl, login.session.token, operationId);
-  assert.equal(replay.ok, true);
-  assert.equal(replay.durableCommit.replayed, true);
-  assert.equal(replay.profile.stoneCoins, 12);
-  assert.equal(profileItemCount(replay.profile, "item_meat_small"), 1);
+  const staleSelectionReplay = await shopRequest(
+    harness.baseUrl,
+    login.session.token,
+    operationId,
+  );
+  assert.equal(staleSelectionReplay.ok, false);
+  assert.equal(staleSelectionReplay.code, "idempotency_key_conflict");
   assert.equal(saveCount, savesAfterLogin);
 });
 

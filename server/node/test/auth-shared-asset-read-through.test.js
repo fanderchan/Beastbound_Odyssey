@@ -669,7 +669,7 @@ test("ordinary mail refuses a stale attachment already consumed on another Node"
   assert.equal(Object.keys(backing.load().mailMessages).length, 0);
 });
 
-test("malformed mail attachments keep the domain error without pre-reading a profile", async () => {
+test("a stale character selection fails before malformed mail can trigger a shared read", async () => {
   const initial = createMemoryAuthStore();
   const seed = createAuthService({store: initial});
   const sender = seed.register({username: "mailbadreadsend", password: "test1234", displayName: "畸形寄件人"});
@@ -705,7 +705,7 @@ test("malformed mail attachments keep the domain error without pre-reading a pro
   );
 
   assert.equal(result.ok, false);
-  assert.equal(result.code, "mail_item_invalid");
+  assert.equal(result.code, "character_selection_stale");
   assert.equal(sharedReadCalled, false);
 });
 
@@ -1292,7 +1292,7 @@ test("exact replay reload rejects a session revoked on another Node", async () =
   assert.equal(retrySaves, 0);
 });
 
-test("a canonical token issued on another Node can recover its account receipt", async () => {
+test("a canonical refresh token issued on another Node can recover its character receipt", async () => {
   const scenario = seedMarketScenario();
   const operation = {
     operationId: "op_rotated_session_receipt_0001",
@@ -1307,7 +1307,7 @@ test("a canonical token issued on another Node can recover its account receipt",
   );
   assert.equal(first.ok, true, JSON.stringify(first));
   const authority = createAuthService({store: scenario.backing});
-  const rotated = authority.login({username: "sharedreadbuyer", password: "test1234"});
+  const rotated = authority.refreshSession(scenario.buyer.session.token);
   assert.equal(rotated.ok, true, JSON.stringify(rotated));
 
   const retryNode = createReadThroughNode(scenario.backing, scenario.afterListing);

@@ -1790,12 +1790,43 @@ test("self rebase invalidates its short cache when runtime sessions are replaced
   const session = (sessionId, accountId, token, expiresAt) => ({
     sessionId,
     accountId,
+    playerId: `player_${accountId}`,
+    slotIndex: 0,
+    selectionEpoch: 1,
     tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
     createdAt: new Date(nowMs - 60_000).toISOString(),
     expiresAt,
     revokedAt: null,
     schemaVersion: 1,
   });
+  const profileBinding = (accountId) => ({
+    accountId,
+    playerId: `player_${accountId}`,
+    profileRevision: 0,
+    createdAt: new Date(nowMs - 60_000).toISOString(),
+    updatedAt: new Date(nowMs - 60_000).toISOString(),
+    schemaVersion: 1,
+  });
+  const profileDocument = (accountId, displayName) => ({
+    playerId: `player_${accountId}`,
+    accountId,
+    profileRevision: 0,
+    profile: {
+      player: {name: displayName, level: 1},
+      schemaVersion: 1,
+    },
+    updatedAt: new Date(nowMs - 60_000).toISOString(),
+    schemaVersion: 1,
+  });
+  const characterSlots = (accountId) => [{
+    accountId,
+    slotIndex: 0,
+    playerId: `player_${accountId}`,
+    createdAt: new Date(nowMs - 60_000).toISOString(),
+    updatedAt: new Date(nowMs - 60_000).toISOString(),
+    lastSelectedAt: new Date(nowMs - 60_000).toISOString(),
+    schemaVersion: 1,
+  }, null, null, null];
   const position = (accountId, username, cellX) => ({
     accountId,
     username,
@@ -1827,6 +1858,21 @@ test("self rebase invalidates its short cache when runtime sessions are replaced
         sess_equal_viewer: session("sess_equal_viewer", viewer.accountId, viewerToken, new Date(nowMs + 60_000).toISOString()),
         sess_equal_leaving: session("sess_equal_leaving", leaving.accountId, leavingToken, new Date(nowMs + 26_001).toISOString()),
         sess_equal_entering: session("sess_equal_entering", entering.accountId, enteringToken, new Date(nowMs + 60_000).toISOString()),
+      },
+      accountCharacterSlots: {
+        [viewer.accountId]: characterSlots(viewer.accountId),
+        [leaving.accountId]: characterSlots(leaving.accountId),
+        [entering.accountId]: characterSlots(entering.accountId),
+      },
+      profileBindings: {
+        [viewer.accountId]: profileBinding(viewer.accountId),
+        [leaving.accountId]: profileBinding(leaving.accountId),
+        [entering.accountId]: profileBinding(entering.accountId),
+      },
+      profiles: {
+        [`player_${viewer.accountId}`]: profileDocument(viewer.accountId, viewer.displayName),
+        [`player_${leaving.accountId}`]: profileDocument(leaving.accountId, leaving.displayName),
+        [`player_${entering.accountId}`]: profileDocument(entering.accountId, entering.displayName),
       },
     }),
   });

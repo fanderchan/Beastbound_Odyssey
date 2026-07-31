@@ -202,7 +202,7 @@ function createMysqlCasPoolFixture(options = {}) {
             pendingRevision = state.revision + 1;
             return [{affectedRows: 1}, []];
           }
-          if (/^(?:INSERT INTO|UPDATE|DELETE FROM) (?:server_state|accounts|profile_bindings|profiles|mail_messages|chat_messages|battle_records|mutation_receipts)\b/i.test(normalizedSql)) {
+          if (/^(?:INSERT INTO|UPDATE|DELETE FROM) (?:server_state|accounts|profile_bindings|account_character_slots|profiles|mail_messages|chat_messages|battle_records|mutation_receipts)\b/i.test(normalizedSql)) {
             return [{affectedRows: 1}, []];
           }
           const error = new Error(`createMysqlCasPoolFixture 未建模 SQL：${normalizedSql}`);
@@ -670,9 +670,85 @@ test("MySQL new mail, listing, and equipment tombstone IDs use strict inserts", 
   assert.doesNotMatch(newTombstone, /ON DUPLICATE KEY UPDATE/);
 });
 
+test("MySQL character slots use fixed four-slot roots and strict composite-key deltas", () => {
+  const accountId = "acc_character_slots";
+  const slot = (slotIndex, playerId, overrides = {}) => ({
+    accountId,
+    slotIndex,
+    playerId,
+    createdAt: `2026-07-31T0${slotIndex}:00:00.000Z`,
+    updatedAt: `2026-07-31T0${slotIndex}:00:00.000Z`,
+    lastSelectedAt: null,
+    schemaVersion: 1,
+    ...overrides,
+  });
+  const previous = {
+    schemaVersion: 1,
+    accountCharacterSlots: {
+      [accountId]: [
+        slot(0, "player_character_a"),
+        slot(1, "player_character_b"),
+        null,
+        null,
+      ],
+    },
+  };
+  const next = structuredClone(previous);
+  next.accountCharacterSlots[accountId][0].updatedAt = "2026-07-31T04:00:00.000Z";
+  next.accountCharacterSlots[accountId][0].lastSelectedAt = "2026-07-31T04:00:00.000Z";
+  next.accountCharacterSlots[accountId][1] = null;
+  next.accountCharacterSlots[accountId][2] = slot(2, "player_character_c");
+  next.accountCharacterSlots[accountId][3] = slot(3, "player_character_b", {
+    createdAt: previous.accountCharacterSlots[accountId][1].createdAt,
+  });
+
+  const statements = __buildSaveStatementsFromPersistentDataForTest(next, previous);
+  const slotStatements = statements.filter((statement) => statement.includes("account_character_slots"));
+  assert.equal(slotStatements.length, 4);
+  assert.match(
+    slotStatements[0],
+    /^DELETE FROM account_character_slots WHERE account_id = 'acc_character_slots' AND slot_index = 1 AND player_id = 'player_character_b'$/,
+  );
+  assert.match(
+    slotStatements[1],
+    /^UPDATE account_character_slots SET updated_at = '2026-07-31T04:00:00.000Z', last_selected_at = '2026-07-31T04:00:00.000Z'/,
+  );
+  assert.match(slotStatements[1], /slot_index = 0 AND player_id = 'player_character_a'$/);
+  assert.match(slotStatements[2], /^INSERT INTO account_character_slots /);
+  assert.match(slotStatements[2], /'player_character_c'/);
+  assert.match(slotStatements[3], /^INSERT INTO account_character_slots /);
+  assert.match(slotStatements[3], /'player_character_b'/);
+  assert.equal(slotStatements.some((statement) => /ON DUPLICATE KEY UPDATE/.test(statement)), false);
+
+  assert.throws(
+    () => __buildSaveStatementsFromPersistentDataForTest({
+      ...previous,
+      accountCharacterSlots: {
+        [accountId]: [
+          slot(0, "player_character_a"),
+          slot(1, "player_character_a"),
+          null,
+          null,
+        ],
+      },
+    }, previous),
+    /角色不能重复占用账号槽位/,
+  );
+  assert.throws(
+    () => __buildSaveStatementsFromPersistentDataForTest({
+      ...previous,
+      accountCharacterSlots: {
+        [accountId]: [slot(0, "player_character_a"), null, null],
+      },
+    }, previous),
+    /固定4个角色槽位/,
+  );
+});
+
 test("mysql auth store root contract classifies every snapshot field exactly once", () => {
   const contract = mysqlAuthStoreRootContract();
   const expectedPersistentFields = [
+    "accountCharacterSlots",
     "accounts",
     "authEvents",
     "battleRecords",
@@ -713,7 +789,7 @@ test("mysql auth store root contract classifies every snapshot field exactly onc
   assert.deepEqual(contract.persistentFields, expectedPersistentFields);
   assert.deepEqual(contract.runtimeOnlyFields, expectedRuntimeOnlyFields);
   assert.deepEqual(contract.snapshotFields, [...expectedPersistentFields, ...expectedRuntimeOnlyFields].sort());
-  assert.equal(contract.persistentFields.length, 26);
+  assert.equal(contract.persistentFields.length, 27);
   assert.equal(new Set([...contract.persistentFields, ...contract.runtimeOnlyFields]).size, contract.snapshotFields.length);
   assert.deepEqual(contract.profileDocumentFields, [
     "playerId",
@@ -748,6 +824,16 @@ process.stdin.on("end", () => {
       ? {accountId: "acc_document", username: "mismatch"}
       : bucket === "profile_bindings"
         ? {accountId: "acc_document", playerId: "player_mismatch", profileRevision: 1}
+        : bucket === "account_character_slots"
+          ? {
+            schemaVersion: 1,
+            accountId: "acc_document",
+            slotIndex: 0,
+            playerId: "player_mismatch",
+            createdAt: "2026-07-31T00:00:00.000Z",
+            updatedAt: "2026-07-31T00:00:00.000Z",
+            lastSelectedAt: null,
+          }
         : bucket === "mutation_receipts"
           ? {operationId: "operation_document", schemaVersion: 1}
           : {eventId: "event_document", type: "login", username: "mismatch"};
@@ -765,6 +851,7 @@ process.stdin.on("end", () => {
     for (const [bucket, rowKey, arrayDocument, strictRowIdentity] of [
       ["accounts", "acc_sql", false, true],
       ["profile_bindings", "acc_sql", false, true],
+      ["account_character_slots", "acc_sql/0", false, false],
       // Durable receipts always validate their SQL/document identity, even on
       // the normal startup loader where the broader migration audit is off.
       ["mutation_receipts", "operation_sql", false, false],
@@ -985,6 +1072,11 @@ process.stdin.on("end", () => {
     assert.ok(calls.some((call) => call.hasManorBattles));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS consumed_equipment_envelopes/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mutation_receipts/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS account_character_slots/.test(call.stdin)));
+    assert.ok(calls.some((call) => /slot_index TINYINT UNSIGNED NOT NULL/.test(call.stdin)));
+    assert.ok(calls.some((call) => /PRIMARY KEY \(account_id, slot_index\)/.test(call.stdin)));
+    assert.ok(calls.some((call) => /UNIQUE KEY uq_account_character_slots_player_id \(player_id\)/.test(call.stdin)));
+    assert.ok(calls.some((call) => /CHECK \(slot_index BETWEEN 0 AND 3\)/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS party_invites/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_storage_control/.test(call.stdin)));
     assert.ok(calls.some((call) => /CREATE TABLE IF NOT EXISTS mail_active_counters/.test(call.stdin)));
@@ -1132,13 +1224,15 @@ process.stdin.on("end", () => {
     assert.throws(() => store.save({}), /Read-only MySQL auth store cannot save/);
     await assert.rejects(store.saveAsync({}), /Read-only MySQL auth store cannot save/);
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 3);
+    assert.equal(calls.length, 4);
     assert.match(calls[0].stdin, /information_schema\.tables/);
     assert.match(calls[1].stdin, /information_schema\.tables/);
-    assert.match(calls[2].stdin, /SELECT 'server_state'/);
-    assert.doesNotMatch(calls[2].stdin, /consumed_equipment_envelopes/);
-    assert.doesNotMatch(calls[2].stdin, /mutation_receipts/);
-    assert.doesNotMatch(calls[2].stdin, /SELECT 'party_invites'/);
+    assert.match(calls[2].stdin, /information_schema\.tables/);
+    assert.match(calls[3].stdin, /SELECT 'server_state'/);
+    assert.doesNotMatch(calls[3].stdin, /account_character_slots/);
+    assert.doesNotMatch(calls[3].stdin, /consumed_equipment_envelopes/);
+    assert.doesNotMatch(calls[3].stdin, /mutation_receipts/);
+    assert.doesNotMatch(calls[3].stdin, /SELECT 'party_invites'/);
     assert.equal(calls.some((call) => /CREATE TABLE|CREATE DATABASE|START TRANSACTION|DELETE FROM party_invites/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
@@ -1194,11 +1288,13 @@ process.stdin.on("end", () => {
       envelopeId: "eqx_store_read_only_0001",
     });
     const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
-    assert.equal(calls.length, 3);
+    assert.equal(calls.length, 4);
     assert.match(calls[0].stdin, /information_schema\.tables/);
     assert.match(calls[1].stdin, /information_schema\.tables/);
-    assert.match(calls[2].stdin, /FROM consumed_equipment_envelopes ORDER BY envelope_id/);
-    assert.match(calls[2].stdin, /FROM mutation_receipts ORDER BY operation_id/);
+    assert.match(calls[2].stdin, /information_schema\.tables/);
+    assert.match(calls[3].stdin, /FROM account_character_slots ORDER BY account_id, slot_index/);
+    assert.match(calls[3].stdin, /FROM consumed_equipment_envelopes ORDER BY envelope_id/);
+    assert.match(calls[3].stdin, /FROM mutation_receipts ORDER BY operation_id/);
     assert.equal(calls.some((call) => /CREATE TABLE|START TRANSACTION/.test(call.stdin)), false);
   } finally {
     if (previousLogPath === undefined) {
@@ -1676,6 +1772,32 @@ process.stdin.on("end", () => {
       createdAt: "2026-07-04T00:00:00.000Z",
       updatedAt: "2026-07-04T00:00:00.000Z",
     }],
+    ["profile_bindings", "acc_entity", {
+      accountId: "acc_entity",
+      playerId: "player_entity",
+      profileRevision: 3,
+      createdAt: "2026-07-04T00:00:00.000Z",
+      updatedAt: "2026-07-04T00:01:00.000Z",
+      schemaVersion: 1,
+    }],
+    ["account_character_slots", "acc_entity/0", {
+      accountId: "acc_entity",
+      slotIndex: 0,
+      playerId: "player_entity",
+      createdAt: "2026-07-04T00:00:00.000Z",
+      updatedAt: "2026-07-04T00:01:00.000Z",
+      lastSelectedAt: "2026-07-04T00:01:00.000Z",
+      schemaVersion: 1,
+    }],
+    ["account_character_slots", "acc_entity/3", {
+      accountId: "acc_entity",
+      slotIndex: 3,
+      playerId: "player_entity_alt",
+      createdAt: "2026-07-04T00:02:00.000Z",
+      updatedAt: "2026-07-04T00:02:00.000Z",
+      lastSelectedAt: null,
+      schemaVersion: 1,
+    }],
     ["profiles", "player_entity", {
       playerId: "player_entity",
       accountId: "acc_entity",
@@ -1708,6 +1830,17 @@ process.stdin.on("end", () => {
           completed: {},
           recentCompletedIds: [],
         },
+      },
+    }],
+    ["profiles", "player_entity_alt", {
+      playerId: "player_entity_alt",
+      accountId: "acc_entity",
+      profileRevision: 0,
+      updatedAt: "2026-07-04T00:02:00.000Z",
+      profile: {
+        name: "实体档案乙",
+        level: 1,
+        stoneCoins: 0,
       },
     }],
     ["mutation_receipts", "operation_entity_0001", {
@@ -1824,6 +1957,13 @@ process.stdin.on("end", () => {
     });
     const loaded = store.load();
     assert.equal(loaded.accounts.entityuser.accountId, "acc_entity");
+    assert.equal(loaded.accountCharacterSlots.acc_entity.length, 4);
+    assert.equal(loaded.accountCharacterSlots.acc_entity[0].playerId, "player_entity");
+    assert.equal(loaded.accountCharacterSlots.acc_entity[1], null);
+    assert.equal(loaded.accountCharacterSlots.acc_entity[2], null);
+    assert.equal(loaded.accountCharacterSlots.acc_entity[3].playerId, "player_entity_alt");
+    assert.equal(loaded.accountCharacterSlots.acc_entity[3].slotIndex, 3);
+    assert.equal(loaded.accountCharacterSlots.acc_entity[3].lastSelectedAt, null);
     assert.equal(loaded.profiles.player_entity.profile.name, "实体档案");
     assert.equal(loaded.profiles.player_entity.profile.stoneCoins, 321);
     assert.equal(loaded.profiles.player_entity.profile.boundStoneCoins, 654);
@@ -1867,6 +2007,93 @@ process.stdin.on("end", () => {
     assert.equal(loaded.petPaidResetConfig.formOverrides.blue_man_dragon_water10.amount, 130000);
   } finally {
     fs.rmSync(tempDir, {"recursive": true, "force": true});
+  }
+});
+
+test("mysql store bridges a legacy profile binding into slot zero and persists it once", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-character-slot-bridge-"));
+  const fakeMysqlPath = path.join(tempDir, "fake-mysql.js");
+  const logPath = path.join(tempDir, "calls.jsonl");
+  const previousLogPath = process.env.FAKE_MYSQL_LOG;
+  fs.writeFileSync(fakeMysqlPath, `#!/usr/bin/env node
+const fs = require("node:fs");
+let stdin = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { stdin += chunk; });
+process.stdin.on("end", () => {
+  fs.appendFileSync(process.env.FAKE_MYSQL_LOG, JSON.stringify({stdin}) + "\\n");
+  if (!stdin.includes("SELECT 'accounts'")) {
+    return;
+  }
+  const rows = [
+    ["store_revision", "auth", "0"],
+    ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
+    ["accounts", "acc_legacy_slot", JSON.stringify({
+      accountId: "acc_legacy_slot",
+      username: "legacyslot",
+      displayName: "旧档角色",
+      role: "player",
+      createdAt: "2026-07-30T00:00:00.000Z",
+      updatedAt: "2026-07-30T00:00:00.000Z",
+    })],
+    ["profile_bindings", "acc_legacy_slot", JSON.stringify({
+      accountId: "acc_legacy_slot",
+      playerId: "player_legacy_slot",
+      profileRevision: 7,
+      createdAt: "2026-07-30T00:00:00.000Z",
+      updatedAt: "2026-07-30T00:07:00.000Z",
+      schemaVersion: 1,
+    })],
+    ["profiles", "player_legacy_slot", JSON.stringify({
+      playerId: "player_legacy_slot",
+      accountId: "acc_legacy_slot",
+      profileRevision: 7,
+      updatedAt: "2026-07-30T00:07:00.000Z",
+      profile: {player: {name: "旧档角色"}},
+    })],
+  ];
+  process.stdout.write(rows.map((row) => row.join("\\t")).join("\\n") + "\\n");
+});
+`, {mode: 0o755});
+  try {
+    process.env.FAKE_MYSQL_LOG = logPath;
+    const store = createMysqlAuthStore({
+      mysqlPath: fakeMysqlPath,
+      host: "127.0.0.1",
+      port: 3306,
+      user: "writer",
+      password: "secret",
+      database: "beastbound_test",
+      createDatabase: false,
+      singleWriterMaintenance: true,
+    });
+    const loaded = store.load();
+    assert.equal(loaded.profileBindings.acc_legacy_slot.playerId, "player_legacy_slot");
+    assert.equal(loaded.profileBindings.acc_legacy_slot.profileRevision, 7);
+    assert.equal(loaded.profiles.player_legacy_slot.profileRevision, 7);
+    assert.deepEqual(
+      loaded.accountCharacterSlots.acc_legacy_slot.map((entry) => entry && entry.playerId),
+      ["player_legacy_slot", null, null, null],
+    );
+
+    store.save(loaded);
+    store.save(loaded);
+    const calls = fs.readFileSync(logPath, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line));
+    const saves = calls.filter((call) => call.stdin.includes("START TRANSACTION"));
+    assert.equal(saves.length, 1);
+    assert.match(
+      saves[0].stdin,
+      /INSERT INTO account_character_slots \(account_id, slot_index, player_id, created_at, updated_at, last_selected_at, document_json\) VALUES \('acc_legacy_slot', 0, 'player_legacy_slot'/,
+    );
+    assert.doesNotMatch(saves[0].stdin, /ON DUPLICATE KEY UPDATE/);
+    assert.doesNotMatch(saves[0].stdin, /INSERT INTO profile_bindings|INSERT INTO profiles/);
+  } finally {
+    if (previousLogPath === undefined) {
+      delete process.env.FAKE_MYSQL_LOG;
+    } else {
+      process.env.FAKE_MYSQL_LOG = previousLogPath;
+    }
+    fs.rmSync(tempDir, {recursive: true, force: true});
   }
 });
 

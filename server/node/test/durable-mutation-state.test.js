@@ -32,8 +32,75 @@ function receipt(operationId, options = {}) {
     committedAt: new Date(committedAtMs).toISOString(),
     expiresAt: new Date(expiresAtMs).toISOString(),
     response: options.response || {ok: true, marker: operationId},
+    ...(options.scopeKind ? {scopeKind: String(options.scopeKind)} : {}),
+    ...(options.playerId ? {
+      playerId: String(options.playerId),
+      selectionEpoch: Number(options.selectionEpoch),
+    } : {}),
   };
 }
+
+test("explicit receipt scopes retain their authority while legacy receipts keep their old shape", () => {
+  const legacy = receipt("operation_legacy_scope_0001");
+  const account = receipt("operation_account_scope_0002", {
+    scopeKind: "account",
+    actionId: "createCharacter",
+  });
+  const scoped = receipt("operation_player_scope_0003", {
+    scopeKind: "character",
+    playerId: "player_receipt_role_b",
+    selectionEpoch: 42,
+  });
+  const baseline = canonicalDurableMutationReceipts({
+    [legacy.operationId]: legacy,
+    [account.operationId]: account,
+    [scoped.operationId]: scoped,
+  });
+  const materialized = materializeDurableMutationReceipts(baseline);
+  assert.equal(Object.hasOwn(materialized[legacy.operationId], "scopeKind"), false);
+  assert.equal(Object.hasOwn(materialized[legacy.operationId], "playerId"), false);
+  assert.equal(Object.hasOwn(materialized[legacy.operationId], "selectionEpoch"), false);
+  assert.equal(materialized[account.operationId].scopeKind, "account");
+  assert.equal(Object.hasOwn(materialized[account.operationId], "playerId"), false);
+  assert.equal(Object.hasOwn(materialized[account.operationId], "selectionEpoch"), false);
+  assert.equal(materialized[scoped.operationId].scopeKind, "character");
+  assert.equal(materialized[scoped.operationId].playerId, "player_receipt_role_b");
+  assert.equal(materialized[scoped.operationId].selectionEpoch, 42);
+
+  const appended = receipt("operation_player_scope_0004", {
+    scopeKind: "character",
+    playerId: "player_receipt_role_c",
+    selectionEpoch: 43,
+  });
+  const staged = stageDurableMutationReceipt(baseline, appended, {nowMs: NOW_MS});
+  const delta = durableMutationReceiptDeltaFrom(baseline, staged);
+  assert.equal(delta.ok, true);
+  assert.equal(delta.upserts.length, 1);
+  assert.equal(delta.upserts[0].playerId, "player_receipt_role_c");
+  assert.equal(delta.upserts[0].selectionEpoch, 43);
+
+  assert.throws(
+    () => canonicalDurableMutationReceipts({
+      operation_invalid_scope_0005: {
+        ...receipt("operation_invalid_scope_0005"),
+        scopeKind: "character",
+        playerId: "player_receipt_invalid",
+        selectionEpoch: 0,
+      },
+    }),
+    (error) => error && error.code === "mutation_receipt_invalid",
+  );
+  assert.throws(
+    () => canonicalDurableMutationReceipts({
+      operation_implicit_character_scope_0006: {
+        ...receipt("operation_implicit_character_scope_0006"),
+        playerId: "player_receipt_invalid",
+        selectionEpoch: 44,
+      },
+    }),
+    (error) => error && error.code === "mutation_receipt_invalid",
+  );
+});
 
 test("final-only receipt payload diagnostics aggregate bytes and shapes without exposing payloads", () => {
   const firstResponse = {ok: true, profile: {name: "容量玩家", slots: [{itemId: "herb", count: 2}]}};

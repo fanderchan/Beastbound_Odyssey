@@ -49,6 +49,25 @@ const ERROR_CODE_MESSAGES := {
 	"auth_rate_limited": "操作太频繁，请稍后再试。",
 	"bad_event_json": "服务器事件格式不正确。",
 	"bad_json": "服务器返回格式不正确。",
+	"character_create_payload_invalid": "创建角色的信息不完整，请重新填写。",
+	"character_missing": "这个角色不存在，请刷新角色列表。",
+	"character_name_duplicate": "这个账号已有同名角色，请换一个名字。",
+	"character_player_id_invalid": "这个角色暂时无法选择，请刷新后重试。",
+	"character_profile_invalid": "角色资料异常，请稍后重试。",
+	"character_select_battle_active": "战斗尚未结束，暂不能切换角色。",
+	"character_select_battle_invite_active": "仍有待处理的战斗邀请，暂不能切换角色。",
+	"character_select_hang_active": "请先结束挂机，再切换角色。",
+	"character_select_market_listing_active": "仍有出售中的物品，暂不能切换角色。",
+	"character_select_mismatch": "角色列表已经变化，请刷新后重新选择。",
+	"character_select_party_active": "请先退出队伍，再切换角色。",
+	"character_select_party_invite_active": "仍有待处理的组队邀请，暂不能切换角色。",
+	"character_select_payload_invalid": "请选择要进入游戏的角色。",
+	"character_select_trade_active": "面对面交易尚未结束，暂不能切换角色。",
+	"character_selection_required": "请先选择角色进入游戏。",
+	"character_selection_stale": "角色选择已经失效，请重新选择。",
+	"character_slot_invalid": "角色槽位无效，请重新选择。",
+	"character_slot_limit": "每个账号最多创建4个角色。",
+	"character_slot_occupied": "这个角色槽已经被占用。",
 	"client_version_missing": "客户端版本信息缺失，请更新客户端后重试。",
 	"command_denied": "当前账号没有执行该操作的权限。",
 	"connection_failed": "服务器连接失败，请稍后重试。",
@@ -438,6 +457,48 @@ static func logout_request(base_url: String, session_token: String) -> Dictionar
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
+	}
+
+
+static func characters_request(base_url: String, session_token: String) -> Dictionary:
+	return {
+		"url": "%s/characters" % normalized_base_url(base_url),
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func character_create_request(
+	base_url: String,
+	session_token: String,
+	slot_index: int,
+	display_name: String
+) -> Dictionary:
+	return _durable_mutation_request({
+		"url": "%s/characters" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"slotIndex": slot_index,
+			"displayName": display_name.strip_edges(),
+		}),
+	})
+
+
+static func character_select_request(
+	base_url: String,
+	session_token: String,
+	player_id: String
+) -> Dictionary:
+	return {
+		"url": "%s/characters/select" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({
+			"playerId": player_id.strip_edges(),
+		}),
+		"retryPolicy": RETRY_POLICY_NONE,
 	}
 
 
@@ -1411,44 +1472,75 @@ static func parse_auth_response(response_code: int, body: PackedByteArray) -> Di
 			"code": code,
 			"response": data,
 		}
-	var account := data.get("account", {}) as Dictionary if data.get("account", {}) is Dictionary else {}
-	var session := data.get("session", {}) as Dictionary if data.get("session", {}) is Dictionary else {}
-	var username := AccountAuthModel.normalized_username(str(account.get("username", session.get("username", ""))))
-	var display_name := str(account.get("displayName", username))
-	var role := str(account.get("role", AccountAuthModel.ROLE_PLAYER))
-	var effective_role := str(session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER))
-	if username == "":
+	var local_session := _local_session_from_server_payload(data)
+	if local_session.is_empty():
 		return {"ok": false, "message": player_message_for_code("missing_username", "服务器会话缺少账号。"), "code": "missing_username"}
-	var runtime_position := data.get("runtimePosition", {}) as Dictionary if data.get("runtimePosition", {}) is Dictionary else {}
-	var local_session := {
-		"accountId": str(account.get("accountId", "")),
-		"username": username,
-		"displayName": display_name,
-		"role": role,
-		"effectiveRole": effective_role,
-		"gmPluginInstalled": false,
-		"profileSavePath": profile_save_path_for_username(username),
-		"authSource": SOURCE_SERVER,
-		"serverSessionId": str(session.get("sessionId", "")),
-		"serverSessionToken": str(session.get("token", "")),
-		"serverExpiresAt": str(session.get("expiresAt", "")),
-		"passwordUpgradeRequired": bool(session.get("passwordUpgradeRequired", false)),
-		"passwordPolicyMessage": str(session.get("passwordPolicyMessage", "")),
-		"serverProfileBinding": data.get("profileBinding", {}),
-		"serverProfileSummary": data.get("profileSummary", {}),
-		"serverRuntimePosition": runtime_position,
-	}
 	return {
 		"ok": true,
 		"message": str(data.get("message", "已连接服务器。")),
 		"session": local_session,
-		"account": account,
+		"account": data.get("account", {}),
+		"characters": _dictionary_array(data.get("characters", [])),
+		"selectedCharacter": (
+			(data.get("selectedCharacter", {}) as Dictionary).duplicate(true)
+			if data.get("selectedCharacter", {}) is Dictionary
+			else {}
+		),
+		"selectionRequired": bool(data.get("selectionRequired", false)),
 		"response": data,
 	}
 
 
 static func parse_logout_response(response_code: int, body: PackedByteArray) -> Dictionary:
 	return _parse_server_json(response_code, body, "退出登录失败。")
+
+
+static func parse_characters_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	return _parse_character_roster_response(
+		response_code,
+		body,
+		"角色列表读取失败，请稍后重试。"
+	)
+
+
+static func parse_character_create_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_character_roster_response(
+		response_code,
+		body,
+		"角色创建失败，请稍后重试。"
+	)
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["character"] = (
+		(response.get("character", {}) as Dictionary).duplicate(true)
+		if response.get("character", {}) is Dictionary
+		else {}
+	)
+	return parsed
+
+
+static func parse_character_select_response(
+	response_code: int,
+	body: PackedByteArray,
+	previous_session: Dictionary
+) -> Dictionary:
+	var parsed := _parse_character_roster_response(
+		response_code,
+		body,
+		"暂时无法进入游戏，请稍后重试。"
+	)
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	var session := _local_session_from_server_payload(response, previous_session)
+	if session.is_empty() or str(session.get("serverSessionToken", "")).strip_edges() == "":
+		return {
+			"ok": false,
+			"message": player_message_for_code("bad_json", "角色会话不完整，请重新登录。"),
+			"code": "bad_json",
+			"response": response,
+		}
+	parsed["session"] = session
+	return parsed
 
 
 static func parse_player_search_response(response_code: int, body: PackedByteArray) -> Dictionary:
@@ -2173,6 +2265,25 @@ static func parse_quest_action_response(response_code: int, body: PackedByteArra
 	return parsed
 
 
+static func _parse_character_roster_response(
+	response_code: int,
+	body: PackedByteArray,
+	fallback_message: String
+) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, fallback_message)
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["characters"] = _dictionary_array(response.get("characters", []))
+	parsed["selectedCharacter"] = (
+		(response.get("selectedCharacter", {}) as Dictionary).duplicate(true)
+		if response.get("selectedCharacter", {}) is Dictionary
+		else {}
+	)
+	parsed["selectionRequired"] = bool(response.get("selectionRequired", false))
+	parsed["slotLimit"] = int(response.get("slotLimit", 4))
+	parsed["schemaVersion"] = int(response.get("schemaVersion", 1))
+	return parsed
+
+
 static func _parse_server_json(response_code: int, body: PackedByteArray, fallback_message: String) -> Dictionary:
 	var text := body.get_string_from_utf8()
 	if text.strip_edges() == "":
@@ -2193,6 +2304,112 @@ static func _parse_server_json(response_code: int, body: PackedByteArray, fallba
 		"ok": true,
 		"message": str(data.get("message", "")),
 		"response": data,
+	}
+
+
+static func _local_session_from_server_payload(
+	data: Dictionary,
+	fallback_session: Dictionary = {}
+) -> Dictionary:
+	var account := data.get("account", {}) as Dictionary if data.get("account", {}) is Dictionary else {}
+	var server_session := data.get("session", {}) as Dictionary if data.get("session", {}) is Dictionary else {}
+	var selected_character := (
+		data.get("selectedCharacter", {}) as Dictionary
+		if data.get("selectedCharacter", {}) is Dictionary
+		else {}
+	)
+	var binding := (
+		data.get("profileBinding", {}) as Dictionary
+		if data.get("profileBinding", {}) is Dictionary
+		else {}
+	)
+	var summary := (
+		data.get("profileSummary", {}) as Dictionary
+		if data.get("profileSummary", {}) is Dictionary
+		else {}
+	)
+	var username := AccountAuthModel.normalized_username(str(account.get(
+		"username",
+		server_session.get("username", fallback_session.get("username", ""))
+	)))
+	if username == "":
+		return {}
+	var player_id := str(server_session.get(
+		"playerId",
+		selected_character.get(
+			"playerId",
+			binding.get("playerId", summary.get("playerId", fallback_session.get("playerId", "")))
+		)
+	)).strip_edges()
+	var account_display_name := str(account.get(
+		"displayName",
+		fallback_session.get("accountDisplayName", fallback_session.get("displayName", username))
+	)).strip_edges()
+	var character_display_name := str(selected_character.get(
+		"displayName",
+		selected_character.get("name", "")
+	)).strip_edges()
+	var display_name := character_display_name if character_display_name != "" else account_display_name
+	var runtime_position := (
+		data.get("runtimePosition", {}) as Dictionary
+		if data.get("runtimePosition", {}) is Dictionary
+		else {}
+	)
+	var slot_index := int(server_session.get(
+		"slotIndex",
+		selected_character.get("slotIndex", fallback_session.get("characterSlotIndex", -1))
+	))
+	var selection_epoch := int(server_session.get(
+		"selectionEpoch",
+		fallback_session.get("selectionEpoch", 0)
+	))
+	return {
+		"accountId": str(account.get("accountId", fallback_session.get("accountId", ""))),
+		"username": username,
+		"accountDisplayName": account_display_name if account_display_name != "" else username,
+		"displayName": display_name if display_name != "" else username,
+		"role": str(account.get("role", fallback_session.get("role", AccountAuthModel.ROLE_PLAYER))),
+		"effectiveRole": str(server_session.get(
+			"effectiveRole",
+			fallback_session.get("effectiveRole", AccountAuthModel.EFFECTIVE_ROLE_PLAYER)
+		)),
+		"gmPluginInstalled": false,
+		"profileSavePath": (
+			profile_save_path_for_character(username, player_id)
+			if player_id != ""
+			else profile_save_path_for_username(username)
+		),
+		"authSource": SOURCE_SERVER,
+		"playerId": player_id,
+		"characterSlotIndex": slot_index,
+		"selectionEpoch": selection_epoch,
+		"selectionRequired": bool(server_session.get(
+			"selectionRequired",
+			data.get("selectionRequired", player_id == "")
+		)),
+		"serverSessionId": str(server_session.get(
+			"sessionId",
+			fallback_session.get("serverSessionId", "")
+		)),
+		"serverSessionToken": str(server_session.get(
+			"token",
+			fallback_session.get("serverSessionToken", "")
+		)),
+		"serverExpiresAt": str(server_session.get(
+			"expiresAt",
+			fallback_session.get("serverExpiresAt", "")
+		)),
+		"passwordUpgradeRequired": bool(server_session.get(
+			"passwordUpgradeRequired",
+			fallback_session.get("passwordUpgradeRequired", false)
+		)),
+		"passwordPolicyMessage": str(server_session.get(
+			"passwordPolicyMessage",
+			fallback_session.get("passwordPolicyMessage", "")
+		)),
+		"serverProfileBinding": binding.duplicate(true),
+		"serverProfileSummary": summary.duplicate(true),
+		"serverRuntimePosition": runtime_position.duplicate(true),
 	}
 
 
@@ -2234,6 +2451,33 @@ static func profile_save_path_for_username(username: String) -> String:
 	if normalized == "":
 		normalized = "player"
 	return "user://server_accounts/%s/player_profile.json" % normalized
+
+
+static func profile_save_path_for_character(username: String, player_id: String) -> String:
+	var normalized_username := AccountAuthModel.normalized_username(username)
+	if normalized_username == "":
+		normalized_username = "player"
+	var character_segment := _safe_path_segment(player_id)
+	if character_segment == "":
+		return profile_save_path_for_username(normalized_username)
+	return "user://server_accounts/%s/characters/%s/player_profile.json" % [
+		normalized_username,
+		character_segment,
+	]
+
+
+static func _safe_path_segment(value: String) -> String:
+	var source := value.strip_edges().to_lower()
+	var result := ""
+	for index in range(source.length()):
+		var codepoint := source.unicode_at(index)
+		var is_digit := codepoint >= 0x30 and codepoint <= 0x39
+		var is_letter := codepoint >= 0x61 and codepoint <= 0x7a
+		if is_digit or is_letter or codepoint == 0x2d or codepoint == 0x5f:
+			result += String.chr(codepoint)
+	if result.length() > 96:
+		result = result.substr(0, 96)
+	return result
 
 
 static func _auth_request(base_url: String, endpoint: String, payload: Dictionary) -> Dictionary:

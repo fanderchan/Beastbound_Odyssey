@@ -19,6 +19,7 @@ const {
   MUTATION_RECEIPT_DELETE_SQL,
   MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID,
   buildMysqlResourceAcquisitionPlan,
+  assertMysqlMutationReceiptWriteContract,
   assertMysqlResourceAcquisitionOrder,
   mysqlResourceAcquisitionTrace,
   mysqlResourceWriteAffectedRowsAccepted,
@@ -919,6 +920,30 @@ test("receipt insert and delete bind every indexed column to one typed JSON docu
       write("mutation_receipt", "operation-1", "insert"),
     ],
   })), true);
+
+  const accountScopedInsert = write("mutation_receipt", "operation-account", "insert");
+  const accountScopedDocument = JSON.parse(accountScopedInsert.params[6]);
+  accountScopedDocument.scopeKind = "account";
+  accountScopedInsert.params[6] = JSON.stringify(accountScopedDocument);
+  assert.equal(assertMysqlMutationReceiptWriteContract(accountScopedInsert), true);
+
+  const characterScopedInsert = write("mutation_receipt", "operation-character", "insert");
+  const characterScopedDocument = JSON.parse(characterScopedInsert.params[6]);
+  characterScopedDocument.scopeKind = "character";
+  characterScopedDocument.playerId = "player-character";
+  characterScopedDocument.selectionEpoch = 17;
+  characterScopedInsert.params[6] = JSON.stringify(characterScopedDocument);
+  assert.equal(assertMysqlMutationReceiptWriteContract(characterScopedInsert), true);
+
+  const implicitCharacterInsert = write("mutation_receipt", "operation-implicit", "insert");
+  const implicitCharacterDocument = JSON.parse(implicitCharacterInsert.params[6]);
+  implicitCharacterDocument.playerId = "player-character";
+  implicitCharacterDocument.selectionEpoch = 17;
+  implicitCharacterInsert.params[6] = JSON.stringify(implicitCharacterDocument);
+  rejectsInvalid(
+    () => assertMysqlMutationReceiptWriteContract(implicitCharacterInsert),
+    "write_receipt_document_invalid",
+  );
 
   const nullAccountDelete = write("mutation_receipt", "operation-1", "delete");
   const nullAccountInsert = write("mutation_receipt", "operation-1", "insert");

@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "packageId": "character_entry_awakened_v1",
+  "title": "万兽纪元角色入口原创美术包",
+  "auditedAt": "2026-07-31",
+  "ownership": "OpenAI ImageGen original for Beastbound",
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "referencePolicy": {
+    "use": "构图与画面气氛参考",
+    "externalPixelsEmbedded": false,
+    "externalIpCharacterCopied": false,
+    "statement": "外部参考图仅用于理解热带营地、左侧角色展示、右侧角色槽和返回入口的构图与风格方向；本包未复制参考图像素、界面贴图或其IP角色。"
+  },
+  "replacementPolicy": {
+    "rule": "替换时保留相同的runtime相对路径和用途契约；先更新source，再生成runtime，并同步更新尺寸、SHA256和透明通道审计。",
+    "ownerAcceptance": "ownerReviewStatus仅能在项目所有者验收冻结画面后由owner_review_pending改为owner_review_accepted。"
+  },
+  "assets": [
+    {
+      "assetId": "tropical_camp_background_source",
+      "role": "source",
+      "relativePath": "source/generated/tropical_camp_background_original.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "bytes": 2300616,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "bf6b4289f488262039bd948ec0597da9c943eebceb24488a2d7b197dad899bc8",
+      "generation": {
+        "method": "OpenAI ImageGen original raster generation",
+        "runId": "call_PGCPRnSu4kQ08qcmoGfg7Eiz",
+        "promptSummary": "原创明亮热带海岸营地；左侧留出角色展示区，右侧树冠和篝火形成角色槽与进入按钮的背景层次。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/tropical_camp_background_original.png"
+    },
+    {
+      "assetId": "novice_hunter_hammer_chroma_source",
+      "role": "source",
+      "relativePath": "source/generated/novice_hunter_hammer_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1456485,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "afaf678a8bdf167321d5c10eacaccf2906500117a01993daed15a677e9fcc00a",
+      "generation": {
+        "method": "OpenAI ImageGen original raster generation on chroma-key background",
+        "runId": "call_p2rsnrfkkvvyS10W6X4TzJqR",
+        "promptSummary": "原创万兽纪元新手猎人全身展示，棕发、原始皮革服饰和大型石锤，适配角色入口主展示位。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/novice_hunter_hammer_chroma.png"
+    },
+    {
+      "assetId": "novice_hunter_portrait_chroma_source",
+      "role": "source",
+      "relativePath": "source/generated/novice_hunter_portrait_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1955547,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "326e2aa63c3cddef5ce28a86e7d70982588db88cd4d7ad37952e6e996e8dd99f",
+      "generation": {
+        "method": "OpenAI ImageGen original independent headshot generation on chroma-key background",
+        "runId": "call_VtgfqlChU8b3O5uXNbtSkyF7",
+        "promptSummary": "原创万兽纪元新手猎人独立大头照，与全身角色保持棕发、头饰和原始猎人身份一致，不从全身图裁切。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/novice_hunter_portrait_chroma.png"
+    },
+    {
+      "assetId": "selected_character_card_chroma_source",
+      "role": "source",
+      "relativePath": "source/generated/selected_character_card_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1787,
+        "height": 880
+      },
+      "bytes": 2504797,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "fe680afbc3ec72a59c867cde9775df352573cac27888cf7b646f3dbf32983aea",
+      "generation": {
+        "method": "OpenAI ImageGen original UI frame generation on chroma-key background",
+        "runId": "call_alXDBJ8L80Wea2QAJp1gSGJw",
+        "promptSummary": "原创选中角色槽框，使用温暖砂岩、木质与金色高光，保留头像和角色文字的清晰内容区。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/selected_character_card_chroma.png"
+    },
+    {
+      "assetId": "empty_character_card_chroma_source",
+      "role": "source",
+      "relativePath": "source/generated/empty_character_card_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1870,
+        "height": 841
+      },
+      "bytes": 2002358,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "c483982bc805797f7f9f198a9db1f02dbf6698773885b1f3e37cb3ba521d0cc3",
+      "generation": {
+        "method": "OpenAI ImageGen original UI frame generation on chroma-key background",
+        "runId": "call_bK8X4dG7t7g63AxAPxubwAcA",
+        "promptSummary": "原创空角色槽框，使用较深的原始石木材质与克制描边，为创建角色图标和文字预留内容区。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/empty_character_card_chroma.png"
+    },
+    {
+      "assetId": "back_chevrons_chroma_source",
+      "role": "source",
+      "relativePath": "source/generated/back_chevrons_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1496167,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "18b7aeb8d58a593917bbcc2104b3f2d9d83853aced8fd7c56288dd650509ec55",
+      "generation": {
+        "method": "OpenAI ImageGen original UI icon generation on chroma-key background",
+        "runId": "call_RFfoh3Ymo3HMVJ6yCdi1FT87",
+        "promptSummary": "原创双层向左返回图标，使用砂岩与木质边缘语言，保证缩小后仍有明确方向识别。"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "source/generated/back_chevrons_chroma.png"
+    },
+    {
+      "assetId": "tropical_camp_background_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/backgrounds/tropical_camp.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "bytes": 1535293,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "fd47cb7502eefba4d9843aac3f8991d3f3d4a204c6d654979eaee85735399acc",
+      "derivedFrom": "tropical_camp_background_source",
+      "generation": {
+        "method": "offline high-quality resize to the PC-first 1280x720 runtime canvas"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/backgrounds/tropical_camp.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "novice_hunter_hammer_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/characters/novice_hunter_hammer.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 761604,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "7c93fba5929e27d49d341d3b5b997759bd6e562c6cb70d3fcfac9a2d9e3ac609",
+      "derivedFrom": "novice_hunter_hammer_chroma_source",
+      "generation": {
+        "method": "offline chroma-key removal with imagegen remove_chroma_key.py; canvas size preserved"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/characters/novice_hunter_hammer.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "novice_hunter_portrait_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/portraits/novice_hunter.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1739813,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "0caf7a8fb09a3e51613c83037f531c5d50dcb3ef567ad9c78b9c5d4cdb206364",
+      "derivedFrom": "novice_hunter_portrait_chroma_source",
+      "generation": {
+        "method": "offline chroma-key removal with imagegen remove_chroma_key.py; canvas size preserved"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/portraits/novice_hunter.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "selected_character_card_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/cards/selected.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 420,
+        "height": 132
+      },
+      "bytes": 107756,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "4fdf0d423ddb0767a04c1c873c7e67359a9960d644c33726978c0c0493e6160e",
+      "derivedFrom": "selected_character_card_chroma_source",
+      "generation": {
+        "method": "offline chroma-key removal with imagegen remove_chroma_key.py, transparent-bounds trim, then high-quality resize to 420x132"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/cards/selected.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "empty_character_card_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/cards/empty.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 420,
+        "height": 132
+      },
+      "bytes": 96805,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "7651a1d2b9696b904ccdabd0a2c8592189535338716b813e56bb1a447ed0e157",
+      "derivedFrom": "empty_character_card_chroma_source",
+      "generation": {
+        "method": "offline chroma-key removal with imagegen remove_chroma_key.py, transparent-bounds trim, then high-quality resize to 420x132"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/cards/empty.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "back_chevrons_runtime",
+      "role": "runtime",
+      "relativePath": "runtime/icons/back_chevrons.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 78,
+        "height": 78
+      },
+      "bytes": 14406,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "117564edd4470d8b163be84e51de70422717aa7426cf8b0a97f91dcc6de4f4de",
+      "derivedFrom": "back_chevrons_chroma_source",
+      "generation": {
+        "method": "offline chroma-key removal with imagegen remove_chroma_key.py, transparent-bounds trim, then high-quality resize to 78x78"
+      },
+      "ownership": "OpenAI ImageGen original for Beastbound",
+      "replacementPath": "runtime/icons/back_chevrons.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    }
+  ],
+  "audit": {
+    "fileCount": 12,
+    "sourceCount": 6,
+    "runtimeCount": 6,
+    "sha256Verified": true,
+    "dimensionsVerified": true,
+    "pngEncodingVerified": true,
+    "alphaChannelVerified": true,
+    "alphaSummary": "6个生成源与runtime背景为RGB；runtime全身角色、独立头像、两种角色槽框和返回图标为RGBA，实测Alpha范围均为0..255。",
+    "result": "passed"
+  }
+}

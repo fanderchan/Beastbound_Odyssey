@@ -22,6 +22,7 @@ const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
   "_httpLoginPasswordDigest",
   "refreshSession",
   "getMarketConfig",
+  "selectCharacter",
 ]);
 // These player-asset domains can turn a successful remote mutation into a
 // local domain failure before this Node reaches MySQL (for example, a shop
@@ -274,6 +275,14 @@ function normalizeReceiptRecord(operationId, raw) {
   const requestHash = rawRequestHash.trim().toLowerCase();
   const rawActionId = String(raw.actionId || "");
   const actionId = rawActionId.trim();
+  const hasScopeKind = Object.hasOwn(raw, "scopeKind");
+  const rawScopeKind = hasScopeKind ? raw.scopeKind : "";
+  const scopeKind = typeof rawScopeKind === "string" ? rawScopeKind.trim() : "";
+  const hasPlayerId = Object.hasOwn(raw, "playerId");
+  const hasSelectionEpoch = Object.hasOwn(raw, "selectionEpoch");
+  const rawPlayerId = String(raw.playerId || "");
+  const playerId = rawPlayerId.trim();
+  const selectionEpoch = Math.trunc(Number(raw.selectionEpoch || 0));
   const committedAtMs = Date.parse(String(raw.committedAt || ""));
   const expiresAtMs = Date.parse(String(raw.expiresAt || ""));
   const rawResponse = raw.response;
@@ -286,6 +295,27 @@ function normalizeReceiptRecord(operationId, raw) {
     || rawActionId !== actionId
     || actionId === ""
     || actionId.length > 160
+    || (
+      !hasScopeKind
+        ? hasPlayerId || hasSelectionEpoch
+        : (
+          rawScopeKind !== scopeKind
+          || (scopeKind !== "account" && scopeKind !== "character")
+          || (
+            scopeKind === "account"
+              ? hasPlayerId || hasSelectionEpoch
+              : !hasPlayerId || !hasSelectionEpoch
+          )
+        )
+    )
+    || rawPlayerId !== playerId
+    || !Number.isSafeInteger(selectionEpoch)
+    || selectionEpoch < 0
+    || (
+      scopeKind === "character"
+        ? playerId === "" || selectionEpoch < 1
+        : playerId !== "" || selectionEpoch !== 0
+    )
     || !Number.isFinite(committedAtMs)
     || !Number.isFinite(expiresAtMs)
     || expiresAtMs <= committedAtMs
@@ -305,6 +335,16 @@ function normalizeReceiptRecord(operationId, raw) {
     committedAt: new Date(committedAtMs).toISOString(),
     expiresAt: new Date(expiresAtMs).toISOString(),
   };
+  // Receipts written before character slots existed have no explicit scope and
+  // must retain their exact persisted shape. New receipts declare account or
+  // character scope so replay authority never depends on an action label.
+  if (scopeKind !== "") {
+    receipt.scopeKind = scopeKind;
+  }
+  if (scopeKind === "character") {
+    receipt.playerId = playerId;
+    receipt.selectionEpoch = selectionEpoch;
+  }
   Object.defineProperty(receipt, "response", {
     configurable: false,
     enumerable: true,
@@ -356,7 +396,7 @@ function receiptResponseJson(receipt) {
 }
 
 function materializeReceiptRecord(receipt) {
-  return {
+  const materialized = {
     schemaVersion: 1,
     operationId: receipt.operationId,
     requestHash: receipt.requestHash,
@@ -366,6 +406,14 @@ function materializeReceiptRecord(receipt) {
     expiresAt: receipt.expiresAt,
     response: JSON.parse(receiptResponseJson(receipt)),
   };
+  if (typeof receipt.scopeKind === "string" && receipt.scopeKind !== "") {
+    materialized.scopeKind = receipt.scopeKind;
+  }
+  if (receipt.scopeKind === "character") {
+    materialized.playerId = receipt.playerId;
+    materialized.selectionEpoch = receipt.selectionEpoch;
+  }
+  return materialized;
 }
 
 function isCanonicalDurableMutationReceipts(value) {
@@ -600,7 +648,7 @@ function durableMutationReceiptPayloadStats(value) {
 }
 
 function receiptJsonByteLength(receipt, responseBytes) {
-  const metadataJson = JSON.stringify({
+  const metadata = {
     schemaVersion: receipt.schemaVersion,
     operationId: receipt.operationId,
     requestHash: receipt.requestHash,
@@ -608,7 +656,15 @@ function receiptJsonByteLength(receipt, responseBytes) {
     accountId: receipt.accountId,
     committedAt: receipt.committedAt,
     expiresAt: receipt.expiresAt,
-  });
+  };
+  if (typeof receipt.scopeKind === "string" && receipt.scopeKind !== "") {
+    metadata.scopeKind = receipt.scopeKind;
+  }
+  if (receipt.scopeKind === "character") {
+    metadata.playerId = receipt.playerId;
+    metadata.selectionEpoch = receipt.selectionEpoch;
+  }
+  const metadataJson = JSON.stringify(metadata);
   return Buffer.byteLength(metadataJson) - 1
     + Buffer.byteLength(',"response":')
     + responseBytes

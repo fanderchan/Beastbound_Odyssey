@@ -123,11 +123,19 @@ function fakePool(rowsValue = [receiptRow()], options = {}) {
 }
 
 test("exact receipt read uses one parameterized PK query behind the session policy", async () => {
-  const fake = fakePool();
+  const scopedReceipt = receipt({
+    scopeKind: "character",
+    playerId: "player_mysql_receipt_role",
+    selectionEpoch: 73,
+  });
+  const fake = fakePool([receiptRow(scopedReceipt)]);
   const view = await __runMysqlDurableReceiptReadForTest(fake.pool, OPERATION_ID);
   assert.equal(view.schemaVersion, 1);
   assert.equal(view.operationId, OPERATION_ID);
   assert.equal(view.receipt.requestHash, "a".repeat(64));
+  assert.equal(view.receipt.scopeKind, "character");
+  assert.equal(view.receipt.playerId, "player_mysql_receipt_role");
+  assert.equal(view.receipt.selectionEpoch, 73);
   assert.deepEqual(fake.state.events, ["session", "begin", "query", "commit"]);
   assert.deepEqual(fake.state.queries, [{
     sql: "SELECT revision_row.revision AS store_revision, receipt.operation_id, receipt.request_hash, receipt.action_id, receipt.account_id, receipt.committed_at, receipt.expires_at, receipt.document_json FROM auth_store_revisions AS revision_row LEFT JOIN mutation_receipts AS receipt ON receipt.operation_id = ? WHERE revision_row.scope_key = ?",
