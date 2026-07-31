@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "characterId": "frost_whisper_v1",
+  "generator": "OpenAI built-in image generation",
+  "externalCreativeInputs": [],
+  "copiedCommercialAssets": [],
+  "identityOutputId": "exec-c340c50d-82ec-4e09-8ceb-443a9719e92e",
+  "portraitOutputId": "exec-cc24bb40-0452-428c-9704-89b0d8321a1d",
+  "showcaseOutputId": "exec-3b0e83e5-3930-4460-869a-717231235914",
+  "promptContracts": [
+    "prompts/identity-and-ui-v1.txt",
+    "prompts/world-true-eight-v1.txt",
+    "prompts/battle-two-view-matrix-v1.txt"
+  ],
+  "replacementPath": "Regenerate from the archived identity lock and prompt contracts, then run source/process_frost_whisper_assets.py and repeat owner visual review."
+}

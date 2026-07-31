@@ -3,6 +3,12 @@ extends SceneTree
 const CharacterRosterModelCheck := preload(
 	"res://scripts/progression/character_roster_model_check.gd"
 )
+const CharacterCreationModelCheck := preload(
+	"res://scripts/progression/character_creation_model_check.gd"
+)
+const ServerAuthClientModel := preload(
+	"res://scripts/progression/server_auth_client_model.gd"
+)
 const CharacterEntryFlowController := preload(
 	"res://scripts/ui/character_entry_flow_controller.gd"
 )
@@ -11,6 +17,7 @@ const VIEWPORT_SIZE := Vector2i(1280, 720)
 
 var _errors: Array[String] = []
 var _created_payloads: Array[Dictionary] = []
+var _allocation_payloads: Array[Dictionary] = []
 var _selected_player_ids: Array[String] = []
 var _return_request_count := 0
 
@@ -27,11 +34,19 @@ func _run() -> void:
 	var model_report := CharacterRosterModelCheck.run()
 	for error_value in model_report.get("errors", []):
 		_errors.append("角色列表模型：%s" % str(error_value))
+	var creation_model_report := CharacterCreationModelCheck.run()
+	for error_value in creation_model_report.get("errors", []):
+		_errors.append("角色创建模型：%s" % str(error_value))
+	_expect_request_contracts()
 
 	var panel := CharacterEntryFlowController.new()
 	panel.create_character_requested.connect(
 		func(payload: Dictionary) -> void:
 			_created_payloads.append(payload.duplicate(true))
+	)
+	panel.allocate_character_elements_requested.connect(
+		func(payload: Dictionary) -> void:
+			_allocation_payloads.append(payload.duplicate(true))
 	)
 	panel.select_character_requested.connect(
 		func(player_id: String) -> void:
@@ -42,6 +57,22 @@ func _run() -> void:
 			_return_request_count += 1
 	)
 	root.add_child(panel)
+	var injected_texture := GradientTexture1D.new()
+	var injected_appearances: Dictionary = {}
+	for appearance_id in [
+		"novice_hunter_v1",
+		"obsidian_scout_v1",
+		"frost_whisper_v1",
+		"ember_spark_v1",
+	]:
+		injected_appearances[appearance_id] = {
+			"portraitTexture": injected_texture,
+			"showcaseTexture": injected_texture,
+		}
+	panel.configure_visual_sources({
+		"backgroundTexture": injected_texture,
+		"appearances": injected_appearances,
+	})
 	panel.open_with_roster({}, "", "fander")
 	await process_frame
 	await process_frame
@@ -68,26 +99,67 @@ func _run() -> void:
 		_errors
 	)
 
+	var creation_snapshot := (
+		create_open_snapshot.get("creation", {}) as Dictionary
+	)
+	_expect(
+		str(creation_snapshot.get("mode", "")) == "create"
+			and int(creation_snapshot.get("remainingPoints", -1)) == 10
+			and (creation_snapshot.get("availableAppearanceIds", []) as Array).size() == 4,
+		"全屏建角页没有提供四形象、元素或创建模式",
+		_errors
+	)
+
 	var name_input := panel.get_node_or_null(
-		"CreateModalShade/CreatePanel/NameInput"
+		"CharacterCreationPanel/CreationBoard/NameInput"
 	) as LineEdit
 	var create_button := panel.get_node_or_null(
-		"CreateModalShade/CreatePanel/CreateCharacterButton"
+		"CharacterCreationPanel/CreationBoard/ConfirmCreationButton"
 	) as Button
 	_expect(
 		name_input != null and create_button != null,
 		"建角表单缺少姓名输入或提交按钮",
 		_errors
 	)
-	if name_input != null and create_button != null:
+	var appearance_button := panel.get_node_or_null(
+		"CharacterCreationPanel/Appearance1"
+	) as Button
+	var earth_plus := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ElementEarthPlus"
+	) as Button
+	var water_plus := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ElementWaterPlus"
+	) as Button
+	_expect(
+		appearance_button != null and earth_plus != null and water_plus != null,
+		"建角页缺少形象切换或元素加点按钮",
+		_errors
+	)
+	if (
+		name_input != null
+		and create_button != null
+		and appearance_button != null
+		and earth_plus != null
+		and water_plus != null
+	):
+		appearance_button.emit_signal("pressed")
+		for _index in range(6):
+			earth_plus.emit_signal("pressed")
+		for _index in range(4):
+			water_plus.emit_signal("pressed")
 		name_input.text = ""
 		create_button.emit_signal("pressed")
 		var invalid_snapshot := panel.snapshot()
 		_expect(
 			_created_payloads.is_empty()
-				and str(invalid_snapshot.get("nameErrorText", "")) != ""
+				and bool(
+					(invalid_snapshot.get("creation", {}) as Dictionary).get(
+						"submitDisabled",
+						false
+					)
+				)
 				and not bool(invalid_snapshot.get("loading", false)),
-			"非法角色名仍发出请求或没有就地提示",
+			"非法角色名仍允许提交",
 			_errors
 		)
 
@@ -105,10 +177,17 @@ func _run() -> void:
 		if not _created_payloads.is_empty():
 			_expect(
 				_created_payloads[0] == {
-					"slotIndex": 0,
-					"displayName": "山岚",
+						"slotIndex": 0,
+						"displayName": "山岚",
+						"appearanceId": "obsidian_scout_v1",
+						"elements": {
+							"earth": 6,
+							"water": 4,
+							"fire": 0,
+							"wind": 0,
+						},
 				},
-				"建角信号没有输出精确的槽位和去空白姓名",
+				"建角信号没有输出槽位、姓名、形象和元素",
 				_errors
 			)
 
@@ -122,6 +201,62 @@ func _run() -> void:
 		"建角失败后没有保留表单并恢复交互",
 		_errors
 	)
+	var creation_return := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationReturnButton"
+	) as Button
+	if creation_return != null:
+		creation_return.emit_signal("pressed")
+	_expect(
+		not bool(panel.snapshot().get("creationOpen", true)),
+		"建角页返回按钮没有做到不创建并回到角色槽",
+		_errors
+	)
+
+	panel.present_roster({
+		"characters": [{
+			"playerId": "legacy_player",
+			"slotIndex": 0,
+			"name": "旧日猎人",
+			"appearanceId": "novice_hunter_v1",
+			"elements": null,
+			"needsElementAllocation": true,
+		}],
+	}, "legacy_player")
+	await process_frame
+	var legacy_creation := (
+		panel.snapshot().get("creation", {}) as Dictionary
+	)
+	_expect(
+		str(legacy_creation.get("mode", "")) == "legacy_allocation"
+			and not bool(legacy_creation.get("nameEditable", true))
+			and str(legacy_creation.get("appearanceId", "")) == "novice_hunter_v1",
+		"旧角色没有自动进入锁定姓名和形象的补元素页面",
+		_errors
+	)
+	var fire_plus := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ElementFirePlus"
+	) as Button
+	var legacy_confirm := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ConfirmCreationButton"
+	) as Button
+	if fire_plus != null and legacy_confirm != null:
+		for _index in range(10):
+			fire_plus.emit_signal("pressed")
+		legacy_confirm.emit_signal("pressed")
+	_expect(
+		_allocation_payloads == [{
+			"playerId": "legacy_player",
+			"elements": {
+				"earth": 0,
+				"water": 0,
+				"fire": 10,
+				"wind": 0,
+			},
+		}],
+		"旧角色补元素没有输出精确的独立请求",
+		_errors
+	)
+	panel.show_error("元素保存失败，请稍后重试")
 
 	var fixture := {
 		"selectionRequired": true,
@@ -133,6 +268,8 @@ func _run() -> void:
 				"level": 12,
 				"mapName": "火芽村",
 				"appearanceId": "novice_hunter_v1",
+				"elements": {"earth": 10, "water": 0, "fire": 0, "wind": 0},
+				"needsElementAllocation": false,
 			},
 			{
 				"playerId": "player_moss",
@@ -141,6 +278,8 @@ func _run() -> void:
 				"level": 8,
 				"mapName": "苔冠沼泽",
 				"appearanceId": "novice_hunter_v1",
+				"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
+				"needsElementAllocation": false,
 			},
 			{
 				"slotIndex": 2,
@@ -171,15 +310,9 @@ func _run() -> void:
 		"正式营地背景、全身像或独立头像没有作为默认可见美术载入",
 		_errors
 	)
-	var injected_texture := GradientTexture1D.new()
 	panel.configure_visual_sources({
 		"backgroundTexture": injected_texture,
-		"appearances": {
-			"novice_hunter_v1": {
-				"portraitTexture": injected_texture,
-				"showcaseTexture": injected_texture,
-			},
-		},
+		"appearances": injected_appearances,
 	})
 	panel.present_roster(fixture, "player_fire")
 	await process_frame
@@ -292,9 +425,11 @@ func _run() -> void:
 		},
 		"slotCount": int(panel.snapshot().get("slotCount", 0)),
 		"createSignalCount": _created_payloads.size(),
+		"allocationSignalCount": _allocation_payloads.size(),
 		"selectSignalCount": _selected_player_ids.size(),
 		"returnSignalCount": _return_request_count,
 		"modelResult": str(model_report.get("result", "FAIL")),
+		"creationModelResult": str(creation_model_report.get("result", "FAIL")),
 		"errors": _errors,
 	}
 	print("character entry flow check: %s" % JSON.stringify(report))
@@ -378,6 +513,78 @@ func _expect_layout(panel: Control) -> void:
 				_errors
 			)
 		occupied_rects.append(rect)
+
+
+func _expect_request_contracts() -> void:
+	var elements := {
+		"earth": 6,
+		"water": 4,
+		"fire": 0,
+		"wind": 0,
+	}
+	var create_spec := ServerAuthClientModel.character_create_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		1,
+		"  山岚  ",
+		"obsidian_scout_v1",
+		elements
+	)
+	var create_body_value = JSON.parse_string(str(create_spec.get("body", "")))
+	var create_body := (
+		create_body_value as Dictionary
+		if create_body_value is Dictionary
+		else {}
+	)
+	var create_elements := (
+		create_body.get("elements", {}) as Dictionary
+		if create_body.get("elements", {}) is Dictionary
+		else {}
+	)
+	_expect(
+		str(create_spec.get("url", "")) == "http://127.0.0.1:8787/characters"
+			and bool(create_spec.get("durableMutation", false))
+			and ServerAuthClientModel.request_is_idempotent(create_spec)
+			and int(create_body.get("slotIndex", -1)) == 1
+			and str(create_body.get("displayName", "")) == "山岚"
+			and str(create_body.get("appearanceId", "")) == "obsidian_scout_v1"
+			and int(create_elements.get("earth", -1)) == 6
+			and int(create_elements.get("water", -1)) == 4
+			and int(create_elements.get("fire", -1)) == 0
+			and int(create_elements.get("wind", -1)) == 0,
+		"创建角色HTTP请求没有携带完整权威合同或幂等键",
+		_errors
+	)
+	var allocation_spec := ServerAuthClientModel.character_allocate_elements_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		elements
+	)
+	var allocation_body_value = JSON.parse_string(
+		str(allocation_spec.get("body", ""))
+	)
+	var allocation_body := (
+		allocation_body_value as Dictionary
+		if allocation_body_value is Dictionary
+		else {}
+	)
+	var allocated_elements := (
+		allocation_body.get("elements", {}) as Dictionary
+		if allocation_body.get("elements", {}) is Dictionary
+		else {}
+	)
+	_expect(
+		str(allocation_spec.get("url", ""))
+			== "http://127.0.0.1:8787/characters/allocate-elements"
+			and bool(allocation_spec.get("durableMutation", false))
+			and ServerAuthClientModel.request_is_idempotent(allocation_spec)
+			and int(allocated_elements.get("earth", -1)) == 6
+			and int(allocated_elements.get("water", -1)) == 4
+			and int(allocated_elements.get("fire", -1)) == 0
+			and int(allocated_elements.get("wind", -1)) == 0,
+		"旧角色补元素HTTP请求合同或幂等键错误",
+		_errors
+	)
 
 
 func _dictionary_rect(value: Dictionary) -> Rect2:

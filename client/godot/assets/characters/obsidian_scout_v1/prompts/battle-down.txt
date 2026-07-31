@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal reversible-KO body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout collapsing into a revivable unconscious hold in eight chronological frames for both formal views. Create an exact 4x4 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: surprise, knees buckle, shield arm loses strength, torso tips, first ground contact, controlled collapse, settle, stable unconscious ground hold. Frame 8 is a non-moving hold intended to be copied exactly as revive frame 1.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body only.
+Layout: exact 4x4 invisible grid; one complete body per cell; consistent scale; ground poses centered and fully inside central 70% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity and attached equipment; monotonic collapse with no standing back up; final pose reads unconscious from slack weight/unfocused expression, not asleep or dead; both formal views remain independently drawn.
+Avoid: mirroring, smile, peaceful sleep curl, X/death eyes, blood, gore, grave symbols, dizzy halo/stars, fade-out, detached equipment, copied chronology, text, watermark.

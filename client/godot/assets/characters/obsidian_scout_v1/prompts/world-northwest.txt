@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: true-eight world locomotion source grid for a playable 2.5D RPG character
+Primary request: Animate the exact same black-haired tribal scout from the identity board, independently authored facing NORTHWEST. Create an exact 2-row by 3-column grid with six complete full-body poses in row-major playback order: 1 neutral idle, 2 left-foot contact, 3 passing step, 4 right-foot contact, 5 passing step completing a real four-frame walk cycle, 6 alternate breathing idle archive pose.
+Input image: identity board is a strict same-character reference; preserve identity, equipment and palette.
+Direction: rear three-quarter view facing upper-left, travel vector diagonally toward screen top-left; face is mostly turned away; all six poses keep this exact direction.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D world sprite, clean outlines and soft cel-painted volume.
+Layout: exact 2x3 invisible grid, one centered subject per cell, consistent scale, stable feet/bottom anchor, body within central 64% safe area, generous separation; no grid lines or labels.
+Scene/backdrop: perfectly flat solid #FF00FF chroma key, uniform; no floor, shadows, gradient or texture.
+Constraints: exact identity; back of high ponytail, vest seams, shield on left arm, axe close to right hip and rear clothing construction remain consistent; real alternating gait; full containment.
+Avoid: mirroring another direction, facing camera, front view, changing direction, sliding, scale pumping, copied frames, missing limbs, detached FX, text, watermark.

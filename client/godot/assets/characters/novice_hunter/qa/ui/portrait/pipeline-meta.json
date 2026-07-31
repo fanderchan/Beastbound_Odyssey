@@ -1,0 +1,64 @@
+{
+  "target": "player",
+  "mode": "player",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/novice_hunter/source/ui/portrait-raw.png",
+  "threshold": 150,
+  "edge_threshold": 210,
+  "duration": 200,
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 1024,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 5,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "portrait-1"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 4,
+      "selected_component_area": 813316,
+      "selected_component_bbox": [
+        100,
+        55,
+        1094,
+        1246
+      ],
+      "crop_bbox": [
+        100,
+        55,
+        1094,
+        1246
+      ],
+      "edge_touch": false,
+      "output_size": [
+        752,
+        901
+      ],
+      "paste_position": [
+        136,
+        61
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

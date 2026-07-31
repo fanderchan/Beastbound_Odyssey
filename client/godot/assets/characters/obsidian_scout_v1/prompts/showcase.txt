@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: independently authored transparent full-body showcase for a playable character selection screen
+Primary request: Paint the exact same black-haired tribal scout from the identity reference as a polished full-body selection-screen hero, standing in a relaxed alert pose. This is a new full-body illustration, not a crop of the identity board.
+Input image: identity board is the strict same-character reference; preserve identity, equipment and palette.
+Subject: agile sturdy young man with warm medium-brown skin, cyan-teal eyes, deep blue-black high ponytail, bone ear cuff and three-fang necklace; slate-blue-black short vest, sand hide shoulder guard, teal belt and dark shorts, brown wraps and boots; small round walnut shield on left arm and short wood-and-flint axe held low in right hand.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D game illustration, clean dark-brown outlines, soft cel-painted volume, collectible character-screen polish, same body proportions as reference.
+Composition/framing: vertical-feeling complete full body inside square canvas; three-quarter view; stable feet; shield and axe remain close to body; entire hair, axe, shield and boots inside central 74% safe area with generous padding.
+Scene/backdrop: perfectly flat solid #FF00FF chroma-key background, one uniform color, no shadow, gradient, texture, floor or reflection.
+Constraints: exact same face, hair, costume, axe, shield, body and palette as reference; all limbs complete; no text, no frame, no watermark, no cast shadow.
+Avoid: combat lunge, giant weapon, shield hiding torso, copied commercial character, red hair, yellow main outfit, heavy armor, magic effect, photorealism, 3D render, pixel art.

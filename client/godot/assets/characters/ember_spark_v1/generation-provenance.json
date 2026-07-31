@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "characterId": "ember_spark_v1",
+  "generator": "OpenAI built-in image generation",
+  "generatedImageArchiveRoot": "/Users/fander/.codex/generated_images/019fb4a2-992a-7db0-bc30-69da4ca374a5",
+  "identity": "exec-0fc4de8b-6a31-42d9-8a34-22853ef10e40.png",
+  "ui": {
+    "portrait": "exec-477f8a9d-f94a-4057-b87d-3eca1f1ca523.png",
+    "showcase": "exec-eb10305e-672c-4e26-9440-a41da665f3fc.png"
+  },
+  "world": {
+    "south": "exec-edfd96f3-e8ae-4218-9ebf-7db23af88ed9.png",
+    "southwest": "exec-7522368d-47d2-4dca-981e-77d92b22376b.png",
+    "west": "exec-7c02f104-64de-4e03-a2dc-1d1b7da383b1.png",
+    "northwest": "exec-7b161ab9-018f-4a72-8abd-946a4f85e128.png",
+    "north": "exec-21067b56-2410-43d8-aaec-b3775e570207.png",
+    "northeast": "exec-7179f2fe-d4ad-4945-925d-22ed4c00063a.png",
+    "east": "exec-45572ba2-8c13-40ab-bd71-908d2246ecad.png",
+    "southeast": "exec-c3f37266-5cc4-4345-a864-6db7701c2eb9.png"
+  },
+  "battle": {
+    "front_3quarter_sw": {
+      "idle": "exec-34342694-f7a9-4180-b2e4-0c491b989514.png",
+      "walk": "exec-b36258f5-5f8b-42cd-be3d-19f40af85d15.png",
+      "attack": "exec-4431043e-22b7-4c04-a65f-59641b807eb4.png",
+      "skill": "exec-2553ea0c-b707-45e5-b6b7-eb0d4246dc37.png",
+      "hurt": "exec-c668abeb-e58a-4fa6-8c56-a63269221ce9.png",
+      "defend": "exec-b2acea90-c2e6-4269-80e5-7e1bd9183170.png",
+      "dodge": "exec-84b75401-ee96-4a7c-b615-2086997644e2.png",
+      "counter": "exec-b0a30f91-5132-45b4-98c0-f0584ba2856e.png",
+      "stagger_return": "exec-3171b650-1bdf-4d8c-abf6-34d6900db12e.png",
+      "knockaway": "exec-de40f4b0-5675-497c-9e6a-f69cd2b17601.png",
+      "down": "exec-c4c2c3ce-c75c-4928-ae50-336cdeb9900e.png",
+      "revive": "exec-12eb3504-a9cb-48e2-b0b9-4ae6cc85bc74.png"
+    },
+    "back_3quarter_ne": {
+      "idle": "exec-0296e938-039d-48be-9905-47060aa36fbb.png",
+      "walk": "exec-28097639-b7a6-4ee8-8311-bc7e09337de4.png",
+      "attack": "exec-43c94ca0-19df-4aeb-b180-21fd1c8b672a.png",
+      "skill": "exec-6cdbb3a2-2302-44c5-8e04-831bd86d4877.png",
+      "hurt": "exec-9040fd42-e55c-4f8a-9c1e-4996c60da957.png",
+      "defend": "exec-eaa593bf-d073-4be8-b575-cbd3faebd502.png",
+      "dodge": "exec-a5d55814-598a-4c0d-b1e8-af95a706d45c.png",
+      "counter": "exec-57899e29-40ba-48b7-a99c-e947f6eba8e8.png",
+      "stagger_return": "exec-896c46fa-9a5c-49a5-9d72-da30beeef676.png",
+      "knockaway": "exec-4b7aa1f5-3f96-4c72-b844-d752ab2e3c28.png",
+      "down": "exec-cd5b16f4-fa52-4f2a-93c8-e0e6d3b3ff71.png",
+      "revive": "exec-6311e041-6574-45cb-b32b-6dfea800d776.png"
+    }
+  },
+  "normalization": {
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "runtimeResample": "premultiplied_bilinear",
+    "backgroundKey": "#FF00FF",
+    "downReviveContinuity": "mechanical exact copy after source and runtime normalization"
+  },
+  "ownerReviewStatus": "owner_review_pending"
+}

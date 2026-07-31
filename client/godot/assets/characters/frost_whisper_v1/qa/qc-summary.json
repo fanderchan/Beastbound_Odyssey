@@ -1,0 +1,970 @@
+{
+  "schemaVersion": 1,
+  "characterId": "frost_whisper_v1",
+  "status": "runtime_contract_passed",
+  "ownerReviewStatus": "owner_review_pending",
+  "counts": {
+    "world": 40,
+    "battlePerView": 90,
+    "battleTotal": 180,
+    "runtimeTotal": 220
+  },
+  "runtimeDimensions": [
+    256,
+    256
+  ],
+  "runtimeAlphaEdgeFailures": [],
+  "sourceCellEdgeWarnings": [
+    {
+      "frame": "world/south/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/south/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/south/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/south/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/south/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southwest/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southwest/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southwest/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/west/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/west/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/west/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/west/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/northwest/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/northwest/5",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "world/north/5",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "world/northeast/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/northeast/5",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "world/east/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/east/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southeast/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southeast/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "world/southeast/5",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/idle/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/3",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/walk/8",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/2",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/3",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/attack/8",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/skill/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/hurt/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/defend/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/2",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/3",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/6",
+      "edges": [
+        "left"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/dodge/8",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/3",
+      "edges": [
+        "left",
+        "right",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/5",
+      "edges": [
+        "right",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/7",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/counter/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/stagger_return/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/knockaway/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/knockaway/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/knockaway/3",
+      "edges": [
+        "left"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/3",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/6",
+      "edges": [
+        "left"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/7",
+      "edges": [
+        "left"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/down/8",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/revive/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/revive/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/revive/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/revive/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/front_3quarter_sw/revive/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/idle/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/idle/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/idle/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/idle/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/walk/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/attack/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/attack/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/attack/3",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/attack/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/attack/5",
+      "edges": [
+        "right"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/skill/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/skill/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/skill/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/skill/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/defend/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/dodge/5",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/dodge/8",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/counter/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/counter/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/counter/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/counter/4",
+      "edges": [
+        "left",
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/counter/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/2",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/3",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/4",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/5",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/6",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/7",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/stagger_return/8",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/knockaway/1",
+      "edges": [
+        "bottom"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/down/1",
+      "edges": [
+        "right"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/down/5",
+      "edges": [
+        "right"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/down/6",
+      "edges": [
+        "left",
+        "right"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/revive/6",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/revive/7",
+      "edges": [
+        "top"
+      ]
+    },
+    {
+      "frame": "battle/back_3quarter_ne/revive/8",
+      "edges": [
+        "top"
+      ]
+    }
+  ],
+  "downReviveExact": {
+    "front_3quarter_sw": true,
+    "back_3quarter_ne": true
+  },
+  "duplicateRgbaGroups": [
+    {
+      "rgbaHash": "788a4ed9eef42cafd616bf2f071f4f07a27983d543612ed691aa516f37dfed8a",
+      "paths": [
+        "views/back_3quarter_ne/down/down-8.png",
+        "views/back_3quarter_ne/revive/revive-1.png"
+      ],
+      "intentional": true
+    },
+    {
+      "rgbaHash": "9282ca73b229fc4e63b4823bedf2cdd59e6ec9741ba696456d14f3a07773c465",
+      "paths": [
+        "views/front_3quarter_sw/down/down-8.png",
+        "views/front_3quarter_sw/revive/revive-1.png"
+      ],
+      "intentional": true
+    }
+  ],
+  "errors": [],
+  "notes": [
+    "All eight world directions were independently generated; no mirroring was used.",
+    "Both battle views were independently generated; no view was mirrored from the other.",
+    "Source-cell edge warnings are retained for owner visual review and do not imply a transparent runtime-edge failure."
+  ]
+}

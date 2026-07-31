@@ -1,0 +1,7 @@
+ORIGINAL TWO-VIEW BATTLE ACTION CONTRACT — FROST WHISPER V1
+
+Use the locked Frost Whisper identity and one named action. Produce a strict 4-column by 4-row animation sheet on a flat saturated magenta key background. Rows 1–2 are eight ordered frames for front_3quarter_sw. Rows 3–4 are eight ordered frames for back_3quarter_ne. Both views must be independently authored and must never be mirrored. Stable camera, body scale, costume, weapon, light and ground line. No text, labels, grid decoration, scenery or fake duplicated frames.
+
+Action passes: idle, walk, attack, skill, hurt, defend, dodge, counter, stagger_return, knockaway, down and revive. Idle/hurt/defend publish frames 1–6; all other actions publish frames 1–8. Down ends in a reversible non-gory unconscious pose. Revive begins from that same pose and returns to idle. Attack uses visible short-staff/bone-blade motion; skill uses a readable wind-up and release; dodge, knockaway and recovery must communicate clear body displacement.
+
+Style: original high-definition 2.5D hand-painted game animation, readable silhouette and ordered motion arcs, no copyrighted character resemblance.

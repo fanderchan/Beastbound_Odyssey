@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal battle body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout performing a distinct eight-frame reactive counterattack for both formal views. Create an exact 4x4 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: reactive ready, shield deflection, hip rotation, draw axe across body, short snapping counter strike, follow-through, guarded retreat, ready.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body and equipment only.
+Layout: exact 4x4 invisible grid; centered complete full body, stable common scale/baseline, central 68% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity; shield left, axe right; reactive shield-to-axe transition is visibly different from normal attack.
+Avoid: mirroring, ordinary attack copy, magic FX, slash arc, impact burst, copied frames, missing limbs, text, watermark.

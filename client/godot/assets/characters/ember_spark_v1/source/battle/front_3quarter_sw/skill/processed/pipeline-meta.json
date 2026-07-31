@@ -1,0 +1,369 @@
+{
+  "target": "player",
+  "mode": "skill",
+  "prompt": "Beastbound original ember_spark_v1 front_3quarter_sw skill action sheet",
+  "role": "ember_spark_v1_front_3quarter_sw",
+  "input": "client/godot/assets/characters/ember_spark_v1/source/battle/front_3quarter_sw/skill/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 3,
+  "cols": 3,
+  "cell_size": 512,
+  "fit_scale": 0.72,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "skill-1",
+    "skill-2",
+    "skill-3",
+    "skill-4",
+    "skill-5",
+    "skill-6",
+    "skill-7",
+    "skill-8",
+    "skill-9"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        418,
+        418
+      ],
+      "component_mode": "largest",
+      "component_count": 2,
+      "selected_component_area": 32106,
+      "selected_component_bbox": [
+        87,
+        95,
+        354,
+        382
+      ],
+      "crop_bbox": [
+        79,
+        87,
+        362,
+        390
+      ],
+      "edge_touch": false,
+      "output_size": [
+        275,
+        294
+      ],
+      "paste_position": [
+        118,
+        147
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        418,
+        0,
+        836,
+        418
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 32016,
+      "selected_component_bbox": [
+        56,
+        96,
+        324,
+        382
+      ],
+      "crop_bbox": [
+        48,
+        88,
+        332,
+        390
+      ],
+      "edge_touch": false,
+      "output_size": [
+        276,
+        293
+      ],
+      "paste_position": [
+        118,
+        148
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        836,
+        0,
+        1254,
+        418
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 33996,
+      "selected_component_bbox": [
+        55,
+        28,
+        298,
+        391
+      ],
+      "crop_bbox": [
+        47,
+        20,
+        306,
+        399
+      ],
+      "edge_touch": false,
+      "output_size": [
+        251,
+        368
+      ],
+      "paste_position": [
+        130,
+        73
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        418,
+        418,
+        836
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 32011,
+      "selected_component_bbox": [
+        72,
+        51,
+        333,
+        343
+      ],
+      "crop_bbox": [
+        64,
+        43,
+        341,
+        351
+      ],
+      "edge_touch": false,
+      "output_size": [
+        269,
+        299
+      ],
+      "paste_position": [
+        121,
+        142
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        418,
+        418,
+        836,
+        836
+      ],
+      "component_mode": "largest",
+      "component_count": 2,
+      "selected_component_area": 33441,
+      "selected_component_bbox": [
+        44,
+        83,
+        315,
+        353
+      ],
+      "crop_bbox": [
+        36,
+        75,
+        323,
+        361
+      ],
+      "edge_touch": false,
+      "output_size": [
+        279,
+        278
+      ],
+      "paste_position": [
+        116,
+        163
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        836,
+        418,
+        1254,
+        836
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 34285,
+      "selected_component_bbox": [
+        18,
+        71,
+        292,
+        355
+      ],
+      "crop_bbox": [
+        10,
+        63,
+        300,
+        363
+      ],
+      "edge_touch": false,
+      "output_size": [
+        282,
+        291
+      ],
+      "paste_position": [
+        115,
+        150
+      ]
+    },
+    {
+      "grid": [
+        2,
+        0
+      ],
+      "source_box": [
+        0,
+        836,
+        418,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 2,
+      "selected_component_area": 32921,
+      "selected_component_bbox": [
+        92,
+        42,
+        335,
+        343
+      ],
+      "crop_bbox": [
+        84,
+        34,
+        343,
+        351
+      ],
+      "edge_touch": false,
+      "output_size": [
+        251,
+        308
+      ],
+      "paste_position": [
+        130,
+        133
+      ]
+    },
+    {
+      "grid": [
+        2,
+        1
+      ],
+      "source_box": [
+        418,
+        836,
+        836,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 34360,
+      "selected_component_bbox": [
+        49,
+        4,
+        313,
+        352
+      ],
+      "crop_bbox": [
+        41,
+        0,
+        321,
+        360
+      ],
+      "edge_touch": true,
+      "output_size": [
+        272,
+        350
+      ],
+      "paste_position": [
+        120,
+        91
+      ]
+    },
+    {
+      "grid": [
+        2,
+        2
+      ],
+      "source_box": [
+        836,
+        836,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 33604,
+      "selected_component_bbox": [
+        56,
+        9,
+        267,
+        366
+      ],
+      "crop_bbox": [
+        48,
+        1,
+        275,
+        374
+      ],
+      "edge_touch": true,
+      "output_size": [
+        220,
+        362
+      ],
+      "paste_position": [
+        146,
+        79
+      ]
+    }
+  ],
+  "edge_touch_frames": [
+    [
+      2,
+      1
+    ],
+    [
+      2,
+      2
+    ]
+  ]
+}

@@ -10,8 +10,12 @@ const CharacterEntryVisualSkin := preload(
 const CharacterSlotCardScript := preload(
 	"res://scripts/ui/character_slot_card.gd"
 )
+const CharacterCreationPanelScript := preload(
+	"res://scripts/ui/character_creation_panel.gd"
+)
 
 signal create_character_requested(payload: Dictionary)
+signal allocate_character_elements_requested(payload: Dictionary)
 signal select_character_requested(player_id: String)
 signal return_to_login_requested()
 signal local_selection_changed(player_id: String)
@@ -42,13 +46,9 @@ var _status_label: Label
 var _enter_button: Button
 var _return_button: Button
 var _account_label: Label
-var _create_modal_shade: ColorRect
+var _create_modal_shade: Control
+var _creation_panel: Control
 var _create_panel: Panel
-var _create_slot_label: Label
-var _name_input: LineEdit
-var _name_error_label: Label
-var _create_button: Button
-var _cancel_create_button: Button
 var _loading_shade: ColorRect
 var _loading_label: Label
 
@@ -103,15 +103,18 @@ func present_roster(
 	)
 	_creation_slot_index = -1
 	_create_modal_shade.visible = false
-	_name_input.text = ""
-	_name_error_label.text = ""
 	_error_message = ""
 	set_loading(false)
 	_refresh_all()
+	var current := selected_character()
+	if bool(current.get("needsElementAllocation", false)):
+		open_legacy_element_allocation(current)
 
 
 func configure_visual_sources(value: Dictionary) -> void:
 	_visual_sources = CharacterEntryVisualSkin.merge_visual_sources(value)
+	if _creation_panel != null:
+		_creation_panel.call("configure_visual_sources", _visual_sources)
 	_refresh_background()
 	_refresh_logo()
 	_refresh_slot_cards()
@@ -128,6 +131,8 @@ func set_loading(active: bool, message: String = "") -> void:
 	if not active:
 		_pending_action = ""
 	_loading_shade.visible = active
+	if _creation_panel != null:
+		_creation_panel.call("set_loading", active)
 	_loading_label.text = (
 		_clean_player_message(message, "请稍候…")
 		if active
@@ -152,6 +157,8 @@ func show_error(player_message: String) -> void:
 		CharacterEntryVisualSkin.status_style(true)
 	)
 	_status_label.visible = true
+	if _creation_panel != null and _creation_panel.visible:
+		_creation_panel.call("show_error", _error_message)
 	_refresh_interaction_state()
 
 
@@ -211,14 +218,21 @@ func open_creation_form(slot_index: int) -> bool:
 	):
 		return false
 	_creation_slot_index = slot_index
-	_create_slot_label.text = "角色位 %d" % (slot_index + 1)
-	_name_input.text = ""
-	_name_error_label.text = ""
 	_error_message = ""
-	_create_modal_shade.visible = true
+	_creation_panel.call("open_for_creation", slot_index)
 	_refresh_status()
 	_refresh_interaction_state()
-	_name_input.grab_focus()
+	return true
+
+
+func open_legacy_element_allocation(character: Dictionary) -> bool:
+	if _loading or not bool(character.get("needsElementAllocation", false)):
+		return false
+	_creation_slot_index = int(character.get("slotIndex", -1))
+	_error_message = ""
+	_creation_panel.call("open_for_legacy_allocation", character)
+	_refresh_status()
+	_refresh_interaction_state()
 	return true
 
 
@@ -226,9 +240,8 @@ func close_creation_form() -> void:
 	if _loading:
 		return
 	_creation_slot_index = -1
-	_name_input.text = ""
-	_name_error_label.text = ""
-	_create_modal_shade.visible = false
+	if _creation_panel != null and _creation_panel.visible:
+		_creation_panel.call("close_panel")
 	_refresh_interaction_state()
 	_enter_button.grab_focus()
 
@@ -262,9 +275,19 @@ func snapshot() -> Dictionary:
 			else false
 		),
 		"creationSlotIndex": _creation_slot_index,
+		"creation": (
+			_creation_panel.call("snapshot") as Dictionary
+			if _creation_panel != null
+			else {}
+		),
 		"nameErrorText": (
-			_name_error_label.text
-			if _name_error_label != null
+			str(
+				(_creation_panel.call("snapshot") as Dictionary).get(
+					"errorText",
+					""
+				)
+			)
+			if _creation_panel != null
 			else ""
 		),
 		"loading": _loading,
@@ -518,104 +541,14 @@ func _build_return_button() -> void:
 
 
 func _build_create_modal() -> void:
-	_create_modal_shade = ColorRect.new()
-	_create_modal_shade.name = "CreateModalShade"
-	_create_modal_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_create_modal_shade.color = Color(0.0, 0.0, 0.0, 0.62)
-	_create_modal_shade.mouse_filter = Control.MOUSE_FILTER_STOP
-	_create_modal_shade.z_index = 50
-	add_child(_create_modal_shade)
-
-	_create_panel = Panel.new()
-	_create_panel.name = "CreatePanel"
-	_create_panel.add_theme_stylebox_override(
-		"panel",
-		CharacterEntryVisualSkin.modal_style()
-	)
-	_create_modal_shade.add_child(_create_panel)
-	_place(_create_panel, Rect2(394.0, 184.0, 492.0, 352.0))
-
-	var title := Label.new()
-	title.name = "CreateTitle"
-	title.text = "创建角色"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	CharacterEntryVisualSkin.apply_title(title, 29)
-	_create_panel.add_child(title)
-	_place(title, Rect2(40.0, 24.0, 412.0, 48.0))
-
-	_create_slot_label = Label.new()
-	_create_slot_label.name = "CreateSlotLabel"
-	_create_slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_create_slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_create_slot_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	CharacterEntryVisualSkin.apply_body(
-		_create_slot_label,
-		15,
-		CharacterEntryVisualSkin.GOLD_TEXT
-	)
-	_create_panel.add_child(_create_slot_label)
-	_place(_create_slot_label, Rect2(80.0, 70.0, 332.0, 30.0))
-
-	var hint := Label.new()
-	hint.name = "NameHint"
-	hint.text = "为你的冒险伙伴取一个名字"
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	CharacterEntryVisualSkin.apply_body(
-		hint,
-		15,
-		CharacterEntryVisualSkin.MUTED_TEXT
-	)
-	_create_panel.add_child(hint)
-	_place(hint, Rect2(60.0, 101.0, 372.0, 30.0))
-
-	_name_input = LineEdit.new()
-	_name_input.name = "NameInput"
-	_name_input.placeholder_text = "输入角色名（1—24个字）"
-	_name_input.max_length = CharacterRosterModel.NAME_MAX_LENGTH
-	_name_input.keep_editing_on_text_submit = true
-	CharacterEntryVisualSkin.apply_line_edit(_name_input)
-	_name_input.text_changed.connect(_on_name_changed)
-	_name_input.text_submitted.connect(func(_text: String) -> void:
-		_submit_create()
-	)
-	_create_panel.add_child(_name_input)
-	_place(_name_input, Rect2(62.0, 143.0, 368.0, 54.0))
-
-	_name_error_label = Label.new()
-	_name_error_label.name = "NameError"
-	_name_error_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_error_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_name_error_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_name_error_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	CharacterEntryVisualSkin.apply_body(
-		_name_error_label,
-		14,
-		CharacterEntryVisualSkin.ERROR_TEXT
-	)
-	_create_panel.add_child(_name_error_label)
-	_place(_name_error_label, Rect2(54.0, 201.0, 384.0, 34.0))
-
-	_cancel_create_button = Button.new()
-	_cancel_create_button.name = "CancelCreateButton"
-	_cancel_create_button.text = "取消"
-	CharacterEntryVisualSkin.apply_secondary_button(_cancel_create_button)
-	_cancel_create_button.pressed.connect(close_creation_form)
-	_create_panel.add_child(_cancel_create_button)
-	_place(_cancel_create_button, Rect2(62.0, 262.0, 154.0, 48.0))
-
-	_create_button = Button.new()
-	_create_button.name = "CreateCharacterButton"
-	_create_button.text = "创建角色"
-	CharacterEntryVisualSkin.apply_primary_button(_create_button)
-	_create_button.pressed.connect(_submit_create)
-	_create_panel.add_child(_create_button)
-	_place(_create_button, Rect2(236.0, 258.0, 194.0, 54.0))
-
-	_create_modal_shade.visible = false
+	_creation_panel = CharacterCreationPanelScript.new()
+	_creation_panel.name = "CharacterCreationPanel"
+	_creation_panel.call("configure_visual_sources", _visual_sources)
+	_creation_panel.connect("submitted", _on_creation_submitted)
+	_creation_panel.connect("cancelled", _on_creation_cancelled)
+	add_child(_creation_panel)
+	_create_modal_shade = _creation_panel
+	_create_panel = _creation_panel.get_node_or_null("CreationBoard") as Panel
 
 
 func _build_loading_overlay() -> void:
@@ -727,8 +660,6 @@ func _refresh_selected_character() -> void:
 		character.get("showcaseTexture", null),
 		str(character.get("showcaseTexturePath", ""))
 	)
-	if texture == null:
-		texture = CharacterEntryVisualSkin.DEFAULT_SHOWCASE_TEXTURE
 	_showcase.texture = texture
 	_showcase.visible = texture != null
 	_showcase_has_injected_texture = texture != null
@@ -786,10 +717,6 @@ func _refresh_interaction_state() -> void:
 		)
 	if _return_button != null:
 		_return_button.disabled = _loading or modal_open
-	if _create_button != null:
-		_create_button.disabled = _loading
-	if _cancel_create_button != null:
-		_cancel_create_button.disabled = _loading
 	_refresh_slot_cards()
 
 
@@ -807,6 +734,18 @@ func _on_slot_activated(
 	if player_id == "":
 		show_error("这个角色暂时无法选择")
 		return
+	var character := CharacterRosterModel.character_by_player_id(
+		_roster,
+		player_id
+	)
+	if bool(character.get("needsElementAllocation", false)):
+		_selected_player_id = player_id
+		_roster = CharacterRosterModel.with_selected_character(
+			_roster,
+			player_id
+		)
+		open_legacy_element_allocation(character)
+		return
 	_selected_player_id = player_id
 	_roster = CharacterRosterModel.with_selected_character(
 		_roster,
@@ -819,36 +758,25 @@ func _on_slot_activated(
 	local_selection_changed.emit(player_id)
 
 
-func _on_name_changed(value: String) -> void:
-	if value.strip_edges() == "":
-		_name_error_label.text = ""
+func _on_creation_submitted(payload: Dictionary) -> void:
+	if _loading or _creation_panel == null:
 		return
-	var errors := CharacterRosterModel.character_name_errors(value)
-	_name_error_label.text = errors[0] if not errors.is_empty() else ""
-
-
-func _submit_create() -> void:
-	if _loading or not _create_modal_shade.visible:
+	var mode_value := str(_creation_panel.call("mode"))
+	if mode_value == "legacy_allocation":
+		_pending_action = "allocate_elements"
+		set_loading(true, "正在保存元素…")
+		allocate_character_elements_requested.emit(payload.duplicate(true))
 		return
-	var request := CharacterRosterModel.build_create_request(
-		_creation_slot_index,
-		_name_input.text
-	)
-	var errors = request.get("errors", [])
-	if not bool(request.get("valid", false)):
-		_name_error_label.text = (
-			str((errors as Array)[0])
-			if errors is Array and not (errors as Array).is_empty()
-			else "请检查角色名"
-		)
-		_name_input.grab_focus()
-		return
-	_name_error_label.text = ""
 	_pending_action = "create"
 	set_loading(true, "正在创建角色…")
-	create_character_requested.emit(
-		(request.get("payload", {}) as Dictionary).duplicate(true)
-	)
+	create_character_requested.emit(payload.duplicate(true))
+
+
+func _on_creation_cancelled() -> void:
+	_creation_slot_index = -1
+	_error_message = ""
+	_refresh_status()
+	_refresh_interaction_state()
 
 
 func _on_enter_pressed() -> void:
@@ -890,10 +818,7 @@ func _with_injected_character_visuals(
 	if not (appearances_value is Dictionary):
 		return character
 	var appearances := appearances_value as Dictionary
-	var visual_value = appearances.get(
-		appearance_id,
-		appearances.get("novice_hunter_v1", {})
-	)
+	var visual_value = appearances.get(appearance_id, {})
 	if not (visual_value is Dictionary):
 		return character
 	var visual := visual_value as Dictionary

@@ -19,8 +19,10 @@ function mismatchedBattleCharacterFixture() {
   });
   assert.equal(registered.ok, true);
   const created = service.createCharacter(registered.session.token, {
+    appearanceId: "novice_hunter_v1",
     slotIndex: 1,
     displayName: "参战乙",
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
   });
   assert.equal(created.ok, true);
 

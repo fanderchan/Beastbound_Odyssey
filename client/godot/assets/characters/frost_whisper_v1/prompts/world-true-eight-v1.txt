@@ -1,0 +1,7 @@
+ORIGINAL TRUE-EIGHT WORLD SPRITE CONTRACT — FROST WHISPER V1
+
+Use the locked Frost Whisper identity. Produce one 2-column by 3-row sheet on a flat saturated magenta key background for exactly one named direction. Cells 1–5 are idle frame 1 followed by walk frames 1–4; cell 6 is an unused settling pose. Full body visible, stable camera, scale, ground line and costume. No labels, borders, shadows, scenery, duplicated frames, mirroring or interpolation.
+
+Generate separate sheets for south, southwest, west, northwest, north, northeast, east and southeast. Every direction must be genuinely authored for that direction. Preserve the correct hand, feather, shell, cloth overlap and weapon orientation instead of reflecting another direction.
+
+Style: original high-definition 2.5D hand-painted game sprite, clear silhouette at 256px runtime size, soft material rendering, no pixel-art imitation, no external character resemblance.

@@ -121,3 +121,58 @@ final result: engineering_passed; owner_review_pending
   主角色六个连续状态。
 
 final result: passed
+
+---
+
+# Phase 379 Design QA：一步到位的人物创建配置与元素配点
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 页面没有人物、头像、配点格、名字输入或创建按钮
+  越界；四个形象、十点配完、非法状态拦截、随机名、键盘改名和创建回槽均可由真实
+  左键／键盘连续完成。
+- 参考图与实现图已归一化后放在同一个比较输入中检查。实现保留参考的左侧圆形人物
+  列表、中部完整人物和右侧元素木框结构，同时使用 Beastbound 原创背景、人物与 UI
+  资产，不复制参考角色、像素或商标。
+- 工程 Design QA 已通过；四套人物正式美术仍保持 `owner_review_pending`，等待项目
+  所有者观看本阶段最终 `1×` 视频后确认主观视觉结果。
+
+## Comparison target
+
+- 参考图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-201f4819-096e-4738-80e0-036f6c76109a.jpg`；
+- 同状态实现图：`.run/character_creation/character_creation_final00000009.png`；
+- 同屏比较：`.run/character_creation/design_qa/reference-vs-implementation.png`；
+- 比较状态均为曜石斥候、水元素 10 点、剩余 0 点、名字已填写；实现视口为
+  `1280×720`。
+
+## Required fidelity surfaces
+
+- Layout：左上返回、左侧四个独立圆形头像、中部全身展示、右侧四行减号／十格／加号、
+  下部名字与创建按钮，视觉层级与参考一致。
+- Material：森林海岸背景、半透明深木面板、暖金描边与木质按钮延续当前宠物／背包界面
+  的统一材质语言。
+- Assets：四个头像和四张全身展示图均为独立正式图片，不从全身像裁头，不使用文字、
+  emoji、手绘 SVG、占位框或参考图裁片。
+- Controls：四形象切换、元素加减、冲突禁配、剩余点提示、随机名字、真实键盘输入、返回
+  与创建均为可操作控件；右键不是必需输入。
+- Safety：玩家界面不显示 `appearanceId`、`playerId`、slot index、schema、raw code、
+  后端状态、QA 或 agent 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/character-entry-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/contact-sheet.png`；
+- 验证摘要：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/summary.json`；
+- 真实 `Main.tscn` 依次展示四空槽、打开创建页、四人物切换、剩余 1 点禁止创建、
+  地 6 水 4 合法完成、随机名、键盘改名、捕获一次性创建 payload 和权威返回后的新角色
+  槽，共 12 个连续章节；
+- 视频为 `19.466667s / 584` 帧、H.264/AAC、`1280×720 / 30 FPS / 1.00×`，
+  完整音视频解码通过；录制使用全新隔离 user-data，未连接后端且未写玩家存档。
+
+final result: passed

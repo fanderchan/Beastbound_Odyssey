@@ -1,0 +1,12 @@
+ORIGINAL CHARACTER CONTRACT — FROST WHISPER V1
+
+Create an original young adult tribal adventurer for Beastbound Odyssey: a calm, agile woman with short tousled silver-white hair, a small blue-violet feather accent, bright icy-blue eyes, blue-white fur and leather clothing, shell and feather ornaments, brown wraps and soft boots. Her signature weapon is a short wooden staff combined with a small bone blade. Lightweight silhouette, no heavy armor, no long robe, no modern objects, no text, no logos, no copyrighted character resemblance.
+
+IDENTITY BOARD
+Four-panel identity reference: front full body, back full body, head-and-shoulders portrait, side profile. Keep facial features, hair, ornaments, outfit construction, colors, body proportions, weapon and materials identical across panels. Clean saturated magenta key background.
+
+PORTRAIT
+Independently authored head-and-shoulders portrait, readable at small UI size, calm confident expression, face and shoulder ornaments match the identity board. Clean saturated green key background. Not a crop of another asset.
+
+SHOWCASE
+Independently authored full-body three-quarter southwest showcase pose, relaxed alert stance holding the short wooden staff/bone blade. Preserve the identity lock exactly. Clean saturated magenta key background. Not a crop of a sprite frame.

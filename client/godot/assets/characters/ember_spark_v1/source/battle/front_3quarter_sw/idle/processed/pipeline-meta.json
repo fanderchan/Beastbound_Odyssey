@@ -1,0 +1,254 @@
+{
+  "target": "player",
+  "mode": "idle",
+  "prompt": "Beastbound original ember_spark_v1 front_3quarter_sw idle action sheet",
+  "role": "ember_spark_v1_front_3quarter_sw",
+  "input": "client/godot/assets/characters/ember_spark_v1/source/battle/front_3quarter_sw/idle/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 2,
+  "cols": 3,
+  "cell_size": 512,
+  "fit_scale": 0.72,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "idle-1",
+    "idle-2",
+    "idle-3",
+    "idle-4",
+    "idle-5",
+    "idle-6"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        418,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 58307,
+      "selected_component_bbox": [
+        118,
+        53,
+        375,
+        543
+      ],
+      "crop_bbox": [
+        110,
+        45,
+        383,
+        551
+      ],
+      "edge_touch": false,
+      "output_size": [
+        198,
+        368
+      ],
+      "paste_position": [
+        157,
+        73
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        418,
+        0,
+        836,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 58117,
+      "selected_component_bbox": [
+        106,
+        57,
+        368,
+        543
+      ],
+      "crop_bbox": [
+        98,
+        49,
+        376,
+        551
+      ],
+      "edge_touch": false,
+      "output_size": [
+        202,
+        365
+      ],
+      "paste_position": [
+        155,
+        76
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        836,
+        0,
+        1254,
+        627
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 57927,
+      "selected_component_bbox": [
+        31,
+        70,
+        330,
+        533
+      ],
+      "crop_bbox": [
+        23,
+        62,
+        338,
+        541
+      ],
+      "edge_touch": false,
+      "output_size": [
+        229,
+        348
+      ],
+      "paste_position": [
+        141,
+        93
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        627,
+        418,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 55844,
+      "selected_component_bbox": [
+        113,
+        6,
+        363,
+        494
+      ],
+      "crop_bbox": [
+        105,
+        0,
+        371,
+        502
+      ],
+      "edge_touch": true,
+      "output_size": [
+        193,
+        365
+      ],
+      "paste_position": [
+        159,
+        76
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        418,
+        627,
+        836,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 53707,
+      "selected_component_bbox": [
+        96,
+        23,
+        351,
+        498
+      ],
+      "crop_bbox": [
+        88,
+        15,
+        359,
+        506
+      ],
+      "edge_touch": false,
+      "output_size": [
+        197,
+        357
+      ],
+      "paste_position": [
+        157,
+        84
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        836,
+        627,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 56504,
+      "selected_component_bbox": [
+        65,
+        25,
+        321,
+        506
+      ],
+      "crop_bbox": [
+        57,
+        17,
+        329,
+        514
+      ],
+      "edge_touch": false,
+      "output_size": [
+        198,
+        362
+      ],
+      "paste_position": [
+        157,
+        79
+      ]
+    }
+  ],
+  "edge_touch_frames": [
+    [
+      1,
+      0
+    ]
+  ]
+}

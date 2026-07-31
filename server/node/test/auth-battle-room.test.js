@@ -1015,6 +1015,7 @@ test("party pve training partners heal their low hp partner pair before attackin
     "quick": 130,
     "pet": {
       "petId": "heal_partner_pet_1",
+      "formId": "bui_normal_red_fire10",
       "name": "满血伙伴宠",
       "level": 12,
       "hp": 90,
@@ -1036,6 +1037,7 @@ test("party pve training partners heal their low hp partner pair before attackin
     "quick": 128,
     "pet": {
       "petId": "heal_partner_pet_2",
+      "formId": "bui_normal_red_fire10",
       "name": "低血伙伴宠",
       "level": 12,
       "hp": 47,
@@ -1071,6 +1073,12 @@ test("party pve training partners heal their low hp partner pair before attackin
   });
   assert.equal(encounter.ok, true);
   const actors = encounter.room.battle.actors;
+  assert.equal(
+    actors.every((actor) => ["earth", "water", "fire", "wind"]
+      .reduce((sum, elementId) => sum + Number(actor.elements && actor.elements[elementId] || 0), 0) === 10),
+    true,
+    JSON.stringify(actors.map((actor) => ({actorId: actor.actorId, elements: actor.elements}))),
+  );
   const soloPlayer = actors.find((actor) => actor.username === "pvehealpartner" && actor.kind === "player");
   const soloPet = actors.find((actor) => actor.username === "pvehealpartner" && actor.kind === "pet");
   const lowPartner = actors.find((actor) => actor.displayName === "低血伙伴" && actor.kind === "player");

@@ -50,6 +50,12 @@ const ERROR_CODE_MESSAGES := {
 	"bad_event_json": "服务器事件格式不正确。",
 	"bad_json": "服务器返回格式不正确。",
 	"character_create_payload_invalid": "创建角色的信息不完整，请重新填写。",
+	"character_appearance_invalid": "请选择可用的人物形象。",
+	"character_elements_invalid": "请重新检查元素分配。",
+	"character_elements_payload_invalid": "请重新检查元素分配。",
+	"character_elements_total_invalid": "请分配完全部10点元素。",
+	"character_elements_already_allocated": "这个角色已经完成元素分配。",
+	"character_elements_not_required": "这个角色不需要补选元素。",
 	"character_missing": "这个角色不存在，请刷新角色列表。",
 	"character_name_duplicate": "这个账号已有同名角色，请换一个名字。",
 	"character_player_id_invalid": "这个角色暂时无法选择，请刷新后重试。",
@@ -68,6 +74,7 @@ const ERROR_CODE_MESSAGES := {
 	"character_slot_invalid": "角色槽位无效，请重新选择。",
 	"character_slot_limit": "每个账号最多创建4个角色。",
 	"character_slot_occupied": "这个角色槽已经被占用。",
+	"character_slots_invalid": "角色资料异常，请重新登录后再试。",
 	"client_version_missing": "客户端版本信息缺失，请更新客户端后重试。",
 	"command_denied": "当前账号没有执行该操作的权限。",
 	"connection_failed": "服务器连接失败，请稍后重试。",
@@ -473,16 +480,36 @@ static func character_create_request(
 	base_url: String,
 	session_token: String,
 	slot_index: int,
-	display_name: String
+	display_name: String,
+	appearance_id: String = "",
+	elements: Dictionary = {}
 ) -> Dictionary:
+	var body := {
+		"slotIndex": slot_index,
+		"displayName": display_name.strip_edges(),
+	}
+	if appearance_id.strip_edges() != "":
+		body["appearanceId"] = appearance_id.strip_edges()
+	if not elements.is_empty():
+		body["elements"] = elements.duplicate(true)
 	return _durable_mutation_request({
 		"url": "%s/characters" % normalized_base_url(base_url),
 		"headers": _json_auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
-		"body": JSON.stringify({
-			"slotIndex": slot_index,
-			"displayName": display_name.strip_edges(),
-		}),
+		"body": JSON.stringify(body),
+	})
+
+
+static func character_allocate_elements_request(
+	base_url: String,
+	session_token: String,
+	elements: Dictionary
+) -> Dictionary:
+	return _durable_mutation_request({
+		"url": "%s/characters/allocate-elements" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": JSON.stringify({"elements": elements.duplicate(true)}),
 	})
 
 
@@ -1516,6 +1543,17 @@ static func parse_character_create_response(response_code: int, body: PackedByte
 		else {}
 	)
 	return parsed
+
+
+static func parse_character_allocate_elements_response(
+	response_code: int,
+	body: PackedByteArray
+) -> Dictionary:
+	return _parse_character_roster_response(
+		response_code,
+		body,
+		"元素保存失败，请稍后重试。"
+	)
 
 
 static func parse_character_select_response(

@@ -60,12 +60,18 @@ def _probe(
 
 def _godot_log() -> str:
     durations = {
-        "primary_character_home": 3.2,
-        "alternate_character_selected": 2.8,
-        "creation_dialog_open": 2.5,
-        "creation_name_entered": 3.0,
-        "creation_cancelled": 2.2,
-        "primary_character_restored": 3.5,
+        "four_empty_slots": 2.0,
+        "creation_configuration_open": 1.4,
+        "appearance_novice_hunter_v1": 1.0,
+        "appearance_obsidian_scout_v1": 1.0,
+        "appearance_frost_whisper_v1": 1.0,
+        "appearance_ember_spark_v1": 1.0,
+        "remaining_point_blocks_creation": 1.2,
+        "legal_dual_elements_complete": 1.2,
+        "random_name_selected": 1.0,
+        "typed_name_ready": 1.4,
+        "create_payload_captured": 0.9,
+        "authoritative_created_slot": 3.0,
     }
     lines = []
     for chapter in TOOL.EXPECTED_CHAPTERS:
@@ -76,9 +82,16 @@ def _godot_log() -> str:
             f"seconds={seconds:.3f} speed=1.00x"
         )
     lines.append(
-        "CHARACTER_ENTRY_OWNER_REVIEW_END elapsed_wall=17.9 "
-        "speed=1.00x roster=isolated backend=false "
-        "selected=character_review_primary"
+        "CHARACTER_ENTRY_OWNER_REVIEW_PAYLOAD slot=0 name=林岚 "
+        "appearance=ember_spark_v1 earth=6 water=4 fire=0 wind=0 "
+        "scene=Main.tscn backend=false"
+    )
+    lines.append(
+        "CHARACTER_ENTRY_OWNER_REVIEW_END elapsed_wall=18.9 "
+        "scene=Main.tscn speed=1.00x roster=isolated backend=false "
+        "payload=captured profile_save=false "
+        "selected=character_review_created appearance=ember_spark_v1 "
+        "elements=earth6_water4"
     )
     return "\n".join(lines) + "\n"
 
@@ -109,13 +122,13 @@ class RecordCharacterEntryOwnerReviewTest(unittest.TestCase):
                 review_args=("--auto-auth-server-live-check",),
             )
 
-    def test_probe_requires_audio_and_15_to_25_seconds(self) -> None:
+    def test_probe_requires_audio_and_15_to_30_seconds(self) -> None:
         metadata = TOOL._validate_probe(_probe())
         self.assertEqual(metadata["durationSeconds"], 18.5)
         self.assertEqual(metadata["fps"], 30.0)
         for probe in (
             _probe(duration=14.9),
-            _probe(duration=25.1),
+            _probe(duration=30.1),
             _probe(fps="60/1"),
             _probe(audio_codec="pcm_s16le"),
             _probe(sample_rate="44100"),
@@ -126,7 +139,7 @@ class RecordCharacterEntryOwnerReviewTest(unittest.TestCase):
                 with self.assertRaises(TOOL.CharacterEntryRecordingError):
                     TOOL._validate_probe(probe)
 
-    def test_log_requires_order_isolation_one_x_and_primary_return(self) -> None:
+    def test_log_requires_main_isolation_payload_and_created_slot(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "godot.log"
             log_path.write_text(_godot_log(), encoding="utf-8")
@@ -136,7 +149,15 @@ class RecordCharacterEntryOwnerReviewTest(unittest.TestCase):
             )
             self.assertTrue(result["rosterIsolated"])
             self.assertFalse(result["backendConnected"])
-            self.assertTrue(result["returnedToPrimaryCharacter"])
+            self.assertTrue(result["fourEmptySlotsAtStart"])
+            self.assertTrue(result["payloadCaptured"])
+            self.assertFalse(result["profileSaveEnabled"])
+            self.assertTrue(result["createdSlotPresented"])
+            self.assertEqual(result["scene"], TOOL.MAIN_SCENE)
+            self.assertEqual(
+                result["createdElements"],
+                {"earth": 6, "water": 4, "fire": 0, "wind": 0},
+            )
 
             invalid_values = (
                 (
@@ -144,10 +165,13 @@ class RecordCharacterEntryOwnerReviewTest(unittest.TestCase):
                     "roster=normal backend=true",
                 ),
                 (
-                    "selected=character_review_primary",
-                    "selected=character_review_secondary",
+                    "selected=character_review_created",
+                    "selected=character_review_missing",
                 ),
                 ("speed=1.00x", "speed=2.00x"),
+                ("scene=Main.tscn", "scene=Standalone.tscn"),
+                ("payload=captured", "payload=missing"),
+                ("profile_save=false", "profile_save=true"),
             )
             for old, new in invalid_values:
                 with self.subTest(old=old):

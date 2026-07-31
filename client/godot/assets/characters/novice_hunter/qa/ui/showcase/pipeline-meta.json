@@ -1,0 +1,64 @@
+{
+  "target": "player",
+  "mode": "player",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/novice_hunter/source/ui/showcase-raw.png",
+  "threshold": 150,
+  "edge_threshold": 210,
+  "duration": 200,
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 1024,
+  "fit_scale": 0.9,
+  "trim_border": 4,
+  "edge_clean_depth": 5,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "showcase-1"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        1024,
+        1536
+      ],
+      "component_mode": "largest",
+      "component_count": 6,
+      "selected_component_area": 360650,
+      "selected_component_bbox": [
+        243,
+        51,
+        728,
+        1341
+      ],
+      "crop_bbox": [
+        243,
+        51,
+        728,
+        1341
+      ],
+      "edge_touch": false,
+      "output_size": [
+        346,
+        921
+      ],
+      "paste_position": [
+        339,
+        52
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

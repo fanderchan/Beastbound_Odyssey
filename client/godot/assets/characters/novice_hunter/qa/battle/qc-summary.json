@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "bundleId": "character_action_novice_hunter_v1",
+  "characterId": "novice_hunter_v1",
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": [
+    "idle",
+    "walk",
+    "attack",
+    "skill",
+    "hurt",
+    "defend",
+    "dodge",
+    "counter",
+    "stagger_return",
+    "knockaway",
+    "down",
+    "revive"
+  ],
+  "totalFrameCount": 180,
+  "sourceFrameCount": 180,
+  "runtimeFrameCount": 180,
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "errors": [],
+  "runtimeMirroring": false,
+  "mirroredFrontBackFrames": [],
+  "koContinuity": "passed",
+  "uiAssets": {
+    "portrait": "ui/portrait.png",
+    "showcase": "ui/showcase.png",
+    "contactSheet": "qa/ui-contact-sheet.png"
+  },
+  "ownerReviewStatus": "owner_review_pending",
+  "actionEvidence": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/front_3quarter_sw/idle/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/idle/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/idle-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/idle.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/walk/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/walk/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/walk-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/walk.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/attack/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/attack/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/attack-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/attack.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/skill/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/skill/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/skill-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/skill.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/front_3quarter_sw/hurt/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/hurt/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/hurt-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/hurt.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/front_3quarter_sw/defend/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/defend/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/defend-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/defend.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/dodge/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/dodge/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/dodge-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/dodge.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/counter/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/counter/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/counter-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/counter.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger_return",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/stagger_return/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/stagger_return/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/stagger_return-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/stagger_return.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/knockaway/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/knockaway/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/knockaway-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/knockaway.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/down/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/down/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/down-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/down.gif"
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/front_3quarter_sw/revive/source-meta.json",
+      "qa": "source/battle/front_3quarter_sw/revive/qa.json",
+      "contactSheet": "qa/battle/actions/front_3quarter_sw/revive-contact.png",
+      "animation": "qa/battle/actions/front_3quarter_sw/revive.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/back_3quarter_ne/idle/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/idle/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/idle-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/idle.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/walk/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/walk/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/walk-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/walk.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/attack/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/attack/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/attack-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/attack.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/skill/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/skill/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/skill-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/skill.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/back_3quarter_ne/hurt/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/hurt/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/hurt-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/hurt.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "frameCount": 6,
+      "sourceMeta": "source/battle/back_3quarter_ne/defend/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/defend/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/defend-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/defend.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/dodge/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/dodge/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/dodge-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/dodge.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/counter/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/counter/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/counter-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/counter.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "stagger_return",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/stagger_return/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/stagger_return/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/stagger_return-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/stagger_return.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/knockaway/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/knockaway/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/knockaway-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/knockaway.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/down/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/down/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/down-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/down.gif"
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "frameCount": 8,
+      "sourceMeta": "source/battle/back_3quarter_ne/revive/source-meta.json",
+      "qa": "source/battle/back_3quarter_ne/revive/qa.json",
+      "contactSheet": "qa/battle/actions/back_3quarter_ne/revive-contact.png",
+      "animation": "qa/battle/actions/back_3quarter_ne/revive.gif"
+    }
+  ]
+}

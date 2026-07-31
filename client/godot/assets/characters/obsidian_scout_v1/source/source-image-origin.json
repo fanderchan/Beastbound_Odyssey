@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "characterId": "obsidian_scout_v1",
+  "createdAt": "2026-08-01",
+  "generator": "OpenAI built-in image generation",
+  "sourceKind": "project_original_ai_assisted",
+  "externalSourceAssetsUsed": false,
+  "identityLock": "identity/identity-lock.md",
+  "ownershipRecord": "identity/source-and-ownership.md",
+  "chromaKey": "#FF00FF",
+  "normalizationPipeline": "/Users/fander/.codex/skills/generate2dsprite/scripts/generate2dsprite.py process",
+  "runtimeDerivation": "tools/build_pet_art_bundle.py::derive_runtime_frame",
+  "runtimeResampleMode": "premultiplied_bilinear",
+  "promptsRoot": "prompts",
+  "rawFiles": {
+    "identity-board-raw.png": "a266009430b9eb3105cfb4651139677e58661b7678a6866e90ae91f41bee553a",
+    "portrait-raw.png": "ac9cbe330bb7a718ee01eda6ef220c0d01ea032a7df271c0c605db64a0759d89",
+    "showcase-raw.png": "6da11b61a442f5c64a5337dea3b9eeab706d0d1ee5176dfc906a4abdec11e24e",
+    "world-south-raw.png": "793fd3fc347f6463c805a4860ea12dffb5c87f78b700def3d92a88dee490a710",
+    "world-southwest-raw.png": "09616f12818eaaf97766edb1dcc0bc6e8a3d476dbd3691d10090729e4edb8b63",
+    "world-west-raw.png": "ae69d0bedc9206e9e54d9523b19cc594c313a70c0ba17902114a074cca2a0656",
+    "world-northwest-raw.png": "9cebc21bc2ab7ac6a11aa0d1a1dcbc23f116a5dcc5030ff9ce0034509f392516",
+    "world-north-raw.png": "f4c11ae7426616158d0fafc9f8250f293324e28ef082a8c34d7e90014f75d765",
+    "world-northeast-raw.png": "0910b2c6f0e654b786fda87fca4009c1fdb52e91ebaef3a3d11dfb59db425921",
+    "world-east-raw.png": "7904a586155441c4ab073294e348ec9b259a852a7a89f25385a9dc67762cfc14",
+    "world-southeast-raw.png": "5723c47016d6d396d21b66f9cde0559ca784e0d1a353e29429c65fdeae0ecd3e",
+    "battle-idle-raw.png": "bfb04744e138f74b90b5b061c9987c5bc887b89c6f13dde4a1dbbf9bdd1916e3",
+    "battle-walk-raw.png": "76299bc95edf15ea72d07408950bddddcce7e8f55edd53d74f53148d0fcc5c96",
+    "battle-attack-raw.png": "f8c97f5be0386fe13dbe8f8f050e50ff9390e1625cb2b605fac4d8e020dfb11a",
+    "battle-skill-raw.png": "3a2e921b3067714d027bc30320ac18854826c2a3c06d51a93072416c56ce2ce3",
+    "battle-hurt-raw.png": "1874841436e677b5a4c295ae3a5ed9eaa6b8830fbdbca6cba82579782a68faa6",
+    "battle-defend-raw.png": "952dd69dcfa35eb7b7ec612c31266ebb2e20a6a4d20cafbcbfbcfb3254e58eca",
+    "battle-dodge-raw.png": "d7dc89e2a7667d7db3097ae7c00f12449e0bfd7608d031c20a0fb678a5652a15",
+    "battle-counter-raw.png": "af5d21aeb41c21a265de500ce7187fea823fd14aa6778921ab1c99495429952c",
+    "battle-stagger_return-raw.png": "92b7255d94907b421a632ccfe2d21b1fdffe981d605b33f93e3b4bfa93cf41c3",
+    "battle-knockaway-raw.png": "7cb7c930e33217a86a402b470ae280bd177188f2b5f5e35448a68219568d58b8",
+    "battle-down-raw.png": "e233321d3f9f23c35dde02a60ac0b56d16c79b085175ee467f708d87d44b09be",
+    "battle-revive-raw.png": "cec85ce0f3e26f7d80a6896cb0a888495f03ce8a53c67a9986c8a965a2485e47"
+  },
+  "intentionalExactDuplicate": {
+    "contract": "down-8_equals_revive-1_decoded_rgba",
+    "reason": "reversible KO handoff",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ]
+  }
+}

@@ -395,6 +395,7 @@
   - 证据（2026-07-25）：项目所有者在核对当前真实逻辑后明确确认陪练小人设计 OK。错误退役提交已由 `62eccc0ca` 完整回退；当前客户端陪练检查证明 0–4 名陪练、人物/出战宠快照、默认选敌、普通攻击、合击与独立经验均保持，Godot parse + `--auto-training-partner-check` 为 `2/2 PASS`。联网服务端定向测试确认正常回合普通攻击，陪练人物仅在自己或配对宠物低于 40% 生命时按既有规则应急治疗，测试 `1/1 PASS`；捕捉回合保护与 GM 随机 10V10 隔离边界不变。本项只纠正路线图产品判断，没有修改运行代码。
 - [x] **P0.8 单账号固定四角色槽与登录后角色入口**
   - 证据（2026-07-31）：服务端新增固定四槽名册、旧单角无损桥接、创建幂等、选角 token 旋转、角色级 receipt scope、战斗写回 fail-closed 和 MySQL 增量槽位表；定向 Node 回归 `438/438`。Godot 正常登录链已接入创建／选择／返回与账号+角色缓存隔离，隔离后端真实 HTTP 检查返回 `register=true entry=true create=true select=true initial=1 created=2 slot=1 sync=ready`。原创 1280×720 角色入口、独立人物头像与六份来源记录齐全；最终 `17.966667s / 539` 帧 `1.00×` H.264/AAC 视频完整解码通过，工程 Design QA 无 P0–P2，项目所有者视觉验收待观看。完整合同见 `docs/phase_378_account_character_slots_and_entry_ui.md`。
+  - Phase379 补全（2026-08-01）：空槽已进入完整创建配置页；新账号四空槽、四原创外观、十点至多双元素及地火／水风禁配由服务端原子校验，旧角色只允许一次免费补配点且未补配前禁止权威战斗。人物元素已进入真实战斗克制；四人物各有独立头像／全身图、真八向世界40帧和双视角十二动作180帧。Node `91/91`、Godot 创建模型／入口／认证客户端／四人物运行硬门、idle／真实移动探针及 `19.466667s / 584` 帧 `1280×720 / 30 FPS / 1.00×` `Main.tscn` 视频均通过；Design QA 无 P0–P2。工程完成，四套主观美术仍为 `owner_review_pending`，完整合同见 `docs/phase_379_character_creation_configuration_and_elements.md`。
 
 ### P1
 

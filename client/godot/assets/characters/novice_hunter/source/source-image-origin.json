@@ -1,21 +1,193 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "characterId": "novice_hunter_v1",
-  "createdAt": "2026-07-18",
   "generator": "OpenAI built-in image generation",
-  "projectOriginal": true,
   "externalSourceAssetsUsed": false,
-  "identityLock": "../identity/identity-lock.md",
-  "promptDirectory": "../prompts",
-  "acceptedRawFiles": [
-    "identity-board-raw.png",
-    "front_3quarter_sw_idle_raw.png",
-    "back_3quarter_ne_idle_raw.png",
-    "front_3quarter_sw_walk_raw.png",
-    "back_3quarter_ne_walk_raw.png",
-    "front_3quarter_sw_ride_idle_raw.png",
-    "back_3quarter_ne_ride_idle_raw.png",
-    "front_3quarter_sw_ride_walk_raw.png",
-    "back_3quarter_ne_ride_walk_raw.png"
-  ]
+  "acceptedSourceCount": 27,
+  "acceptedSources": [
+    {
+      "path": "source/identity-board-raw.png",
+      "kind": "identity_board",
+      "sha256": "2b1fb044a21e20dabb8c78e1dd584282385647ce33d7e7ef728b718fed09c327"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "idle",
+      "sha256": "33937e22907ea755b26141b9b16805140a6e1f27136087d4af66b848b44c397e"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "walk",
+      "sha256": "988ffd6275090803d88f30822d5529fe29dd8b31de4c8b07e8a1f1e598cdda81"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "attack",
+      "sha256": "18369f935245b8b598dbfaeb8e0077916bcdd68a59ae291fbf44f334ed26fe24"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "skill",
+      "sha256": "4db301b9f48cf90dc570ab6e56feace02c0e006834cea6f58e2f574a95fb51e8"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "hurt",
+      "sha256": "934b1f16797246a994375ec753a143dd3dff9a282f45232d5b1039813669e0c5"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "defend",
+      "sha256": "3941c8bb13a4417c12ce6f46df2d59a2e751c57323d22f631e433ccd4c84a996"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "dodge",
+      "sha256": "4f58f804a29130907afffc02cf51c3c7ddb29d059d36639a6781cd533062a337"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "counter",
+      "sha256": "1a534841392b2eb47d908571e849ac45fe5dc866475359934b455ec3ee8ebff9"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "stagger_return",
+      "sha256": "dbf9f26409c73dda7b97916ddcfb1cff6ac37840f756ac7125f5d2b8a23884ba"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "knockaway",
+      "sha256": "39db0af8195670db98f429f130a1d4aeee4feacad276ec3b501d643e17e76087"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "sha256": "2154ba339239996cbea84cd23fac6a10d7df528d837f6b20a5e4ecaad3f4e03e"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "sha256": "6d84839e2e84048229bd40515a695cb24aaa7b5326a2bb5a636da17e20598e9c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "idle",
+      "sha256": "408bb57dc386d271648c9b5ceaaf3feec622293ce92df607bdc19b6ba35d0366"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "walk",
+      "sha256": "50963f3e78430d3d2a316682ccf017d6339fde7db07e6b97d13c76ffd7a7f027"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "attack",
+      "sha256": "e42b0b2d2db0b86254bd6f54924f19fa313689d3c32bca6efcb44c55fdb6e69e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "skill",
+      "sha256": "d83f395799fcb3f5ba2f9c674cfe1371322984a9312d34563f78fc8d5995252c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "hurt",
+      "sha256": "2486e3180c33ed58cf3cb6c346ceb95bfc9bd276c892970f226fd9848acd3689"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "defend",
+      "sha256": "b3adedbeecf6d0764aee33bab7cb328404c810e8340aea8cf13fe8fc9aecb03c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "dodge",
+      "sha256": "8213ffaa8fc434ffcd06c2f512306b84f3ef8c4eeb2a3db0529353f7bb9d2baf"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "counter",
+      "sha256": "ad21c2c7e9035feced80c07d70ee697e478e40c6452577bca5e0eb54e09b24d9"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "stagger_return",
+      "sha256": "bc6979b2f45fe8a3b96f966181f93851f4e78bb16ccc4ec7ad77e93c300fd465"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "knockaway",
+      "sha256": "39f6d3850287a98508064e47657cfce0029c6c8f2fd8f14fde111b054ad8e350"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "sha256": "8de3fcd8a51d374455d72d36f2bd0bc7836a7116836aa98e4a9c04c2bd7cd98f"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/raw-sheet-lossless.png",
+      "kind": "formal_battle_action_raw",
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "sha256": "3da708ab676a4059781933eac36b38ab3bb4ff685f82895b828c07feef25e806"
+    },
+    {
+      "path": "source/ui/portrait-raw.png",
+      "kind": "ui_portrait_raw",
+      "sha256": "77eb78db50bcd41ac91f2b7898536232cc8e693ed4929dd4ffd4ec2b0bf56741"
+    },
+    {
+      "path": "source/ui/showcase-raw.png",
+      "kind": "ui_showcase_raw",
+      "sha256": "669111d2e29d1aaf3ca96dc62120b8955d0c30144371db1f21bb156990fbe460"
+    }
+  ],
+  "ownerReviewStatus": "owner_review_pending"
 }

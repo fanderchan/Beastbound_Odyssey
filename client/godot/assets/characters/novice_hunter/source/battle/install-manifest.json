@@ -1,0 +1,1448 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "character_action_novice_hunter_v1",
+  "totalFrameCount": 180,
+  "entryCount": 360,
+  "entries": [
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-1.png",
+      "sha256": "5f574a9cde9ab537f6e365434f3311b00f9e9a84dbb2b31014f2fdb75aa83a5a"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-2.png",
+      "sha256": "d23c7083dbbb7c8a426781d2ed1bcb451d1f7b56a402a7a0c95070c28d3c238c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-3.png",
+      "sha256": "496c39b32230836615b0af6def778c59ea5d6e49265530154df03870d807c281"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-4.png",
+      "sha256": "3819ffb64d7ec3c00df84a72028d8e6e203089fecd6400ca979bcf5b47d9ef72"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-5.png",
+      "sha256": "ab370f0a151ac00ee59dbe0cdbe89867ab19e01ccac033388074efbba59d994b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-6.png",
+      "sha256": "8dbef6af9b64d0c3729b8cea15b94e4cf2d6c88dfbb959014b64a4f31aefde68"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-7.png",
+      "sha256": "304803037f58188ce8d66b291defe050f19f6c980614bfe2c1c65168e5b035d5"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/attack/source-frames/attack-8.png",
+      "sha256": "8cc12b4c36aa0a1763256c453673dc16481a6706f5e2c8f5a8a6008508dfa3b1"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-1.png",
+      "sha256": "ae212c0df86281fbdc7a7ced2d3aa76f81f3206036cb6af81ca24b8fb8d70b8e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-2.png",
+      "sha256": "a9e01c47b48b4f897f73eeef424b4cc11de3adadbb133422a52c28fcfa9683d0"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-3.png",
+      "sha256": "55041bc408c20177413682f57f0633161a616b4f26e73eef60dcb064b10c181a"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-4.png",
+      "sha256": "97cc507dac9cdafcc9bb7d36a99fcc6793bf89e20622a49f029b4c5c1b2d096e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-5.png",
+      "sha256": "2220de7421186fd1ca860b5c474888080b3a8e022664cdeb6be04898dafdd33c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-6.png",
+      "sha256": "6579795c9a734071643e6e04c79aaaf32a29ca693c34edccb130b06e5c1e1680"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-7.png",
+      "sha256": "8e89c012494edffaed6932153ffad064ffc5304eb4bd49b7edbb5349e3b6c758"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/counter/source-frames/counter-8.png",
+      "sha256": "989b60e78835f724d2989a1fda8cfa89906a393b2c5a5639335c2902a2881c51"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-1.png",
+      "sha256": "26916049171d7cc14c23d8bbe3393f08c3367e329299aaaaeb0896c0c3ce54ea"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-2.png",
+      "sha256": "c8d8e242a67fd1842040da8bdef94d77b5c4ce445729d3983f1dbcdaf2823361"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-3.png",
+      "sha256": "dd8e051fa7ae3e5d1459bfc533cd9ae059fe3d037ede7a6806417c8c984e4ce0"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-4.png",
+      "sha256": "707b325a85735bcbd71d8802718f22d9de3440f84501dea5e57777868ee3804c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-5.png",
+      "sha256": "4c4d6364cde6aae9555fd46275ecae2e8644e539f2e2f566c4a7aedc809014f3"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/defend/source-frames/defend-6.png",
+      "sha256": "a0cd690e0a91a15667ede40d6941d41162848aacc1014dbff766c2480316f212"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-1.png",
+      "sha256": "bf956eb25b5cb90ee9699fe379074e87b1b87b046cf0e5564d665a751d64ab44"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-2.png",
+      "sha256": "68f8e28096fbf98645b724eef39b6e6665363016ed1b1350062db8d9baa0b574"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-3.png",
+      "sha256": "35ae261110ee17e42b67b2632e3406b479b0af63f2d795ad7e2beba02f7d5425"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-4.png",
+      "sha256": "afb25e4a65e505faa3da8d8d540933539b5743d61cf2905e978de384fb51ffb4"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-5.png",
+      "sha256": "30264d982ef9fcade523c8ec3a57b14a233c9fc9beb8820a551a16ea46fab6b8"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-6.png",
+      "sha256": "439286d6c47db9201293681a687a91978ece30fb612d5215c39ce7c0d65217d3"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-7.png",
+      "sha256": "786ae789c964a6cdd76c3d82c1ab560776de85b97f6809756c932f0eecca1b0b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/dodge/source-frames/dodge-8.png",
+      "sha256": "8b0d7f6c705b817bd2178f9d3b74fc9531b3ee144287edae2d10427344fb2ec1"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-1.png",
+      "sha256": "28f6c6abe0963d4ddba7dfc9ec2975b20b785880534f236a88e978fa8c107520"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-2.png",
+      "sha256": "47b1dc3cbb22384b7ffb0edab1a69a18fc505655ac1e8f891991b37ac0886da0"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-3.png",
+      "sha256": "de9da3be75d31eb7bd560684442076c1756561d042a8077337fbd414e84880e9"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-4.png",
+      "sha256": "67ba2d02fd6bdc17d8b5e6448e26a8e59614674b0a92df5a543f431397d0a160"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-5.png",
+      "sha256": "1dcc649b4a4d950d24b89b4a021b0271a1fd42e275e5b82edf377211cacd987e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-6.png",
+      "sha256": "a53b5c1001efe7b8656ad8527cf6c541f4fd792cd683b3ac0704b638196e6f98"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-7.png",
+      "sha256": "c4d21db0c77b3835be08e1db7a26747ae0d0c879082c36d010543a155d6e179e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/down/source-frames/down-8.png",
+      "sha256": "cf0e43d149f2c9496a54c659b8060c2aa2956508537f807c5f7f1a7c7d56514b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-1.png",
+      "sha256": "6d59c23f53b5f9c121b6dc210b3e5de8ee7dab2c4eb969931e7c4a0baaa4c245"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-2.png",
+      "sha256": "b631cdd440eb791ba1945dda84884181f2ed84c607acaeb13ec03ca2a10358ec"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-3.png",
+      "sha256": "b55e717e6e0c5d1c26fa2578d873bcb6463a9aa9a790998943cf1e0253974e18"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-4.png",
+      "sha256": "113eb294cbebd39df375fbeccc494d75fd12511921ea1c66320c5b4ff217b89b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-5.png",
+      "sha256": "fae02d490a954949f5e56228cb7ae66ad734776a12cf5a8aca77dc99ec24c0ae"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/hurt/source-frames/hurt-6.png",
+      "sha256": "1976b8cb529359d17fc51332ee22b0edc36a8c709d796f1c663f7715b4d6d6cd"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-1.png",
+      "sha256": "22201726d80c4668b1ed8f1634448ce97e0912717cbaa384ad0f9a5039f8ff2e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-2.png",
+      "sha256": "803b6e251fcbda03fa30aa620358c9d9e376652df28b3536677692efdc0fd317"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-3.png",
+      "sha256": "02ee6962adc885e0079f7c871e1aacb0a2acc8273727f027e077b8d500467e8b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-4.png",
+      "sha256": "0f105d8fa331c567190c2e386be6e3da11c064a3dd6bb2e532632f30dc2a2260"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-5.png",
+      "sha256": "2da74cf1300856f4dcb8f80f12eab7b9e327c8fd9409d1cef2a8995d202b343e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/idle/source-frames/idle-6.png",
+      "sha256": "64423a0b8c50c4bec764870bd27fee6d3616448409e5ab1c47d00e2aa28ffd19"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-1.png",
+      "sha256": "5da63931e3e15a4e1e49cfcfb2dc4089a71fcec24b85b01946593b5f3244e005"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-2.png",
+      "sha256": "4fcdd0d30726b956ee8d88d8a638da8b41a400ba9d6732086a2d39662684382c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-3.png",
+      "sha256": "30d4746826a58d2d7ca33c7cd3f49ef944ce8749c86045acfcf2ba3bdbb04087"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-4.png",
+      "sha256": "6133ebf524468d782e07f44bc43c6bd6d52744122d39ccdbf5aaf72962f860e2"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-5.png",
+      "sha256": "5b92d064d1cb662ca600a1f4e556083e5db05ed17ce43d54d7290d7036c872d0"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-6.png",
+      "sha256": "f6ff3a502e423d3e4c2e629672c7c225c931f8df5e42f7d95415085095f64ca7"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-7.png",
+      "sha256": "ae8164e1019ec158e67d7a7bddb6520a88ddb44be1ca3883f8d3d664a1d66f59"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/knockaway/source-frames/knockaway-8.png",
+      "sha256": "a06da75e3ea268724ae8e0faae93a73d7b59ffadd9c30eed42e33c22e91a18e3"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-1.png",
+      "sha256": "cf0e43d149f2c9496a54c659b8060c2aa2956508537f807c5f7f1a7c7d56514b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-2.png",
+      "sha256": "f0fb2b7033335b24820a122cc33549072fbeec128b1cb7d1f6c1ed79d953bf88"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-3.png",
+      "sha256": "37efec1d7ef8c156708feb520a5c22a9ee35ebb1485def88d5085202da10244a"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-4.png",
+      "sha256": "fe84510c1112ca882ae93ca27b1ad13c101155c5d6b7db7f48daba8151a01fc8"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-5.png",
+      "sha256": "c80558cd8cbd88da55a08dc1c34f52752f9da26ccab3e642ff72ecafc9948628"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-6.png",
+      "sha256": "6c69e610f53349ecab05c97298af5a2178d4e4935e5fd272ee6ba4e0fb8c39dd"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-7.png",
+      "sha256": "3e59d2ccd0869ed9f90ee38c1459ca599675751f134c52d2e5b24f2c1e28d64b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/revive/source-frames/revive-8.png",
+      "sha256": "fd9b5a0a89602db5c194e4c018c317b2526c2b78a5dc24ed67a9c65e9ca828c6"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-1.png",
+      "sha256": "85b7c1bd41cee7864a99ea2276636c9d4d43b32a46a33b9810c5783dfdb71fa3"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-2.png",
+      "sha256": "013b2f86f0818522305b4f4f00c298f3aa2c9834cf6dedc7ab3a72350680bf3e"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-3.png",
+      "sha256": "548f2e97f50157d2242c4901c1446af67c955131a70dd521d9deb8f33ccbbb91"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-4.png",
+      "sha256": "0bd6081f40bef3a37365b621f8fa49f19e6c8fbd8069066904d33186f6ef1b5a"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-5.png",
+      "sha256": "0d4d4ce07348e80bf254186cfe20718a890f57e5007f5f5e1356c0fc95e51289"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-6.png",
+      "sha256": "d4e860198aeb9622987301d54e247a19980c21dd027891301fffe53130e9f176"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-7.png",
+      "sha256": "248805dd898b3d4631321a8b09d697080595925625391b7bd13421e2efecb741"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/skill/source-frames/skill-8.png",
+      "sha256": "28b822f891eae5d7d355c9708b2c0f758d01d5329a1f882a3e1294106b55b09b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-1.png",
+      "sha256": "eb16c788cef55fe7930895c6508c55269695090f72b8e0a1503cc37a677641e6"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-2.png",
+      "sha256": "0a97af18ed9820fce1c02958548535b3abd0de95b10a8aaba728354cbba9d701"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-3.png",
+      "sha256": "faf35096a53f589beb7e08a6359e06000a0d82294eed94037a5b02a27b6e88c2"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-4.png",
+      "sha256": "a7e15de25364cadb3134f0f3e9361877a0213f25d8b6e30a9ca130c9a81d0b8c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-5.png",
+      "sha256": "f62d28ec918ad81c215ba951915fcb0c528a8553dbc315086b9084eeeaadcc15"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-6.png",
+      "sha256": "4a02b10ebdc29cbbb85bdc4bd821c490faa8078b6feb99de4b49bceb52663852"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-7.png",
+      "sha256": "4f50b8d9c22cf2e4eca425b74c1d2feddd1de57d17aea085c4fd8feec2d13091"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/stagger_return/source-frames/stagger_return-8.png",
+      "sha256": "e1ff8da4272579f36752d2b17e90545de41029ba38df7d6ce9d449ae70ace26f"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-1.png",
+      "sha256": "c69450f5ed0145976b1f1bc7bc042082c570babae9e06e93ee258ee5cfbb036c"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-2.png",
+      "sha256": "d4229d67248bc45146f0b36f4d9eecb243c99d282b8309388bad3548d001683f"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-3.png",
+      "sha256": "32b2bdc0be54c84d01e5929b78f2a253920191e3fa6f185c2eeb0cfb25f635ec"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-4.png",
+      "sha256": "f8ad8d45b4c69416edc1afc6c8aaa66ef2b4ee8ac82f8864d4eb627af6853ed8"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-5.png",
+      "sha256": "dbcc3b6fc3e717a80ed6777d69e56befb6c635e966272ec175baf11d2f448b95"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-6.png",
+      "sha256": "1fb2bd54a4c5fc79d9a195d1a999df1221a7ebbdd25bf09f1b8354ca9f34812b"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-7.png",
+      "sha256": "1e11885b88e567dea975ac409b35e6703306fdd88fdf9dba8251a8f07ca44031"
+    },
+    {
+      "path": "source/battle/back_3quarter_ne/walk/source-frames/walk-8.png",
+      "sha256": "82992895d2bfee3e52644e51745716a00d272be1bdcefb6c188853de8b112619"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-1.png",
+      "sha256": "823adae930727c5477913a122487e6d73c0c4cbf8a7043e03d3b082f89d2a707"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-2.png",
+      "sha256": "9b291941518e08875c4641a8da00ac0aeced966e0bdeb5f9334d7e836258cbbf"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-3.png",
+      "sha256": "86d74e83249a3b9d75e1d8bd9a72676fa55fff82f18ab36db5ef43da45788209"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-4.png",
+      "sha256": "3fabaf232c3f7a4df62aec6005eb96f88f447d32260e3f3b57862a83a540bec9"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-5.png",
+      "sha256": "d664e021704b41c040df843a06767b9fefaae18a7441e3642a09b1f6259c61bf"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-6.png",
+      "sha256": "05f9a1e7067ab65f80083744beea33c744d03866fc56e47f3c5a90a371ac0b64"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-7.png",
+      "sha256": "68b3d0302ebcd26b747b11a5b3ebf5348427a3180c6fd7924f1c8c376e65c79f"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/attack/source-frames/attack-8.png",
+      "sha256": "ff3b4bfd18eb3efb6bfdf28e28992b867d7317025a440875e9fbdc5cf9ae774f"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-1.png",
+      "sha256": "8700336eb1376ae00b3d517af8e0c354a40002ab016593b9fb1910e5735c2b04"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-2.png",
+      "sha256": "4d5918d9f7bc8943fc7174a71dc90d2e2469dd889d9a3be9cc26fde3d067f492"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-3.png",
+      "sha256": "1444521e04a0c1301b93472e6002f6af43f963c17dd3c90a65fd5c98f111a08f"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-4.png",
+      "sha256": "e0f8d7b3e1b745500a85c0e64550047575b1c84f1b558d3ba83173470f122b8a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-5.png",
+      "sha256": "fc446ca48765a54f73ea85478a6f8268d36fc97400950184f3bee8c4576737aa"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-6.png",
+      "sha256": "d0f8e9068b632ad6021a789a87254046ae88093c21b52815e96cd13257a124a7"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-7.png",
+      "sha256": "8328efac08e5ca80ffb6eef6461608466ac5b6bfece85ec339915e12f9c3824e"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/counter/source-frames/counter-8.png",
+      "sha256": "6db1450761094e409ae70becc33da66dfeab1bdceee34d7ab809ad65527ddc83"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-1.png",
+      "sha256": "f8e583f5abf108cf5380e6b0988c9b373a067f83d96eb9ac4f39f5141861e42c"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-2.png",
+      "sha256": "a7424e2dc3b1d0c06eec9cf2a4a4fd423cd9f9a81d9242673cb5fb419defbd45"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-3.png",
+      "sha256": "0a2dac2b8adb13ad08c4873b1178a152027c4a53ed719bce92e5edb1ede98a5d"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-4.png",
+      "sha256": "5bd0af7f80f1e888e84a7620c75e642aac27e79d88d52d5f557cfdc62c772323"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-5.png",
+      "sha256": "33c4c5f0e9155f5bf6d75fc7605836e127a25023d9a2ca817873d1bd9a705515"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/defend/source-frames/defend-6.png",
+      "sha256": "fdf0fc43c7672f591fe62d181ece8fd94a4e3da9a64f002cedb4d45ac82c3110"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-1.png",
+      "sha256": "4ce38cb59b061832ff5485b9ab4818d8081227a11e38b2e4e40728e3264ba585"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-2.png",
+      "sha256": "11bc66292ffe64c965088aa9a3753bac24697cd248afa82ce3395ec6a3ae7a03"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-3.png",
+      "sha256": "3d41041e69ca5e1d9b34993cbe1dab441c1303aada2775d664a46fb05bbb62a6"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-4.png",
+      "sha256": "d4b4485c4c474f95b2c74c2457d98517808ded88a5e1ee4f82bc21422fdfff93"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-5.png",
+      "sha256": "5664d73e7b8ff15d0a9d95305fd0b8c1d790f6d2cecc06bc49c52c3724f0b3f5"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-6.png",
+      "sha256": "8b05b3bbce5d0c98c7396f35ba7c34ffd56eb10b53e07d5fed16f81acd4312a2"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-7.png",
+      "sha256": "25771194c3b407b500c6a4bd3abcfaf93c2b812c086803582d90f8bda1bd6112"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/dodge/source-frames/dodge-8.png",
+      "sha256": "aa25c0e39484a804dfd649c268218699453be571cb5ac83fc64c3f59ec9ddb6b"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-1.png",
+      "sha256": "293e6b8bd4d753c5b71a18a12694b112bc1c47e2760ffa8aeb9f56cfca3164a9"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-2.png",
+      "sha256": "fe030543e165e254db9d958f7c092f167b11e54d85668c53dde7058bbd8782ee"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-3.png",
+      "sha256": "97e3261aced644c849cfc385a715a08f6c53379e534fcf5fb5d56214392e0e3a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-4.png",
+      "sha256": "cb03e4f0a34c609de32b6afb86d2d9e93b72de07ed1e7660b87e818337e5285c"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-5.png",
+      "sha256": "3d76fc7ac7e64b28d9bc9b58db6ac143089a35f28806b084d32ef2c774cf6683"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-6.png",
+      "sha256": "3f448aa9afe56c4f198c2b3f18b3b211a19c620bd7cbd95a501ac30b87c4b5e2"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-7.png",
+      "sha256": "8fe55adaa5141ed840c8c623886f55c22b18306e023b77428b783df96253c3fc"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/down/source-frames/down-8.png",
+      "sha256": "f8535574a292af66093277020bb8051449c7e939896f2e30eb83034ec688ae53"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-1.png",
+      "sha256": "c0bc49dead82522bed4c9d904c94e312b1ec823738fa78683e2f08afb62c4bd0"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-2.png",
+      "sha256": "b6b8f3608215fa38b408c85df714f01f55a6346b60a13174a415289f8de28750"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-3.png",
+      "sha256": "e8c40445bcde0718c5fd460facdca48b91a19886b95070f300c4d62c1a9503c6"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-4.png",
+      "sha256": "b51b3f91b0a5850924b7a06e6fc02685b766bc4801b939d000a8d3765fdfb46e"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-5.png",
+      "sha256": "c6a7f1268f0e817e75f93bdcd9a6f4e189ceef71152d7f4d8f6df8e8fe04261a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/hurt/source-frames/hurt-6.png",
+      "sha256": "1869f8faf759a188dcf8e223c27fbd1585cc15f55ddf42c7e46037d563b7ca65"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-1.png",
+      "sha256": "df068809942fae25d81c5c58f0ba5271040b8542d9ad767cff267f7cd2e31fc7"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-2.png",
+      "sha256": "315f061a2fd9d74776b5a4f38000ca9279cbeb6be82a5aa87c7bb88d187d7c7b"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-3.png",
+      "sha256": "84acbdcbf2e6f3d2ce995d1dbf8f62ca0d51fd4b9c9f6dd3f7f08ada9077d6a5"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-4.png",
+      "sha256": "9785a2bae3738cc41ade0c56856ff203c8a7bc473410b19022a4155aab9604ac"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-5.png",
+      "sha256": "3b1d68889e787ffbf365751dd5c2494b27badb905e39bb8ae2bf3e910100368a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/idle/source-frames/idle-6.png",
+      "sha256": "ce3f3fc08e10d79e44c5f2261695f57afdcfca5f81652c954e2c291cac323c29"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-1.png",
+      "sha256": "5072d1fe7b3739f84b5aa033ca0659f26f4a31c64f37f8dbc5429543e3b7c42a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-2.png",
+      "sha256": "037fc11827cf2047f46991e00d7f3f116bc34c751fc07f9fbb39883e09b3958a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-3.png",
+      "sha256": "ac70939121dbba28711c55ba41614d72ac5a716ceb891c913f441d2fec5b8f14"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-4.png",
+      "sha256": "18cefb6aa49bed233e7e2fe922ee958aa715dd42c21dfdfc500e1e23b6b5d44d"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-5.png",
+      "sha256": "a2e605999a7714cd524eabca9404758641aa2814746b1feb706d03514e97ffb3"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-6.png",
+      "sha256": "3fb7bc3a9af16093ec211547e587a5a2731d5ac490b3192e020175e175779c45"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-7.png",
+      "sha256": "4ea8af16505d8f0fe39eb9cfa74a0808dcddc5af3da9aaa2fbe93d177f506d59"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/knockaway/source-frames/knockaway-8.png",
+      "sha256": "a4aadd39b384c52d6c36b690c34f2da4620969f1260fc935e9b2f8c1c1003988"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-1.png",
+      "sha256": "f8535574a292af66093277020bb8051449c7e939896f2e30eb83034ec688ae53"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-2.png",
+      "sha256": "1903a132468cffa580045f575d1821258114f4b52922f9a9f1cd746e3e89a181"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-3.png",
+      "sha256": "aca4dd328d81b949d77ee49ba788b823c9be4c5f0afc228d538e51dccbcaec3b"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-4.png",
+      "sha256": "dac06c7f57621e54bcd69501b5947abf578086e640474492f798db9861f63a31"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-5.png",
+      "sha256": "b225d07c70a86f74a013df8ce9b04d7a3f8757f4298eec7f47d6efadfc755a1a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-6.png",
+      "sha256": "df8191c9d693cc8dc25a813ba941e5d4b255d4938588bc35efb73c12642d62d4"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-7.png",
+      "sha256": "f73c6e0b59ecafccb03badb455abb93b2b2fbd2fcd8c8dedcc4bc00932faff59"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/revive/source-frames/revive-8.png",
+      "sha256": "da90e1b5e7a5f9cc2ffc1afaa4c0107209a888dff7f927352783cb5337b031f2"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-1.png",
+      "sha256": "eb741379503b8160b794ee1768f606dee8471aafd57bff0b16a397343e2d8eae"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-2.png",
+      "sha256": "15a6606d1bb4d8d698bf892421a1bcc602034753b97a32153cda6f4beb8b3df0"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-3.png",
+      "sha256": "c2d619ac48d551c4083d900e43aa006fb9f784ebaa563af239668f7c360e24e1"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-4.png",
+      "sha256": "b1f77cddf3c1083dc9a8e0e6f02f0c6251aec7e7621f617a8396658882eaa2ce"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-5.png",
+      "sha256": "e7ad841269cbb19e0548e662d34e7be79d795acd0c4bd236bc7d1ce9d2bafc42"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-6.png",
+      "sha256": "5acb6f59a4ffa0263c9a34515953bafbf1424889d48f192039e68a26ee60cbf7"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-7.png",
+      "sha256": "8728a8c6193cdc1cf6b3e9b68097075c4ba639c1336f7a5c01d5d0deecf32ba2"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/skill/source-frames/skill-8.png",
+      "sha256": "bce05d3e2fcacee929013c34bd3b01c2620ee0071218d1450ea3e7a47e09752a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-1.png",
+      "sha256": "71015d2827cbefd644777ccb8d40980430b558011e209d5e88f79c84b71408b1"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-2.png",
+      "sha256": "8d28aeae732a5438980705c1f4ba84eec41208ae3af74f1dc6ce4bf6d5636994"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-3.png",
+      "sha256": "dc227c3937a1b5e840e026fabc10310805d0cc8e1f3bedb67334ca53d4513a7d"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-4.png",
+      "sha256": "51e3d0499c6ba6967c99c57a895b176cad88a49feb42aa4f7b77fa353f05831a"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-5.png",
+      "sha256": "4f54f7f1f685dbfa658fe584784661e235030c97a4023afa67285473ac5ff019"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-6.png",
+      "sha256": "7a32280d427ceca66c5b4855af9b1acfac155af10f19d89070d9273ca1199a6d"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-7.png",
+      "sha256": "b576ffb7f4b34f9b606bb73d59e148fd5594487fcb2687e55efa90095e81fda0"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/stagger_return/source-frames/stagger_return-8.png",
+      "sha256": "d5b46f6119a3d6000cb151baad7ce28dda487222b5ec49a75347cb6399234344"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-1.png",
+      "sha256": "5ba5bdbb47a14d922694ccda95ad08020904311c5f68f8da86905deb1daf77d8"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-2.png",
+      "sha256": "df3992104ba21336034305ab1b5ea0acaf92aecbb7a71ba9f411704796ec2f75"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-3.png",
+      "sha256": "615960383581b61b6e17351f8293bac5208e7285298cb9a29eabb6c6a6ea3418"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-4.png",
+      "sha256": "ff96aa18c5dd942819cf7cabe97196858b2f3bb3b7fcb5ef332028d7654c951c"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-5.png",
+      "sha256": "e229614d2b1b33bda5cb6df228ae37ba97a0579e9e793833fca10fb5f1f7c1ac"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-6.png",
+      "sha256": "60e2484f787050ae100633042fc16c0bc81b08bc524f35cf382d2f6c18104142"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-7.png",
+      "sha256": "ac00cf700e07e1226c1ede520bfd447dbda17e1ac9b73e36b20d46fe98f8177c"
+    },
+    {
+      "path": "source/battle/front_3quarter_sw/walk/source-frames/walk-8.png",
+      "sha256": "5e47dd45c817538d7be9fe9e7d81ea40d0312ca58452a238d0c623076a41154a"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-1.png",
+      "sha256": "ae078d954051e6fd8ab91c1beedbeaa83919f44059a2ec595650db9b60ef620b"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-2.png",
+      "sha256": "79f2e7e045840c7b69d79b33f5a9d4c4e0af84da0dd1e93da41a4b32f65da85d"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-3.png",
+      "sha256": "b15c61a8c1e6da391bea6fde7cd8b2b94e430396bb50e0c8989fc47ad4b72fb0"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-4.png",
+      "sha256": "ae7fd0b31c3e1cd3bfade4428829ba80f2346248d2f316fc20cd491e3729d0bd"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-5.png",
+      "sha256": "5e5399cdb9bb633375591106aad877cffcf52b134142d32b1388f72db9576917"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-6.png",
+      "sha256": "515e5617bfedddb8502b5f7447164f711b41d64f29903c7deb3e824a455f502b"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-7.png",
+      "sha256": "bb9607110e495d1e4824241d53efe78b48f4c6234a1384a7b0fa00b467e6aa9b"
+    },
+    {
+      "path": "views/back_3quarter_ne/attack/attack-8.png",
+      "sha256": "cb196ff9c0704419ed18c23088eb402b26a16137afa1dee22baed262ef210448"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-1.png",
+      "sha256": "0ec44076f12fee4b67cc2942123fe4cccbe1164ad60c49a04e1fdfd6d35d0b32"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-2.png",
+      "sha256": "38212966c7a641e72a448a3d172bc56c4280862ea06be42279735872b4b3d3c4"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-3.png",
+      "sha256": "87cae8e748b930160e1506e84728afc4b9c0abe10f355396948e8fad576dd1c8"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-4.png",
+      "sha256": "e51c81336ddaf49ecb1f97d8ff4ecfd294ef6c27ec1992e6a8816f412074c142"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-5.png",
+      "sha256": "2af1adcad2743324f09f3a5191dc7e427a0a47452ea6e1b8d27897f8bd4e498c"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-6.png",
+      "sha256": "e05803c0b780542aa5b7b275053ca72f3247142572afd44fc0c96156fb5d244a"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-7.png",
+      "sha256": "5c2241e99e156d3c6be17adbbc42104d8604ee3d50b7b08378f0394466c004a5"
+    },
+    {
+      "path": "views/back_3quarter_ne/counter/counter-8.png",
+      "sha256": "b795bff027de1c3b173e06f6f8dfd70ebef8ebebe6d0281678a541c78759c892"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-1.png",
+      "sha256": "55c1293c8baa8ac8ace2e4325c239b40745abed3a824ccef515b2f6a720ca0ac"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-2.png",
+      "sha256": "94a682a4ac512e35191b9e3f47970c1b4318ef38bac7b1897ed0c3664854b709"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-3.png",
+      "sha256": "7b6d47ce4757b0130873315459a8cd6950a0974825b490718df9fe54fc49828b"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-4.png",
+      "sha256": "473811f1506f8a77b4ef0a2216e18c61e16debe535a22e64d3f7d9edd60a2f89"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-5.png",
+      "sha256": "4ede8c89707b358b85c378851927752df42a16052a58d6df4d21ee17f2a6cab3"
+    },
+    {
+      "path": "views/back_3quarter_ne/defend/defend-6.png",
+      "sha256": "ea82dbb3298b28b10a45968ce3d45433f1187c26b9d6eeb2179d4601e5101642"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-1.png",
+      "sha256": "0ee8ffd59c2e7016bd3d82d00e8b27612db47ab1d87349e416139ca127e65e3d"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-2.png",
+      "sha256": "76535f7a38b34acb8c8488ccc8270c6604e605d9fa77c8c6030bfd13830e83ce"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-3.png",
+      "sha256": "c29ef5d13cf41c96526e5760e2c1135e26463994ee22ea8fab7c0cfc5c52e65f"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-4.png",
+      "sha256": "57e7d7fc19fdee3691a3ccbcc5e9a2e77d967a0af63bdb7785a603b10c7d19ce"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-5.png",
+      "sha256": "e10a8f7cc18366bfefa5e9db64948ba1b571d5b5ad3adc1f34965226935c6474"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-6.png",
+      "sha256": "a899a6083f1e23564077b4a2b4e69eb8cc9226cf9bef8cfb2e5eb7aa465d3739"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-7.png",
+      "sha256": "fff832ac22af4ebbf7b4fef175b246a16ae119ad48f9d8402aa46cc78644a669"
+    },
+    {
+      "path": "views/back_3quarter_ne/dodge/dodge-8.png",
+      "sha256": "d6e6b3faba7cc6fda555df9ad11825c59b9d6e9a28d92cd58aaa4d28748f8472"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-1.png",
+      "sha256": "37490c9fb90b56bdef7e42dada6809da39a411d8def9af39916acf079466db16"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-2.png",
+      "sha256": "89d5a1cc4a4a05f92ec738796a9ea3ea6243e3db8bebd0f9d9e766cf2df43dc1"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-3.png",
+      "sha256": "f3d4ef0b99eeb50776af59c9628c14b5b9197bc1c791077944da6b5d4a528bec"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-4.png",
+      "sha256": "4ae8d7b89a2ccf0346ecee617137a9fc7df77eb5a41223f7d21bbc76ba6d035e"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-5.png",
+      "sha256": "fdec14ee79a161d5362b57ad0f7490fe78ef20b143419f8c207117cde7e9dc28"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-6.png",
+      "sha256": "6caf0704f37ba0bec60280d9a0cc36c73d4f148d5eeeebe51cac9c93d82ed928"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-7.png",
+      "sha256": "336bc200120bf4ba96dea8aedae3be1fdfb7a85f0c2ec03516556807d86cd8cc"
+    },
+    {
+      "path": "views/back_3quarter_ne/down/down-8.png",
+      "sha256": "3c828cd817062d8c994fef192885cf58138805f8917923d0cc6bb9f2eb39511d"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-1.png",
+      "sha256": "1e3741ff40715c92ce3ad4d402fa0b16099b4cd5ff160da33fb8fcf09e1aed96"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-2.png",
+      "sha256": "5fa50bb79adb4e2c3b1ad4cf06fc1fde78f7dd68e97b4f9c5af6d63a8566733a"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-3.png",
+      "sha256": "a390d25812df99bc055fb9588dec0d6c95d342ec80dfd4d86045c7767c528829"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-4.png",
+      "sha256": "ca3dfc6960b4c370f5d6ad38e3567591c669c11a48dc7abbbe2571f16757379c"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-5.png",
+      "sha256": "647716faa5689b687ccfc28efaf0fdbd7bf925a259f0343d411f7c7992104d59"
+    },
+    {
+      "path": "views/back_3quarter_ne/hurt/hurt-6.png",
+      "sha256": "94aaa2ab04f5d4fb527c77889abe3ba19616b8381d5db35afac68675ad2d0489"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-1.png",
+      "sha256": "59b2aaabba9c5e046bec0d65d175c28739c0b15d137bf28840e355cb8d80466f"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-2.png",
+      "sha256": "097e457835c6daa0bd2f3b09fe52fa7d3809971403f3c1927716557a6bd14663"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-3.png",
+      "sha256": "7575db67d4e7800daf12188d8519bb6430e5debff6d15bc8395c19b350247ba0"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-4.png",
+      "sha256": "cfcbd0dc6a344639b9fcb441456fd0393e0ac16935c97d445de7788af84ced27"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-5.png",
+      "sha256": "e788c436dabfd2ed16c416c94445a2382f27984b6f70aad6ede975087c186ad6"
+    },
+    {
+      "path": "views/back_3quarter_ne/idle/idle-6.png",
+      "sha256": "b3000c989365ad694609e20c25956660b685325b55e02f11975878b2782717af"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-1.png",
+      "sha256": "7b207804c4afc65a23efe493706fc7c14a927be4755fb7eb10479e57ea6ef797"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-2.png",
+      "sha256": "9244063d733745ac462ad984cf11f8b08bbda203eaf670f1a89f653dfbd4457f"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-3.png",
+      "sha256": "43a78f0a6af481460c145c0390319d2af2672f9bc9286289cdac1912685ac4c8"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-4.png",
+      "sha256": "c7452684e05a0bbd3fa6b6a7e0150ff8ddc9c1d5cf7e219134d894571837f387"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-5.png",
+      "sha256": "f3b72a3137ff25901ba62352a195c60130a4d66a37f9df0b4d0f42cd579dffa1"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-6.png",
+      "sha256": "281822596b642cbc56ca552c3dd46fb76636d2a08dd4a293a5fc972b17138085"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-7.png",
+      "sha256": "bbc54114bf8af17d71c951221690bf21fd5ce176547178381d82adae482c576f"
+    },
+    {
+      "path": "views/back_3quarter_ne/knockaway/knockaway-8.png",
+      "sha256": "a34662407b524e7340ce492f17bd817670b791cd26ef1ce1543424c3df96495c"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-1.png",
+      "sha256": "3c828cd817062d8c994fef192885cf58138805f8917923d0cc6bb9f2eb39511d"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-2.png",
+      "sha256": "217ddb358f722d205c7f37a2e3961114607a02307da46e761932e1f61a1871d0"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-3.png",
+      "sha256": "fc919eb2f52a5e0469ebec2640b09d15ee480745717b3e8ae8afb8534bc9cf01"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-4.png",
+      "sha256": "4a4d5410a3ebca735544217a2e4ce7e3de7753fcfab0c91510048a9fb7f35f94"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-5.png",
+      "sha256": "9af178a370969d1b46eeab6ffc2fa3965945925824a0e518404e06d6b2bd9336"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-6.png",
+      "sha256": "13f63c2bc7070bd40af9ccafd43f2f65edfadf3cd711b01884c2da48d26db813"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-7.png",
+      "sha256": "c8d3833e70be5398009f3ff17997cce04f4333da41099779676a8720ade4c1a6"
+    },
+    {
+      "path": "views/back_3quarter_ne/revive/revive-8.png",
+      "sha256": "87eafd4b74cc4f20036d0fdec4ab91cd4f8320c191074d46fb84987459306617"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-1.png",
+      "sha256": "9305976d551bfc7a6a0ef50fb4c0db9c9f8e637fcb82789758e20e4e3ab45964"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-2.png",
+      "sha256": "c26719a524616743c83e9ea8c42d84086b8c7f59778619680b964e537619fd6c"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-3.png",
+      "sha256": "eec9c4bc522c477dbac7d057f1cc0451149a31ae2de53ea14dfa5cb6ef0fe314"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-4.png",
+      "sha256": "dc18f2a433d861323d5b1dbaa4510ab00459b88c5699ad5a7f37ec087347d958"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-5.png",
+      "sha256": "3306e17468b9f5bb5b2ce2da52ca45335340f9902936f667020e3f2c2b469800"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-6.png",
+      "sha256": "ac7b97d8c4849a287fc165914933f2f680fb6da091d29d158fe908c44eedb1f6"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-7.png",
+      "sha256": "df5c17058b1b8d918c1f8c98a072b7f2309aca592d924106b00cae312ca2337f"
+    },
+    {
+      "path": "views/back_3quarter_ne/skill/skill-8.png",
+      "sha256": "9ef0fa250ac789ac353eae052b147dfcf9cc3c342eea9ce0c62bf6463eb207b5"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-1.png",
+      "sha256": "786e22a98ad8cc58ec00f7b93f4d149a14431363af86bbc69699e68f99ea9ffd"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-2.png",
+      "sha256": "be41bc12e2f261bd1d4b9d0a3e22ee2df91de1df24a61c8a9d619a2112183628"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-3.png",
+      "sha256": "8fea1fee6d07c38c118f25c3045c91cf06469fe8e7844eff30effcde84852ff3"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-4.png",
+      "sha256": "3369c88addba5c86c97cd2e5803c725062173ec75fcb09545b8a9cb1b598845b"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-5.png",
+      "sha256": "c3daa403c27af2fd1f5d27e1a3290a563b23dcd8f46c77849e522489fa1bf99a"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-6.png",
+      "sha256": "4744f859aa16f80ccdb351a0bfce4942a864af80b5c6947cc9a63719b19428a7"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-7.png",
+      "sha256": "84130fd74b54209ea36cd654e4a15babeecebc7c4f5061641e6023d95e53a7a0"
+    },
+    {
+      "path": "views/back_3quarter_ne/stagger_return/stagger_return-8.png",
+      "sha256": "8accc224a6e890c91fee62c66b9c3214d416e36255eb096f2b2f415cb2baaba6"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-1.png",
+      "sha256": "6285e548c40137ee1879baab88ec55b20107455ca1c14311d3f675fd8b3963bf"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-2.png",
+      "sha256": "1ee594d723e08e04ff0a6d89aa7ae372ae4ff24184f3b8c945dcda05f62c1ddb"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-3.png",
+      "sha256": "96107b6dbd49313a2aef36fbc3fc69ac51eb896b3d4b394987da7c4b578049f8"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-4.png",
+      "sha256": "a569009d030fbed645517b14094dae53ae928186a19142a31e41e0f441d24dee"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-5.png",
+      "sha256": "b8456e29e1078ba39a4b2f422eec3870d6e15fa30d5599f76408cbd4830ad28f"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-6.png",
+      "sha256": "72a412b46a2c25a5c921716fcf1501291073a2a4392270a630ad8ce0aebff208"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-7.png",
+      "sha256": "96a65f3ddcad2f31e2fda67677839551d80a6e169d0a3ceaee1f4a672d3265f0"
+    },
+    {
+      "path": "views/back_3quarter_ne/walk/walk-8.png",
+      "sha256": "5f2368c1cd90b3cc50420893d0dde0ef85c9f575fb7e2f8301efc0829c25a801"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-1.png",
+      "sha256": "73f4cd478ec42578484af27669571222685d7233d5766ea6118d2482f323f7a5"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-2.png",
+      "sha256": "459dcaafa5b8fb45157d027cf0e4c8cb8bf73615efcb921fab81f57b55117244"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-3.png",
+      "sha256": "3616766e1af94be41f8c4b41a89efcf4a9630988d2b917cbe7bd45044359dbcb"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-4.png",
+      "sha256": "9eff4118f8d7641795152106947219b733f486cf6f9b2b5644398d30c34503b6"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-5.png",
+      "sha256": "01a78ffbc56029a6b1fd5c236c8cc46106c4efd52b1c63b0e2c6977918d9467d"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-6.png",
+      "sha256": "e9c3851ddb9d9f272891e0691a049693f5ed91bfa3e26965ec52ce1364634be2"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-7.png",
+      "sha256": "02ca6441bcb3d2c1045b4c3808ded1a34a21a73cd06b0a5fdf232e35f4e79876"
+    },
+    {
+      "path": "views/front_3quarter_sw/attack/attack-8.png",
+      "sha256": "c8e410a6e45d5eab82ad54fcaf45d3ce58fb0c8f308769f42d8d3981b3a9a02e"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-1.png",
+      "sha256": "a39deaabb83b5980dfdca04debd3cd6bc20b56b3165f5c7e38d10bee001d1258"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-2.png",
+      "sha256": "031ada8d3534347f9c75f660ae87adb5a74dff9d37a12473fe77fea476abb654"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-3.png",
+      "sha256": "80d62faad394642a34560d544e2edfae227a35aa2001ea1c00a6cefbaa28eb06"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-4.png",
+      "sha256": "331c16d4f0cf48619bba99891548b9cdddab763791792236e3918d468b30db92"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-5.png",
+      "sha256": "81d82591c2718aeb3f76d2342682cee09d0cd4ec26a0b2414917ed3f5e48a08e"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-6.png",
+      "sha256": "2c89e6a618a23f14de6e4b7e1cfe6d8df933b913230157d082b19d7710e26413"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-7.png",
+      "sha256": "9ed89b2b3b454fdf07857582f7085c451a1bccbe7c1562ec50090f59cd9fc172"
+    },
+    {
+      "path": "views/front_3quarter_sw/counter/counter-8.png",
+      "sha256": "36cb9ebcd5820b9d1f0d2df67b44e9640fe9f4d9a45b247ff57a18b5e82f0341"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-1.png",
+      "sha256": "2a8ebededb0b33db00432a6985993929668390ad51effc62ea447c7065306a2a"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-2.png",
+      "sha256": "b85abb1e3a331f879423dc0bbbf76cacba4eef253a9989e7257407c953f6082e"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-3.png",
+      "sha256": "96e370f73080492aea99f7854fb2c6332d2ca585fc2e9c67a1d8f9d67eacbefd"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-4.png",
+      "sha256": "adadacb46c83100eec5ea470b32f22466e35a1715601a2b09415cd8984804632"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-5.png",
+      "sha256": "6b46702a59c40d8a368b402b519a43a1ddf60d818be2932b0b4114315b732d37"
+    },
+    {
+      "path": "views/front_3quarter_sw/defend/defend-6.png",
+      "sha256": "0d26fa42fb8f23331594213d57cdd7e132844d16902acb002ff425444b5898c7"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-1.png",
+      "sha256": "457ff6442e81030328de72c478dba5b158f2650dbd0c755c9093e22a0b7bbc1d"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-2.png",
+      "sha256": "0644f8cff3849bf0816892b7e66a49b9d4f81151c43501ef072f9ec14d9ed839"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-3.png",
+      "sha256": "6973d9979f858a0ea400474e1c41ac27d72d65d50be6c2ee07e67a75aaa87b4c"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-4.png",
+      "sha256": "94d8ecbf027f788f50310d77ed944ec069e90bc76b075dbb3fd0adaad350e09e"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-5.png",
+      "sha256": "618bca421baed4da7ecc03b5dcaf064c21274a7c9036e394c22be8eac7d559ac"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-6.png",
+      "sha256": "e2ed1feb4dae5186cc6da9d05c8afb3c414dcdc9834ba6c674d384b39667b6ca"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-7.png",
+      "sha256": "e2c6b0704954d32e56d500918ae54b95eac6505c040ca4c4893ba2664491fe6d"
+    },
+    {
+      "path": "views/front_3quarter_sw/dodge/dodge-8.png",
+      "sha256": "aa1fdfe4b34bd903ada26d750a3a15e01a886171c88aa22052ef941a9dfa7b7d"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-1.png",
+      "sha256": "b70cb55e83fb3bd69c17459f1529d734f36d2acd2f504112399f863181af9a8d"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-2.png",
+      "sha256": "49f3eb656894788790bc6f1da1e48e4f2f0edb5778803a30f32d5d5a98ecd39f"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-3.png",
+      "sha256": "5ecd8cf08e16b19ee10159399f8ebfee1b0e0265a564b556526519817c6b0bc8"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-4.png",
+      "sha256": "0042d68a7443963323fb10d0c10e06686ddfbb98491d9114269cd5aeb302f947"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-5.png",
+      "sha256": "78762e09b1fc52a0ee76884410288d0e9ac300587cd545546027bbfa69909a1f"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-6.png",
+      "sha256": "0680c8f831d8d6a52b7843d258ec139a5df0a85f543563b0629cb86c487a1524"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-7.png",
+      "sha256": "3d4619acf1c4eb35f6021a9dd15b4d1391e7360a11b8343911da76b25a70e4e0"
+    },
+    {
+      "path": "views/front_3quarter_sw/down/down-8.png",
+      "sha256": "682ad40f64b12f63a9d7ba34ad799485e85a571db02d1f7fb7b923869f26421f"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-1.png",
+      "sha256": "af577681aeac864c4283ba5e9f4c3e4bd6ed360ed2e1c0f4669a277f7a258252"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-2.png",
+      "sha256": "d84a829057706d70140f0cfaff5765a089e70324dc9419abff44ffadae7823cf"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-3.png",
+      "sha256": "0f29cc8843bd037538eea178ef9c4469bf0f8ac772e173ff7a070b7fca24ef4a"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-4.png",
+      "sha256": "72c29a6291ffb05b4c7142fb19b288b17b3c90dc6bc01f9f7071a4c1c10fe070"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-5.png",
+      "sha256": "3e7182fa284514f2c24a548fc173e0df96ce228a78009ee27efc96bb84247d81"
+    },
+    {
+      "path": "views/front_3quarter_sw/hurt/hurt-6.png",
+      "sha256": "41b979ecb39a5d69bf79defd781dadae78ca487bb675d650e2f40e5a5590f89c"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-1.png",
+      "sha256": "ed071d31d3a216401fe74d7a8db7745aae1cd6e427e6a2b7cb9da7b346e9a22c"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-2.png",
+      "sha256": "498953e67144153adb4d6afa594f2e97da87388050f6d303f31b1fee90e4dd60"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-3.png",
+      "sha256": "b81e616f1f4995fbc4111bc28d4679afa3ea376b01b78576bee058d926f4ef1b"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-4.png",
+      "sha256": "4d6961acf3a5cc8c3f50aac2e189900c5b3a29775218f778ab98421bf79ef192"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-5.png",
+      "sha256": "249df00be42aa4f73bb6bf32adc5a29e4df0b44f488f11d176f09974ae8325e5"
+    },
+    {
+      "path": "views/front_3quarter_sw/idle/idle-6.png",
+      "sha256": "21b2bf990301746e8c360c7191825c1252ce754cbcd9d47f5dd99009759dc4ad"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-1.png",
+      "sha256": "02b839667120d2f615913b09bca88a2c35bba992ef89e10319bad7f785ea6e61"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-2.png",
+      "sha256": "6cbfc0fd7ef20016e7608eab5c436878f7a08aeeedfaa5ab76190615d193eb95"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-3.png",
+      "sha256": "3609b9a14354939ce5299df5356fa9d0fc1858d25f72f9a8e8b5011638565e0c"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-4.png",
+      "sha256": "681586c3545df7339b0f90a98044351588d5692ec62114cbf170d5784fd3557e"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-5.png",
+      "sha256": "9522ca5e1bda20fb38a9f1d866c6b644907ac977efbcda085b16d79b7e4f4418"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-6.png",
+      "sha256": "dc5533ebe175ab38e4ad830d38e8b2bd9f0bdfbe2a08bbaef173d5ccb467eeb6"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-7.png",
+      "sha256": "3d689ada3ddf4ca785d39fac98527c7fe7f06d90ffa033636852817932bc340d"
+    },
+    {
+      "path": "views/front_3quarter_sw/knockaway/knockaway-8.png",
+      "sha256": "b6be46af1e3f35359e86ea2c83bb8bc434c49b47d0ef762e27e73f4139233a61"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-1.png",
+      "sha256": "682ad40f64b12f63a9d7ba34ad799485e85a571db02d1f7fb7b923869f26421f"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-2.png",
+      "sha256": "7edbfa5126aef5ccf1f1889db799b9884f8e535a2c81d8e4b49615b5e63e6b5c"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-3.png",
+      "sha256": "5e15302bc1c824b65bfac9d1915afbba056539fd97936c1fa99cb54ac1187ca1"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-4.png",
+      "sha256": "55de766481551ba697edc9f20676cd4a3f72b8d2b29b2ea8aee90a09e6b98e5f"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-5.png",
+      "sha256": "cbcf7b6c02e09a8fdcd5d541ace57839e296847546f0e2d7a029931557e7b5fe"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-6.png",
+      "sha256": "dce113135d46dbd31a6aa1af1c46c12d94ee1709594191b0535a9568d1e7965b"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-7.png",
+      "sha256": "522ec188d98a31ab988f1a081b1bedfd3accab755b1fb655fed05f438a9c42a1"
+    },
+    {
+      "path": "views/front_3quarter_sw/revive/revive-8.png",
+      "sha256": "a2157914f5a9e10eebfb86ba394e58cccacfa8811c934749318ef32c181f2e20"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-1.png",
+      "sha256": "2d46609959992e9cab4e93747beea3dab015c9ecdc893b1d75cc8018ae6465ba"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-2.png",
+      "sha256": "e0ed75336efabb8831983eb70f8055ec9db94f23d17e119e8281a2685ff101f3"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-3.png",
+      "sha256": "d2cd33677cf99e02bb209bcc84a02bbb103abf8ddfc4d3a955b76c41f3fd2720"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-4.png",
+      "sha256": "08c06d0d37d80ea67a8f4f75a2884ae5ae96d02ffc78104cc7914e8f952ef858"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-5.png",
+      "sha256": "b4bbc36879a00fbba119f76eabd576adc6e6013c99ae8fc032025b334eb01e0c"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-6.png",
+      "sha256": "b323438e97e5f61adc32d393b6f8f949c9b035816ccf4ad65f39c306e787a7ef"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-7.png",
+      "sha256": "fa29cd178c4803fc6ab7c8f2b3905a3d68fb39823f5db7f903b701704f2c4e52"
+    },
+    {
+      "path": "views/front_3quarter_sw/skill/skill-8.png",
+      "sha256": "1506c7dd975ca875168ecf62866a186e7916655790c20c0d49030634d6fda869"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-1.png",
+      "sha256": "03b853d0c143f4c393c8fff6e35fe5d841f0eeec3d77a19518e885e397660298"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-2.png",
+      "sha256": "2210ad5054b8b54e453e2510896814765a9e2aad6db11514fe643f19af8e9b26"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-3.png",
+      "sha256": "21a4460efb73782650e09c727bb0b989f8b4e5879c803ea77bc0712fb6b5647c"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-4.png",
+      "sha256": "53076e12e1c74f6f882b23712f262c9bbcf70e66bf5ace87d7b4c3a7c351b5af"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-5.png",
+      "sha256": "b3999295d207507c875de6763bae77028cfb174ea3f544fe9edb175e0bf490d7"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-6.png",
+      "sha256": "f726b25eae67931d18f27f8b62b9d291b2d323c64a6dfdf9ca80174c943bd48e"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-7.png",
+      "sha256": "49172a10a8befff5cd097641fe0e33ca68f91d7b3dc3ce49a53add6282749693"
+    },
+    {
+      "path": "views/front_3quarter_sw/stagger_return/stagger_return-8.png",
+      "sha256": "38b61a9a357480258a584d4c0751154e230605530b7a7a509da8e4407c3b7691"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-1.png",
+      "sha256": "8a6d90fa4bed9c24a7a89d43b858116123ed06962b421354f4c537ac6c8109ff"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-2.png",
+      "sha256": "c42bc6b63d569808c663198adb6558478a09b8080b38b958a3e2d916dc962883"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-3.png",
+      "sha256": "b31e5e845cf8854b9cb7bf318f30d69ab39d9a02ba55ba5a44b24f821b81dd62"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-4.png",
+      "sha256": "78b539438b5e7a940e92aa78f56144f2d19ab842a2e1949a857d9c2a331a0dda"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-5.png",
+      "sha256": "7a746ffb1070ffe4233317ea3a85fceb9e5e858b496831dc6784e660f919b41c"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-6.png",
+      "sha256": "51fadb83bcab45333f2014ee3f6062d53dca2369e75b1c5f8914a9c4f6604eda"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-7.png",
+      "sha256": "3934893381f19fce0298269c456556d64e987949193b4fff4ea18978cfa5cc1f"
+    },
+    {
+      "path": "views/front_3quarter_sw/walk/walk-8.png",
+      "sha256": "9cbfee06ac54839f8a06e4d6cfec77ab40ad51ab65972693b1e789cceede4598"
+    }
+  ]
+}

@@ -149,6 +149,14 @@ static func normalize_character_summary(
 	)
 	if appearance_id == "":
 		appearance_id = DEFAULT_APPEARANCE_ID
+	var elements_value = raw.get("elements", null)
+	var elements = _normalize_elements_or_null(elements_value)
+	var needs_element_allocation := bool(
+		raw.get(
+			"needsElementAllocation",
+			not (elements_value is Dictionary)
+		)
+	)
 	var slot_index := _declared_slot_index(raw)
 	if slot_index < 0 or slot_index >= SLOT_COUNT:
 		slot_index = clampi(fallback_slot_index, 0, SLOT_COUNT - 1)
@@ -163,6 +171,8 @@ static func normalize_character_summary(
 		"mapId": map_id,
 		"mapName": map_name,
 		"appearanceId": appearance_id,
+		"elements": elements,
+		"needsElementAllocation": needs_element_allocation,
 		"portraitTexturePath": portrait_path,
 		"showcaseTexturePath": showcase_path,
 		"portraitTexture": raw.get("portraitTexture", null),
@@ -187,6 +197,8 @@ static func empty_slot(slot_index: int) -> Dictionary:
 		"mapId": "",
 		"mapName": "",
 		"appearanceId": "",
+		"elements": null,
+		"needsElementAllocation": false,
 		"portraitTexturePath": "",
 		"showcaseTexturePath": "",
 		"portraitTexture": null,
@@ -474,6 +486,18 @@ static func _contains_control_character(value: String) -> bool:
 		if codepoint < 32 or codepoint == 127:
 			return true
 	return false
+
+
+static func _normalize_elements_or_null(value):
+	if not (value is Dictionary):
+		return null
+	var raw := value as Dictionary
+	return {
+		"earth": clampi(int(raw.get("earth", 0)), 0, 10),
+		"water": clampi(int(raw.get("water", 0)), 0, 10),
+		"fire": clampi(int(raw.get("fire", 0)), 0, 10),
+		"wind": clampi(int(raw.get("wind", 0)), 0, 10),
+	}
 
 
 static func _looks_normalized(value) -> bool:

@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "input": "client/godot/assets/characters/novice_hunter/source/battle/back_3quarter_ne/revive/raw-sheet-lossless.png",
+  "output": "client/godot/assets/characters/novice_hunter/source/battle/back_3quarter_ne/revive/pipeline-input.png",
+  "rows": 2,
+  "cols": 4,
+  "key": "#FF00FF",
+  "sharedScale": 0.863170028818444,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        37,
+        247,
+        378,
+        412
+      ],
+      "sourceArea": 34147,
+      "outputSize": [
+        300,
+        148
+      ],
+      "pastePosition": [
+        42,
+        323
+      ],
+      "cellMargins": [
+        42,
+        323,
+        42,
+        41
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        413,
+        228,
+        753,
+        412
+      ],
+      "sourceArea": 34476,
+      "outputSize": [
+        299,
+        164
+      ],
+      "pastePosition": [
+        426,
+        307
+      ],
+      "cellMargins": [
+        42,
+        307,
+        43,
+        41
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        809,
+        168,
+        1094,
+        427
+      ],
+      "sourceArea": 37208,
+      "outputSize": [
+        251,
+        229
+      ],
+      "pastePosition": [
+        834,
+        242
+      ],
+      "cellMargins": [
+        66,
+        242,
+        67,
+        41
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        0,
+        3
+      ],
+      "sourceBbox": [
+        1166,
+        163,
+        1438,
+        423
+      ],
+      "sourceArea": 37718,
+      "outputSize": [
+        240,
+        230
+      ],
+      "pastePosition": [
+        1224,
+        241
+      ],
+      "cellMargins": [
+        72,
+        241,
+        72,
+        41
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        88,
+        580,
+        289,
+        875
+      ],
+      "sourceArea": 37070,
+      "outputSize": [
+        179,
+        260
+      ],
+      "pastePosition": [
+        102,
+        723
+      ],
+      "cellMargins": [
+        102,
+        211,
+        103,
+        41
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        445,
+        515,
+        668,
+        866
+      ],
+      "sourceArea": 41696,
+      "outputSize": [
+        198,
+        308
+      ],
+      "pastePosition": [
+        477,
+        675
+      ],
+      "cellMargins": [
+        93,
+        163,
+        93,
+        41
+      ]
+    },
+    {
+      "index": 7,
+      "grid": [
+        1,
+        2
+      ],
+      "sourceBbox": [
+        809,
+        509,
+        1028,
+        872
+      ],
+      "sourceArea": 41927,
+      "outputSize": [
+        194,
+        319
+      ],
+      "pastePosition": [
+        863,
+        664
+      ],
+      "cellMargins": [
+        95,
+        152,
+        95,
+        41
+      ]
+    },
+    {
+      "index": 8,
+      "grid": [
+        1,
+        3
+      ],
+      "sourceBbox": [
+        1175,
+        509,
+        1393,
+        878
+      ],
+      "sourceArea": 42013,
+      "outputSize": [
+        193,
+        324
+      ],
+      "pastePosition": [
+        1247,
+        659
+      ],
+      "cellMargins": [
+        95,
+        147,
+        96,
+        41
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "target": "player",
+  "mode": "player",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/obsidian_scout_v1/source/showcase-raw.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 1,
+  "cols": 1,
+  "cell_size": 1024,
+  "fit_scale": 0.88,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 0,
+  "min_component_area": 1,
+  "edge_touch_margin": 0,
+  "frame_labels": [
+    "showcase-1"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "component_mode": "largest",
+      "component_count": 2,
+      "selected_component_area": 238281,
+      "selected_component_bbox": [
+        358,
+        48,
+        845,
+        1108
+      ],
+      "crop_bbox": [
+        358,
+        48,
+        845,
+        1108
+      ],
+      "edge_touch": false,
+      "output_size": [
+        414,
+        901
+      ],
+      "paste_position": [
+        305,
+        62
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal battle body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout in a readable six-frame ordinary hit reaction and regain-balance sequence for both formal views. Create an exact 4x3 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: alert, impact flinch, torso recoil, knee compression, regain balance, guarded ready.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body only.
+Layout: exact 4x3 invisible grid; centered complete full body, common scale, stable slot anchor, central 65% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity and equipment; shield and axe remain held/attached; hurt is distinct from defend and knockaway; no injury or blood.
+Avoid: mirroring, falling unconscious, flying away, shield-block pose, impact FX, copied frames, missing equipment, text, watermark.

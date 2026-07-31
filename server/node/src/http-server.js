@@ -72,6 +72,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "getSession",
   "listCharacters",
   "createCharacter",
+  "allocateCharacterElements",
   "selectCharacter",
   "getProfile",
   "listPetRecoveries",
@@ -160,6 +161,7 @@ const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
 ]);
 const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/characters",
+  "/characters/allocate-elements",
   "/bank/deposit",
   "/bank/withdraw",
   "/market/list",
@@ -358,6 +360,12 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname === "/characters") {
         return sendResult(res, service.createCharacter(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/characters/allocate-elements") {
+        return sendResult(res, service.allocateCharacterElements(
+          bearerToken(req),
+          await readJson(req),
+        ));
       }
       if (req.method === "POST" && url.pathname === "/characters/select") {
         return sendResult(res, service.selectCharacter(bearerToken(req), await readJson(req)));

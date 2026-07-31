@@ -31,11 +31,29 @@ func _build_preview() -> void:
 				"level": 80,
 				"mapName": "火芽村",
 				"appearanceId": "novice_hunter_v1",
+				"elements": {"earth": 10, "water": 0, "fire": 0, "wind": 0},
+				"needsElementAllocation": false,
 			},
 		],
 	}, "preview_player_fire", "冒险者账号")
 	if OS.get_cmdline_user_args().has("--open-create"):
 		panel.open_creation_form(1)
+		var appearance_button := panel.get_node_or_null(
+			"CharacterCreationPanel/Appearance1"
+		) as Button
+		if appearance_button != null and not appearance_button.disabled:
+			appearance_button.emit_signal("pressed")
+		var name_input := panel.get_node_or_null(
+			"CharacterCreationPanel/CreationBoard/NameInput"
+		) as LineEdit
+		if name_input != null:
+			name_input.text = "山岚"
+		var water_plus := panel.get_node_or_null(
+			"CharacterCreationPanel/CreationBoard/ElementWaterPlus"
+		) as Button
+		if water_plus != null:
+			for _index in range(10):
+				water_plus.emit_signal("pressed")
 	await process_frame
 	await process_frame
 	print("character entry review preview ready: 1280x720")

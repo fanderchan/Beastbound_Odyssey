@@ -1,5 +1,9 @@
 extends RefCounted
 
+const PlayerAppearanceCatalog := preload(
+	"res://scripts/player/player_appearance_catalog.gd"
+)
+
 const VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 const CARD_SIZE := Vector2(420.0, 132.0)
 
@@ -57,12 +61,7 @@ static var _missing_texture_paths: Dictionary = {}
 static func default_visual_sources() -> Dictionary:
 	return {
 		"backgroundTexturePath": DEFAULT_BACKGROUND_PATH,
-		"appearances": {
-			"novice_hunter_v1": {
-				"portraitTexturePath": DEFAULT_PORTRAIT_PATH,
-				"showcaseTexturePath": DEFAULT_SHOWCASE_PATH,
-			},
-		},
+		"appearances": PlayerAppearanceCatalog.visual_sources(),
 	}
 
 
@@ -127,7 +126,7 @@ static func body_font() -> Font:
 static func texture_from(value, fallback_path: String = "") -> Texture2D:
 	if value is Texture2D:
 		return value as Texture2D
-	var path := str(value).strip_edges()
+	var path := "" if value == null else str(value).strip_edges()
 	if path == "":
 		path = fallback_path.strip_edges()
 	if path == "" or _missing_texture_paths.has(path):
@@ -356,6 +355,81 @@ static func slot_style(
 
 static func portrait_frame_style(_selected: bool = false) -> StyleBoxFlat:
 	return transparent_style()
+
+
+static func creation_board_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.028, 0.021, 0.90)
+	style.border_color = Color(0.62, 0.45, 0.26, 0.98)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.72)
+	style.shadow_size = 18
+	return style
+
+
+static func appearance_button_style(
+	selected: bool,
+	available: bool
+) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = (
+		Color(0.20, 0.13, 0.075, 0.98)
+		if available
+		else Color(0.09, 0.075, 0.060, 0.84)
+	)
+	style.border_color = (
+		Color(1.0, 0.70, 0.20, 1.0)
+		if selected and available
+		else Color(0.60, 0.45, 0.29, 0.90)
+	)
+	style.set_border_width_all(4 if selected else 2)
+	style.set_corner_radius_all(52)
+	style.shadow_color = (
+		Color(1.0, 0.56, 0.10, 0.48)
+		if selected and available
+		else Color(0.0, 0.0, 0.0, 0.44)
+	)
+	style.shadow_size = 10 if selected else 5
+	style.content_margin_left = 7.0
+	style.content_margin_right = 7.0
+	style.content_margin_top = 7.0
+	style.content_margin_bottom = 7.0
+	return style
+
+
+static func element_track_style(fill_color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill_color
+	style.border_color = Color(0.94, 0.79, 0.53, 0.52)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(3)
+	return style
+
+
+static func compact_action_button(button: Button) -> void:
+	_apply_button_text(button, 22, INK_TEXT)
+	button.custom_minimum_size = Vector2(42.0, 42.0)
+	button.add_theme_stylebox_override(
+		"normal",
+		_texture_style(BUTTON_NORMAL_TEXTURE)
+	)
+	button.add_theme_stylebox_override(
+		"hover",
+		_texture_style(BUTTON_SELECTED_TEXTURE)
+	)
+	button.add_theme_stylebox_override(
+		"pressed",
+		_texture_style(BUTTON_SELECTED_TEXTURE, Color(0.90, 0.79, 0.63, 1.0))
+	)
+	button.add_theme_stylebox_override(
+		"focus",
+		_texture_style(BUTTON_SELECTED_TEXTURE)
+	)
+	button.add_theme_stylebox_override(
+		"disabled",
+		_texture_style(BUTTON_NORMAL_TEXTURE, Color(0.45, 0.43, 0.40, 0.60))
+	)
 
 
 static func transparent_style() -> StyleBoxFlat:

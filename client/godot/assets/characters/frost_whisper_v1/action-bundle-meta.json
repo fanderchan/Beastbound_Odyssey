@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 3,
+  "bundleId": "character_action_frost_whisper_v1",
+  "characterId": "frost_whisper_v1",
+  "displayName": "霜语游侠",
+  "identityLock": "identity/identity-lock.md",
+  "identityLockImage": "identity/identity-lock.png",
+  "artStatus": "produced",
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 11,
+      "loop": true,
+      "status": "produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": false,
+      "status": "produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 14,
+      "loop": false,
+      "status": "produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 13,
+      "loop": false,
+      "status": "produced"
+    },
+    "stagger_return": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    }
+  },
+  "worldVisual": {
+    "strategy": "independent_8",
+    "runtimeMirroring": false,
+    "directions": [
+      "south",
+      "southwest",
+      "west",
+      "northwest",
+      "north",
+      "northeast",
+      "east",
+      "southeast"
+    ],
+    "independentlyAuthoredDirections": true,
+    "onFoot": {
+      "actions": {
+        "idle": {
+          "frameCount": 1,
+          "fps": 4,
+          "loop": true,
+          "status": "produced"
+        },
+        "walk": {
+          "frameCount": 4,
+          "fps": 9,
+          "loop": true,
+          "status": "produced"
+        }
+      },
+      "totalFrameCount": 40
+    }
+  },
+  "ui": {
+    "portrait": "ui/portrait.png",
+    "showcase": "ui/showcase.png",
+    "independentlyAuthored": true
+  },
+  "frameTotals": {
+    "world": 40,
+    "battlePerView": 90,
+    "battleTotal": 180,
+    "runtimeTotal": 220
+  },
+  "source": {
+    "ledger": "source/source-ledger.json",
+    "postprocessor": "source/process_frost_whisper_assets.py",
+    "sourceCellEdgeWarningCount": 150
+  },
+  "quality": {
+    "runtimeContractStatus": "passed",
+    "ownerReviewStatus": "owner_review_pending",
+    "runtimeMirroring": false,
+    "downReviveContinuity": "exact_rgba",
+    "qcSummary": "qa/qc-summary.json",
+    "contactSheets": [
+      "qa/contact_sheets/world-true-eight.png",
+      "qa/contact_sheets/battle-front_3quarter_sw.png",
+      "qa/contact_sheets/battle-back_3quarter_ne.png"
+    ]
+  }
+}

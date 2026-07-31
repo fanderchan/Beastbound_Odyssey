@@ -1,0 +1,249 @@
+{
+  "target": "asset",
+  "mode": "sheet",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/characters/ember_spark_v1/source/world/southwest/raw-sheet.png",
+  "threshold": 100,
+  "edge_threshold": 150,
+  "duration": 200,
+  "rows": 2,
+  "cols": 3,
+  "cell_size": 512,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 3,
+  "align": "feet",
+  "shared_scale": true,
+  "component_mode": "largest",
+  "component_padding": 8,
+  "min_component_area": 1,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "frame-1",
+    "frame-2",
+    "frame-3",
+    "frame-4",
+    "frame-5",
+    "frame-6"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        482,
+        543
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 48280,
+      "selected_component_bbox": [
+        218,
+        62,
+        445,
+        509
+      ],
+      "crop_bbox": [
+        210,
+        54,
+        453,
+        517
+      ],
+      "edge_touch": false,
+      "output_size": [
+        231,
+        440
+      ],
+      "paste_position": [
+        140,
+        37
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        482,
+        0,
+        964,
+        543
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 44156,
+      "selected_component_bbox": [
+        147,
+        86,
+        376,
+        509
+      ],
+      "crop_bbox": [
+        139,
+        78,
+        384,
+        517
+      ],
+      "edge_touch": false,
+      "output_size": [
+        232,
+        417
+      ],
+      "paste_position": [
+        140,
+        60
+      ]
+    },
+    {
+      "grid": [
+        0,
+        2
+      ],
+      "source_box": [
+        964,
+        0,
+        1446,
+        543
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 45484,
+      "selected_component_bbox": [
+        65,
+        79,
+        310,
+        508
+      ],
+      "crop_bbox": [
+        57,
+        71,
+        318,
+        516
+      ],
+      "edge_touch": false,
+      "output_size": [
+        248,
+        423
+      ],
+      "paste_position": [
+        132,
+        54
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        543,
+        482,
+        1086
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 43795,
+      "selected_component_bbox": [
+        205,
+        25,
+        436,
+        448
+      ],
+      "crop_bbox": [
+        197,
+        17,
+        444,
+        456
+      ],
+      "edge_touch": false,
+      "output_size": [
+        234,
+        417
+      ],
+      "paste_position": [
+        139,
+        60
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        482,
+        543,
+        964,
+        1086
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 41485,
+      "selected_component_bbox": [
+        163,
+        23,
+        354,
+        449
+      ],
+      "crop_bbox": [
+        155,
+        15,
+        362,
+        457
+      ],
+      "edge_touch": false,
+      "output_size": [
+        196,
+        420
+      ],
+      "paste_position": [
+        158,
+        57
+      ]
+    },
+    {
+      "grid": [
+        1,
+        2
+      ],
+      "source_box": [
+        964,
+        543,
+        1446,
+        1086
+      ],
+      "component_mode": "largest",
+      "component_count": 1,
+      "selected_component_area": 45674,
+      "selected_component_bbox": [
+        75,
+        19,
+        299,
+        454
+      ],
+      "crop_bbox": [
+        67,
+        11,
+        307,
+        462
+      ],
+      "edge_touch": false,
+      "output_size": [
+        228,
+        428
+      ],
+      "paste_position": [
+        142,
+        49
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

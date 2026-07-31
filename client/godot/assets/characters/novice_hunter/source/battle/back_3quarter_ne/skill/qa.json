@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "skill",
+  "frameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "errors": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "skill-1",
+      "runtimeBbox": [
+        86,
+        47,
+        173,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "b08c83816864776df587b922958bad8d17ff134f40d7b4be3874b392bd3b95f2",
+      "runtimeDecodedRgbaSha256": "6b6e82d86883fd9f6cad043ce3326c7a2519607da1d392ece2291af436593485"
+    },
+    {
+      "slot": "skill-2",
+      "runtimeBbox": [
+        69,
+        79,
+        178,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "59a51b5eb7f0b8098b3db9f42d792092edd3fc12c5c58e1a55bcb145064b7a4b",
+      "runtimeDecodedRgbaSha256": "7a82e54b41b9b7b4c8815b7c5acba41be27d0249b36d6cbc4a311b7f62c1e6dc"
+    },
+    {
+      "slot": "skill-3",
+      "runtimeBbox": [
+        77,
+        55,
+        176,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "1c4d4bd0f85659864b72c760d2f1e0f13d96e1def359703dd3533ae6a0f5a850",
+      "runtimeDecodedRgbaSha256": "7619230dd544209d3445def84afab3affffe57d0850989d24ba207f7784780ba"
+    },
+    {
+      "slot": "skill-4",
+      "runtimeBbox": [
+        33,
+        55,
+        217,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "f6b7115fa94bb1f60d7716a74c6203d5de506542f2592e1aabfde745435bc142",
+      "runtimeDecodedRgbaSha256": "705cb2169c862a27a353fe23799b4de9dd06aab70cb6fc1220e3e0d1c68eb63d"
+    },
+    {
+      "slot": "skill-5",
+      "runtimeBbox": [
+        45,
+        58,
+        212,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "4fc5f359940aa373eebcae580a1305bea9bb0d62d7cf77bf253771912fb07d14",
+      "runtimeDecodedRgbaSha256": "a7a33f37e5e12968b056f11cf2025418e51cf91c4f33757ebb8ba69e9d3f2123"
+    },
+    {
+      "slot": "skill-6",
+      "runtimeBbox": [
+        72,
+        57,
+        191,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "bc31999309ab084ed8c91d72ab4aab05b8763514098aa7c38857b3d702841c14",
+      "runtimeDecodedRgbaSha256": "f953fef3d48f7bf62ba32d2c26f99e99ee53805130c0cffe08a450283922795a"
+    },
+    {
+      "slot": "skill-7",
+      "runtimeBbox": [
+        88,
+        55,
+        171,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "987dbee79f0cac419804c9aaf93c87fc0d69d3bd82bc06be023afaa17862af2a",
+      "runtimeDecodedRgbaSha256": "0d569907723462e563c4ab39688cdcb6df2f985331760623f73139adabcf7c5c"
+    },
+    {
+      "slot": "skill-8",
+      "runtimeBbox": [
+        88,
+        57,
+        169,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "3cad1227b2c607b24f4eedf20411d75e48e233192246ee5f15100d53320ee93e",
+      "runtimeDecodedRgbaSha256": "1d304df9e863e9f8d779c6b97d031f41a342795b4fa1732c44dda9d84fb1db3e"
+    }
+  ]
+}

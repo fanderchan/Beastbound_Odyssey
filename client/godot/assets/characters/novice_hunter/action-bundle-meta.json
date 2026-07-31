@@ -1,36 +1,129 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "bundleId": "character_action_novice_hunter_v1",
   "characterId": "novice_hunter_v1",
   "displayName": "见习猎人",
   "identityLock": "identity/identity-lock.md",
-  "sourceFrameSize": [512, 512],
-  "runtimeFrameSize": [256, 256],
+  "artStatus": "produced",
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
   "views": [
     "front_3quarter_sw",
     "back_3quarter_ne"
   ],
   "actions": {
-    "idle": {"frameCount": 6, "fps": 8, "loop": true},
-    "walk": {"frameCount": 8, "fps": 11, "loop": true},
-    "ride_idle": {"frameCount": 6, "fps": 8, "loop": true, "runtimeScope": "historical_two_view_compatibility"},
-    "ride_walk": {"frameCount": 8, "fps": 11, "loop": true, "runtimeScope": "historical_two_view_compatibility"}
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "produced"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 11,
+      "loop": true,
+      "status": "produced"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "stagger_return": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "produced"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "produced"
+    }
   },
-  "legacyTwoViewCompatibility": {
-    "preserved": true,
-    "runtimeMountedComposition": false,
+  "battleVisual": {
+    "status": "produced_owner_review_pending",
     "views": [
       "front_3quarter_sw",
       "back_3quarter_ne"
     ],
-    "frameCountsPerView": {
-      "idle": 6,
-      "walk": 8,
-      "ride_idle": 6,
-      "ride_walk": 8
-    },
-    "totalFrameCount": 56,
-    "worldDirectionSource": false
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger_return",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "sourceLedgerSha256": "b40988829affe081b0512fd4edb14790b4dce22c946c46c2f8a5b7a48ef62e3e",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "f08d1d98b7b6049869f40c5c8f4ccfd1d28ce919f8e1fee63108aa1c074f698a",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "qcSummarySha256": "602a080ee248cca6063058620ac6e0e9ec6fec3403ceb76c9213fc9a1e9a0c7a",
+    "koContinuity": "down-8_equals_revive-1_decoded_rgba"
   },
   "worldVisual": {
     "strategy": "independent_8",
@@ -45,13 +138,65 @@
       "southeast"
     ],
     "runtimeMirroring": false,
+    "actions": {
+      "idle": {
+        "frameCount": 1,
+        "loop": true
+      },
+      "walk": {
+        "frameCount": 4,
+        "loop": true
+      }
+    },
+    "totalFrameCount": 40,
     "onFoot": {
       "actions": {
-        "idle": {"frameCount": 1, "loop": true},
-        "walk": {"frameCount": 4, "loop": true}
+        "idle": {
+          "frameCount": 1,
+          "loop": true
+        },
+        "walk": {
+          "frameCount": 4,
+          "loop": true
+        }
       },
       "totalFrameCount": 40
     }
+  },
+  "legacyTwoViewCompatibility": {
+    "preservedOnDisk": true,
+    "actions": [
+      "ride_idle",
+      "ride_walk"
+    ],
+    "runtimeScope": "historical_only_not_part_of_formal_action_matrix"
+  },
+  "uiVisual": {
+    "status": "produced_owner_review_pending",
+    "assets": {
+      "portrait": {
+        "path": "ui/portrait.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "sha256": "7c8256c230de281fd996f4aa159208bab00dda93c8968ac50a6d3d30fb4aebde",
+        "decodedRgbaSha256": "e58063b15b0322f81b9a48c88604139996fe9f79a0c066a2020a5719f53a6b74",
+        "source": "source/ui/portrait-raw.png"
+      },
+      "showcase": {
+        "path": "ui/showcase.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "sha256": "20042f6ea76f15916f6769fb86253594a6225cac6e8ae63bea0b3bfb91bfa076",
+        "decodedRgbaSha256": "3b7f9613082eadec75c203af47510752f3f9aad6b2aff7b408b866938495a564",
+        "source": "source/ui/showcase-raw.png"
+      }
+    },
+    "contactSheet": "qa/ui-contact-sheet.png",
+    "contactSheetSha256": "9d473baeaf60f5fd1cf1f28f4774bc3a638654d76b829e190746b6eeb8adade0"
   },
   "source": {
     "kind": "project_original_ai_assisted",
@@ -59,17 +204,14 @@
     "externalSourceAssetsUsed": false,
     "createdForRepository": true,
     "ownershipRecord": "identity/source-and-ownership.md",
-    "replacementPath": "Regenerate from the identity lock, then pass grid, edge, continuity, Godot and on-foot direction gates."
+    "promptContract": "prompts/battle-formal-v1.txt",
+    "replacementPath": "Replay the tracked raw sheets through repack_chroma_sprite_grid.py and build_pet_art_bundle.py, apply the recorded KO continuity override, then run source/battle/rebuild_phase379_evidence.py."
   },
   "quality": {
-    "resolution": "hd_512_source_with_256_runtime_frames",
-    "worldLocomotionDirectionContract": "independent_8_no_runtime_mirroring",
-    "selfReviewStatus": "passed_true_8_direction_on_foot",
-    "ownerReviewStatus": "pending"
-  },
-  "knownScope": {
-    "included": ["world_idle", "world_walk"],
-    "historicalOnly": ["two_view_ride_idle", "two_view_ride_walk"],
-    "deferred": ["battle_attack", "battle_hurt", "battle_down", "weapon_specific", "other_body_archetypes"]
+    "selfReviewStatus": "passed",
+    "ownerReviewStatus": "owner_review_pending",
+    "runtimeMirroring": false,
+    "formalBattleFrameCount": 180,
+    "worldFrameCount": 40
   }
 }

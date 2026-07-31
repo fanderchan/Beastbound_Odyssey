@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "characterId": "frost_whisper_v1",
+  "generationMethod": "OpenAI built-in image generation with archived prompt contracts",
+  "postprocessing": "deterministic chroma removal, proportional slicing, shared-scale normalization, premultiplied resize",
+  "creativeTransformations": [],
+  "mirroringUsed": false,
+  "inputs": [
+    {
+      "path": "source/identity-board-raw.png",
+      "sha256": "8920d028b987fc89e6d15a7de49adf30b1e84f36b2922eedac6cd09c3b144f9e"
+    },
+    {
+      "path": "source/ui/portrait-green-raw.png",
+      "sha256": "ff8a3250d8c252332146e116a68ffb3e60020262089f55cd84022ca86c88797e"
+    },
+    {
+      "path": "source/ui/showcase-raw.png",
+      "sha256": "14725bf35316aac45e742e5419242728771091b5ad8c7ef8b6d7f8eacfe35999"
+    },
+    {
+      "path": "identity/identity-lock.png",
+      "sha256": "8b85679311370f55ae9fa6aad8c5cd5e0660fb4d09bf09390c67ec5967a4ade1"
+    },
+    {
+      "path": "ui/portrait.png",
+      "sha256": "e75415b1ca5795e95d615a4cdec99a96d455eff192d8112f44cbc9399d119887"
+    },
+    {
+      "path": "ui/showcase.png",
+      "sha256": "5bff9d200ea243def9ce8a67c2a08b75c01014f8f9378c91aced08a052d2c547"
+    },
+    {
+      "path": "source/world-sheets/south-raw.png",
+      "sha256": "7c7e27f982eef5216acd1b2db53ccf14aa12f3a8fc652318113ce51e3b2c097f"
+    },
+    {
+      "path": "source/world-sheets/southwest-raw.png",
+      "sha256": "fc8d04052162fae1124b884cd46ec8f35e0b85aa35e6c4df8a9bd5c29f56ac14"
+    },
+    {
+      "path": "source/world-sheets/west-raw.png",
+      "sha256": "09d21bf856be87902095c56b8cba48ca1a9cf03da2aaf0f8ccff053459ba5274"
+    },
+    {
+      "path": "source/world-sheets/northwest-raw.png",
+      "sha256": "274e797751d6cd4d5a40d34768f270409707c5b4569a4f7e936652c42b53a139"
+    },
+    {
+      "path": "source/world-sheets/north-raw.png",
+      "sha256": "4b16c490f072fc434545ae9cbf259995d6289817fdd211414e1796af0dcd16ac"
+    },
+    {
+      "path": "source/world-sheets/northeast-raw.png",
+      "sha256": "9599f2c7e45bcba468846a75362be57c0254914989c9d44e9a71f53cffc56e25"
+    },
+    {
+      "path": "source/world-sheets/east-raw.png",
+      "sha256": "f348590e73e7b1532e94af79b210cffab0c5cd2272e775855d6e0842509fbe13"
+    },
+    {
+      "path": "source/world-sheets/southeast-raw.png",
+      "sha256": "1ed5117a39c6e8f91ff951fe759409ab9bb2e5855f248880ae7cdfb5a65ea801"
+    },
+    {
+      "path": "source/battle-sheets/idle-raw.png",
+      "sha256": "5c3e85ab36f2b22376a1a026b0f5ae3b135d20db2e5dfe6c132af7a07e7fed8e"
+    },
+    {
+      "path": "source/battle-sheets/walk-raw.png",
+      "sha256": "735e431c0c3c2c7dcae0588757d350b70882afb1c8db0201b51a370bed5741cc"
+    },
+    {
+      "path": "source/battle-sheets/attack-raw.png",
+      "sha256": "1e8f89ae0f005831ca140fa3350a653384127b9c969ce09eb44cdbb610334ccf"
+    },
+    {
+      "path": "source/battle-sheets/skill-raw.png",
+      "sha256": "a0313af81d1dd47ca7a640a4cca142f6376c02b128286a35d6c0dc60a4fd9b47"
+    },
+    {
+      "path": "source/battle-sheets/hurt-raw.png",
+      "sha256": "4488964659b00722b83872246e3927207787766d18df5092da1e071349448caa"
+    },
+    {
+      "path": "source/battle-sheets/defend-raw.png",
+      "sha256": "9279fb616b54567b992bb042a25f10a88404cb1040b7844e2c0d29fe9943d38b"
+    },
+    {
+      "path": "source/battle-sheets/dodge-raw.png",
+      "sha256": "b6b99d974cff399d5b80e97e35009533ff63cae80f34fad37aa141b06e562536"
+    },
+    {
+      "path": "source/battle-sheets/counter-raw.png",
+      "sha256": "361f1ae2f9f1468cfb5b4f8a9fe0e6e1a23a61394f78a87b118e9ffa1af1d00d"
+    },
+    {
+      "path": "source/battle-sheets/stagger_return-raw.png",
+      "sha256": "aa4f98689af3bce3ef5f40916f1a1a4f62fa0300a19d8dcf92f8afd8bdd4b0e1"
+    },
+    {
+      "path": "source/battle-sheets/knockaway-raw.png",
+      "sha256": "25b2e3939b98b0de1edb2b61d940b34216e0e4dd56fa6f6d2f0694e4596c11f0"
+    },
+    {
+      "path": "source/battle-sheets/down-raw.png",
+      "sha256": "2a90e998dc0f227c30ca6a34adf0e92a947dd19ae6823418cf773af463bfdd73"
+    },
+    {
+      "path": "source/battle-sheets/revive-raw.png",
+      "sha256": "e037fc9944b5235397c4805e513d2947196e54abf6b330ec33bab89a667faa31"
+    }
+  ]
+}

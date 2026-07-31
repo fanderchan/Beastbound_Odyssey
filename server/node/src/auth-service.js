@@ -60,8 +60,11 @@ const {
   durableMutationToken,
 } = require("./auth/durable-mutation-state");
 const {
+  CHARACTER_DEFAULT_APPEARANCE_ID,
   CHARACTER_SLOT_LIMIT,
   createAccountCharactersDomain,
+  normalizeCharacterAppearanceId,
+  normalizeCharacterElements,
   selectedCharacterForSession,
 } = require("./auth/account-characters");
 const {createProfileActionsDomain} = require("./auth/profile-actions");
@@ -247,8 +250,13 @@ const {
 const {
   comboDamageFor,
   loadBattleCombatFormula,
-  resolvePhysicalDamage,
 } = require("./auth/battle-combat-formula");
+const {
+  inspectElementAllocation,
+  loadBattleElementMatchup,
+  playerBattleElementAdmission,
+  resolveElementalPhysicalDamage,
+} = require("./auth/battle-element-rules");
 const {
   equippedPetSkillIds,
   normalizePetSkillSlots,
@@ -280,6 +288,7 @@ const {
 const playerLevelRuntime = loadPlayerLevelRuntime();
 const battleEquipmentCatalog = loadBattleEquipmentCatalog();
 const authoritativeBattleCombatFormula = loadBattleCombatFormula();
+const authoritativeBattleElementMatchup = loadBattleElementMatchup();
 const petRebirthBalance = loadPetRebirthBalance();
 
 const USERNAME_MIN_LENGTH = 3;
@@ -333,6 +342,7 @@ const ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS = new Set([
   "createCharacter",
 ]);
 const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
+  "allocateCharacterElements",
   "bankDeposit",
   "bankWithdraw",
   "createCharacter",
@@ -728,6 +738,10 @@ function createAuthService(options = {}) {
   const allowFullProfileSave = Boolean(
     options.allowFullProfileSave ?? (process.env.BEASTBOUND_ALLOW_PROFILE_SAVE === "1")
   );
+  const autoCreateInitialCharacterForTests = options.autoCreateInitialCharacterForTests === true;
+  const initialCharacterElementsForTests = autoCreateInitialCharacterForTests
+    ? normalizeCharacterElements(options.initialCharacterElementsForTests)
+    : null;
   // 仅测试夹具可跳过首次记录点播种；没有环境变量或 HTTP 开关，正式服务始终从角色记录点恢复。
   const allowInitialPositionSeedForTests = Boolean(options.allowInitialPositionSeedForTests);
   const allowHangOriginWithoutPositionForTests = Boolean(options.allowHangOriginWithoutPositionForTests);
@@ -880,6 +894,27 @@ function createAuthService(options = {}) {
     const stagedData = storedData && typeof storedData === "object" && !Array.isArray(storedData)
       ? {...storedData, sessions: {...objectOrEmpty(storedData.sessions)}}
       : {};
+    if (initialCharacterElementsForTests) {
+      stagedData.profiles = {...objectOrEmpty(stagedData.profiles)};
+      for (const [playerId, profileDocValue] of Object.entries(stagedData.profiles)) {
+        const profileDoc = objectOrEmpty(profileDocValue);
+        const profile = objectOrEmpty(profileDoc.profile);
+        const player = objectOrEmpty(profile.player);
+        if (Object.prototype.hasOwnProperty.call(player, "elements")) {
+          continue;
+        }
+        stagedData.profiles[playerId] = {
+          ...profileDoc,
+          profile: {
+            ...profile,
+            player: {
+              ...player,
+              elements: clone(initialCharacterElementsForTests),
+            },
+          },
+        };
+      }
+    }
     pruneLoadedSessionHistory(stagedData, now);
     cachedData = normalizeData(stagedData);
     cachedData.playerPositions = {};
@@ -1254,16 +1289,24 @@ function createAuthService(options = {}) {
       updatedAt: isoNow(now),
       schemaVersion: 1,
     };
+    if (!autoCreateInitialCharacterForTests) {
+      account.characterSlotsInitialized = true;
+    }
     storeAuthorityRootRecord(data, "accounts", username, account);
-    storeAuthorityRootRecord(data, "profileBindings", accountId, {
-      accountId,
-      playerId: `player_${accountId.slice(4, 16)}`,
-      profileRevision: 0,
-      createdAt: isoNow(now),
-      updatedAt: isoNow(now),
-      schemaVersion: 1,
-    });
-    ensureProfileForAccount(data, account, now);
+    if (autoCreateInitialCharacterForTests) {
+      if (initialCharacterElementsForTests) {
+        account.elements = clone(initialCharacterElementsForTests);
+      }
+      storeAuthorityRootRecord(data, "profileBindings", accountId, {
+        accountId,
+        playerId: `player_${accountId.slice(4, 16)}`,
+        profileRevision: 0,
+        createdAt: isoNow(now),
+        updatedAt: isoNow(now),
+        schemaVersion: 1,
+      });
+      ensureProfileForAccount(data, account, now);
+    }
     const characterState = accountCharacters.autoSelectionForAccount(data, account);
     if (!characterState.ok) {
       recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
@@ -1292,9 +1335,11 @@ function createAuthService(options = {}) {
     return ok({
       account: publicAccount(account),
       session: publicSession(sessionResult.session, account, data, sessionResult.token, {now}),
-      profileBinding: data.profileBindings[accountId],
-      profileSummary: profileSummaryForAccount(account, data),
-      runtimePosition: publicRuntimePositionForAccount(data, accountId),
+      profileBinding: characterPayload.selectionRequired ? null : data.profileBindings[accountId],
+      profileSummary: characterPayload.selectionRequired ? null : profileSummaryForAccount(account, data),
+      runtimePosition: characterPayload.selectionRequired
+        ? null
+        : publicRuntimePositionForAccount(data, accountId),
       selectionRequired: characterPayload.selectionRequired,
       characters: characterPayload.characters,
       selectedCharacter: characterPayload.selectedCharacter,
@@ -1356,7 +1401,12 @@ function createAuthService(options = {}) {
   }
 
   function completeLogin(data, account, username, authGate) {
-    const ensured = ensureProfileForAccount(data, account, now);
+    if (
+      !Object.hasOwn(data.accountCharacterSlots || {}, account.accountId)
+      && account.characterSlotsInitialized !== true
+    ) {
+      ensureProfileForAccount(data, account, now);
+    }
     const characterState = accountCharacters.autoSelectionForAccount(data, account);
     if (!characterState.ok) {
       recordAuthAttemptResult(authAttemptState, authGate.authAttemptKey, false, now);
@@ -1492,7 +1542,6 @@ function createAuthService(options = {}) {
     removeRuntimeSessionsAfterCommit(replacedSessionIds);
     resetRuntimeMovementAuthorityAfterCommit(resolved.account.accountId, "session_refreshed");
     markRuntimeSession(sessionResult.session);
-    const ensured = ensureProfileForAccount(data, resolved.account, now);
     recordAuthEvent(data, "session_refresh", resolved.account.username, true, "", now);
     if (replacement.revokedSessions.length > 0) {
       recordAuthEvent(data, "session_replaced", resolved.account.username, true, `${replacement.revokedSessions.length} old session(s) revoked.`, now);
@@ -1529,7 +1578,9 @@ function createAuthService(options = {}) {
     return ok({
       account: publicAccount(resolved.account),
       session: publicSession(sessionResult.session, resolved.account, data, sessionResult.token, {now}),
-      profileBinding: characterPayload.selectionRequired ? null : ensured.binding,
+      profileBinding: characterPayload.selectionRequired
+        ? null
+        : data.profileBindings[resolved.account.accountId],
       profileSummary: characterPayload.selectionRequired
         ? null
         : profileSummaryForAccount(resolved.account, data),
@@ -1582,7 +1633,9 @@ function createAuthService(options = {}) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
-    const ensured = ensureProfileForAccount(data, resolved.account, now);
+    const ensured = String(resolved.session.playerId || "") === ""
+      ? {binding: null, created: false}
+      : ensureProfileForAccount(data, resolved.account, now);
     const characterPayload = accountCharacters.payloadForAccount(
       data,
       resolved.account,
@@ -2005,6 +2058,15 @@ function createAuthService(options = {}) {
     };
     candidateData.profileBindings[resolved.account.accountId] = binding;
     const storedProfile = clone(profile);
+    if (
+      initialCharacterElementsForTests
+      && storedProfile.player
+      && typeof storedProfile.player === "object"
+      && !Array.isArray(storedProfile.player)
+      && !Object.prototype.hasOwnProperty.call(storedProfile.player, "elements")
+    ) {
+      storedProfile.player.elements = clone(initialCharacterElementsForTests);
+    }
     if (
       currentProfileDoc
       && currentProfileDoc.profile
@@ -6104,6 +6166,7 @@ function createAuthService(options = {}) {
     getEventSession,
     listCharacters: accountCharacters.listCharacters,
     createCharacter: accountCharacters.createCharacter,
+    allocateCharacterElements: accountCharacters.allocateCharacterElements,
     selectCharacter: accountCharacters.selectCharacter,
     getProfile,
     listPetRecoveries,
@@ -8212,6 +8275,7 @@ function publicBattleActor(actor) {
     accountId: String(actor.accountId || ""),
     username: String(actor.username || ""),
     displayName: String(actor.displayName || actor.username || ""),
+    appearanceId: String(actor.appearanceId || ""),
     side: String(actor.side || ""),
     kind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
     slotId: String(actor.slotId || ""),
@@ -8240,6 +8304,7 @@ function publicBattleActor(actor) {
     speed: Number(actor.speed || 0),
     attack: Number(actor.attack || 0),
     defense: Number(actor.defense || 0),
+    elements: clone(objectOrEmpty(actor.elements)),
     guarding: Boolean(actor.guarding),
     defeated: Boolean(actor.defeated),
     escaped: Boolean(actor.escaped),
@@ -10140,6 +10205,7 @@ function equipmentExpPillChargeHasProgress(slots, value) {
 
 function battlePlayerSnapshotFromProfile(profile, account) {
   const player = profile && profile.player && typeof profile.player === "object" ? profile.player : {};
+  const elementAdmission = playerBattleElementAdmission(profile);
   const equipmentStats = resolveEquipmentBattleStats(profile, battleEquipmentCatalog, {requireInstances: true});
   const baseStats = equipmentStats.effectiveStats;
   const maxHp = positiveNumber(baseStats.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
@@ -10160,6 +10226,13 @@ function battlePlayerSnapshotFromProfile(profile, account) {
   return {
     kind: BATTLE_ACTOR_KIND_PLAYER,
     name: String(player.name || account.displayName || account.username || "猎人"),
+    appearanceId: normalizeCharacterAppearanceId(player.appearanceId),
+    // Legacy characters must remain inspectable in party/profile projections
+    // while battle admission stays fail-closed until their one-time allocation.
+    // Never invent production elements here: battleBackpackEntryCheck is the
+    // authoritative gate before an actor snapshot can enter a new room.
+    elements: elementAdmission.ok ? clone(elementAdmission.elements) : {},
+    needsElementAllocation: !elementAdmission.ok,
     level: positiveNumber(player.level, 1),
     hp: clampNumber(equipmentStats.currentHp, 1, maxHp, maxHp),
     maxHp,
@@ -10296,6 +10369,7 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
+    elements: battlePetElementsFromSource(pet),
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
@@ -10308,12 +10382,18 @@ function battlePetSnapshotFromProfilePet(pet, activePetInstanceId = "", partyInd
 
 function trainingPartnerSnapshotsFromProfile(profile, options = {}) {
   const partners = profile && Array.isArray(profile.trainingPartners) ? profile.trainingPartners : [];
+  const ownerElements = playerBattleElementAdmission(profile);
   return partners
-    .map((partner, index) => trainingPartnerSnapshotFromProfilePartner(partner, index, options))
+    .map((partner, index) => trainingPartnerSnapshotFromProfilePartner(
+      partner,
+      index,
+      options,
+      ownerElements.ok ? ownerElements.elements : null,
+    ))
     .filter((partner) => String(partner.partnerId || "").trim() !== "" && Number(partner.hp || 0) > 0);
 }
 
-function trainingPartnerSnapshotFromProfilePartner(partner, index = 0, options = {}) {
+function trainingPartnerSnapshotFromProfilePartner(partner, index = 0, options = {}, ownerElements = null) {
   if (!partner || typeof partner !== "object" || Array.isArray(partner)) {
     return {};
   }
@@ -10331,6 +10411,7 @@ function trainingPartnerSnapshotFromProfilePartner(partner, index = 0, options =
     attack: positiveNumber(partner.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
     defense: positiveNumber(partner.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
     quick: positiveNumber(partner.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+    elements: battleElementsOrFallback(partner.elements, ownerElements),
     pet,
     schemaVersion: 1,
   };
@@ -10351,6 +10432,7 @@ function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0, options = {}) 
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
+    elements: battlePetElementsFromSource(pet),
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet.petSkillSlots),
     forgottenSkillIds: uniqueStringArray(pet.forgottenSkillIds),
@@ -10358,6 +10440,27 @@ function trainingPartnerPetSnapshotFromProfilePet(pet, index = 0, options = {}) 
     ...battleFusionIdentityFields(pet, options),
     schemaVersion: 1,
   };
+}
+
+function battleElementsOrFallback(value, fallbackValue) {
+  const direct = inspectElementAllocation(value);
+  if (direct.ok) {
+    return clone(direct.elements);
+  }
+  const fallback = inspectElementAllocation(fallbackValue);
+  return fallback.ok ? clone(fallback.elements) : {};
+}
+
+function battlePetElementsFromSource(pet) {
+  const source = pet && typeof pet === "object" && !Array.isArray(pet) ? pet : {};
+  const direct = inspectElementAllocation(source.elements);
+  if (direct.ok) {
+    return clone(direct.elements);
+  }
+  const formId = String(source.formId || source.templateId || source.speciesId || "").trim();
+  const template = petTemplateForFormId(formId);
+  const inherited = inspectElementAllocation(template && template.elements);
+  return inherited.ok ? clone(inherited.elements) : {};
 }
 
 function petBattleStateIsAvailable(pet, activePetInstanceId = "") {
@@ -11327,6 +11430,10 @@ function battleBackpackEntryCheck(data, accountIds) {
     if (!profileDoc || !profileDoc.profile || typeof profileDoc.profile !== "object" || Array.isArray(profileDoc.profile)) {
       return fail("profile_missing", "参战角色档案不存在，暂不能进入战斗。");
     }
+    const elementAdmission = playerBattleElementAdmission(profileDoc.profile);
+    if (!elementAdmission.ok) {
+      return fail(elementAdmission.code, elementAdmission.message);
+    }
     const backpackConflict = rawBackpackAssetConflict(profileDoc.profile);
     if (backpackConflict) {
       return fail(backpackConflict.code, `${backpackConflict.message} 修复前暂不能进入战斗。`);
@@ -11490,6 +11597,7 @@ function battlePlayerActorFromParticipant(participant, side, options = {}) {
     accountId: String(participant.accountId || ""),
     username: String(participant.username || ""),
     displayName: String(player.name || participant.displayName || participant.username || ""),
+    appearanceId: normalizeCharacterAppearanceId(player.appearanceId),
     side,
     kind: BATTLE_ACTOR_KIND_PLAYER,
     slotId,
@@ -11500,6 +11608,7 @@ function battlePlayerActorFromParticipant(participant, side, options = {}) {
     speed: positiveNumber(player.quick, side === "challenger" ? 70 : 68),
     attack: positiveNumber(player.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
     defense: positiveNumber(player.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    elements: battleElementsOrFallback(player.elements, null),
     guarding: false,
     defeated: hp <= 0,
     actionState: hp <= 0 ? "down" : "idle",
@@ -11547,6 +11656,7 @@ function battlePetActorFromParticipant(participant, side, pet, petIndex, options
     speed: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    elements: battlePetElementsFromSource(pet),
     guarding: false,
     defeated: hp <= 0,
     actionState: hp <= 0 ? "down" : "idle",
@@ -11674,6 +11784,12 @@ function battleTrainingPartnerActorFromSnapshot(participant, partner, index, slo
     speed: positiveNumber(partner.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
     attack: positiveNumber(partner.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
     defense: positiveNumber(partner.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    elements: battleElementsOrFallback(
+      partner.elements,
+      participant && participant.teamSnapshot && participant.teamSnapshot.player
+        ? participant.teamSnapshot.player.elements
+        : null,
+    ),
     guarding: false,
     defeated: hp <= 0,
     actionState: hp <= 0 ? "down" : "idle",
@@ -11711,6 +11827,7 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     speed: positiveNumber(pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
     attack: positiveNumber(pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    elements: battlePetElementsFromSource(pet),
     guarding: false,
     defeated: hp <= 0,
     actionState: hp <= 0 ? "down" : "idle",
@@ -11758,6 +11875,7 @@ function partyPveEnemyActors(room) {
       speed: positiveNumber(wildPet.quick, 48) + (slotNumber - 1) * 2,
       attack: positiveNumber(wildPet.attack, DEFAULT_PET_BATTLE_STATS.attack),
       defense: positiveNumber(wildPet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+      elements: battlePetElementsFromSource(wildPet),
       expReward: battleEnemyBaseExpFromEntry(wildPet),
       guarding: false,
       defeated: false,
@@ -11832,6 +11950,7 @@ function normalizedServerWildPetEntry(value) {
     attack: positiveNumber(stats.attack || value.attack, DEFAULT_PET_BATTLE_STATS.attack),
     defense: positiveNumber(stats.defense || value.defense, DEFAULT_PET_BATTLE_STATS.defense),
     quick: positiveNumber(stats.quick || stats.agility || value.quick || value.agility, DEFAULT_PET_BATTLE_STATS.quick),
+    elements: battleElementsOrFallback(value && value.elements, template.elements),
     ...(explicitExpReward > 0 ? {expReward: explicitExpReward} : {}),
     activeSkillIds,
     petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, value && value.petSkillSlots),
@@ -13120,8 +13239,9 @@ function battleEquipmentMultiAttackEvent(room, battle, resolved, actionId, round
   let totalDamage = 0;
   for (let ordinal = 0; ordinal < targets.length; ordinal += 1) {
     const target = targets[ordinal];
-    const attackDamageResult = resolvePhysicalDamage({
+    const attackDamageResult = resolveElementalPhysicalDamage({
       formula: authoritativeBattleCombatFormula,
+      elementMatchup: authoritativeBattleElementMatchup,
       actor,
       target,
       eventType: "multi_attack",
@@ -23543,6 +23663,16 @@ function battleCombatFormulaEventFields(damageResult) {
     defenseReduction: Math.max(0, Math.trunc(Number(result.defenseReduction || 0))),
     guardMultiplier: Number.isFinite(configuredGuardMultiplier) ? Math.max(0, configuredGuardMultiplier) : 1,
     minimumDamage: Math.max(1, Math.trunc(Number(result.minimumDamage || 1))),
+    damageBeforeElement: Math.max(1, Math.trunc(Number(result.damageBeforeElement || result.damage || 1))),
+    elementMultiplier: Number.isFinite(Number(result.elementMultiplier))
+      ? Math.max(0, Number(result.elementMultiplier))
+      : 1,
+    elementDamageDelta: Math.trunc(Number(result.elementDamageDelta || 0)),
+    elementStrongWeight: Math.max(0, Number(result.elementStrongWeight || 0)),
+    elementWeakWeight: Math.max(0, Number(result.elementWeakWeight || 0)),
+    elementNeutralWeight: Math.max(0, Number(result.elementNeutralWeight || 0)),
+    attackerElements: clone(objectOrEmpty(result.attackerElements)),
+    targetElements: clone(objectOrEmpty(result.targetElements)),
   };
 }
 
@@ -23640,8 +23770,9 @@ function battleAttackDamageResult(room, battle, command, actor, target) {
   const powerMultiplier = Number.isFinite(configuredPowerMultiplier)
     ? Math.max(0, configuredPowerMultiplier)
     : 1;
-  return resolvePhysicalDamage({
+  return resolveElementalPhysicalDamage({
     formula: authoritativeBattleCombatFormula,
+    elementMatchup: authoritativeBattleElementMatchup,
     actor,
     target,
     eventType,
@@ -24149,6 +24280,9 @@ function createDefaultServerProfile(account) {
     schemaVersion: CURRENT_PROFILE_SCHEMA_VERSION,
     player: {
       name: displayName,
+      appearanceId: normalizeCharacterAppearanceId(
+        account && account.appearanceId || CHARACTER_DEFAULT_APPEARANCE_ID,
+      ),
       level: 1,
       exp: 0,
       nextExp: battleExpToNextLevel(1),
@@ -24216,6 +24350,10 @@ function createDefaultServerProfile(account) {
     rebirthTrialProofs: {},
     qualificationBattleClaims: {},
   };
+  const characterElements = normalizeCharacterElements(account && account.elements);
+  if (characterElements) {
+    profile.player.elements = characterElements;
+  }
   if (profile.petInstances.length <= 0) {
     profile.activePetInstanceId = "";
   }

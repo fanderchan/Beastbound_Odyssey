@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "appearanceAffectsStats": false,
+  "appearances": [
+    {
+      "appearanceId": "novice_hunter_v1",
+      "displayName": "见习猎人",
+      "creationOrder": 0,
+      "selectable": true,
+      "portraitTexturePath": "res://assets/characters/novice_hunter/ui/portrait.png",
+      "showcaseTexturePath": "res://assets/characters/novice_hunter/ui/showcase.png",
+      "characterAssetRoot": "res://assets/characters/novice_hunter"
+    },
+    {
+      "appearanceId": "obsidian_scout_v1",
+      "displayName": "曜石斥候",
+      "creationOrder": 1,
+      "selectable": true,
+      "portraitTexturePath": "res://assets/characters/obsidian_scout_v1/ui/portrait.png",
+      "showcaseTexturePath": "res://assets/characters/obsidian_scout_v1/ui/showcase.png",
+      "characterAssetRoot": "res://assets/characters/obsidian_scout_v1"
+    },
+    {
+      "appearanceId": "frost_whisper_v1",
+      "displayName": "霜语游侠",
+      "creationOrder": 2,
+      "selectable": true,
+      "portraitTexturePath": "res://assets/characters/frost_whisper_v1/ui/portrait.png",
+      "showcaseTexturePath": "res://assets/characters/frost_whisper_v1/ui/showcase.png",
+      "characterAssetRoot": "res://assets/characters/frost_whisper_v1"
+    },
+    {
+      "appearanceId": "ember_spark_v1",
+      "displayName": "焰芽斗士",
+      "creationOrder": 3,
+      "selectable": true,
+      "portraitTexturePath": "res://assets/characters/ember_spark_v1/ui/portrait.png",
+      "showcaseTexturePath": "res://assets/characters/ember_spark_v1/ui/showcase.png",
+      "characterAssetRoot": "res://assets/characters/ember_spark_v1"
+    }
+  ]
+}

@@ -111,6 +111,9 @@ const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
 const MountedActionAssetCheck := preload("res://scripts/qa/mounted_action_asset_check.gd")
 const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_check.gd")
+const CharacterRuntimeAppearanceCheck := preload(
+	"res://scripts/qa/character_runtime_appearance_check.gd"
+)
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
 const BackpackAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/backpack_awakened_owner_review_capture.gd"
@@ -891,6 +894,7 @@ var auto_mounted_action_asset_check: bool = false
 var auto_mounted_action_asset_form_id: String = ""
 var auto_mounted_action_asset_world_only: bool = false
 var auto_character_mount_art_check: bool = false
+var auto_character_runtime_appearance_check: bool = false
 var auto_pet_skill_training_check: bool = false
 var auto_village_healer_check: bool = false
 var auto_record_point_check: bool = false
@@ -1112,6 +1116,7 @@ var world_depth_drop_content_signature_cache: String = ""
 var world_depth_drop_signature_dirty: bool = true
 var world_overlay_signature_cache: String = ""
 var player_profile: Dictionary = {}
+var player_appearance_visual_id_cache: String = "__uninitialized__"
 var player_mount_visual_ride_id_cache: String = "__uninitialized__"
 var account_authenticated: bool = false
 var auth_auto_bypass: bool = false
@@ -1755,6 +1760,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_mounted_action_asset_check")
 	elif auto_character_mount_art_check:
 		call_deferred("_run_auto_character_mount_art_check")
+	elif auto_character_runtime_appearance_check:
+		call_deferred("_run_auto_character_runtime_appearance_check")
 	elif auto_pet_skill_training_check:
 		call_deferred("_run_auto_pet_skill_training_check")
 	elif auto_village_healer_check:
@@ -2522,6 +2529,8 @@ func _apply_preview_window_args() -> void:
 			auto_mounted_action_asset_world_only = true
 		elif arg == "--auto-character-mount-art-check":
 			auto_character_mount_art_check = true
+		elif arg == "--auto-character-runtime-appearance-check":
+			auto_character_runtime_appearance_check = true
 		elif arg == "--auto-pet-skill-training-check":
 			auto_pet_skill_training_check = true
 		elif arg == "--auto-village-healer-check":
@@ -6079,6 +6088,15 @@ func _run_auto_character_mount_art_check() -> void:
 	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
 
+func _run_auto_character_runtime_appearance_check() -> void:
+	var result := CharacterRuntimeAppearanceCheck.run(self)
+	print("character runtime appearance check ready: status=%s result=%s" % [
+		"ok" if bool(result.get("ok", false)) else "failed",
+		JSON.stringify(result),
+	])
+	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
+
+
 func _run_auto_pet_skill_training_check() -> void:
 	await _auto_checks()._run_auto_pet_skill_training_check()
 
@@ -8788,8 +8806,14 @@ func _spawn_player() -> void:
 func _sync_player_mount_visual_if_needed(force: bool = false) -> void:
 	if player == null or not player.has_method("set_riding_form"):
 		return
+	var appearance_id := _selected_player_appearance_id()
+	var appearance_changed := appearance_id != player_appearance_visual_id_cache
+	if force or appearance_changed:
+		player_appearance_visual_id_cache = appearance_id
+		if player.has_method("set_appearance_id"):
+			player.call("set_appearance_id", appearance_id)
 	var ride_instance_id := str(player_profile.get(PlayerProgressModel.RIDE_PET_INSTANCE_ID_KEY, "")).strip_edges()
-	if not force and ride_instance_id == player_mount_visual_ride_id_cache:
+	if not force and not appearance_changed and ride_instance_id == player_mount_visual_ride_id_cache:
 		return
 	player_mount_visual_ride_id_cache = ride_instance_id
 	var ride_form_id := ""
@@ -8805,6 +8829,14 @@ func _sync_player_mount_visual_if_needed(force: bool = false) -> void:
 				ride_form_id = str(instance.get("formId", instance.get("templateId", ""))).strip_edges()
 				break
 	player.call("set_riding_form", ride_form_id)
+
+
+func _selected_player_appearance_id() -> String:
+	var player_value = player_profile.get("player", {})
+	var appearance_id := ""
+	if player_value is Dictionary:
+		appearance_id = str((player_value as Dictionary).get("appearanceId", "")).strip_edges()
+	return CharacterActionAssetCatalog.resolve_appearance_id(appearance_id)
 
 
 func _spawn_pet() -> void:
@@ -9508,6 +9540,7 @@ func _refresh_battle_target_seed() -> void:
 
 func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
+	_warm_battle_character_appearance_state(next_battle_state)
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	if bool(next_battle_state.get("reviewLab", false)):
@@ -9515,6 +9548,22 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		BattleRangedProjectileAssetCatalog.warm_all()
 	BattleArenaVisualCatalog.warm_state(next_battle_state)
 	_panel_flow()._start_battle(next_battle_state)
+
+
+func _warm_battle_character_appearance_state(next_battle_state: Dictionary) -> void:
+	var warmed: Dictionary = {}
+	for value in next_battle_state.get("actors", []):
+		if not (value is Dictionary):
+			continue
+		var actor := value as Dictionary
+		if str(actor.get("kind", "")) != "player":
+			continue
+		var appearance_id := _battle_actor_appearance_id(actor)
+		if warmed.has(appearance_id):
+			continue
+		warmed[appearance_id] = true
+		CharacterActionAssetCatalog.warm_battle(appearance_id)
+
 
 func _end_battle(_restore_world: bool = true) -> void:
 	battle_pet_art_elapsed = 0.0
@@ -14894,6 +14943,14 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		# 骑乘整图在 10V10 下仍约 120px 高；人物默认血条位置会压进骑手身体。
 		hp_offset = -166.0 * visual_scale
 		name_offset = -188.0 * visual_scale
+	elif (
+		kind == "player"
+		and CharacterActionAssetCatalog.supports_battle_appearance(
+			_battle_actor_appearance_id(actor)
+		)
+	):
+		hp_offset = -132.0 * visual_scale
+		name_offset = -153.0 * visual_scale
 	var state_offset := _battle_actor_state_offset(
 		state,
 		side,
@@ -14944,7 +15001,17 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		if not integrated_mount_drawn:
 			# 未完成专属 AI 整图的骑乘组合只降级为徒步人物；绝不猜测坐骑外形，
 			# 也绝不重新启用人物 + 宠物的运行时分层拼接。
-			_draw_battle_on_foot_player_actor(pos, visual_scale, alpha, body_color, trim_color)
+			_draw_battle_on_foot_player_actor(
+				actor,
+				pos,
+				visual_scale,
+				alpha,
+				body_color,
+				trim_color,
+				side,
+				state,
+				launch_rotation
+			)
 	elif kind == "pet":
 		var pet_body_center := pos + Vector2(0, -14) * visual_scale
 		draw_circle(pet_body_center, 25.0 * visual_scale, body_color)
@@ -14999,10 +15066,117 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_status_badges(actor, pos + Vector2(0, hp_offset - 17.0 * visual_scale), visual_scale, alpha)
 
 
-func _draw_battle_on_foot_player_actor(pos: Vector2, visual_scale: float, alpha: float, body_color: Color, trim_color: Color) -> void:
+func _draw_battle_on_foot_player_actor(
+	actor: Dictionary,
+	pos: Vector2,
+	visual_scale: float,
+	alpha: float,
+	body_color: Color,
+	trim_color: Color,
+	side: String,
+	state: String,
+	rotation_angle: float = 0.0
+) -> void:
+	if _draw_formal_battle_character_actor(
+		actor,
+		pos,
+		visual_scale,
+		alpha,
+		side,
+		state,
+		rotation_angle
+	):
+		return
 	draw_rect(Rect2(pos + Vector2(-19, -38) * visual_scale, Vector2(38, 56) * visual_scale), body_color, true)
 	draw_circle(pos + Vector2(0, -48) * visual_scale, 13.0 * visual_scale, Color(0.96, 0.72, 0.46, alpha))
 	draw_line(pos + Vector2(-18, -8) * visual_scale, pos + Vector2(18, -8) * visual_scale, trim_color, 4.0 * visual_scale, true)
+
+
+func _draw_formal_battle_character_actor(
+	actor: Dictionary,
+	pos: Vector2,
+	visual_scale: float,
+	alpha: float,
+	side: String,
+	state: String,
+	rotation_angle: float = 0.0
+) -> bool:
+	var appearance_id := _battle_actor_appearance_id(actor)
+	if not CharacterActionAssetCatalog.supports_battle_appearance(appearance_id):
+		return false
+	var action := CharacterActionAssetCatalog.action_for_battle_state(state, appearance_id)
+	var view := CharacterActionAssetCatalog.battle_view_for_side(side)
+	var texture: Texture2D
+	if action == "idle":
+		texture = CharacterActionAssetCatalog.texture_for_elapsed(
+			view,
+			action,
+			battle_pet_art_elapsed,
+			appearance_id
+		)
+	else:
+		var progress := 1.0 if state == "captured" else _battle_current_event_progress()
+		var event_type := str(battle_current_event.get("type", ""))
+		var reveal_progress := (
+			_battle_event_result_reveal_progress(battle_current_event)
+			if not battle_current_event.is_empty()
+			else 0.0
+		)
+		var actor_id := str(actor.get("id", ""))
+		if action == "attack" and ["attack", "skill_attack", "counter_attack"].has(event_type):
+			var participant_ids: Array = battle_current_event.get(
+				"participantIds",
+				[str(battle_current_event.get("attackerId", ""))]
+			)
+			if participant_ids.has(actor_id):
+				if (
+					event_type == "attack"
+					and bool(battle_current_event.get("counterTriggered", false))
+					and progress >= reveal_progress
+				):
+					progress = BattleVisualPresentationModel.MELEE_CONTACT_ACTION_PROGRESS
+				elif not battle_last_event_launch:
+					progress = BattleVisualPresentationModel.melee_action_progress(
+						progress,
+						reveal_progress
+					)
+		if action == "stagger_return":
+			progress = BattleVisualPresentationModel.counter_ko_stagger_progress(
+				_battle_current_event_progress(),
+				reveal_progress
+			)
+		if state == "down":
+			var is_current_target := _battle_current_event_targets_actor(actor_id)
+			if is_current_target and _battle_last_event_is_nonlaunch_counter_ko(battle_current_event):
+				progress = BattleVisualPresentationModel.counter_ko_down_progress(
+					_battle_current_event_progress(),
+					reveal_progress
+				)
+			else:
+				progress = BattleVisualPresentationModel.down_action_progress(
+					is_current_target,
+					_battle_current_event_progress(),
+					reveal_progress
+				)
+		texture = CharacterActionAssetCatalog.texture_for_progress(
+			view,
+			action,
+			progress,
+			appearance_id
+		)
+	if texture == null:
+		return false
+	var target_size := 156.0 * visual_scale
+	var target_rect := Rect2(
+		Vector2(-target_size * 0.5, -target_size * 0.92),
+		Vector2(target_size, target_size)
+	)
+	# Phase379 character battle frames are authored in final board orientation.
+	# No selected appearance is mirrored at runtime.
+	draw_set_transform(pos, rotation_angle, Vector2.ONE)
+	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	return true
 
 
 func _draw_formal_battle_pet_actor(actor_id: String, form_id: String, side: String, state: String, pos: Vector2, visual_scale: float, alpha: float, rotation_angle: float = 0.0) -> bool:
@@ -15074,10 +15248,29 @@ func _battle_actor_has_active_ride(actor: Dictionary) -> bool:
 	)
 
 
+func _battle_actor_appearance_id(actor: Dictionary) -> String:
+	var appearance_id := str(
+		actor.get("appearanceId", actor.get("characterAppearanceId", ""))
+	).strip_edges()
+	if appearance_id == "" and str(actor.get("id", "")) == BattleModel.PLAYER_ACTOR_ID:
+		appearance_id = (
+			player_appearance_visual_id_cache
+			if player_appearance_visual_id_cache != "__uninitialized__"
+			else _selected_player_appearance_id()
+		)
+	return CharacterActionAssetCatalog.resolve_appearance_id(appearance_id)
+
+
 func _battle_actor_uses_integrated_mount_visual(actor: Dictionary) -> bool:
 	if not _battle_actor_has_active_ride(actor):
 		return false
 	var form_id := str(actor.get("ridePetFormId", "")).strip_edges()
+	var mounted_character_id := MountVisualProfileCatalog.character_id_for_form(form_id)
+	if not CharacterActionAssetCatalog.appearance_supports_mounted_character(
+		_battle_actor_appearance_id(actor),
+		mounted_character_id
+	):
+		return false
 	return (
 		MountVisualProfileCatalog.runtime_presentation_mode_for_form(form_id)
 		== MountVisualProfileCatalog.PRESENTATION_MODE_INTEGRATED_MOUNTED_BODY

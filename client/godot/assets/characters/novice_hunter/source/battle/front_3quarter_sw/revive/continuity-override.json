@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "reason": "Formal KO continuity requires down-8 to equal revive-1 exactly.",
+  "view": "front_3quarter_sw",
+  "generatedReviveSourceBeforeOverrideSha256": "f1335db80e6c0eafb2831ef2edad3a03898bf78ed572f1f8ef59e360a6b6f09e",
+  "generatedReviveRuntimeBeforeOverrideSha256": "f04421befc13aa6048f22832979a396fca119b59a15a24c439f31543f4c458b0",
+  "finalSourceCopiedFrom": "../down/source-frames/down-8.png",
+  "finalRuntimeCopiedFrom": "views/front_3quarter_sw/down/down-8.png",
+  "sourceDecodedRgbaEqual": true,
+  "runtimeDecodedRgbaEqual": true,
+  "finalSourceDecodedRgbaSha256": "94a081d5c9c8926ae2590aea08380124cc318e2ef7f18c376594bebe76108af1",
+  "finalRuntimeDecodedRgbaSha256": "40fb3e9a03a106b59d0f392f06753379f6ff409b68fdaa66516567e751945d64"
+}

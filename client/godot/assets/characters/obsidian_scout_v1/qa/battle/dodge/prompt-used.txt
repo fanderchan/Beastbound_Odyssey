@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal battle body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout in a clearly readable eight-frame evasive side-step and settled return for both formal views. Create an exact 4x4 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: notice threat, lower center of gravity, push off, lateral/back arc at maximum displacement, land, counterbalance, return toward slot, settled ready.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body only.
+Layout: exact 4x4 invisible grid; full body centered within each cell despite evasive pose, stable body height/common scale, central 68% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity and equipment; dodge must read from changing center of gravity and limbs, not healthy walking; shield/axe remain attached.
+Avoid: mirroring, walk cycle, teleport blur, afterimage, dust, copied frames, missing limbs, crossed cells, text, watermark.

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "input": "client/godot/assets/characters/novice_hunter/source/battle/back_3quarter_ne/defend/raw-sheet-lossless.png",
+  "output": "client/godot/assets/characters/novice_hunter/source/battle/back_3quarter_ne/defend/pipeline-input.png",
+  "rows": 2,
+  "cols": 3,
+  "key": "#FF00FF",
+  "sharedScale": 0.9860740740740741,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        210,
+        43,
+        369,
+        442
+      ],
+      "sourceArea": 40751,
+      "outputSize": [
+        163,
+        399
+      ],
+      "pastePosition": [
+        174,
+        72
+      ],
+      "cellMargins": [
+        174,
+        72,
+        175,
+        41
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        655,
+        63,
+        877,
+        443
+      ],
+      "sourceArea": 42793,
+      "outputSize": [
+        225,
+        381
+      ],
+      "pastePosition": [
+        655,
+        90
+      ],
+      "cellMargins": [
+        143,
+        90,
+        144,
+        41
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        0,
+        2
+      ],
+      "sourceBbox": [
+        1118,
+        61,
+        1341,
+        443
+      ],
+      "sourceArea": 43624,
+      "outputSize": [
+        226,
+        383
+      ],
+      "pastePosition": [
+        1167,
+        88
+      ],
+      "cellMargins": [
+        143,
+        88,
+        143,
+        41
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        160,
+        575,
+        409,
+        937
+      ],
+      "sourceArea": 42276,
+      "outputSize": [
+        251,
+        363
+      ],
+      "pastePosition": [
+        130,
+        620
+      ],
+      "cellMargins": [
+        130,
+        108,
+        131,
+        41
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        642,
+        575,
+        876,
+        937
+      ],
+      "sourceArea": 42050,
+      "outputSize": [
+        237,
+        363
+      ],
+      "pastePosition": [
+        649,
+        620
+      ],
+      "cellMargins": [
+        137,
+        108,
+        138,
+        41
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        1,
+        2
+      ],
+      "sourceBbox": [
+        1140,
+        555,
+        1302,
+        941
+      ],
+      "sourceArea": 39195,
+      "outputSize": [
+        166,
+        387
+      ],
+      "pastePosition": [
+        1197,
+        596
+      ],
+      "cellMargins": [
+        173,
+        84,
+        173,
+        41
+      ]
+    }
+  ]
+}

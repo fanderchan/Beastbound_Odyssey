@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "characterId": "ember_spark_v1",
+  "status": "passed",
+  "counts": {
+    "worldRuntimeFrames": 40,
+    "battleSourceFrames": 180,
+    "battleRuntimeFrames": 180,
+    "battleRuntimePerView": 90,
+    "hashLedgerEntries": 225
+  },
+  "contracts": {
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeMirroring": false,
+    "downReviveDecodedRgbaExact": true,
+    "noExactWithinActionDuplicates": true,
+    "noExactWorldMirrors": true,
+    "noExactFrontBackMirrors": true
+  },
+  "chromaEdgeAudit": {
+    "framesWithConservativeNearKeyPixels": 48,
+    "maximumStrongNearKeyPixels": 4,
+    "maximumStrongNearKeyRatio": 0.001874,
+    "maximumFrame": "client/godot/assets/characters/ember_spark_v1/views/front_3quarter_sw/stagger_return/stagger_return-2.png",
+    "note": "Conservative near-literal-key audit; max ratio remains below 0.2% and alpha is preserved."
+  },
+  "errors": [],
+  "warnings": [],
+  "ownerReviewStatus": "owner_review_pending"
+}

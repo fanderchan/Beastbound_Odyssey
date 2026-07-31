@@ -23,6 +23,12 @@ func bind(main_host, character_panel) -> void:
 		return
 	if not panel.create_character_requested.is_connected(_on_create_character_requested):
 		panel.create_character_requested.connect(_on_create_character_requested)
+	if not panel.allocate_character_elements_requested.is_connected(
+		_on_allocate_character_elements_requested
+	):
+		panel.allocate_character_elements_requested.connect(
+			_on_allocate_character_elements_requested
+		)
 	if not panel.select_character_requested.is_connected(_on_select_character_requested):
 		panel.select_character_requested.connect(_on_select_character_requested)
 	if not panel.return_to_login_requested.is_connected(_on_return_to_login_requested):
@@ -130,7 +136,13 @@ func _on_create_character_requested(payload: Dictionary) -> void:
 			_base_url,
 			token,
 			int(payload.get("slotIndex", -1)),
-			str(payload.get("displayName", ""))
+			str(payload.get("displayName", "")),
+			str(payload.get("appearanceId", "")),
+			(
+				(payload.get("elements", {}) as Dictionary).duplicate(true)
+				if payload.get("elements", {}) is Dictionary
+				else {}
+			)
 		)
 	)
 	if not _request_is_current(generation, token):
@@ -153,6 +165,80 @@ func _on_create_character_requested(payload: Dictionary) -> void:
 	var roster := parsed.get("response", {}) as Dictionary
 	panel.present_roster(roster, str(created.get("playerId", "")))
 	panel.show_notice("角色创建成功，请选择角色进入游戏")
+
+
+func _on_allocate_character_elements_requested(payload: Dictionary) -> void:
+	if host == null or panel == null or not has_pending_session():
+		if panel != null:
+			panel.show_error("登录已失效，请重新登录")
+		return
+	var elements := (
+		(payload.get("elements", {}) as Dictionary).duplicate(true)
+		if payload.get("elements", {}) is Dictionary
+		else {}
+	)
+	var generation := _generation
+	var player_id := str(payload.get("playerId", "")).strip_edges()
+	var token := _pending_token()
+	if (
+		player_id != ""
+		and str(_pending_session.get("playerId", "")).strip_edges()
+			!= player_id
+	):
+		var select_response: Dictionary = await host._auto_http_request_spec(
+			ServerAuthClientModel.character_select_request(
+				_base_url,
+				token,
+				player_id
+			)
+		)
+		if not _request_is_current(generation, token):
+			return
+		var select_parsed := ServerAuthClientModel.parse_character_select_response(
+			int(select_response.get("responseCode", 0)),
+			select_response.get("body", PackedByteArray()) as PackedByteArray,
+			_pending_session
+		)
+		if not bool(select_parsed.get("ok", false)):
+			panel.show_error(ServerAuthClientModel.player_message_from_parsed(
+				select_parsed,
+				"暂时无法选择这个旧角色，请稍后重试"
+			))
+			return
+		var selected_session := (
+			(select_parsed.get("session", {}) as Dictionary).duplicate(true)
+			if select_parsed.get("session", {}) is Dictionary
+			else {}
+		)
+		selected_session["serverBaseUrl"] = _base_url
+		_pending_session = selected_session
+		host._remember_auth_session(selected_session)
+		token = _pending_token()
+	var response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.character_allocate_elements_request(
+			_base_url,
+			token,
+			elements
+		)
+	)
+	if not _request_is_current(generation, token):
+		return
+	var parsed := ServerAuthClientModel.parse_character_allocate_elements_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if not bool(parsed.get("ok", false)):
+		panel.show_error(ServerAuthClientModel.player_message_from_parsed(
+			parsed,
+			"元素保存失败，请稍后重试"
+		))
+		return
+	var roster := parsed.get("response", {}) as Dictionary
+	if roster.get("characters", []) is Array:
+		panel.present_roster(roster, player_id)
+		panel.show_notice("元素属性已保存")
+		return
+	await _refresh_roster(generation)
 
 
 func _on_select_character_requested(player_id: String) -> void:

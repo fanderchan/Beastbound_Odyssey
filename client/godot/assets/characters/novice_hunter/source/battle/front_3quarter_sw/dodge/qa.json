@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "dodge",
+  "frameCount": 8,
+  "fps": 12,
+  "loop": false,
+  "errors": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "dodge-1",
+      "runtimeBbox": [
+        84,
+        70,
+        177,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "36fdda4bebad8b8bfc7f288114fc759a92143b69d7f1e0095f8c50fc37d29ee2",
+      "runtimeDecodedRgbaSha256": "7be15e27af9182c6cbae99deda7a8142b1985a4637f2f33b7f0276ce19a86627"
+    },
+    {
+      "slot": "dodge-2",
+      "runtimeBbox": [
+        84,
+        72,
+        178,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "c9217ec1b5219582466606af74439ebb20b4bbaf7336f473d370bac3d34063cb",
+      "runtimeDecodedRgbaSha256": "9f33ff0e780233a327e648abc199681a93537cd5c9997b617cc72da68f6dedfe"
+    },
+    {
+      "slot": "dodge-3",
+      "runtimeBbox": [
+        75,
+        80,
+        183,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "a26dad662d1df076f6127a8aa3afe4be6ecdf0b837fcd6e7d4cd7dc263ce3c2a",
+      "runtimeDecodedRgbaSha256": "b3b7587ca236938a724b48078a687a59faf5ac6ad5f683bf9ec01d7f461aba47"
+    },
+    {
+      "slot": "dodge-4",
+      "runtimeBbox": [
+        44,
+        81,
+        166,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "9c46b154209d7fee01b55b2f125a8d2cbc220fbe560e586f70b106671b99b88b",
+      "runtimeDecodedRgbaSha256": "66bf6467360a681e2948181598e38b36c359af6a8f565dbfd2e152aadad0b038"
+    },
+    {
+      "slot": "dodge-5",
+      "runtimeBbox": [
+        27,
+        82,
+        164,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "ad4d8b3136e08db0534feda0207a2485bb807b30c36b8605828eb5847531b4a3",
+      "runtimeDecodedRgbaSha256": "22a1edc483970b337b70de24a7cbaa252eedca7c92356719661e9fb744a6cede"
+    },
+    {
+      "slot": "dodge-6",
+      "runtimeBbox": [
+        82,
+        84,
+        169,
+        252
+      ],
+      "minimumEdgeMargin": 4,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "9232a17640ea8098ffcb53cf4e651c05d6fed0424eabcc7fbdf70bfc96f960a7",
+      "runtimeDecodedRgbaSha256": "5033a937c72ee13568eb45b7798f5283feffa703de70a60e2dc916111e76d5f7"
+    },
+    {
+      "slot": "dodge-7",
+      "runtimeBbox": [
+        87,
+        100,
+        180,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "e4516c82c0b27ba30bb6586bc55202c2c6d87399cad79db8041285d8fc6f2e6e",
+      "runtimeDecodedRgbaSha256": "6aea17ceff4e0d6711662c4385bc5218543fc6cc6c6ce5c212eae12c22391b80"
+    },
+    {
+      "slot": "dodge-8",
+      "runtimeBbox": [
+        85,
+        80,
+        176,
+        251
+      ],
+      "minimumEdgeMargin": 5,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0,
+      "sourceDecodedRgbaSha256": "67dcb8ed3dad7bc8d7c0760e8f492c3d882dfa87b175d1ca3f82042e8f7224b5",
+      "runtimeDecodedRgbaSha256": "34bb15fa9304b59d00e587ba83d3998e68f12fb38f175ae3d96286e77827ef0c"
+    }
+  ]
+}

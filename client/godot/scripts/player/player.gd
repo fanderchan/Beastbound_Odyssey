@@ -48,13 +48,14 @@ var last_body_scale := Vector2(INF, INF)
 var last_left_foot_visible: bool = false
 var last_right_foot_visible: bool = false
 var formal_asset_enabled: bool = false
+var appearance_id: String = CharacterActionAssetCatalog.CHARACTER_ID
 var riding_form_id: String = ""
 var last_formal_texture: Texture2D
 var last_formal_flip_h: bool = false
 
 
 func _ready() -> void:
-	formal_asset_enabled = CharacterActionAssetCatalog.warm()
+	formal_asset_enabled = CharacterActionAssetCatalog.warm_world(appearance_id)
 	face_direction(Vector2.DOWN)
 	_set_animation_state("idle")
 	_set_placeholder_visible(not formal_asset_enabled)
@@ -71,7 +72,7 @@ func _process(delta: float) -> void:
 		var animation_fps := (
 			MountedCharacterAssetCatalog.world_action_fps(animation_state)
 			if riding_form_id != ""
-			else CharacterActionAssetCatalog.world_action_fps(animation_state)
+			else CharacterActionAssetCatalog.world_action_fps(animation_state, appearance_id)
 		)
 		var frame_step := 1.0 / maxf(1.0, animation_fps)
 		if animation_visual_elapsed < frame_step:
@@ -261,8 +262,42 @@ func get_animation_clip_key() -> String:
 	return "%s_%s" % [animation_state, facing_key]
 
 
+func set_appearance_id(value: String) -> bool:
+	var normalized := CharacterActionAssetCatalog.resolve_appearance_id(value)
+	var changed := normalized != appearance_id
+	appearance_id = normalized
+	formal_asset_enabled = CharacterActionAssetCatalog.warm_world(appearance_id)
+	if changed:
+		last_formal_texture = null
+		if formal_sprite != null:
+			formal_sprite.texture = null
+	if riding_form_id != "":
+		var required_character_id := MountVisualProfileCatalog.character_id_for_form(riding_form_id)
+		if not CharacterActionAssetCatalog.appearance_supports_mounted_character(
+			appearance_id,
+			required_character_id
+		):
+			set_riding_form("")
+	if formal_sprite != null:
+		formal_sprite.visible = formal_asset_enabled and riding_form_id == ""
+	_set_placeholder_visible(not formal_asset_enabled and riding_form_id == "")
+	_update_formal_animation()
+	return formal_asset_enabled
+
+
+func get_appearance_id() -> String:
+	return appearance_id
+
+
 func set_riding_form(form_id: String) -> bool:
 	var normalized := form_id.strip_edges()
+	if normalized != "":
+		var required_character_id := MountVisualProfileCatalog.character_id_for_form(normalized)
+		if not CharacterActionAssetCatalog.appearance_supports_mounted_character(
+			appearance_id,
+			required_character_id
+		):
+			normalized = ""
 	var mounted := false
 	if mounted_character != null and mounted_character.has_method("set_mount_form"):
 		mounted = bool(mounted_character.call("set_mount_form", normalized))
@@ -314,7 +349,12 @@ func _update_formal_animation() -> void:
 		return
 	if formal_sprite == null:
 		return
-	var texture := CharacterActionAssetCatalog.world_texture_for_elapsed(facing_key, animation_state, animation_time)
+	var texture := CharacterActionAssetCatalog.world_texture_for_elapsed(
+		facing_key,
+		animation_state,
+		animation_time,
+		appearance_id
+	)
 	if texture != null and texture != last_formal_texture:
 		formal_sprite.texture = texture
 		last_formal_texture = texture

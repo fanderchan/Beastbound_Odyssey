@@ -1,9 +1,23 @@
 "use strict";
 
+const {
+  loadPlayerAppearanceCatalog,
+} = require("./player-appearance-catalog");
+const {
+  ELEMENT_IDS,
+  ELEMENT_TOTAL_POINTS,
+  inspectPlayerElementAllocation,
+} = require("./battle-element-rules");
+
 const CHARACTER_SLOT_LIMIT = 4;
 const CHARACTER_SCHEMA_VERSION = 1;
 const CHARACTER_NAME_MAX_GRAPHEMES = 24;
 const CHARACTER_NAME_MAX_BYTES = 96;
+const CHARACTER_APPEARANCE_CATALOG = loadPlayerAppearanceCatalog();
+const CHARACTER_DEFAULT_APPEARANCE_ID = CHARACTER_APPEARANCE_CATALOG.defaultAppearanceId;
+const CHARACTER_APPEARANCE_IDS = CHARACTER_APPEARANCE_CATALOG.appearanceIds;
+const CHARACTER_ELEMENT_IDS = ELEMENT_IDS;
+const CHARACTER_ELEMENT_TOTAL = ELEMENT_TOTAL_POINTS;
 const CHARACTER_NAME_SEGMENTER = new Intl.Segmenter("zh-CN", {granularity: "grapheme"});
 
 function createAccountCharactersDomain(context) {
@@ -21,6 +35,7 @@ function createAccountCharactersDomain(context) {
     ok,
     isEquipmentItemId,
     partyForAccount,
+    persistProfileForAccount,
     profileSummaryForAccount,
     publicAccount,
     publicSession,
@@ -40,6 +55,11 @@ function createAccountCharactersDomain(context) {
     const existing = data.accountCharacterSlots && data.accountCharacterSlots[accountId];
     if (existing !== undefined) {
       return canonicalRoster(data, account, existing);
+    }
+    if (account.characterSlotsInitialized === true) {
+      const slots = emptyCharacterSlots();
+      storeAuthorityRootRecord(data, "accountCharacterSlots", accountId, slots);
+      return {ok: true, slots, created: true};
     }
     const binding = data.profileBindings && data.profileBindings[accountId];
     if (!binding || String(binding.playerId || "") === "") {
@@ -161,6 +181,8 @@ function createAccountCharactersDomain(context) {
     const profile = createDefaultServerProfile({
       ...resolved.account,
       displayName: intent.displayName,
+      appearanceId: intent.appearanceId,
+      elements: intent.elements,
     });
     const profileDoc = {
       playerId,
@@ -191,6 +213,60 @@ function createAccountCharactersDomain(context) {
       ...characterRosterPayload(data, resolved.account, resolved.session, nextSlots),
       character: publicCharacterSlot(data, slot, resolved.session),
       message: "角色创建成功，请选择角色进入游戏。",
+    });
+  }
+
+  function allocateCharacterElements(token, payload = {}) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const ensured = ensureForAccount(data, resolved.account);
+    if (!ensured.ok) {
+      return ensured;
+    }
+    const intent = characterElementAllocationIntent(payload);
+    if (!intent.ok) {
+      return intent;
+    }
+    const binding = data.profileBindings && data.profileBindings[resolved.account.accountId];
+    const profileDoc = binding && data.profiles ? data.profiles[binding.playerId] : null;
+    const profile = profileDoc && isRecord(profileDoc.profile) ? clone(profileDoc.profile) : null;
+    const player = profile && isRecord(profile.player) ? profile.player : null;
+    if (
+      !binding
+      || String(binding.playerId || "") !== String(resolved.session.playerId || "")
+      || !profileDoc
+      || String(profileDoc.playerId || "") !== String(resolved.session.playerId || "")
+      || !player
+    ) {
+      return fail("character_profile_invalid", "角色档案异常，已停止元素分配，请联系GM处理。");
+    }
+    if (normalizeCharacterElements(player.elements)) {
+      return fail("character_elements_already_allocated", "这个角色已经完成元素分配，不能重复领取首次配点。");
+    }
+    player.appearanceId = normalizeCharacterAppearanceId(player.appearanceId);
+    player.elements = intent.elements;
+    const persisted = persistProfileForAccount(
+      data,
+      resolved.account,
+      binding,
+      profile,
+      now,
+    );
+    const slot = ensured.slots.find((entry) => (
+      entry && entry.playerId === persisted.binding.playerId
+    )) || null;
+    if (!slot) {
+      return fail("character_slots_invalid", "账号角色槽档案异常，已停止元素分配，请联系GM处理。");
+    }
+    save(data);
+    return ok({
+      character: publicCharacterSlot(data, slot, resolved.session),
+      profileBinding: persisted.binding,
+      profileSummary: profileSummaryForAccount(resolved.account, data),
+      message: "元素分配完成。",
     });
   }
 
@@ -269,6 +345,7 @@ function createAccountCharactersDomain(context) {
   }
 
   return Object.freeze({
+    allocateCharacterElements,
     autoSelectionForAccount,
     createCharacter,
     ensureForAccount,
@@ -455,9 +532,6 @@ function canonicalRoster(data, account, value) {
     playerIds.add(rawSlot.playerId);
     slots.push(characterSlot(rawSlot));
   }
-  if (slots.filter(Boolean).length === 0) {
-    return rosterFailure();
-  }
   const activeBinding = data.profileBindings && data.profileBindings[accountId];
   if (
     activeBinding
@@ -503,11 +577,15 @@ function publicCharacterSlot(data, slot, session) {
   const profileDoc = data.profiles && data.profiles[slot.playerId];
   const profile = profileDoc && isRecord(profileDoc.profile) ? profileDoc.profile : {};
   const player = isRecord(profile.player) ? profile.player : {};
+  const elements = normalizeCharacterElements(player.elements);
   return {
     slotIndex: slot.slotIndex,
     occupied: true,
     playerId: slot.playerId,
     displayName: String(player.name || "见习猎人"),
+    appearanceId: normalizeCharacterAppearanceId(player.appearanceId),
+    elements,
+    needsElementAllocation: elements === null,
     level: positiveInteger(player.level, 1),
     rebirthCount: nonNegativeInteger(profile.rebirthCount, 0),
     profileRevision: nonNegativeInteger(profileDoc && profileDoc.profileRevision, 0),
@@ -523,13 +601,21 @@ function characterCreateIntent(payload, slots) {
   if (!isRecord(payload)) {
     return {ok: false, code: "character_create_payload_invalid", message: "角色创建请求不正确。"};
   }
-  const allowed = new Set(["displayName", "slotIndex"]);
+  const allowed = new Set(["appearanceId", "displayName", "elements", "slotIndex"]);
   if (Object.keys(payload).some((key) => !allowed.has(key))) {
     return {ok: false, code: "character_create_payload_invalid", message: "角色创建请求包含不支持的字段。"};
   }
   const displayName = String(payload.displayName || "").trim();
   if (!isValidCharacterName(displayName)) {
     return {ok: false, code: "invalid_display_name", message: "角色名最多24个字符，且不能包含控制字符。"};
+  }
+  const appearanceId = String(payload.appearanceId || "").trim();
+  if (!CHARACTER_APPEARANCE_CATALOG.has(appearanceId)) {
+    return {ok: false, code: "character_appearance_invalid", message: "请选择可用的角色形象。"};
+  }
+  const elementIntent = characterElementsIntent(payload.elements);
+  if (!elementIntent.ok) {
+    return elementIntent;
   }
   let slotIndex = slots.findIndex((slot) => slot === null);
   if (Object.hasOwn(payload, "slotIndex")) {
@@ -544,7 +630,57 @@ function characterCreateIntent(payload, slots) {
   if (slots[slotIndex] !== null) {
     return {ok: false, code: "character_slot_occupied", message: "这个角色槽已经被占用。"};
   }
-  return {ok: true, displayName, slotIndex};
+  return {
+    ok: true,
+    appearanceId,
+    displayName,
+    elements: elementIntent.elements,
+    slotIndex,
+  };
+}
+
+function characterElementAllocationIntent(payload) {
+  if (
+    !isRecord(payload)
+    || Object.keys(payload).length !== 1
+    || !Object.hasOwn(payload, "elements")
+  ) {
+    return {ok: false, code: "character_elements_payload_invalid", message: "元素分配请求不正确。"};
+  }
+  return characterElementsIntent(payload.elements);
+}
+
+function characterElementsIntent(value) {
+  const inspected = inspectPlayerElementAllocation(value);
+  if (inspected.ok) {
+    return {ok: true, elements: {...inspected.elements}};
+  }
+  if (inspected.reason === "total_invalid") {
+    return {ok: false, code: "character_elements_total_invalid", message: "创建角色时必须分配完10点元素。"};
+  }
+  if (inspected.reason === "too_many_active_elements") {
+    return {ok: false, code: "character_elements_affinity_limit", message: "一个角色最多选择两种元素。"};
+  }
+  if (inspected.reason === "forbidden_pair") {
+    const pair = Array.isArray(inspected.forbiddenPair) ? inspected.forbiddenPair.join("+") : "";
+    const message = pair === "earth+fire"
+      ? "地与火不能同时分配元素点。"
+      : "水与风不能同时分配元素点。";
+    return {ok: false, code: "character_elements_conflict", message};
+  }
+  return {ok: false, code: "character_elements_invalid", message: "元素点必须完整包含地、水、火、风四项，且每项为0到10之间的整数。"};
+}
+
+function normalizeCharacterAppearanceId(value) {
+  const appearanceId = String(value || "").trim();
+  return CHARACTER_APPEARANCE_CATALOG.has(appearanceId)
+    ? appearanceId
+    : CHARACTER_DEFAULT_APPEARANCE_ID;
+}
+
+function normalizeCharacterElements(value) {
+  const intent = characterElementsIntent(value);
+  return intent.ok ? intent.elements : null;
 }
 
 function characterSelectionIntent(payload, slots) {
@@ -722,6 +858,10 @@ function characterSlot(value) {
   };
 }
 
+function emptyCharacterSlots() {
+  return Array.from({length: CHARACTER_SLOT_LIMIT}, () => null);
+}
+
 function nextPlayerId(data, randomId) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const entropy = String(randomId() || "").trim().replace(/[^A-Za-z0-9]/g, "").slice(0, 40);
@@ -821,8 +961,14 @@ function values(value) {
 }
 
 module.exports = {
+  CHARACTER_APPEARANCE_IDS,
+  CHARACTER_DEFAULT_APPEARANCE_ID,
+  CHARACTER_ELEMENT_IDS,
+  CHARACTER_ELEMENT_TOTAL,
   CHARACTER_SLOT_LIMIT,
   createAccountCharactersDomain,
   isValidCharacterName,
+  normalizeCharacterAppearanceId,
+  normalizeCharacterElements,
   selectedCharacterForSession,
 };

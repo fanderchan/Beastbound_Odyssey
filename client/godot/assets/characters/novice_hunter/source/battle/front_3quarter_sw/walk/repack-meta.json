@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "input": "client/godot/assets/characters/novice_hunter/source/front_3quarter_sw_walk_raw.png",
+  "output": "client/godot/assets/characters/novice_hunter/source/front_3quarter_sw_walk_repacked.png",
+  "rows": 4,
+  "cols": 2,
+  "key": "#FF00FF",
+  "sharedScale": 0.7513043478260869,
+  "allowUpscale": false,
+  "discardedSmallComponents": [],
+  "frames": [
+    {
+      "index": 1,
+      "grid": [
+        0,
+        0
+      ],
+      "sourceBbox": [
+        190,
+        22,
+        395,
+        379
+      ],
+      "sourceArea": 38606,
+      "outputSize": [
+        159,
+        273
+      ],
+      "pastePosition": [
+        176,
+        80
+      ],
+      "cellMargins": [
+        176,
+        80,
+        177,
+        31
+      ]
+    },
+    {
+      "index": 2,
+      "grid": [
+        0,
+        1
+      ],
+      "sourceBbox": [
+        631,
+        22,
+        837,
+        381
+      ],
+      "sourceArea": 37955,
+      "outputSize": [
+        159,
+        274
+      ],
+      "pastePosition": [
+        688,
+        79
+      ],
+      "cellMargins": [
+        176,
+        79,
+        177,
+        31
+      ]
+    },
+    {
+      "index": 3,
+      "grid": [
+        1,
+        0
+      ],
+      "sourceBbox": [
+        189,
+        391,
+        380,
+        749
+      ],
+      "sourceArea": 36291,
+      "outputSize": [
+        148,
+        273
+      ],
+      "pastePosition": [
+        182,
+        464
+      ],
+      "cellMargins": [
+        182,
+        80,
+        182,
+        31
+      ]
+    },
+    {
+      "index": 4,
+      "grid": [
+        1,
+        1
+      ],
+      "sourceBbox": [
+        621,
+        394,
+        824,
+        742
+      ],
+      "sourceArea": 35762,
+      "outputSize": [
+        157,
+        266
+      ],
+      "pastePosition": [
+        689,
+        471
+      ],
+      "cellMargins": [
+        177,
+        87,
+        178,
+        31
+      ]
+    },
+    {
+      "index": 5,
+      "grid": [
+        2,
+        0
+      ],
+      "sourceBbox": [
+        174,
+        768,
+        385,
+        1111
+      ],
+      "sourceArea": 36113,
+      "outputSize": [
+        163,
+        262
+      ],
+      "pastePosition": [
+        174,
+        859
+      ],
+      "cellMargins": [
+        174,
+        91,
+        175,
+        31
+      ]
+    },
+    {
+      "index": 6,
+      "grid": [
+        2,
+        1
+      ],
+      "sourceBbox": [
+        639,
+        768,
+        819,
+        1115
+      ],
+      "sourceArea": 35510,
+      "outputSize": [
+        140,
+        265
+      ],
+      "pastePosition": [
+        698,
+        856
+      ],
+      "cellMargins": [
+        186,
+        88,
+        186,
+        31
+      ]
+    },
+    {
+      "index": 7,
+      "grid": [
+        3,
+        0
+      ],
+      "sourceBbox": [
+        183,
+        1129,
+        362,
+        1483
+      ],
+      "sourceArea": 34838,
+      "outputSize": [
+        139,
+        270
+      ],
+      "pastePosition": [
+        186,
+        1235
+      ],
+      "cellMargins": [
+        186,
+        83,
+        187,
+        31
+      ]
+    },
+    {
+      "index": 8,
+      "grid": [
+        3,
+        1
+      ],
+      "sourceBbox": [
+        625,
+        1128,
+        828,
+        1490
+      ],
+      "sourceArea": 36818,
+      "outputSize": [
+        157,
+        276
+      ],
+      "pastePosition": [
+        689,
+        1229
+      ],
+      "cellMargins": [
+        177,
+        77,
+        178,
+        31
+      ]
+    }
+  ]
+}

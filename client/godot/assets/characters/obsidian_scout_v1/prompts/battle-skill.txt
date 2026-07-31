@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal battle body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout performing a distinctive eight-frame shield-braced leaping heavy-axe skill in both formal views. Create an exact 4x4 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: shield brace, low crouch, leg load, short forward leap, overhead heavy axe strike/contact body pose, controlled landing, draw back, ready. Clearly different from the normal chop.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body and equipment only.
+Layout: exact 4x4 invisible grid; complete body centered, stable scale/baseline, all poses inside central 68% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity, axe right hand, shield left arm; real anticipation/air/landing beats; equipment remains attached.
+Avoid: mirroring, magic aura, slash arc, impact burst, dust, projectile, copied frames, missing limbs, crossed edges, text, watermark.

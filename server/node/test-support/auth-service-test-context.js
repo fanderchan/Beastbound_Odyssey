@@ -26,6 +26,23 @@ const fixtureManualEncounterAccess = Object.freeze({
 // useStrictPetEncounterAuthority: true 会改走与生产相同的地图目录与位置校验。
 function createAuthService(options = {}) {
   const serviceOptions = {"allowFullProfileSave": true, ...options};
+  // Most historical domain fixtures begin from an already-created legacy
+  // character. Production createAuthService() defaults to zero characters;
+  // character-creation tests opt out explicitly to exercise that real flow.
+  if (serviceOptions.autoCreateInitialCharacterForTests === undefined) {
+    serviceOptions.autoCreateInitialCharacterForTests = true;
+  }
+  if (
+    serviceOptions.autoCreateInitialCharacterForTests
+    && serviceOptions.initialCharacterElementsForTests === undefined
+  ) {
+    serviceOptions.initialCharacterElementsForTests = {
+      earth: 10,
+      water: 0,
+      fire: 0,
+      wind: 0,
+    };
+  }
   const useStrictPetEncounterPermitAuthority = Boolean(serviceOptions.useStrictPetEncounterPermitAuthority);
   const useStrictManualEncounterAccess = Boolean(serviceOptions.useStrictManualEncounterAccess);
   const useStrictPetEncounterAuthority = Boolean(

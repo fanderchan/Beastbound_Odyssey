@@ -37,10 +37,10 @@ GODOT_PROJECT = REPO_ROOT / "client" / "godot"
 MAIN_SCENE = "res://scenes/Main.tscn"
 DEFAULT_CAPTURE_FLAG = "--character-entry-owner-review-capture"
 DEFAULT_OUTPUT_ROOT = Path(
-    ".run/evidence/phase378_character_entry_owner_review"
+    ".run/evidence/phase379_character_creation_owner_review"
 )
-REPORT_SCHEMA_VERSION = 1
-REPORT_TYPE = "beastbound_character_entry_owner_review_video"
+REPORT_SCHEMA_VERSION = 2
+REPORT_TYPE = "beastbound_character_creation_main_owner_review_video"
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
 EXPECTED_FPS = 30
@@ -48,19 +48,25 @@ EXPECTED_VIDEO_CODEC = "h264"
 EXPECTED_PIXEL_FORMAT = "yuv420p"
 EXPECTED_AUDIO_CODEC = "aac"
 MIN_DURATION_SECONDS = 15.0
-MAX_DURATION_SECONDS = 25.0
+MAX_DURATION_SECONDS = 30.0
 DEFAULT_SAMPLE_COUNT = 8
 MAX_SAMPLE_COUNT = 12
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 END_MARKER = "CHARACTER_ENTRY_OWNER_REVIEW_END"
 CHAPTER_MARKER = "CHARACTER_ENTRY_OWNER_REVIEW_CHAPTER"
 EXPECTED_CHAPTERS = (
-    "primary_character_home",
-    "alternate_character_selected",
-    "creation_dialog_open",
-    "creation_name_entered",
-    "creation_cancelled",
-    "primary_character_restored",
+    "four_empty_slots",
+    "creation_configuration_open",
+    "appearance_novice_hunter_v1",
+    "appearance_obsidian_scout_v1",
+    "appearance_frost_whisper_v1",
+    "appearance_ember_spark_v1",
+    "remaining_point_blocks_creation",
+    "legal_dual_elements_complete",
+    "random_name_selected",
+    "typed_name_ready",
+    "create_payload_captured",
+    "authoritative_created_slot",
 )
 
 
@@ -74,7 +80,7 @@ def _utc_now() -> datetime:
 
 def _new_run_id() -> str:
     timestamp = _utc_now().strftime("%Y%m%dT%H%M%S.%fZ")
-    return f"phase378-{timestamp}-{uuid.uuid4().hex[:8]}"
+    return f"phase379-{timestamp}-{uuid.uuid4().hex[:8]}"
 
 
 def _build_godot_command(
@@ -171,9 +177,39 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         raise CharacterEntryRecordingError(
             "Godot角色入口验收序列没有确认隔离角色名单和离线后端"
         )
-    if "selected=character_review_primary" not in text:
+    if "scene=Main.tscn" not in text:
         raise CharacterEntryRecordingError(
-            "Godot角色入口验收序列没有返回主角色"
+            "Godot角色创建验收序列没有确认真实Main.tscn"
+        )
+    if "payload=captured" not in text:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收序列没有确认捕获创建payload"
+        )
+    if "profile_save=false" not in text:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收序列没有关闭玩家档案写入"
+        )
+    if "selected=character_review_created" not in text:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收序列没有展示新建角色槽"
+        )
+    if "appearance=ember_spark_v1" not in text:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收序列没有保存最终人物形象"
+        )
+    if "elements=earth6_water4" not in text:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收序列没有保存合法双元素"
+        )
+    payload_pattern = re.compile(
+        r"CHARACTER_ENTRY_OWNER_REVIEW_PAYLOAD\s+"
+        r"slot=0\s+name=林岚\s+appearance=ember_spark_v1\s+"
+        r"earth=6\s+water=4\s+fire=0\s+wind=0\s+"
+        r"scene=Main\.tscn\s+backend=false"
+    )
+    if payload_pattern.search(text) is None:
+        raise CharacterEntryRecordingError(
+            "Godot角色创建验收日志缺少完整、安全的创建payload"
         )
     chapter_pattern = re.compile(
         rf"{CHAPTER_MARKER}\s+chapter=([A-Za-z0-9_.-]+)\s+"
@@ -209,7 +245,19 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "playbackSpeed": 1.0,
         "rosterIsolated": True,
         "backendConnected": False,
-        "returnedToPrimaryCharacter": True,
+        "scene": MAIN_SCENE,
+        "fourEmptySlotsAtStart": True,
+        "payloadCaptured": True,
+        "profileSaveEnabled": False,
+        "createdSlotPresented": True,
+        "createdPlayerId": "character_review_created",
+        "createdAppearanceId": "ember_spark_v1",
+        "createdElements": {
+            "earth": 6,
+            "water": 4,
+            "fire": 0,
+            "wind": 0,
+        },
     }
 
 
@@ -408,6 +456,9 @@ def _record_into(
             ],
             "audioRequired": True,
             "realCrossFrameInput": True,
+            "fourEmptySlotsAtStart": True,
+            "payloadCapturedWithoutBackend": True,
+            "localAuthoritativePresentation": True,
         },
         "isolation": {
             "userData": CORE._user_data_inventory(user_data_dir),
@@ -515,8 +566,8 @@ def _record(args: argparse.Namespace) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "用真实Main.tscn录制1280x720、30fps、1×、有声的角色入口"
-            "验收视频，并生成MP4、联系表、元数据与完整解码证据。"
+            "用真实Main.tscn录制1280x720、30fps、1×、有声的完整角色"
+            "创建配置验收视频，并生成MP4、联系表、元数据与解码证据。"
         )
     )
     parser.add_argument("--run-id", help="可选的唯一安全runId。")

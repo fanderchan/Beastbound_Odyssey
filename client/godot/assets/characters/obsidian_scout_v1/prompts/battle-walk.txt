@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal battle body-animation source grid
+Primary request: Animate the exact same black-haired tribal scout in an eight-frame forward battle approach/return walk cycle for both formal views. Create an exact 4-row by 4-column grid: rows 1-2 are front_3quarter_sw facing lower-left; rows 3-4 are independently authored back_3quarter_ne facing upper-right. Frame order per view: left contact, compression, passing, rise, right contact, compression, passing, rise; a real alternating loop.
+Input image: identity board is the strict same-character reference.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite.
+Layout: exact 4x4 invisible grid; one centered complete full body per cell; stable feet, common scale and body height; central 65% safe area; no grid lines or labels.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: exact identity; shield on left arm and short axe in right hand kept close; ponytail and waist cord follow motion; both views keep exact direction and equipment sides.
+Avoid: mirroring, sliding, vertical-bob-only walk, copied frames, direction drift, scale pumping, crossed edges, detached FX, text, watermark.

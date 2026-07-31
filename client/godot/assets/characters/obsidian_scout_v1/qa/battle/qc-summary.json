@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "characterId": "obsidian_scout_v1",
+  "checkedAt": "2026-08-01",
+  "result": "passed_engineering_qc",
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "sourceFrameSize": [
+    512,
+    512
+  ],
+  "battle": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actionCount": 12,
+    "framesPerView": 90,
+    "totalFrameCount": 180,
+    "missingFrames": [],
+    "wrongSizeFrames": [],
+    "emptyAlphaFrames": [],
+    "runtimeEdgeTouchFrames": [],
+    "unexpectedDecodedDuplicateGroups": [],
+    "intentionalDecodedDuplicateGroups": [
+      [
+        "views/front_3quarter_sw/down/down-8.png",
+        "views/front_3quarter_sw/revive/revive-1.png"
+      ],
+      [
+        "views/back_3quarter_ne/down/down-8.png",
+        "views/back_3quarter_ne/revive/revive-1.png"
+      ]
+    ]
+  },
+  "world": {
+    "strategy": "independent_8",
+    "directionCount": 8,
+    "framesPerDirection": 5,
+    "totalFrameCount": 40,
+    "runtimeMirroring": false,
+    "exactDuplicateGroups": [],
+    "horizontalMirrorMatches": [],
+    "runtimeEdgeTouchFrames": []
+  },
+  "koContinuity": [
+    {
+      "view": "front_3quarter_sw",
+      "down8Sha256": "e01f8cfc1c1d1e0f3dd7a6649d310ff47318f26781c30e40c319c32327dcba11",
+      "revive1Sha256": "e01f8cfc1c1d1e0f3dd7a6649d310ff47318f26781c30e40c319c32327dcba11",
+      "decodedRgbaEqual": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "down8Sha256": "c001c97fd0fdb0f00fc4347c7c777e665836922527682f2420151f5d7cef44a1",
+      "revive1Sha256": "c001c97fd0fdb0f00fc4347c7c777e665836922527682f2420151f5d7cef44a1",
+      "decodedRgbaEqual": true
+    }
+  ],
+  "ui": {
+    "portrait": {
+      "path": "ui/portrait.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaNonEmpty": true
+    },
+    "showcase": {
+      "path": "ui/showcase.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaNonEmpty": true
+    }
+  },
+  "contactSheets": {
+    "battle": "qa/battle/contact-sheet.png",
+    "world": "qa/world/contact-sheet.png",
+    "ui": "qa/ui-contact-sheet.png"
+  },
+  "ownerReviewStatus": "owner_review_pending"
+}

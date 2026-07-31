@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: independently authored square character portrait master for Beastbound Odyssey UI
+Primary request: Paint a dedicated head-and-upper-torso portrait of the exact same black-haired tribal scout shown in the reference identity board. This is a new portrait composition, not a crop of the reference.
+Input image: identity board is the strict same-character reference; preserve identity, costume and palette.
+Subject: warm medium-brown young man, cyan-teal eyes, deep blue-black high ponytail with indigo highlights and two asymmetric forehead locks, pale bone ear cuff, three-fang bone necklace, slate-blue-black vest and sand hide shoulder guard. Alert friendly confidence, subtle half-smile. No weapons in front of the face.
+Style/medium: original high-definition hand-painted 2.5D collectible RPG portrait, clean dark-brown outlines, soft cel-painted volume, crisp readable eyes and materials.
+Composition/framing: square 1:1 master; head and upper torso centered, slightly turned three-quarter toward viewer; all hair tips, ear and shoulders fully inside central 72% safe area; generous padding.
+Scene/backdrop: perfectly flat solid #FF00FF chroma-key background, one uniform color, no shadow, gradient, texture, floor or reflection.
+Constraints: exact same face, hair silhouette, teal eyes, bone necklace, shoulder guard and colors as reference; no text, no frame, no watermark, no cast shadow.
+Avoid: full-body pose, copied commercial character, red hair, white hair, orange/yellow main clothing, photorealism, 3D render, pixel art, toddler proportions.

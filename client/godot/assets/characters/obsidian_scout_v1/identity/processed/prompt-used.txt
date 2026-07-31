@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: production identity reference board for a playable 2.5D RPG character
+Primary request: Create one exact original young male tribal scout identity shown in four coherent panels: front three-quarter full body, rear three-quarter full body, side full body, and alert ready full body. Every panel is the same person.
+Subject: agile sturdy young man, warm medium-brown skin, large cyan-teal eyes, deep blue-black high ponytail with indigo highlights and two asymmetric forehead locks, small pale bone ear cuff, three-fang bone necklace with longer center fang. Asymmetric slate-blue-black short vest, sand hide shoulder guard, deep teal belt, dark teal shorts, brown wrist and shin wraps, soft hide ankle boots. Small round walnut wood shield with pale bone boss and teal braided rim on left arm. Short wood-and-flint hand axe with rope binding at right hip/hand.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D game character, clean dark-brown outlines, soft cel-painted volume, collectible RPG clarity, roughly 1:4.6 head-to-body proportion.
+Composition/framing: exact 2x2 identity board, one complete full body per panel, consistent size and ground line, generous safe padding; no labels, no panel borders.
+Scene/backdrop: perfectly flat solid #FF00FF chroma-key background, uniform with no shadows, gradients, texture, floor or reflections.
+Constraints: identical face, hair, necklace, costume, axe, shield, body proportion and palette in all four panels; every limb and accessory fully visible; shield stays small enough not to hide the torso; no cast shadow; no text; no watermark.
+Avoid: red or orange hair, yellow main clothing, white fur collar, satchel, long cape, heavy armor, metal weapon, giant axe, magic glow, copied commercial character, photorealism, 3D render, pixel art, chibi toddler proportions.

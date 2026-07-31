@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: two-view formal reversible-KO recovery source grid
+Primary request: Animate the exact same black-haired tribal scout recovering from the supplied exact unconscious hold into ready stance in eight chronological frames for both formal views. Create an exact 4x4 grid: rows 1-2 front_3quarter_sw facing lower-left; rows 3-4 independently authored back_3quarter_ne facing upper-right. Per-view chronology: exact held unconscious starting pose, first stir, place hand/shield for support, push torso up, kneel, rise halfway, stand and regain balance, ready stance. Do not replay collapse.
+Input images: identity board locks character identity; supplied front and back down-8 images lock the first frame of each view. The installed revive-1 will be byte-identical to those down-8 frames.
+Style/medium: original Beastbound Odyssey high-definition hand-painted 2.5D battle sprite, body only.
+Layout: exact 4x4 invisible grid; one complete body per cell; common scale; all poses inside central 70% safe area.
+Scene/backdrop: perfectly flat uniform #FF00FF chroma key.
+Constraints: same identity and attached equipment; clear continuous recovery without teleporting; awake expression only after the body begins rising; both views independently authored.
+Avoid: mirroring, re-collapse, instant teleport to idle, smile while unconscious, X/death eyes, gore, halo/stars, magic FX, detached equipment, text, watermark.
