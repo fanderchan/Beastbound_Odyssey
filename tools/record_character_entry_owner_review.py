@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record and validate the real character-entry owner-review flow.
+"""Record and validate the real Phase380 character-name owner-review flow.
 
 The recorder launches the production ``Main.tscn`` path with a fresh Godot
 user-data directory.  It does not start a backend or read/write the normal
@@ -37,18 +37,18 @@ GODOT_PROJECT = REPO_ROOT / "client" / "godot"
 MAIN_SCENE = "res://scenes/Main.tscn"
 DEFAULT_CAPTURE_FLAG = "--character-entry-owner-review-capture"
 DEFAULT_OUTPUT_ROOT = Path(
-    ".run/evidence/phase379_character_creation_owner_review"
+    ".run/evidence/phase380_character_name_safety_owner_review"
 )
-REPORT_SCHEMA_VERSION = 2
-REPORT_TYPE = "beastbound_character_creation_main_owner_review_video"
+REPORT_SCHEMA_VERSION = 3
+REPORT_TYPE = "beastbound_character_name_safety_main_owner_review_video"
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
 EXPECTED_FPS = 30
 EXPECTED_VIDEO_CODEC = "h264"
 EXPECTED_PIXEL_FORMAT = "yuv420p"
 EXPECTED_AUDIO_CODEC = "aac"
-MIN_DURATION_SECONDS = 15.0
-MAX_DURATION_SECONDS = 30.0
+MIN_DURATION_SECONDS = 20.0
+MAX_DURATION_SECONDS = 35.0
 DEFAULT_SAMPLE_COUNT = 8
 MAX_SAMPLE_COUNT = 12
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -62,8 +62,13 @@ EXPECTED_CHAPTERS = (
     "appearance_frost_whisper_v1",
     "appearance_ember_spark_v1",
     "remaining_point_blocks_creation",
-    "legal_dual_elements_complete",
-    "random_name_selected",
+    "legal_dual_elements_earth_green",
+    "name_row_inside_board_earth_green",
+    "random_name_1_allowed",
+    "random_name_2_allowed",
+    "random_name_3_allowed",
+    "restricted_name_rejected",
+    "random_name_recovered",
     "typed_name_ready",
     "create_payload_captured",
     "authoritative_created_slot",
@@ -80,7 +85,7 @@ def _utc_now() -> datetime:
 
 def _new_run_id() -> str:
     timestamp = _utc_now().strftime("%Y%m%dT%H%M%S.%fZ")
-    return f"phase379-{timestamp}-{uuid.uuid4().hex[:8]}"
+    return f"phase380-{timestamp}-{uuid.uuid4().hex[:8]}"
 
 
 def _build_godot_command(
@@ -201,6 +206,54 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         raise CharacterEntryRecordingError(
             "Godot角色创建验收序列没有保存合法双元素"
         )
+    if (
+        "phase=380 name_row=inside earth=green "
+        "random_names=3 restricted=blocked"
+    ) not in text:
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收序列缺少名字行、地属性或敏感名结论"
+        )
+    if (
+        "CHARACTER_ENTRY_OWNER_REVIEW_LAYOUT "
+        "name_row=inside_board button=inside_board overlap=false "
+        "earth=green"
+    ) not in text:
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收没有确认名字按钮边界和绿色地属性"
+        )
+    random_pattern = re.compile(
+        r"CHARACTER_ENTRY_OWNER_REVIEW_RANDOM\s+"
+        r"index=(\d+)\s+name=([^\s]+)\s+"
+        r"nonempty=true\s+changed=true\s+allowed=true"
+    )
+    random_entries = [
+        {"index": int(match.group(1)), "name": match.group(2)}
+        for match in random_pattern.finditer(text)
+    ]
+    if [entry["index"] for entry in random_entries] != [1, 2, 3]:
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收没有按顺序完成三次随机名字点击"
+        )
+    if any(not str(entry["name"]).strip() for entry in random_entries):
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收记录了空的随机名字"
+        )
+    if (
+        "CHARACTER_ENTRY_OWNER_REVIEW_RESTRICTED "
+        "input=obfuscated policy=blocked error=generic submit=disabled"
+    ) not in text:
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收没有展示混淆敏感名通用错误"
+        )
+    recovery_pattern = re.compile(
+        r"CHARACTER_ENTRY_OWNER_REVIEW_RECOVERY\s+"
+        r"random_name=([^\s]+)\s+allowed=true\s+submit=enabled"
+    )
+    recovery_match = recovery_pattern.search(text)
+    if recovery_match is None or recovery_match.group(1).strip() == "":
+        raise CharacterEntryRecordingError(
+            "Godot Phase380验收没有用随机名字恢复合法状态"
+        )
     payload_pattern = re.compile(
         r"CHARACTER_ENTRY_OWNER_REVIEW_PAYLOAD\s+"
         r"slot=0\s+name=林岚\s+appearance=ember_spark_v1\s+"
@@ -258,6 +311,14 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             "fire": 0,
             "wind": 0,
         },
+        "nameRowInsideBoard": True,
+        "earthElementGreen": True,
+        "randomNameClickCount": len(random_entries),
+        "randomNames": [entry["name"] for entry in random_entries],
+        "restrictedObfuscatedNameBlocked": True,
+        "restrictedNameMessageGeneric": True,
+        "restrictedNameSubmitDisabled": True,
+        "randomNameRecovery": recovery_match.group(1),
     }
 
 
@@ -279,8 +340,8 @@ def _record_into(
     temporary_dir.mkdir(parents=False, exist_ok=False)
     environment = CORE._isolated_environment(temporary_dir)
 
-    avi_path = run_dir / "character-entry-owner-review-1x.avi"
-    video_path = run_dir / "character-entry-owner-review-1x.mp4"
+    avi_path = run_dir / "character-name-safety-owner-review-1x.avi"
+    video_path = run_dir / "character-name-safety-owner-review-1x.mp4"
     godot_log = run_dir / "godot-recording.log"
     command = _build_godot_command(
         godot=godot,
@@ -459,6 +520,14 @@ def _record_into(
             "fourEmptySlotsAtStart": True,
             "payloadCapturedWithoutBackend": True,
             "localAuthoritativePresentation": True,
+            "nameRowInsideBoard": True,
+            "earthElementGreen": True,
+            "minimumRandomNameClicks": 3,
+            "randomNamesValidatedByClientPolicy": True,
+            "obfuscatedRestrictedNameRejected": True,
+            "restrictedNameMessageGeneric": True,
+            "restrictedNameSubmitDisabled": True,
+            "randomNameRecovery": True,
         },
         "isolation": {
             "userData": CORE._user_data_inventory(user_data_dir),
@@ -566,8 +635,9 @@ def _record(args: argparse.Namespace) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "用真实Main.tscn录制1280x720、30fps、1×、有声的完整角色"
-            "创建配置验收视频，并生成MP4、联系表、元数据与解码证据。"
+            "用真实Main.tscn录制1280x720、30fps、1×、有声的Phase380"
+            "角色名字边界、随机生成、敏感名过滤与绿色地属性验收视频，"
+            "并生成MP4、联系表、元数据与解码证据。"
         )
     )
     parser.add_argument("--run-id", help="可选的唯一安全runId。")

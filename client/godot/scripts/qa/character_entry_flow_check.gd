@@ -3,6 +3,9 @@ extends SceneTree
 const CharacterRosterModelCheck := preload(
 	"res://scripts/progression/character_roster_model_check.gd"
 )
+const CharacterRosterModel := preload(
+	"res://scripts/progression/character_roster_model.gd"
+)
 const CharacterCreationModelCheck := preload(
 	"res://scripts/progression/character_creation_model_check.gd"
 )
@@ -109,6 +112,8 @@ func _run() -> void:
 		"全屏建角页没有提供四形象、元素或创建模式",
 		_errors
 	)
+	_expect_creation_layout(panel, creation_snapshot)
+	_expect_earth_green(panel, false)
 
 	var name_input := panel.get_node_or_null(
 		"CharacterCreationPanel/CreationBoard/NameInput"
@@ -116,11 +121,34 @@ func _run() -> void:
 	var create_button := panel.get_node_or_null(
 		"CharacterCreationPanel/CreationBoard/ConfirmCreationButton"
 	) as Button
+	var random_name_button := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/RandomNameButton"
+	) as Button
 	_expect(
-		name_input != null and create_button != null,
-		"建角表单缺少姓名输入或提交按钮",
+		name_input != null
+		and create_button != null
+		and random_name_button != null,
+		"建角表单缺少姓名输入、随机名或提交按钮",
 		_errors
 	)
+	if name_input != null and random_name_button != null:
+		random_name_button.emit_signal("pressed")
+		var first_random_name := name_input.text
+		random_name_button.emit_signal("pressed")
+		var second_random_name := name_input.text
+		_expect(
+			first_random_name != ""
+			and second_random_name != ""
+			and first_random_name != second_random_name
+			and CharacterRosterModel.character_name_errors(
+				first_random_name
+			).is_empty()
+			and CharacterRosterModel.character_name_errors(
+				second_random_name
+			).is_empty(),
+			"换一个按钮没有连续生成两个不同的安全名字",
+			_errors
+		)
 	var appearance_button := panel.get_node_or_null(
 		"CharacterCreationPanel/Appearance1"
 	) as Button
@@ -147,7 +175,29 @@ func _run() -> void:
 			earth_plus.emit_signal("pressed")
 		for _index in range(4):
 			water_plus.emit_signal("pressed")
+		_expect_earth_green(panel, true)
+		name_input.text = "管·理 员"
+		name_input.emit_signal("text_changed", name_input.text)
+		var restricted_snapshot := panel.snapshot()
+		_expect(
+			create_button.disabled
+			and str(
+				(restricted_snapshot.get("creation", {}) as Dictionary).get(
+					"errorText",
+					""
+				)
+			) == "这个名字不能使用，请换一个。",
+			"敏感角色名没有即时禁止创建并显示安全提示",
+			_errors
+		)
+		create_button.emit_signal("pressed")
+		_expect(
+			_created_payloads.is_empty(),
+			"敏感角色名仍发出了创建请求",
+			_errors
+		)
 		name_input.text = ""
+		name_input.emit_signal("text_changed", name_input.text)
 		create_button.emit_signal("pressed")
 		var invalid_snapshot := panel.snapshot()
 		_expect(
@@ -164,6 +214,7 @@ func _run() -> void:
 		)
 
 		name_input.text = "  山岚  "
+		name_input.emit_signal("text_changed", name_input.text)
 		create_button.emit_signal("pressed")
 		var creating_snapshot := panel.snapshot()
 		_expect(
@@ -515,7 +566,87 @@ func _expect_layout(panel: Control) -> void:
 		occupied_rects.append(rect)
 
 
+func _expect_creation_layout(
+	_panel: Control,
+	creation_snapshot: Dictionary
+) -> void:
+	var layout_rects := creation_snapshot.get("layoutRects", {}) as Dictionary
+	var board_rect := _dictionary_rect(
+		layout_rects.get("board", {}) as Dictionary
+	)
+	var name_rect := _dictionary_rect(
+		layout_rects.get("nameInput", {}) as Dictionary
+	)
+	var random_rect := _dictionary_rect(
+		layout_rects.get("randomNameButton", {}) as Dictionary
+	)
+	var board_local := Rect2(Vector2.ZERO, board_rect.size)
+	_expect(
+		board_rect.size.x > 0.0
+		and board_rect.size.y > 0.0
+		and name_rect.size.x > 0.0
+		and random_rect.size.x > 0.0
+		and board_local.encloses(name_rect)
+		and board_local.encloses(random_rect),
+		"角色名输入框或换一个按钮越出建角面板",
+		_errors
+	)
+	_expect(
+		not name_rect.intersects(random_rect)
+		and name_rect.end.x <= random_rect.position.x,
+		"角色名输入框与换一个按钮发生重叠",
+		_errors
+	)
+
+
+func _expect_earth_green(panel: Control, require_active_segment: bool) -> void:
+	var earth_label := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ElementEarthLabel"
+	) as Label
+	_expect(earth_label != null, "建角页缺少地属性标签", _errors)
+	if earth_label != null:
+		var label_color := earth_label.get_theme_color("font_color")
+		_expect(
+			label_color.g > label_color.r and label_color.g > label_color.b,
+			"地属性标签没有统一使用绿色",
+			_errors
+		)
+	if not require_active_segment:
+		return
+	var segment := panel.get_node_or_null(
+		"CharacterCreationPanel/CreationBoard/ElementEarthSegment0"
+	) as Panel
+	_expect(segment != null, "建角页缺少地属性点格", _errors)
+	if segment != null:
+		var style := segment.get_theme_stylebox("panel") as StyleBoxFlat
+		_expect(style != null, "地属性点格缺少样式", _errors)
+		if style != null:
+			var segment_color := style.bg_color
+			_expect(
+				segment_color.g > segment_color.r
+				and segment_color.g > segment_color.b,
+				"地属性已分配点格没有统一使用绿色",
+				_errors
+			)
+
+
 func _expect_request_contracts() -> void:
+	_expect(
+		ServerAuthClientModel.player_message_for_code(
+			"character_name_restricted",
+			"internal"
+		) == "这个名字不能使用，请换一个。",
+		"角色名限制错误码没有映射为安全玩家文案",
+		_errors
+	)
+	_expect(
+		ServerAuthClientModel.player_message_for_code(
+			"invalid_display_name",
+			"internal"
+		) == "角色名最多24个字，且不能包含不能使用的字符。",
+		"角色名格式错误码没有映射为稳定玩家文案",
+		_errors
+	)
 	var elements := {
 		"earth": 6,
 		"water": 4,

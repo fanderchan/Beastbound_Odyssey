@@ -58,6 +58,7 @@ const ERROR_CODE_MESSAGES := {
 	"character_elements_not_required": "这个角色不需要补选元素。",
 	"character_missing": "这个角色不存在，请刷新角色列表。",
 	"character_name_duplicate": "这个账号已有同名角色，请换一个名字。",
+	"character_name_restricted": "这个名字不能使用，请换一个。",
 	"character_player_id_invalid": "这个角色暂时无法选择，请刷新后重试。",
 	"character_profile_invalid": "角色资料异常，请稍后重试。",
 	"character_select_battle_active": "战斗尚未结束，暂不能切换角色。",
@@ -86,6 +87,7 @@ const ERROR_CODE_MESSAGES := {
 	"gm_denied": "当前账号没有 GM 权限。",
 	"heal_not_needed": "队伍生命已满。",
 	"invalid_body": "内容不能为空。",
+	"invalid_display_name": "角色名最多24个字，且不能包含不能使用的字符。",
 	"invalid_profile": "角色档案格式不正确。",
 	"invalid_shop_action": "商店操作不正确。",
 	"invalid_title": "标题不能为空。",
@@ -389,10 +391,14 @@ static func is_network_failure_response(parsed: Dictionary) -> bool:
 
 
 static func player_message_for_code(code: String, fallback_message: String = "") -> String:
+	var normalized_code := code.strip_edges()
+	# Restricted-name responses deliberately hide the matched term and category,
+	# even if an older or misconfigured server returns a more specific message.
+	if normalized_code == "character_name_restricted":
+		return str(ERROR_CODE_MESSAGES[normalized_code])
 	var fallback := fallback_message.strip_edges()
 	if message_has_cjk(fallback):
 		return fallback
-	var normalized_code := code.strip_edges()
 	if ERROR_CODE_MESSAGES.has(normalized_code):
 		return str(ERROR_CODE_MESSAGES[normalized_code])
 	for entry in ERROR_CODE_PREFIX_MESSAGES:

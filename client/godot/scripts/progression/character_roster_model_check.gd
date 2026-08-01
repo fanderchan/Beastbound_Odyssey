@@ -126,6 +126,19 @@ static func run() -> Dictionary:
 	for invalid_name in [
 		"",
 		"非法\n名字",
+		"Ｇ Ｍ",
+		"GM小龙",
+		"小龙GM",
+		"WX小王",
+		"小王QQ",
+		"真GM玩家",
+		"我是ADMIN本人",
+		"小王QQ客服",
+		"管·理 员",
+		"加-微-信",
+		"冒险１２３４５６",
+		"🔥🔥",
+		"猎人%s名字" % String.chr(0x85),
 		"一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十二一二二二三二四二五",
 	]:
 		_expect(
@@ -136,6 +149,17 @@ static func run() -> Dictionary:
 				).get("valid", true)
 			),
 			"非法角色名未被拒绝：%s" % invalid_name,
+			errors
+		)
+	for allowed_name in ["Sigma", "Enigma", "Badminton"]:
+		_expect(
+			bool(
+				CharacterRosterModel.build_create_request(
+					1,
+					allowed_name
+				).get("valid", false)
+			),
+			"合法英文名字被短边界词误伤：%s" % allowed_name,
 			errors
 		)
 

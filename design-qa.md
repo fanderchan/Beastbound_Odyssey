@@ -176,3 +176,50 @@ final result: passed
   完整音视频解码通过；录制使用全新隔离 user-data，未连接后端且未写玩家存档。
 
 final result: passed
+
+---
+
+# Phase 380 Design QA：随机名按钮边界、名字安全与地属性绿色
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 创建页中，“换一个”按钮完整位于右侧配置板内，与姓名
+  输入框保持间距且不重叠；地属性文字和六个已点亮格均为绿色。
+- 用户问题截图与同状态实机帧已统一为 `1280×720` 后放在同一个比较输入中检查；对比
+  状态均为焰芽斗士、地 6／水 3、剩余 1 点、名字为空。
+- 玩家可连续左键随机换名；混淆敏感名只显示通用提示并禁用创建，安全随机名可恢复。
+
+## Comparison target
+
+- 用户问题截图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-16d1ba64-be73-4d8d-adcf-86a79f5741b0.png`；
+- 同状态实现图：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/frame-08.png`；
+- 同屏比较：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/reference-vs-implementation.png`。
+
+## Required fidelity surfaces
+
+- Boundary：通用次级按钮原有 `150px` 最小宽度不再撑破当前名字行；此处独立使用
+  `94×50`，右侧保留 42px 配置板内边距。
+- Alignment：姓名输入为 `262×50`，与随机按钮间隔 10px，文字基线、按钮高度和输入框
+  高度一致。
+- Color：地属性语义统一为绿色；水、火、风继续使用蓝、红、黄，不修改元素数值规则。
+- Feedback：受限名字显示“这个名字不能使用，请换一个。”；界面不显示命中词、分类、
+  raw code、服务端字段或 QA 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/character-name-safety-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/contact-sheet.png`；
+- 视频来自真实 `Main.tscn`，为 `22.900s`、`687` 帧、H.264/AAC、
+  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；
+- 连续流程覆盖配置板边界、绿色地元素、三次不同安全随机名、混淆名 `Ｇ · M` 拦截、
+  随机名恢复、键盘输入“林岚”和一次性创建 payload；录制使用隔离 user-data，未连接
+  后端且未写玩家存档。
+
+final result: passed

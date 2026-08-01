@@ -3,10 +3,18 @@ extends RefCounted
 const PlayerAppearanceCatalog := preload(
 	"res://scripts/player/player_appearance_catalog.gd"
 )
+const CharacterNamePolicyModel := preload(
+	"res://scripts/progression/character_name_policy_model.gd"
+)
+const CharacterRosterModel := preload(
+	"res://scripts/progression/character_roster_model.gd"
+)
 
 const CAPTURE_FLAG := "--character-entry-owner-review-capture"
 const REVIEW_FPS := 30
 const REVIEW_CHARACTER_NAME := "林岚"
+const RESTRICTED_REVIEW_NAME := "Ｇ · M"
+const RANDOM_NAME_REVIEW_COUNT := 3
 const CREATED_PLAYER_ID := "character_review_created"
 const FINAL_APPEARANCE_ID := "ember_spark_v1"
 const APPEARANCE_SEQUENCE := [
@@ -45,26 +53,35 @@ func run() -> void:
 			+ "backend=false profile_save=false"
 		)
 	)
-	await _hold("four_empty_slots", 2.0)
+	await _hold("four_empty_slots", 1.5)
 	await _open_creation_configuration()
 	if _failed:
 		return
-	await _hold("creation_configuration_open", 1.4)
+	await _hold("creation_configuration_open", 1.0)
 
 	for appearance_id_value in APPEARANCE_SEQUENCE:
 		var appearance_id := str(appearance_id_value)
 		await _select_appearance(appearance_id)
 		if _failed:
 			return
-		await _hold("appearance_%s" % appearance_id, 1.0)
+		await _hold("appearance_%s" % appearance_id, 0.7)
 
 	await _allocate_remaining_point_preview()
 	if _failed:
 		return
-	await _choose_random_name()
+	await _verify_name_row_and_earth_color()
 	if _failed:
 		return
-	await _enter_character_name()
+	await _review_random_name_sequence()
+	if _failed:
+		return
+	await _review_restricted_name()
+	if _failed:
+		return
+	await _recover_with_random_name()
+	if _failed:
+		return
+	await _enter_final_character_name()
 	if _failed:
 		return
 	await _submit_and_present_authoritative_result()
@@ -77,8 +94,15 @@ func run() -> void:
 			"CHARACTER_ENTRY_OWNER_REVIEW_END elapsed_wall=%.3f "
 			+ "scene=Main.tscn speed=1.00x roster=isolated "
 			+ "backend=false payload=captured profile_save=false "
-			+ "selected=%s appearance=%s elements=earth6_water4"
-		) % [elapsed, CREATED_PLAYER_ID, FINAL_APPEARANCE_ID]
+			+ "selected=%s appearance=%s elements=earth6_water4 "
+			+ "phase=380 name_row=inside earth=green "
+			+ "random_names=%d restricted=blocked"
+		) % [
+			elapsed,
+			CREATED_PLAYER_ID,
+			FINAL_APPEARANCE_ID,
+			RANDOM_NAME_REVIEW_COUNT,
+		]
 	)
 	host.get_tree().quit(0)
 
@@ -288,7 +312,7 @@ func _allocate_remaining_point_preview() -> void:
 	):
 		_fail_capture("剩余1点时没有阻止创建")
 		return
-	await _hold("remaining_point_blocks_creation", 1.2)
+	await _hold("remaining_point_blocks_creation", 0.8)
 
 	await _click_element_until(creation, "water", water_plus as Button, 4)
 	if _failed:
@@ -301,7 +325,7 @@ func _allocate_remaining_point_preview() -> void:
 	):
 		_fail_capture("合法地6水4元素配置没有完成")
 		return
-	await _hold("legal_dual_elements_complete", 1.2)
+	await _hold("legal_dual_elements_earth_green", 1.4)
 
 
 func _click_element_until(
@@ -326,50 +350,165 @@ func _click_element_until(
 	_fail_capture("元素按钮没有达到预期点数：%s" % element_key)
 
 
-func _choose_random_name() -> void:
+func _verify_name_row_and_earth_color() -> void:
+	var creation = _creation_panel()
+	if creation == null:
+		return
+	var board = creation.get_node_or_null("CreationBoard") as Control
+	var input = creation.get_node_or_null("CreationBoard/NameInput") as LineEdit
+	var random_button = creation.get_node_or_null(
+		"CreationBoard/RandomNameButton"
+	) as Button
+	if board == null or input == null or random_button == null:
+		_fail_capture("角色名字行缺少输入框、按钮或正式面板")
+		return
+	var board_rect := board.get_global_rect()
+	var input_rect := input.get_global_rect()
+	var button_rect := random_button.get_global_rect()
+	if (
+		not board_rect.encloses(input_rect)
+		or not board_rect.encloses(button_rect)
+		or input_rect.intersects(button_rect)
+		or button_rect.end.x > board_rect.end.x
+	):
+		_fail_capture("角色名字输入框或换一个按钮越出正式面板")
+		return
+
+	var earth_label = creation.get_node_or_null(
+		"CreationBoard/ElementEarthLabel"
+	) as Label
+	var earth_segment = creation.get_node_or_null(
+		"CreationBoard/ElementEarthSegment0"
+	) as Panel
+	if earth_label == null or earth_segment == null:
+		_fail_capture("创建配置页缺少地属性颜色节点")
+		return
+	var label_color := earth_label.get_theme_color("font_color")
+	var segment_style := earth_segment.get_theme_stylebox("panel")
+	if not (segment_style is StyleBoxFlat):
+		_fail_capture("地属性已加点色块没有正式颜色样式")
+		return
+	var segment_color := (segment_style as StyleBoxFlat).bg_color
+	if not _is_green(label_color) or not _is_green(segment_color):
+		_fail_capture("地属性文字与已加点色块没有统一使用绿色")
+		return
+	print(
+		"CHARACTER_ENTRY_OWNER_REVIEW_LAYOUT "
+		+ "name_row=inside_board button=inside_board overlap=false "
+		+ "earth=green"
+	)
+	await _hold("name_row_inside_board_earth_green", 1.5)
+
+
+func _review_random_name_sequence() -> void:
 	var creation = _creation_panel()
 	if creation == null:
 		return
 	var random_button = creation.get_node_or_null(
 		"CreationBoard/RandomNameButton"
-	)
-	if not (random_button is Button) or (random_button as Button).disabled:
+	) as Button
+	if random_button == null or random_button.disabled:
 		_fail_capture("随机名字按钮不可用")
 		return
-	await _left_click(random_button as Button, "随机名字")
+	var previous_name := ""
+	for index in range(RANDOM_NAME_REVIEW_COUNT):
+		await _left_click(random_button, "第%d次随机名字" % (index + 1))
+		if _failed:
+			return
+		await _settle_frames(2)
+		var snapshot := creation.call("snapshot") as Dictionary
+		var generated_name := str(snapshot.get("name", "")).strip_edges()
+		if (
+			generated_name == ""
+			or generated_name == previous_name
+			or not CharacterNamePolicyModel.is_allowed(generated_name)
+			or not CharacterRosterModel.character_name_errors(
+				generated_name
+			).is_empty()
+			or bool(snapshot.get("submitDisabled", true))
+		):
+			_fail_capture("第%d次随机名字没有生成变化后的合法名字" % (index + 1))
+			return
+		print(
+			(
+				"CHARACTER_ENTRY_OWNER_REVIEW_RANDOM index=%d "
+				+ "name=%s nonempty=true changed=true allowed=true"
+			) % [index + 1, generated_name]
+		)
+		previous_name = generated_name
+		await _hold("random_name_%d_allowed" % (index + 1), 0.8)
+
+
+func _review_restricted_name() -> void:
+	var creation = _creation_panel()
+	var line_edit := _name_input()
+	if creation == null or line_edit == null:
+		return
+	await _replace_name(line_edit, RESTRICTED_REVIEW_NAME)
 	if _failed:
 		return
 	await _settle_frames(2)
 	var snapshot := creation.call("snapshot") as Dictionary
-	if str(snapshot.get("name", "")).strip_edges() == "":
-		_fail_capture("随机名字按钮没有生成名字")
+	if (
+		line_edit.text != RESTRICTED_REVIEW_NAME
+		or CharacterNamePolicyModel.is_allowed(RESTRICTED_REVIEW_NAME)
+		or CharacterRosterModel.character_name_errors(
+			RESTRICTED_REVIEW_NAME
+		).is_empty()
+		or not bool(snapshot.get("submitDisabled", false))
+		or str(snapshot.get("errorText", ""))
+			!= CharacterNamePolicyModel.player_message()
+	):
+		_fail_capture("混淆敏感名字没有显示通用错误并禁用创建")
 		return
-	await _hold("random_name_selected", 1.0)
+	print(
+		"CHARACTER_ENTRY_OWNER_REVIEW_RESTRICTED "
+		+ "input=obfuscated policy=blocked error=generic submit=disabled"
+	)
+	await _hold("restricted_name_rejected", 2.0)
 
 
-func _enter_character_name() -> void:
+func _recover_with_random_name() -> void:
 	var creation = _creation_panel()
 	if creation == null:
 		return
-	var input = creation.get_node_or_null("CreationBoard/NameInput")
-	if not (input is LineEdit):
-		_fail_capture("创建配置页缺少角色名输入框")
+	var random_button = creation.get_node_or_null(
+		"CreationBoard/RandomNameButton"
+	) as Button
+	if random_button == null or random_button.disabled:
+		_fail_capture("敏感名校验后随机名字按钮不可用")
 		return
-	var line_edit := input as LineEdit
-	await _left_click(line_edit, "角色名输入框")
+	await _left_click(random_button, "敏感名后的随机名字恢复")
 	if _failed:
 		return
-	await _send_key(KEY_END)
-	var previous_length := line_edit.text.length()
-	for _index in range(previous_length):
-		await _send_key(KEY_BACKSPACE)
-		if not line_edit.has_focus():
-			_fail_capture("清空随机名字时输入焦点丢失")
-			return
-	if line_edit.text != "":
-		_fail_capture("真实退格键没有清空随机名字")
+	await _settle_frames(2)
+	var snapshot := creation.call("snapshot") as Dictionary
+	var recovered_name := str(snapshot.get("name", "")).strip_edges()
+	if (
+		recovered_name == ""
+		or recovered_name == RESTRICTED_REVIEW_NAME
+		or not CharacterNamePolicyModel.is_allowed(recovered_name)
+		or not CharacterRosterModel.character_name_errors(
+			recovered_name
+		).is_empty()
+		or bool(snapshot.get("submitDisabled", true))
+		or str(snapshot.get("errorText", "")) != ""
+	):
+		_fail_capture("随机名字没有从敏感名错误中恢复")
 		return
-	await _type_text(line_edit, REVIEW_CHARACTER_NAME)
+	print(
+		"CHARACTER_ENTRY_OWNER_REVIEW_RECOVERY "
+		+ "random_name=%s allowed=true submit=enabled" % recovered_name
+	)
+	await _hold("random_name_recovered", 0.8)
+
+
+func _enter_final_character_name() -> void:
+	var creation = _creation_panel()
+	var line_edit := _name_input()
+	if creation == null or line_edit == null:
+		return
+	await _replace_name(line_edit, REVIEW_CHARACTER_NAME)
 	if _failed:
 		return
 	await _settle_frames(2)
@@ -377,11 +516,16 @@ func _enter_character_name() -> void:
 	if (
 		line_edit.text != REVIEW_CHARACTER_NAME
 		or str(snapshot.get("name", "")) != REVIEW_CHARACTER_NAME
+		or not CharacterNamePolicyModel.is_allowed(REVIEW_CHARACTER_NAME)
+		or not CharacterRosterModel.character_name_errors(
+			REVIEW_CHARACTER_NAME
+		).is_empty()
 		or bool(snapshot.get("submitDisabled", true))
+		or str(snapshot.get("errorText", "")) != ""
 	):
-		_fail_capture("真实键盘输入后创建配置仍未就绪")
+		_fail_capture("真实键盘输入最终名字后创建配置仍未就绪")
 		return
-	await _hold("typed_name_ready", 1.4)
+	await _hold("typed_name_ready", 1.0)
 
 
 func _submit_and_present_authoritative_result() -> void:
@@ -417,7 +561,7 @@ func _submit_and_present_authoritative_result() -> void:
 			+ "scene=Main.tscn backend=false"
 		) % [REVIEW_CHARACTER_NAME, FINAL_APPEARANCE_ID]
 	)
-	await _hold("create_payload_captured", 0.9)
+	await _hold("create_payload_captured", 0.7)
 
 	panel.present_roster(
 		_created_review_roster(_created_payload),
@@ -439,7 +583,7 @@ func _submit_and_present_authoritative_result() -> void:
 	):
 		_fail_capture("本地模拟权威返回后没有展示新建角色槽")
 		return
-	await _hold("authoritative_created_slot", 3.0)
+	await _hold("authoritative_created_slot", 2.4)
 
 
 func _created_review_roster(payload: Dictionary) -> Dictionary:
@@ -492,6 +636,38 @@ func _elements_equal(value, expected: Dictionary) -> bool:
 		if int(elements.get(key, -1)) != int(expected.get(key, -2)):
 			return false
 	return true
+
+
+func _is_green(color: Color) -> bool:
+	return color.g > color.r + 0.15 and color.g > color.b + 0.15
+
+
+func _name_input() -> LineEdit:
+	var creation = _creation_panel()
+	if creation == null:
+		return null
+	var input = creation.get_node_or_null("CreationBoard/NameInput")
+	if not (input is LineEdit):
+		_fail_capture("创建配置页缺少角色名输入框")
+		return null
+	return input as LineEdit
+
+
+func _replace_name(line_edit: LineEdit, value: String) -> void:
+	await _left_click(line_edit, "角色名输入框")
+	if _failed:
+		return
+	await _send_key(KEY_END)
+	var previous_length := line_edit.text.length()
+	for _index in range(previous_length):
+		await _send_key(KEY_BACKSPACE)
+		if not line_edit.has_focus():
+			_fail_capture("清空角色名字时输入焦点丢失")
+			return
+	if line_edit.text != "":
+		_fail_capture("真实退格键没有清空角色名字")
+		return
+	await _type_text(line_edit, value)
 
 
 func _type_text(line_edit: LineEdit, value: String) -> void:

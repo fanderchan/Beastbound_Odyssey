@@ -3,6 +3,9 @@ extends RefCounted
 const CharacterRosterModel := preload(
 	"res://scripts/progression/character_roster_model.gd"
 )
+const CharacterNamePolicyModel := preload(
+	"res://scripts/progression/character_name_policy_model.gd"
+)
 const PlayerAppearanceCatalog := preload(
 	"res://scripts/player/player_appearance_catalog.gd"
 )
@@ -17,20 +20,6 @@ const ELEMENT_NAMES := {
 	"fire": "火",
 	"wind": "风",
 }
-
-const RANDOM_NAMES := [
-	"山岚",
-	"石芽",
-	"潮歌",
-	"风铃",
-	"火羽",
-	"苔星",
-	"霜叶",
-	"云角",
-	"砂舟",
-	"暮泉",
-]
-
 
 static func empty_elements() -> Dictionary:
 	return {
@@ -176,7 +165,8 @@ static func build_legacy_allocation_request(
 	}
 
 
-static func random_name(index: int) -> String:
-	if RANDOM_NAMES.is_empty():
-		return ""
-	return str(RANDOM_NAMES[posmod(index, RANDOM_NAMES.size())])
+static func random_name(
+	rng: RandomNumberGenerator,
+	avoid_name: String = ""
+) -> String:
+	return CharacterNamePolicyModel.generate_random_name(rng, avoid_name)

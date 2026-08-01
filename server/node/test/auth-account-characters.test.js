@@ -25,6 +25,51 @@ function characterCreationPayload(displayName, slotIndex) {
   return payload;
 }
 
+test("character creation rejects restricted and obfuscated names without persisting a profile", () => {
+  const service = createAuthService({
+    autoCreateInitialCharacterForTests: false,
+    store: createMemoryAuthStore(),
+  });
+  const registered = service.register({
+    username: "charactersafety",
+    password: "test1234",
+    displayName: "账号称呼",
+  });
+  assert.equal(registered.ok, true);
+
+  for (const displayName of ["猎人\u0085甲", "猎人\u202E甲"]) {
+    const invalidFormat = service.createCharacter(
+      registered.session.token,
+      characterCreationPayload(displayName, 0),
+    );
+    assert.equal(invalidFormat.ok, false, displayName);
+    assert.equal(invalidFormat.code, "invalid_display_name", displayName);
+  }
+  for (const displayName of ["Ｇ · M", "微🌟信", "傻_逼", "猎人1-2-3-4-5-6"]) {
+    const blocked = service.createCharacter(
+      registered.session.token,
+      characterCreationPayload(displayName, 0),
+    );
+    assert.equal(blocked.ok, false, displayName);
+    assert.equal(blocked.code, "character_name_restricted", displayName);
+    assert.equal(blocked.message, "这个名字不能使用，请换一个。", displayName);
+  }
+  assert.deepEqual(service.snapshot().profiles, {});
+
+  const created = service.createCharacter(
+    registered.session.token,
+    characterCreationPayload("风语猎人", 0),
+  );
+  assert.equal(created.ok, true);
+  const duplicate = service.createCharacter(
+    registered.session.token,
+    characterCreationPayload("风语猎人", 1),
+  );
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.code, "character_name_duplicate");
+  assert.equal(Object.keys(service.snapshot().profiles).length, 1);
+});
+
 test("new accounts begin with four empty slots and create one complete authoritative character", () => {
   const store = createMemoryAuthStore();
   const service = createAuthService({

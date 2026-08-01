@@ -1,5 +1,9 @@
 extends RefCounted
 
+const CharacterNamePolicyModel := preload(
+	"res://scripts/progression/character_name_policy_model.gd"
+)
+
 const SCHEMA_VERSION := 1
 const SLOT_COUNT := 4
 const NAME_MIN_LENGTH := 1
@@ -299,6 +303,8 @@ static func character_name_errors(value: String) -> Array[String]:
 		errors.append("角色名内容过长")
 	if _contains_control_character(name):
 		errors.append("角色名包含不能使用的字符")
+	elif not CharacterNamePolicyModel.is_allowed(name):
+		errors.append(CharacterNamePolicyModel.player_message())
 	return errors
 
 

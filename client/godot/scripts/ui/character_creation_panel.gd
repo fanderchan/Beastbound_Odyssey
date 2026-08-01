@@ -21,7 +21,7 @@ const MODE_CREATE := "create"
 const MODE_LEGACY_ALLOCATION := "legacy_allocation"
 
 const ELEMENT_COLORS := {
-	"earth": Color(0.55, 0.40, 0.19, 1.0),
+	"earth": Color(0.34, 0.78, 0.32, 1.0),
 	"water": Color(0.32, 0.76, 0.98, 1.0),
 	"fire": Color(0.96, 0.30, 0.18, 1.0),
 	"wind": Color(0.91, 0.73, 0.22, 1.0),
@@ -38,7 +38,7 @@ var _available_appearance_ids: Array[String] = []
 var _elements: Dictionary = {}
 var _loading := false
 var _error_message := ""
-var _random_name_index := 0
+var _random_name_rng := RandomNumberGenerator.new()
 
 var _background: TextureRect
 var _return_button: Button
@@ -72,6 +72,7 @@ func _init() -> void:
 	_appearance_entries = PlayerAppearanceCatalog.creation_entries()
 	_appearance_ids = PlayerAppearanceCatalog.appearance_ids()
 	_elements = CharacterCreationModel.empty_elements()
+	_random_name_rng.randomize()
 	_build_ui()
 	visible = false
 
@@ -210,6 +211,8 @@ func snapshot() -> Dictionary:
 			"showcase": _rect_snapshot(_showcase),
 			"board": _rect_snapshot(_board),
 			"submitButton": _rect_snapshot(_submit_button),
+			"nameInput": _rect_snapshot(_name_input),
+			"randomNameButton": _rect_snapshot(_random_name_button),
 		},
 	}
 
@@ -404,8 +407,12 @@ func _build_configuration_board() -> void:
 	_name_input.placeholder_text = "输入角色名"
 	_name_input.max_length = CharacterRosterModel.NAME_MAX_LENGTH
 	CharacterEntryVisualSkin.apply_line_edit(_name_input)
-	_name_input.text_changed.connect(func(_value: String) -> void:
+	_name_input.text_changed.connect(func(value: String) -> void:
 		_error_message = ""
+		if value.strip_edges() != "":
+			var name_errors := CharacterRosterModel.character_name_errors(value)
+			if not name_errors.is_empty():
+				_error_message = name_errors[0]
 		_refresh_error()
 		_refresh_interaction_state()
 	)
@@ -413,15 +420,16 @@ func _build_configuration_board() -> void:
 		_submit()
 	)
 	_board.add_child(_name_input)
-	_place(_name_input, Rect2(42.0, 466.0, 278.0, 50.0))
+	_place(_name_input, Rect2(42.0, 466.0, 262.0, 50.0))
 
 	_random_name_button = Button.new()
 	_random_name_button.name = "RandomNameButton"
 	_random_name_button.text = "换一个"
 	CharacterEntryVisualSkin.apply_secondary_button(_random_name_button)
+	_random_name_button.custom_minimum_size = Vector2(94.0, 50.0)
 	_random_name_button.pressed.connect(_choose_random_name)
 	_board.add_child(_random_name_button)
-	_place(_random_name_button, Rect2(328.0, 466.0, 82.0, 50.0))
+	_place(_random_name_button, Rect2(314.0, 466.0, 94.0, 50.0))
 
 	_error_label = Label.new()
 	_error_label.name = "CreationError"
@@ -713,8 +721,10 @@ func _adjust_element(key: String, delta: int) -> void:
 func _choose_random_name() -> void:
 	if _loading or _mode != MODE_CREATE:
 		return
-	_random_name_index += 1
-	_name_input.text = CharacterCreationModel.random_name(_random_name_index)
+	_name_input.text = CharacterCreationModel.random_name(
+		_random_name_rng,
+		_name_input.text
+	)
 	_name_input.caret_column = _name_input.text.length()
 	_error_message = ""
 	_refresh_error()

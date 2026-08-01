@@ -3,6 +3,9 @@ extends SceneTree
 const CharacterCreationModel := preload(
 	"res://scripts/progression/character_creation_model.gd"
 )
+const CharacterNamePolicyModel := preload(
+	"res://scripts/progression/character_name_policy_model.gd"
+)
 const PlayerAppearanceCatalog := preload(
 	"res://scripts/player/player_appearance_catalog.gd"
 )
@@ -90,6 +93,53 @@ static func run() -> Dictionary:
 			},
 		},
 		"创建请求没有输出完整姓名、形象与元素合同",
+		errors
+	)
+
+	for blocked_name in [
+		"Ｇ Ｍ",
+		"GM小龙",
+		"小龙GM",
+		"WX小王",
+		"小王QQ",
+		"真GM玩家",
+		"我是ADMIN本人",
+		"小王QQ客服",
+		"管·理 员",
+		"官方\u200B客服",
+		"冒险１２３４５６",
+		"加-微-信",
+		"🔥🔥",
+		"猎人%s名字" % String.chr(0x85),
+	]:
+		_expect(
+			not CharacterNamePolicyModel.is_allowed(blocked_name),
+			"敏感、冒充或广告名字绕过了客户端过滤：%s" % blocked_name,
+			errors
+		)
+	_expect(
+		CharacterNamePolicyModel.canonical_scan(" Ｇ-Ｍ ") == "gm"
+		and CharacterNamePolicyModel.is_allowed("山岚")
+		and CharacterNamePolicyModel.is_allowed("Sigma")
+		and CharacterNamePolicyModel.is_allowed("Enigma")
+		and CharacterNamePolicyModel.is_allowed("Badminton"),
+		"全角规整或边界短词匹配产生了误判",
+		errors
+	)
+	var seeded_rng := RandomNumberGenerator.new()
+	seeded_rng.seed = 380
+	var first_random_name := CharacterCreationModel.random_name(seeded_rng)
+	var second_random_name := CharacterCreationModel.random_name(
+		seeded_rng,
+		first_random_name
+	)
+	_expect(
+		first_random_name != ""
+		and second_random_name != ""
+		and first_random_name != second_random_name
+		and CharacterNamePolicyModel.is_allowed(first_random_name)
+		and CharacterNamePolicyModel.is_allowed(second_random_name),
+		"可注入随机源没有生成两个不同的安全名字",
 		errors
 	)
 

@@ -8,12 +8,17 @@ const {
   ELEMENT_TOTAL_POINTS,
   inspectPlayerElementAllocation,
 } = require("./battle-element-rules");
+const {
+  inspectCharacterNameSafety,
+  loadCharacterNamePolicy,
+} = require("./character-name-policy");
 
 const CHARACTER_SLOT_LIMIT = 4;
 const CHARACTER_SCHEMA_VERSION = 1;
 const CHARACTER_NAME_MAX_GRAPHEMES = 24;
 const CHARACTER_NAME_MAX_BYTES = 96;
 const CHARACTER_APPEARANCE_CATALOG = loadPlayerAppearanceCatalog();
+const CHARACTER_NAME_POLICY = loadCharacterNamePolicy();
 const CHARACTER_DEFAULT_APPEARANCE_ID = CHARACTER_APPEARANCE_CATALOG.defaultAppearanceId;
 const CHARACTER_APPEARANCE_IDS = CHARACTER_APPEARANCE_CATALOG.appearanceIds;
 const CHARACTER_ELEMENT_IDS = ELEMENT_IDS;
@@ -609,6 +614,14 @@ function characterCreateIntent(payload, slots) {
   if (!isValidCharacterName(displayName)) {
     return {ok: false, code: "invalid_display_name", message: "角色名最多24个字符，且不能包含控制字符。"};
   }
+  const nameSafety = inspectCharacterNameSafety(displayName, CHARACTER_NAME_POLICY);
+  if (!nameSafety.ok) {
+    return {
+      ok: false,
+      code: "character_name_restricted",
+      message: CHARACTER_NAME_POLICY.playerMessage,
+    };
+  }
   const appearanceId = String(payload.appearanceId || "").trim();
   if (!CHARACTER_APPEARANCE_CATALOG.has(appearanceId)) {
     return {ok: false, code: "character_appearance_invalid", message: "请选择可用的角色形象。"};
@@ -885,7 +898,7 @@ function isValidCharacterName(value) {
   if (
     text === ""
     || Buffer.byteLength(text) > CHARACTER_NAME_MAX_BYTES
-    || /[\u0000-\u001f\u007f]/.test(text)
+    || /[\p{Cc}\p{Cf}]/u.test(text)
   ) {
     return false;
   }
