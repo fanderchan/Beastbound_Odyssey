@@ -75,6 +75,9 @@ const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_s
 const PetFusionSkillPolicyCheck := preload(
 	"res://scripts/progression/pet_fusion_skill_policy_check.gd"
 )
+const PlayerCharacterMainFlowCheck := preload(
+	"res://scripts/qa/player_character_main_flow_check.gd"
+)
 const ServerPetProfileProjectionModel := preload("res://scripts/progression/server_pet_profile_projection_model.gd")
 const ServerProfileCacheModel := preload("res://scripts/progression/server_profile_cache_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
@@ -11950,7 +11953,7 @@ func _run_auto_player_status_check() -> void:
 	host._open_player_status_panel()
 	await host.get_tree().process_frame
 	var text = host.player_status_detail_label.text if host.player_status_detail_label != null else ""
-	var menu_ok = host.player_status_menu_button != null and host.player_status_menu_button.text == "状态"
+	var menu_ok = host.player_status_menu_button != null and host.player_status_menu_button.text == "角色"
 	var panel_ok = host.player_status_panel != null and host.player_status_panel.visible
 	var stats_ok = (
 		text.find("见习猎人") >= 0
@@ -11994,6 +11997,12 @@ func _run_auto_player_status_check() -> void:
 		str(equipment_route_ok),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _run_auto_player_character_main_flow_check() -> void:
+	var report: Dictionary = await PlayerCharacterMainFlowCheck.run(host)
+	print("player character main flow check: %s" % JSON.stringify(report))
+	host.get_tree().quit(0 if str(report.get("result", "")) == "PASS" else 1)
 
 func _run_auto_player_stat_points_check() -> void:
 	host.profile_save_enabled = false

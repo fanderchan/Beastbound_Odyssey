@@ -480,6 +480,84 @@ test("profile action endpoint applies whitelisted gameplay mutations server-side
   assert.equal(loaded.profile.petInstances.find((pet) => pet.instanceId === "pet_action_target").name, "服务布伊");
 });
 
+test("profile action atomically confirms a batch of player stat points", () => {
+  const service = createAuthService({"store": createMemoryAuthStore()});
+  const registered = service.register({
+    "username": "statbatch",
+    "password": "test1234",
+    "displayName": "批量加点",
+  });
+  assert.equal(registered.ok, true);
+  const token = registered.session.token;
+  const profile = battleProfile("批量加点", {"level": 10, "hp": 80, "maxHp": 120}, null);
+  profile.player.statPoints = 7;
+  profile.player.baseStats = {"maxHp": 120, "attack": 18, "defense": 6, "quick": 70};
+  const saved = service.saveProfile(token, {"expectedRevision": 0, profile});
+  assert.equal(saved.ok, true);
+
+  const allocated = service.profileAction(token, {
+    "action": "player_stat_allocate_batch",
+    "payload": {"allocations": {"maxHp": 2, "attack": 2, "defense": 1, "quick": 1}},
+  });
+
+  assert.equal(allocated.ok, true, JSON.stringify(allocated));
+  assert.equal(allocated.profileSummary.profileRevision, saved.profileSummary.profileRevision + 1);
+  assert.equal(allocated.profile.player.statPoints, 1);
+  assert.deepEqual(allocated.profile.player.baseStats, {
+    "maxHp": 128,
+    "attack": 20,
+    "defense": 7,
+    "quick": 71,
+  });
+  assert.equal(allocated.profile.player.hp, 88);
+  assert.equal(allocated.profile.player.maxHp, 128);
+  assert.equal(allocated.result.count, 6);
+  assert.equal(allocated.result.changedCount, 6);
+  assert.equal(allocated.logLines.length, 1);
+  assert.match(allocated.logLines[0], /生命 \+8/);
+  assert.match(allocated.logLines[0], /剩余1点/);
+});
+
+test("profile action rejects invalid player stat batches without changing the profile", () => {
+  const invalidCases = [
+    {name: "missing", allocations: undefined, code: "player_stat_allocations_invalid"},
+    {name: "unknown", allocations: {attack: 1, luck: 1}, code: "player_stat_invalid"},
+    {name: "negative", allocations: {attack: -1}, code: "player_stat_allocation_invalid"},
+    {name: "fractional", allocations: {attack: 1.5}, code: "player_stat_allocation_invalid"},
+    {name: "numeric_string", allocations: {attack: "1"}, code: "player_stat_allocation_invalid"},
+    {name: "empty", allocations: {}, code: "player_stat_allocation_empty"},
+    {name: "zero", allocations: {maxHp: 0, attack: 0, defense: 0, quick: 0}, code: "player_stat_allocation_empty"},
+    {name: "overspend", allocations: {maxHp: 1, attack: 2}, code: "player_stat_points_insufficient"},
+  ];
+
+  for (const [index, invalidCase] of invalidCases.entries()) {
+    const service = createAuthService({"store": createMemoryAuthStore()});
+    const registered = service.register({
+      "username": `badstatbatch${index}`,
+      "password": "test1234",
+      "displayName": "非法批量加点",
+    });
+    assert.equal(registered.ok, true);
+    const token = registered.session.token;
+    const profile = battleProfile("非法批量加点", {"level": 10, "hp": 80, "maxHp": 120}, null);
+    profile.player.statPoints = 2;
+    profile.player.baseStats = {"maxHp": 120, "attack": 18, "defense": 6, "quick": 70};
+    const saved = service.saveProfile(token, {"expectedRevision": 0, profile});
+    assert.equal(saved.ok, true);
+    const profileBefore = service.getProfile(token).profile;
+
+    const result = service.profileAction(token, {
+      "action": "player_stat_allocate_batch",
+      "payload": invalidCase.allocations === undefined ? {} : {"allocations": invalidCase.allocations},
+    });
+
+    assert.equal(result.ok, false, invalidCase.name);
+    assert.equal(result.code, invalidCase.code, invalidCase.name);
+    assert.equal(result.profileSummary.profileRevision, saved.profileSummary.profileRevision, invalidCase.name);
+    assert.deepEqual(service.getProfile(token).profile, profileBefore, invalidCase.name);
+  }
+});
+
 test("authority-v1 pet rebirth restarts one canonical growth cycle atomically", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const registered = service.register({"username": "v1petrebirth", "password": "test1234", "displayName": "权威转宠"});

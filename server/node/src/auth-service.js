@@ -69,6 +69,10 @@ const {
 } = require("./auth/account-characters");
 const {createProfileActionsDomain} = require("./auth/profile-actions");
 const {
+  PLAYER_STAT_ALLOCATE_BATCH_ACTION_ID,
+  applyPlayerStatAllocationBatch,
+} = require("./auth/player-stat-allocation");
+const {
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   createAutoCaptureSettingsRules,
 } = require("./auth/auto-capture-settings");
@@ -599,6 +603,7 @@ const PROFILE_ACTION_IDS = new Set([
   AUTO_CAPTURE_SETTINGS_ACTION_ID,
   PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
   "player_stat_allocate",
+  PLAYER_STAT_ALLOCATE_BATCH_ACTION_ID,
   "backpack_unlock_slot",
   "bank_unlock_tab",
   "backpack_move_stack",
@@ -19062,6 +19067,12 @@ function applyProfileActionToProfile(profile, action, params, now, options = {})
       return options.petGrowthEvaluationSettingsRules.applyPlayerUpdate(profile, params);
     case "player_stat_allocate":
       return applyPlayerStatAllocateAction(profile, params);
+    case PLAYER_STAT_ALLOCATE_BATCH_ACTION_ID:
+      return applyPlayerStatAllocationBatch(profile, params, {
+        pointGainFor: playerStatPointGainFor,
+        baseStatsFromPlayer: playerBaseStatsFromPlayer,
+        defaultMaxHp: DEFAULT_PLAYER_BATTLE_STATS.maxHp,
+      });
     case "backpack_unlock_slot":
       return applyBackpackUnlockSlotAction(profile, params);
     case "bank_unlock_tab":

@@ -10,7 +10,7 @@ const FEATURE_AUTO_SETTINGS := "auto_settings"
 const FEATURE_ACCOUNT := "account"
 
 const FEATURE_LABELS := {
-	FEATURE_STATUS: "状态",
+	FEATURE_STATUS: "角色",
 	FEATURE_EQUIPMENT: "装备",
 	FEATURE_CODEX: "图鉴",
 	FEATURE_QUEST: "任务",

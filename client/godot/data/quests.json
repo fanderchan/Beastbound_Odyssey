@@ -199,18 +199,18 @@
     },
     {
       "id": "quest_open_status_panel",
-      "title": "认识人物状态",
+      "title": "认识角色界面",
       "requiredLevel": 1,
       "recommendedLevel": 1,
       "giverId": "firebud_riding_trainer",
       "turnInId": "firebud_riding_trainer",
       "autoClaimOnReady": true,
-      "summary": "状态面板会显示人物属性和可分配点数。",
+      "summary": "角色界面会显示人物属性、可分配点数和骑宠资格。",
       "objective": {
         "type": "open_feature",
         "featureId": "status",
         "count": 1,
-        "text": "点击底部“状态”"
+        "text": "点击底部“角色”"
       },
       "rewards": {
         "stoneCoins": 5,

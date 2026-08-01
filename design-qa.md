@@ -124,6 +124,63 @@ final result: passed
 
 ---
 
+# Phase 381 Design QA：世界“角色”入口与角色管理三页
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 角色页完整覆盖世界并阻断点击穿透，标题、关闭键、九个
+  装备槽、人物全身图、两张宠物大头照、右侧页签、加点行和骑证卡片均未越界。
+- 四张参考截图与四个同状态实机帧均按等比适配后分别放入同一个比较输入中检查。实现
+  保留参考的全屏木石框架、人物主视觉、右侧纵向分页、属性条、先草稿后确认的加点节奏
+  以及“全部／种族”骑证筛选，同时只使用 Beastbound 原创或项目内正式资产。
+- 工程 Design QA 已通过；项目所有者的主观画面验收仍以本阶段最终 `1×` 视频为准。
+
+## Comparison targets
+
+- 属性页：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/attributes_reference_vs_implementation.jpg`；
+- 加点页：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/stat_points_reference_vs_implementation.jpg`；
+- 骑证全部：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_all_reference_vs_implementation.jpg`；
+- 骑证种族：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_species_reference_vs_implementation.jpg`；
+- 四状态总览：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/all_states_reference_vs_implementation.jpg`。
+
+## Required fidelity surfaces
+
+- Layout：世界右下“角色”真实入口，全屏角色页，左装备／中人物／右资料，以及右侧
+  `属性 / 加点 / 骑证` 三页结构与参考一致；关闭后恢复世界和右下操作栏。
+- Truth：属性页展示项目真实九装备槽，不为匹配参考的六槽外观删槽；骑证页严格只展示
+  当前三种真实可骑形态，不用虚构九卡填满版面。
+- Controls：四维 `+ / -`、清空本次、一次确认、全部／种族／真实族系筛选都由左键
+  工作；加点请求进行中即使关闭再打开也保持禁用，避免旧响应清掉新草稿。
+- Assets：加减、锁定和拥有状态使用项目原创透明位图，不再用文字符号或 emoji 冒充
+  图标；人物、宠物大头照、装备图标与木质皮肤均来自项目批准目录。
+- Safety：不显示虚构称号、家族、气力、怒气、战力、固定百分比或免费洗点；不显示
+  raw code、资源路径、schema、接口名、QA 和 agent 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/player-character-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/contact-sheet.png`；
+- 验证摘要：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/summary.json`；
+- 视频来自真实 `Main.tscn`，为 `33.933333s / 1018` 帧、H.264/AAC、
+  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；连续展示世界入口、属性、九装备槽、
+  加点草稿、减点撤回、清空本次、原子确认、三种真实骑宠、缺证锁定、种族展开、老虎系
+  筛选和关闭返回世界。
+- 录制使用全新隔离 user-data，未启动后端、未连接 MySQL、未写正常玩家存档。
+
+final result: passed
+
+---
+
 # Phase 379 Design QA：一步到位的人物创建配置与元素配点
 
 ## Result

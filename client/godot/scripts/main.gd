@@ -121,6 +121,9 @@ const BackpackAwakenedOwnerReviewCapture := preload(
 const CharacterEntryOwnerReviewCapture := preload(
 	"res://scripts/qa/character_entry_owner_review_capture.gd"
 )
+const PlayerCharacterOwnerReviewCapture := preload(
+	"res://scripts/qa/player_character_owner_review_capture.gd"
+)
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
 const PetBattleReviewLabCheck := preload("res://scripts/qa/pet_battle_review_lab_check.gd")
@@ -961,6 +964,7 @@ var auto_world_log_panel_check: bool = false
 var auto_equipment_check: bool = false
 var auto_equipment_shop_preview_check: bool = false
 var auto_player_status_check: bool = false
+var auto_player_character_main_flow_check: bool = false
 var auto_player_stat_points_check: bool = false
 var auto_player_stat_spam_perf_check: bool = false
 var auto_player_rebirth_preview_check: bool = false
@@ -1055,6 +1059,7 @@ var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var backpack_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
+var player_character_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1816,6 +1821,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_equipment_shop_preview_check")
 	elif auto_player_status_check:
 		call_deferred("_run_auto_player_status_check")
+	elif auto_player_character_main_flow_check:
+		call_deferred("_run_auto_player_character_main_flow_check")
 	elif auto_player_stat_points_check:
 		call_deferred("_run_auto_player_stat_points_check")
 	elif auto_player_stat_spam_perf_check:
@@ -2000,6 +2007,8 @@ func _ready() -> void:
 		call_deferred("_run_backpack_awakened_owner_review_capture")
 	elif character_entry_owner_review_capture:
 		call_deferred("_run_character_entry_owner_review_capture")
+	elif player_character_owner_review_capture:
+		call_deferred("_run_player_character_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2239,6 +2248,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
+		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2668,6 +2678,8 @@ func _apply_preview_window_args() -> void:
 			auto_equipment_shop_preview_check = true
 		elif arg == "--auto-player-status-check":
 			auto_player_status_check = true
+		elif arg == "--auto-player-character-main-flow-check":
+			auto_player_character_main_flow_check = true
 		elif arg == "--auto-player-stat-points-check":
 			auto_player_stat_points_check = true
 		elif arg == "--auto-player-stat-spam-perf-check":
@@ -2852,6 +2864,8 @@ func _apply_preview_window_args() -> void:
 			backpack_awakened_owner_review_capture = true
 		elif arg == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG:
 			character_entry_owner_review_capture = true
+		elif arg == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG:
+			player_character_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -4094,6 +4108,10 @@ func _run_character_entry_owner_review_capture() -> void:
 	await CharacterEntryOwnerReviewCapture.new(self).run()
 
 
+func _run_player_character_owner_review_capture() -> void:
+	await PlayerCharacterOwnerReviewCapture.new(self).run()
+
+
 func _run_pet_action_art_preview() -> void:
 	await PetActionArtPreview.new(self).run()
 
@@ -4431,6 +4449,10 @@ func _profile_with_item_count(profile: Dictionary, item_id: String, count: int) 
 
 func _run_auto_player_status_check() -> void:
 	await _auto_checks()._run_auto_player_status_check()
+
+
+func _run_auto_player_character_main_flow_check() -> void:
+	await _auto_checks()._run_auto_player_character_main_flow_check()
 
 
 func _run_auto_player_stat_points_check() -> void:
@@ -14135,8 +14157,8 @@ func _layout_hud() -> void:
 	pet_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_width)
 	pet_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), pet_height)
 	var pet_panel_y = minf(maxf(panel_top_y, (viewport_size.y - pet_height) * 0.5), viewport_size.y - pet_height - margin)
-	player_status_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
-	player_status_panel.size = Vector2(pet_width, pet_height)
+	player_status_panel.position = Vector2.ZERO
+	player_status_panel.size = viewport_size
 	if battle_active:
 		player_status_panel.visible = false
 	if player_status_panel.visible and action_bar != null:

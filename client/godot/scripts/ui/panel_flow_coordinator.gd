@@ -72,6 +72,12 @@ const BackpackAwakenedPanelView := preload("res://scripts/ui/backpack_awakened_p
 const BackpackAwakenedVisualSkin := preload(
 	"res://scripts/ui/backpack_awakened_visual_skin.gd"
 )
+const CharacterManagementPresenter := preload(
+	"res://scripts/ui/character_management_presenter.gd"
+)
+const CharacterManagementPanelView := preload(
+	"res://scripts/ui/character_management_panel.gd"
+)
 const EquipmentInstancePresenter := preload("res://scripts/ui/equipment_instance_presenter.gd")
 const EquipmentEscrowClientModel := preload("res://scripts/progression/equipment_escrow_client_model.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
@@ -168,6 +174,10 @@ var backpack_discard_drop_zone: ItemDropZone
 var backpack_awakened_panel
 var backpack_awakened_selected_key: String = ""
 var backpack_awakened_selected_equipment_slot: String = ""
+var character_management_panel
+var character_management_pending_allocation: Dictionary = {}
+var character_management_ride_filter_id: String = "all"
+var character_management_allocation_pending: bool = false
 var bank_active_tab_index: int = 0
 var bank_selected_slot_data: Dictionary = {}
 var bank_tab_buttons: Array[Button] = []
@@ -6006,7 +6016,7 @@ func _build_hud() -> void:
 	action_row.add_child(stop_button)
 	quick_slot_buttons.clear()
 	player_status_menu_button = Button.new()
-	player_status_menu_button.text = "状态"
+	player_status_menu_button.text = "角色"
 	player_status_menu_button.custom_minimum_size = MIN_TOUCH_BUTTON_SIZE
 	player_status_menu_button.pressed.connect(_open_player_status_panel)
 	action_row.add_child(player_status_menu_button)
@@ -6087,9 +6097,15 @@ func _build_hud() -> void:
 	_build_account_panel()
 
 	player_status_panel = _panel_container("PlayerStatusPanel")
+	player_status_panel.add_theme_stylebox_override(
+		"panel",
+		BackpackAwakenedVisualSkin.transparent_style()
+	)
 	player_status_panel.visible = false
 	player_status_panel.z_index = 24
 	var player_status_column = VBoxContainer.new()
+	player_status_column.name = "LegacyPlayerStatusCompatibility"
+	player_status_column.visible = false
 	player_status_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	player_status_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	player_status_column.add_theme_constant_override("separation", 8)
@@ -6160,6 +6176,24 @@ func _build_hud() -> void:
 	player_status_equipment_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	player_status_equipment_button.pressed.connect(_on_player_status_equipment_pressed)
 	player_status_column.add_child(player_status_equipment_button)
+
+	character_management_panel = CharacterManagementPanelView.new()
+	character_management_panel.close_requested.connect(_close_player_status_panel)
+	character_management_panel.equipment_requested.connect(_on_player_status_equipment_pressed)
+	character_management_panel.rebirth_requested.connect(_open_player_rebirth_preview_panel)
+	character_management_panel.stat_adjust_requested.connect(
+		_on_character_management_stat_adjust_requested
+	)
+	character_management_panel.stat_confirm_requested.connect(
+		_on_character_management_stat_confirm_requested
+	)
+	character_management_panel.stat_pending_reset_requested.connect(
+		_on_character_management_stat_pending_reset_requested
+	)
+	character_management_panel.ride_filter_requested.connect(
+		_on_character_management_ride_filter_requested
+	)
+	player_status_panel.add_child(character_management_panel)
 	hud_root.add_child(player_status_panel)
 
 	player_rebirth_preview_panel = _panel_container("PlayerRebirthPreviewPanel")
@@ -14037,6 +14071,10 @@ func _open_player_status_panel() -> void:
 	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_player_rebirth_preview_panel(false)
+	character_management_pending_allocation.clear()
+	character_management_ride_filter_id = "all"
+	if character_management_panel != null:
+		character_management_panel.switch_tab(CharacterManagementPanelView.TAB_ATTRIBUTES)
 	player_status_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_player_status_panel()
@@ -14046,6 +14084,7 @@ func _open_player_status_panel() -> void:
 func _close_player_status_panel() -> void:
 	host._flush_profile_save_now()
 	player_status_refresh_pending = false
+	character_management_pending_allocation.clear()
 	_hide_control(player_status_panel)
 
 func _open_player_rebirth_preview_panel() -> void:
@@ -14103,6 +14142,91 @@ func _on_player_status_allocate_pressed(stat_key: String) -> void:
 	if not ok:
 		_set_world_log_message(str(result.get("message", "")))
 		host._update_hud_text()
+
+func _on_character_management_stat_adjust_requested(stat_key: String, delta: int) -> void:
+	if character_management_allocation_pending:
+		return
+	character_management_pending_allocation = CharacterManagementPresenter.adjust_pending_allocation(
+		character_management_pending_allocation,
+		stat_key,
+		delta,
+		PlayerProgressModel.player_stat_points(player_profile)
+	)
+	_refresh_player_status_panel()
+
+func _on_character_management_stat_pending_reset_requested() -> void:
+	if character_management_allocation_pending:
+		return
+	character_management_pending_allocation.clear()
+	_refresh_player_status_panel()
+
+func _on_character_management_ride_filter_requested(filter_id: String) -> void:
+	character_management_ride_filter_id = filter_id
+	_refresh_player_status_panel()
+
+func _on_character_management_stat_confirm_requested() -> void:
+	if character_management_allocation_pending:
+		return
+	var pending := CharacterManagementPresenter.normalize_pending_allocation(
+		character_management_pending_allocation,
+		PlayerProgressModel.player_stat_points(player_profile)
+	)
+	var pending_total := 0
+	for stat_key in PlayerProgressModel.PLAYER_STAT_KEYS:
+		pending_total += maxi(0, int(pending.get(stat_key, 0)))
+	if pending_total <= 0:
+		return
+	character_management_allocation_pending = true
+	_refresh_player_status_panel()
+	if _is_server_account_session():
+		var parsed = await _submit_server_profile_action(
+			"player_stat_allocate_batch",
+			{"allocations": pending},
+			"确认属性加点失败。"
+		)
+		character_management_allocation_pending = false
+		if bool(parsed.get("ok", false)):
+			character_management_pending_allocation.clear()
+		_set_world_log_message("\n".join(_string_array_values(parsed.get("logLines", []))))
+		_refresh_player_status_panel()
+		_refresh_quick_bar()
+		if status_label != null:
+			host._update_hud_text()
+		return
+	if _local_profile_mutation_blocked_for_server_only("确认属性加点"):
+		character_management_allocation_pending = false
+		_refresh_player_status_panel()
+		return
+	var local_result := _apply_local_player_stat_allocation_batch(pending)
+	character_management_allocation_pending = false
+	if bool(local_result.get("ok", false)):
+		player_profile = local_result.get("profile", player_profile)
+		character_management_pending_allocation.clear()
+		if profile_save_enabled:
+			host._request_profile_save(0.35)
+	else:
+		_set_world_log_message(str(local_result.get("message", "确认属性加点失败。")))
+	_refresh_player_status_panel()
+	_refresh_quick_bar()
+	if status_label != null:
+		host._update_hud_text()
+
+func _apply_local_player_stat_allocation_batch(allocations: Dictionary) -> Dictionary:
+	var working_profile: Dictionary = player_profile.duplicate(true)
+	for stat_key in PlayerProgressModel.PLAYER_STAT_KEYS:
+		for _index in maxi(0, int(allocations.get(stat_key, 0))):
+			var result := PlayerProgressModel.allocate_player_stat_point_fast(
+				working_profile,
+				stat_key
+			)
+			if not bool(result.get("ok", false)):
+				return result
+			working_profile = result.get("profile", working_profile)
+	return {
+		"ok": true,
+		"profile": PlayerProgressModel.normalize_profile(working_profile),
+		"message": "属性加点已确认。",
+	}
 
 func _request_player_status_refresh() -> void:
 	if player_status_panel == null or not player_status_panel.visible:
@@ -14190,6 +14314,20 @@ func _refresh_player_status_panel() -> void:
 	if player_status_rebirth_button != null:
 		player_status_rebirth_button.text = "转生预览"
 		player_status_rebirth_button.disabled = false
+	if character_management_panel != null:
+		character_management_pending_allocation = CharacterManagementPresenter.normalize_pending_allocation(
+			character_management_pending_allocation,
+			stat_points
+		)
+		var character_state := CharacterManagementPresenter.view_state(
+			player_profile,
+			character_management_pending_allocation,
+			character_management_ride_filter_id
+		)
+		character_state["allocationPending"] = character_management_allocation_pending
+		if character_management_allocation_pending:
+			character_state["canConfirmAllocation"] = false
+		character_management_panel.apply_view_state(character_state)
 
 func _refresh_player_rebirth_preview_panel() -> void:
 	if player_rebirth_preview_panel == null or player_rebirth_preview_label == null:
